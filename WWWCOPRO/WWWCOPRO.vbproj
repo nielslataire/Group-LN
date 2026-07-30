@@ -253,6 +253,7 @@
     <Compile Include="Models\Blog\BlogArtikelModel.vb" />
     <Compile Include="Models\Contact\NewsletterModel.vb" />
     <Compile Include="Models\Contact\MailModel.vb" />
+    <Compile Include="Models\Home\HeroSearchOptionsModel.vb" />
     <Compile Include="Models\Projects\ProjectModel.vb" />
     <Compile Include="Models\References\ReferencesModel.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
@@ -317,6 +318,8 @@
     <Content Include="Content\PATTERN-dark.png" />
     <Content Include="Content\project-detail.css" />
     <Content Include="Content\project-inschrijving.css" />
+    <Content Include="Content\home-hero.css" />
+    <Content Include="Content\home-sections.css" />
     <Content Include="Content\projects-index.css" />
     <Content Include="Content\skins\PATTERN-dark.png" />
     <Content Include="Content\PATTERN.png" />
@@ -324,6 +327,7 @@
     <Content Include="Content\skins\default-darkgreen2.css" />
     <Content Include="Content\skins\default-darkgreen.css" />
     <Content Include="Content\skins\skin-real-estate.css" />
+    <Content Include="Content\video\hero.mp4" />
     <Content Include="Fonts\fontawesome-webfont.eot" />
     <Content Include="Fonts\fontawesome-webfont.ttf" />
     <Content Include="Fonts\fontawesome-webfont.woff" />

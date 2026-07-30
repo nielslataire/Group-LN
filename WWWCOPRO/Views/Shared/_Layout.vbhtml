@@ -9,6 +9,7 @@
     If _defaultCanonical = "https://www.groupln.be" Then _defaultCanonical &= "/"
     Dim _ogUrl As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogurl"))), CStr(ViewData("ogurl")), _defaultCanonical)
     Dim _canonical As String = If(Not String.IsNullOrEmpty(CStr(ViewData("canonical"))), CStr(ViewData("canonical")), _defaultCanonical)
+    Dim _heroHeader As Boolean = CBool(If(ViewData("HeroHeader"), False))
 End Code
 <!DOCTYPE html>
 <html lang="nl">
@@ -120,120 +121,106 @@ End Code
     </noscript>
     <!-- End Google Tag Manager (noscript) -->
     <div class="body">
-        <header id="header" class="header-no-border-bottom" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": 175, "stickySetTop": "-175px", "stickyChangeLogo": false}'>
+        <header id="header" class="header-no-border-bottom header-full-width @(If(_heroHeader, "header-transparent header-transparent-brand", ""))" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": 175, "stickySetTop": 0, "stickyChangeLogo": false}'>
             <div class="header-body">
-                <!--
-                <div class="header-top header-top-style-2">
-                    <div class="container">
-                        <p class="pull-left hidden-xs">
-                            The #1 Selling HTML Site Template on ThemeForest.
-                        </p>
-                        <p class="pull-right">
-                            <i class="fa fa-map-marker"></i> 1234 Street Name, City Name, US
-                        </p>
-                    </div>
-                </div>
-                    -->
-                <div class="header-container container">
-                    <div class="header-row">
-                        <div class="header-column">
+                <div class="header-container container-fluid">
+                    <div class="header-row header-row-redesign">
+                        <div class="header-column header-logo-col">
                             <div class="header-logo">
                                 <a href="@Url.Action("Index", "Home")" class="header-logo-brand">
-                                    <img alt="Group LN" class="header-brand-img" data-sticky-width="36" data-sticky-height="36" data-sticky-top="22" src="@Url.Content("~/Content/img/logoimg.jpg")">
+                                    <img alt="Group LN" class="header-brand-img" src="@Url.Content("~/Content/img/logo.png")">
                                     <span class="header-brand-text">
                                         <span class="header-brand-name">GROUP LN</span>
                                         <span class="header-brand-sub">Projectontwikkeling</span>
-                                        <span class="header-brand-tagline">Appartementen &middot; Woningen</span>
                                     </span>
-                                    <span class="header-brand-divider"></span>
+                                  
                                 </a>
                             </div>
+                            <a href="tel:+3292164950" class="header-phone">
+                                <span class="header-phone-icon"><i class="fa fa-phone"></i></span>
+                                <span class="header-phone-text">
+                                    <span class="header-phone-label">Bel ons</span>
+                                    <span class="header-phone-number">+32 (0)9 216 49 50</span>
+                                </span>
+                            </a>
                         </div>
-                        <div class="header-column">
-                            <ul class="header-extra-info hidden-xs header-contact-list">
-                                <li>
-                                    <div class="feature-box feature-box-style-3">
-                                        <div class="feature-box-icon">
-                                            <i class="fa fa-phone"></i>
-                                        </div>
-                                        <div class="feature-box-info">
-                                            <h4 class="mb-none">+32 (0)9 216 49 50</h4>
-                                            <p><small>Neem telefonisch contact op</small></p>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li class="header-contact-divider"></li>
-                                <li>
-                                    <div class="feature-box feature-box-style-3">
-                                        <div class="feature-box-icon">
-                                            <a href="mailto:info@groupln.be"><i class="fa fa-envelope"></i></a>
-                                        </div>
-                                        <div class="feature-box-info">
-                                            <h4 class="mb-none">info@groupln.be</h4>
-                                            <p><small>Of stuur ons een mail</small></p>
-                                        </div>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="header-container header-nav header-nav-bar header-nav-bar-primary">
-                    <div class=" container">
-                        <button class="btn header-btn-collapse-nav" data-toggle="collapse" data-target=".header-nav-main">
-                            <i class="fa fa-bars"></i>
-                        </button>
-                        <div class="header-nav-main header-nav-main-light  header-nav-main-effect-1 header-nav-main-sub-effect-1 collapse">
-                            <nav>
-                                <ul class="nav nav-pills" id="mainNav">
-                                    <li>
-                                        <a href="@Url.Action("Index", "Home")">
-                                            Home
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "AboutUs")">
-                                            Over ons
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">
-                                            Woonprojecten
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">
-                                            Commercieel
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">
-                                            Realisaties
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "Blog")">
-                                            Blog
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "Team")">
-                                            Team
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="@Url.Action("Index", "Contact")">
-                                            Contact
-                                        </a>
-                                    </li>
-
-                                </ul>
+                        <div class="header-column header-nav-col">
+                            <nav class="hero-nav-items" id="heroNavItems">
+                                <a class="hero-nav-item" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">Woonprojecten</a>
+                                <a class="hero-nav-item" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">Commercieel</a>
+                                <a class="hero-nav-item" href="@Url.Action("Index", "Blog")">Blog</a>
+                                <a class="hero-nav-item" href="@Url.Action("Index", "Contact")">Contact</a>
                             </nav>
+                            <button type="button" id="navOverlayToggle" class="hamburger-circle-btn" aria-expanded="false" aria-controls="navOverlay">
+                                <span class="hamburger-lines"><span></span><span></span><span></span></span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </header>
+
+        <div id="navOverlay" class="nav-overlay" aria-hidden="true">
+            <div class="nav-overlay-backdrop"></div>
+            <div class="nav-overlay-panel">
+                <button type="button" id="navOverlayClose" class="nav-overlay-close" aria-label="Sluiten">&times;</button>
+                <nav>
+                    <ul class="nav-overlay-list" id="mainNav">
+                        <li>
+                            <a href="@Url.Action("Index", "Home")">
+                                Home
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "AboutUs")">
+                                Over ons
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">
+                                Woonprojecten
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">
+                                Commercieel
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">
+                                Realisaties
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "Blog")">
+                                Blog
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "Team")">
+                                Team
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.Action("Index", "Contact")">
+                                Contact
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="nav-overlay-info">
+                    <div class="nav-overlay-contact">
+                        <h4>Contact</h4>
+                        <p><a href="tel:+3292164950">+32 (0)9 216 49 50</a></p>
+                        <p><a href="mailto:info@groupln.be">info@groupln.be</a></p>
+                    </div>
+                    <div class="nav-overlay-address">
+                        <h4>Adres</h4>
+                        <p>Klaverdries 53, 9031 Drongen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div role="main" class="main">
             @RenderBody()
         </div>

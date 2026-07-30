@@ -26,7 +26,7 @@ Public Class RouteConfig
         routes.Localization(Function(configuration)
                                 configuration.DefaultCulture = nl
                                 configuration.AcceptedCultures = acceptedCultures
-                                configuration.AttributeRouteProcessing = AttributeRouteProcessing.AddAsNeutralAndDefaultCultureRoute
+                                configuration.AttributeRouteProcessing = AttributeRouteProcessing.AddAsNeutralRouteAndReplaceByFirstTranslation
                                 configuration.AddCultureAsRoutePrefix = False
                                 configuration.AddTranslationToSimiliarUrls = True
                                 configuration.ValidateURL = False

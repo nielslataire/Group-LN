@@ -19,13 +19,18 @@ Namespace Controllers
         End Function
         ' GET: /Projects
         <Route("Projects/{id?}", Name:="ProjectById")>
-        Function Index(Optional Type As ProjectType = 0, Optional id As Integer = 0) As ActionResult
+        Function Index(Optional Type As ProjectType = 0, Optional id As Integer = 0,
+                        Optional Gemeente As String = Nothing,
+                        Optional PriceMin As Decimal? = Nothing,
+                        Optional PriceMax As Decimal? = Nothing,
+                        Optional UnitCategory As String = Nothing) As ActionResult
             If Not id = 0 Then
                 ViewData("LatestNews") = GetLatestNews(4)
                 Dim model As New ProjectDetailModel
                 Dim service = ServiceFactory.GetProjectService
                 Dim response = service.GetProjectByID(id)
                 If (response.Success) Then model.Data = response.Values.FirstOrDefault
+                If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
                 'sort pictures
                 model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
                 model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
@@ -79,16 +84,71 @@ Namespace Controllers
                     ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
                 End If
 
+                Dim heroFilterActive As Boolean = Not String.IsNullOrWhiteSpace(Gemeente) OrElse PriceMin.HasValue OrElse PriceMax.HasValue OrElse Not String.IsNullOrWhiteSpace(UnitCategory)
+
                 Dim model As New ProjectModel
                 Dim service = ServiceFactory.GetProjectService
                 Dim response = service.GetProjectsForList(Type,, TrimCommercialText:=True)
                 If (response.Success) Then model.Projects = response.Values
                 model.Projects = model.Projects.Where(Function(m) m.Status.Id <> CInt(ProjectStatusType.Opgeleverd) AndAlso m.Status.Id <> CInt(ProjectStatusType.Stopgezet)).ToList
+
+                If heroFilterActive Then
+                    Dim coordinationIds = GetCoordinationOnlyProjectIds()
+                    model.Projects = model.Projects.Where(Function(m) Not coordinationIds.Contains(m.Id)).ToList()
+                    If Not String.IsNullOrWhiteSpace(Gemeente) Then
+                        model.Projects = model.Projects.Where(Function(m) m.Postalcode IsNot Nothing AndAlso
+                            String.Equals(m.Postalcode.Gemeente, Gemeente, StringComparison.OrdinalIgnoreCase)).ToList()
+                    End If
+                End If
+
                 model.Projects = model.Projects.OrderByDescending(Function(m) m.Id).ToList
                 Dim response2 = service.GetProjectSalesData(model.Projects.Select(Function(m) m.Id).ToList())
                 If (response2.Success) Then model.SalesData = response2.Values
+                ' Let op: GetSalesSettings(ids) zet Response.Success op False zodra ÉÉN project uit de
+                ' batch geen instellingen-record heeft (heel normaal) — .Values blijft dan wél correct
+                ' gevuld voor de projecten die wél een record hebben, dus .Success hier bewust negeren.
                 Dim response3 = service.GetSalesSettings(model.Projects.Select(Function(m) m.Id).ToList())
-                If (response3.Success) Then model.SalesSettings = response3.Values
+                If response3.Values IsNot Nothing Then model.SalesSettings = response3.Values
+
+                If heroFilterActive Then
+                    model.Projects = model.Projects.Where(Function(p)
+                                                               Dim s = model.SalesSettings.FirstOrDefault(Function(x) x.ProjectId = p.Id)
+                                                               Return s IsNot Nothing AndAlso s.SaleVisible
+                                                           End Function).ToList()
+
+                    model.Projects = model.Projects.Where(Function(p)
+                                                               Dim sd = model.SalesData.FirstOrDefault(Function(x) x.ProjectId = p.Id)
+                                                               Return sd IsNot Nothing AndAlso (sd.LivingUnits - sd.LivingUnitsSold) > 0
+                                                           End Function).ToList()
+
+                    If PriceMin.HasValue OrElse PriceMax.HasValue Then
+                        model.Projects = model.Projects.Where(Function(p)
+                                                                   Dim sd = model.SalesData.FirstOrDefault(Function(x) x.ProjectId = p.Id)
+                                                                   If sd Is Nothing Then Return False
+                                                                   If PriceMin.HasValue AndAlso sd.StartingPrice < PriceMin.Value Then Return False
+                                                                   If PriceMax.HasValue AndAlso sd.StartingPrice > PriceMax.Value Then Return False
+                                                                   Return True
+                                                               End Function).ToList()
+                    End If
+
+                    If Not String.IsNullOrWhiteSpace(UnitCategory) Then
+                        model.Projects = model.Projects.Where(Function(p)
+                                                                   Dim sd = model.SalesData.FirstOrDefault(Function(x) x.ProjectId = p.Id)
+                                                                   If sd Is Nothing Then Return False
+                                                                   Select Case UnitCategory
+                                                                       Case "Appartement" : Return sd.NumberAppartments > 0
+                                                                       Case "Woning" : Return sd.NumberHouses > 0
+                                                                       Case "Handelspand" : Return sd.NumberCommercial > 0
+                                                                       Case Else : Return True
+                                                                   End Select
+                                                               End Function).ToList()
+                    End If
+
+                    Dim finalIds = model.Projects.Select(Function(m) m.Id).ToList()
+                    model.SalesData = model.SalesData.Where(Function(sd) finalIds.Contains(sd.ProjectId)).ToList()
+                    model.SalesSettings = model.SalesSettings.Where(Function(ss) finalIds.Contains(ss.ProjectId)).ToList()
+                End If
+
                 Return View(model)
             End If
 
@@ -106,6 +166,7 @@ Namespace Controllers
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
             If (response.Success) Then model.Data = response.Values.FirstOrDefault
+            If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
             'sort pictures
             model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
             model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
@@ -149,7 +210,7 @@ Namespace Controllers
 
         End Function
         Function Detail(model As ProjectDetailModel) As ActionResult
-
+            If model Is Nothing OrElse model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
 
             Return View(model)
 
@@ -1045,6 +1106,24 @@ Namespace Controllers
             End If
             Return news
         End Function
+        Private Function GetCoordinationOnlyProjectIds() As HashSet(Of Integer)
+            Dim ids As New HashSet(Of Integer)
+            Try
+                Using conn As New System.Data.SqlClient.SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString)
+                    conn.Open()
+                    Using cmd As New System.Data.SqlClient.SqlCommand("SELECT ProjectID FROM Project WHERE IsOnlyCoordinationProject = 1", conn)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                ids.Add(reader.GetInt32(0))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch
+            End Try
+            Return ids
+        End Function
+
         Private Sub LoadProjectSeoFields(data As ProjectBO)
             Try
                 Using conn As New System.Data.SqlClient.SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString)

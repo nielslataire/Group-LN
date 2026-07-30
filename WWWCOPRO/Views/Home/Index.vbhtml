@@ -1,229 +1,131 @@
-﻿@Code
+﻿@Imports BO
+@Code
     ViewData("Title") = "Projectontwikkelaar in Gent en Oost-Vlaanderen | Group LN"
+    ViewData("HeroHeader") = True
     Layout = "~/Views/Shared/_Layout.vbhtml"
+    Dim heroOptions = CType(ViewData("HeroSearchOptions"), WWWCOPRO.HeroSearchOptionsModel)
+    If heroOptions Is Nothing Then heroOptions = New WWWCOPRO.HeroSearchOptionsModel()
 End Code
-<!-- Current Page CSS -->
+@section PageStyle
+    <link rel="stylesheet" href="~/Content/home-hero.css" />
+    <link rel="stylesheet" href="~/Content/home-sections.css" />
+End Section
 
-
-<div class="slider-container light rev_slider_wrapper">
-    <div id="revolutionSlider" class="slider rev_slider" data-plugin-revolution-slider data-plugin-options='{"gridwidth": 1170, "gridheight": 500, "disableProgressBar": "on"}'>
-        <ul>
-            <li data-transition="fade">
-
-                <img src="@Url.Content("~/content/img/slides/slide1.jpg")"
-                     alt="Villa Cauxyde - Koksijde"
-                     data-bgposition="right center"
-                     data-bgpositionend="center center"
-                     data-bgfit="cover"
-                     data-bgrepeat="no-repeat"
-                     data-kenburns="on"
-                     data-duration="3000"
-                     data-ease="Linear.easeNone"
-                     data-scalestart="100"
-                     data-scaleend="100"
-                     data-rotatestart="0"
-                     data-rotateend="0"
-                     data-offsetstart="0 0"
-                     data-offsetend="0 0"
-                     data-bgparallax="10"
-                     class="rev-slidebg">
-
-                @*<div class="tp-caption"
-                     data-x="177"
-                     data-y="180"
-                     data-start="1000"
-                     data-transform_in="x:[-300%];opacity:0;s:500;"><img src="~/content/img/slides/slide-title-border-light.png" alt=""></div>*@
-
-                <div class="tp-caption top-label tp-caption-overlay-opacity"
-                     data-x="20"
-                     data-y="50"
-                     data-start="500"
-                     data-transform_in="y:[-300%];opacity:0;s:500;">KOKSIJDE</div>
-
-                @*<div class="tp-caption"
-                     data-x="480"
-                     data-y="180"
-                     data-start="1000"
-                     data-transform_in="x:[300%];opacity:0;s:500;"><img src="~/content/img/slides/slide-title-border-light.png" alt=""></div>*@
-
-            <div class="tp-caption main-label tp-caption-overlay-opacity"
-                 data-x="20"
-                 data-y="80"
-                 data-start="1000"
-                 data-whitespace="nowrap"
-                 data-transform_in="y:[100%];s:500;"
-                 data-transform_out="opacity:0;s:500;"
-                 data-mask_in="x:0px;y:0px;">Villa Cauxyde</div>
-
-                <div class="tp-caption bottom-label tp-caption-overlay-opacity"
-                     data-x="20"
-                     data-y="130"
-                     data-start="1500"
-                     data-transform_in="y:[100%];opacity:0;s:500;">2 luxevilla's in het centrum van Koksijde</div>
-
-            </li>
-            <li data-transition="fade">
-
-                <img src="@Url.Content("~/content/img/slides/slide2.jpg")"
-                     alt="Verkaveling Keerstraat - Erpe-Mere"
-                     data-bgposition="right center"
-                     data-bgpositionend="center center"
-                     data-bgfit="cover"
-                     data-bgrepeat="no-repeat"
-                     data-kenburns="on"
-                     data-duration="3000"
-                     data-ease="Linear.easeNone"
-                     data-scalestart="100"
-                     data-scaleend="100"
-                     data-rotatestart="0"
-                     data-rotateend="0"
-                     data-offsetstart="0 0"
-                     data-offsetend="0 0"
-                     data-bgparallax="10"
-                     class="rev-slidebg">
-
-                <div class="tp-caption top-label tp-caption-overlay-opacity"
-                     data-x="right"
-                     data-y="50"
-                     data-start="500"
-                     data-transform_in="y:[-300%];opacity:0;s:500;">ERPE-MERE</div>
-
-                <div class="tp-caption main-label tp-caption-overlay-opacity"
-                     data-x="right"
-                     data-y="80"
-                     data-start="1000"
-                     style="z-index: 5"
-                     data-transform_in="y:[100%];s:500;"
-                     data-transform_out="opacity:0;s:500;">Verkaveling Keerstraat</div>
-
-                <div class="tp-caption bottom-label tp-caption-overlay-opacity"
-                     data-x="right"
-                     data-y="130"
-                     data-start="1500"
-                     data-transform_in="y:[100%];opacity:0;s:500;">4 stijlvolle woningen in het landelijke Vlekkem.</div>
-
-            </li>
-            <li data-transition="fade">
-
-                <img src="@Url.Content("~/content/img/slides/slide3.jpg")"
-                     alt="3 woningen - Landegem - Renaat de Rudderstraat"
-                     data-bgposition="right center"
-                     data-bgpositionend="center center"
-                     data-bgfit="cover"
-                     data-bgrepeat="no-repeat"
-                     data-kenburns="on"
-                     data-duration="3000"
-                     data-ease="Linear.easeNone"
-                     data-scalestart="100"
-                     data-scaleend="100"
-                     data-rotatestart="0"
-                     data-rotateend="0"
-                     data-offsetstart="0 0"
-                     data-offsetend="0 0"
-                     data-bgparallax="10"
-                     class="rev-slidebg">
-
-                <div class="tp-caption top-label tp-caption-overlay-opacity"
-                     data-x="left"
-                     data-y="50"
-                     data-start="500"
-                     data-transform_in="y:[-300%];opacity:0;s:500;">LANDEGEM</div>
-
-                <div class="tp-caption main-label tp-caption-overlay-opacity"
-                     data-x="left"
-                     data-y="80"
-                     data-start="1000"
-                     style="z-index: 5"
-                     data-transform_in="y:[100%];s:500;"
-                     data-transform_out="opacity:0;s:500;">3 woningen</div>
-
-                <div class="tp-caption bottom-label tp-caption-overlay-opacity"
-                     data-x="left"
-                     data-y="130"
-                     data-start="1500"
-                     data-transform_in="y:[100%];opacity:0;s:500;">Moderne woningen dichtbij Gent.</div>
-
-            </li>
-        </ul>
+<section id="homeHero" class="home-hero">
+    <video class="home-hero-video" autoplay muted loop playsinline preload="auto" poster=""@Url.Content("~/Content/video/hero-poster.jpg")">
+        <source src="@Url.Content("~/Content/video/hero.webm")" type="video/webm">
+        <source src="@Url.Content("~/Content/video/hero.mp4")" type="video/mp4">
+    </video>
+    <div class="home-hero-overlay"></div>
+    <div class="home-hero-content">
+        <p class="hero-kicker"><span class="hero-rule"></span>PROJECTONTWIKKELING & PROJECTCOÖRDINATIE<span class="hero-rule"></span></p>
+        <p class="hero-headline">Bijzondere plekken, doordacht ontwikkeld.</p>
+        <h1 class="hero-subtext">Group LN is projectontwikkelaar van tijdloze appartementen en woningen op de mooiste locaties in Vlaanderen.</h1>
     </div>
-</div>
-<section class="section section-light m-none" style="background: var(--mist) !important;">
-    <div class="container">
-        <div class="row mb-xl">
-            <div class="col-md-4">
-                <h2 class="mb-xl"><strong>Wie</strong> zijn we</h2>
-                <p>Group LN is een projectontwikkelaar vooral actief in de residentiële sector met meer dan 15 jaar ervaring. We zijn vooral gespecialiseerd in nieuwbouwappartementen maar gaan geen enkele uitdaging uit de weg.</p>
-                <div>
-                    <span class="thumb-info thumb-info-lighten thumb-info-centered-info thumb-info-no-borders mt-lg">
-                        <span class="thumb-info-wrapper">
-                            <img src="@Url.content("~/content/img/bureel.jpg")" class="img-responsive" alt="Bureel Group LN">
-                           
-                        </span>
-                    </span>
-                    @*<span class="img-thumbnail">
-                        <img alt="" class="img-responsive" src="@Url.content("~/content/img/bureel.jpg")">
-                    </span>*@
-                </div>
-                <br />
-                <a class="btn btn-default mr-xs mb-sm" href="@Url.Action("Index","AboutUs")">Lees Meer</a>
+    <button type="button" id="heroSearchToggle" class="hero-search-toggle" aria-expanded="false" aria-controls="homeHeroSearch" aria-label="Zoeken">
+        <i class="fa fa-search"></i>
+    </button>
+    <div class="home-hero-search" id="homeHeroSearch">
+        <form id="heroSearchForm" method="get" action="@Url.Action("Index", "Projects")">
+            <div class="hero-search-field hero-search-term" style="display:none;">
+                <label class="hero-search-field-label" for="heroSearchTerm">Zoekterm</label>
+                <input type="text" id="heroSearchTerm" name="q" placeholder="Vind een pand, gemeente of project" disabled />
             </div>
-            <div class="col-md-8">
-                <h1 style="display:none;">Home</h1>
-                <h2 class="mb-xl"><strong>Onze</strong> troeven</h2>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="feature-box feature-box-style-2 appear-animation" data-appear-animation="fadeInLeft" data-appear-animation-delay="0">
-                            <div class="feature-box-icon">
-                                <i class="icon-book-open  icons"></i>
-                            </div>
-                            <div class="feature-box-info">
-                                <h4 class="mb-sm">Kennis</h4>
-                                <p class="mb-lg">De jarenlange ervaring van de zaakvoerders als werfleider en projectleider bij diverse aannemingsbedrijven en de daarbij opgedane kennis zijn een garantie voor een kwalitatief afgewerkt project.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="feature-box feature-box-style-2 appear-animation" data-appear-animation="fadeInLeft" data-appear-animation-delay="0">
-                            <div class="feature-box-icon">
-                                <i class="icon-home icons"></i>
-                            </div>
-                            <div class="feature-box-info">
-                                <h4 class="mb-sm">Functioneel en tijdloos</h4>
-                                <p class="mb-lg">Wij werken samen met architecten die uw woonwensen vertalen in een functioneel en tijdloos geheel met aandacht voor kwalitatieve en energie-efficiënte materialen.</p>
-                            </div>
-                        </div>
-                    </div>
+            <div class="hero-search-field hero-search-regio hero-dropdown" id="heroRegioDropdown">
+                <span class="hero-search-field-label">Regio</span>
+                <button type="button" class="hero-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="hero-dropdown-value">Alle regio's</span>
+                </button>
+                <ul class="hero-dropdown-menu" role="listbox">
+                    <li class="hero-dropdown-option is-all is-selected" data-value="" role="option" aria-selected="true">Alle regio's</li>
+                    @For Each regio In heroOptions.Regios
+                        @<li class="hero-dropdown-option" data-value="@regio" role="option" aria-selected="false">@regio</li>
+                    Next
+                </ul>
+                <input type="hidden" id="heroSearchGemeente" value="" />
+            </div>
+            <div class="hero-search-field hero-search-prijs hero-dropdown" id="heroPrijsDropdown">
+                <span class="hero-search-field-label">Prijs</span>
+                <button type="button" class="hero-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="hero-dropdown-value">Alle prijzen</span>
+                </button>
+                <ul class="hero-dropdown-menu" role="listbox">
+                    <li class="hero-dropdown-option is-all is-selected" data-value="," role="option" aria-selected="true">Alle prijzen</li>
+                    @For Each bracket In heroOptions.PriceBrackets
+                        @<li class="hero-dropdown-option" data-value="@(bracket.MinValue),@(bracket.MaxValue)" role="option" aria-selected="false">@bracket.Label</li>
+                    Next
+                </ul>
+                <input type="hidden" id="heroSearchPrice" value="" />
+            </div>
+            @If heroOptions.ShowTypeField Then
+                @<div class="hero-search-field hero-search-type hero-dropdown" id="heroTypeDropdown">
+                    <span class="hero-search-field-label">Type</span>
+                    <button type="button" class="hero-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="hero-dropdown-value">Alle types</span>
+                    </button>
+                    <ul class="hero-dropdown-menu" role="listbox">
+                        <li class="hero-dropdown-option is-all is-selected" data-value="" role="option" aria-selected="true">Alle types</li>
+                        @For Each cat In heroOptions.UnitCategories
+                            @<li class="hero-dropdown-option" data-value="@cat.Key" role="option" aria-selected="false">@cat.Label</li>
+                        Next
+                    </ul>
+                    <input type="hidden" id="heroSearchUnitCategory" value="" />
                 </div>
-
-                <div class="row mt-md">
-                    <div class="col-md-6">
-                        <div class="feature-box feature-box-style-2 appear-animation" data-appear-animation="fadeInLeft" data-appear-animation-delay="300">
-                            <div class="feature-box-icon">
-                                <i class="icon-calendar  icons"></i>
-                            </div>
-                            <div class="feature-box-info">
-                                <h4 class="mb-sm">Planning</h4>
-                                <p class="mb-lg">Een goede uitvoering van het project, een deskundige selectie van aannemers en een strakke coördinatie resulteren in een korte bouwtermijn, wat een win-win situatie is voor u als klant enerzijds en voor ons als projectontwikkelaar anderzijds.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="feature-box feature-box-style-2 appear-animation" data-appear-animation="fadeInLeft" data-appear-animation-delay="300">
-                            <div class="feature-box-icon">
-                                <i class="icon-user icons"></i>
-                            </div>
-                            <div class="feature-box-info">
-                                <h4 class="mb-sm">Eén aanspreekpunt</h4>
-                                <p class="mb-lg">Wij verzorgen de coördinatie tussen u als koper(s), de architect, ingenieur, EPB verslaggever, aannemer en veiligheidscoördinator. Wij begeleiden u bij het maken van de keuzes in de diverse toonzalen.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            End If
+            <button type="submit" class="hero-search-btn" aria-label="Zoeken"><i class="fa fa-search"></i></button>
+        </form>
+    </div>
+    <div class="home-hero-disclaimer" style="display:none;">
+        <p>Door verder te gaan, gaat u akkoord met ons privacybeleid.</p>
+    </div>
+</section>
+<section class="about-section">
+    <div class="container">
+        <div class="about-grid">
+            <div class="about-content">
+                <p class="section-kicker">Wie zijn we</p>
+                <h2 class="about-headline">Vijftien jaar ervaring, één aanspreekpunt.</h2>
+                <p class="about-text">Group LN is een projectontwikkelaar actief in de residentiële sector, met jarenlange ervaring als werfleider en projectleider bij diverse aannemingsbedrijven. Die kennis is vandaag de garantie voor een kwalitatief afgewerkt project — van eerste plan tot sleuteloverdracht.</p>
+                <p class="about-text">We gaan geen enkele uitdaging uit de weg, en werken samen met architecten die uw woonwensen vertalen naar een functioneel en tijdloos geheel.</p>
+                <a class="about-btn" href="@Url.Action("Index","AboutUs")">Meer over Group LN <i class="fa fa-arrow-right"></i></a>
+            </div>
+            <div class="about-media">
+                @* Placeholder — foto/video hier nog te vervangen *@
+                <div class="about-media-placeholder"></div>
             </div>
         </div>
     </div>
-    </section>
+</section>
+
+<section class="troeven-section">
+    <div class="container">
+        <p class="section-kicker">Onze troeven</p>
+        <h2 class="troeven-headline">Wat ons onderscheidt als projectontwikkelaar.</h2>
+        <div class="troeven-divider"></div>
+        <div class="troeven-grid">
+            <div class="troeven-item">
+                <span class="troeven-number">01</span>
+                <h4>Kennis</h4>
+                <p>Jarenlange ervaring van onze zaakvoerders als werfleider en projectleider, vertaald in kwalitatief afgewerkte projecten.</p>
+            </div>
+            <div class="troeven-item">
+                <span class="troeven-number">02</span>
+                <h4>Planning</h4>
+                <p>Deskundige selectie van aannemers en een strakke coördinatie resulteren in een korte, betrouwbare bouwtermijn.</p>
+            </div>
+            <div class="troeven-item">
+                <span class="troeven-number">03</span>
+                <h4>Functioneel &amp; tijdloos</h4>
+                <p>Samenwerking met architecten die woonwensen vertalen in een functioneel en tijdloos geheel met aandacht voor energie-efficiënte materialen.</p>
+            </div>
+            <div class="troeven-item">
+                <span class="troeven-number">04</span>
+                <h4>Eén aanspreekpunt</h4>
+                <p>Wij coördineren tussen u, de architect, ingenieur, EPB-verslaggever, aannemer en veiligheidscoördinator — u heeft één contactpersoon.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
 @section LatestNews
     <h4>Recente <strong>berichten</strong></h4>
@@ -246,6 +148,7 @@ End Section
                 $('a[href="/"]').parent().addClass('active');
             };
             $('a[href="' + this.location.pathname + '"]').parent().addClass('active');
+            $('a.hero-nav-item[href="' + this.location.pathname + '"]').addClass('active');
         });
 
     </script>

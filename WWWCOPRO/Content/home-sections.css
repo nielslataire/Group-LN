@@ -1,0 +1,196 @@
+/* ================================================
+   Homepage — "Wie zijn we" + "Onze troeven" secties
+   ================================================ */
+.section-kicker {
+    margin: 0 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    color: var(--color-primary, #00532D);
+}
+
+/* --- Wie zijn we --- */
+.about-section {
+    padding: 100px 0;
+    background: var(--mist, #F2F5EF);
+}
+
+.about-grid {
+    display: flex;
+    align-items: flex-start;
+    gap: 64px;
+}
+
+.about-content {
+    flex: 1 1 0;
+    max-width: 460px;
+}
+
+.about-headline {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 22px;
+}
+
+.about-text {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0 0 18px;
+}
+
+.about-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 14px 22px;
+    border: 1.5px solid var(--groen-diep, #2C3B2A);
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--groen-diep, #2C3B2A);
+    background: transparent;
+    text-decoration: none !important;
+    transition: background 0.25s ease, color 0.25s ease;
+}
+.about-btn:hover {
+    background: var(--color-primary, #00532D);
+    border-color: var(--color-primary, #00532D);
+    color: #fff;
+}
+
+.about-media {
+    flex: 1 1 0;
+}
+
+.about-media-placeholder {
+    width: 100%;
+    aspect-ratio: 5 / 6;
+    background-image: repeating-linear-gradient(45deg, #e2e7de 0, #e2e7de 12px, #ebefe6 12px, #ebefe6 24px);
+}
+
+/* --- Onze troeven --- */
+.troeven-section {
+    padding: 20px 0 100px;
+    background: var(--mist, #F2F5EF);
+}
+
+.troeven-headline {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0;
+    max-width: 640px;
+}
+
+.troeven-divider {
+    height: 1px;
+    background: var(--border, rgba(0, 83, 45, 0.10));
+    margin: 40px 0 48px;
+}
+
+.troeven-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+}
+
+.troeven-item {
+    padding-left: 28px;
+    border-left: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+}
+.troeven-item:first-child {
+    padding-left: 0;
+    border-left: none;
+}
+
+.troeven-number {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-cta, #C9A96E);
+    margin-bottom: 14px;
+}
+
+.troeven-item h4 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 19px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 10px;
+}
+
+.troeven-item p {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+}
+
+/* --- Responsive --- */
+@media (max-width: 991px) {
+    .about-grid {
+        flex-direction: column-reverse;
+        gap: 32px;
+    }
+    .about-content {
+        max-width: none;
+    }
+    .troeven-grid {
+        grid-template-columns: repeat(2, 1fr);
+        row-gap: 32px;
+    }
+    .troeven-item:nth-child(2) {
+        padding-left: 28px;
+        border-left: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    }
+    .troeven-item:nth-child(3) {
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+        padding-top: 24px;
+    }
+    .troeven-item:nth-child(4) {
+        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+        padding-top: 24px;
+    }
+}
+
+@media (max-width: 767px) {
+    .about-section {
+        padding: 64px 0;
+    }
+    .troeven-section {
+        padding: 0 0 64px;
+    }
+    .about-headline,
+    .troeven-headline {
+        font-size: 26px;
+    }
+    .troeven-grid {
+        grid-template-columns: 1fr;
+        row-gap: 24px;
+    }
+    .troeven-item {
+        padding-left: 0 !important;
+        border-left: none !important;
+    }
+    .troeven-item:nth-child(n+2) {
+        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10)) !important;
+        padding-top: 24px !important;
+    }
+}

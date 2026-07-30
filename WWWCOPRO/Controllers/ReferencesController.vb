@@ -12,6 +12,7 @@
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectByID(id)
             If (response.Success) Then model.Data = response.Values.FirstOrDefault
+            If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
             'sort pictures
             model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
 
@@ -46,6 +47,7 @@
         Dim service = ServiceFactory.GetProjectService
         Dim response = service.GetProjectBySlug(slug)
         If (response.Success) Then model.Data = response.Values.FirstOrDefault
+        If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
         'sort pictures
         model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
 
@@ -59,13 +61,13 @@
         'Architect
         response2 = companyservice.GetCompanyByID(model.Data.Architect.ID)
         If (response.Success) Then model.Architect = response2.Values.FirstOrDefault
-        ViewData("Title") = "Group LN - " & model.Data.Name
+        ViewData("Title") = WWWCOPRO.Extensions.BuildProjectSeoTitle(model.Data.Name, model.Data.Postalcode?.Gemeente)
         Return View("detail", model)
 
 
     End Function
     Function Detail(model As ReferenceDetailModel) As ActionResult
-      
+        If model Is Nothing OrElse model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
 
         Return View(model)
 
