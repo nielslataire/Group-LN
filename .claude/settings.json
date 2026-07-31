@@ -200,7 +200,14 @@
       "Bash(sed -n '/heroPrijsDropdown/,/heroSearchPrice/p' /tmp/home7.html)",
       "Bash(curl -s http://localhost:8099/ -o /tmp/home_verify.html)",
       "Bash(curl -s http://localhost:8099/ -o /tmp/home_verify2.html)",
-      "Bash(curl -s -o /dev/null -w \"home-sections.css status: %{http_code}\\\\n\" http://localhost:8099/Content/home-sections.css)"
+      "Bash(curl -s -o /dev/null -w \"home-sections.css status: %{http_code}\\\\n\" http://localhost:8099/Content/home-sections.css)",
+      "Bash(curl -s http://localhost:8099/ -o /tmp/home_verify3.html)",
+      "Bash(curl -s http://localhost:8099/ -o /tmp/home_verify4.html)",
+      "Bash(sed -n '/application\\\\/ld+json/,/<\\\\/script>/p' /tmp/home_verify4.html)",
+      "Bash(curl -s http://localhost:8099/Content/home-sections.css)",
+      "Bash(curl -s http://localhost:8099/ -o /tmp/home_final.html)",
+      "Bash(sed -n '/additionalProperty/,/^           }/p' /tmp/home_final.html)",
+      "Bash(curl -s \"http://localhost:8099/woonprojecten\" -o /tmp/list.html)"
     ],
     "additionalDirectories": [
       "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",

@@ -5,14 +5,42 @@
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim heroOptions = CType(ViewData("HeroSearchOptions"), WWWCOPRO.HeroSearchOptionsModel)
     If heroOptions Is Nothing Then heroOptions = New WWWCOPRO.HeroSearchOptionsModel()
+
+    ' Troeven: bron voor de zichtbare "Onze troeven"-sectie hieronder.
+    Dim troeven() = {
+        New With {.Number = "01", .Name = "Vakmanschap", .Description = "Onze zaakvoerders stonden zelf jarenlang als werfleider en projectleider op de werf. Die praktijkkennis van elke bouwfase — ruwbouw, technieken, afwerking — stelt ons in staat om de volledige realisatie op ons te nemen, met een oog voor detail dat je alleen opbouwt na jaren ervaring op de werf zelf."},
+        New With {.Number = "02", .Name = "Strakke opvolging", .Description = "Wij selecteren zorgvuldig de juiste vakmensen en bewaken de volledige planning — van eerste spadesteek tot oplevering. U hoeft zelf geen aannemers op te volgen of te coördineren: die verantwoordelijkheid dragen wij, tot in het kleinste detail."},
+        New With {.Number = "03", .Name = "Tijdloos ontwerp", .Description = "Samen met onze architecten vertalen we uw woonwensen naar een functioneel, tijdloos ontwerp. Diezelfde visie bewaken we ook tijdens de uitvoering, tot en met de laatste afwerking en de keuze van energiezuinige materialen — zodat wat op de tekentafel ontstond, exact zo wordt gerealiseerd."},
+        New With {.Number = "04", .Name = "Eén aanspreekpunt", .Description = "Architect, ingenieur, EPB-verslaggever, aannemer, veiligheidscoördinator: wij regisseren ze allemaal, tot in het kleinste detail. U heeft één aanspreekpunt dat het volledige traject bewaakt — van eerste ontwerp tot oplevering."}
+    }
 End Code
+@Code
+    ' JSON-LD additionalProperty opbouwen vanuit dezelfde troeven-array
+    ' die ook de zichtbare "Onze troeven"-sectie voedt (single source of truth).
+    Dim additionalPropertyJson As New System.Text.StringBuilder()
+    For i As Integer = 0 To troeven.Length - 1
+        Dim t = troeven(i)
+        Dim escapedValue As String = t.Description.Replace("\", "\\").Replace(Chr(34), "\" & Chr(34))
+        additionalPropertyJson.Append("{""@@type"":""PropertyValue"",""name"":""" & t.Name & """,""value"":""" & escapedValue & """}")
+        If i < troeven.Length - 1 Then additionalPropertyJson.Append(",")
+    Next
+End Code
+
+<script type="application/ld+json">
+{
+  "@@context": "https://schema.org",
+  "@@type": "Organization",
+  "@@id": "https://www.groupln.be/#organization",
+  "additionalProperty": [@Html.Raw(additionalPropertyJson.ToString())]
+}
+</script>
 @section PageStyle
     <link rel="stylesheet" href="~/Content/home-hero.css" />
     <link rel="stylesheet" href="~/Content/home-sections.css" />
 End Section
 
 <section id="homeHero" class="home-hero">
-    <video class="home-hero-video" autoplay muted loop playsinline preload="auto" poster=""@Url.Content("~/Content/video/hero-poster.jpg")">
+    <video class="home-hero-video" autoplay muted loop playsinline preload="auto" poster="" @Url.Content("~/Content/video/hero-poster.jpg") ">
         <source src="@Url.Content("~/Content/video/hero.webm")" type="video/webm">
         <source src="@Url.Content("~/Content/video/hero.mp4")" type="video/mp4">
     </video>
@@ -84,9 +112,11 @@ End Section
         <div class="about-grid">
             <div class="about-content">
                 <p class="section-kicker">Wie zijn we</p>
-                <h2 class="about-headline">Vijftien jaar ervaring, één aanspreekpunt.</h2>
-                <p class="about-text">Group LN is een projectontwikkelaar actief in de residentiële sector, met jarenlange ervaring als werfleider en projectleider bij diverse aannemingsbedrijven. Die kennis is vandaag de garantie voor een kwalitatief afgewerkt project — van eerste plan tot sleuteloverdracht.</p>
-                <p class="about-text">We gaan geen enkele uitdaging uit de weg, en werken samen met architecten die uw woonwensen vertalen naar een functioneel en tijdloos geheel.</p>
+                <h2 class="about-headline">@(DateTime.Now.Year - 1999) jaar ervaring, één aanspreekpunt.</h2>
+                <p class="about-text">Group LN bestaat 27 jaar als projectontwikkelaar in de residentiële sector.</p>
+                <p class="about-text">Onze zaakvoerders brachten bij de oprichting al jarenlange ervaring mee als werfleider en projectleider bij diverse aannemingsbedrijven — ervaring die sindsdien alleen maar is gegroeid.</p>
+                <p class="about-text">Die combinatie van bedrijfscontinuïteit en praktijkkennis is vandaag de garantie voor een kwalitatief afgewerkt project, van eerste ontwerp tot oplevering.</p>
+                <p class="about-text">Elk project is anders. Daarom werken we nauw samen met architecten om uw woonwensen te vertalen naar een ontwerp dat vandaag functioneel is, en morgen nog steeds klopt.</p>
                 <a class="about-btn" href="@Url.Action("Index","AboutUs")">Meer over Group LN <i class="fa fa-arrow-right"></i></a>
             </div>
             <div class="about-media">
@@ -100,29 +130,16 @@ End Section
 <section class="troeven-section">
     <div class="container">
         <p class="section-kicker">Onze troeven</p>
-        <h2 class="troeven-headline">Wat ons onderscheidt als projectontwikkelaar.</h2>
+        <h2 class="troeven-headline">Eén partner, van eerste ontwerp tot laatste afwerkingsdetail.</h2>
         <div class="troeven-divider"></div>
         <div class="troeven-grid">
-            <div class="troeven-item">
-                <span class="troeven-number">01</span>
-                <h4>Kennis</h4>
-                <p>Jarenlange ervaring van onze zaakvoerders als werfleider en projectleider, vertaald in kwalitatief afgewerkte projecten.</p>
-            </div>
-            <div class="troeven-item">
-                <span class="troeven-number">02</span>
-                <h4>Planning</h4>
-                <p>Deskundige selectie van aannemers en een strakke coördinatie resulteren in een korte, betrouwbare bouwtermijn.</p>
-            </div>
-            <div class="troeven-item">
-                <span class="troeven-number">03</span>
-                <h4>Functioneel &amp; tijdloos</h4>
-                <p>Samenwerking met architecten die woonwensen vertalen in een functioneel en tijdloos geheel met aandacht voor energie-efficiënte materialen.</p>
-            </div>
-            <div class="troeven-item">
-                <span class="troeven-number">04</span>
-                <h4>Eén aanspreekpunt</h4>
-                <p>Wij coördineren tussen u, de architect, ingenieur, EPB-verslaggever, aannemer en veiligheidscoördinator — u heeft één contactpersoon.</p>
-            </div>
+            @For Each t In troeven
+                @<div class="troeven-item">
+                    <span class="troeven-number">@t.Number</span>
+                    <h3>@t.Name</h3>
+                    <p>@t.Description</p>
+                </div>
+            Next
         </div>
     </div>
 </section>
@@ -153,4 +170,3 @@ End Section
 
     </script>
 End section
-   

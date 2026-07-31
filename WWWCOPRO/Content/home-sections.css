@@ -19,7 +19,7 @@
 
 .about-grid {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 64px;
 }
 
@@ -125,12 +125,14 @@
     margin-bottom: 14px;
 }
 
-.troeven-item h4 {
+.troeven-item h3 {
     font-family: var(--font-serif);
     font-weight: 600;
     font-size: 19px;
     color: var(--groen-diep, #2C3B2A);
     margin: 0 0 10px;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 .troeven-item p {
@@ -145,6 +147,7 @@
 @media (max-width: 991px) {
     .about-grid {
         flex-direction: column-reverse;
+        align-items: stretch;
         gap: 32px;
     }
     .about-content {

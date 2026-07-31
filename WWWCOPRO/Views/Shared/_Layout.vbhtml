@@ -46,63 +46,64 @@ End Code
         @<meta name="twitter:image" content="@ViewData("twitterimage")" />
     End If
     <link rel="canonical" href="@_canonical" />
-<script type="application/ld+json">
-           {
-             "@@context": "https://schema.org",
-             "@@type": [
-               "Organization",
-               "LocalBusiness"
-             ],
-             "name": "Group LN",
-             "url": "https://www.groupln.be/",
-             "logo": "https://www.groupln.be/Content/img/logoimg.jpg",
-             "image": "https://www.groupln.be/Content/img/logoimg.jpg",
-             "telephone": "+32 9 216 49 50",
-             "email": "info@groupln.be",
-             "address": {
-               "@@type": "PostalAddress",
-               "streetAddress": "Klaverdries 53",
-               "postalCode": "9031",
-               "addressLocality": "Drongen",
-               "addressRegion": "Oost-Vlaanderen",
-               "addressCountry": {
-                 "@@type": "Country",
-                 "name": "BE"
+    <script type="application/ld+json">
+               {
+                 "@@id": "https://www.groupln.be/#organization",
+                 "@@context": "https://schema.org",
+                 "@@type": [
+                   "Organization",
+                   "LocalBusiness"
+                 ],
+                 "name": "Group LN",
+                 "url": "https://www.groupln.be/",
+                 "logo": "https://www.groupln.be/Content/img/logoimg.jpg",
+                 "image": "https://www.groupln.be/Content/img/logoimg.jpg",
+                 "telephone": "+32 9 216 49 50",
+                 "email": "info@groupln.be",
+                 "address": {
+                   "@@type": "PostalAddress",
+                   "streetAddress": "Klaverdries 53",
+                   "postalCode": "9031",
+                   "addressLocality": "Drongen",
+                   "addressRegion": "Oost-Vlaanderen",
+                   "addressCountry": {
+                     "@@type": "Country",
+                     "name": "BE"
+                   }
+                 },
+                 "areaServed": [
+                   {
+                     "@@type": "AdministrativeArea",
+                     "name": "Oost-Vlaanderen"
+                   },
+                   {
+                     "@@type": "AdministrativeArea",
+                     "name": "West-Vlaanderen"
+                   },
+                   {
+                      "@@type": "AdministrativeArea",
+                      "name": "Antwerpen"
+                    }
+                 ],
+                 "contactPoint": {
+                   "@@type": "ContactPoint",
+                   "telephone": "+32 9 216 49 50",
+                   "email": "info@groupln.be",
+                   "contactType": "sales",
+                   "areaServed": "BE",
+                   "availableLanguage": [
+                     "nl",
+                     "fr",
+                     "en"
+                   ]
+                 },
+                 "sameAs": [
+                   "https://www.facebook.com/GROUPLN",
+                   "https://www.linkedin.com/company/group-ln",
+                   "https://www.instagram.com/group.ln/"
+                 ]
                }
-             },
-             "areaServed": [
-               {
-                 "@@type": "AdministrativeArea",
-                 "name": "Oost-Vlaanderen"
-               },
-               {
-                 "@@type": "AdministrativeArea",
-                 "name": "West-Vlaanderen"
-               },
-               {
-                  "@@type": "AdministrativeArea",
-                  "name": "Antwerpen"
-                }
-             ],
-             "contactPoint": {
-               "@@type": "ContactPoint",
-               "telephone": "+32 9 216 49 50",
-               "email": "info@groupln.be",
-               "contactType": "sales",
-               "areaServed": "BE",
-               "availableLanguage": [
-                 "nl",
-                 "fr",
-                 "en"
-               ]
-             },
-             "sameAs": [
-               "https://www.facebook.com/GROUPLN",
-               "https://www.linkedin.com/company/group-ln",
-               "https://www.instagram.com/group.ln/"
-             ]
-           }
-</script>
+    </script>
     <!-- Web Fonts  -->
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" type="text/css">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>

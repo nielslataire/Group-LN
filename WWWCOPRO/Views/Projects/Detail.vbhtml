@@ -383,7 +383,7 @@ End Section
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If Not isSold Then
+                                                            @If isAvailable Then
                                                                 @If heeftOpties Then
                                                                     Dim aptMinOptPrice = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
                                                                     @<text>
@@ -394,7 +394,7 @@ End Section
                                                                     @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                                 End If
                                                             Else
-                                                                @<span class="prijs-verkocht">—</span>
+                                                                @<span class="prijs-verborgen">—</span>
                                                             End If
                                                         </td>
                                                         <td class="center opties-plan-cel">
@@ -545,7 +545,7 @@ End Section
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If Not isSold Then
+                                                            @If isAvailable Then
                                                                 @If heeftOpties Then
                                                                     Dim wonMinOptPrice = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
                                                                     @<text>
@@ -556,7 +556,7 @@ End Section
                                                                     @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                                 End If
                                                             Else
-                                                                @<span class="prijs-verkocht">—</span>
+                                                                @<span class="prijs-verborgen">—</span>
                                                             End If
                                                         </td>
                                                         <td class="center opties-plan-cel">
@@ -683,10 +683,10 @@ End Section
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If Not isSold Then
+                                                            @If isAvailable Then
                                                                 @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                             Else
-                                                                @<span class="prijs-verkocht">—</span>
+                                                                @<span class="prijs-verborgen">—</span>
                                                             End If
                                                         </td>
                                                         <td class="center">

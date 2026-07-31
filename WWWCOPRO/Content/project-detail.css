@@ -587,7 +587,8 @@
     color: var(--color-primary, #00532D);
     letter-spacing: 0.01em;
 }
-.prijs-verkocht {
+.prijs-verkocht,
+.prijs-verborgen {
     color: var(--tekst-sub, #5a6b58);
 }
 
