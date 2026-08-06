@@ -199,7 +199,7 @@
 					}
 					@if (canSeeInstellingen)
 				{
-					<li class="@(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" || currentController == "BlogBeheer" ? "nav-active" : string.Empty)">
+					<li class="@(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" || currentController == "BlogBeheer" || currentController == "HomeHeroProject" ? "nav-active" : string.Empty)">
 						<a class="main-nav-tile" href="@Url.Action("Index", "Instellingen")">
 							<i class="bx bx-cog" aria-hidden="true"></i>
 							<span class="main-nav-label">Instellingen</span>

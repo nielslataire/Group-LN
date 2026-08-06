@@ -59,6 +59,30 @@ End Section
             max-width: 900px !important;
         }
 
+        @@media (max-width: 767px) {
+            .mfp-container {
+                padding: 0 !important;
+            }
+
+            .modal-block {
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+            .contact-modal-container {
+                border-radius: 0 !important;
+                min-height: 100vh;
+                min-height: 100dvh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .contact-modal-body {
+                flex: 1 1 auto;
+                overflow-y: auto;
+            }
+        }
     </style>
 End Section
 
@@ -1159,17 +1183,4 @@ End Section
 
 
     </script>
-End Section
-@section LatestNews
-    <h4>Recente <strong>berichten</strong></h4>
-
-    <ul class="nav nav-list mb-xl">
-        @For Each news In ViewData("LatestNews")
-            @<text>
-                <li><a title="@news.news.TitleNL" href="@Url.Action("News", "Projects", New With {.slug = news.projectslug})">@news.news.TitleNL</a></li>
-            </text>
-
-        Next
-
-    </ul>
 End Section

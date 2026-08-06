@@ -33,7 +33,9 @@ public class PermissionResolver : IPermissionResolver
         {
             if (string.Equals(action, "Weather", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.ProjectsWeatherDelay;
             if (action?.Contains("Document", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsDocuments;
-            if (action?.Contains("Photo", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsPhotos;
+            if (action?.Contains("Photo", StringComparison.OrdinalIgnoreCase) == true
+                || action?.Contains("Media", StringComparison.OrdinalIgnoreCase) == true
+                || action?.Contains("Image", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsPhotos;
             if (action?.Contains("News", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsNews;
             if (action?.Contains("Unit", StringComparison.OrdinalIgnoreCase) == true || action?.Contains("Eenheid", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsUnits;
             if (action?.Contains("Issue", StringComparison.OrdinalIgnoreCase) == true || action?.Contains("Punt", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsIssues;

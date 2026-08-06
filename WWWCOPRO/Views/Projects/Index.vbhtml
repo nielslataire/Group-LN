@@ -1,4 +1,4 @@
-@ModelType WWWCOPRO.ProjectModel
+﻿@ModelType WWWCOPRO.ProjectModel
 @Imports wwwcopro.extensions
 @Imports System.Globalization
 @Code
@@ -561,7 +561,7 @@ end section
                 <div class="cta-kaart-label">Grondpositie</div>
                 <div class="cta-kaart-titel">Projectgrond<br />te koop?</div>
                 <p class="cta-kaart-tekst">Heeft u een perceel of pand te koop? Wij bekijken graag de mogelijkheden samen met u.</p>
-                <a href="/Contact" class="cta-kaart-btn">
+                <a href="@Url.Action("Index", "Contact")" class="cta-kaart-btn">
                     Neem contact op
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
@@ -570,7 +570,7 @@ end section
                 <div class="cta-kaart-label">Meer weten?</div>
                 <div class="cta-kaart-titel">Informatie<br />aanvragen</div>
                 <p class="cta-kaart-tekst">Interesse in een van onze projecten? Wij beantwoorden al uw vragen.</p>
-                <a href="/Contact" class="cta-kaart-btn">
+                <a href="@Url.Action("Index", "Contact")" class="cta-kaart-btn">
                     Stuur een bericht
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
@@ -582,7 +582,7 @@ end section
                 <div class="cta-kaart-label">Grondpositie</div>
                 <div class="cta-kaart-titel">Projectgrond<br />te koop?</div>
                 <p class="cta-kaart-tekst">Heeft u een perceel of pand te koop? Wij bekijken graag de mogelijkheden samen met u.</p>
-                <a href="/Contact" class="cta-kaart-btn">
+                <a href="@Url.Action("Index", "Contact")" class="cta-kaart-btn">
                     Neem contact op
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
@@ -616,13 +616,3 @@ end section
     </script>
 End section
 
-@section LatestNews
-    <h4>Recente <strong>berichten</strong></h4>
-    <ul class="nav nav-list mb-xl">
-        @For Each news In ViewData("LatestNews")
-            @<text>
-                <li><a title="@news.news.TitleNL" href="@Url.Action("News", "Projects", New With {.slug = news.projectslug})">@news.news.TitleNL</a></li>
-            </text>
-        Next
-    </ul>
-End Section

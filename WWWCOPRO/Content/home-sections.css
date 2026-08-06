@@ -11,6 +11,61 @@
     color: var(--color-primary, #00532D);
 }
 
+/* --- CTA: eigen project realiseren --- */
+.cta-section {
+    padding: 100px 0;
+    background: var(--mist, #F2F5EF);
+    text-align: center;
+}
+
+.cta-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 16px;
+}
+
+.cta-text {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    max-width: 560px;
+    margin: 0 auto 32px;
+}
+
+.cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 28px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-primary, #00532D);
+    text-decoration: none !important;
+    transition: background 0.25s ease;
+}
+.cta-btn:hover {
+    background: var(--color-primary-hover, #006638);
+    color: #fff;
+}
+
+@media (max-width: 767px) {
+    .cta-section {
+        padding: 64px 0;
+    }
+    .cta-title {
+        font-size: 26px;
+    }
+}
+
 /* --- Wie zijn we --- */
 .about-section {
     padding: 100px 0;
@@ -73,10 +128,11 @@
     flex: 1 1 0;
 }
 
-.about-media-placeholder {
+.about-media-foto {
+    display: block;
     width: 100%;
     aspect-ratio: 5 / 6;
-    background-image: repeating-linear-gradient(45deg, #e2e7de 0, #e2e7de 12px, #ebefe6 12px, #ebefe6 24px);
+    object-fit: cover;
 }
 
 /* --- Onze troeven --- */
@@ -176,6 +232,9 @@
 @media (max-width: 767px) {
     .about-section {
         padding: 64px 0;
+    }
+    .about-grid {
+        flex-direction: column;
     }
     .troeven-section {
         padding: 0 0 64px;

@@ -95,6 +95,14 @@ builder.Services.AddControllersWithViews(options =>
     })
 .AddSessionStateTempDataProvider();
 
+// JS fetch()-aanroepen sturen het antiforgery-token via deze header (i.p.v. een form field,
+// want de body is JSON). Zonder HeaderName kijkt [ValidateAntiForgeryToken] alleen naar form
+// fields en falen alle AJAX POSTs met JSON body altijd, ongeacht rechten.
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "RequestVerificationToken";
+});
+
 
 
 builder.Services.AddSession(options =>
@@ -160,6 +168,7 @@ builder.Services.AddScoped<IInvoiceQueryService, InvoiceQueryService>();
 builder.Services.AddScoped<ICompanyQueryService, CompanyQueryService>();
 builder.Services.AddScoped<IIssuerCompanyService, IssuerCompanyService>();
 builder.Services.AddScoped<IIssuerBankAccountService, IssuerBankAccountService>();
+builder.Services.AddScoped<IHomeHeroProjectService, HomeHeroProjectService>();
 builder.Services.AddScoped<IIssuerSeriesService, IssuerSeriesService>();
 builder.Services.AddScoped<IPartyLookupService, PartyLookupService>();
 builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();

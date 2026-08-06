@@ -1,5 +1,16 @@
 $(function () {
 
+    // Hero scroll-cue: enkel deze klik smooth scrollen (geen globale scroll-behavior:smooth,
+    // dat maakt normaal scrollen op de zware home-hero merkbaar traag)
+    $('.hero-scroll-cue').on('click', function (e) {
+        var targetId = $(this).attr('href');
+        var $target = $(targetId);
+        if ($target.length) {
+            e.preventDefault();
+            $target.get(0).scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+
     // Hamburger nav-overlay toggle (site-breed, markup zit in _Layout.vbhtml)
     var $navOverlay = $('#navOverlay');
 

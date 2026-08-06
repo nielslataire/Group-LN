@@ -25,7 +25,6 @@ Namespace Controllers
                         Optional PriceMax As Decimal? = Nothing,
                         Optional UnitCategory As String = Nothing) As ActionResult
             If Not id = 0 Then
-                ViewData("LatestNews") = GetLatestNews(4)
                 Dim model As New ProjectDetailModel
                 Dim service = ServiceFactory.GetProjectService
                 Dim response = service.GetProjectByID(id)
@@ -69,7 +68,6 @@ Namespace Controllers
                 SetProjectSeoViewData(model.Data)
                 Return View("Detail", model)
             Else
-                ViewData("LatestNews") = GetLatestNews(4)
                 If Type = ProjectType.Woonproject Then
                     ViewData("Title") = "Woonprojecten | Group LN"
                     ViewBag.Metatitle = "Woonprojecten | Group LN"
@@ -161,7 +159,6 @@ Namespace Controllers
         <Route("woonprojecten/{slug}", Name:="ProjectBySlug")>
         Function ProjectBySlug(slug As String) As ActionResult
 
-            ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ProjectDetailModel
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
@@ -1006,7 +1003,6 @@ Namespace Controllers
         <Route("Projects/Photos/{slug}", Name:="ProjectPhotosBySlug")>
         Function Photos(slug As String) As ActionResult
 
-            ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ProjectPhotosModel
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetPicturesByProjectSlug(slug)
@@ -1026,7 +1022,6 @@ Namespace Controllers
         End Function
         <Route("Projects/News/{slug}", Name:="ProjectNewsBySlug")>
         Function News(slug As String, Optional newsid As Integer = 0) As ActionResult
-            ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ProjectNewsModel
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetNewsByProjectSlug(slug)
@@ -1058,7 +1053,6 @@ Namespace Controllers
         End Function
         <Route("Projects/{id}/News", Name:="ProjectNewsById")>
         Function News(id As Integer, Optional newsid As Integer = 0) As ActionResult
-            ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ProjectNewsModel
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetNewsByProjectId(id)
@@ -1090,22 +1084,6 @@ Namespace Controllers
         End Function
 
 
-        Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
-            Dim service = ServiceFactory.GetProjectService
-            Dim response = service.GetLatestNews(4)
-            Dim news As New List(Of LatestNews)
-            If (response.Success) Then
-                For Each value In response.Values
-                    Dim newsitem As New LatestNews
-                    newsitem.News = value
-                    newsitem.ProjectCity = service.GetProjectCityById(value.ProjectId)
-                    newsitem.ProjectName = service.GetProjectNameById(value.ProjectId)
-                    newsitem.ProjectSlug = service.GetProjectSlugById(value.ProjectId)
-                    news.Add(newsitem)
-                Next
-            End If
-            Return news
-        End Function
         Private Function GetCoordinationOnlyProjectIds() As HashSet(Of Integer)
             Dim ids As New HashSet(Of Integer)
             Try
@@ -1182,7 +1160,6 @@ Namespace Controllers
         <Route("Projects/Inschrijving/{slug}", Name:="ProjectInschrijvingBySlug")>
         <HttpGet>
         Function Inschrijving(slug As String) As ActionResult
-            ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ProjectDetailModel
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)

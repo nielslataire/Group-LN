@@ -1,132 +1,134 @@
 ﻿Imports Postal
 Imports BO
+Imports System.Configuration
 Imports System.IO
 Imports System.Linq
+Imports System.Text.RegularExpressions
 Imports System.Web.Hosting
+Imports System.Web.Mvc
 Public Class ContactController
     Inherits System.Web.Mvc.Controller
 
-    'Private Const ReCaptchaActionName As String = "contact"
-    'Private Const ReCaptchaMinimumScore As Double = 0.5
+    Private Const ReCaptchaActionName As String = "contact"
+    Private Const ReCaptchaMinimumScore As Double = 0.5
+
+    ' Herkent URL's/domeinnamen in vrije-tekstvelden — de meeste spam-bots proberen een
+    ' promotionele link te slijten via naam- of berichtvelden (bv. "diarshop.com").
+    Private Shared ReadOnly SpamUrlPattern As New Regex(
+        "https?://|www\.|\b[a-z0-9-]+\.(com|net|org|be|nl|shop|info|xyz|biz|club|online|top|site)\b",
+        RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+
+    Private Shared ReadOnly OnderwerpOpties As List(Of SelectListItem) = New List(Of SelectListItem) From {
+        New SelectListItem With {.Text = "Algemene vraag", .Value = "Algemene vraag"},
+        New SelectListItem With {.Text = "Vraag over een project", .Value = "Vraag over een project"},
+        New SelectListItem With {.Text = "Prijsofferte aanvragen", .Value = "Prijsofferte aanvragen"},
+        New SelectListItem With {.Text = "Grond of pand aanbieden", .Value = "Grond of pand aanbieden"},
+        New SelectListItem With {.Text = "Klacht of opmerking", .Value = "Klacht of opmerking"},
+        New SelectListItem With {.Text = "Andere", .Value = "Andere"}
+    }
 
     ' GET: /Contact
     <Route("Contact")>
     Function Index() As ActionResult
         Dim model As New MailModel
-        'ApplyRecaptchaSettings()
-        ViewData("LatestNews") = GetLatestNews(4)
+        ApplyRecaptchaSettings()
+        ViewBag.OnderwerpOpties = OnderwerpOpties
         Return View(model)
     End Function
     <HttpPost>
     <Route("Contact")>
     Function Index(model As MailModel) As ActionResult
-        'ApplyRecaptchaSettings()
-        ViewData("LatestNews") = GetLatestNews(4)
+        ApplyRecaptchaSettings()
+        ViewBag.OnderwerpOpties = OnderwerpOpties
         Return View(model)
     End Function
     <Route("Contact/Send")>
     <HttpPost>
     <ValidateInput(False)>
     Function Send(model As MailModel) As ActionResult
-        Dim errors As New ArrayList
-        'ApplyRecaptchaSettings()
-        ViewData("LatestNews") = GetLatestNews(4)
-        'if not valid then there where errors (required property not filled in or such) so return to show them
-        'For Each key In ModelState.Keys
-        '    If ModelState(key).Errors.Count > 0 Then
-        '        errors(key) = ModelState(key).Errors()
-        '    End If
-        'Next
+        ApplyRecaptchaSettings()
+        ViewBag.OnderwerpOpties = OnderwerpOpties
 
-        'Dim captchaResponse As String = Request.Form("g-recaptcha-response")
-        'Dim actionFromForm As String = Request.Form("recaptcha-action")
-        'Dim result As ReCaptchaValidationResult = ReCaptchaValidator.ValidateV3(captchaResponse, actionFromForm, ReCaptchaMinimumScore)
-        'If Not result.Success Then
-        '    If result.ErrorCodes IsNot Nothing AndAlso result.ErrorCodes.Count > 0 Then
-        '        For Each err As String In result.ErrorCodes
-        '            ModelState.AddModelError("", err)
-        '        Next
-        '    Else
-        '        ModelState.AddModelError("", "Invalid reCAPTCHA response")
-        '    End If
-        '    Return View("index", model)
-        'End If
+        If Not model.PrivacyAkkoord Then
+            ModelState.AddModelError("PrivacyAkkoord", "Gelieve akkoord te gaan met het privacybeleid.")
+        End If
+
         If (Not ModelState.IsValid) Then Return View("index", model)
-        If (ModelState.IsValid) Then
-            Dim externalMailStatus As String = "Niet verzonden"
-            Dim internalMailStatus As String = "Niet verzonden"
-            Dim externalMailSent As Boolean = False
 
-            Try
-                Dim email As Object = New Email("ContactMail")
-                email.[To] = model.EmailTo
-                email.ContactName = model.ContactName
-                email.Title = model.Title
-                email.Message = model.Message
-                email.Send()
-                externalMailStatus = "Verzonden"
-                externalMailSent = True
-            Catch ex As Exception
-                LogError("CONTACT: MAIL TO CUSTOMER FAILED", ex)
-                externalMailStatus = "Mislukt"
-            End Try
+        ' Honeypot: verborgen veld dat enkel bots invullen
+        Dim isHoneypotTriggered = Not String.IsNullOrEmpty(Request.Form("website_url"))
 
-            Try
-                Dim internalemail As Object = New Email("InternalMail")
-                internalemail.[To] = model.EmailTo
-                internalemail.ContactName = model.ContactName
-                internalemail.Title = model.Title
-                internalemail.Message = model.Message
-                internalemail.Phone = model.Phone
-                internalemail.Send()
-                internalMailStatus = "Verzonden"
-            Catch ex As Exception
-                LogError("CONTACT: INTERNAL MAIL FAILED", ex)
-                internalMailStatus = "Mislukt"
-            End Try
+        ' reCAPTCHA v3: onzichtbare score-gebaseerde controle
+        Dim captchaResponse As String = Request.Form("g-recaptcha-response")
+        Dim captchaResult = ReCaptchaValidator.ValidateV3(captchaResponse, ReCaptchaActionName, ReCaptchaMinimumScore)
 
-            Dim contactRequest As New ContactRequestBO With {
-                .Fullname = model.ContactName,
-                .Email = model.EmailTo,
-                .Phone = model.Phone,
-                .Subject = model.Title,
-                .Question = model.Message,
-                .RequestType = "Contact",
-                .Origin = ResolveOrigin("ContactController.Send"),
-                .SourceSite = "Group LN",
-                .ExternalMailStatus = externalMailStatus,
-                .InternalMailStatus = internalMailStatus
-            }
-            SaveContactRequest(contactRequest)
+        ' Inhoudsfilter: URL's/domeinen in naam- of berichtvelden zijn zo goed als altijd spam
+        Dim bevatVerdachteLink = SpamUrlPattern.IsMatch(model.Voornaam & " " & model.Achternaam & " " & model.Title & " " & model.Message)
 
-            If Not externalMailSent Then
-                AddMessage("error", "Uw bericht kon niet worden verstuurd. Probeer het opnieuw.", "Fout!")
-                Return View("index", model)
-            End If
+        If isHoneypotTriggered OrElse Not captchaResult.Success OrElse bevatVerdachteLink Then
+            LogError("CONTACT: SPAM GEWEERD | honeypot=" & isHoneypotTriggered & " | captcha=" & captchaResult.Success & " | verdachteLink=" & bevatVerdachteLink & " | email=" & model.EmailTo)
+            ' Bewust geen foutmelding: een generiek succesbericht ontmoedigt bots niet om te blijven proberen
+            ViewBag.SubmitSuccess = True
+            ViewBag.SubmittedNaam = model.Voornaam
+            ViewBag.SubmittedEmail = model.EmailTo
+            Return View("index", New MailModel())
+        End If
 
-            model = New MailModel()
-            AddMessage("success", "Uw bericht is verstuurd naar Group LN, wij nemen zo snel mogelijk contact met u op.", "Geslaagd!")
-            Return View("index", model)
-        Else
+        Dim externalMailStatus As String = "Niet verzonden"
+        Dim internalMailStatus As String = "Niet verzonden"
+        Dim externalMailSent As Boolean = False
+
+        Try
+            Dim email As Object = New Email("ContactMail")
+            email.[To] = model.EmailTo
+            email.ContactName = model.FullName
+            email.Title = model.Title
+            email.Message = model.Message
+            email.Send()
+            externalMailStatus = "Verzonden"
+            externalMailSent = True
+        Catch ex As Exception
+            LogError("CONTACT: MAIL TO CUSTOMER FAILED", ex)
+            externalMailStatus = "Mislukt"
+        End Try
+
+        Try
+            Dim internalemail As Object = New Email("InternalMail")
+            internalemail.[To] = model.EmailTo
+            internalemail.ContactName = model.FullName
+            internalemail.Title = model.Title
+            internalemail.Message = model.Message
+            internalemail.Phone = model.Phone
+            internalemail.Send()
+            internalMailStatus = "Verzonden"
+        Catch ex As Exception
+            LogError("CONTACT: INTERNAL MAIL FAILED", ex)
+            internalMailStatus = "Mislukt"
+        End Try
+
+        Dim contactRequest As New ContactRequestBO With {
+            .Fullname = model.FullName,
+            .Email = model.EmailTo,
+            .Phone = model.Phone,
+            .Subject = model.Title,
+            .Question = model.Message,
+            .RequestType = "Contact",
+            .Origin = ResolveOrigin("ContactController.Send"),
+            .SourceSite = "Group LN",
+            .ExternalMailStatus = externalMailStatus,
+            .InternalMailStatus = internalMailStatus
+        }
+        SaveContactRequest(contactRequest)
+
+        If Not externalMailSent Then
+            AddMessage("error", "Uw bericht kon niet worden verstuurd. Probeer het opnieuw.", "Fout!")
             Return View("index", model)
         End If
-    End Function
 
-    Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
-        Dim service = ServiceFactory.GetProjectService
-        Dim response = service.GetLatestNews(4)
-        Dim news As New List(Of LatestNews)
-        If (response.Success) Then
-            For Each value In response.Values
-                Dim newsitem As New LatestNews
-                newsitem.News = value
-                newsitem.ProjectCity = service.GetProjectCityById(value.ProjectId)
-                newsitem.ProjectName = service.GetProjectNameById(value.ProjectId)
-                newsitem.ProjectSlug = service.GetProjectSlugById(value.ProjectId)
-                news.Add(newsitem)
-            Next
-        End If
-        Return news
+        ViewBag.SubmitSuccess = True
+        ViewBag.SubmittedNaam = model.Voornaam
+        ViewBag.SubmittedEmail = model.EmailTo
+        Return View("index", New MailModel())
     End Function
 
     Public Sub AddMessage(ByVal messagetype As String, ByVal message As String, ByVal messagetitle As String)
@@ -193,9 +195,9 @@ Public Class ContactController
         End Try
     End Sub
 
-    'Private Sub ApplyRecaptchaSettings()
-    '    ViewBag.ReCaptchaSiteKey = ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")
-    '    ViewBag.ReCaptchaAction = ReCaptchaActionName
-    'End Sub
+    Private Sub ApplyRecaptchaSettings()
+        ViewBag.ReCaptchaSiteKey = ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")
+        ViewBag.ReCaptchaAction = ReCaptchaActionName
+    End Sub
 
 End Class

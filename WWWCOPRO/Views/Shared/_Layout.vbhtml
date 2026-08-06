@@ -106,10 +106,12 @@ End Code
     </script>
     <!-- Web Fonts  -->
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" type="text/css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     @Styles.Render("~/Vendor/css")
     @Styles.Render("~/Content/theme")
     @Styles.Render("~/Content/skin")
+    <link rel="stylesheet" href="@Url.Content("~/Content/footer.css")" />
     @RenderSection("PageMeta", required:=False)
     @RenderSection("PageStyle", required:=False)
 
@@ -225,65 +227,68 @@ End Code
         <div role="main" class="main">
             @RenderBody()
         </div>
-        <footer id="footer" class="dark footer-primary">
+        <footer id="footer" class="site-footer">
             <div class="container">
-                <div class="row">
-                    <div class="footer-ribbon">
-                        <span>Volg ons</span>
+                <p class="footer-quote">Bouwen aan plekken waar mensen graag thuiskomen.</p>
+            </div>
+            <div class="container">
+                <div class="footer-divider"></div>
+            </div>
+            <div class="container">
+                <div class="footer-columns">
+                    <div class="footer-col footer-col-brand">
+                        <a href="@Url.Action("Index", "Home")" class="footer-logo-brand">
+                            <img alt="Group LN" class="footer-brand-img" src="@Url.Content("~/Content/img/logo.png")">
+                            <span class="footer-brand-text">
+                                <span class="footer-brand-name">GROUP LN</span>
+                                <span class="footer-brand-sub">Projectontwikkeling</span>
+                            </span>
+                        </a>
+                        <ul class="footer-social">
+                            <li><a href="https://www.instagram.com/group.ln/" target="_blank" rel="noopener" aria-label="Instagram"><i class="bx bxl-instagram"></i></a></li>
+                            <li><a href="https://www.linkedin.com/company/group-ln" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bx bxl-linkedin"></i></a></li>
+                            <li><a href="https://www.facebook.com/GROUPLN" target="_blank" rel="noopener" aria-label="Facebook"><i class="bx bxl-facebook"></i></a></li>
+                            <li><a href="@("https://www.tiktok.com/@groupln_")" target="_blank" rel="noopener" aria-label="TikTok"><i class="bx bxl-tiktok"></i></a></li>
+                            <li><a href="@("https://www.youtube.com/@Group_LN")" target="_blank" rel="noopener" aria-label="YouTube"><i class="bx bxl-youtube"></i></a></li>
+                        </ul>
                     </div>
-                    @*<div class="col-md-3">
-                            <div class="newsletter">
-                                @Html.Partial("Newsletter")
-
-                            </div>
-                            @RenderSection("LatestPictures", False)
-
-                        </div>*@
-                    <div class="col-md-4">
-                        @RenderSection("LatestNews", False)
-                        @*<h4>Laaste Facebook Posts</h4>
-                            <div id="tweet" class="twitter" data-plugin-tweets data-plugin-options='{"username": "", "count": 2}'>
-                                <p>Please wait...</p>
-                            </div>*@
+                    <div class="footer-col footer-col-projecten">
+                        <h4 class="footer-col-title">Projecten</h4>
+                        <ul class="footer-links">
+                            <li><a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">Woonprojecten</a></li>
+                            <li><a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">Commercieel</a></li>
+                            <li><a href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">Realisaties</a></li>
+                        </ul>
                     </div>
-                    <div class="col-md-4">
-                        <div class="contact-details">
-                            <h4><strong>Contacteer</strong> Ons</h4>
-                            <ul class="contact">
-                                <li><p><i class="fa fa-map-marker"></i> <strong>Adres:</strong> Klaverdries 53, 9031 Drongen, België</p></li>
-                                <li><p><i class="fa fa-phone"></i> <strong>Telefoon:</strong> +32 (0)9 216 49 50</p></li>
-                                <li><p><i class="fa fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@groupln.be">info@groupln.be</a></p></li>
-                            </ul>
-                        </div>
+                    <div class="footer-col footer-col-groupln">
+                        <h4 class="footer-col-title">Group LN</h4>
+                        <ul class="footer-links">
+                            <li><a href="@Url.Action("Index", "AboutUs")">Over ons</a></li>
+                            <li><a href="@Url.Action("Index", "Blog")">Blog</a></li>
+                            <li style="display:none;"><a href="#">FAQ</a></li>
+                            <li><a href="@Url.Action("Index", "Contact")">Contact</a></li>
+                        </ul>
                     </div>
-                    <div class="col-md-2">
-                        <h4><strong>Sociale</strong> Media</h4>
-                        <ul class="social-icons">
-                            <li class="social-icons-facebook"><a href="https://www.facebook.com/GROUPLN" target="_blank" title="Facebook"><i class="fa fa-facebook"></i></a></li>
-                            @*<li class="social-icons-twitter"><a href="http://www.twitter.com/" target="_blank" title="Twitter"><i class="fa fa-twitter"></i></a></li>*@
-                            <li class="social-icons-linkedin"><a href="https://www.linkedin.com/company/group-ln" target="_blank" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
-                            <li class="social-icons-instagram"><a href="https://www.instagram.com/group.ln/" target="_blank" title="Linkedin"><i class="fa fa-instagram"></i></a></li>
+                    <div class="footer-col">
+                        <h4 class="footer-col-title">Gegevens</h4>
+                        <ul class="footer-links">
+                            <li>Klaverdries 53</li>
+                            <li>9031 Drongen</li>
+                            <li><a href="tel:+3292164950">+32 (0)9 216 49 50</a></li>
+                            <li><a href="mailto:info@groupln.be">info@groupln.be</a></li>
                         </ul>
                     </div>
                 </div>
             </div>
-            <div class="footer-copyright footer-copyright-primary">
-                <div class="container">
-                    <div class="row">
-
-                        <div class="col-md-8">
-                            <p>© Copyright 2026 Group LN. All Rights Reserved.</p>
-                        </div>
-                        @*<div class="col-md-4">
-                                <nav id="sub-menu">
-                                    <ul style="color:#FFF">
-                                        <li><a href="page-faq.html">FAQ's</a></li>
-                                        <li><a href="sitemap.html">Sitemap</a></li>
-                                        <li><a href="contact-us.html">Contact</a></li>
-                                    </ul>
-                                </nav>
-                            </div>*@
-                    </div>
+            <div class="footer-bottom">
+                <div class="container footer-bottom-inner">
+                    <p class="footer-copyright">© @DateTime.Now.Year Group LN · Projectontwikkeling</p>
+                    <ul class="footer-legal">
+                        <li style="display:none;"><a href="#">Privacybeleid</a></li>
+                        <li style="display:none;"><a href="#">Cookies</a></li>
+                        <li style="display:none;"><a href="#">Algemene voorwaarden</a></li>
+                    </ul>
+                    <p class="footer-ai-note"><i class="bx bx-time-five"></i> Onderdelen van deze site zijn met AI-ondersteuning gebouwd</p>
                 </div>
             </div>
         </footer>

@@ -9,6 +9,7 @@ Imports System.Web.Mvc
 Imports System.Web
 Imports System.Web.Routing
 Imports System.Globalization
+Imports System.Web.Hosting
 
 Public Class MvcApplication
     Inherits System.Web.HttpApplication
@@ -25,6 +26,20 @@ Public Class MvcApplication
         FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters)
         RouteConfig.RegisterRoutes(RouteTable.Routes)
         BundleConfig.RegisterBundles(BundleTable.Bundles)
+    End Sub
+
+    Sub Application_Error(sender As Object, e As EventArgs)
+        Try
+            Dim ex = Server.GetLastError()
+            If ex Is Nothing Then Return
+            Dim folder = HostingEnvironment.MapPath("~/App_Data/")
+            If Not System.IO.Directory.Exists(folder) Then System.IO.Directory.CreateDirectory(folder)
+            Dim logFile = System.IO.Path.Combine(folder, "app-error.txt")
+            Dim url = If(Request IsNot Nothing, Request.Url?.ToString(), "(onbekend)")
+            System.IO.File.AppendAllText(logFile,
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") & " | url=" & url & " | " & ex.GetType().Name & ": " & ex.Message & Environment.NewLine & ex.ToString() & Environment.NewLine & "---" & Environment.NewLine)
+        Catch
+        End Try
     End Sub
 
 

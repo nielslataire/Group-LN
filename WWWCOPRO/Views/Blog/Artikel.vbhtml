@@ -1,5 +1,6 @@
 @ModelType WWWCOPRO.Models.Blog.BlogArtikelModel
 @Imports System.Globalization
+@Imports System.Configuration
 @Code
     Dim nlBE = New CultureInfo("nl-BE")
     Dim titel As String = If(Not String.IsNullOrEmpty(Model.DetailTitel), Model.DetailTitel, Model.Titel)
@@ -303,7 +304,7 @@ End If
                             If item.MinSlaapkamers.Value = item.MaxSlaapkamers.Value Then
                                 slaapLabel = item.MinSlaapkamers.Value.ToString() & " slaapkamer" & If(item.MinSlaapkamers.Value = 1, "", "s")
                             Else
-                                slaapLabel = item.MinSlaapkamers.Value.ToString() & Chr(8211) & item.MaxSlaapkamers.Value.ToString() & " slaapkamers"
+                                slaapLabel = item.MinSlaapkamers.Value.ToString() & ChrW(8211) & item.MaxSlaapkamers.Value.ToString() & " slaapkamers"
                             End If
                         ElseIf item.MinSlaapkamers.HasValue Then
                             slaapLabel = item.MinSlaapkamers.Value.ToString() & " slaapkamer" & If(item.MinSlaapkamers.Value = 1, "", "s")
@@ -376,10 +377,13 @@ End If
 </div>
 
 @section scripts
+    <script src="https://www.google.com/recaptcha/api.js?render=@ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")"></script>
     <script>
         (function () {
             var form = document.getElementById('blogContactForm');
             if (!form) return;
+
+            var recaptchaSiteKey = '@ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")';
 
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
@@ -397,34 +401,49 @@ End If
 
                 var voornaam = document.getElementById('bc_voornaam').value.trim();
                 var telefoon = document.getElementById('bc_tel').value.trim();
+                var honeypot = document.getElementById('bc_hp').value;
                 var artikelTitel = form.querySelector('input[name="artikelTitel"]').value;
                 var token = form.querySelector('input[name="__RequestVerificationToken"]').value;
 
                 document.getElementById('bcSubmit').classList.add('hidden');
                 document.getElementById('bcSpinner').classList.remove('hidden');
 
-                $.ajax({
-                    url: '@Url.Action("Send", "Contact")',
-                    type: 'POST',
-                    data: {
-                        ContactName: naam + (voornaam ? ' ' + voornaam : ''),
-                        EmailTo: email,
-                        Phone: telefoon,
-                        Title: 'Vraag via blog: ' + artikelTitel,
-                        Message: bericht,
-                        __RequestVerificationToken: token
-                    },
-                    complete: function () {
-                        var f = document.getElementById('blogContactForm');
-                        if (f) {
-                            f.outerHTML =
-                                '<div class="artikel-contact-succes">' +
-                                '<div class="artikel-contact-succes-icon"><i class="fa fa-check-circle"></i></div>' +
-                                '<strong>Bedankt voor je bericht!</strong><br>We contacteren je zo snel mogelijk.' +
-                                '</div>';
+                function verstuur(captchaToken) {
+                    $.ajax({
+                        url: '@Url.Action("Send", "Contact")',
+                        type: 'POST',
+                        data: {
+                            Voornaam: voornaam || naam,
+                            Achternaam: naam,
+                            EmailTo: email,
+                            Phone: telefoon,
+                            Title: 'Vraag via blog: ' + artikelTitel,
+                            Message: bericht,
+                            PrivacyAkkoord: true,
+                            website_url: honeypot,
+                            'g-recaptcha-response': captchaToken || '',
+                            __RequestVerificationToken: token
+                        },
+                        complete: function () {
+                            var f = document.getElementById('blogContactForm');
+                            if (f) {
+                                f.outerHTML =
+                                    '<div class="artikel-contact-succes">' +
+                                    '<div class="artikel-contact-succes-icon"><i class="fa fa-check-circle"></i></div>' +
+                                    '<strong>Bedankt voor je bericht!</strong><br>We contacteren je zo snel mogelijk.' +
+                                    '</div>';
+                            }
                         }
-                    }
-                });
+                    });
+                }
+
+                if (recaptchaSiteKey && typeof grecaptcha !== 'undefined') {
+                    grecaptcha.ready(function () {
+                        grecaptcha.execute(recaptchaSiteKey, { action: 'contact' }).then(verstuur, function () { verstuur(''); });
+                    });
+                } else {
+                    verstuur('');
+                }
             });
         })();
 

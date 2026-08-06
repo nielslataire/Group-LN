@@ -30,6 +30,7 @@ namespace DALCore.Models
                 new PaymentTerms { Id = 4, Name = "Contant", Days = 0, Description = "Onmiddellijk bij factuurdatum", TermType = 0, DisplayMode = 0 }
 );
             ConfigureKostprijsMaterialenEntities(modelBuilder);
+            ConfigureHomeHeroProjectEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>
             {

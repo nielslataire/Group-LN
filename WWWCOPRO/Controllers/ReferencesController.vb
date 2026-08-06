@@ -6,7 +6,6 @@
     <Route("References/{id?}")>
     Function Index(Optional id As Integer = 0) As ActionResult
         If Not id = 0 Then
-            ViewData("LatestNews") = getlatestNews(4)
 
             Dim model As New ReferenceDetailModel
             Dim service = ServiceFactory.GetProjectService
@@ -29,7 +28,6 @@
             ViewData("Title") = WWWCOPRO.Extensions.BuildProjectSeoTitle(model.Data.Name, model.Data.Postalcode?.Gemeente)
             Return View("detail", model)
         Else
-            ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ReferencesModel
             Dim service = ServiceFactory.GetProjectService
 
@@ -42,7 +40,6 @@
     End Function
     <Route("References/ReferenceBySlug/{slug}", name:="ReferenceBySlug")>
     Function ReferenceBySlug(slug As String) As ActionResult
-        ViewData("LatestNews") = GetLatestNews(4)
         Dim model As New ReferenceDetailModel
         Dim service = ServiceFactory.GetProjectService
         Dim response = service.GetProjectBySlug(slug)
@@ -72,21 +69,4 @@
         Return View(model)
 
     End Function
-    Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
-        Dim service = ServiceFactory.GetProjectService
-        Dim response = service.GetLatestNews(4)
-        Dim news As New List(Of LatestNews)
-        If (response.Success) Then
-            For Each value In response.Values
-                Dim newsitem As New LatestNews
-                newsitem.News = value
-                newsitem.ProjectCity = service.GetProjectCityById(value.ProjectId)
-                newsitem.ProjectName = service.GetProjectNameById(value.ProjectId)
-                newsitem.ProjectSlug = service.GetProjectSlugById(value.ProjectId)
-                news.Add(newsitem)
-            Next
-        End If
-        Return news
-    End Function
-
 End Class

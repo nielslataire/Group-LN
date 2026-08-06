@@ -85,10 +85,20 @@ app.UseExceptionHandler(handler =>
 app.UseHttpsRedirection();
 app.UseCors();
 
+// .NET's ingebouwde FileExtensionContentTypeProvider kent ".webp" niet standaard —
+// zonder deze registratie weigert StaticFileMiddleware zulke bestanden met een 404
+// (ServeUnknownFileTypes staat standaard uit), vandaar dat webp-foto's niet laadden.
+var pictureContentTypeProvider = new FileExtensionContentTypeProvider();
+if (!pictureContentTypeProvider.Mappings.ContainsKey(".webp"))
+{
+    pictureContentTypeProvider.Mappings[".webp"] = "image/webp";
+}
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(picturesPath),
     RequestPath = "/pictures",
+    ContentTypeProvider = pictureContentTypeProvider,
     OnPrepareResponse = ctx =>
     {
         ctx.Context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
@@ -99,6 +109,7 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(videosPath),
     RequestPath = "/videos",
+    ContentTypeProvider = pictureContentTypeProvider,
     OnPrepareResponse = ctx =>
     {
         ctx.Context.Response.Headers.CacheControl = "public,max-age=2592000";
@@ -155,7 +166,12 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
 
     if (isConvertibleImage)
     {
-        generatedFileName = $"{Guid.NewGuid():N}.webp";
+        // Verschillende varianten (pictures / pictures/447 / pictures/800) van dezelfde foto
+        // worden in aparte calls geüpload en moeten dezelfde bestandsnaam krijgen zodat de
+        // aanroeper (CPMCore) er één Name-waarde voor alle varianten in de DB kan opslaan.
+        generatedFileName = IsSafeFileName(file.FileName)
+            ? Path.ChangeExtension(file.FileName, ".webp")
+            : $"{Guid.NewGuid():N}.webp";
         var targetFilePath = Path.Combine(targetFolderPath, generatedFileName);
 
         await using var inputStream = file.OpenReadStream();

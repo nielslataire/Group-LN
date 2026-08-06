@@ -1,1 +1,1 @@
-ALTER TABLE Project ADD SeoTitle NVARCHAR(120) NULL, SeoDescription NVARCHAR(320) NULL;
+in

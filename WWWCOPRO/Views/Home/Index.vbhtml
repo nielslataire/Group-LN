@@ -5,6 +5,7 @@
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim heroOptions = CType(ViewData("HeroSearchOptions"), WWWCOPRO.HeroSearchOptionsModel)
     If heroOptions Is Nothing Then heroOptions = New WWWCOPRO.HeroSearchOptionsModel()
+    Dim heroFeatured = CType(ViewData("HomeHeroFeatured"), WWWCOPRO.HomeHeroFeaturedModel)
 
     ' Troeven: bron voor de zichtbare "Onze troeven"-sectie hieronder.
     Dim troeven() = {
@@ -37,13 +38,25 @@ End Code
 @section PageStyle
     <link rel="stylesheet" href="~/Content/home-hero.css" />
     <link rel="stylesheet" href="~/Content/home-sections.css" />
+    <link rel="stylesheet" href="~/Content/home-featured-project.css" />
 End Section
 
 <section id="homeHero" class="home-hero">
-    <video class="home-hero-video" autoplay muted loop playsinline preload="auto" poster="" @Url.Content("~/Content/video/hero-poster.jpg") ">
+    <video class="home-hero-video" autoplay muted loop playsinline preload="auto">
+        <source src="@Url.Content("~/Content/video/hero-portrait.webm")" type="video/webm" media="(orientation: portrait)">
+        <source src="@Url.Content("~/Content/video/hero-portrait.mp4")" type="video/mp4" media="(orientation: portrait)">
         <source src="@Url.Content("~/Content/video/hero.webm")" type="video/webm">
         <source src="@Url.Content("~/Content/video/hero.mp4")" type="video/mp4">
     </video>
+    <script>
+        (function () {
+            var heroVideo = document.currentScript.previousElementSibling;
+            if (!heroVideo || heroVideo.tagName !== 'VIDEO') return;
+            heroVideo.poster = window.matchMedia('(orientation: portrait)').matches
+                ? '@Url.Content("~/Content/video/hero-poster-portrait.jpg")'
+                : '@Url.Content("~/Content/video/hero-poster.jpg")';
+        })();
+    </script>
     <div class="home-hero-overlay"></div>
     <div class="home-hero-content">
         <p class="hero-kicker"><span class="hero-rule"></span>PROJECTONTWIKKELING & PROJECTCOÖRDINATIE<span class="hero-rule"></span></p>
@@ -106,8 +119,11 @@ End Section
     <div class="home-hero-disclaimer" style="display:none;">
         <p>Door verder te gaan, gaat u akkoord met ons privacybeleid.</p>
     </div>
+    <a href="#aboutSection" class="hero-scroll-cue" aria-label="Scroll naar beneden">
+        <i class="fa fa-chevron-down"></i>
+    </a>
 </section>
-<section class="about-section">
+<section id="aboutSection" class="about-section">
     <div class="container">
         <div class="about-grid">
             <div class="about-content">
@@ -120,8 +136,7 @@ End Section
                 <a class="about-btn" href="@Url.Action("Index","AboutUs")">Meer over Group LN <i class="fa fa-arrow-right"></i></a>
             </div>
             <div class="about-media">
-                @* Placeholder — foto/video hier nog te vervangen *@
-                <div class="about-media-placeholder"></div>
+                <img class="about-media-foto" src="@Url.Content("~/Content/img/about.webp")" alt="Group LN" />
             </div>
         </div>
     </div>
@@ -144,19 +159,41 @@ End Section
     </div>
 </section>
 
-@section LatestNews
-    <h4>Recente <strong>berichten</strong></h4>
+@If heroFeatured IsNot Nothing Then
+    @<section class="featured-project-section">
+        <div class="featured-project-media">
+            @If heroFeatured.IsVideo Then
+                @<video src="@heroFeatured.VideoSrc" autoplay muted loop playsinline></video>
+            Else
+                @<img src="@heroFeatured.ImageSrc" alt="@heroFeatured.ProjectTitel">
+            End If
+        </div>
+        <div class="featured-project-overlay"></div>
+        <div class="featured-project-inner">
+            <div class="container">
+                @If Not String.IsNullOrWhiteSpace(heroFeatured.Kicker) Then
+                    @<p class="section-kicker featured-project-kicker">@heroFeatured.Kicker</p>
+                End If
+                @If Not String.IsNullOrWhiteSpace(heroFeatured.Titel) Then
+                    @<h2 class="featured-project-title">@heroFeatured.Titel</h2>
+                End If
+                @If Not String.IsNullOrWhiteSpace(heroFeatured.Tekst) Then
+                    @<p class="featured-project-text">@heroFeatured.Tekst</p>
+                End If
+                <a class="about-btn featured-project-btn" href="@heroFeatured.DetailUrl">Ontdek @heroFeatured.ProjectTitel <i class="fa fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </section>
+End If
 
-    <ul class="nav nav-list mb-xl">
-        @For Each news In ViewData("LatestNews")
-            @<text>
-                <li><a title="@news.news.TitleNL" href="@Url.Action("News", "Projects", New With {.slug = news.projectslug})">@news.news.TitleNL</a></li>
-            </text>
+<section class="cta-section">
+    <div class="container">
+        <h2 class="cta-title">Grond of pand met ontwikkelingspotentieel?</h2>
+        <p class="cta-text">Of het nu gaat om een perceel, een oude woning of een verouderd pand — wij onderzoeken graag vrijblijvend de mogelijkheden voor een samenwerking of overname, en ontzorgen u doorheen het volledige traject.</p>
+        <a class="cta-btn" href="@Url.Action("Index", "Contact")">Neem contact op <i class="fa fa-arrow-right"></i></a>
+    </div>
+</section>
 
-        Next
-
-    </ul>
-End Section
 @section scripts
     <script>
         $(document).ready(function () {

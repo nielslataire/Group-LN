@@ -254,6 +254,7 @@
     <Compile Include="Models\Contact\NewsletterModel.vb" />
     <Compile Include="Models\Contact\MailModel.vb" />
     <Compile Include="Models\Home\HeroSearchOptionsModel.vb" />
+    <Compile Include="Models\Home\HomeHeroFeaturedModel.vb" />
     <Compile Include="Models\Projects\ProjectModel.vb" />
     <Compile Include="Models\References\ReferencesModel.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
@@ -311,6 +312,7 @@
     <Content Include="Content\fonts\star.eot" />
     <Content Include="Content\fonts\star.ttf" />
     <Content Include="Content\fonts\star.woff" />
+    <Content Include="Content\img\about.jpg" />
     <Content Include="Content\img\gallery-year.png" />
     <Content Include="Content\img\logoimg.jpg" />
     <Content Include="Content\img\no_image.jpg" />
@@ -320,6 +322,9 @@
     <Content Include="Content\project-inschrijving.css" />
     <Content Include="Content\home-hero.css" />
     <Content Include="Content\home-sections.css" />
+    <Content Include="Content\home-featured-project.css" />
+    <Content Include="Content\footer.css" />
+    <Content Include="Content\contact.css" />
     <Content Include="Content\projects-index.css" />
     <Content Include="Content\skins\PATTERN-dark.png" />
     <Content Include="Content\PATTERN.png" />
@@ -327,7 +332,12 @@
     <Content Include="Content\skins\default-darkgreen2.css" />
     <Content Include="Content\skins\default-darkgreen.css" />
     <Content Include="Content\skins\skin-real-estate.css" />
+    <Content Include="Content\video\heor-poster-portrait.jpg" />
+    <Content Include="Content\video\hero-poster.jpg" />
     <Content Include="Content\video\hero.mp4" />
+    <Content Include="Content\video\hero.webm" />
+    <Content Include="Content\video\hero-portrait.mp4" />
+    <Content Include="Content\video\hero-portrait.webm" />
     <Content Include="Fonts\fontawesome-webfont.eot" />
     <Content Include="Fonts\fontawesome-webfont.ttf" />
     <Content Include="Fonts\fontawesome-webfont.woff" />
@@ -383,6 +393,7 @@
       <LastGenOutput>Settings.Designer.vb</LastGenOutput>
     </None>
     <Content Include="Content\img\bureel.jpg" />
+    <Content Include="Content\img\about.webp" />
     <Content Include="Content\img\logo-default.gif" />
     <Content Include="Content\img\team\jeffrey.jpg" />
     <Content Include="Content\img\team\nele.jpg" />

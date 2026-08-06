@@ -10,25 +10,9 @@ Public Class HomeController
     <Route("~/", name:="defaultroute")>
     Function Index() As ActionResult
         'Dim model As New ProjectModel
-        ViewData("LatestNews") = GetLatestNews(4)
         ViewData("HeroSearchOptions") = BuildHeroSearchOptions()
+        ViewData("HomeHeroFeatured") = GetHomeHeroFeatured()
         Return View()
-    End Function
-    Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
-        Dim service = ServiceFactory.GetProjectService
-        Dim response = service.GetLatestNews(4)
-        Dim news As New List(Of LatestNews)
-        If (response.Success) Then
-            For Each value In response.Values
-                Dim newsitem As New LatestNews
-                newsitem.News = value
-                newsitem.ProjectCity = service.GetProjectCityById(value.ProjectId)
-                newsitem.ProjectName = service.GetProjectNameById(value.ProjectId)
-                newsitem.ProjectSlug = service.GetProjectSlugById(value.ProjectId)
-                news.Add(newsitem)
-            Next
-        End If
-        Return news
     End Function
 
     Private Function GetCoordinationOnlyProjectIds() As HashSet(Of Integer)
@@ -124,6 +108,63 @@ Public Class HomeController
             ' Bij een fout blijft de zoekbalk gewoon met lege/inerte opties werken; homepage crasht niet
         End Try
         Return model
+    End Function
+
+    ' Uitgelicht project op de home-hero: geconfigureerd via CPMCore/Instellingen, in de gedeelde
+    ' databank. Zelfde raw-SQL-patroon als GetCoordinationOnlyProjectIds() (tabel valt buiten de
+    ' legacy BO-laag). Geeft Nothing terug als er geen instelling is of het project niet meer
+    ' SaleVisible is — de sectie wordt dan gewoon niet getoond, zelfde defensieve stijl als elders.
+    Private Function GetHomeHeroFeatured() As HomeHeroFeaturedModel
+        Try
+            Dim heroProjectId As Integer = 0
+            Dim kicker As String = Nothing
+            Dim titel As String = Nothing
+            Dim tekst As String = Nothing
+            Dim projectTitelOverride As String = Nothing
+
+            Using conn As New System.Data.SqlClient.SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString)
+                conn.Open()
+                Using cmd As New System.Data.SqlClient.SqlCommand("SELECT TOP 1 ProjectId, Kicker, Titel, Tekst, ProjectTitelOverride FROM HomeHeroProject", conn)
+                    Using reader = cmd.ExecuteReader()
+                        If Not reader.Read() Then Return Nothing
+                        heroProjectId = reader.GetInt32(0)
+                        If Not reader.IsDBNull(1) Then kicker = reader.GetString(1)
+                        If Not reader.IsDBNull(2) Then titel = reader.GetString(2)
+                        If Not reader.IsDBNull(3) Then tekst = reader.GetString(3)
+                        If Not reader.IsDBNull(4) Then projectTitelOverride = reader.GetString(4)
+                    End Using
+                End Using
+            End Using
+
+            Dim service = ServiceFactory.GetProjectService
+            Dim projectResponse = service.GetProjectByID(heroProjectId)
+            If Not projectResponse.Success OrElse projectResponse.Values Is Nothing OrElse Not projectResponse.Values.Any() Then Return Nothing
+            Dim project = projectResponse.Values.First()
+
+            Dim settingsResponse = service.GetSalesSettings(New List(Of Integer) From {heroProjectId})
+            Dim settings = If(settingsResponse.Values, New List(Of ProjectSalesSettingsBO)).FirstOrDefault(Function(s) s.ProjectId = heroProjectId)
+            Dim saleVisible = If(settings IsNot Nothing, settings.SaleVisible, False)
+            If Not saleVisible Then Return Nothing
+
+            ' Zelfde media-logica als het "uitgelicht project"-blok op Views\Projects\Index.vbhtml
+            Dim imgBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
+            Dim videoExts As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {".mp4", ".webm", ".mov", ".avi"}
+            Dim isVideo = project.DefaultPicture IsNot Nothing AndAlso
+                (project.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(project.DefaultPicture.Name)))
+
+            Dim model As New HomeHeroFeaturedModel
+            model.Kicker = kicker
+            model.Titel = titel
+            model.Tekst = tekst
+            model.ProjectTitel = If(Not String.IsNullOrWhiteSpace(projectTitelOverride), projectTitelOverride, project.Name)
+            model.IsVideo = isVideo
+            model.ImageSrc = If(project.DefaultPicture IsNot Nothing AndAlso Not isVideo, Url.Content(imgBase & "pictures/800/" & project.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
+            model.VideoSrc = If(isVideo, Url.Content(imgBase & "videos/" & project.DefaultPicture.Name), "")
+            model.DetailUrl = Url.RouteUrl("ProjectBySlug", New With {.slug = project.Slug})
+            Return model
+        Catch
+            Return Nothing
+        End Try
     End Function
 
     Private Function NormalizeGemeenteCasing(gemeente As String) As String

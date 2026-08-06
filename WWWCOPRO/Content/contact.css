@@ -1,0 +1,489 @@
+/* ================================================
+   Contactpagina — twee kolommen (gegevens + formulier)
+   ================================================ */
+.contact-page-header {
+    background: var(--mist);
+    padding: 44px 0 36px;
+    border-bottom: 1px solid var(--border);
+}
+.contact-page-header .breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0 0 16px;
+    font-size: 12px;
+    color: var(--tekst-sub);
+}
+.contact-page-header h1 {
+    font-family: var(--font-serif);
+    font-size: 36px;
+    font-weight: 400;
+    color: var(--tekst);
+    margin: 0 0 8px;
+    line-height: 1.2;
+}
+.contact-page-header .page-subtitle {
+    font-size: 14px;
+    color: var(--tekst-sub);
+    margin: 0;
+}
+
+.contact-page-wrap {
+    background: var(--mist, #F2F5EF);
+    padding: 40px 24px 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.contact-section {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    align-items: stretch;
+    gap: 40px;
+    width: 100%;
+    max-width: 1180px;
+}
+
+/* --- Links: gegevens --- */
+.contact-info-panel {
+    background: var(--color-primary, #00532D);
+    color: #fff;
+    padding: 56px 40px 40px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.08);
+}
+
+.contact-info-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 26px;
+    color: #fff;
+    margin: 0 0 28px;
+}
+
+.contact-info-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.contact-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    text-decoration: none !important;
+    color: inherit;
+    transition: opacity 0.2s ease;
+}
+.contact-info-item:hover {
+    opacity: 0.8;
+}
+.contact-info-item:hover .contact-info-icon {
+    background: var(--color-cta, #C9A96E);
+    border-color: var(--color-cta, #C9A96E);
+}
+.contact-info-item:first-child {
+    padding-top: 0;
+}
+
+.contact-info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.contact-info-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--color-cta, #C9A96E);
+    margin-bottom: 6px;
+}
+
+.contact-info-value {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.contact-social {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: flex;
+    gap: 10px;
+}
+.contact-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-size: 16px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.contact-social a:hover {
+    background: var(--color-cta, #C9A96E);
+    border-color: var(--color-cta, #C9A96E);
+}
+
+.contact-map {
+    margin-top: 40px;
+    flex: 1 1 0;
+    min-height: 220px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* --- Rechts: formulier --- */
+.contact-form-panel {
+    background: transparent;
+    display: flex;
+    align-items: center;
+    padding: 56px 64px;
+}
+
+.contact-form-inner {
+    width: 100%;
+    max-width: 640px;
+}
+
+.contact-form-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 38px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 16px;
+    max-width: 480px;
+}
+
+.contact-form-sub {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0 0 40px;
+    max-width: 480px;
+}
+
+.contact-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 40px;
+    margin-bottom: 8px;
+}
+
+.contact-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+.contact-field-full {
+    grid-column: 1 / -1;
+}
+
+.contact-field label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--tekst-sub, #5a6b58);
+    margin-bottom: 10px;
+}
+.contact-field label .req {
+    color: var(--color-cta, #C9A96E);
+    margin-left: 2px;
+}
+
+.contact-field .form-control {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--tekst, #2C3B2A);
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.2));
+    border-radius: 6px;
+    padding: 12px 14px;
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    box-shadow: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.contact-field select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-height: 48px;
+    padding-top: 13px;
+    padding-bottom: 13px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235a6b58' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 44px;
+}
+.contact-field select.form-control option {
+    background-color: #fff;
+    color: var(--tekst, #2C3B2A);
+    padding: 10px 14px;
+}
+.contact-field select.form-control option:checked,
+.contact-field select.form-control option:hover {
+    background-color: var(--mist, #F2F5EF);
+    color: var(--color-primary, #00532D);
+}
+
+/* Customizable Select (base-select): volledig gestylede keuzelijst in ondersteunende browsers.
+   Progressieve verbetering — @supports zorgt dat dit enkel toepast waar de browser het kent;
+   elders blijft de appearance:none-aanpak hierboven gewoon gelden. */
+@supports (appearance: base-select) {
+    .contact-field select.form-control {
+        appearance: base-select;
+    }
+    .contact-field select.form-control::picker-icon {
+        display: none;
+    }
+    .contact-field select.form-control::picker(select) {
+        appearance: base-select;
+        border: 1px solid var(--border, rgba(0, 83, 45, 0.2));
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+        padding: 6px;
+        margin-top: 6px;
+    }
+    .contact-field select.form-control option {
+        border-radius: 6px;
+        margin: 2px 0;
+    }
+    .contact-field select.form-control option:checked {
+        background-color: var(--color-primary, #00532D);
+        color: #fff;
+    }
+}
+.contact-field textarea.form-control {
+    resize: vertical;
+    min-height: 90px;
+}
+.contact-field .form-control:focus {
+    outline: none;
+    box-shadow: none !important;
+    border-color: var(--color-primary, #00532D);
+    background: rgba(0, 83, 45, 0.03);
+}
+.contact-field .form-control::placeholder {
+    color: var(--tekst-sub, #5a6b58);
+    opacity: 0.6;
+}
+
+.contact-field-error {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: #c0392b;
+    margin-top: 6px;
+}
+
+.contact-privacy {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 8px 0 28px;
+}
+.contact-privacy input[type="checkbox"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+.contact-privacy label {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--tekst-sub, #5a6b58);
+}
+.contact-privacy label a {
+    color: var(--color-primary, #00532D);
+    text-decoration: underline;
+}
+
+.contact-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 24px;
+    border: none;
+    border-radius: 6px;
+    background: var(--color-primary, #00532D);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.contact-submit-btn:hover {
+    background: var(--color-primary-hover, #006638);
+}
+
+/* --- Succes-status: formulier vervangen na geslaagde verzending --- */
+.contact-success {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 0;
+}
+
+.contact-success-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(0, 83, 45, 0.08);
+    margin-bottom: 24px;
+}
+.contact-success-check svg {
+    overflow: visible;
+}
+.contact-success-check-circle {
+    stroke: var(--color-primary, #00532D);
+    stroke-linecap: round;
+    stroke-dasharray: 176;
+    stroke-dashoffset: 176;
+    transform-origin: center;
+    transform: rotate(-90deg);
+    animation: contact-success-circle 0.6s ease-out forwards;
+}
+.contact-success-check-mark {
+    stroke: var(--color-primary, #00532D);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 34;
+    stroke-dashoffset: 34;
+    animation: contact-success-mark 0.35s ease-out 0.55s forwards;
+}
+@keyframes contact-success-circle {
+    to { stroke-dashoffset: 0; }
+}
+@keyframes contact-success-mark {
+    to { stroke-dashoffset: 0; }
+}
+
+.contact-success .contact-form-title,
+.contact-success .contact-form-sub {
+    max-width: none;
+}
+.contact-success .contact-form-sub {
+    margin-bottom: 28px;
+}
+
+.contact-success-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 100px;
+    background: var(--mist, #F2F5EF);
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--tekst-sub, #5a6b58);
+    margin-bottom: 28px;
+}
+.contact-success-pill strong {
+    color: var(--tekst, #2C3B2A);
+}
+.contact-success-pill-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary, #00532D);
+    flex-shrink: 0;
+}
+
+.contact-success-link {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary, #00532D);
+    text-decoration: none !important;
+    transition: opacity 0.2s ease;
+}
+.contact-success-link:hover {
+    opacity: 0.75;
+}
+
+@media (max-width: 991px) {
+    .contact-page-wrap {
+        padding: 48px 20px;
+    }
+    .contact-section {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    .contact-form-panel {
+        padding: 48px 32px;
+    }
+    .contact-info-panel {
+        padding: 48px 32px;
+    }
+}
+
+@media (max-width: 575px) {
+    .contact-page-wrap {
+        padding: 32px 12px;
+    }
+    .contact-info-panel {
+        border-radius: 12px;
+    }
+    .contact-form-grid {
+        grid-template-columns: 1fr;
+    }
+    .contact-form-panel,
+    .contact-info-panel {
+        padding: 40px 24px;
+    }
+    .contact-form-title {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 767px) {
+    .contact-form-panel {
+        order: 1;
+        padding: 0;
+    }
+    .contact-info-panel {
+        order: 2;
+    }
+    .contact-info-list,
+    .contact-social {
+        display: none;
+    }
+    .contact-info-title {
+        margin: 0 0 20px;
+    }
+    .contact-map {
+        margin-top: 0;
+    }
+}

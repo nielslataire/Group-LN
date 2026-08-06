@@ -159,16 +159,3 @@ End Code
 
     </script>
 End section
-@section LatestNews
-    <h4>Recente <strong>berichten</strong></h4>
-
-    <ul class="nav nav-list mb-xl">
-        @For Each news In ViewData("LatestNews")
-            @<text>
-                <li><a title="@news.news.TitleNL" href="@Url.Action("News", "Projects", New With {.slug = news.projectslug})">@news.news.TitleNL</a></li>
-            </text>
-
-        Next
-
-    </ul>
-End Section

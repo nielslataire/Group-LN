@@ -14,13 +14,14 @@
     var canKostprijs           = PermissionService.HasRead(PermissionCodes.SettingsKostprijsMaterialen);
     var canBlog                = PermissionService.HasRead(PermissionCodes.SettingsBlogBeheer);
     var canEmailTemplates      = PermissionService.HasRead(PermissionCodes.SettingsEmailTemplates);
+    var canHomeHeroProject     = PermissionService.HasRead(PermissionCodes.SettingsHomeHeroProject);
     var canIssueNotifications  = PermissionService.HasRead(PermissionCodes.SettingsIssueNotifications);
     var canMarketDataStatus    = PermissionService.HasRead(PermissionCodes.SettingsMarketDataStatus);
 
     var countFacturatie    = (canBillingCompanies ? 1 : 0) + (canInvoiceTemplates ? 1 : 0) + (canBouwIndexen ? 1 : 0);
     var countTeam          = (canUsers ? 1 : 0) + (canHolidays ? 1 : 0);
     var countCalculatie    = (canActivities ? 1 : 0) + (canKostprijs ? 1 : 0);
-    var countWebsite       = (canBlog ? 1 : 0) + (canEmailTemplates ? 1 : 0);
+    var countWebsite       = (canBlog ? 1 : 0) + (canEmailTemplates ? 1 : 0) + (canHomeHeroProject ? 1 : 0);
     var countAutomatisatie = (canIssueNotifications ? 1 : 0) + (canMarketDataStatus ? 1 : 0);
 }
 
@@ -425,6 +426,26 @@
                                     <i class="bx bx-cog"></i> Open beheer
                                 </a>
                                 <a href="@Url.Action("Index", "EmailTemplateBeheer")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (canHomeHeroProject)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-monitor-wallpaper"></i></div>
+                                <h3 class="settings-card-title">Home hero — uitgelicht project</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Kies het project dat uitgelicht wordt op de home-hero van de publieke website, met eigen kicker, titel en tekst.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("Index", "HomeHeroProject")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("Index", "HomeHeroProject")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
                             </div>
                         </div>
                     </div>

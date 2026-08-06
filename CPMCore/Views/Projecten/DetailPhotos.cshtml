@@ -832,6 +832,12 @@
                 'RequestVerificationToken': antiForgery
             },
             body: JSON.stringify(body)
+        }).then(function(r) {
+            if (!r.ok) {
+                alert('Actie mislukt (status ' + r.status + '). Mogelijk ontbreken de nodige rechten.');
+                throw new Error('postJson ' + url + ' failed: ' + r.status);
+            }
+            return r;
         });
     }
 
