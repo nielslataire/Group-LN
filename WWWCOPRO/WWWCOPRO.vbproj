@@ -324,6 +324,7 @@
     <Content Include="Content\home-sections.css" />
     <Content Include="Content\home-featured-project.css" />
     <Content Include="Content\footer.css" />
+    <Content Include="Content\reveal.css" />
     <Content Include="Content\contact.css" />
     <Content Include="Content\projects-index.css" />
     <Content Include="Content\skins\PATTERN-dark.png" />
@@ -854,6 +855,7 @@
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
     <Content Include="Scripts\custom.js" />
+    <Content Include="Scripts\reveal.js" />
     <Content Include="Scripts\theme.init.js" />
     <Content Include="Scripts\theme.js" />
     <Content Include="Scripts\_references.js" />

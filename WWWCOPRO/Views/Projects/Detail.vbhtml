@@ -88,7 +88,7 @@ End Section
 
 
 <section class="page-header page-header-light">
-    <div class="container">
+    <div class="container reveal">
         <div class="row">
             <div class="col-md-12">
                 <ul class="breadcrumb">
@@ -112,7 +112,7 @@ End Section
     <div class="row detail-row">
         <div class="col-md-7">
 
-            <div class="detail-foto-wrap">
+            <div class="detail-foto-wrap reveal">
             <div class="detail-project-badge">@Model.Data.Name</div>
 
             @Code
@@ -167,7 +167,7 @@ End Section
 
         </div>
         <div class="col-md-5">
-            <div class="info-kaart">
+            <div class="info-kaart reveal">
 
                 <!-- Prijs / status balk -->
                 <div class="info-kaart-prijs">
@@ -316,7 +316,7 @@ End Section
             </div><!-- /info-kaart -->
         </div>
     </div>
-    <div class="commercial-sectie">
+    <div class="commercial-sectie reveal">
         <p class="commercial-titel">@Model.Data.CommercialTitleNL</p>
         <div class="commercial-accent"></div>
         <div class="project-tekst">@Html.Raw(Model.Data.CommercialTextNL)</div>
@@ -341,9 +341,9 @@ End Section
                                     Dim aptMaxSlpk = If(aptSlpkList.Any(), aptSlpkList.Max(), 0)
                                 End Code
                                 @<div class="eenheid-sectie">
-                                    <h2 class="sectie-titel">Appartementen</h2>
+                                    <h2 class="sectie-titel reveal">Appartementen</h2>
                                     <div class="goud-streep"></div>
-                                    <div class="tabel-wrap">
+                                    <div class="tabel-wrap reveal">
                                         <table class="eenheid-tabel">
                                             <thead>
                                                 <tr>
@@ -507,9 +507,9 @@ End Section
                                     Dim wonMaxSlpk = If(wonSlpkList.Any(), wonSlpkList.Max(), 0)
                                 End Code
                                 @<div class="eenheid-sectie">
-                                    <h2 class="sectie-titel">Woningen</h2>
+                                    <h2 class="sectie-titel reveal">Woningen</h2>
                                     <div class="goud-streep"></div>
-                                    <div class="tabel-wrap">
+                                    <div class="tabel-wrap reveal">
                                         <table class="eenheid-tabel">
                                             <thead>
                                                 <tr>
@@ -668,9 +668,9 @@ End Section
                                     Dim handMaxSurf = If(handAvail.Any(), handAvail.Max(Function(m) m.Surface), 0)
                                 End Code
                                 @<div class="eenheid-sectie">
-                                    <h2 class="sectie-titel">Handelspanden</h2>
+                                    <h2 class="sectie-titel reveal">Handelspanden</h2>
                                     <div class="goud-streep"></div>
-                                    <div class="tabel-wrap">
+                                    <div class="tabel-wrap reveal">
                                         <table class="eenheid-tabel">
                                             <thead>
                                                 <tr>
@@ -755,8 +755,8 @@ End Section
 
                             <hr Class="solid tall">
                             <!--LOCATIE-->
-                            <h4 Class="mt-md mb-md" id="map">Locatie op kaart</h4>
-                            <div id="googlemaps" Class="google-map m-none mb-xlg"></div>
+                            <h4 Class="mt-md mb-md reveal" id="map">Locatie op kaart</h4>
+                            <div id="googlemaps" Class="google-map m-none mb-xlg reveal"></div>
 
                             <!--FOTOS-->
 
@@ -768,12 +768,12 @@ End Section
                                 @<text>
                                     <hr class="solid tall" />
 
-                                    <h4 class="mt-md mb-md">
+                                    <h4 class="mt-md mb-md reveal">
                                         Recentste <strong>Foto's</strong>
                                         <a href="@Url.Action("Photos", "Projects", New With {.slug = Model.Data.Slug})">(alle foto's)</a>
                                     </h4>
 
-                                    <div class="media-gallery">
+                                    <div class="media-gallery reveal">
                                         <div class="row mg-files" data-sort-destination data-sort-id="media-gallery">
 
                                             @For Each picture In picturesToShow

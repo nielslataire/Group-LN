@@ -1,6 +1,7 @@
 ﻿@Imports BO
 @Code
-    ViewData("Title") = "Projectontwikkelaar in Gent en Oost-Vlaanderen | Group LN"
+    ViewData("Title") = "Group LN | Projectontwikkelaar in gans Vlaanderen"
+    ViewData("MetaDescription") = "Group LN is projectontwikkelaar met 27 jaar ervaring in tijdloze appartementen en woningen op de mooiste locaties in Vlaanderen, van ontwerp tot oplevering."
     ViewData("HeroHeader") = True
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim heroOptions = CType(ViewData("HeroSearchOptions"), WWWCOPRO.HeroSearchOptionsModel)
@@ -126,7 +127,7 @@ End Section
 <section id="aboutSection" class="about-section">
     <div class="container">
         <div class="about-grid">
-            <div class="about-content">
+            <div class="about-content reveal">
                 <p class="section-kicker">Wie zijn we</p>
                 <h2 class="about-headline">@(DateTime.Now.Year - 1999) jaar ervaring, één aanspreekpunt.</h2>
                 <p class="about-text">Group LN bestaat 27 jaar als projectontwikkelaar in de residentiële sector.</p>
@@ -135,7 +136,7 @@ End Section
                 <p class="about-text">Elk project is anders. Daarom werken we nauw samen met architecten om uw woonwensen te vertalen naar een ontwerp dat vandaag functioneel is, en morgen nog steeds klopt.</p>
                 <a class="about-btn" href="@Url.Action("Index","AboutUs")">Meer over Group LN <i class="fa fa-arrow-right"></i></a>
             </div>
-            <div class="about-media">
+            <div class="about-media reveal reveal-slide-right">
                 <img class="about-media-foto" src="@Url.Content("~/Content/img/about.webp")" alt="Group LN" />
             </div>
         </div>
@@ -145,11 +146,11 @@ End Section
 <section class="troeven-section">
     <div class="container">
         <p class="section-kicker">Onze troeven</p>
-        <h2 class="troeven-headline">Eén partner, van eerste ontwerp tot laatste afwerkingsdetail.</h2>
+        <h2 class="troeven-headline reveal">Eén partner, van eerste ontwerp tot laatste afwerkingsdetail.</h2>
         <div class="troeven-divider"></div>
         <div class="troeven-grid">
             @For Each t In troeven
-                @<div class="troeven-item">
+                @<div class="troeven-item reveal">
                     <span class="troeven-number">@t.Number</span>
                     <h3>@t.Name</h3>
                     <p>@t.Description</p>
@@ -170,7 +171,7 @@ End Section
         </div>
         <div class="featured-project-overlay"></div>
         <div class="featured-project-inner">
-            <div class="container">
+            <div class="container reveal">
                 @If Not String.IsNullOrWhiteSpace(heroFeatured.Kicker) Then
                     @<p class="section-kicker featured-project-kicker">@heroFeatured.Kicker</p>
                 End If
@@ -187,7 +188,7 @@ End Section
 End If
 
 <section class="cta-section">
-    <div class="container">
+    <div class="container reveal">
         <h2 class="cta-title">Grond of pand met ontwikkelingspotentieel?</h2>
         <p class="cta-text">Of het nu gaat om een perceel, een oude woning of een verouderd pand — wij onderzoeken graag vrijblijvend de mogelijkheden voor een samenwerking of overname, en ontzorgen u doorheen het volledige traject.</p>
         <a class="cta-btn" href="@Url.Action("Index", "Contact")">Neem contact op <i class="fa fa-arrow-right"></i></a>

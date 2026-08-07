@@ -1,6 +1,7 @@
 ﻿@ModelType WWWCOPRO.ReferencesModel
 @Code
     ViewData("Title") = "Realisaties | Group LN"
+    ViewData("MetaDescription") = "Bekijk de gerealiseerde projecten van Group LN: opgeleverde appartementen, woningen en handelspanden in Vlaanderen, van ontwerp tot afwerking."
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 @section PageStyle
@@ -8,7 +9,7 @@ End Code
 end section
 <section class="page-header page-header-light page-header-more-padding">
     
-    <div class="container">
+    <div class="container reveal">
         <div class="row">
             <div class="col-md-12">
                 <ul class="breadcrumb">
@@ -33,7 +34,7 @@ end section
                 @For Each project In group
             @<text>
 
-            <li class="col-md-4 col-sm-6 col-xs-12 p-md isotope-item">
+            <li class="col-md-4 col-sm-6 col-xs-12 p-md isotope-item reveal">
                 <div class="listing-item">
                     <a href="@(Url.Action("ReferenceBySlug", "References", New With {.slug = project.Slug}))">
                         @If project.DefaultPicture.Name IsNot Nothing Then

@@ -1736,7 +1736,10 @@ public class LeveranciersController : BaseController
             RelationIdentificationServiceData = new OctopusRelationIdentificationData
             {
                 RelationKey = new OctopusRelationKey { Id = octopusRelationId },
-                ExternalRelationId = company.CompanyId
+                // Offset: ClientAccount.Id en CompanyInfo.CompanyId zijn onafhankelijke ID-reeksen
+                // die kunnen overlappen. De offset voorkomt botsingen met een ClientAccount.Id met
+                // hetzelfde nummer (zie externalRelationNr-conflicten bij Octopus-sync).
+                ExternalRelationId = OctopusExternalRelationIds.CompanyOffset + company.CompanyId
             },
             Name = name,
             Firstname = name,

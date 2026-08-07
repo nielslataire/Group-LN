@@ -57,7 +57,7 @@ End If
 
 @* ── Header: breadcrumbs + titel + meta ── *@
 <section class="artikel-header">
-    <div class="container">
+    <div class="container reveal">
         <ul class="breadcrumb">
             <li><a href="@Url.Action("Index", "Home")">Home</a></li>
             <li><a href="@Url.RouteUrl("Blog")">Blog</a></li>
@@ -80,7 +80,7 @@ End If
 
     @* ── Hero foto ── *@
     @If Not String.IsNullOrEmpty(Model.FotoBestand) Then
-        @<div class="artikel-hero-foto">
+        @<div class="artikel-hero-foto reveal">
             <img src="@Model.FotoBestand" alt="@titel" />
         </div>
     End If
@@ -93,12 +93,12 @@ End If
 
             @* Intro tekst (DetailTitelTekst) *@
             @If Not String.IsNullOrEmpty(Model.DetailTitelTekst) Then
-                @<p class="artikel-intro">@Model.DetailTitelTekst</p>
+                @<p class="artikel-intro reveal">@Model.DetailTitelTekst</p>
             End If
 
             @* Inhoudsblokken *@
             @For Each blok In Model.Blokken
-                @<div class="artikel-blok">
+                @<div class="artikel-blok reveal">
                     @If blok.BlokType = "quote" Then
                         @If Not String.IsNullOrEmpty(blok.RijkeTekst) Then
                             @<div class="artikel-pullquote">@Html.Raw(blok.RijkeTekst)</div>
@@ -163,7 +163,7 @@ End If
 
             @* ── FAQ ── *@
             @If Model.FaqItems.Count > 0 Then
-                @<section class="artikel-faq">
+                @<section class="artikel-faq reveal">
                     <h2 class="artikel-faq-titel">Veelgestelde vragen</h2>
                     <hr class="artikel-blok-lijn" />
                     <dl class="artikel-faq-lijst" id="artikelFaqLijst">
@@ -216,7 +216,7 @@ End If
 
         @* Rechts: sticky contactformulier *@
         <aside class="artikel-sidebar">
-            <div class="artikel-contact-blok" id="contactBlok">
+            <div class="artikel-contact-blok reveal" id="contactBlok">
                 <div class="artikel-contact-header">
                     <p class="artikel-contact-titel">Interesse<br />of een vraag?</p>
                     <p class="artikel-contact-sub">Laat je gegevens achter en we contacteren je snel — vrijblijvend.</p>
@@ -320,7 +320,7 @@ End If
                             prijsLabel = "Vanaf € " & item.VanafPrijs.Value.ToString("N0", New System.Globalization.CultureInfo("nl-BE")) & "<small>" & If(item.IsCasco, " casco", " incl. afwerking") & "</small>"
                         End If
                     End If
-                    @<a href="@itemHref" class="blog-kaart">
+                    @<a href="@itemHref" class="blog-kaart reveal">
                         <div class="blog-kaart-foto">
                             @If item.IsVideo AndAlso Not String.IsNullOrEmpty(item.VideoUrl) Then
                                 @<video class="blog-kaart-video" autoplay="autoplay" muted="muted" loop="loop" playsinline="playsinline">

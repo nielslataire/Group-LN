@@ -2,7 +2,7 @@
 @Imports System.Globalization
 @Code
     Dim pageTitle As String = "Nieuws & inspiratie over nieuwbouw in Gent | Group LN"
-    Dim pageDesc As String = "Lees het laatste nieuws en inspiratie over nieuwbouw en projectontwikkeling in Gent, Drongen en Oost-Vlaanderen. Group LN deelt marktinzichten, architectuurtrends en tips voor investeren in vastgoed."
+    Dim pageDesc As String = "Lees het laatste nieuws en inspiratie over nieuwbouw en projectontwikkeling in Vlaanderen. Group LN deelt marktinzichten, architectuurtrends en tips voor investeren in vastgoed."
     ViewData("Title") = pageTitle
     ViewData("MetaDescription") = pageDesc
     ViewData("ogtitle") = pageTitle
@@ -29,7 +29,7 @@ End Code
     <meta name="ICBM" content="51.0682, 3.6566" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Nieuws & inspiratie over nieuwbouw in Gent | Group LN" />
-    <meta name="twitter:description" content="Lees het laatste nieuws en inspiratie over nieuwbouw en projectontwikkeling in Gent, Drongen en Oost-Vlaanderen." />
+    <meta name="twitter:description" content="Lees het laatste nieuws en inspiratie over nieuwbouw en projectontwikkeling in Vlaanderen." />
     <meta name="twitter:image" content="https://www.groupln.be/Content/img/logoimg.jpg" />
 End Section
 
@@ -39,7 +39,7 @@ End Section
 
 @* ── Paginakoptekst ── *@
 <section class="blog-page-header">
-    <div class="container">
+    <div class="container reveal">
         <ul class="breadcrumb">
             <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
             <li class="active">Blog</li>
@@ -58,7 +58,7 @@ End Section
         @* ── Uitgelicht artikel (meest recente) ── *@
         @<text>
             <div class="sectie-kop">Uitgelicht artikel</div>
-            <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = uitgelicht.Slug})" class="blog-uitgelicht">
+            <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = uitgelicht.Slug})" class="blog-uitgelicht reveal">
                 <div class="blog-uitgelicht-foto">
                     @If Not String.IsNullOrEmpty(uitgelicht.FotoBestand) Then
                         @<img src="@(uitgelicht.FotoBestand)" alt="@uitgelicht.Titel" />
@@ -95,7 +95,7 @@ End Section
                 @If speciaal.Any() Then
                     @<text>
                         <div class="blog-speciaal blog-speciaal--@(remainder)">
-                            <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = speciaal(0).Slug})" class="blog-kaart-h">
+                            <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = speciaal(0).Slug})" class="blog-kaart-h reveal">
                                 <div class="blog-kaart-h-foto">
                                     @If Not String.IsNullOrEmpty(speciaal(0).FotoBestand) Then
                                         @<img src="@(speciaal(0).FotoBestand)" alt="@speciaal(0).Titel" />
@@ -120,7 +120,7 @@ End Section
                                                                 </a>
                                     @If remainder = 2 Then
                                     @<text>
-                                        <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = speciaal(1).Slug})" class="blog-kaart">
+                                        <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = speciaal(1).Slug})" class="blog-kaart reveal">
                                             <div class="blog-kaart-foto">
                                                 @If Not String.IsNullOrEmpty(speciaal(1).FotoBestand) Then
                                                 @<img src="@(speciaal(1).FotoBestand)" alt="@speciaal(1).Titel" />
@@ -153,7 +153,7 @@ End Section
                                     @<text>
                                         <div class="blog-grid">
                                             @For Each artikel In normaal
-                            @<a href="@Url.RouteUrl("BlogArtikel", New With {.slug = artikel.Slug})" class="blog-kaart">
+                            @<a href="@Url.RouteUrl("BlogArtikel", New With {.slug = artikel.Slug})" class="blog-kaart reveal">
                                 <div class="blog-kaart-foto">
                                     @If Not String.IsNullOrEmpty(artikel.FotoBestand) Then
                                     @<img src="@(artikel.FotoBestand)" alt="@artikel.Titel" />
@@ -216,7 +216,7 @@ End Section
                         {
                           "@@type": "Blog",
                           "name": "Nieuws & inspiratie | Group LN",
-                          "description": "Marktinzichten, architectuurtrends, duurzaam bouwen, financieringstips en updates over nieuwbouwprojecten in Gent en Oost-Vlaanderen.",
+                          "description": "Marktinzichten, architectuurtrends, duurzaam bouwen, financieringstips en updates over nieuwbouwprojecten in Vlaanderen.",
                           "url": "https://www.groupln.be/Blog",
                           "inLanguage": "nl-BE",
                           "publisher": {

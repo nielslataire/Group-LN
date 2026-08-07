@@ -48,7 +48,8 @@ Public Class BundleConfig
                     "~/Scripts/custom.js",
                     "~/scripts/views/view.home.js",
                     "~/scripts/real-estate.js",
-                    "~/Scripts/theme.init.js"
+                    "~/Scripts/theme.init.js",
+                    "~/Scripts/reveal.js"
                     ))
 
         bundles.Add(New StyleBundle("~/Content/css").Include("~/Content/site.css"))

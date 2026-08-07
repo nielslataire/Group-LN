@@ -2,6 +2,7 @@
 @Imports System.Web.Mvc
 @Code
     ViewData("Title") = "Contacteer ons | Group LN"
+    ViewData("MetaDescription") = "Neem contact op met Group LN voor vragen over een project, of het aanbieden van een grond of pand. Wij antwoorden snel en persoonlijk."
     Layout = "~/Views/Shared/_Layout.vbhtml"
 
     ' Logo als base64 voor de custom kaart-pin (een SVG die als icoon-URL dient mag geen
@@ -18,7 +19,7 @@ End Code
 End Section
 
 <section class="contact-page-header">
-    <div class="container">
+    <div class="container reveal">
         <ul class="breadcrumb">
             <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
             <li class="active">Contact</li>
@@ -30,7 +31,7 @@ End Section
 
 <div class="contact-page-wrap">
 <section class="contact-section">
-    <div class="contact-info-panel">
+    <div class="contact-info-panel reveal">
         <h2 class="contact-info-title">Onze locatie</h2>
         <div class="contact-info-list">
             <a class="contact-info-item" href="https://www.google.com/maps/search/?api=1&query=Klaverdries+53%2C+9031+Drongen" target="_blank" rel="noopener">
@@ -74,7 +75,7 @@ End Section
     </div>
 
     <div class="contact-form-panel">
-        <div class="contact-form-inner">
+        <div class="contact-form-inner reveal">
             @If ViewBag.SubmitSuccess IsNot Nothing AndAlso ViewBag.SubmitSuccess Then
                 @<div class="contact-success">
                     <div class="contact-success-check">

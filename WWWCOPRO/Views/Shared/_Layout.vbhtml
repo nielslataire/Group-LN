@@ -112,6 +112,12 @@ End Code
     @Styles.Render("~/Content/theme")
     @Styles.Render("~/Content/skin")
     <link rel="stylesheet" href="@Url.Content("~/Content/footer.css")" />
+    <link rel="stylesheet" href="@Url.Content("~/Content/reveal.css")" />
+    <script>
+        if ('IntersectionObserver' in window) {
+            document.documentElement.classList.add('js-reveal');
+        }
+    </script>
     @RenderSection("PageMeta", required:=False)
     @RenderSection("PageStyle", required:=False)
 
@@ -124,7 +130,7 @@ End Code
     </noscript>
     <!-- End Google Tag Manager (noscript) -->
     <div class="body">
-        <header id="header" class="header-no-border-bottom header-full-width @(If(_heroHeader, "header-transparent header-transparent-brand", ""))" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": 175, "stickySetTop": 0, "stickyChangeLogo": false}'>
+        <header id="header" class="header-no-border-bottom header-full-width @(If(_heroHeader, "header-transparent header-transparent-brand", ""))" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": @(If(_heroHeader, 175, 0)), "stickySetTop": 0, "stickyChangeLogo": false}'>
             <div class="header-body">
                 <div class="header-container container-fluid">
                     <div class="header-row header-row-redesign">

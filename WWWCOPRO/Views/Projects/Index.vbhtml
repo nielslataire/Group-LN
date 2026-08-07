@@ -4,6 +4,9 @@
 @Code
     Dim isWoonproject As Boolean = Model.Projects.Any() AndAlso Model.Projects.First().ProjectType = BO.ProjectType.Woonproject
     ViewData("Title") = If(isWoonproject, "Woonprojecten | Group LN", "Commerciële projecten | Group LN")
+    ViewData("MetaDescription") = If(isWoonproject,
+        "Ontdek de nieuwbouwappartementen en woningen van Group LN in Vlaanderen — kwalitatieve afwerking, tijdloos ontwerp, één aanspreekpunt.",
+        "Ontdek de commerciële projecten en handelspanden van Group LN in Vlaanderen, zorgvuldig ontwikkeld met oog voor kwaliteit en locatie.")
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim belgianCulture = New CultureInfo("nl-BE")
     Dim imgBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
@@ -138,7 +141,7 @@ End Section
 end section
 
 <section class="projecten-page-header">
-    <div class="container">
+    <div class="container reveal">
         <ul class="breadcrumb">
             <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
             <li class="active">
@@ -170,7 +173,7 @@ end section
     @If fp IsNot Nothing Then
         @<text>
             <div class="sectie-kop">Uitgelicht project</div>
-            <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = fp.Slug}))" class="uitgelicht-project">
+            <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = fp.Slug}))" class="uitgelicht-project reveal">
                 <div class="uitgelicht-foto">
                     @If fpIsVideo Then
                         @<video src="@fpVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -337,7 +340,7 @@ end section
 
         @If isBinnenkort Then
             @<text>
-                <a href="@(Url.Action("Inschrijving", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
+                <a href="@(Url.Action("Inschrijving", "Projects", New With {.slug = project.Slug}))" class="project-kaart reveal">
                     <div class="kaart-foto">
                         @If cardIsVideo Then
                             @<video src="@cardVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -411,7 +414,7 @@ end section
             </text>
         Else
             @<text>
-                <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = project.Slug}))" class="project-kaart">
+                <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = project.Slug}))" class="project-kaart reveal">
                     <div class="kaart-foto">
                         @If cardIsVideo Then
                             @<video src="@cardVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -557,7 +560,7 @@ end section
     @* Vul resterende lege slots op met CTA-kaarten *@
     @If remainingSlots = 2 Then
         @<text>
-            <div class="cta-kaart cta-kaart-grond">
+            <div class="cta-kaart cta-kaart-grond reveal">
                 <div class="cta-kaart-label">Grondpositie</div>
                 <div class="cta-kaart-titel">Projectgrond<br />te koop?</div>
                 <p class="cta-kaart-tekst">Heeft u een perceel of pand te koop? Wij bekijken graag de mogelijkheden samen met u.</p>
@@ -566,7 +569,7 @@ end section
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
             </div>
-            <div class="cta-kaart cta-kaart-contact">
+            <div class="cta-kaart cta-kaart-contact reveal">
                 <div class="cta-kaart-label">Meer weten?</div>
                 <div class="cta-kaart-titel">Informatie<br />aanvragen</div>
                 <p class="cta-kaart-tekst">Interesse in een van onze projecten? Wij beantwoorden al uw vragen.</p>
@@ -578,7 +581,7 @@ end section
         </text>
     ElseIf remainingSlots = 1 Then
         @<text>
-            <div class="cta-kaart cta-kaart-grond">
+            <div class="cta-kaart cta-kaart-grond reveal">
                 <div class="cta-kaart-label">Grondpositie</div>
                 <div class="cta-kaart-titel">Projectgrond<br />te koop?</div>
                 <p class="cta-kaart-tekst">Heeft u een perceel of pand te koop? Wij bekijken graag de mogelijkheden samen met u.</p>

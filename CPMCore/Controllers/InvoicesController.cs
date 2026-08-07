@@ -3435,9 +3435,11 @@ namespace CPMCore.Controllers
                 RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
                 {
                     RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
+                    // ClientAccount.Id en CompanyInfo.CompanyId zijn onafhankelijke ID-reeksen die
+                    // kunnen overlappen — de company-tak krijgt daarom een offset (zie OctopusExternalRelationIds).
                     ExternalRelationId = context.Invoice.ClientIdClientAccountNavigation?.Id
                         ?? context.Invoice.ClientId
-                        ?? context.Invoice.CompanyId
+                        ?? (context.Invoice.CompanyId is int companyId ? OctopusExternalRelationIds.CompanyOffset + companyId : (int?)null)
                         ?? 0
                 },
                 Comment = context.Invoice.Text,
@@ -4275,7 +4277,10 @@ END";
                     RelationKey = issuerRelationId.HasValue && issuerRelationId.Value > 0
                         ? new OctopusRelationKey { Id = issuerRelationId.Value }
                         : null,
-                    ExternalRelationId = invoice.ClientId ?? invoice.CompanyId
+                    // ClientAccount.Id en CompanyInfo.CompanyId zijn onafhankelijke ID-reeksen die
+                    // kunnen overlappen — de company-tak krijgt daarom een offset (zie OctopusExternalRelationIds).
+                    ExternalRelationId = invoice.ClientId
+                        ?? (invoice.CompanyId is int companyId ? OctopusExternalRelationIds.CompanyOffset + companyId : (int?)null)
                 },
                 Name = clientName,
                 Firstname = firstName,

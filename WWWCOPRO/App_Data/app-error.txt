@@ -203,3 +203,63 @@ System.Web.HttpException (0x80004005): A public action method '5' was not found 
    bij System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step)
    bij System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)
 ---
+2026-08-06 13:01:16 | url=http://localhost:8150/Projects | HttpException: A public action method 'Index' was not found on controller 'WWWCOPRO.Controllers.ProjectsController'.
+System.Web.HttpException (0x80004005): A public action method 'Index' was not found on controller 'WWWCOPRO.Controllers.ProjectsController'.
+   bij System.Web.Mvc.Controller.HandleUnknownAction(String actionName)
+   bij System.Web.Mvc.Controller.<BeginExecuteCore>b__1d(IAsyncResult asyncResult, ExecuteCoreState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecuteCore(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecute(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.<BeginProcessRequest>b__5(IAsyncResult asyncResult, ProcessRequestState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.EndProcessRequest(IAsyncResult asyncResult)
+   bij System.Web.HttpApplication.CallHandlerExecutionStep.System.Web.HttpApplication.IExecutionStep.Execute()
+   bij System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step)
+   bij System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)
+---
+2026-08-06 13:42:49 | url=http://localhost:8151/AboutUs | HttpException: A public action method 'Index' was not found on controller 'WWWCOPRO.AboutUsController'.
+System.Web.HttpException (0x80004005): A public action method 'Index' was not found on controller 'WWWCOPRO.AboutUsController'.
+   bij System.Web.Mvc.Controller.HandleUnknownAction(String actionName)
+   bij System.Web.Mvc.Controller.<BeginExecuteCore>b__1d(IAsyncResult asyncResult, ExecuteCoreState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecuteCore(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecute(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.<BeginProcessRequest>b__5(IAsyncResult asyncResult, ProcessRequestState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.EndProcessRequest(IAsyncResult asyncResult)
+   bij System.Web.HttpApplication.CallHandlerExecutionStep.System.Web.HttpApplication.IExecutionStep.Execute()
+   bij System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step)
+   bij System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)
+---
+2026-08-06 13:42:50 | url=http://localhost:8151/Team | HttpException: A public action method 'Index' was not found on controller 'WWWCOPRO.TeamController'.
+System.Web.HttpException (0x80004005): A public action method 'Index' was not found on controller 'WWWCOPRO.TeamController'.
+   bij System.Web.Mvc.Controller.HandleUnknownAction(String actionName)
+   bij System.Web.Mvc.Controller.<BeginExecuteCore>b__1d(IAsyncResult asyncResult, ExecuteCoreState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecuteCore(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecute(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.<BeginProcessRequest>b__5(IAsyncResult asyncResult, ProcessRequestState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.EndProcessRequest(IAsyncResult asyncResult)
+   bij System.Web.HttpApplication.CallHandlerExecutionStep.System.Web.HttpApplication.IExecutionStep.Execute()
+   bij System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step)
+   bij System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)
+---
+2026-08-06 13:51:57 | url=http://localhost:62633/Contact/Index | HttpException: A public action method 'Index' was not found on controller 'WWWCOPRO.ContactController'.
+System.Web.HttpException (0x80004005): A public action method 'Index' was not found on controller 'WWWCOPRO.ContactController'.
+   bij System.Web.Mvc.Controller.HandleUnknownAction(String actionName)
+   bij System.Web.Mvc.Controller.<BeginExecuteCore>b__1d(IAsyncResult asyncResult, ExecuteCoreState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecuteCore(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.Controller.EndExecute(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.<BeginProcessRequest>b__5(IAsyncResult asyncResult, ProcessRequestState innerState)
+   bij System.Web.Mvc.Async.AsyncResultWrapper.WrappedAsyncVoid`1.CallEndDelegate(IAsyncResult asyncResult)
+   bij System.Web.Mvc.MvcHandler.EndProcessRequest(IAsyncResult asyncResult)
+   bij System.Web.HttpApplication.CallHandlerExecutionStep.System.Web.HttpApplication.IExecutionStep.Execute()
+   bij System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step)
+   bij System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)
+---

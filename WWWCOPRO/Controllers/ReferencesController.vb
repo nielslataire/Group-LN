@@ -26,6 +26,7 @@
             response2 = companyservice.GetCompanyByID(model.Data.Architect.ID)
             If (response.Success) Then model.Architect = response2.Values.FirstOrDefault
             ViewData("Title") = WWWCOPRO.Extensions.BuildProjectSeoTitle(model.Data.Name, model.Data.Postalcode?.Gemeente)
+            ViewData("MetaDescription") = WWWCOPRO.Extensions.BuildProjectSeoDescription(model.Data.Name, model.Data.Postalcode?.Gemeente, model.Data.Street, model.Data.CommercialTextNL)
             Return View("detail", model)
         Else
             Dim model As New ReferencesModel
@@ -59,6 +60,7 @@
         response2 = companyservice.GetCompanyByID(model.Data.Architect.ID)
         If (response.Success) Then model.Architect = response2.Values.FirstOrDefault
         ViewData("Title") = WWWCOPRO.Extensions.BuildProjectSeoTitle(model.Data.Name, model.Data.Postalcode?.Gemeente)
+        ViewData("MetaDescription") = WWWCOPRO.Extensions.BuildProjectSeoDescription(model.Data.Name, model.Data.Postalcode?.Gemeente, model.Data.Street, model.Data.CommercialTextNL)
         Return View("detail", model)
 
 

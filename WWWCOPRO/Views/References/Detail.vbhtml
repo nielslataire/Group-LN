@@ -4,7 +4,7 @@
 End Code
 @Imports wwwcopro.extensions
 <section class="page-header page-header-light">
-    <div class="container">
+    <div class="container reveal">
         <div class="row">
             <div class="col-md-12">
                 <ul class="breadcrumb">
@@ -47,7 +47,7 @@ End Code
 
     <div class="row">
         <div class="col-md-9">
-            <div class="col-md-5">
+            <div class="col-md-5 reveal">
 
                 <div class="owl-carousel owl-theme" data-plugin-options='{"items": 1, "margin": 10}'>
                             @If Not Model.Data.DefaultPicture Is Nothing Or Model.Data.DefaultPicture.Id = 0 Then
@@ -76,7 +76,7 @@ End Code
 
             </div>
 
-            <div class="col-md-7">
+            <div class="col-md-7 reveal">
 
 
 
@@ -88,7 +88,7 @@ End Code
 
         </div>
         <div class="col-md-3">
-            <aside class="sidebar">
+            <aside class="sidebar reveal">
                 <h5 class="heading-primary text-center">Ligging</h5>
                 <div class="divider">
                     <i class="fa fa-chevron-down"></i>

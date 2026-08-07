@@ -1,0 +1,28 @@
+/* ================================================
+   Scroll-reveal — herbruikbare "reveal"-animatie
+   Werking: html.js-reveal (toegevoegd via inline script in <head>,
+   enkel als IntersectionObserver ondersteund wordt) verbergt .reveal-
+   elementen totdat scripts/reveal.js de klasse "visible" toevoegt.
+   Zonder JS (of zonder IntersectionObserver-support) blijft .js-reveal
+   afwezig en tonen alle .reveal-elementen gewoon normaal — geen
+   afhankelijkheid van JS om zichtbaar te worden.
+   ================================================ */
+@media (prefers-reduced-motion: no-preference) {
+    html.js-reveal .reveal {
+        opacity: 0;
+        transform: translateY(24px);
+        transition: opacity 0.95s ease, transform 0.95s ease;
+    }
+    html.js-reveal .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Variant: schuift in van rechts naar links i.p.v. van onderaf */
+    html.js-reveal .reveal.reveal-slide-right {
+        transform: translateX(60px);
+    }
+    html.js-reveal .reveal.reveal-slide-right.visible {
+        transform: translateX(0);
+    }
+}

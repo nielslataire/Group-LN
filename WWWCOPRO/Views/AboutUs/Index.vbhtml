@@ -1,5 +1,6 @@
 ﻿@Code
     ViewData("Title") = "Over ons | Group LN"
+    ViewData("MetaDescription") = "Group LN is al 27 jaar projectontwikkelaar in Vlaanderen. Ontdek onze aanpak, ervaring en visie op kwalitatief en tijdloos bouwen."
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 
