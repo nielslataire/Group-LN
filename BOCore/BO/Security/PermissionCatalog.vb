@@ -55,7 +55,8 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.SettingsHomeHeroProject, "Home hero — uitgelicht project", PermissionCodes.SettingsWebsite, 98),
             New PermissionDefinition(PermissionCodes.Marktanalyse, "Marktanalyse", Nothing, 90),
             New PermissionDefinition(PermissionCodes.DocumentCenter, "Documentencentrum", Nothing, 100),
-            New PermissionDefinition(PermissionCodes.DocumentCenterByBillingCompany, "Per facturatiebedrijf", PermissionCodes.DocumentCenter, 101)
+            New PermissionDefinition(PermissionCodes.DocumentCenterByBillingCompany, "Per facturatiebedrijf", PermissionCodes.DocumentCenter, 101),
+            New PermissionDefinition(PermissionCodes.SettingsVacatureBeheer, "Vacatures", PermissionCodes.SettingsWebsite, 102)
         }
 
 End Class

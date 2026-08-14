@@ -13,8 +13,14 @@
     ViewData("ogtype") = "article"
     ViewData("ogdescription") = metaDescStr
     ViewData("ogimage") = If(Not String.IsNullOrEmpty(Model.FotoBestand), Model.FotoBestand, "https://www.groupln.be/Content/img/logoimg.jpg")
-    ViewData("ogurl") = "https://www.groupln.be/blog/" & Model.Slug
-    ViewData("canonical") = "https://www.groupln.be/blog/" & Model.Slug
+    ' routes.LowercaseUrls = True zorgt dat elke intern gegenereerde link naar dit artikel
+    ' kleine letters gebruikt — de canonical moet dus ook op de kleine-letter-slug wijzen,
+    ' anders wijkt hij af van de URL die Google via interne links/sitemap ontdekt (net het
+    ' "canonical naar andere URL"-probleem dat gemeld werd voor dit exacte artikel, waarvan
+    ' de Slug in de database met een hoofdletter begint).
+    Dim canonicalSlug As String = If(Model.Slug, "").ToLowerInvariant()
+    ViewData("ogurl") = "https://www.groupln.be/blog/" & canonicalSlug
+    ViewData("canonical") = "https://www.groupln.be/blog/" & canonicalSlug
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 
@@ -118,7 +124,7 @@ End If
                             @<text>
                                 <div class="artikel-blok-split">
                                     <div class="artikel-blok-split-foto">
-                                        <img src="@blok.FotoBestand" alt="@blok.Titel" />
+                                        <img src="@blok.FotoBestand" alt="@(If(Not String.IsNullOrEmpty(blok.Titel), blok.Titel, titel))" />
                                     </div>
                                     <div class="artikel-blok-split-body">
                                         @If Not String.IsNullOrEmpty(blok.Titel) Then
@@ -142,7 +148,7 @@ End If
                                         End If
                                     </div>
                                     <div class="artikel-blok-split-foto">
-                                        <img src="@blok.FotoBestand" alt="@blok.Titel" />
+                                        <img src="@blok.FotoBestand" alt="@(If(Not String.IsNullOrEmpty(blok.Titel), blok.Titel, titel))" />
                                     </div>
                                 </div>
                             </text>

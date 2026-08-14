@@ -11,7 +11,7 @@ End Code
         Dim _imgUrl As String = If(Model.Data.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(Model.Data.DefaultPicture.Name),
                                    _imgBase & "pictures/" & Model.Data.DefaultPicture.Name,
                                    String.Empty)
-        Dim _canonical As String = CStr(If(ViewData("ogurl"), "https://www.groupln.be/woonprojecten/" & Model.Data.Slug))
+        Dim _canonical As String = CStr(If(ViewData("ogurl"), "https://www.groupln.be/woonprojecten/" & If(Model.Data.Slug, "").ToLowerInvariant()))
         Dim _seoTitle As String = CStr(If(ViewData("ogtitle"), Model.Data.Name))
         Dim _seoDesc As String = CStr(If(ViewData("ogdescription"), String.Empty))
         Dim _streetAddress As String = (If(Not String.IsNullOrWhiteSpace(Model.Data.Street), Model.Data.Street, "") & " " & If(Not String.IsNullOrWhiteSpace(Model.Data.HouseNumber), Model.Data.HouseNumber, "")).Trim()
@@ -129,7 +129,7 @@ End Section
             <div class="foto-gallerij" id="fotoGallerij">
                 @If Model.Data.DefaultPicture IsNot Nothing Then
                     @<a href="@(If(defaultIsVideo, Url.Content(imgBase & "videos/" & Model.Data.DefaultPicture.Name), Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)))" class="fg-main-link" id="fgMainLink">
-                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="projectfoto" style="@(If(defaultIsVideo, "display:none;", ""))">
+                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="@(If(Not String.IsNullOrWhiteSpace(Model.Data.DefaultPicture.Caption), Model.Data.DefaultPicture.Caption, Model.Data.Name))" style="@(If(defaultIsVideo, "display:none;", ""))">
                         <video id="fgMainVideo" src="@(If(defaultIsVideo, Url.Content(imgBase & "videos/" & Model.Data.DefaultPicture.Name), ""))" muted loop playsinline data-autoplay="true" style="@(If(Not defaultIsVideo, "display:none;", ""))"></video>
                         <span class="fg-zoom-ico"><i class="icon-magnifier icons font-size-xl"></i></span>
                     </a>
@@ -317,7 +317,7 @@ End Section
         </div>
     </div>
     <div class="commercial-sectie reveal">
-        <p class="commercial-titel">@Model.Data.CommercialTitleNL</p>
+        <h2 class="commercial-titel">@Model.Data.CommercialTitleNL</h2>
         <div class="commercial-accent"></div>
         <div class="project-tekst">@Html.Raw(Model.Data.CommercialTextNL)</div>
     </div>
@@ -770,7 +770,6 @@ End Section
 
                                     <h4 class="mt-md mb-md reveal">
                                         Recentste <strong>Foto's</strong>
-                                        <a href="@Url.Action("Photos", "Projects", New With {.slug = Model.Data.Slug})">(alle foto's)</a>
                                     </h4>
 
                                     <div class="media-gallery reveal">
@@ -798,7 +797,7 @@ End Section
                                                                    href="@Url.Content(imgBase & "pictures/" & picture.Name)">
                                                                     <img src="@Url.Content(imgBase & "pictures/447/" & picture.Name)"
                                                                          class="img-responsive"
-                                                                         alt="@picture.Caption" />
+                                                                         alt="@(If(Not String.IsNullOrWhiteSpace(picture.Caption), picture.Caption, Model.Data.Name))" />
                                                                 </a>
                                                                 <div class="mg-thumb-options">
                                                                     <div class="mg-zoom"><i class="fa fa-search"></i></div>

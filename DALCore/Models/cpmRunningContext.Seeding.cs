@@ -47,6 +47,12 @@ namespace DALCore.Models
                 entity.ToTable("BlogArtikelBlok");
                 entity.HasKey(e => e.Id);
             });
+
+            modelBuilder.Entity<Vacature>(entity =>
+            {
+                entity.ToTable("Vacature");
+                entity.HasKey(e => e.Id);
+            });
         }
     }
 }

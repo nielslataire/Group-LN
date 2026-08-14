@@ -18,7 +18,7 @@
                             <table width="100%">
                                 <tr>
                                     <td style="width:220px;">
-                                        <a href="http://www.groupln.be" target="_blank">
+                                        <a href="https://www.groupln.be" target="_blank">
                                             <img src="https://www.groupln.be/content/img/logo-default.png"
                                                  alt="Group LN" height="54" style="display:block; border:0;" />
                                         </a>

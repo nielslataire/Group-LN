@@ -68,19 +68,41 @@ Namespace Controllers
                 SetProjectSeoViewData(model.Data)
                 Return View("Detail", model)
             Else
+                ' Type=0 bestaat niet als enum-waarde (Woonproject=1, Commerciëel=2) — zonder
+                ' expliciete Type valt GetProjectsForList terug op "geen filter" (gemengde lijst).
+                ' Voor de overzichtspagina normaliseren we dat hier naar Woonproject, zodat de kale
+                ' /woonprojecten-URL altijd deterministisch dezelfde inhoud toont.
+                Dim typeWasExplicit As Boolean = Not String.IsNullOrEmpty(Request.QueryString("Type"))
+                If Type = 0 Then Type = ProjectType.Woonproject
+
+                If typeWasExplicit Then
+                    ' Oude ?Type=...-URL's permanent doorsturen naar de schone, canonieke URL
+                    ' (/woonprojecten of /commerciele-projecten), met behoud van de overige filters.
+                    Dim cleanPath As String = If(Type = ProjectType.Woonproject, "/woonprojecten", "/commerciele-projecten")
+                    Dim qsParts As New List(Of String)
+                    For Each key As String In Request.QueryString.AllKeys
+                        If key IsNot Nothing AndAlso Not key.Equals("Type", StringComparison.OrdinalIgnoreCase) Then
+                            qsParts.Add(Uri.EscapeDataString(key) & "=" & Uri.EscapeDataString(Request.QueryString(key)))
+                        End If
+                    Next
+                    Dim redirectUrl As String = cleanPath & If(qsParts.Any(), "?" & String.Join("&", qsParts), "")
+                    Return RedirectPermanent(redirectUrl)
+                End If
+
                 If Type = ProjectType.Woonproject Then
                     ViewData("Title") = "Woonprojecten | Group LN"
                     ViewBag.Metatitle = "Woonprojecten | Group LN"
                     ViewBag.MetaDescription = "Woonprojecten"
-                    ViewBag.MetaURL = "http://www.groupln.be/woonprojecten"
-                    ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
+                    ViewBag.MetaURL = "https://www.groupln.be/woonprojecten"
+                    ViewBag.MetaImageUrl = "https://www.groupln.be/content/img/slides/slide2.jpg"
                 Else
                     ViewData("Title") = "Commerciële projecten | Group LN"
                     ViewBag.Metatitle = "Commerciële projecten | Group LN"
-                    ViewBag.MetaDescription = "Commercieel"
-                    ViewBag.MetaURL = "http://www.groupln.be/Commercieel"
-                    ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
+                    ViewBag.MetaDescription = "Commerciële projecten"
+                    ViewBag.MetaURL = "https://www.groupln.be/commerciele-projecten"
+                    ViewBag.MetaImageUrl = "https://www.groupln.be/content/img/slides/slide2.jpg"
                 End If
+                ViewBag.IsWoonproject = (Type = ProjectType.Woonproject)
 
                 Dim heroFilterActive As Boolean = Not String.IsNullOrWhiteSpace(Gemeente) OrElse PriceMin.HasValue OrElse PriceMax.HasValue OrElse Not String.IsNullOrWhiteSpace(UnitCategory)
 
@@ -147,10 +169,20 @@ Namespace Controllers
                     model.SalesSettings = model.SalesSettings.Where(Function(ss) finalIds.Contains(ss.ProjectId)).ToList()
                 End If
 
-                Return View(model)
+                Return View("Index", model)
             End If
 
         End Function
+
+        ' GET: /commerciele-projecten
+        <Route("commerciele-projecten")>
+        Function Commercieel(Optional Gemeente As String = Nothing,
+                              Optional PriceMin As Decimal? = Nothing,
+                              Optional PriceMax As Decimal? = Nothing,
+                              Optional UnitCategory As String = Nothing) As ActionResult
+            Return Index(ProjectType.Commerciëel, 0, Gemeente, PriceMin, PriceMax, UnitCategory)
+        End Function
+
         <Route("Projects/ProjectBySlug/{slug}", Name:="ProjectBySlugLegacy")>
         Function RedirectProjectBySlug(slug As String) As ActionResult
             Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
@@ -159,11 +191,53 @@ Namespace Controllers
         <Route("woonprojecten/{slug}", Name:="ProjectBySlug")>
         Function ProjectBySlug(slug As String) As ActionResult
 
-            Dim model As New ProjectDetailModel
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
-            If (response.Success) Then model.Data = response.Values.FirstOrDefault
-            If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
+            Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
+            If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
+
+            ' Eenmaal opgeleverd hoort een project bij de realisaties, niet meer bij de
+            ' woonprojecten — permanent doorsturen zodat er geen verouderde "te koop"-pagina
+            ' blijft rondzweven naast de echte realisatiepagina op dezelfde slug.
+            If data.Status IsNot Nothing AndAlso data.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
+                Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = slug})
+            End If
+
+            ' Commerciële panden horen bij /commerciele-projecten, niet bij /woonprojecten.
+            If data.ProjectType = ProjectType.Commerciëel Then
+                Return RedirectToRoutePermanent("CommercieelBySlug", New With {.slug = slug})
+            End If
+
+            Return RenderProjectDetail(data, service)
+        End Function
+
+        <Route("commerciele-projecten/{slug}", Name:="CommercieelBySlug")>
+        Function CommercieelBySlug(slug As String) As ActionResult
+
+            Dim service = ServiceFactory.GetProjectService
+            Dim response = service.GetProjectBySlug(slug)
+            Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
+            If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
+
+            If data.Status IsNot Nothing AndAlso data.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
+                Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = slug})
+            End If
+
+            ' Woonprojecten horen bij /woonprojecten, niet bij /commerciele-projecten.
+            If data.ProjectType = ProjectType.Woonproject Then
+                Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
+            End If
+
+            Return RenderProjectDetail(data, service)
+        End Function
+
+        ' Gedeelde weergavelogica voor zowel /woonprojecten/{slug} als /commerciele-projecten/{slug} —
+        ' enige verschil tussen de twee is welke route ernaartoe leidt en welke canonical
+        ' SetProjectSeoViewData op basis van data.ProjectType kiest.
+        Private Function RenderProjectDetail(data As ProjectBO, service As IProjectService) As ActionResult
+            Dim model As New ProjectDetailModel
+            model.Data = data
+
             'sort pictures
             model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
             model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
@@ -203,8 +277,6 @@ Namespace Controllers
             LoadProjectSeoFields(model.Data)
             SetProjectSeoViewData(model.Data)
             Return View("Detail", model)
-
-
         End Function
         Function Detail(model As ProjectDetailModel) As ActionResult
             If model Is Nothing OrElse model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
@@ -1000,88 +1072,10 @@ Namespace Controllers
             End If
         End Function
 
-        <Route("Projects/Photos/{slug}", Name:="ProjectPhotosBySlug")>
-        Function Photos(slug As String) As ActionResult
-
-            Dim model As New ProjectPhotosModel
-            Dim service = ServiceFactory.GetProjectService
-            Dim response = service.GetPicturesByProjectSlug(slug)
-            If (response.Success) Then model.Photos = response.Values
-            'sort pictures
-            model.Photos = model.Photos.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
-            model.Photos = model.Photos.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
-            model.ProjectId = model.Photos.FirstOrDefault.ProjectId
-            model.ProjectName = service.GetProjectNameById(model.ProjectId)
-            model.ProjectCity = service.GetProjectCityById(model.ProjectId)
-            model.ProjectSlug = service.GetProjectSlugById(model.ProjectId)
-
-            ViewData("Title") = model.ProjectName & " - Foto's | Group LN"
-
-            Return View(model)
-
-        End Function
-        <Route("Projects/News/{slug}", Name:="ProjectNewsBySlug")>
-        Function News(slug As String, Optional newsid As Integer = 0) As ActionResult
-            Dim model As New ProjectNewsModel
-            Dim service = ServiceFactory.GetProjectService
-            Dim response = service.GetNewsByProjectSlug(slug)
-            If (response.Success) Then model.News = response.Values
-
-            'sort news
-            model.ProjectId = model.News.FirstOrDefault.ProjectId
-            model.News = model.News.OrderByDescending(Function(m) m.NewsDate).ToList
-            model.ProjectName = service.GetProjectNameById(model.ProjectId)
-            model.ProjectCity = service.GetProjectCityById(model.ProjectId)
-            model.ProjectSlug = service.GetProjectSlugById(model.ProjectId)
-
-            ViewData("Title") = model.ProjectName & " - Nieuws | Group LN"
-
-            If Not newsid = 0 Then
-
-                model.NewsId = newsid
-                Dim newsitem As ProjectNewsBO = model.News.Where(Function(m) m.Id = newsid).FirstOrDefault
-                ViewData("ogtitle") = model.ProjectName & " - " & newsitem.TitleNL
-                ViewData("ogtype") = "website"
-                ViewData("ogdescription") = newsitem.TextNL
-                ViewData("ogimage") = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/News/" & newsitem.Picture.Name
-                'ViewData("ogurl") = Url.Action("News", "Projects", New With {.id = model.ProjectId, .newsid = newsitem.Id})
-            Else
-
-            End If
-            Return View(model)
-
-        End Function
-        <Route("Projects/{id}/News", Name:="ProjectNewsById")>
-        Function News(id As Integer, Optional newsid As Integer = 0) As ActionResult
-            Dim model As New ProjectNewsModel
-            Dim service = ServiceFactory.GetProjectService
-            Dim response = service.GetNewsByProjectId(id)
-            If (response.Success) Then model.News = response.Values
-
-            'sort news
-            model.ProjectId = model.News.FirstOrDefault.ProjectId
-            model.News = model.News.OrderByDescending(Function(m) m.NewsDate).ToList
-            model.ProjectName = service.GetProjectNameById(model.ProjectId)
-            model.ProjectCity = service.GetProjectCityById(model.ProjectId)
-            model.ProjectSlug = service.GetProjectSlugById(model.ProjectId)
-
-            ViewData("Title") = model.ProjectName & " - Nieuws | Group LN"
-            If Not newsid = 0 Then
-
-                model.NewsId = newsid
-                Dim newsitem As ProjectNewsBO = model.News.Where(Function(m) m.Id = newsid).FirstOrDefault
-                ViewData("ogtitle") = model.ProjectName & " - " & newsitem.TitleNL
-                ViewData("ogtype") = "website"
-                ViewData("ogdescription") = newsitem.TextNL
-                ViewData("ogimage") = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/News/" & newsitem.Picture.Name
-                'ViewData("ogurl") = Url.Action("News", "Projects", New With {.id = model.ProjectId, .newsid = newsitem.Id})
-            Else
-
-            End If
-
-            Return View(model)
-
-        End Function
+        ' Foto's/nieuws als losse projectpagina's zijn niet meer in gebruik (het detail zelf
+        ' toont al een fotogallerij) en stonden bovendien kapot (Google had de oude URL's nog
+        ' geïndexeerd). De acties (Photos/News) en hun routes zijn daarom verwijderd — MVC's
+        ' standaard "unknown action"-afhandeling geeft nu vanzelf een nette 404.
 
 
         Private Function GetCoordinationOnlyProjectIds() As HashSet(Of Integer)
@@ -1125,7 +1119,11 @@ Namespace Controllers
             Dim imgUrl As String = If(data.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(data.DefaultPicture.Name),
                                       imageBase & "pictures/" & data.DefaultPicture.Name,
                                       imageBase & "pictures/placeholder.jpg")
-            Dim canonical As String = "https://www.groupln.be/woonprojecten/" & data.Slug
+            Dim canonicalBase As String = If(data.ProjectType = ProjectType.Commerciëel, "commerciele-projecten", "woonprojecten")
+            ' routes.LowercaseUrls = True genereert intern altijd kleine-letter-URL's — de
+            ' canonical moet daarom ook de kleine-letter-slug gebruiken, anders wijkt hij af
+            ' zodra de Slug in de database met een hoofdletter begint.
+            Dim canonical As String = "https://www.groupln.be/" & canonicalBase & "/" & If(data.Slug, "").ToLowerInvariant()
 
             Dim seoTitle As String = If(Not String.IsNullOrWhiteSpace(data.SeoTitle),
                                         data.SeoTitle,

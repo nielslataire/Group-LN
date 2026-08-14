@@ -41,7 +41,7 @@ end section
                             @<text>
                                 <span class="thumb-info thumb-info-lighten">
                                     <span class="thumb-info-wrapper m-none">
-                                        <img src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & project.DefaultPicture.Name)" class="img-responsive" alt="@project.DefaultPicture.Caption ">
+                                        <img src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & project.DefaultPicture.Name)" class="img-responsive" alt="@(If(Not String.IsNullOrWhiteSpace(project.DefaultPicture.Caption), project.DefaultPicture.Caption, project.Name))">
                                         <span class="thumb-info-listing-type background-color-primary text-uppercase text-color-light font-weight-semibold p-xs pl-md pr-md">
                                             @project.Postalcode.Gemeente
                                         </span>
@@ -60,7 +60,7 @@ end section
                             @<text>
                                 <span class="thumb-info thumb-info-no-borders thumb-info-lighten">
                                     <span class="thumb-info-wrapper">
-                                        <img src="@Url.Content("~/content/img/no_image.jpg")" class="img-responsive" alt="@project.DefaultPicture.Caption ">
+                                        <img src="@Url.Content("~/content/img/no_image.jpg")" class="img-responsive" alt="@project.Name">
                                         <span class="thumb-info-title">
                                             <span class="thumb-info-inner">@project.Name</span>
                                             <span class="thumb-info-type">@project.Postalcode.Gemeente</span>

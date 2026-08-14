@@ -155,8 +155,8 @@ End Code
                         </div>
                         <div class="header-column header-nav-col">
                             <nav class="hero-nav-items" id="heroNavItems">
-                                <a class="hero-nav-item" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">Woonprojecten</a>
-                                <a class="hero-nav-item" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">Commercieel</a>
+                                <a class="hero-nav-item" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">Woonprojecten</a>
+                                <a class="hero-nav-item" href="@Url.Action("Commercieel", "Projects")">Commercieel</a>
                                 <a class="hero-nav-item" href="@Url.Action("Index", "Blog")">Blog</a>
                                 <a class="hero-nav-item" href="@Url.Action("Index", "Contact")">Contact</a>
                             </nav>
@@ -186,12 +186,12 @@ End Code
                             </a>
                         </li>
                         <li>
-                            <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">
+                            <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">
                                 Woonprojecten
                             </a>
                         </li>
                         <li>
-                            <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">
+                            <a href="@Url.Action("Commercieel", "Projects")">
                                 Commercieel
                             </a>
                         </li>
@@ -208,6 +208,11 @@ End Code
                         <li>
                             <a href="@Url.Action("Index", "Team")">
                                 Team
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.RouteUrl("Vacatures")">
+                                Vacatures
                             </a>
                         </li>
                         <li>
@@ -261,8 +266,8 @@ End Code
                     <div class="footer-col footer-col-projecten">
                         <h4 class="footer-col-title">Projecten</h4>
                         <ul class="footer-links">
-                            <li><a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">Woonprojecten</a></li>
-                            <li><a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">Commercieel</a></li>
+                            <li><a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">Woonprojecten</a></li>
+                            <li><a href="@Url.Action("Commercieel", "Projects")">Commercieel</a></li>
                             <li><a href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">Realisaties</a></li>
                         </ul>
                     </div>

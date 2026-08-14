@@ -18,12 +18,13 @@ Public Class SitemapController
         ' Statische pagina's
         AddUrl(urlset, "/", "daily", "1.0")
         AddUrl(urlset, "/over-ons", "monthly", "0.6")
-        AddUrl(urlset, "/ons-team", "monthly", "0.5")
+        AddUrl(urlset, "/team", "monthly", "0.5")
         AddUrl(urlset, "/contacteer-ons", "monthly", "0.5")
-        AddUrl(urlset, "/woonprojecten?Type=Woonproject", "weekly", "0.9")
-        AddUrl(urlset, "/woonprojecten?Type=" & Uri.EscapeDataString("Commerciëel"), "weekly", "0.8")
+        AddUrl(urlset, "/woonprojecten", "weekly", "0.9")
+        AddUrl(urlset, "/commerciele-projecten", "weekly", "0.8")
         AddUrl(urlset, "/realisaties", "monthly", "0.6")
         AddUrl(urlset, "/blog", "weekly", "0.7")
+        AddUrl(urlset, "/vacatures", "weekly", "0.6")
 
         ' Projecten: actieve projecten -> /woonprojecten/{slug}, opgeleverde -> /realisaties/{slug}
         Try
@@ -35,11 +36,18 @@ Public Class SitemapController
                     If p.Status Is Nothing Then Continue For
                     If p.Status.Id = CInt(ProjectStatusType.Stopgezet) Then Continue For
 
+                    ' routes.LowercaseUrls = True genereert intern altijd kleine-letter-URL's —
+                    ' de sitemap moet daarom ook kleine letters gebruiken, anders wijkt de
+                    ' opgegeven URL af van de canonical zodra de Slug in de database met een
+                    ' hoofdletter begint.
+                    Dim pSlug As String = p.Slug.ToLowerInvariant()
                     If p.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
                         Dim lastmod As String = If(p.DeliveryDate.HasValue, p.DeliveryDate.Value.ToString("yyyy-MM-dd"), Nothing)
-                        AddUrl(urlset, "/realisaties/" & p.Slug, "yearly", "0.4", lastmod)
+                        AddUrl(urlset, "/realisaties/" & pSlug, "yearly", "0.4", lastmod)
+                    ElseIf p.ProjectType = ProjectType.Commerciëel Then
+                        AddUrl(urlset, "/commerciele-projecten/" & pSlug, "weekly", "0.7")
                     Else
-                        AddUrl(urlset, "/woonprojecten/" & p.Slug, "weekly", "0.7")
+                        AddUrl(urlset, "/woonprojecten/" & pSlug, "weekly", "0.7")
                     End If
                 Next
             End If
@@ -54,7 +62,7 @@ Public Class SitemapController
                 Dim cmd As New SqlCommand("SELECT Slug, Datum FROM BlogArtikel WHERE IsGepubliceerd = 1 ORDER BY Datum DESC", conn)
                 Using reader = cmd.ExecuteReader()
                     While reader.Read()
-                        Dim slug As String = reader.GetString(0)
+                        Dim slug As String = reader.GetString(0).ToLowerInvariant()
                         Dim lastmod As String = If(reader.IsDBNull(1), Nothing, reader.GetDateTime(1).ToString("yyyy-MM-dd"))
                         AddUrl(urlset, "/blog/" & slug, "monthly", "0.6", lastmod)
                     End While
@@ -62,6 +70,23 @@ Public Class SitemapController
             End Using
         Catch
             ' sitemap moet blijven werken ook als de blogdata niet beschikbaar is
+        End Try
+
+        ' Vacatures
+        Try
+            Using conn As New SqlConnection(ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString)
+                conn.Open()
+                Dim cmd As New SqlCommand("SELECT Slug, GewijzigdOp FROM Vacature WHERE IsGepubliceerd = 1 ORDER BY SortOrder", conn)
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        Dim slug As String = reader.GetString(0).ToLowerInvariant()
+                        Dim lastmod As String = If(reader.IsDBNull(1), Nothing, reader.GetDateTime(1).ToString("yyyy-MM-dd"))
+                        AddUrl(urlset, "/vacatures/" & slug, "weekly", "0.6", lastmod)
+                    End While
+                End Using
+            End Using
+        Catch
+            ' sitemap moet blijven werken ook als de vacature-data niet beschikbaar is
         End Try
 
         Dim doc As New XDocument(New XDeclaration("1.0", "UTF-8", Nothing), urlset)

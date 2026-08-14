@@ -9,6 +9,12 @@ Public Class BlogController
     <Route("Blog", Name:="Blog")>
     <Route("Nieuws", Name:="Nieuws")>
     Function Index() As ActionResult
+        ' /Nieuws is een oude, alternatieve route naar dezelfde pagina — permanent
+        ' doorsturen naar /blog zodat er maar één indexeerbare URL overblijft.
+        If Request.Url.AbsolutePath.StartsWith("/Nieuws", StringComparison.OrdinalIgnoreCase) Then
+            Return RedirectPermanent("/blog")
+        End If
+
         Dim artikelen = GetGepubliceerdeArtikelen()
         Return View(artikelen)
     End Function
@@ -17,6 +23,10 @@ Public Class BlogController
     <Route("Blog/{slug}", Name:="BlogArtikel")>
     <Route("Nieuws/{slug}", Name:="NieuwsArtikel")>
     Function Artikel(slug As String, prev As String) As ActionResult
+        If Request.Url.AbsolutePath.StartsWith("/Nieuws", StringComparison.OrdinalIgnoreCase) Then
+            Return RedirectPermanent("/blog/" & slug)
+        End If
+
         Dim verwachtToken = ConfigurationManager.AppSettings("PreviewToken")
         Dim isPreview As Boolean = Not String.IsNullOrEmpty(verwachtToken) AndAlso
                                    Not String.IsNullOrEmpty(prev) AndAlso

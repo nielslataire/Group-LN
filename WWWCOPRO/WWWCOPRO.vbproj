@@ -236,6 +236,7 @@
     <Compile Include="App_Start\WebApiConfig.vb" />
     <Compile Include="Controllers\AboutUsController.vb" />
     <Compile Include="Controllers\BlogController.vb" />
+    <Compile Include="Controllers\VacaturesController.vb" />
     <Compile Include="Controllers\ContactController.vb" />
     <Compile Include="Controllers\ErrorController.vb" />
     <Compile Include="Controllers\HomeController.vb" />
@@ -251,6 +252,7 @@
     <Compile Include="Helpers\Extensions.vb" />
     <Compile Include="Helpers\LatestNews.vb" />
     <Compile Include="Models\Blog\BlogArtikelModel.vb" />
+    <Compile Include="Models\Vacatures\VacatureModel.vb" />
     <Compile Include="Models\Contact\NewsletterModel.vb" />
     <Compile Include="Models\Contact\MailModel.vb" />
     <Compile Include="Models\Home\HeroSearchOptionsModel.vb" />
@@ -326,6 +328,7 @@
     <Content Include="Content\footer.css" />
     <Content Include="Content\reveal.css" />
     <Content Include="Content\contact.css" />
+    <Content Include="Content\vacatures.css" />
     <Content Include="Content\projects-index.css" />
     <Content Include="Content\skins\PATTERN-dark.png" />
     <Content Include="Content\PATTERN.png" />
@@ -528,8 +531,7 @@
     <Content Include="Views\References\Index.vbhtml" />
     <Content Include="Views\Projects\Detail.vbhtml" />
     <Content Include="Views\Projects\Adressblock.vbhtml" />
-    <Content Include="Views\Projects\Photos.vbhtml" />
-    <Content Include="Views\Projects\News.vbhtml" />
+
     <Content Include="Views\References\Detail.vbhtml" />
     <Content Include="Views\References\Adressblock.vbhtml" />
     <Content Include="Views\Emails\Web.config" />
@@ -557,6 +559,8 @@
     <Content Include="Views\Projects\Inschrijving.vbhtml" />
     <Content Include="Views\Blog\Artikel.vbhtml" />
     <Content Include="Views\Blog\Index.vbhtml" />
+    <Content Include="Views\Vacatures\Index.vbhtml" />
+    <Content Include="Views\Vacatures\Detail.vbhtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\custom.css" />

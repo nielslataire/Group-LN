@@ -9,6 +9,13 @@ Public Class HomeController
     <Route("Home", name:="Home")>
     <Route("~/", name:="defaultroute")>
     Function Index() As ActionResult
+        ' /welkom (en /Home, /Home/Index) zijn allemaal alternatieve routes naar dezelfde
+        ' homepage — permanent doorsturen naar de echte root, zodat er maar één indexeerbare
+        ' URL voor de homepage bestaat.
+        If Request.Url.AbsolutePath <> "/" Then
+            Return RedirectPermanent("/")
+        End If
+
         'Dim model As New ProjectModel
         ViewData("HeroSearchOptions") = BuildHeroSearchOptions()
         ViewData("HomeHeroFeatured") = GetHomeHeroFeatured()
@@ -160,7 +167,8 @@ Public Class HomeController
             model.IsVideo = isVideo
             model.ImageSrc = If(project.DefaultPicture IsNot Nothing AndAlso Not isVideo, Url.Content(imgBase & "pictures/800/" & project.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
             model.VideoSrc = If(isVideo, Url.Content(imgBase & "videos/" & project.DefaultPicture.Name), "")
-            model.DetailUrl = Url.RouteUrl("ProjectBySlug", New With {.slug = project.Slug})
+            Dim detailRouteName = If(project.ProjectType = ProjectType.Commerciëel, "CommercieelBySlug", "ProjectBySlug")
+            model.DetailUrl = Url.RouteUrl(detailRouteName, New With {.slug = project.Slug})
             Return model
         Catch
             Return Nothing

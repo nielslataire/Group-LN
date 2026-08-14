@@ -438,9 +438,10 @@
     font-family: var(--font-serif);
     font-size: 22px;
     font-weight: 400;
+    letter-spacing: normal;
     color: var(--groen-diep, #2C3B2A);
     line-height: 1.45;
-    margin-bottom: 10px;
+    margin: 0 0 10px;
 }
 .commercial-accent {
     width: 44px;

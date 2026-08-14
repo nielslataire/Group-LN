@@ -106,6 +106,7 @@ namespace DALCore
         public GenericRepository<BlogArtikel>    BlogArtikelen    { get; }
         public GenericRepository<BlogArtikelBlok> BlogArtikelBlokken { get; }
         public GenericRepository<BlogArtikelFaq>  BlogArtikelFaqItems { get; }
+        public GenericRepository<Vacature>        Vacaturen           { get; }
         public GenericRepository<EmailTemplate>       EmailTemplates       { get; }
         public GenericRepository<UserEmailSignature>  UserEmailSignatures  { get; }
         public GenericRepository<EmailSendLog>        EmailSendLogs        { get; }
@@ -214,6 +215,7 @@ namespace DALCore
             BlogArtikelen             = new GenericRepository<BlogArtikel>(_context);
             BlogArtikelBlokken        = new GenericRepository<BlogArtikelBlok>(_context);
             BlogArtikelFaqItems       = new GenericRepository<BlogArtikelFaq>(_context);
+            Vacaturen                 = new GenericRepository<Vacature>(_context);
             EmailTemplates            = new GenericRepository<EmailTemplate>(_context);
             UserEmailSignatures       = new GenericRepository<UserEmailSignature>(_context);
             EmailSendLogs             = new GenericRepository<EmailSendLog>(_context);

@@ -2,7 +2,11 @@
 @Imports wwwcopro.extensions
 @Imports System.Globalization
 @Code
-    Dim isWoonproject As Boolean = Model.Projects.Any() AndAlso Model.Projects.First().ProjectType = BO.ProjectType.Woonproject
+    ' Bepaald door de controller (Type-parameter), niet afgeleid uit de projectlijst —
+    ' anders wisselt de titel/canonical afhankelijk van welk project toevallig eerst komt,
+    ' of zelfs bij een lege lijst.
+    Dim isWoonproject As Boolean = CBool(If(ViewBag.IsWoonproject, True))
+    Dim _detailRouteName As String = If(isWoonproject, "ProjectBySlug", "CommercieelBySlug")
     ViewData("Title") = If(isWoonproject, "Woonprojecten | Group LN", "Commerciële projecten | Group LN")
     ViewData("MetaDescription") = If(isWoonproject,
         "Ontdek de nieuwbouwappartementen en woningen van Group LN in Vlaanderen — kwalitatieve afwerking, tijdloos ontwerp, één aanspreekpunt.",
@@ -72,14 +76,12 @@
            "Woonprojecten",
            "Commerciële projecten")
 
-    Dim _typeValue As String =
-        If(isWoonproject,
-           "Woonproject",
-           "Commercieel")
-
+    ' Schone, canonieke URL per type — geen query-string meer (die werd voorheen zelfs
+    ' als canonical opgegeven, wat Google net naar de query-string-variant deed wijzen).
     Dim _listUrl As String =
-        "https://www.groupln.be/woonprojecten?Type=" &
-        Uri.EscapeDataString(_typeValue)
+        If(isWoonproject,
+           "https://www.groupln.be/woonprojecten",
+           "https://www.groupln.be/commerciele-projecten")
 
     ViewData("canonical") = _listUrl
 
@@ -96,8 +98,8 @@
                p.Name)
 
         Dim pUrl As String =
-            "https://www.groupln.be/woonprojecten/" &
-            Uri.EscapeDataString(p.Slug)
+            _listUrl & "/" &
+            Uri.EscapeDataString(If(p.Slug, "").ToLowerInvariant())
 
         If _itemsJson.Length > 0 Then
             _itemsJson.Append(","c)
@@ -173,7 +175,7 @@ end section
     @If fp IsNot Nothing Then
         @<text>
             <div class="sectie-kop">Uitgelicht project</div>
-            <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = fp.Slug}))" class="uitgelicht-project reveal">
+            <a href="@(Url.RouteUrl(_detailRouteName, New With {.slug = fp.Slug}))" class="uitgelicht-project reveal">
                 <div class="uitgelicht-foto">
                     @If fpIsVideo Then
                         @<video src="@fpVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -414,7 +416,7 @@ end section
             </text>
         Else
             @<text>
-                <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = project.Slug}))" class="project-kaart reveal">
+                <a href="@(Url.RouteUrl(_detailRouteName, New With {.slug = project.Slug}))" class="project-kaart reveal">
                     <div class="kaart-foto">
                         @If cardIsVideo Then
                             @<video src="@cardVideoSrc" muted loop playsinline data-autoplay="true"></video>

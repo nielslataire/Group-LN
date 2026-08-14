@@ -1,0 +1,608 @@
+/* ================================================
+   Vacatures — hero, wie-wij-zoeken, waarom-hier-starten,
+   wat-wij-bieden, vacaturelijst, afsluitende CTA + detailpagina
+   ================================================ */
+
+/* --- Hero --- */
+.vacatures-page-header {
+    position: relative;
+    padding: 120px 0 90px;
+    background: linear-gradient(160deg, var(--color-primary, #00532D) 0%, var(--color-primary-dark, #003d21) 100%);
+    overflow: hidden;
+}
+.vacatures-page-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.035),
+        rgba(255, 255, 255, 0.035) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    pointer-events: none;
+}
+.vacatures-header-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+}
+.vacatures-header-kicker {
+    margin: 0 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    color: var(--color-cta, #C9A96E);
+}
+.vacatures-header-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 44px;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0 0 18px;
+}
+.vacatures-header-text {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    max-width: 520px;
+}
+
+/* --- Wie wij zoeken --- */
+.vac-wie-section {
+    padding: 100px 0;
+    background: var(--mist, #F2F5EF);
+}
+.vac-wie-grid {
+    display: flex;
+    align-items: center;
+    gap: 64px;
+}
+.vac-wie-foto-wrap {
+    flex: 1 1 0;
+}
+.vac-wie-foto {
+    display: block;
+    width: 100%;
+    aspect-ratio: 5 / 6;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.vac-wie-content {
+    flex: 1 1 0;
+    max-width: 480px;
+}
+.vac-wie-headline {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 22px;
+}
+.vac-wie-text {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0 0 18px;
+}
+.vac-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+}
+.vac-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 100px;
+    background: #fff;
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tekst, #2C3B2A);
+}
+.vac-pill svg {
+    color: var(--color-primary, #00532D);
+    flex-shrink: 0;
+}
+
+/* --- Waarom hier starten --- */
+.vac-why-section {
+    padding: 100px 0;
+    background: var(--color-primary-dark, #003d21);
+}
+.vac-why-headline {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0;
+    max-width: 640px;
+}
+.vac-why-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    margin-top: 48px;
+}
+.vac-why-item {
+    padding-left: 28px;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+.vac-why-item:first-child {
+    padding-left: 0;
+    border-left: none;
+}
+.vac-why-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--color-cta, #C9A96E);
+    margin-bottom: 16px;
+}
+.vac-why-item h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 18px;
+    color: #fff;
+    margin: 0 0 10px;
+}
+.vac-why-item p {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+/* --- Wat wij bieden --- */
+.vac-benefits-section {
+    padding: 100px 0;
+    background: #fff;
+}
+.vac-benefits-headline {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 40px;
+}
+.vac-benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    border-radius: 10px;
+    overflow: hidden;
+}
+.vac-benefit-item {
+    padding: 32px;
+    border-right: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+}
+.vac-benefit-item:nth-child(3n) {
+    border-right: none;
+}
+.vac-benefit-item:nth-child(n+4) {
+    border-bottom: none;
+}
+.vac-benefit-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--mist, #F2F5EF);
+    color: var(--color-primary, #00532D);
+    margin-bottom: 16px;
+}
+.vac-benefit-item h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 8px;
+}
+.vac-benefit-item p {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+}
+
+/* --- Openstaande vacatures --- */
+.vac-list-section {
+    padding: 100px 0;
+    background: var(--mist, #F2F5EF);
+}
+.vac-list-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 16px;
+}
+.vac-list-headline {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 34px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0;
+}
+.vac-list-count {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--tekst-sub, #5a6b58);
+    white-space: nowrap;
+}
+.vac-list-text {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    max-width: 640px;
+    margin: 0 0 40px;
+}
+.vac-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.vac-card {
+    display: block;
+    background: #fff;
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    border-radius: 10px;
+    padding: 28px 32px;
+    text-decoration: none !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.vac-card:hover {
+    border-color: var(--color-primary, #00532D);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+.vac-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+.vac-card-categorie {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-primary, #00532D);
+    margin: 0 0 8px;
+}
+.vac-card-titel {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 21px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 10px;
+}
+.vac-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+.vac-card-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--tekst-sub, #5a6b58);
+}
+.vac-card-meta-item svg {
+    color: var(--tekst-sub, #5a6b58);
+    flex-shrink: 0;
+}
+.vac-card-tekst {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+    max-width: 640px;
+}
+.vac-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-primary, #00532D);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.vac-empty {
+    text-align: center;
+    padding: 48px 24px;
+    background: #fff;
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    border-radius: 10px;
+    color: var(--tekst-sub, #5a6b58);
+    font-family: var(--font-sans);
+    font-size: 15px;
+}
+
+/* --- Afsluitende CTA (geen sollicitatieknop) --- */
+.vac-cta-section {
+    padding: 80px 0;
+    background: #fff;
+    text-align: center;
+}
+.vac-cta-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 14px;
+}
+.vac-cta-text {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* --- Detailpagina --- */
+.vac-detail-header {
+    background: var(--mist, #F2F5EF);
+    padding: 44px 0 36px;
+    border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+}
+.vac-detail-categorie {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-primary, #00532D);
+    margin: 0 0 10px;
+}
+.vac-detail-header h1 {
+    font-family: var(--font-serif);
+    font-size: 36px;
+    font-weight: 400;
+    color: var(--tekst, #2C3B2A);
+    margin: 0 0 16px;
+    line-height: 1.2;
+}
+.vac-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.vac-detail-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--tekst-sub, #5a6b58);
+}
+.vac-detail-meta-item svg {
+    color: var(--color-primary, #00532D);
+    flex-shrink: 0;
+}
+.vac-detail-wrap {
+    background: #fff;
+    padding: 64px 24px 96px;
+}
+.vac-detail-body {
+    max-width: 720px;
+    margin: 0 auto;
+}
+.vac-detail-body h2,
+.vac-detail-body h3 {
+    font-family: var(--font-serif);
+    color: var(--groen-diep, #2C3B2A);
+    margin: 32px 0 14px;
+}
+.vac-detail-body p {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0 0 18px;
+}
+.vac-detail-body ul,
+.vac-detail-body ol {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0 0 18px;
+    padding-left: 22px;
+}
+.vac-detail-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 48px;
+    padding: 32px;
+    background: var(--mist, #F2F5EF);
+    border-radius: 10px;
+}
+.vac-detail-cta-text h3 {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 6px;
+}
+.vac-detail-cta-text p {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+}
+.vac-detail-apply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 28px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-primary, #00532D);
+    text-decoration: none !important;
+    white-space: nowrap;
+    transition: background 0.25s ease;
+}
+.vac-detail-apply-btn:hover {
+    background: var(--color-primary-hover, #006638);
+    color: #fff;
+}
+.vac-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 32px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary, #00532D);
+    text-decoration: none !important;
+}
+.vac-detail-back:hover {
+    opacity: 0.8;
+}
+
+/* --- Responsive --- */
+@media (max-width: 991px) {
+    .vac-wie-grid {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 32px;
+    }
+    .vac-wie-content {
+        max-width: none;
+    }
+    .vac-why-grid {
+        grid-template-columns: repeat(2, 1fr);
+        row-gap: 32px;
+    }
+    .vac-why-item:nth-child(2) {
+        padding-left: 28px;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .vac-why-item:nth-child(3) {
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        padding-top: 24px;
+    }
+    .vac-why-item:nth-child(4) {
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        padding-top: 24px;
+    }
+    .vac-benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .vac-benefit-item:nth-child(3n) {
+        border-right: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    }
+    .vac-benefit-item:nth-child(2n) {
+        border-right: none;
+    }
+    .vac-benefit-item:nth-child(n+4) {
+        border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    }
+    .vac-benefit-item:nth-child(n+5) {
+        border-bottom: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .vacatures-page-header {
+        padding: 90px 0 64px;
+    }
+    .vacatures-header-title {
+        font-size: 30px;
+    }
+    .vac-wie-section,
+    .vac-why-section,
+    .vac-benefits-section,
+    .vac-list-section {
+        padding: 64px 0;
+    }
+    .vac-wie-headline,
+    .vac-why-headline,
+    .vac-benefits-headline,
+    .vac-list-headline {
+        font-size: 26px;
+    }
+    .vac-why-grid {
+        grid-template-columns: 1fr;
+        row-gap: 24px;
+    }
+    .vac-why-item {
+        padding-left: 0 !important;
+        border-left: none !important;
+    }
+    .vac-why-item:nth-child(n+2) {
+        border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+        padding-top: 24px !important;
+    }
+    .vac-benefits-grid {
+        grid-template-columns: 1fr;
+    }
+    .vac-benefit-item {
+        border-right: none !important;
+        border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10)) !important;
+    }
+    .vac-benefit-item:last-child {
+        border-bottom: none !important;
+    }
+    .vac-list-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .vac-card {
+        padding: 22px 20px;
+    }
+    .vac-detail-cta {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+}

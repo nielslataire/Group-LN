@@ -1,0 +1,176 @@
+@model CPMCore.Models.Instellingen.VacatureListVM
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle {
+<style>
+    .badge-gepubliceerd {
+        background: #d1fae5;
+        color: #065f46;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .badge-gepubliceerd::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #059669;
+        flex-shrink: 0;
+    }
+
+    .badge-concept {
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .vc-tabel th {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #8a9aaa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 16px;
+        background: transparent;
+    }
+
+    .vc-tabel td {
+        padding: 14px 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f2f5;
+    }
+
+    .vc-tabel tbody tr:last-child td { border-bottom: none; }
+    .vc-tabel tbody tr:hover td { background: #f8fafb; }
+
+    .vc-actie-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-size: 15px;
+        transition: background .15s, color .15s, border-color .15s;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .vc-actie-btn:hover { background: #f0f2f5; color: #343a40; border-color: #c6cbd1; text-decoration: none; }
+    .vc-actie-btn.vc-actie-delete:hover { background: #fff1f0; color: #dc3545; border-color: #f5c6cb; }
+</style>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Vacatures</h1>
+        <p class="text-muted mb-0">Beheer de vacatures die op de website verschijnen.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("Index", "Instellingen")" class="btn btn-outline-secondary">
+            <i class="bx bx-cog"></i> Instellingen
+        </a>
+        <a href="@Url.Action("Aanmaken")" class="btn btn-primary">
+            <i class="bx bx-plus"></i> Nieuwe vacature
+        </a>
+    </div>
+</div>
+
+@if (!Model.Vacatures.Any())
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bx bx-briefcase" style="font-size: 3rem; color: #adb5bd;"></i>
+            <p class="mt-3 text-muted">Er zijn nog geen vacatures. Maak je eerste vacature aan.</p>
+            <a href="@Url.Action("Aanmaken")" class="btn btn-primary mt-2">
+                <i class="bx bx-plus"></i> Nieuwe vacature
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card" style="border-radius:8px;border:1px solid #e9ecef;background-color:#fff;">
+        <div class="table-responsive">
+            <table class="table vc-tabel mb-0">
+                <thead>
+                    <tr>
+                        <th>Titel</th>
+                        <th style="width:180px;">Categorie</th>
+                        <th style="width:140px;">Locatie</th>
+                        <th style="width:90px;">Volgorde</th>
+                        <th style="width:150px;">Status</th>
+                        <th style="width:90px;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var vacature in Model.Vacatures)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold" style="font-size:14px;color:#212529;">@vacature.Titel</div>
+                                <div class="text-muted" style="font-size:12px;margin-top:2px;">@vacature.Slug</div>
+                            </td>
+                            <td>@vacature.Categorie</td>
+                            <td>@vacature.Locatie</td>
+                            <td>@vacature.SortOrder</td>
+                            <td>
+                                @if (vacature.IsGepubliceerd)
+                                {
+                                    <span class="badge-gepubliceerd">Gepubliceerd</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-concept">Concept</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a href="@Url.Action("Bewerken", new { id = vacature.ID })"
+                                       class="vc-actie-btn" title="Bewerken">
+                                        <i class="bx bx-edit-alt"></i>
+                                    </a>
+                                    <button type="button" class="vc-actie-btn vc-actie-delete" title="Verwijderen"
+                                            onclick="vcVerwijder(@vacature.ID)">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                    <form id="del-@vacature.ID" method="post" action="@Url.Action("Verwijderen")" style="display:none;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@vacature.ID" />
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section PageScripts {
+<script>
+    function vcVerwijder(id) {
+        if (!confirm('Weet je zeker dat je deze vacature wil verwijderen?')) return;
+        document.getElementById('del-' + id).submit();
+    }
+</script>
+}

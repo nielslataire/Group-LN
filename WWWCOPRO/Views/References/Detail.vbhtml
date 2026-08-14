@@ -3,6 +3,40 @@
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 @Imports wwwcopro.extensions
+@section PageStyle
+    <style>
+        .ref-detail-media-float {
+            float: left;
+            width: 50%;
+            margin: 0 32px 24px 0;
+        }
+        @@media (max-width: 767px) {
+            .ref-detail-media-float {
+                float: none;
+                width: 100%;
+                margin: 0 0 24px;
+            }
+        }
+
+        /* Enkel de eerste titel + tekst wikkelt naast de carousel; elke
+           volgende titel (en alles erna) valt onder de carousel, zodat een
+           titel nooit losgeknipt raakt van zijn eigen tekst. */
+        .mt-xlg h3 ~ h3 {
+            clear: left;
+        }
+
+        /* De globale h3-stijl (theme-elements.css) zet alle tekst in
+           hoofdletters — voor de commerciële tekst willen we de titel
+           tonen zoals ingevoerd, dus die transform hier uitschakelen. */
+        .mt-xlg h3 {
+            text-transform: none;
+        }
+
+        .mt-xlg {
+            padding-bottom: 48px;
+        }
+    </style>
+End Section
 <section class="page-header page-header-light">
     <div class="container reveal">
         <div class="row">
@@ -31,8 +65,8 @@ End Code
                     <div class="portfolio-nav-all col-md-1">
                         <a href="@(Url.Action("Index", "References", New With {.id = UrlParameter.Optional}))" data-tooltip data-original-title="Terug naar onze realisaties"><i class="fa fa-th"></i></a>
                     </div>
-                    <div class="col-md-10 center">
-                        <h2 class="mb-none">@Model.Data.Name te @System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(Model.Data.Postalcode.Gemeente.ToLower()) </h2>
+                    <div class="col-md-10">
+                        <h2 class="mb-none">@Model.Data.CommercialTitleNL</h2>
                     </div>
                     @*<div class="portfolio-nav col-md-1">
                         <a href="portfolio-single-project.html" class="portfolio-nav-prev" data-tooltip data-original-title="Previous"><i class="fa fa-chevron-left"></i></a>
@@ -46,15 +80,15 @@ End Code
     </div>
 
     <div class="row">
-        <div class="col-md-9">
-            <div class="col-md-5 reveal">
+        <div class="col-md-9 reveal">
 
+            <div class="ref-detail-media-float">
                 <div class="owl-carousel owl-theme" data-plugin-options='{"items": 1, "margin": 10}'>
                             @If Not Model.Data.DefaultPicture Is Nothing Or Model.Data.DefaultPicture.Id = 0 Then
                                 @<text>
                                     <div>
                                         <span class="img-thumbnail">
-                                            <img alt="" class="img-responsive" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & Model.Data.DefaultPicture.Name)">
+                                            <img alt="@(If(Not String.IsNullOrWhiteSpace(Model.Data.DefaultPicture.Caption), Model.Data.DefaultPicture.Caption, Model.Data.Name))" class="img-responsive" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & Model.Data.DefaultPicture.Name)">
                                         </span>
                                     </div>
                                 </text>
@@ -65,7 +99,7 @@ End Code
                                 @<text>
                                     <div>
                                         <span class="img-thumbnail">
-                                            <img alt="" class="img-responsive" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & picture.Name)">
+                                            <img alt="@(If(Not String.IsNullOrWhiteSpace(picture.Caption), picture.Caption, Model.Data.Name))" class="img-responsive" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & picture.Name)">
                                         </span>
                                     </div>
                                 </text>
@@ -73,18 +107,9 @@ End Code
                             Next
 
                 </div>
-
             </div>
 
-            <div class="col-md-7 reveal">
-
-
-
-                <h4 class="heading-primary">@Model.Data.CommercialTitleNL</h4>
-                <p class="mt-xlg">@Model.Data.CommercialTextNL</p>
-
-
-            </div>
+            <div class="mt-xlg">@Html.Raw(Model.Data.CommercialTextNL)</div>
 
         </div>
         <div class="col-md-3">

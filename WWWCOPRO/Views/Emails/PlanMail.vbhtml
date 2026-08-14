@@ -216,10 +216,10 @@
                                                 <tbody>
                                                     <tr>
                                                         <td class="logo" width="254" height="100" align="left" style="padding-left: 4px; padding-bottom: 5px;">
-                                                            <a href="http://www.groupln.be">
+                                                            <a href="https://www.groupln.be">
                                                                 <img alt="Group LN - Projectontwikkeling"
                                                                      height="70"
-                                                                     src="http://www.groupln.be/content/img/logo-default.png">
+                                                                     src="https://www.groupln.be/content/img/logo-default.png">
                                                             </a>
                                                         </td>
                                                         <td class="tdhide">&nbsp;</td>
@@ -298,8 +298,8 @@
                         <td>
                             <img class="emailImage"
                                  width="640"
-                                 src="http://cpm.groupln.be/assets/pictures/@Model.Image"
-                                 alt="@Model.Imagecaption">
+                                 src="https://cpm.groupln.be/assets/pictures/@Model.Image"
+                                 alt="@(If(Not String.IsNullOrWhiteSpace(Model.Imagecaption), Model.Imagecaption, Model.Projectname))">
                         </td>
                     </tr>
                 </tbody>
@@ -324,7 +324,7 @@
                             <table width="200" cellpadding="0" cellspacing="0" bgcolor="#009336" style="border-radius:3px;">
                                 <tr>
                                     <td align="center" style="padding:12px;">
-                                        <a href="http://www.groupln.be/woonprojecten/@Model.Slug"
+                                        <a href="https://www.groupln.be/woonprojecten/@Model.Slug.ToLowerInvariant()"
                                            style="color:#fff; text-decoration:none; font-size:18px;">
                                             Project bekijken
                                         </a>

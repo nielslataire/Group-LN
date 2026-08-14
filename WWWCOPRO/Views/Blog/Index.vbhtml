@@ -209,7 +209,7 @@ End Section
                               "@@type": "ListItem",
                               "position": 2,
                               "name": "Blog",
-                              "item": "https://www.groupln.be/Blog"
+                              "item": "https://www.groupln.be/blog"
                             }
                           ]
                         },
@@ -217,7 +217,7 @@ End Section
                           "@@type": "Blog",
                           "name": "Nieuws & inspiratie | Group LN",
                           "description": "Marktinzichten, architectuurtrends, duurzaam bouwen, financieringstips en updates over nieuwbouwprojecten in Vlaanderen.",
-                          "url": "https://www.groupln.be/Blog",
+                          "url": "https://www.groupln.be/blog",
                           "inLanguage": "nl-BE",
                           "publisher": {
                             "@@type": "Organization",

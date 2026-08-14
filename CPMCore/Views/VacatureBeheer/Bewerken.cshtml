@@ -1,0 +1,171 @@
+@model CPMCore.Models.Instellingen.VacatureEditVM
+@{
+    var isNieuw = Model.ID == 0;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle {
+<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<style>
+    .bw-card { border: 1px solid #e9ecef; border-radius: 10px; background: #fff; margin-bottom: 24px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    .bw-card-inner { display: flex; }
+    .bw-sidebar { width: 230px; min-width: 230px; padding: 28px 22px; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; background: #fff; }
+    .bw-content { flex: 1; padding: 28px; min-width: 0; }
+    .bw-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; border-top: 1px solid #e9ecef; background: #f9fafb; }
+    .bw-icon { width: 44px; height: 44px; background: #ECF4E8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #00532D; margin-bottom: 14px; flex-shrink: 0; }
+    .bw-sidebar-title { font-weight: 700; font-size: 14px; color: #212529; margin-bottom: 6px; }
+    .bw-sidebar-desc { font-size: 12px; color: #6c757d; line-height: 1.55; }
+    .bw-sidebar-note { font-size: 12px; color: #6c757d; line-height: 1.55; margin-top: auto; padding-top: 20px; }
+
+    .bw-badge-pub { background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; }
+    .bw-badge-pub::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #059669; flex-shrink: 0; }
+    .bw-badge-concept { background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+
+    .ql-container { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+    .ql-toolbar { border-top-left-radius: 4px; border-top-right-radius: 4px; }
+    .quill-wrap { height: 240px; }
+</style>
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="h3 mb-1">@(isNieuw ? "Nieuwe vacature" : "Vacature bewerken")</h1>
+        @if (!isNieuw)
+        {
+            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                <span class="text-muted" style="font-size:14px;">@Model.Titel</span>
+                @if (Model.IsGepubliceerd)
+                {
+                    <span class="bw-badge-pub">Gepubliceerd</span>
+                }
+                else
+                {
+                    <span class="bw-badge-concept">Concept</span>
+                }
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("Index")" class="btn btn-default flex-shrink-0">
+            <i class="bx bx-arrow-back"></i> Terug
+        </a>
+    </div>
+</div>
+
+<form id="vacature-form" method="post" action="@Url.Action("Bewerken")">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ID" />
+
+    <div asp-validation-summary="All" class="alert alert-danger mb-4"></div>
+
+    <div class="bw-card">
+        <div class="bw-card-inner">
+            <div class="bw-sidebar">
+                <div class="bw-icon"><i class="bx bx-briefcase"></i></div>
+                <div class="bw-sidebar-title">Vacature</div>
+                <div class="bw-sidebar-desc">Gegevens voor de overzichts- en detailpagina op de website.</div>
+                <div class="bw-sidebar-note">Velden met <span class="text-danger">*</span> zijn verplicht. Slug leeg laten = automatisch gegenereerd op basis van de titel.</div>
+            </div>
+            <div class="bw-content">
+                <div class="row g-3">
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Titel" class="form-label fw-semibold">Titel <span class="text-danger">*</span></label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Titel" class="form-control" placeholder="Bv. Junior Projectleider Bouw" />
+                        <span asp-validation-for="Titel" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Slug" class="form-label fw-semibold">Slug</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Slug" class="form-control" placeholder="wordt-automatisch-gegenereerd" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Categorie" class="form-label fw-semibold">Categorie</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Categorie" class="form-control" placeholder="Bv. Bouw &amp; Werfopvolging" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Locatie" class="form-label fw-semibold">Locatie</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Locatie" class="form-control" placeholder="Bv. Gent" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Dienstverband" class="form-label fw-semibold">Dienstverband</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Dienstverband" class="form-control" placeholder="Bv. Voltijds" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="KorteBeschrijving" class="form-label fw-semibold">Korte beschrijving</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <textarea asp-for="KorteBeschrijving" class="form-control" rows="2" placeholder="Verschijnt op de vacaturekaart in de lijst..."></textarea>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 text-end">
+                        <label class="form-label fw-semibold">Beschrijving</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <div id="quill-beschrijving" class="quill-wrap"></div>
+                        <textarea asp-for="Beschrijving" id="quill-beschrijving-input" style="display:none;"></textarea>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="SortOrder" class="form-label fw-semibold">Volgorde</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="SortOrder" type="number" class="form-control" style="max-width:120px;" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2"></div>
+                    <div class="col-md-8 col-lg-10">
+                        <div class="form-check form-switch">
+                            <input asp-for="IsGepubliceerd" class="form-check-input" role="switch" />
+                            <label asp-for="IsGepubliceerd" class="form-check-label">Gepubliceerd (zichtbaar op de website)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bw-card-footer">
+            <div></div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save"></i> Opslaan
+            </button>
+        </div>
+    </div>
+</form>
+
+@section PageScripts {
+<script>
+    (function () {
+        var toolbarOptions = [
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'header': [2, 3, 4, false] }],
+            ['link'],
+            ['clean']
+        ];
+
+        var container = document.getElementById('quill-beschrijving');
+        var input = document.getElementById('quill-beschrijving-input');
+        if (container && input) {
+            var quill = new Quill(container, { theme: 'snow', modules: { toolbar: toolbarOptions } });
+            if (input.value) quill.root.innerHTML = input.value;
+            quill.on('text-change', function () { input.value = quill.root.innerHTML; });
+            var form = document.getElementById('vacature-form');
+            if (form) form.addEventListener('submit', function () { input.value = quill.root.innerHTML; });
+        }
+    })();
+</script>
+}

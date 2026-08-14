@@ -17,7 +17,7 @@ Subject: Group LN - uw contactvraag
                                 <tr>
                                     <td style="width:220px;" valign="middle">
                                         <a href="https://www.groupln.be" target="_blank" style="text-decoration:none; color:#009336;">
-                                            <img src="http://www.groupln.be/content/img/logo-default.png" alt="Group LN" height="54" style="display:block; border:0;" />
+                                            <img src="https://www.groupln.be/content/img/logo-default.png" alt="Group LN" height="54" style="display:block; border:0;" />
                                         </a>
                                     </td>
                                     <td align="right" style="color:#8a8a8a; font-size:11px; font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">
