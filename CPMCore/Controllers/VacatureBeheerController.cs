@@ -78,6 +78,8 @@ public class VacatureBeheerController : BaseController
             Categorie         = vm.Categorie,
             Locatie           = vm.Locatie,
             Dienstverband     = vm.Dienstverband,
+            Opleiding         = vm.Opleiding,
+            Start             = vm.Start,
             KorteBeschrijving = vm.KorteBeschrijving,
             Beschrijving      = vm.Beschrijving,
             IsGepubliceerd    = vm.IsGepubliceerd,
@@ -115,6 +117,174 @@ public class VacatureBeheerController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
+    // ── TAKENPAKKET ─────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult TaakOpslaan(VacatureTaakVM vm)
+    {
+        var bo = new VacatureTaakBO { ID = vm.ID, VacatureId = vm.VacatureId, SortOrder = vm.SortOrder, Tekst = vm.Tekst };
+        var response = _vacatureService.InsertUpdateTaak(bo);
+
+        if (response.HasErrors)
+            AddMessage("error", "Taak kon niet opgeslagen worden.", "Fout");
+        else
+            AddMessage("success", "Taak opgeslagen.", "Opgeslagen");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vm.VacatureId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult TaakVolgorde([FromForm] VacatureVolgordeVM vm)
+    {
+        if (vm.VacatureId <= 0 || vm.SortedIds == null || !vm.SortedIds.Any())
+            return Json(new { success = false });
+
+        var response = _vacatureService.UpdateTakenVolgorde(vm.VacatureId, vm.SortedIds);
+        return Json(new { success = !response.HasErrors });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult TaakVerwijderen(int taakId, int vacatureId)
+    {
+        var response = _vacatureService.DeleteTaak(taakId);
+
+        if (response.HasErrors)
+            AddMessage("error", "Taak kon niet verwijderd worden.", "Fout");
+        else
+            AddMessage("success", "Taak verwijderd.", "Verwijderd");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vacatureId });
+    }
+
+    // ── WIE ZOEKEN WE (must-have / mooi meegenomen) ─────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult VereisteOpslaan(VacatureVereisteVM vm)
+    {
+        var bo = new VacatureVereisteBO { ID = vm.ID, VacatureId = vm.VacatureId, SortOrder = vm.SortOrder, Categorie = vm.Categorie, Tekst = vm.Tekst };
+        var response = _vacatureService.InsertUpdateVereiste(bo);
+
+        if (response.HasErrors)
+            AddMessage("error", "Vereiste kon niet opgeslagen worden.", "Fout");
+        else
+            AddMessage("success", "Vereiste opgeslagen.", "Opgeslagen");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vm.VacatureId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult VereisteVolgorde([FromForm] VacatureVolgordeVM vm)
+    {
+        if (vm.VacatureId <= 0 || vm.SortedIds == null || !vm.SortedIds.Any())
+            return Json(new { success = false });
+
+        var response = _vacatureService.UpdateVereistenVolgorde(vm.VacatureId, vm.SortedIds);
+        return Json(new { success = !response.HasErrors });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult VereisteVerwijderen(int vereisteId, int vacatureId)
+    {
+        var response = _vacatureService.DeleteVereiste(vereisteId);
+
+        if (response.HasErrors)
+            AddMessage("error", "Vereiste kon niet verwijderd worden.", "Fout");
+        else
+            AddMessage("success", "Vereiste verwijderd.", "Verwijderd");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vacatureId });
+    }
+
+    // ── WAT BIEDEN WE ────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult VoordeelOpslaan(VacatureVoordeelVM vm)
+    {
+        var bo = new VacatureVoordeelBO { ID = vm.ID, VacatureId = vm.VacatureId, SortOrder = vm.SortOrder, Tekst = vm.Tekst };
+        var response = _vacatureService.InsertUpdateVoordeel(bo);
+
+        if (response.HasErrors)
+            AddMessage("error", "Voordeel kon niet opgeslagen worden.", "Fout");
+        else
+            AddMessage("success", "Voordeel opgeslagen.", "Opgeslagen");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vm.VacatureId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult VoordeelVolgorde([FromForm] VacatureVolgordeVM vm)
+    {
+        if (vm.VacatureId <= 0 || vm.SortedIds == null || !vm.SortedIds.Any())
+            return Json(new { success = false });
+
+        var response = _vacatureService.UpdateVoordelenVolgorde(vm.VacatureId, vm.SortedIds);
+        return Json(new { success = !response.HasErrors });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult VoordeelVerwijderen(int voordeelId, int vacatureId)
+    {
+        var response = _vacatureService.DeleteVoordeel(voordeelId);
+
+        if (response.HasErrors)
+            AddMessage("error", "Voordeel kon niet verwijderd worden.", "Fout");
+        else
+            AddMessage("success", "Voordeel verwijderd.", "Verwijderd");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vacatureId });
+    }
+
+    // ── STAPPENLIJST SOLLICITATIE ────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult StapOpslaan(VacatureSollicitatieStapVM vm)
+    {
+        var bo = new VacatureSollicitatieStapBO { ID = vm.ID, VacatureId = vm.VacatureId, SortOrder = vm.SortOrder, Titel = vm.Titel, Tekst = vm.Tekst };
+        var response = _vacatureService.InsertUpdateSollicitatieStap(bo);
+
+        if (response.HasErrors)
+            AddMessage("error", "Stap kon niet opgeslagen worden.", "Fout");
+        else
+            AddMessage("success", "Stap opgeslagen.", "Opgeslagen");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vm.VacatureId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult StapVolgorde([FromForm] VacatureVolgordeVM vm)
+    {
+        if (vm.VacatureId <= 0 || vm.SortedIds == null || !vm.SortedIds.Any())
+            return Json(new { success = false });
+
+        var response = _vacatureService.UpdateSollicitatieStappenVolgorde(vm.VacatureId, vm.SortedIds);
+        return Json(new { success = !response.HasErrors });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult StapVerwijderen(int stapId, int vacatureId)
+    {
+        var response = _vacatureService.DeleteSollicitatieStap(stapId);
+
+        if (response.HasErrors)
+            AddMessage("error", "Stap kon niet verwijderd worden.", "Fout");
+        else
+            AddMessage("success", "Stap verwijderd.", "Verwijderd");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vacatureId });
+    }
+
     // ── PRIVATE HELPERS ──────────────────────────────────────────────────
 
     private static VacatureEditVM MapBoToVm(VacatureBO bo) => new()
@@ -125,9 +295,15 @@ public class VacatureBeheerController : BaseController
         Categorie         = bo.Categorie,
         Locatie           = bo.Locatie,
         Dienstverband     = bo.Dienstverband,
+        Opleiding         = bo.Opleiding,
+        Start             = bo.Start,
         KorteBeschrijving = bo.KorteBeschrijving,
         Beschrijving      = bo.Beschrijving,
         IsGepubliceerd    = bo.IsGepubliceerd,
-        SortOrder         = bo.SortOrder
+        SortOrder         = bo.SortOrder,
+        TaakItems              = bo.TaakItems,
+        VereisteItems          = bo.VereisteItems,
+        VoordeelItems          = bo.VoordeelItems,
+        SollicitatieStapItems  = bo.SollicitatieStapItems
     };
 }

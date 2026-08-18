@@ -52,6 +52,46 @@ namespace DALCore.Models
             {
                 entity.ToTable("Vacature");
                 entity.HasKey(e => e.Id);
+                entity.HasMany(e => e.TaakItems)
+                      .WithOne(t => t.Vacature)
+                      .HasForeignKey(t => t.VacatureId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasMany(e => e.VereisteItems)
+                      .WithOne(v => v.Vacature)
+                      .HasForeignKey(v => v.VacatureId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasMany(e => e.VoordeelItems)
+                      .WithOne(v => v.Vacature)
+                      .HasForeignKey(v => v.VacatureId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasMany(e => e.SollicitatieStapItems)
+                      .WithOne(s => s.Vacature)
+                      .HasForeignKey(s => s.VacatureId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<VacatureTaak>(entity =>
+            {
+                entity.ToTable("VacatureTaak");
+                entity.HasKey(e => e.Id);
+            });
+
+            modelBuilder.Entity<VacatureVereiste>(entity =>
+            {
+                entity.ToTable("VacatureVereiste");
+                entity.HasKey(e => e.Id);
+            });
+
+            modelBuilder.Entity<VacatureVoordeel>(entity =>
+            {
+                entity.ToTable("VacatureVoordeel");
+                entity.HasKey(e => e.Id);
+            });
+
+            modelBuilder.Entity<VacatureSollicitatieStap>(entity =>
+            {
+                entity.ToTable("VacatureSollicitatieStap");
+                entity.HasKey(e => e.Id);
             });
         }
     }

@@ -8,6 +8,7 @@ Public Class VacaturesController
     ' GET: /vacatures
     <Route("vacatures", Name:="Vacatures")>
     Function Index() As ActionResult
+        ViewData("HeroHeader") = True
         ViewData("Title") = "Vacatures | Group LN"
         ViewData("MetaDescription") = "Werken bij Group LN? Bekijk onze openstaande vacatures in projectontwikkeling, verkoop en marketing in Gent."
         ViewData("canonical") = "https://www.groupln.be/vacatures"
@@ -82,7 +83,7 @@ Public Class VacaturesController
             Using conn As New SqlConnection(GetConnectionString())
                 conn.Open()
                 Dim cmd As New SqlCommand(
-                    "SELECT Id, Titel, Slug, Categorie, Locatie, Dienstverband, KorteBeschrijving, Beschrijving, SortOrder
+                    "SELECT Id, Titel, Slug, Categorie, Locatie, Dienstverband, Opleiding, Start, KorteBeschrijving, Beschrijving, SortOrder
                        FROM Vacature
                       WHERE Slug = @slug AND IsGepubliceerd = 1", conn)
                 cmd.Parameters.AddWithValue("@slug", slug)
@@ -96,12 +97,55 @@ Public Class VacaturesController
                             .Categorie = If(reader.IsDBNull(3), Nothing, reader.GetString(3)),
                             .Locatie = If(reader.IsDBNull(4), Nothing, reader.GetString(4)),
                             .Dienstverband = If(reader.IsDBNull(5), Nothing, reader.GetString(5)),
-                            .KorteBeschrijving = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
-                            .Beschrijving = If(reader.IsDBNull(7), Nothing, reader.GetString(7)),
-                            .SortOrder = reader.GetInt32(8)
+                            .Opleiding = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
+                            .Start = If(reader.IsDBNull(7), Nothing, reader.GetString(7)),
+                            .KorteBeschrijving = If(reader.IsDBNull(8), Nothing, reader.GetString(8)),
+                            .Beschrijving = If(reader.IsDBNull(9), Nothing, reader.GetString(9)),
+                            .SortOrder = reader.GetInt32(10)
                         }
                     End If
                 End Using
+
+                If vacature IsNot Nothing Then
+                    Dim taakCmd As New SqlCommand("SELECT Tekst FROM VacatureTaak WHERE VacatureId = @id ORDER BY SortOrder", conn)
+                    taakCmd.Parameters.AddWithValue("@id", vacature.ID)
+                    Using reader = taakCmd.ExecuteReader()
+                        While reader.Read()
+                            vacature.Takenpakket.Add(reader.GetString(0))
+                        End While
+                    End Using
+
+                    Dim vereisteCmd As New SqlCommand("SELECT Categorie, Tekst FROM VacatureVereiste WHERE VacatureId = @id ORDER BY SortOrder", conn)
+                    vereisteCmd.Parameters.AddWithValue("@id", vacature.ID)
+                    Using reader = vereisteCmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.GetString(0) = "MooiMeegenomen" Then
+                                vacature.MooiMeegenomen.Add(reader.GetString(1))
+                            Else
+                                vacature.MustHaves.Add(reader.GetString(1))
+                            End If
+                        End While
+                    End Using
+
+                    Dim voordeelCmd As New SqlCommand("SELECT Tekst FROM VacatureVoordeel WHERE VacatureId = @id ORDER BY SortOrder", conn)
+                    voordeelCmd.Parameters.AddWithValue("@id", vacature.ID)
+                    Using reader = voordeelCmd.ExecuteReader()
+                        While reader.Read()
+                            vacature.Voordelen.Add(reader.GetString(0))
+                        End While
+                    End Using
+
+                    Dim stapCmd As New SqlCommand("SELECT Titel, Tekst FROM VacatureSollicitatieStap WHERE VacatureId = @id ORDER BY SortOrder", conn)
+                    stapCmd.Parameters.AddWithValue("@id", vacature.ID)
+                    Using reader = stapCmd.ExecuteReader()
+                        While reader.Read()
+                            vacature.SollicitatieStappen.Add(New VacatureSollicitatieStapModel With {
+                                .Titel = If(reader.IsDBNull(0), Nothing, reader.GetString(0)),
+                                .Tekst = If(reader.IsDBNull(1), Nothing, reader.GetString(1))
+                            })
+                        End While
+                    End Using
+                End If
             End Using
         Catch ex As Exception
             LogError("VACATURE DETAIL | slug=" & slug, ex)

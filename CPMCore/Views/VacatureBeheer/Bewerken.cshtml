@@ -7,6 +7,7 @@
 @section PageStyle {
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1/Sortable.min.js"></script>
 <style>
     .bw-card { border: 1px solid #e9ecef; border-radius: 10px; background: #fff; margin-bottom: 24px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
     .bw-card-inner { display: flex; }
@@ -25,6 +26,19 @@
     .ql-container { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
     .ql-toolbar { border-top-left-radius: 4px; border-top-right-radius: 4px; }
     .quill-wrap { height: 240px; }
+
+    .bw-blok-wrap { margin-bottom: 8px; }
+    .bw-blok-wrap:last-child { margin-bottom: 0; }
+    .bw-blok-row { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: 1px solid #e9ecef; border-radius: 8px; background: #fff; }
+    .bw-blok-grip { color: #c2ccd6; cursor: grab; font-size: 20px; flex-shrink: 0; touch-action: none; line-height: 1; }
+    .bw-blok-grip:active { cursor: grabbing; }
+    .bw-blok-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 8px; border-radius: 5px; flex-shrink: 0; white-space: nowrap; }
+    .bw-blok-badge.musthave { background: #fee2e2; color: #991b1b; }
+    .bw-blok-badge.mooi { background: #dbeafe; color: #1e40af; }
+    .bw-blok-titel { flex: 1; font-size: 14px; font-weight: 500; color: #212529; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bw-blok-acties { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .bw-blok-edit-panel { background: #f8fafb; border: 1px solid #e9ecef; border-radius: 8px; margin-top: 4px; padding: 20px 20px 16px; }
+    .bw-sublijst-titel { font-size: 10px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: #9aabb8; }
 </style>
 }
 
@@ -57,7 +71,7 @@
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="ID" />
 
-    <div asp-validation-summary="All" class="alert alert-danger mb-4"></div>
+    <div asp-validation-summary="All" class="alert alert-danger d-none mb-4" id="val-summary"></div>
 
     <div class="bw-card">
         <div class="bw-card-inner">
@@ -106,6 +120,20 @@
                     </div>
 
                     <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Opleiding" class="form-label fw-semibold">Opleiding</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Opleiding" class="form-control" placeholder="Bv. Bachelor Bouw of gelijkwaardig door ervaring" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="Start" class="form-label fw-semibold">Start</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <input asp-for="Start" class="form-control" placeholder="Bv. Zo snel mogelijk" />
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
                         <label asp-for="KorteBeschrijving" class="form-label fw-semibold">Korte beschrijving</label>
                     </div>
                     <div class="col-md-8 col-lg-10">
@@ -113,7 +141,7 @@
                     </div>
 
                     <div class="col-md-4 col-lg-2 text-end">
-                        <label class="form-label fw-semibold">Beschrijving</label>
+                        <label class="form-label fw-semibold">Lange beschrijving</label>
                     </div>
                     <div class="col-md-8 col-lg-10">
                         <div id="quill-beschrijving" class="quill-wrap"></div>
@@ -146,6 +174,527 @@
     </div>
 </form>
 
+@if (!isNieuw)
+{
+    @* ── Takenpakket ──────────────────────────────────────────────── *@
+    <div class="bw-card">
+        <div class="bw-card-inner">
+            <div class="bw-sidebar">
+                <div class="bw-icon"><i class="bx bx-list-check"></i></div>
+                <div class="bw-sidebar-title">Takenpakket</div>
+                <div class="bw-sidebar-desc">Puntenlijst van taken voor de detailpagina.</div>
+                @if (Model.TaakItems.Any())
+                {
+                    <div class="bw-sidebar-note">Sleep aan de greep <i class="bx bx-grid-vertical" style="font-size:15px;vertical-align:middle;"></i> om de volgorde te wijzigen.</div>
+                }
+            </div>
+            <div class="bw-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="bw-sublijst-titel">Taken</span>
+                    <button type="button" class="btn btn-primary btn-sm" id="taakNieuwBtn">
+                        <i class="bx bx-plus"></i> Taak toevoegen
+                    </button>
+                </div>
+
+                @if (!Model.TaakItems.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bx bx-list-check" style="font-size:2.2rem;"></i>
+                        <p class="mt-2 mb-0" style="font-size:14px;">Nog geen taken. Voeg er een toe via de knop hierboven.</p>
+                    </div>
+                }
+
+                <div id="taakLijst">
+                    @foreach (var taak in Model.TaakItems.OrderBy(t => t.SortOrder))
+                    {
+                        <div class="bw-blok-wrap" data-id="@taak.ID">
+                            <div class="bw-blok-row">
+                                <div class="bw-blok-grip" title="Sleep om volgorde te wijzigen"><i class="bx bx-grid"></i></div>
+                                <div class="bw-blok-titel">@taak.Tekst</div>
+                                <div class="bw-blok-acties">
+                                    <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#taak-panel-@taak.ID">
+                                        <i class="bx bx-pencil"></i> Bewerken
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="if(confirm('Taak verwijderen?')) document.getElementById('del-taak-@taak.ID').submit();">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="taak-panel-@taak.ID">
+                                <div class="bw-blok-edit-panel">
+                                    <form method="post" action="@Url.Action("TaakOpslaan")">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ID" value="@taak.ID" />
+                                        <input type="hidden" name="VacatureId" value="@Model.ID" />
+                                        <div class="row g-3">
+                                            <div class="col-md-9">
+                                                <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                                <input type="text" name="Tekst" value="@taak.Tekst" class="form-control" maxlength="500" required />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-semibold">Volgorde</label>
+                                                <input type="number" name="SortOrder" value="@taak.SortOrder" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button type="submit" class="btn btn-sm btn-primary"><i class="bx bx-save"></i> Opslaan</button>
+                                            <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#taak-panel-@taak.ID">Annuleren</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <form id="del-taak-@taak.ID" method="post" action="@Url.Action("TaakVerwijderen")" style="display:none;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="taakId" value="@taak.ID" />
+                                <input type="hidden" name="vacatureId" value="@Model.ID" />
+                            </form>
+                        </div>
+                    }
+                </div>
+
+                <div class="collapse mt-3" id="nieuwTaakPanel">
+                    <div class="bw-blok-edit-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold" style="font-size:14px;">Nieuwe taak</span>
+                            <button type="button" class="btn-close" aria-label="Sluiten" data-bs-toggle="collapse" data-bs-target="#nieuwTaakPanel" style="font-size:12px;"></button>
+                        </div>
+                        <form method="post" action="@Url.Action("TaakOpslaan")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ID" value="0" />
+                            <input type="hidden" name="VacatureId" value="@Model.ID" />
+                            <div class="row g-3">
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                    <input type="text" name="Tekst" class="form-control" placeholder="Typ het punt..." maxlength="500" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Volgorde</label>
+                                    <input type="number" name="SortOrder" value="@(Model.TaakItems.Any() ? Model.TaakItems.Max(t => t.SortOrder) + 10 : 0)" class="form-control" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3"><i class="bx bx-plus"></i> Taak toevoegen</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Wie zoeken we: must-haves + mooi meegenomen ─────────────────── *@
+    <div class="bw-card">
+        <div class="bw-card-inner">
+            <div class="bw-sidebar">
+                <div class="bw-icon"><i class="bx bx-user-check"></i></div>
+                <div class="bw-sidebar-title">Wie zoeken we</div>
+                <div class="bw-sidebar-desc">Onderverdeeld in must-haves en mooi meegenomen.</div>
+            </div>
+            <div class="bw-content">
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="bw-sublijst-titel">Must-haves</span>
+                    <button type="button" class="btn btn-primary btn-sm" id="vereisteMustHaveNieuwBtn">
+                        <i class="bx bx-plus"></i> Toevoegen
+                    </button>
+                </div>
+
+                @{ var mustHaves = Model.VereisteItems.Where(v => v.Categorie == "MustHave").OrderBy(v => v.SortOrder).ToList(); }
+                @if (!mustHaves.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-0" style="font-size:14px;">Nog geen must-haves.</p>
+                    </div>
+                }
+                <div id="vereisteMustHaveLijst">
+                    @foreach (var v in mustHaves)
+                    {
+                        <div class="bw-blok-wrap" data-id="@v.ID">
+                            <div class="bw-blok-row">
+                                <div class="bw-blok-grip" title="Sleep om volgorde te wijzigen"><i class="bx bx-grid"></i></div>
+                                <div class="bw-blok-badge musthave">Must-have</div>
+                                <div class="bw-blok-titel">@v.Tekst</div>
+                                <div class="bw-blok-acties">
+                                    <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#vereiste-panel-@v.ID">
+                                        <i class="bx bx-pencil"></i> Bewerken
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="if(confirm('Punt verwijderen?')) document.getElementById('del-vereiste-@v.ID').submit();">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="vereiste-panel-@v.ID">
+                                <div class="bw-blok-edit-panel">
+                                    <form method="post" action="@Url.Action("VereisteOpslaan")">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ID" value="@v.ID" />
+                                        <input type="hidden" name="VacatureId" value="@Model.ID" />
+                                        <input type="hidden" name="Categorie" value="@v.Categorie" />
+                                        <div class="row g-3">
+                                            <div class="col-md-9">
+                                                <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                                <input type="text" name="Tekst" value="@v.Tekst" class="form-control" maxlength="500" required />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-semibold">Volgorde</label>
+                                                <input type="number" name="SortOrder" value="@v.SortOrder" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button type="submit" class="btn btn-sm btn-primary"><i class="bx bx-save"></i> Opslaan</button>
+                                            <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#vereiste-panel-@v.ID">Annuleren</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <form id="del-vereiste-@v.ID" method="post" action="@Url.Action("VereisteVerwijderen")" style="display:none;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="vereisteId" value="@v.ID" />
+                                <input type="hidden" name="vacatureId" value="@Model.ID" />
+                            </form>
+                        </div>
+                    }
+                </div>
+                <div class="collapse mt-3" id="nieuwVereisteMustHavePanel">
+                    <div class="bw-blok-edit-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold" style="font-size:14px;">Nieuwe must-have</span>
+                            <button type="button" class="btn-close" aria-label="Sluiten" data-bs-toggle="collapse" data-bs-target="#nieuwVereisteMustHavePanel" style="font-size:12px;"></button>
+                        </div>
+                        <form method="post" action="@Url.Action("VereisteOpslaan")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ID" value="0" />
+                            <input type="hidden" name="VacatureId" value="@Model.ID" />
+                            <input type="hidden" name="Categorie" value="MustHave" />
+                            <div class="row g-3">
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                    <input type="text" name="Tekst" class="form-control" placeholder="Typ het punt..." maxlength="500" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Volgorde</label>
+                                    <input type="number" name="SortOrder" value="@(mustHaves.Any() ? mustHaves.Max(v => v.SortOrder) + 10 : 0)" class="form-control" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3"><i class="bx bx-plus"></i> Toevoegen</button>
+                        </form>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="bw-sublijst-titel">Mooi meegenomen</span>
+                    <button type="button" class="btn btn-primary btn-sm" id="vereisteMooiNieuwBtn">
+                        <i class="bx bx-plus"></i> Toevoegen
+                    </button>
+                </div>
+
+                @{ var mooiItems = Model.VereisteItems.Where(v => v.Categorie == "MooiMeegenomen").OrderBy(v => v.SortOrder).ToList(); }
+                @if (!mooiItems.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-0" style="font-size:14px;">Nog geen "mooi meegenomen"-punten.</p>
+                    </div>
+                }
+                <div id="vereisteMooiLijst">
+                    @foreach (var v in mooiItems)
+                    {
+                        <div class="bw-blok-wrap" data-id="@v.ID">
+                            <div class="bw-blok-row">
+                                <div class="bw-blok-grip" title="Sleep om volgorde te wijzigen"><i class="bx bx-grid"></i></div>
+                                <div class="bw-blok-badge mooi">Mooi meegenomen</div>
+                                <div class="bw-blok-titel">@v.Tekst</div>
+                                <div class="bw-blok-acties">
+                                    <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#vereiste-panel-@v.ID">
+                                        <i class="bx bx-pencil"></i> Bewerken
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="if(confirm('Punt verwijderen?')) document.getElementById('del-vereiste-@v.ID').submit();">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="vereiste-panel-@v.ID">
+                                <div class="bw-blok-edit-panel">
+                                    <form method="post" action="@Url.Action("VereisteOpslaan")">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ID" value="@v.ID" />
+                                        <input type="hidden" name="VacatureId" value="@Model.ID" />
+                                        <input type="hidden" name="Categorie" value="@v.Categorie" />
+                                        <div class="row g-3">
+                                            <div class="col-md-9">
+                                                <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                                <input type="text" name="Tekst" value="@v.Tekst" class="form-control" maxlength="500" required />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-semibold">Volgorde</label>
+                                                <input type="number" name="SortOrder" value="@v.SortOrder" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button type="submit" class="btn btn-sm btn-primary"><i class="bx bx-save"></i> Opslaan</button>
+                                            <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#vereiste-panel-@v.ID">Annuleren</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <form id="del-vereiste-@v.ID" method="post" action="@Url.Action("VereisteVerwijderen")" style="display:none;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="vereisteId" value="@v.ID" />
+                                <input type="hidden" name="vacatureId" value="@Model.ID" />
+                            </form>
+                        </div>
+                    }
+                </div>
+                <div class="collapse mt-3" id="nieuwVereisteMooiPanel">
+                    <div class="bw-blok-edit-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold" style="font-size:14px;">Nieuw "mooi meegenomen"-punt</span>
+                            <button type="button" class="btn-close" aria-label="Sluiten" data-bs-toggle="collapse" data-bs-target="#nieuwVereisteMooiPanel" style="font-size:12px;"></button>
+                        </div>
+                        <form method="post" action="@Url.Action("VereisteOpslaan")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ID" value="0" />
+                            <input type="hidden" name="VacatureId" value="@Model.ID" />
+                            <input type="hidden" name="Categorie" value="MooiMeegenomen" />
+                            <div class="row g-3">
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                    <input type="text" name="Tekst" class="form-control" placeholder="Typ het punt..." maxlength="500" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Volgorde</label>
+                                    <input type="number" name="SortOrder" value="@(mooiItems.Any() ? mooiItems.Max(v => v.SortOrder) + 10 : 0)" class="form-control" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3"><i class="bx bx-plus"></i> Toevoegen</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Wat bieden we ────────────────────────────────────────────── *@
+    <div class="bw-card">
+        <div class="bw-card-inner">
+            <div class="bw-sidebar">
+                <div class="bw-icon"><i class="bx bx-gift"></i></div>
+                <div class="bw-sidebar-title">Wat bieden we</div>
+                <div class="bw-sidebar-desc">Puntenlijst van voordelen voor de detailpagina.</div>
+                @if (Model.VoordeelItems.Any())
+                {
+                    <div class="bw-sidebar-note">Sleep aan de greep om de volgorde te wijzigen.</div>
+                }
+            </div>
+            <div class="bw-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="bw-sublijst-titel">Voordelen</span>
+                    <button type="button" class="btn btn-primary btn-sm" id="voordeelNieuwBtn">
+                        <i class="bx bx-plus"></i> Voordeel toevoegen
+                    </button>
+                </div>
+
+                @if (!Model.VoordeelItems.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bx bx-gift" style="font-size:2.2rem;"></i>
+                        <p class="mt-2 mb-0" style="font-size:14px;">Nog geen voordelen. Voeg er een toe via de knop hierboven.</p>
+                    </div>
+                }
+
+                <div id="voordeelLijst">
+                    @foreach (var voordeel in Model.VoordeelItems.OrderBy(v => v.SortOrder))
+                    {
+                        <div class="bw-blok-wrap" data-id="@voordeel.ID">
+                            <div class="bw-blok-row">
+                                <div class="bw-blok-grip" title="Sleep om volgorde te wijzigen"><i class="bx bx-grid"></i></div>
+                                <div class="bw-blok-titel">@voordeel.Tekst</div>
+                                <div class="bw-blok-acties">
+                                    <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#voordeel-panel-@voordeel.ID">
+                                        <i class="bx bx-pencil"></i> Bewerken
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="if(confirm('Voordeel verwijderen?')) document.getElementById('del-voordeel-@voordeel.ID').submit();">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="voordeel-panel-@voordeel.ID">
+                                <div class="bw-blok-edit-panel">
+                                    <form method="post" action="@Url.Action("VoordeelOpslaan")">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ID" value="@voordeel.ID" />
+                                        <input type="hidden" name="VacatureId" value="@Model.ID" />
+                                        <div class="row g-3">
+                                            <div class="col-md-9">
+                                                <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                                <input type="text" name="Tekst" value="@voordeel.Tekst" class="form-control" maxlength="500" required />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-semibold">Volgorde</label>
+                                                <input type="number" name="SortOrder" value="@voordeel.SortOrder" class="form-control" />
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button type="submit" class="btn btn-sm btn-primary"><i class="bx bx-save"></i> Opslaan</button>
+                                            <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#voordeel-panel-@voordeel.ID">Annuleren</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <form id="del-voordeel-@voordeel.ID" method="post" action="@Url.Action("VoordeelVerwijderen")" style="display:none;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="voordeelId" value="@voordeel.ID" />
+                                <input type="hidden" name="vacatureId" value="@Model.ID" />
+                            </form>
+                        </div>
+                    }
+                </div>
+
+                <div class="collapse mt-3" id="nieuwVoordeelPanel">
+                    <div class="bw-blok-edit-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold" style="font-size:14px;">Nieuw voordeel</span>
+                            <button type="button" class="btn-close" aria-label="Sluiten" data-bs-toggle="collapse" data-bs-target="#nieuwVoordeelPanel" style="font-size:12px;"></button>
+                        </div>
+                        <form method="post" action="@Url.Action("VoordeelOpslaan")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ID" value="0" />
+                            <input type="hidden" name="VacatureId" value="@Model.ID" />
+                            <div class="row g-3">
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold">Tekst <span class="text-danger">*</span></label>
+                                    <input type="text" name="Tekst" class="form-control" placeholder="Typ het punt..." maxlength="500" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Volgorde</label>
+                                    <input type="number" name="SortOrder" value="@(Model.VoordeelItems.Any() ? Model.VoordeelItems.Max(v => v.SortOrder) + 10 : 0)" class="form-control" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3"><i class="bx bx-plus"></i> Voordeel toevoegen</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Stappenlijst sollicitatie ────────────────────────────────── *@
+    <div class="bw-card">
+        <div class="bw-card-inner">
+            <div class="bw-sidebar">
+                <div class="bw-icon"><i class="bx bx-directions"></i></div>
+                <div class="bw-sidebar-title">Stappenlijst sollicitatie</div>
+                <div class="bw-sidebar-desc">Stappen met titel en tekst voor de detailpagina.</div>
+                @if (Model.SollicitatieStapItems.Any())
+                {
+                    <div class="bw-sidebar-note">Sleep aan de greep om de volgorde te wijzigen.</div>
+                }
+            </div>
+            <div class="bw-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="bw-sublijst-titel">Stappen</span>
+                    <button type="button" class="btn btn-primary btn-sm" id="stapNieuwBtn">
+                        <i class="bx bx-plus"></i> Stap toevoegen
+                    </button>
+                </div>
+
+                @if (!Model.SollicitatieStapItems.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bx bx-directions" style="font-size:2.2rem;"></i>
+                        <p class="mt-2 mb-0" style="font-size:14px;">Nog geen stappen. Voeg er een toe via de knop hierboven.</p>
+                    </div>
+                }
+
+                <div id="stapLijst">
+                    @foreach (var stap in Model.SollicitatieStapItems.OrderBy(s => s.SortOrder))
+                    {
+                        <div class="bw-blok-wrap" data-id="@stap.ID">
+                            <div class="bw-blok-row">
+                                <div class="bw-blok-grip" title="Sleep om volgorde te wijzigen"><i class="bx bx-grid"></i></div>
+                                <div class="bw-blok-titel">@(string.IsNullOrEmpty(stap.Titel) ? "(zonder titel)" : stap.Titel)</div>
+                                <div class="bw-blok-acties">
+                                    <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#stap-panel-@stap.ID">
+                                        <i class="bx bx-pencil"></i> Bewerken
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="if(confirm('Stap verwijderen?')) document.getElementById('del-stap-@stap.ID').submit();">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="stap-panel-@stap.ID">
+                                <div class="bw-blok-edit-panel">
+                                    <form method="post" action="@Url.Action("StapOpslaan")">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ID" value="@stap.ID" />
+                                        <input type="hidden" name="VacatureId" value="@Model.ID" />
+                                        <div class="row g-3">
+                                            <div class="col-md-9">
+                                                <label class="form-label fw-semibold">Titel <span class="text-danger">*</span></label>
+                                                <input type="text" name="Titel" value="@stap.Titel" class="form-control" maxlength="200" required />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-semibold">Volgorde</label>
+                                                <input type="number" name="SortOrder" value="@stap.SortOrder" class="form-control" />
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label fw-semibold">Tekst</label>
+                                                <textarea name="Tekst" class="form-control" rows="3">@stap.Tekst</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button type="submit" class="btn btn-sm btn-primary"><i class="bx bx-save"></i> Opslaan</button>
+                                            <button type="button" class="btn btn-sm btn-default" data-bs-toggle="collapse" data-bs-target="#stap-panel-@stap.ID">Annuleren</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <form id="del-stap-@stap.ID" method="post" action="@Url.Action("StapVerwijderen")" style="display:none;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="stapId" value="@stap.ID" />
+                                <input type="hidden" name="vacatureId" value="@Model.ID" />
+                            </form>
+                        </div>
+                    }
+                </div>
+
+                <div class="collapse mt-3" id="nieuwStapPanel">
+                    <div class="bw-blok-edit-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold" style="font-size:14px;">Nieuwe stap</span>
+                            <button type="button" class="btn-close" aria-label="Sluiten" data-bs-toggle="collapse" data-bs-target="#nieuwStapPanel" style="font-size:12px;"></button>
+                        </div>
+                        <form method="post" action="@Url.Action("StapOpslaan")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ID" value="0" />
+                            <input type="hidden" name="VacatureId" value="@Model.ID" />
+                            <div class="row g-3">
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold">Titel <span class="text-danger">*</span></label>
+                                    <input type="text" name="Titel" class="form-control" placeholder="Bv. Sollicitatie versturen" maxlength="200" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Volgorde</label>
+                                    <input type="number" name="SortOrder" value="@(Model.SollicitatieStapItems.Any() ? Model.SollicitatieStapItems.Max(s => s.SortOrder) + 10 : 0)" class="form-control" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Tekst</label>
+                                    <textarea name="Tekst" class="form-control" rows="3" placeholder="Typ de tekst..."></textarea>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3"><i class="bx bx-plus"></i> Stap toevoegen</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @section PageScripts {
 <script>
     (function () {
@@ -167,5 +716,64 @@
             if (form) form.addEventListener('submit', function () { input.value = quill.root.innerHTML; });
         }
     })();
+</script>
+<script>
+(function () {
+    var VACATURE_ID = @Model.ID;
+
+    function wireNieuwBtn(btnId, panelId) {
+        var btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var panel = document.getElementById(panelId);
+            if (panel) {
+                var bsCollapse = bootstrap.Collapse.getOrCreateInstance(panel);
+                bsCollapse.show();
+                setTimeout(function () { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 200);
+            }
+        });
+    }
+
+    function wireSortable(listId, volgordeUrl) {
+        var lijst = document.getElementById(listId);
+        if (!lijst || typeof Sortable === 'undefined') return;
+        Sortable.create(lijst, {
+            handle: '.bw-blok-grip',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            onEnd: function () {
+                var wraps = lijst.querySelectorAll('.bw-blok-wrap[data-id]');
+                var ids = Array.from(wraps).map(function (w) { return parseInt(w.dataset.id); });
+
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                var fd = new FormData();
+                if (token) fd.append('__RequestVerificationToken', token.value);
+                fd.append('VacatureId', VACATURE_ID);
+                ids.forEach(function (id) { fd.append('SortedIds', id); });
+
+                fetch(volgordeUrl, { method: 'POST', body: fd })
+                    .catch(function () { console.warn('Volgorde opslaan mislukt.'); });
+            }
+        });
+    }
+
+    wireNieuwBtn('taakNieuwBtn', 'nieuwTaakPanel');
+    wireNieuwBtn('vereisteMustHaveNieuwBtn', 'nieuwVereisteMustHavePanel');
+    wireNieuwBtn('vereisteMooiNieuwBtn', 'nieuwVereisteMooiPanel');
+    wireNieuwBtn('voordeelNieuwBtn', 'nieuwVoordeelPanel');
+    wireNieuwBtn('stapNieuwBtn', 'nieuwStapPanel');
+
+    wireSortable('taakLijst', '@Url.Action("TaakVolgorde")');
+    wireSortable('vereisteMustHaveLijst', '@Url.Action("VereisteVolgorde")');
+    wireSortable('vereisteMooiLijst', '@Url.Action("VereisteVolgorde")');
+    wireSortable('voordeelLijst', '@Url.Action("VoordeelVolgorde")');
+    wireSortable('stapLijst', '@Url.Action("StapVolgorde")');
+
+    // ── Validatiesamenvatting ──
+    var summary = document.getElementById('val-summary');
+    if (summary && summary.querySelector('.validation-summary-errors'))
+        summary.classList.remove('d-none');
+})();
 </script>
 }

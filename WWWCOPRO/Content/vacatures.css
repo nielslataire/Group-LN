@@ -6,21 +6,15 @@
 /* --- Hero --- */
 .vacatures-page-header {
     position: relative;
-    padding: 120px 0 90px;
-    background: linear-gradient(160deg, var(--color-primary, #00532D) 0%, var(--color-primary-dark, #003d21) 100%);
+    padding: 140px 0 200px;
+    background: url('img/our-office-3.jpg') center center / cover no-repeat;
     overflow: hidden;
 }
-.vacatures-page-header::before {
+.vacatures-page-header::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-        -45deg,
-        rgba(255, 255, 255, 0.035),
-        rgba(255, 255, 255, 0.035) 10px,
-        transparent 10px,
-        transparent 20px
-    );
+    background: linear-gradient(to bottom, var(--color-primary, #00532D) 0%, rgba(0, 61, 33, 0.85) 100%);
     pointer-events: none;
 }
 .vacatures-header-inner {
@@ -43,26 +37,35 @@
     font-size: 44px;
     line-height: 1.2;
     color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
     margin: 0 0 18px;
 }
 .vacatures-header-text {
     font-family: var(--font-sans);
     font-size: 16px;
     line-height: 1.65;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
     margin: 0;
     max-width: 520px;
 }
 
 /* --- Wie wij zoeken --- */
 .vac-wie-section {
-    padding: 100px 0;
+    padding: 0 0 100px;
     background: var(--mist, #F2F5EF);
 }
 .vac-wie-grid {
     display: flex;
     align-items: center;
     gap: 64px;
+    margin-top: -140px;
+    padding: 48px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.14);
+    position: relative;
+    z-index: 2;
 }
 .vac-wie-foto-wrap {
     flex: 1 1 0;
@@ -162,69 +165,16 @@
     font-size: 18px;
     color: #fff;
     margin: 0 0 10px;
+    text-transform: lowercase;
+}
+.vac-why-item h3::first-letter {
+    text-transform: uppercase;
 }
 .vac-why-item p {
     font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.7);
-    margin: 0;
-}
-
-/* --- Wat wij bieden --- */
-.vac-benefits-section {
-    padding: 100px 0;
-    background: #fff;
-}
-.vac-benefits-headline {
-    font-family: var(--font-serif);
-    font-weight: 500;
-    font-size: 34px;
-    line-height: 1.2;
-    color: var(--groen-diep, #2C3B2A);
-    margin: 0 0 40px;
-}
-.vac-benefits-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
-    border-radius: 10px;
-    overflow: hidden;
-}
-.vac-benefit-item {
-    padding: 32px;
-    border-right: 1px solid var(--border, rgba(0, 83, 45, 0.10));
-    border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10));
-}
-.vac-benefit-item:nth-child(3n) {
-    border-right: none;
-}
-.vac-benefit-item:nth-child(n+4) {
-    border-bottom: none;
-}
-.vac-benefit-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--mist, #F2F5EF);
-    color: var(--color-primary, #00532D);
-    margin-bottom: 16px;
-}
-.vac-benefit-item h3 {
-    font-family: var(--font-serif);
-    font-weight: 600;
-    font-size: 17px;
-    color: var(--groen-diep, #2C3B2A);
-    margin: 0 0 8px;
-}
-.vac-benefit-item p {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--tekst-sub, #5a6b58);
     margin: 0;
 }
 
@@ -268,7 +218,10 @@
     gap: 16px;
 }
 .vac-card {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
     background: #fff;
     border: 1px solid var(--border, rgba(0, 83, 45, 0.10));
     border-radius: 10px;
@@ -280,18 +233,19 @@
     border-color: var(--color-primary, #00532D);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
 }
+.vac-card-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
 .vac-card-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
+    display: block;
 }
 .vac-card-categorie {
     display: block;
     font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.4px;
     text-transform: uppercase;
     color: var(--color-primary, #00532D);
     margin: 0 0 8px;
@@ -302,6 +256,10 @@
     font-size: 21px;
     color: var(--groen-diep, #2C3B2A);
     margin: 0 0 10px;
+    text-transform: lowercase;
+}
+.vac-card-titel::first-letter {
+    text-transform: uppercase;
 }
 .vac-card-meta {
     display: flex;
@@ -447,6 +405,50 @@
     margin: 0 0 18px;
     padding-left: 22px;
 }
+.vac-detail-section {
+    margin-bottom: 8px;
+}
+.vac-detail-section h2:first-child,
+.vac-detail-section h3:first-child {
+    margin-top: 0;
+}
+.vac-detail-stappen {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.vac-detail-stap {
+    display: flex;
+    gap: 18px;
+}
+.vac-detail-stap-nummer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--mist, #F2F5EF);
+    color: var(--color-primary, #00532D);
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 14px;
+}
+.vac-detail-stap-titel {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--groen-diep, #2C3B2A);
+    margin-bottom: 4px;
+}
+.vac-detail-stap-tekst {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--tekst-sub, #5a6b58);
+}
+
 .vac-detail-cta {
     display: flex;
     align-items: center;
@@ -512,6 +514,8 @@
         flex-direction: column-reverse;
         align-items: stretch;
         gap: 32px;
+        margin-top: -90px;
+        padding: 32px;
     }
     .vac-wie-content {
         max-width: none;
@@ -534,41 +538,31 @@
         border-top: 1px solid rgba(255, 255, 255, 0.18);
         padding-top: 24px;
     }
-    .vac-benefits-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .vac-benefit-item:nth-child(3n) {
-        border-right: 1px solid var(--border, rgba(0, 83, 45, 0.10));
-    }
-    .vac-benefit-item:nth-child(2n) {
-        border-right: none;
-    }
-    .vac-benefit-item:nth-child(n+4) {
-        border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10));
-    }
-    .vac-benefit-item:nth-child(n+5) {
-        border-bottom: none;
-    }
 }
 
 @media (max-width: 767px) {
     .vacatures-page-header {
-        padding: 90px 0 64px;
+        padding: 120px 0 130px;
     }
     .vacatures-header-title {
         font-size: 30px;
     }
     .vac-wie-section,
     .vac-why-section,
-    .vac-benefits-section,
     .vac-list-section {
         padding: 64px 0;
     }
+    .vac-wie-section {
+        padding-top: 0;
+    }
     .vac-wie-headline,
     .vac-why-headline,
-    .vac-benefits-headline,
     .vac-list-headline {
         font-size: 26px;
+    }
+    .vac-wie-grid {
+        margin-top: -50px;
+        padding: 24px;
     }
     .vac-why-grid {
         grid-template-columns: 1fr;
@@ -582,22 +576,14 @@
         border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
         padding-top: 24px !important;
     }
-    .vac-benefits-grid {
-        grid-template-columns: 1fr;
-    }
-    .vac-benefit-item {
-        border-right: none !important;
-        border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.10)) !important;
-    }
-    .vac-benefit-item:last-child {
-        border-bottom: none !important;
-    }
     .vac-list-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
     .vac-card {
+        flex-direction: column;
+        align-items: flex-start;
         padding: 22px 20px;
     }
     .vac-detail-cta {

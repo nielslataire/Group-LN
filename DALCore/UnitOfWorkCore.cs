@@ -107,6 +107,10 @@ namespace DALCore
         public GenericRepository<BlogArtikelBlok> BlogArtikelBlokken { get; }
         public GenericRepository<BlogArtikelFaq>  BlogArtikelFaqItems { get; }
         public GenericRepository<Vacature>        Vacaturen           { get; }
+        public GenericRepository<VacatureTaak>              VacatureTaken              { get; }
+        public GenericRepository<VacatureVereiste>          VacatureVereisten          { get; }
+        public GenericRepository<VacatureVoordeel>          VacatureVoordelen          { get; }
+        public GenericRepository<VacatureSollicitatieStap>  VacatureSollicitatieStappen{ get; }
         public GenericRepository<EmailTemplate>       EmailTemplates       { get; }
         public GenericRepository<UserEmailSignature>  UserEmailSignatures  { get; }
         public GenericRepository<EmailSendLog>        EmailSendLogs        { get; }
@@ -216,6 +220,10 @@ namespace DALCore
             BlogArtikelBlokken        = new GenericRepository<BlogArtikelBlok>(_context);
             BlogArtikelFaqItems       = new GenericRepository<BlogArtikelFaq>(_context);
             Vacaturen                 = new GenericRepository<Vacature>(_context);
+            VacatureTaken              = new GenericRepository<VacatureTaak>(_context);
+            VacatureVereisten          = new GenericRepository<VacatureVereiste>(_context);
+            VacatureVoordelen          = new GenericRepository<VacatureVoordeel>(_context);
+            VacatureSollicitatieStappen= new GenericRepository<VacatureSollicitatieStap>(_context);
             EmailTemplates            = new GenericRepository<EmailTemplate>(_context);
             UserEmailSignatures       = new GenericRepository<UserEmailSignature>(_context);
             EmailSendLogs             = new GenericRepository<EmailSendLog>(_context);
