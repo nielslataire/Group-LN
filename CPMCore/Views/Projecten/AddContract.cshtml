@@ -1,4 +1,4 @@
-﻿@using CPMCore.Controllers
+@using CPMCore.Controllers
 @using CPMCore.Helpers
 @using BOCore
 @inject IConfiguration Configuration
@@ -16,7 +16,43 @@
 	<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
 	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
-
+	<style>
+		.company-picker-result {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.3;
+		}
+		.company-picker-result .name { font-weight: 600; }
+		.company-picker-result .vat { font-size: .8rem; color: #8590a5; }
+		.company-picker-result.company-picker-new {
+			color: #1a9e5c;
+			font-weight: 600;
+		}
+		.company-picker-selected {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: .75rem;
+			border: 1px solid #b7e4c7;
+			background: #f0faf4;
+			border-radius: .375rem;
+			padding: .6rem .9rem;
+		}
+		.company-picker-selected .name { font-weight: 600; }
+		.company-picker-selected .vat { font-size: .8rem; color: #6b7a90; }
+		#companyContractDefaultsNote { color: #1a9e5c; }
+		.activity-rows-header { font-size: .75rem; letter-spacing: .03em; }
+		.empty-state-box {
+			border: 1px dashed #ced4da;
+			border-radius: .375rem;
+			padding: 1rem 1.25rem;
+			color: #8590a5;
+			text-align: center;
+		}
+		.form-control-h {
+			min-height: calc(1.5em + 1.4rem + 2px);
+		}
+	</style>
 }
 
 <div class="row">
@@ -36,13 +72,24 @@
 	</div>
 </div>
 </div>
+
+<div class="row mt-2">
+	<div class="col">
+		<div class="alert alert-info d-flex align-items-start gap-2 mb-0">
+			<i class="bx bx-info-circle mt-1"></i>
+			<div>Elk contract koppelt &eacute;&eacute;n leverancier aan dit project. Kies eerst de leverancier &mdash; BTW% en betaaltermijn worden automatisch ingevuld op basis van het vorige contract. Gebruik Enter om snel toe te voegen.</div>
+		</div>
+	</div>
+</div>
+
 @using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
 {
+	@Html.AntiForgeryToken()
 
 	@Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
 	@Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
 	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
-	<div class="row mt-2">
+	<div class="row mt-4">
 		<div class="col">
 			<section class="card card-modern card-big-info">
 				<div class="card-body">
@@ -64,41 +111,46 @@
 							</div>
 							<div class="form-group row align-items-center pb-3">
 								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
-									@Html.LabelFor(m => m.Companies)
+									@Html.LabelFor(m => m.Companies) <span class="text-danger">*</span>
 								</label>
 								<div class="col-lg-8 col-xl-6">
-									@if (Model.Contract.Company.ID > 0)
-									{
-										<p class="form-control-static mb-0">
-											<strong>
-												@Model.Contract.Company.Display
-												@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
-												@Html.HiddenFor(m => m.Contract.Company.Display, new { id = "txtCompanyDisplay" })
-											</strong>
-										</p>
-									}
-									else
-									{
-										<select id="ddlCompany" class="form-control w-100">
-											<!-- Voeg hier de opties toe -->
-										</select>
-										@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
-										@Html.HiddenFor(m => m.Contract.Company.Display, new { id = "txtCompanyDisplay" })
-									}
+									@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID" })
+									@Html.HiddenFor(m => m.Contract.Company.Display, new { id = "txtCompanyDisplay" })
+									<div id="companySelected" class="company-picker-selected @(Model.Contract.Company.ID > 0 ? "" : "d-none")">
+										<div>
+											<div class="name" id="companySelectedName">@Model.Contract.Company.Display</div>
+											<div class="vat" id="companySelectedVat"></div>
+										</div>
+										<button type="button" class="btn btn-sm btn-link text-danger p-0" id="btnClearCompany" title="Andere leverancier kiezen">
+											<i class="bx bx-x fs-3"></i>
+										</button>
+									</div>
+									<select id="ddlCompany" class="form-control w-100 @(Model.Contract.Company.ID > 0 ? "d-none" : "")">
+										<!-- Voeg hier de opties toe -->
+									</select>
+									<div id="companyContractDefaultsNote" class="small mt-2 d-none">
+										<i class="bx bx-check-circle me-1"></i>BTW%, betaaltermijn en waarborg ingevuld op basis van vorig contract met deze leverancier.
+									</div>
 								</div>
 							</div>
 							<div class="form-group row align-items-center pb-3">
-								<div class="form-group row align-items-center pb-3">
-									<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.SiteManagerContactId)</label>
-									<div class="col-lg-8 col-xl-6">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.SiteManagerContactId)</label>
+								<div class="col-lg-8 col-xl-6">
+									<div class="input-group">
 										@Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
+										<button type="button" class="btn btn-outline-secondary" id="btnNewSiteManager" disabled title="Eerst een leverancier kiezen">
+											<i class="bx bx-user-plus"></i>
+										</button>
 									</div>
 								</div>
+							</div>
+
+							<div class="form-group row align-items-center pb-3">
 								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.VatPercentage)</label>
 								<div class="col-lg-3 col-xl-2">
 									@Html.EditorFor(m => m.Contract.VatPercentage, new { id = "txtVatPercentage", @class = "form-control form-control-modern", placeholder = "0,00", autocomplete = "off" })
 								</div>
-								<label class="col-lg-2 col-xl-23 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.PaymentTerm)</label>
+								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.PaymentTerm)</label>
 								<div class="col-lg-3 col-xl-2">
 									@Html.TextBoxFor(m => m.Contract.PaymentTerm, new { id = "txtPaymentTerm", @class = "form-control form-control-modern", placeholder = "Aantal dagen" })
 								</div>
@@ -113,11 +165,11 @@
 										</span>
 										@Html.TextBoxFor(m => m.Contract.CashDiscountPaymentTerm, new { id = "txtCashDiscountPaymentTerm", @class = "form-control form-control-modern", type = "text", placeholder = "Aantal dagen" }).DisableIf(() => !Model.Contract.CashDiscount)
 									</div>
-									
+
 								</div>
 								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.CashDiscountPercentage)</label>
 								<div class="col-lg-3 col-xl-2">
-									@Html.EditorFor(m => m.Contract.CashDiscountPercentage, new { id = "txtCashDiscountPercentage", @class = "form-control form-control-modern", placeholder = "Aantal dagen" }).DisableIf(() => !Model.Contract.CashDiscount)
+									@Html.EditorFor(m => m.Contract.CashDiscountPercentage, new { id = "txtCashDiscountPercentage", @class = "form-control form-control-modern", placeholder = "0,00" }).DisableIf(() => !Model.Contract.CashDiscount)
 								</div>
 							</div>
 							<div class="form-group row align-items-center pb-3">
@@ -127,16 +179,15 @@
 								</div>
 								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.GuaranteePercentage)</label>
 								<div class="col-lg-3 col-xl-2">
-									@Html.EditorFor(m => m.Contract.GuaranteePercentage, new { id = "txtGuaranteePercentage", @class = "form-control form-control-modern", placeholder = "Aantal dagen" }).DisableIf(() => Model.Contract.GuaranteeType != ContractGuaranteeType.FinancialGuarantee)
+									@Html.EditorFor(m => m.Contract.GuaranteePercentage, new { id = "txtGuaranteePercentage", @class = "form-control form-control-modern", placeholder = "0,00" }).DisableIf(() => Model.Contract.GuaranteeType != ContractGuaranteeType.FinancialGuarantee)
 								</div>
 							</div>
-							<div class="form-group row align-items-center pb-3">
-								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.ContractSigned)</label>
-								<div class="col-lg-8 col-xl-6">
-									<div class="checkbox-custom checkbox-default">
-										@Html.CheckBoxFor(m => m.Contract.ContractSigned, new {id = "chkContractSigned"})
-										<label></label>
+							<div class="form-group row align-items-center justify-content-center pb-3 pt-2">
+								<div class="col-auto d-flex align-items-center gap-2">
+									<div class="switch switch-sm switch-primary">
+										@Html.CheckBoxFor(m => m.Contract.ContractSigned, new { id = "chkContractSigned", data_plugin_ios_switch = "" })
 									</div>
+									<label class="form-check-label mb-0" for="chkContractSigned">@Html.DisplayNameFor(m => m.Contract.ContractSigned)</label>
 								</div>
 							</div>
 
@@ -152,68 +203,220 @@
 				<div class="card-body">
 					<div class="row">
 						<div class="col-lg-2-5 col-xl-1-5">
-							<i class="card-big-info-icon bx bx-building-house"></i>
-							<h2 class="card-big-info-title">Loten</h2>
-							<p class="card-big-info-desc">Selecteer de loten van het contract en voeg deze toe en vul per lot het bedrag van het lot in</p>
+							<i class="card-big-info-icon bx bx-list-check"></i>
+							<h2 class="card-big-info-title">Activiteiten</h2>
+							<p class="card-big-info-desc">Kies de activiteiten van deze leverancier en vul per activiteit het bedrag in. Niet gevonden? Voeg meteen een nieuwe activiteit toe.</p>
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5">
-							<div class="form-group row align-items-center pb-3">
-								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
-									Lot toevoegen
-								</label>
-								<div class="col-lg-8 col-xl-6">
-									<div class="d-flex align-items-start gap-2">
-										<select id="lstActivities" name="SelectedActivities" multiple
-												class="form-control populate select2" data-plugin-selectTwo
-												class="gl-flex-input">
-											<!-- Opties -->
-										</select>
-										<button type="button" class="btn btn-outline-secondary" id="btnAddActivities">
-											Toevoegen
-										</button>
-									</div>
+							<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+								<h3 class="text-color-dark font-weight-bold text-4 line-height-1 mb-0 text-uppercase" id="companyActivitiesTitle">Kies eerst een leverancier</h3>
+								<div class="d-flex gap-2">
+									<button type="button" class="btn btn-outline-success btn-sm" id="btnNewActivity" disabled>
+										<i class="bx bx-plus me-1"></i>Nieuwe activiteit
+									</button>
+									<button type="button" class="btn btn-dashed btn-sm" id="btnAddActivities" disabled>
+										<i class="bx bx-plus me-1"></i>Toevoegen
+									</button>
 								</div>
 							</div>
-							<div class="form-group row align-items-center pb-3">
-								<div id="ActivityRows">
+							<div id="availableActivitiesList" class="empty-state-box mb-4">Kies eerst een leverancier hierboven.</div>
 
-								</div>
-							
-										@foreach (var item in Model.Contract.Activities)
-									{
-											@await Html.PartialAsync("_ActivityRow", item, new ViewDataDictionary(ViewData) {{ "mode", "add" }})
-									}
-								
+							<div id="activityRowsHead" class="activity-rows-header row align-items-center pb-2 border-bottom mb-2 text-muted text-uppercase d-none">
+								<div class="col-lg-4 col-xl-3">Activiteit</div>
+								<div class="col-lg-8 col-xl-6">Bedrag</div>
 							</div>
-
+							<div id="ActivityRows">
+								@foreach (var item in Model.Contract.Activities)
+								{
+									@await Html.PartialAsync("_ActivityRow", item, new ViewDataDictionary(ViewData) {{ "mode", "add" }})
+								}
+							</div>
+							<div id="noActivitiesHint" class="empty-state-box">Nog geen activiteiten toegevoegd aan dit contract.</div>
+							<div id="activityRowsTotal" class="row align-items-center pt-2 border-top mt-2 d-none">
+								<div class="col-lg-4 col-xl-3 fw-bold">Totaal</div>
+								<div class="col-lg-8 col-xl-6 fw-bold" id="activitiesTotal">&euro; 0,00</div>
+							</div>
 						</div>
 					</div>
 				</div>
 			</section>
 		</div>
 	</div>
-	<div class="row action-buttons">
+	<div class="row action-buttons align-items-center">
 		<div class="col-12 col-md-auto">
-			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-				<i class="bx bx-save text-4 me-2"></i> Leverancier opslaan
+			<button type="submit" name="saveAction" value="save" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+				<i class="bx bx-save text-4 me-2"></i> Contract opslaan
+			</button>
+		</div>
+		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+			<button type="submit" name="saveAction" value="addAnother" class="submit-button btn btn-light border btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 text-color-dark" data-loading-text="Laden...">
+				<i class="bx bx-plus-circle text-4 me-2"></i> Opslaan &amp; nog een contract toevoegen
 			</button>
 		</div>
 		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
 			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
 		</div>
+		<div class="col-12 col-md px-md-0 mt-3 mt-md-0 text-muted text-3">
+			Tip: gebruik <strong>Opslaan &amp; nog een contract toevoegen</strong> als je meerdere leveranciers na elkaar invoert.
+		</div>
 
 	</div>
 }
 
+<!-- Modal: nieuwe leverancier -->
+<div class="modal fade" id="modalNewSupplier" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Nieuwe leverancier</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div id="nsErrors" class="alert alert-danger d-none"></div>
+				<div class="row g-3">
+					<div class="col-md-8">
+						<label class="control-label mb-1">Bedrijfsnaam <span class="text-danger">*</span></label>
+						<input type="text" id="nsName" class="form-control form-control-modern" />
+					</div>
+					<div class="col-md-4">
+						<label class="control-label mb-1">Bedrijfsvorm</label>
+						<select id="nsLegalForm" class="form-control form-control-modern">
+							<option value="">Geen</option>
+							@foreach (var lf in Model.LegalForms)
+							{
+								<option value="@lf.ID">@lf.Display</option>
+							}
+						</select>
+					</div>
+					<div class="col-md-6">
+						<label class="control-label mb-1">Ondernemingsnummer</label>
+						<input type="text" id="nsEnterpriseNumber" class="form-control form-control-modern" placeholder="BE0123456789" />
+					</div>
+					<div class="col-md-6">
+						<label class="control-label mb-1">BTW nummer</label>
+						<div class="input-group">
+							<input type="text" id="nsVat" class="form-control form-control-modern" placeholder="BE0123456789" />
+							<button type="button" class="btn btn-outline-primary" id="nsBtnValidateVat">
+								<i class="bx bx-check"></i> Controleren
+							</button>
+						</div>
+						<small class="text-muted d-block mt-1">Vult bij een geldig nummer meteen naam en adres aan.</small>
+					</div>
+					<div class="col-md-6">
+						<label class="control-label mb-1">Straat</label>
+						<input type="text" id="nsStreet" class="form-control form-control-modern" />
+					</div>
+					<div class="col-md-3">
+						<label class="control-label mb-1">Nr</label>
+						<input type="text" id="nsHouseNumber" class="form-control form-control-modern" />
+					</div>
+					<div class="col-md-3">
+						<label class="control-label mb-1">Bus</label>
+						<input type="text" id="nsBusNumber" class="form-control form-control-modern" />
+					</div>
+					<div class="col-md-4">
+						<label class="control-label mb-1">Postcode</label>
+						<input type="text" id="nsPostalCode" class="form-control form-control-modern" />
+					</div>
+					<div class="col-md-4">
+						<label class="control-label mb-1">Gemeente</label>
+						<input type="text" id="nsCity" class="form-control form-control-modern" />
+					</div>
+					<div class="col-md-4">
+						<label class="control-label mb-1">Land</label>
+						<select id="nsCountryId" class="form-control form-control-modern">
+							@foreach (var c in Model.Countries)
+							{
+								<option value="@c.ID" selected="@(c.Display != null && c.Display.Contains("Belg", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@c.Display</option>
+							}
+						</select>
+					</div>
+					<div class="col-md-6">
+						<label class="control-label mb-1">Email</label>
+						<input type="email" id="nsEmail" class="form-control form-control-modern" />
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
+				<button type="button" class="btn btn-primary" id="btnCreateSupplier">Leverancier aanmaken &amp; selecteren</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal: nieuwe werfleider -->
+<div class="modal fade" id="modalNewSiteManager" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Nieuwe werfleider</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<p class="text-muted" id="nwmForLabel">Voor: </p>
+				<div id="nwmErrors" class="alert alert-danger d-none"></div>
+				<div class="mb-3">
+					<label class="control-label mb-1">Naam <span class="text-danger">*</span></label>
+					<input type="text" id="nwmName" class="form-control form-control-modern" placeholder="Voor- en achternaam" />
+				</div>
+				<div class="mb-3">
+					<label class="control-label mb-1">E-mailadres</label>
+					<input type="email" id="nwmEmail" class="form-control form-control-modern" placeholder="naam@bedrijf.be" />
+				</div>
+				<div class="mb-3">
+					<label class="control-label mb-1">Telefoon</label>
+					<input type="text" id="nwmPhone" class="form-control form-control-modern" placeholder="+32 ..." />
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
+				<button type="button" class="btn btn-primary" id="btnCreateSiteManager">Werfleider aanmaken &amp; selecteren</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal: nieuwe activiteit -->
+<div class="modal fade" id="modalNewActivity" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Nieuwe activiteit</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<p class="text-muted" id="naForLabel">Voor: </p>
+				<div id="naErrors" class="alert alert-danger d-none"></div>
+				<div class="mb-3">
+					<label class="control-label mb-1">Naam van de activiteit <span class="text-danger">*</span></label>
+					<input type="text" id="naName" class="form-control form-control-modern" placeholder="bv. Dakisolatie" />
+				</div>
+				<div class="mb-3">
+					<label class="control-label mb-1">Groep <span class="text-danger">*</span></label>
+					<select id="naGroup" class="form-control form-control-modern">
+						@foreach (var g in Model.ActivityGroups)
+						{
+							<option value="@g.ID">@g.Display</option>
+						}
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
+				<button type="button" class="btn btn-primary" id="btnCreateActivity">Activiteit aanmaken</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 @section PageScripts
 {
 	<script src="~/lib/select2/js/select2.js"></script>
 	<script src="~/js/theme.admin.extension.js"></script>
-@* 	<script src="~/js/examples/examples.advanced.form.js"></script> *@
 	<script src="~/lib/select2/js/i18n/nl.js"></script>
-@* 	<script src="~/lib/jquery-validation/jquery.validate.js"></script> *@
 	<script src="~/lib/dropzone/dropzone.js"></script>
+	<script src="~/lib/ios7-switch/ios7-switch.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
 	<script src="~/js/currency.js"></script>
 
@@ -222,22 +425,54 @@
 		// CurrencyMask helper (ipv AutoNumeric)
 		// ==============================
 		function initEuroInput(target) {
-			// target kan selector, element of NodeList zijn
 			CurrencyMask.init(target);
 		}
 
+		function setCurrencyValue(selector, value) {
+			const el = document.querySelector(selector);
+			if (!el || value === null || value === undefined) return;
+			const an = AutoNumeric.getAutoNumericElement(el);
+			if (an) {
+				an.set(value);
+			} else {
+				el.value = value;
+			}
+		}
+
+		function notify(title, text, type) {
+			if (typeof PNotify !== 'undefined') {
+				new PNotify({
+					title: title || '',
+					text: text || '',
+					type: type || 'info',
+					addclass: 'stack-bar-top',
+					stack: { dir1: 'down', dir2: 'right', push: 'top', spacing1: 5 }
+				});
+			} else {
+				window.alert((title ? title + '\n' : '') + (text || ''));
+			}
+		}
+
+		function antiforgeryToken() {
+			const el = document.querySelector('input[name="__RequestVerificationToken"]');
+			return el ? el.value : '';
+		}
+
+		function initSwitches($scope) {
+			if (typeof ios7Switch === 'undefined') return;
+			($scope || $(document)).find('[data-plugin-ios-switch]').each(function () {
+				if (!$(this).data('ios7-switch-init')) {
+					new ios7Switch(this);
+					$(this).data('ios7-switch-init', true);
+				}
+			});
+		}
+
+		let addedActivityIds = new Set();
+
 		$(function () {
 
-			// ==============================
-			// ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
-			// ==============================
-			$("#lstActivities").select2({
-				theme: 'bootstrap',
-				placeholder: 'Selecteer het lot',
-				width: '100%',
-				dropdownAutoWidth: true,
-				data: []
-			});
+			initSwitches($(document));
 
 			// ==============================
 			// GARANTIE TYPE
@@ -260,64 +495,172 @@
 			});
 
 			// ==============================
-			// BEDRIJFSNAAM
+			// BEDRIJFSNAAM AUTOCOMPLETE
 			// ==============================
-			const companyId = $('#txtCompany').val();
-			if (companyId && companyId !== "0") {
-				LoadActivities(companyId, '#lstActivities', '#btnAddActivities');
-			} else {
-				$('#ddlCompany').select2({
-					theme: 'bootstrap',
-					minimumInputLength: 3,
-					width: '100%',
-					placeholder: "Voer een bedrijfsnaam in...",
-					allowClear: true,
-					language: "nl",
-					ajax: {
-						url: '@Url.Action("GetCompanys", "Projecten")',
-						type: 'POST',
-						dataType: 'json',
-						delay: 250,
-						data: params => ({ term: params.term }),
-						processResults: data => ({
-							results: $.map(data, item => ({
-								id: item.id,
-								text: item.text
-							}))
-						}),
-						cache: true
+			$('#ddlCompany').select2({
+				theme: 'bootstrap',
+				minimumInputLength: 3,
+				width: '100%',
+				placeholder: "Typ om een leverancier te zoeken...",
+				allowClear: true,
+				language: "nl",
+				ajax: {
+					url: '@Url.Action("GetCompanys", "Projecten")',
+					type: 'POST',
+					dataType: 'json',
+					delay: 250,
+					data: params => ({ term: params.term }),
+					processResults: data => {
+						const results = $.map(data, item => ({ id: item.id, text: item.text, vat: item.extra }));
+						results.push({ id: '__new__', text: 'Nieuwe leverancier toevoegen' });
+						return { results };
+					},
+					cache: true
+				},
+				templateResult: function (data) {
+					if (!data.id) return data.text;
+					if (data.id === '__new__') {
+						return $('<div class="company-picker-result company-picker-new"><i class="bx bx-plus-circle me-1"></i>' + data.text + '</div>');
 					}
-				});
-				$('#lstActivities').prop('disabled', true);
-				$('#btnAddActivities').prop('disabled', true);
-			}
+					const $r = $('<div class="company-picker-result"><span class="name"></span><span class="vat"></span></div>');
+					$r.find('.name').text(data.text);
+					$r.find('.vat').text(data.vat || '');
+					return $r;
+				}
+			});
+
+			$('#ddlCompany').on('select2:select', function (e) {
+				const selectedData = e.params && e.params.data;
+				if (!selectedData || !selectedData.id) return;
+
+				if (selectedData.id === '__new__') {
+					$('#ddlCompany').val(null).trigger('change');
+					new bootstrap.Modal(document.getElementById('modalNewSupplier')).show();
+					return;
+				}
+
+				selectCompany(selectedData.id, selectedData.text, selectedData.vat, true);
+			});
+
+			$('#btnClearCompany').on('click', function () {
+				$('#txtCompanyID').val('0');
+				$('#txtCompanyDisplay').val('');
+				$('#companySelected').addClass('d-none');
+				$('#ddlCompany').val(null).trigger('change').removeClass('d-none');
+				$('#companyContractDefaultsNote').addClass('d-none');
+				setActivitiesCompanyState(false, '');
+				$('#btnNewSiteManager').prop('disabled', true);
+				$('#ddlSiteManager').empty().append(new Option('Geen', '', false, false));
+			});
 
 			// ==============================
-			// INITIËLE CHECK CASH DISCOUNT
+			// INITIËLE STAAT
 			// ==============================
+			const initialCompanyId = $('#txtCompanyID').val();
+			if (initialCompanyId && initialCompanyId !== "0") {
+				setActivitiesCompanyState(true, $('#txtCompanyDisplay').val());
+				LoadActivities(initialCompanyId);
+				LoadSiteManagers(initialCompanyId, '#ddlSiteManager');
+				$('#btnNewSiteManager').prop('disabled', false);
+			}
+
 			$('#chkCashDiscount').trigger('change');
+			$('#ActivityRows').children().each(function () {
+				const id = $(this).find('input[name$=".Activity.ID"]').val();
+				if (id) addedActivityIds.add(String(id));
+			});
+			toggleEmptyActivitiesHint();
+			recomputeActivitiesTotal();
+
+			initEuroInput('.Currencymask');
 		});
 
 		// ==============================
-		// ACTIVITEITEN OPHALEN
+		// LEVERANCIER SELECTEREN (zoekresultaat of net aangemaakt)
 		// ==============================
-		function LoadActivities(companyId, selectSelector, buttonSelector) {
+		function selectCompany(id, text, vat, fetchDefaults) {
+			$('#txtCompanyID').val(id);
+			$('#txtCompanyDisplay').val(text);
+
+			$('#companySelectedName').text(text);
+			$('#companySelectedVat').text(vat || '');
+			$('#companySelected').removeClass('d-none');
+			$('#ddlCompany').addClass('d-none');
+
+			setActivitiesCompanyState(true, text);
+			$('#btnNewSiteManager').prop('disabled', false);
+
+			LoadActivities(id);
+			LoadSiteManagers(id, '#ddlSiteManager');
+
+			if (fetchDefaults) {
+				$.ajax({
+					type: 'POST',
+					url: '@Url.Action("GetCompanyContractDefaults", "Projecten")',
+					data: { companyid: id },
+					dataType: 'json',
+					success: function (data) {
+						if (!data || !data.found) {
+							$('#companyContractDefaultsNote').addClass('d-none');
+							return;
+						}
+						if (data.vatPercentage !== null) setCurrencyValue('#Contract_VatPercentage', data.vatPercentage);
+						if (data.paymentTerm !== null) $('#txtPaymentTerm').val(data.paymentTerm);
+						if (data.guaranteeType !== null) {
+							$('#lstGuaranteeType').val(data.guaranteeType).trigger('change');
+						}
+						if (data.guaranteePercentage !== null) setCurrencyValue('#Contract_GuaranteePercentage', data.guaranteePercentage);
+						$('#companyContractDefaultsNote').removeClass('d-none');
+					},
+					error: function () {
+						$('#companyContractDefaultsNote').addClass('d-none');
+					}
+				});
+			} else {
+				$('#companyContractDefaultsNote').addClass('d-none');
+			}
+		}
+
+		function setActivitiesCompanyState(hasCompany, companyName) {
+			$('#btnNewActivity, #btnAddActivities').prop('disabled', !hasCompany);
+			if (hasCompany) {
+				$('#companyActivitiesTitle').text('ACTIVITEITEN VAN ' + (companyName || '').toUpperCase());
+				$('#activityRowsHead').toggleClass('d-none', $('#ActivityRows').children().length === 0);
+				$('#activityRowsTotal').removeClass('d-none');
+			} else {
+				$('#companyActivitiesTitle').text('Kies eerst een leverancier');
+				$('#availableActivitiesList').removeClass().addClass('empty-state-box mb-4').text('Kies eerst een leverancier hierboven.');
+				$('#activityRowsHead').addClass('d-none');
+				$('#activityRowsTotal').addClass('d-none');
+			}
+		}
+
+		// ==============================
+		// ACTIVITEITEN VAN LEVERANCIER OPHALEN (checkbox-lijst)
+		// ==============================
+		function LoadActivities(companyId) {
 			$.ajax({
 				type: 'POST',
 				url: '@Url.Action("GetCompanyActivities", "Projecten")',
 				data: { companyid: companyId },
 				dataType: 'json',
 				success: function (data) {
-					let $select = $(selectSelector);
-					$select.empty().prop('disabled', false);
-					$(buttonSelector).prop('disabled', false);
+					const $list = $('#availableActivitiesList');
+					const remaining = (data || []).filter(item => !addedActivityIds.has(String(item.id)));
 
-					$.each(data, function (i, item) {
-						let option = new Option(item.text, item.id, false, false);
-						$select.append(option);
+					if (remaining.length === 0) {
+						$list.removeClass().addClass('empty-state-box mb-4').text('Geen activiteiten meer beschikbaar. Voeg een nieuwe activiteit toe.');
+						return;
+					}
+
+					$list.removeClass('empty-state-box').addClass('border rounded p-3 mb-4').empty();
+					remaining.forEach(function (item) {
+						const id = 'actchk-' + item.id;
+						const $row = $('<div class="form-check"></div>');
+						$row.append($('<input type="checkbox" class="form-check-input avail-activity-checkbox">').attr('id', id).val(item.id).data('text', item.text));
+						$row.append($('<label class="form-check-label"></label>').attr('for', id).text(item.text));
+						$list.append($row);
 					});
-
-					$select.trigger('change');
 				},
 				error: function (xhr, status, error) {
 					console.error('Fout bij ophalen activiteiten:', error);
@@ -326,61 +669,66 @@
 		}
 
 		function LoadSiteManagers(companyId, selectSelector) {
-					$.ajax({
-						type: 'POST',
-						url: '@Url.Action("GetCompanyContacts", "Projecten")',
-						data: { companyid: companyId },
-						dataType: 'json',
-						success: function (data) {
-							let $select = $(selectSelector);
-							const selectedValue = $select.val();
-							$select.empty();
-							$select.append(new Option('Geen', '', false, false));
-							$.each(data, function (i, item) {
-								$select.append(new Option(item.text, item.id, false, false));
-							});
-							if (selectedValue) {
-								$select.val(selectedValue);
-							}
-						},
-						error: function (xhr, status, error) {
-							console.error('Fout bij ophalen contactpersonen:', error);
-						}
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("GetCompanyContacts", "Projecten")',
+				data: { companyid: companyId },
+				dataType: 'json',
+				success: function (data) {
+					let $select = $(selectSelector);
+					const selectedValue = $select.val();
+					$select.empty();
+					$select.append(new Option('Geen', '', false, false));
+					$.each(data, function (i, item) {
+						$select.append(new Option(item.text, item.id, false, false));
 					});
+					if (selectedValue) {
+						$select.val(selectedValue);
+					}
+				},
+				error: function (xhr, status, error) {
+					console.error('Fout bij ophalen contactpersonen:', error);
 				}
+			});
+		}
+
 		// ==============================
 		// ACTIVITEITEN TOEVOEGEN AAN CONTRACT
 		// ==============================
-		$('#btnAddActivities').click(function () {
-			var data = $('#lstActivities').select2('data');
+		$('#btnAddActivities').on('click', function () {
+			const $checked = $('.avail-activity-checkbox:checked');
+			if ($checked.length === 0) return false;
 
-			if (data && data.length > 0) {
-				data.forEach(function (item) {
-					$.ajax({
-						url: '@Url.Action("AddSelectedActivities", "Projecten")',
-						data: { ActivityId: item.id, ActivityName: item.text },
-						cache: false,
-						traditional: true,
-						type: 'POST',
-						success: function (result) {
-							const $row = $(result);
-							$('#ActivityRows').append($row);
-
-							// 🔑 CurrencyMask toepassen op nieuwe inputs
-							initEuroInput($row.find('.Currencymask'));
-						}
-					});
-
-					// toegevoegde optie disablen
-					$("#lstActivities option[value='" + item.id + "']")
-						.attr('disabled', 'disabled');
-				});
-
-				$("#lstActivities").val(null).trigger("change");
-			}
+			$checked.each(function () {
+				addActivityRow($(this).val(), $(this).data('text'));
+			});
 
 			return false;
 		});
+
+		function addActivityRow(activityId, activityName) {
+			$.ajax({
+				url: '@Url.Action("AddSelectedActivities", "Projecten")',
+				data: { ActivityId: activityId, ActivityName: activityName },
+				cache: false,
+				traditional: true,
+				type: 'POST',
+				success: function (result) {
+					const $row = $(result);
+					$('#ActivityRows').append($row);
+					initEuroInput($row.find('.Currencymask'));
+					addedActivityIds.add(String(activityId));
+					$('#activityRowsHead').removeClass('d-none');
+					toggleEmptyActivitiesHint();
+					recomputeActivitiesTotal();
+
+					const companyId = $('#txtCompanyID').val();
+					if (companyId && companyId !== "0") {
+						LoadActivities(companyId);
+					}
+				}
+			});
+		}
 
 		// ==============================
 		// ACTIVITEIT VERWIJDEREN
@@ -388,34 +736,227 @@
 		$(document).on('click', 'button.deleterow', function () {
 			$(this).closest('div').parent('div').parent('div').remove();
 			const activiteitId = $(this).data('id');
-			$("#lstActivities option[value='" + activiteitId + "']")
-				.removeAttr('disabled');
+			addedActivityIds.delete(String(activiteitId));
+			toggleEmptyActivitiesHint();
+			recomputeActivitiesTotal();
+
+			const companyId = $('#txtCompanyID').val();
+			if (companyId && companyId !== "0") {
+				LoadActivities(companyId);
+			}
 			return false;
 		});
 
-		// ==============================
-		// DOCUMENT READY
-		// ==============================
-		$(document).ready(function () {
+		function toggleEmptyActivitiesHint() {
+			const hasRows = $('#ActivityRows').children().length > 0;
+			$('#noActivitiesHint').toggleClass('d-none', hasRows);
+			if (($('#txtCompanyID').val() || '0') !== '0') {
+				$('#activityRowsHead').toggleClass('d-none', !hasRows);
+			}
+		}
 
-			$('#ddlCompany').on('select2:select', function (e) {
-				const selectedData = e.params?.data;
-				if (selectedData && selectedData.id) {
-					$('#txtCompanyID').val(selectedData.id);
-					$('#txtCompanyDisplay').val(selectedData.text);
-					LoadActivities(selectedData.id, '#lstActivities', '#btnAddActivities');
-					LoadSiteManagers(selectedData.id, '#ddlSiteManager');
+		function recomputeActivitiesTotal() {
+			let total = 0;
+			$('#ActivityRows .Currencymask').each(function () {
+				const an = AutoNumeric.getAutoNumericElement(this);
+				const val = an ? an.getNumber() : parseFloat(($(this).val() || '0').replace(/\./g, '').replace(',', '.'));
+				if (!isNaN(val)) total += val;
+			});
+			const formatted = total.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+			$('#activitiesTotal').text('€ ' + formatted);
+		}
+
+		$(document).on('input change', '#ActivityRows .Currencymask', function () {
+			recomputeActivitiesTotal();
+		});
+
+		// ==============================
+		// MODAL: NIEUWE LEVERANCIER
+		// ==============================
+		$('#nsBtnValidateVat').on('click', function () {
+			const vatNumber = ($('#nsVat').val() || $('#nsEnterpriseNumber').val() || '').toString().trim();
+			if (!vatNumber) {
+				notify('Ongeldig btw-nummer', 'Vul eerst een btw- of ondernemingsnummer in.', 'warning');
+				return;
+			}
+
+			const button = $(this);
+			button.prop('disabled', true);
+
+			$.getJSON('@Url.Action("ValidateVat", "Leveranciers")', { vatCountryCode: 'BE', vatNumber: vatNumber })
+				.done(function (data) {
+					if (!data || data.valid === false) {
+						notify('Ongeldig btw-nummer', 'Dit btw-nummer werd niet gevonden.', 'error');
+						return;
+					}
+
+					const address = data.address || {};
+					if (data.name) $('#nsName').val(data.name);
+					if (address.street) $('#nsStreet').val(address.street);
+					if (address.number) $('#nsHouseNumber').val(address.number);
+					const postal = address.zip || address.zip_code || address.postcode;
+					if (postal) $('#nsPostalCode').val(postal);
+					if (address.city) $('#nsCity').val(address.city);
+
+					notify('Btw-nummer gevonden', 'De gegevens werden overgenomen.', 'success');
+				})
+				.fail(function (xhr) {
+					const message = xhr.responseJSON && xhr.responseJSON.error
+						? xhr.responseJSON.error
+						: 'De validatie van het btw-nummer is mislukt.';
+					notify('Fout bij controle', message, 'error');
+				})
+				.always(function () {
+					button.prop('disabled', false);
+				});
+		});
+
+		$('#btnCreateSupplier').on('click', function () {
+			const $errors = $('#nsErrors').addClass('d-none').empty();
+			const button = $(this);
+			button.prop('disabled', true);
+
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("CreateQuick", "Leveranciers")',
+				data: {
+					Name: $('#nsName').val(),
+					SelectedLegalFormId: $('#nsLegalForm').val(),
+					EnterpriseNumber: $('#nsEnterpriseNumber').val(),
+					VatNumber: $('#nsVat').val(),
+					Street: $('#nsStreet').val(),
+					HouseNumber: $('#nsHouseNumber').val(),
+					BusNumber: $('#nsBusNumber').val(),
+					PostalCode: $('#nsPostalCode').val(),
+					City: $('#nsCity').val(),
+					SelectedCountryId: $('#nsCountryId').val(),
+					Email: $('#nsEmail').val(),
+					__RequestVerificationToken: antiforgeryToken()
+				},
+				dataType: 'json'
+			}).done(function (data) {
+				if (!data || !data.success) {
+					const messages = (data && data.errors && data.errors.length) ? data.errors : ['De leverancier kon niet worden aangemaakt.'];
+					$errors.removeClass('d-none').html(messages.map(m => '<div>' + m + '</div>').join(''));
+					return;
 				}
-			});
 
-			$('#txtCompanyID').on('change', function () {
-				LoadActivities($(this).val(), '#lstActivities', '#btnAddActivities');
-				LoadSiteManagers($(this).val(), '#ddlSiteManager');
+				bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNewSupplier')).hide();
+				document.getElementById('modalNewSupplier').querySelectorAll('input').forEach(i => i.value = '');
+				selectCompany(data.id, data.text, data.vat, true);
+			}).fail(function (xhr) {
+				const messages = (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.length)
+					? xhr.responseJSON.errors
+					: ['De leverancier kon niet worden aangemaakt.'];
+				$errors.removeClass('d-none').html(messages.map(m => '<div>' + m + '</div>').join(''));
+			}).always(function () {
+				button.prop('disabled', false);
 			});
+		});
 
-			// 🔑 init bestaande bedragen
-			initEuroInput('.Currencymask');
-			LoadSiteManagers($('#txtCompanyID').val(), '#ddlSiteManager');
+		// ==============================
+		// MODAL: NIEUWE WERFLEIDER
+		// ==============================
+		$('#btnNewSiteManager').on('click', function () {
+			const companyId = $('#txtCompanyID').val();
+			if (!companyId || companyId === "0") return;
+			$('#nwmForLabel').text('Voor: ' + $('#txtCompanyDisplay').val());
+			$('#nwmErrors').addClass('d-none').empty();
+			new bootstrap.Modal(document.getElementById('modalNewSiteManager')).show();
+		});
+
+		$('#btnCreateSiteManager').on('click', function () {
+			const companyId = $('#txtCompanyID').val();
+			const name = $('#nwmName').val();
+			const $errors = $('#nwmErrors').addClass('d-none').empty();
+
+			if (!name || !name.trim()) {
+				$errors.removeClass('d-none').text('Naam is verplicht.');
+				return;
+			}
+
+			const button = $(this);
+			button.prop('disabled', true);
+
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("AddCompanyContactQuick", "Projecten")',
+				data: {
+					companyId: companyId,
+					name: name,
+					email: $('#nwmEmail').val(),
+					phone: $('#nwmPhone').val(),
+					__RequestVerificationToken: antiforgeryToken()
+				},
+				dataType: 'json'
+			}).done(function (data) {
+				if (!data || !data.success) {
+					$errors.removeClass('d-none').text((data && data.error) || 'De werfleider kon niet worden aangemaakt.');
+					return;
+				}
+
+				let $select = $('#ddlSiteManager');
+				$select.append(new Option(data.text, data.id, false, false));
+				$select.val(data.id);
+
+				bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNewSiteManager')).hide();
+				document.getElementById('modalNewSiteManager').querySelectorAll('input').forEach(i => i.value = '');
+			}).fail(function (xhr) {
+				$errors.removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.error) || 'De werfleider kon niet worden aangemaakt.');
+			}).always(function () {
+				button.prop('disabled', false);
+			});
+		});
+
+		// ==============================
+		// MODAL: NIEUWE ACTIVITEIT
+		// ==============================
+		$('#btnNewActivity').on('click', function () {
+			const companyId = $('#txtCompanyID').val();
+			if (!companyId || companyId === "0") return;
+			$('#naForLabel').text('Voor: ' + $('#txtCompanyDisplay').val());
+			$('#naErrors').addClass('d-none').empty();
+			new bootstrap.Modal(document.getElementById('modalNewActivity')).show();
+		});
+
+		$('#btnCreateActivity').on('click', function () {
+			const companyId = $('#txtCompanyID').val();
+			const name = $('#naName').val();
+			const groupId = $('#naGroup').val();
+			const $errors = $('#naErrors').addClass('d-none').empty();
+
+			if (!name || !name.trim()) {
+				$errors.removeClass('d-none').text('Naam is verplicht.');
+				return;
+			}
+
+			const button = $(this);
+			button.prop('disabled', true);
+
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("AddCompanyActivityQuick", "Projecten")',
+				data: {
+					companyId: companyId,
+					name: name,
+					groupId: groupId,
+					__RequestVerificationToken: antiforgeryToken()
+				},
+				dataType: 'json'
+			}).done(function (data) {
+				if (!data || !data.success) {
+					$errors.removeClass('d-none').text((data && data.error) || 'De activiteit kon niet worden aangemaakt.');
+					return;
+				}
+
+				addActivityRow(data.id, data.text);
+				bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNewActivity')).hide();
+				document.getElementById('modalNewActivity').querySelector('#naName').value = '';
+			}).fail(function (xhr) {
+				$errors.removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.error) || 'De activiteit kon niet worden aangemaakt.');
+			}).always(function () {
+				button.prop('disabled', false);
+			});
 		});
 	</script>
 

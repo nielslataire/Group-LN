@@ -9,6 +9,13 @@ public class VacatureListVM
     public List<VacatureBO> Vacatures { get; set; } = new();
 }
 
+public class VacatureSollicitatieListVM
+{
+    public List<VacatureSollicitatieBO> Sollicitaties { get; set; } = new();
+    public int? VacatureId { get; set; }
+    public string? VacatureTitel { get; set; }
+}
+
 public class VacatureEditVM
 {
     public int ID { get; set; }

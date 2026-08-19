@@ -152,6 +152,7 @@ builder.Services.AddScoped<FacadeCore.IAuthenticationService, ServiceCore.Authen
 builder.Services.AddScoped<FacadeCore.IActivityService, ServiceCore.ActivityService>();
 builder.Services.AddScoped<FacadeCore.IBlogArtikelService, ServiceCore.BlogArtikelService>();
 builder.Services.AddScoped<FacadeCore.IVacatureService, ServiceCore.VacatureService>();
+builder.Services.AddScoped<FacadeCore.IVacatureSollicitatieService, ServiceCore.VacatureSollicitatieService>();
 builder.Services.AddScoped<FacadeCore.IEmailTemplateService, ServiceCore.EmailTemplateService>();
 builder.Services.AddScoped<FacadeCore.IEmailSendLogService, ServiceCore.EmailSendLogService>();
 builder.Services.AddScoped<FacadeCore.IUserSignatureService, ServiceCore.UserSignatureService>();

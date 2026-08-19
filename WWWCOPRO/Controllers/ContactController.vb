@@ -1,5 +1,4 @@
-﻿Imports Postal
-Imports BO
+﻿Imports BO
 Imports System.Configuration
 Imports System.IO
 Imports System.Linq
@@ -78,13 +77,26 @@ Public Class ContactController
         Dim internalMailStatus As String = "Niet verzonden"
         Dim externalMailSent As Boolean = False
 
+        ' Zelfde SMTP-pad als het (bewezen werkende) documentaanvraag-formulier
+        ' (ProjectsController.SendDoc) — expliciete Office365-relay met credentials
+        ' uit environment variables, i.p.v. de onbetrouwbare Postal/<system.net><mailSettings>-relay.
         Try
-            Dim email As Object = New Email("ContactMail")
-            email.[To] = model.EmailTo
-            email.ContactName = model.FullName
-            email.Title = model.Title
-            email.Message = model.Message
-            email.Send()
+            ViewBag.To = model.EmailTo
+            ViewBag.ContactName = model.FullName
+            ViewBag.Title = model.Title
+            ViewBag.Message = model.Message
+
+            Dim emailHtml As String = ViewRenderHelper.RenderViewToString(Me.ControllerContext, "~/Views/Emails/ContactMail.vbhtml", Nothing)
+
+            Dim msg As New System.Net.Mail.MailMessage()
+            msg.To.Add(model.EmailTo)
+            msg.From = New System.Net.Mail.MailAddress("info@groupln.be")
+            msg.Subject = "Group LN - uw contactvraag"
+            msg.Body = emailHtml
+            msg.IsBodyHtml = True
+
+            SmtpMailHelper.SendWithRetry(msg)
+
             externalMailStatus = "Verzonden"
             externalMailSent = True
         Catch ex As Exception
@@ -93,13 +105,23 @@ Public Class ContactController
         End Try
 
         Try
-            Dim internalemail As Object = New Email("InternalMail")
-            internalemail.[To] = model.EmailTo
-            internalemail.ContactName = model.FullName
-            internalemail.Title = model.Title
-            internalemail.Message = model.Message
-            internalemail.Phone = model.Phone
-            internalemail.Send()
+            ViewBag.To = model.EmailTo
+            ViewBag.ContactName = model.FullName
+            ViewBag.Title = model.Title
+            ViewBag.Message = model.Message
+            ViewBag.Phone = model.Phone
+
+            Dim internalHtml As String = ViewRenderHelper.RenderViewToString(Me.ControllerContext, "~/Views/Emails/InternalMail.vbhtml", Nothing)
+
+            Dim msg2 As New System.Net.Mail.MailMessage()
+            msg2.To.Add("niels.lataire@groupln.be")
+            msg2.From = New System.Net.Mail.MailAddress("info@groupln.be")
+            msg2.Subject = "Website Group LN : " & model.Title
+            msg2.Body = internalHtml
+            msg2.IsBodyHtml = True
+
+            SmtpMailHelper.SendWithRetry(msg2)
+
             internalMailStatus = "Verzonden"
         Catch ex As Exception
             LogError("CONTACT: INTERNAL MAIL FAILED", ex)

@@ -2584,6 +2584,8 @@ namespace CPMCore.Controllers
             if (response.Success)
                 model.InsuranceCompanies = response.Values;
 
+            PopulateAddContractLookups(model);
+
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -2613,6 +2615,7 @@ namespace CPMCore.Controllers
         public ActionResult AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders)
         {
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
+            var addAnother = Request.Form["saveAction"] == "addAnother";
 
             if (!ModelState.IsValid)
             {
@@ -2622,6 +2625,7 @@ namespace CPMCore.Controllers
                     .FirstOrDefault();
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(model.ProjectId) : model.ProjectName)} - Contract toevoegen");
+                PopulateAddContractLookups(model);
                 return View(model);
             }
 
@@ -2644,6 +2648,10 @@ namespace CPMCore.Controllers
             if (response.Success)
             {
                 AddMessage("success", "Het contract is toegevoegd aan het project " + model.ProjectName, "Geslaagd!");
+                if (addAnother)
+                {
+                    return RedirectToAction(nameof(AddContract), new { projectid = model.ProjectId });
+                }
                 return Redirect(referrer);
             }
             else
@@ -2652,8 +2660,26 @@ namespace CPMCore.Controllers
                     ?? "Het contract is NIET toegevoegd aan het project " + model.ProjectName;
                 AddMessage("error", serviceError, "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
+                PopulateAddContractLookups(model);
                 return View(model);
             }
+        }
+
+        private void PopulateAddContractLookups(ProjectAddContractModel model)
+        {
+            var groupsResponse = _activityService.GetActivityGroupsForSelect();
+            if (groupsResponse.Success)
+                model.ActivityGroups = groupsResponse.Values;
+
+            model.LegalForms = _db.CompanyLegalForm
+                .Where(l => l.IsActive)
+                .OrderBy(l => l.Name)
+                .Select(l => new IdNameBO { ID = l.Id, Display = l.Name })
+                .ToList();
+
+            var countriesResponse = _countryService.GetVisibleCountriesForSelect();
+            if (countriesResponse.Success)
+                model.Countries = countriesResponse.Values;
         }
         [HttpGet]
         //[Breadcrumb("Contract bewerken")]
@@ -7792,6 +7818,90 @@ namespace CPMCore.Controllers
                 .Select(x => new SelectBO { id = x.ID, text = x.Display })
                 .ToList();
             return Json(contacts);
+        }
+        [HttpPost]
+        public JsonResult GetCompanyContractDefaults(int companyid)
+        {
+            var last = _db.Contract
+                .Where(c => c.CompanyId == companyid)
+                .OrderByDescending(c => c.Id)
+                .Select(c => new
+                {
+                    c.VatPercentage,
+                    c.PaymentTerm,
+                    c.GuaranteeType,
+                    c.GuaranteePercentage
+                })
+                .FirstOrDefault();
+
+            if (last == null)
+            {
+                return Json(new { found = false });
+            }
+
+            return Json(new
+            {
+                found = true,
+                vatPercentage = last.VatPercentage,
+                paymentTerm = last.PaymentTerm,
+                guaranteeType = last.GuaranteeType,
+                guaranteePercentage = last.GuaranteePercentage
+            });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<JsonResult> AddCompanyContactQuick(int companyId, string name, string email, string phone)
+        {
+            if (companyId <= 0 || string.IsNullOrWhiteSpace(name))
+            {
+                Response.StatusCode = 400;
+                return Json(new { success = false, error = "Naam is verplicht." });
+            }
+
+            var entity = new CompanyContacts
+            {
+                CompanyId = companyId,
+                ContactNaam = name.Trim(),
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+                Gsm = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim()
+            };
+
+            _db.CompanyContacts.Add(entity);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, id = entity.ContactId, text = entity.ContactNaam });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult AddCompanyActivityQuick(int companyId, string name, int groupId)
+        {
+            if (companyId <= 0 || string.IsNullOrWhiteSpace(name) || groupId <= 0)
+            {
+                Response.StatusCode = 400;
+                return Json(new { success = false, error = "Naam en groep zijn verplicht." });
+            }
+
+            var activityBo = new ActivityBO
+            {
+                Name = name.Trim(),
+                Group = new ActivityGroupBO { ID = groupId }
+            };
+
+            var createResponse = _activityService.InsertUpdate(activityBo);
+            if (!createResponse.Success || createResponse.InsertedId == 0)
+            {
+                Response.StatusCode = 400;
+                return Json(new { success = false, error = "De activiteit kon niet worden aangemaakt." });
+            }
+
+            var linkResponse = _companyService.AddCompanyActivity(companyId, createResponse.InsertedId);
+            if (!linkResponse.Success)
+            {
+                Response.StatusCode = 400;
+                return Json(new { success = false, error = "De activiteit kon niet aan de leverancier gekoppeld worden." });
+            }
+
+            return Json(new { success = true, id = createResponse.InsertedId, text = activityBo.Name });
         }
         [HttpPost]
         public JsonResult GetWheaterstations(string term)

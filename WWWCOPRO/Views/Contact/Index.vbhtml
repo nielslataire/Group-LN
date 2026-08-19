@@ -84,18 +84,9 @@ End Section
                             <path class="contact-success-check-mark" fill="none" stroke-width="4" d="M20 33l8 8 16-17" />
                         </svg>
                     </div>
-                    <h2 class="contact-form-title">Bericht verstuurd</h2>
                     <p class="contact-form-sub">
-                        Dank u@(If(Not String.IsNullOrWhiteSpace(CStr(ViewBag.SubmittedNaam)), ", " & ViewBag.SubmittedNaam, "")), uw bericht is bij ons binnen. Ons team beantwoordt uw vraag zo snel mogelijk.
+                        Bericht ontvangen@(If(Not String.IsNullOrWhiteSpace(CStr(ViewBag.SubmittedNaam)), ", " & ViewBag.SubmittedNaam, "")), helemaal volgens plan! We werken het verder uit en laten iets horen op @ViewBag.SubmittedEmail.
                     </p>
-                    @If Not String.IsNullOrWhiteSpace(CStr(ViewBag.SubmittedEmail)) Then
-                        @<div class="contact-success-pill">
-                            <span class="contact-success-pill-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                            </span>
-                            <span>Bevestiging verzonden naar <strong>@ViewBag.SubmittedEmail</strong></span>
-                        </div>
-                    End If
                     <a href="@Url.Action("Index", "Contact")" class="contact-success-link">&larr; Nog een bericht versturen</a>
                 </div>
             Else

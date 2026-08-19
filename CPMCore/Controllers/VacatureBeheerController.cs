@@ -13,10 +13,12 @@ namespace CPMCore.Controllers;
 public class VacatureBeheerController : BaseController
 {
     private readonly IVacatureService _vacatureService;
+    private readonly IVacatureSollicitatieService _sollicitatieService;
 
-    public VacatureBeheerController(IVacatureService vacatureService)
+    public VacatureBeheerController(IVacatureService vacatureService, IVacatureSollicitatieService sollicitatieService)
     {
         _vacatureService = vacatureService;
+        _sollicitatieService = sollicitatieService;
     }
 
     // ── LIST ────────────────────────────────────────────────────────────
@@ -115,6 +117,61 @@ public class VacatureBeheerController : BaseController
             AddMessage("success", "Vacature verwijderd.", "Verwijderd");
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // ── SOLLICITATIES ──────────────────────────────────────────────────
+
+    [HttpGet]
+    public IActionResult Sollicitaties(int? vacatureId)
+    {
+        SetPageHeader("bx bx-mail-send", "Sollicitaties");
+
+        string? vacatureTitel = null;
+        if (vacatureId.HasValue)
+        {
+            var vacatureResult = _vacatureService.GetVacatureById(vacatureId.Value);
+            vacatureTitel = vacatureResult.Value?.Titel;
+        }
+
+        var result = _sollicitatieService.GetSollicitaties(vacatureId);
+        var vm = new VacatureSollicitatieListVM
+        {
+            Sollicitaties = result.Values ?? new(),
+            VacatureId = vacatureId,
+            VacatureTitel = vacatureTitel
+        };
+        return View(vm);
+    }
+
+    [HttpGet]
+    public IActionResult SollicitatieCvDownloaden(int id)
+    {
+        var result = _sollicitatieService.GetSollicitatieCv(id);
+        if (result.HasErrors || result.Value?.CvBestand == null)
+        {
+            AddMessage("error", "Cv niet gevonden.", "Fout");
+            return RedirectToAction(nameof(Sollicitaties));
+        }
+
+        // Openen van de sollicitatie markeert ze meteen als gelezen.
+        _sollicitatieService.MarkeerGelezen(id, true);
+
+        var cv = result.Value;
+        return File(cv.CvBestand, string.IsNullOrWhiteSpace(cv.CvBestandType) ? "application/octet-stream" : cv.CvBestandType, cv.CvBestandsnaam);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult SollicitatieVerwijderen(int id, int? vacatureId)
+    {
+        var response = _sollicitatieService.DeleteSollicitatie(id);
+
+        if (response.HasErrors)
+            AddMessage("error", "Sollicitatie kon niet verwijderd worden.", "Fout");
+        else
+            AddMessage("success", "Sollicitatie verwijderd.", "Verwijderd");
+
+        return RedirectToAction(nameof(Sollicitaties), new { vacatureId });
     }
 
     // ── TAKENPAKKET ─────────────────────────────────────────────────────

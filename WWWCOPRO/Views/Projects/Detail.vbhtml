@@ -836,6 +836,13 @@ End Section
 </div>
 @section scripts
 
+    <script src="https://www.google.com/recaptcha/api.js?render=@ViewBag.ReCaptchaSiteKey"></script>
+    <script>
+        // Site-wide beschikbaar voor de modal-partials (SendPlan/SendDoc/SendBrochure/SendMail),
+        // die telkens opnieuw via AJAX in de pagina geïnjecteerd worden en dus geen eigen
+        // ViewBag-toegang hebben.
+        window.reCaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
+    </script>
     <script src="~/vendor/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
     $(function () {

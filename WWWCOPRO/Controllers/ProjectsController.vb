@@ -14,6 +14,17 @@ Namespace Controllers
     Public Class ProjectsController
         Inherits System.Web.Mvc.Controller
 
+        Private Const ReCaptchaMinimumScore As Double = 0.5
+        Private Const SendPlanReCaptchaAction As String = "sendplan"
+        Private Const SendDocReCaptchaAction As String = "senddoc"
+        Private Const SendBrochureReCaptchaAction As String = "sendbrochure"
+        Private Const SendMailReCaptchaAction As String = "sendmail"
+        Private Const InschrijvingReCaptchaAction As String = "inschrijving"
+
+        Private Sub ApplyRecaptchaSettings()
+            ViewBag.ReCaptchaSiteKey = WebConfigurationManager.AppSettings("ReCaptchaV3SiteKey")
+        End Sub
+
         Private Function RenderViewToString(viewName As String, model As Object) As String
             Return ViewRenderHelper.RenderViewToString(Me.ControllerContext, viewName, model)
         End Function
@@ -66,6 +77,7 @@ Namespace Controllers
 
                 LoadProjectSeoFields(model.Data)
                 SetProjectSeoViewData(model.Data)
+                ApplyRecaptchaSettings()
                 Return View("Detail", model)
             Else
                 ' Type=0 bestaat niet als enum-waarde (Woonproject=1, Commerciëel=2) — zonder
@@ -276,6 +288,7 @@ Namespace Controllers
 
             LoadProjectSeoFields(model.Data)
             SetProjectSeoViewData(model.Data)
+            ApplyRecaptchaSettings()
             Return View("Detail", model)
         End Function
         Function Detail(model As ProjectDetailModel) As ActionResult
@@ -297,6 +310,10 @@ Namespace Controllers
             If Not ModelState.IsValid Then
                 Return PartialView("ModalFailPlan")
             End If
+
+            If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailPlan")
+            Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendPlanReCaptchaAction, ReCaptchaMinimumScore)
+            If Not captchaResult.Success Then Return PartialView("ModalFailPlan")
 
             Try
                 Dim externalMailStatus As String = "Niet verzonden"
@@ -381,12 +398,7 @@ Namespace Controllers
                     Dim att As New Net.Mail.Attachment(stream, attName)
                     msg.Attachments.Add(att)
 
-                    ' SMTP
-                    Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
-                    smtp.EnableSsl = True
-                    smtp.Credentials = New Net.NetworkCredential(If(Environment.GetEnvironmentVariable("SmtpUser"), WebConfigurationManager.AppSettings("SmtpUser")), If(Environment.GetEnvironmentVariable("SmtpPassword"), WebConfigurationManager.AppSettings("SmtpPassword")))
-
-                    smtp.Send(msg)
+                    SmtpMailHelper.SendWithRetry(msg)
                     externalMailStatus = "Verzonden"
                     externalMailSent = True
                 Catch ex As Exception
@@ -423,11 +435,7 @@ Namespace Controllers
                     msg2.Body = internalHtml
                     msg2.IsBodyHtml = True
 
-                    Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
-                    smtp2.EnableSsl = True
-                    smtp2.Credentials = New NetworkCredential(If(Environment.GetEnvironmentVariable("SmtpUser"), WebConfigurationManager.AppSettings("SmtpUser")), If(Environment.GetEnvironmentVariable("SmtpPassword"), WebConfigurationManager.AppSettings("SmtpPassword")))
-
-                    smtp2.Send(msg2)
+                    SmtpMailHelper.SendWithRetry(msg2)
                     internalMailStatus = "Verzonden"
 
                 Catch ex As Exception
@@ -470,6 +478,10 @@ Namespace Controllers
             If Not ModelState.IsValid Then
                 Return PartialView("ModalFailDoc")
             End If
+
+            If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailDoc")
+            Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendDocReCaptchaAction, ReCaptchaMinimumScore)
+            If Not captchaResult.Success Then Return PartialView("ModalFailDoc")
 
             Try
                 Dim externalMailStatus As String = "Niet verzonden"
@@ -551,12 +563,7 @@ Namespace Controllers
                     Dim att As New Net.Mail.Attachment(stream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename))
                     msg.Attachments.Add(att)
 
-                    ' SMTP
-                    Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
-                    smtp.EnableSsl = True
-                    smtp.Credentials = New Net.NetworkCredential(If(Environment.GetEnvironmentVariable("SmtpUser"), WebConfigurationManager.AppSettings("SmtpUser")), If(Environment.GetEnvironmentVariable("SmtpPassword"), WebConfigurationManager.AppSettings("SmtpPassword")))
-
-                    smtp.Send(msg)
+                    SmtpMailHelper.SendWithRetry(msg)
                     externalMailStatus = "Verzonden"
                     externalMailSent = True
                 Catch ex As Exception
@@ -593,11 +600,7 @@ Namespace Controllers
                     msg2.Body = internalHtml
                     msg2.IsBodyHtml = True
 
-                    Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
-                    smtp2.EnableSsl = True
-                    smtp2.Credentials = New Net.NetworkCredential(If(Environment.GetEnvironmentVariable("SmtpUser"), WebConfigurationManager.AppSettings("SmtpUser")), If(Environment.GetEnvironmentVariable("SmtpPassword"), WebConfigurationManager.AppSettings("SmtpPassword")))
-
-                    smtp2.Send(msg2)
+                    SmtpMailHelper.SendWithRetry(msg2)
                     internalMailStatus = "Verzonden"
                 Catch ex As Exception
                     LogError("SENDDOC: INTERNAL MAIL FAILED", ex)
@@ -789,6 +792,10 @@ Namespace Controllers
                 Return PartialView("ModalFailDoc")
             End If
 
+            If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailDoc")
+            Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendBrochureReCaptchaAction, ReCaptchaMinimumScore)
+            If Not captchaResult.Success Then Return PartialView("ModalFailDoc")
+
             Try
                 Dim externalMailStatus As String = "Niet verzonden"
                 Dim internalMailStatus As String = "Niet verzonden"
@@ -867,12 +874,7 @@ Namespace Controllers
                     Dim att As New Net.Mail.Attachment(stream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename))
                     msg.Attachments.Add(att)
 
-                    ' SMTP
-                    Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
-                    smtp.EnableSsl = True
-                    smtp.Credentials = New Net.NetworkCredential(If(Environment.GetEnvironmentVariable("SmtpUser"), WebConfigurationManager.AppSettings("SmtpUser")), If(Environment.GetEnvironmentVariable("SmtpPassword"), WebConfigurationManager.AppSettings("SmtpPassword")))
-
-                    smtp.Send(msg)
+                    SmtpMailHelper.SendWithRetry(msg)
                     externalMailStatus = "Verzonden"
                     externalMailSent = True
                 Catch ex As Exception
@@ -909,11 +911,7 @@ Namespace Controllers
                     msg2.Body = internalHtml
                     msg2.IsBodyHtml = True
 
-                    Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
-                    smtp2.EnableSsl = True
-                    smtp2.Credentials = New Net.NetworkCredential(If(Environment.GetEnvironmentVariable("SmtpUser"), WebConfigurationManager.AppSettings("SmtpUser")), If(Environment.GetEnvironmentVariable("SmtpPassword"), WebConfigurationManager.AppSettings("SmtpPassword")))
-
-                    smtp2.Send(msg2)
+                    SmtpMailHelper.SendWithRetry(msg2)
                     internalMailStatus = "Verzonden"
                 Catch ex As Exception
                     LogError("SENDBROCHURE: INTERNAL MAIL FAILED", ex)
@@ -1017,9 +1015,12 @@ Namespace Controllers
             Return PartialView("ModalSendMail", viewModel)
         End Function
         <HttpPost>
+        <ValidateInput(False)>
         Function SendMail(model As ProjectSendMailModel) As PartialViewResult
             ' Honeypot: als het veld ingevuld is, is het een bot
             If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailMail")
+            Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendMailReCaptchaAction, ReCaptchaMinimumScore)
+            If Not captchaResult.Success Then Return PartialView("ModalFailMail")
             If (Not ModelState.IsValid) Then Return PartialView("ModalFailMail")
             If (ModelState.IsValid) Then
                 Dim project As New ProjectBO
@@ -1027,32 +1028,56 @@ Namespace Controllers
                 Dim response2 = service2.GetProjectByID(model.ProjectId)
                 If response2.Success Then project = response2.Value
 
-                'Mail
-                Dim email As Object = New Email("ProjectMail")
-                email.[To] = model.Email
-                email.[From] = "niels.lataire@groupln.be"
-                email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
-                email.Title = project.CommercialTitleNL
-                email.Text = project.CommercialTextNL
-                email.Image = project.DefaultPicture.Name
-                email.Imagecaption = project.DefaultPicture.Caption
-                email.Slug = project.Slug
-                email.EmailTitle = "Group LN - Uw informatieaanvraag"
-                email.Phone = model.Phone
-                email.Firstname = model.Firstname
-                email.Name = model.Name
-                email.Question = model.Question
-                email.Send()
-                'Internalmail
-                Dim internalemail As Object = New Email("ProjectInternalMail")
-                internalemail.[To] = model.Email
-                internalemail.[From] = "niels.lataire@groupln.be"
-                internalemail.Project = project.Name
-                internalemail.Phone = model.Phone
-                internalemail.Name = model.Name
-                internalemail.Firstname = model.Firstname
-                internalemail.Question = model.Question
-                internalemail.Send()
+                ' Zelfde SMTP-pad als het (bewezen werkende) documentaanvraag-formulier
+                ' (SendDoc hierboven) — expliciete Office365-relay i.p.v. Postal.
+                Try
+                    ViewBag.To = model.Email
+                    ViewBag.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+                    ViewBag.Title = project.CommercialTitleNL
+                    ViewBag.Text = project.CommercialTextNL
+                    ViewBag.Image = project.DefaultPicture.Name
+                    ViewBag.Imagecaption = project.DefaultPicture.Caption
+                    ViewBag.Slug = project.Slug
+                    ViewBag.Phone = model.Phone
+                    ViewBag.Firstname = model.Firstname
+                    ViewBag.Name = model.Name
+                    ViewBag.Question = model.Question
+
+                    Dim mailHtml As String = RenderViewToString("~/Views/Emails/ProjectMail.vbhtml", Nothing)
+
+                    Dim msg As New Net.Mail.MailMessage()
+                    msg.To.Add(model.Email)
+                    msg.From = New Net.Mail.MailAddress("info@groupln.be")
+                    msg.Subject = "Group LN - Uw informatieaanvraag"
+                    msg.Body = mailHtml
+                    msg.IsBodyHtml = True
+
+                    SmtpMailHelper.SendWithRetry(msg)
+                Catch ex As Exception
+                    LogError("SENDMAIL: MAIL TO CUSTOMER FAILED", ex)
+                End Try
+
+                Try
+                    ViewBag.Project = project.Name
+                    ViewBag.Phone = model.Phone
+                    ViewBag.Name = model.Name
+                    ViewBag.Fistname = model.Firstname
+                    ViewBag.Email = model.Email
+                    ViewBag.Question = model.Question
+
+                    Dim internalHtml As String = RenderViewToString("~/Views/Emails/ProjectInternalMail.vbhtml", Nothing)
+
+                    Dim msg2 As New Net.Mail.MailMessage()
+                    msg2.To.Add("niels.lataire@groupln.be")
+                    msg2.From = New Net.Mail.MailAddress("info@groupln.be")
+                    msg2.Subject = "Website Group LN - informatieaanvraag"
+                    msg2.Body = internalHtml
+                    msg2.IsBodyHtml = True
+
+                    SmtpMailHelper.SendWithRetry(msg2)
+                Catch ex As Exception
+                    LogError("SENDMAIL: INTERNAL MAIL FAILED", ex)
+                End Try
                 Dim mailRequest As New ContactRequestBO With {
                     .ProjectId = project.Id,
                     .Firstname = model.Firstname,
@@ -1176,35 +1201,64 @@ Namespace Controllers
             ViewData("Title") = "Inschrijving " & model.Data.Name & " | Group LN"
             ViewBag.Metatitle = "Inschrijvingspagina " & model.Data.Name & " | Group LN"
             ViewBag.MetaDescription = "Schrijf u in voor " & model.Data.Name & " in " & model.Data.Postalcode.Gemeente
+            ApplyRecaptchaSettings()
             Return View("Inschrijving", model)
         End Function
 
         <Route("Projects/Inschrijving/{slug}")>
         <HttpPost>
+        <ValidateInput(False)>
         Function Inschrijving(slug As String, model As ProjectInschrijvingFormModel) As ActionResult
+            ' Let op: het formulier (Inschrijving.vbhtml) gebruikt eigen $.ajax()-JS, niet het
+            ' gedeelde modal-partial-systeem van SendDoc/SendMail — dus deze actie retourneert
+            ' bewust Json (success:true/false) i.p.v. een PartialView, zodat de front-end een
+            ' échte mislukking niet per ongeluk als succes toont (jQuery's success-callback vuurt
+            ' immers op elke HTTP 200, ongeacht de inhoud van de respons).
             If Not ModelState.IsValid Then
-                Return PartialView("ModalFailMail")
+                Return Json(New With {.success = False})
             End If
+
+            If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return Json(New With {.success = False})
+            Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), InschrijvingReCaptchaAction, ReCaptchaMinimumScore)
+            If Not captchaResult.Success Then Return Json(New With {.success = False})
+
+            Dim service = ServiceFactory.GetProjectService()
+            Dim projectResp = service.GetProjectBySlug(slug)
+            If Not projectResp.Success Then Return Json(New With {.success = False})
+            Dim project As ProjectBO = projectResp.Values.FirstOrDefault
+
+            Dim interestText As String = If(Not String.IsNullOrEmpty(model.Interest), model.Interest, "/")
+            Dim questionText As String = "Interesse: " & interestText & If(Not String.IsNullOrEmpty(model.Remarks), " | Opmerkingen: " & model.Remarks, "")
+
+            ' Mail-verzending en opslag zijn bewust ontkoppeld (zoals ContactController.Send) —
+            ' een mislukte mail mag de opslag van de aanvraag niet blokkeren, en omgekeerd.
+            Dim mailVerzonden As Boolean = False
             Try
-                Dim service = ServiceFactory.GetProjectService()
-                Dim projectResp = service.GetProjectBySlug(slug)
-                If Not projectResp.Success Then Return PartialView("ModalFailMail")
-                Dim project As ProjectBO = projectResp.Values.FirstOrDefault
+                ' Zelfde SMTP-pad als het (bewezen werkende) documentaanvraag-formulier
+                ' (SendDoc) — expliciete Office365-relay i.p.v. Postal.
+                ViewBag.Project = project.Name
+                ViewBag.Phone = model.Phone
+                ViewBag.Name = model.Name
+                ViewBag.Fistname = model.Firstname
+                ViewBag.Email = model.Email
+                ViewBag.Question = questionText
 
-                Dim interestText As String = If(Not String.IsNullOrEmpty(model.Interest), model.Interest, "/")
-                Dim questionText As String = "Interesse: " & interestText & If(Not String.IsNullOrEmpty(model.Remarks), " | Opmerkingen: " & model.Remarks, "")
+                Dim internalHtml As String = RenderViewToString("~/Views/Emails/ProjectInternalMail.vbhtml", Nothing)
 
-                Dim internalMail As Object = New Email("ProjectInternalMail")
-                internalMail.[To] = "niels.lataire@groupln.be"
-                internalMail.[From] = "niels.lataire@groupln.be"
-                internalMail.Project = project.Name
-                internalMail.Phone = model.Phone
-                internalMail.Name = model.Name
-                internalMail.Firstname = model.Firstname
-                internalMail.Email = model.Email
-                internalMail.Question = questionText
-                internalMail.Send()
+                Dim internalMsg As New Net.Mail.MailMessage()
+                internalMsg.To.Add("niels.lataire@groupln.be")
+                internalMsg.From = New Net.Mail.MailAddress("info@groupln.be")
+                internalMsg.Subject = "Website Group LN - inschrijving"
+                internalMsg.Body = internalHtml
+                internalMsg.IsBodyHtml = True
 
+                SmtpMailHelper.SendWithRetry(internalMsg)
+                mailVerzonden = True
+            Catch ex As Exception
+                LogError("INSCHRIJVING: MAIL FAILED", ex)
+            End Try
+
+            Try
                 Dim mailRequest As New ContactRequestBO With {
                     .ProjectId = project.Id,
                     .Firstname = model.Firstname,
@@ -1218,11 +1272,11 @@ Namespace Controllers
                     .SourceSite = "Group LN"
                 }
                 SaveContactRequest(mailRequest)
-                Return PartialView("ModalSuccesMail")
             Catch ex As Exception
-                LogError("INSCHRIJVING FAILED", ex)
-                Return PartialView("ModalFailMail")
+                LogError("INSCHRIJVING: DB OPSLAG FAILED", ex)
             End Try
+
+            Return Json(New With {.success = mailVerzonden})
         End Function
 
     End Class

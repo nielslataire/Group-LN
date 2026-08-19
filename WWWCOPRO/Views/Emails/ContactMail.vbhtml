@@ -1,7 +1,4 @@
-﻿To: @ViewBag.To
-From: info@groupln.be
-Subject: Group LN - uw contactvraag
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />

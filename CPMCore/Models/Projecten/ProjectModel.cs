@@ -2966,6 +2966,10 @@ namespace CPMCore.Models.Projecten
                 _contractactivities = value;
             }
         }
+
+        public List<IdNameBO> ActivityGroups { get; set; } = new();
+        public List<IdNameBO> LegalForms { get; set; } = new();
+        public List<IdNameBO> Countries { get; set; } = new();
     }
 
     public class ProjectCalculationSettings

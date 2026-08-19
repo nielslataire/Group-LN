@@ -1,7 +1,4 @@
-﻿To: niels.lataire@groupln.be
-From: info@groupln.be
-Subject: Website Group LN - informatieaanvraag
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <!-- Web Fonts  -->

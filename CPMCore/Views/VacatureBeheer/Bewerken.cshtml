@@ -61,6 +61,12 @@
         }
     </div>
     <div class="d-flex gap-2">
+        @if (!isNieuw)
+        {
+            <a href="@Url.Action("Sollicitaties", new { vacatureId = Model.ID })" class="btn btn-outline-secondary flex-shrink-0">
+                <i class="bx bx-mail-send"></i> Sollicitaties
+            </a>
+        }
         <a href="@Url.Action("Index")" class="btn btn-default flex-shrink-0">
             <i class="bx bx-arrow-back"></i> Terug
         </a>

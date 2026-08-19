@@ -121,7 +121,7 @@
                                     <ul class="list list-unstyled list-item-bottom-space-0">
                                         <li>@Model.Company.Straat @Model.Company.Huisnummer @if(Model.Company.Busnummer is not null){@Html.Raw("/")@Model.Company.Busnummer}</li>
                                         <li>@Model.Company.Postcode.Postcode @Model.Company.Postcode.Gemeente</li>
-                                        <li>@Model.Company.Postcode.Country.Name.ToUpper()</li>
+                                        <li>@Model.Company.Postcode.Country.Name?.ToUpper()</li>
                                     </ul>
                                     <strong class="d-block text-color-dark">Email adres:</strong>
                                     @if(Model.Company.Email is not null)

@@ -23,6 +23,10 @@
     --olijf:               #3D7A4E;
     --olijf-hover:         #2F6038;
 
+    /* Klik-status van links (a:active) — een donkergroene tint hierop was onzichtbaar
+       op de eveneens donkergroene menubalk, dus hergebruikt de goed zichtbare cta-hover-tint. */
+    --color-link-active:   var(--color-cta-hover);
+
     /* Typografie */
     --font-serif:          'Playfair Display', 'Times New Roman', Georgia, serif;
     --font-sans:           'Avenir', sans-serif;
@@ -41,7 +45,7 @@ a:focus {
 }
 
 a:active {
-	color: #003d21;
+	color: var(--color-link-active);
 }
 
 html .heading-primary,

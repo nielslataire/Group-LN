@@ -5,6 +5,11 @@
     @<text>
 
         @Html.HiddenFor(Function(m) m.DocId, New With {.id = "brochuredocid"})
+        <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
+            <label for="website_url">Website</label>
+            <input type="text" name="website_url" id="website_url" tabindex="-1" autocomplete="off" value="" />
+        </div>
+        <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponseBrochure" />
         <div class="contact-modal-container" id="modalsendbrochurepanel">
 
             <div class="contact-modal-header">
@@ -74,22 +79,36 @@ End Using
         $button.prop("disabled", true);
         $spinner.removeClass("hidden");
         $icon.addClass("hidden");
-        $.ajax({
-            url: '@Url.Action("SendBrochure", "Projects")',
-            data: $('#FormSendBrochure').serialize(),
-            type: 'POST',
-            cache: false,
-            success: function (result) {
-                $("#modalsendbrochurepanel").html(result);
-            },
-            error: function () {
-                $("#modalsendbrochurepanel").html('<div class="contact-modal-header contact-modal-header-error"><h3 class="contact-modal-title">Er is iets misgegaan</h3></div><div class="contact-modal-body contact-modal-body-centered"><p class="contact-result-message">Probeer het opnieuw of bel ons op <a href="tel:+3292164950">09/216.49.50</a>.</p></div>');
-            },
-            complete: function () {
-                $button.prop("disabled", false);
-                $spinner.addClass("hidden");
-                $icon.removeClass("hidden");
-            }
-        });
+
+        function doSubmit() {
+            $.ajax({
+                url: '@Url.Action("SendBrochure", "Projects")',
+                data: $('#FormSendBrochure').serialize(),
+                type: 'POST',
+                cache: false,
+                success: function (result) {
+                    $("#modalsendbrochurepanel").html(result);
+                },
+                error: function () {
+                    $("#modalsendbrochurepanel").html('<div class="contact-modal-header contact-modal-header-error"><h3 class="contact-modal-title">Er is iets misgegaan</h3></div><div class="contact-modal-body contact-modal-body-centered"><p class="contact-result-message">Probeer het opnieuw of bel ons op <a href="tel:+3292164950">09/216.49.50</a>.</p></div>');
+                },
+                complete: function () {
+                    $button.prop("disabled", false);
+                    $spinner.addClass("hidden");
+                    $icon.removeClass("hidden");
+                }
+            });
+        }
+
+        if (window.reCaptchaSiteKey && typeof grecaptcha !== 'undefined') {
+            grecaptcha.ready(function () {
+                grecaptcha.execute(window.reCaptchaSiteKey, { action: 'sendbrochure' }).then(function (token) {
+                    $("#gRecaptchaResponseBrochure").val(token);
+                    doSubmit();
+                }, doSubmit);
+            });
+        } else {
+            doSubmit();
+        }
     });
 </script>

@@ -74,6 +74,12 @@
     <Reference Include="Microsoft.AspNet.Identity.Owin, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.Identity.Owin.2.2.4\lib\net45\Microsoft.AspNet.Identity.Owin.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Configuration.ConfigurationBuilders.Base, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Configuration.ConfigurationBuilders.Base.3.0.0\lib\Net471\Microsoft.Configuration.ConfigurationBuilders.Base.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Configuration.ConfigurationBuilders.UserSecrets, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Configuration.ConfigurationBuilders.UserSecrets.3.0.0\lib\Net471\Microsoft.Configuration.ConfigurationBuilders.UserSecrets.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Owin, Version=4.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Owin.4.2.2\lib\net45\Microsoft.Owin.dll</HintPath>
     </Reference>
@@ -249,10 +255,12 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\ViewRenderHelper.vb" />
+    <Compile Include="Helpers\SmtpMailHelper.vb" />
     <Compile Include="Helpers\Extensions.vb" />
     <Compile Include="Helpers\LatestNews.vb" />
     <Compile Include="Models\Blog\BlogArtikelModel.vb" />
     <Compile Include="Models\Vacatures\VacatureModel.vb" />
+    <Compile Include="Models\Vacatures\SollicitatieModel.vb" />
     <Compile Include="Models\Contact\NewsletterModel.vb" />
     <Compile Include="Models\Contact\MailModel.vb" />
     <Compile Include="Models\Home\HeroSearchOptionsModel.vb" />
@@ -531,12 +539,12 @@
     <Content Include="Views\References\Index.vbhtml" />
     <Content Include="Views\Projects\Detail.vbhtml" />
     <Content Include="Views\Projects\Adressblock.vbhtml" />
-
     <Content Include="Views\References\Detail.vbhtml" />
     <Content Include="Views\References\Adressblock.vbhtml" />
     <Content Include="Views\Emails\Web.config" />
     <Content Include="Views\Emails\_ViewStart.cshtml" />
     <Content Include="Views\Emails\ContactMail.vbhtml" />
+    <Content Include="Views\Emails\SollicitatieMail.vbhtml" />
     <Content Include="Views\Shared\_ValidationSummary.vbhtml" />
     <Content Include="Views\Emails\InternalMail.vbhtml" />
     <Content Include="Views\Shared\Newsletter.vbhtml" />

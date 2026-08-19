@@ -18,3 +18,419 @@ CONTACT: SPAM GEWEERD | honeypot=True | captcha=False | verdachteLink=False | em
 2026-08-06 10:24:29
 CONTACT: SPAM GEWEERD | honeypot=False | captcha=False | verdachteLink=False | email=niels.lataire@telenet.be
 
+--------------------------------------------------
+2026-08-18 16:26:08
+INSCHRIJVING FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1248
+
+--------------------------------------------------
+2026-08-18 16:37:30
+INSCHRIJVING FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1248
+
+--------------------------------------------------
+2026-08-18 16:44:08
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1258
+
+--------------------------------------------------
+2026-08-18 17:01:43
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1258
+
+--------------------------------------------------
+2026-08-18 17:07:21
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1257
+
+--------------------------------------------------
+2026-08-18 17:09:10
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1257
+
+--------------------------------------------------
+2026-08-18 17:19:20
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:22:40
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:22:44
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:22:54
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:22:58
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:23:10
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:24:00
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:24:54
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1259
+
+--------------------------------------------------
+2026-08-18 17:36:41
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij WWWCOPRO.SmtpMailHelper.SendWithRetry(MailMessage msg, Int32 maxAttempts) in E:\TFS\WWWCOPRO\Helpers\SmtpMailHelper.vb:regel 33
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1223
+
+--------------------------------------------------
+2026-08-18 17:39:11
+INSCHRIJVING: MAIL FAILED
+EXCEPTION:
+System.Net.Mail.SmtpException: Fout bij het verzenden van e-mail. ---> System.IO.IOException: Verificatie is mislukt omdat de andere partij de transportstroom heeft gesloten.
+   bij System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.CheckCompletionBeforeNextReceive(ProtocolToken message, AsyncProtocolRequest asyncRequest)
+   bij System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   bij System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   bij System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   bij System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   bij System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   bij System.Net.TlsStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.PooledStream.Write(Byte[] buffer, Int32 offset, Int32 size)
+   bij System.Net.Mail.SmtpConnection.Flush()
+   bij System.Net.Mail.ReadLinesCommand.Send(SmtpConnection conn)
+   bij System.Net.Mail.EHelloCommand.Send(SmtpConnection conn, String domain)
+   bij System.Net.Mail.SmtpConnection.GetConnection(ServicePoint servicePoint)
+   bij System.Net.Mail.SmtpClient.GetConnection()
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   --- Einde van intern uitzonderingsstackpad ---
+   bij WWWCOPRO.SmtpMailHelper.SendWithRetry(MailMessage msg, Int32 maxAttempts) in E:\TFS\WWWCOPRO\Helpers\SmtpMailHelper.vb:regel 33
+   bij WWWCOPRO.Controllers.ProjectsController.Inschrijving(String slug, ProjectInschrijvingFormModel model) in E:\TFS\WWWCOPRO\Controllers\ProjectsController.vb:regel 1223
+

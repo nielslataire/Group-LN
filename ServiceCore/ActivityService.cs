@@ -225,7 +225,7 @@ namespace ServiceCore
             var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
             response.AddSaveChangesResult(result, "Activiteit aangepast of toegevoegd", "Activiteit niet aangepast of toegevoegd");
 
-            // eventueel: response.InsertedId = entity.ActivityId;
+            response.InsertedId = entity.ActivityId;
             return response;
         }
 

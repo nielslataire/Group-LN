@@ -106,6 +106,11 @@ end section
                     @Using Html.BeginForm("Inschrijving", "Projects", New With {.slug = Model.Data.Slug}, FormMethod.Post, New With {.id = "inschrijving-form", .class = "inschrijving-form"})
                         @Html.AntiForgeryToken()
                         @<text>
+                            <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
+                                <label for="website_url">Website</label>
+                                <input type="text" name="website_url" id="website_url" tabindex="-1" autocomplete="off" value="" />
+                            </div>
+                            <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponse" />
                             <div class="inschrijving-rij-2">
                                 <div class="inschrijving-veld">
                                     <label class="inschrijving-label">Voornaam</label>
@@ -213,28 +218,52 @@ end section
 </div>
 
 @section scripts
+    <script src="https://www.google.com/recaptcha/api.js?render=@ViewBag.ReCaptchaSiteKey"></script>
     <script>
         $(document).ready(function () {
+            var recaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
+
             $('#inschrijving-form').on('submit', function (e) {
                 e.preventDefault();
 
+                var $form = $(this);
                 var interestChecked = [];
                 $('input[name="Interest"]:checked').each(function () {
                     interestChecked.push($(this).val());
                 });
 
-                var formData = $(this).serializeArray();
+                var formData = $form.serializeArray();
                 formData = formData.filter(function (f) { return f.name !== 'Interest'; });
                 formData.push({ name: 'Interest', value: interestChecked.join(', ') });
 
-                var $btn = $(this).find('.inschrijving-btn');
+                var $btn = $form.find('.inschrijving-btn');
                 $btn.prop('disabled', true).text('Bezig...');
 
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: formData,
-                    success: function () {
+                function doSubmit() {
+                    $.ajax({
+                        url: $form.attr('action'),
+                        type: 'POST',
+                        data: formData,
+                        dataType: 'json',
+                        success: onSuccess,
+                        error: onError
+                    });
+                }
+
+                if (recaptchaSiteKey && typeof grecaptcha !== 'undefined') {
+                    grecaptcha.ready(function () {
+                        grecaptcha.execute(recaptchaSiteKey, { action: 'inschrijving' }).then(function (token) {
+                            var tokenField = formData.find(function (f) { return f.name === 'g-recaptcha-response'; });
+                            if (tokenField) { tokenField.value = token; } else { formData.push({ name: 'g-recaptcha-response', value: token }); }
+                            doSubmit();
+                        }, doSubmit);
+                    });
+                } else {
+                    doSubmit();
+                }
+
+                function onSuccess(response) {
+                    if (response && response.success) {
                         $('#inschrijving-form-wrap').hide();
                         $('#inschrijving-result').html(
                             '<div class="inschrijving-succes">' +
@@ -243,14 +272,20 @@ end section
                             '<p>Bedankt voor uw interesse. Wij nemen zo snel mogelijk contact met u op zodra meer informatie beschikbaar is.</p>' +
                             '</div>'
                         ).show();
-                    },
-                    error: function () {
+                    } else {
                         $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Schrijf mij in');
                         $('#inschrijving-result').html(
                             '<p class="inschrijving-fout">Er is een fout opgetreden. Probeer het later opnieuw of neem telefonisch contact op.</p>'
                         ).show();
                     }
-                });
+                }
+
+                function onError() {
+                    $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Schrijf mij in');
+                    $('#inschrijving-result').html(
+                        '<p class="inschrijving-fout">Er is een fout opgetreden. Probeer het later opnieuw of neem telefonisch contact op.</p>'
+                    ).show();
+                }
             });
         });
     </script>

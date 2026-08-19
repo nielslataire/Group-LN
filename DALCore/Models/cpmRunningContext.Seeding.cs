@@ -93,6 +93,17 @@ namespace DALCore.Models
                 entity.ToTable("VacatureSollicitatieStap");
                 entity.HasKey(e => e.Id);
             });
+
+            modelBuilder.Entity<VacatureSollicitatie>(entity =>
+            {
+                entity.ToTable("VacatureSollicitatie");
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Vacature)
+                      .WithMany()
+                      .HasForeignKey(e => e.VacatureId)
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.ClientSetNull);
+            });
         }
     }
 }

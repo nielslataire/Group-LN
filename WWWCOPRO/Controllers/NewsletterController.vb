@@ -1,6 +1,6 @@
 ﻿Imports System.Web.Mvc
+Imports System.Configuration
 
-Imports Postal
 Namespace Controllers
     Public Class NewsletterController
         Inherits Controller
@@ -25,12 +25,24 @@ Namespace Controllers
             'If (Not ModelState.IsValid) Then Return "Inschrijven mislukt, probeer later opnieuw!"
             If (ModelState.IsValid) Then
 
-                Dim internalemail As Object = New Email("InternalMail")
-                internalemail.[To] = EmailTo
-                internalemail.ContactName = ""
-                internalemail.Title = "Nieuwsbrief"
-                internalemail.Message = "Nieuwsbrief"
-                internalemail.Send()
+                Try
+                    ViewBag.To = EmailTo
+                    ViewBag.ContactName = ""
+                    ViewBag.Title = "Nieuwsbrief"
+                    ViewBag.Message = "Nieuwsbrief"
+
+                    Dim internalHtml As String = ViewRenderHelper.RenderViewToString(Me.ControllerContext, "~/Views/Emails/InternalMail.vbhtml", Nothing)
+
+                    Dim msg As New Net.Mail.MailMessage()
+                    msg.To.Add("niels.lataire@groupln.be")
+                    msg.From = New Net.Mail.MailAddress("info@groupln.be")
+                    msg.Subject = "Website Group LN : Nieuwsbrief"
+                    msg.Body = internalHtml
+                    msg.IsBodyHtml = True
+
+                    SmtpMailHelper.SendWithRetry(msg)
+                Catch
+                End Try
 
                 Return Json(New With {.success = True})
             Else

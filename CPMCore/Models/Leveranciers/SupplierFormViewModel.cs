@@ -29,18 +29,22 @@ public class SupplierFormViewModel
     [Display(Name = "BTW status")]
     public string VatStatus { get; set; } = VatStatusBtwPlichtig;
 
+    [Required(ErrorMessage = "Straat is verplicht")]
     [Display(Name = "Straat")]
     public string? Street { get; set; }
 
+    [Required(ErrorMessage = "Huisnummer is verplicht")]
     [Display(Name = "Nr")]
     public string? HouseNumber { get; set; }
 
     [Display(Name = "Bus")]
     public string? BusNumber { get; set; }
 
+    [Required(ErrorMessage = "Postcode is verplicht")]
     [Display(Name = "Postcode")]
     public string? PostalCode { get; set; }
 
+    [Required(ErrorMessage = "Gemeente is verplicht")]
     [Display(Name = "Gemeente")]
     public string? City { get; set; }
 
@@ -50,6 +54,7 @@ public class SupplierFormViewModel
     [Display(Name = "Landcode")]
     public string? CountryCode { get; set; }
 
+    [Required(ErrorMessage = "Land is verplicht")]
     [Display(Name = "Land")]
     public int? SelectedCountryId { get; set; }
 

@@ -90,7 +90,7 @@ namespace ServiceCore
             var query = _uow.CompanyInfo.GetNoTracking()
                 .Where(CompanyQuery.GetNameQuery(searchterm))
                 .OrderBy(m => m.BedrijfsNaam)
-                .Select(m => new SelectBO { id = m.CompanyId, text = m.BedrijfsNaam, extra = "Company" });
+                .Select(m => new SelectBO { id = m.CompanyId, text = m.BedrijfsNaam, extra = m.Ondernemingsnummer ?? m.VatNumber });
 
             response.Values = query.ToList();
             return response;

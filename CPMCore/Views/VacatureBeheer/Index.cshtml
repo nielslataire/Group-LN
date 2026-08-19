@@ -88,6 +88,9 @@
         <a href="@Url.Action("Index", "Instellingen")" class="btn btn-outline-secondary">
             <i class="bx bx-cog"></i> Instellingen
         </a>
+        <a href="@Url.Action("Sollicitaties")" class="btn btn-outline-secondary">
+            <i class="bx bx-mail-send"></i> Sollicitaties
+        </a>
         <a href="@Url.Action("Aanmaken")" class="btn btn-primary">
             <i class="bx bx-plus"></i> Nieuwe vacature
         </a>
@@ -144,6 +147,10 @@ else
                             </td>
                             <td>
                                 <div class="d-flex gap-1">
+                                    <a href="@Url.Action("Sollicitaties", new { vacatureId = vacature.ID })"
+                                       class="vc-actie-btn" title="Sollicitaties bekijken">
+                                        <i class="bx bx-mail-send"></i>
+                                    </a>
                                     <a href="@Url.Action("Bewerken", new { id = vacature.ID })"
                                        class="vc-actie-btn" title="Bewerken">
                                         <i class="bx bx-edit-alt"></i>

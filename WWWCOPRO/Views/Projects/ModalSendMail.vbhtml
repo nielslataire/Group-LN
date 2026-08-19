@@ -10,6 +10,7 @@
         <label for="website_url">Website</label>
         <input type="text" name="website_url" id="website_url" tabindex="-1" autocomplete="off" value="" />
     </div>
+    <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponseMail" />
 
     <div class="contact-modal-container" id="modalsendmailpanel">
 
@@ -86,17 +87,30 @@ End Using
             saveContactInfoToCookie(contactData);
         }
 
-        $.ajax({
-            url: '@Url.Action("SendMail", "Projects")',
-            data: $("#FormSendMail").serialize(),
-            type: "POST",
-            success: function (result) {
-                $("#modalsendmailpanel").html(result);
-            },
-            error: function () {
-                $("#btnSendMail").removeClass("hidden");
-                $("#spinnerSendMail").addClass("hidden");
-            }
-        });
+        function doSubmit() {
+            $.ajax({
+                url: '@Url.Action("SendMail", "Projects")',
+                data: $("#FormSendMail").serialize(),
+                type: "POST",
+                success: function (result) {
+                    $("#modalsendmailpanel").html(result);
+                },
+                error: function () {
+                    $("#btnSendMail").removeClass("hidden");
+                    $("#spinnerSendMail").addClass("hidden");
+                }
+            });
+        }
+
+        if (window.reCaptchaSiteKey && typeof grecaptcha !== 'undefined') {
+            grecaptcha.ready(function () {
+                grecaptcha.execute(window.reCaptchaSiteKey, { action: 'sendmail' }).then(function (token) {
+                    $("#gRecaptchaResponseMail").val(token);
+                    doSubmit();
+                }, doSubmit);
+            });
+        } else {
+            doSubmit();
+        }
     });
 </script>

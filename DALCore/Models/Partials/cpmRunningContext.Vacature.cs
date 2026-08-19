@@ -9,4 +9,5 @@ public partial class cpmRunningContext
     public virtual DbSet<VacatureVereiste> VacatureVereiste { get; set; }
     public virtual DbSet<VacatureVoordeel> VacatureVoordeel { get; set; }
     public virtual DbSet<VacatureSollicitatieStap> VacatureSollicitatieStap { get; set; }
+    public virtual DbSet<VacatureSollicitatie> VacatureSollicitatie { get; set; }
 }

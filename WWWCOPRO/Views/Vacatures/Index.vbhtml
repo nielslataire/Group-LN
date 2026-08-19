@@ -3,8 +3,24 @@
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 
+@section PageMeta
+    @Code
+        Dim _breadcrumbJson As String = "{" & Environment.NewLine &
+            "  ""@context"": ""https://schema.org""," & Environment.NewLine &
+            "  ""@type"": ""BreadcrumbList""," & Environment.NewLine &
+            "  ""itemListElement"": [" & Environment.NewLine &
+            "    { ""@type"": ""ListItem"", ""position"": 1, ""name"": ""Home"", ""item"": ""https://www.groupln.be/"" }," & Environment.NewLine &
+            "    { ""@type"": ""ListItem"", ""position"": 2, ""name"": ""Vacatures"", ""item"": ""https://www.groupln.be/vacatures"" }" & Environment.NewLine &
+            "  ]" & Environment.NewLine &
+            "}"
+    End Code
+    <script type="application/ld+json">@Html.Raw(_breadcrumbJson)</script>
+End Section
+
 @section PageStyle
+    <link rel="stylesheet" href="~/Content/home-sections.css" />
     <link rel="stylesheet" href="~/Content/vacatures.css" />
+    <link rel="preload" as="image" href="@Url.Content("~/Content/img/our-office-3.jpg")" />
 End Section
 
 <section class="vacatures-page-header">
@@ -21,7 +37,7 @@ End Section
     <div class="container">
         <div class="vac-wie-grid">
             <div class="vac-wie-foto-wrap reveal">
-                <img class="vac-wie-foto" src="@Url.Content("~/Content/img/our-office-1.jpg")" alt="Aan het werk bij Group LN" />
+                <img class="vac-wie-foto" src="@Url.Content("~/Content/img/our-office-1.jpg")" alt="Aan het werk bij Group LN" width="500" height="600" />
             </div>
             <div class="vac-wie-content reveal reveal-slide-right">
                 <p class="section-kicker">Wie wij zoeken</p>
@@ -40,28 +56,28 @@ End Section
         <div class="vac-why-grid">
             <div class="vac-why-item reveal">
                 <span class="vac-why-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </span>
                 <h3>Verantwoordelijkheid vanaf dag één</h3>
-                <p>een jaren wachten op een echt dossier. Je krijgt van bij de start een eigen project, met de zaakvoerders binnen handbereik voor overleg.</p>
+                <p>Geen jaren wachten op een echt dossier. Je krijgt van bij de start een eigen project, met de zaakvoerders binnen handbereik voor overleg.</p>
             </div>
             <div class="vac-why-item reveal">
                 <span class="vac-why-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 </span>
                 <h3>Groeien in je eigen tempo</h3>
                 <p>Een klein team betekent dat je snel meer verantwoordelijkheid opneemt zodra je er klaar voor bent — niet omdat het jaar erop staat.</p>
             </div>
             <div class="vac-why-item reveal">
                 <span class="vac-why-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </span>
                 <h3>Van dichtbij leren</h3>
                 <p>Je werkt rechtstreeks samen met de zaakvoerders, architecten en aannemers — dezelfde mensen die al 27 jaar het volledige traject van ontwerp tot oplevering opvolgen.</p>
             </div>
             <div class="vac-why-item reveal">
                 <span class="vac-why-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </span>
                 <h3>Een team dat elkaar kent</h3>
                 <p>Klein team, korte lijnen: je kent iedereen bij naam en weet waar elk project staat.</p>
@@ -96,13 +112,13 @@ End Section
                             <div class="vac-card-meta">
                                 @If Not String.IsNullOrWhiteSpace(v.Locatie) Then
                                     @<span class="vac-card-meta-item">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                                         @v.Locatie
                                     </span>
                                 End If
                                 @If Not String.IsNullOrWhiteSpace(v.Dienstverband) Then
                                     @<span class="vac-card-meta-item">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                         @v.Dienstverband
                                     </span>
                                 End If
@@ -113,7 +129,7 @@ End Section
                         </div>
                         <span class="vac-card-link">
                             Bekijk vacature
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </span>
                     </a>
                 Next

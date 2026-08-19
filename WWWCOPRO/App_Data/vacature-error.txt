@@ -1,0 +1,19 @@
+2026-08-18 13:34:15 | SOLLICITATIE: SPAM GEWEERD | honeypot=False | captcha=False | verdachteLink=False | email=test.kandidaat@example.com | 
+---
+2026-08-18 14:26:09 | SOLLICITATIE: MAIL FAILED | SmtpException: Fout bij het verzenden van e-mail.
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.VacaturesController.VerstuurSollicitatieMail(SollicitatieModel model, Byte[] cvBytes, String cvBestandsnaam, String cvBestandType) in E:\TFS\WWWCOPRO\Controllers\VacaturesController.vb:regel 159
+---
+2026-08-18 15:13:19 | SOLLICITATIE: SPAM GEWEERD | honeypot=False | captcha=False | verdachteLink=False | email=sanity@example.com | 
+---
+2026-08-18 15:48:40 | SOLLICITATIE: MAIL FAILED | SmtpException: Voor de SMTP-server is een beveiligde verbinding vereist of de client is niet geverifieerd. Het serverantwoord is: 5.7.57 Client not authenticated to send mail. [AS4P190CA0024.EURP190.PROD.OUTLOOK.COM 2026-08-18T13:48:40.864Z 08DEFCD8A7CCCDD9]
+   bij System.Net.Mail.MailCommand.CheckResponse(SmtpStatusCode statusCode, String response)
+   bij System.Net.Mail.MailCommand.Send(SmtpConnection conn, Byte[] command, MailAddress from, Boolean allowUnicode)
+   bij System.Net.Mail.SmtpTransport.SendMail(MailAddress sender, MailAddressCollection recipients, String deliveryNotify, Boolean allowUnicode, SmtpFailedRecipientException& exception)
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.VacaturesController.VerstuurSollicitatieMail(SollicitatieModel model, Byte[] cvBytes, String cvBestandsnaam, String cvBestandType) in E:\TFS\WWWCOPRO\Controllers\VacaturesController.vb:regel 159
+---
+2026-08-18 16:16:58 | SOLLICITATIE: MAIL FAILED | SmtpException: Fout bij het verzenden van e-mail.
+   bij System.Net.Mail.SmtpClient.Send(MailMessage message)
+   bij WWWCOPRO.VacaturesController.VerstuurSollicitatieMail(SollicitatieModel model, Byte[] cvBytes, String cvBestandsnaam, String cvBestandType) in E:\TFS\WWWCOPRO\Controllers\VacaturesController.vb:regel 166
+---

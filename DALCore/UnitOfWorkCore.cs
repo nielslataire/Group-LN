@@ -111,6 +111,7 @@ namespace DALCore
         public GenericRepository<VacatureVereiste>          VacatureVereisten          { get; }
         public GenericRepository<VacatureVoordeel>          VacatureVoordelen          { get; }
         public GenericRepository<VacatureSollicitatieStap>  VacatureSollicitatieStappen{ get; }
+        public GenericRepository<VacatureSollicitatie>      VacatureSollicitaties      { get; }
         public GenericRepository<EmailTemplate>       EmailTemplates       { get; }
         public GenericRepository<UserEmailSignature>  UserEmailSignatures  { get; }
         public GenericRepository<EmailSendLog>        EmailSendLogs        { get; }
@@ -224,6 +225,7 @@ namespace DALCore
             VacatureVereisten          = new GenericRepository<VacatureVereiste>(_context);
             VacatureVoordelen          = new GenericRepository<VacatureVoordeel>(_context);
             VacatureSollicitatieStappen= new GenericRepository<VacatureSollicitatieStap>(_context);
+            VacatureSollicitaties      = new GenericRepository<VacatureSollicitatie>(_context);
             EmailTemplates            = new GenericRepository<EmailTemplate>(_context);
             UserEmailSignatures       = new GenericRepository<UserEmailSignature>(_context);
             EmailSendLogs             = new GenericRepository<EmailSendLog>(_context);

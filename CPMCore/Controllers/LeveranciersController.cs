@@ -1308,6 +1308,36 @@ public class LeveranciersController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
+    public async Task<IActionResult> CreateQuick(SupplierFormViewModel model, CancellationToken ct)
+    {
+        NormalizeVatInputs(model);
+        await ValidateVatInputsAsync(model, null, ct);
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState
+                .Where(kv => kv.Value != null && kv.Value.Errors.Count > 0)
+                .SelectMany(kv => kv.Value!.Errors.Select(e => e.ErrorMessage))
+                .ToList();
+            Response.StatusCode = 400;
+            return Json(new { success = false, errors });
+        }
+
+        await EnsurePostalSelectionAsync(model, ct);
+
+        var entity = new CompanyInfo();
+        MapToEntity(model, entity);
+        entity.Type = await ResolveLegalFormAbbreviation(model.SelectedLegalFormId, ct);
+
+        _db.CompanyInfo.Add(entity);
+        await _db.SaveChangesAsync(ct);
+
+        return Json(new { success = true, id = entity.CompanyId, text = entity.BedrijfsNaam, vat = entity.Ondernemingsnummer });
+    }
+
     [HttpGet]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
     public async Task<IActionResult> Edit(int id, CancellationToken ct)

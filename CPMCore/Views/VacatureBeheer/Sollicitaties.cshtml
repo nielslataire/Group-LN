@@ -1,0 +1,159 @@
+@model CPMCore.Models.Instellingen.VacatureSollicitatieListVM
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle {
+<style>
+    .vc-tabel th {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #8a9aaa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 16px;
+        background: transparent;
+    }
+    .vc-tabel td { padding: 14px 16px; vertical-align: middle; border-bottom: 1px solid #f0f2f5; }
+    .vc-tabel tbody tr:last-child td { border-bottom: none; }
+    .vc-tabel tbody tr:hover td { background: #f8fafb; }
+    .vc-actie-btn {
+        width: 32px; height: 32px; border-radius: 6px; border: 1px solid #dee2e6; background: #fff;
+        display: inline-flex; align-items: center; justify-content: center; color: #6c757d; font-size: 15px;
+        transition: background .15s, color .15s, border-color .15s; cursor: pointer; text-decoration: none;
+    }
+    .vc-actie-btn:hover { background: #f0f2f5; color: #343a40; border-color: #c6cbd1; text-decoration: none; }
+    .vc-actie-btn.vc-actie-delete:hover { background: #fff1f0; color: #dc3545; border-color: #f5c6cb; }
+    .vs-badge-nieuw { background: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .vs-badge-gelezen { background: #f0f2f5; color: #6c757d; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+    .vs-motivatie-panel { background: #f8fafb; border: 1px solid #e9ecef; border-radius: 8px; padding: 16px 18px; margin: 0 16px 12px; font-size: 14px; color: #495057; white-space: pre-wrap; }
+</style>
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="h3 mb-1">Sollicitaties</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.VacatureTitel))
+        {
+            <p class="text-muted mb-0">Voor vacature: <strong>@Model.VacatureTitel</strong></p>
+        }
+        else
+        {
+            <p class="text-muted mb-0">Alle sollicitaties, over alle vacatures heen.</p>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.VacatureId.HasValue)
+        {
+            <a href="@Url.Action("Sollicitaties")" class="btn btn-outline-secondary">Alle sollicitaties</a>
+            <a href="@Url.Action("Bewerken", new { id = Model.VacatureId })" class="btn btn-outline-secondary">
+                <i class="bx bx-arrow-back"></i> Terug naar vacature
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                <i class="bx bx-arrow-back"></i> Terug naar vacatures
+            </a>
+        }
+    </div>
+</div>
+
+@if (!Model.Sollicitaties.Any())
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bx bx-mail-send" style="font-size: 3rem; color: #adb5bd;"></i>
+            <p class="mt-3 text-muted">Nog geen sollicitaties ontvangen.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card" style="border-radius:8px;border:1px solid #e9ecef;background-color:#fff;">
+        <div class="table-responsive">
+            <table class="table vc-tabel mb-0">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Vacature</th>
+                        <th>Contact</th>
+                        <th style="width:130px;">Datum</th>
+                        <th style="width:90px;">Status</th>
+                        <th style="width:150px;">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Sollicitaties)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-semibold" style="font-size:14px;color:#212529;">@s.FullName</div>
+                            </td>
+                            <td>@s.VacatureTitelSnapshot</td>
+                            <td>
+                                <div style="font-size:13px;">@s.Email</div>
+                                @if (!string.IsNullOrWhiteSpace(s.Telefoon))
+                                {
+                                    <div class="text-muted" style="font-size:12px;">@s.Telefoon</div>
+                                }
+                            </td>
+                            <td style="font-size:13px;">@s.AangemaaktOp.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (s.IsGelezen)
+                                {
+                                    <span class="vs-badge-gelezen">Gelezen</span>
+                                }
+                                else
+                                {
+                                    <span class="vs-badge-nieuw">Nieuw</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    @if (!string.IsNullOrWhiteSpace(s.Motivatie))
+                                    {
+                                        <button type="button" class="vc-actie-btn" title="Motivatie tonen"
+                                                data-bs-toggle="collapse" data-bs-target="#mot-@s.ID">
+                                            <i class="bx bx-comment-detail"></i>
+                                        </button>
+                                    }
+                                    <a href="@Url.Action("SollicitatieCvDownloaden", new { id = s.ID })" class="vc-actie-btn" title="Cv downloaden">
+                                        <i class="bx bx-download"></i>
+                                    </a>
+                                    <button type="button" class="vc-actie-btn vc-actie-delete" title="Verwijderen"
+                                            onclick="vsVerwijder(@s.ID)">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                    <form id="del-sol-@s.ID" method="post" action="@Url.Action("SollicitatieVerwijderen")" style="display:none;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@s.ID" />
+                                        <input type="hidden" name="vacatureId" value="@Model.VacatureId" />
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        @if (!string.IsNullOrWhiteSpace(s.Motivatie))
+                        {
+                            <tr class="collapse" id="mot-@s.ID">
+                                <td colspan="6" style="padding:0;border-bottom:1px solid #f0f2f5;">
+                                    <div class="vs-motivatie-panel">@s.Motivatie</div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section PageScripts {
+<script>
+    function vsVerwijder(id) {
+        if (!confirm('Weet je zeker dat je deze sollicitatie wil verwijderen?')) return;
+        document.getElementById('del-sol-' + id).submit();
+    }
+</script>
+}

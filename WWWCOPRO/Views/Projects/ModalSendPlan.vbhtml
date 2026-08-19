@@ -5,6 +5,11 @@
 @<text>
 
     @Html.HiddenFor(Function(m) m.UnitId, New With {.id = "unitid"})
+    <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
+        <label for="website_url">Website</label>
+        <input type="text" name="website_url" id="website_url" tabindex="-1" autocomplete="off" value="" />
+    </div>
+    <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponsePlan" />
     <div class="contact-modal-container" id="modalsendplanpanel">
 
         <div class="contact-modal-header">
@@ -74,18 +79,32 @@ End Using
         $button.prop("disabled", true);
         $spinner.removeClass("hidden");
         $icon.addClass("hidden");
-        $.ajax({
-            url: '@Url.Action("SendPlan", "Projects")',
-            data: $('#FormSendPlan2').serialize(),
-            type: 'POST',
-            success: function (result) {
-                $("#modalsendplanpanel").html(result);
-            },
-            complete: function () {
-                $button.prop("disabled", false);
-                $spinner.addClass("hidden");
-                $icon.removeClass("hidden");
-            }
-        });
+
+        function doSubmit() {
+            $.ajax({
+                url: '@Url.Action("SendPlan", "Projects")',
+                data: $('#FormSendPlan2').serialize(),
+                type: 'POST',
+                success: function (result) {
+                    $("#modalsendplanpanel").html(result);
+                },
+                complete: function () {
+                    $button.prop("disabled", false);
+                    $spinner.addClass("hidden");
+                    $icon.removeClass("hidden");
+                }
+            });
+        }
+
+        if (window.reCaptchaSiteKey && typeof grecaptcha !== 'undefined') {
+            grecaptcha.ready(function () {
+                grecaptcha.execute(window.reCaptchaSiteKey, { action: 'sendplan' }).then(function (token) {
+                    $("#gRecaptchaResponsePlan").val(token);
+                    doSubmit();
+                }, doSubmit);
+            });
+        } else {
+            doSubmit();
+        }
     });
 </script>

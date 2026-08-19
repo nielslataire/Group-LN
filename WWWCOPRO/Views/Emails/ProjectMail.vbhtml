@@ -1,9 +1,4 @@
-﻿To: @ViewBag.To
-From : info@groupln.be
-Subject: @ViewBag.EmailTitle
-
-
-<html>
+﻿<html>
 <body>
     <div style="font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10pt; color: #000000">
         <div>

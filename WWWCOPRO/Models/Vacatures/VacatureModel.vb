@@ -11,12 +11,14 @@ Namespace Models.Vacatures
         Public Property KorteBeschrijving As String
         Public Property Beschrijving As String
         Public Property SortOrder As Integer
+        Public Property AangemaaktOp As Date
 
         Public Property Takenpakket As New List(Of String)
         Public Property MustHaves As New List(Of String)
         Public Property MooiMeegenomen As New List(Of String)
         Public Property Voordelen As New List(Of String)
         Public Property SollicitatieStappen As New List(Of VacatureSollicitatieStapModel)
+        Public Property AndereVacatures As New List(Of VacatureModel)
     End Class
 
     Public Class VacatureSollicitatieStapModel
