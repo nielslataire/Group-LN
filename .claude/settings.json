@@ -667,7 +667,8 @@
       "Bash(sqlcmd -S SQL6032.site4now.net -U db_ab5fbb_testdb_admin -P '840683P@s' -d db_ab5fbb_testdb -Q \"SET NOCOUNT ON; SELECT Id, CompanyId FROM IncommingInvoices WHERE CompanyId IN \\(2674,2684,2685\\) ORDER BY CompanyId, Id;\" -W -s\"|\")",
       "Bash(sqlcmd -S SQL6032.site4now.net -U db_ab5fbb_testdb_admin -P 840683P@s -d db_ab5fbb_testdb -Q ' *)",
       "Bash(xargs grep -l \"ContractBO\")",
-      "Bash(sqlcmd -S SQL6032.site4now.net -U db_ab5fbb_testdb_admin -P '840683P@s' -d db_ab5fbb_testdb -Q \"SET NOCOUNT ON; SELECT * FROM ActivityGroup ORDER BY 1;\")"
+      "Bash(sqlcmd -S SQL6032.site4now.net -U db_ab5fbb_testdb_admin -P '840683P@s' -d db_ab5fbb_testdb -Q \"SET NOCOUNT ON; SELECT * FROM ActivityGroup ORDER BY 1;\")",
+      "Bash(tee /tmp/build_check.log)"
     ],
     "additionalDirectories": [
       "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",

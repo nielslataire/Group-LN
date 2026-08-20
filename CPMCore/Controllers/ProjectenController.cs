@@ -4,6 +4,7 @@ using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Models.Invoicing;
 using CPMCore.Models.Klanten;
+using CPMCore.Models.Leveranciers;
 using CPMCore.Models.Projecten;
 using FacadeCore;
 using DALCore;
@@ -2667,9 +2668,16 @@ namespace CPMCore.Controllers
 
         private void PopulateAddContractLookups(ProjectAddContractModel model)
         {
-            var groupsResponse = _activityService.GetActivityGroupsForSelect();
-            if (groupsResponse.Success)
-                model.ActivityGroups = groupsResponse.Values;
+            model.AllActivities = _db.Activity
+                .Select(a => new ActivityFilterItemViewModel
+                {
+                    Id = a.ActivityId,
+                    Name = a.Omschrijving,
+                    GroupName = a.Group != null ? a.Group.Name : null
+                })
+                .OrderBy(a => a.GroupName)
+                .ThenBy(a => a.Name)
+                .ToList();
 
             model.LegalForms = _db.CompanyLegalForm
                 .Where(l => l.IsActive)
@@ -7872,36 +7880,22 @@ namespace CPMCore.Controllers
             return Json(new { success = true, id = entity.ContactId, text = entity.ContactNaam });
         }
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public JsonResult AddCompanyActivityQuick(int companyId, string name, int groupId)
+        public PartialViewResult AddContractActivitySelection(int companyId, int activityId, string activityName)
         {
-            if (companyId <= 0 || string.IsNullOrWhiteSpace(name) || groupId <= 0)
+            var alreadyLinked = _db.CompanyInfo
+                .Where(c => c.CompanyId == companyId)
+                .Any(c => c.Activity.Any(a => a.ActivityId == activityId));
+
+            if (!alreadyLinked)
             {
-                Response.StatusCode = 400;
-                return Json(new { success = false, error = "Naam en groep zijn verplicht." });
+                _companyService.AddCompanyActivity(companyId, activityId);
             }
 
-            var activityBo = new ActivityBO
-            {
-                Name = name.Trim(),
-                Group = new ActivityGroupBO { ID = groupId }
-            };
-
-            var createResponse = _activityService.InsertUpdate(activityBo);
-            if (!createResponse.Success || createResponse.InsertedId == 0)
-            {
-                Response.StatusCode = 400;
-                return Json(new { success = false, error = "De activiteit kon niet worden aangemaakt." });
-            }
-
-            var linkResponse = _companyService.AddCompanyActivity(companyId, createResponse.InsertedId);
-            if (!linkResponse.Success)
-            {
-                Response.StatusCode = 400;
-                return Json(new { success = false, error = "De activiteit kon niet aan de leverancier gekoppeld worden." });
-            }
-
-            return Json(new { success = true, id = createResponse.InsertedId, text = activityBo.Name });
+            var nContractActivity = new ContractActivityBO();
+            var nActivity = new ActivityBO { ID = activityId, Name = activityName };
+            nContractActivity.Activity = nActivity;
+            ViewData["mode"] = "add";
+            return PartialView("_ActivityRow", nContractActivity);
         }
         [HttpPost]
         public JsonResult GetWheaterstations(string term)

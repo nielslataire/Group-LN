@@ -398,6 +398,15 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     --custom-accent: #8B6B4A;
     --lightgreen: #e8f0eb;
     --lightgray: #f8f9fc;
+    /* Tokens voor de card-big-info herwerking hieronder */
+    --white: #ffffff;
+    --border: #e7e7e7;
+    --radius: 7px;
+    --card-shadow: 0px 0px 37px -36px rgba(0, 0, 0, 0.4);
+    --green-light: var(--lightgreen);
+    --green-acc: var(--primary);
+    --green: var(--primary);
+    --muted: #8590a5;
 }
 
 /*Badges*/
@@ -1792,4 +1801,124 @@ html.fixed .sidebar-left {
     .page-intro-actions {
         width: 100%;
     }
+}
+
+/* ==========================================================================
+   card-big-info herwerking (compacte icoon-sidebar i.p.v. het grote
+   grijze thema-icoon). Overschrijft .card.card-big-info uit theme.css
+   voor alle pagina's die dit component gebruiken (bv. leverancier-/
+   contractformulieren): kleine ronde icoonbox, dunne rand i.p.v. grijze
+   achtergrond, kleinere titel/tekst.
+   ========================================================================== */
+.card.card-big-info {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+.card.card-big-info .card-body {
+    padding: 0;
+    background: var(--white);
+    /* .card-body krijgt via Bootstrap's eigen .card-body{flex:1 1 auto} de volledige
+       hoogte van de kaart (bv. bij h-100 om twee kaarten naast elkaar gelijk te maken).
+       Zonder dit zou de .row daarbinnen slechts zo hoog zijn als zijn eigen inhoud,
+       met lege ruimte eronder en een rand die te vroeg stopt. */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Grid i.p.v. flex: garandeert dat sidebar en inhoud altijd exact dezelfde
+   hoogte hebben, ongeacht welke van de twee het meeste inhoud heeft
+   (de rand tussen beide moet altijd tot onderaan doorlopen). */
+.card.card-big-info .card-body > .row {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    margin: 0;
+    flex: 1 1 auto;
+}
+
+.card.card-big-info .card-body > .row > div[class*="col-"] {
+    width: auto;
+    max-width: none;
+}
+
+.card.card-big-info .card-body > .row > div[class*="col-"]:first-child {
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+}
+
+.card.card-big-info .card-body > .row > div[class*="col-"]:first-child .card-big-info-icon {
+    position: static;
+    left: auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--green-light);
+    color: var(--green-acc);
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.card.card-big-info .card-body > .row > div[class*="col-"]:first-child .card-big-info-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    margin: 0 0 5px;
+    line-height: 1.3;
+}
+
+.card.card-big-info .card-body > .row > div[class*="col-"]:first-child .card-big-info-desc {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.card.card-big-info .card-body > .row > div[class*="col-"]:not(:first-child) {
+    padding: 24px 26px;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .card.card-big-info .card-body > .row {
+        grid-template-columns: 1fr;
+    }
+
+    .card.card-big-info .card-body > .row > div[class*="col-"]:first-child {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 16px;
+    }
+
+    .card.card-big-info .card-body > .row > div[class*="col-"]:not(:first-child) {
+        padding: 16px;
+    }
+}
+
+/* ── Disabled-knoppen: duidelijke 'niet toegestaan'-cursor bij hover ──────
+   Bootstrap zet standaard pointer-events:none op .btn:disabled, waardoor de
+   browser bij hover geen cursor toont en het niet duidelijk is dat de knop
+   uitgeschakeld is. Voor échte disabled knoppen (button/input — beschermd
+   door het HTML disabled-attribuut zelf, dus zonder klik-risico) zetten we
+   pointer-events terug aan zodat de 'verboden'-cursor zichtbaar wordt.
+   .btn.disabled op <a>-tags (geen native disabled-bescherming) blijft
+   ongemoeid, want :disabled matcht daar sowieso niet op. */
+button:disabled,
+input[type="submit"]:disabled,
+input[type="button"]:disabled,
+.btn:disabled {
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+
+/* ── Alert info: vaste huisstijlkleuren, overal in de app ─────────────── */
+.alert.alert-info {
+    color: #1565c0;
+    background-color: #eef7ff;
+    border: 1px solid #cfe8fb;
 }

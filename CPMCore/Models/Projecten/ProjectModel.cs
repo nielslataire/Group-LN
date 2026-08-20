@@ -1,4 +1,5 @@
 ﻿using BOCore;
+using CPMCore.Models.Leveranciers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
@@ -2967,7 +2968,7 @@ namespace CPMCore.Models.Projecten
             }
         }
 
-        public List<IdNameBO> ActivityGroups { get; set; } = new();
+        public List<ActivityFilterItemViewModel> AllActivities { get; set; } = new();
         public List<IdNameBO> LegalForms { get; set; } = new();
         public List<IdNameBO> Countries { get; set; } = new();
     }

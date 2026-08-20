@@ -59,7 +59,7 @@ Public Class ContractBO
     Private _cashdiscountpercentage As Decimal?
     <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:F}")>
     <UIHint("Percentage")>
-    <Display(Name:="Percentage korting contant")>
+    <Display(Name:="% korting contant")>
     Public Property CashDiscountPercentage() As Decimal?
         Get
             Return _cashdiscountpercentage
