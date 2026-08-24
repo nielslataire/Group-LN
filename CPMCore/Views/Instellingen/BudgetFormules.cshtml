@@ -1,0 +1,423 @@
+@model CPMCore.Models.BudgetFormulesViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var bestaandeActivityIds = Model.Formules.Select(f => f.ActivityId).ToHashSet();
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/instellingen-custom.css" />
+    <style>
+        .formule-editor {
+            font-family: Consolas, Monaco, 'Courier New', monospace;
+            font-size: .85rem;
+            line-height: 1.5;
+            min-height: 70px;
+            resize: vertical;
+        }
+        .formule-card .card-header { background: transparent; }
+        .formule-lot-badge { font-size: .7rem; }
+
+        /* @@-autocomplete dropdown */
+        .param-suggest {
+            position: absolute;
+            z-index: 1060;
+            background: var(--white, #fff);
+            border: 1px solid var(--border, #dee2e6);
+            border-radius: .375rem;
+            box-shadow: 0 6px 18px rgba(0,0,0,.12);
+            max-height: 280px;
+            overflow-y: auto;
+            display: none;
+        }
+        .param-suggest .item {
+            padding: .35rem .65rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: baseline;
+        }
+        .param-suggest .item.active,
+        .param-suggest .item:hover { background: var(--bs-primary-bg-subtle, #e8f0fe); }
+        .param-suggest .item .naam { font-family: Consolas, Monaco, monospace; font-size: .8rem; font-weight: 600; }
+        .param-suggest .item .oms  { font-size: .72rem; color: #6c757d; flex: 1; text-align: left; }
+        .param-suggest .item .val  { font-size: .75rem; color: #0d6efd; white-space: nowrap; }
+
+        /* Parameterreferentie */
+        .param-ref-table td { font-size: .78rem; vertical-align: top; }
+        .param-ref-table .p-naam { font-family: Consolas, Monaco, monospace; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .param-ref-table .p-naam:hover { color: #0d6efd; text-decoration: underline; }
+        .param-ref-table .p-waarde { text-align: right; white-space: nowrap; color: #0d6efd; }
+        .param-ref-sticky { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; }
+
+        .test-result table td { font-size: .78rem; }
+        .test-result .expr-namen { font-family: Consolas, Monaco, monospace; font-size: .72rem; color: #6c757d; }
+    </style>
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Budgetformules</h1>
+            <h5 class="mb-4 mt-0">Bewerk de voorstel-formules per activiteit voor de pagina Activiteiten in de budgetwizard.</h5>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info d-flex gap-2">
+    <i class="bx bx-info-circle fs-5"></i>
+    <div>
+        Een formule berekent het <strong>totaal voor het project</strong>; het voorstel per eenheid wordt automatisch
+        <em>totaal ÷ aantal woon-/commerciële eenheden</em> (<code>@@aantal_wooncomm</code>).
+        Typ <strong>@@</strong> in het formuleveld om een parameter te kiezen — bv. <code>@@aantal</code> toont alle parameters met "aantal".
+        Toegestaan: <code>+ − × ÷ ( )</code> en getallen (punt of komma als decimaalteken).
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        <div class="card card-modern mb-4">
+            <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center">
+                <label class="form-label mb-0 me-2"><i class="bx bx-test-tube me-1"></i>Testen met budgetversie:</label>
+                <select id="ddlTestVersie" class="form-select form-select-sm" style="max-width:380px">
+                    <option value="">— kies versie voor testwaarden —</option>
+                    @foreach (var v in Model.TestVersies)
+                    {
+                        <option value="@v.Value">@v.Text</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        @foreach (var f in Model.Formules)
+        {
+            <div class="card card-modern formule-card mb-3" data-formule-id="@f.Id" data-activity-id="@f.ActivityId">
+                <div class="card-header border-0 pb-0 d-flex align-items-center gap-2">
+                    <span class="badge bg-primary formule-lot-badge">Lot @f.LotNummer.ToString("G", System.Globalization.CultureInfo.InvariantCulture)</span>
+                    <h2 class="card-title mb-0 fs-6">@f.ActivityOmschrijving</h2>
+                    <div class="form-check form-switch ms-auto mb-0" title="Formule actief">
+                        <input class="form-check-input chk-actief" type="checkbox" @(f.Actief ? "checked" : "") />
+                        <label class="form-check-label small text-muted">Actief</label>
+                    </div>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small mb-1">Label (popover-titel)</label>
+                            <input type="text" class="form-control form-control-sm inp-omschrijving" value="@f.Omschrijving" maxlength="300" />
+                        </div>
+                        <div class="col-md-8 text-md-end align-self-end small text-muted">
+                            Laatst gewijzigd: @f.LaatstGewijzigd.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+                    <label class="form-label small mb-1">Formule (totaal project)</label>
+                    <textarea class="form-control formule-editor" spellcheck="false">@f.Formule</textarea>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-primary btn-sm btn-opslaan"><i class="bx bx-save me-1"></i>Opslaan</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-test"><i class="bx bx-calculator me-1"></i>Test</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-verwijderen ms-auto"><i class="bx bx-trash"></i></button>
+                    </div>
+                    <div class="test-result mt-2"></div>
+                </div>
+            </div>
+        }
+
+        <div class="card card-modern formule-card mb-3" id="cardNieuweFormule" data-formule-id="0">
+            <div class="card-header border-0 pb-0">
+                <h2 class="card-title mb-0 fs-6"><i class="bx bx-plus-circle me-1"></i>Nieuwe formule</h2>
+            </div>
+            <div class="card-body pt-2">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-8">
+                        <label class="form-label small mb-1">Activiteit</label>
+                        <select class="form-select form-select-sm sel-activity">
+                            <option value="">— kies activiteit —</option>
+                            @foreach (var a in Model.Activiteiten.Where(a => !bestaandeActivityIds.Contains(int.Parse(a.Value))))
+                            {
+                                <option value="@a.Value">@a.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1">Label (popover-titel)</label>
+                        <input type="text" class="form-control form-control-sm inp-omschrijving" maxlength="300" />
+                    </div>
+                </div>
+                <label class="form-label small mb-1">Formule (totaal project)</label>
+                <textarea class="form-control formule-editor" spellcheck="false" placeholder="bv. @@mat_dakwerken_platdak * @@opp_platdak"></textarea>
+                <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-primary btn-sm btn-opslaan"><i class="bx bx-save me-1"></i>Opslaan</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm btn-test"><i class="bx bx-calculator me-1"></i>Test</button>
+                </div>
+                <div class="test-result mt-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card card-modern param-ref-sticky">
+            <div class="card-header border-0 pb-0">
+                <h2 class="card-title mb-0 fs-6"><i class="bx bx-code-curly me-1"></i>Beschikbare parameters</h2>
+                <p class="small text-muted mb-0">Klik op een naam om deze in de formule in te voegen.</p>
+            </div>
+            <div class="card-body pt-2" id="paramRefContainer">
+                <div class="text-muted small">Parameters laden…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="param-suggest" id="paramSuggest"></div>
+
+@section PageScripts {
+<script>
+(function () {
+    const urlParams  = '@Url.Action("GetBudgetFormuleParameters", "Instellingen")';
+    const urlOpslaan = '@Url.Action("BudgetFormuleOpslaan", "Instellingen")';
+    const urlDelete  = '@Url.Action("BudgetFormuleDelete", "Instellingen")';
+    const urlTest    = '@Url.Action("BudgetFormuleTest", "Instellingen")';
+
+    let PARAMS = [];          // [{naam, omschrijving, eenheid, categorie, waarde}]
+    let lastEditor = null;    // laatst gefocust formuleveld (voor invoegen vanuit referentie)
+
+    const nlBE = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt  = v => (v === null || v === undefined) ? '' : nlBE.format(v);
+
+    // ── Parameters laden + referentiepaneel ────────────────────────────────
+    function laadParameters() {
+        const versieId = document.getElementById('ddlTestVersie').value;
+        const url = versieId ? `${urlParams}?versieId=${versieId}` : urlParams;
+        fetch(url)
+            .then(r => r.json())
+            .then(data => { PARAMS = data; renderParamRef(); })
+            .catch(() => {
+                document.getElementById('paramRefContainer').innerHTML =
+                    '<div class="text-danger small">Parameters laden mislukt.</div>';
+            });
+    }
+
+    function renderParamRef() {
+        const container = document.getElementById('paramRefContainer');
+        const heeftWaarden = PARAMS.some(p => p.waarde !== null && p.waarde !== undefined);
+        const groepen = {};
+        PARAMS.forEach(p => { (groepen[p.categorie] = groepen[p.categorie] || []).push(p); });
+
+        let html = '';
+        Object.keys(groepen).forEach(cat => {
+            html += `<div class="fw-semibold small mt-2 mb-1">${cat}</div>`;
+            html += '<table class="table table-sm param-ref-table mb-1"><tbody>';
+            groepen[cat].forEach(p => {
+                const waarde = heeftWaarden ? `<td class="p-waarde">${fmt(p.waarde)}${p.eenheid ? ' <span class="text-muted">' + p.eenheid + '</span>' : ''}</td>` : '';
+                html += `<tr>
+                    <td class="p-naam" data-naam="${p.naam}" title="${p.omschrijving}">@@${p.naam}</td>
+                    ${waarde}
+                </tr>`;
+            });
+            html += '</tbody></table>';
+        });
+        if (!heeftWaarden)
+            html += '<div class="small text-muted mt-2">Kies bovenaan een budgetversie om de actuele waarden te zien.</div>';
+        container.innerHTML = html;
+
+        container.querySelectorAll('.p-naam').forEach(el => {
+            el.addEventListener('click', () => voegParameterIn(el.dataset.naam));
+        });
+    }
+
+    function voegParameterIn(naam) {
+        if (!lastEditor) return;
+        const ta = lastEditor;
+        const start = ta.selectionStart ?? ta.value.length;
+        const end   = ta.selectionEnd ?? start;
+        ta.value = ta.value.slice(0, start) + '@@' + naam + ta.value.slice(end);
+        const nieuwePos = start + naam.length + 1;
+        ta.focus();
+        ta.setSelectionRange(nieuwePos, nieuwePos);
+    }
+
+    // ── @@-autocomplete in formulevelden ────────────────────────────────────
+    const suggest = document.getElementById('paramSuggest');
+    document.body.appendChild(suggest); // absolute t.o.v. document positioneren
+    let suggestItems = [];
+    let suggestIndex = -1;
+    let suggestEditor = null;
+    let suggestTokenStart = -1;
+
+    function sluitSuggest() {
+        suggest.style.display = 'none';
+        suggestItems = [];
+        suggestIndex = -1;
+        suggestEditor = null;
+    }
+
+    function toonSuggest(ta, tokenStart, filter) {
+        const matches = PARAMS
+            .filter(p => p.naam.includes(filter.toLowerCase()))
+            .slice(0, 12);
+        if (matches.length === 0) { sluitSuggest(); return; }
+
+        suggestEditor = ta;
+        suggestTokenStart = tokenStart;
+        suggestItems = matches;
+        suggestIndex = 0;
+
+        suggest.innerHTML = matches.map((p, i) => `
+            <div class="item ${i === 0 ? 'active' : ''}" data-i="${i}">
+                <span class="naam">@@${p.naam}</span>
+                <span class="oms">${p.omschrijving}</span>
+                ${p.waarde !== null && p.waarde !== undefined ? `<span class="val">${fmt(p.waarde)}</span>` : ''}
+            </div>`).join('');
+
+        const rect = ta.getBoundingClientRect();
+        suggest.style.left  = (rect.left + window.scrollX) + 'px';
+        suggest.style.top   = (rect.bottom + window.scrollY + 2) + 'px';
+        suggest.style.width = rect.width + 'px';
+        suggest.style.display = 'block';
+
+        suggest.querySelectorAll('.item').forEach(el => {
+            el.addEventListener('mousedown', e => {
+                e.preventDefault();
+                kiesSuggest(parseInt(el.dataset.i));
+            });
+        });
+    }
+
+    function kiesSuggest(i) {
+        if (!suggestEditor || i < 0 || i >= suggestItems.length) return;
+        const ta = suggestEditor;
+        const naam = suggestItems[i].naam;
+        const caret = ta.selectionStart;
+        ta.value = ta.value.slice(0, suggestTokenStart) + '@@' + naam + ta.value.slice(caret);
+        const nieuwePos = suggestTokenStart + naam.length + 1;
+        ta.setSelectionRange(nieuwePos, nieuwePos);
+        ta.focus();
+        sluitSuggest();
+    }
+
+    function updateSuggest(ta) {
+        const caret = ta.selectionStart;
+        const voor = ta.value.slice(0, caret);
+        const m = voor.match(/@@([a-zA-Z0-9_]*)$/);
+        if (m) toonSuggest(ta, caret - m[0].length, m[1]);
+        else sluitSuggest();
+    }
+
+    document.querySelectorAll('.formule-editor').forEach(ta => {
+        ta.addEventListener('focus', () => { lastEditor = ta; });
+        ta.addEventListener('input', () => updateSuggest(ta));
+        ta.addEventListener('click', () => updateSuggest(ta));
+        ta.addEventListener('blur', () => setTimeout(sluitSuggest, 150));
+        ta.addEventListener('keydown', e => {
+            if (suggest.style.display !== 'block') return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const delta = e.key === 'ArrowDown' ? 1 : -1;
+                suggestIndex = (suggestIndex + delta + suggestItems.length) % suggestItems.length;
+                suggest.querySelectorAll('.item').forEach((el, i) =>
+                    el.classList.toggle('active', i === suggestIndex));
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                kiesSuggest(suggestIndex);
+            } else if (e.key === 'Escape') {
+                sluitSuggest();
+            }
+        });
+    });
+
+    // ── Opslaan / testen / verwijderen ─────────────────────────────────────
+    function toonMelding(ok, message) {
+        if (typeof toastr !== 'undefined') { ok ? toastr.success(message) : toastr.error(message); }
+        else alert(message);
+    }
+
+    document.querySelectorAll('.formule-card').forEach(card => {
+        const editor = card.querySelector('.formule-editor');
+        const resultDiv = card.querySelector('.test-result');
+
+        card.querySelector('.btn-opslaan')?.addEventListener('click', () => {
+            const isNieuw = card.id === 'cardNieuweFormule';
+            const activityId = isNieuw
+                ? parseInt(card.querySelector('.sel-activity').value || '0')
+                : parseInt(card.dataset.activityId);
+            if (!activityId) { toonMelding(false, 'Kies eerst een activiteit.'); return; }
+            if (!editor.value.trim()) { toonMelding(false, 'Formule is leeg.'); return; }
+
+            fetch(urlOpslaan, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    activityId:   activityId,
+                    formule:      editor.value,
+                    omschrijving: card.querySelector('.inp-omschrijving').value,
+                    actief:       card.querySelector('.chk-actief') ? card.querySelector('.chk-actief').checked : true
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                toonMelding(res.ok, res.message);
+                if (res.ok && isNieuw) location.reload();
+            })
+            .catch(() => toonMelding(false, 'Verbindingsfout.'));
+        });
+
+        card.querySelector('.btn-test')?.addEventListener('click', () => {
+            const versieId = document.getElementById('ddlTestVersie').value;
+            if (!versieId) { toonMelding(false, 'Kies eerst een budgetversie om mee te testen.'); return; }
+            if (!editor.value.trim()) { toonMelding(false, 'Formule is leeg.'); return; }
+
+            fetch(urlTest, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ versieId: parseInt(versieId), formule: editor.value })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (!res.ok) {
+                    resultDiv.innerHTML = `<div class="alert alert-danger py-2 small mb-0">${res.fout}</div>`;
+                    return;
+                }
+                let html = '';
+                if (res.onbekendeParams && res.onbekendeParams.length)
+                    html += `<div class="alert alert-warning py-1 small mb-2">Onbekende parameter(s): ${res.onbekendeParams.join(', ')} — deze tellen als 0.</div>`;
+                html += '<table class="table table-sm mb-0"><tbody>';
+                res.termen.forEach(t => {
+                    html += `<tr>
+                        <td class="expr-namen">${t.exprNamen}</td>
+                        <td class="text-end text-muted">${t.exprWaarden}</td>
+                        <td class="text-end fw-semibold" style="white-space:nowrap">= € ${fmt(t.waarde)}</td></tr>`;
+                });
+                html += `<tr class="border-top">
+                    <td colspan="2"><strong>Totaal project</strong></td>
+                    <td class="text-end fw-bold" style="white-space:nowrap">€ ${fmt(res.totaal)}</td></tr>`;
+                html += `<tr>
+                    <td colspan="2">÷ ${res.aantalEenheden} eenheden</td>
+                    <td class="text-end fw-bold text-primary" style="white-space:nowrap">= € ${fmt(res.perEenheid)}/eenh.</td></tr>`;
+                html += '</tbody></table>';
+                resultDiv.innerHTML = html;
+            })
+            .catch(() => toonMelding(false, 'Verbindingsfout.'));
+        });
+
+        card.querySelector('.btn-verwijderen')?.addEventListener('click', () => {
+            if (!confirm('Deze formule verwijderen? De activiteit valt dan terug op de standaardberekening.')) return;
+            fetch(urlDelete, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(parseInt(card.dataset.formuleId))
+            })
+            .then(r => r.json())
+            .then(res => {
+                toonMelding(res.ok, res.message);
+                if (res.ok) card.remove();
+            })
+            .catch(() => toonMelding(false, 'Verbindingsfout.'));
+        });
+    });
+
+    document.getElementById('ddlTestVersie').addEventListener('change', laadParameters);
+    laadParameters();
+})();
+</script>
+}

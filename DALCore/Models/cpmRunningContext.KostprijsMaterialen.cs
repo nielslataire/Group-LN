@@ -8,6 +8,7 @@ public partial class cpmRunningContext {
     public virtual DbSet<ProjectKostprijs> ProjectKostprijzen { get; set; }
     public virtual DbSet<BouwkostPercentageGroep> BouwkostPercentageGroepen { get; set; }
     public virtual DbSet<BouwkostPercentage> BouwkostPercentages { get; set; }
+    public virtual DbSet<BudgetActivityFormule> BudgetActivityFormules { get; set; }
     private void ConfigureKostprijsMaterialenEntities(ModelBuilder modelBuilder) {
         modelBuilder.Ignore<KostprijsCategorie>();
         modelBuilder.Entity<KmIndexType>(entity => {
@@ -58,6 +59,16 @@ public partial class cpmRunningContext {
             entity.HasOne(d => d.Materiaal).WithMany()
                 .HasForeignKey(d => d.MateriaalId).OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_FormulaKoppeling_Materiaal");
+        });
+        modelBuilder.Entity<BudgetActivityFormule>(entity => {
+            entity.ToTable("BudgetActivityFormule");
+            entity.Property(e => e.Formule).IsRequired();
+            entity.Property(e => e.Omschrijving).HasMaxLength(300);
+            entity.Property(e => e.Actief).HasDefaultValue(true);
+            entity.HasIndex(e => e.ActivityId).IsUnique();
+            entity.HasOne(d => d.Activity).WithMany()
+                .HasForeignKey(d => d.ActivityId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetActivityFormule_Activity");
         });
         modelBuilder.Entity<BouwkostPercentage>(entity => {
             entity.ToTable("BouwkostPercentage");

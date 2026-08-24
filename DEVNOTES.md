@@ -176,12 +176,60 @@ Entiteiten: `BouwkostPercentageGroep` + `BouwkostPercentage`
 
 ---
 
+## 5. Budgetformules — bewerkbare voorstel-formules per activiteit (aug 2026)
+
+Instellingen → Budgetformules: per activiteit een bewerkbare formule die het
+voorstel op de pagina BudgetActivityLijnen berekent (totaal project; de service
+deelt door `@aantal_wooncomm` voor de prijs per eenheid). Parameters via `@naam`
+(autocomplete), waarden uit budget-tabbladen + geïndexeerde materiaalprijzen.
+
+- `DALCore/Models/BudgetActivityFormule.cs` + tabel `BudgetActivityFormule`
+- `ServiceCore/Budget/FormuleParser.cs` — expressie-parser (`+ - * / ( )`, `@params`)
+- `ServiceCore/Budget/BudgetActivityFormuleService.cs` — parametercatalogus, CRUD, evaluatie
+- `BudgetActivityService` gebruikt actieve formules met voorrang op de hardgecodeerde
+  voorstellen (die blijven als fallback wanneer geen formule bestaat/actief is)
+- Seed: de 14 bestaande voorstellen als formules (zelfde uitkomst als voorheen)
+
+**SQL uitvoeren (als nog niet gedaan):**
+```
+DALCore/Migrations/BudgetActivityFormules.sql
+```
+
+---
+
 ## Te doen / pending
 
 - [ ] SQL migraties uitvoeren op productie/andere PC:
   - `KostprijsMaterialen_ActivityGroep.sql`
   - `BouwkostPercentages.sql`
   - `KostprijsFormulaKoppeling.sql`
+  - `BudgetActivityFormules.sql`
 - [ ] Materiaal koppelen in Instellingen voor `nacalc_ruwbouw_basis`
 - [ ] Zelfde voorstel-badge patroon implementeren voor `GevelMetselwerkPrijsPerM2` en `GipswerkenPrijsPerM2`
 - [ ] Verdere formules toevoegen naargelang budget-stappen dat vereisen
+
+---
+
+## 6. Factuur btw-berekening — per tarief op de maatstaf (aug 2026)
+
+**Probleem:** Btw werd per detaillijn afgerond en daarna opgeteld. Bij factuur 0030.08.2026 (id 1136) gaf dat 269,45 i.p.v. 269,44 (21% op 1.283,05). De EPC-QR-code en de Octopus-boeking gebruikten wél het bedrag op de maatstaf, waardoor de afgedrukte factuur er 1 cent naast zat.
+
+**Oplossing:** Nieuwe helper `ServiceCore/Invoicing/InvoiceVatCalculator.cs`:
+- Btw-totaal = per btw-tarief `ROUND(som netto × tarief, 2)` (maatstaf van heffing, conform EN 16931 / Peppol BR-CO-17).
+- Per-lijn btw wordt cumulatief toegewezen zodat de lijnbedragen exact optellen tot het tarieftotaal (afrondingsverschil schuift naar de laatste lijn van het tarief).
+
+**Aangepast:**
+- `ServiceCore/InvoiceCommandService.cs` — `CreateWithLinesAsync` + `CalculateGrossTotalAsync` (QR-bedrag)
+- `ServiceCore/InvoicingService.cs` — `PopulateTotalsAsync` (detail/PDF-totalen; balance-override nu afgerond op 2 dec.)
+- `ServiceCore/Invoicing/InvoiceUblBuilder.cs` — Peppol UBL tax totals
+- `CPMCore/Extensions/InvoiceDetailExtensions.cs` — PDF-lijnen (per-lijn toewijzing)
+- `CPMCore/Controllers/InvoicesController.cs` — detail/edit-weergave (`MapLinesForEdit`)
+- `CPMCore/wwwroot/js/invoices.preview.js` — live preview (zelfde cumulatieve toewijzing)
+
+**Belangrijk:** btw-bedragen worden nergens opgeslagen; alles wordt bij weergave/afdruk herberekend uit de detaillijnen. Bestaande facturen worden dus niet gewijzigd in de databank, maar een herafdruk toont voortaan de correcte (per-tarief) bedragen.
+
+**SQL optioneel uitvoeren (view-consistentie, wijzigt geen data):**
+```
+DALCore/Migrations/InvoiceVatPerTarief.sql
+```
+Maakt `vwInvoiceTotals` consistent: btw per tarief afgerond én korting (`DiscountAmount`) meegenomen in het brutototaal (werd voorheen genegeerd in de view).

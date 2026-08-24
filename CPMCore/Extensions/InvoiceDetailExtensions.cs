@@ -65,7 +65,7 @@ public static class InvoiceDetailExtensions
             },
             Project = new ProjectInfoDto(),
             Unit = new UnitInfoDto(),
-            Lines = bo.Lines.Select(ToInvoiceLineDto).ToList(),
+            Lines = MapLines(bo.Lines),
             VatTypes = vatTypes?.Select(v => new VatTypeDto
             {
                 Id = v.Id,
@@ -76,17 +76,32 @@ public static class InvoiceDetailExtensions
         };
     }
 
-    private static InvoiceLineDto ToInvoiceLineDto(InvoiceLineBO line)
+    private static List<InvoiceLineDto> MapLines(IEnumerable<InvoiceLineBO> lines)
     {
-        if (line == null) throw new ArgumentNullException(nameof(line));
+        var list = (lines ?? Enumerable.Empty<InvoiceLineBO>()).ToList();
 
-        var discount = line.DiscountAmount
+        // Btw per tarief op de maatstaf, cumulatief verdeeld over de lijnen zodat de
+        // lijntotalen exact optellen tot het factuurtotaal (zie InvoiceVatCalculator).
+        var nets = list
+            .Select(l => (Net: l.Price - LineDiscount(l), Rate: l.VatPercentage))
+            .ToList();
+        var vatAmounts = ServiceCore.Invoicing.InvoiceVatCalculator.AllocateLineVat(nets);
+
+        return list
+            .Select((line, i) => ToInvoiceLineDto(line, nets[i].Net, vatAmounts[i]))
+            .ToList();
+    }
+
+    private static decimal LineDiscount(InvoiceLineBO line) =>
+        line.DiscountAmount
             ?? (line.DiscountPercent.HasValue
                 ? Math.Round(line.Price * (line.DiscountPercent.Value / 100m), 2, MidpointRounding.AwayFromZero)
                 : 0m);
 
-        var net = line.Price - discount;
-        var vatAmount = Math.Round(net * (line.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+    private static InvoiceLineDto ToInvoiceLineDto(InvoiceLineBO line, decimal net, decimal vatAmount)
+    {
+        if (line == null) throw new ArgumentNullException(nameof(line));
+
         var total = net + vatAmount;
 
         return new InvoiceLineDto

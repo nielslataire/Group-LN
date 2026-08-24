@@ -31,12 +31,14 @@ namespace ServiceCore.Budget
         private readonly UnitOfWorkCore _uow;
         private readonly BouwIndexService _bouwIndex;
         private readonly BudgetFormulaService _formulaService;
+        private readonly BudgetActivityFormuleService _activityFormules;
 
-        public BudgetActivityService(UnitOfWorkCore uow, BouwIndexService bouwIndex, BudgetFormulaService formulaService)
+        public BudgetActivityService(UnitOfWorkCore uow, BouwIndexService bouwIndex, BudgetFormulaService formulaService, BudgetActivityFormuleService activityFormules)
         {
             _uow = uow;
             _bouwIndex = bouwIndex;
             _formulaService = formulaService;
+            _activityFormules = activityFormules;
         }
 
         private static decimal GevelLm(DALCore.Models.BudgetGevelElementen e)
@@ -187,6 +189,10 @@ namespace ServiceCore.Budget
                 : 0m;
             // ── Einde ruwbouw-voorstel ─────────────────────────────────────────────
 
+            // Bewerkbare formules (Instellingen → Budgetformules) hebben voorrang
+            // op de hardgecodeerde voorstellen hieronder.
+            var formuleEvaluaties = await _activityFormules.EvaluateAlleAsync(budgetVersieId);
+
             // Alle activiteiten inclusief lot-groep
             var activities = await _uow.Activities.GetNoTracking()
                 .Include(a => a.Group)
@@ -251,7 +257,23 @@ namespace ServiceCore.Budget
                             bo.IsManueel                   = lijn.IsManueel;
                         }
 
-                        if (isRuwbouw && ruwbouwVoorstelPerEenheid > 0)
+                        bool viaFormule = formuleEvaluaties.TryGetValue(activity.ActivityId, out var fEval)
+                                          && fEval.Totaal > 0 && aantalWoonComm > 0;
+                        if (viaFormule)
+                        {
+                            var fPerEenheid = Math.Round(fEval.Totaal / aantalWoonComm, 2);
+                            bo.VoorgesteldePrijsPerEenheid = fPerEenheid;
+                            bo.VoorstelEnkelPrijs          = fPerEenheid;
+                            bo.VoorstelEnkelHoeveelheid    = aantalWoonComm;
+                            bo.VoorstelEnkelEenheid        = "eenh.";
+                            bo.VoorstelEnkelLabel          = fEval.Label;
+                            bo.VoorstelEnkelDetail         = fEval.DetailRowsHtml;
+                            bo.VoorstelAantalEenheden      = aantalWoonComm;
+                            if (!heeftBestaandeLijn)
+                                bo.AlternatievePrijsPerEenheid = fPerEenheid;
+                        }
+
+                        if (!viaFormule && isRuwbouw && ruwbouwVoorstelPerEenheid > 0)
                         {
                             bo.VoorgesteldePrijsPerEenheid  = ruwbouwVoorstelPerEenheid;
                             bo.VoorstelRuwbouwPrijs         = ruwbouwPrijsGeind;
@@ -284,7 +306,7 @@ namespace ServiceCore.Budget
                         };
 
                         // ── Composite: ballustrades + zichtschermen (217) ─────
-                        if (activity.ActivityId == ActivityIdGevelsluitingCombi)
+                        if (!viaFormule && activity.ActivityId == ActivityIdGevelsluitingCombi)
                         {
                             var ballDeel  = ballustradePrijsGeind  * totaalBallustrade;
                             var zichtDeel = zichtschermenPrijsGeind * totaalZichtscherm;
@@ -318,7 +340,7 @@ namespace ServiceCore.Budget
                         bool isDaktimmerwerk = activity.ActivityId == ActivityIdDaktimmerwerk;
                         bool isDakBedekking  = activity.ActivityId == ActivityIdDakBedekking;
 
-                        if (isDaktimmerwerk || isDakBedekking)
+                        if (!viaFormule && (isDaktimmerwerk || isDakBedekking))
                         {
                             decimal totaalProject;
                             string  dakLabel;
@@ -383,7 +405,7 @@ namespace ServiceCore.Budget
                             }
                         }
 
-                        if (enkel.prijs > 0 && enkel.hoev > 0)
+                        if (!viaFormule && enkel.prijs > 0 && enkel.hoev > 0)
                         {
                             var ePerEenheid = aantalWoonComm > 0
                                 ? Math.Round(enkel.prijs * enkel.hoev / aantalWoonComm, 2)

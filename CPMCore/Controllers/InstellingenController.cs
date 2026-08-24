@@ -54,6 +54,7 @@ public class InstellingenController : BaseController
     private readonly ServiceCore.Budget.SIndexScraperService _sIndexScraper;
     private readonly ServiceCore.Budget.I2021SyncService _i2021Sync;
     private readonly CPMCore.Services.IMarketDataStatusService _marketDataStatus;
+    private readonly ServiceCore.Budget.BudgetActivityFormuleService _budgetFormules;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -69,7 +70,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync, CPMCore.Services.IMarketDataStatusService marketDataStatus)
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync, CPMCore.Services.IMarketDataStatusService marketDataStatus, ServiceCore.Budget.BudgetActivityFormuleService budgetFormules)
     {
         _logger = logger;
         _issuers = issuers;
@@ -87,6 +88,7 @@ public class InstellingenController : BaseController
         _sIndexScraper = sIndexScraper;
         _i2021Sync = i2021Sync;
         _marketDataStatus = marketDataStatus;
+        _budgetFormules = budgetFormules;
     }
 
     [HttpGet]
@@ -1890,6 +1892,75 @@ public class InstellingenController : BaseController
             k.Sleutel, k.Omschrijving, k.MateriaalId, k.MateriaalNaam,
             k.MateriaalReferentiePrijs, k.MateriaalEenheid
         }));
+    }
+
+    // ─── Budgetformules (voorstellen BudgetActivityLijnen) ─────────────────────
+
+    [HttpGet]
+    [Breadcrumb("Budgetformules")]
+    public async Task<IActionResult> BudgetFormules()
+    {
+        SetPageHeader("bx bx-math", "Budgetformules");
+
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = dashboard
+        };
+        var formulesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("BudgetFormules", "Instellingen", "Budgetformules")
+        {
+            Parent = instellingenIndex
+        };
+        ViewData["BreadcrumbNode"] = formulesNode;
+
+        var vm = new BudgetFormulesViewModel
+        {
+            Formules     = await _budgetFormules.GetFormulesAsync(),
+            Activiteiten = await _budgetFormules.GetActiviteitenAsync(),
+            TestVersies  = await _budgetFormules.GetTestVersiesAsync()
+        };
+        return View(vm);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetBudgetFormuleParameters(int? versieId)
+    {
+        var parameters = await _budgetFormules.GetParametersAsync(versieId);
+        return Json(parameters.Select(p => new { p.Naam, p.Omschrijving, p.Eenheid, p.Categorie, p.Waarde }));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> BudgetFormuleOpslaan([FromBody] BudgetFormuleOpslaanRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.Formule)) return BadRequest();
+        var r = await _budgetFormules.SaveAsync(req.ActivityId, req.Formule, req.Omschrijving, req.Actief);
+        var fout = r.Messages.FirstOrDefault(m => m.Type == BOCore.MessageType.Error)?.Message;
+        return Json(new { ok = r.Success, message = r.Success ? "Formule opgeslagen." : fout });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> BudgetFormuleDelete([FromBody] int id)
+    {
+        var r = await _budgetFormules.DeleteAsync(id);
+        var fout = r.Messages.FirstOrDefault(m => m.Type == BOCore.MessageType.Error)?.Message;
+        return Json(new { ok = r.Success, message = r.Success ? "Formule verwijderd." : fout });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> BudgetFormuleTest([FromBody] BudgetFormuleTestRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.Formule) || req.VersieId <= 0) return BadRequest();
+        var r = await _budgetFormules.TestAsync(req.VersieId, req.Formule);
+        return Json(new
+        {
+            ok              = r.Ok,
+            fout            = r.Fout,
+            totaal          = r.Totaal,
+            perEenheid      = r.PerEenheid,
+            aantalEenheden  = r.AantalEenheden,
+            onbekendeParams = r.OnbekendeParams,
+            termen          = r.Termen.Select(t => new { t.ExprNamen, t.ExprWaarden, t.Waarde })
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]

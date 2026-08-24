@@ -2,6 +2,7 @@
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
+using ServiceCore.Invoicing;
 using ServiceCore.Translators;
 using DALCore.Query;
 using System.Linq;
@@ -519,7 +520,7 @@ namespace ServiceCore
         private async Task PopulateTotalsAsync(InvoiceDetailBO detail, int invoiceId, CancellationToken ct)
         {
             decimal totalExcl = 0m;
-            decimal totalVat = 0m;
+            var netPerRate = new List<(decimal Net, decimal Rate)>();
 
             foreach (var line in detail.Lines)
             {
@@ -529,14 +530,12 @@ namespace ServiceCore
                         : 0m);
 
                 var net = line.Price - discount;
-                var vat = Math.Round(net * (line.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
-
                 totalExcl += net;
-                totalVat += vat;
+                netPerRate.Add((net, line.VatPercentage));
             }
 
             detail.TotalExclVat = Math.Round(totalExcl, 2, MidpointRounding.AwayFromZero);
-            detail.TotalVat = Math.Round(totalVat, 2, MidpointRounding.AwayFromZero);
+            detail.TotalVat = InvoiceVatCalculator.CalculateTotalVat(netPerRate);
             detail.TotalInclVat = Math.Round(detail.TotalExclVat + detail.TotalVat, 2, MidpointRounding.AwayFromZero);
 
             var balance = await _db.VwInvoiceBalance
@@ -548,7 +547,7 @@ namespace ServiceCore
                 detail.PaidAmount = balance.Paid;
                 detail.Balance = balance.Balance;
                 if (balance.GrossTotal.HasValue)
-                    detail.TotalInclVat = balance.GrossTotal.Value;
+                    detail.TotalInclVat = Math.Round(balance.GrossTotal.Value, 2, MidpointRounding.AwayFromZero);
             }
         }
 

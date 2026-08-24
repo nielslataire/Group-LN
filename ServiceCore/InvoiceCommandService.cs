@@ -5,6 +5,7 @@ using DALCore.Query;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
 using ServiceCore.Helpers;
+using ServiceCore.Invoicing;
 using ServiceCore.Translators;
 using System;
 using System.Collections.Generic;
@@ -117,7 +118,7 @@ namespace ServiceCore
                 // lines
                 bo.Lines ??= new List<InvoiceLineBO>();
                 decimal totalExcl = 0m;
-                decimal totalVat = 0m;
+                var netPerRate = new List<(decimal Net, decimal Rate)>();
                 foreach (var l in bo.Lines)
                 {
                     var resolvedVatTypeId = l.VatTypeId ?? bo.SelectedVatTypeId;
@@ -145,9 +146,8 @@ namespace ServiceCore
                         discPct = Math.Round((discAmt.Value / price) * 100m, 4, MidpointRounding.AwayFromZero);
 
                     var net = price - (discAmt ?? 0m);
-                    var vat = Math.Round(net * (vatPct / 100m), 2, MidpointRounding.AwayFromZero);
                     totalExcl += net;
-                    totalVat += vat;
+                    netPerRate.Add((net, vatPct));
 
                     _uow.InvoiceDetails.Add(new InvoicesDetails
                     {
@@ -169,6 +169,7 @@ namespace ServiceCore
                         // ConstructionValued / ChangeOrderDetailId blijven null
                     });
                 }
+                var totalVat = InvoiceVatCalculator.CalculateTotalVat(netPerRate);
                 var grossTotal = Math.Round(totalExcl + totalVat, 2, MidpointRounding.AwayFromZero);
                 await _uow.SaveChangesAsync(ct);
 
@@ -932,7 +933,7 @@ namespace ServiceCore
                 return 0m;
 
             decimal totalExcl = 0m;
-            decimal totalVat = 0m;
+            var netPerRate = new List<(decimal Net, decimal Rate)>();
 
             foreach (var line in lines)
             {
@@ -947,12 +948,11 @@ namespace ServiceCore
                 }
 
                 var net = price - (discountAmount ?? 0m);
-                var vatRate = line.VatPercentage ?? 0m;
-                var vat = Math.Round(net * (vatRate / 100m), 2, MidpointRounding.AwayFromZero);
                 totalExcl += net;
-                totalVat += vat;
+                netPerRate.Add((net, line.VatPercentage ?? 0m));
             }
 
+            var totalVat = InvoiceVatCalculator.CalculateTotalVat(netPerRate);
             return Math.Round(totalExcl + totalVat, 2, MidpointRounding.AwayFromZero);
         }
 

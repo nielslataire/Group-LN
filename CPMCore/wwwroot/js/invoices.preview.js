@@ -131,6 +131,22 @@
         return roundCurrency((Number(a) || 0) + (Number(b) || 0));
     }
 
+    // Btw per tarief op de maatstaf (som van de nettobedragen), cumulatief verdeeld
+    // over de lijnen — zelfde methode als InvoiceVatCalculator server-side, zodat de
+    // preview exact toont wat er op de factuur komt.
+    let vatAllocState = new Map();
+
+    function allocateVat(excl, vatPerc) {
+        const rate = Number(vatPerc) || 0;
+        const s = vatAllocState.get(rate) || { base: 0, allocated: 0 };
+        s.base += (Number(excl) || 0);
+        const target = roundCurrency(s.base * rate / 100);
+        const vatAmt = roundCurrency(target - s.allocated);
+        s.allocated = target;
+        vatAllocState.set(rate, s);
+        return vatAmt;
+    }
+
     function sectionTable() {
         const $wrap = $(`
       <div class="table-responsive mb-3">
@@ -153,7 +169,7 @@
         $tables.append($wrap);
         return {
             pushRow(desc, qty, unit, excl, vatPerc) {
-                const vatAmt = roundCurrency(excl * (vatPerc / 100.0));
+                const vatAmt = allocateVat(excl, vatPerc);
                 const tot = addCurrency(excl, vatAmt);
                 const tr = $(`
           <tr>
@@ -278,6 +294,7 @@
     function rebuildPreview() {
         updateHeader();
         $tables.empty();
+        vatAllocState = new Map();
 
         let sub = 0, vat = 0, tot = 0, any = false;
         const sign = getCreditSign();

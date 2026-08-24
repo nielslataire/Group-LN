@@ -2409,7 +2409,7 @@ namespace CPMCore.Controllers
                 Email = bo.ClientEmail
             };
 
-            vm.Lines = bo.Lines.Select(MapDetailLine).ToList();
+            vm.Lines = MapLinesForEdit(bo.Lines).Select(ToDetailLine).ToList();
             vm.IsCreditNote = DetermineCreditNote(bo.IsCreditNote, bo.StatusName, bo.TotalInclVat);
             return vm;
         }
@@ -2435,7 +2435,7 @@ namespace CPMCore.Controllers
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),
                 IsCreditNote = DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat),
-                Lines = (detail.Lines ?? Enumerable.Empty<InvoiceLineBO>()).Select(MapLineForEdit).ToList()
+                Lines = MapLinesForEdit(detail.Lines)
             };
         }
 
@@ -2504,36 +2504,40 @@ namespace CPMCore.Controllers
                 
         }
 
-        private static InvoiceLineEditVM MapLineForEdit(InvoiceLineBO line)
+        private static List<InvoiceLineEditVM> MapLinesForEdit(IEnumerable<InvoiceLineBO>? lines)
         {
-            if (line == null) throw new ArgumentNullException(nameof(line));
+            var list = (lines ?? Enumerable.Empty<InvoiceLineBO>()).ToList();
 
-            var discount = line.DiscountAmount
-                ?? (line.DiscountPercent.HasValue
-                    ? Math.Round(line.Price * (line.DiscountPercent.Value / 100m), 2, MidpointRounding.AwayFromZero)
-                    : 0m);
+            // Btw per tarief op de maatstaf, cumulatief verdeeld over de lijnen zodat de
+            // getoonde lijnbedragen exact optellen tot de factuurtotalen (zie InvoiceVatCalculator).
+            var nets = list.Select(l =>
+            {
+                var discount = l.DiscountAmount
+                    ?? (l.DiscountPercent.HasValue
+                        ? Math.Round(l.Price * (l.DiscountPercent.Value / 100m), 2, MidpointRounding.AwayFromZero)
+                        : 0m);
+                return (Net: l.Price - discount, Rate: l.VatPercentage, Discount: discount);
+            }).ToList();
 
-            var net = line.Price - discount;
-            var vat = Math.Round(net * (line.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
-            var gross = net + vat;
+            var vatAmounts = ServiceCore.Invoicing.InvoiceVatCalculator.AllocateLineVat(
+                nets.Select(n => (n.Net, n.Rate)).ToList());
 
-            return new InvoiceLineEditVM
+            return list.Select((line, i) => new InvoiceLineEditVM
             {
                 LineId = line.Id,
                 Text = line.Text ?? string.Empty,
                 GroupName = line.GroupName,
                 VatRate = line.VatPercentage,
-                NetAmount = RoundCurrency(net),
-                VatAmount = RoundCurrency(vat),
-                GrossAmount = RoundCurrency(gross),
-                DiscountAmount = discount != 0 ? RoundCurrency(discount) : (decimal?)null,
+                NetAmount = RoundCurrency(nets[i].Net),
+                VatAmount = RoundCurrency(vatAmounts[i]),
+                GrossAmount = RoundCurrency(nets[i].Net + vatAmounts[i]),
+                DiscountAmount = nets[i].Discount != 0 ? RoundCurrency(nets[i].Discount) : (decimal?)null,
                 DiscountPercent = line.DiscountPercent
-            };
+            }).ToList();
         }
 
-        private static InvoiceDetailLineVM MapDetailLine(InvoiceLineBO line)
+        private static InvoiceDetailLineVM ToDetailLine(InvoiceLineEditVM editLine)
         {
-            var editLine = MapLineForEdit(line);
             return new InvoiceDetailLineVM
             {
                 Text = editLine.Text,

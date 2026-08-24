@@ -100,6 +100,7 @@ namespace DALCore
         public GenericRepository<KmIndexType>               KmIndexTypes          { get; }
         public GenericRepository<KostprijsMateriaal>        KostprijsMaterialen   { get; }
         public GenericRepository<KostprijsFormulaKoppeling> FormulaKoppelingen    { get; }
+        public GenericRepository<BudgetActivityFormule>     BudgetActivityFormules { get; }
         public GenericRepository<ProjectKostprijs>   ProjectKostprijzen   { get; }
         public GenericRepository<BouwkostPercentageGroep> BouwkostPercentageGroepen { get; }
         public GenericRepository<BouwkostPercentage>      BouwkostPercentages       { get; }
@@ -214,6 +215,7 @@ namespace DALCore
             KmIndexTypes          = new GenericRepository<KmIndexType>(_context);
             KostprijsMaterialen   = new GenericRepository<KostprijsMateriaal>(_context);
             FormulaKoppelingen    = new GenericRepository<KostprijsFormulaKoppeling>(_context);
+            BudgetActivityFormules = new GenericRepository<BudgetActivityFormule>(_context);
             ProjectKostprijzen   = new GenericRepository<ProjectKostprijs>(_context);
             BouwkostPercentageGroepen = new GenericRepository<BouwkostPercentageGroep>(_context);
             BouwkostPercentages       = new GenericRepository<BouwkostPercentage>(_context);

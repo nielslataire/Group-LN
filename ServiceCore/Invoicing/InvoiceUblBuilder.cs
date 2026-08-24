@@ -34,6 +34,18 @@ namespace ServiceCore.Invoicing
             var lines = detail.Lines ?? new List<InvoiceLineBO>();
             var lineData = lines.Select((line, index) => BuildLineData(line, index + 1)).ToList();
 
+            // Btw per tarief op de maatstaf berekenen en terugverdelen over de lijnen,
+            // zodat TaxAmount = TaxableAmount × tarief (Peppol BR-CO-17) en alles optelt.
+            var allocatedVat = InvoiceVatCalculator.AllocateLineVat(
+                lineData.Select(l => (l.Net, l.VatRate)).ToList());
+            lineData = lineData
+                .Select((l, i) => l with
+                {
+                    VatAmount = allocatedVat[i],
+                    Gross = Math.Round(l.Net + allocatedVat[i], 2, MidpointRounding.AwayFromZero)
+                })
+                .ToList();
+
             var totals = CalculateTotals(lineData);
             var taxGroups = lineData
                 .GroupBy(l => l.VatRate)
@@ -99,10 +111,9 @@ namespace ServiceCore.Invoicing
 
             var net = Math.Round(line.Price - discount, 2, MidpointRounding.AwayFromZero);
             var vatRate = Math.Max(0m, line.VatPercentage);
-            var vatAmount = Math.Round(net * vatRate / 100m, 2, MidpointRounding.AwayFromZero);
-            var gross = Math.Round(net + vatAmount, 2, MidpointRounding.AwayFromZero);
 
-            return new LineData(index, line.Text ?? string.Empty, net, vatAmount, gross, vatRate);
+            // VatAmount en Gross worden na de per-tarief-verdeling ingevuld (zie Build).
+            return new LineData(index, line.Text ?? string.Empty, net, 0m, net, vatRate);
         }
 
         private static Totals CalculateTotals(IEnumerable<LineData> lines)
