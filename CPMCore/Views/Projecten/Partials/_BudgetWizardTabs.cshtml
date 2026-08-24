@@ -1,6 +1,8 @@
 @using CPMCore.Controllers
 @model CPMCore.Models.Projecten.BudgetWizardTabsModel
+@inject ServiceCore.Budget.BudgetActivityFormuleService FormuleSvc
 @{
+    var poortWaarschuwing = await FormuleSvc.IsPoortWaarschuwingAsync(Model.VersieId);
     var steps = new[]
     {
         (1, "Gegevens",           Url.Action("BudgetGegevens",    "Projecten", new { versieId = Model.VersieId })),
@@ -37,6 +39,12 @@
                         }
                     </span>
                     <span class="bw-step__label">@label</span>
+                    @if (num == 1 && poortWaarschuwing)
+                    {
+                        <i class="fas fa-exclamation-triangle text-danger ms-1"
+                           data-bs-toggle="tooltip" data-bs-placement="top"
+                           title="Type poorten nog niet geselecteerd op het tabblad Gegevens."></i>
+                    }
                 </a>
             }
             else
@@ -44,6 +52,12 @@
                 <div class="bw-step @cls">
                     <span class="bw-step__circle">@(isDone ? "" : num.ToString())</span>
                     <span class="bw-step__label">@label</span>
+                    @if (num == 1 && poortWaarschuwing)
+                    {
+                        <i class="fas fa-exclamation-triangle text-danger ms-1"
+                           data-bs-toggle="tooltip" data-bs-placement="top"
+                           title="Type poorten nog niet geselecteerd op het tabblad Gegevens."></i>
+                    }
                 </div>
             }
 
@@ -65,3 +79,10 @@
         </div>
     }
 </div>
+
+@if (poortWaarschuwing)
+{
+    <script>
+        document.querySelectorAll('.bw-tab-bar [data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    </script>
+}

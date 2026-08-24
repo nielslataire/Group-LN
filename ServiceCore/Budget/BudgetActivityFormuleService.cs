@@ -84,6 +84,10 @@ public class BudgetActivityFormuleService
         ("aantal_wooncomm",          "Aantal woon-/commerciële eenheden (deler voor prijs per eenheid)",        "st",   "Aantallen"),
         ("verdiepingen_ondergronds", "Aantal verdiepingen ondergronds (tab Gegevens)",                          "st",   "Aantallen"),
         ("aantal_veluxen",           "Aantal veluxen (tab Dak & afbraak)",                                      "st",   "Aantallen"),
+        ("aantal_garages_bovengronds", "Aantal rijen op tab Oppervlaktes met subtype 'Bovengrondse garage'", "st", "Aantallen"),
+        ("aantal_garages_ondergronds", "Aantal rijen op tab Oppervlaktes met subtype 'Ondergrondse garage'",  "st", "Aantallen"),
+        ("aantal_poorten_sectionaal", "Aantal garages waarvoor een sectionaalpoort telt (0 als een ander type gekozen is)", "st", "Aantallen"),
+        ("aantal_poorten_kantel",    "Aantal garages waarvoor een kantelpoort telt (0 als een ander type gekozen is)",     "st", "Aantallen"),
 
         ("opp_gba",                  "Totale bewoonbare oppervlakte (GBA)",                                     "m²",   "Oppervlaktes"),
         ("opp_ruwbouw",              "Ruwbouwoppervlakte (GBA + garages + kelder + berging + doorrit + gemene delen + 30% zolder + 25% platdak)", "m²", "Oppervlaktes"),
@@ -192,6 +196,7 @@ public class BudgetActivityFormuleService
 
         var opps = await _uow.BudgetOppervlaktes.GetNoTracking()
             .Include(o => o.UnitGroupType)
+            .Include(o => o.UnitType)
             .Where(o => o.BudgetVersieId == budgetVersieId)
             .ToListAsync();
 
@@ -229,12 +234,28 @@ public class BudgetActivityFormuleService
         var m2Funder      = gegevensBO.OppFunderingen ?? 0m;
         var totaalGarBerg = opps.Sum(o => o.GarBergOndergronds);
 
+        // Een "garage" is een rij op tab Oppervlaktes met UnitType "Bovengrondse garage" / "Ondergrondse garage"
+        // (subtype-dropdown), niet een oppervlakte-waarde > 0 — die velden blijven vaak 0 voor garagerijen.
+        static bool IsGarageType(BudgetOppervlaktes o, string richting) =>
+            o.UnitType != null
+            && o.UnitType.Name.Contains("garage", StringComparison.OrdinalIgnoreCase)
+            && o.UnitType.Name.Contains(richting, StringComparison.OrdinalIgnoreCase);
+
+        var aantalGaragesBovengronds = opps.Count(o => IsGarageType(o, "boven"));
+        var aantalGaragesOndergronds = opps.Count(o => IsGarageType(o, "onder"));
+        var aantalPoorten            = aantalGaragesBovengronds + aantalGaragesOndergronds;
+        var typePoorten               = dbGeg?.TypePoorten;
+
         var waarden = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
         {
             ["aantal_eenheden"]          = aantalEenheden,
             ["aantal_wooncomm"]          = aantalWoonComm,
             ["verdiepingen_ondergronds"] = gegevensBO.AantalVerdiepingenOndergronds,
             ["aantal_veluxen"]           = gegevensBO.AantalVeluxen ?? 0,
+            ["aantal_garages_bovengronds"] = aantalGaragesBovengronds,
+            ["aantal_garages_ondergronds"] = aantalGaragesOndergronds,
+            ["aantal_poorten_sectionaal"]  = typePoorten == "Sectionaalpoort" ? aantalPoorten : 0,
+            ["aantal_poorten_kantel"]      = typePoorten == "Kantelpoort"     ? aantalPoorten : 0,
 
             ["opp_gba"]                  = opps.Sum(o => o.BewoonbareOpp),
             ["opp_ruwbouw"]              = totOppRuwbouw,
@@ -287,6 +308,25 @@ public class BudgetActivityFormuleService
         }
 
         return waarden;
+    }
+
+    // Licht gewicht check (geen volledige parameterberekening) voor het waarschuwingsicoon
+    // op tab Gegevens: garages ingegeven op tab Oppervlaktes, maar nog geen type poorten gekozen.
+    public async Task<bool> IsPoortWaarschuwingAsync(int budgetVersieId)
+    {
+        var typePoorten = await _uow.BudgetGegevens.GetNoTracking()
+            .Where(g => g.BudgetVersieId == budgetVersieId)
+            .Select(g => g.TypePoorten)
+            .SingleOrDefaultAsync();
+
+        var unitTypeNamen = await _uow.BudgetOppervlaktes.GetNoTracking()
+            .Where(o => o.BudgetVersieId == budgetVersieId && o.UnitType != null)
+            .Select(o => o.UnitType.Name)
+            .ToListAsync();
+
+        var heeftGarages = unitTypeNamen.Any(n => n.Contains("garage", StringComparison.OrdinalIgnoreCase));
+
+        return heeftGarages && (string.IsNullOrWhiteSpace(typePoorten) || typePoorten == "Geen");
     }
 
     // ── CRUD ─────────────────────────────────────────────────────────────────

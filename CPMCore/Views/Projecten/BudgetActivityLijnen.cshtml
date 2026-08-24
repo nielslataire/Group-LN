@@ -101,7 +101,13 @@
                             </span>
                             <span class="text-muted small align-self-center">(I/I₀)×0.40 + (S/S₀)×0.40 + 0.20</span>
                         </div>
-                        <div class="col-md-auto ms-md-auto d-flex gap-2">
+                        <div class="col-md-auto ms-md-auto d-flex align-items-center gap-2">
+                            <div class="form-check form-switch mb-0 me-1">
+                                <input class="form-check-input" type="checkbox" role="switch" id="chkAltFilter" checked>
+                                <label class="form-check-label small text-muted user-select-none" for="chkAltFilter">
+                                    Enkel rijen met alt. totaal
+                                </label>
+                            </div>
                             <select class="form-select form-select-sm" id="ddlBronProject" style="min-width:200px">
                                 <option value="">Kies bronproject...</option>
                                 @foreach (var item in Model.BeschikbareProjecten)
@@ -281,7 +287,20 @@
         herbereken($tr);
         herberekenLotTotalen($tbody);
         updateKPIs();
+        applyAltTotaalFilter();
     });
+
+    // ── Filter: enkel rijen met een alt. totaal tonen ──────────────────────
+    function applyAltTotaalFilter() {
+        const onlyWithValue = $('#chkAltFilter').is(':checked');
+        $('.activity-row').each(function () {
+            const $tr      = $(this);
+            const altPrijs = parseFloat($tr.find('.alt-prijs').val()) || 0;
+            $tr.toggle(!onlyWithValue || altPrijs > 0);
+        });
+    }
+    $('#chkAltFilter').on('change', applyAltTotaalFilter);
+    applyAltTotaalFilter();
 
     // ── Formules toggle ────────────────────────────────────────────────────
     $('#btnToggleCalc').on('click', function () {

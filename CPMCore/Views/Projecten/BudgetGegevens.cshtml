@@ -2,7 +2,9 @@
 @using BOCore
 @using ServiceCore.Budget
 @model CPMCore.Models.Projecten.BudgetGegevensModel
+@inject ServiceCore.Budget.BudgetActivityFormuleService FormuleSvc
 @{
+    var poortWaarschuwing = await FormuleSvc.IsPoortWaarschuwingAsync(Model.VersieId);
     var currentYear = DateTime.Now.Year;
     Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.NacalcRuwbouwBasis,      out var fRuwbouw);
     Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.BovenbouwGevelmetselwerk, out var fGevel);
@@ -113,7 +115,15 @@
                                         </div>
                                     </div>
                                     <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.TypePoorten" class="form-label">Type poorten</label>
+                                        <label asp-for="Gegevens.TypePoorten" class="form-label">
+                                            Type poorten
+                                            @if (poortWaarschuwing)
+                                            {
+                                                <i class="fas fa-exclamation-triangle text-danger ms-1"
+                                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                                   title="De poorten moeten geselecteerd worden."></i>
+                                            }
+                                        </label>
                                         <select asp-for="Gegevens.TypePoorten" asp-items="Model.TypePoortenOptions"
                                                 class="form-select form-select-sm">
                                             <option value="">— kies type —</option>
@@ -451,6 +461,8 @@
     const terrasBasePrijs = @((terrasBasePrijs.HasValue ? terrasBasePrijs.Value.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "null"));
     const terrasIRef = @((terrasIRef > 0 ? terrasIRef.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "100"));
     const terrasSRef = @((terrasSRef > 0 ? terrasSRef.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) : "100"));
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
     function matFactor(iHuidig, sHuidig, iRef, sRef) {
         return (iHuidig / iRef) * 0.40 + (sHuidig / sRef) * 0.40 + 0.20;

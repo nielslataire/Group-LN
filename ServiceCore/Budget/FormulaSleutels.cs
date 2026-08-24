@@ -22,6 +22,10 @@ public static class FormulaSleutels {
     public const string GevelsluitingBallustrades      = "gevelsluiting_ballustrades";
     public const string GevelsluitingZichtschermen     = "gevelsluiting_zichtschermen";
     public const string GevelsluitingLeien             = "gevelsluiting_leien";
+    // ── Poorten ──────────────────────────────────────────────────────────────
+    public const string PoortSectionaal                = "poorten_sectionaalpoort";
+    public const string PoortKantelpoort               = "poorten_kantelpoort";
+    public const string Sleutelcombinatie               = "sleutelcombinatie";
     // Voeg hier nieuwe sleutels toe zodra een nieuw formule-veld wordt aangemaakt.
     // Voeg ook een corresponderende rij toe in KostprijsFormulaKoppeling.sql.
 }
