@@ -1,171 +1,223 @@
+@using System.Text.Json
 @model CPMCore.Models.BudgetFormulesViewModel
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var bestaandeActivityIds = Model.Formules.Select(f => f.ActivityId).ToHashSet();
+    var jsonOpts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var formulesJson     = JsonSerializer.Serialize(Model.Formules.Select(f => new {
+        f.Id, f.ActivityId, f.ActivityOmschrijving, f.LotNaam, f.LotNummer,
+        f.Formule, f.Omschrijving, f.Actief,
+        laatstGewijzigd = f.LaatstGewijzigd.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+    }), jsonOpts);
+    var activiteitenJson = JsonSerializer.Serialize(Model.Activiteiten, jsonOpts);
 }
 
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/instellingen-custom.css" />
     <style>
+        .bf-shell { display: flex; flex-direction: column; gap: 1rem; }
+
+        /* ── Header ── */
+        .bf-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+        .bf-header-left { display: flex; align-items: flex-start; gap: .75rem; }
+        .bf-back {
+            display: flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: .5rem; flex-shrink: 0; margin-top: .1rem;
+            background: var(--white, #fff); border: 1px solid var(--border, #dee2e6);
+            color: inherit; font-size: 1.1rem;
+        }
+        .bf-back:hover { background: var(--bs-primary-bg-subtle, #e8f0fe); }
+        .bf-title { font-weight: 700; margin: 0; font-size: 1.4rem; }
+        .bf-subtitle { margin: .15rem 0 0; color: #6c757d; font-size: .9rem; }
+        .bf-header-right { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+        .bf-test-picker {
+            display: flex; align-items: center; gap: .5rem;
+            background: var(--white, #fff); border: 1px solid var(--border, #dee2e6);
+            border-radius: .5rem; padding: .3rem .6rem; font-size: .85rem; color: #6c757d;
+        }
+        .bf-test-picker select { border: 0; box-shadow: none; padding-left: 0; min-width: 220px; }
+
+        /* ── Body: 3 kolommen ── */
+        .bf-body { display: flex; align-items: flex-start; gap: 1rem; }
+        .bf-panel {
+            background: var(--white, #fff); border: 1px solid var(--border, #dee2e6);
+            border-radius: var(--radius, .5rem); display: flex; flex-direction: column;
+            position: sticky; top: 90px; max-height: calc(100vh - 110px);
+        }
+        .bf-sidebar-list  { flex: 0 0 300px; width: 300px; }
+        .bf-sidebar-params{ flex: 0 0 340px; width: 340px; }
+        .bf-editor { flex: 1 1 auto; min-width: 0; }
+
+        .bf-panel-header {
+            display: flex; align-items: baseline; justify-content: space-between;
+            padding: .85rem 1rem .5rem; flex-shrink: 0;
+        }
+        .bf-eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6c757d; }
+        .bf-count, .bf-hint { font-size: .75rem; color: #adb5bd; }
+
+        .bf-search { position: relative; margin: 0 1rem .5rem; flex-shrink: 0; }
+        .bf-search i { position: absolute; left: .6rem; top: 50%; transform: translateY(-50%); color: #adb5bd; font-size: .95rem; }
+        .bf-search input {
+            width: 100%; padding: .35rem .6rem .35rem 1.85rem; font-size: .82rem;
+            border: 1px solid var(--border, #dee2e6); border-radius: .4rem; background: #f8f9fb;
+        }
+        .bf-search input:focus { outline: none; border-color: #86b7fe; background: #fff; }
+
+        .bf-filters { display: flex; gap: .4rem; margin: 0 1rem .6rem; flex-shrink: 0; }
+        .bf-filters select { font-size: .78rem; padding: .25rem .4rem; }
+
+        .bf-list { flex: 1 1 auto; overflow-y: auto; padding-bottom: .5rem; }
+        .bf-lot-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: .4rem 1rem; font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+            color: #adb5bd; text-transform: uppercase; background: #f8f9fb;
+            position: sticky; top: 0; z-index: 1;
+        }
+        .bf-item {
+            display: flex; align-items: flex-start; gap: .55rem;
+            padding: .5rem 1rem; cursor: pointer; border-left: 3px solid transparent;
+        }
+        .bf-item:hover { background: #f8f9fb; }
+        .bf-item.active { background: var(--bs-primary-bg-subtle, #e8f0fe); border-left-color: var(--bs-primary, #0d6efd); }
+        .bf-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: .4rem; flex-shrink: 0; }
+        .bf-dot.on  { background: #2fb344; }
+        .bf-dot.off { background: #ced4da; }
+        .bf-item-title { font-size: .84rem; font-weight: 600; line-height: 1.25; }
+        .bf-item-preview {
+            font-family: Consolas, Monaco, 'Courier New', monospace; font-size: .71rem; color: #6c757d;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: .1rem;
+        }
+        .bf-list-empty { padding: 1.5rem 1rem; text-align: center; color: #adb5bd; font-size: .82rem; }
+        .bf-list-footer {
+            flex-shrink: 0; padding: .55rem 1rem; font-size: .75rem; color: #6c757d;
+            border-top: 1px solid var(--border, #dee2e6); text-align: center;
+        }
+
+        /* ── Editor ── */
+        .bf-editor-empty {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: .5rem; padding: 4rem 1rem; color: #adb5bd; text-align: center; height: 100%;
+        }
+        .bf-editor-empty i { font-size: 2.2rem; }
+        .bf-editor-topbar { display: flex; align-items: center; gap: .65rem; padding: 1rem 1.25rem .25rem; flex-wrap: wrap; }
+        .bf-badge { font-size: .72rem; font-weight: 600; padding: .3rem .55rem; }
+        .bf-editor-title { font-size: 1rem; font-weight: 700; margin: 0; }
+        .bf-editor-body { padding: .75rem 1.25rem 1.25rem; }
+        .bf-label { font-size: .78rem; font-weight: 600; color: #495057; margin-bottom: .3rem; display: block; }
+        .bf-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin-bottom: .9rem; }
+        .bf-row-1 { margin-bottom: .9rem; }
+        .bf-row-1-meta { display: flex; align-items: flex-end; gap: .9rem; margin-bottom: .9rem; flex-wrap: wrap; }
+        .bf-row-1-meta > div:first-child { flex: 1 1 260px; }
+        .bf-meta-text { font-size: .78rem; color: #adb5bd; padding-bottom: .35rem; }
+
         .formule-editor {
             font-family: Consolas, Monaco, 'Courier New', monospace;
-            font-size: .85rem;
-            line-height: 1.5;
-            min-height: 70px;
-            resize: vertical;
+            font-size: .85rem; line-height: 1.6; min-height: 130px; resize: vertical;
         }
-        .formule-card .card-header { background: transparent; }
-        .formule-lot-badge { font-size: .7rem; }
+        .bf-hintbar {
+            display: flex; flex-wrap: wrap; gap: 1.1rem; font-size: .74rem; color: #adb5bd;
+            margin-top: .5rem;
+        }
+        .bf-hintbar code { font-size: .74rem; background: none; color: #6c757d; padding: 0; }
+        .bf-actions { display: flex; align-items: center; gap: .5rem; margin-top: .9rem; }
 
-        /* @@-autocomplete dropdown */
+        /* ── @@-autocomplete dropdown ── */
         .param-suggest {
-            position: absolute;
-            z-index: 1060;
-            background: var(--white, #fff);
-            border: 1px solid var(--border, #dee2e6);
-            border-radius: .375rem;
-            box-shadow: 0 6px 18px rgba(0,0,0,.12);
-            max-height: 280px;
-            overflow-y: auto;
-            display: none;
+            position: absolute; z-index: 1060; background: var(--white, #fff);
+            border: 1px solid var(--border, #dee2e6); border-radius: .375rem;
+            box-shadow: 0 6px 18px rgba(0,0,0,.12); max-height: 280px; overflow-y: auto; display: none;
         }
-        .param-suggest .item {
-            padding: .35rem .65rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: baseline;
-        }
-        .param-suggest .item.active,
-        .param-suggest .item:hover { background: var(--bs-primary-bg-subtle, #e8f0fe); }
+        .param-suggest .item { padding: .35rem .65rem; cursor: pointer; display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+        .param-suggest .item.active, .param-suggest .item:hover { background: var(--bs-primary-bg-subtle, #e8f0fe); }
         .param-suggest .item .naam { font-family: Consolas, Monaco, monospace; font-size: .8rem; font-weight: 600; }
         .param-suggest .item .oms  { font-size: .72rem; color: #6c757d; flex: 1; text-align: left; }
         .param-suggest .item .val  { font-size: .75rem; color: #0d6efd; white-space: nowrap; }
 
-        /* Parameterreferentie */
-        .param-ref-table td { font-size: .78rem; vertical-align: top; }
-        .param-ref-table .p-naam { font-family: Consolas, Monaco, monospace; font-weight: 600; cursor: pointer; white-space: nowrap; }
-        .param-ref-table .p-naam:hover { color: #0d6efd; text-decoration: underline; }
-        .param-ref-table .p-waarde { text-align: right; white-space: nowrap; color: #0d6efd; }
-        .param-ref-sticky { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow-y: auto; }
+        /* ── Parameterpaneel ── */
+        .bf-param-list { flex: 1 1 auto; overflow-y: auto; padding-bottom: .5rem; }
+        .bf-param-cat {
+            padding: .4rem 1rem; font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+            color: #adb5bd; text-transform: uppercase; background: #f8f9fb;
+            position: sticky; top: 0; z-index: 1;
+        }
+        .bf-param-row { display: flex; align-items: baseline; gap: .5rem; padding: .3rem 1rem; cursor: pointer; }
+        .bf-param-row:hover { background: #f8f9fb; }
+        .bf-param-name {
+            font-family: Consolas, Monaco, monospace; font-size: .78rem; font-weight: 600;
+            color: #0d6efd; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .bf-param-val  { font-family: Consolas, Monaco, monospace; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+        .bf-param-unit { font-size: .68rem; color: #adb5bd; width: 2.2rem; text-align: right; flex-shrink: 0; }
 
         .test-result table td { font-size: .78rem; }
         .test-result .expr-namen { font-family: Consolas, Monaco, monospace; font-size: .72rem; color: #6c757d; }
+
+        @@media (max-width: 1199.98px) {
+            .bf-sidebar-params { display: none; }
+        }
+        @@media (max-width: 991.98px) {
+            .bf-body { flex-direction: column; }
+            .bf-sidebar-list { width: 100%; flex: 1 1 auto; position: static; max-height: none; }
+        }
     </style>
 }
 
-<div class="row">
-    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-            <h1 class="font-weight-bold mb-0 mt-0">Budgetformules</h1>
-            <h5 class="mb-4 mt-0">Bewerk de voorstel-formules per activiteit voor de pagina Activiteiten in de budgetwizard.</h5>
+<div class="bf-shell">
+    <div class="bf-header">
+        <div class="bf-header-left">
+            <a href="@Url.Action("Index", "Instellingen")" class="bf-back" title="Terug naar instellingen"><i class="bx bx-arrow-back"></i></a>
+            <div>
+                <h1 class="bf-title">Budgetformules</h1>
+                <p class="bf-subtitle">Voorstel-formules per activiteit voor de pagina Activiteiten in de budgetwizard</p>
+            </div>
         </div>
-    </div>
-</div>
-
-<div class="alert alert-info d-flex gap-2">
-    <i class="bx bx-info-circle fs-5"></i>
-    <div>
-        Een formule berekent het <strong>totaal voor het project</strong>; het voorstel per eenheid wordt automatisch
-        <em>totaal ÷ aantal woon-/commerciële eenheden</em> (<code>@@aantal_wooncomm</code>).
-        Typ <strong>@@</strong> in het formuleveld om een parameter te kiezen — bv. <code>@@aantal</code> toont alle parameters met "aantal".
-        Toegestaan: <code>+ − × ÷ ( )</code> en getallen (punt of komma als decimaalteken).
-    </div>
-</div>
-
-<div class="row g-4">
-    <div class="col-lg-8">
-
-        <div class="card card-modern mb-4">
-            <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center">
-                <label class="form-label mb-0 me-2"><i class="bx bx-test-tube me-1"></i>Testen met budgetversie:</label>
-                <select id="ddlTestVersie" class="form-select form-select-sm" style="max-width:380px">
-                    <option value="">— kies versie voor testwaarden —</option>
+        <div class="bf-header-right">
+            <div class="bf-test-picker">
+                <i class="bx bx-test-tube"></i>
+                <span>Testen met</span>
+                <select id="ddlTestVersie" class="form-select form-select-sm">
+                    <option value="">— kies versie —</option>
                     @foreach (var v in Model.TestVersies)
                     {
                         <option value="@v.Value">@v.Text</option>
                     }
                 </select>
             </div>
-        </div>
-
-        @foreach (var f in Model.Formules)
-        {
-            <div class="card card-modern formule-card mb-3" data-formule-id="@f.Id" data-activity-id="@f.ActivityId">
-                <div class="card-header border-0 pb-0 d-flex align-items-center gap-2">
-                    <span class="badge bg-primary formule-lot-badge">Lot @f.LotNummer.ToString("G", System.Globalization.CultureInfo.InvariantCulture)</span>
-                    <h2 class="card-title mb-0 fs-6">@f.ActivityOmschrijving</h2>
-                    <div class="form-check form-switch ms-auto mb-0" title="Formule actief">
-                        <input class="form-check-input chk-actief" type="checkbox" @(f.Actief ? "checked" : "") />
-                        <label class="form-check-label small text-muted">Actief</label>
-                    </div>
-                </div>
-                <div class="card-body pt-2">
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-4">
-                            <label class="form-label small mb-1">Label (popover-titel)</label>
-                            <input type="text" class="form-control form-control-sm inp-omschrijving" value="@f.Omschrijving" maxlength="300" />
-                        </div>
-                        <div class="col-md-8 text-md-end align-self-end small text-muted">
-                            Laatst gewijzigd: @f.LaatstGewijzigd.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
-                        </div>
-                    </div>
-                    <label class="form-label small mb-1">Formule (totaal project)</label>
-                    <textarea class="form-control formule-editor" spellcheck="false">@f.Formule</textarea>
-                    <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn btn-primary btn-sm btn-opslaan"><i class="bx bx-save me-1"></i>Opslaan</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm btn-test"><i class="bx bx-calculator me-1"></i>Test</button>
-                        <button type="button" class="btn btn-outline-danger btn-sm btn-verwijderen ms-auto"><i class="bx bx-trash"></i></button>
-                    </div>
-                    <div class="test-result mt-2"></div>
-                </div>
-            </div>
-        }
-
-        <div class="card card-modern formule-card mb-3" id="cardNieuweFormule" data-formule-id="0">
-            <div class="card-header border-0 pb-0">
-                <h2 class="card-title mb-0 fs-6"><i class="bx bx-plus-circle me-1"></i>Nieuwe formule</h2>
-            </div>
-            <div class="card-body pt-2">
-                <div class="row g-2 mb-2">
-                    <div class="col-md-8">
-                        <label class="form-label small mb-1">Activiteit</label>
-                        <select class="form-select form-select-sm sel-activity">
-                            <option value="">— kies activiteit —</option>
-                            @foreach (var a in Model.Activiteiten.Where(a => !bestaandeActivityIds.Contains(int.Parse(a.Value))))
-                            {
-                                <option value="@a.Value">@a.Text</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small mb-1">Label (popover-titel)</label>
-                        <input type="text" class="form-control form-control-sm inp-omschrijving" maxlength="300" />
-                    </div>
-                </div>
-                <label class="form-label small mb-1">Formule (totaal project)</label>
-                <textarea class="form-control formule-editor" spellcheck="false" placeholder="bv. @@mat_dakwerken_platdak * @@opp_platdak"></textarea>
-                <div class="d-flex gap-2 mt-2">
-                    <button type="button" class="btn btn-primary btn-sm btn-opslaan"><i class="bx bx-save me-1"></i>Opslaan</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm btn-test"><i class="bx bx-calculator me-1"></i>Test</button>
-                </div>
-                <div class="test-result mt-2"></div>
-            </div>
+            <button type="button" class="btn btn-success btn-sm" id="btnNieuweFormule">
+                <i class="bx bx-plus me-1"></i>Nieuwe formule
+            </button>
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card card-modern param-ref-sticky">
-            <div class="card-header border-0 pb-0">
-                <h2 class="card-title mb-0 fs-6"><i class="bx bx-code-curly me-1"></i>Beschikbare parameters</h2>
-                <p class="small text-muted mb-0">Klik op een naam om deze in de formule in te voegen.</p>
+    <div class="bf-body">
+        <aside class="bf-panel bf-sidebar-list">
+            <div class="bf-panel-header">
+                <span class="bf-eyebrow">Formules</span>
+                <span class="bf-count" id="lblFormuleCount"></span>
             </div>
-            <div class="card-body pt-2" id="paramRefContainer">
-                <div class="text-muted small">Parameters laden…</div>
+            <div class="bf-search"><i class="bx bx-search"></i><input type="text" id="inpZoekFormule" placeholder="Zoek activiteit of parameter..." /></div>
+            <div class="bf-filters">
+                <select id="ddlFilterLot" class="form-select form-select-sm"><option value="">Alle lots</option></select>
+                <select id="ddlFilterStatus" class="form-select form-select-sm">
+                    <option value="">Alle</option>
+                    <option value="actief">Actief</option>
+                    <option value="inactief">Inactief</option>
+                </select>
             </div>
-        </div>
+            <div class="bf-list" id="formuleList"></div>
+            <div class="bf-list-footer" id="lblStatusSamenvatting"></div>
+        </aside>
+
+        <main class="bf-panel bf-editor" id="editorPane"></main>
+
+        <aside class="bf-panel bf-sidebar-params">
+            <div class="bf-panel-header">
+                <span class="bf-eyebrow">Parameters</span>
+                <span class="bf-hint">klik = invoegen</span>
+            </div>
+            <div class="bf-search"><i class="bx bx-search"></i><input type="text" id="inpZoekParam" placeholder="Zoek parameter..." /></div>
+            <div class="bf-param-list" id="paramList"></div>
+        </aside>
     </div>
 </div>
 
@@ -179,52 +231,424 @@
     const urlDelete  = '@Url.Action("BudgetFormuleDelete", "Instellingen")';
     const urlTest    = '@Url.Action("BudgetFormuleTest", "Instellingen")';
 
-    let PARAMS = [];          // [{naam, omschrijving, eenheid, categorie, waarde}]
-    let lastEditor = null;    // laatst gefocust formuleveld (voor invoegen vanuit referentie)
+    let FORMULES     = @Html.Raw(formulesJson);
+    const ACTIVITEITEN = @Html.Raw(activiteitenJson);
+    let PARAMS = [];
+
+    let selectedId       = null;   // id van geselecteerde formule, of '__new__'
+    let previousSelectedId = null; // om naar terug te keren na Annuleren op een nieuwe formule
+    let lastEditor        = null;  // laatst gefocust formuleveld (voor @@-paramklik)
 
     const nlBE = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmt  = v => (v === null || v === undefined) ? '' : nlBE.format(v);
+    const lotFmt = n => Number(n).toFixed(1);
+    const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-    // ── Parameters laden + referentiepaneel ────────────────────────────────
+    function toonMelding(ok, message) {
+        if (typeof toastr !== 'undefined') { ok ? toastr.success(message) : toastr.error(message); }
+        else alert(message);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Linkerpaneel: lijst van formules
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function vulLotFilter() {
+        const ddl = document.getElementById('ddlFilterLot');
+        const lots = [...new Map(FORMULES.map(f => [f.lotNummer, f.lotNaam])).entries()]
+            .sort((a, b) => a[0] - b[0]);
+        ddl.innerHTML = '<option value="">Alle lots</option>' +
+            lots.map(([nr, naam]) => `<option value="${nr}">Lot ${lotFmt(nr)} — ${escapeHtml(naam)}</option>`).join('');
+    }
+
+    function gefilterdeFormules() {
+        const zoek   = document.getElementById('inpZoekFormule').value.trim().toLowerCase();
+        const lot    = document.getElementById('ddlFilterLot').value;
+        const status = document.getElementById('ddlFilterStatus').value;
+        return FORMULES.filter(f => {
+            if (lot && String(f.lotNummer) !== lot) return false;
+            if (status === 'actief' && !f.actief) return false;
+            if (status === 'inactief' && f.actief) return false;
+            if (zoek) {
+                const inNaam    = f.activityOmschrijving.toLowerCase().includes(zoek);
+                const inFormule = f.formule.toLowerCase().includes(zoek);
+                if (!inNaam && !inFormule) return false;
+            }
+            return true;
+        });
+    }
+
+    function renderFormuleList() {
+        const lijst = gefilterdeFormules();
+        const container = document.getElementById('formuleList');
+        document.getElementById('lblFormuleCount').textContent = `${lijst.length}/${FORMULES.length}`;
+
+        const actief   = FORMULES.filter(f => f.actief).length;
+        const inactief = FORMULES.length - actief;
+        document.getElementById('lblStatusSamenvatting').textContent = `${actief} actief · ${inactief} inactief`;
+
+        if (lijst.length === 0) {
+            container.innerHTML = '<div class="bf-list-empty">Geen formules gevonden.</div>';
+            return;
+        }
+
+        const groepen = new Map();
+        lijst.forEach(f => {
+            if (!groepen.has(f.lotNummer)) groepen.set(f.lotNummer, { naam: f.lotNaam, items: [] });
+            groepen.get(f.lotNummer).items.push(f);
+        });
+        const lotNrs = [...groepen.keys()].sort((a, b) => a - b);
+
+        let html = '';
+        lotNrs.forEach(nr => {
+            const groep = groepen.get(nr);
+            html += `<div class="bf-lot-header"><span>Lot ${lotFmt(nr)}</span><span>${groep.items.length}</span></div>`;
+            groep.items.forEach(f => {
+                html += `
+                <div class="bf-item ${f.id === selectedId ? 'active' : ''}" data-id="${f.id}">
+                    <span class="bf-dot ${f.actief ? 'on' : 'off'}"></span>
+                    <div class="bf-item-text">
+                        <div class="bf-item-title">${escapeHtml(f.activityOmschrijving)}</div>
+                        <div class="bf-item-preview">${escapeHtml(f.formule)}</div>
+                    </div>
+                </div>`;
+            });
+        });
+        container.innerHTML = html;
+
+        container.querySelectorAll('.bf-item').forEach(el => {
+            el.addEventListener('click', () => selectFormule(parseInt(el.dataset.id)));
+        });
+    }
+
+    document.getElementById('inpZoekFormule').addEventListener('input', renderFormuleList);
+    document.getElementById('ddlFilterLot').addEventListener('change', renderFormuleList);
+    document.getElementById('ddlFilterStatus').addEventListener('change', renderFormuleList);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Editorpaneel
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function selectFormule(id) {
+        selectedId = id;
+        renderFormuleList();
+        renderEditorVoorFormule(FORMULES.find(f => f.id === id));
+    }
+
+    function toonLegeState() {
+        selectedId = null;
+        renderFormuleList();
+        document.getElementById('editorPane').innerHTML = `
+            <div class="bf-editor-empty">
+                <i class="bx bx-function"></i>
+                <p>Selecteer een formule links, of maak een nieuwe aan.</p>
+            </div>`;
+    }
+
+    function hintbarHtml() {
+        return `
+            <div class="bf-hintbar">
+                <span>Typ <strong>@@</strong> of klik rechts een parameter</span>
+                <span>Toegestaan: <code>+ − × ÷ ( )</code></span>
+                <span>Voorwaarde: <code>ALS(x &gt; 4; a; b)</code></span>
+            </div>`;
+    }
+
+    function renderEditorVoorFormule(f) {
+        const pane = document.getElementById('editorPane');
+        pane.innerHTML = `
+            <div class="bf-editor-topbar">
+                <span class="badge bg-primary bf-badge">Lot ${lotFmt(f.lotNummer)}</span>
+                <h2 class="bf-editor-title">${escapeHtml(f.activityOmschrijving)}</h2>
+                <div class="form-check form-switch ms-auto mb-0" title="Formule actief">
+                    <input class="form-check-input" type="checkbox" id="edActief" ${f.actief ? 'checked' : ''} />
+                    <label class="form-check-label small text-muted">Actief</label>
+                </div>
+            </div>
+            <div class="bf-editor-body">
+                <div class="bf-row-1-meta">
+                    <div>
+                        <label class="bf-label">Label (popover-titel)</label>
+                        <input type="text" class="form-control form-control-sm" id="edLabel" maxlength="300" value="${escapeHtml(f.omschrijving ?? '')}" />
+                    </div>
+                    <div class="bf-meta-text">Laatst gewijzigd: ${f.laatstGewijzigd}</div>
+                </div>
+                <label class="bf-label">Formule (totaal project)</label>
+                <textarea class="form-control formule-editor" id="edFormule" spellcheck="false">${escapeHtml(f.formule)}</textarea>
+                ${hintbarHtml()}
+                <div class="bf-actions">
+                    <button class="btn btn-primary btn-sm" id="btnOpslaan"><i class="bx bx-save me-1"></i>Opslaan</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="btnTest"><i class="bx bx-calculator me-1"></i>Test</button>
+                    <button class="btn btn-outline-danger btn-sm ms-auto" id="btnVerwijderen" title="Formule verwijderen"><i class="bx bx-trash"></i></button>
+                </div>
+                <div class="test-result mt-2" id="edTestResult"></div>
+            </div>`;
+
+        wireEditorGedeeld();
+
+        document.getElementById('btnOpslaan').addEventListener('click', () => opslaan(f.activityId));
+        document.getElementById('btnVerwijderen').addEventListener('click', () => verwijderen(f.id));
+    }
+
+    function openNieuweFormule() {
+        previousSelectedId = selectedId;
+        selectedId = '__new__';
+        renderFormuleList();
+
+        // Alle activiteiten tonen (ongeacht of ze al een formule hebben) — kiezen van een
+        // activiteit die al gekoppeld is, bewerkt gewoon de bestaande formule (zie opslaan()).
+        const toegewezen = new Set(FORMULES.map(f => f.activityId));
+        const lots = [...new Map(ACTIVITEITEN.map(a => [a.lotNummer, a.lotNaam])).entries()]
+            .sort((a, b) => a[0] - b[0]);
+
+        const pane = document.getElementById('editorPane');
+        pane.innerHTML = `
+            <div class="bf-editor-topbar">
+                <span class="badge bg-success-subtle text-success bf-badge">Nieuw</span>
+                <h2 class="bf-editor-title">Nieuwe formule</h2>
+            </div>
+            <div class="bf-editor-body">
+                <div class="bf-row-2">
+                    <div>
+                        <label class="bf-label">Lot</label>
+                        <select class="form-select form-select-sm" id="edLot"></select>
+                    </div>
+                    <div>
+                        <label class="bf-label">Activiteit</label>
+                        <select class="form-select form-select-sm" id="edActiviteit"></select>
+                    </div>
+                </div>
+                <div class="bf-row-1">
+                    <label class="bf-label">Label (popover-titel)</label>
+                    <input type="text" class="form-control form-control-sm" id="edLabel" maxlength="300" placeholder="bv. Platte daken" />
+                </div>
+                <label class="bf-label">Formule (totaal project)</label>
+                <textarea class="form-control formule-editor" id="edFormule" spellcheck="false" placeholder="bv. @@mat_dakwerken_platdak * @@opp_platdak"></textarea>
+                ${hintbarHtml()}
+                <div class="bf-actions">
+                    <button class="btn btn-primary btn-sm" id="btnOpslaan"><i class="bx bx-save me-1"></i>Opslaan</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="btnTest"><i class="bx bx-calculator me-1"></i>Test</button>
+                    <button class="btn btn-link btn-sm text-muted ms-auto" id="btnAnnuleren">Annuleren</button>
+                </div>
+                <div class="test-result mt-2" id="edTestResult"></div>
+            </div>`;
+
+        const ddlLot = document.getElementById('edLot');
+        const ddlAct = document.getElementById('edActiviteit');
+
+        if (lots.length === 0) {
+            ddlLot.innerHTML = '<option value="">— geen activiteiten beschikbaar —</option>';
+            ddlAct.innerHTML = '<option value="">— kies activiteit —</option>';
+        } else {
+            ddlLot.innerHTML = lots.map(([nr, naam]) => `<option value="${nr}">Lot ${lotFmt(nr)} — ${escapeHtml(naam)}</option>`).join('');
+            const vulActiviteiten = () => {
+                const gekozenLot = ddlLot.value;
+                const opties = ACTIVITEITEN.filter(a => String(a.lotNummer) === gekozenLot);
+                ddlAct.innerHTML = '<option value="">— kies activiteit —</option>' +
+                    opties.map(a => {
+                        const heeftAl = toegewezen.has(a.activityId);
+                        return `<option value="${a.activityId}">${escapeHtml(a.activityOmschrijving)}${heeftAl ? ' (heeft al een formule)' : ''}</option>`;
+                    }).join('');
+            };
+            ddlLot.addEventListener('change', vulActiviteiten);
+            vulActiviteiten();
+            ddlAct.addEventListener('change', () => {
+                const id = parseInt(ddlAct.value || '0');
+                if (id && toegewezen.has(id)) {
+                    toonMelding(true, 'Deze activiteit heeft al een formule — je bewerkt hem hier.');
+                    document.getElementById('edFormule').value = FORMULES.find(f => f.activityId === id).formule;
+                    document.getElementById('edLabel').value = FORMULES.find(f => f.activityId === id).omschrijving ?? '';
+                }
+            });
+        }
+
+        wireEditorGedeeld();
+
+        document.getElementById('btnOpslaan').addEventListener('click', () => opslaan(parseInt(ddlAct.value || '0')));
+        document.getElementById('btnAnnuleren').addEventListener('click', () => {
+            if (previousSelectedId != null && FORMULES.some(f => f.id === previousSelectedId)) selectFormule(previousSelectedId);
+            else toonLegeState();
+        });
+    }
+
+    document.getElementById('btnNieuweFormule').addEventListener('click', openNieuweFormule);
+
+    // Gedeelde bedrading voor het formuleveld (autocomplete) en de Test-knop —
+    // identiek voor het bewerk- en het nieuw-formulier.
+    function wireEditorGedeeld() {
+        const editor = document.getElementById('edFormule');
+        lastEditor = editor;
+        editor.addEventListener('focus', () => { lastEditor = editor; });
+        editor.addEventListener('input', () => updateSuggest(editor));
+        editor.addEventListener('click', () => updateSuggest(editor));
+        editor.addEventListener('blur', () => setTimeout(sluitSuggest, 150));
+        editor.addEventListener('keydown', e => {
+            if (suggest.style.display !== 'block') return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const delta = e.key === 'ArrowDown' ? 1 : -1;
+                suggestIndex = (suggestIndex + delta + suggestItems.length) % suggestItems.length;
+                suggest.querySelectorAll('.item').forEach((el, i) => el.classList.toggle('active', i === suggestIndex));
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                kiesSuggest(suggestIndex);
+            } else if (e.key === 'Escape') {
+                sluitSuggest();
+            }
+        });
+
+        document.getElementById('btnTest').addEventListener('click', testFormule);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Opslaan / testen / verwijderen
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function opslaan(activityId) {
+        const editor = document.getElementById('edFormule');
+        const label  = document.getElementById('edLabel');
+        const actiefEl = document.getElementById('edActief');
+        if (!activityId) { toonMelding(false, 'Kies eerst een activiteit.'); return; }
+        if (!editor.value.trim()) { toonMelding(false, 'Formule is leeg.'); return; }
+
+        const btn = document.getElementById('btnOpslaan');
+        btn.disabled = true;
+        fetch(urlOpslaan, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                activityId:   activityId,
+                formule:      editor.value,
+                omschrijving: label.value,
+                actief:       actiefEl ? actiefEl.checked : true
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            toonMelding(res.ok, res.message);
+            if (res.ok && res.formule) {
+                const idx = FORMULES.findIndex(x => x.activityId === res.formule.activityId);
+                if (idx >= 0) FORMULES[idx] = res.formule; else FORMULES.push(res.formule);
+                vulLotFilter();
+                selectFormule(res.formule.id);
+            }
+        })
+        .catch(() => toonMelding(false, 'Verbindingsfout.'))
+        .finally(() => { btn.disabled = false; });
+    }
+
+    function testFormule() {
+        const editor = document.getElementById('edFormule');
+        const resultDiv = document.getElementById('edTestResult');
+        const versieId = document.getElementById('ddlTestVersie').value;
+        if (!versieId) { toonMelding(false, 'Kies eerst een budgetversie om mee te testen.'); return; }
+        if (!editor.value.trim()) { toonMelding(false, 'Formule is leeg.'); return; }
+
+        fetch(urlTest, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ versieId: parseInt(versieId), formule: editor.value })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) {
+                resultDiv.innerHTML = `<div class="alert alert-danger py-2 small mb-0">${res.fout}</div>`;
+                return;
+            }
+            let html = '';
+            if (res.onbekendeParams && res.onbekendeParams.length)
+                html += `<div class="alert alert-warning py-1 small mb-2">Onbekende parameter(s): ${res.onbekendeParams.join(', ')} — deze tellen als 0.</div>`;
+            html += '<table class="table table-sm mb-0"><tbody>';
+            res.termen.forEach(t => {
+                html += `<tr>
+                    <td class="expr-namen">${t.exprNamen}</td>
+                    <td class="text-end text-muted">${t.exprWaarden}</td>
+                    <td class="text-end fw-semibold" style="white-space:nowrap">= € ${fmt(t.waarde)}</td></tr>`;
+            });
+            html += `<tr class="border-top">
+                <td colspan="2"><strong>Totaal project</strong></td>
+                <td class="text-end fw-bold" style="white-space:nowrap">€ ${fmt(res.totaal)}</td></tr>`;
+            html += `<tr>
+                <td colspan="2">÷ ${res.aantalEenheden} eenheden</td>
+                <td class="text-end fw-bold text-primary" style="white-space:nowrap">= € ${fmt(res.perEenheid)}/eenh.</td></tr>`;
+            html += '</tbody></table>';
+            resultDiv.innerHTML = html;
+        })
+        .catch(() => toonMelding(false, 'Verbindingsfout.'));
+    }
+
+    function verwijderen(id) {
+        if (!confirm('Deze formule verwijderen? De activiteit valt dan terug op de standaardberekening.')) return;
+        fetch(urlDelete, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(id)
+        })
+        .then(r => r.json())
+        .then(res => {
+            toonMelding(res.ok, res.message);
+            if (res.ok) {
+                FORMULES = FORMULES.filter(f => f.id !== id);
+                vulLotFilter();
+                toonLegeState();
+            }
+        })
+        .catch(() => toonMelding(false, 'Verbindingsfout.'));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Rechterpaneel: parameters
+    // ═══════════════════════════════════════════════════════════════════════
+
     function laadParameters() {
         const versieId = document.getElementById('ddlTestVersie').value;
         const url = versieId ? `${urlParams}?versieId=${versieId}` : urlParams;
         fetch(url)
             .then(r => r.json())
-            .then(data => { PARAMS = data; renderParamRef(); })
+            .then(data => { PARAMS = data; renderParamList(); })
             .catch(() => {
-                document.getElementById('paramRefContainer').innerHTML =
-                    '<div class="text-danger small">Parameters laden mislukt.</div>';
+                document.getElementById('paramList').innerHTML =
+                    '<div class="bf-list-empty">Parameters laden mislukt.</div>';
             });
     }
 
-    function renderParamRef() {
-        const container = document.getElementById('paramRefContainer');
+    function renderParamList() {
+        const zoek = document.getElementById('inpZoekParam').value.trim().toLowerCase();
         const heeftWaarden = PARAMS.some(p => p.waarde !== null && p.waarde !== undefined);
-        const groepen = {};
-        PARAMS.forEach(p => { (groepen[p.categorie] = groepen[p.categorie] || []).push(p); });
+        const gefilterd = zoek
+            ? PARAMS.filter(p => p.naam.toLowerCase().includes(zoek) || (p.omschrijving || '').toLowerCase().includes(zoek))
+            : PARAMS;
+
+        const groepen = new Map();
+        gefilterd.forEach(p => { if (!groepen.has(p.categorie)) groepen.set(p.categorie, []); groepen.get(p.categorie).push(p); });
+
+        const container = document.getElementById('paramList');
+        if (gefilterd.length === 0) {
+            container.innerHTML = '<div class="bf-list-empty">Geen parameters gevonden.</div>';
+            return;
+        }
 
         let html = '';
-        Object.keys(groepen).forEach(cat => {
-            html += `<div class="fw-semibold small mt-2 mb-1">${cat}</div>`;
-            html += '<table class="table table-sm param-ref-table mb-1"><tbody>';
-            groepen[cat].forEach(p => {
-                const waarde = heeftWaarden ? `<td class="p-waarde">${fmt(p.waarde)}${p.eenheid ? ' <span class="text-muted">' + p.eenheid + '</span>' : ''}</td>` : '';
-                html += `<tr>
-                    <td class="p-naam" data-naam="${p.naam}" title="${p.omschrijving}">@@${p.naam}</td>
-                    ${waarde}
-                </tr>`;
+        groepen.forEach((items, cat) => {
+            html += `<div class="bf-param-cat">${escapeHtml(cat)}</div>`;
+            items.forEach(p => {
+                const val = heeftWaarden && p.waarde !== null && p.waarde !== undefined ? fmt(p.waarde) : '';
+                html += `
+                <div class="bf-param-row" data-naam="${p.naam}" title="${escapeHtml(p.omschrijving)}">
+                    <span class="bf-param-name">@@${p.naam}</span>
+                    <span class="bf-param-val">${val}</span>
+                    <span class="bf-param-unit">${p.eenheid || ''}</span>
+                </div>`;
             });
-            html += '</tbody></table>';
         });
-        if (!heeftWaarden)
-            html += '<div class="small text-muted mt-2">Kies bovenaan een budgetversie om de actuele waarden te zien.</div>';
         container.innerHTML = html;
 
-        container.querySelectorAll('.p-naam').forEach(el => {
+        container.querySelectorAll('.bf-param-row').forEach(el => {
             el.addEventListener('click', () => voegParameterIn(el.dataset.naam));
         });
     }
+
+    document.getElementById('inpZoekParam').addEventListener('input', renderParamList);
 
     function voegParameterIn(naam) {
         if (!lastEditor) return;
@@ -237,9 +661,12 @@
         ta.setSelectionRange(nieuwePos, nieuwePos);
     }
 
-    // ── @@-autocomplete in formulevelden ────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    // @@-autocomplete in het formuleveld
+    // ═══════════════════════════════════════════════════════════════════════
+
     const suggest = document.getElementById('paramSuggest');
-    document.body.appendChild(suggest); // absolute t.o.v. document positioneren
+    document.body.appendChild(suggest); // absoluut t.o.v. document positioneren
     let suggestItems = [];
     let suggestIndex = -1;
     let suggestEditor = null;
@@ -253,9 +680,7 @@
     }
 
     function toonSuggest(ta, tokenStart, filter) {
-        const matches = PARAMS
-            .filter(p => p.naam.includes(filter.toLowerCase()))
-            .slice(0, 12);
+        const matches = PARAMS.filter(p => p.naam.includes(filter.toLowerCase())).slice(0, 12);
         if (matches.length === 0) { sluitSuggest(); return; }
 
         suggestEditor = ta;
@@ -277,10 +702,7 @@
         suggest.style.display = 'block';
 
         suggest.querySelectorAll('.item').forEach(el => {
-            el.addEventListener('mousedown', e => {
-                e.preventDefault();
-                kiesSuggest(parseInt(el.dataset.i));
-            });
+            el.addEventListener('mousedown', e => { e.preventDefault(); kiesSuggest(parseInt(el.dataset.i)); });
         });
     }
 
@@ -304,117 +726,14 @@
         else sluitSuggest();
     }
 
-    document.querySelectorAll('.formule-editor').forEach(ta => {
-        ta.addEventListener('focus', () => { lastEditor = ta; });
-        ta.addEventListener('input', () => updateSuggest(ta));
-        ta.addEventListener('click', () => updateSuggest(ta));
-        ta.addEventListener('blur', () => setTimeout(sluitSuggest, 150));
-        ta.addEventListener('keydown', e => {
-            if (suggest.style.display !== 'block') return;
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                const delta = e.key === 'ArrowDown' ? 1 : -1;
-                suggestIndex = (suggestIndex + delta + suggestItems.length) % suggestItems.length;
-                suggest.querySelectorAll('.item').forEach((el, i) =>
-                    el.classList.toggle('active', i === suggestIndex));
-            } else if (e.key === 'Enter' || e.key === 'Tab') {
-                e.preventDefault();
-                kiesSuggest(suggestIndex);
-            } else if (e.key === 'Escape') {
-                sluitSuggest();
-            }
-        });
-    });
+    // ═══════════════════════════════════════════════════════════════════════
+    // Init
+    // ═══════════════════════════════════════════════════════════════════════
 
-    // ── Opslaan / testen / verwijderen ─────────────────────────────────────
-    function toonMelding(ok, message) {
-        if (typeof toastr !== 'undefined') { ok ? toastr.success(message) : toastr.error(message); }
-        else alert(message);
-    }
-
-    document.querySelectorAll('.formule-card').forEach(card => {
-        const editor = card.querySelector('.formule-editor');
-        const resultDiv = card.querySelector('.test-result');
-
-        card.querySelector('.btn-opslaan')?.addEventListener('click', () => {
-            const isNieuw = card.id === 'cardNieuweFormule';
-            const activityId = isNieuw
-                ? parseInt(card.querySelector('.sel-activity').value || '0')
-                : parseInt(card.dataset.activityId);
-            if (!activityId) { toonMelding(false, 'Kies eerst een activiteit.'); return; }
-            if (!editor.value.trim()) { toonMelding(false, 'Formule is leeg.'); return; }
-
-            fetch(urlOpslaan, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    activityId:   activityId,
-                    formule:      editor.value,
-                    omschrijving: card.querySelector('.inp-omschrijving').value,
-                    actief:       card.querySelector('.chk-actief') ? card.querySelector('.chk-actief').checked : true
-                })
-            })
-            .then(r => r.json())
-            .then(res => {
-                toonMelding(res.ok, res.message);
-                if (res.ok && isNieuw) location.reload();
-            })
-            .catch(() => toonMelding(false, 'Verbindingsfout.'));
-        });
-
-        card.querySelector('.btn-test')?.addEventListener('click', () => {
-            const versieId = document.getElementById('ddlTestVersie').value;
-            if (!versieId) { toonMelding(false, 'Kies eerst een budgetversie om mee te testen.'); return; }
-            if (!editor.value.trim()) { toonMelding(false, 'Formule is leeg.'); return; }
-
-            fetch(urlTest, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ versieId: parseInt(versieId), formule: editor.value })
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (!res.ok) {
-                    resultDiv.innerHTML = `<div class="alert alert-danger py-2 small mb-0">${res.fout}</div>`;
-                    return;
-                }
-                let html = '';
-                if (res.onbekendeParams && res.onbekendeParams.length)
-                    html += `<div class="alert alert-warning py-1 small mb-2">Onbekende parameter(s): ${res.onbekendeParams.join(', ')} — deze tellen als 0.</div>`;
-                html += '<table class="table table-sm mb-0"><tbody>';
-                res.termen.forEach(t => {
-                    html += `<tr>
-                        <td class="expr-namen">${t.exprNamen}</td>
-                        <td class="text-end text-muted">${t.exprWaarden}</td>
-                        <td class="text-end fw-semibold" style="white-space:nowrap">= € ${fmt(t.waarde)}</td></tr>`;
-                });
-                html += `<tr class="border-top">
-                    <td colspan="2"><strong>Totaal project</strong></td>
-                    <td class="text-end fw-bold" style="white-space:nowrap">€ ${fmt(res.totaal)}</td></tr>`;
-                html += `<tr>
-                    <td colspan="2">÷ ${res.aantalEenheden} eenheden</td>
-                    <td class="text-end fw-bold text-primary" style="white-space:nowrap">= € ${fmt(res.perEenheid)}/eenh.</td></tr>`;
-                html += '</tbody></table>';
-                resultDiv.innerHTML = html;
-            })
-            .catch(() => toonMelding(false, 'Verbindingsfout.'));
-        });
-
-        card.querySelector('.btn-verwijderen')?.addEventListener('click', () => {
-            if (!confirm('Deze formule verwijderen? De activiteit valt dan terug op de standaardberekening.')) return;
-            fetch(urlDelete, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(parseInt(card.dataset.formuleId))
-            })
-            .then(r => r.json())
-            .then(res => {
-                toonMelding(res.ok, res.message);
-                if (res.ok) card.remove();
-            })
-            .catch(() => toonMelding(false, 'Verbindingsfout.'));
-        });
-    });
+    vulLotFilter();
+    renderFormuleList();
+    if (FORMULES.length > 0) selectFormule(FORMULES[0].id);
+    else toonLegeState();
 
     document.getElementById('ddlTestVersie').addEventListener('change', laadParameters);
     laadParameters();

@@ -35,12 +35,21 @@ Public Class VacaturesController
         Return View(vacatures)
     End Function
 
-    ' GET: /vacatures/{slug}
+    ' GET: /vacatures/{slug}  (ook preview via ?prev=token)
     <Route("vacatures/{slug}", Name:="VacatureDetail")>
-    Function Detail(slug As String) As ActionResult
-        Dim vacature = GetVacatureBySlug(slug)
+    Function Detail(slug As String, prev As String) As ActionResult
+        Dim verwachtToken = ConfigurationManager.AppSettings("PreviewToken")
+        Dim isPreview As Boolean = Not String.IsNullOrEmpty(verwachtToken) AndAlso
+                                   Not String.IsNullOrEmpty(prev) AndAlso
+                                   prev = verwachtToken
+
+        Dim vacature = GetVacatureBySlug(slug, inclConcept:=isPreview)
         If vacature Is Nothing Then
             Return HttpNotFound()
+        End If
+
+        If isPreview Then
+            ViewData("IsVoorvertoning") = True
         End If
 
         Dim canonicalSlug = If(vacature.Slug, "").ToLowerInvariant()
@@ -235,7 +244,7 @@ Public Class VacaturesController
         Return result
     End Function
 
-    Private Function GetVacatureBySlug(slug As String) As VacatureModel
+    Private Function GetVacatureBySlug(slug As String, Optional inclConcept As Boolean = False) As VacatureModel
         If String.IsNullOrWhiteSpace(slug) Then Return Nothing
 
         Dim vacature As VacatureModel = Nothing
@@ -243,10 +252,11 @@ Public Class VacaturesController
         Try
             Using conn As New SqlConnection(GetConnectionString())
                 conn.Open()
+                Dim whereClause = If(inclConcept, "Slug = @slug", "Slug = @slug AND IsGepubliceerd = 1")
                 Dim cmd As New SqlCommand(
                     "SELECT Id, Titel, Slug, Categorie, Locatie, Dienstverband, Opleiding, Start, KorteBeschrijving, Beschrijving, SortOrder, AangemaaktOp
                        FROM Vacature
-                      WHERE Slug = @slug AND IsGepubliceerd = 1", conn)
+                      WHERE " & whereClause, conn)
                 cmd.Parameters.AddWithValue("@slug", slug)
 
                 Using reader = cmd.ExecuteReader()

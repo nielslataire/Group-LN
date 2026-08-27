@@ -24,27 +24,30 @@ namespace ServiceCore.Budget
                 .Include(v => v.BudgetGegevens)
                 .FirstOrDefaultAsync(v => v.Id == budgetVersieId);
 
-            var aantalEenheden = await _uow.BudgetOppervlaktes.GetNoTracking()
-                .CountAsync(o => o.BudgetVersieId == budgetVersieId);
-
-            var totaalGBA = await _uow.BudgetOppervlaktes.GetNoTracking()
+            var opps = await _uow.BudgetOppervlaktes.GetNoTracking()
+                .Include(o => o.UnitGroupType)
                 .Where(o => o.BudgetVersieId == budgetVersieId)
-                .SumAsync(o => (decimal?)o.BewoonbareOpp) ?? 0m;
+                .ToListAsync();
+            var aantalEenheden = opps.Count;
+            var aantalWoonComm = BudgetActivityService.TelWoonCommEenheden(opps);
+            var totaalGBA      = opps.Sum(o => o.BewoonbareOpp);
 
             var lijnen = await _uow.BudgetActivityLijnen.GetNoTracking()
                 .Where(l => l.BudgetVersieId == budgetVersieId)
                 .ToListAsync();
 
-            decimal totaalBouw = lijnen.Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalEenheden);
+            // Lijnprijzen zijn per woon-/commerciële eenheid
+            decimal totaalBouw = lijnen.Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm);
 
             var p = await GetOrCreateParamsAsync(budgetVersieId);
 
             var result = new BudgetResultaatBO
             {
-                BudgetVersieId = budgetVersieId,
-                AantalEenheden = aantalEenheden,
-                TotaalGBA      = totaalGBA,
-                TotaalBouw     = totaalBouw
+                BudgetVersieId         = budgetVersieId,
+                AantalEenheden         = aantalEenheden,
+                AantalWoonCommEenheden = aantalWoonComm,
+                TotaalGBA              = totaalGBA,
+                TotaalBouw             = totaalBouw
             };
 
             // B) Kosten op bouwkost

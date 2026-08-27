@@ -78,6 +78,18 @@ End Section
     <link rel="stylesheet" href="~/Content/vacatures.css" />
 End Section
 
+@* ── Voorvertoning banner ── *@
+@If ViewData("IsVoorvertoning") IsNot Nothing Then
+    @<div style="background:#fef3c7;border-bottom:2px solid #d97706;padding:12px 0;position:sticky;top:0;z-index:9999;">
+        <div class="container">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:#92400e;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                VOORVERTONING &mdash; Deze vacature is nog niet gepubliceerd. Enkel zichtbaar via deze beveiligde link.
+            </div>
+        </div>
+    </div>
+End If
+
 <section class="vac-detail-header">
     <div class="container">
         <ul class="breadcrumb">

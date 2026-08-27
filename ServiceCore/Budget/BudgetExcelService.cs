@@ -163,8 +163,8 @@ namespace ServiceCore.Budget
                     var altPpu   = lijn.AlternatievePrijsPerEenheid ?? 0m;
                     var nacPpu   = lijn.NacalcPrijsPerEenheid ?? 0m;
                     var nacGeind = nacPpu * lijn.Correctiefactor * gewogenFactor;
-                    var altTot   = altPpu * resultaat.AantalEenheden;
-                    var nacTot   = nacGeind * resultaat.AantalEenheden;
+                    var altTot   = altPpu * resultaat.AantalWoonCommEenheden;
+                    var nacTot   = nacGeind * resultaat.AantalWoonCommEenheden;
                     var verschil = altTot - nacTot;
                     totAlt += altTot;
                     totNac += nacTot;

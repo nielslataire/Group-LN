@@ -1,3 +1,4 @@
+using System.Text;
 using BOCore;
 using DALCore;
 using DALCore.Models;
@@ -98,6 +99,69 @@ public class KostprijsService : IKostprijsService {
         r.AddSuccess("Koppeling opgeslagen.");
         return r;
     }
+    // Genereert een unieke, in formules bruikbare sleutel uit een vrij ingegeven naam:
+    // kleine letters, cijfers en underscore, geen dubbele/rand-underscores, en moet
+    // met een letter beginnen zodat @mat_<sleutel> altijd een geldige parameternaam is.
+    private string GenereerUniekeSleutel(string naam) {
+        var basis = new StringBuilder();
+        foreach (var ch in naam.Trim().ToLowerInvariant()) {
+            if (char.IsLetterOrDigit(ch)) basis.Append(ch);
+            else if (basis.Length > 0 && basis[basis.Length - 1] != '_') basis.Append('_');
+        }
+        var slug = basis.ToString().Trim('_');
+        if (slug.Length == 0 || !char.IsLetter(slug[0])) slug = "m_" + slug;
+
+        var kandidaat = slug;
+        var bestaande = _uow.FormulaKoppelingen.GetNoTracking()
+            .Select(k => k.Sleutel).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var i = 2;
+        while (bestaande.Contains(kandidaat)) kandidaat = $"{slug}_{i++}";
+        return kandidaat;
+    }
+
+    public GetResponse<FormulaKoppelingBO> CreateFormulaKoppeling(string naam, int? materiaalId) {
+        var r = new GetResponse<FormulaKoppelingBO>();
+        if (string.IsNullOrWhiteSpace(naam)) { r.AddError("Naam is verplicht."); return r; }
+
+        var sleutel = GenereerUniekeSleutel(naam);
+        var entity = new KostprijsFormulaKoppeling {
+            Sleutel = sleutel, Omschrijving = naam.Trim(), MateriaalId = materiaalId
+        };
+        _uow.FormulaKoppelingen.Add(entity);
+        _uow.SaveChanges();
+
+        var materiaal = materiaalId.HasValue ? _uow.KostprijsMaterialen.GetById(materiaalId.Value) : null;
+        r.AddValue(new FormulaKoppelingBO {
+            Id = entity.Id, Sleutel = entity.Sleutel, Omschrijving = entity.Omschrijving,
+            MateriaalId = materiaal?.Id, MateriaalNaam = materiaal?.Naam,
+            MateriaalReferentiePrijs = materiaal?.ReferentiePrijs,
+            MateriaalReferentieDatum = materiaal?.ReferentieDatum, MateriaalEenheid = materiaal?.Eenheid
+        });
+        r.AddSuccess("Formule-koppeling aangemaakt.");
+        return r;
+    }
+
+    public Response DeleteFormulaKoppeling(int id) {
+        var r = new Response();
+        var entity = _uow.FormulaKoppelingen.GetNormal().FirstOrDefault(k => k.Id == id);
+        if (entity == null) { r.AddError("Koppeling niet gevonden."); return r; }
+
+        var parameterNaam = "@mat_" + entity.Sleutel;
+        var gebruiktIn = _uow.BudgetActivityFormules.GetNoTracking()
+            .Where(f => f.Formule.Contains(parameterNaam))
+            .Select(f => f.ActivityId)
+            .ToList();
+        if (gebruiktIn.Count > 0) {
+            r.AddError($"Deze koppeling wordt gebruikt in {gebruiktIn.Count} budgetformule(s) ({parameterNaam}) en kan niet verwijderd worden. Pas eerst die formule(s) aan in Instellingen → Budgetformules.");
+            return r;
+        }
+
+        _uow.FormulaKoppelingen.Remove(entity);
+        _uow.SaveChanges();
+        r.AddSuccess("Koppeling verwijderd.");
+        return r;
+    }
+
     public Response SnapshotVoorProject(int projectId) {
         var r = new Response();
         var bestaand = _uow.ProjectKostprijzen.GetNormal().Where(x => x.ProjectId == projectId).ToList();

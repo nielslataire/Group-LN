@@ -14,6 +14,8 @@ public interface IKostprijsService {
     Response DeletePercentage(int id);
     GetResponse<FormulaKoppelingBO> GetFormulaKoppelingen();
     Response SaveFormulaKoppeling(string sleutel, int? materiaalId);
+    GetResponse<FormulaKoppelingBO> CreateFormulaKoppeling(string naam, int? materiaalId);
+    Response DeleteFormulaKoppeling(int id);
     Response SnapshotVoorProject(int projectId);
     GetResponse<ProjectKostprijsBO> GetProjectKostprijzen(int projectId);
     GetResponse<ProjectKostprijsBO> GetUpdatePreview(int projectId);

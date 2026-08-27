@@ -41,6 +41,27 @@ namespace ServiceCore.Budget
             _activityFormules = activityFormules;
         }
 
+        // Telt de woon-/commerciële eenheden; valt terug op alle eenheden als er
+        // geen enkele als woon/commercieel getypeerd is. Dit is de deler én de
+        // vermenigvuldiger voor alle activiteitlijn-totalen.
+        public static int TelWoonCommEenheden(IReadOnlyCollection<DALCore.Models.BudgetOppervlaktes> opps)
+        {
+            var n = opps.Count(o =>
+                o.UnitGroupType != null && (
+                    o.UnitGroupType.Name.Contains("woon", StringComparison.OrdinalIgnoreCase) ||
+                    o.UnitGroupType.Name.Contains("commerci", StringComparison.OrdinalIgnoreCase)));
+            return n == 0 ? opps.Count : n;
+        }
+
+        public async Task<int> GetAantalWoonCommEenhedenAsync(int budgetVersieId)
+        {
+            var opps = await _uow.BudgetOppervlaktes.GetNoTracking()
+                .Include(o => o.UnitGroupType)
+                .Where(o => o.BudgetVersieId == budgetVersieId)
+                .ToListAsync();
+            return TelWoonCommEenheden(opps);
+        }
+
         private static decimal GevelLm(DALCore.Models.BudgetGevelElementen e)
             => e.Aantal * (e.Lengte ?? 0m);
 
@@ -174,11 +195,7 @@ namespace ServiceCore.Budget
             var totaalZichtscherm     = gevelRijen.Where(g => g.ElementType == "Zichtscherm").Sum(g => GevelLm(g));
             var totaalLeien           = gevelRijen.Where(g => g.ElementType == "Leien").Sum(g => GevelM2(g));
 
-            var aantalWoonComm = opps.Count(o =>
-                o.UnitGroupType != null && (
-                    o.UnitGroupType.Name.Contains("woon", StringComparison.OrdinalIgnoreCase) ||
-                    o.UnitGroupType.Name.Contains("commerci", StringComparison.OrdinalIgnoreCase)));
-            if (aantalWoonComm == 0) aantalWoonComm = aantalEenheden;
+            var aantalWoonComm = TelWoonCommEenheden(opps);
 
             var ruwbouwVoorstelTotaal = ruwbouwPrijsGeind * totOppRuwbouw
                                       + terrasPrijsGeind  * totTerrasPrefab
@@ -237,7 +254,8 @@ namespace ServiceCore.Budget
                             LotNummer             = g.Key.Lot,
                             LotNaam               = g.Key.Name,
                             GroupId               = activity.GroupId,
-                            AantalEenheden        = aantalEenheden,
+                            // Totalen (alt/nacalc) rekenen per woon-/commerciële eenheid
+                            AantalEenheden        = aantalWoonComm,
                             TotaalOppervlakte     = totaalGBA,
                             Correctiefactor       = 1m,
                             SIndexStart           = sStart,

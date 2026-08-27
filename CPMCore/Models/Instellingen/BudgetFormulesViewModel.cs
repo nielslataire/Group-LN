@@ -4,7 +4,7 @@ namespace CPMCore.Models;
 
 public class BudgetFormulesViewModel {
     public List<BudgetActivityFormuleInfo> Formules      { get; set; } = new();
-    public List<SelectListItem>            Activiteiten  { get; set; } = new();
+    public List<ActivityLotInfo>           Activiteiten  { get; set; } = new();
     public List<SelectListItem>            TestVersies   { get; set; } = new();
 }
 

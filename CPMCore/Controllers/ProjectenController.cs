@@ -9739,8 +9739,8 @@ namespace CPMCore.Controllers
 
             var lotGroepen = await _budgetActivityService.GetLotGroepenAsync(versieId);
 
-            var aantalEenheden = _uow.BudgetOppervlaktes.GetNoTracking()
-                .Count(o => o.BudgetVersieId == versieId);
+            // Totalen rekenen per woon-/commerciële eenheid
+            var aantalEenheden = await _budgetActivityService.GetAantalWoonCommEenhedenAsync(versieId);
 
             var totaalGBA = _uow.BudgetOppervlaktes.GetNoTracking()
                 .Where(o => o.BudgetVersieId == versieId)
@@ -9831,10 +9831,12 @@ namespace CPMCore.Controllers
             var aantalEenh = _uow.BudgetOppervlaktes.GetNoTracking()
                 .Count(o => o.BudgetVersieId == versieId);
 
+            // Lijnprijzen zijn per woon-/commerciële eenheid
+            var aantalWoonComm = await _budgetActivityService.GetAantalWoonCommEenhedenAsync(versieId);
             var totaalBouw = _uow.BudgetActivityLijnen.GetNoTracking()
                 .Where(l => l.BudgetVersieId == versieId)
                 .AsEnumerable()
-                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalEenh);
+                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm);
 
             var model = new BudgetParamsModel
             {
@@ -9999,8 +10001,8 @@ namespace CPMCore.Controllers
             resultaat.VersieNaam   = versie.VersieNaam   ?? string.Empty;
             resultaat.Versienummer = versie.Versienummer;
 
-            var aantalEenh = _uow.BudgetOppervlaktes.GetNoTracking()
-                .Count(o => o.BudgetVersieId == versieId);
+            // Lijnprijzen zijn per woon-/commerciële eenheid
+            var aantalEenh = await _budgetActivityService.GetAantalWoonCommEenhedenAsync(versieId);
 
             var altBouw = _uow.BudgetActivityLijnen.GetNoTracking()
                 .Where(l => l.BudgetVersieId == versieId)

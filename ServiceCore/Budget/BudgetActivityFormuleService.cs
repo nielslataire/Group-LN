@@ -40,6 +40,14 @@ public class BudgetActivityFormuleInfo
     public DateTime LaatstGewijzigd      { get; set; }
 }
 
+public class ActivityLotInfo
+{
+    public int     ActivityId           { get; set; }
+    public string  ActivityOmschrijving { get; set; }
+    public decimal LotNummer            { get; set; }
+    public string  LotNaam              { get; set; }
+}
+
 public class FormuleEvaluatieResultaat
 {
     public decimal Totaal         { get; set; }
@@ -82,6 +90,12 @@ public class BudgetActivityFormuleService
     {
         ("aantal_eenheden",          "Aantal eenheden (alle rijen op tab Oppervlaktes)",                        "st",   "Aantallen"),
         ("aantal_wooncomm",          "Aantal woon-/commerciële eenheden (deler voor prijs per eenheid)",        "st",   "Aantallen"),
+        ("aantal_appartementen",     "Aantal rijen op tab Oppervlaktes met (sub)type appartement",              "st",   "Aantallen"),
+        ("aantal_woningen",          "Aantal rijen op tab Oppervlaktes met (sub)type woning",                   "st",   "Aantallen"),
+        ("aantal_bergingen",         "Aantal rijen op tab Oppervlaktes met (sub)type berging",                  "st",   "Aantallen"),
+        ("aantal_trapzalen",         "Aantal trapzalen (tab Gegevens)",                                         "st",   "Aantallen"),
+        ("aantal_binnentrappen",     "Aantal binnentrappen (tab Gegevens)",                                     "st",   "Aantallen"),
+        ("verdiepingen_bovengronds", "Aantal bovengrondse verdiepingen (tab Gegevens)",                         "st",   "Aantallen"),
         ("verdiepingen_ondergronds", "Aantal verdiepingen ondergronds (tab Gegevens)",                          "st",   "Aantallen"),
         ("aantal_veluxen",           "Aantal veluxen (tab Dak & afbraak)",                                      "st",   "Aantallen"),
         ("aantal_garages_bovengronds", "Aantal rijen op tab Oppervlaktes met subtype 'Bovengrondse garage'", "st", "Aantallen"),
@@ -89,9 +103,19 @@ public class BudgetActivityFormuleService
         ("aantal_poorten_sectionaal", "Aantal garages waarvoor een sectionaalpoort telt (0 als een ander type gekozen is)", "st", "Aantallen"),
         ("aantal_poorten_kantel",    "Aantal garages waarvoor een kantelpoort telt (0 als een ander type gekozen is)",     "st", "Aantallen"),
 
-        ("opp_gba",                  "Totale bewoonbare oppervlakte (GBA)",                                     "m²",   "Oppervlaktes"),
+        ("opp_gba",                  "Totale bewoonbare oppervlakte (GBA), alle rijen op tab Oppervlaktes",     "m²",   "Oppervlaktes"),
+        ("opp_woningen",             "Bewoonbare oppervlakte van rijen met (sub)type woning",                   "m²",   "Oppervlaktes"),
+        ("opp_appartementen",        "Bewoonbare oppervlakte van rijen met (sub)type appartement",              "m²",   "Oppervlaktes"),
+        ("opp_commercieel",          "Bewoonbare oppervlakte van rijen met (sub)type commercieel",              "m²",   "Oppervlaktes"),
+        ("opp_bergingen",            "Bewoonbare oppervlakte van rijen met (sub)type berging",                  "m²",   "Oppervlaktes"),
         ("opp_ruwbouw",              "Ruwbouwoppervlakte (GBA + garages + kelder + berging + doorrit + gemene delen + 30% zolder + 25% platdak)", "m²", "Oppervlaktes"),
-        ("opp_terras_prefab",        "Terras prefab",                                                           "m²",   "Oppervlaktes"),
+        ("opp_tuin",                 "Tuin (kolomtotaal tab Oppervlaktes)",                                     "m²",   "Oppervlaktes"),
+        ("opp_terras_prefab",        "Terras prefab (kolomtotaal tab Oppervlaktes)",                            "m²",   "Oppervlaktes"),
+        ("opp_terras_gelijkvloers",  "Terras gelijkvloers (kolomtotaal tab Oppervlaktes)",                      "m²",   "Oppervlaktes"),
+        ("opp_dakterras",            "Dakterras (kolomtotaal tab Oppervlaktes)",                                "m²",   "Oppervlaktes"),
+        ("opp_carports",             "Carports (kolomtotaal tab Oppervlaktes)",                                 "m²",   "Oppervlaktes"),
+        ("opp_wegenis",              "Wegenis (kolomtotaal tab Oppervlaktes)",                                  "m²",   "Oppervlaktes"),
+        ("opp_grondopp",             "Grondoppervlakte (kolomtotaal tab Oppervlaktes)",                         "m²",   "Oppervlaktes"),
         ("opp_gevels",               "Gevels (nieuwbouw + bestaand)",                                           "m²",   "Oppervlaktes"),
         ("opp_platdak",              "Platdak",                                                                 "m²",   "Oppervlaktes"),
         ("opp_hellend_dak",          "Hellend dak (horizontale projectie)",                                     "m²",   "Oppervlaktes"),
@@ -112,6 +136,12 @@ public class BudgetActivityFormuleService
         ("lm_secanpalen",            "Secanpalen (tab Gegevens)",                                               "lm",   "Lengtes"),
         ("lm_ballustrades",          "Ballustrades (tab Gevels)",                                               "lm",   "Lengtes"),
         ("lm_zichtschermen",         "Zichtschermen (tab Gevels)",                                              "lm",   "Lengtes"),
+
+        ("aantal_badkamers",           "Totaal badkamers (kolomtotaal tab Sanitair)",                           "st",   "Sanitair"),
+        ("aantal_toilet_in_badkamer",  "Totaal toilet in badkamer (kolomtotaal tab Sanitair)",                  "st",   "Sanitair"),
+        ("aantal_afzonderlijk_toilet", "Totaal afzonderlijk toilet (kolomtotaal tab Sanitair)",                 "st",   "Sanitair"),
+        ("aantal_douche_in_badkamer",  "Totaal douche in badkamer (kolomtotaal tab Sanitair)",                  "st",   "Sanitair"),
+        ("aantal_douchekamers",        "Totaal douchekamers (kolomtotaal tab Sanitair)",                        "st",   "Sanitair"),
 
         ("m3_onderschoeiingen",      "Onderschoeiingen (tab Gegevens)",                                         "m³",   "Volumes"),
         ("m3_grondwerken",           "Grondwerken: opp funderingen × 0,30 + verd. ondergronds × 3,50 × garage/berging ondergronds", "m³", "Volumes"),
@@ -189,8 +219,11 @@ public class BudgetActivityFormuleService
             LmSecanpalen                  = dbGeg?.LmSecanpalen,
             OppFunderingen                = dbGeg?.OppFunderingen,
             AantalVerdiepingenOndergronds = dbGeg?.AantalVerdiepingenOndergronds ?? 0,
+            AantalBovengrondseVerdiepingen = dbGeg?.AantalBovengrondseVerdiepingen ?? 0,
             M3Onderschoeiingen            = dbGeg?.M3Onderschoeiingen,
-            AantalVeluxen                 = dbGeg?.AantalVeluxen
+            AantalVeluxen                 = dbGeg?.AantalVeluxen,
+            AantalTrapzalen               = dbGeg?.AantalTrapzalen,
+            AantalBinnentrappen           = dbGeg?.AantalBinnentrappen ?? 0
         };
         var ctx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
 
@@ -202,6 +235,10 @@ public class BudgetActivityFormuleService
 
         var gevelRijen = await _uow.BudgetGevelElementen.GetNoTracking()
             .Where(g => g.BudgetVersieId == budgetVersieId)
+            .ToListAsync();
+
+        var sanitairRijen = await _uow.BudgetSanitair.GetNoTracking()
+            .Where(s => s.BudgetVersieId == budgetVersieId)
             .ToListAsync();
 
         static decimal GevelLm(BudgetGevelElementen e) => e.Aantal * (e.Lengte ?? 0m);
@@ -219,11 +256,16 @@ public class BudgetActivityFormuleService
             gevelRijen.Where(g => g.ElementType == type).Sum(g => GevelLm(g));
 
         var aantalEenheden = opps.Count;
-        var aantalWoonComm = opps.Count(o =>
-            o.UnitGroupType != null && (
-                o.UnitGroupType.Name.Contains("woon", StringComparison.OrdinalIgnoreCase) ||
-                o.UnitGroupType.Name.Contains("commerci", StringComparison.OrdinalIgnoreCase)));
-        if (aantalWoonComm == 0) aantalWoonComm = aantalEenheden;
+        var aantalWoonComm = BudgetActivityService.TelWoonCommEenheden(opps);
+        // Telt rijen op naam van het unittype ("Woning", "Appartement", …) of,
+        // als dat niet matcht, het groeptype — de naam kan op beide niveaus staan.
+        bool IsGroepType(BudgetOppervlaktes o, string naamDeel) =>
+            (o.UnitType != null &&
+             o.UnitType.Name.Contains(naamDeel, StringComparison.OrdinalIgnoreCase)) ||
+            (o.UnitGroupType != null &&
+             o.UnitGroupType.Name.Contains(naamDeel, StringComparison.OrdinalIgnoreCase));
+        int     TelGroepType(string naamDeel) => opps.Count(o => IsGroepType(o, naamDeel));
+        decimal OppGroepType(string naamDeel) => opps.Where(o => IsGroepType(o, naamDeel)).Sum(o => o.BewoonbareOpp);
 
         var totaalPlatDak = GevelM2Type("PlatDak");
         var totOppRuwbouw = opps.Sum(o =>
@@ -250,6 +292,12 @@ public class BudgetActivityFormuleService
         {
             ["aantal_eenheden"]          = aantalEenheden,
             ["aantal_wooncomm"]          = aantalWoonComm,
+            ["aantal_appartementen"]     = TelGroepType("appartement"),
+            ["aantal_woningen"]          = TelGroepType("woning"),
+            ["aantal_bergingen"]         = TelGroepType("berging"),
+            ["aantal_trapzalen"]         = gegevensBO.AantalTrapzalen ?? 0,
+            ["aantal_binnentrappen"]     = gegevensBO.AantalBinnentrappen,
+            ["verdiepingen_bovengronds"] = gegevensBO.AantalBovengrondseVerdiepingen,
             ["verdiepingen_ondergronds"] = gegevensBO.AantalVerdiepingenOndergronds,
             ["aantal_veluxen"]           = gegevensBO.AantalVeluxen ?? 0,
             ["aantal_garages_bovengronds"] = aantalGaragesBovengronds,
@@ -258,8 +306,18 @@ public class BudgetActivityFormuleService
             ["aantal_poorten_kantel"]      = typePoorten == "Kantelpoort"     ? aantalPoorten : 0,
 
             ["opp_gba"]                  = opps.Sum(o => o.BewoonbareOpp),
+            ["opp_woningen"]             = OppGroepType("woning"),
+            ["opp_appartementen"]        = OppGroepType("appartement"),
+            ["opp_commercieel"]          = OppGroepType("commerci"),
+            ["opp_bergingen"]            = OppGroepType("berging"),
             ["opp_ruwbouw"]              = totOppRuwbouw,
+            ["opp_tuin"]                 = opps.Sum(o => o.Tuin),
             ["opp_terras_prefab"]        = opps.Sum(o => o.TerrasPrefab),
+            ["opp_terras_gelijkvloers"]  = opps.Sum(o => o.TerrasGelijkvloers),
+            ["opp_dakterras"]            = opps.Sum(o => o.Dakterras),
+            ["opp_carports"]             = opps.Sum(o => o.Carports),
+            ["opp_wegenis"]              = opps.Sum(o => o.Wegenis),
+            ["opp_grondopp"]             = opps.Sum(o => o.Grondopp),
             ["opp_gevels"]               = GevelM2Type("GevelNieuwbouw", "GevelBestaand"),
             ["opp_platdak"]              = totaalPlatDak,
             ["opp_hellend_dak"]          = GevelM2Type("HellendDak"),
@@ -280,6 +338,12 @@ public class BudgetActivityFormuleService
             ["lm_secanpalen"]            = gegevensBO.LmSecanpalen     ?? 0m,
             ["lm_ballustrades"]          = GevelLmType("Ballustrade"),
             ["lm_zichtschermen"]         = GevelLmType("Zichtscherm"),
+
+            ["aantal_badkamers"]           = sanitairRijen.Sum(s => s.Badkamer),
+            ["aantal_toilet_in_badkamer"]  = sanitairRijen.Sum(s => s.ToiletInBadkamer),
+            ["aantal_afzonderlijk_toilet"] = sanitairRijen.Sum(s => s.AfzonderlijkToilet),
+            ["aantal_douche_in_badkamer"]  = sanitairRijen.Sum(s => s.DoucheInBadkamer),
+            ["aantal_douchekamers"]        = sanitairRijen.Sum(s => s.Douchekamer),
 
             ["m3_onderschoeiingen"]      = gegevensBO.M3Onderschoeiingen ?? 0m,
             ["m3_grondwerken"]           = m2Funder * 0.3m
@@ -352,9 +416,9 @@ public class BudgetActivityFormuleService
             .ToListAsync();
     }
 
-    public async Task<Response> SaveAsync(int activityId, string formule, string omschrijving, bool actief)
+    public async Task<GetResponse<BudgetActivityFormuleInfo>> SaveAsync(int activityId, string formule, string omschrijving, bool actief)
     {
-        var response = new Response();
+        var response = new GetResponse<BudgetActivityFormuleInfo>();
 
         // Valideer syntax
         FormuleNode node;
@@ -383,27 +447,46 @@ public class BudgetActivityFormuleService
 
         var bestaand = await _uow.BudgetActivityFormules.GetNormal()
             .SingleOrDefaultAsync(f => f.ActivityId == activityId);
+        BudgetActivityFormule entity;
         if (bestaand != null)
         {
             bestaand.Formule         = formule.Trim();
             bestaand.Omschrijving    = string.IsNullOrWhiteSpace(omschrijving) ? null : omschrijving.Trim();
             bestaand.Actief          = actief;
             bestaand.LaatstGewijzigd = DateTime.UtcNow;
+            entity = bestaand;
         }
         else
         {
-            _uow.BudgetActivityFormules.Add(new BudgetActivityFormule
+            entity = new BudgetActivityFormule
             {
                 ActivityId      = activityId,
                 Formule         = formule.Trim(),
                 Omschrijving    = string.IsNullOrWhiteSpace(omschrijving) ? null : omschrijving.Trim(),
                 Actief          = actief,
                 LaatstGewijzigd = DateTime.UtcNow
-            });
+            };
+            _uow.BudgetActivityFormules.Add(entity);
         }
 
-        int affected = await _uow.SaveChangesAsync();
-        response.AddSaveChangesResult(affected, "Formule opgeslagen.", "Geen wijzigingen opgeslagen.");
+        await _uow.SaveChangesAsync();
+
+        var activity = await _uow.Activities.GetNoTracking()
+            .Include(a => a.Group)
+            .SingleAsync(a => a.ActivityId == activityId);
+        response.AddValue(new BudgetActivityFormuleInfo
+        {
+            Id                   = entity.Id,
+            ActivityId           = activityId,
+            ActivityOmschrijving = activity.Omschrijving,
+            LotNaam              = activity.Group?.Name,
+            LotNummer            = activity.Group?.Lot ?? 0m,
+            Formule              = entity.Formule,
+            Omschrijving         = entity.Omschrijving,
+            Actief               = entity.Actief,
+            LaatstGewijzigd      = entity.LaatstGewijzigd
+        });
+        response.AddSuccess("Formule opgeslagen.");
         return response;
     }
 
@@ -423,21 +506,25 @@ public class BudgetActivityFormuleService
         return response;
     }
 
-    // Alle activiteiten voor de "nieuwe formule"-dropdown.
-    public async Task<List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetActiviteitenAsync()
+    // Alle activiteiten (met lot) voor de Lot/Activiteit-dropdowns bij een nieuwe formule.
+    // Activiteiten zonder (of met een kapotte) groepskoppeling worden niet weggelaten —
+    // dat zou ze onvindbaar maken t.o.v. Instellingen → Activiteiten, waar ze wel getoond worden.
+    public async Task<List<ActivityLotInfo>> GetActiviteitenMetLotAsync()
     {
         var activities = await _uow.Activities.GetNoTracking()
             .Include(a => a.Group)
-            .Where(a => a.Group != null)
-            .OrderBy(a => a.Group.Lot)
+            .OrderBy(a => a.Group == null ? 1 : 0)
+            .ThenBy(a => a.Group != null ? a.Group.Lot : 0)
             .ThenBy(a => a.Omschrijving)
             .ToListAsync();
 
         return activities
-            .Select(a => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+            .Select(a => new ActivityLotInfo
             {
-                Value = a.ActivityId.ToString(),
-                Text  = $"Lot {a.Group.Lot:G} — {a.Omschrijving}"
+                ActivityId           = a.ActivityId,
+                ActivityOmschrijving = a.Omschrijving,
+                LotNummer            = a.Group?.Lot ?? 9999m,
+                LotNaam              = a.Group?.Name ?? "Geen lot"
             })
             .ToList();
     }

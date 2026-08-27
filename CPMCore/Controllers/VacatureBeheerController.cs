@@ -3,6 +3,7 @@ using CPMCore.Models.Instellingen;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
 
@@ -14,11 +15,13 @@ public class VacatureBeheerController : BaseController
 {
     private readonly IVacatureService _vacatureService;
     private readonly IVacatureSollicitatieService _sollicitatieService;
+    private readonly IConfiguration _configuration;
 
-    public VacatureBeheerController(IVacatureService vacatureService, IVacatureSollicitatieService sollicitatieService)
+    public VacatureBeheerController(IVacatureService vacatureService, IVacatureSollicitatieService sollicitatieService, IConfiguration configuration)
     {
         _vacatureService = vacatureService;
         _sollicitatieService = sollicitatieService;
+        _configuration = configuration;
     }
 
     // ── LIST ────────────────────────────────────────────────────────────
@@ -56,6 +59,15 @@ public class VacatureBeheerController : BaseController
         {
             AddMessage("error", "Vacature niet gevonden.", "Fout");
             return RedirectToAction(nameof(Index));
+        }
+
+        var previewBase  = _configuration["Preview:BaseUrl"]?.TrimEnd('/');
+        var previewToken = _configuration["Preview:Token"];
+        if (!string.IsNullOrEmpty(previewBase) && !string.IsNullOrEmpty(previewToken))
+        {
+            var slug = result.Value?.Slug;
+            if (!string.IsNullOrEmpty(slug))
+                ViewBag.PreviewUrl = $"{previewBase}/vacatures/{slug}?prev={previewToken}";
         }
 
         var vm = MapBoToVm(result.Value);

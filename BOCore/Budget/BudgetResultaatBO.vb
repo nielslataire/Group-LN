@@ -13,6 +13,8 @@ Namespace Budget
         Public Property VersieNaam As String
         Public Property Versienummer As Integer
         Public Property AantalEenheden As Integer
+        ''' <summary>Woon-/commerciële eenheden: vermenigvuldiger voor activiteitlijn-totalen.</summary>
+        Public Property AantalWoonCommEenheden As Integer
         Public Property TotaalGBA As Decimal
 
         Public Property TotaalBouw As Decimal

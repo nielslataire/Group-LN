@@ -4,6 +4,10 @@ public class FormulaKoppelingAjaxRequest {
     public string Sleutel    { get; set; }
     public int?   MateriaalId { get; set; }
 }
+public class FormulaKoppelingAanmakenRequest {
+    public string Naam       { get; set; }
+    public int?   MateriaalId { get; set; }
+}
 public class KostprijsMaterialenViewModel {
     public List<KmIndexTypeBO>             IndexTypes          { get; set; } = new();
     public List<ActivityGroupBO>           ActivityGroepen     { get; set; } = new();

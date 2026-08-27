@@ -204,6 +204,7 @@ DALCore/Migrations/BudgetActivityFormules.sql
   - `BouwkostPercentages.sql`
   - `KostprijsFormulaKoppeling.sql`
   - `BudgetActivityFormules.sql`
+  - `BudgetGegevens_Trapzalen_Deuren.sql` (+ daarna deur-materialen koppelen in Instellingen → Kostprijsmaterialen → Formule koppelingen)
 - [ ] Materiaal koppelen in Instellingen voor `nacalc_ruwbouw_basis`
 - [ ] Zelfde voorstel-badge patroon implementeren voor `GevelMetselwerkPrijsPerM2` en `GipswerkenPrijsPerM2`
 - [ ] Verdere formules toevoegen naargelang budget-stappen dat vereisen

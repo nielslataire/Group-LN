@@ -1894,6 +1894,33 @@ public class InstellingenController : BaseController
         }));
     }
 
+    [HttpPost]
+    public IActionResult FormulaKoppelingAanmaken([FromBody] FormulaKoppelingAanmakenRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.Naam)) return BadRequest();
+        var r = _kostprijsService.CreateFormulaKoppeling(req.Naam, req.MateriaalId);
+        var fout = r.Messages.FirstOrDefault(m => m.Type == BOCore.MessageType.Error)?.Message;
+        var k = r.Values?.FirstOrDefault();
+        return Json(new
+        {
+            ok = r.Success,
+            message = r.Success ? "Formule-koppeling aangemaakt." : fout,
+            koppeling = k == null ? null : new
+            {
+                k.Id, k.Sleutel, k.Omschrijving, k.MateriaalId, k.MateriaalNaam,
+                k.MateriaalReferentiePrijs, k.MateriaalEenheid
+            }
+        });
+    }
+
+    [HttpPost]
+    public IActionResult FormulaKoppelingVerwijderen([FromBody] int id)
+    {
+        var r = _kostprijsService.DeleteFormulaKoppeling(id);
+        var fout = r.Messages.FirstOrDefault(m => m.Type == BOCore.MessageType.Error)?.Message;
+        return Json(new { ok = r.Success, message = r.Success ? "Koppeling verwijderd." : fout });
+    }
+
     // ─── Budgetformules (voorstellen BudgetActivityLijnen) ─────────────────────
 
     [HttpGet]
@@ -1916,7 +1943,7 @@ public class InstellingenController : BaseController
         var vm = new BudgetFormulesViewModel
         {
             Formules     = await _budgetFormules.GetFormulesAsync(),
-            Activiteiten = await _budgetFormules.GetActiviteitenAsync(),
+            Activiteiten = await _budgetFormules.GetActiviteitenMetLotAsync(),
             TestVersies  = await _budgetFormules.GetTestVersiesAsync()
         };
         return View(vm);
@@ -1935,7 +1962,17 @@ public class InstellingenController : BaseController
         if (req == null || string.IsNullOrWhiteSpace(req.Formule)) return BadRequest();
         var r = await _budgetFormules.SaveAsync(req.ActivityId, req.Formule, req.Omschrijving, req.Actief);
         var fout = r.Messages.FirstOrDefault(m => m.Type == BOCore.MessageType.Error)?.Message;
-        return Json(new { ok = r.Success, message = r.Success ? "Formule opgeslagen." : fout });
+        var f = r.Value;
+        return Json(new
+        {
+            ok = r.Success,
+            message = r.Success ? "Formule opgeslagen." : fout,
+            formule = f == null ? null : new
+            {
+                f.Id, f.ActivityId, f.ActivityOmschrijving, f.LotNaam, f.LotNummer,
+                f.Formule, f.Omschrijving, f.Actief, laatstGewijzigd = f.LaatstGewijzigd.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+            }
+        });
     }
 
     [HttpPost]

@@ -8,8 +8,10 @@ namespace ServiceCore.Budget;
 // ─────────────────────────────────────────────────────────────────────────────
 // Kleine expressie-parser voor bewerkbare budgetformules.
 // Syntax:  @parameter_naam, getallen (punt of komma als decimaal),
-//          + - * / ( ), en × ÷ als alternatieven voor * /.
-// Voorbeeld: @mat_dakwerken_daktimmerwerk * @opp_hellend_dak * 1.42 * 0.45
+//          + - * / ( ), × ÷ als alternatieven voor * /,
+//          vergelijkingen > >= < <= = <> (resultaat 1 of 0),
+//          en ALS(voorwaarde; waarde_als_waar; waarde_als_onwaar).
+// Voorbeeld: ALS(@verdiepingen_bovengronds > 4; @aantal_trapzalen * 250; 0)
 // ─────────────────────────────────────────────────────────────────────────────
 
 public class FormuleParseException : Exception
@@ -102,6 +104,71 @@ public class BinaryNode : FormuleNode
     }
 }
 
+public class VergelijkingNode : FormuleNode
+{
+    public string Op { get; }
+    public FormuleNode Links { get; }
+    public FormuleNode Rechts { get; }
+
+    public VergelijkingNode(string op, FormuleNode links, FormuleNode rechts)
+    {
+        Op = op; Links = links; Rechts = rechts;
+    }
+
+    public override decimal Evaluate(IReadOnlyDictionary<string, decimal> p)
+    {
+        var l = Links.Evaluate(p);
+        var r = Rechts.Evaluate(p);
+        var waar = Op switch
+        {
+            ">"  => l > r,
+            ">=" => l >= r,
+            "<"  => l < r,
+            "<=" => l <= r,
+            "="  => l == r,
+            "<>" => l != r,
+            _    => false
+        };
+        return waar ? 1m : 0m;
+    }
+
+    public override void CollectParameters(HashSet<string> namen)
+    {
+        Links.CollectParameters(namen);
+        Rechts.CollectParameters(namen);
+    }
+
+    public override string ToDisplay(Func<string, string> paramWeergave) =>
+        Links.ToDisplay(paramWeergave) + " " + Op + " " + Rechts.ToDisplay(paramWeergave);
+}
+
+public class AlsNode : FormuleNode
+{
+    public FormuleNode Voorwaarde { get; }
+    public FormuleNode Dan { get; }
+    public FormuleNode Anders { get; }
+
+    public AlsNode(FormuleNode voorwaarde, FormuleNode dan, FormuleNode anders)
+    {
+        Voorwaarde = voorwaarde; Dan = dan; Anders = anders;
+    }
+
+    public override decimal Evaluate(IReadOnlyDictionary<string, decimal> p) =>
+        Voorwaarde.Evaluate(p) != 0m ? Dan.Evaluate(p) : Anders.Evaluate(p);
+
+    public override void CollectParameters(HashSet<string> namen)
+    {
+        Voorwaarde.CollectParameters(namen);
+        Dan.CollectParameters(namen);
+        Anders.CollectParameters(namen);
+    }
+
+    public override string ToDisplay(Func<string, string> paramWeergave) =>
+        "ALS(" + Voorwaarde.ToDisplay(paramWeergave) + "; "
+               + Dan.ToDisplay(paramWeergave) + "; "
+               + Anders.ToDisplay(paramWeergave) + ")";
+}
+
 public class HaakjesNode : FormuleNode
 {
     public FormuleNode Kind { get; }
@@ -159,8 +226,30 @@ public static class FormuleParser
     }
 
     // ── Recursive descent ────────────────────────────────────────────────────
+    // expressie := additief ( ('>'|'>='|'<'|'<='|'='|'<>') additief )?
 
     private static FormuleNode ParseExpressie(string s, ref int pos)
+    {
+        var links = ParseAdditief(s, ref pos);
+        SkipSpaties(s, ref pos);
+        if (pos < s.Length && (s[pos] == '>' || s[pos] == '<' || s[pos] == '='))
+        {
+            string op;
+            if (s[pos] == '=') { op = "="; pos++; }
+            else
+            {
+                op = s[pos].ToString();
+                pos++;
+                if (pos < s.Length && s[pos] == '=') { op += "="; pos++; }
+                else if (op == "<" && pos < s.Length && s[pos] == '>') { op = "<>"; pos++; }
+            }
+            var rechts = ParseAdditief(s, ref pos);
+            return new VergelijkingNode(op, links, rechts);
+        }
+        return links;
+    }
+
+    private static FormuleNode ParseAdditief(string s, ref int pos)
     {
         var links = ParseTerm(s, ref pos);
         while (true)
@@ -234,6 +323,31 @@ public static class FormuleParser
             return new ParameterNode(s.Substring(start, pos - start).ToLowerInvariant());
         }
 
+        if (char.IsLetter(c))
+        {
+            var start = pos;
+            while (pos < s.Length && char.IsLetter(s[pos])) pos++;
+            var naam = s.Substring(start, pos - start).ToUpperInvariant();
+            if (naam is "ALS" or "IF")
+            {
+                SkipSpaties(s, ref pos);
+                if (pos >= s.Length || s[pos] != '(')
+                    throw new FormuleParseException($"'(' verwacht na {naam} op positie {pos + 1}.");
+                pos++;
+                var voorwaarde = ParseExpressie(s, ref pos);
+                VerwachtPuntkomma(s, ref pos, naam);
+                var dan = ParseExpressie(s, ref pos);
+                VerwachtPuntkomma(s, ref pos, naam);
+                var anders = ParseExpressie(s, ref pos);
+                SkipSpaties(s, ref pos);
+                if (pos >= s.Length || s[pos] != ')')
+                    throw new FormuleParseException($"Sluitend haakje ')' ontbreekt bij {naam}(...).");
+                pos++;
+                return new AlsNode(voorwaarde, dan, anders);
+            }
+            throw new FormuleParseException($"Onbekende functie '{naam}' op positie {start + 1}. Alleen ALS(voorwaarde; dan; anders) wordt ondersteund.");
+        }
+
         if (char.IsDigit(c))
         {
             var start = pos;
@@ -258,6 +372,14 @@ public static class FormuleParser
         }
 
         throw new FormuleParseException($"Onverwacht teken '{c}' op positie {pos + 1}.");
+    }
+
+    private static void VerwachtPuntkomma(string s, ref int pos, string functie)
+    {
+        SkipSpaties(s, ref pos);
+        if (pos >= s.Length || s[pos] != ';')
+            throw new FormuleParseException($"';' verwacht in {functie}(voorwaarde; dan; anders) op positie {pos + 1}.");
+        pos++;
     }
 
     private static void SkipSpaties(string s, ref int pos)

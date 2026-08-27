@@ -185,6 +185,17 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
+    Private _aantalTrapzalen As Integer?
+    <Display(Name:="Aantal trapzalen")>
+    Public Property AantalTrapzalen() As Integer?
+        Get
+            Return _aantalTrapzalen
+        End Get
+        Set(ByVal value As Integer?)
+            _aantalTrapzalen = value
+        End Set
+    End Property
+
     Private _aantalVeluxen As Integer?
     <Display(Name:="Aantal veluxen")>
     Public Property AantalVeluxen() As Integer?

@@ -432,9 +432,34 @@
                 Koppel hier elk formule-slot aan een materiaal uit de lijst.
                 De prijs van dat materiaal wordt gebruikt als invoer voor de formule in het budget.
                 Materialen die hier gekoppeld zijn kunnen niet worden verwijderd.
+                Elke koppeling is nadien bruikbaar in <a href="@Url.Action("BudgetFormules", "Instellingen")">Budgetformules</a>
+                als parameter <code>@@mat_&lt;sleutel&gt;</code>.
             </p>
         </div>
         <div class="card-body">
+            <div class="row g-2 align-items-end mb-3 pb-3 border-bottom" id="rij-nieuwe-koppeling">
+                <div class="col-md-4">
+                    <label class="form-label small mb-1">Naam nieuwe koppeling</label>
+                    <input type="text" class="form-control form-control-sm" id="inp-nieuwe-koppeling-naam"
+                           placeholder="bv. Gordijnwand systeem" maxlength="200" />
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small mb-1">Koppel materiaal</label>
+                    <select class="form-select form-select-sm" id="sel-nieuwe-koppeling-materiaal">
+                        <option value="">— geen koppeling —</option>
+                        @foreach (var m in Model.Materialen) {
+                            <option value="@m.Id">
+                                @(string.IsNullOrEmpty(m.CategorieNaam) ? "" : $"[{m.CategorieNaam}] ")@m.Naam
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-primary btn-sm w-100" id="btn-nieuwe-koppeling">
+                        <i class="bx bx-plus me-1"></i>Koppeling aanmaken
+                    </button>
+                </div>
+            </div>
             <table class="table table-sm table-hover align-middle" id="tbl-koppelingen">
                 <thead class="table-light">
                     <tr>
@@ -443,12 +468,12 @@
                         <th style="min-width:260px">Gekoppeld materiaal</th>
                         <th style="width:130px">Referentieprijs</th>
                         <th style="width:80px">Eenheid</th>
-                        <th style="width:90px"></th>
+                        <th style="width:130px"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var k in Model.FormulaKoppelingen) {
-                        <tr data-sleutel="@k.Sleutel">
+                        <tr data-id="@k.Id" data-sleutel="@k.Sleutel">
                             <td><code class="text-secondary small">@k.Sleutel</code></td>
                             <td>@k.Omschrijving</td>
                             <td>
@@ -470,9 +495,12 @@
                                 }
                             </td>
                             <td class="koppeling-eenheid small text-muted">@k.MateriaalEenheid</td>
-                            <td>
+                            <td class="d-flex gap-1">
                                 <button type="button" class="btn btn-sm btn-primary btn-save-koppeling" data-sleutel="@k.Sleutel">
                                     <i class="bx bx-save me-1"></i>Opslaan
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-koppeling" data-id="@k.Id" title="Koppeling verwijderen">
+                                    <i class="bx bx-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -625,20 +653,21 @@
     })();
 
     // ── Formule koppelingen ─────────────────────────────────────────────────
-    document.querySelectorAll('.koppeling-materiaal-select').forEach(function(sel) {
+    const tblKoppelingenBody = document.querySelector('#tbl-koppelingen tbody');
+    const materiaalOptionsHtml = document.getElementById('sel-nieuwe-koppeling-materiaal').innerHTML;
+
+    function wireKoppelingRow(tr) {
+        const sel = tr.querySelector('.koppeling-materiaal-select');
         sel.addEventListener('change', function() {
-            const tr = this.closest('tr');
             const opt = this.options[this.selectedIndex];
             tr.querySelector('.koppeling-prijs').innerHTML =
                 opt.dataset.prijs ? '€ ' + parseFloat(opt.dataset.prijs).toLocaleString('nl-BE', {minimumFractionDigits:2,maximumFractionDigits:2}) : '';
             tr.querySelector('.koppeling-eenheid').textContent = opt.dataset.eenheid || '';
         });
-    });
 
-    document.querySelectorAll('.btn-save-koppeling').forEach(function(btn) {
-        btn.addEventListener('click', async function() {
-            const sleutel = this.dataset.sleutel;
-            const tr = this.closest('tr');
+        tr.querySelector('.btn-save-koppeling').addEventListener('click', async function() {
+            const btn = this;
+            const sleutel = tr.dataset.sleutel;
             const materiaalId = tr.querySelector('.koppeling-materiaal-select').value;
             btn.disabled = true;
             btn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Bezig...';
@@ -665,6 +694,83 @@
                 btn.disabled = false;
             }
         });
+
+        tr.querySelector('.btn-delete-koppeling').addEventListener('click', async function() {
+            const btn = this;
+            if (!confirm(`Koppeling "${tr.querySelector('td').textContent.trim()}" verwijderen?`)) return;
+            btn.disabled = true;
+            try {
+                const resp = await fetch('@Url.Action("FormulaKoppelingVerwijderen", "Instellingen")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parseInt(tr.dataset.id))
+                });
+                const data = await resp.json();
+                if (data.ok) { tr.remove(); return; }
+                alert(data.message || 'Verwijderen mislukt.');
+                btn.disabled = false;
+            } catch {
+                alert('Verbindingsfout.');
+                btn.disabled = false;
+            }
+        });
+    }
+
+    document.querySelectorAll('#tbl-koppelingen tbody tr').forEach(wireKoppelingRow);
+
+    function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    document.getElementById('btn-nieuwe-koppeling').addEventListener('click', async function() {
+        const btn = this;
+        const naamInput = document.getElementById('inp-nieuwe-koppeling-naam');
+        const naam = naamInput.value.trim();
+        if (!naam) { naamInput.focus(); return; }
+        const materiaalSel = document.getElementById('sel-nieuwe-koppeling-materiaal');
+        const materiaalId = materiaalSel.value;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Bezig...';
+        try {
+            const resp = await fetch('@Url.Action("FormulaKoppelingAanmaken", "Instellingen")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ naam: naam, materiaalId: materiaalId ? parseInt(materiaalId) : null })
+            });
+            const data = await resp.json();
+            if (!data.ok) { alert(data.message || 'Aanmaken mislukt.'); return; }
+
+            const k = data.koppeling;
+            const tr = document.createElement('tr');
+            tr.dataset.id = k.id;
+            tr.dataset.sleutel = k.sleutel;
+            const prijsTxt = k.materiaalReferentiePrijs != null
+                ? '€ ' + Number(k.materiaalReferentiePrijs).toLocaleString('nl-BE', {minimumFractionDigits:2,maximumFractionDigits:2})
+                : '';
+            tr.innerHTML = `
+                <td><code class="text-secondary small">${escapeHtml(k.sleutel)}</code></td>
+                <td>${escapeHtml(k.omschrijving)}</td>
+                <td><select class="form-select form-select-sm koppeling-materiaal-select">${materiaalOptionsHtml}</select></td>
+                <td class="koppeling-prijs text-end font-monospace small">${prijsTxt}</td>
+                <td class="koppeling-eenheid small text-muted">${escapeHtml(k.materiaalEenheid || '')}</td>
+                <td class="d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-primary btn-save-koppeling"><i class="bx bx-save me-1"></i>Opslaan</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-koppeling" title="Koppeling verwijderen"><i class="bx bx-trash"></i></button>
+                </td>`;
+            if (k.materiaalId) tr.querySelector('.koppeling-materiaal-select').value = k.materiaalId;
+            tblKoppelingenBody.appendChild(tr);
+            wireKoppelingRow(tr);
+
+            naamInput.value = '';
+            materiaalSel.value = '';
+            if (typeof toastr !== 'undefined') toastr.success(`Koppeling "${k.sleutel}" aangemaakt — bruikbaar als @@mat_${k.sleutel}`);
+        } catch {
+            alert('Verbindingsfout.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-plus me-1"></i>Koppeling aanmaken';
+        }
     });
     </script>
 }
