@@ -23,6 +23,11 @@ Public Class BundleConfig
         bundles.Add(New ScriptBundle("~/bundles/modernizr").Include(
                     "~/Scripts/modernizr-*"))
 
+        ' Enkel de plugins die de site effectief gebruikt. Verwijderd (geen markup op de site,
+        ' theme.js valt netjes terug via $.isFunction-guards): jquery.stellar, jquery.easy-pie-chart,
+        ' jquery.gmap (Contact laadt de Google Maps-API rechtstreeks), jquery.lazyload,
+        ' rs-plugin (revolution slider), circle-flip-slideshow, vide.
+        ' isotope: behouden — gebruikt op Realisaties-overzicht en de mediagalerij op Projectdetail.
         bundles.Add(New ScriptBundle("~/Vendor/jsbundle").Include(
                     "~/vendor/jquery.appear/jquery.appear.min.js",
                     "~/vendor/jquery.easing/jquery.easing.min.js",
@@ -30,18 +35,10 @@ Public Class BundleConfig
                     "~/vendor/bootstrap/js/bootstrap.min.js",
                     "~/vendor/common/common.min.js",
                     "~/vendor/jquery.validation/jquery.validation.min.js",
-                    "~/vendor/jquery.stellar/jquery.stellar.min.js",
-                    "~/vendor/jquery.easy-pie-chart/jquery.easy-pie-chart.min.js",
-                    "~/vendor/jquery.gmap/jquery.gmap.min.js",
-                    "~/vendor/jquery.lazyload/jquery.lazyload.min.js",
                     "~/vendor/isotope/jquery.isotope.min.js",
                     "~/vendor/owl.carousel/owl.carousel.min.js",
                     "~/vendor/magnific-popup/jquery.magnific-popup.min.js",
-                    "~/vendor/rs-plugin/js/jquery.themepunch.tools.min.js",
-                    "~/vendor/rs-plugin/js/jquery.themepunch.revolution.min.js",
-                    "~/vendor/circle-flip-slideshow/js/jquery.flipshow.min.js",
-                    "~/vendor/pnotify/pnotify.custom.js",
-                    "~/vendor/vide/vide.min.js"))
+                    "~/vendor/pnotify/pnotify.custom.js"))
 
         bundles.Add(New ScriptBundle("~/Scripts/jsbundle").Include(
                     "~/Scripts/theme.js",
@@ -75,10 +72,6 @@ Public Class BundleConfig
                     "~/vendor/owl.carousel/assets/owl.carousel.min.css",
                     "~/vendor/owl.carousel/assets/owl.theme.default.min.css",
                     "~/vendor/magnific-popup/magnific-popup.min.css",
-                    "~/vendor/rs-plugin/css/settings.css",
-                    "~/vendor/rs-plugin/css/layers.css",
-                    "~/vendor/rs-plugin/css/navigation.css",
-                    "~/vendor/circle-flip-slideshow/css/component.css",
                     "~/vendor/pnotify/pnotify.custom.css"
                    ))
 

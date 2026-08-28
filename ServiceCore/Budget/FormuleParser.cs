@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace ServiceCore.Budget;
@@ -10,8 +11,9 @@ namespace ServiceCore.Budget;
 // Syntax:  @parameter_naam, getallen (punt of komma als decimaal),
 //          + - * / ( ), × ÷ als alternatieven voor * /,
 //          vergelijkingen > >= < <= = <> (resultaat 1 of 0),
-//          en ALS(voorwaarde; waarde_als_waar; waarde_als_onwaar).
-// Voorbeeld: ALS(@verdiepingen_bovengronds > 4; @aantal_trapzalen * 250; 0)
+//          ALS(voorwaarde; waarde_als_waar; waarde_als_onwaar),
+//          en EN(a; b; ...) / OF(a; b; ...) om voorwaarden te combineren (2+ argumenten).
+// Voorbeeld: ALS(EN(@aantal_eenheden < 9; @aantal_appartementen > 0); @aantal_eenheden * @mat_tellerkast; 0)
 // ─────────────────────────────────────────────────────────────────────────────
 
 public class FormuleParseException : Exception
@@ -167,6 +169,28 @@ public class AlsNode : FormuleNode
         "ALS(" + Voorwaarde.ToDisplay(paramWeergave) + "; "
                + Dan.ToDisplay(paramWeergave) + "; "
                + Anders.ToDisplay(paramWeergave) + ")";
+}
+
+public class LogischNode : FormuleNode
+{
+    public bool IsEn { get; }
+    public List<FormuleNode> Argumenten { get; }
+
+    public LogischNode(bool isEn, List<FormuleNode> argumenten)
+    {
+        IsEn = isEn; Argumenten = argumenten;
+    }
+
+    public override decimal Evaluate(IReadOnlyDictionary<string, decimal> p) =>
+        (IsEn ? Argumenten.All(a => a.Evaluate(p) != 0m) : Argumenten.Any(a => a.Evaluate(p) != 0m)) ? 1m : 0m;
+
+    public override void CollectParameters(HashSet<string> namen)
+    {
+        foreach (var a in Argumenten) a.CollectParameters(namen);
+    }
+
+    public override string ToDisplay(Func<string, string> paramWeergave) =>
+        (IsEn ? "EN(" : "OF(") + string.Join("; ", Argumenten.Select(a => a.ToDisplay(paramWeergave))) + ")";
 }
 
 public class HaakjesNode : FormuleNode
@@ -345,7 +369,28 @@ public static class FormuleParser
                 pos++;
                 return new AlsNode(voorwaarde, dan, anders);
             }
-            throw new FormuleParseException($"Onbekende functie '{naam}' op positie {start + 1}. Alleen ALS(voorwaarde; dan; anders) wordt ondersteund.");
+            if (naam is "EN" or "AND" or "OF" or "OR")
+            {
+                SkipSpaties(s, ref pos);
+                if (pos >= s.Length || s[pos] != '(')
+                    throw new FormuleParseException($"'(' verwacht na {naam} op positie {pos + 1}.");
+                pos++;
+                var argumenten = new List<FormuleNode> { ParseExpressie(s, ref pos) };
+                SkipSpaties(s, ref pos);
+                while (pos < s.Length && s[pos] == ';')
+                {
+                    pos++;
+                    argumenten.Add(ParseExpressie(s, ref pos));
+                    SkipSpaties(s, ref pos);
+                }
+                if (argumenten.Count < 2)
+                    throw new FormuleParseException($"{naam}(...) heeft minstens 2 argumenten nodig, gescheiden door ';'.");
+                if (pos >= s.Length || s[pos] != ')')
+                    throw new FormuleParseException($"Sluitend haakje ')' ontbreekt bij {naam}(...).");
+                pos++;
+                return new LogischNode(naam is "EN" or "AND", argumenten);
+            }
+            throw new FormuleParseException($"Onbekende functie '{naam}' op positie {start + 1}. Ondersteund: ALS(voorwaarde; dan; anders), EN(a; b; ...), OF(a; b; ...).");
         }
 
         if (char.IsDigit(c))

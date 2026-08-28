@@ -158,11 +158,12 @@
 .footer-legal a {
     font-family: var(--font-sans);
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.65);
+    /* !important zoals bij .footer-links a — het thema zet anders #footer a via een ID-selector */
+    color: rgba(255, 255, 255, 0.68) !important;
     text-decoration: none !important;
 }
 .footer-legal a:hover {
-    color: #fff;
+    color: #fff !important;
 }
 .footer-ai-note {
     display: flex;
@@ -191,9 +192,6 @@
     .footer-quote {
         font-size: 28px;
     }
-    .footer-bottom-inner {
-        justify-content: flex-start;
-    }
 }
 
 @media (max-width: 767px) {
@@ -215,6 +213,24 @@
         flex-direction: column;
     }
     .footer-social {
+        justify-content: center;
+    }
+
+    /* Onderbalk: alle regels onder elkaar en horizontaal gecentreerd */
+    .footer-bottom-inner {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+    }
+    .footer-copyright {
+        margin-right: 0;
+    }
+    .footer-legal {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .footer-ai-note {
         justify-content: center;
     }
 }

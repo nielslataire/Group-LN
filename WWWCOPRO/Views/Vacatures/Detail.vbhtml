@@ -329,7 +329,7 @@ End If
 
                         <div class="contact-privacy">
                             <input type="checkbox" id="PrivacyAkkoord" name="PrivacyAkkoord" value="true" />
-                            <label for="PrivacyAkkoord">Ik ga akkoord dat Group LN mijn gegevens gebruikt om mijn sollicitatie te behandelen, conform het <a href="#">privacybeleid</a>.</label>
+                            <label for="PrivacyAkkoord">Ik ga akkoord dat Group LN mijn gegevens gebruikt om mijn sollicitatie te behandelen, conform het <a href="@Url.Action("Privacybeleid", "Legal")" target="_blank" rel="noopener">privacybeleid</a>.</label>
                         </div>
                         <span class="contact-field-error" data-valmsg-for="PrivacyAkkoord"></span>
 

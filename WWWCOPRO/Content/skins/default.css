@@ -29,7 +29,7 @@
 
     /* Typografie */
     --font-serif:          'Playfair Display', 'Times New Roman', Georgia, serif;
-    --font-sans:           'Avenir', sans-serif;
+    --font-sans:           'Avenir', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 a {

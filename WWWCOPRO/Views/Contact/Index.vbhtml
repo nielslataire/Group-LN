@@ -139,7 +139,7 @@ End Section
 
                             <div class="contact-privacy">
                                 @Html.CheckBoxFor(Function(m) m.PrivacyAkkoord)
-                                <label for="PrivacyAkkoord">Ik ga akkoord dat Group LN mijn gegevens gebruikt om mijn vraag te beantwoorden, conform het <a href="#">privacybeleid</a>.</label>
+                                <label for="PrivacyAkkoord">Ik ga akkoord dat Group LN mijn gegevens gebruikt om mijn vraag te beantwoorden, conform het <a href="@Url.Action("Privacybeleid", "Legal")" target="_blank" rel="noopener">privacybeleid</a>.</label>
                             </div>
                             @Html.ValidationMessageFor(Function(m) m.PrivacyAkkoord, "", New With {.class = "contact-field-error"})
 

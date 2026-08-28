@@ -92,9 +92,11 @@ public class BudgetActivityFormuleService
         ("aantal_wooncomm",          "Aantal woon-/commerciële eenheden (deler voor prijs per eenheid)",        "st",   "Aantallen"),
         ("aantal_appartementen",     "Aantal rijen op tab Oppervlaktes met (sub)type appartement",              "st",   "Aantallen"),
         ("aantal_woningen",          "Aantal rijen op tab Oppervlaktes met (sub)type woning",                   "st",   "Aantallen"),
+        ("aantal_commercieel",       "Aantal rijen op tab Oppervlaktes met (sub)type commercieel/handel",       "st",   "Aantallen"),
         ("aantal_bergingen",         "Aantal rijen op tab Oppervlaktes met (sub)type berging",                  "st",   "Aantallen"),
         ("aantal_trapzalen",         "Aantal trapzalen (tab Gegevens)",                                         "st",   "Aantallen"),
         ("aantal_binnentrappen",     "Aantal binnentrappen (tab Gegevens)",                                     "st",   "Aantallen"),
+        ("aantal_liften",            "Aantal liften (tab Gegevens)",                                            "st",   "Aantallen"),
         ("verdiepingen_bovengronds", "Aantal bovengrondse verdiepingen (tab Gegevens)",                         "st",   "Aantallen"),
         ("verdiepingen_ondergronds", "Aantal verdiepingen ondergronds (tab Gegevens)",                          "st",   "Aantallen"),
         ("aantal_veluxen",           "Aantal veluxen (tab Dak & afbraak)",                                      "st",   "Aantallen"),
@@ -223,7 +225,8 @@ public class BudgetActivityFormuleService
             M3Onderschoeiingen            = dbGeg?.M3Onderschoeiingen,
             AantalVeluxen                 = dbGeg?.AantalVeluxen,
             AantalTrapzalen               = dbGeg?.AantalTrapzalen,
-            AantalBinnentrappen           = dbGeg?.AantalBinnentrappen ?? 0
+            AantalBinnentrappen           = dbGeg?.AantalBinnentrappen ?? 0,
+            AantalLiften                  = dbGeg?.AantalLiften ?? 0
         };
         var ctx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
 
@@ -294,9 +297,12 @@ public class BudgetActivityFormuleService
             ["aantal_wooncomm"]          = aantalWoonComm,
             ["aantal_appartementen"]     = TelGroepType("appartement"),
             ["aantal_woningen"]          = TelGroepType("woning"),
+            // "commercieel" i.p.v. "handel": zelfde matching als @opp_commercieel hierboven.
+            ["aantal_commercieel"]       = TelGroepType("commerci"),
             ["aantal_bergingen"]         = TelGroepType("berging"),
             ["aantal_trapzalen"]         = gegevensBO.AantalTrapzalen ?? 0,
             ["aantal_binnentrappen"]     = gegevensBO.AantalBinnentrappen,
+            ["aantal_liften"]            = gegevensBO.AantalLiften,
             ["verdiepingen_bovengronds"] = gegevensBO.AantalBovengrondseVerdiepingen,
             ["verdiepingen_ondergronds"] = gegevensBO.AantalVerdiepingenOndergronds,
             ["aantal_veluxen"]           = gegevensBO.AantalVeluxen ?? 0,

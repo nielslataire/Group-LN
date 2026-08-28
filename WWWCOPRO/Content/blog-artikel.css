@@ -402,6 +402,23 @@
     min-height: 86px;
 }
 
+.artikel-contact-veld input.is-invalid,
+.artikel-contact-veld textarea.is-invalid {
+    border-color: #c0392b;
+    background: #fff;
+}
+
+.artikel-contact-fout {
+    display: none;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #c0392b;
+}
+.artikel-contact-fout.is-visible {
+    display: block;
+}
+
 .artikel-contact-check {
     margin: 10px 0 14px;
     font-size: 13px;

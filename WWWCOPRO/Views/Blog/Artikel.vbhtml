@@ -235,7 +235,8 @@ End If
                     </div>
                     <div class="artikel-contact-veld">
                         <label for="bc_naam">NAAM <span class="req">*</span></label>
-                        <input type="text" id="bc_naam" name="naam" autocomplete="family-name" placeholder="Janssen" />
+                        <input type="text" id="bc_naam" name="naam" autocomplete="family-name" placeholder="Janssen" aria-describedby="bc_naam_fout" />
+                        <span class="artikel-contact-fout" id="bc_naam_fout" data-valmsg-for="naam" role="alert"></span>
                     </div>
                     <div class="artikel-contact-veld">
                         <label for="bc_voornaam">VOORNAAM</label>
@@ -243,7 +244,8 @@ End If
                     </div>
                     <div class="artikel-contact-veld">
                         <label for="bc_email">E-MAILADRES <span class="req">*</span></label>
-                        <input type="email" id="bc_email" name="email" autocomplete="email" placeholder="jan@email.be" />
+                        <input type="email" id="bc_email" name="email" autocomplete="email" placeholder="jan@email.be" aria-describedby="bc_email_fout" />
+                        <span class="artikel-contact-fout" id="bc_email_fout" data-valmsg-for="email" role="alert"></span>
                     </div>
                     <div class="artikel-contact-veld">
                         <label for="bc_tel">TELEFOONNUMMER</label>
@@ -251,7 +253,8 @@ End If
                     </div>
                     <div class="artikel-contact-veld">
                         <label for="bc_bericht">BERICHT <span class="req">*</span></label>
-                        <textarea id="bc_bericht" name="bericht" rows="4" placeholder="Je vraag of opmerking..."></textarea>
+                        <textarea id="bc_bericht" name="bericht" rows="4" placeholder="Je vraag of opmerking..." aria-describedby="bc_bericht_fout"></textarea>
+                        <span class="artikel-contact-fout" id="bc_bericht_fout" data-valmsg-for="bericht" role="alert"></span>
                     </div>
                     @*<div class="artikel-contact-check">
                         <input type="checkbox" id="bc_nieuwsbrief" name="nieuwsbrief" value="1" />
@@ -391,6 +394,22 @@ End If
 
             var recaptchaSiteKey = '@ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")';
 
+            function zetVeldFout(inputId, boodschap) {
+                var input = document.getElementById(inputId);
+                var fout = document.getElementById(inputId + '_fout');
+                if (input) input.classList.toggle('is-invalid', !!boodschap);
+                if (fout) {
+                    fout.textContent = boodschap || '';
+                    fout.classList.toggle('is-visible', !!boodschap);
+                }
+            }
+
+            // Fout wissen zodra de bezoeker het veld aanpast
+            ['bc_naam', 'bc_email', 'bc_bericht'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('input', function () { zetVeldFout(id, ''); });
+            });
+
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
 
@@ -400,8 +419,23 @@ End If
                 var email   = document.getElementById('bc_email').value.trim();
                 var bericht = document.getElementById('bc_bericht').value.trim();
 
-                if (!naam || !email || !bericht) {
-                    alert('Vul alle verplichte velden in (Naam, E-mailadres en Bericht).');
+                var eersteFout = null;
+                function eis(inputId, ongeldig, boodschap) {
+                    zetVeldFout(inputId, ongeldig ? boodschap : '');
+                    if (ongeldig && !eersteFout) eersteFout = document.getElementById(inputId);
+                }
+
+                eis('bc_naam', !naam, 'Vul je naam in.');
+                if (!email) {
+                    eis('bc_email', true, 'Vul je e-mailadres in.');
+                } else {
+                    // \x40 in de regex is het apenstaartje-teken; letterlijk geschreven breekt het de Razor-VB-parser
+                    eis('bc_email', !/^[^\s\x40]+\x40[^\s\x40]+\.[^\s\x40]+$/.test(email), 'Vul een geldig e-mailadres in.');
+                }
+                eis('bc_bericht', !bericht, 'Vul je bericht in.');
+
+                if (eersteFout) {
+                    eersteFout.focus();
                     return;
                 }
 

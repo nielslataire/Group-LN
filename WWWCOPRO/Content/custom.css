@@ -54,6 +54,47 @@
 }
 
 /* ================================================
+   Toegankelijkheid — skip-link + zichtbare toetsenbord-focus
+   ================================================ */
+
+/* "Naar de inhoud": alleen zichtbaar zodra hij focus krijgt (Tab) */
+.skip-to-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3000;
+    padding: 10px 18px;
+    background: var(--color-primary, #00532D);
+    color: #fff !important;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none !important;
+    border-bottom-right-radius: 3px;
+    transform: translateY(-120%);
+    transition: transform 0.15s ease;
+}
+.skip-to-content:focus {
+    transform: translateY(0);
+}
+
+/* De grote inhoud-container mag geen focusring tonen wanneer de skip-link erheen springt */
+.main:focus {
+    outline: none !important;
+}
+
+/* Zichtbare focus voor toetsenbordgebruikers — één consistente stijl.
+   !important omdat het verouderde thema op tal van plekken outline:0 forceert. */
+:focus-visible {
+    outline: 2px solid var(--color-cta, #C9A96E) !important;
+    outline-offset: 2px !important;
+}
+/* Muisklik / aanraking: geen ring (browsers die :focus-visible niet zelf beperken) */
+:focus:not(:focus-visible) {
+    outline: none !important;
+}
+
+/* ================================================
    Header — logo + brand tekst
    ================================================ */
 .header-logo-brand {
@@ -545,6 +586,27 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--mist, #F2F5EF) !important;
     background-image: none !important;
     border-bottom: 0.5px solid var(--border, rgba(0,83,45,0.10)) !important;
+}
+
+/* ================================================
+   Tabulaire cijfers — rechte kolommen voor prijzen, getallenreeksen
+   en tabellen. Progressieve verbetering: fonts zonder 'tnum'-feature
+   negeren dit gewoon.
+   ================================================ */
+.tabular-nums,
+.info-kaart-prijs,
+.info-prijs-val,
+.prijs-val,
+.prijs-vanaf-label,
+.samenv-prijs,
+.optie-kaart-prijs,
+.uitgelicht-prijs,
+.kaart-prijs,
+.total-prijs,
+.eenheid-tabel,
+.troeven-number,
+.header-phone-number {
+    font-variant-numeric: tabular-nums;
 }
 
 /* ================================================

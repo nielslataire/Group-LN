@@ -246,6 +246,7 @@
     <Compile Include="Controllers\ContactController.vb" />
     <Compile Include="Controllers\ErrorController.vb" />
     <Compile Include="Controllers\HomeController.vb" />
+    <Compile Include="Controllers\LegalController.vb" />
     <Compile Include="Controllers\NewsletterController.vb" />
     <Compile Include="Controllers\SitemapController.vb" />
     <Compile Include="Controllers\TeamController.vb" />
@@ -302,6 +303,8 @@
   <ItemGroup>
     <Content Include="Content\blog-artikel.css" />
     <Content Include="Content\blog-index.css" />
+    <Content Include="Content\legal.css" />
+    <Content Include="Content\cookie-consent.css" />
     <Content Include="Content\bootstrap-grid.css" />
     <Content Include="Content\bootstrap-grid.min.css" />
     <Content Include="Content\bootstrap-grid.rtl.css" />
@@ -569,6 +572,9 @@
     <Content Include="Views\Blog\Index.vbhtml" />
     <Content Include="Views\Vacatures\Index.vbhtml" />
     <Content Include="Views\Vacatures\Detail.vbhtml" />
+    <Content Include="Views\Legal\Privacybeleid.vbhtml" />
+    <Content Include="Views\Legal\Cookiebeleid.vbhtml" />
+    <Content Include="Views\Legal\AlgemeneVoorwaarden.vbhtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\custom.css" />
@@ -867,6 +873,7 @@
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
     <Content Include="Scripts\custom.js" />
+    <Content Include="Scripts\cookie-consent.js" />
     <Content Include="Scripts\reveal.js" />
     <Content Include="Scripts\theme.init.js" />
     <Content Include="Scripts\theme.js" />

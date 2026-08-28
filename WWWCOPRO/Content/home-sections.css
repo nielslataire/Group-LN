@@ -70,6 +70,9 @@
 .about-section {
     padding: 100px 0;
     background: var(--mist, #F2F5EF);
+    /* .about-media heeft .reveal-slide-right (translateX(60px) in rusttoestand);
+       zonder deze clip duwt die 60px de pagina breder op smalle schermen. */
+    overflow-x: hidden;
 }
 
 .about-grid {

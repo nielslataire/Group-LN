@@ -14,17 +14,35 @@ End Code
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <!-- Google Tag Manager -->
+    <!-- Google Consent Mode v2 — standaard alles geweigerd tot de bezoeker kiest (zie cookie-consent.js) -->
     <script>
-        (function (w, d, s, l, i) {
-            w[l] = w[l] || []; w[l].push({
-                'gtm.start':
-                    new Date().getTime(), event: 'gtm.js'
-            }); var f = d.getElementsByTagName(s)[0],
-                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-        })(window, document, 'script', 'dataLayer', 'GTM-KG5HPVWR');</script>
-    <!-- End Google Tag Manager -->
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('consent', 'default', {
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            analytics_storage: 'denied',
+            functionality_storage: 'granted',
+            security_storage: 'granted',
+            wait_for_update: 500
+        });
+        gtag('set', 'ads_data_redaction', true);
+
+        // Google Tag Manager wordt pas geladen nadat de bezoeker statistiek of marketing aanvaardt.
+        window.grouplnLoadGTM = function () {
+            if (window.__grouplnGtmLoaded) { return; }
+            window.__grouplnGtmLoaded = true;
+            (function (w, d, s, l, i) {
+                w[l] = w[l] || []; w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+                var f = d.getElementsByTagName(s)[0], j = d.createElement(s),
+                    dl = l != 'dataLayer' ? '&l=' + l : '';
+                j.async = true; j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+                f.parentNode.insertBefore(j, f);
+            })(window, document, 'script', 'dataLayer', 'GTM-KG5HPVWR');
+        };
+    </script>
+    <!-- End Consent Mode / GTM-loader -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData("Title")</title>
@@ -113,6 +131,7 @@ End Code
     @Styles.Render("~/Content/skin")
     <link rel="stylesheet" href="@Url.Content("~/Content/footer.css")" />
     <link rel="stylesheet" href="@Url.Content("~/Content/reveal.css")" />
+    <link rel="stylesheet" href="@Url.Content("~/Content/cookie-consent.css")" />
     <script>
         if ('IntersectionObserver' in window) {
             document.documentElement.classList.add('js-reveal');
@@ -123,12 +142,9 @@ End Code
 
 </head>
 <body>
-    <!-- Google Tag Manager (noscript) -->
-    <noscript>
-        <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KG5HPVWR"
-                height="0" width="0" style="display:none;visibility:hidden"></iframe>
-    </noscript>
-    <!-- End Google Tag Manager (noscript) -->
+    @* Google Tag Manager laadt via Consent Mode pas na toestemming (zie <head> + cookie-consent.js).
+       De <noscript>-fallback is bewust weggelaten: zonder JavaScript kan er geen toestemming gevraagd worden. *@
+    <a class="skip-to-content" href="#main">Naar de inhoud</a>
     <div class="body">
         <header id="header" class="header-no-border-bottom header-full-width @(If(_heroHeader, "header-transparent header-transparent-brand", ""))" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": @(If(_heroHeader, 175, 0)), "stickySetTop": 0, "stickyChangeLogo": false}'>
             <div class="header-body">
@@ -235,9 +251,9 @@ End Code
                 </div>
             </div>
         </div>
-        <div role="main" class="main">
+        <main id="main" role="main" class="main" tabindex="-1">
             @RenderBody()
-        </div>
+        </main>
         <footer id="footer" class="site-footer">
             <div class="container">
                 <p class="footer-quote">Bouwen aan plekken waar mensen graag thuiskomen.</p>
@@ -276,7 +292,6 @@ End Code
                         <ul class="footer-links">
                             <li><a href="@Url.Action("Index", "AboutUs")">Over ons</a></li>
                             <li><a href="@Url.Action("Index", "Blog")">Blog</a></li>
-                            <li style="display:none;"><a href="#">FAQ</a></li>
                             <li><a href="@Url.Action("Index", "Contact")">Contact</a></li>
                         </ul>
                     </div>
@@ -295,9 +310,9 @@ End Code
                 <div class="container footer-bottom-inner">
                     <p class="footer-copyright">© @DateTime.Now.Year Group LN · Projectontwikkeling</p>
                     <ul class="footer-legal">
-                        <li style="display:none;"><a href="#">Privacybeleid</a></li>
-                        <li style="display:none;"><a href="#">Cookies</a></li>
-                        <li style="display:none;"><a href="#">Algemene voorwaarden</a></li>
+                        <li><a href="@Url.Action("Privacybeleid", "Legal")">Privacybeleid</a></li>
+                        <li><a href="@Url.Action("Cookiebeleid", "Legal")">Cookiebeleid</a></li>
+                        <li><a href="@Url.Action("AlgemeneVoorwaarden", "Legal")">Algemene voorwaarden</a></li>
                     </ul>
                     <p class="footer-ai-note"><i class="bx bx-time-five"></i> Onderdelen van deze site zijn met AI-ondersteuning gebouwd</p>
                 </div>
@@ -341,5 +356,83 @@ End Code
                 });
             </script>
         End Section*@
+
+    @* ── Cookietoestemming ── *@
+    <div id="ccConsent" class="cc">
+        <div class="cc-overlay" data-cc-close-prefs></div>
+
+        <div class="cc-banner" role="dialog" aria-live="polite" aria-labelledby="ccBannerTitle" aria-describedby="ccBannerText">
+            <div class="cc-banner-inner">
+                <p id="ccBannerTitle" class="cc-banner-title">Cookies op deze website</p>
+                <p id="ccBannerText" class="cc-banner-text">
+                    We gebruiken noodzakelijke cookies om de site te laten werken. Met jouw toestemming
+                    plaatsen we ook cookies voor statistiek en marketing. Meer info in ons
+                    <a href="@Url.Action("Cookiebeleid", "Legal")">cookiebeleid</a>.
+                </p>
+                <div class="cc-banner-acties">
+                    <button type="button" class="cc-btn cc-btn-ghost" data-cc-action="reject">Alles weigeren</button>
+                    <button type="button" class="cc-btn cc-btn-primary" data-cc-action="accept">Alles aanvaarden</button>
+                </div>
+                <button type="button" class="cc-prefs-link" data-cc-action="prefs">Voorkeuren aanpassen</button>
+            </div>
+        </div>
+
+        <div class="cc-dialog" role="dialog" aria-modal="true" aria-labelledby="ccDialogTitle">
+            <div class="cc-dialog-panel">
+                <div class="cc-dialog-head">
+                    <p id="ccDialogTitle" class="cc-dialog-title">Cookievoorkeuren</p>
+                    <button type="button" class="cc-dialog-close" data-cc-close-prefs aria-label="Sluiten">&times;</button>
+                </div>
+                <div class="cc-dialog-body">
+                    <p class="cc-dialog-intro">
+                        Kies welke cookies we mogen plaatsen. Je kan je keuze later altijd wijzigen via
+                        het cookie-icoon linksonder op elke pagina.
+                    </p>
+
+                    <div class="cc-cat">
+                        <div class="cc-cat-head">
+                            <span class="cc-cat-naam">Noodzakelijk</span>
+                            <span class="cc-cat-verplicht">Altijd actief</span>
+                        </div>
+                        <p class="cc-cat-tekst">Nodig om de website en de formulieren te laten werken en om je cookiekeuze te onthouden. Deze kan je niet uitschakelen.</p>
+                    </div>
+
+                    <div class="cc-cat">
+                        <div class="cc-cat-head">
+                            <label class="cc-cat-naam" for="ccCatAnalytics">Statistiek</label>
+                            <span class="cc-switch">
+                                <input type="checkbox" id="ccCatAnalytics" />
+                                <span class="cc-switch-slider"></span>
+                            </span>
+                        </div>
+                        <p class="cc-cat-tekst">Anonieme statistiek over het gebruik van de site (Google Analytics), zodat we de website kunnen verbeteren.</p>
+                    </div>
+
+                    <div class="cc-cat">
+                        <div class="cc-cat-head">
+                            <label class="cc-cat-naam" for="ccCatMarketing">Marketing</label>
+                            <span class="cc-switch">
+                                <input type="checkbox" id="ccCatMarketing" />
+                                <span class="cc-switch-slider"></span>
+                            </span>
+                        </div>
+                        <p class="cc-cat-tekst">Cookies waarmee we onze advertenties relevanter kunnen maken en het resultaat ervan kunnen meten.</p>
+                    </div>
+                </div>
+                <div class="cc-dialog-acties">
+                    <button type="button" class="cc-btn cc-btn-ghost" data-cc-action="reject">Alles weigeren</button>
+                    <button type="button" class="cc-btn cc-btn-primary" data-cc-action="save">Keuze bewaren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" id="ccFab" class="cc-fab" aria-label="Cookievoorkeuren openen">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-4-4 3 3 0 0 1-3-3 3 3 0 0 1-3-3zm-3.5 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-6 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm4-6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+        </svg>
+    </button>
+
+    <script src="@Url.Content("~/Scripts/cookie-consent.js")"></script>
 </body>
 </html>
