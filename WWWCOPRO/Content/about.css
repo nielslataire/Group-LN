@@ -1,0 +1,518 @@
+/* ================================================
+   Over ons — hoofdpagina (hub) + subpagina's
+   (Projectbegeleiding, Grond- en pandverwerving)
+
+   Deelt de huisstijl van home-sections.css: .section-kicker,
+   .about-grid / .about-content / .about-media / .about-headline /
+   .about-text, .about-btn en .cta-btn worden hergebruikt. Laad
+   home-sections.css daarom samen met dit bestand in de
+   PageStyle-sectie van elke Over ons-view.
+   ================================================ */
+
+/* ------------------------------------------------
+   Hero — volvlakse groene kop met subtiele
+   diagonale rastertextuur; de site-header staat er
+   transparant overheen (ViewData("HeroHeader") = True).
+   ------------------------------------------------ */
+.about-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Geen grote min-height: de hoogte volgt de inhoud. 140px bovenmarge houdt
+       de tekst vrij van de vaste transparante header (zelfde als home/vacatures);
+       de kleine min-height is enkel een ondergrens op zeer hoge schermen. */
+    min-height: 44vh;
+    padding: 140px 0 88px;
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 10px),
+        linear-gradient(180deg, #075c34 0%, var(--color-primary, #00532D) 48%, var(--color-primary-dark, #003d21) 100%);
+    overflow: hidden;
+}
+.about-hero::after {
+    /* zachte verdonkering onderaan zodat de overgang naar de volgende sectie rustig is */
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100px;
+    background: linear-gradient(to bottom, rgba(0, 61, 33, 0) 0%, rgba(0, 40, 21, 0.5) 100%);
+    pointer-events: none;
+}
+.about-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+}
+.about-breadcrumb {
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+.about-breadcrumb li {
+    display: inline;
+}
+.about-breadcrumb li + li::before {
+    content: '/';
+    padding: 0 8px;
+    color: rgba(255, 255, 255, 0.35);
+}
+.about-breadcrumb a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+.about-breadcrumb a:hover {
+    color: #fff;
+}
+.about-hero .about-hero-kicker {
+    margin: 0 0 18px;
+    text-transform: uppercase;
+    letter-spacing: 2.4px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    color: var(--color-cta, #C9A96E);
+}
+.about-hero .about-hero-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 46px;
+    line-height: 1.12;
+    color: #fff;
+    margin: 0 0 20px;
+}
+.about-hero .about-hero-text {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    max-width: 560px;
+    margin: 0;
+}
+
+/* ------------------------------------------------
+   "Ons verhaal" / intro — beeld + tekst.
+   Hergebruikt .about-grid / .about-content /
+   .about-media / .about-media-foto / .about-headline /
+   .about-text / .about-btn uit home-sections.css.
+   ------------------------------------------------ */
+.about-story {
+    background: var(--mist, #F2F5EF);
+    padding: 96px 0;
+    /* .reveal-slide-right schuift 60px in rust; clip voorkomt horizontale scroll.
+       overflow-x: clip (waar ondersteund) maakt géén scroll-context, zodat de
+       position: sticky-foto hieronder tegen de viewport blijft plakken i.p.v.
+       tegen deze sectie. Oudere browsers vallen terug op hidden. */
+    overflow-x: hidden;
+    overflow-x: clip;
+}
+
+/* Hub: de "Ons verhaal"-tekst is langer dan de foto. De foto schuift mee met de
+   pagina en komt pas los onderaan de sectie (klassiek sticky-beeld naast lange tekst). */
+@media (min-width: 992px) {
+    .about-story--sticky .about-grid {
+        align-items: flex-start;
+    }
+    .about-story--sticky .about-media {
+        position: sticky;
+        top: 100px;
+    }
+}
+
+/* ------------------------------------------------
+   Sectiekop (kicker + titel + optionele lead)
+   ------------------------------------------------ */
+.about-section-head {
+    max-width: 640px;
+    margin: 0 0 40px;
+}
+.about-section-head h2 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 12px;
+}
+.about-section-head p {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+}
+
+/* ------------------------------------------------
+   Pijlers / stappen — genummerde rijen met haarlijn
+   ------------------------------------------------ */
+.about-pijlers-section {
+    background: #fff;
+    padding: 96px 0;
+}
+.about-pijlers {
+    display: flex;
+    flex-direction: column;
+}
+.about-pijler {
+    display: flex;
+    gap: 32px;
+    padding: 32px 0;
+    border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+}
+.about-pijler:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+.about-pijler-num {
+    flex-shrink: 0;
+    width: 48px;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.35;
+    color: var(--color-cta, #C9A96E);
+}
+.about-pijler-body {
+    flex: 1;
+    min-width: 0;
+    max-width: 640px;
+}
+.about-pijler-body h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 10px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+.about-pijler-body p {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+}
+.about-pijler-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-primary, #00532D);
+    text-decoration: none !important;
+}
+.about-pijler-link i {
+    transition: transform 0.18s ease;
+}
+.about-pijler-link:hover {
+    color: var(--color-primary-hover, #006638);
+}
+.about-pijler-link:hover i {
+    transform: translateX(3px);
+}
+
+/* ------------------------------------------------
+   "Waarom Group LN" — groene sectie, 4 kolommen
+   met haarlijn ertussen
+   ------------------------------------------------ */
+.about-waarom {
+    background: var(--color-primary-dark, #003d21);
+    padding: 100px 0;
+}
+.about-waarom .section-kicker {
+    color: var(--color-cta, #C9A96E);
+}
+.about-waarom h2 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0;
+    max-width: 640px;
+}
+.about-waarom-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    margin-top: 48px;
+}
+.about-waarom-item {
+    padding-left: 28px;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+.about-waarom-item:first-child {
+    padding-left: 0;
+    border-left: none;
+}
+.about-waarom-item h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 18px;
+    color: #fff;
+    margin: 0 0 10px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+.about-waarom-item p {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+/* ------------------------------------------------
+   Fases (Projectbegeleiding) — 3 groepen met
+   aangevinkte takenlijst
+   ------------------------------------------------ */
+.about-fases {
+    background: #fff;
+    padding: 96px 0;
+}
+.about-fase-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-top: 44px;
+}
+.about-fase {
+    border-top: 2px solid var(--color-primary, #00532D);
+    padding-top: 24px;
+}
+.about-fase-num {
+    display: block;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 20px;
+    color: var(--color-cta, #C9A96E);
+    margin-bottom: 6px;
+}
+.about-fase h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 18px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+.about-check-list {
+    list-style: none !important;
+    margin: 0;
+    padding: 0;
+}
+.about-check-list li {
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 16px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+}
+.about-check-list li:last-child {
+    margin-bottom: 0;
+}
+.about-check-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300532D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px 15px;
+}
+.about-check-list li strong {
+    display: block;
+    font-weight: 700;
+    color: var(--groen-diep, #2C3B2A);
+    margin-bottom: 2px;
+}
+
+/* ------------------------------------------------
+   Aanbod-grid (Grondverwerving) — 2 kolommen
+   ------------------------------------------------ */
+.about-aanbod {
+    background: var(--mist, #F2F5EF);
+    padding: 96px 0;
+}
+.about-aanbod-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 48px;
+    margin-top: 44px;
+}
+.about-aanbod-item {
+    padding: 28px 0;
+    border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+}
+.about-aanbod-item:nth-child(1),
+.about-aanbod-item:nth-child(2) {
+    border-top: none;
+    padding-top: 0;
+}
+.about-aanbod-item h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 8px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+.about-aanbod-item p {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--tekst-sub, #5a6b58);
+    margin: 0;
+}
+
+/* ------------------------------------------------
+   Afsluitende CTA
+   ------------------------------------------------ */
+.about-eind-cta {
+    background: var(--mist, #F2F5EF);
+    padding: 100px 0;
+    text-align: center;
+}
+.about-eind-cta.on-white {
+    background: #fff;
+}
+.about-eind-cta h2 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.2;
+    color: var(--groen-diep, #2C3B2A);
+    margin: 0 0 14px;
+}
+.about-eind-cta p {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--tekst-sub, #5a6b58);
+    max-width: 520px;
+    margin: 0 auto 32px;
+}
+.about-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+}
+.about-cta-actions .about-btn {
+    margin-top: 0;
+}
+.about-cta-mail {
+    display: block;
+    margin-top: 20px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--tekst-sub, #5a6b58);
+}
+.about-cta-mail a {
+    color: var(--color-primary, #00532D);
+    font-weight: 700;
+    text-decoration: none;
+}
+.about-cta-mail a:hover {
+    text-decoration: underline;
+}
+
+/* ------------------------------------------------
+   Responsief
+   ------------------------------------------------ */
+@media (max-width: 991px) {
+    .about-waarom-grid {
+        grid-template-columns: repeat(2, 1fr);
+        row-gap: 32px;
+    }
+    .about-waarom-item:nth-child(3) {
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        padding-top: 24px;
+    }
+    .about-waarom-item:nth-child(4) {
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        padding-top: 24px;
+    }
+    .about-fase-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    .about-aanbod-grid {
+        grid-template-columns: 1fr;
+    }
+    .about-aanbod-item:nth-child(2) {
+        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+        padding-top: 28px;
+    }
+}
+
+@media (max-width: 767px) {
+    .about-hero {
+        min-height: 0;
+        padding: 116px 0 56px;
+    }
+    .about-hero .about-hero-title {
+        font-size: 32px;
+    }
+    .about-hero .about-hero-text {
+        font-size: 15px;
+    }
+    .about-story,
+    .about-pijlers-section,
+    .about-fases,
+    .about-aanbod,
+    .about-waarom,
+    .about-eind-cta {
+        padding: 64px 0;
+    }
+    .about-section-head h2,
+    .about-waarom h2,
+    .about-eind-cta h2 {
+        font-size: 26px;
+    }
+    .about-waarom-grid {
+        grid-template-columns: 1fr;
+        row-gap: 24px;
+    }
+    .about-waarom-item {
+        padding-left: 0 !important;
+        border-left: none !important;
+    }
+    .about-waarom-item:nth-child(n+2) {
+        border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+        padding-top: 24px !important;
+    }
+    .about-pijler {
+        gap: 18px;
+        padding: 24px 0;
+    }
+    .about-pijler-num {
+        width: 32px;
+        font-size: 18px;
+    }
+    .about-cta-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .about-cta-actions a {
+        justify-content: center;
+    }
+}

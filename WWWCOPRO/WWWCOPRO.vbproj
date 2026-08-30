@@ -301,6 +301,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\about.css" />
     <Content Include="Content\blog-artikel.css" />
     <Content Include="Content\blog-index.css" />
     <Content Include="Content\legal.css" />
@@ -537,6 +538,9 @@
     <Content Include="Views\Home\Index.vbhtml" />
     <Content Include="Views\Contact\Index.vbhtml" />
     <Content Include="Views\AboutUs\Index.vbhtml" />
+    <Content Include="Views\AboutUs\Overzicht.vbhtml" />
+    <Content Include="Views\AboutUs\Projectmanagement.vbhtml" />
+    <Content Include="Views\AboutUs\Grondverwerving.vbhtml" />
     <Content Include="Views\Team\Index.vbhtml" />
     <Content Include="Views\Projects\Index.vbhtml" />
     <Content Include="Views\References\Index.vbhtml" />

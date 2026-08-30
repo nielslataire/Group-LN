@@ -40,10 +40,6 @@ End Section
 @* ── Paginakoptekst ── *@
 <section class="blog-page-header">
     <div class="container reveal">
-        <ul class="breadcrumb">
-            <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
-            <li class="active">Blog</li>
-        </ul>
         <h1>Nieuws &amp; inspiratie</h1>
         <p class="page-subtitle">Op onze blog delen we het laatste nieuws over nieuwbouwprojecten, projectontwikkeling en de vastgoedmarkt in Vlaanderen. U vindt er praktische informatie over een nieuwbouwappartement of nieuwbouwwoning kopen, investeren in vastgoed, duurzaam en energiezuinig wonen, vastgoedfinanciering en alles wat komt kijken bij de aankoop van een woning, appartement of bouwgrond. Daarnaast delen we marktinzichten, bouwtrends en deskundig advies zodat u goed geïnformeerde keuzes kunt maken op de vastgoedmarkt van vandaag en morgen.</p>
     </div>

@@ -17,10 +17,6 @@ End Section
 
 <section class="legal-header">
     <div class="container">
-        <ul class="breadcrumb">
-            <li><a href="@Url.Action("Index", "Home")">Home</a></li>
-            <li>Privacybeleid</li>
-        </ul>
         <h1>Privacybeleid</h1>
         <p class="legal-updated">Laatst bijgewerkt op 28 augustus 2026</p>
     </div>

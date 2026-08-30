@@ -18,10 +18,6 @@ End Section
 
 <section class="legal-header">
     <div class="container">
-        <ul class="breadcrumb">
-            <li><a href="@Url.Action("Index", "Home")">Home</a></li>
-            <li>Cookiebeleid</li>
-        </ul>
         <h1>Cookiebeleid</h1>
         <p class="legal-updated">Laatst bijgewerkt op 28 augustus 2026</p>
     </div>

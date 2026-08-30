@@ -20,10 +20,6 @@ End Section
 
 <section class="contact-page-header">
     <div class="container reveal">
-        <ul class="breadcrumb">
-            <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
-            <li class="active">Contact</li>
-        </ul>
         <h1>Contacteer ons</h1>
         <p class="page-subtitle">Heeft u een vraag over een project of wil u een grond laten ontwikkelen? Laat het ons weten.</p>
     </div>

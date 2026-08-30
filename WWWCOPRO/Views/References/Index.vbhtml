@@ -12,14 +12,6 @@ end section
     <div class="container reveal">
         <div class="row">
             <div class="col-md-12">
-                <ul class="breadcrumb">
-                    <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
-                    <li class="active">Realisaties</li>
-                </ul>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
                 <h1>Realisaties</h1>
             </div>
         </div>

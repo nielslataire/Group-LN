@@ -8,14 +8,6 @@ End Code
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <ul class="breadcrumb">
-                    <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
-                    <li class="active">Team</li>
-                </ul>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
                 <h1>Ons <strong>Team</strong></h1>
             </div>
         </div>

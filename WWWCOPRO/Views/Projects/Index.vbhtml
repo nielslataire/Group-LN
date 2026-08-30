@@ -144,12 +144,6 @@ end section
 
 <section class="projecten-page-header">
     <div class="container reveal">
-        <ul class="breadcrumb">
-            <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
-            <li class="active">
-                @If isWoonproject Then @<text>Woonprojecten</text> Else @<text>Commerciële projecten</text> End If
-            </li>
-        </ul>
         <h1>@If isWoonproject Then @<text>Woonprojecten</text> Else @<text>Commerciële projecten</text> End If</h1>
         <p class="page-subtitle">
             @If isWoonproject Then
