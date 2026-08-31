@@ -1776,6 +1776,39 @@ namespace CPMCore.Controllers
             {
                 SetPageHeader("bx bx-group", model.Client?.DisplayName ?? "Klant bewerken");
             }
+
+            if (model.ProjectId > 0)
+            {
+                var projectName = _projectService.GetProjectNameById(model.ProjectId);
+                var clientName = model.Client?.DisplayName ?? _clientService.GetClientAccountNameById(clientid);
+
+                var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Home");
+                var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+                {
+                    Parent = dashboard
+                };
+                var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", projectName)
+                {
+                    Parent = projectenIndex,
+                    RouteValues = new { projectid = model.ProjectId }
+                };
+                var klanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
+                {
+                    Parent = projectDetail,
+                    RouteValues = new { projectid = model.ProjectId }
+                };
+                var klantDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Klanten", clientName)
+                {
+                    Parent = klanten,
+                    RouteValues = new { clientid = clientid, projectid = model.ProjectId }
+                };
+                ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditProject", "Klanten", "Klant bewerken")
+                {
+                    Parent = klantDetail,
+                    RouteValues = new { projectid = model.ProjectId, clientid = clientid, activetab = activetab }
+                };
+            }
+
             return View("EditProject", model);
         }
 

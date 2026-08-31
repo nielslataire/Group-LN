@@ -516,3 +516,110 @@
         justify-content: center;
     }
 }
+
+/* ================================================
+   Grondverwerving — hero met foto, aanbod-kaarten
+   met beeld, FAQ-accordeon. Aan het einde geplaatst
+   zodat deze regels de eerdere media-queries winnen.
+   ================================================ */
+
+/* Hero met achtergrondfoto: de groene gradient staat als overlay in de
+   inline-style; deze regels zorgen voor een nette fallback (donkergroen)
+   wanneer de foto ontbreekt, en voor de juiste schaling. */
+.about-hero--foto {
+    background-color: var(--color-primary-dark, #003d21);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+.about-hero--foto::after {
+    /* iets sterkere verdonkering onderaan boven een foto */
+    background: linear-gradient(to bottom, rgba(0, 40, 21, 0) 0%, rgba(0, 30, 16, 0.55) 100%);
+}
+
+/* Aanbod-grid met foto's — kaarten i.p.v. haarlijn-rijen */
+.about-aanbod-grid--foto {
+    gap: 44px 48px;
+    margin-top: 44px;
+}
+.about-aanbod-grid--foto .about-aanbod-item {
+    border-top: none;
+    padding: 0;
+}
+.about-aanbod-foto {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 3px;
+    margin-bottom: 16px;
+    background: rgba(0, 83, 45, 0.06);
+}
+
+/* FAQ-accordeon (native <details>) */
+.about-faq {
+    background: var(--mist, #F2F5EF);
+    padding: 96px 0;
+}
+.about-faq-lijst {
+    max-width: 760px;
+    border-top: 1px solid var(--border, rgba(0, 83, 45, 0.12));
+}
+.about-faq-item {
+    border-bottom: 1px solid var(--border, rgba(0, 83, 45, 0.12));
+}
+.about-faq-vraag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 0;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--groen-diep, #2C3B2A);
+}
+.about-faq-vraag::-webkit-details-marker {
+    display: none;
+}
+.about-faq-vraag:hover {
+    color: var(--color-primary, #00532D);
+}
+.about-faq-chevron {
+    flex-shrink: 0;
+    color: var(--color-cta, #C9A96E);
+    transition: transform 0.2s ease;
+}
+.about-faq-item[open] .about-faq-chevron {
+    transform: rotate(180deg);
+}
+.about-faq-antwoord {
+    padding: 0 0 22px;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--tekst-sub, #5a6b58);
+    max-width: 68ch;
+}
+
+@media (max-width: 991px) {
+    .about-aanbod-grid--foto {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    .about-faq {
+        padding: 64px 0;
+    }
+    .about-aanbod-grid--foto {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    .about-faq-vraag {
+        font-size: 16px;
+    }
+}

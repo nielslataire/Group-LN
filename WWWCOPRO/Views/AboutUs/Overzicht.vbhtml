@@ -22,7 +22,7 @@ End Section
         <div class="about-hero-inner">
             <p class="about-hero-kicker">Over Group LN</p>
             <h1 class="about-hero-title">Bouwen aan meer dan een dak boven je hoofd</h1>
-            <p class="about-hero-text">Group LN ontwikkelt en begeleidt bouwprojecten in Gent en Oost-Vlaanderen, van eerste ontwerp tot definitieve oplevering.</p>
+            <p class="about-hero-text">Group LN ontwikkelt en begeleidt bouwprojecten in gans Vlaanderen, van eerste ontwerp tot definitieve oplevering.</p>
         </div>
     </div>
 </section>

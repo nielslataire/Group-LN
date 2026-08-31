@@ -10,6 +10,11 @@
     Dim _ogUrl As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogurl"))), CStr(ViewData("ogurl")), _defaultCanonical)
     Dim _canonical As String = If(Not String.IsNullOrEmpty(CStr(ViewData("canonical"))), CStr(ViewData("canonical")), _defaultCanonical)
     Dim _heroHeader As Boolean = CBool(If(ViewData("HeroHeader"), False))
+    ' Scrollafstand waarna de transparante hero-header solide wordt. Per pagina te
+    ' overschrijven via ViewData("StickyStartAt") — laag zetten op pagina's met een
+    ' korte hero, zodat de titel niet lang "achter" het menu doorschuift.
+    Dim _stickyStartAt As Integer = If(_heroHeader, 175, 0)
+    If ViewData("StickyStartAt") IsNot Nothing Then _stickyStartAt = CInt(ViewData("StickyStartAt"))
 End Code
 <!DOCTYPE html>
 <html lang="nl">
@@ -146,7 +151,7 @@ End Code
        De <noscript>-fallback is bewust weggelaten: zonder JavaScript kan er geen toestemming gevraagd worden. *@
     <a class="skip-to-content" href="#main">Naar de inhoud</a>
     <div class="body">
-        <header id="header" class="header-no-border-bottom header-full-width @(If(_heroHeader, "header-transparent header-transparent-brand", ""))" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": @(If(_heroHeader, 175, 0)), "stickySetTop": 0, "stickyChangeLogo": false}'>
+        <header id="header" class="header-no-border-bottom header-full-width @(If(_heroHeader, "header-transparent header-transparent-brand", ""))" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": @_stickyStartAt, "stickySetTop": 0, "stickyChangeLogo": false}'>
             <div class="header-body">
                 <div class="header-container container-fluid">
                     <div class="header-row header-row-redesign">

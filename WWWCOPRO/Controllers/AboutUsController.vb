@@ -19,6 +19,7 @@ Public Class AboutUsController
     <Route("over-ons-nieuw", Name:="OverOnsHub")>
     Function Overzicht() As ActionResult
         ViewData("HeroHeader") = True
+        ViewData("StickyStartAt") = 20
         ViewData("Title") = "Over Group LN | Projectontwikkelaar in Gent en Oost-Vlaanderen"
         ViewData("MetaDescription") = "Group LN ontwikkelt en begeleidt residentiële en commerciële bouwprojecten in Gent en Oost-Vlaanderen, van eerste ontwerp tot definitieve oplevering."
         Return View()
@@ -29,6 +30,7 @@ Public Class AboutUsController
     <Route("projectbegeleiding", Name:="Projectbegeleiding")>
     Function Projectmanagement() As ActionResult
         ViewData("HeroHeader") = True
+        ViewData("StickyStartAt") = 20
         ViewData("Title") = "Projectbegeleiding | Group LN"
         ViewData("MetaDescription") = "Group LN begeleidt uw bouwproject van ontwerp tot definitieve oplevering: aanbesteding, werfopvolging, budgetbewaking, klantenopvolging en nazorg."
         ViewData("canonical") = "https://www.groupln.be/projectbegeleiding"
@@ -40,8 +42,9 @@ Public Class AboutUsController
     <Route("grond-of-pand-aanbieden", Name:="Grondverwerving")>
     Function Grondverwerving() As ActionResult
         ViewData("HeroHeader") = True
-        ViewData("Title") = "Grond of pand aanbieden | Group LN"
-        ViewData("MetaDescription") = "Een bouwgrond, oude woning of verouderd pand met ontwikkelingspotentieel? Group LN onderzoekt vrijblijvend de mogelijkheden voor aankoop, ruil of samenwerking."
+        ViewData("StickyStartAt") = 20
+        ViewData("Title") = "Grond of pand verkopen aan projectontwikkelaar | Group LN"
+        ViewData("MetaDescription") = "Bouwgrond, een oude woning of verouderd pand? Wij onderzoeken de mogelijkheden, doen een concurrentieel voorstel en nemen het volledige traject uit handen."
         ViewData("canonical") = "https://www.groupln.be/grond-of-pand-aanbieden"
         Return View()
     End Function
