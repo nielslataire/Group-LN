@@ -10,6 +10,8 @@ Namespace Models.Vacatures
         Public Property Start As String
         Public Property KorteBeschrijving As String
         Public Property Beschrijving As String
+        Public Property VideoBestand As String
+        Public Property VideoPosterBestand As String
         Public Property SortOrder As Integer
         Public Property AangemaaktOp As Date
 

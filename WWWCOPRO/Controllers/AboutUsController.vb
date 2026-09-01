@@ -3,26 +3,22 @@ Public Class AboutUsController
 
     '
     ' GET: /over-ons  (route-vertaling "AboutUs" -> "over-ons", zie RouteTranslations.vb)
-    ' Bestaande pagina — voorlopig ongewijzigd. Wordt later vervangen door Overzicht().
-    <Route("AboutUs")>
+    ' De nieuwe "Over ons"-hub. Vervangt de vroegere Index-pagina.
+    <Route("AboutUs", Name:="OverOnsHub")>
     Function Index() As ActionResult
-        Return View()
-    End Function
-
-    '
-    ' GET: /over-ons-nieuw
-    ' Nieuwe "Over ons" hoofdpagina (hub). Draait tijdelijk op een eigen slug zodat de
-    ' bestaande /over-ons (Index) intact blijft. Bij livegang:
-    '  1. RouteTranslations.vb: de vertaling "over-ons" naar deze actie (Overzicht) verleggen
-    '  2. Index() + Views/AboutUs/Index.vbhtml verwijderen
-    '  3. de <meta robots="noindex"> in Overzicht.vbhtml schrappen
-    <Route("over-ons-nieuw", Name:="OverOnsHub")>
-    Function Overzicht() As ActionResult
         ViewData("HeroHeader") = True
         ViewData("StickyStartAt") = 20
         ViewData("Title") = "Over Group LN | Projectontwikkelaar in Gent en Oost-Vlaanderen"
         ViewData("MetaDescription") = "Group LN ontwikkelt en begeleidt residentiële en commerciële bouwprojecten in Gent en Oost-Vlaanderen, van eerste ontwerp tot definitieve oplevering."
+        ViewData("canonical") = "https://www.groupln.be/over-ons"
         Return View()
+    End Function
+
+    '
+    ' GET: /over-ons-nieuw  — oude preview-URL, permanent doorsturen naar /over-ons
+    <Route("over-ons-nieuw")>
+    Function OverOnsNieuw() As ActionResult
+        Return RedirectToActionPermanent("Index")
     End Function
 
     '

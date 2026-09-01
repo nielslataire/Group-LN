@@ -175,6 +175,18 @@ End Section
     </div>
 </section>
 
+@* ── CTA: grond of pand aanbieden ── *@
+<section class="about-eind-cta on-white">
+    <div class="container reveal">
+        <h2>Grond of pand aanbieden?</h2>
+        <p>Bezorg ons vrijblijvend de gegevens van uw grond of pand. Wij onderzoeken de mogelijkheden en komen binnen 7 werkdagen bij u terug.</p>
+        <div class="about-cta-actions">
+            <a class="cta-btn" href="@Url.Action("Index", "Contact", New With {.onderwerp = "Grond of pand aanbieden"})">Grond of pand aanbieden <i class="fa fa-arrow-right"></i></a>
+        </div>
+        <span class="about-cta-mail">of mail rechtstreeks naar <a href="mailto:info@groupln.be">info@groupln.be</a></span>
+    </div>
+</section>
+
 @* ── Waarom eigenaars voor ons kiezen ── *@
 <section class="about-waarom">
     <div class="container">
@@ -220,17 +232,5 @@ End Section
                 </details>
             Next
         </div>
-    </div>
-</section>
-
-@* ── Afsluitende CTA ── *@
-<section class="about-eind-cta on-white">
-    <div class="container reveal">
-        <h2>Grond of pand aanbieden?</h2>
-        <p>Bezorg ons vrijblijvend de gegevens van uw grond of pand. Wij onderzoeken de mogelijkheden en komen binnen 7 werkdagen bij u terug.</p>
-        <div class="about-cta-actions">
-            <a class="cta-btn" href="@Url.Action("Index", "Contact")">Grond of pand aanbieden <i class="fa fa-arrow-right"></i></a>
-        </div>
-        <span class="about-cta-mail">of mail rechtstreeks naar <a href="mailto:info@groupln.be">info@groupln.be</a></span>
     </div>
 </section>

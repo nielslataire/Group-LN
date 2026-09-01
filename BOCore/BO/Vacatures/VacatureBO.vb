@@ -17,6 +17,8 @@ Public Class VacatureBO
     Public Property Start As String
     Public Property KorteBeschrijving As String
     Public Property Beschrijving As String
+    Public Property VideoBestand As String
+    Public Property VideoPosterBestand As String
     Public Property IsGepubliceerd As Boolean
     Public Property SortOrder As Integer
     Public Property AangemaaktOp As DateTime

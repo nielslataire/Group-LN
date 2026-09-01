@@ -94,6 +94,59 @@
     outline: none !important;
 }
 
+/* ------------------------------------------------
+   Klik-/focuskleur van knoppen en menu-items.
+   Het thema (skins/default.css) zet generiek a:focus -> #006638
+   en a:active -> olijf; dat wint van de knop-/menuklassen en maakt
+   de tekst tijdens het klikken onleesbaar op de groene achtergrond.
+   Hieronder per component teruggezet naar een leesbare kleur.
+   ------------------------------------------------ */
+
+/* Menu- en headerlinks (op de groene header): wit behouden */
+.hero-nav-item:focus,
+.hero-nav-item:active,
+.nav-overlay-list a:focus,
+.nav-overlay-list a:active,
+.header-phone:focus,
+.header-phone:active,
+.about-breadcrumb a:focus,
+.about-breadcrumb a:active {
+    color: #fff;
+}
+
+/* Gevulde knoppen: witte tekst behouden bij klik/focus */
+.cta-btn:focus, .cta-btn:active,
+.hero-search-btn:focus, .hero-search-btn:active,
+.artikel-contact-btn:focus, .artikel-contact-btn:active,
+.error-btn:focus, .error-btn:active,
+.vac-detail-apply-btn:focus, .vac-detail-apply-btn:active,
+.vac-detail-sidebar-cta-btn:focus, .vac-detail-sidebar-cta-btn:active,
+.vac-solliciteer-submit-btn:focus, .vac-solliciteer-submit-btn:active,
+.contact-submit-btn:focus, .contact-submit-btn:active,
+.cc-btn-primary:focus, .cc-btn-primary:active {
+    color: #fff;
+}
+
+/* Omlijnde knoppen: donkergroene tekst behouden zolang niet gehoverd
+   (bij hover wordt de knop groen gevuld met witte tekst) */
+.about-btn:focus:not(:hover),
+.about-btn:active:not(:hover),
+.hero-cta:focus:not(:hover),
+.hero-cta:active:not(:hover),
+.legal-consent-btn:focus:not(:hover),
+.legal-consent-btn:active:not(:hover),
+.cc-btn-ghost:focus:not(:hover),
+.cc-btn-ghost:active:not(:hover) {
+    color: var(--groen-diep, #2C3B2A);
+}
+
+/* Tekstlinks (pijl-terug e.d.) op lichte achtergrond: groen behouden */
+.about-pijler-link:focus, .about-pijler-link:active,
+.artikel-terug:focus, .artikel-terug:active,
+.legal-back:focus, .legal-back:active {
+    color: var(--color-primary, #00532D);
+}
+
 /* ================================================
    Header — logo + brand tekst
    ================================================ */
@@ -604,7 +657,6 @@ h1, h2, h3, h4, h5, h6 {
 .kaart-prijs,
 .total-prijs,
 .eenheid-tabel,
-.troeven-number,
 .header-phone-number {
     font-variant-numeric: tabular-nums;
 }

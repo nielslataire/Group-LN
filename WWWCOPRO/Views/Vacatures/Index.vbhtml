@@ -37,7 +37,7 @@ End Section
     <div class="container">
         <div class="vac-wie-grid">
             <div class="vac-wie-foto-wrap reveal">
-                <img class="vac-wie-foto" src="@Url.Content("~/Content/img/our-office-1.jpg")" alt="Aan het werk bij Group LN" width="500" height="600" />
+                <img class="vac-wie-foto" src="@Url.Content("~/Content/img/helm-logo-vertical.webp")" alt="Aan het werk bij Group LN" width="500" height="600" />
             </div>
             <div class="vac-wie-content reveal reveal-slide-right">
                 <p class="section-kicker">Wie wij zoeken</p>

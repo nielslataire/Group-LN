@@ -231,7 +231,7 @@ End Code
                                 Team
                             </a>
                         </li>
-                        <li>
+                        <li style="display:none;">
                             <a href="@Url.RouteUrl("Vacatures")">
                                 Vacatures
                             </a>

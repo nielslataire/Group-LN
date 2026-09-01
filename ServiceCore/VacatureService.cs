@@ -143,11 +143,13 @@ namespace ServiceCore
             entity.Dienstverband     = bo.Dienstverband;
             entity.Opleiding         = bo.Opleiding;
             entity.Start             = bo.Start;
-            entity.KorteBeschrijving = bo.KorteBeschrijving;
-            entity.Beschrijving      = bo.Beschrijving;
-            entity.IsGepubliceerd    = bo.IsGepubliceerd;
-            entity.SortOrder         = bo.SortOrder;
-            entity.GewijzigdOp       = DateTime.Now;
+            entity.KorteBeschrijving   = bo.KorteBeschrijving;
+            entity.Beschrijving        = bo.Beschrijving;
+            entity.VideoBestand        = bo.VideoBestand;
+            entity.VideoPosterBestand  = bo.VideoPosterBestand;
+            entity.IsGepubliceerd      = bo.IsGepubliceerd;
+            entity.SortOrder           = bo.SortOrder;
+            entity.GewijzigdOp         = DateTime.Now;
 
             var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
             response.AddSaveChangesResult(result, "Vacature opgeslagen.", "Vacature niet opgeslagen.");
@@ -478,10 +480,12 @@ namespace ServiceCore
                 Dienstverband     = e.Dienstverband,
                 Opleiding         = e.Opleiding,
                 Start             = e.Start,
-                KorteBeschrijving = e.KorteBeschrijving,
-                Beschrijving      = e.Beschrijving,
-                IsGepubliceerd    = e.IsGepubliceerd,
-                SortOrder         = e.SortOrder,
+                KorteBeschrijving  = e.KorteBeschrijving,
+                Beschrijving       = e.Beschrijving,
+                VideoBestand       = e.VideoBestand,
+                VideoPosterBestand = e.VideoPosterBestand,
+                IsGepubliceerd     = e.IsGepubliceerd,
+                SortOrder          = e.SortOrder,
                 AangemaaktOp      = e.AangemaaktOp,
                 GewijzigdOp       = e.GewijzigdOp
             };

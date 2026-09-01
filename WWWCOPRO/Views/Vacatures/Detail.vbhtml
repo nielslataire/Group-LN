@@ -221,6 +221,19 @@ End If
             </div>
 
             <aside class="vac-detail-sidebar reveal">
+                @If Not String.IsNullOrWhiteSpace(Model.VideoBestand) Then
+                    @<div class="vac-detail-video" data-video>
+                        @If Not String.IsNullOrWhiteSpace(Model.VideoPosterBestand) Then
+                            @<video src="@Model.VideoBestand" poster="@Model.VideoPosterBestand" preload="metadata" playsinline></video>
+                        Else
+                            @<video src="@Model.VideoBestand" preload="metadata" playsinline></video>
+                        End If
+                        <button type="button" class="vac-detail-video-play" aria-label="Afspelen of pauzeren">
+                            <svg class="vac-detail-video-ico vac-detail-video-ico--play" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                            <svg class="vac-detail-video-ico vac-detail-video-ico--pause" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+                        </button>
+                    </div>
+                End If
                 <div class="vac-detail-sidebar-card">
                     <span class="vac-detail-sidebar-title">Vacature in een oogopslag</span>
                     @If Not String.IsNullOrWhiteSpace(Model.Locatie) Then
@@ -519,5 +532,57 @@ End If
                 });
             </text>
         End If
+
+        // Vacaturevideo: eigen centrale knop die play/pauze wisselt. Geen autoplay.
+        // Na de eerste start blijft ook de native videobalk beschikbaar (scrubben, volume, fullscreen).
+        (function () {
+            var wrap = document.querySelector('[data-video]');
+            if (!wrap) return;
+            var video = wrap.querySelector('video');
+            var btn = wrap.querySelector('.vac-detail-video-play');
+            if (!video || !btn) return;
+
+            var started = false, hideTimer;
+
+            function toonKnop() {
+                wrap.classList.add('show-btn');
+                clearTimeout(hideTimer);
+                if (!video.paused) {
+                    hideTimer = setTimeout(function () { wrap.classList.remove('show-btn'); }, 2000);
+                }
+            }
+            function verbergKnop() {
+                clearTimeout(hideTimer);
+                wrap.classList.remove('show-btn');
+            }
+
+            btn.addEventListener('click', function () {
+                if (!started) { started = true; video.controls = true; }
+                if (video.paused) {
+                    var p = video.play();
+                    if (p && typeof p.catch === 'function') { p.catch(function () { }); }
+                } else {
+                    video.pause();
+                }
+            });
+
+            wrap.addEventListener('mousemove', toonKnop);
+            wrap.addEventListener('mouseleave', verbergKnop);
+            wrap.addEventListener('click', toonKnop);
+
+            video.addEventListener('play', function () {
+                wrap.classList.add('is-playing');
+                verbergKnop();               // meteen verbergen zodra de video speelt
+            });
+            video.addEventListener('pause', function () {
+                wrap.classList.remove('is-playing');
+                wrap.classList.add('show-btn');   // gepauzeerd: knop blijft staan
+                clearTimeout(hideTimer);
+            });
+            video.addEventListener('ended', function () {
+                wrap.classList.remove('is-playing');
+                wrap.classList.add('show-btn');
+            });
+        })();
     </script>
 End Section

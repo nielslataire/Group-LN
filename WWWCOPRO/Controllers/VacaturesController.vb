@@ -254,7 +254,7 @@ Public Class VacaturesController
                 conn.Open()
                 Dim whereClause = If(inclConcept, "Slug = @slug", "Slug = @slug AND IsGepubliceerd = 1")
                 Dim cmd As New SqlCommand(
-                    "SELECT Id, Titel, Slug, Categorie, Locatie, Dienstverband, Opleiding, Start, KorteBeschrijving, Beschrijving, SortOrder, AangemaaktOp
+                    "SELECT Id, Titel, Slug, Categorie, Locatie, Dienstverband, Opleiding, Start, KorteBeschrijving, Beschrijving, SortOrder, AangemaaktOp, VideoBestand, VideoPosterBestand
                        FROM Vacature
                       WHERE " & whereClause, conn)
                 cmd.Parameters.AddWithValue("@slug", slug)
@@ -273,7 +273,9 @@ Public Class VacaturesController
                             .KorteBeschrijving = If(reader.IsDBNull(8), Nothing, reader.GetString(8)),
                             .Beschrijving = If(reader.IsDBNull(9), Nothing, reader.GetString(9)),
                             .SortOrder = reader.GetInt32(10),
-                            .AangemaaktOp = reader.GetDateTime(11)
+                            .AangemaaktOp = reader.GetDateTime(11),
+                            .VideoBestand = If(reader.IsDBNull(12), Nothing, reader.GetString(12)),
+                            .VideoPosterBestand = If(reader.IsDBNull(13), Nothing, reader.GetString(13))
                         }
                     End If
                 End Using

@@ -79,7 +79,7 @@
     </div>
 </div>
 
-<form id="vacature-form" method="post" action="@Url.Action("Bewerken")">
+<form id="vacature-form" method="post" action="@Url.Action("Bewerken")" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="ID" />
 
@@ -158,6 +158,46 @@
                     <div class="col-md-8 col-lg-10">
                         <div id="quill-beschrijving" class="quill-wrap"></div>
                         <textarea asp-for="Beschrijving" id="quill-beschrijving-input" style="display:none;"></textarea>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 text-end">
+                        <label class="form-label fw-semibold">Video <small class="text-muted fw-normal">opt.</small></label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="btn btn-outline-secondary btn-sm mb-0" style="cursor:pointer;">
+                                Videobestand kiezen
+                                <input type="file" asp-for="VideoUpload" class="d-none" accept="video/mp4,video/webm,.mp4,.m4v,.webm" id="videoUploadInput" />
+                            </label>
+                            <span class="text-muted small" id="videoFileName">@(string.IsNullOrEmpty(Model.VideoBestand) ? "" : System.IO.Path.GetFileName(Model.VideoBestand))</span>
+                        </div>
+                        <div class="mt-2" id="videoPreviewWrap" style="@(string.IsNullOrEmpty(Model.VideoBestand) ? "display:none;" : "")">
+                            <video id="videoPreview" src="@Model.VideoBestand" controls preload="metadata"
+                                   style="max-width:320px;max-height:200px;border-radius:6px;background:#000;"></video>
+                            <div><button type="button" class="btn btn-sm btn-link text-danger px-0" id="videoVerwijder">Video verwijderen</button></div>
+                        </div>
+                        <input type="hidden" asp-for="VideoBestand" id="videoBestandInput" />
+                        <div class="form-text">Getoond boven "Vacature in één oogopslag" op de detailpagina. Speelt niet automatisch af — de bezoeker klikt op play. Max. 120&nbsp;MB.</div>
+                    </div>
+
+                    <div class="col-md-4 col-lg-2 text-end">
+                        <label class="form-label fw-semibold">Posterbeeld <small class="text-muted fw-normal">opt.</small></label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="btn btn-outline-secondary btn-sm mb-0" style="cursor:pointer;">
+                                Afbeelding kiezen
+                                <input type="file" asp-for="PosterUpload" class="d-none" accept="image/*" id="posterUploadInput" />
+                            </label>
+                            <span class="text-muted small" id="posterFileName">@(string.IsNullOrEmpty(Model.VideoPosterBestand) ? "" : System.IO.Path.GetFileName(Model.VideoPosterBestand))</span>
+                        </div>
+                        <div class="mt-2" id="posterPreviewWrap" style="@(string.IsNullOrEmpty(Model.VideoPosterBestand) ? "display:none;" : "")">
+                            <img id="posterPreview" src="@Model.VideoPosterBestand" alt="Posterbeeld"
+                                 style="max-width:220px;max-height:140px;object-fit:cover;border-radius:6px;" />
+                            <div><button type="button" class="btn btn-sm btn-link text-danger px-0" id="posterVerwijder">Posterbeeld verwijderen</button></div>
+                        </div>
+                        <input type="hidden" asp-for="VideoPosterBestand" id="posterBestandInput" />
+                        <div class="form-text">Het eerste beeld dat vóór het afspelen getoond wordt. Leeg = de browser toont het eerste frame.</div>
                     </div>
 
                     <div class="col-md-4 col-lg-2 align-content-center text-end">
@@ -786,6 +826,43 @@
     var summary = document.getElementById('val-summary');
     if (summary && summary.querySelector('.validation-summary-errors'))
         summary.classList.remove('d-none');
+})();
+</script>
+<script>
+(function () {
+    // Video- en poster-upload: bestandsnaam tonen, lokale voorvertoning, en "verwijderen".
+    function wireMedia(inputId, wrapId, previewId, hiddenId, nameId, removeId) {
+        var input = document.getElementById(inputId);
+        var wrap = document.getElementById(wrapId);
+        var preview = document.getElementById(previewId);
+        var hidden = document.getElementById(hiddenId);
+        var nameEl = document.getElementById(nameId);
+        var removeBtn = document.getElementById(removeId);
+
+        if (input) {
+            input.addEventListener('change', function () {
+                var file = this.files && this.files[0];
+                if (!file) return;
+                if (nameEl) nameEl.textContent = file.name;
+                if (preview) {
+                    try { preview.src = URL.createObjectURL(file); } catch (e) { }
+                    if (preview.tagName === 'VIDEO') preview.load();
+                }
+                if (wrap) wrap.style.display = '';
+            });
+        }
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                if (hidden) hidden.value = '';
+                if (input) input.value = '';
+                if (preview) preview.removeAttribute('src');
+                if (nameEl) nameEl.textContent = '';
+                if (wrap) wrap.style.display = 'none';
+            });
+        }
+    }
+    wireMedia('videoUploadInput', 'videoPreviewWrap', 'videoPreview', 'videoBestandInput', 'videoFileName', 'videoVerwijder');
+    wireMedia('posterUploadInput', 'posterPreviewWrap', 'posterPreview', 'posterBestandInput', 'posterFileName', 'posterVerwijder');
 })();
 </script>
 }

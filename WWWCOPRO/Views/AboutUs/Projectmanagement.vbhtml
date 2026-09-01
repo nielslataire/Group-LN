@@ -44,7 +44,7 @@ End Section
     <div class="container">
         <div class="about-grid">
             <div class="about-media reveal">
-                <img class="about-media-foto" src="@Url.Content("~/Content/img/our-office-3.jpg")" alt="Group LN aan het werk" width="500" height="600" />
+                <img class="about-media-foto" src="@Url.Content("~/Content/img/projectmanagement.webp")" alt="Group LN aan het werk" width="500" height="600" />
             </div>
             <div class="about-content reveal reveal-slide-right">
                 <p class="section-kicker">Wat het inhoudt</p>
@@ -101,7 +101,7 @@ End Section
         <h2>Een project dat begeleiding kan gebruiken?</h2>
         <p>Vraag vrijblijvend een offerte voor de begeleiding van uw project.</p>
         <div class="about-cta-actions">
-            <a class="cta-btn" href="@Url.Action("Index", "Contact")">Neem contact op <i class="fa fa-arrow-right"></i></a>
+            <a class="cta-btn" href="@Url.Action("Index", "Contact", New With {.onderwerp = "Projectbegeleiding"})">Neem contact op <i class="fa fa-arrow-right"></i></a>
         </div>
         <span class="about-cta-mail">of mail rechtstreeks naar <a href="mailto:info@groupln.be">info@groupln.be</a></span>
     </div>

@@ -20,25 +20,55 @@ Public Class ContactController
     Private Shared ReadOnly OnderwerpOpties As List(Of SelectListItem) = New List(Of SelectListItem) From {
         New SelectListItem With {.Text = "Algemene vraag", .Value = "Algemene vraag"},
         New SelectListItem With {.Text = "Vraag over een project", .Value = "Vraag over een project"},
+        New SelectListItem With {.Text = "Projectbegeleiding", .Value = "Projectbegeleiding"},
         New SelectListItem With {.Text = "Prijsofferte aanvragen", .Value = "Prijsofferte aanvragen"},
         New SelectListItem With {.Text = "Grond of pand aanbieden", .Value = "Grond of pand aanbieden"},
         New SelectListItem With {.Text = "Klacht of opmerking", .Value = "Klacht of opmerking"},
         New SelectListItem With {.Text = "Andere", .Value = "Andere"}
     }
 
-    ' GET: /Contact
+    ' Verse kopie van de onderwerplijst met .Selected gezet op de gekozen waarde
+    ' (de statische lijst mag niet gemuteerd worden). Hoofdletter-ongevoelig.
+    Private Shared Function OnderwerpOptiesVoor(ByVal selected As String) As List(Of SelectListItem)
+        Dim lijst As New List(Of SelectListItem)()
+        For Each o As SelectListItem In OnderwerpOpties
+            lijst.Add(New SelectListItem() With {
+                .Text = o.Text,
+                .Value = o.Value,
+                .Selected = (Not String.IsNullOrEmpty(selected)) AndAlso _
+                            String.Equals(o.Value, selected, StringComparison.OrdinalIgnoreCase)
+            })
+        Next
+        Return lijst
+    End Function
+
+    ' Zoekt de exacte optiewaarde die (hoofdletter-ongevoelig) overeenkomt.
+    Private Shared Function CanoniekOnderwerp(ByVal raw As String) As String
+        If String.IsNullOrWhiteSpace(raw) Then Return Nothing
+        For Each o As SelectListItem In OnderwerpOpties
+            If String.Equals(o.Value, raw.Trim(), StringComparison.OrdinalIgnoreCase) Then Return o.Value
+        Next
+        Return Nothing
+    End Function
+
+    ' GET: /Contact  (optioneel ?onderwerp= om het onderwerp voor te selecteren, bv. vanuit de Over ons-pagina's)
     <Route("Contact")>
-    Function Index() As ActionResult
-        Dim model As New MailModel
+    Function Index(ByVal onderwerp As String) As ActionResult
+        ' Fallback: lees rechtstreeks uit de querystring als model binding niets doorgaf.
+        If String.IsNullOrWhiteSpace(onderwerp) Then onderwerp = Request.QueryString("onderwerp")
+
+        Dim model As New MailModel()
+        model.Title = CanoniekOnderwerp(onderwerp)
+
         ApplyRecaptchaSettings()
-        ViewBag.OnderwerpOpties = OnderwerpOpties
+        ViewBag.OnderwerpOpties = OnderwerpOptiesVoor(model.Title)
         Return View(model)
     End Function
     <HttpPost>
     <Route("Contact")>
     Function Index(model As MailModel) As ActionResult
         ApplyRecaptchaSettings()
-        ViewBag.OnderwerpOpties = OnderwerpOpties
+        ViewBag.OnderwerpOpties = OnderwerpOptiesVoor(model.Title)
         Return View(model)
     End Function
     <Route("Contact/Send")>
@@ -46,7 +76,7 @@ Public Class ContactController
     <ValidateInput(False)>
     Function Send(model As MailModel) As ActionResult
         ApplyRecaptchaSettings()
-        ViewBag.OnderwerpOpties = OnderwerpOpties
+        ViewBag.OnderwerpOpties = OnderwerpOptiesVoor(model.Title)
 
         If Not model.PrivacyAkkoord Then
             ModelState.AddModelError("PrivacyAkkoord", "Gelieve akkoord te gaan met het privacybeleid.")

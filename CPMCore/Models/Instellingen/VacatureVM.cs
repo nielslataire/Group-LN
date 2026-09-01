@@ -1,4 +1,5 @@
 using BOCore;
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -45,6 +46,18 @@ public class VacatureEditVM
     public string? KorteBeschrijving { get; set; }
 
     public string? Beschrijving { get; set; }
+
+    /// <summary>URL van de reeds opgeslagen video (Storage API). Leeg = geen video.</summary>
+    public string? VideoBestand { get; set; }
+
+    /// <summary>URL van de posterafbeelding die als eerste beeld voor de video dient.</summary>
+    public string? VideoPosterBestand { get; set; }
+
+    /// <summary>Nieuw geüpload videobestand (optioneel).</summary>
+    public IFormFile? VideoUpload { get; set; }
+
+    /// <summary>Nieuw geüploade posterafbeelding (optioneel).</summary>
+    public IFormFile? PosterUpload { get; set; }
 
     public bool IsGepubliceerd { get; set; }
 

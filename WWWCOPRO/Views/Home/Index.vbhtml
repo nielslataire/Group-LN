@@ -64,6 +64,9 @@ End Section
         <p class="hero-headline">Bijzondere plekken, doordacht ontwikkeld.</p>
         <h1 class="hero-subtext">Group LN is projectontwikkelaar van tijdloze appartementen en woningen op de mooiste locaties in Vlaanderen.</h1>
     </div>
+    <a class="hero-cta" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">
+        Bekijk ons aanbod te koop <i class="fa fa-arrow-right"></i>
+    </a>
     <button type="button" id="heroSearchToggle" class="hero-search-toggle" aria-expanded="false" aria-controls="homeHeroSearch" aria-label="Zoeken">
         <i class="fa fa-search"></i>
     </button>
@@ -120,8 +123,9 @@ End Section
     <div class="home-hero-disclaimer" style="display:none;">
         <p>Door verder te gaan, gaat u akkoord met ons privacybeleid.</p>
     </div>
-    <a href="#aboutSection" class="hero-scroll-cue" aria-label="Scroll naar beneden">
-        <i class="fa fa-chevron-down"></i>
+    <a href="#aboutSection" class="hero-scroll-cue" aria-label="Scroll naar beneden voor meer">
+        <span class="hero-scroll-label">Ontdek meer</span>
+        <span class="hero-scroll-dot"><i class="fa fa-chevron-down"></i></span>
     </a>
 </section>
 <section id="aboutSection" class="about-section">
@@ -151,7 +155,6 @@ End Section
         <div class="troeven-grid">
             @For Each t In troeven
                 @<div class="troeven-item reveal">
-                    <span class="troeven-number">@t.Number</span>
                     <h3>@t.Name</h3>
                     <p>@t.Description</p>
                 </div>

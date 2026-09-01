@@ -175,15 +175,6 @@
     border-left: none;
 }
 
-.troeven-number {
-    display: block;
-    font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--color-cta, #C9A96E);
-    margin-bottom: 14px;
-}
-
 .troeven-item h3 {
     font-family: var(--font-serif);
     font-weight: 600;

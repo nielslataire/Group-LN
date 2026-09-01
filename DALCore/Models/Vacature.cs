@@ -26,6 +26,10 @@ public partial class Vacature
 
     public string Beschrijving { get; set; }
 
+    public string VideoBestand { get; set; }
+
+    public string VideoPosterBestand { get; set; }
+
     public bool IsGepubliceerd { get; set; }
 
     public int SortOrder { get; set; }

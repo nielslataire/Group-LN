@@ -1,16 +1,7 @@
 @Code
-    ' Nieuwe "Over ons" hoofdpagina (hub). Draait voorlopig op /over-ons-nieuw zodat de
-    ' bestaande /over-ons (AboutUs/Index) ongewijzigd blijft. Bij livegang:
-    '  1. RouteTranslations.vb: "over-ons" naar deze actie (Overzicht) verleggen
-    '  2. AboutUs/Index + Views/AboutUs/Index.vbhtml verwijderen
-    '  3. de <meta robots="noindex"> hieronder schrappen
+    ' "Over ons" hoofdpagina (hub) — bereikbaar op /over-ons.
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
-
-@section PageMeta
-    @* Preview-pagina: nog niet laten indexeren zolang /over-ons de oude versie toont *@
-    <meta name="robots" content="noindex, follow" />
-End Section
 
 @section PageStyle
     <link rel="stylesheet" href="~/Content/home-sections.css" />
@@ -31,7 +22,7 @@ End Section
     <div class="container">
         <div class="about-grid">
             <div class="about-media reveal">
-                <img class="about-media-foto" src="@Url.Content("~/Content/img/about.webp")" alt="Group LN" width="500" height="600" />
+                <img class="about-media-foto" src="@Url.Content("~/Content/img/helm-logo-vertical.webp")" alt="Group LN" width="500" height="600" />
             </div>
             <div class="about-content reveal reveal-slide-right">
                 <p class="section-kicker">Ons verhaal</p>
@@ -114,7 +105,7 @@ End Section
         <div class="about-cta-actions">
             <a class="cta-btn" href="@Url.Action("Index", "Team")">Bekijk ons team <i class="fa fa-arrow-right"></i></a>
             <a class="about-btn" href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">Bekijk onze realisaties <i class="fa fa-arrow-right"></i></a>
-            <a class="about-btn" href="@Url.Action("Index", "Contact")">Contacteer ons <i class="fa fa-arrow-right"></i></a>
+            <a class="about-btn" href="@Url.Action("Index", "Contact", New With {.onderwerp = "Algemene vraag"})">Contacteer ons <i class="fa fa-arrow-right"></i></a>
         </div>
     </div>
 </section>
