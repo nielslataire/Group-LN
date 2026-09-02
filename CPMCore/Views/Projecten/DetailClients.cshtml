@@ -38,7 +38,9 @@
                 <div class="col-sm-auto px-0">
                         <div class="btn-group" role="group" aria-label="Project acties">
                             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
-                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnPrintClientList" title="Klantenlijst afdrukken">
+                                <i class="bx bx-printer"></i> Klantenlijst
+                            </button>
                             @if (canWriteProjectCustomers)
                             {
                                 <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
@@ -107,16 +109,6 @@
                       exportOptions: { columns: ':visible' }
                     },
                     {
-                      extend: 'pdf',
-                      text: '<i class="fa fa-file-pdf"></i>',
-                      className: 'btn btn-default me-2',
-                      titleAttr: 'Exporteer naar PDF',
-                      attr: { "data-bs-toggle": "tooltip" },
-                      orientation: 'landscape',
-                      pageSize: 'A3',
-                      exportOptions: { columns: ':visible' }
-                    },
-                    {
                       extend: 'colvis',
                       text: '<i class="bx bx-columns me-2"></i><span>Alle kolommen</span>',
                       titleAttr: 'Selecteer kolommen',
@@ -135,15 +127,16 @@
             // ===== UI-aanpassingen / custom knoppen =====
             // Verberg standaard knoppen/search indien je eigen UI gebruikt
             $(".buttons-excel").hide();
-            $(".buttons-pdf").hide();
             $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
 
             // Koppel custom export-knoppen
             $("#btnExportExcel").on('click', function () {
               $(".buttons-excel").trigger("click");
             });
-            $("#btnExportPdf").on('click', function () {
-              $(".buttons-pdf").trigger("click");
+
+            // Klantenlijst-PDF (server-side, Group LN-huisstijl)
+            $("#btnPrintClientList").on('click', function () {
+              window.open('@Url.Action("PrintClientList", "Projecten")' + '?projectid=' + @Model.ProjectId, '_blank');
             });
 
             // Verplaats knoppen naar een eigen container

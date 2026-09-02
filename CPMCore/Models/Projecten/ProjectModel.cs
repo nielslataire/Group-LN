@@ -3835,6 +3835,7 @@ namespace CPMCore.Models.Projecten
     {
         public int GroupLot { get; set; }
         public string GroupName { get; set; } = string.Empty;
+        public int ActivityId { get; set; }
         public string ActivityName { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
         public string Vat { get; set; }
@@ -3883,6 +3884,50 @@ namespace CPMCore.Models.Projecten
         public string ProjectName { get; set; } = string.Empty;
         public SupplierListProjectInfo Project { get; set; } = new();
         public List<SupplierListRow> Rows { get; set; } = new();
+    }
+
+    /// <summary>Eén persoon op de klantenlijst-PDF: contactpersoon of mede-eigenaar van een klant.</summary>
+    public sealed class ClientListPerson
+    {
+        public string Name { get; set; } = string.Empty;
+        /// <summary>Enkel ingevuld voor mede-eigenaars; contactpersonen tonen geen apart adres.</summary>
+        public string Address { get; set; }
+        public string Phone { get; set; }
+        public string Cellphone { get; set; }
+        public string Email { get; set; }
+    }
+
+    /// <summary>Eén klant op de klantenlijst-PDF, met zijn eenheden, contactpersonen en mede-eigenaars.</summary>
+    public sealed class ClientListRow
+    {
+        public string ClientName { get; set; } = string.Empty;
+        public string Address { get; set; }
+        public List<string> Units { get; set; } = new();
+        public List<ClientListPerson> Contacts { get; set; } = new();
+        public List<ClientListPerson> CoOwners { get; set; } = new();
+    }
+
+    /// <summary>De PROJECTFICHE bovenaan de klantenlijst-PDF.</summary>
+    public sealed class ClientListProjectInfo
+    {
+        public string ProjectName { get; set; } = string.Empty;
+        public string AddressLine { get; set; }
+        public string CityLine { get; set; }
+        public string OpdrachtgeverName { get; set; }
+        public string OpdrachtgeverAddress { get; set; }
+        public int AantalKlanten { get; set; }
+        public int AantalEenhedenTotaal { get; set; }
+        public int AantalEenhedenVerkocht { get; set; }
+        public string LaatstBijgewerktDoor { get; set; }
+        public DateTime LaatstBijgewerkt { get; set; } = DateTime.Now;
+    }
+
+    public sealed class ClientListModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; } = string.Empty;
+        public ClientListProjectInfo Project { get; set; } = new();
+        public List<ClientListRow> Rows { get; set; } = new();
     }
 
     public class ProjectContractDetailModel

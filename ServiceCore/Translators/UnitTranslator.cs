@@ -28,6 +28,9 @@ namespace ServiceCore.Translators
             bo.HouseNumber = _entity.Housenumber;
             bo.BusNumber = _entity.Busnumber;
             bo.PreKad = _entity.PreKad;
+            bo.EanGas = _entity.EanGas;
+            bo.EanElektriciteit = _entity.EanElektriciteit;
+            bo.WatermeterNummer = _entity.WatermeterNummer;
             bo.IsLink = _entity.IsLink;
             bo.IsOption = _entity.IsOption;
             bo.Plan = _entity.Plan;
@@ -90,6 +93,9 @@ namespace ServiceCore.Translators
             _entity.Housenumber = bo.HouseNumber;
             _entity.Busnumber = bo.BusNumber;
             _entity.PreKad = bo.PreKad;
+            _entity.EanGas = bo.EanGas;
+            _entity.EanElektriciteit = bo.EanElektriciteit;
+            _entity.WatermeterNummer = bo.WatermeterNummer;
             _entity.ConstructionValueSold = bo.ConstructionValueSold;
             _entity.LandValueSold = bo.LandValueSold;
             _entity.ConstructionValue = bo.ConstructionValue;

@@ -67,6 +67,24 @@
 								</div>
 							</div>
 							<div class="row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">EAN Gas</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.EanGas, new { @class = "form-control", id = "txtEanGas", placeholder = "EAN-nummer gasaansluiting" })
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">EAN Elektriciteit</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.EanElektriciteit, new { @class = "form-control", id = "txtEanElektriciteit", placeholder = "EAN-nummer elektriciteitsaansluiting" })
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Watermeter nummer</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.WatermeterNummer, new { @class = "form-control", id = "txtWatermeterNummer", placeholder = "nummer van de watermeter" })
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
 								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Aandeel in de basisakte</label>
 								<div class="col-lg-7 col-xl-6">
 									@Html.TextBoxFor(m => m.Unit.Landshare, new { @class = "form-control", id = "txtTienduizend", placeholder = "geef het aantal aandelen in de basisakte in", type = "number" })

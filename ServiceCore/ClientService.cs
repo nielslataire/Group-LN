@@ -148,7 +148,8 @@ namespace ServiceCore
                 .Include(m => m.Units).ThenInclude(unit => unit.Project)
                 .Include(m => m.Units).ThenInclude(unit => unit.Type)
                 .Include(m => m.PostalCode).ThenInclude(pc => pc.Country)
-                .Include(m => m.PostalCode).ThenInclude(pc => pc.Provincie);
+                .Include(m => m.PostalCode).ThenInclude(pc => pc.Provincie)
+                .Include(m => m.ClientContacts).ThenInclude(cc => cc.PostalCode);
 
             foreach (var e in entities)
             {

@@ -29,6 +29,12 @@ public partial class Units
 
     public string PreKad { get; set; }
 
+    public string EanGas { get; set; }
+
+    public string EanElektriciteit { get; set; }
+
+    public string WatermeterNummer { get; set; }
+
     public decimal? ConstructionValueSold { get; set; }
 
     public decimal? LandValueSold { get; set; }

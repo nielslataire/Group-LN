@@ -2454,10 +2454,11 @@ namespace CPMCore.Controllers
 
                 var activities = contract.Activities ?? new List<ContractActivityBO>();
                 var buckets = activities.Count == 0
-                    ? new List<(int Lot, string Name, string Activity)> { (0, "ALGEMEEN", "(geen lot gekoppeld)") }
+                    ? new List<(int Lot, string Name, int ActivityId, string Activity)> { (0, "ALGEMEEN", 0, "(geen lot gekoppeld)") }
                     : activities.Select(a => (
                         Lot: a.Activity?.Group?.Lot ?? 0,
                         Name: string.IsNullOrWhiteSpace(a.Activity?.Group?.Name) ? "ALGEMEEN" : a.Activity.Group.Name,
+                        ActivityId: a.Activity?.ID ?? 0,
                         Activity: a.Activity?.Name ?? "(onbekende activiteit)")).ToList();
 
                 foreach (var b in buckets)
@@ -2466,6 +2467,7 @@ namespace CPMCore.Controllers
                     {
                         GroupLot = b.Lot,
                         GroupName = b.Name,
+                        ActivityId = b.ActivityId,
                         ActivityName = b.Activity,
                         CompanyName = companyName,
                         Vat = vat,
@@ -2527,6 +2529,12 @@ namespace CPMCore.Controllers
 
             var pc2 = project?.PostalCode;
             var vc = project?.SecurityCoordinator;
+            // Veiligheidscoördinator staat vaak enkel als contract/activiteit (Activiteit-ID 165) gekoppeld
+            // en niet als apart projectveld ingevuld; val in dat geval terug op die contractrij voor de fiche.
+            const int VeiligheidscoordinatieActivityId = 165;
+            var vcRow = vc == null
+                ? model.Rows.FirstOrDefault(r => !r.IsSynthesized && r.ActivityId == VeiligheidscoordinatieActivityId)
+                : null;
             var bu = project?.Builder;
             var usr = project?.AspNetUser;
             model.Project = new SupplierListProjectInfo
@@ -2547,12 +2555,14 @@ namespace CPMCore.Controllers
                 ProjectcoordinatieName = usr == null ? null : string.Join(" ", new[] { usr.Voornaam, usr.Familienaam }.Where(s => !string.IsNullOrWhiteSpace(s))),
                 ProjectcoordinatiePhone = usr?.Gsm,
                 ProjectcoordinatieEmail = usr?.Email,
-                VeiligheidscoordinatorName = vc?.BedrijfsNaam,
-                VeiligheidscoordinatorAddress = vc == null ? null : string.Join(", ",
-                    new[] { string.Join(" ", new[] { vc.Straat, vc.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))),
-                            string.Join(" ", new[] { vc.Postcode, vc.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s))) }
-                    .Where(s => !string.IsNullOrWhiteSpace(s))),
-                VeiligheidscoordinatorEmail = vc?.Email,
+                VeiligheidscoordinatorName = vc?.BedrijfsNaam ?? vcRow?.CompanyName,
+                VeiligheidscoordinatorAddress = vc != null
+                    ? string.Join(", ",
+                        new[] { string.Join(" ", new[] { vc.Straat, vc.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                                string.Join(" ", new[] { vc.Postcode, vc.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s))) }
+                        .Where(s => !string.IsNullOrWhiteSpace(s)))
+                    : vcRow?.Address?.Replace("\n", ", "),
+                VeiligheidscoordinatorEmail = vc?.Email ?? vcRow?.ContactEmail,
                 AardVanDeWerken = string.IsNullOrWhiteSpace(aard) ? null : aard,
                 StartDatumWerf = project?.StartDateConstruction,
                 WerfmeldingDate = project?.WerfmeldingDate,
@@ -2574,8 +2584,8 @@ namespace CPMCore.Controllers
             {
                 foreach (var f in new[]
                 {
-                    "Avenir-Roman.ttf", "Avenir-Medium.ttf", "Avenir-Heavy.ttf",
-                    "Avenir-Oblique.ttf", "Avenir-MediumOblique.ttf", "Avenir-HeavyOblique.ttf"
+                    "Avenir-Roman.ttf", "Avenir-Medium.ttf", "Avenir-Heavy.ttf", "Avenir-Black.ttf",
+                    "Avenir-Oblique.ttf", "Avenir-MediumOblique.ttf", "Avenir-HeavyOblique.ttf", "Avenir-BlackOblique.ttf"
                 })
                 {
                     var fp = Path.Combine(fontsRoot, f);
@@ -2605,6 +2615,147 @@ namespace CPMCore.Controllers
             var fileName = $"Aannemerslijst_{safeProject}_{DateTime.Now:yyyyMMdd}.pdf";
 
             return File(pdfBytes, "application/pdf", fileName);
+        }
+
+        [HttpGet]
+        public IActionResult PrintClientList(int projectid)
+        {
+            var project = _db.Project
+                .Include(p => p.PostalCode)
+                .Include(p => p.Builder)
+                .Include(p => p.Units).ThenInclude(u => u.Type)
+                .AsNoTracking()
+                .FirstOrDefault(p => p.ProjectId == projectid);
+
+            var projectName = project?.ProjectName ?? _projectService.GetProjectNameById(projectid);
+
+            var clientsResponse = _clientService.GetClientAccountsByProjectIdWithUnits(projectid);
+            var clientAccounts = clientsResponse.Success ? clientsResponse.Values : new List<ClientAccountWithUnitsBO>();
+
+            string FormatAddress(string street, string housenumber, string busnumber, PostalCodeBO pc)
+            {
+                var line1 = string.Join(" ", new[] { street, housenumber }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (!string.IsNullOrWhiteSpace(busnumber)) line1 = string.IsNullOrWhiteSpace(line1) ? $"bus {busnumber}" : $"{line1} bus {busnumber}";
+                var line2 = pc == null ? null : string.Join(" ", new[] { pc.Postcode, pc.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                return string.Join(", ", new[] { line1, line2 }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            }
+
+            // Zelfde volgorde als de eenheden-kolommen op Projecten/DetailClients: Wooneenheid, Commerciële
+            // ruimte, Parkeergelegenheid, Berging, en dan de rest.
+            var unitGroupOrder = new Dictionary<int, int> { [1] = 0, [4] = 1, [3] = 2, [2] = 3 };
+            string FormatUnit(UnitBO u) => string.Join(" ", new[] { u.Type?.Name, u.Name?.ToUpperInvariant() }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            string ClientDisplayName(ClientAccountBO cl) => cl == null ? "—"
+                : string.Join(" ", new[] { cl.Salutation.GetDisplayName(), cl.DisplayName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            string PersonDisplayName(ClientContactBO p) =>
+                string.Join(" ", new[] { p.Salutation.GetDisplayName(), p.Firstname, p.Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            var model = new ClientListModel { ProjectId = projectid, ProjectName = projectName };
+
+            // Klanten sorteren zoals op Projecten/DetailClients: op naam van hun wooneenheid (lot).
+            var sortedClientAccounts = clientAccounts.OrderBy(
+                m => m.Units.Where(a => a.Type.GroupId == 1).Count() > 0 ? m.Units.Where(a => a.Type.GroupId == 1).FirstOrDefault().Name : "",
+                new ServiceCore.Helpers.AlphanumComparator());
+
+            foreach (var ca in sortedClientAccounts)
+            {
+                var client = ca.Client;
+                var row = new ClientListRow
+                {
+                    ClientName = ClientDisplayName(client),
+                    Address = FormatAddress(client?.Street, client?.Housenumber, client?.Busnumber, client?.Postalcode),
+                    Units = (ca.Units ?? new List<UnitBO>())
+                        .Where(u => !u.IsOption)
+                        .OrderBy(u => unitGroupOrder.TryGetValue(u.Type?.GroupId ?? -1, out var ord) ? ord : int.MaxValue)
+                        .Select(FormatUnit)
+                        .ToList()
+                };
+
+                foreach (var contact in client?.Contacts ?? new List<ClientContactBO>())
+                {
+                    row.Contacts.Add(new ClientListPerson
+                    {
+                        Name = PersonDisplayName(contact),
+                        Phone = contact.Phone,
+                        Cellphone = contact.Cellphone,
+                        Email = contact.Email
+                    });
+                }
+
+                foreach (var owner in client?.CoOwners ?? new List<ClientContactBO>())
+                {
+                    row.CoOwners.Add(new ClientListPerson
+                    {
+                        Name = PersonDisplayName(owner),
+                        Address = FormatAddress(owner.Street, owner.Housenumber, owner.Busnumber, owner.Postalcode),
+                        Phone = owner.Phone,
+                        Email = owner.Email
+                    });
+                }
+
+                model.Rows.Add(row);
+            }
+
+            var bu = project?.Builder;
+            model.Project = new ClientListProjectInfo
+            {
+                ProjectName = projectName,
+                AddressLine = string.Join(" ", new[] { project?.Street, project?.Number }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                CityLine = project?.PostalCode == null ? null : string.Join(" ", new[] { project.PostalCode.Postcode, project.PostalCode.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                OpdrachtgeverName = bu?.BedrijfsNaam,
+                OpdrachtgeverAddress = bu == null ? null : string.Join(", ", new[]
+                {
+                    string.Join(" ", new[] { bu.Straat, bu.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                    string.Join(" ", new[] { bu.Postcode, bu.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                AantalKlanten = model.Rows.Count,
+                AantalEenhedenTotaal = (project?.Units ?? new List<DALCore.Models.Units>()).Count(u => !u.IsOption),
+                AantalEenhedenVerkocht = model.Rows.Sum(r => r.Units.Count),
+                LaatstBijgewerktDoor = User.GetCpmDisplayName()
+            };
+
+            // Logo + Avenir-font (zoals PrintSupplierList)
+            byte[] logoBytes = null;
+            var logoPath = Path.Combine(_env.WebRootPath, "Img", "groupln-logo.png");
+            if (System.IO.File.Exists(logoPath))
+                logoBytes = System.IO.File.ReadAllBytes(logoPath);
+
+            string fontFamily = null;
+            var fontsRoot = Path.Combine(_env.WebRootPath, "fonts");
+            try
+            {
+                foreach (var f in new[]
+                {
+                    "Avenir-Roman.ttf", "Avenir-Medium.ttf", "Avenir-Heavy.ttf", "Avenir-Black.ttf",
+                    "Avenir-Oblique.ttf", "Avenir-MediumOblique.ttf", "Avenir-HeavyOblique.ttf", "Avenir-BlackOblique.ttf"
+                })
+                {
+                    var fp = Path.Combine(fontsRoot, f);
+                    if (System.IO.File.Exists(fp))
+                        using (var stream = System.IO.File.OpenRead(fp))
+                            FontManager.RegisterFont(stream);
+                }
+                fontFamily = "Avenir";
+            }
+            catch { /* fallback naar default font */ }
+
+            var document = new ClientListDocument(model, logoBytes, fontFamily);
+
+            byte[] pdfBytes;
+            try
+            {
+                pdfBytes = document.GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Klantenlijst-PDF genereren mislukt voor project {ProjectId}", projectid);
+                return StatusCode(500, "De klantenlijst kon niet worden opgemaakt: " + ex.Message);
+            }
+
+            var safeClientProject = (projectName ?? "Project").Replace(Path.GetInvalidFileNameChars(), '_');
+            var clientFileName = $"Klantenlijst_{safeClientProject}_{DateTime.Now:yyyyMMdd}.pdf";
+
+            return File(pdfBytes, "application/pdf", clientFileName);
         }
 
         [HttpGet]

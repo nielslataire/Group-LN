@@ -116,6 +116,36 @@ Public Class UnitBO
             _prekad = value
         End Set
     End Property
+    Private _eangas As String
+    <Display(Name:="EAN Gas")>
+    Public Property EanGas() As String
+        Get
+            Return _eangas
+        End Get
+        Set(ByVal value As String)
+            _eangas = value
+        End Set
+    End Property
+    Private _eanelektriciteit As String
+    <Display(Name:="EAN Elektriciteit")>
+    Public Property EanElektriciteit() As String
+        Get
+            Return _eanelektriciteit
+        End Get
+        Set(ByVal value As String)
+            _eanelektriciteit = value
+        End Set
+    End Property
+    Private _watermeternummer As String
+    <Display(Name:="Watermeter nummer")>
+    Public Property WatermeterNummer() As String
+        Get
+            Return _watermeternummer
+        End Get
+        Set(ByVal value As String)
+            _watermeternummer = value
+        End Set
+    End Property
     Private _constructionvaluesold As Decimal?
     '<DisplayFormat(DataFormatString:="{0:0,00}")>
     <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:C}")>
