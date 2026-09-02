@@ -33,6 +33,16 @@ public partial class Contract
 
     public string ContractName { get; set; }
 
+    public DateTime? ContractSentDate { get; set; }
+
+    public string ContractSentNote { get; set; }
+
+    public bool SiteNotification { get; set; }
+
+    public bool VgmCharter { get; set; }
+
+    public bool PidAttest { get; set; }
+
     public virtual CompanyInfo Company { get; set; }
 
     public virtual ICollection<ContractActivity> ContractActivity { get; set; } = new List<ContractActivity>();

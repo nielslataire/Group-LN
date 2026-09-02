@@ -114,42 +114,62 @@ public class PermissionService : IPermissionService
     {
         if (!_loaded) return false;
 
-        var hasDirect = _effective.TryGetValue(code, out var grant);
-        if (hasDirect)
-        {
-            // Directe entry is definitief: true = toegang, false = geweigerd.
-            // Geen kind-lookup bij expliciete false: kindcodes die niet in het panel
-            // staan (bv. Suppliers.All) mogen een expliciete weigering niet omzeilen.
-            return access switch
-            {
-                PermissionAccessType.Read => grant!.Read,
-                PermissionAccessType.Write => grant!.Write,
-                PermissionAccessType.Delete => grant!.Delete,
-                _ => false
-            };
-        }
-        else
-        {
-            // Geen directe match: zoek omhoog naar parent-permissie
-            // ("Suppliers.Company" → "Suppliers")
-            var parent = code.Contains('.') ? code[..code.LastIndexOf('.')] : null;
-            if (!string.IsNullOrWhiteSpace(parent))
-                return Has(parent, access);
-        }
+        // Direct toegekend, of overgeërfd van een bovenliggende code (echte inheritance:
+        // "Suppliers" true ⇒ ook "Suppliers.Company.5"). Een directe entry is definitief,
+        // óók wanneer die op false staat.
+        if (HasGrantedOrInherited(code, access))
+            return true;
 
-        // Zoek omlaag: als de gebruiker een child-permissie heeft (bv. "Suppliers.Company.5")
-        // dan heeft hij impliciet ook toegang tot de parent ("Suppliers").
+        // Toegang tot een containerpagina zodra de gebruiker minstens één concreet
+        // (in het rechtenpaneel getoond) kindrecht heeft — bv. iemand met enkel
+        // "Settings.Users" moet op Instellingen kunnen, ook al staat "Settings" zelf
+        // expliciet op geweigerd. De pagina toont daarna enkel de toegestane onderdelen.
+        // Verborgen aggregatie-codes (".All", ".ByBillingCompany") cascaden mee met de
+        // parent en mogen een expliciete weigering NIET omzeilen.
+        return HasAnyChildGrant(code, access);
+    }
+
+    /// <summary>
+    /// True als <paramref name="code"/> rechtstreeks is toegekend, of als een
+    /// bovenliggende code is toegekend. Een rechtstreekse entry is definitief
+    /// (ook een expliciete false stopt de zoektocht omhoog).
+    /// </summary>
+    private bool HasGrantedOrInherited(string code, PermissionAccessType access)
+    {
+        if (_effective.TryGetValue(code, out var grant))
+            return Granted(grant, access);
+
+        var dot = code.LastIndexOf('.');
+        return dot > 0 && HasGrantedOrInherited(code[..dot], access);
+    }
+
+    /// <summary>
+    /// True als de gebruiker minstens één concreet kindrecht onder <paramref name="code"/>
+    /// heeft (bv. "Settings.Users" onder "Settings", of "Suppliers.Company.5" onder
+    /// "Suppliers"). De verborgen aggregatie-codes ".All" en ".ByBillingCompany" tellen
+    /// hier bewust niet mee.
+    /// </summary>
+    private bool HasAnyChildGrant(string code, PermissionAccessType access)
+    {
         var prefix = code + ".";
         return _effective.Any(kv =>
+            kv.Key.Length > prefix.Length &&
             kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-            access switch
-            {
-                PermissionAccessType.Read => kv.Value.Read,
-                PermissionAccessType.Write => kv.Value.Write,
-                PermissionAccessType.Delete => kv.Value.Delete,
-                _ => false
-            });
+            !IsAggregateChildSuffix(kv.Key.AsSpan(prefix.Length)) &&
+            Granted(kv.Value, access));
     }
+
+    private static bool IsAggregateChildSuffix(ReadOnlySpan<char> suffix) =>
+        suffix.Equals("All", StringComparison.OrdinalIgnoreCase) ||
+        suffix.Equals("ByBillingCompany", StringComparison.OrdinalIgnoreCase);
+
+    private static bool Granted(PermissionGrant grant, PermissionAccessType access) => access switch
+    {
+        PermissionAccessType.Read => grant.Read,
+        PermissionAccessType.Write => grant.Write,
+        PermissionAccessType.Delete => grant.Delete,
+        _ => false
+    };
 
     private void GrantAll(string code) => _effective[code] = new PermissionGrant(true, true, true);
 }

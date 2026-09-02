@@ -113,6 +113,7 @@ public class InstellingenController : BaseController
 
 
     [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsActivities)]
     [Breadcrumb("Activiteiten")]
     public IActionResult Activities()
     {
@@ -242,6 +243,7 @@ public class InstellingenController : BaseController
 
     //VAKANTIEDAGEN
     [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsHolidays)]
     [Breadcrumb("Vakantiedagen")]
     public ActionResult Vacationdays()
     {
@@ -296,6 +298,7 @@ public class InstellingenController : BaseController
     //MIJN BEDRIJVEN
     // GET /Admin/IssuerCompanies
     [HttpGet("IssuerCompanies")]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsBillingCompanies)]
     public async Task<IActionResult> IssuerCompanies()
     {
         SetPageHeader("bx bx-cog", "Mijn bedrijven");
@@ -832,6 +835,7 @@ public class InstellingenController : BaseController
 
     // GET /Admin/InvoiceTemplates
     [HttpGet("InvoiceTemplates")]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsInvoiceTemplates)]
     public async Task<IActionResult> InvoiceTemplates(CancellationToken ct)
     {
         await _invoiceTemplates.EnsureDefaultsAsync(ct);
@@ -1824,6 +1828,7 @@ public class InstellingenController : BaseController
     // ─── Kostprijzen materialen ─────────────────────────────────────────────────
 
     [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
     [Breadcrumb("Kostprijzen materialen")]
     public IActionResult KostprijsMaterialen()
     {
@@ -1924,6 +1929,7 @@ public class InstellingenController : BaseController
     // ─── Budgetformules (voorstellen BudgetActivityLijnen) ─────────────────────
 
     [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsCalculatie)]
     [Breadcrumb("Budgetformules")]
     public async Task<IActionResult> BudgetFormules()
     {
@@ -2060,6 +2066,7 @@ public class InstellingenController : BaseController
     // ─── Bouwindexen ────────────────────────────────────────────────────────────
 
     [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsBouwIndexen)]
     [Breadcrumb("Bouwindexen")]
     public async Task<IActionResult> Bouwindexen()
     {
@@ -2134,6 +2141,7 @@ public class InstellingenController : BaseController
     // ─── Marktdata-status ───────────────────────────────────────────────────────
 
     [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsMarketDataStatus)]
     [Breadcrumb("Marktdata-status")]
     public async Task<IActionResult> MarketDataStatus(CancellationToken ct)
     {

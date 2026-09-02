@@ -10,8 +10,8 @@
         @Html.HiddenFor(m => m.ContractId)
         @Html.HiddenFor(m => m.Activity.ID)
         @Html.HiddenFor(m => m.Activity.Name)
-        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Model.Activity.Name</label>
-        <div class="col-lg-8 col-xl-6">
+        <label class="col-12 col-md-4 control-label text-md-end mb-0">@Model.Activity.Name</label>
+        <div class="col-12 col-md-8">
           @Html.EditorFor(
                 m => m.Price,
                 "CurrencyWithActions",

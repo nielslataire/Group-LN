@@ -131,6 +131,62 @@
                                                         : contract.GuaranteeType.GetDisplayName())
                                                 </div>
                                             </div>
+                                            <div class="col-6 mt-3">
+                                                <span class="fw-semibold fs-6">Contract verstuurd</span>
+                                                <div class="text-muted">
+                                                    @if (contract.ContractSentDate is null && string.IsNullOrWhiteSpace(contract.ContractSentNote))
+                                                    {
+                                                        <text>-</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        @(contract.ContractSentDate?.ToString("dd/MM/yyyy") ?? "-")
+                                                        @if (!string.IsNullOrWhiteSpace(contract.ContractSentNote))
+                                                        {
+                                                            <text> (@contract.ContractSentNote)</text>
+                                                        }
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="col-6 mt-3">
+                                                <span class="fw-semibold fs-6">Werfmelding</span>
+                                                <div>
+                                                    @if (contract.SiteNotification)
+                                                    {
+                                                        <span class="badge bg-success">Ja</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Nee</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="col-6 mt-3">
+                                                <span class="fw-semibold fs-6">VGM charter</span>
+                                                <div>
+                                                    @if (contract.VgmCharter)
+                                                    {
+                                                        <span class="badge bg-success">Ja</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Nee</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="col-6 mt-3">
+                                                <span class="fw-semibold fs-6">PID-attesten</span>
+                                                <div>
+                                                    @if (contract.PidAttest)
+                                                    {
+                                                        <span class="badge bg-success">Ja</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">Nee</span>
+                                                    }
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <div class="d-flex justify-content-between align-items-center mb-2">

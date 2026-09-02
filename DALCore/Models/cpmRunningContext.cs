@@ -1300,6 +1300,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.CashDiscountPercentage).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
             entity.Property(e => e.ContractName).HasMaxLength(200);
+            entity.Property(e => e.ContractSentDate).HasColumnType("date");
+            entity.Property(e => e.ContractSentNote).HasMaxLength(200);
             entity.Property(e => e.GuaranteePercentage).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.PaymentTerm).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
@@ -2369,6 +2371,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.SeoDescription).HasMaxLength(320);
             entity.Property(e => e.Street).HasMaxLength(100);
             entity.Property(e => e.TotalLandShare).HasColumnType("numeric(18, 0)");
+            entity.Property(e => e.WerfmeldingDate).HasColumnType("date");
+            entity.Property(e => e.WerfmeldingDossier).HasMaxLength(100);
             entity.Property(e => e.WheaterStationId).HasColumnName("WheaterStationID");
 
             entity.HasOne(d => d.Architect).WithMany(p => p.ProjectArchitect)

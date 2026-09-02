@@ -2382,6 +2382,231 @@ namespace CPMCore.Controllers
             return File(pdfBytes, "application/pdf", fileName);
         }
 
+        // Aannemerslijst (werf) als PDF in de Group LN-huisstijl: PROJECTFICHE + tabel met
+        // aannemers/studiebureaus/nutspartijen per lot. De vijf statuskolommen worden via
+        // query-parameters aan/uit gezet.
+        [HttpGet]
+        public IActionResult PrintSupplierList(int projectid, bool sent = true, bool signed = true,
+            bool vgm = true, bool notification = true, bool pid = true)
+        {
+            var project = _db.Project
+                .Include(p => p.Builder)
+                .Include(p => p.Architect)
+                .Include(p => p.Engineer)
+                .Include(p => p.EpbReporter)
+                .Include(p => p.SecurityCoordinator)
+                .Include(p => p.AspNetUser)
+                .Include(p => p.PostalCode)
+                .Include(p => p.Units).ThenInclude(u => u.Type)
+                .AsNoTracking()
+                .FirstOrDefault(p => p.ProjectId == projectid);
+
+            var projectName = project?.ProjectName ?? _projectService.GetProjectNameById(projectid);
+
+            var contractsResponse = _projectService.GetProjectContracts(projectid);
+            var contracts = contractsResponse.Success ? contractsResponse.Values : new List<ContractBO>();
+
+            // Rauwe bedrijfs- en contactgegevens ophalen voor de betrokken contracten.
+            var companyIds = contracts.Select(c => c.Company?.ID ?? 0).Where(id => id > 0).Distinct().ToList();
+            var contactIds = contracts.Where(c => c.SiteManagerContactId.HasValue)
+                .Select(c => c.SiteManagerContactId.Value).Distinct().ToList();
+            var companies = _db.CompanyInfo.AsNoTracking()
+                .Where(c => companyIds.Contains(c.CompanyId)).ToDictionary(c => c.CompanyId);
+            var contacts = _db.CompanyContacts.AsNoTracking()
+                .Where(c => contactIds.Contains(c.ContactId)).ToDictionary(c => c.ContactId);
+
+            string FmtVat(string nr)
+            {
+                var d = new string((nr ?? "").Where(char.IsDigit).ToArray());
+                return d.Length == 10 ? $"{d[..4]}.{d.Substring(4, 3)}.{d.Substring(7, 3)}" : (nr ?? "").Trim();
+            }
+            string CompanyAddress(DALCore.Models.CompanyInfo ci) => ci == null ? null : string.Join("\n",
+                new[]
+                {
+                    string.Join(" ", new[] { ci.Straat, ci.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                    string.Join(" ", new[] { ci.Postcode, ci.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            var model = new SupplierListModel { ProjectId = projectid, ProjectName = projectName };
+
+            foreach (var contract in contracts)
+            {
+                var ci = contract.Company != null && companies.TryGetValue(contract.Company.ID, out var c) ? c : null;
+                var companyName = ci?.BedrijfsNaam ?? contract.Company?.Display ?? string.Empty;
+                var vat = FmtVat(ci?.Ondernemingsnummer ?? ci?.VatNumber);
+                var address = CompanyAddress(ci);
+
+                string contactName = null, contactPhone = null, contactEmail = null;
+                var isGeneral = true;
+                if (contract.SiteManagerContactId.HasValue &&
+                    contacts.TryGetValue(contract.SiteManagerContactId.Value, out var ct))
+                {
+                    contactName = string.Join(" ", new[] { ct.ContactVoornaam, ct.ContactNaam }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                    contactPhone = string.IsNullOrWhiteSpace(ct.Gsm) ? ct.Telefoon : ct.Gsm;
+                    contactEmail = ct.Email;
+                    isGeneral = string.IsNullOrWhiteSpace(contactName) && string.IsNullOrWhiteSpace(contactPhone) && string.IsNullOrWhiteSpace(contactEmail);
+                }
+                if (isGeneral)
+                {
+                    contactPhone = string.IsNullOrWhiteSpace(ci?.Gsm) ? ci?.Telefoon1 : ci?.Gsm;
+                    contactEmail = ci?.Email;
+                }
+
+                var activities = contract.Activities ?? new List<ContractActivityBO>();
+                var buckets = activities.Count == 0
+                    ? new List<(int Lot, string Name, string Activity)> { (0, "ALGEMEEN", "(geen lot gekoppeld)") }
+                    : activities.Select(a => (
+                        Lot: a.Activity?.Group?.Lot ?? 0,
+                        Name: string.IsNullOrWhiteSpace(a.Activity?.Group?.Name) ? "ALGEMEEN" : a.Activity.Group.Name,
+                        Activity: a.Activity?.Name ?? "(onbekende activiteit)")).ToList();
+
+                foreach (var b in buckets)
+                {
+                    model.Rows.Add(new SupplierListRow
+                    {
+                        GroupLot = b.Lot,
+                        GroupName = b.Name,
+                        ActivityName = b.Activity,
+                        CompanyName = companyName,
+                        Vat = vat,
+                        Address = address,
+                        ContactName = contactName,
+                        ContactPhone = contactPhone,
+                        ContactEmail = contactEmail,
+                        ContactIsGeneral = isGeneral,
+                        SentDate = contract.ContractSentDate,
+                        SentNote = contract.ContractSentNote,
+                        Signed = contract.ContractSigned,
+                        Vgm = contract.VgmCharter,
+                        Notification = contract.SiteNotification,
+                        Pid = contract.PidAttest
+                    });
+                }
+            }
+
+            // Ontwerpteamrollen aanvullen uit de projectvelden wanneer er geen contractrij is.
+            void AddTeamRow(string role, DALCore.Models.CompanyInfo ci)
+            {
+                if (ci == null) return;
+                if (model.Rows.Any(r => string.Equals(r.ActivityName, role, StringComparison.OrdinalIgnoreCase))) return;
+                model.Rows.Add(new SupplierListRow
+                {
+                    GroupLot = 0,
+                    GroupName = "ALGEMEEN",
+                    ActivityName = role,
+                    CompanyName = ci.BedrijfsNaam,
+                    Vat = FmtVat(ci.Ondernemingsnummer ?? ci.VatNumber),
+                    Address = CompanyAddress(ci),
+                    ContactPhone = string.IsNullOrWhiteSpace(ci.Gsm) ? ci.Telefoon1 : ci.Gsm,
+                    ContactEmail = ci.Email,
+                    ContactIsGeneral = true,
+                    IsSynthesized = true
+                });
+            }
+            AddTeamRow("Architect", project?.Architect);
+            AddTeamRow("Ingenieur stabiliteit", project?.Engineer);
+            AddTeamRow("EPB-verslaggever", project?.EpbReporter);
+            AddTeamRow("Veiligheidscoördinatie", project?.SecurityCoordinator);
+
+            model.Rows = model.Rows
+                .OrderBy(r => r.GroupLot)
+                .ThenBy(r => r.GroupName)
+                .ThenBy(r => r.IsSynthesized)
+                .ThenBy(r => r.ActivityName)
+                .ThenBy(r => r.CompanyName)
+                .ToList();
+
+            // PROJECTFICHE
+            string PostalLine(DALCore.Models.PostalCode pc) => pc == null ? null :
+                string.Join(" ", new[] { pc.Postcode, pc.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var aard = string.Join(" · ", (project?.Units ?? new List<DALCore.Models.Units>())
+                .Where(u => !u.IsOption)
+                .GroupBy(u => u.Type?.Name ?? "eenheid")
+                .OrderByDescending(g => g.Count())
+                .Select(g => $"{g.Count()}× {g.Key.ToLowerInvariant()}"));
+
+            var pc2 = project?.PostalCode;
+            var vc = project?.SecurityCoordinator;
+            var bu = project?.Builder;
+            var usr = project?.AspNetUser;
+            model.Project = new SupplierListProjectInfo
+            {
+                ProjectName = projectName,
+                AddressLine = string.Join(" ", new[] { project?.Street, project?.Number }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                CityLine = PostalLine(pc2),
+                OpdrachtgeverName = bu?.BedrijfsNaam,
+                OpdrachtgeverAddress = bu == null ? null : string.Join(" · ", new[]
+                {
+                    string.Join(", ", new[]
+                    {
+                        string.Join(" ", new[] { bu.Straat, bu.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                        string.Join(" ", new[] { bu.Postcode, bu.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                    }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                    bu.Email
+                }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                ProjectcoordinatieName = usr == null ? null : string.Join(" ", new[] { usr.Voornaam, usr.Familienaam }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                ProjectcoordinatiePhone = usr?.Gsm,
+                ProjectcoordinatieEmail = usr?.Email,
+                VeiligheidscoordinatorName = vc?.BedrijfsNaam,
+                VeiligheidscoordinatorAddress = vc == null ? null : string.Join(", ",
+                    new[] { string.Join(" ", new[] { vc.Straat, vc.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                            string.Join(" ", new[] { vc.Postcode, vc.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s))) }
+                    .Where(s => !string.IsNullOrWhiteSpace(s))),
+                VeiligheidscoordinatorEmail = vc?.Email,
+                AardVanDeWerken = string.IsNullOrWhiteSpace(aard) ? null : aard,
+                StartDatumWerf = project?.StartDateConstruction,
+                WerfmeldingDate = project?.WerfmeldingDate,
+                WerfmeldingDossier = project?.WerfmeldingDossier,
+                AantalPartijen = model.Rows.Select(r => r.CompanyName).Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                LaatstBijgewerktDoor = User.GetCpmDisplayName()
+            };
+
+            // Logo + Avenir-font (zoals PrintRecalculation)
+            byte[] logoBytes = null;
+            var logoPath = Path.Combine(_env.WebRootPath, "Img", "groupln-logo.png");
+            if (System.IO.File.Exists(logoPath))
+                logoBytes = System.IO.File.ReadAllBytes(logoPath);
+
+            string fontFamily = null;
+            var fontsRoot = Path.Combine(_env.WebRootPath, "fonts");
+            try
+            {
+                foreach (var f in new[]
+                {
+                    "Avenir-Roman.ttf", "Avenir-Medium.ttf", "Avenir-Heavy.ttf",
+                    "Avenir-Oblique.ttf", "Avenir-MediumOblique.ttf", "Avenir-HeavyOblique.ttf"
+                })
+                {
+                    var fp = Path.Combine(fontsRoot, f);
+                    if (System.IO.File.Exists(fp))
+                        using (var stream = System.IO.File.OpenRead(fp))
+                            FontManager.RegisterFont(stream);
+                }
+                fontFamily = "Avenir";
+            }
+            catch { /* fallback naar default font */ }
+
+            var columns = new SupplierListColumns(sent, signed, vgm, notification, pid);
+            var document = new SupplierListDocument(model, columns, logoBytes, fontFamily);
+
+            byte[] pdfBytes;
+            try
+            {
+                pdfBytes = document.GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Aannemerslijst-PDF genereren mislukt voor project {ProjectId}", projectid);
+                return StatusCode(500, "De aannemerslijst kon niet worden opgemaakt: " + ex.Message);
+            }
+
+            var safeProject = (projectName ?? "Project").Replace(Path.GetInvalidFileNameChars(), '_');
+            var fileName = $"Aannemerslijst_{safeProject}_{DateTime.Now:yyyyMMdd}.pdf";
+
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+
         [HttpGet]
         public IActionResult ExportInvoicesExcel(int projectid)
         {

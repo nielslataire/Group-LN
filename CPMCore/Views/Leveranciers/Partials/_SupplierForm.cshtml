@@ -57,7 +57,12 @@
 @using (Html.BeginForm(Model.Id.HasValue ? "Edit" : "Create", "Leveranciers", formRouteValues, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "ecommerce-form action-buttons-fixed", id = "supplier-form" }))
 {
     @Html.AntiForgeryToken()
-    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert">
+            @Html.ValidationSummary(false, "", new { @class = "mb-0" })
+        </div>
+    }
     @Html.HiddenFor(m => m.Id)
 
     <div class="row mt-2">

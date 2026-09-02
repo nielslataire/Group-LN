@@ -25,6 +25,8 @@
 	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
 	<style>
+		/* Kleuren komen uit het tokenpalet in wwwroot/css/custom.css (:root):
+		   --muted, --primary, --green-light, --border, --white. Geen losse hex hier. */
 		.company-picker-result {
 			display: flex;
 			flex-direction: column;
@@ -32,11 +34,11 @@
 			padding: 2px 0;
 		}
 		.company-picker-result .name { font-weight: 400; }
-		.company-picker-result .vat { font-size: .7rem; color: #8590a5; }
+		.company-picker-result .vat { font-size: .7rem; color: var(--muted); }
 		.company-picker-result.company-picker-new {
 			flex-direction: row;
 			align-items: center;
-			color: #1a9e5c;
+			color: var(--primary);
 			font-weight: 600;
 		}
 		.company-picker-result.company-picker-new i { font-size: 1rem; }
@@ -46,7 +48,7 @@
 		}
 		/* Enkel bij hover/toetsenbord-highlight een green-light achtergrond, niet standaard */
 		#select2-ddlCompany-results .select2-results__option--highlighted {
-			background: var(--green-light, #e8f0eb) !important;
+			background: var(--green-light) !important;
 			color: inherit !important;
 		}
 		/* "Nieuwe leverancier toevoegen" blijft onderaan zichtbaar, los van de scrollbare
@@ -54,39 +56,72 @@
 		#select2-ddlCompany-results .select2-results__option:has(.company-picker-new) {
 			position: sticky;
 			bottom: 0;
-			background: #fff;
-			border-top: 1px solid #dee2e6;
+			background: var(--white);
+			border-top: 1px solid var(--border);
 			border-radius: 0;
 			margin-top: 4px;
 			margin-bottom: 0;
 		}
 		#select2-ddlCompany-results .select2-results__option:has(.company-picker-new).select2-results__option--highlighted {
-			background: #f0faf4 !important;
-			color: #1a9e5c !important;
+			background: var(--green-light) !important;
+			color: var(--primary) !important;
 		}
 		.company-picker-selected {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			gap: .75rem;
-			border: 1px solid #b7e4c7;
-			background: #f0faf4;
+			border: 1px solid var(--border);
+			background: var(--green-light);
 			border-radius: .375rem;
 			padding: .6rem .9rem;
 		}
 		.company-picker-selected .name { font-weight: 600; }
-		.company-picker-selected .vat { font-size: .8rem; color: #6b7a90; }
-		#companyContractDefaultsNote { color: #1a9e5c; }
+		.company-picker-selected .vat { font-size: .8rem; color: var(--muted); }
+		#companyContractDefaultsNote { color: var(--primary); }
 		.activity-rows-header { font-size: .75rem; letter-spacing: .03em; }
 		.empty-state-box {
-			border: 1px dashed #ced4da;
+			border: 1px dashed var(--border);
 			border-radius: .375rem;
 			padding: 1rem 1.25rem;
-			color: #8590a5;
+			color: var(--muted);
 			text-align: center;
 		}
 		.form-control-h {
 			min-height: calc(1.5em + 1.4rem + 2px);
+		}
+		/* Sectiescheiding binnen de kaart: subtiel kopje boven de opvolgvelden */
+		.form-section-caption {
+			font-size: .7rem;
+			letter-spacing: .04em;
+		}
+		/* Contrast: var(--muted) haalt 4.5:1 niet op wit / green-light — lokaal donkerder */
+		.company-picker-result .vat,
+		.company-picker-selected .vat,
+		.empty-state-box { color: #5c6b7a; }
+		/* Lange bedrijfsnaam in het geselecteerde-vak mag niet uitbreken */
+		.company-picker-selected > div { min-width: 0; }
+		.company-picker-selected .name,
+		.company-picker-selected .vat {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		/* Bedragen onder elkaar vergelijkbaar uitlijnen */
+		#activitiesTotal,
+		#ActivityRows .Currencymask { font-variant-numeric: tabular-nums; }
+		/* Native <select> expliciete kleuren (Windows / geforceerde thema's) */
+		select.form-control-modern { background-color: #fff; color: #212529; }
+		/* Modals: scroll niet doorgeven aan de pagina */
+		.modal .modal-body { overscroll-behavior: contain; }
+		/* Dubbelklik-zoom op touch vermijden */
+		.ecommerce-form .btn,
+		.ecommerce-form .form-control,
+		.action-buttons .btn { touch-action: manipulation; }
+		/* Datumveld nooit onbruikbaar smal laten worden in een krappe kolom */
+		#txtContractSentDate { min-width: 8rem; }
+		@@media (prefers-reduced-motion: reduce) {
+			.switch, .switch * { transition: none !important; }
 		}
 	</style>
 }
@@ -96,8 +131,8 @@
 	<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
 			<div class="row align-items-center">
 				<div class="col-sm-auto d-flex align-items-center">
-					<a href="@Url.Action("DetailContracts", "Projecten",new {projectid = Model.ProjectId})" class="text-decoration-none text-reset d-flex align-items-center">
-						<i class="bx bx-chevron-left fs-1"></i>
+					<a href="@Url.Action("DetailContracts", "Projecten",new {projectid = Model.ProjectId})" class="text-decoration-none text-reset d-flex align-items-center" aria-label="Terug naar leveranciers">
+						<i class="bx bx-chevron-left fs-1" aria-hidden="true"></i>
 					</a>
 				</div>
 				<div class="col-sm-auto">
@@ -112,44 +147,50 @@
 <div class="row mt-0 pt-0">
 	<div class="col">
 		<div class="alert alert-info d-flex align-items-start gap-2 mb-0">
-			<i class="bx bx-info-circle mt-1"></i>
-			<div>Elk contract koppelt &eacute;&eacute;n leverancier aan dit project. Kies eerst de leverancier &mdash; BTW% en betaaltermijn worden automatisch ingevuld op basis van het vorige contract. Gebruik Enter om snel toe te voegen.</div>
+			<i class="bx bx-info-circle mt-1" aria-hidden="true"></i>
+			<div>Elk contract koppelt &eacute;&eacute;n leverancier aan dit project. Kies eerst de leverancier. BTW% en betaaltermijn worden automatisch ingevuld op basis van het vorige contract. Gebruik Enter om snel toe te voegen.</div>
 		</div>
 	</div>
 </div>
 
-@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", id = "addContractForm" }))
 {
 	@Html.AntiForgeryToken()
+	@if (!ViewData.ModelState.IsValid)
+	{
+		<div class="alert alert-danger" role="alert">
+			@Html.ValidationSummary(false, "", new { @class = "mb-0" })
+		</div>
+	}
 
 	@Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
 	@Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
 	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
 	<div class="row mt-2 g-4">
-		<div class="col-12 col-xl-6">
+		<div class="col-12 col-xxl-6">
 			<section class="card card-modern card-big-info h-100">
 				<div class="card-body">
 					<div class="row">
-						<div class="col-lg-2-5 col-xl-1-5">
-							<i class="card-big-info-icon bx bx-box"></i>
+						<div class="col-xl-1-5">
+							<i class="card-big-info-icon bx bx-box" aria-hidden="true"></i>
 							<h2 class="card-big-info-title">Algemene info</h2>
 							<p class="card-big-info-desc">Voeg hier de algemene info van het contract in.</p>
 						</div>
-						<div class="col-lg-3-5 col-xl-4-5">
+						<div class="col-xl-4-5">
 
 							<div class="row align-items-center pb-3">
-								<label class="col-lg-4 control-label text-lg-end mb-0">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0">
 									@Html.LabelFor(m => m.Contract.ContractName)
 								</label>
-								<div class="col-lg-8">
-									@Html.TextBoxFor(m => m.Contract.ContractName, new { @class = "form-control form-control-modern", placeholder = "Optionele naam voor dit contract" })
+								<div class="col-12 col-md-8">
+									@Html.TextBoxFor(m => m.Contract.ContractName, new { @class = "form-control form-control-modern", placeholder = "Optionele naam voor dit contract…" })
 								</div>
 							</div>
 							<div class="row align-items-center pb-3">
-								<label class="col-lg-4 control-label text-lg-end mb-0">
-									@Html.LabelFor(m => m.Companies) <span class="text-danger">*</span>
+								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="ddlCompany">
+									@Html.DisplayNameFor(m => m.Companies) <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (verplicht)</span>
 								</label>
-								<div class="col-lg-8">
+								<div class="col-12 col-md-8">
 									@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID" })
 									@Html.HiddenFor(m => m.Contract.Company.Display, new { id = "txtCompanyDisplay" })
 									<div id="companySelected" class="company-picker-selected @(Model.Contract.Company.ID > 0 ? "" : "d-none")">
@@ -157,78 +198,123 @@
 											<div class="name" id="companySelectedName">@Model.Contract.Company.Display</div>
 											<div class="vat" id="companySelectedVat"></div>
 										</div>
-										<button type="button" class="btn btn-sm btn-link text-muted p-0" id="btnClearCompany" title="Andere leverancier kiezen">
-											<i class="bx bx-x fs-3"></i>
+										<button type="button" class="btn btn-sm btn-link text-muted p-0" id="btnClearCompany" title="Andere leverancier kiezen" aria-label="Andere leverancier kiezen">
+											<i class="bx bx-x fs-3" aria-hidden="true"></i>
 										</button>
 									</div>
 									<div id="ddlCompanyWrapper" class="@(Model.Contract.Company.ID > 0 ? "d-none" : "")">
-										<select id="ddlCompany" class="form-control form-control-modern w-100">
+										<select id="ddlCompany" class="form-control form-control-modern w-100" aria-label="Leverancier zoeken" aria-required="true">
 											<!-- Voeg hier de opties toe -->
 										</select>
 									</div>
 									<div id="companyContractDefaultsNote" class="small mt-2 d-none">
-										<i class="bx bx-check-circle me-1"></i>BTW%, betaaltermijn en waarborg ingevuld op basis van vorig contract met deze leverancier.
+										<i class="bx bx-check-circle me-1" aria-hidden="true"></i>BTW%, betaaltermijn en waarborg ingevuld op basis van vorig contract met deze leverancier.
 									</div>
+									@Html.ValidationMessageFor(m => m.Contract.Company.ID, "", new { @class = "text-danger small d-block mt-1" })
 								</div>
 							</div>
 							<div class="row align-items-center pb-3">
-								<label class="col-lg-4 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.SiteManagerContactId)</label>
-								<div class="col-lg-8">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="ddlSiteManager">@Html.DisplayNameFor(m => m.Contract.SiteManagerContactId)</label>
+								<div class="col-12 col-md-8">
 									<div class="input-group">
 										@Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
-										<button type="button" class="btn btn-outline-secondary" id="btnNewSiteManager" disabled title="Eerst een leverancier kiezen">
-											<i class="bx bx-user-plus"></i>
+										<button type="button" class="btn btn-outline-secondary" id="btnNewSiteManager" disabled title="Eerst een leverancier kiezen" aria-label="Nieuwe werfleider toevoegen">
+											<i class="bx bx-user-plus" aria-hidden="true"></i>
 										</button>
 									</div>
 								</div>
 							</div>
 
 							<div class="row align-items-center pb-3">
-								<label class="col-lg-4 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.VatPercentage)</label>
-								<div class="col-lg-3">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="Contract_VatPercentage">@Html.DisplayNameFor(m => m.Contract.VatPercentage)</label>
+								<div class="col-12 col-md-3">
 									@Html.EditorFor(m => m.Contract.VatPercentage, new { id = "txtVatPercentage", @class = "form-control form-control-modern", placeholder = "0,00", autocomplete = "off" })
 								</div>
-								<label class="col-lg-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.PaymentTerm)</label>
-								<div class="col-lg-3">
-									@Html.TextBoxFor(m => m.Contract.PaymentTerm, new { id = "txtPaymentTerm", @class = "form-control form-control-modern", placeholder = "Aantal dagen" })
+								<label class="col-12 col-md-2 control-label text-md-end mb-0" for="txtPaymentTerm">@Html.DisplayNameFor(m => m.Contract.PaymentTerm)</label>
+								<div class="col-12 col-md-3">
+									@Html.TextBoxFor(m => m.Contract.PaymentTerm, new { id = "txtPaymentTerm", @class = "form-control form-control-modern", placeholder = "Aantal dagen…", inputmode = "numeric" })
 								</div>
 							</div>
 
 							<div class="row align-items-center pb-3">
-								<label class="col-lg-4 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.CashDiscountPaymentTerm)</label>
-								<div class="col-lg-3">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="txtCashDiscountPaymentTerm">@Html.DisplayNameFor(m => m.Contract.CashDiscountPaymentTerm)</label>
+								<div class="col-12 col-md-3">
 									<div class="input-group mb-3">
 										<span class="input-group-text">
-											@Html.CheckBoxFor(m => m.Contract.CashDiscount, new  {id = "chkCashDiscount"})
+											@Html.CheckBoxFor(m => m.Contract.CashDiscount, new  {id = "chkCashDiscount", aria_label = "Korting contant toepassen"})
 										</span>
-										@Html.TextBoxFor(m => m.Contract.CashDiscountPaymentTerm, new { id = "txtCashDiscountPaymentTerm", @class = "form-control form-control-modern", type = "text", placeholder = "Aantal dagen" }).DisableIf(() => !Model.Contract.CashDiscount)
+										@Html.TextBoxFor(m => m.Contract.CashDiscountPaymentTerm, new { id = "txtCashDiscountPaymentTerm", @class = "form-control form-control-modern", type = "text", placeholder = "Aantal dagen…", inputmode = "numeric" }).DisableIf(() => !Model.Contract.CashDiscount)
 									</div>
 
 								</div>
-								<label class="col-lg-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.CashDiscountPercentage)</label>
-								<div class="col-lg-3">
+								<label class="col-12 col-md-2 control-label text-md-end mb-0" for="Contract_CashDiscountPercentage">@Html.DisplayNameFor(m => m.Contract.CashDiscountPercentage)</label>
+								<div class="col-12 col-md-3">
 									@Html.EditorFor(m => m.Contract.CashDiscountPercentage, new { id = "txtCashDiscountPercentage", @class = "form-control form-control-modern", placeholder = "0,00" }).DisableIf(() => !Model.Contract.CashDiscount)
 								</div>
 							</div>
 							<div class="row align-items-center pb-3">
-								<label class="col-lg-4 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.GuaranteeType)</label>
-								<div class="col-lg-3">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="lstGuaranteeType">@Html.DisplayNameFor(m => m.Contract.GuaranteeType)</label>
+								<div class="col-12 col-md-3">
 									@Html.DropDownListFor(m => m.Contract.GuaranteeType, Html.GetEnumSelectList(Model.Contract.GuaranteeType.GetType()), new { @class = "form-control form-control-modern", id = "lstGuaranteeType" })
 								</div>
-								<label class="col-lg-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.GuaranteePercentage)</label>
-								<div class="col-lg-3">
+								<label class="col-12 col-md-2 control-label text-md-end mb-0" for="Contract_GuaranteePercentage">@Html.DisplayNameFor(m => m.Contract.GuaranteePercentage)</label>
+								<div class="col-12 col-md-3">
 									@Html.EditorFor(m => m.Contract.GuaranteePercentage, new { id = "txtGuaranteePercentage", @class = "form-control form-control-modern", placeholder = "0,00" }).DisableIf(() => Model.Contract.GuaranteeType != ContractGuaranteeType.FinancialGuarantee)
 								</div>
 							</div>
-							<div class="row align-items-center justify-content-center pb-3 pt-2">
-								<label class="col-lg-4 control-label text-lg-end mb-0">
+							<div class="row pb-2 pt-3 mt-1 border-top">
+								<div class="col-12">
+									<span class="text-muted text-uppercase fw-semibold form-section-caption">Opvolging</span>
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0">
 									@Html.DisplayNameFor(m => m.Contract.ContractSigned)
 								</label>
-								<div class="col-lg-8">
+								<div class="col-12 col-md-8">
 									<div class="switch switch-sm switch-primary">
 										@Html.CheckBoxFor(m => m.Contract.ContractSigned, new { id = "chkContractSigned", data_plugin_ios_switch = "" })
 									</div>
 									<label class="form-check-label mb-0" for="chkContractSigned"></label>
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
+								<label class="col-12 col-md-3 control-label text-md-end mb-0" for="txtContractSentDate">@Html.DisplayNameFor(m => m.Contract.ContractSentDate)</label>
+								<div class="col-12 col-md-4">
+									<div class="input-group">
+										<span class="input-group-text"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span>
+										@Html.TextBoxFor(m => m.Contract.ContractSentDate, "{0:yyyy-MM-dd}", new { type = "date", @class = "form-control form-control-modern", id = "txtContractSentDate" })
+									</div>
+								</div>
+								<label class="col-12 col-md-2 control-label text-md-end mb-0" for="txtContractSentNote">@Html.DisplayNameFor(m => m.Contract.ContractSentNote)</label>
+								<div class="col-12 col-md-3">
+									@Html.TextBoxFor(m => m.Contract.ContractSentNote, new { @class = "form-control form-control-modern", placeholder = "bv. Bestelbon, per e-mail…", maxlength = "200", id = "txtContractSentNote" })
+									<small class="text-muted d-block mt-1 text-md-end"><span id="contractSentNoteCount">0</span>/200</small>
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0">@Html.DisplayNameFor(m => m.Contract.SiteNotification)</label>
+								<div class="col-12 col-md-3">
+									<div class="switch switch-sm switch-primary">
+										@Html.CheckBoxFor(m => m.Contract.SiteNotification, new { id = "chkSiteNotification", data_plugin_ios_switch = "" })
+									</div>
+									<label class="form-check-label mb-0" for="chkSiteNotification"></label>
+								</div>
+								<label class="col-12 col-md-2 control-label text-md-end mb-0">@Html.DisplayNameFor(m => m.Contract.VgmCharter)</label>
+								<div class="col-12 col-md-3">
+									<div class="switch switch-sm switch-primary">
+										@Html.CheckBoxFor(m => m.Contract.VgmCharter, new { id = "chkVgmCharter", data_plugin_ios_switch = "" })
+									</div>
+									<label class="form-check-label mb-0" for="chkVgmCharter"></label>
+								</div>
+							</div>
+							<div class="row align-items-center pb-3">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0">@Html.DisplayNameFor(m => m.Contract.PidAttest)</label>
+								<div class="col-12 col-md-8">
+									<div class="switch switch-sm switch-primary">
+										@Html.CheckBoxFor(m => m.Contract.PidAttest, new { id = "chkPidAttest", data_plugin_ios_switch = "" })
+									</div>
+									<label class="form-check-label mb-0" for="chkPidAttest"></label>
 								</div>
 							</div>
 
@@ -237,16 +323,16 @@
 				</div>
 			</section>
 		</div>
-		<div class="col-12 col-xl-6">
+		<div class="col-12 col-xxl-6">
 			<section class="card card-modern card-big-info h-100">
 				<div class="card-body">
 					<div class="row">
-						<div class="col-lg-2-5 col-xl-1-5">
-							<i class="card-big-info-icon bx bx-checklist"></i>
+						<div class="col-xl-1-5">
+							<i class="card-big-info-icon bx bx-checklist" aria-hidden="true"></i>
 							<h2 class="card-big-info-title">Activiteiten</h2>
 							<p class="card-big-info-desc">Kies de activiteiten van deze leverancier en vul per activiteit het bedrag in. Niet gevonden? Voeg een bestaande activiteit uit de catalogus toe.</p>
 						</div>
-						<div class="col-lg-3-5 col-xl-4-5">
+						<div class="col-xl-4-5">
 							<div class="d-flex justify-content-between align-items-center flex-nowrap gap-2 mb-4">
 								<h3 class="text-color-dark font-weight-bold text-4 mb-0 text-uppercase text-truncate" id="companyActivitiesTitle" style="min-width:0;">Kies eerst een leverancier</h3>
 								<div class="d-flex gap-2 flex-shrink-0">
@@ -261,8 +347,8 @@
 							<div id="availableActivitiesList" class="empty-state-box mb-4">Kies eerst een leverancier hierboven.</div>
 
 							<div id="activityRowsHead" class="activity-rows-header row align-items-center pb-2 border-bottom mb-2 text-muted text-uppercase d-none">
-								<div class="col-lg-4 col-xl-3 text-lg-end">Activiteit</div>
-								<div class="col-lg-8 col-xl-6">Bedrag</div>
+								<div class="col-12 col-md-4 text-md-end">Activiteit</div>
+								<div class="col-12 col-md-8">Bedrag</div>
 							</div>
 							<div id="ActivityRows">
 								@foreach (var item in Model.Contract.Activities)
@@ -272,8 +358,8 @@
 							</div>
 							<div id="noActivitiesHint" class="empty-state-box">Nog geen activiteiten toegevoegd aan dit contract.</div>
 							<div id="activityRowsTotal" class="row align-items-center pt-2 border-top mt-2 d-none">
-								<div class="col-lg-4 col-xl-3 fw-bold text-lg-end">Totaal</div>
-								<div class="col-lg-8 col-xl-6 fw-bold text-start" id="activitiesTotal">&euro; 0,00</div>
+								<div class="col-12 col-md-4 fw-bold text-md-end">Totaal</div>
+								<div class="col-12 col-md-8 fw-bold text-start" id="activitiesTotal">&euro; 0,00</div>
 							</div>
 						</div>
 					</div>
@@ -283,13 +369,13 @@
 	</div>
 	<div class="row action-buttons align-items-center">
 		<div class="col-12 col-md-auto">
-			<button type="submit" name="saveAction" value="save" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-				<i class="bx bx-save text-4 me-2"></i> Contract opslaan
+			<button type="submit" name="saveAction" value="save" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden…">
+				<i class="bx bx-save text-4 me-2" aria-hidden="true"></i> Contract opslaan
 			</button>
 		</div>
 		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-			<button type="submit" name="saveAction" value="addAnother" class="submit-button btn btn-light border btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 text-color-dark" data-loading-text="Laden...">
-				<i class="bx bx-plus-circle text-4 me-2"></i> Opslaan &amp; nog een contract toevoegen
+			<button type="submit" name="saveAction" value="addAnother" class="submit-button btn btn-light border btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 text-color-dark" data-loading-text="Laden…">
+				<i class="bx bx-plus-circle text-4 me-2" aria-hidden="true"></i> Opslaan &amp; nog een contract toevoegen
 			</button>
 		</div>
 		<div class="col-12 col-md-auto">
@@ -311,14 +397,14 @@
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				<div id="nsErrors" class="alert alert-danger d-none"></div>
+				<div id="nsErrors" class="alert alert-danger d-none" role="alert"></div>
 				<div class="row g-3">
 					<div class="col-md-8">
-						<label class="control-label mb-1">Bedrijfsnaam <span class="text-danger">*</span></label>
-						<input type="text" id="nsName" class="form-control form-control-modern" />
+						<label class="control-label mb-1" for="nsName">Bedrijfsnaam <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (verplicht)</span></label>
+						<input type="text" id="nsName" class="form-control form-control-modern" required aria-required="true" />
 					</div>
 					<div class="col-md-4">
-						<label class="control-label mb-1">Bedrijfsvorm</label>
+						<label class="control-label mb-1" for="nsLegalForm">Bedrijfsvorm</label>
 						<select id="nsLegalForm" class="form-control form-control-modern">
 							<option value="">Geen</option>
 							@foreach (var lf in Model.LegalForms)
@@ -328,41 +414,41 @@
 						</select>
 					</div>
 					<div class="col-md-6">
-						<label class="control-label mb-1">Ondernemingsnummer</label>
-						<input type="text" id="nsEnterpriseNumber" class="form-control form-control-modern" placeholder="BE0123456789" />
+						<label class="control-label mb-1" for="nsEnterpriseNumber">Ondernemingsnummer</label>
+						<input type="text" id="nsEnterpriseNumber" class="form-control form-control-modern" placeholder="BE0123456789" inputmode="numeric" spellcheck="false" autocomplete="off" />
 					</div>
 					<div class="col-md-6">
-						<label class="control-label mb-1">BTW nummer</label>
+						<label class="control-label mb-1" for="nsVat">BTW nummer</label>
 						<div class="input-group">
-							<input type="text" id="nsVat" class="form-control form-control-modern" placeholder="BE0123456789" />
+							<input type="text" id="nsVat" class="form-control form-control-modern" placeholder="BE0123456789" spellcheck="false" autocomplete="off" />
 							<button type="button" class="btn btn-outline-primary" id="nsBtnValidateVat">
-								<i class="bx bx-check"></i> Controleren
+								<i class="bx bx-check" aria-hidden="true"></i> Controleren
 							</button>
 						</div>
 						<small class="text-muted d-block mt-1">Vult bij een geldig nummer meteen naam en adres aan.</small>
 					</div>
 					<div class="col-md-6">
-						<label class="control-label mb-1">Straat</label>
-						<input type="text" id="nsStreet" class="form-control form-control-modern" />
+						<label class="control-label mb-1" for="nsStreet">Straat</label>
+						<input type="text" id="nsStreet" class="form-control form-control-modern" autocomplete="address-line1" />
 					</div>
 					<div class="col-md-3">
-						<label class="control-label mb-1">Nr</label>
+						<label class="control-label mb-1" for="nsHouseNumber">Nr</label>
 						<input type="text" id="nsHouseNumber" class="form-control form-control-modern" />
 					</div>
 					<div class="col-md-3">
-						<label class="control-label mb-1">Bus</label>
+						<label class="control-label mb-1" for="nsBusNumber">Bus</label>
 						<input type="text" id="nsBusNumber" class="form-control form-control-modern" />
 					</div>
 					<div class="col-md-4">
-						<label class="control-label mb-1">Postcode</label>
-						<input type="text" id="nsPostalCode" class="form-control form-control-modern" />
+						<label class="control-label mb-1" for="nsPostalCode">Postcode</label>
+						<input type="text" id="nsPostalCode" class="form-control form-control-modern" inputmode="numeric" autocomplete="postal-code" />
 					</div>
 					<div class="col-md-4">
-						<label class="control-label mb-1">Gemeente</label>
-						<input type="text" id="nsCity" class="form-control form-control-modern" />
+						<label class="control-label mb-1" for="nsCity">Gemeente</label>
+						<input type="text" id="nsCity" class="form-control form-control-modern" autocomplete="address-level2" />
 					</div>
 					<div class="col-md-4">
-						<label class="control-label mb-1">Land</label>
+						<label class="control-label mb-1" for="nsCountryId">Land</label>
 						<select id="nsCountryId" class="form-control form-control-modern">
 							@foreach (var c in Model.Countries)
 							{
@@ -371,8 +457,8 @@
 						</select>
 					</div>
 					<div class="col-md-12">
-						<label class="control-label mb-1">Email</label>
-						<input type="email" id="nsEmail" class="form-control form-control-modern" />
+						<label class="control-label mb-1" for="nsEmail">Email</label>
+						<input type="email" id="nsEmail" class="form-control form-control-modern" inputmode="email" spellcheck="false" autocomplete="email" />
 					</div>
 				</div>
 			</div>
@@ -394,18 +480,18 @@
 			</div>
 			<div class="modal-body">
 				<p class="text-muted" id="nwmForLabel">Voor: </p>
-				<div id="nwmErrors" class="alert alert-danger d-none"></div>
+				<div id="nwmErrors" class="alert alert-danger d-none" role="alert"></div>
 				<div class="mb-3">
-					<label class="control-label mb-1">Naam <span class="text-danger">*</span></label>
-					<input type="text" id="nwmName" class="form-control form-control-modern" placeholder="Voor- en achternaam" />
+					<label class="control-label mb-1" for="nwmName">Naam <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (verplicht)</span></label>
+					<input type="text" id="nwmName" class="form-control form-control-modern" placeholder="Voor- en achternaam…" required aria-required="true" autocomplete="name" />
 				</div>
 				<div class="mb-3">
-					<label class="control-label mb-1">E-mailadres</label>
-					<input type="email" id="nwmEmail" class="form-control form-control-modern" placeholder="naam@bedrijf.be" />
+					<label class="control-label mb-1" for="nwmEmail">E-mailadres</label>
+					<input type="email" id="nwmEmail" class="form-control form-control-modern" placeholder="naam@bedrijf.be" inputmode="email" spellcheck="false" autocomplete="email" />
 				</div>
 				<div class="mb-3">
-					<label class="control-label mb-1">Telefoon</label>
-					<input type="text" id="nwmPhone" class="form-control form-control-modern" placeholder="+32 ..." />
+					<label class="control-label mb-1" for="nwmPhone">Telefoon</label>
+					<input type="tel" id="nwmPhone" class="form-control form-control-modern" placeholder="+32 …" inputmode="tel" autocomplete="tel" />
 				</div>
 			</div>
 			<div class="modal-footer">
@@ -426,10 +512,10 @@
 			</div>
 			<div class="modal-body">
 				<p class="text-muted" id="naForLabel">Voor: </p>
-				<div id="naErrors" class="alert alert-danger d-none"></div>
+				<div id="naErrors" class="alert alert-danger d-none" role="alert"></div>
 				<div class="mb-3">
-					<label class="control-label mb-1">Activiteit <span class="text-danger">*</span></label>
-					<select id="naActivity" class="form-control form-control-modern">
+					<label class="control-label mb-1" for="naActivity">Activiteit <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (verplicht)</span></label>
+					<select id="naActivity" class="form-control form-control-modern" aria-required="true">
 						<option value=""></option>
 						@foreach (var group in groupedActivities)
 						{
@@ -593,6 +679,10 @@
 			});
 
 			$('#btnClearCompany').on('click', function () {
+				if ($('#ActivityRows').children().length &&
+					!window.confirm('De activiteiten die je aan dit contract koppelde, gaan verloren als je van leverancier wisselt. Doorgaan?')) {
+					return;
+				}
 				$('#txtCompanyID').val('0');
 				$('#txtCompanyDisplay').val('');
 				$('#companySelected').addClass('d-none');
@@ -601,7 +691,7 @@
 				$('#companyContractDefaultsNote').addClass('d-none');
 				setActivitiesCompanyState(false, '');
 				clearActivityRows();
-				$('#btnNewSiteManager').prop('disabled', true);
+				$('#btnNewSiteManager').prop('disabled', true).attr('title', 'Eerst een leverancier kiezen');
 				$('#ddlSiteManager').empty().append(new Option('Geen', '', false, false));
 			});
 
@@ -623,7 +713,7 @@
 				setActivitiesCompanyState(true, $('#txtCompanyDisplay').val());
 				LoadActivities(initialCompanyId);
 				LoadSiteManagers(initialCompanyId, '#ddlSiteManager');
-				$('#btnNewSiteManager').prop('disabled', false);
+				$('#btnNewSiteManager').prop('disabled', false).attr('title', 'Nieuwe werfleider toevoegen');
 			}
 
 			$('#chkCashDiscount').trigger('change');
@@ -633,6 +723,45 @@
 			});
 			toggleEmptyActivitiesHint();
 			recomputeActivitiesTotal();
+
+			// Tekenteller voor "opmerking verzending" (max 200)
+			const $sentNote = $('#txtContractSentNote');
+			if ($sentNote.length) {
+				const updateSentNoteCount = () => $('#contractSentNoteCount').text(($sentNote.val() || '').length);
+				$sentNote.on('input', updateSentNoteCount);
+				updateSentNoteCount();
+			}
+
+			// Waarschuwen bij onopgeslagen wijzigingen
+			let formDirty = false, formSubmitting = false;
+			const $form = $('#addContractForm');
+			$form.on('input change', ':input', function () { formDirty = true; });
+			$(window).on('beforeunload', function () {
+				if (formDirty && !formSubmitting) return '';
+			});
+
+			// Submit: knop met spinner, dubbele submit blokkeren (label blijft staan)
+			$form.find('button[type="submit"]').on('click', function () { $form.data('submitter', this); });
+			$form.on('submit', function () {
+				formSubmitting = true;
+				const $clicked = $($form.data('submitter'));
+				if ($clicked.length) {
+					$clicked.find('i.bx').addClass('d-none');
+					$clicked.prepend('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
+				}
+				const $btns = $form.find('button[type="submit"]');
+				setTimeout(function () { $btns.prop('disabled', true); }, 0);
+			});
+
+			// Server-validatie: focus naar het eerste veld met een fout
+			const firstInvalid = document.querySelector('.input-validation-error');
+			if (firstInvalid) { firstInvalid.focus(); }
+
+			// Desktop: het zoekveld voor de leverancier meteen openen
+			if ((!initialCompanyId || initialCompanyId === '0') &&
+				window.matchMedia('(min-width: 992px)').matches) {
+				setTimeout(function () { $('#ddlCompany').select2('open'); }, 150);
+			}
 
 			initEuroInput('.Currencymask');
 		});
@@ -650,7 +779,7 @@
 			$('#ddlCompanyWrapper').addClass('d-none');
 
 			setActivitiesCompanyState(true, text);
-			$('#btnNewSiteManager').prop('disabled', false);
+			$('#btnNewSiteManager').prop('disabled', false).attr('title', 'Nieuwe werfleider toevoegen');
 
 			LoadActivities(id);
 			LoadSiteManagers(id, '#ddlSiteManager');
@@ -686,7 +815,8 @@
 		function setActivitiesCompanyState(hasCompany, companyName) {
 			$('#btnNewActivity, #btnAddActivities').prop('disabled', !hasCompany);
 			if (hasCompany) {
-				$('#companyActivitiesTitle').text('ACTIVITEITEN VAN ' + (companyName || '').toUpperCase());
+				// Tekst in gewone naamval laten; .text-uppercase (CSS) zorgt voor de visuele hoofdletters
+				$('#companyActivitiesTitle').text('Activiteiten van ' + (companyName || ''));
 				$('#activityRowsHead').toggleClass('d-none', $('#ActivityRows').children().length === 0);
 				$('#activityRowsTotal').removeClass('d-none');
 			} else {
@@ -796,6 +926,7 @@
 		// ACTIVITEIT VERWIJDEREN
 		// ==============================
 		$(document).on('click', 'button.deleterow', function () {
+			if (!window.confirm('Deze activiteit van het contract verwijderen?')) { return false; }
 			$(this).closest('div').parent('div').parent('div').remove();
 			const activiteitId = $(this).data('id');
 			addedActivityIds.delete(String(activiteitId));
@@ -850,7 +981,10 @@
 			}
 
 			const button = $(this);
+			const $icon = button.find('i');
+			const iconCls = $icon.attr('class');
 			button.prop('disabled', true);
+			$icon.attr('class', 'spinner-border spinner-border-sm me-1');
 
 			$.getJSON('@Url.Action("ValidateVat", "Leveranciers")', { vatCountryCode: 'BE', vatNumber: vatNumber })
 				.done(function (data) {
@@ -877,6 +1011,7 @@
 				})
 				.always(function () {
 					button.prop('disabled', false);
+					$icon.attr('class', iconCls);
 				});
 		});
 

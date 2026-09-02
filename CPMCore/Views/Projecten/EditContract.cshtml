@@ -139,6 +139,41 @@
 									</div>
 								</div>
 							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.ContractSentDate)</label>
+								<div class="col-lg-3 col-xl-2">
+									@Html.TextBoxFor(m => m.Contract.ContractSentDate, "{0:yyyy-MM-dd}", new { type = "date", @class = "form-control form-control-modern", id = "txtContractSentDate" })
+								</div>
+								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.ContractSentNote)</label>
+								<div class="col-lg-3 col-xl-3">
+									@Html.TextBoxFor(m => m.Contract.ContractSentNote, new { @class = "form-control form-control-modern", placeholder = "bv. Bestelbon, per e-mail", maxlength = "200" })
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.SiteNotification)</label>
+								<div class="col-lg-4 col-xl-3">
+									<div class="checkbox-custom checkbox-default">
+										@Html.CheckBoxFor(m => m.Contract.SiteNotification, new {id = "chkSiteNotification"})
+										<label></label>
+									</div>
+								</div>
+								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.VgmCharter)</label>
+								<div class="col-lg-2 col-xl-2">
+									<div class="checkbox-custom checkbox-default">
+										@Html.CheckBoxFor(m => m.Contract.VgmCharter, new {id = "chkVgmCharter"})
+										<label></label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.PidAttest)</label>
+								<div class="col-lg-8 col-xl-6">
+									<div class="checkbox-custom checkbox-default">
+										@Html.CheckBoxFor(m => m.Contract.PidAttest, new {id = "chkPidAttest"})
+										<label></label>
+									</div>
+								</div>
+							</div>
 
 						</div>
 					</div>

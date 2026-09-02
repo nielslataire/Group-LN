@@ -57,6 +57,37 @@
                         <div class="btn-group" role="group" aria-label="Project acties">
                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+                    <div class="btn-group">
+                                <button type="button" class="btn btn-primary btn-md px-3 me-1 dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Aannemerslijst afdrukken">
+                            <i class="bx bx-printer"></i> Aannemerslijst
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px;">
+                            <p class="text-muted small mb-2">Kolommen op de aannemerslijst</p>
+                            <div class="checkbox-custom checkbox-default mb-2">
+                                <input type="checkbox" id="chkSupplierListSent" checked>
+                                <label for="chkSupplierListSent">Contract verstuurd</label>
+                            </div>
+                            <div class="checkbox-custom checkbox-default mb-2">
+                                <input type="checkbox" id="chkSupplierListSigned" checked>
+                                <label for="chkSupplierListSigned">Getekend</label>
+                            </div>
+                            <div class="checkbox-custom checkbox-default mb-2">
+                                <input type="checkbox" id="chkSupplierListVgm" checked>
+                                <label for="chkSupplierListVgm">VGM charter</label>
+                            </div>
+                            <div class="checkbox-custom checkbox-default mb-2">
+                                <input type="checkbox" id="chkSupplierListNotification" checked>
+                                <label for="chkSupplierListNotification">Werfmelding</label>
+                            </div>
+                            <div class="checkbox-custom checkbox-default mb-3">
+                                <input type="checkbox" id="chkSupplierListPid" checked>
+                                <label for="chkSupplierListPid">PID attesten</label>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm w-100" id="btnPrintSupplierList">
+                                <i class="bx bx-download"></i> PDF afdrukken
+                            </button>
+                        </div>
+                    </div>
                         @if (canWriteProjectSuppliers)
                         {
                             <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
@@ -170,6 +201,19 @@
           $(".buttons-pdf").trigger("click");
         });
 
+        // Aannemerslijst-PDF: kolomkeuze meesturen als querystring
+        $("#btnPrintSupplierList").on('click', function () {
+          var params = $.param({
+            projectid: @Model.ProjectId,
+            sent: $("#chkSupplierListSent").is(":checked"),
+            signed: $("#chkSupplierListSigned").is(":checked"),
+            vgm: $("#chkSupplierListVgm").is(":checked"),
+            notification: $("#chkSupplierListNotification").is(":checked"),
+            pid: $("#chkSupplierListPid").is(":checked")
+          });
+          window.open('@Url.Action("PrintSupplierList", "Projecten")' + '?' + params, '_blank');
+        });
+
         // Verplaats knoppen naar een eigen container
         table.buttons(0, null).containers().appendTo('#colvis-container');
 
@@ -205,6 +249,29 @@
             ).map(th => th.offsetWidth + 'px');
         }
 
+        // Zelfde iconencluster als de server-side FollowUpIcons() in Contracts.cshtml:
+        // inline-SVG (solid-vorm uit lib/boxicons/svg/solid/*.svg), want het geladen boxicons
+        // "basic"-pack bevat geen bxs-* varianten. fill=currentColor + text-success (groen =
+        // "ja") / text-muted (gedempt = "nee"); titel/aria-label voor de niet-visuele betekenis.
+        const FOLLOWUP_ICO = {
+            signed: 'M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm-1.999 14.413-3.713-3.705L7.7 11.292l2.299 2.295 5.294-5.294 1.414 1.414-6.706 6.706z',
+            vgm: 'm20.496 6.106-7.973-4a.997.997 0 0 0-.895-.002l-8.027 4c-.297.15-.502.437-.544.767-.013.097-1.145 9.741 8.541 15.008a.995.995 0 0 0 .969-.009c9.307-5.259 8.514-14.573 8.476-14.967a1 1 0 0 0-.547-.797z',
+            notification: 'M20 18v-3a8 8 0 0 0-5-7.4V13h-1V5h-4v8H9V7.6A8 8 0 0 0 4 15v3H2v2h20v-2z'
+        };
+        function buildFollowUpIcons(signed, vgm, notification) {
+            function chip(on, path, label) {
+                const cls = on ? 'text-success' : 'text-muted';
+                const opacity = on ? '1' : '.4';
+                const text = label + ': ' + (on ? 'ja' : 'nee');
+                return `<svg viewBox="0 0 24 24" width="18" height="18" class="${cls}" style="vertical-align:-.2em;opacity:${opacity}" role="img" aria-label="${text}"><title>${text}</title><path fill="currentColor" d="${path}"/></svg>`;
+            }
+            return '<div class="d-inline-flex align-items-center gap-2">'
+                + chip(signed, FOLLOWUP_ICO.signed, 'Contract getekend')
+                + chip(vgm, FOLLOWUP_ICO.vgm, 'VGM charter')
+                + chip(notification, FOLLOWUP_ICO.notification, 'Werfmelding')
+                + '</div>';
+        }
+
         function buildContractChildRows(contracts) {
             const w = getColWidths();
 
@@ -226,7 +293,7 @@
                        </a>`
                     : '';
 
-                // Kolommen 0-9 in dezelfde volgorde als de thead
+                // Kolommen 0-11 in dezelfde volgorde als de thead
                 return `<tr>
                     <td style="width:${w[0]}"></td>
                     <td style="width:${w[1]}">
@@ -242,7 +309,9 @@
                     <td style="width:${w[6]};text-align:right">${c.paymentTerm}</td>
                     <td style="width:${w[7]};text-align:right">${c.cashDiscount}</td>
                     <td style="width:${w[8]};text-align:right">${c.guarantee}</td>
-                    <td style="width:${w[9]}" class="actions">${editBtn}${deleteBtn}</td>
+                    <td style="width:${w[9]};text-align:center">${c.sent}</td>
+                    <td style="width:${w[10]};text-align:center">${buildFollowUpIcons(c.signed, c.vgm, c.notification)}</td>
+                    <td style="width:${w[11]}" class="actions">${editBtn}${deleteBtn}</td>
                 </tr>`;
             }).join('');
 

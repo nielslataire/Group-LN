@@ -112,6 +112,63 @@ Public Class ContractBO
         End Set
     End Property
 
+    Private _contractSentDate As Date?
+    <Display(Name:="Datum contract verstuurd")>
+    <DataType(DataType.Date)>
+    <DisplayFormat(DataFormatString:="{0:yyyy-MM-dd}", ApplyFormatInEditMode:=True)>
+    Public Property ContractSentDate() As Date?
+        Get
+            Return _contractSentDate
+        End Get
+        Set(ByVal value As Date?)
+            _contractSentDate = value
+        End Set
+    End Property
+
+    Private _contractSentNote As String
+    <Display(Name:="Opmerking verzending")>
+    Public Property ContractSentNote() As String
+        Get
+            Return _contractSentNote
+        End Get
+        Set(ByVal value As String)
+            _contractSentNote = value
+        End Set
+    End Property
+
+    Private _siteNotification As Boolean
+    <Display(Name:="Werfmelding")>
+    Public Property SiteNotification() As Boolean
+        Get
+            Return _siteNotification
+        End Get
+        Set(ByVal value As Boolean)
+            _siteNotification = value
+        End Set
+    End Property
+
+    Private _vgmCharter As Boolean
+    <Display(Name:="VGM charter")>
+    Public Property VgmCharter() As Boolean
+        Get
+            Return _vgmCharter
+        End Get
+        Set(ByVal value As Boolean)
+            _vgmCharter = value
+        End Set
+    End Property
+
+    Private _pidAttest As Boolean
+    <Display(Name:="PID-attesten")>
+    Public Property PidAttest() As Boolean
+        Get
+            Return _pidAttest
+        End Get
+        Set(ByVal value As Boolean)
+            _pidAttest = value
+        End Set
+    End Property
+
 
     Private m_Activities As List(Of ContractActivityBO)
     Public Property Activities() As List(Of ContractActivityBO)

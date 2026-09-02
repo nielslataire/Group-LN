@@ -1,6 +1,7 @@
 @using BOCore
 @using System.Globalization
 @using System.Text.Json
+@using Microsoft.AspNetCore.Html
 @model CPMCore.Models.Projecten.DetailContractsModel
 @{
     var canWriteProjectSuppliers = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
@@ -23,6 +24,36 @@
         c.GuaranteeType == ContractGuaranteeType.FinancialGuarantee
             ? $"{c.GuaranteePercentage?.ToString("N2", currencyCulture)}% {c.GuaranteeType.GetDisplayName()}"
             : c.GuaranteeType.GetDisplayName();
+
+    string FmtSent(ContractBO c) =>
+        c.ContractSentDate?.ToString("dd/MM/yyyy", currencyCulture) ?? "-";
+
+    // Compacte iconencluster voor de drie opvolgvlaggen. Het geladen boxicons "basic"-pack
+    // bevat geen bxs-* (solid) varianten, dus tekenen we de solid-vorm rechtstreeks als
+    // inline-SVG (pad uit lib/boxicons/svg/solid/*.svg). fill=currentColor laat text-success
+    // (groen = "ja") / text-muted (gedempt = "nee") de kleur sturen; titel + aria-label
+    // zorgen dat de betekenis niet louter op kleur steunt.
+    const string IcoSigned = "M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm-1.999 14.413-3.713-3.705L7.7 11.292l2.299 2.295 5.294-5.294 1.414 1.414-6.706 6.706z";
+    const string IcoShield = "m20.496 6.106-7.973-4a.997.997 0 0 0-.895-.002l-8.027 4c-.297.15-.502.437-.544.767-.013.097-1.145 9.741 8.541 15.008a.995.995 0 0 0 .969-.009c9.307-5.259 8.514-14.573 8.476-14.967a1 1 0 0 0-.547-.797z";
+    const string IcoHardHat = "M20 18v-3a8 8 0 0 0-5-7.4V13h-1V5h-4v8H9V7.6A8 8 0 0 0 4 15v3H2v2h20v-2z";
+
+    IHtmlContent FollowUpIcons(ContractBO c) => FollowUpIconsRaw(c.ContractSigned, c.VgmCharter, c.SiteNotification);
+
+    IHtmlContent FollowUpIconsRaw(bool signed, bool vgm, bool notification)
+    {
+        string Chip(bool on, string path, string label)
+        {
+            var text = $"{label}: {(on ? "ja" : "nee")}";
+            return $"<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" class=\"{(on ? "text-success" : "text-muted")}\" style=\"vertical-align:-.2em;opacity:{(on ? "1" : ".4")}\" role=\"img\" aria-label=\"{text}\"><title>{text}</title><path fill=\"currentColor\" d=\"{path}\"/></svg>";
+        }
+
+        var html = "<div class=\"d-inline-flex align-items-center gap-2\">"
+            + Chip(signed, IcoSigned, "Contract getekend")
+            + Chip(vgm, IcoShield, "VGM charter")
+            + Chip(notification, IcoHardHat, "Werfmelding")
+            + "</div>";
+        return new HtmlString(html);
+    }
 }
 
 @section PageStyle
@@ -59,6 +90,8 @@
 						<th data-sortable="false" class="text-end">Betaaltermijn</th>
 						<th data-sortable="false" class="text-end">Korting contant</th>
 						<th data-sortable="false" class="text-end">Waarborg</th>
+						<th data-sortable="false" class="text-center">Verstuurd</th>
+						<th data-sortable="false" class="text-center" title="Getekend / VGM charter / Werfmelding">Opvolging</th>
 						<th class="noVis" data-sortable="false">Acties</th>
 					</tr>
 				</thead>
@@ -82,7 +115,10 @@
 									vat         = FmtVat(c),
 									paymentTerm = FmtPaymentTerm(c),
 									cashDiscount= FmtCashDiscount(c),
-									guarantee   = FmtGuarantee(c)
+									guarantee   = FmtGuarantee(c),
+									sent        = FmtSent(c),
+									vgm         = c.VgmCharter,
+									notification= c.SiteNotification
 								})
 							);
 						}
@@ -134,6 +170,12 @@
 							</td>
 							<td class="text-end align-middle">
 								@(hasSingle ? FmtGuarantee(row.Contract) : "-")
+							</td>
+							<td class="text-center align-middle">
+								@(hasSingle ? FmtSent(row.Contract) : "-")
+							</td>
+							<td class="text-center align-middle">
+								@(hasSingle ? FollowUpIcons(row.Contract) : new HtmlString("-"))
 							</td>
 							<td class="actions align-middle">
 								@if (row.Company != null)

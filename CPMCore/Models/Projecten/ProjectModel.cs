@@ -3827,6 +3827,64 @@ namespace CPMCore.Models.Projecten
         public decimal TotalContractPrice => Contracts?.Sum(c => c.Activities?.Sum(a => a.Price ?? 0) ?? 0) ?? 0;
     }
 
+    /// <summary>Welke optionele kolommen mee op de aannemerslijst-PDF komen.</summary>
+    public sealed record SupplierListColumns(bool Sent, bool Signed, bool Vgm, bool Notification, bool Pid);
+
+    /// <summary>Eén regel op de aannemerslijst: één (contract-)activiteit met de aannemer/partij erbij.</summary>
+    public sealed class SupplierListRow
+    {
+        public int GroupLot { get; set; }
+        public string GroupName { get; set; } = string.Empty;
+        public string ActivityName { get; set; } = string.Empty;
+        public string CompanyName { get; set; } = string.Empty;
+        public string Vat { get; set; }
+        public string Address { get; set; }
+        public string ContactName { get; set; }
+        public string ContactPhone { get; set; }
+        public string ContactEmail { get; set; }
+        /// <summary>True = contactgegevens komen van de aannemer zelf (geen aparte werfleider).</summary>
+        public bool ContactIsGeneral { get; set; }
+        public DateTime? SentDate { get; set; }
+        public string SentNote { get; set; }
+        public bool Signed { get; set; }
+        public bool Vgm { get; set; }
+        public bool Notification { get; set; }
+        public bool Pid { get; set; }
+        /// <summary>True = rij afgeleid uit een projectveld (geen contract) → statuskolommen tonen "n.v.t.".</summary>
+        public bool IsSynthesized { get; set; }
+    }
+
+    /// <summary>De PROJECTFICHE bovenaan de aannemerslijst-PDF.</summary>
+    public sealed class SupplierListProjectInfo
+    {
+        public string ProjectName { get; set; } = string.Empty;
+        public string AddressLine { get; set; }
+        public string CityLine { get; set; }
+        public string OpdrachtgeverName { get; set; }
+        public string OpdrachtgeverAddress { get; set; }
+        public string ProjectcoordinatieName { get; set; }
+        public string ProjectcoordinatiePhone { get; set; }
+        public string ProjectcoordinatieEmail { get; set; }
+        public string VeiligheidscoordinatorName { get; set; }
+        public string VeiligheidscoordinatorAddress { get; set; }
+        public string VeiligheidscoordinatorEmail { get; set; }
+        public string AardVanDeWerken { get; set; }
+        public DateOnly? StartDatumWerf { get; set; }
+        public DateOnly? WerfmeldingDate { get; set; }
+        public string WerfmeldingDossier { get; set; }
+        public int AantalPartijen { get; set; }
+        public string LaatstBijgewerktDoor { get; set; }
+        public DateTime LaatstBijgewerkt { get; set; } = DateTime.Now;
+    }
+
+    public sealed class SupplierListModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; } = string.Empty;
+        public SupplierListProjectInfo Project { get; set; } = new();
+        public List<SupplierListRow> Rows { get; set; } = new();
+    }
+
     public class ProjectContractDetailModel
     {
         public ProjectContractDetailModel()

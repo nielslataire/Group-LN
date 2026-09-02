@@ -316,6 +316,53 @@ public class LeveranciersController : BaseController
         model.SelectedPostalCodeId = newPostal.PostcodeId;
     }
 
+    /// <summary>
+    /// Bij een Belgisch adres worden de tekstvelden voor postcode, gemeente en land
+    /// niet rechtstreeks gepost maar afgeleid uit <see cref="SupplierFormViewModel.SelectedPostalCodeId"/>.
+    /// Model binding heeft daardoor "verplicht"-fouten toegevoegd op basis van de nog lege
+    /// tekstvelden. Deze methode wist die verouderde fouten en her-valideert op basis van de
+    /// intussen (via <see cref="PopulateSelectionsAsync"/>) afgeleide waarden.
+    /// </summary>
+    private void RevalidateResolvedAddress(SupplierFormViewModel model)
+    {
+        ModelState.Remove(nameof(SupplierFormViewModel.PostalCode));
+        ModelState.Remove(nameof(SupplierFormViewModel.City));
+        ModelState.Remove(nameof(SupplierFormViewModel.SelectedCountryId));
+
+        if (string.IsNullOrWhiteSpace(model.PostalCode))
+        {
+            ModelState.AddModelError(nameof(SupplierFormViewModel.PostalCode), "Postcode is verplicht");
+        }
+
+        if (string.IsNullOrWhiteSpace(model.City))
+        {
+            ModelState.AddModelError(nameof(SupplierFormViewModel.City), "Gemeente is verplicht");
+        }
+
+        if (!model.SelectedCountryId.HasValue)
+        {
+            ModelState.AddModelError(nameof(SupplierFormViewModel.SelectedCountryId), "Land is verplicht");
+        }
+    }
+
+    /// <summary>
+    /// Zet de SmartBreadcrumbs-node voor de leverancier-aanmaakpagina (Dashboard › Leveranciers › Nieuwe leverancier).
+    /// Zonder dit toont de breadcrumb-component niets voor deze actie.
+    /// </summary>
+    private void SetCreateBreadcrumb()
+    {
+        var home = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var leveranciersIndex = new MvcBreadcrumbNode("Index", "Leveranciers", "Leveranciers")
+        {
+            Parent = home
+        };
+
+        ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Create), "Leveranciers", "Nieuwe leverancier")
+        {
+            Parent = leveranciersIndex
+        };
+    }
+
 
     private async Task<string?> ResolveLegalFormAbbreviation(int? legalFormId, CancellationToken ct)
     {
@@ -1249,6 +1296,7 @@ public class LeveranciersController : BaseController
         }, ct, scope);
 
         SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
+        SetCreateBreadcrumb();
         return View(vm);
     }
     [HttpPost]
@@ -1274,14 +1322,20 @@ public class LeveranciersController : BaseController
         NormalizeWebsiteInput(model);
         await ValidateVatInputsAsync(model, null, ct);
 
+        // Bij een Belgisch adres zijn de postcode-/gemeentevelden verborgen en leeg; hun
+        // waarden komen uit SelectedPostalCodeId. Leid ze af vóór de validatie zodat de
+        // "verplicht"-regels op de juiste (afgeleide) waarden werken.
+        await PopulateSelectionsAsync(model, ct);
+        RevalidateResolvedAddress(model);
+
         if (!ModelState.IsValid)
         {
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
+            SetCreateBreadcrumb();
             return View(model);
         }
 
-        await PopulateSelectionsAsync(model, ct);
         await EnsurePostalSelectionAsync(model, ct);
 
         var entity = new CompanyInfo();
@@ -1491,6 +1545,10 @@ public class LeveranciersController : BaseController
         NormalizeWebsiteInput(model);
         await ValidateVatInputsAsync(model, id, ct);
 
+        // Zie Create: adresvelden voor een Belgisch adres komen uit SelectedPostalCodeId.
+        await PopulateSelectionsAsync(model, ct);
+        RevalidateResolvedAddress(model);
+
         if (!ModelState.IsValid)
         {
             await BuildFormAsync(model, ct, scope);
@@ -1523,7 +1581,6 @@ public class LeveranciersController : BaseController
                 .ToList();
         }
 
-        await PopulateSelectionsAsync(model, ct);
         await EnsurePostalSelectionAsync(model, ct);
 
         var requiresOctopusSync = entity.CompanyIssuerCompany.Any(l => (l.OctopusRelationId ?? 0) > 0)

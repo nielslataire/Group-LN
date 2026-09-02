@@ -107,6 +107,10 @@ public partial class Project
 
     public string SeoDescription { get; set; }
 
+    public DateOnly? WerfmeldingDate { get; set; }
+
+    public string WerfmeldingDossier { get; set; }
+
     public virtual CompanyInfo Architect { get; set; }
 
     public virtual Users AspNetUser { get; set; }

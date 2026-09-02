@@ -121,6 +121,8 @@ namespace ServiceCore.Translators
             bo.StandardFotoName = _entity.StandardFotoName;
             bo.SeoTitle = _entity.SeoTitle;
             bo.SeoDescription = _entity.SeoDescription;
+            bo.WerfmeldingDate = _entity.WerfmeldingDate;
+            bo.WerfmeldingDossier = _entity.WerfmeldingDossier;
             // Alle project fotos
             foreach (var x in _entity.ProjectPictures)
             {
@@ -182,6 +184,8 @@ namespace ServiceCore.Translators
             _entity.StandardFotoName     = bo.StandardFotoName;
             _entity.SeoTitle             = bo.SeoTitle;
             _entity.SeoDescription       = bo.SeoDescription;
+            _entity.WerfmeldingDate      = bo.WerfmeldingDate;
+            _entity.WerfmeldingDossier   = string.IsNullOrWhiteSpace(bo.WerfmeldingDossier) ? null : bo.WerfmeldingDossier.Trim();
 
             if ((bo.Postalcode != null && bo.Postalcode.PostcodeId != 0))
                 _entity.PostalCodeId = bo.Postalcode.PostcodeId;

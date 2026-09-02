@@ -529,6 +529,11 @@ Public Class ProjectBO
     Public Property SeoTitle As String
     Public Property SeoDescription As String
 
+    <Display(Name:="Datum werfmelding")>
+    Public Property WerfmeldingDate As DateOnly?
+    <Display(Name:="Dossiernummer werfmelding")>
+    Public Property WerfmeldingDossier As String
+
     Private _hourlyRates As List(Of ProjectHourlyRateBO)
     Public Property HourlyRates() As List(Of ProjectHourlyRateBO)
         Get

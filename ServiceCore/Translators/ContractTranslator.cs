@@ -33,6 +33,11 @@ namespace ServiceCore.Translators
             bo.GuaranteeType = (ContractGuaranteeType)_entity.GuaranteeType;
             bo.GuaranteePercentage = _entity.GuaranteePercentage;
             bo.ContractSigned = _entity.ContractSigned ?? false;
+            bo.ContractSentDate = _entity.ContractSentDate;
+            bo.ContractSentNote = _entity.ContractSentNote;
+            bo.SiteNotification = _entity.SiteNotification;
+            bo.VgmCharter = _entity.VgmCharter;
+            bo.PidAttest = _entity.PidAttest;
             bo.SiteManagerContactId = _entity.SiteManagerContactId;
             bo.ContractName = _entity.ContractName;
             if (_entity.ContractActivity != null)
@@ -63,6 +68,11 @@ namespace ServiceCore.Translators
             _entity.PaymentTerm = bo.PaymentTerm;
             _entity.VatPercentage = bo.VatPercentage;
             _entity.ContractSigned = bo.ContractSigned;
+            _entity.ContractSentDate = bo.ContractSentDate;
+            _entity.ContractSentNote = string.IsNullOrWhiteSpace(bo.ContractSentNote) ? null : bo.ContractSentNote.Trim();
+            _entity.SiteNotification = bo.SiteNotification;
+            _entity.VgmCharter = bo.VgmCharter;
+            _entity.PidAttest = bo.PidAttest;
             _entity.GuaranteePercentage = bo.GuaranteePercentage;
             _entity.GuaranteeType = (int)bo.GuaranteeType;
             _entity.SiteManagerContactId = bo.SiteManagerContactId;
