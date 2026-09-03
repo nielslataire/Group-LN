@@ -97,6 +97,7 @@ public class BudgetActivityFormuleService
         ("aantal_trapzalen",         "Aantal trapzalen (tab Gegevens)",                                         "st",   "Aantallen"),
         ("aantal_binnentrappen",     "Aantal binnentrappen (tab Gegevens)",                                     "st",   "Aantallen"),
         ("aantal_liften",            "Aantal liften (tab Gegevens)",                                            "st",   "Aantallen"),
+        ("aantal_toegangspoorten",   "Aantal toegangspoorten (tab Gegevens)",                                   "st",   "Aantallen"),
         ("verdiepingen_bovengronds", "Aantal bovengrondse verdiepingen (tab Gegevens)",                         "st",   "Aantallen"),
         ("verdiepingen_ondergronds", "Aantal verdiepingen ondergronds (tab Gegevens)",                          "st",   "Aantallen"),
         ("aantal_veluxen",           "Aantal veluxen (tab Dak & afbraak)",                                      "st",   "Aantallen"),
@@ -226,7 +227,8 @@ public class BudgetActivityFormuleService
             AantalVeluxen                 = dbGeg?.AantalVeluxen,
             AantalTrapzalen               = dbGeg?.AantalTrapzalen,
             AantalBinnentrappen           = dbGeg?.AantalBinnentrappen ?? 0,
-            AantalLiften                  = dbGeg?.AantalLiften ?? 0
+            AantalLiften                  = dbGeg?.AantalLiften ?? 0,
+            AantalToegangspoorten         = dbGeg?.AantalToegangspoorten
         };
         var ctx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
 
@@ -303,6 +305,7 @@ public class BudgetActivityFormuleService
             ["aantal_trapzalen"]         = gegevensBO.AantalTrapzalen ?? 0,
             ["aantal_binnentrappen"]     = gegevensBO.AantalBinnentrappen,
             ["aantal_liften"]            = gegevensBO.AantalLiften,
+            ["aantal_toegangspoorten"]   = gegevensBO.AantalToegangspoorten ?? 0,
             ["verdiepingen_bovengronds"] = gegevensBO.AantalBovengrondseVerdiepingen,
             ["verdiepingen_ondergronds"] = gegevensBO.AantalVerdiepingenOndergronds,
             ["aantal_veluxen"]           = gegevensBO.AantalVeluxen ?? 0,
