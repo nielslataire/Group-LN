@@ -120,14 +120,6 @@
     .gl-kpi-strip { display: none !important; }
 }
 
-/* ── Dashboard mobiel: meldingen ná werven via flex ordering ─────────── */
-/* Scoped to .gl-dashboard om layout-problemen op andere pagina's te vermijden */
-@media (max-width: 991.98px) {
-    .gl-dashboard .col-lg-9 { display: flex !important; flex-direction: column; }
-    .gl-dashboard .gl-werven-section    { order: 0; }
-    .gl-dashboard .gl-meldingen-section { order: 1; }
-}
-
 /* ── gl-mob-sheet-item als <button> (reset naar zelfde look als <a>) ─── */
 button.gl-mob-sheet-item {
     width: 100%;

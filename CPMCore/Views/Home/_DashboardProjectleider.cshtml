@@ -147,7 +147,7 @@
 <div class="row pt-3 gl-dashboard">
 
     <!-- MELDINGSCENTRUM: 1/4 -->
-    <div class="col-lg-3 gl-mc-col">
+    <div class="col-lg-3 col-xxl-2 gl-mc-col">
         <section class="card card-modern gl-mc-card">
             <header class="card-header">
                 <div class="card-title">
@@ -166,7 +166,7 @@
                 {
                     <div class="gl-mc-group gl-mc-urgent">
                         <div class="gl-mc-group-hdr" title="Vereist directe opvolging, bv. een verzekering die verloopt">
-                            <i class="bx bx-error-circle"></i> ACTIE VEREIST
+                            <i class="bx bx-alert-circle"></i> ACTIE VEREIST
                             <span class="gl-mc-cnt">@urgentMeldingen.Count</span>
                         </div>
                         <div class="gl-mc-group-body">
@@ -177,7 +177,7 @@
                                     <i class="@icon gl-mc-item-icon"></i>
                                     <span class="gl-mc-item-text">@tekst</span>
                                     <div class="gl-mc-item-actions">
-                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-external"></i></a>
+                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
                                     </div>
                                 </div>
                             }
@@ -190,7 +190,7 @@
                 {
                     <div class="gl-mc-group gl-mc-normal">
                         <div class="gl-mc-group-hdr" title="Vraagt aandacht op korte termijn, geen directe actie">
-                            <i class="bx bx-time"></i> OP TE LOSSEN
+                            <i class="bx bx-clock"></i> OP TE LOSSEN
                             <span class="gl-mc-cnt">@normaleMeldingen.Count</span>
                             @if (normaleMeldingen.Count > 3)
                             {
@@ -207,8 +207,8 @@
                                     <i class="@icon gl-mc-item-icon"></i>
                                     <span class="gl-mc-item-text">@tekst</span>
                                     <div class="gl-mc-item-actions">
-                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-external"></i></a>
-                                        <button type="button" class="gl-mc-btn-snooze" data-snz="@snzKey" title="Snooze 1 week" aria-label="Snooze 1 week"><i class="bx bx-alarm-snooze"></i></button>
+                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                        <button type="button" class="gl-mc-btn-snooze" data-snz="@snzKey" title="Snooze 1 week" aria-label="Snooze 1 week"><i class="bx bx-alarm"></i></button>
                                     </div>
                                 </div>
                                 ni++;
@@ -235,8 +235,8 @@
                                     <i class="@icon gl-mc-item-icon"></i>
                                     <span class="gl-mc-item-text">@tekst</span>
                                     <div class="gl-mc-item-actions">
-                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-external"></i></a>
-                                        <button type="button" class="gl-mc-btn-snooze" data-snz="@snzKey" title="Snooze 1 week" aria-label="Snooze 1 week"><i class="bx bx-alarm-snooze"></i></button>
+                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                        <button type="button" class="gl-mc-btn-snooze" data-snz="@snzKey" title="Snooze 1 week" aria-label="Snooze 1 week"><i class="bx bx-alarm"></i></button>
                                     </div>
                                 </div>
                             }
@@ -258,7 +258,7 @@
     <!-- /MELDINGSCENTRUM -->
 
     <!-- MIJN WERVEN: 2/4 -->
-    <div class="col-lg-6">
+    <div class="col-lg-6 col-xxl-8">
 
         <div class="gl-werven-section">
         <div class="gl-sectie-kop">
@@ -329,11 +329,11 @@
                         : string.Empty;
                     var isPinned = Model.PinnedProjectIds.Contains(project.Id);
 
-                    <div class="col-12 col-sm-6 col-lg-4 mb-4 gl-werf-col">
+                    <div class="col-12 col-sm-6 col-lg-4 col-xxl-3 mb-4 gl-werf-col">
                         @if (isPinned)
                         {
                             <button type="button" class="gl-pin-toggle" data-project-id="@project.Id" aria-label="Losmaken: @project.Name" title="Vastgezet — klik om los te maken">
-                                <i class="bx bxs-pin"></i>
+                                <i class="bx bx-pin"></i>
                             </button>
                         }
                         <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart">
@@ -351,7 +351,7 @@
                                 @if (vg != null && !string.IsNullOrEmpty(vg.Warnings))
                                 {
                                     <span class="gl-warn-badge" title="@string.Join(", ", vg.WarningList)">
-                                        <i class="bx bx-error"></i>
+                                        <i class="bx bx-alert-circle"></i>
                                     </span>
                                 }
                             </div>
@@ -422,7 +422,7 @@
     <!-- /MIJN WERVEN -->
 
     <!-- SNELACTIES: 1/4 -->
-    <div class="col-lg-3 d-none d-lg-block">
+    <div class="col-lg-3 col-xxl-2 d-none d-lg-block">
         <section class="card card-modern" id="gl-snelacties-card">
             <header class="card-header">
                 <div class="card-title">
@@ -591,7 +591,7 @@
                 @* Project vastzetten – zelfde paneel als de "+" bij Mijn Werven *@
                 <div class="gl-sa-item-wrap">
                     <button type="button" class="gl-snelactie-direct gl-snelactie" id="sa-pin-search">
-                        <i class="bx bxs-pin"></i>
+                        <i class="bx bx-pin"></i>
                         Project vastzetten
                     </button>
                 </div>
@@ -645,7 +645,7 @@
                             data-pid="@p.Id"
                             data-pname="@p.Name"
                             data-name="@p.Name.ToLower()">
-                        <i class="bx bx-map-pin"></i>
+                        <i class="bx bx-location-pin"></i>
                         @p.Name
                     </button>
                 }
@@ -894,7 +894,7 @@ window.addEventListener('load', function () {
                         $('<button type="button">').addClass('gl-mob-sheet-item')
                             .attr('data-pid', p.id)
                             .attr('data-pname', p.name)
-                            .html('<i class="bx bx-map-pin"></i> ' + $('<span>').text(p.name).html())
+                            .html('<i class="bx bx-location-pin"></i> ' + $('<span>').text(p.name).html())
                     );
                 });
             });
@@ -1048,7 +1048,7 @@ window.addEventListener('load', function () {
                         $list.append(
                             $('<button type="button">').addClass('gl-mob-sheet-item')
                                 .attr('data-pid', p.id)
-                                .html('<i class="bx bx-map-pin"></i> ' + $('<span>').text(p.name).html())
+                                .html('<i class="bx bx-location-pin"></i> ' + $('<span>').text(p.name).html())
                         );
                     });
                 })

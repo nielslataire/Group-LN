@@ -21,7 +21,7 @@ public static class MeldingTypeHelper
         [MeldingType.Oplevering]         = ("Oplevering", "bx bx-checklist"),
         [MeldingType.Documenten]         = ("Documenten", "bx bx-file"),
         [MeldingType.Verzekering]        = ("Verzekering","bx bx-shield"),
-        [MeldingType.AannemerCommentaar] = ("Aannemer",   "bx bx-comment"),
+        [MeldingType.AannemerCommentaar] = ("Aannemer",   "bx bx-message-bubble"),
     };
 
     public static string GetLabel(MeldingType type)

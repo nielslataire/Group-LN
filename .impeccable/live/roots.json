@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "appRoot": "E:\\TFS",
+  "repoRoot": "E:\\TFS",
+  "contextRoot": "E:\\TFS",
+  "sessionRoot": "E:\\TFS\\.impeccable\\live",
+  "productPath": "E:\\TFS\\PRODUCT.md",
+  "designPath": "E:\\TFS\\DESIGN.md",
+  "resolvedFrom": "fallback"
+}
