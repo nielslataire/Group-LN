@@ -1,6 +1,7 @@
 /* ===================================================================
    Dashboard Projectleider
-   Kleuren: Porto/Bootstrap palette + brand primary #0a5a3b (skin.css)
+   Kleuren: brand primary #0a5a3b + de semantische status-tokens
+   (--danger/--warning/--info + hun -tint/-text varianten) uit custom.css.
    Structurele/layout CSS; Bootstrap utility classes worden in HTML gebruikt.
    =================================================================== */
 
@@ -23,28 +24,70 @@
     background: rgba(0,0,0,.1);
 }
 
-/* KPI: card-featured-primary override naar brand groen */
-.gl-kpi-strip .card-featured-primary { border-color: #0a5a3b; }
-
-/* Meldingen – filterknopen */
-#gl-melding-filter { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 24px; padding-left: 0; border-bottom: 1px solid rgba(0,0,0,.06); }
-#gl-melding-filter .btn { margin: 0; }
-
-/* Meldingen – lijst item */
-.gl-melding {
-    padding: 9px 14px;
-    font-size: 12.5px;
-    display: flex;
+/* "+" knop naast de sectietitel (bv. "Mijn Werven") om een project vast te zetten. */
+.gl-mw-add-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid rgba(0,0,0,.06);
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgba(10,90,59,.35);
+    border-radius: 50%;
+    background: none;
+    color: #0a5a3b;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .15s, color .15s;
 }
-.gl-melding:last-child { border-bottom: none; }
-.gl-melding.type-danger  { background: #fdf2f2; }
-.gl-melding.type-warning { background: #fefce8; }
-.gl-melding-icon { font-size: 16px; flex-shrink: 0; line-height: 1; }
-.gl-melding-text { flex: 1; min-width: 0; }
-.gl-melding .btn.ml-auto { margin-left: auto !important; flex-shrink: 0; }
+.gl-mw-add-btn:hover,
+.gl-mw-add-btn:focus-visible {
+    background: #0a5a3b;
+    color: #fff;
+    outline: none;
+}
+
+/* Pin-toggle op een vastgezette werf-kaart (los van de kaart-link zelf,
+   zodat het geen interactief element-in-element wordt). */
+.gl-werf-col { position: relative; }
+.gl-pin-toggle {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 3;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,90,59,.88);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s;
+}
+.gl-pin-toggle:hover { background: #0a5a3b; }
+.gl-pin-toggle:focus-visible {
+    outline: 2px solid #0a5a3b;
+    outline-offset: 2px;
+}
+.gl-pin-toggle:disabled { opacity: .6; cursor: default; }
+
+/* KPI: severity-accenten. "Actieve projecten" / "Open punten" blijven
+   neutraal groen; "Urgent" / "Overdue" krijgen de Semantic Status-kleur
+   (kaartrand, icoon-achtergrond en het getal zelf) zodat de KPI-strip
+   dezelfde urgentietaal spreekt als de meldingencentrum eronder. */
+.gl-kpi-strip .card-featured-primary { border-color: var(--primary); }
+.gl-kpi-strip .card-featured-danger  { border-color: var(--danger); }
+.gl-kpi-strip .card-featured-warning { border-color: var(--warning); }
+
+.gl-kpi-strip .summary-icon.gl-kpi-icon-danger  { background-color: var(--danger); }
+.gl-kpi-strip .summary-icon.gl-kpi-icon-warning { background-color: var(--warning); }
+
+.gl-kpi-strip .amount.gl-kpi-amount-danger  { color: var(--danger-text); }
+.gl-kpi-strip .amount.gl-kpi-amount-warning { color: var(--warning-text); }
 
 /* Count badge (rood bolletje met getal) */
 .gl-count-badge {
@@ -52,7 +95,7 @@
     height: 18px;
     border-radius: 9px;
     padding: 0 5px;
-    background: #d2322d;
+    background: var(--danger);
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -92,7 +135,7 @@
 /* Waarschuwingsbadge op foto */
 .gl-warn-badge {
     position: absolute; bottom: 8px; left: 8px;
-    background: rgba(210,50,45,.9); color: #fff;
+    background: rgba(179,69,47,.9); color: #fff; /* var(--danger) op .9 dekking */
     width: 22px; height: 22px; border-radius: 50%;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 13px; z-index: 2; cursor: default;
@@ -108,9 +151,9 @@
     letter-spacing: .1em; text-transform: uppercase;
     padding: 3px 8px; border-radius: 2px; z-index: 2;
 }
-.sc-groen  { background: rgba(10,90,59,.85);  color: #d2f4e2; }
+.sc-groen  { background: rgba(10,90,59,.85);  color: #d2f4e2; }  /* var(--primary) */
 .sc-geel   { background: rgba(237,156,40,.9); color: #fff; }
-.sc-rood   { background: rgba(210,50,45,.88); color: #fff; }
+.sc-rood   { background: rgba(179,69,47,.88); color: #fff; }     /* var(--danger) */
 .sc-donker { background: rgba(5,50,30,.9);    color: #a8e6c5; }
 
 .gl-werf-body { padding: 11px 14px 13px; flex: 1; display: flex; flex-direction: column; gap: 7px; }
@@ -165,18 +208,18 @@
 }
 .gl-mc-group + .gl-mc-group > .gl-mc-group-hdr { border-top: 1px solid rgba(0,0,0,.07); }
 
-/* ACTIE VEREIST – rood */
-.gl-mc-urgent > .gl-mc-group-hdr  { background: #fdf2f2; color: #b91c1c; }
-.gl-mc-urgent > .gl-mc-group-hdr > i { color: #ef4444; }
+/* ACTIE VEREIST – roestrood */
+.gl-mc-urgent > .gl-mc-group-hdr  { background: var(--danger-tint); color: var(--danger-text); }
+.gl-mc-urgent > .gl-mc-group-hdr > i { color: var(--danger); }
 
-/* DEZE WEEK – geel */
-.gl-mc-normal > .gl-mc-group-hdr  { background: #fefce8; color: #92400e; }
-.gl-mc-normal > .gl-mc-group-hdr > i { color: #d97706; }
+/* DEZE WEEK – oker */
+.gl-mc-normal > .gl-mc-group-hdr  { background: var(--warning-tint); color: var(--warning-text); }
+.gl-mc-normal > .gl-mc-group-hdr > i { color: var(--warning); }
 
-/* TER INFO – blauw */
-.gl-mc-info > .gl-mc-group-hdr    { background: #eff6ff; color: #1e40af; cursor: pointer; }
-.gl-mc-info > .gl-mc-group-hdr > i:first-child { color: #3b82f6; }
-.gl-mc-info > .gl-mc-group-hdr:hover { background: #dbeafe; }
+/* TER INFO – taupe (bewust geen blauw, zie DESIGN.md) */
+.gl-mc-info > .gl-mc-group-hdr    { background: var(--info-tint); color: var(--info-text); cursor: pointer; }
+.gl-mc-info > .gl-mc-group-hdr > i:first-child { color: var(--info); }
+.gl-mc-info > .gl-mc-group-hdr:hover { background: #e5ddd4; }
 
 /* Teller badge */
 .gl-mc-cnt {
@@ -212,13 +255,13 @@
     line-height: 1.4;
 }
 .gl-mc-item:last-child { border-bottom: none; }
-.gl-mc-item-urgent  { background: #fff5f5; }
-.gl-mc-item-normal  { background: #fffef0; }
-.gl-mc-item-info    { background: #f0f7ff; }
+.gl-mc-item-urgent  { background: var(--danger-tint); }
+.gl-mc-item-normal  { background: var(--warning-tint); }
+.gl-mc-item-info    { background: var(--info-tint); }
 .gl-mc-item-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; color: #888; }
-.gl-mc-item-urgent  .gl-mc-item-icon { color: #dc2626; }
-.gl-mc-item-normal  .gl-mc-item-icon { color: #d97706; }
-.gl-mc-item-info    .gl-mc-item-icon { color: #3b82f6; }
+.gl-mc-item-urgent  .gl-mc-item-icon { color: var(--danger); }
+.gl-mc-item-normal  .gl-mc-item-icon { color: var(--warning); }
+.gl-mc-item-info    .gl-mc-item-icon { color: var(--info); }
 .gl-mc-item-text { flex: 1; min-width: 0; }
 
 /* Acties onder tekst */
@@ -243,12 +286,17 @@
 }
 .gl-mc-btn-snooze:hover { color: #888; background: rgba(0,0,0,.05); }
 
-/* Opgeleverd-icoon in werf-footer */
+/* Opgeleverd-icoon in werf-footer — var(--primary), niet Bootstrap's stock groen */
 .gl-icon-opgeleverd {
-    color: #28a745;
+    color: var(--primary);
     font-size: 1rem;
     margin-right: 4px;
 }
+
+/* Werf-footer tekstkleuren: Semantic Status-tokens i.p.v. Bootstrap's
+   stock text-success/text-danger, zodat ze bij de rest van dit dashboard passen. */
+.gl-text-success { color: var(--primary) !important; }
+.gl-text-danger   { color: var(--danger-text) !important; }
 
 /* Lege staat */
 .gl-mc-empty {
@@ -265,10 +313,15 @@
 
 .gl-snelactie {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px; cursor: pointer;
-    text-decoration: none; color: #555;
+    width: 100%; padding: 10px 16px; cursor: pointer;
+    text-decoration: none; text-align: left; color: #555;
+    background: none; border: 0; font: inherit;
     font-size: 12px; font-weight: 500;
     transition: background .15s; user-select: none;
+}
+.gl-snelactie:focus-visible,
+.gl-mc-info-toggle:focus-visible {
+    outline: 2px solid #0a5a3b; outline-offset: -2px;
 }
 .gl-snelactie:hover { background: #f5f5f5; color: #333; text-decoration: none; }
 .gl-snelactie.active { background: #fff; color: #0a5a3b; }

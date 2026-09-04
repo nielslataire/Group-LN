@@ -95,7 +95,7 @@ namespace ServiceCore
         }
 
         public GetResponse<ProjectBO> GetProjectsForList(
-            ProjectType Type = 0, int StatusId = 0, string UserId = null, int BuilderId = 0, bool TrimCommercialText = false)
+            ProjectType Type = 0, int StatusId = 0, string UserId = null, int BuilderId = 0, bool TrimCommercialText = false, IEnumerable<int> ProjectIds = null)
         {
             var response = new GetResponse<ProjectBO>();
 
@@ -125,6 +125,7 @@ namespace ServiceCore
             if (StatusId != 0) q = q.Where(m => m.Status == StatusId);
             if (UserId != null) q = q.Where(m => m.UserId == UserId);
             if (BuilderId != 0) q = q.Where(m => m.BuilderId == BuilderId);
+            if (ProjectIds != null) q = q.Where(m => ProjectIds.Contains(m.Id));
 
             foreach (var e in q)
             {
@@ -165,6 +166,54 @@ namespace ServiceCore
 
             return response;
         }
+        public HashSet<int> GetPinnedProjectIds(int userId)
+            => _uow.PinnedProjects.GetNoTracking()
+                .Where(p => p.UserId == userId)
+                .Select(p => p.ProjectId)
+                .ToHashSet();
+
+        public Response PinProject(int userId, int projectId)
+        {
+            var response = new Response();
+
+            var alreadyPinned = _uow.PinnedProjects.GetNoTracking()
+                .Any(p => p.UserId == userId && p.ProjectId == projectId);
+            if (alreadyPinned)
+            {
+                response.AddInfo("Project stond al vastgezet");
+                return response;
+            }
+
+            var pin = _uow.PinnedProjects.GetNew();
+            pin.UserId = userId;
+            pin.ProjectId = projectId;
+            pin.PinnedAt = DateTime.Now;
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Project vastgezet", "Vastzetten van project mislukt");
+
+            return response;
+        }
+
+        public Response UnpinProject(int userId, int projectId)
+        {
+            var response = new Response();
+
+            var pin = _uow.PinnedProjects.GetNormal()
+                .FirstOrDefault(p => p.UserId == userId && p.ProjectId == projectId);
+            if (pin == null)
+            {
+                response.AddInfo("Project was niet vastgezet");
+                return response;
+            }
+
+            _uow.PinnedProjects.Remove(pin);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Project losgemaakt", "Losmaken van project mislukt");
+
+            return response;
+        }
+
         public string GetProjectNameById(int id)
             => _uow.Projects.GetById(id)?.ProjectName ?? string.Empty;
 

@@ -54,6 +54,9 @@ public class HomeController : BaseController
                 model.DashboardType = (Models.DashboardType)rawDashboardType.Value;
         }
 
+        if (model.DashboardType == Models.DashboardType.Projectleider)
+            ViewData["CoachmarkPageKey"] = "Home.Dashboard.Projectleider";
+
         var response = _projectService.GetProjectsForList(0, 0, currentUserCode);
         if (response.Success)
         {
@@ -66,6 +69,22 @@ public class HomeController : BaseController
                 .ThenBy(p => p.Name)
                 .ToList();
         }
+
+        // Vastgezette projecten samenvoegen met de toegewezen projecten
+        // (enkel projectleider-dashboard — "Mijn Werven" toont toegewezen + vastgezet).
+        if (model.DashboardType == Models.DashboardType.Projectleider && userId.HasValue)
+        {
+            model.PinnedProjectIds = _projectService.GetPinnedProjectIds(userId.Value);
+            var alreadyIn = model.Projects.Select(p => p.Id).ToHashSet();
+            var toFetch = model.PinnedProjectIds.Where(id => !alreadyIn.Contains(id)).ToList();
+            if (toFetch.Count > 0)
+            {
+                var pinnedResponse = _projectService.GetProjectsForList(ProjectIds: toFetch);
+                if (pinnedResponse.Success)
+                    model.Projects.AddRange(pinnedResponse.Values);
+            }
+        }
+
         var response2 = _clientService.GetClientAccountsByDateDeedofSale();
         var response3 = _projectService.GetStatuses();
         if ((response3.Success))
@@ -119,7 +138,38 @@ public class HomeController : BaseController
             model.ContractorCommentMeldingen = await _issueService.GetContractorCommentMeldingen(projectIds);
         }
 
+        // KPI "Open punten" voor projectleider-dashboard
+        if (model.DashboardType == Models.DashboardType.Projectleider && model.Projects.Count > 0)
+        {
+            var projectIds = model.Projects.Select(p => p.Id);
+            model.OpenIssuesCount = await _issueService.CountOpen(projectIds);
+        }
+
         return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult PinProject(int projectId)
+    {
+        var userId = User.GetCpmUserId();
+        if (!userId.HasValue)
+            return Json(new { success = false, error = "Niet aangemeld." });
+
+        var response = _projectService.PinProject(userId.Value, projectId);
+        return Json(new { success = response.Success, message = response.Messages.LastOrDefault()?.Message });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult UnpinProject(int projectId)
+    {
+        var userId = User.GetCpmUserId();
+        if (!userId.HasValue)
+            return Json(new { success = false, error = "Niet aangemeld." });
+
+        var response = _projectService.UnpinProject(userId.Value, projectId);
+        return Json(new { success = response.Success, message = response.Messages.LastOrDefault()?.Message });
     }
 
 

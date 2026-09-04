@@ -189,6 +189,8 @@ public partial class Project
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
 
+    public virtual ICollection<UserPinnedProject> UserPinnedProject { get; set; } = new List<UserPinnedProject>();
+
     public virtual ICollection<VacationDays> VacationDays { get; set; } = new List<VacationDays>();
 
     public virtual WheaterStations WheaterStation { get; set; }

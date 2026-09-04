@@ -12,7 +12,12 @@ namespace FacadeCore
         GetResponse<ProjectBO> GetProjectByID(int id);
         GetResponse<ProjectBO> GetProjectBySlug(string slug);
         //GetResponse<ProjectBO> GetProjects();
-        GetResponse<ProjectBO> GetProjectsForList(ProjectType Type = 0, int StatusId = 0, string UserId = null, int BuilderId = 0, bool TrimCommercialText = false);
+        GetResponse<ProjectBO> GetProjectsForList(ProjectType Type = 0, int StatusId = 0, string UserId = null, int BuilderId = 0, bool TrimCommercialText = false, IEnumerable<int> ProjectIds = null);
+
+        // Vastgezette projecten (dashboard "Mijn Werven" — pin een project dat niet aan mij is toegewezen)
+        HashSet<int> GetPinnedProjectIds(int userId);
+        Response PinProject(int userId, int projectId);
+        Response UnpinProject(int userId, int projectId);
         string GetProjectNameById(int id);
         string GetProjectCityById(int id);
         string GetProjectSlugById(int id);

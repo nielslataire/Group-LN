@@ -88,6 +88,17 @@ namespace CPMCore.Models.Home
         public List<WarningBO>? ContractorCommentMeldingen { get; set; }
         public DashboardType? DashboardType { get; set; }
 
+        /// <summary>Aantal open punten over de projecten van de gebruiker (KPI-strip projectleider-dashboard).</summary>
+        public int OpenIssuesCount { get; set; }
+
+        /// <summary>
+        /// Project-ID's die de gebruiker heeft vastgezet op het projectleider-dashboard,
+        /// ook als het project niet aan hem/haar is toegewezen. Deze projecten worden
+        /// samengevoegd met <see cref="Projects"/>; deze set laat de view weten welke
+        /// kaarten een "vastgezet" toggle moeten tonen i.p.v. een gewone toegewezen kaart.
+        /// </summary>
+        public HashSet<int> PinnedProjectIds { get; set; } = new();
+
         /// <summary>Voortgang per project-id, geladen voor het projectleider-dashboard.</summary>
         public Dictionary<int, ProjectVoortgangBO> ProjectVoortgang { get; set; } = new();
 

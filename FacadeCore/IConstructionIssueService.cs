@@ -21,4 +21,7 @@ public interface IConstructionIssueService
     Task<List<ConstructionIssueCategory>> GetCategories();
     Task<List<Units>> GetProjectUnits(int projectId);
     Task<List<WarningBO>> GetContractorCommentMeldingen(IEnumerable<int> projectIds, int daysBack = 7);
+
+    /// <summary>Aantal niet-gesloten punten over de opgegeven projecten (voor dashboard-KPI's).</summary>
+    Task<int> CountOpen(IEnumerable<int> projectIds);
 }

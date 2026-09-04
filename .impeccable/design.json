@@ -52,6 +52,54 @@
         "canonical": "#8A7967",
         "tonalRamp": ["#332c25", "#4d4237", "#6a5c4d", "#8a7967", "#a89a8b", "#c5bbb0", "#ddd6cf", "#f1ede9"]
       },
+      "rust": {
+        "role": "semantic-danger",
+        "displayName": "Rust",
+        "canonical": "#b3452f",
+        "tonalRamp": ["#3d170f", "#5c2216", "#7c2e1d", "#b3452f", "#c96f52", "#dc9d85", "#eac3b4", "#f7ece8"]
+      },
+      "rust-tint": {
+        "role": "semantic-danger",
+        "displayName": "Rust Tint",
+        "canonical": "#f7ece8",
+        "tonalRamp": ["#3d170f", "#7c2e1d", "#b3452f", "#c96f52", "#dc9d85", "#eac3b4", "#f2ddd5", "#f7ece8"]
+      },
+      "rust-text": {
+        "role": "semantic-danger",
+        "displayName": "Rust Text",
+        "canonical": "#8a3420",
+        "tonalRamp": ["#2b0f08", "#431709", "#62210d", "#8a3420", "#a8503a", "#c47862", "#dda690", "#f0d4c5"]
+      },
+      "ochre": {
+        "role": "semantic-warning",
+        "displayName": "Ochre",
+        "canonical": "#c17d1f",
+        "tonalRamp": ["#3f2809", "#5e3b0d", "#7f5010", "#c17d1f", "#d29c4c", "#e0ba7e", "#ecd6b0", "#f8f0dc"]
+      },
+      "ochre-tint": {
+        "role": "semantic-warning",
+        "displayName": "Ochre Tint",
+        "canonical": "#faf1df",
+        "tonalRamp": ["#3f2809", "#7f5010", "#c17d1f", "#d29c4c", "#e0ba7e", "#ecd6b0", "#f4e6cc", "#faf1df"]
+      },
+      "ochre-text": {
+        "role": "semantic-warning",
+        "displayName": "Ochre Text",
+        "canonical": "#7a5210",
+        "tonalRamp": ["#241800", "#3a2600", "#573a08", "#7a5210", "#9c7330", "#bd9860", "#dcc194", "#f3e6cf"]
+      },
+      "taupe-tint": {
+        "role": "semantic-info",
+        "displayName": "Taupe Tint",
+        "canonical": "#efe9e3",
+        "tonalRamp": ["#332c25", "#6a5c4d", "#8a7967", "#a89a8b", "#c5bbb0", "#ddd6cf", "#e7e1da", "#efe9e3"]
+      },
+      "taupe-text": {
+        "role": "semantic-info",
+        "displayName": "Taupe Text",
+        "canonical": "#5f5245",
+        "tonalRamp": ["#1c1712", "#2e2620", "#443a30", "#5f5245", "#7d6f60", "#9c8f81", "#bcb2a7", "#ded8d1"]
+      },
       "ink": {
         "role": "neutral",
         "displayName": "Ink",
@@ -217,8 +265,9 @@
       "Responsive down to a 60px solid-green mobile bar; dense tables that stay usable on small screens."
     ],
     "rules": [
-      { "name": "The One Green Rule", "body": "Deep Forest Green is the only brand colour on a content screen. If a second saturated colour appears, it is a status signal (success/warning/danger) or a deliberate category (Sage / Timber / Taupe), never decoration. In custom.css the primary is referenced ~29× and every other brand token once — keep that ratio.", "section": "colors" },
+      { "name": "The One Green Rule", "body": "Deep Forest Green is the only brand colour on a content screen. If a second saturated colour appears, it is a Semantic Status signal (Rust / Ochre / Taupe Grey) or a deliberate category (Sage / Timber / Taupe), never decoration. In custom.css the primary is referenced ~29× and every other brand token once — keep that ratio.", "section": "colors" },
       { "name": "The Warm-Grey Rule", "body": "Neutrals lean warm, never cool-blue. Reach for Page Grey and Hairline before any #f1f5f9-family cool grey; the cool Slate tones are permitted only for topbar/menu chrome text where they already live.", "section": "colors" },
+      { "name": "The Warm-Signal Rule", "body": "Danger/warning/info use Rust / Ochre / Taupe Grey (each with a pale tint + darker text form), never stock Bootstrap red/amber/blue. A severity signal should still read as part of this palette, not a bolted-on alert library.", "section": "colors" },
       { "name": "The Weight-Not-Size Rule", "body": "Build hierarchy by moving between 400 / 600 / 700 Poppins at a small set of sizes. Do not introduce new font sizes, a second family, uppercase tracking, or italic for emphasis — bump the weight or use Deep Forest Green.", "section": "typography" },
       { "name": "The Field-Width Rule", "body": "Every screen must stay usable and legible at 360px. Tables collapse or scroll, controls stay ≥40px tall, the green mobile bar is the only chrome. On-site phone use is a first-class case, not a fallback.", "section": "layout" },
       { "name": "The Float-Only Rule", "body": "A visible (Overlay-strength) shadow means the element is literally floating above the page — a menu, a dropdown, a dialog. Resting content gets Card rest or Whisper or nothing. Never use an Overlay shadow to make a static card look important; use the Hairline border and, if needed, a Mist Green header.", "section": "elevation" },
@@ -231,7 +280,8 @@
       "Do use 7px radius for content chrome and 14–16px for navigation chrome (The 7-14-16 Rule).",
       "Do back \"green-related\" affordances — icon chips, tab-active rows, hovers — with Mist Green (#e8f0eb), and use Mint Ice (#e7fff1) as the only text colour on the green rail.",
       "Do keep every screen usable at 360px with ≥40px touch targets; on-site phone use is first-class (The Field-Width Rule).",
-      "Do prefer soft tinted state colours (e.g. btn-gl-remove) over solid loud fills, in keeping with the restrained tone."
+      "Do prefer soft tinted state colours (e.g. btn-gl-remove) over solid loud fills, in keeping with the restrained tone.",
+      "Do use Rust / Ochre / Taupe Grey for danger / warning / info severity — never stock Bootstrap red, amber, or blue."
     ],
     "donts": [
       "Don't introduce cool blue-greys for neutrals; keep them warm — Page Grey and Hairline before any #f1f5f9-family grey (The Warm-Grey Rule).",

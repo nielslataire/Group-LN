@@ -72,16 +72,30 @@ Internal tool — the distinguishing mechanisms, not a market claim:
 
 ## Capabilities and Constraints
 
-**Modules:** Dashboard; Leveranciers (subcontractors); Klanten (buyers, client
-accounts, projects per client); Projecten (project detail, contracts + bank-
-guarantee documents, budget wizard, voortgang/progress, project issues +
-notifications, weerverlet); Budget (cost-price materials, formula engine +
+**Modules:** Dashboard (role-specific — see below); Leveranciers (subcontractors);
+Klanten (buyers, client accounts, projects per client); Projecten (project detail,
+contracts + bank-guarantee documents, budget wizard, voortgang/progress, project
+issues + notifications, weerverlet); Budget (cost-price materials, formula engine +
 couplings, bouwkost percentages, budget-activity formulas); Facturatie (invoices
 per billing company, per-tariff VAT, Peppol/UBL, EPC QR, Octopus bookings,
 invoice layout/enrichment); Documentencentrum; Marktanalyse (gemeenteanalyse,
 vergelijkbare panden, projectdetail); Contractor portal + contractor invites;
 Instellingen (issuer companies, roles/permissions, email templates, blog,
 vacancies, home-hero project); User admin; Search.
+
+**Dashboard is per-function, not one screen.** A user's `DashboardType`
+(Geen/Boekhouding/CeoCfo/Projectleider) selects which dashboard renders.
+Project managers get the Projectleider dashboard: a KPI strip (active projects,
+open punten, urgent meldingen, achterstallige werven), an urgency-grouped
+meldingencentrum (ACTIE VEREIST / OP TE LOSSEN / TER INFO, with snooze), a "Mijn
+Werven" grid with real voortgang bars and delivery countdowns, and a Snelacties
+panel for common workflows. PMs can also **pin** a project outside their own
+assignment so it appears in "Mijn Werven" alongside their assigned projects.
+Confirmed direction: every function should eventually get a dashboard in this
+style (KPI strip + urgency-grouped attention panel + quick actions), tailored to
+what that role needs to see — the generic, unstyled fallback dashboard (`Geen` /
+no type set) is a backup only and is not meant to be anyone's daily surface going
+forward. Boekhouding/CeoCfo-specific dashboards are not yet built.
 
 **Architecture (must be respected):** layered solution — DALCore (entities /
 DbContext, no business logic), FacadeCore (viewmodels / DTOs, no UI dependency),

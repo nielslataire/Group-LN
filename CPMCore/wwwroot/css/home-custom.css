@@ -4,16 +4,80 @@
    Bootstrap utility classes worden in HTML gebruikt.
    =================================================================== */
 
+/* Vaste beeldverhouding: kaarten zijn altijd even hoog en er is geen
+   layout-shift terwijl de foto's laden (Isotope berekent de layout dan
+   meteen correct, ook zonder imagesLoaded). */
+#project-grid .card-img-top {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 7px 7px 0 0;
+    background: #eef0f2;
+}
+
+/* Gemeente-label: leesbaar grijs (±4,9:1 op wit) i.p.v. Porto's #999 (2,85:1). */
+#project-grid .dashboard-card-place {
+    color: #667085;
+    font-size: .8125rem;
+    margin-bottom: .125rem;
+}
+
+/* Statusfilter: knoppen i.p.v. <a href="#">, gestyled als volledige-breedte
+   tekstlinks met een fatsoenlijk tap-target. */
+.filters .filter-link {
+    display: block;
+    width: 100%;
+    padding: 10px 8px;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: inherit;
+    border-radius: 6px;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.filters .filter-link:hover,
+.filters .filter-link:focus-visible {
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary, #0a5a3b);
+}
+
+.filters .filter-link.active {
+    font-weight: 600;
+    color: var(--primary, #0a5a3b);
+}
+
+.filters .filter-link:focus-visible,
+.card-modern .card-actions .card-action-toggle:focus-visible {
+    outline: 2px solid var(--primary, #0a5a3b);
+    outline-offset: 2px;
+}
+
+/* Kaart-inklapknop: knop-chrome resetten (Porto styling verwacht een <a>). */
+.card-modern .card-actions .card-action-toggle {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* Gelijke gutter op elk breakpoint. Porto's .row-gutter-sm dekt col-xxl-*
+   niet af, dus normaliseren we het hier expliciet voor het projectgrid. */
+#project-grid.row-gutter-sm {
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+#project-grid.row-gutter-sm > [class*="col-"] {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
 @media (max-width: 767.98px) {
-    /* Hide image link on mobile when there is no project photo */
+    /* Verberg de afbeeldingslink op mobiel als er geen projectfoto is */
     #project-grid .card-no-photo > a { display: none; }
 
-    /* Consistent gutter for full-width cards */
-    #project-grid [class*="col-"] {
-        padding-left: 12px;
-        padding-right: 12px;
-    }
-
-    /* Spacing between stacked cards */
+    /* Ruimte tussen gestapelde kaarten */
     #project-grid .mb-4 { margin-bottom: 1rem !important; }
 }

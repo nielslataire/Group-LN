@@ -117,6 +117,63 @@ public static class CoachmarkRegistry
             ReleaseDate     = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc),
             MaxShowDays     = 60
         },
+
+        // ── Projectleider-dashboard: kennismakingstour (4 stappen) ────────────
+        // Alle vier de elementen zijn pas sinds deze herwerking écht functioneel
+        // (KPI-kleuren, snooze/toggle-JS, desktop leverancier/klant-zoeken,
+        // project vastzetten/pinnen).
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Home.Dashboard.Projectleider.Tour.Step1",
+            PageKey         = "Home.Dashboard.Projectleider",
+            TargetSelector  = ".gl-kpi-strip",
+            Title           = "Je dashboard in één oogopslag",
+            Message         = "Actieve projecten en open punten blijven groen; Urgent en Achterstallig springen eruit in kleur zodra ze aandacht vragen.",
+            Placement       = CoachmarkPlacement.Bottom,
+            SequenceKey     = "Home.Dashboard.Projectleider.Tour",
+            StepIndex       = 0,
+            ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Home.Dashboard.Projectleider.Tour.Step2",
+            PageKey         = "Home.Dashboard.Projectleider",
+            TargetSelector  = ".gl-mc-card",
+            Title           = "Meldingen per urgentie",
+            Message         = "ACTIE VEREIST vraagt meteen actie, OP TE LOSSEN kan nog even wachten, TER INFO is ter kennisgeving. Snooze een melding met het klokje-icoon.",
+            Placement       = CoachmarkPlacement.Right,
+            SequenceKey     = "Home.Dashboard.Projectleider.Tour",
+            StepIndex       = 1,
+            ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Home.Dashboard.Projectleider.Tour.Step3",
+            PageKey         = "Home.Dashboard.Projectleider",
+            TargetSelector  = "#gl-snelacties-card",
+            Title           = "Snelacties",
+            Message         = "Rechtstreeks naar een nieuw contract, punt, factuur of leverancier — inclusief leverancier en klant zoeken.",
+            Placement       = CoachmarkPlacement.Left,
+            SequenceKey     = "Home.Dashboard.Projectleider.Tour",
+            StepIndex       = 2,
+            ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Home.Dashboard.Projectleider.Tour.Step4",
+            PageKey         = "Home.Dashboard.Projectleider",
+            TargetSelector  = "#mw-add-project",
+            Title           = "Project vastzetten",
+            Message         = "Sta je een project bij dat niet aan jou is toegewezen? Zet het hier vast — het verschijnt dan naast je eigen projecten in Mijn Werven. Losmaken kan via het pin-icoontje op de kaart.",
+            Placement       = CoachmarkPlacement.Bottom,
+            SequenceKey     = "Home.Dashboard.Projectleider.Tour",
+            StepIndex       = 3,
+            ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
     };
 
     /// <summary>Alle geregistreerde definities.</summary>

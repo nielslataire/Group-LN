@@ -285,6 +285,31 @@ button.gl-mob-sheet-item {
     font-size: .85rem; padding: 24px 10px;
 }
 
+/* ── Zoek-sheet op desktop: gecentreerd paneel i.p.v. bottom-sheet ──────
+   Zelfde markup/JS (Punt-projectkeuze, Leverancier, Klant); een sheet die
+   van onderuit opschuift is een mobiel/duim-idioom en oogt misplaatst op
+   een muis-gestuurd breed scherm — hier wordt het een compact, gecentreerd
+   paneel met fade-in i.p.v. de sheet-up animatie. */
+@media (min-width: 992px) {
+    .gl-mob-sheet {
+        align-items: center;
+        justify-content: center;
+    }
+    .gl-mob-sheet-panel {
+        width: 440px;
+        max-width: 90vw;
+        max-height: 70vh;
+        border-radius: 12px;
+        animation: sheet-fade-in .15s ease-out;
+        box-shadow: 0 16px 48px rgba(0,0,0,.28);
+    }
+    .gl-mob-sheet-handle { display: none; } /* sleepgreep is een touch-affordance */
+}
+@keyframes sheet-fade-in {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1;  }
+}
+
 /* ── Fullscreen modal (iframe wrapper voor Issues) ───────────────────── */
 .gl-fs-modal {
     position: fixed;
@@ -295,6 +320,32 @@ button.gl-mob-sheet-item {
     flex-direction: column;
 }
 .gl-fs-modal.open { display: flex; }
+
+/* Laad-overlay terwijl de CreateForm-pagina nog in de iframe laadt. */
+.gl-fs-modal-loading {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+}
+.gl-fs-modal.loading .gl-fs-modal-loading { display: flex; }
+.gl-fs-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border, #e7e7e7);
+    border-top-color: var(--primary, #0a5a3b);
+    border-radius: 50%;
+    animation: gl-fs-spin .7s linear infinite;
+}
+@keyframes gl-fs-spin {
+    to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gl-fs-spinner { animation-duration: 1.6s; }
+}
 
 /* Verberg outer header + sidebar wanneer de modal open is */
 html.gl-modal-open .header,
@@ -407,7 +458,45 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     --green-acc: var(--primary);
     --green: var(--primary);
     --muted: #8590a5;
+
+    /* Semantische status-kleuren (meldingen, badges, KPI's).
+       Warme varianten i.p.v. stock rood/amber/blauw, zodat ze bij het
+       "Grounded & Cultivated" palet passen — zie DESIGN.md. --info bestond
+       al (taupe); --danger en --warning waren tot nu toe niet gedefinieerd
+       (badge.bg-danger/-warning vielen stil terug op Bootstrap-standaard). */
+    --danger: #b3452f;        /* Roestrood */
+    --danger-tint: #f7ece8;
+    --danger-text: #8a3420;
+    --warning: #c17d1f;       /* Oker */
+    --warning-tint: #faf1df;
+    --warning-text: #7a5210;
+    --info-tint: #efe9e3;     /* aanvulling op de bestaande --info (taupe) */
+    --info-text: #5f5245;
 }
+
+/* ── Skip-to-content link (a11y: WCAG 2.4.1) ─────────────────────────────
+   Verborgen tot hij focus krijgt via Tab; springt dan zichtbaar linksboven.
+   ─────────────────────────────────────────────────────────────────────── */
+.skip-link {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    z-index: 2000;
+    padding: 10px 16px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: var(--radius);
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(-150%);
+    transition: transform .15s ease;
+}
+
+    .skip-link:focus {
+        transform: translateY(0);
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+    }
 
 /*Badges*/
 .badge.bg-primary {
@@ -1349,6 +1438,9 @@ h1.page-head {
    ============================================================ */
 :root {
     --topbar-height: 72px;
+    --topbar-fg-strong: #1e293b;  /* paginatitel, userbox-naam */
+    --topbar-fg-muted: #667085;   /* breadcrumb + e-mail — AA-contrast op wit (4.9:1) */
+    --topbar-divider: #e3e7ee;    /* onderrand topbar, rand dropdown-menu */
 }
 
 html.fixed .header.page-topbar {
@@ -1357,7 +1449,7 @@ html.fixed .header.page-topbar {
     align-items: center;
     gap: 18px;
     background: #fff;
-    border-bottom: 1px solid #e3e7ee;
+    border-bottom: 1px solid var(--topbar-divider);
     box-shadow: none;
     padding-right: 24px;
 }
@@ -1407,7 +1499,7 @@ html.fixed .sidebar-left {
     margin: 0;
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--topbar-fg-strong);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -1433,7 +1525,7 @@ html.fixed .sidebar-left {
 .topbar-page-meta .breadcrumbs li {
     display: inline-flex;
     align-items: center;
-    color: #94a3b8;
+    color: var(--topbar-fg-muted);
     font-size: .78rem;
 }
 
@@ -1449,7 +1541,7 @@ html.fixed .sidebar-left {
 
 .topbar-page-meta .breadcrumbs a,
 .topbar-page-meta .breadcrumbs span {
-    color: #94a3b8;
+    color: var(--topbar-fg-muted);
     font-size: .78rem;
     text-decoration: none;
 }
@@ -1526,7 +1618,7 @@ html.fixed .sidebar-left {
 .topbar-userbox-menu {
     min-width: 230px;
     padding: 8px;
-    border: 1px solid #e3e7ee;
+    border: 1px solid var(--topbar-divider);
     border-radius: 10px;
     box-shadow: 0 12px 32px rgba(15, 23, 42, .12);
     margin-top: 8px !important;
@@ -1541,19 +1633,20 @@ html.fixed .sidebar-left {
 .topbar-userbox-header-name {
     font-weight: 600;
     font-size: .85rem;
-    color: #1e293b;
+    color: var(--topbar-fg-strong);
 }
 
 .topbar-userbox-header-email {
     font-size: .75rem;
-    color: #94a3b8;
+    color: var(--topbar-fg-muted);
 }
 
 .topbar-userbox-menu .dropdown-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    min-height: 44px; /* touch target (WCAG 2.5.8) */
+    padding: 10px 12px;
     border-radius: 7px;
     font-size: .85rem;
     color: #374151;
@@ -1574,6 +1667,17 @@ html.fixed .sidebar-left {
 
 .topbar-userbox-menu .dropdown-item:hover i {
     color: var(--primary);
+}
+
+/* Sidebar-collapse knop: touch target ≥44px in het tablet-bereik (768–991px),
+   waar hij zichtbaar is via .d-lg-none maar buiten de mobiele 60px-regel valt.
+   De @media (max-width: 767px)-blok hieronder zet hem daar expliciet op 60px. */
+.header-btn-collapse-nav {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Mobiel: alles in één balk — hamburger, titel (verticaal gecentreerd,

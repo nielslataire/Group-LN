@@ -19,6 +19,14 @@ colors:
   slate-900: "#1e293b"
   slate-500: "#94a3b8"
   text-muted: "#8590a5"
+  rust: "#b3452f"
+  rust-tint: "#f7ece8"
+  rust-text: "#8a3420"
+  ochre: "#c17d1f"
+  ochre-tint: "#faf1df"
+  ochre-text: "#7a5210"
+  taupe-tint: "#efe9e3"
+  taupe-text: "#5f5245"
 typography:
   display:
     fontFamily: "Poppins, 'Segoe UI', system-ui, sans-serif"
@@ -203,12 +211,27 @@ and place, everything else recedes.
 - **Divider Cool** (`#e3e7ee`): the slightly cooler 1px border under the topbar
   and around dropdown menus.
 
+### Semantic Status
+Danger/warning/info as warm, earth-family hues — never stock Bootstrap
+red/amber/blue — so a severity signal still reads as part of this palette, not
+a bolted-on alert library. Each has a solid form (icon, count badge, chip) and
+a pale tint + matching darker text form (banner/row backgrounds).
+- **Rust** (`#b3452f`) / tint `#f7ece8` / text `#8a3420`: danger — "ACTIE
+  VEREIST" meldingen, the melding count badge, the werf-card warning badge.
+  A warm brick-red in the same family as Timber, not a cool crimson.
+- **Ochre** (`#c17d1f`) / tint `#faf1df` / text `#7a5210`: warning — "OP TE
+  LOSSEN" meldingen. Close to the existing amber werf-status chip.
+- **Taupe Grey** (`#8A7967`, see Tertiary) / tint `#efe9e3` / text `#5f5245`:
+  info — "TER INFO" meldingen. Reuses the info role rather than introducing a
+  fourth hue; this replaced a cool blue that had drifted into the
+  meldingencentrum outside the documented system.
+
 ### Named Rules
 **The One Green Rule.** Deep Forest Green is the only brand colour on a content
-screen. If a second saturated colour appears, it is a status signal
-(success/warning/danger) or a deliberate category (Sage / Timber / Taupe), never
-decoration. In `custom.css` the primary is referenced ~29× and every other brand
-token once — keep that ratio.
+screen. If a second saturated colour appears, it is a Semantic Status signal
+(Rust / Ochre / Taupe Grey) or a deliberate category (Sage / Timber / Taupe),
+never decoration. In `custom.css` the primary is referenced ~29× and every
+other brand token once — keep that ratio.
 
 **The Warm-Grey Rule.** Neutrals lean warm, never cool-blue. Reach for Page Grey
 and Hairline before any `#f1f5f9`-family cool grey; the cool Slate tones are
@@ -405,6 +428,8 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
   phone use is first-class (The Field-Width Rule).
 - **Do** prefer soft tinted state colours (e.g. `btn-gl-remove`) over solid loud
   fills, in keeping with the restrained tone.
+- **Do** use Rust / Ochre / Taupe Grey for danger / warning / info severity —
+  never stock Bootstrap red (`#dc3545`-family), amber, or blue.
 
 ### Don't:
 - **Don't** introduce cool blue-greys for neutrals; keep them warm — Page Grey

@@ -15,6 +15,9 @@ public class ConstructionIssueService : IConstructionIssueService
     public Task<List<ConstructionIssueCategory>> GetCategories() => _db.ConstructionIssueCategory.OrderBy(x => x.Name).ToListAsync();
     public Task<List<Units>> GetProjectUnits(int projectId) => _db.Units.Where(x => x.ProjectId == projectId).OrderBy(x => x.Name).ToListAsync();
 
+    public Task<int> CountOpen(IEnumerable<int> projectIds) =>
+        _db.ConstructionIssue.CountAsync(x => projectIds.Contains(x.ProjectId) && x.Status != (int)ConstructionIssueStatus.Closed);
+
     public Task<ConstructionIssue?> GetById(int projectId, int id) =>
         _db.ConstructionIssue
             .Include(x => x.Category)

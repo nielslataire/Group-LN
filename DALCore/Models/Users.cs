@@ -63,6 +63,8 @@ public partial class Users
 
     public virtual ICollection<UserCompanyAccess> UserCompanyAccess { get; set; } = new List<UserCompanyAccess>();
 
+    public virtual ICollection<UserPinnedProject> UserPinnedProject { get; set; } = new List<UserPinnedProject>();
+
     public virtual ICollection<UserGuestInvitation> UserGuestInvitationInvitedByUser { get; set; } = new List<UserGuestInvitation>();
 
     public virtual ICollection<UserGuestInvitation> UserGuestInvitationUser { get; set; } = new List<UserGuestInvitation>();

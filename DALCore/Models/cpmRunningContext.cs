@@ -259,6 +259,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<UserGuestInvitationAudit> UserGuestInvitationAudit { get; set; }
 
+    public virtual DbSet<UserPinnedProject> UserPinnedProject { get; set; }
+
     public virtual DbSet<Users> Users { get; set; }
 
     public virtual DbSet<UtilityPercentage> UtilityPercentage { get; set; }
@@ -2941,6 +2943,25 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.UserCoachmarkState)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_UserCoachmarkState_Users");
+        });
+
+        modelBuilder.Entity<UserPinnedProject>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_UserPinnedProject_UserId");
+
+            entity.HasIndex(e => new { e.UserId, e.ProjectId }, "UX_UserPinnedProject_User_Project").IsUnique();
+
+            entity.Property(e => e.PinnedAt).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.UserPinnedProject)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserPinnedProject_Project");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserPinnedProject)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserPinnedProject_Users");
         });
 
         modelBuilder.Entity<UserCompany>(entity =>
