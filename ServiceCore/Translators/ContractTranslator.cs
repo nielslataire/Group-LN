@@ -32,6 +32,8 @@ namespace ServiceCore.Translators
             bo.VatPercentage = _entity.VatPercentage;
             bo.GuaranteeType = (ContractGuaranteeType)_entity.GuaranteeType;
             bo.GuaranteePercentage = _entity.GuaranteePercentage;
+            bo.GuaranteeDocFilename = _entity.GuaranteeDocFilename;
+            bo.GuaranteeDocUploadedAt = _entity.GuaranteeDocUploadedAt;
             bo.ContractSigned = _entity.ContractSigned ?? false;
             bo.ContractSentDate = _entity.ContractSentDate;
             bo.ContractSentNote = _entity.ContractSentNote;
@@ -75,6 +77,8 @@ namespace ServiceCore.Translators
             _entity.PidAttest = bo.PidAttest;
             _entity.GuaranteePercentage = bo.GuaranteePercentage;
             _entity.GuaranteeType = (int)bo.GuaranteeType;
+            _entity.GuaranteeDocFilename = string.IsNullOrWhiteSpace(bo.GuaranteeDocFilename) ? null : bo.GuaranteeDocFilename.Trim();
+            _entity.GuaranteeDocUploadedAt = bo.GuaranteeDocUploadedAt;
             _entity.SiteManagerContactId = bo.SiteManagerContactId;
             _entity.ContractName = string.IsNullOrWhiteSpace(bo.ContractName) ? null : bo.ContractName.Trim();
             var Err = HandleActivities(_entity, bo.Activities, uow);

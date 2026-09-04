@@ -624,6 +624,11 @@
 
 				// 🔑 CurrencyMask op co-owner
 				applyCurrencyMasks($item.find('.Currencymask'));
+
+				// 🔑 Telefoonmasker (verving de inline <script> in de Phone-editortemplate)
+				if ($.fn.mask) {
+					$item.find('.Phonemask').mask('999/99.99.99');
+				}
 			}
 
 			/* ==============================

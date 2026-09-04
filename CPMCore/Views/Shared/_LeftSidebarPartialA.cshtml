@@ -113,7 +113,7 @@
 		}
 	}
 	var invoicingIssuerCompanies = issuerCompanies
-		.Where(i => invoicingIssuerCompanyIds.Contains(i.Id))
+		.Where(i => invoicingIssuerCompanyIds.Contains(i.Id) && !i.IsExternalCoordinationDefault)
 		.ToList();
 	canSeeBoekhouding = canSeeBoekhouding && invoicingIssuerCompanies.Any();
 	var suppliersSubmenuClass = supplierIssuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";

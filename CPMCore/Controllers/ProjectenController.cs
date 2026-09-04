@@ -2989,10 +2989,20 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders)
+        public async Task<ActionResult> AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders, IFormFile guaranteeDoc)
         {
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
             var addAnother = Request.Form["saveAction"] == "addAnother";
+
+            // model.ProjectId werd vroeger niet altijd mee gepost; val terug op het contract zelf.
+            var projectId = model.ProjectId > 0 ? model.ProjectId : (model.Contract?.ProjectId ?? 0);
+            model.ProjectId = projectId;
+            if (model.Contract != null && model.Contract.ProjectId <= 0)
+                model.Contract.ProjectId = projectId;
+
+            // Bankwaarborg-document (pdf/jpg/jpeg) — optioneel, maar indien meegestuurd valideren.
+            if (guaranteeDoc is { Length: > 0 } && !ValidateGuaranteeDoc(guaranteeDoc, out var guaranteeDocError))
+                ModelState.AddModelError("guaranteeDoc", guaranteeDocError);
 
             if (!ModelState.IsValid)
             {
@@ -3001,13 +3011,38 @@ namespace CPMCore.Controllers
                     .Select(e => e.ErrorMessage)
                     .FirstOrDefault();
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
-                SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(model.ProjectId) : model.ProjectName)} - Contract toevoegen");
+                SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract toevoegen");
                 PopulateAddContractLookups(model);
                 return View(model);
             }
 
-            var referrer = TempData["Referrer"] as string
-                ?? Url.Action("DetailContracts", "Projecten", new { projectid = model.ProjectId });
+            if (guaranteeDoc is { Length: > 0 })
+            {
+                var storedName = await UploadAssetToStorageAsync(guaranteeDoc, "guarantees");
+                if (string.IsNullOrWhiteSpace(storedName))
+                {
+                    AddMessage("error", "Het waarborgdocument kon niet naar de storage geüpload worden.", "Fout!");
+                    SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract toevoegen");
+                    PopulateAddContractLookups(model);
+                    return View(model);
+                }
+                model.Contract.GuaranteeDocFilename = storedName;
+                model.Contract.GuaranteeDocUploadedAt = DateTime.Now;
+            }
+            else if (model.Contract.Id > 0)
+            {
+                // Geen nieuw bestand: bestaande waarborgdoc-gegevens behouden (die staan niet in het formulier).
+                var existing = _projectService.GetContract(model.Contract.Id);
+                if (existing.Success && existing.Value != null)
+                {
+                    model.Contract.GuaranteeDocFilename = existing.Value.GuaranteeDocFilename;
+                    model.Contract.GuaranteeDocUploadedAt = existing.Value.GuaranteeDocUploadedAt;
+                }
+            }
+
+            // Na opslaan altijd terug naar de leverancierslijst van het juiste project
+            // (de oude "ga terug naar Referer"-logica landde bij een verloren project op een lege lijst).
+            var backToList = Url.Action("DetailContracts", "Projecten", new { projectid = projectId });
 
             foreach (var contractactivity in activities ?? Enumerable.Empty<ContractActivityBO>())
             {
@@ -3024,12 +3059,13 @@ namespace CPMCore.Controllers
             var response = service.InsertUpdateProjectContract(model.Contract);
             if (response.Success)
             {
+                EnsureSupplierIssuerLink(model.Contract.Company.ID, projectId);
                 AddMessage("success", "Het contract is toegevoegd aan het project " + model.ProjectName, "Geslaagd!");
                 if (addAnother)
                 {
-                    return RedirectToAction(nameof(AddContract), new { projectid = model.ProjectId });
+                    return RedirectToAction(nameof(AddContract), new { projectid = projectId });
                 }
-                return Redirect(referrer);
+                return Redirect(backToList);
             }
             else
             {
@@ -3149,6 +3185,11 @@ namespace CPMCore.Controllers
             var errors = new Dictionary<string, List<string>>();
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
 
+            var projectId = model.ProjectId > 0 ? model.ProjectId : (model.Contract?.ProjectId ?? 0);
+            model.ProjectId = projectId;
+            if (model.Contract != null && model.Contract.ProjectId <= 0)
+                model.Contract.ProjectId = projectId;
+
             foreach (var key in ModelState.Keys)
             {
                 var state = ModelState[key];
@@ -3160,14 +3201,12 @@ namespace CPMCore.Controllers
 
             if ((!ModelState.IsValid))
             {
-                SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(model.ProjectId) : model.ProjectName)} - Contract bewerken");
+                SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract bewerken");
                 return View(model);
             }
             if ((ModelState.IsValid))
             {
-                //Referrer
-                var referrer = TempData["Referrer"] as string
-                    ?? Url.Action("DetailContracts", "Projecten", new { projectid = model.ProjectId });
+                var backToList = Url.Action("DetailContracts", "Projecten", new { projectid = projectId });
                 foreach (var contractactivity in activities)
                 {
                     if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
@@ -3183,8 +3222,9 @@ namespace CPMCore.Controllers
                 var response = service.InsertUpdateProjectContract(model.Contract);
                 if (response.Success)
                 {
+                    EnsureSupplierIssuerLink(model.Contract.Company.ID, projectId);
                     AddMessage("success", "Het contract is bijgewerkt voor project " + model.ProjectName, "Geslaagd!");
-                    return Redirect(referrer);
+                    return Redirect(backToList);
                 }
                 else
                 {
@@ -8152,6 +8192,123 @@ namespace CPMCore.Controllers
             var presponse = pservice.GetCompanyNameById(companyid);
             return presponse;
         }
+
+        /// <summary>
+        /// Koppelt de leverancier van een contract aan het juiste facturatiebedrijf (IssuerCompany).
+        /// Doelbedrijf = het facturatiebedrijf-bouwheer van het project (<see cref="Project.IssuerCompanyIdBuilder"/>),
+        /// of bij coördinatieprojecten <see cref="Project.CoordinationIssuerCompanyId"/>. Is er geen,
+        /// dan valt het terug op het als "externe standaard" gemarkeerde facturatiebedrijf.
+        /// </summary>
+        private void EnsureSupplierIssuerLink(int companyId, int projectId)
+        {
+            if (companyId <= 0 || projectId <= 0)
+                return;
+
+            try
+            {
+                var project = _db.Project
+                    .Where(p => p.ProjectId == projectId)
+                    .Select(p => new
+                    {
+                        p.IssuerCompanyIdBuilder,
+                        p.CoordinationIssuerCompanyId,
+                        p.IsCoordinationProject,
+                        p.IsOnlyCoordinationProject
+                    })
+                    .FirstOrDefault();
+                if (project == null)
+                    return;
+
+                int? targetIssuerId = project.IssuerCompanyIdBuilder
+                    ?? ((project.IsCoordinationProject || project.IsOnlyCoordinationProject) ? project.CoordinationIssuerCompanyId : null)
+                    ?? _db.IssuerCompany
+                        .Where(i => i.IsExternalCoordinationDefault && i.IsActive)
+                        .Select(i => (int?)i.Id)
+                        .FirstOrDefault();
+
+                if (targetIssuerId is null or <= 0)
+                {
+                    _logger?.LogWarning(
+                        "EnsureSupplierIssuerLink: geen doel-IssuerCompany voor project {ProjectId} (geen bouwheer-facturatiebedrijf en geen 'externe standaard' ingesteld).",
+                        projectId);
+                    return;
+                }
+
+                var alreadyLinked = _db.CompanyIssuerCompany
+                    .Any(l => l.CompanyId == companyId && l.IssuerCompanyId == targetIssuerId.Value);
+                if (alreadyLinked)
+                    return;
+
+                _db.CompanyIssuerCompany.Add(new CompanyIssuerCompany
+                {
+                    CompanyId = companyId,
+                    IssuerCompanyId = targetIssuerId.Value
+                });
+                _db.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                // De contract-opslag zelf mag hier niet op vastlopen.
+                _logger?.LogError(ex,
+                    "EnsureSupplierIssuerLink mislukt voor leverancier {CompanyId} / project {ProjectId}",
+                    companyId, projectId);
+            }
+        }
+
+        // ── Bankwaarborg-document ─────────────────────────────────────────────────
+        private static readonly string[] _guaranteeDocExtensions = { ".pdf", ".jpg", ".jpeg" };
+
+        private static bool ValidateGuaranteeDoc(IFormFile file, out string error)
+        {
+            error = null;
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant() ?? string.Empty;
+            if (!_guaranteeDocExtensions.Contains(ext))
+            {
+                error = "Het waarborgdocument moet een pdf, jpg of jpeg zijn.";
+                return false;
+            }
+            if (file.Length > 10 * 1024 * 1024)
+            {
+                error = "Het waarborgdocument mag maximaal 10 MB groot zijn.";
+                return false;
+            }
+            return true;
+        }
+
+        [HttpGet]
+        [CPMCore.Filters.PermissionRead(PermissionCodes.ProjectsSuppliers)]
+        public IActionResult GuaranteeDoc(int contractid)
+        {
+            var contract = _projectService.GetContract(contractid);
+            var fileName = contract.Success ? contract.Value?.GuaranteeDocFilename : null;
+            if (string.IsNullOrWhiteSpace(fileName))
+                return NotFound();
+
+            var signedUrl = GetSignedAssetUrlByFileName(fileName, "guarantees");
+            if (string.IsNullOrWhiteSpace(signedUrl))
+                return NotFound();
+            return Redirect(signedUrl);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSuppliers)]
+        public IActionResult RemoveGuaranteeDoc(int contractid, int projectid)
+        {
+            var response = _projectService.GetContract(contractid);
+            if (response.Success && response.Value != null)
+            {
+                var bo = response.Value;
+                bo.GuaranteeDocFilename = null;
+                bo.GuaranteeDocUploadedAt = null;
+                var saved = _projectService.InsertUpdateProjectContract(bo);
+                AddMessage(saved.Success ? "success" : "error",
+                    saved.Success ? "Het waarborgdocument is verwijderd." : "Het waarborgdocument kon niet verwijderd worden.",
+                    saved.Success ? "Geslaagd!" : "Fout!");
+            }
+            return RedirectToAction(nameof(EditContract), new { projectid, contractid });
+        }
+
         [HttpPost]
         public JsonResult GetCountryIsoCode(int countryid)
         {
@@ -8196,6 +8353,7 @@ namespace CPMCore.Controllers
             return Json(iList);
         }
         [HttpPost]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSuppliers)]
         public JsonResult GetCompanyContacts(int companyid)
         {
             var contacts = GetSiteManagersForCompany(companyid)
@@ -8234,6 +8392,7 @@ namespace CPMCore.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSuppliers)]
         public async Task<JsonResult> AddCompanyContactQuick(int companyId, string name, string email, string phone)
         {
             if (companyId <= 0 || string.IsNullOrWhiteSpace(name))

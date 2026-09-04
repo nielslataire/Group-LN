@@ -27,6 +27,10 @@ public partial class Contract
 
     public decimal? GuaranteePercentage { get; set; }
 
+    public string GuaranteeDocFilename { get; set; }
+
+    public DateTime? GuaranteeDocUploadedAt { get; set; }
+
     public bool? ContractSigned { get; set; }
 
     public int? SiteManagerContactId { get; set; }

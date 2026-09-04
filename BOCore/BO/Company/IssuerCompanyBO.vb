@@ -24,6 +24,8 @@
     Public Property DefaultPaymentTermId As Integer?
     Public Property DefaultVatTypeId As Integer?
     Public Property IsActive As Boolean
+    ''' <summary>Verzamelbak voor leveranciers van contracten zonder eigen facturatiebedrijf (coördinatie/extern). Max één.</summary>
+    Public Property IsExternalCoordinationDefault As Boolean
 
     Public Property EInvoiceEnabled As Boolean
     Public Property PeppolParticipantId As String

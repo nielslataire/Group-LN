@@ -1303,6 +1303,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ContractSentDate).HasColumnType("date");
             entity.Property(e => e.ContractSentNote).HasMaxLength(200);
             entity.Property(e => e.GuaranteePercentage).HasColumnType("numeric(18, 0)");
+            entity.Property(e => e.GuaranteeDocFilename).HasMaxLength(260);
             entity.Property(e => e.PaymentTerm).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
             entity.Property(e => e.SiteManagerContactId).HasColumnName("SiteManagerContactID");
@@ -2033,6 +2034,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
             entity.Property(e => e.InvoiceSendEmail).HasMaxLength(200);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsExternalCoordinationDefault).HasDefaultValue(false);
             entity.Property(e => e.LegalName).HasMaxLength(200);
             entity.Property(e => e.LogoPath).HasMaxLength(400);
             entity.Property(e => e.Name)

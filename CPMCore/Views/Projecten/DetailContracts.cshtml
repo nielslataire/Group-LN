@@ -276,6 +276,9 @@
             const w = getColWidths();
 
             const rows = contracts.map(function (c) {
+                const guaranteeBadge = c.guaranteeDocMissing
+                    ? ' <i class="bx bx-alert-circle text-danger" style="font-size:18px;vertical-align:-.2em" title="Nog te ontvangen" role="img" aria-label="Bankwaarborg nog te ontvangen"></i>'
+                    : '';
                 const statusClass = c.signed ? 'completed' : 'failed';
                 const statusTitle = c.signed ? 'Contract getekend' : 'Contract niet getekend';
                 const statusDot   = `<span class="ecommerce-status ${statusClass}" title="${statusTitle}"></span>`;
@@ -308,7 +311,7 @@
                     <td style="width:${w[5]};text-align:right">${c.vat}</td>
                     <td style="width:${w[6]};text-align:right">${c.paymentTerm}</td>
                     <td style="width:${w[7]};text-align:right">${c.cashDiscount}</td>
-                    <td style="width:${w[8]};text-align:right">${c.guarantee}</td>
+                    <td style="width:${w[8]};text-align:right">${c.guarantee}${guaranteeBadge}</td>
                     <td style="width:${w[9]};text-align:center">${c.sent}</td>
                     <td style="width:${w[10]};text-align:center">${buildFollowUpIcons(c.signed, c.vgm, c.notification)}</td>
                     <td style="width:${w[11]}" class="actions">${editBtn}${deleteBtn}</td>

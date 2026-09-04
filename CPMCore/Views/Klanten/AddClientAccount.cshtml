@@ -319,6 +319,13 @@
 				}
 			}
 
+			// Telefoonmasker (verving de inline <script> in de Phone-editortemplate)
+			function applyPhoneMasks($scope) {
+				if (!$.fn.mask) return;
+				var $t = $scope ? $scope.find('.Phonemask') : $('.Phonemask');
+				$t.mask('999/99.99.99');
+			}
+
 			// ==============================
 			// Toggle bedrijfsgegevens
 			// ==============================
@@ -479,6 +486,7 @@
 					const $row = $(html);
 					$("#coOwnerRows").append($row);
 					applyCurrencyMasks($row.find('.Currencymask'));
+					applyPhoneMasks($row);
 				});
 				return false;
 			});
@@ -500,6 +508,7 @@
 			// Init bestaande masks
 			// ==============================
 			applyCurrencyMasks();
+			applyPhoneMasks();
 
 		});
 	</script>

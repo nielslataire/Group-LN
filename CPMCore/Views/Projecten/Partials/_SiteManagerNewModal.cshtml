@@ -1,0 +1,96 @@
+@*
+    Gedeelde "nieuwe werfleider"-modal + JS voor projecten/AddContract en projecten/EditContract.
+    Verwacht op de pagina: #txtCompanyID (hidden, leverancier-id), #txtCompanyDisplay (naam, optioneel),
+    #ddlSiteManager (de dropdown), #btnNewSiteManager (de "+"-knop) en een antiforgery-token in het formulier.
+    Zelfstandig: geen afhankelijkheid van pagina-specifieke JS.
+*@
+<div class="modal fade" id="modalNewSiteManager" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Nieuwe werfleider</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+			</div>
+			<div class="modal-body">
+				<p class="text-muted" id="nwmForLabel">Voor: </p>
+				<div id="nwmErrors" class="alert alert-danger d-none" role="alert"></div>
+				<div class="mb-3">
+					<label class="control-label mb-1" for="nwmName">Naam <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (verplicht)</span></label>
+					<input type="text" id="nwmName" class="form-control form-control-modern" placeholder="Voor- en achternaam…" required aria-required="true" autocomplete="name" />
+				</div>
+				<div class="mb-3">
+					<label class="control-label mb-1" for="nwmEmail">E-mailadres</label>
+					<input type="email" id="nwmEmail" class="form-control form-control-modern" placeholder="naam@@bedrijf.be" inputmode="email" spellcheck="false" autocomplete="email" />
+				</div>
+				<div class="mb-3">
+					<label class="control-label mb-1" for="nwmPhone">Telefoon</label>
+					<input type="tel" id="nwmPhone" class="form-control form-control-modern" placeholder="+32 …" inputmode="tel" autocomplete="tel" />
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
+				<button type="button" class="btn btn-primary" id="btnCreateSiteManager">Werfleider aanmaken &amp; selecteren</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	(function () {
+		function smToken() {
+			const el = document.querySelector('input[name="__RequestVerificationToken"]');
+			return el ? el.value : '';
+		}
+
+		$('#btnNewSiteManager').on('click', function () {
+			const companyId = $('#txtCompanyID').val();
+			if (!companyId || companyId === "0") return;
+			$('#nwmForLabel').text('Voor: ' + ($('#txtCompanyDisplay').val() || ''));
+			$('#nwmErrors').addClass('d-none').empty();
+			new bootstrap.Modal(document.getElementById('modalNewSiteManager')).show();
+		});
+
+		$('#btnCreateSiteManager').on('click', function () {
+			const companyId = $('#txtCompanyID').val();
+			const name = $('#nwmName').val();
+			const $errors = $('#nwmErrors').addClass('d-none').empty();
+
+			if (!name || !name.trim()) {
+				$errors.removeClass('d-none').text('Naam is verplicht.');
+				return;
+			}
+
+			const button = $(this);
+			button.prop('disabled', true);
+
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("AddCompanyContactQuick", "Projecten")',
+				data: {
+					companyId: companyId,
+					name: name,
+					email: $('#nwmEmail').val(),
+					phone: $('#nwmPhone').val(),
+					__RequestVerificationToken: smToken()
+				},
+				dataType: 'json'
+			}).done(function (data) {
+				if (!data || !data.success) {
+					$errors.removeClass('d-none').text((data && data.error) || 'De werfleider kon niet worden aangemaakt.');
+					return;
+				}
+
+				const $select = $('#ddlSiteManager');
+				$select.append(new Option(data.text, data.id, false, false));
+				$select.val(data.id);
+
+				bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNewSiteManager')).hide();
+				document.getElementById('modalNewSiteManager').querySelectorAll('input').forEach(i => i.value = '');
+			}).fail(function (xhr) {
+				$errors.removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.error) || 'De werfleider kon niet worden aangemaakt.');
+			}).always(function () {
+				button.prop('disabled', false);
+			});
+		});
+	})();
+</script>

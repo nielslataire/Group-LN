@@ -153,7 +153,7 @@
 	</div>
 </div>
 
-@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", id = "addContractForm" }))
+@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", id = "addContractForm", enctype = "multipart/form-data" }))
 {
 	@Html.AntiForgeryToken()
 	@if (!ViewData.ModelState.IsValid)
@@ -163,6 +163,7 @@
 		</div>
 	}
 
+	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
 	@Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
 	@Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
 	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
@@ -260,6 +261,13 @@
 								<label class="col-12 col-md-2 control-label text-md-end mb-0" for="Contract_GuaranteePercentage">@Html.DisplayNameFor(m => m.Contract.GuaranteePercentage)</label>
 								<div class="col-12 col-md-3">
 									@Html.EditorFor(m => m.Contract.GuaranteePercentage, new { id = "txtGuaranteePercentage", @class = "form-control form-control-modern", placeholder = "0,00" }).DisableIf(() => Model.Contract.GuaranteeType != ContractGuaranteeType.FinancialGuarantee)
+								</div>
+							</div>
+							<div class="row align-items-center pb-3" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
+								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="fileGuaranteeDoc">Waarborgdocument <span class="text-muted">(pdf/jpg)</span></label>
+								<div class="col-12 col-md-8">
+									<input type="file" name="guaranteeDoc" id="fileGuaranteeDoc" class="form-control form-control-modern" accept=".pdf,.jpg,.jpeg,image/jpeg,application/pdf" />
+									<small class="text-muted d-block mt-1">De bankwaarborg blijft als “nog te ontvangen” gemarkeerd zolang je hier geen document toevoegt.</small>
 								</div>
 							</div>
 							<div class="row pb-2 pt-3 mt-1 border-top">
@@ -470,37 +478,7 @@
 	</div>
 </div>
 
-<!-- Modal: nieuwe werfleider -->
-<div class="modal fade" id="modalNewSiteManager" tabindex="-1" aria-hidden="true">
-	<div class="modal-dialog">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title">Nieuwe werfleider</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<div class="modal-body">
-				<p class="text-muted" id="nwmForLabel">Voor: </p>
-				<div id="nwmErrors" class="alert alert-danger d-none" role="alert"></div>
-				<div class="mb-3">
-					<label class="control-label mb-1" for="nwmName">Naam <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (verplicht)</span></label>
-					<input type="text" id="nwmName" class="form-control form-control-modern" placeholder="Voor- en achternaam…" required aria-required="true" autocomplete="name" />
-				</div>
-				<div class="mb-3">
-					<label class="control-label mb-1" for="nwmEmail">E-mailadres</label>
-					<input type="email" id="nwmEmail" class="form-control form-control-modern" placeholder="naam@bedrijf.be" inputmode="email" spellcheck="false" autocomplete="email" />
-				</div>
-				<div class="mb-3">
-					<label class="control-label mb-1" for="nwmPhone">Telefoon</label>
-					<input type="tel" id="nwmPhone" class="form-control form-control-modern" placeholder="+32 …" inputmode="tel" autocomplete="tel" />
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
-				<button type="button" class="btn btn-primary" id="btnCreateSiteManager">Werfleider aanmaken &amp; selecteren</button>
-			</div>
-		</div>
-	</div>
-</div>
+@* Modal "nieuwe werfleider": zie Partials/_SiteManagerNewModal.cshtml, gerenderd onderaan de scriptsectie *@
 
 <!-- Modal: activiteit toevoegen -->
 <div class="modal fade" id="modalNewActivity" tabindex="-1" aria-hidden="true">
@@ -614,12 +592,15 @@
 			// GARANTIE TYPE
 			// ==============================
 			$('#lstGuaranteeType').on('change', function () {
-				if ($(this).val() == 2) {
+				var val = $(this).val();
+				if (val == 2) {
 					$("#Contract_GuaranteePercentage").removeAttr("disabled");
 				} else {
 					$("#Contract_GuaranteePercentage").attr("disabled", "disabled");
 				}
-			});
+				// Bankwaarborg (3): document-upload tonen
+				$('#guaranteeDocRow').toggle(val == 3);
+			}).trigger('change');
 
 			// ==============================
 			// KORTING CONTANT
@@ -1058,59 +1039,7 @@
 			});
 		});
 
-		// ==============================
-		// MODAL: NIEUWE WERFLEIDER
-		// ==============================
-		$('#btnNewSiteManager').on('click', function () {
-			const companyId = $('#txtCompanyID').val();
-			if (!companyId || companyId === "0") return;
-			$('#nwmForLabel').text('Voor: ' + $('#txtCompanyDisplay').val());
-			$('#nwmErrors').addClass('d-none').empty();
-			new bootstrap.Modal(document.getElementById('modalNewSiteManager')).show();
-		});
-
-		$('#btnCreateSiteManager').on('click', function () {
-			const companyId = $('#txtCompanyID').val();
-			const name = $('#nwmName').val();
-			const $errors = $('#nwmErrors').addClass('d-none').empty();
-
-			if (!name || !name.trim()) {
-				$errors.removeClass('d-none').text('Naam is verplicht.');
-				return;
-			}
-
-			const button = $(this);
-			button.prop('disabled', true);
-
-			$.ajax({
-				type: 'POST',
-				url: '@Url.Action("AddCompanyContactQuick", "Projecten")',
-				data: {
-					companyId: companyId,
-					name: name,
-					email: $('#nwmEmail').val(),
-					phone: $('#nwmPhone').val(),
-					__RequestVerificationToken: antiforgeryToken()
-				},
-				dataType: 'json'
-			}).done(function (data) {
-				if (!data || !data.success) {
-					$errors.removeClass('d-none').text((data && data.error) || 'De werfleider kon niet worden aangemaakt.');
-					return;
-				}
-
-				let $select = $('#ddlSiteManager');
-				$select.append(new Option(data.text, data.id, false, false));
-				$select.val(data.id);
-
-				bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNewSiteManager')).hide();
-				document.getElementById('modalNewSiteManager').querySelectorAll('input').forEach(i => i.value = '');
-			}).fail(function (xhr) {
-				$errors.removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.error) || 'De werfleider kon niet worden aangemaakt.');
-			}).always(function () {
-				button.prop('disabled', false);
-			});
-		});
+		// MODAL: NIEUWE WERFLEIDER → zie Partials/_SiteManagerNewModal.cshtml (onderaan deze sectie)
 
 		// ==============================
 		// MODAL: ACTIVITEIT TOEVOEGEN (bestaande activiteit uit de catalogus)
@@ -1140,4 +1069,5 @@
 		});
 	</script>
 
+	@await Html.PartialAsync("Partials/_SiteManagerNewModal")
 }

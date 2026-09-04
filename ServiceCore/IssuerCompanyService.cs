@@ -61,6 +61,7 @@ namespace ServiceCore
                     DefaultPaymentTermId = x.company.DefaultPaymentTermId,
                     DefaultVatTypeId = x.company.DefaultVatTypeId,
                     IsActive = x.company.IsActive,
+                    IsExternalCoordinationDefault = x.company.IsExternalCoordinationDefault,
                     CompanyLegalFormId = x.company.CompanyLegalFormId,
                     CompanyLegalFormName = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Name : null,
                     CompanyLegalFormAbbreviation = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Abbreviation : null,
@@ -103,6 +104,8 @@ namespace ServiceCore
         {
             var e = MapToEntity(bo, new IssuerCompany());
             _uow.IssuerCompanies.Add(e);
+            if (bo.IsExternalCoordinationDefault)
+                await ClearOtherExternalCoordinationDefaultsAsync(0, ct);
             await _uow.SaveChangesAsync(ct);
             return e.Id;
         }
@@ -111,7 +114,19 @@ namespace ServiceCore
         {
             var e = await _db.IssuerCompany.FirstAsync(x => x.Id == bo.Id, ct);
             MapToEntity(bo, e);
+            if (bo.IsExternalCoordinationDefault)
+                await ClearOtherExternalCoordinationDefaultsAsync(bo.Id, ct);
             await _uow.SaveChangesAsync(ct);
+        }
+
+        // Max één facturatiebedrijf mag als "externe standaard" gemarkeerd zijn.
+        private async Task ClearOtherExternalCoordinationDefaultsAsync(int keepId, CancellationToken ct)
+        {
+            var others = await _db.IssuerCompany
+                .Where(x => x.IsExternalCoordinationDefault && x.Id != keepId)
+                .ToListAsync(ct);
+            foreach (var o in others)
+                o.IsExternalCoordinationDefault = false;
         }
 
         public async Task DisableAsync(int id, CancellationToken ct = default)
@@ -195,9 +210,10 @@ namespace ServiceCore
         }
         public async Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default)
         {
+            // Een "externe coördinatie"-verzamelbedrijf mag niet factureren en dus niet kiesbaar zijn.
             return await _db.IssuerCompany
                 .AsNoTracking()
-                .Where(i => i.IsActive)
+                .Where(i => i.IsActive && !i.IsExternalCoordinationDefault)
                 .OrderBy(i => i.Name)
                 .Select(i => new IssuerListItemBO
                 {
@@ -213,7 +229,7 @@ namespace ServiceCore
         {
             return await _db.IssuerCompany
                 .AsNoTracking()
-                .Where(i => i.IsActive)
+                .Where(i => i.IsActive && !i.IsExternalCoordinationDefault)
                 .OrderBy(i => i.Name)
                 .Select(i => (int?)i.Id)
                 .FirstOrDefaultAsync(ct);
@@ -429,6 +445,7 @@ namespace ServiceCore
                 DefaultPaymentTermId = x.DefaultPaymentTermId,
                 DefaultVatTypeId = x.DefaultVatTypeId,
                 IsActive = x.IsActive,
+                IsExternalCoordinationDefault = x.IsExternalCoordinationDefault,
                 EInvoiceEnabled = x.EinvoiceEnabled,
                 PeppolParticipantId = x.PeppolParticipantId,
                 UblAttachPdf = x.UblAttachPdf,
@@ -493,6 +510,7 @@ namespace ServiceCore
             e.DefaultPaymentTermId = bo.DefaultPaymentTermId;
             e.DefaultVatTypeId = bo.DefaultVatTypeId;
             e.IsActive = bo.IsActive;
+            e.IsExternalCoordinationDefault = bo.IsExternalCoordinationDefault;
             e.EinvoiceEnabled = bo.EInvoiceEnabled;
             e.PeppolParticipantId = bo.PeppolParticipantId?.Trim();
             e.UblAttachPdf = bo.UblAttachPdf;

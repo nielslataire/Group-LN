@@ -671,7 +671,10 @@
       "Bash(tee /tmp/build_check.log)",
       "Bash(grep -rlniE \"navbar-brand|logo|group.{0,3}ln\" WWWCOPRO/Views)",
       "Bash(xargs -I{} sed -n '{},+40p' WWWCOPRO/Content/custom.css)",
-      "Bash(grep -iv \"// \")"
+      "Bash(grep -iv \"// \")",
+      "Bash(grep -n \"jquery-mask\\\\|jquery.mask\\\\|\\\\.mask\\(\\\\|Phonemask\\\\|Currencymask\\\\|CurrencyMask\\\\|initCoOwner\\\\|addCoOwner\\\\|coOwnerRow\\\\|coownerContainer\\\\|BlankCoOwnerRow\\\\|\\\\$\\(document\\).ready\\\\|\\\\$\\(function\" e:/TFS/CPMCore/Views/Klanten/AddClientAccount.cshtml)",
+      "Bash(awk 'NR>=1000 && NR<=1098 && /public .*\\(ActionResult|PartialViewResult|IActionResult\\)/' e:/TFS/CPMCore/Controllers/KlantenController.cs)",
+      "Bash(python -c ' *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",

@@ -56,16 +56,18 @@ catch (Exception ex)
 }
 
 var rootPath = Path.Combine(app.Environment.ContentRootPath, settings.RootPath);
-var picturesPath = Path.Combine(rootPath, AssetFolders.Pictures);
-var videosPath   = Path.Combine(rootPath, AssetFolders.Videos);
-var plansPath    = Path.Combine(rootPath, AssetFolders.Plans);
-var docsPath     = Path.Combine(rootPath, AssetFolders.Docs);
+var picturesPath  = Path.Combine(rootPath, AssetFolders.Pictures);
+var videosPath    = Path.Combine(rootPath, AssetFolders.Videos);
+var plansPath     = Path.Combine(rootPath, AssetFolders.Plans);
+var docsPath      = Path.Combine(rootPath, AssetFolders.Docs);
+var guaranteesPath = Path.Combine(rootPath, AssetFolders.Guarantees);
 
 Directory.CreateDirectory(rootPath);
 Directory.CreateDirectory(picturesPath);
 Directory.CreateDirectory(videosPath);
 Directory.CreateDirectory(plansPath);
 Directory.CreateDirectory(docsPath);
+Directory.CreateDirectory(guaranteesPath);
 
 app.UseExceptionHandler(handler =>
 {
@@ -136,7 +138,7 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
 
     if (!AssetFolders.IsValid(folder))
     {
-        return Results.BadRequest(new { error = "Invalid folder. Allowed values: pictures, pictures/447, pictures/800, videos, plans, docs." });
+        return Results.BadRequest(new { error = "Invalid folder. Allowed values: pictures, pictures/447, pictures/800, videos, plans, docs, guarantees." });
     }
 
     var file = form.Files["file"];
@@ -235,7 +237,7 @@ app.MapPost("/api/assets/{folder}/{fileName}/sign", (HttpRequest request, string
     folder = folder.Trim().ToLowerInvariant();
     if (!AssetFolders.IsPrivate(folder))
     {
-        return Results.BadRequest(new { error = "Signed URL is only available for plans and docs." });
+        return Results.BadRequest(new { error = "Signed URL is only available for plans, docs and guarantees." });
     }
 
     if (!IsSafeFileName(fileName))
@@ -778,14 +780,15 @@ static class AssetFolders
     public const string Videos = "videos";
     public const string Plans = "plans";
     public const string Docs = "docs";
+    public const string Guarantees = "guarantees";
 
     public static bool IsValid(string folder) =>
         folder is Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
             or PicturesBlog
-            or Videos or Plans or Docs;
+            or Videos or Plans or Docs or Guarantees;
 
-    public static bool IsPrivate(string folder) => folder is Plans or Docs;
+    public static bool IsPrivate(string folder) => folder is Plans or Docs or Guarantees;
     public static bool IsPictures(string folder) => folder.StartsWith("pictures", StringComparison.Ordinal);
     public static bool IsVideos(string folder) => folder == Videos;
     public static bool IsPublicMedia(string folder) => IsPictures(folder) || IsVideos(folder);

@@ -101,6 +101,34 @@ Public Class ContractBO
             _guaranteeprecentage = value
         End Set
     End Property
+    Private _guaranteeDocFilename As String
+    <Display(Name:="Waarborgdocument")>
+    Public Property GuaranteeDocFilename() As String
+        Get
+            Return _guaranteeDocFilename
+        End Get
+        Set(ByVal value As String)
+            _guaranteeDocFilename = value
+        End Set
+    End Property
+
+    Private _guaranteeDocUploadedAt As Date?
+    Public Property GuaranteeDocUploadedAt() As Date?
+        Get
+            Return _guaranteeDocUploadedAt
+        End Get
+        Set(ByVal value As Date?)
+            _guaranteeDocUploadedAt = value
+        End Set
+    End Property
+
+    ''' <summary>True wanneer de waarborg een bankwaarborg is maar het document nog niet toegevoegd is.</summary>
+    Public ReadOnly Property GuaranteeDocumentMissing() As Boolean
+        Get
+            Return _guaranteetype = ContractGuaranteeType.BankGuarantee AndAlso String.IsNullOrWhiteSpace(_guaranteeDocFilename)
+        End Get
+    End Property
+
     Private _contractsigned As Boolean
     <Display(Name:="Contract getekend")>
     Public Property ContractSigned() As Boolean

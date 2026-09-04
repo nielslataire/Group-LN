@@ -2121,6 +2121,7 @@ namespace ServiceCore
         public Response InsertUpdateProjectContract(ContractBO contractBo)
         {
             var response = new Response();
+            if (contractBo.ProjectId <= 0) response.AddError("Er is geen geldig project geselecteerd voor dit contract.");
             if (contractBo.Company.ID == 0) response.AddError("Bedrijf selecteren is verplicht");
             if (contractBo.Activities.Count == 0) response.AddError("Er is minstens één lot nodig");
             if (!response.Success) return response;

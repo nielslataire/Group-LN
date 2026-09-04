@@ -38,12 +38,14 @@
 		</div>
 	</div>
 </div>
-@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#", enctype = "multipart/form-data" }))
 {
+	@Html.AntiForgeryToken()
 	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
 	@Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
 	@Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
 	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
+	<input type="hidden" id="txtCompanyDisplay" value="@Model.Contract.Company.Display" />
 	<div class="row mt-2">
 		<div class="col">
 			<section class="card card-modern card-big-info">
@@ -89,9 +91,14 @@
 							</div>
 							<div class="form-group row align-items-center pb-3">
 								<div class="form-group row align-items-center pb-3">
-									<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.SiteManagerContactId)</label>
+									<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="ddlSiteManager">@Html.LabelFor(m => m.Contract.SiteManagerContactId)</label>
 									<div class="col-lg-8 col-xl-6">
-										@Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
+										<div class="input-group">
+											@Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
+											<button type="button" class="btn btn-outline-secondary" id="btnNewSiteManager" title="Nieuwe werfleider toevoegen" aria-label="Nieuwe werfleider toevoegen">
+												<i class="bx bx-user-plus" aria-hidden="true"></i>
+											</button>
+										</div>
 									</div>
 								</div>
 								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.VatPercentage)</label>
@@ -128,6 +135,28 @@
 								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.GuaranteePercentage)</label>
 								<div class="col-lg-3 col-xl-2">
 									@Html.EditorFor(m => m.Contract.GuaranteePercentage, new { id = "txtGuaranteePercentage", @class = "form-control form-control-modern", placeholder = "Aantal dagen" }).DisableIf(() => Model.Contract.GuaranteeType != ContractGuaranteeType.FinancialGuarantee)
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="fileGuaranteeDoc">Waarborgdocument <span class="text-muted">(pdf/jpg)</span></label>
+								<div class="col-lg-8 col-xl-6">
+									@if (!string.IsNullOrWhiteSpace(Model.Contract.GuaranteeDocFilename))
+									{
+										<div class="d-flex align-items-center gap-2 mb-2">
+											<a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id })" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bx bx-file" aria-hidden="true"></i> Bekijken</a>
+											<button type="submit" formnovalidate formaction="@Url.Action("RemoveGuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id, projectid = Model.ProjectId })" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash" aria-hidden="true"></i> Verwijderen</button>
+											@if (Model.Contract.GuaranteeDocUploadedAt.HasValue)
+											{
+												<span class="text-muted small">toegevoegd op @Model.Contract.GuaranteeDocUploadedAt.Value.ToString("dd/MM/yyyy")</span>
+											}
+										</div>
+									}
+									<input type="file" name="guaranteeDoc" id="fileGuaranteeDoc" class="form-control form-control-modern" accept=".pdf,.jpg,.jpeg,image/jpeg,application/pdf" />
+								</div>
+							</div>
+							<div class="form-group row pb-3" id="guaranteeDocWarningRow" style="@(Model.Contract.GuaranteeDocumentMissing ? "" : "display:none")">
+								<div class="col-lg-8 col-xl-6 offset-lg-4 offset-xl-3">
+									<div class="alert alert-warning mb-0 py-2"><i class="bx bx-error-circle me-1" aria-hidden="true"></i> De bankwaarborg is nog niet ontvangen &mdash; voeg het document toe (pdf of jpg).</div>
 								</div>
 							</div>
 							<div class="form-group row align-items-center pb-3">
@@ -285,12 +314,18 @@
 			// GARANTIE TYPE
 			// ==============================
 			$('#lstGuaranteeType').on('change', function () {
-				if ($(this).val() == 2) {
+				var val = $(this).val();
+				if (val == 2) {
 					$("#Contract_GuaranteePercentage").removeAttr("disabled");
 				} else {
 					$("#Contract_GuaranteePercentage").attr("disabled", "disabled");
 				}
-			});
+				// Bankwaarborg (3): document-upload tonen; waarschuwing enkel als er nog geen document is
+				var isBank = val == 3;
+				$('#guaranteeDocRow').toggle(isBank);
+				var hasDoc = $('#guaranteeDocRow').find('a[href*="GuaranteeDoc"]').length > 0;
+				$('#guaranteeDocWarningRow').toggle(isBank && !hasDoc);
+			}).trigger('change');
 
 			// ==============================
 			// KORTING CONTANT
@@ -390,4 +425,5 @@
 		});
 	</script>
 
+	@await Html.PartialAsync("Partials/_SiteManagerNewModal")
 }

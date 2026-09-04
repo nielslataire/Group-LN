@@ -39,6 +39,13 @@ public partial class IssuerCompany
 
     public bool IsActive { get; set; }
 
+    /// <summary>
+    /// Verzamelbak voor leveranciers van contracten waarvan de opdrachtgever geen eigen
+    /// facturatiebedrijf is (bv. coördinatiecontracten voor een externe bouwheer). Er zou er
+    /// maximaal één zo gemarkeerd mogen zijn.
+    /// </summary>
+    public bool IsExternalCoordinationDefault { get; set; }
+
     public int? LegacyCompanyInfoId { get; set; }
 
     public bool EinvoiceEnabled { get; set; }

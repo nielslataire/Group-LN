@@ -23,14 +23,14 @@ namespace ServiceCore
 
         public async Task<int> GetFirstActiveIssuerIdAsync(CancellationToken ct = default)
                => await _db.IssuerCompany.AsNoTracking()
-                     .Where(x => x.IsActive)
+                     .Where(x => x.IsActive && !x.IsExternalCoordinationDefault)
                      .OrderBy(x => x.Name)
                      .Select(x => x.Id)
                      .FirstOrDefaultAsync(ct);
 
         public async Task<IReadOnlyList<(int Id, string Name)>> ListActiveIssuersAsync(CancellationToken ct = default)
             => await _db.IssuerCompany.AsNoTracking()
-                  .Where(x => x.IsActive)
+                  .Where(x => x.IsActive && !x.IsExternalCoordinationDefault)
                   .OrderBy(x => x.Name)
                   .Select(x => new ValueTuple<int, string>(x.Id, x.Name))
                   .ToListAsync(ct);

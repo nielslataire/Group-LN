@@ -130,6 +130,21 @@
                                                         ? $"{contract.GuaranteePercentage?.ToString("N2")}% {contract.GuaranteeType.GetDisplayName()}"
                                                         : contract.GuaranteeType.GetDisplayName())
                                                 </div>
+                                                @if (contract.GuaranteeType == BOCore.ContractGuaranteeType.BankGuarantee)
+                                                {
+                                                    <div class="mt-1">
+                                                        @if (!string.IsNullOrWhiteSpace(contract.GuaranteeDocFilename))
+                                                        {
+                                                            <a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = contract.Id })" target="_blank" rel="noopener" class="small">
+                                                                <i class="bx bx-file" aria-hidden="true"></i> Waarborgdocument bekijken
+                                                            </a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning text-dark"><i class="bx bx-error-circle" aria-hidden="true"></i> waarborg nog te ontvangen</span>
+                                                        }
+                                                    </div>
+                                                }
                                             </div>
                                             <div class="col-6 mt-3">
                                                 <span class="fw-semibold fs-6">Contract verstuurd</span>

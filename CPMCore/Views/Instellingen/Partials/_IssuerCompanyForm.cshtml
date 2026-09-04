@@ -38,6 +38,18 @@
 
                             </div>
                         </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label class="col-lg-2 control-label text-lg-end pt-2" asp-for="IsExternalCoordinationDefault"></label>
+                            <div class="col-lg-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.IsExternalCoordinationDefault, new { data_plugin_ios_switch = "" })
+                                </div>
+                                <small class="form-text text-muted d-block mt-1">
+                                    Leveranciers van contracten waarvan de opdrachtgever geen eigen facturatiebedrijf is
+                                    (bv. coördinatie voor een externe bouwheer) worden onder dit bedrijf gezet. Er kan er maar één zo gemarkeerd zijn.
+                                </small>
+                            </div>
+                        </div>
                         <div class="form-group">
 						<div class="row align-items-center pb-3">
 							<label class="col-md-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Name)</label>

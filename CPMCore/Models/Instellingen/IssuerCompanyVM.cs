@@ -78,6 +78,8 @@ namespace CPMCore.Models.Instellingen
 
         [Display(Name = "Actief")]
         public bool IsActive { get; set; } = true;
+        [Display(Name = "Standaard voor externe / coördinatiecontracten")]
+        public bool IsExternalCoordinationDefault { get; set; }
         [Display(Name = "E-invoicing actief")]
         public bool EInvoiceEnabled { get; set; }
         [Display(Name = "Peppol Participant ID")]
