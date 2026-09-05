@@ -18,6 +18,15 @@
     var werfProjects        = (activeProjects.Any() ? activeProjects : myProjects).Union(pinnedInMyProjects).ToList();
     var myProjectIds       = myProjects.Select(p => p.Id).ToHashSet();
 
+    // Handmatige volgorde (Rangschikken) toepassen; projecten zonder opgeslagen
+    // positie (bv. net toegewezen/vastgezet) sluiten stabiel aan achteraan.
+    if (Model.ProjectSortOrder.Any())
+    {
+        werfProjects = werfProjects
+            .OrderBy(p => Model.ProjectSortOrder.TryGetValue(p.Id, out var pos) ? pos : int.MaxValue)
+            .ToList();
+    }
+
     // KPI: werven waarvan de opleverdatum voorbij is maar die nog niet als
     // "Opgeleverd" geregistreerd staan.
     var overdueCount = nietOpgeleverd.Count(p =>
@@ -266,6 +275,13 @@
             <button type="button" class="gl-mw-add-btn" id="mw-add-project" aria-label="Project vastzetten" title="Project vastzetten">
                 <i class="bx bx-plus"></i>
             </button>
+            @if (werfProjects.Count > 1)
+            {
+                <button type="button" class="gl-arrange-toggle" id="mw-arrange-toggle" aria-pressed="false">
+                    <i class="bx bx-sort-alt-2"></i>
+                    <span>Rangschikken</span>
+                </button>
+            }
         </div>
 
         @if (!werfProjects.Any())
@@ -274,7 +290,7 @@
         }
         else
         {
-            <div class="row mb-3">
+            <div class="row mb-3" id="mw-werf-grid">
                 @foreach (var project in werfProjects)
                 {
                     int? daysLeft  = null;
@@ -329,7 +345,18 @@
                         : string.Empty;
                     var isPinned = Model.PinnedProjectIds.Contains(project.Id);
 
-                    <div class="col-12 col-sm-6 col-lg-4 col-xxl-3 mb-4 gl-werf-col">
+                    <div class="col-12 col-sm-6 col-lg-4 col-xxl-3 mb-4 gl-werf-col" data-project-id="@project.Id">
+                        <div class="gl-arrange-bar d-none">
+                            <button type="button" class="gl-arrange-btn gl-arrange-up" aria-label="@(project.Name) naar boven verplaatsen" title="Naar boven">
+                                <i class="bx bx-chevron-up"></i>
+                            </button>
+                            <span class="gl-drag-grip" aria-hidden="true" title="Sleep om te verplaatsen">
+                                <i class="bx bx-grid-vertical"></i> Sleep
+                            </span>
+                            <button type="button" class="gl-arrange-btn gl-arrange-down" aria-label="@(project.Name) naar onder verplaatsen" title="Naar onder">
+                                <i class="bx bx-chevron-down"></i>
+                            </button>
+                        </div>
                         @if (isPinned)
                         {
                             <button type="button" class="gl-pin-toggle" data-project-id="@project.Id" aria-label="Losmaken: @project.Name" title="Vastgezet — klik om los te maken">
@@ -422,7 +449,7 @@
     <!-- /MIJN WERVEN -->
 
     <!-- SNELACTIES: 1/4 -->
-    <div class="col-lg-3 col-xxl-2 d-none d-lg-block">
+    <div class="col-lg-3 col-xxl-2 d-none d-md-block">
         <section class="card card-modern" id="gl-snelacties-card">
             <header class="card-header">
                 <div class="card-title">
@@ -604,7 +631,7 @@
 </div>
 
 <!-- ── MOBIELE BOTTOM NAV ───────────────────────────────────────────── -->
-<nav class="gl-mob-nav d-lg-none" aria-label="Snelle acties">
+<nav class="gl-mob-nav d-md-none" aria-label="Snelle acties">
     <button class="gl-mob-nav-btn" id="mob-nav-punt" type="button" aria-label="Punt toevoegen">
         <i class="bx bx-alert-circle"></i>
         <span>Punt</span>
@@ -1087,6 +1114,103 @@ window.addEventListener('load', function () {
                 $btn.prop('disabled', false);
                 gl_announce('Losmaken mislukt. Probeer het opnieuw.');
             });
+    });
+
+    // ── Rangschikken: "Mijn Werven" handmatig herordenen ───────────────
+    // Sleep (jQuery UI sortable, al site-breed geladen incl. touch-punch
+    // voor tablet) of gebruik de pijltjes; opslaan gebeurt pas bij "Klaar",
+    // niet bij elke stap, zodat een half-gemaakte volgorde nooit blijft hangen.
+    var $arrangeToggle = $('#mw-arrange-toggle');
+    var $werfGrid      = $('#mw-werf-grid');
+    var $werfSection   = $('.gl-werven-section');
+    var arranging      = false;
+
+    if ($werfGrid.length && $.fn.sortable) {
+        $werfGrid.sortable({
+            items: '> .gl-werf-col',
+            handle: '.gl-drag-grip',
+            tolerance: 'pointer',
+            delay: 100,
+            cursor: 'grabbing',
+            disabled: true,
+            // Een kloon i.p.v. de originele kolom zelf laten slepen: de kolom
+            // zit qua breedte vast aan Bootstrap's percentages en aan de
+            // sticky/relative voorouders in dit dashboard, waardoor "origineel"
+            // als sleep-helper zichtbaar nergens beweegt. De kloon krijgt een
+            // vaste px-breedte en hangt aan <body>, dus sleept altijd zichtbaar
+            // mee, bovenop topbar/sidebar/sticky meldingen-kolom.
+            helper: function (e, $item) {
+                return $item.clone().width($item.outerWidth());
+            },
+            appendTo: 'body',
+            placeholder: 'gl-werf-col gl-werf-placeholder',
+            forcePlaceholderSize: true,
+            start: function (e, ui) {
+                // Bootstrap-kolomklassen (col-12 col-sm-6 ...) overnemen zodat
+                // de placeholder exact de breedte van de gesleepte kaart inneemt.
+                ui.placeholder.attr('class', ui.item.attr('class').replace('ui-sortable-helper', '') + ' gl-werf-placeholder');
+            }
+        });
+    }
+
+    function moveWerfCard($col, direction) {
+        if (direction < 0) {
+            var $prev = $col.prev('.gl-werf-col');
+            if ($prev.length) $col.insertBefore($prev);
+        } else {
+            var $next = $col.next('.gl-werf-col');
+            if ($next.length) $col.insertAfter($next);
+        }
+    }
+
+    function enterArrangeMode() {
+        arranging = true;
+        $werfSection.addClass('gl-arranging');
+        $werfGrid.find('.gl-arrange-bar').removeClass('d-none');
+        if ($.fn.sortable) $werfGrid.sortable('option', 'disabled', false);
+        $arrangeToggle.attr('aria-pressed', 'true');
+        $arrangeToggle.find('span').text('Klaar');
+        $arrangeToggle.find('i').attr('class', 'bx bx-check');
+        gl_announce('Rangschikken actief. Sleep een werf aan de greep of gebruik de pijltjes om de volgorde aan te passen.');
+    }
+
+    function exitArrangeMode(save) {
+        arranging = false;
+        $werfSection.removeClass('gl-arranging');
+        $werfGrid.find('.gl-arrange-bar').addClass('d-none');
+        if ($.fn.sortable) $werfGrid.sortable('option', 'disabled', true);
+        $arrangeToggle.attr('aria-pressed', 'false');
+        $arrangeToggle.find('span').text('Rangschikken');
+        $arrangeToggle.find('i').attr('class', 'bx bx-sort-alt-2');
+
+        if (!save) return;
+
+        var projectIds = $werfGrid.find('> .gl-werf-col').map(function () {
+            return $(this).data('project-id');
+        }).get();
+
+        $.ajax({
+            url: '@Url.Action("ReorderProjects", "Home")',
+            method: 'POST',
+            data: { projectIds: projectIds },
+            traditional: true,
+            headers: { 'RequestVerificationToken': antiForgery }
+        })
+            .done(function (res) {
+                gl_announce((res && res.success) ? 'Volgorde opgeslagen.' : ((res && res.message) || 'Opslaan van volgorde mislukt.'));
+            })
+            .fail(function () {
+                gl_announce('Opslaan van volgorde mislukt. Probeer het opnieuw.');
+            });
+    }
+
+    $arrangeToggle.on('click', function () {
+        if (arranging) { exitArrangeMode(true); } else { enterArrangeMode(); }
+    });
+
+    $(document).on('click', '.gl-arrange-up, .gl-arrange-down', function () {
+        var $btn = $(this);
+        moveWerfCard($btn.closest('.gl-werf-col'), $btn.hasClass('gl-arrange-up') ? -1 : 1);
     });
 
 });

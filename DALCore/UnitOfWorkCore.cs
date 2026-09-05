@@ -117,6 +117,7 @@ namespace DALCore
         public GenericRepository<UserEmailSignature>  UserEmailSignatures  { get; }
         public GenericRepository<EmailSendLog>        EmailSendLogs        { get; }
         public GenericRepository<UserPinnedProject>   PinnedProjects       { get; }
+        public GenericRepository<UserProjectSortOrder> ProjectSortOrders   { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -233,6 +234,7 @@ namespace DALCore
             UserEmailSignatures       = new GenericRepository<UserEmailSignature>(_context);
             EmailSendLogs             = new GenericRepository<EmailSendLog>(_context);
             PinnedProjects            = new GenericRepository<UserPinnedProject>(_context);
+            ProjectSortOrders         = new GenericRepository<UserProjectSortOrder>(_context);
         }
 
         // Eenduidige save-methodes

@@ -397,6 +397,32 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
 - **Mobile (≤767px):** whole bar becomes 60px solid Deep Forest Green; only
   hamburger, centred title, avatar.
 
+### Paginakop (`gl-page-header`)
+- **What it replaces:** the ad-hoc title/subtitle/back-button/actions block that
+  had drifted into 30+ near-duplicate variants across content pages
+  (`font-weight-bold` vs `fw-bold`, `mb-4 mt-0` vs `mb-0`, `btn-group` vs
+  `d-flex gap-2`, inconsistent row-wrapper classes). This is the single
+  successor pattern; new content pages use it instead of reinventing the row.
+- **Structure:** one flex row (`gl-page-header`, `justify-content: space-between`,
+  wraps below 576px) with two zones — `gl-page-header__left` (back button +
+  title + subtitle, rendered by the shared partial `Views/Shared/_PageHeader.cshtml`
+  with `Models.PageHeaderModel { Title, Subtitle?, BackUrl?, BackAriaLabel? }`)
+  and `gl-page-header__actions` (page-specific buttons, authored directly by the
+  calling page — action content varies too much across pages to generalize
+  further; only its position and inter-button gap are standardized).
+- **Back button:** 40×40px icon button (`gl-page-header__back`, The Field-Width
+  Rule), `bx-chevron-left` at 1.5rem, Muted by default, Mist-Green background +
+  Deep Forest Green icon on hover/focus — same interaction language as the
+  dashboard icon buttons.
+- **Title / subtitle:** plain `<h1>`/`<h5>`, font-size intentionally left to the
+  theme's base heading styles (unchanged); `gl-page-header` only standardizes
+  spacing (4px between title and subtitle) and the row's own bottom margin (24px).
+- **Usage:** `CPMCore/Views/Projecten/AddContract.cshtml` (back + title +
+  subtitle, no actions) and `CPMCore/Views/Projecten/DetailContracts.cshtml`
+  (title + subtitle + actions, no back) are the first two migrated pages. The
+  ~28 other pages carrying the old ad-hoc pattern are not yet migrated —
+  do so opportunistically when touching those views, not as a bulk sweep.
+
 ### Badges
 - Solid fills mapped to tokens: `bg-primary` → Deep Forest Green,
   `bg-secondary` → Sage, `bg-info` → Taupe Grey, `bg-accent` → Timber, plus

@@ -1,0 +1,231 @@
+@model CPMCore.Models.Home.HomeModel
+
+@{
+    var summary    = Model.OutgoingInvoiceSummary;
+    var invCulture = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    var hasOverdue = summary != null && summary.TopOverdue.Any();
+    var hasAction  = Model.IncomingInvoiceAttention.Any();
+    var hasWarn    = Model.IncomingInvoiceWarningCount > 0;
+}
+
+<!-- ── KPI STRIP ──────────────────────────────────────────── -->
+<div class="row gl-kpi-strip mb-2">
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Uitgaande facturen met een openstaand saldo">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-receipt"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Openstaand</h4>
+                            <div class="info">
+                                <strong class="amount">@(summary?.OutstandingCount ?? 0)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-danger h-100 mb-0" title="Uitgaande facturen waarvan de vervaldatum voorbij is">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-danger">
+                            <i class="bx bx-timer"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Vervallen</h4>
+                            <div class="info">
+                                <strong class="amount gl-kpi-amount-danger">@(summary?.OverdueCount ?? 0)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-warning h-100 mb-0" title="Inkomende facturen die nog verwerkt moeten worden">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-warning">
+                            <i class="bx bx-task"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Te verwerken</h4>
+                            <div class="info">
+                                <strong class="amount gl-kpi-amount-warning">@Model.IncomingInvoiceActionCount</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Inkomende facturen met onopgeloste waarschuwingen">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-info-circle"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Waarschuwingen</h4>
+                            <div class="info">
+                                <strong class="amount">@Model.IncomingInvoiceWarningCount</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+<div class="row pt-3 gl-dashboard">
+
+    <!-- AANDACHTSPANEEL: 2/3 -->
+    <div class="col-lg-8">
+        <section class="card card-modern gl-mc-card">
+            <header class="card-header">
+                <div class="card-title">
+                    <i class="bx bx-bell text-primary"></i>
+                    Aandacht vereist
+                </div>
+            </header>
+            <div class="card-body p-0 gl-mc-body gl-mc-body-static">
+
+                @if (hasOverdue)
+                {
+                    <div class="gl-mc-group gl-mc-urgent">
+                        <div class="gl-mc-group-hdr" title="Uitgaande facturen waarvan de vervaldatum voorbij is">
+                            <i class="bx bx-alert-circle"></i> VERVALLEN
+                            <span class="gl-mc-cnt">@summary!.OverdueCount</span>
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @foreach (var line in summary.TopOverdue)
+                            {
+                                <div class="gl-mc-item gl-mc-item-urgent">
+                                    <i class="bx bx-receipt gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">
+                                        <strong>@line.ClientName</strong> — €@line.Balance.ToString("N2", invCulture)
+                                        <span class="text-muted"> · @line.DaysOverdue d over tijd@(line.ProjectName != null ? " · " + line.ProjectName : "")</span>
+                                    </span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@Url.Action("Detail", "Invoices", new { id = line.InvoiceId })" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (hasAction)
+                {
+                    <div class="gl-mc-group gl-mc-normal">
+                        <div class="gl-mc-group-hdr" title="Inkomende facturen die nog verwerkt moeten worden">
+                            <i class="bx bx-clock"></i> TE VERWERKEN
+                            <span class="gl-mc-cnt">@Model.IncomingInvoiceActionCount</span>
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @foreach (var inv in Model.IncomingInvoiceAttention)
+                            {
+                                <div class="gl-mc-item gl-mc-item-normal">
+                                    <i class="bx bx-task gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">
+                                        <strong>@inv.SupplierName</strong> — €@inv.TotalAmountInclVat.ToString("N2", invCulture)
+                                        <span class="text-muted"> · @inv.StatusLabel</span>
+                                    </span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@Url.Action("Index", "DocumentenCentrum", new { statusId = inv.StatusId })" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (hasWarn)
+                {
+                    <div class="gl-mc-group gl-mc-info">
+                        <a href="@Url.Action("Index", "DocumentenCentrum", new { hasWarnings = true })" class="gl-mc-group-hdr text-decoration-none" title="Inkomende facturen met onopgeloste waarschuwingen">
+                            <i class="bx bx-info-circle"></i> WAARSCHUWINGEN
+                            <span class="gl-mc-cnt">@Model.IncomingInvoiceWarningCount</span>
+                            <i class="bx bx-chevron-right ms-auto"></i>
+                        </a>
+                    </div>
+                }
+
+                @if (!hasOverdue && !hasAction && !hasWarn)
+                {
+                    <div class="gl-mc-empty">
+                        <i class="bx bx-check-circle"></i>
+                        <span>Niets dat aandacht vraagt</span>
+                    </div>
+                }
+
+            </div>
+        </section>
+    </div>
+    <!-- /AANDACHTSPANEEL -->
+
+    <!-- SNELACTIES: 1/3 -->
+    <div class="col-lg-4">
+        <section class="card card-modern" id="gl-snelacties-card">
+            <header class="card-header">
+                <div class="card-title">
+                    <i class="bx bx-bolt text-primary"></i>
+                    Snelacties
+                </div>
+            </header>
+            <div class="card-body p-0 pb-3">
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Create", "Invoices")" class="gl-snelactie-direct">
+                        <i class="bx bx-receipt"></i>
+                        Nieuwe factuur opmaken
+                    </a>
+                </div>
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "DocumentenCentrum")" class="gl-snelactie-direct">
+                        <i class="bx bx-arrow-in-up-square-half"></i>
+                        Inkomende facturen verwerken
+                    </a>
+                </div>
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "Klanten")" class="gl-snelactie-direct">
+                        <i class="bx bx-search"></i>
+                        Klanten zoeken
+                    </a>
+                </div>
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "Leveranciers")" class="gl-snelactie-direct">
+                        <i class="bx bx-search"></i>
+                        Leveranciers zoeken
+                    </a>
+                </div>
+
+            </div>
+        </section>
+    </div>
+    <!-- /SNELACTIES -->
+
+</div>

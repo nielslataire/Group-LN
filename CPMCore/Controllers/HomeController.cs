@@ -22,9 +22,22 @@ public class HomeController : BaseController
     private readonly IInsuranceService _insuranceService;
     private readonly IProjectVoortgangService _voortgangService;
     private readonly IConstructionIssueService _issueService;
+    private readonly IInvoiceQueryService _invoiceQueryService;
+    private readonly IIncomingInvoiceService _incomingInvoiceService;
+    private readonly IIssuerCompanyService _issuerCompanyService;
     private readonly cpmRunningContext _db;
 
-    public HomeController(ILogger<HomeController> logger, IProjectService projectService, IClientService clientService, IInsuranceService insuranceService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, cpmRunningContext db)
+    public HomeController(
+        ILogger<HomeController> logger,
+        IProjectService projectService,
+        IClientService clientService,
+        IInsuranceService insuranceService,
+        IProjectVoortgangService voortgangService,
+        IConstructionIssueService issueService,
+        IInvoiceQueryService invoiceQueryService,
+        IIncomingInvoiceService incomingInvoiceService,
+        IIssuerCompanyService issuerCompanyService,
+        cpmRunningContext db)
     {
         _logger = logger;
         _projectService = projectService;
@@ -32,6 +45,9 @@ public class HomeController : BaseController
         _insuranceService = insuranceService;
         _voortgangService = voortgangService;
         _issueService = issueService;
+        _invoiceQueryService = invoiceQueryService;
+        _incomingInvoiceService = incomingInvoiceService;
+        _issuerCompanyService = issuerCompanyService;
         _db = db;
     }
 
@@ -56,8 +72,16 @@ public class HomeController : BaseController
 
         if (model.DashboardType == Models.DashboardType.Projectleider)
             ViewData["CoachmarkPageKey"] = "Home.Dashboard.Projectleider";
+        else if (model.DashboardType == Models.DashboardType.CeoCfo)
+            ViewData["CoachmarkPageKey"] = "Home.Dashboard.CeoCfo";
+        else if (model.DashboardType == Models.DashboardType.Boekhouding)
+            ViewData["CoachmarkPageKey"] = "Home.Dashboard.Boekhouding";
 
-        var response = _projectService.GetProjectsForList(0, 0, currentUserCode);
+        // CeoCfo is portfolio-oversight, niet persoonlijk toegewezen: alle actieve
+        // projecten over alle bedrijven heen, geen filter op de ingelogde gebruiker.
+        var response = model.DashboardType == Models.DashboardType.CeoCfo
+            ? _projectService.GetProjectsForList(0, 0)
+            : _projectService.GetProjectsForList(0, 0, currentUserCode);
         if (response.Success)
         {
             var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
@@ -83,6 +107,8 @@ public class HomeController : BaseController
                 if (pinnedResponse.Success)
                     model.Projects.AddRange(pinnedResponse.Values);
             }
+
+            model.ProjectSortOrder = _projectService.GetProjectOrder(userId.Value);
         }
 
         var response2 = _clientService.GetClientAccountsByDateDeedofSale();
@@ -124,8 +150,10 @@ public class HomeController : BaseController
                 model.ProjectInfo = iresponse.Values;
         }
 
-        // Voortgang voor projectleider-dashboard
-        if (model.DashboardType == Models.DashboardType.Projectleider && model.Projects.Count > 0)
+        // Voortgang voor projectleider- en CeoCfo-dashboard (werf-kaarten met
+        // dezelfde fysieke/financiële voortgangsbalken op beide schermen).
+        if ((model.DashboardType == Models.DashboardType.Projectleider || model.DashboardType == Models.DashboardType.CeoCfo)
+            && model.Projects.Count > 0)
         {
             var projectIds = model.Projects.Select(p => p.Id);
             model.ProjectVoortgang = _voortgangService.GetForProjects(projectIds);
@@ -143,6 +171,51 @@ public class HomeController : BaseController
         {
             var projectIds = model.Projects.Select(p => p.Id);
             model.OpenIssuesCount = await _issueService.CountOpen(projectIds);
+        }
+
+        // Facturatie-overzicht — Boekhouding en CeoCfo delen dezelfde cijfers
+        // (org-breed, geen filter op bedrijf: beide rollen overzien alles).
+        if (model.DashboardType == Models.DashboardType.Boekhouding || model.DashboardType == Models.DashboardType.CeoCfo)
+        {
+            model.OutgoingInvoiceSummary = await _invoiceQueryService.GetDashboardSummaryAsync();
+
+            // "Actie nodig" = som van de statussen die IncomingInvoiceStatus.RequiresUserAction
+            // als actie-vereist beschouwt. GetPagedAsync filtert maar op één status per call,
+            // dus vier kleine, goedkope paged calls (TotalCount draagt de kost, niet de items).
+            var actionStatuses = new[]
+            {
+                IncomingInvoiceStatus.New,
+                IncomingInvoiceStatus.Enriched,
+                IncomingInvoiceStatus.NeedsReview,
+                IncomingInvoiceStatus.PendingApproval
+            };
+
+            var actionCount = 0;
+            var attention = new List<IncomingInvoiceListItemVm>();
+            foreach (var statusId in actionStatuses)
+            {
+                var paged = await _incomingInvoiceService.GetPagedAsync(
+                    new IncomingInvoiceFilterVm { StatusId = statusId, PageSize = 5 });
+                actionCount += paged.TotalCount;
+                attention.AddRange(paged.Items);
+            }
+
+            model.IncomingInvoiceActionCount = actionCount;
+            model.IncomingInvoiceAttention = attention
+                .OrderBy(i => i.DueDate ?? DateOnly.MaxValue)
+                .Take(5)
+                .ToList();
+
+            var warningsPage = await _incomingInvoiceService.GetPagedAsync(
+                new IncomingInvoiceFilterVm { HasWarnings = true, PageSize = 1 });
+            model.IncomingInvoiceWarningCount = warningsPage.TotalCount;
+        }
+
+        // CeoCfo: bedrijfsnamen voor de badge op elke kaart in de multi-company werven-grid.
+        if (model.DashboardType == Models.DashboardType.CeoCfo)
+        {
+            var issuers = await _issuerCompanyService.GetAllAsync();
+            model.IssuerCompanyNames = issuers.ToDictionary(i => i.Id, i => i.Name);
         }
 
         return View(model);
@@ -169,6 +242,18 @@ public class HomeController : BaseController
             return Json(new { success = false, error = "Niet aangemeld." });
 
         var response = _projectService.UnpinProject(userId.Value, projectId);
+        return Json(new { success = response.Success, message = response.Messages.LastOrDefault()?.Message });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ReorderProjects(List<int> projectIds)
+    {
+        var userId = User.GetCpmUserId();
+        if (!userId.HasValue)
+            return Json(new { success = false, error = "Niet aangemeld." });
+
+        var response = _projectService.SetProjectOrder(userId.Value, projectIds ?? new List<int>());
         return Json(new { success = response.Success, message = response.Messages.LastOrDefault()?.Message });
     }
 

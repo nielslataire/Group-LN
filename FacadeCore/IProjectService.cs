@@ -18,6 +18,10 @@ namespace FacadeCore
         HashSet<int> GetPinnedProjectIds(int userId);
         Response PinProject(int userId, int projectId);
         Response UnpinProject(int userId, int projectId);
+
+        // Handmatige volgorde van "Mijn Werven" op het projectleider-dashboard
+        Dictionary<int, int> GetProjectOrder(int userId);
+        Response SetProjectOrder(int userId, List<int> orderedProjectIds);
         string GetProjectNameById(int id);
         string GetProjectCityById(int id);
         string GetProjectSlugById(int id);

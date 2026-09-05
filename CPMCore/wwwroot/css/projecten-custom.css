@@ -51,6 +51,30 @@
 }
 
 /* ----------------------------------------------------------
+   Contract-status kleuren via DESIGN.md-tokens i.p.v. de theme-defaults
+   (stock groen #5fbe5f / rood #ce4545). ".canceled" (geen contract) had
+   geen match in theme.css — dat kent enkel ".cancelled" (dubbele l) — dus
+   die statusdot was tot nu toe onzichtbaar; nu expliciet gedekt met een
+   neutrale kleur (geen contract is geen ernst-signaal).
+   ---------------------------------------------------------- */
+.ecommerce-status.completed:before { background-color: var(--primary); }
+.ecommerce-status.failed:before { background-color: var(--danger); }
+.ecommerce-status.canceled:before { background-color: var(--muted); }
+
+/* Opvolg-icoontjes (getekend/VGM/werfmelding) en de "waarborg ontbreekt"
+   badge op de contractenlijst: vervangt text-success/text-danger (stock
+   Bootstrap-kleuren) door de forest-green/rust tokens. */
+.gl-follow-on { color: var(--primary); }
+.gl-danger-icon { color: var(--danger); }
+
+/* Contractenlijst: labeled expand-knop (i.p.v. een ongelabeld chevron-icoon) —
+   .btn-link's standaard linkkleur overschrijven zodat het geen stock blauw wordt. */
+.supplier-toggle:hover,
+.supplier-toggle:focus-visible {
+    color: var(--primary) !important;
+}
+
+/* ----------------------------------------------------------
    DataTable – colvis chevron (gedeeld door meerdere views)
    ---------------------------------------------------------- */
 div.dt-buttons .btn.buttons-colvis::after {

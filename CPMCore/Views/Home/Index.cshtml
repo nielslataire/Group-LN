@@ -3,10 +3,18 @@
 @model CPMCore.Models.Home.HomeModel
 
 
+@{
+    var isRoleDashboard = Model.DashboardType is CPMCore.Models.DashboardType.Projectleider
+        or CPMCore.Models.DashboardType.CeoCfo
+        or CPMCore.Models.DashboardType.Boekhouding;
+}
+
 @section PageStyle
 {
-@if (Model.DashboardType == CPMCore.Models.DashboardType.Projectleider)
+@if (isRoleDashboard)
 {
+    @* Gedeelde componentbibliotheek voor alle rol-dashboards: KPI-strip,
+       urgentie-gegroepeerd meldingencentrum, sectiekop, werf-kaart-grid. *@
     <link rel="stylesheet" href="~/css/dashboard-projectleider.css" asp-append-version="true" />
 }
 else
@@ -17,7 +25,7 @@ else
 
 @section PageScripts
 {
-@if (Model.DashboardType != CPMCore.Models.DashboardType.Projectleider)
+@if (!isRoleDashboard)
 {
     <script src="~/lib/isotope/isotope.js" asp-append-version="true"></script>
     <script>
@@ -50,6 +58,14 @@ else
 @if (Model.DashboardType == CPMCore.Models.DashboardType.Projectleider)
 {
     await Html.RenderPartialAsync("_DashboardProjectleider", Model);
+}
+else if (Model.DashboardType == CPMCore.Models.DashboardType.CeoCfo)
+{
+    await Html.RenderPartialAsync("_DashboardCeoCfo", Model);
+}
+else if (Model.DashboardType == CPMCore.Models.DashboardType.Boekhouding)
+{
+    await Html.RenderPartialAsync("_DashboardBoekhouding", Model);
 }
 else
 {

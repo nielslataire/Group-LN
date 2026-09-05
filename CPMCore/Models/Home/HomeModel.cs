@@ -1,4 +1,5 @@
 ﻿using BOCore;
+using FacadeCore;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 
@@ -101,6 +102,28 @@ namespace CPMCore.Models.Home
 
         /// <summary>Voortgang per project-id, geladen voor het projectleider-dashboard.</summary>
         public Dictionary<int, ProjectVoortgangBO> ProjectVoortgang { get; set; } = new();
+
+        /// <summary>
+        /// Handmatige volgorde (project-id -> 0-gebaseerde positie) die de gebruiker heeft
+        /// ingesteld voor "Mijn Werven" via de Rangschikken-modus. Projecten die hier niet
+        /// in voorkomen zijn nooit expliciet gesorteerd en sluiten aan achteraan.
+        /// </summary>
+        public Dictionary<int, int> ProjectSortOrder { get; set; } = new();
+
+        // ── Boekhouding & CeoCfo: uitgaande facturen (openstaand/vervallen) ────
+        public InvoiceDashboardSummaryBO OutgoingInvoiceSummary { get; set; }
+
+        /// <summary>Aantal inkomende facturen die actie vragen (nieuw/verrijkt/te keuren/vraagt aandacht).</summary>
+        public int IncomingInvoiceActionCount { get; set; }
+
+        /// <summary>Kleine steekproef van de dringendste inkomende facturen, voor de aandachtspaneel.</summary>
+        public List<IncomingInvoiceListItemVm> IncomingInvoiceAttention { get; set; } = new();
+
+        /// <summary>Inkomende facturen met onopgeloste documentwaarschuwingen.</summary>
+        public int IncomingInvoiceWarningCount { get; set; }
+
+        // ── CeoCfo: bedrijfsnamen (IssuerCompanyId → naam) voor de multi-company werven-grid ──
+        public Dictionary<int, string> IssuerCompanyNames { get; set; } = new();
 
         private List<ProjectStatusBO> _statuses;
         public List<ProjectStatusBO> Statuses

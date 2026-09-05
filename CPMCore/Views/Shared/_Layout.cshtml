@@ -165,6 +165,14 @@
 		}
 	</script>
 
+	<!-- jquery-ui.css/theme.css hierboven verwachten ook de widget-JS (o.a.
+	     .sortable() voor het projectleider-dashboard); vroeg geladen, vóór
+	     bootstrap.bundle.min.js en bootstrap-datepicker.min.js, zodat die twee
+	     hun eigen .tooltip()/.button()/.datepicker() nadien terugclaimen i.p.v.
+	     dat jQuery UI's gelijknamige widgets blijven staan. -->
+	<script src="~/lib/jquery-ui/jquery-ui.js"></script>
+	<script src="~/lib/jqueryui-touch-punch/jquery.ui.touch-punch.js"></script>
+
 	<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 	<script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.min.js"></script>
 	<script src="~/lib/bootstrap-datepicker/locales/bootstrap-datepicker.nl-BE.min.js"></script>

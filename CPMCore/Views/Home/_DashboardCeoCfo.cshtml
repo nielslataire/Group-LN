@@ -1,0 +1,439 @@
+@model CPMCore.Models.Home.HomeModel
+@using CPMCore.Helpers
+@using Microsoft.Extensions.Configuration
+@using BOCore
+@inject IConfiguration Configuration
+
+@{
+    var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
+    var opgeleverdStatusId = (int)ProjectStatusType.Opgeleverd;
+    var invCulture         = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    var imgBase            = Configuration["URL:ImageWebUrl"] ?? string.Empty;
+
+    var allProjects    = Model.Projects;
+    var activeProjects = allProjects.Where(p => p.Status.Id != opgeleverdStatusId).ToList();
+
+    var overdueProjects = activeProjects
+        .Where(p => p.DeliveryDate.HasValue && p.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Today)
+        .OrderBy(p => p.DeliveryDate)
+        .ToList();
+
+    var summary    = Model.OutgoingInvoiceSummary;
+    var hasOverdueInvoices = summary != null && summary.TopOverdue.Any();
+    var hasOverdueWerven   = overdueProjects.Any();
+    var hasDeedWarnings    = Model.DeedofSaleWarnings.Any();
+    var hasIncomingWarn    = Model.IncomingInvoiceWarningCount > 0;
+}
+
+<!-- ── KPI STRIP ──────────────────────────────────────────── -->
+<div class="row gl-kpi-strip mb-2">
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Actieve projecten over alle bedrijven heen">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-buildings"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Actieve projecten</h4>
+                            <div class="info">
+                                <strong class="amount">@activeProjects.Count</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-danger h-100 mb-0" title="Uitgaande facturen waarvan de vervaldatum voorbij is">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-danger">
+                            <i class="bx bx-timer"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Vervallen</h4>
+                            <div class="info">
+                                <strong class="amount gl-kpi-amount-danger">@(summary?.OverdueCount ?? 0)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-warning h-100 mb-0" title="Klantendossiers met een aktedatum in aantocht of voorbij">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-warning">
+                            <i class="bx bx-file"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Contracten</h4>
+                            <div class="info">
+                                <strong class="amount gl-kpi-amount-warning">@Model.DeedofSaleWarnings.Count</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Inkomende facturen met onopgeloste waarschuwingen">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-info-circle"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Waarschuwingen</h4>
+                            <div class="info">
+                                <strong class="amount">@Model.IncomingInvoiceWarningCount</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+<div class="row pt-3 gl-dashboard">
+
+    <!-- AANDACHTSPANEEL: 1/4 -->
+    <div class="col-lg-3 col-xxl-2 gl-mc-col">
+        <section class="card card-modern gl-mc-card">
+            <header class="card-header">
+                <div class="card-title">
+                    <i class="bx bx-bell text-primary"></i>
+                    Aandacht vereist
+                </div>
+            </header>
+            <div class="card-body p-0 gl-mc-body">
+
+                @if (hasOverdueInvoices)
+                {
+                    <div class="gl-mc-group gl-mc-urgent">
+                        <div class="gl-mc-group-hdr" title="Uitgaande facturen waarvan de vervaldatum voorbij is">
+                            <i class="bx bx-alert-circle"></i> VERVALLEN
+                            <span class="gl-mc-cnt">@summary!.OverdueCount</span>
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @foreach (var line in summary.TopOverdue)
+                            {
+                                <div class="gl-mc-item gl-mc-item-urgent">
+                                    <i class="bx bx-receipt gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">
+                                        <strong>@line.ClientName</strong> — €@line.Balance.ToString("N2", invCulture)
+                                        <span class="text-muted"> · @line.DaysOverdue d over tijd</span>
+                                    </span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@Url.Action("Detail", "Invoices", new { id = line.InvoiceId })" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (hasOverdueWerven)
+                {
+                    <div class="gl-mc-group gl-mc-normal">
+                        <div class="gl-mc-group-hdr" title="Werven waarvan de opleverdatum voorbij is">
+                            <i class="bx bx-timer"></i> ACHTERSTALLIG
+                            <span class="gl-mc-cnt">@overdueProjects.Count</span>
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @foreach (var p in overdueProjects.Take(5))
+                            {
+                                var daysOver = (int)(DateTime.Today - p.DeliveryDate!.Value.ToDateTime(TimeOnly.MinValue)).TotalDays;
+                                <div class="gl-mc-item gl-mc-item-normal">
+                                    <i class="bx bx-buildings gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">
+                                        <strong>@p.Name</strong>
+                                        <span class="text-muted"> · @daysOver d over tijd</span>
+                                    </span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@Url.Action("Detail", "Projecten", new { projectid = p.Id })" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (hasDeedWarnings)
+                {
+                    <div class="gl-mc-group gl-mc-info">
+                        <div class="gl-mc-group-hdr gl-mc-info-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="gl-mc-deed-body" title="Klantendossiers met een aktedatum in aantocht of voorbij">
+                            <i class="bx bx-info-circle"></i> CONTRACTEN
+                            <span class="gl-mc-cnt">@Model.DeedofSaleWarnings.Count</span>
+                            <i class="bx bx-chevron-down gl-mc-chevron ms-auto"></i>
+                        </div>
+                        <div id="gl-mc-deed-body" class="gl-mc-group-body d-none">
+                            @foreach (var c in Model.DeedofSaleWarnings.Take(5))
+                            {
+                                <div class="gl-mc-item gl-mc-item-info">
+                                    <i class="bx bx-file gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">
+                                        <strong>@c.Name</strong>
+                                        @if (c.DateDeedOfSaleExpDate.HasValue)
+                                        {
+                                            <span class="text-muted"> · akte tegen @c.DateDeedOfSaleExpDate.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                    </span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@Url.Action("Details", "Klanten", new { id = c.Id })" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (hasIncomingWarn)
+                {
+                    <div class="gl-mc-group gl-mc-info">
+                        <a href="@Url.Action("Index", "DocumentenCentrum", new { hasWarnings = true })" class="gl-mc-group-hdr text-decoration-none" title="Inkomende facturen met onopgeloste waarschuwingen">
+                            <i class="bx bx-info-circle"></i> FACTUURWAARSCHUWINGEN
+                            <span class="gl-mc-cnt">@Model.IncomingInvoiceWarningCount</span>
+                            <i class="bx bx-chevron-right ms-auto"></i>
+                        </a>
+                    </div>
+                }
+
+                @if (!hasOverdueInvoices && !hasOverdueWerven && !hasDeedWarnings && !hasIncomingWarn)
+                {
+                    <div class="gl-mc-empty">
+                        <i class="bx bx-check-circle"></i>
+                        <span>Niets dat aandacht vraagt</span>
+                    </div>
+                }
+
+            </div>
+        </section>
+    </div>
+    <!-- /AANDACHTSPANEEL -->
+
+    <!-- WERVEN: 2/4 -->
+    <div class="col-lg-6 col-xxl-8">
+
+        <div class="gl-sectie-kop">Alle werven</div>
+
+        @if (!activeProjects.Any())
+        {
+            <p class="text-muted mb-3">Geen actieve projecten gevonden.</p>
+        }
+        else
+        {
+            <div class="row mb-3">
+                @foreach (var project in activeProjects)
+                {
+                    int? daysLeft  = null;
+                    bool isOverdue = false;
+                    if (project.DeliveryDate.HasValue)
+                    {
+                        daysLeft  = (int)(project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
+                        isOverdue = daysLeft < 0;
+                    }
+
+                    Model.ProjectVoortgang.TryGetValue(project.Id, out var vg);
+
+                    var displayFysPct = isOverdue ? 100m : (vg?.FysiekeVoortgangPct  ?? 0m);
+                    var displayFinPct = isOverdue ? 100m : (vg?.FinancieleVoortgangPct ?? 0m);
+                    var showBars      = vg != null || isOverdue;
+
+                    string chipClass, chipLabel;
+                    if (vg != null)
+                    {
+                        if (vg.Fase == VoortgangFase.Afgewerkt) { chipClass = "sc-donker"; chipLabel = "Afgewerkt"; }
+                        else if (vg.Fase == VoortgangFase.Eindfase) { chipClass = "sc-groen"; chipLabel = "Eindfase"; }
+                        else if (vg.Fase == VoortgangFase.InUitvoering) { chipClass = "sc-groen"; chipLabel = "In uitvoering"; }
+                        else if (vg.Fase == VoortgangFase.InVoorbereiding) { chipClass = "sc-geel"; chipLabel = "In voorbereiding"; }
+                        else { chipClass = "sc-geel"; chipLabel = "Opstart"; }
+                    }
+                    else
+                    {
+                        chipClass = project.Status.Id == uitvoeringStatusId ? "sc-groen" : "sc-geel";
+                        chipLabel = project.Status.Name;
+                    }
+
+                    var fotoUrl = project.DefaultPicture?.Name != null
+                        ? imgBase + "pictures/447/" + project.DefaultPicture.Name
+                        : string.Empty;
+
+                    var companyId = project.CoordinationIssuerCompanyId ?? project.IssuerCompanyIdBuilder;
+                    string companyName = null;
+                    if (companyId.HasValue)
+                        Model.IssuerCompanyNames.TryGetValue(companyId.Value, out companyName);
+
+                    <div class="col-12 col-sm-6 col-lg-4 col-xxl-3 mb-4 gl-werf-col">
+                        <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart">
+                            <div class="gl-werf-foto">
+                                @if (!string.IsNullOrEmpty(fotoUrl))
+                                {
+                                    <img src="@fotoUrl" alt="@project.Name" />
+                                }
+                                else
+                                {
+                                    <div class="gl-werf-foto-placeholder"></div>
+                                }
+                                <div class="gl-werf-overlay"></div>
+                                @if (!string.IsNullOrWhiteSpace(companyName))
+                                {
+                                    <span class="gl-company-chip" title="@companyName">@companyName</span>
+                                }
+                                <span class="gl-status-chip @chipClass">@chipLabel</span>
+                                @if (vg != null && !string.IsNullOrEmpty(vg.Warnings))
+                                {
+                                    <span class="gl-warn-badge" title="@string.Join(", ", vg.WarningList)">
+                                        <i class="bx bx-alert-circle"></i>
+                                    </span>
+                                }
+                            </div>
+                            <div class="gl-werf-body">
+                                <div>
+                                    <p class="gl-werf-naam">@project.Name</p>
+                                    @if (!string.IsNullOrWhiteSpace(project.Postalcode?.Gemeente))
+                                    {
+                                        <p class="gl-werf-gem">
+                                            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            @project.Postalcode.Gemeente
+                                        </p>
+                                    }
+                                </div>
+                                @if (showBars)
+                                {
+                                    <div>
+                                        <div class="pb-2">
+                                            <div class="gl-pg-row">
+                                                <span class="gl-pg-label">Fysiek</span>
+                                                <span class="gl-pg-pct">@displayFysPct.ToString("0.#")%</span>
+                                            </div>
+                                            <div class="progress gl-pg-bar">
+                                                <div class="progress-bar gl-pg-bar-fys" style="--gl-fill-width:@(displayFysPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="pb-2">
+                                            <div class="gl-pg-row">
+                                                <span class="gl-pg-label">Financieel</span>
+                                                <span class="gl-pg-pct">@displayFinPct.ToString("0.#")%</span>
+                                            </div>
+                                            <div class="progress gl-pg-bar">
+                                                <div class="progress-bar gl-pg-bar-hoog" style="--gl-fill-width:@(displayFinPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                <div class="gl-werf-footer">
+                                    <div class="gl-resterende">
+                                        @if (isOverdue)
+                                        {
+                                            <i class="bx bx-check-circle gl-icon-opgeleverd"></i>
+                                            <span class="gl-text-success">Opgeleverd op @project.DeliveryDate!.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                        else
+                                        {
+                                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            @if (daysLeft.HasValue)
+                                            {
+                                                <span class="@(daysLeft.Value < 14 ? "gl-text-danger" : "")">@daysLeft.Value d resterend</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Geen opleverdatum</span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+    <!-- /WERVEN -->
+
+    <!-- SNELACTIES: 1/4 -->
+    <div class="col-lg-3 col-xxl-2 d-none d-md-block">
+        <section class="card card-modern" id="gl-snelacties-card">
+            <header class="card-header">
+                <div class="card-title">
+                    <i class="bx bx-bolt text-primary"></i>
+                    Snelacties
+                </div>
+            </header>
+            <div class="card-body p-0 pb-3">
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "Projecten")" class="gl-snelactie-direct">
+                        <i class="bx bx-buildings"></i>
+                        Alle projecten
+                    </a>
+                </div>
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "DocumentenCentrum")" class="gl-snelactie-direct">
+                        <i class="bx bx-arrow-in-up-square-half"></i>
+                        Documentencentrum
+                    </a>
+                </div>
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "Klanten")" class="gl-snelactie-direct">
+                        <i class="bx bx-search"></i>
+                        Klanten zoeken
+                    </a>
+                </div>
+
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Index", "Leveranciers")" class="gl-snelactie-direct">
+                        <i class="bx bx-search"></i>
+                        Leveranciers zoeken
+                    </a>
+                </div>
+
+            </div>
+        </section>
+    </div>
+    <!-- /SNELACTIES -->
+
+</div>
+
+<script>
+window.addEventListener('load', function () {
+    function toggleInfoGroup($toggle) {
+        var $body = $toggle.next('.gl-mc-group-body');
+        var $chev = $toggle.find('.gl-mc-chevron');
+        var opening = $body.hasClass('d-none');
+        if (opening) { $body.removeClass('d-none'); $chev.addClass('gl-mc-chevron-open'); }
+        else { $body.addClass('d-none'); $chev.removeClass('gl-mc-chevron-open'); }
+        $toggle.attr('aria-expanded', opening ? 'true' : 'false');
+    }
+    $(document).on('click', '.gl-mc-info-toggle', function () { toggleInfoGroup($(this)); });
+    $(document).on('keydown', '.gl-mc-info-toggle', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            toggleInfoGroup($(this));
+        }
+    });
+});
+</script>

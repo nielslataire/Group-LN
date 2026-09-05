@@ -170,8 +170,11 @@ button.gl-mob-sheet-item {
     outline: none;
 }
 
-/* ── Body padding op mobiel (inhoud achter bottom nav) ───────────────── */
-@media (max-width: 991.98px) {
+/* ── Body padding op mobiel (inhoud achter bottom nav) ─────────────────
+   Zelfde breakpoint als .gl-mob-nav (d-md-none): de balk toont enkel nog
+   op telefoonbreedte, vanaf 768px staat de volledige Snelacties-kaart er
+   in de plaats en is deze compensatie niet meer nodig. */
+@media (max-width: 767.98px) {
     body { padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important; }
 }
 
@@ -464,6 +467,67 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     --warning-text: #7a5210;
     --info-tint: #efe9e3;     /* aanvulling op de bestaande --info (taupe) */
     --info-text: #5f5245;
+}
+
+/* ── Paginakop (gl-page-header) ───────────────────────────────────────────
+   Herbruikbare kop: terug-knop + titel + subtitel (links, via
+   Views/Shared/_PageHeader.cshtml) + acties (rechts, paginaspecifiek).
+   Vervangt de tot nu toe per-pagina losstaande varianten van dit patroon
+   (font-weight-bold/fw-bold, mb-4 mt-0/mb-0, btn-group/d-flex...). Titel/
+   subtitel-lettergrootte bewust ongemoeid gelaten (komt uit de thema-basis-
+   stijl voor h1/h5); enkel structuur/positionering wordt hier vastgelegd.
+   ─────────────────────────────────────────────────────────────────────── */
+.gl-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 16px;
+    column-gap: 16px;
+    margin-bottom: 24px;
+}
+.gl-page-header__left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.gl-page-header__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: var(--radius);
+    color: var(--muted);
+    transition: background .15s, color .15s;
+}
+.gl-page-header__back:hover,
+.gl-page-header__back:focus-visible {
+    background: var(--lightgreen);
+    color: var(--primary);
+    outline: none;
+}
+.gl-page-header__back i { font-size: 1.5rem; }
+.gl-page-header__text { min-width: 0; }
+.gl-page-header__title {
+    margin: 0;
+    font-weight: 700;
+}
+.gl-page-header__subtitle {
+    margin: 4px 0 0;
+    font-weight: 400;
+    color: var(--muted);
+}
+.gl-page-header__actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+@media (max-width: 575.98px) {
+    .gl-page-header__actions { width: 100%; }
 }
 
 /* ── Skip-to-content link (a11y: WCAG 2.4.1) ─────────────────────────────

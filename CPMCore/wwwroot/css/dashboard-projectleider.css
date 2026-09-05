@@ -1,5 +1,9 @@
 /* ===================================================================
-   Dashboard Projectleider
+   Rol-dashboards (Home/Index): gedeelde componentbibliotheek voor
+   Projectleider, CeoCfo en Boekhouding — KPI-strip, urgentie-gegroepeerd
+   meldingencentrum, sectiekop, werf-kaart-grid, Snelacties. Ondanks de
+   bestandsnaam (herkomst: eerst gebouwd voor Projectleider) generiek
+   geschreven; class-namen zijn niet rol-specifiek.
    Kleuren: brand primary #0a5a3b + de semantische status-tokens
    (--danger/--warning/--info + hun -tint/-text varianten) uit custom.css.
    Structurele/layout CSS; Bootstrap utility classes worden in HTML gebruikt.
@@ -22,6 +26,115 @@
     flex: 1;
     height: 1px;
     background: rgba(0,0,0,.1);
+}
+
+/* Rangschikken-toggle naast de sectietitel: schakelt "Mijn Werven" tussen
+   bekijken en handmatig herschikken (drag of pijltjes). */
+.gl-arrange-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px solid rgba(10,90,59,.35);
+    border-radius: 7px;
+    background: none;
+    color: #0a5a3b;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.gl-arrange-toggle > i { font-size: 14px; }
+.gl-arrange-toggle:hover,
+.gl-arrange-toggle:focus-visible {
+    background: var(--primary-tint, #e8f0eb);
+    outline: none;
+}
+.gl-arrange-toggle[aria-pressed="true"] {
+    background: #0a5a3b;
+    border-color: #0a5a3b;
+    color: #fff;
+}
+.gl-arrange-toggle[aria-pressed="true"]:hover { background: #0f4b40; }
+
+/* Rangschik-balk bovenop een werf-kaart: enkel zichtbaar in rangschik-modus.
+   Losstaand blok (geen overlay op de foto), zodat pin-badge/status-chip
+   ongemoeid blijven en de knoppen het vereiste 40px raakvlak halen. */
+.gl-arrange-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    padding: 0 4px 0 10px;
+    margin-bottom: 6px;
+    background: #e8f0eb;
+    border-radius: 7px;
+    color: #0a5a3b;
+}
+.gl-drag-grip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: #0a5a3b;
+    cursor: grab;
+    user-select: none;
+}
+.gl-drag-grip > i { font-size: 18px; }
+.gl-arrange-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: none;
+    color: #0a5a3b;
+    font-size: 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .15s;
+}
+.gl-arrange-btn:hover,
+.gl-arrange-btn:focus-visible {
+    background: rgba(10,90,59,.12);
+    outline: none;
+}
+
+/* Rangschik-modus: kaart navigeert niet meer, ziet er "opgepakt" uit tijdens slepen. */
+.gl-arranging .gl-werf-kaart {
+    pointer-events: none;
+    cursor: grab;
+}
+
+/* Sleep-kloon (helper:'clone', appendTo:'body'): jQuery UI verplaatst de
+   originele kolom niet zelf naar position:absolute (die zit qua breedte vast
+   aan Bootstrap's kolom-percentages en de sticky/relative voorouders van dit
+   dashboard) — een losse kloon, expliciet op px-breedte gezet in de JS
+   'helper'-callback en aan <body> gehangen, sleept wél betrouwbaar mee en
+   rendert altijd bovenop topbar/sidebar/sticky meldingen-kolom. */
+.gl-werf-col.ui-sortable-helper {
+    z-index: 3000;
+    pointer-events: none;
+    margin: 0 !important;
+}
+.gl-werf-col.ui-sortable-helper .gl-arrange-bar,
+.gl-werf-col.ui-sortable-helper .gl-pin-toggle {
+    display: none;
+}
+.gl-werf-col.ui-sortable-helper .gl-werf-kaart {
+    box-shadow: 0 16px 35px rgba(0,0,0,.24); /* Overlay: kaart floats echt tijdens het slepen */
+    transform: rotate(-1.5deg);
+}
+.gl-werf-placeholder {
+    border: 2px dashed rgba(10,90,59,.4);
+    border-radius: 7px;
+    background: rgba(10,90,59,.06);
+    visibility: visible !important;
 }
 
 /* "+" knop naast de sectietitel (bv. "Mijn Werven") om een project vast te zetten. */
@@ -106,7 +219,15 @@
     vertical-align: middle;
 }
 
-/* Wervenkaarten */
+/* Wervenkaarten. .gl-werf-col is zelf een flex-kolom (i.p.v. de kaart
+   height:100% te geven): zo verdelen de rangschik-balk (vaste hoogte) en de
+   kaart (flex:1) de door Bootstrap's align-items:stretch toegekende hoogte
+   correct, zonder dat de balk er als extra hoogte bovenop komt. */
+.gl-werf-col {
+    display: flex;
+    flex-direction: column;
+}
+.gl-arrange-bar { flex: 0 0 auto; }
 .gl-werf-kaart {
     border: 1px solid rgba(0,0,0,.125);
     border-radius: 4px;
@@ -116,7 +237,8 @@
     display: flex;
     flex-direction: column;
     transition: transform .2s, box-shadow .2s;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     background: #fff;
 }
 .gl-werf-kaart:hover {
@@ -156,6 +278,21 @@
 .sc-rood   { background: rgba(179,69,47,.88); color: #fff; }     /* var(--danger) */
 .sc-donker { background: rgba(5,50,30,.9);    color: #a8e6c5; }
 
+/* Bedrijfs-badge op de foto (CeoCfo — multi-company grid): welk issuer-
+   company dit project draagt. Zelfde plek als het pin-icoon zou zitten, maar
+   links onderaan zodat het nooit met de status-chip (rechtsboven) of de
+   waarschuwingsbadge (linksonder tijdens fysieke waarschuwing) samenvalt op
+   de projectleider-kaart — hier is er nooit een pin-icoon, dus geen conflict. */
+.gl-company-chip {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(10,90,59,.85); color: #fff;
+    font-size: 8.5px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 2px; z-index: 2;
+    max-width: calc(100% - 70px);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 .gl-werf-body { padding: 11px 14px 13px; flex: 1; display: flex; flex-direction: column; gap: 7px; }
 .gl-werf-naam { font-size: 13px; font-weight: 600; margin: 0; }
 .gl-werf-gem  { font-size: 11px; color: #777; display: flex; align-items: center; gap: 4px; margin: 0; }
@@ -180,15 +317,19 @@
 /* ── Meldingscentrum ─────────────────────────────────────────────────── */
 
 @media (min-width: 992px) {
-    .gl-mc-col { position: sticky; top: 70px; align-self: flex-start; }
+    .gl-mc-col { position: sticky; top: calc(var(--topbar-height, 72px) + 10px); align-self: flex-start; }
 }
 
 .gl-mc-card { overflow: hidden; }
 .gl-mc-body {
-    max-height: calc(100vh - 260px);
+    max-height: calc(100vh - 272px);
     overflow-y: auto;
     overflow-x: hidden;
 }
+/* Boekhouding/CeoCfo: aandachtspaneel staat niet naast een lange, sticky
+   werven-kolom (Boekhouding heeft zelfs geen grid), dus geen kunstmatige
+   scroll-hoogte nodig — de kaart groeit gewoon met haar inhoud mee. */
+.gl-mc-body-static { max-height: none; overflow: visible; }
 
 /* Groep header */
 .gl-mc-group-hdr {

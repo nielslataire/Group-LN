@@ -252,6 +252,68 @@ namespace ServiceCore
             return items;
         }
 
+        public async Task<InvoiceDashboardSummaryBO> GetDashboardSummaryAsync(CancellationToken ct = default)
+        {
+            // Concept/Cancelled/Generating tellen niet mee als "openstaand" — geen
+            // reële vordering. Balance>0 sluit Betaald vanzelf uit.
+            byte draft = (byte)InvoiceStatusId.Draft;
+            byte cancelled = (byte)InvoiceStatusId.Cancelled;
+            byte generating = (byte)InvoiceStatusId.Generating;
+
+            var outstandingQuery =
+                from i in _db.Invoices.AsNoTracking()
+                join bal in _db.VwInvoiceBalance.AsNoTracking() on i.Id equals bal.Id
+                where i.StatusId != draft && i.StatusId != cancelled && i.StatusId != generating
+                      && bal.Balance > 0
+                select new
+                {
+                    i.Id,
+                    i.PublicId,
+                    i.ClientName,
+                    i.ExpirationDate,
+                    i.ProjectId,
+                    Balance = bal.Balance.Value
+                };
+
+            var outstanding = await outstandingQuery.ToListAsync(ct);
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var overdue = outstanding
+                .Where(x => x.ExpirationDate.HasValue && x.ExpirationDate.Value < today)
+                .OrderBy(x => x.ExpirationDate)
+                .ToList();
+
+            var projectIds = overdue
+                .Where(x => x.ProjectId.HasValue)
+                .Select(x => x.ProjectId!.Value)
+                .Distinct()
+                .ToList();
+            var projectNames = await _db.Project.AsNoTracking()
+                .Where(p => projectIds.Contains(p.ProjectId))
+                .ToDictionaryAsync(p => p.ProjectId, p => p.ProjectName, ct);
+
+            return new InvoiceDashboardSummaryBO
+            {
+                OutstandingCount = outstanding.Count,
+                OutstandingAmount = outstanding.Sum(x => x.Balance),
+                OverdueCount = overdue.Count,
+                OverdueAmount = overdue.Sum(x => x.Balance),
+                TopOverdue = overdue
+                    .Take(5)
+                    .Select(x => new OverdueInvoiceLineBO
+                    {
+                        InvoiceId = x.Id,
+                        PublicId = x.PublicId,
+                        ClientName = x.ClientName,
+                        ProjectName = x.ProjectId.HasValue && projectNames.TryGetValue(x.ProjectId.Value, out var pn) ? pn : null,
+                        Balance = x.Balance,
+                        ExpirationDate = x.ExpirationDate,
+                        DaysOverdue = (today.ToDateTime(TimeOnly.MinValue) - x.ExpirationDate!.Value.ToDateTime(TimeOnly.MinValue)).Days
+                    })
+                    .ToList()
+            };
+        }
+
         public async Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default)
         {
             var invoice = await _db.Invoices

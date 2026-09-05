@@ -261,6 +261,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<UserPinnedProject> UserPinnedProject { get; set; }
 
+    public virtual DbSet<UserProjectSortOrder> UserProjectSortOrder { get; set; }
+
     public virtual DbSet<Users> Users { get; set; }
 
     public virtual DbSet<UtilityPercentage> UtilityPercentage { get; set; }
@@ -2962,6 +2964,23 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserPinnedProject_Users");
+        });
+
+        modelBuilder.Entity<UserProjectSortOrder>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_UserProjectSortOrder_UserId");
+
+            entity.HasIndex(e => new { e.UserId, e.ProjectId }, "UX_UserProjectSortOrder_User_Project").IsUnique();
+
+            entity.HasOne(d => d.Project).WithMany(p => p.UserProjectSortOrder)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserProjectSortOrder_Project");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserProjectSortOrder)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserProjectSortOrder_Users");
         });
 
         modelBuilder.Entity<UserCompany>(entity =>

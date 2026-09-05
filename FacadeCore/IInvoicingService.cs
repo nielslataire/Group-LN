@@ -23,6 +23,9 @@ namespace FacadeCore
         //Filter op bedrijf
         Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default);
         Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default);
+
+        /// <summary>Openstaand/vervallen-overzicht voor de Boekhouding- en CeoCfo-dashboards.</summary>
+        Task<InvoiceDashboardSummaryBO> GetDashboardSummaryAsync(CancellationToken ct = default);
     }
 }
 

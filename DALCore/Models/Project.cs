@@ -191,6 +191,8 @@ public partial class Project
 
     public virtual ICollection<UserPinnedProject> UserPinnedProject { get; set; } = new List<UserPinnedProject>();
 
+    public virtual ICollection<UserProjectSortOrder> UserProjectSortOrder { get; set; } = new List<UserProjectSortOrder>();
+
     public virtual ICollection<VacationDays> VacationDays { get; set; } = new List<VacationDays>();
 
     public virtual WheaterStations WheaterStation { get; set; }

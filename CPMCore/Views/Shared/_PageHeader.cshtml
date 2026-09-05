@@ -1,0 +1,28 @@
+@model CPMCore.Models.PageHeaderModel
+@*
+    Herbruikbare paginakop — zie DESIGN.md "Paginakop (gl-page-header)".
+    Rendert enkel het linkercluster (terug-knop + titel + subtitel). De
+    aanroepende pagina wrapt dit samen met haar eigen acties in ".gl-page-header":
+
+        <div class="gl-page-header">
+            @await Html.PartialAsync("_PageHeader", new PageHeaderModel { Title = "...", ... })
+            <div class="gl-page-header__actions">
+                ... paginaspecifieke knoppen ...
+            </div>
+        </div>
+*@
+<div class="gl-page-header__left">
+    @if (!string.IsNullOrEmpty(Model.BackUrl))
+    {
+        <a href="@Model.BackUrl" class="gl-page-header__back" aria-label="@(Model.BackAriaLabel ?? "Terug")">
+            <i class="bx bx-chevron-left" aria-hidden="true"></i>
+        </a>
+    }
+    <div class="gl-page-header__text">
+        <h1 class="gl-page-header__title">@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <h5 class="gl-page-header__subtitle">@Model.Subtitle</h5>
+        }
+    </div>
+</div>

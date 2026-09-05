@@ -10,6 +10,11 @@
 		.GroupBy(a => string.IsNullOrWhiteSpace(a.GroupName) ? "Overige" : a.GroupName!)
 		.OrderBy(g => g.Key)
 		.ToList();
+
+	// Opvolging staat standaard ingeklapt (progressieve onthulling van een lang formulier),
+	// behalve wanneer er al opvolgingsgegevens ingevuld staan — dan mag niets verborgen blijven.
+	var hasOpvolgingData = Model.Contract.ContractSigned || Model.Contract.SiteNotification
+		|| Model.Contract.VgmCharter || Model.Contract.PidAttest || Model.Contract.ContractSentDate.HasValue;
 }
 
 @section PageStyle
@@ -95,6 +100,9 @@
 			font-size: .7rem;
 			letter-spacing: .04em;
 		}
+		/* Opvolging is standaard ingeklapt (progressieve onthulling); chevron volgt de collapse-state */
+		.gl-opvolging-chevron { transition: transform .2s ease; }
+		[data-bs-toggle="collapse"][aria-expanded="true"] .gl-opvolging-chevron { transform: rotate(180deg); }
 		/* Contrast: var(--muted) haalt 4.5:1 niet op wit / green-light — lokaal donkerder */
 		.company-picker-result .vat,
 		.company-picker-selected .vat,
@@ -126,22 +134,14 @@
 	</style>
 }
 
-<div class="row">
-<div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-	<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-			<div class="row align-items-center">
-				<div class="col-sm-auto d-flex align-items-center">
-					<a href="@Url.Action("DetailContracts", "Projecten",new {projectid = Model.ProjectId})" class="text-decoration-none text-reset d-flex align-items-center" aria-label="Terug naar leveranciers">
-						<i class="bx bx-chevron-left fs-1" aria-hidden="true"></i>
-					</a>
-				</div>
-				<div class="col-sm-auto">
-					<h1 class="fw-bold mb-0 mt-0">Contract toevoegen</h1>
-					<h5 class="mb-4 mt-0">Voeg een nieuw leverancierscontract toe aan project @Model.ProjectName</h5>
-				</div>
-			</div>
-	</div>
-</div>
+<div class="gl-page-header">
+	@await Html.PartialAsync("_PageHeader", new CPMCore.Models.PageHeaderModel
+	{
+		Title = "Contract toevoegen",
+		Subtitle = $"Voeg een nieuw leverancierscontract toe aan project {Model.ProjectName}",
+		BackUrl = Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId }),
+		BackAriaLabel = "Terug naar leveranciers"
+	})
 </div>
 
 <div class="row mt-0 pt-0">
@@ -267,14 +267,21 @@
 								<label class="col-12 col-md-4 control-label text-md-end mb-0" for="fileGuaranteeDoc">Waarborgdocument <span class="text-muted">(pdf/jpg)</span></label>
 								<div class="col-12 col-md-8">
 									<input type="file" name="guaranteeDoc" id="fileGuaranteeDoc" class="form-control form-control-modern" accept=".pdf,.jpg,.jpeg,image/jpeg,application/pdf" />
+									<div id="guaranteeDocError" class="gl-danger-icon small mt-1 d-none" role="alert"></div>
 									<small class="text-muted d-block mt-1">De bankwaarborg blijft als “nog te ontvangen” gemarkeerd zolang je hier geen document toevoegt.</small>
 								</div>
 							</div>
 							<div class="row pb-2 pt-3 mt-1 border-top">
 								<div class="col-12">
-									<span class="text-muted text-uppercase fw-semibold form-section-caption">Opvolging</span>
+									<button type="button" class="btn btn-link p-0 text-muted text-uppercase fw-semibold form-section-caption text-decoration-none d-flex align-items-center gap-1"
+									        data-bs-toggle="collapse" data-bs-target="#opvolgingCollapse"
+									        aria-expanded="@(hasOpvolgingData ? "true" : "false")" aria-controls="opvolgingCollapse">
+										Opvolging
+										<i class="bx bx-chevron-down gl-opvolging-chevron" aria-hidden="true"></i>
+									</button>
 								</div>
 							</div>
+							<div class="collapse @(hasOpvolgingData ? "show" : "")" id="opvolgingCollapse">
 							<div class="row align-items-center pb-3">
 								<label class="col-12 col-md-4 control-label text-md-end mb-0">
 									@Html.DisplayNameFor(m => m.Contract.ContractSigned)
@@ -301,14 +308,20 @@
 								</div>
 							</div>
 							<div class="row align-items-center pb-3">
-								<label class="col-12 col-md-4 control-label text-md-end mb-0">@Html.DisplayNameFor(m => m.Contract.SiteNotification)</label>
+								<label class="col-12 col-md-4 control-label text-md-end mb-0">
+									@Html.DisplayNameFor(m => m.Contract.SiteNotification)
+									<i class="bx bx-info-circle text-muted ms-1" tabindex="0" title="Geeft aan of de werfmelding voor deze aannemer is gebeurd." aria-label="Uitleg bij werfmelding"></i>
+								</label>
 								<div class="col-12 col-md-3">
 									<div class="switch switch-sm switch-primary">
 										@Html.CheckBoxFor(m => m.Contract.SiteNotification, new { id = "chkSiteNotification", data_plugin_ios_switch = "" })
 									</div>
 									<label class="form-check-label mb-0" for="chkSiteNotification"></label>
 								</div>
-								<label class="col-12 col-md-2 control-label text-md-end mb-0">@Html.DisplayNameFor(m => m.Contract.VgmCharter)</label>
+								<label class="col-12 col-md-2 control-label text-md-end mb-0">
+									@Html.DisplayNameFor(m => m.Contract.VgmCharter)
+									<i class="bx bx-info-circle text-muted ms-1" tabindex="0" title="Veiligheids-, gezondheids- en milieucharter — vereist vóór de aannemer met de werken start." aria-label="Uitleg bij VGM charter"></i>
+								</label>
 								<div class="col-12 col-md-3">
 									<div class="switch switch-sm switch-primary">
 										@Html.CheckBoxFor(m => m.Contract.VgmCharter, new { id = "chkVgmCharter", data_plugin_ios_switch = "" })
@@ -317,13 +330,17 @@
 								</div>
 							</div>
 							<div class="row align-items-center pb-3">
-								<label class="col-12 col-md-4 control-label text-md-end mb-0">@Html.DisplayNameFor(m => m.Contract.PidAttest)</label>
+								<label class="col-12 col-md-4 control-label text-md-end mb-0">
+									@Html.DisplayNameFor(m => m.Contract.PidAttest)
+									<i class="bx bx-info-circle text-muted ms-1" tabindex="0" title="Attesten voor het postinterventiedossier (PID), aangeleverd door deze aannemer." aria-label="Uitleg bij PID-attesten"></i>
+								</label>
 								<div class="col-12 col-md-8">
 									<div class="switch switch-sm switch-primary">
 										@Html.CheckBoxFor(m => m.Contract.PidAttest, new { id = "chkPidAttest", data_plugin_ios_switch = "" })
 									</div>
 									<label class="form-check-label mb-0" for="chkPidAttest"></label>
 								</div>
+							</div>
 							</div>
 
 						</div>
@@ -344,13 +361,17 @@
 							<div class="d-flex justify-content-between align-items-center flex-nowrap gap-2 mb-4">
 								<h3 class="text-color-dark font-weight-bold text-4 mb-0 text-uppercase text-truncate" id="companyActivitiesTitle" style="min-width:0;">Kies eerst een leverancier</h3>
 								<div class="d-flex gap-2 flex-shrink-0">
-									<button type="button" class="btn btn-outline-success btn-sm" id="btnNewActivity" disabled>
+									<button type="button" class="btn btn-outline-primary btn-sm" id="btnNewActivity" disabled>
 										<i class="bx bx-plus me-1"></i>Nieuwe activiteit
 									</button>
-									<button type="button" class="btn btn-outline-success btn-sm" id="btnAddActivities" disabled>
+									<button type="button" class="btn btn-outline-primary btn-sm" id="btnAddActivities" disabled>
 										<i class="bx bx-plus me-1"></i>Toevoegen
 									</button>
 								</div>
+							</div>
+							<div class="input-group mb-2" id="activitySearchWrapper" hidden>
+								<span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+								<input type="text" class="form-control form-control-modern" id="activitySearchFilter" placeholder="Zoek een activiteit…" aria-label="Zoek een activiteit in de lijst hieronder" />
 							</div>
 							<div id="availableActivitiesList" class="empty-state-box mb-4">Kies eerst een leverancier hierboven.</div>
 
@@ -603,6 +624,33 @@
 			}).trigger('change');
 
 			// ==============================
+			// WAARBORGDOCUMENT: client-side check (zelfde regels als
+			// ValidateGuaranteeDoc op de server) zodat een verkeerd bestand
+			// meteen opvalt i.p.v. pas na een volledige POST + herselecteren.
+			// ==============================
+			const GUARANTEE_DOC_EXTENSIONS = ['.pdf', '.jpg', '.jpeg'];
+			const GUARANTEE_DOC_MAX_BYTES = 10 * 1024 * 1024;
+			$('#fileGuaranteeDoc').on('change', function () {
+				const $input = $(this);
+				const $error = $('#guaranteeDocError');
+				const file = this.files && this.files[0];
+				if (!file) { $error.addClass('d-none').text(''); return; }
+
+				const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+				if (!GUARANTEE_DOC_EXTENSIONS.includes(ext)) {
+					$error.removeClass('d-none').text('Het waarborgdocument moet een pdf, jpg of jpeg zijn.');
+					$input.val('');
+					return;
+				}
+				if (file.size > GUARANTEE_DOC_MAX_BYTES) {
+					$error.removeClass('d-none').text('Het waarborgdocument mag maximaal 10 MB groot zijn.');
+					$input.val('');
+					return;
+				}
+				$error.addClass('d-none').text('');
+			});
+
+			// ==============================
 			// KORTING CONTANT
 			// ==============================
 			$('#chkCashDiscount').on('change', function () {
@@ -734,9 +782,18 @@
 				setTimeout(function () { $btns.prop('disabled', true); }, 0);
 			});
 
-			// Server-validatie: focus naar het eerste veld met een fout
+			// Server-validatie: focus naar het eerste veld met een fout (en, als dat veld
+			// binnen de inklapbare Opvolging-sectie zit, die eerst uitklappen zodat het
+			// zichtbaar is i.p.v. onzichtbaar gefocust)
 			const firstInvalid = document.querySelector('.input-validation-error');
-			if (firstInvalid) { firstInvalid.focus(); }
+			if (firstInvalid) {
+				const $collapse = $(firstInvalid).closest('#opvolgingCollapse');
+				if ($collapse.length && !$collapse.hasClass('show')) {
+					$collapse.addClass('show');
+					$('[data-bs-target="#opvolgingCollapse"]').attr('aria-expanded', 'true');
+				}
+				firstInvalid.focus();
+			}
 
 			// Desktop: het zoekveld voor de leverancier meteen openen
 			if ((!initialCompanyId || initialCompanyId === '0') &&
@@ -805,8 +862,22 @@
 				$('#availableActivitiesList').removeClass().addClass('empty-state-box mb-4').text('Kies eerst een leverancier hierboven.');
 				$('#activityRowsHead').addClass('d-none');
 				$('#activityRowsTotal').addClass('d-none');
+				$('#activitySearchWrapper').prop('hidden', true);
+				$('#activitySearchFilter').val('');
 			}
 		}
+
+		// ==============================
+		// ACTIVITEITENLIJST FILTEREN (zoekveld boven de checkbox-catalogus)
+		// ==============================
+		function filterAvailableActivities() {
+			const q = ($('#activitySearchFilter').val() || '').trim().toLowerCase();
+			$('#availableActivitiesList .form-check').each(function () {
+				const label = $(this).find('.form-check-label').text().toLowerCase();
+				$(this).toggle(label.indexOf(q) !== -1);
+			});
+		}
+		$(document).on('input', '#activitySearchFilter', filterAvailableActivities);
 
 		// ==============================
 		// ACTIVITEITEN VAN LEVERANCIER OPHALEN (checkbox-lijst)
@@ -821,8 +892,11 @@
 					const $list = $('#availableActivitiesList');
 					const remaining = (data || []).filter(item => !addedActivityIds.has(String(item.id)));
 
+					$('#activitySearchFilter').val('');
+
 					if (remaining.length === 0) {
 						$list.removeClass().addClass('empty-state-box mb-4').text('Geen activiteiten meer beschikbaar. Voeg een bestaande activiteit uit de catalogus toe.');
+						$('#activitySearchWrapper').prop('hidden', true);
 						return;
 					}
 
@@ -834,6 +908,8 @@
 						$row.append($('<label class="form-check-label"></label>').attr('for', id).text(item.text));
 						$list.append($row);
 					});
+					// Zoekveld pas tonen boven een lijst lang genoeg om te doorzoeken
+					$('#activitySearchWrapper').prop('hidden', remaining.length <= 6);
 				},
 				error: function (xhr, status, error) {
 					console.error('Fout bij ophalen activiteiten:', error);

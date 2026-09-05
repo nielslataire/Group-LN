@@ -214,6 +214,38 @@ namespace ServiceCore
             return response;
         }
 
+        public Dictionary<int, int> GetProjectOrder(int userId)
+            => _uow.ProjectSortOrders.GetNoTracking()
+                .Where(o => o.UserId == userId)
+                .ToDictionary(o => o.ProjectId, o => o.SortOrder);
+
+        public Response SetProjectOrder(int userId, List<int> orderedProjectIds)
+        {
+            var response = new Response();
+
+            // Volledige set voor deze gebruiker vervangen: eenvoudiger en robuuster
+            // dan een diff, en de rangschik-modus stuurt sowieso steeds de complete
+            // volgorde van "Mijn Werven" mee bij het klikken op "Klaar".
+            var existing = _uow.ProjectSortOrders.GetNormal()
+                .Where(o => o.UserId == userId)
+                .ToList();
+            foreach (var row in existing)
+                _uow.ProjectSortOrders.Remove(row);
+
+            for (int i = 0; i < orderedProjectIds.Count; i++)
+            {
+                var order = _uow.ProjectSortOrders.GetNew();
+                order.UserId = userId;
+                order.ProjectId = orderedProjectIds[i];
+                order.SortOrder = i;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Volgorde opgeslagen", "Opslaan van volgorde mislukt");
+
+            return response;
+        }
+
         public string GetProjectNameById(int id)
             => _uow.Projects.GetById(id)?.ProjectName ?? string.Empty;
 

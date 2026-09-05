@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "font awesome 6 free",
+        "createdAt": "2026-09-05T12:55:09.958Z",
+        "reason": "pre-existing icon-font ligature for a chevron glyph (colvis dropdown), not a body/display text font choice — false positive"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "CPMCore/wwwroot/css/custom.css"
+        ],
+        "createdAt": "2026-09-05T13:18:19.082Z",
+        "reason": "Agent: .tabs-modern .nav-link.active is a functional active-state indicator on EditUnit.cshtml's vertical tab list, not a decorative card border (the pattern this rule targets); pre-existing code, unrelated to this session's edits"
+      }
+    ]
+  }
+}

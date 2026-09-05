@@ -174,6 +174,19 @@ public static class CoachmarkRegistry
             ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
             MaxShowDays     = 45
         },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Home.Dashboard.Projectleider.Tour.Step5",
+            PageKey         = "Home.Dashboard.Projectleider",
+            TargetSelector  = "#mw-arrange-toggle",
+            Title           = "Rangschikken",
+            Message         = "Wil je Mijn Werven in je eigen volgorde zetten? Klik op Rangschikken, sleep een werf aan de greep of gebruik de pijltjes, en klik op Klaar om te bewaren.",
+            Placement       = CoachmarkPlacement.Bottom,
+            SequenceKey     = "Home.Dashboard.Projectleider.Tour",
+            StepIndex       = 4,
+            ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
     };
 
     /// <summary>Alle geregistreerde definities.</summary>
