@@ -21,6 +21,12 @@ public partial class ProjectVoortgang
 
     public string Warnings { get; set; }
 
+    public decimal? TotaalBegroot { get; set; }
+
+    public decimal? TotaalGecontracteerd { get; set; }
+
+    public decimal? TotaalGefactureerd { get; set; }
+
     public DateTime BerekendOp { get; set; }
 
     public bool ManueelAfgesloten { get; set; }

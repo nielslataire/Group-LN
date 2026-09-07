@@ -187,6 +187,62 @@ public static class CoachmarkRegistry
             ReleaseDate     = new DateTime(2026, 9, 4, 0, 0, 0, DateTimeKind.Utc),
             MaxShowDays     = 45
         },
+
+        // ── Projecten/Detail: herwerkte projecthub (3 stappen) ───────────────
+        // De detailpagina is herschikt: acties in de titelbalk, klikbare KPI's
+        // en een gebundelde Voortgang & budget-kaart.
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Projects.Detail.Redesign.Tour.Step1",
+            PageKey         = "Projects.Detail",
+            TargetSelector  = ".topbar-page-actions",
+            Title           = "Bewerken en verwijderen staan nu bovenaan",
+            Message         = "De knoppen om dit project te bewerken of te verwijderen zijn verhuisd naar de titelbalk bovenaan de pagina.",
+            Placement       = CoachmarkPlacement.Bottom,
+            SequenceKey     = "Projects.Detail.Redesign.Tour",
+            StepIndex       = 0,
+            ReleaseDate     = new DateTime(2026, 9, 7, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Projects.Detail.Redesign.Tour.Step2",
+            PageKey         = "Projects.Detail",
+            TargetSelector  = ".gl-kpi2-strip",
+            Title           = "De kerncijfers zijn nu doorklikbaar",
+            Message         = "Elke tegel linkt door naar het bijhorende onderdeel — Verkocht naar de klanten, Open punten naar de puntenlijst, Fysiek en Financieel naar de nacalculatie, enzovoort.",
+            Placement       = CoachmarkPlacement.Bottom,
+            SequenceKey     = "Projects.Detail.Redesign.Tour",
+            StepIndex       = 1,
+            ReleaseDate     = new DateTime(2026, 9, 7, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Projects.Detail.Redesign.Tour.Step3",
+            PageKey         = "Projects.Detail",
+            TargetSelector  = "#gl-detail-voortgang-card",
+            Title           = "Voortgang & budget in één kaart",
+            Message         = "Fysieke en financiële voortgang, verkochte waarde en budget besteed staan hier samen, met begroot en gecontracteerd bedrag en een doorklik naar de volledige nacalculatie.",
+            Placement       = CoachmarkPlacement.Top,
+            SequenceKey     = "Projects.Detail.Redesign.Tour",
+            StepIndex       = 2,
+            ReleaseDate     = new DateTime(2026, 9, 7, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Projects.Detail.Redesign.Tour.Step4",
+            PageKey         = "Projects.Detail",
+            TargetSelector  = ".gl-detail-mc-card",
+            Title           = "Aandacht vereist",
+            Message         = "Alles wat opvolging vraagt voor dit project op één plek: niet-getekende contracten, ontbrekende bankwaarborgen, over-/onderfacturatie, achterstallige werfpunten en verzekeringen. Filter op categorie met de knoppen bovenaan; ACTIE VEREIST vraagt meteen actie, OP TE LOSSEN kan nog even wachten. Klik 'Bekijk' om naar het onderdeel te gaan.",
+            Placement       = CoachmarkPlacement.Left,
+            SequenceKey     = "Projects.Detail.Redesign.Tour",
+            StepIndex       = 3,
+            ReleaseDate     = new DateTime(2026, 9, 7, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
     };
 
     /// <summary>Alle geregistreerde definities.</summary>

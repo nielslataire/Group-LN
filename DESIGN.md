@@ -237,6 +237,14 @@ other brand token once — keep that ratio.
 and Hairline before any `#f1f5f9`-family cool grey; the cool Slate tones are
 permitted only for topbar/menu chrome text where they already live.
 
+**The Status-Is-Not-Severity Rule.** Semantic Status colours (Rust / Ochre /
+Taupe) mean *something needs attention*, not *a state exists*. A lifecycle
+status that happens to be a good or neutral outcome must not borrow an alert
+hue: a **sold** unit is `bg-primary` (green — the outcome you want), never
+`bg-danger`. Map lifecycle states to Primary / Sage / Ochre / Ink / Dark and
+keep Rust for genuine problems. Two greens on one screen (e.g. "Verkocht" and a
+green brand mark) is acceptable; an alarm-red "everything is fine" is not.
+
 ## Typography
 
 **Display / Body / Label Font:** Poppins (with `'Segoe UI', system-ui, sans-serif`)
@@ -507,6 +515,91 @@ stylesheet; extend it there rather than forking a per-role copy.
   the same actions; CeoCfo/Boekhouding rely on the Snelacties card alone
   (`d-none d-md-block` — hidden only below 768px, not below 992px, so tablets
   keep the full action set).
+
+### Projecthub-componentbibliotheek (`Projecten/Detail`)
+All CSS lives in `CPMCore/wwwroot/css/projecten-custom.css` (the page also
+links `dashboard-projectleider.css` to reuse `gl-mc-*`). The detail page is a
+single-project hub: **Operate** mode — scan project state, then jump into a
+sub-area. Motion here serves feedback/state only; no page-load choreography.
+
+**Hero-blok — twee rijen van twee kaarten (`gl-detail-hero-row-1/-2`, `gl-detail-hero-cell`)**
+- Rij 1: projectfoto (`col-xl-4`) + "Aandacht vereist" (`col-xl-8`). Rij 2:
+  "Algemene gegevens" (`col-xl-4`) + "Eenheden & verkoopstatus" (`col-xl-8`).
+- **Gelijke hoogte per rij, puur CSS, geen JS-meting.** Rij 1 heeft ≥xl een
+  *vaste* hoogte (420px) omdat de foto geen eigen inhoudshoogte heeft en de
+  meldingenlijst anders wegrent. Rij 2 laat **"Algemene gegevens" de hoogte
+  bepalen** (toont altijd al haar rijen, scrollt nooit); de eenheden-tabel
+  staat in een `gl-detail-units-scroll`-wrapper met de scrollzone
+  `position:absolute; inset:0`, zodat de tabel géén hoogte aan de flow
+  toevoegt en de kaart nooit hoger wordt dan de buurkaart. Bootstrap's
+  `align-items:stretch` trekt hem dan naar diezelfde hoogte; de tabel scrollt.
+  Dezelfde absolute-uit-de-flow-truc als de projectfoto (`gl-detail-photo`
+  `position:absolute; inset:0` met de edit/verwijder-knoppen erbovenop).
+- Onder xl stapelen de kaarten op natuurlijke hoogte; de scrollzones vallen
+  terug op een gewone `max-height`.
+- Een eerdere JS-hoogtesynchronisatie (`syncHeroColumnHeight`) is bewust
+  verwijderd — die veroorzaakte telkens "grote witruimte onder een kaart".
+
+**KPI-strip (`gl-kpi2-*`)** — een *aparte* variant van het dashboard
+`gl-kpi-strip`, niet dezelfde component.
+- 7 tegels (op uitdrukkelijke gebruikerskeuze), flex-wrap met `flex:1 1 150px`.
+  Elke tegel is een `<a>` naar het bijhorende onderdeel met een echte
+  `aria-label`. De 3 minst dringende tegels krijgen `gl-kpi2-tile-col--sec` en
+  vallen weg onder 576px zodat de kern zichtbaar blijft.
+- Rand = hairline (`--border`); het *icoon* draagt de kleur — `--primary`
+  standaard, `--danger` alleen wanneer de tegel een probleem meldt (Werkdagen
+  te laat, Open punten > 0). Geen andere accentkleuren (One Green Rule).
+- `gl-kpi2-ring` = donut-icoon via `conic-gradient(var(--kpi-color) calc(var(--pct)*1%), …)`.
+  `--pct` is als `@property <number>` geregistreerd zodat de ring bij het
+  eerste zien naar zijn waarde veegt (JS zet 'm even op 0 en terug).
+
+**Voortgang & budget-balken (`gl-vb-*`)** — dashboard-`gl-pg-bar` is een
+gradient-in-één-balk; dit is een aparte set van vier gelabelde balken in één
+kaart. Eén kleur per maatstaf, allemaal **systeemtokens**:
+Fysiek = `--primary`, Financieel = `--custom-accent`, Verkocht = `--secondary`,
+Budget besteed = `--info`; `gl-vb-over` (budget > 100%) wisselt naar `--warning`
+als semantisch signaal. Track `rgba(0,0,0,.07)`, fill `border-radius:999px`.
+Bij mount vullen de vier balken links→rechts (`@keyframes` `scaleX(0→1)`,
+0,6s ease-out, eenmalig).
+
+**Sleutel/waarde-lijst "Algemene gegevens" (`gl-detail-kv`)**
+- `gl-detail-kv-row` = grid `20px 116px 1fr` (icoon | label | waarde), hairline
+  tussen de rijen. Icoon `--primary`, label `--gl-detail-text-aa`, waarde
+  `--ink`/700. Onder 420px valt de labelkolom weg (`grid-template-columns: 20px 1fr`).
+
+**Kaart-header actielink (`gl-detail-card-header` + `gl-detail-card-edit`)**
+- Elke hub-kaart heeft dezelfde header: titel links (klikbaar naar de
+  volledige pagina), rechts een pill `gl-detail-card-edit` (bx-icoon + label,
+  ≥40px tikgebied, hover = `--lightgreen`). Gebruikt op alle zes de kaarten —
+  Bewerken / Facturatieblad / Nacalculatie / Alle documenten / Alle foto's /
+  Alle eenheden. Nieuwe kaarten volgen dit, geen ad-hoc `text-muted small`-link.
+
+**Documentrij (`gl-doc-item`) & meldingsrij (`gl-mc-item` op deze pagina)**
+- **De hele rij is de link.** `gl-doc-item` en (detail-scoped) `gl-mc-item`
+  zijn een `<a href>` i.p.v. een `<div>` met een geneste link; de "Open" / de
+  "Bekijk ›" is nog enkel een visueel label (`<span>`). Zo werkt middenklik /
+  openen-in-nieuw-tabblad en is de rij toetsenbord-focusbaar (focusring
+  `outline-offset:-2px`). Hover: lichte achtergrond (`--lightgreen`) resp.
+  `filter:brightness(.97)` op de getinte meldingsrij.
+- Bestandstype-badge `gl-doc-badge` (34px, `--radius`): PDF `--danger`,
+  Word `--custom-accent`, Excel `--primary`, CAD `--warning`, beeld `--info`.
+
+**Deelpagina-chiprij (`gl-detail-subnav`)** — een quiet wrappende rij pill-links
+naar alle deelpagina's, **enkel < 768px** zichtbaar (`@media (min-width:768px){display:none}`),
+waar het `DetailMenu` (inner-menu) ingeklapt zit. Samen met `gl-detail-mobile-title`
+(projectnaam in de body, ook enkel < 768px) de oriëntatie op de telefoon.
+
+**Beweging** — één geauthoreerd moment (de vier `gl-vb`-balken + de twee
+`gl-kpi2`-ringen die bij mount naar hun waarde bewegen); de rest is
+≤150ms hover/press-bevestiging op wat aanklikbaar is (KPI-tegels 1px lift,
+`gl-detail-thumb-*` foto-knoppen scale 1.09/0.93 + icoon 1.12, mediaminiaturen
+1.04). Alles heeft een `prefers-reduced-motion`-pad dat de beweging weglaat maar
+kleur/toestand behoudt.
+
+**Coachmark-tour** — `SequenceKey = "Projects.Detail.Redesign.Tour"` in
+`CoachmarkRegistry.cs` (PageKey `Projects.Detail`, gezet via
+`ViewData["CoachmarkPageKey"]`): 4 stappen — topbar-acties (verplaatst),
+klikbare KPI-strip, "Voortgang & budget"-kaart, "Aandacht vereist".
 
 ## Do's and Don'ts
 

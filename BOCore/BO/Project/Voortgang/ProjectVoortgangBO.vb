@@ -91,6 +91,23 @@ Public Class ProjectVoortgangBO
         End Set
     End Property
 
+    ''' <summary>Totaal begroot bedrag (alle activiteitengroepen samen) op moment van berekenen.</summary>
+    Public Property TotaalBegroot As Decimal
+
+    ''' <summary>Totaal gecontracteerd bedrag (alle activiteitengroepen samen) op moment van berekenen.</summary>
+    Public Property TotaalGecontracteerd As Decimal
+
+    ''' <summary>Totaal gefactureerd bedrag door onderaannemers (excl. meerwerk klant) op moment van berekenen.</summary>
+    Public Property TotaalGefactureerd As Decimal
+
+    ''' <summary>Budget besteed = gefactureerd / begroot, in %. 0 als er geen budget is.</summary>
+    Public ReadOnly Property BudgetBestedPct As Decimal
+        Get
+            If TotaalBegroot <= 0D Then Return 0D
+            Return Math.Round(TotaalGefactureerd / TotaalBegroot * 100D, 2)
+        End Get
+    End Property
+
     ''' <summary>Computed from Warnings string — list of warning codes.</summary>
     Public ReadOnly Property WarningList() As List(Of String)
         Get

@@ -328,6 +328,7 @@ namespace CPMCore.Controllers
 
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
+            model.Users = GetOrderedUsers();
 
             return View(model);
         }
@@ -342,6 +343,7 @@ namespace CPMCore.Controllers
             {
                 FillInAddSelectLists(model);
                 FillInAvailableUsers(model);
+                model.Users = GetOrderedUsers();
                 return View(model);
             }
 
@@ -403,6 +405,7 @@ namespace CPMCore.Controllers
 
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
+            model.Users = GetOrderedUsers();
             return View(model);
         }
 
@@ -531,34 +534,40 @@ namespace CPMCore.Controllers
 
                 model.UnitRows = unitsResp.Values.Select(u =>
                 {
-                    // Verkoopprijs i.p.v. vraagprijs zodra verkocht — en de basisprijs
-                    // apart van gekozen afwerkingsopties (UnitConstructionValueBO's met
-                    // een FinishingOptionId zijn geen deel van de basis-bouwwaarde, dus
-                    // niet blind meetellen in één bedrag; wel elk apart tonen met hun
-                    // eigen kostprijs).
+                    // Verkocht: exact dezelfde waarde als op Klanten/Detail per eenheid
+                    // (UnitBO.TotalValueSold = grondwaarde verkocht + som van alle
+                    // ValueSold-bouwwaarden). Bij een verkocht pand zit de afwerking
+                    // al in ValueSold verrekend, dus geen aparte afwerkingsopties.
+                    // Nog te koop: basis-bouwwaarde (rijen zonder FinishingOptionId)
+                    // apart van de afwerkingsopties (rijen mét FinishingOptionId),
+                    // die elk apart getoond worden.
                     bool isSold = u.Unit.ClientAccountId is not null;
                     var constructionValues = u.Unit.ConstructionValues ?? new List<UnitConstructionValueBO>();
                     var baseValues = constructionValues.Where(cv => cv.FinishingOptionId is null);
                     var finishValues = constructionValues.Where(cv => cv.FinishingOptionId is not null);
 
-                    decimal baseConstructie = isSold
-                        ? baseValues.Sum(cv => cv.ValueSold ?? cv.Value ?? 0m)
-                        : baseValues.Sum(cv => cv.Value ?? 0m);
-                    decimal landPrijs = isSold ? (u.Unit.LandValueSold ?? u.Unit.LandValue ?? 0m) : (u.Unit.LandValue ?? 0m);
+                    decimal prijs = isSold
+                        ? u.Unit.TotalValueSold
+                        : (u.Unit.LandValue ?? 0m) + baseValues.Sum(cv => cv.Value ?? 0m);
 
-                    var afwerkingen = finishValues.Select(cv => (
-                        Description: string.IsNullOrWhiteSpace(cv.Description) ? "Afwerkingsoptie" : cv.Description,
-                        Cost: isSold ? (cv.ValueSold ?? cv.Value ?? 0m) : (cv.Value ?? 0m)
-                    )).ToList();
+                    var afwerkingen = isSold
+                        ? new List<(string Description, decimal Cost)>()
+                        : finishValues.Select(cv => (
+                            Description: string.IsNullOrWhiteSpace(cv.Description) ? "Afwerkingsoptie" : cv.Description,
+                            Cost: cv.Value ?? 0m
+                        )).ToList();
 
                     clientByUnitId.TryGetValue(u.Unit.Id, out var clientWithUnits);
                     var client = clientWithUnits?.Client;
 
+                    // Geen van deze statussen is een fout, dus geen alarm-rood:
+                    // Beschikbaar = Sage (open), In optie = Oker (opvolgen),
+                    // Verkocht = groen (goede afloop), Akte verleden = Ink (afgesloten).
                     string status; string statusVariant;
-                    if (client is not null && client.DateDeedOfSale.HasValue) { status = "Akte verleden"; statusVariant = "primary"; }
-                    else if (isSold) { status = "Verkocht"; statusVariant = "danger"; }
+                    if (client is not null && client.DateDeedOfSale.HasValue) { status = "Akte verleden"; statusVariant = "dark"; }
+                    else if (isSold) { status = "Verkocht"; statusVariant = "primary"; }
                     else if (u.Unit.IsOption) { status = "In optie"; statusVariant = "warning"; }
-                    else { status = "Beschikbaar"; statusVariant = "success"; }
+                    else { status = "Beschikbaar"; statusVariant = "secondary"; }
 
                     return new ProjectDetailUnitRowVM
                     {
@@ -566,7 +575,7 @@ namespace CPMCore.Controllers
                         Naam = u.Unit.Name,
                         TypeName = u.Unit.Type?.Name,
                         Oppervlakte = u.Unit.Surface,
-                        Vraagprijs = landPrijs + baseConstructie,
+                        Vraagprijs = prijs,
                         Afwerkingen = afwerkingen,
                         Status = status,
                         StatusVariant = statusVariant,
@@ -868,10 +877,13 @@ namespace CPMCore.Controllers
 
         private IEnumerable<CpmUserOption> GetOrderedUsers()
         {
-            var internalUserIds = _db.PermissionPerUser.Select(p => p.UserId).Distinct();
+            // Alle actieve interne medewerkers (interne gebruiker = geen
+            // UserCompanyAccess, d.w.z. geen externe aannemer-/leverancierslogin).
+            // Vroeger beperkt tot wie een PermissionPerUser-rij had — dat sloot
+            // geldige medewerkers (bv. verkoopverantwoordelijken) ten onrechte uit.
             var users = _db.Users
                 .AsNoTracking()
-                .Where(u => u.IsActive && internalUserIds.Contains(u.Id))
+                .Where(u => u.IsActive && !u.UserCompanyAccess.Any())
                 .OrderBy(user => user.Familienaam)
                 .ThenBy(user => user.Voornaam)
                 .Select(user => new

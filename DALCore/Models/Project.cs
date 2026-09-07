@@ -111,6 +111,12 @@ public partial class Project
 
     public string WerfmeldingDossier { get; set; }
 
+    public string ProjectCode { get; set; }
+
+    public string SalesResponsibleAspNetUserId { get; set; }
+
+    public int? NotaryCompanyId { get; set; }
+
     public virtual CompanyInfo Architect { get; set; }
 
     public virtual Users AspNetUser { get; set; }
@@ -132,6 +138,10 @@ public partial class Project
     public virtual ProjectPictures DefaultPicture { get; set; }
 
     public virtual CompanyInfo Developer { get; set; }
+
+    public virtual CompanyInfo NotaryCompany { get; set; }
+
+    public virtual Users SalesResponsibleAspNetUser { get; set; }
 
     public virtual CompanyInfo Engineer { get; set; }
 

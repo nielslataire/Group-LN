@@ -91,6 +91,9 @@ namespace ServiceCore
                 entry.Property(e => e.FysiekeVoortgangPct).IsModified = true;
                 entry.Property(e => e.FinancieleVoortgangPct).IsModified = true;
                 entry.Property(e => e.ContractueleVolwassenheidPct).IsModified = true;
+                entry.Property(e => e.TotaalBegroot).IsModified = true;
+                entry.Property(e => e.TotaalGecontracteerd).IsModified = true;
+                entry.Property(e => e.TotaalGefactureerd).IsModified = true;
                 entry.Property(e => e.Fase).IsModified = true;
                 entry.Property(e => e.Warnings).IsModified = true;
                 entry.Property(e => e.BerekendOp).IsModified = true;
@@ -216,9 +219,24 @@ namespace ServiceCore
             //     systeem" als backup, zoals gevraagd).
             decimal fysiekeVoortgang = CalculateVerkoopVoortgang(projectId) ?? fysiekeVoortgangBudgetBased;
 
-            // 5. Financiële voortgang: gefactureerd / gecontracteerd
-            decimal financieleVoortgang = totalGecontracteerd > 0m
-                ? Math.Round(totalGefactureerd / totalGecontracteerd * 100m, 2)
+            // 5. Financiële voortgang: gefactureerd t.o.v. begroot — maar per lot
+            //    (activiteitengroep) opgetrokken naar het gecontracteerde bedrag
+            //    zodra dat hoger ligt dan de begroting voor dat lot. Zo weegt een
+            //    lot dat duurder is aangenomen dan begroot mee aan zijn werkelijke
+            //    (gecontracteerde) waarde i.p.v. aan de te lage begroting.
+            var financieleReferentiePerGroep = budgetPerGroep.Keys
+                .Union(gecontracterrdPerGroep.Keys)
+                .Union(factuurPerGroep.Keys)
+                .Select(groepId =>
+                {
+                    var begrootGroep = budgetPerGroep.TryGetValue(groepId, out var bg) ? bg : 0m;
+                    var gecontracteerdGroep = gecontracterrdPerGroep.TryGetValue(groepId, out var gc) ? gc : 0m;
+                    return Math.Max(begrootGroep, gecontracteerdGroep);
+                })
+                .Sum();
+
+            decimal financieleVoortgang = financieleReferentiePerGroep > 0m
+                ? Math.Round(totalGefactureerd / financieleReferentiePerGroep * 100m, 2)
                 : 0m;
 
             // 6. Contractuele volwassenheid: gecontracteerd / begroot
@@ -275,6 +293,9 @@ namespace ServiceCore
                 FysiekeVoortgangPct         = fysiekeVoortgang,
                 FinancieleVoortgangPct      = financieleVoortgang,
                 ContractueleVolwassenheidPct = contractueleVolwassenheid,
+                TotaalBegroot               = totalBegroot,
+                TotaalGecontracteerd        = totalGecontracteerd,
+                TotaalGefactureerd          = totalGefactureerd,
                 Fase                        = fase,
                 Warnings                    = warnings.Count > 0 ? string.Join("|", warnings) : null,
                 BerekendOp                  = DateTime.UtcNow,
@@ -325,8 +346,14 @@ namespace ServiceCore
             var groupIds = groupMap.Values.SelectMany(g => g).Distinct().ToList();
             if (groupIds.Count == 0) return null;
 
+            // ALLE schijven van het betaalschema van de groep (samen ~100% van de
+            // bouw) — NIET enkel de al als "factureerbaar" gemarkeerde. Dat vinkje
+            // wordt gaandeweg gezet: op dit moment zijn bv. enkel de eerste 3
+            // milestones (40%) factureerbaar. Meten t.o.v. alleen die 40% maakt
+            // "alle nu factureerbare schijven gefactureerd" ten onrechte 100%
+            // fysieke voortgang terwijl de werf pas ~40% ver staat.
             var stages = _uow.PaymentStages.GetNoTracking()
-                .Where(s => s.Invoicable && groupIds.Contains(s.GroupId))
+                .Where(s => groupIds.Contains(s.GroupId))
                 .Select(s => new { s.Id, s.GroupId, s.Percentage })
                 .ToList();
 
@@ -390,6 +417,9 @@ namespace ServiceCore
             FysiekeVoortgangPct         = e.FysiekeVoortgangPct,
             FinancieleVoortgangPct      = e.FinancieleVoortgangPct,
             ContractueleVolwassenheidPct = e.ContractueleVolwassenheidPct,
+            TotaalBegroot               = e.TotaalBegroot ?? 0m,
+            TotaalGecontracteerd        = e.TotaalGecontracteerd ?? 0m,
+            TotaalGefactureerd          = e.TotaalGefactureerd ?? 0m,
             Fase                        = (VoortgangFase)e.Fase,
             Warnings                    = e.Warnings,
             BerekendOp                  = e.BerekendOp,
@@ -402,6 +432,9 @@ namespace ServiceCore
             entity.FysiekeVoortgangPct          = bo.FysiekeVoortgangPct;
             entity.FinancieleVoortgangPct       = bo.FinancieleVoortgangPct;
             entity.ContractueleVolwassenheidPct = bo.ContractueleVolwassenheidPct;
+            entity.TotaalBegroot                = bo.TotaalBegroot;
+            entity.TotaalGecontracteerd         = bo.TotaalGecontracteerd;
+            entity.TotaalGefactureerd           = bo.TotaalGefactureerd;
             entity.Fase                         = (int)bo.Fase;
             entity.Warnings                     = bo.Warnings;
             entity.BerekendOp                   = bo.BerekendOp;

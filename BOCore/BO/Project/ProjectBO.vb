@@ -11,6 +11,7 @@ Public Class ProjectBO
         _securitycoordinator = New IdNameBO
         _epbreporter = New IdNameBO
         _builder = New IdNameBO
+        _notary = New IdNameBO
         _pictures = New List(Of ProjectPictureBO)
         _defaultpicture = New ProjectPictureBO
     End Sub
@@ -542,6 +543,25 @@ Public Class ProjectBO
         End Get
         Set(ByVal value As List(Of ProjectHourlyRateBO))
             _hourlyRates = value
+        End Set
+    End Property
+
+    ''' <summary>Vrij projectkenmerk (bv. "P-2024-118"), los van de naam/slug.</summary>
+    <Display(Name:="Projectcode")>
+    Public Property ProjectCode As String
+
+    ''' <summary>ASP.NET-gebruikers-id van de verkoopverantwoordelijke (mirror van AspNetUserID).</summary>
+    <Display(Name:="Verkoopverantwoordelijke")>
+    Public Property SalesResponsibleUserID As String
+
+    Private _notary As IdNameBO
+    <Display(Name:="Notaris")>
+    Public Property Notary() As IdNameBO
+        Get
+            Return _notary
+        End Get
+        Set(ByVal value As IdNameBO)
+            _notary = value
         End Set
     End Property
 

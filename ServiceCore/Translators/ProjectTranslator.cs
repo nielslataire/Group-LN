@@ -123,6 +123,11 @@ namespace ServiceCore.Translators
             bo.SeoDescription = _entity.SeoDescription;
             bo.WerfmeldingDate = _entity.WerfmeldingDate;
             bo.WerfmeldingDossier = _entity.WerfmeldingDossier;
+            bo.ProjectCode = _entity.ProjectCode;
+            bo.SalesResponsibleUserID = _entity.SalesResponsibleAspNetUserId;
+            // Notaris (CompanyInfo, zelfde patroon als Ontwikkelaar/Bouwheer)
+            if ((_entity.NotaryCompany != null))
+                bo.Notary = _entity.NotaryCompany.GetIdName();
             // Alle project fotos
             foreach (var x in _entity.ProjectPictures)
             {
@@ -186,6 +191,9 @@ namespace ServiceCore.Translators
             _entity.SeoDescription       = bo.SeoDescription;
             _entity.WerfmeldingDate      = bo.WerfmeldingDate;
             _entity.WerfmeldingDossier   = string.IsNullOrWhiteSpace(bo.WerfmeldingDossier) ? null : bo.WerfmeldingDossier.Trim();
+            _entity.ProjectCode          = string.IsNullOrWhiteSpace(bo.ProjectCode) ? null : bo.ProjectCode.Trim();
+            _entity.SalesResponsibleAspNetUserId = string.IsNullOrWhiteSpace(bo.SalesResponsibleUserID) ? null : bo.SalesResponsibleUserID;
+            _entity.NotaryCompanyId      = (bo.Notary != null && bo.Notary.ID != 0) ? bo.Notary.ID : (int?)null;
 
             if ((bo.Postalcode != null && bo.Postalcode.PostcodeId != 0))
                 _entity.PostalCodeId = bo.Postalcode.PostcodeId;

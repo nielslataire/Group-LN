@@ -13,6 +13,8 @@
     Public Property RequiresDigitalInvoice As Boolean
     Public Property HasEmail As Boolean
     Public Property ClientType As Integer?
+    ''' <summary>Id van de klant/leverancier (ClientAccount, ClientContact of CompanyInfo, afhankelijk van ClientType).</summary>
+    Public Property ClientId As Integer?
     Public Property IsSupplier As Boolean
     Public Property HasCompanyName As Boolean
     Public Property OctopusWorkflowState As String

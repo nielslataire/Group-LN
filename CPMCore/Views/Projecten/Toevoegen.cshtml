@@ -36,6 +36,8 @@
     @Html.HiddenFor(m => m.Project.Developer.Display, new { id = "Project_Developer_Display" })
     @Html.HiddenFor(m => m.Project.Builder.ID, new { id = "Project_Builder_ID" })
     @Html.HiddenFor(m => m.Project.Builder.Display, new { id = "Project_Builder_Display" })
+    @Html.HiddenFor(m => m.Project.Notary.ID, new { id = "Project_Notary_ID" })
+    @Html.HiddenFor(m => m.Project.Notary.Display, new { id = "Project_Notary_Display" })
     @Html.HiddenFor(m => m.Project.WheaterStation.Id, new { id = "Project_WheaterStation_Id" })
     @Html.HiddenFor(m => m.Project.WheaterStation.Name, new { id = "Project_WheaterStation_Name" })
 
@@ -104,6 +106,15 @@
                                 </label>
                                 <div class="col-lg-8 col-xl-8">
                                     @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_ProjectCode">
+                                    @Html.LabelFor(m => m.Project.ProjectCode)
+                                </label>
+                                <div class="col-lg-8 col-xl-8">
+                                    @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
                                 </div>
                             </div>
 
@@ -242,6 +253,27 @@
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_IssuerCompanyLandOwner">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdLandOwner)</label>
                                 <div class="col-lg-3 col-xl-3">
                                     @Html.DropDownListFor(m => m.Project.IssuerCompanyIdLandOwner, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdLandOwner), "-- Selecteer --", new { @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_AspNetUserID">@Html.LabelFor(m => m.Project.AspNetUserID)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern" })
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_SalesResponsibleUserID">@Html.LabelFor(m => m.Project.SalesResponsibleUserID)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.DropDownListFor(m => m.Project.SalesResponsibleUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.SalesResponsibleUserID), "Selecteer een verkoopverantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_SalesResponsibleUserID" })
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="NotarySelect">@Html.LabelFor(m => m.Project.Notary)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="NotarySelect" class="form-control w-100">
+                                        @if (Model.Project.Notary.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Notary.ID" selected>@Model.Project.Notary.Display</option>
+                                        }
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -411,6 +443,33 @@
                 }).on('select2:clear', function () {
                         $('#Project_Builder_ID').val(0);
                         $('#Project_Builder_Display').val('');
+                });
+
+                $('#NotarySelect').select2({
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer de notaris',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        minimumInputLength: 3,
+                        ajax: {
+                                url: '@Url.Action("GetCompanys", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return { term: params.term };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }).on('select2:select', function (e) {
+                        $('#Project_Notary_ID').val(e.params.data.id);
+                        $('#Project_Notary_Display').val(e.params.data.text);
+                }).on('select2:clear', function () {
+                        $('#Project_Notary_ID').val(0);
+                        $('#Project_Notary_Display').val('');
                 });
 
                 $('#WheaterSelect').select2({

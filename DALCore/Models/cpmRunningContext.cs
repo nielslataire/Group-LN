@@ -2364,6 +2364,11 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.FacebookPlaceId).HasMaxLength(128);
             entity.Property(e => e.KmAllowance).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Number).HasMaxLength(10);
+            entity.Property(e => e.ProjectCode).HasMaxLength(50);
+            entity.Property(e => e.SalesResponsibleAspNetUserId)
+                .HasMaxLength(128)
+                .HasColumnName("SalesResponsibleAspNetUserID");
+            entity.Property(e => e.NotaryCompanyId).HasColumnName("NotaryCompanyID");
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
             entity.Property(e => e.ProjectDistanceKm).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.ProjectName)
@@ -2405,6 +2410,15 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Developer).WithMany(p => p.ProjectDeveloper)
                 .HasForeignKey(d => d.DeveloperId)
                 .HasConstraintName("FK_Project_CompanyInfo");
+
+            entity.HasOne(d => d.NotaryCompany).WithMany()
+                .HasForeignKey(d => d.NotaryCompanyId)
+                .HasConstraintName("FK_Project_NotaryCompany");
+
+            entity.HasOne(d => d.SalesResponsibleAspNetUser).WithMany()
+                .HasPrincipalKey(p => p.UserId)
+                .HasForeignKey(d => d.SalesResponsibleAspNetUserId)
+                .HasConstraintName("FK_Project_SalesResponsibleUser");
 
             entity.HasOne(d => d.Engineer).WithMany(p => p.ProjectEngineer)
                 .HasForeignKey(d => d.EngineerId)
@@ -2687,6 +2701,9 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ContractueleVolwassenheidPct).HasColumnType("decimal(7, 2)");
             entity.Property(e => e.FinancieleVoortgangPct).HasColumnType("decimal(7, 2)");
             entity.Property(e => e.FysiekeVoortgangPct).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.TotaalBegroot).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.TotaalGecontracteerd).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.TotaalGefactureerd).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Warnings).HasMaxLength(500);
 
             entity.HasOne(d => d.Project).WithOne(p => p.ProjectVoortgang)

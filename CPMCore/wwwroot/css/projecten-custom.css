@@ -117,34 +117,97 @@
     object-fit: cover;
     border-radius: var(--radius, 7px);
 }
-/* Kolom-gutter van de hero-rij verkleind van Bootstrap's 24px-standaard naar
-   16px — gelijk aan de verticale afstand hieronder, en zelf ook krapper dan
-   de 24px die hier te ruim oogde eenmaal alles effectief gelijk stond. */
-.gl-detail-hero-row { --bs-gutter-x: 1rem; }
-.gl-detail-photo-card { margin-bottom: 16px; }
+/* ----------------------------------------------------------
+   Hero-blok: TWEE rijen van elk twee kolommen
+     rij 1: projectfoto (col-xl-4) + aandacht vereist (col-xl-8)
+     rij 2: algemene gegevens (col-xl-4) + eenheden & verkoopstatus (col-xl-8)
 
-/* Hero-rij (Projectfoto+Algemene gegevens naast Aandacht vereist+Eenheden):
-   syncHeroColumnHeight (PageScripts) zet de rechterkolom se hoogte gelijk aan
-   de linkerkolom se gerenderde hoogte. align-self:flex-start op de linker-
-   kolom is de sleutel: zonder dat zou .row's eigen align-items:stretch de
-   linkerkolom ZELF al oprekken tot de (ongelimiteerde, inhoud-afhankelijke)
-   hoogte van de rechterkolom vóór de JS ooit meet — waardoor de JS een al
-   opgeblazen hoogte afleest en die terug op de rechterkolom zet: een lus die
-   precies de "enorme witruimte in beide kaarten"-bug veroorzaakte. Met
-   flex-start blijft de linkerkolom altijd op haar eigen, echte inhoudshoogte
-   staan, ongeacht wat de rechterkolom doet. min-height:0 op de rechterkolom
-   + flex-grow hieronder werken dan wél zoals bedoeld zodra er een correcte,
-   niet-opgeblazen hoogte is om te verdelen. */
-.gl-detail-hero-col-left { align-self: flex-start; }
-.gl-detail-hero-col-right { min-height: 0; }
-.gl-detail-hero-split { flex: 1 1 0%; min-height: 0; }
-/* Zelfde 16px als de kolom-gutter en de Projectfoto/Algemeen-afstand — via
-   de aangrenzende-sibling-selector i.p.v. mb-3 op de eerste kaart, zodat de
-   laatste (Eenheden) geen ongewenste marge onderaan de kolom krijgt. */
-.gl-detail-hero-split + .gl-detail-hero-split { margin-top: 16px; }
-.gl-detail-hero-split > .card-body {
+   RIJ 1 (≥xl): vaste hoogte (420px). De foto heeft geen eigen inhoudshoogte
+   en "Aandacht vereist" zou met 40+ items wegrennen, dus een vast kader met
+   interne scroll is hier juist.
+
+   RIJ 2 (≥xl): "Algemene gegevens" bepaalt de hoogte — die kaart toont altijd
+   ál haar rijen, scrollt nooit. Bootstrap's align-items:stretch trekt de
+   "Eenheden"-kolom naar diezelfde hoogte; de eenhedentabel scrollt intern om
+   te passen. Zo past eenheden zich aan algemene gegevens aan, nooit omgekeerd.
+
+   Onder xl staan de kaarten gestapeld op hun natuurlijke hoogte.
+   ---------------------------------------------------------- */
+.gl-detail-hero-row { --bs-gutter-x: 1rem; }
+
+.gl-detail-hero-cell { display: flex; }
+.gl-detail-hero-cell > .card {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    margin-bottom: 0;
+}
+
+@media (min-width: 1200px) {
+    /* Rij 1: vast kader. */
+    .gl-detail-hero-row-1 .gl-detail-hero-cell { height: 420px; }
+    .gl-detail-hero-row-1 .gl-detail-hero-cell > .card > .card-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    /* Rij 2: "Algemene gegevens" (1e cel) = de hoogtebepaler; die kaart toont
+       altijd ál haar rijen en scrollt nooit. "Eenheden" (laatste cel): de
+       tabel-scrollzone staat ABSOLUUT gepositioneerd (net als de projectfoto),
+       zodat de tabel geen hoogte toevoegt aan de flow. Zo kan de eenheden-kaart
+       nooit hoger worden dan "Algemene gegevens" — align-items:stretch trekt
+       hem net naar diezelfde hoogte en de tabel scrollt om te passen. */
+    .gl-detail-hero-row-2 .gl-detail-hero-cell:last-child > .card { overflow: hidden; }
+    .gl-detail-hero-row-2 .gl-detail-hero-cell:last-child > .card > .card-body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .gl-detail-hero-row-2 .gl-detail-units-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        position: relative;
+    }
+    .gl-detail-hero-row-2 .gl-detail-units-body {
+        position: absolute;
+        inset: 0;
+        max-height: none;
+        overflow-y: auto;
+    }
+}
+
+/* Onder xl (gestapeld): gewone max-height-scroll, geen flex-/absolute-truc. */
+@media (max-width: 1199.98px) {
+    .gl-detail-hero-row-1 .gl-mc-body-capped { max-height: 420px; overflow-y: auto; }
+    .gl-detail-hero-row-2 .gl-detail-units-body { max-height: 480px; overflow-y: auto; }
+}
+
+/* Projectfoto vult de kaarthoogte; <img> absoluut zodat ze nooit zelf de
+   hoogte bepaalt (edit/verwijder-knoppen liggen erbovenop, later in de DOM). */
+.gl-detail-hero-row-1 .gl-detail-photo-card { overflow: hidden; }
+.gl-detail-hero-row-1 .gl-detail-photo-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 240px;
+}
+.gl-detail-hero-row-1 .gl-detail-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    border-radius: 0;
+    object-fit: cover;
+}
+
+/* "Aandacht vereist"-body: display:block (niet flex) zodat de scrollzone zich
+   net als op de Home-dashboards gedraagt; de rest van het hoogtegedrag zit in
+   de media-queries hierboven. */
+.gl-detail-hero-row-1 .gl-mc-body-capped {
+    display: block;
     min-height: 0;
 }
 .gl-detail-card-img {
@@ -153,14 +216,62 @@
     object-fit: cover;
     display: block;
 }
-/* Algemene gegevens: iets rustiger ritme tussen rijen dan de theme-default
-   (geen expliciete margin), zonder de list-icons iconpositionering te breken. */
-.gl-detail-list-icons > li {
-    padding-top: 6px;
-    padding-bottom: 6px;
+/* Algemene gegevens: label/waarde-rijen met een leidend icoontje i.p.v. de
+   vroegere fa-list-icons — icoon | label (vaste kolom) | waarde, met een dunne
+   scheidingslijn tussen de rijen zoals de KPI-/Eenheden-kaarten. */
+.gl-detail-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
-.gl-detail-list-icons > li + li {
-    border-top: 1px solid var(--border, #e7e7e7);
+.gl-detail-card-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    min-height: 40px;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: var(--radius, 7px);
+}
+.gl-detail-card-edit:hover { background: var(--lightgreen, #e8f0eb); color: var(--primary); }
+.gl-detail-card-edit:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.gl-detail-card-edit > i { font-size: 1rem; }
+
+.gl-detail-kv { margin: 0; }
+.gl-detail-kv-row {
+    display: grid;
+    grid-template-columns: 20px 116px 1fr;
+    align-items: start;
+    column-gap: 10px;
+    padding: 9px 16px;
+    font-size: .8rem;
+}
+.gl-detail-kv-row + .gl-detail-kv-row { border-top: 1px solid var(--border, #e7e7e7); }
+.gl-detail-kv-row > i {
+    color: var(--primary);
+    font-size: 1rem;
+    line-height: 1.35;
+}
+.gl-detail-kv-row > dt {
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-weight: 500;
+    line-height: 1.35;
+}
+.gl-detail-kv-row > dd {
+    margin: 0;
+    color: var(--ink, #1f2a37);
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+}
+@media (max-width: 420px) {
+    .gl-detail-kv-row { grid-template-columns: 20px 1fr; row-gap: 2px; }
+    .gl-detail-kv-row > dd { grid-column: 2; }
 }
 
 /* Standaardfoto-upload overlay op de Projectfoto-kaart. 40x40px tikgebied
@@ -201,21 +312,67 @@
     right: 12px;
     background: var(--danger);
 }
+/* Fysieke bevestiging: de knop reageert op aanwijzen (licht groter + schaduw)
+   en op indrukken (kort samendrukken). Geen entree-animatie — de knoppen
+   moeten vanaf het eerste moment zichtbaar en vindbaar zijn (ook op touch). */
+.gl-detail-thumb-edit,
+.gl-detail-thumb-remove {
+    transition: transform .16s cubic-bezier(.16, 1, .3, 1), box-shadow .16s ease, filter .16s ease;
+    will-change: transform;
+}
+.gl-detail-thumb-edit:not(:disabled):hover,
+.gl-detail-thumb-remove:not(:disabled):hover {
+    transform: scale(1.09);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .22);
+    filter: brightness(0.93);
+}
+.gl-detail-thumb-edit:not(:disabled):active,
+.gl-detail-thumb-remove:not(:disabled):active {
+    transform: scale(0.93);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+}
+.gl-detail-thumb-edit > i,
+.gl-detail-thumb-remove > i { transition: transform .16s cubic-bezier(.16, 1, .3, 1); }
+.gl-detail-thumb-edit:not(:disabled):hover > i,
+.gl-detail-thumb-remove:not(:disabled):hover > i { transform: scale(1.12); }
 
-/* KPI-strip: derde iteratie — losstaande witte kaartjes met een dunne rand +
-   icoon in onze eigen kleuren (Primary/Info/Danger; nooit de blauw/oranje/
-   zwart uit de aangeleverde referentieafbeelding). Deze kleur-utility-classes
-   blijven — ze worden ook hergebruikt op de Verzekeringen-kaart hieronder.
-   --muted (#8590a5) komt op ~3.3:1 op wit uit, onder WCAG AA's 4.5:1 voor
-   kleine tekst; gl-detail-text-aa is een donkerdere tint van dezelfde kleur
-   die ~5.4:1 haalt. */
-.gl-detail-kpi-value-primary { color: var(--primary); }
-.gl-detail-kpi-value-warning { color: var(--warning-text, var(--warning)); }
-.gl-detail-kpi-value-danger { color: var(--danger-text, var(--danger)); }
+/* Bezig-met-uploaden: verberg het camera-icoon en toon een draaiende ring, zo
+   ziet de gebruiker op een trage werf-verbinding dat er iets gebeurt. */
+.gl-detail-thumb-edit[aria-busy="true"] > i { opacity: 0; }
+.gl-detail-thumb-edit[aria-busy="true"]::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, .4);
+    border-top-color: var(--white, #fff);
+    border-radius: 50%;
+    animation: gl-detail-spin .7s linear infinite;
+}
+@keyframes gl-detail-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .gl-detail-thumb-edit[aria-busy="true"]::after { animation-duration: 0s; }
+    .gl-detail-thumb-edit,
+    .gl-detail-thumb-remove,
+    .gl-detail-thumb-edit > i,
+    .gl-detail-thumb-remove > i { transition: box-shadow .16s ease; }
+    .gl-detail-thumb-edit:not(:disabled):hover,
+    .gl-detail-thumb-remove:not(:disabled):hover,
+    .gl-detail-thumb-edit:not(:disabled):active,
+    .gl-detail-thumb-remove:not(:disabled):active { transform: none; }
+    .gl-detail-thumb-edit:not(:disabled):hover > i,
+    .gl-detail-thumb-remove:not(:disabled):hover > i { transform: none; }
+}
 
-/* 7 tegels i.p.v. het gebruikelijke 4-tal elders — flex-grow met een
-   minimumbreedte i.p.v. een vaste verdeling, zodat het op brede schermen op
-   één rij past en op smallere schermen vanzelf wrapt i.p.v. tekst lelijk
+/* KPI-strip: losstaande witte kaartjes met een hairline rand + gekleurd icoon
+   (Primary voor de meeste, Danger wanneer een tegel een probleem signaleert).
+   De tegels zijn nu links; elke tegel gaat naar het bijhorende onderdeel.
+   --gl-detail-text-aa is een donkerdere tint van --muted die ~5.4:1 op wit
+   haalt (WCAG AA voor kleine tekst). */
+
+/* Flex-grow met een minimumbreedte i.p.v. een vaste verdeling, zodat de strip
+   op brede schermen op één rij past en op smallere schermen vanzelf wrapt
+   i.p.v. tekst lelijk
    middenin een woord af te breken. */
 .gl-kpi2-strip { display: flex; flex-wrap: wrap; gap: 12px; }
 .gl-kpi2-tile-col { flex: 1 1 150px; }
@@ -226,9 +383,13 @@
     height: 100%;
     padding: 12px 14px;
     background: var(--white, #fff);
-    border: 1px solid var(--kpi-color, var(--border));
+    border: 1px solid var(--border, #e7e7e7);
     border-radius: var(--radius, 7px);
+    color: inherit;
+    text-decoration: none;
 }
+a.gl-kpi2-tile:hover { border-color: var(--primary); }
+a.gl-kpi2-tile:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .gl-kpi2-icon {
     width: 38px;
     height: 38px;
@@ -285,12 +446,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/* "voor smaller minder info" — onder deze breedte vallen label en subtekst
-   weg, enkel icoon + waarde blijven staan (dichter, matcht de tweede
-   referentieafbeelding). */
-@media (max-width: 1299.98px) {
-    .gl-kpi2-label, .gl-kpi2-sub { display: none; }
-    .gl-kpi2-tile { justify-content: center; }
+/* Label + subtekst blijven op élke breedte staan — op tablet (het primaire
+   werf-toestel) waren de tegels anders 7 naamloze schijfjes. De strip wrapt
+   vanzelf naar meerdere rijen via flex; op een telefoon vallen de 3 minst
+   dringende tegels (via .gl-kpi2-tile-col--sec) weg zodat de kern zichtbaar
+   blijft zonder horizontaal te persen. */
+.gl-kpi2-label { white-space: normal; }
+@media (max-width: 575.98px) {
+    .gl-kpi2-tile-col--sec { display: none; }
 }
 
 /* Aandachtspaneel: categoriefilter-chips boven de gl-mc-groepen. Wit, zoals
@@ -306,14 +469,16 @@
     border-bottom: 1px solid var(--border, #e7e7e7);
 }
 .gl-mc-filter-chip {
+    display: inline-flex;
+    align-items: center;
     border: 1px solid var(--border, #e7e7e7);
     background: var(--white, #fff);
     color: var(--gl-detail-text-aa, #5f6b7a);
     font-size: .72rem;
     font-weight: 600;
     line-height: 1;
-    min-height: 32px;
-    padding: 6px 14px;
+    min-height: 40px;
+    padding: 8px 16px;
     border-radius: 999px;
     cursor: pointer;
 }
@@ -350,19 +515,19 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 20px;
+    height: 12px;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
     pointer-events: none;
     border-bottom-left-radius: var(--radius, 7px);
     border-bottom-right-radius: var(--radius, 7px);
 }
-/* De categoriefilter-chips maken de per-groep bannertekst ("ACTIE VEREIST",
-   "OP TE LOSSEN") overbodig — die twee zeggen op deze pagina in feite twee
-   keer "Aandacht vereist" vlak na elkaar. De rijkleur (--danger-tint/
-   --warning-tint) blijft het ernst-signaal dragen; enkel op deze pagina
-   verborgen, de Home-dashboards hebben geen filterchips en hebben deze
-   banner wél nodig als hun enige categorisatiesignaal. */
-.gl-detail-mc-card .gl-mc-group-hdr { display: none; }
+/* De per-groep bannertekst ("ACTIE VEREIST", "OP TE LOSSEN") + telling blijft
+   staan: de filterchips filteren op categorie (Contracten/Financieel), niet op
+   dringendheid. Zonder deze header is dringendheid enkel nog kleur - twee
+   bleke warme tinten (--danger-tint vs --warning-tint) die kleurenblinde
+   gebruikers en fel buitenlicht niet onderscheiden (WCAG 1.4.1). Hier iets
+   compacter dan op de Home-dashboards. */
+.gl-detail-mc-card .gl-mc-group-hdr { padding: 6px 16px; font-size: 10px; }
 .gl-detail-mc-card .gl-mc-group + .gl-mc-group > .gl-mc-group-body { border-top: 1px solid rgba(0,0,0,.07); }
 
 /* Contextuele meta-tekst naast "Bekijk" (bv. "24 dagen open"). */
@@ -377,17 +542,59 @@
    van de Home-dashboards. Op deze volle-breedte kaart is die ruimtebeperking
    er niet, en oogde de tekst nodeloos klein — hier vergroot, enkel op deze
    pagina. */
-.gl-detail-mc-card .gl-mc-item { font-size: 13px; padding: 10px 16px; gap: 10px; }
-.gl-detail-mc-card .gl-mc-item-icon { font-size: 15px; }
-.gl-detail-mc-card .gl-mc-btn-bekijk { font-size: 12px; }
+.gl-detail-mc-card .gl-mc-item { font-size: 12.5px; padding: 6px 16px; gap: 10px; align-items: center; line-height: 1.35; }
+.gl-detail-mc-card .gl-mc-item-icon { font-size: 15px; margin-top: 0; }
+/* Volledige rij aanklikbaar: de <a> reset naar rij-uiterlijk; enkel wanneer er
+   een BekijkUrl is (href aanwezig) wordt ze een link. */
+.gl-detail-mc-card a.gl-mc-item { color: inherit; text-decoration: none; }
+.gl-detail-mc-card a.gl-mc-item[href] { cursor: pointer; }
+.gl-detail-mc-card a.gl-mc-item[href]:hover { filter: brightness(0.97); }
+.gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk { text-decoration: underline; }
+.gl-detail-mc-card a.gl-mc-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.gl-detail-mc-card .gl-mc-btn-bekijk {
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 6px;
+    color: var(--primary);
+    white-space: nowrap;
+}
+.gl-detail-mc-card .gl-mc-btn-bekijk > i { font-size: 14px; }
 .gl-detail-mc-card .gl-mc-item-meta { font-size: 11px; }
 
-/* Eenheden & verkoopstatus tabel: compacte badge-varianten passend bij het
-   bestaande Sales.cshtml-kleurenschema (Verkocht=danger, Optie=warning,
-   Beschikbaar=success); "Akte verleden" is hier nieuw en krijgt primary. */
-/* Vult de resterende hoogte van de kaart i.p.v. een vaste max-height — de
-   kaart zelf krijgt haar hoogte nu van de hero-rij (gl-detail-hero-split). */
-.gl-detail-units-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
+/* Eenheden & verkoopstatus: statusbadges op systeemtokens, geen alarm-rood
+   (geen van de statussen is een fout): Beschikbaar=Sage, In optie=Oker,
+   Verkocht=groen, Akte verleden=Ink — zie ProjectenController. */
+/* Tabelbody: vult de resterende kaarthoogte en scrollt; de rijhoogte-logica
+   zit in de hero-media-queries bovenaan dit bestand. */
+.gl-detail-units-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+/* Zoekbalk boven de tabel: blijft staan terwijl de tabel eronder scrollt. */
+.gl-detail-units-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, .06);
+    flex-shrink: 0;
+}
+.gl-detail-units-search > i {
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.gl-detail-units-search .form-control {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+}
+.gl-detail-units-search .form-control:focus {
+    box-shadow: none;
+    background: transparent;
+}
 /* Bootstrap's table-celpadding (0.5rem/8px) staat los van DESIGN.md's eigen
    6/10/16/24/32-ritme; hier op scherpte gebracht. Sticky thead zodat je bij
    het scrollen niet de kolomkoppen kwijtraakt (was al gesignaleerd bij de
@@ -440,21 +647,49 @@
     gap: 6px;
 }
 .gl-detail-media-grid img,
-.gl-detail-media-more {
+.gl-detail-media-thumb,
+.gl-detail-media-empty,
+.gl-detail-media-add {
     aspect-ratio: 1 / 1;
     width: 100%;
     object-fit: cover;
     border-radius: var(--radius, 7px);
 }
-.gl-detail-media-more {
+.gl-detail-media-thumb { display: block; overflow: hidden; }
+.gl-detail-media-thumb img { display: block; aspect-ratio: 1 / 1; }
+.gl-detail-media-empty {
+    background: repeating-linear-gradient(45deg, rgba(0, 0, 0, .03) 0 6px, transparent 6px 12px);
+    border: 1px dashed var(--border, #e7e7e7);
+}
+/* Zesde tegel: knop om een foto toe te voegen. */
+.gl-detail-media-add {
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--lightgreen, #e8f0eb);
     color: var(--primary);
-    font-weight: 700;
-    font-size: .95rem;
+    border: 1px solid transparent;
+    font-size: 1.5rem;
+    text-decoration: none;
 }
+.gl-detail-media-add:hover {
+    background: var(--primary);
+    color: var(--white, #fff);
+}
+.gl-detail-media-add:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    color: var(--primary);
+}
+
+/* Kaartenrij onder de hero: alle kaarten op één lijn even hoog, ongeacht
+   inhoud — de facturatie-/voortgang-/documenten-/fotokaarten stonden anders
+   elk op hun eigen inhoudshoogte. */
+/* Zelfde 16px horizontale gutter als de hero-rij (Bootstrap-default is 24px) -
+   zo is de tussenruimte tussen álle kaarten op de pagina gelijk. */
+.gl-detail-cards-row { --bs-gutter-x: 1rem; }
+.gl-detail-cards-row > [class*="col-"] { display: flex; }
+.gl-detail-cards-row > [class*="col-"] > .card { flex: 1 1 auto; }
 
 /* ----------------------------------------------------------
    DataTable – colvis chevron (gedeeld door meerdere views)
@@ -1099,5 +1334,254 @@ td.details-control i.bx {
 .gl-pg-bar-sold  { width: var(--gl-fill-width, 0%); }
 .gl-pg-bar-fys   { width: var(--gl-fill-width, 0%); }
 .gl-pg-bar-fin   { width: var(--gl-fill-width, 0%); }
+
+/* ----------------------------------------------------------
+   Detail-hub – "Voortgang & budget"-kaart
+   ---------------------------------------------------------- */
+.gl-vb-list { display: flex; flex-direction: column; gap: 12px; }
+.gl-vb-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: .8rem;
+    margin-bottom: 5px;
+}
+.gl-vb-label { color: var(--gl-detail-text-aa, #5f6b7a); font-weight: 500; }
+.gl-vb-pct { font-weight: 700; color: var(--gl-vb-color, var(--primary)); }
+.gl-vb-track {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .07);
+    overflow: hidden;
+}
+.gl-vb-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--gl-vb-color, var(--primary));
+    width: var(--gl-vb-width, 0%);
+    max-width: 100%;
+    /* Bij het eerste zien vullen de vier balken links-naar-rechts, zodat de
+       verhoudingen als een reeks landen. Eenmalig, respecteert reduced-motion. */
+    transform-origin: left center;
+    animation: gl-vb-fill-in .6s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes gl-vb-fill-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* Eén kleur per maatstaf, maar allemaal design-systeemtokens — geen losse hex.
+   Oker/Rust blijven voorbehouden voor het semantische signaal (Budget besteed
+   boven 100% = gl-vb-over). */
+.gl-vb-fys    { --gl-vb-color: var(--primary, #0a5a3b); }
+.gl-vb-fin    { --gl-vb-color: var(--custom-accent, #8B6B4A); }
+.gl-vb-sold   { --gl-vb-color: var(--secondary, #7A8450); }
+.gl-vb-budget { --gl-vb-color: var(--info, #8A7967); }
+.gl-vb-budget.gl-vb-over,
+.gl-vb-budget.gl-vb-over .gl-vb-pct { --gl-vb-color: var(--warning, #c17d1f); color: var(--warning-text, #7a5210); }
+
+.gl-vb-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+}
+.gl-vb-stat {
+    background: var(--lightgreen, #e8f0eb);
+    border-radius: var(--radius, 7px);
+    padding: 10px 12px;
+}
+.gl-vb-stat-label {
+    font-size: .62rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+}
+.gl-vb-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink, #1f2a37);
+    margin-top: 2px;
+}
+.gl-vb-stat-sub { font-size: .68rem; color: var(--gl-detail-text-aa, #5f6b7a); margin-top: 1px; }
+
+/* ----------------------------------------------------------
+   Detail-hub – "Documenten & contracten"-kaart
+   ---------------------------------------------------------- */
+.gl-doc-list { display: flex; flex-direction: column; }
+/* Volledige rij aanklikbaar: <a> reset naar rij-uiterlijk, opent het document. */
+.gl-doc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color .12s ease;
+}
+a.gl-doc-item { cursor: pointer; }
+a.gl-doc-item:hover { background: var(--lightgreen, #e8f0eb); }
+a.gl-doc-item:hover .gl-doc-open { text-decoration: underline; }
+a.gl-doc-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.gl-doc-item + .gl-doc-item { border-top: 1px solid var(--border, #e7e7e7); }
+.gl-doc-badge {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius, 7px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .58rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    color: var(--white, #fff);
+    background: var(--gl-doc-color, var(--info, #8A7967));
+}
+.gl-doc-badge.gl-doc-pdf   { --gl-doc-color: var(--danger, #b3452f); }
+.gl-doc-badge.gl-doc-word  { --gl-doc-color: var(--custom-accent, #8B6B4A); }
+.gl-doc-badge.gl-doc-excel { --gl-doc-color: var(--primary, #0a5a3b); }
+.gl-doc-badge.gl-doc-cad   { --gl-doc-color: var(--warning, #c17d1f); }
+.gl-doc-badge.gl-doc-img   { --gl-doc-color: var(--info, #8A7967); }
+.gl-doc-main { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+.gl-doc-title {
+    display: block;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--ink, #1f2a37);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-doc-sub { display: block; font-size: .68rem; color: var(--gl-detail-text-aa, #5f6b7a); }
+.gl-doc-open {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+.gl-doc-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    margin-top: 6px;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+}
+.gl-doc-add:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.gl-doc-add:hover { color: var(--primary); text-decoration: underline; }
+.gl-doc-add > i { font-size: 1.05rem; }
+.gl-doc-empty { font-size: .8rem; color: var(--gl-detail-text-aa, #5f6b7a); padding: 6px 0; }
+
+/* ----------------------------------------------------------
+   Detail-hub - deelpagina-navigatie in de body
+   Het DetailMenu (inner-menu) is op touch dichtgeklapt achter "Toon Menu";
+   deze quiet wrappende chip-rij zet dezelfde deelpagina's rechtstreeks in de
+   hub-body zodat je niet eerst een menu moet openen om ergens te geraken.
+   ---------------------------------------------------------- */
+.gl-detail-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+/* Vanaf 768px staat het inner-menu (DetailMenu) links als vaste kolom - dan is
+   deze chip-rij dubbelop, dus enkel tonen op de telefoon waar dat menu
+   ingeklapt zit achter een toggle. */
+@media (min-width: 768px) { .gl-detail-subnav { display: none; } }
+.gl-detail-subnav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 6px 12px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: 999px;
+    background: var(--white, #fff);
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-size: .78rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.gl-detail-subnav a > i { font-size: 1rem; color: var(--primary); }
+.gl-detail-subnav a:hover { border-color: var(--primary); color: var(--ink, #1f2a37); }
+.gl-detail-subnav a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Projectnaam in de body - op telefoon verbergt de topbar de titel, dus zonder
+   dit stond er nergens op het scherm welk project je bekijkt. */
+.gl-detail-mobile-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--slate-900, #1e293b);
+    margin: 0 0 16px;
+}
+@media (min-width: 768px) { .gl-detail-mobile-title { display: none; } }
+
 /* RecalculationDetail JS tabelrij */
 .gl-td-text-right { text-align: right; }
+
+/* ==========================================================
+   Projecten/Detail - beweging
+   Operate-oppervlak: motion dient feedback, toestand en continuiteit; geen
+   page-load-choreografie. Eén geauthoreerd moment: de vier voortgangsbalken +
+   de twee KPI-ringen die bij het eerste zien naar hun waarde bewegen. De rest
+   is korte (<=150ms) bevestiging van klik/hover op wat nu aanklikbaar is.
+   ========================================================== */
+
+/* KPI-ring: --pct animeerbaar maken zodat de donut naar zijn waarde veegt. */
+@property --pct {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+.gl-kpi2-ring { transition: --pct .6s cubic-bezier(.16, 1, .3, 1); }
+
+/* Klik-/hover-bevestiging op nu-interactieve elementen. */
+a.gl-kpi2-tile {
+    transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease;
+}
+a.gl-kpi2-tile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
+}
+a.gl-kpi2-tile:active { transform: translateY(0); }
+
+.gl-detail-card-edit,
+.gl-detail-subnav a,
+.gl-mc-filter-chip,
+.gl-detail-mc-card .gl-mc-btn-bekijk,
+.gl-doc-open,
+.gl-doc-add,
+.gl-detail-table-link,
+.gl-detail-media-add {
+    transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+}
+.gl-detail-media-thumb img {
+    transition: transform .18s cubic-bezier(.16, 1, .3, 1);
+}
+.gl-detail-media-thumb:hover img { transform: scale(1.04); }
+.gl-detail-mc-card a.gl-mc-item[href] { transition: filter .12s ease; }
+.gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk > i { transform: translateX(2px); transition: transform .14s ease; }
+
+/* Categoriefilter: korte opacity-dip op de lijst = "de lijst is bijgewerkt",
+   zonder per-rij choreografie. */
+.gl-detail-mc-card .gl-mc-body-capped { transition: opacity .12s ease; }
+.gl-detail-mc-card .gl-mc-body-capped.is-refiltering { opacity: .5; }
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-vb-fill { animation: none; }
+    .gl-kpi2-ring { transition: none; }
+    a.gl-kpi2-tile,
+    .gl-detail-media-thumb img,
+    .gl-detail-mc-card a.gl-mc-item[href],
+    .gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk > i { transition: none; }
+    a.gl-kpi2-tile:hover { transform: none; box-shadow: none; }
+    .gl-detail-media-thumb:hover img { transform: none; }
+    .gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk > i { transform: none; }
+    .gl-detail-mc-card a.gl-mc-item[href]:hover { filter: none; }
+    .gl-detail-mc-card .gl-mc-body-capped.is-refiltering { opacity: 1; }
+}

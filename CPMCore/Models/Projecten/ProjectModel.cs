@@ -83,6 +83,10 @@ namespace CPMCore.Models.Projecten
         // Beschikbare gebruikers voor uurtarieven
         [ValidateNever]
         public List<IdNameBO> AvailableUsers { get; set; } = new List<IdNameBO>();
+
+        // Interne gebruikers voor projectleider/verkoopverantwoordelijke-keuzelijsten
+        [ValidateNever]
+        public IEnumerable<CpmUserOption> Users { get; set; }
     }
 
     public class EditProjectDetail

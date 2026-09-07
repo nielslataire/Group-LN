@@ -43,6 +43,7 @@ namespace ServiceCore
                 .Include(m => m.Engineer)
                 .Include(m => m.EpbReporter)
                 .Include(m => m.SecurityCoordinator)
+                .Include(m => m.NotaryCompany)
                 .Include(m => m.WheaterStation)
                 .Include(m => m.DefaultPicture)
                 .Include(m => m.ProjectDocs)

@@ -10,6 +10,7 @@
     var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
     var canDeleteProject = ViewBag.CanDeleteProject as bool? ?? false;
     var be = CultureInfo.GetCultureInfo("nl-BE");
+    ViewData["CoachmarkPageKey"] = "Projects.Detail";
 }
 @{
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -58,57 +59,73 @@
             </div>
 
             @{
-                // KPI-strip: hergebruikt het gedocumenteerde gl-kpi-strip component
-                // (card-featured-left/widget-summary, dezelfde kleurtokens als de
-                // Home-dashboards) i.p.v. een eigen bar — bewust met 7 tegels i.p.v.
-                // de daar gangbare 4, op uitdrukkelijke keuze van de gebruiker.
-                // Sub is de kleine tweede regel (bv. "37,5%", "van €3,41 mio
-                // potentieel"); RingPct != null geeft een donut-icoon i.p.v. een
-                // vlak icoon, gevuld tot dat percentage. Kleuren komen uit ons
-                // eigen systeem (--primary/--info/--danger), niet uit de
-                // aangeleverde referentieafbeelding.
+                // KPI-strip (gl-kpi2-*): 7 tegels op uitdrukkelijke keuze van de
+                // gebruiker; elke tegel is een link naar het bijhorende onderdeel
+                // (Href), de 3 minst dringende (Secondary) vallen weg op < 576px.
+                // Sub = de kleine tweede regel; RingPct != null geeft een donut-
+                // icoon gevuld tot dat percentage (Fysiek/Financieel). Severe
+                // kleurt de tegel Danger (Werkdagen te laat, Open punten > 0),
+                // anders Primary — geen andere accentkleuren (One Green Rule).
                 var kpiToday = DateOnly.FromDateTime(DateTime.Today);
                 var overdueIssueCount = Model.OpenIssues.Count(i => i.DueDate.HasValue && i.DueDate.Value < kpiToday);
-                string FormatMio(decimal v) => v >= 1_000_000m
-                    ? "€" + (v / 1_000_000m).ToString("0.##", be) + " mio"
-                    : v.ToString("C0", be);
 
-                var kpiTiles = new List<(string Label, string Value, string? Sub, string Icon, bool Severe, decimal? RingPct, string? RingColorVar)>
+                // Omzet & potentieel: opgeteld uit exact dezelfde bedragen als de
+                // "Eenheden & verkoopstatus"-tabel (grond + constructiewaarde per
+                // eenheid, zónder afwerkingsopties) i.p.v. de aparte SalesData-
+                // aggregatie die hier afweek. Omzet = verkochte eenheden;
+                // potentieel = alle eenheden (verkocht + te koop). Eén geldformaat
+                // (C0) overal — geen aparte "mio"-notatie meer.
+                bool KpiIsSold(CPMCore.Models.Projecten.ProjectDetailUnitRowVM r) =>
+                    r.Status == "Verkocht" || r.Status == "Akte verleden";
+                var kpiOmzetVerkocht = Model.UnitRows.Where(KpiIsSold).Sum(r => r.Vraagprijs);
+                // Potentieel = per eenheid de hoogst haalbare totaalwaarde:
+                // verkocht -> de verkochte waarde; nog te koop -> grond + basis +
+                // de DUURSTE afwerkingsoptie (Afwerkingen is leeg bij verkocht).
+                var kpiOmzetPotentieel = Model.UnitRows.Sum(r =>
+                    r.Vraagprijs + (r.Afwerkingen.Count > 0 ? r.Afwerkingen.Max(a => a.Cost) : 0m));
+
+                var werkdagenLaat = Model.WorkingDaysLeft != -9999 && Model.WorkingDaysLeft < 0;
+                var editUrl = Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id });
+                var recalcUrl = Url.Action("Recalculation", "Projecten", new { projectid = Model.Project.Id });
+
+                // Href = klik-doorstroom naar de deelpagina; Secondary = valt weg
+                // op een telefoon (< 576px) zodat de kern-tegels niet geperst worden.
+                var kpiTiles = new List<(string Label, string Value, string? Sub, string Icon, bool Severe, decimal? RingPct, string Href, bool Secondary)>
                 {
-                    ("Status", Model.Project.Status?.Name ?? "—", null, "bx-flag", false, null, null),
-                    ("Verkocht", $"{Model.SalesData?.LivingUnitsSold ?? 0} / {Model.SalesData?.LivingUnits ?? 0} loten",
+                    ("Status", Model.Project.Status?.Name ?? "—", null, "bx-flag", false, null, editUrl, true),
+                    ("Verkocht", $"{Model.SalesData?.LivingUnitsSold ?? 0} / {Model.SalesData?.LivingUnits ?? 0} eenheden",
                         Model.SalesData is not null ? Model.SalesData.PercentageLivingUnitsSold.ToString("0.#", be) + "%" : null,
-                        "bx-key", false, null, null),
-                    ("Omzet", (Model.SalesData?.ValueSold ?? 0).ToString("C0", be),
-                        (Model.SalesData?.ValueForSale ?? 0) > 0 ? "van " + FormatMio(Model.SalesData!.ValueForSale) + " potentieel" : null,
-                        "bx-euro", false, null, null),
+                        "bx-key", false, null, Url.Action("DetailClients", "Projecten", new { projectid = Model.Project.Id }), false),
+                    ("Omzet", kpiOmzetVerkocht.ToString("C0", be),
+                        kpiOmzetPotentieel > 0 ? "van " + kpiOmzetPotentieel.ToString("C0", be) + " potentieel" : null,
+                        "bx-euro", false, null, Url.Action("DetailSales", "Projecten", new { projectid = Model.Project.Id }), true),
                     ("Fysiek", Model.Voortgang is not null ? Model.Voortgang.FysiekeVoortgangPct.ToString("0.#") + "%" : "—", "voortgang",
-                        "bx-trending-up", false, Model.Voortgang?.FysiekeVoortgangPct, "--primary"),
+                        "bx-trending-up", false, Model.Voortgang?.FysiekeVoortgangPct, recalcUrl, false),
                     ("Financieel", Model.Voortgang is not null ? Model.Voortgang.FinancieleVoortgangPct.ToString("0.#") + "%" : "—", "voortgang",
-                        "bx-wallet", false, Model.Voortgang?.FinancieleVoortgangPct, "--info"),
-                    ("Werkdagen", Model.WorkingDaysLeft == -9999 ? "—" : Model.WorkingDaysLeft.ToString(),
+                        "bx-wallet", false, Model.Voortgang?.FinancieleVoortgangPct, recalcUrl, true),
+                    ("Werkdagen", Model.WorkingDaysLeft == -9999 ? "—" : (werkdagenLaat ? $"{-Model.WorkingDaysLeft} te laat" : Model.WorkingDaysLeft.ToString()),
                         Model.FinalConstructionDate != DateOnly.MinValue ? "tot " + Model.FinalConstructionDate.ToString("dd/MM/yy") : null,
-                        "bx-calendar", false, null, null),
+                        "bx-calendar", werkdagenLaat, null, editUrl, false),
                     ("Open punten", Model.OpenIssuesCount.ToString(),
                         overdueIssueCount > 0 ? $"{overdueIssueCount} over datum" : null,
-                        "bx-alert-circle", Model.OpenIssuesCount > 0, null, null),
+                        "bx-alert-circle", Model.OpenIssuesCount > 0, null, Url.Action("Index", "ProjectsIssues", new { projectId = Model.Project.Id }), false),
                 };
             }
             <div class="gl-kpi2-strip mb-3">
                 @foreach (var tile in kpiTiles)
                 {
-                    var kpiColorVar = tile.Severe ? "--danger" : (tile.RingColorVar ?? "--primary");
-                    <div class="gl-kpi2-tile-col">
-                        <div class="gl-kpi2-tile" style="--kpi-color: var(@kpiColorVar);" title="@tile.Label">
+                    var kpiColorVar = tile.Severe ? "--danger" : "--primary";
+                    <div class="gl-kpi2-tile-col@(tile.Secondary ? " gl-kpi2-tile-col--sec" : "")">
+                        <a class="gl-kpi2-tile" href="@tile.Href" style="--kpi-color: var(@kpiColorVar);" aria-label="@tile.Label: @tile.Value@(tile.Sub is not null ? " (" + tile.Sub + ")" : "")">
                             @if (tile.RingPct.HasValue)
                             {
                                 <div class="gl-kpi2-icon gl-kpi2-ring" style="--pct: @(tile.RingPct.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));">
-                                    <div class="gl-kpi2-ring-inner"><i class="bx @tile.Icon"></i></div>
+                                    <div class="gl-kpi2-ring-inner"><i class="bx @tile.Icon" aria-hidden="true"></i></div>
                                 </div>
                             }
                             else
                             {
-                                <div class="gl-kpi2-icon"><i class="bx @tile.Icon"></i></div>
+                                <div class="gl-kpi2-icon"><i class="bx @tile.Icon" aria-hidden="true"></i></div>
                             }
                             <div class="gl-kpi2-body">
                                 <div class="gl-kpi2-label">@tile.Label</div>
@@ -118,10 +135,26 @@
                                     <div class="gl-kpi2-sub">@tile.Sub</div>
                                 }
                             </div>
-                        </div>
+                        </a>
                     </div>
                 }
             </div>
+
+            <div class="gl-detail-mobile-title">@Model.Project.Name</div>
+            <nav class="gl-detail-subnav" aria-label="Projectonderdelen">
+                <a href="@Url.Action("DetailClients", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-group" aria-hidden="true"></i>Klanten</a>
+                <a href="@Url.Action("DetailUnits", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-building-house" aria-hidden="true"></i>Eenheden</a>
+                <a href="@Url.Action("DetailContracts", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-briefcase" aria-hidden="true"></i>Leveranciers</a>
+                <a href="@Url.Action("Index", "ProjectsIssues", new { projectId = Model.Project.Id })"><i class="bx bx-checklist" aria-hidden="true"></i>Punten</a>
+                <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-folder" aria-hidden="true"></i>Documenten</a>
+                <a href="@Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-shield" aria-hidden="true"></i>Verzekeringen</a>
+                <a href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-receipt" aria-hidden="true"></i>Facturatie</a>
+                <a href="@Url.Action("PaymentStages", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-euro" aria-hidden="true"></i>Betalingen</a>
+                <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-calculator" aria-hidden="true"></i>Nacalculatie</a>
+                <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.Project.Id })"><i class="bx bx-table" aria-hidden="true"></i>Budgetten</a>
+                <a href="@Url.Action("DetailsChangeOrder", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-edit" aria-hidden="true"></i>Wijzigingsopdrachten</a>
+                <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })"><i class="bx bx-images" aria-hidden="true"></i>Foto's</a>
+            </nav>
 
             @{
                 // Aandachtspaneel: dezelfde gl-mc-urgent/gl-mc-normal-groepering als de
@@ -132,7 +165,7 @@
                 // met een Categorie-veld voor de filterchips.
                 var attentionToday = DateOnly.FromDateTime(DateTime.Today);
                 // Type/Entiteit/Extra i.p.v. één platte tekst — Type is het label
-                // ("Contract niet getekend"), Entiteit de leverancier/klant/lot,
+                // ("Contract niet getekend"), Entiteit de leverancier/klant/eenheid,
                 // Extra een korte omschrijving (contractnaam, punt-titel, ...).
                 var urgentItems = new List<(string Type, string? Entiteit, string? Extra, string? BekijkUrl, string Icon, string Categorie, string? Meta)>();
                 var normalItems = new List<(string Type, string? Entiteit, string? Extra, string? BekijkUrl, string Icon, string Categorie, string? Meta)>();
@@ -232,8 +265,9 @@
                 else
                     urlTotal = "~/img/no_image.jpg";
             }
-            <div class="row mb-3 gl-detail-hero-row">
-                <div class="col-12 col-xl-4 d-flex flex-column gl-detail-hero-col-left">
+            @*HERO-RIJ 1: projectfoto + aandacht vereist — twee kaarten, gelijke hoogte*@
+            <div class="row mb-3 gl-detail-hero-row gl-detail-hero-row-1">
+                <div class="col-12 col-xl-4 mb-3 mb-xl-0 gl-detail-hero-cell">
                     @*PROJECTFOTO — de foto zelf is de kaart, geen aparte titelbalk erboven*@
                     <div class="card card-modern gl-detail-photo-card">
                         <div class="gl-detail-photo-wrap">
@@ -241,106 +275,22 @@
                             @if (canWriteProject)
                             {
                                 <button type="button" class="gl-detail-thumb-edit" id="editStandardFotoBtn" aria-label="Foto wijzigen" title="Foto wijzigen">
-                                    <i class="fa fa-camera" aria-hidden="true"></i>
+                                    <i class="bx bx-camera" aria-hidden="true"></i>
                                 </button>
                                 <input type="file" id="standardFotoInput" accept="image/*" hidden />
                                 @if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
                                 {
                                     <button type="button" class="gl-detail-thumb-remove" id="removeStandardFotoBtn" aria-label="Standaard foto verwijderen" title="Standaard foto verwijderen">
-                                        <i class="fa fa-times" aria-hidden="true"></i>
+                                        <i class="bx bx-x" aria-hidden="true"></i>
                                     </button>
                                 }
                             }
                         </div>
                     </div>
-                    @*ALGEMEEN*@
-                    <div class="card card-modern card-modern-alt-padding gl-detail-card mb-0 flex-fill">
-                        <header class="card-header">
-                            <h2 class="card-title">Algemene gegevens</h2>
-                        </header>
-                        <div class="card-body bg-light">
-                            <div class="small mb-3">
-                                <strong>Adres: </strong>@Model.Project.Street @Model.Project.HouseNumber,
-                                @Model.Project.Postalcode.Postcode @Model.Project.Postalcode.Gemeente.ToUpper()<br />
-                                @Model.Project.Postalcode.Country.Name
-                            </div>
-                            <ul class="list list-icons gl-detail-list-icons mb-0">
-                                @if (Model.Project.Status is not null)
-                                {
-                                    <li>
-                                        <i Class="fa fa-spinner"></i>
-                                        <strong> Status : </strong>@Model.Project.Status.Name
-                                    </li>
-                                }
-                                @if (Model.Project.WheaterStation is not null)
-                                {
-                                    <li>
-                                        <i Class="fa fa-sun-o"></i>
-                                        <strong> Weerstation : </strong>@Model.Project.WheaterStation.Name
-                                    </li>
-                                }
-                                @if (Model.Project.Developer is not null)
-                                {
-
-                                    <li>
-                                        <i Class="fa fa-calculator"></i>
-                                        <strong> Ontwikkelaar : </strong>@Model.Project.Developer.Display
-                                    </li>
-
-                                }
-                                @if (Model.Project.Builder is not null)
-                                {
-
-                                    <li>
-                                        <i Class="fa fa-building"></i>
-                                        <strong> Aannemer : </strong>@Model.Project.Builder.Display
-                                    </li>
-
-                                }
-                                @if (Model.Project.Architect is not null)
-                                {
-
-                                    <li>
-                                        <i Class="fa fa-male"></i>
-                                        <strong> Architect : </strong>@Model.Project.Architect.Display
-                                    </li>
-
-                                }
-                                @if (Model.Project.Engineer is not null)
-                                {
-
-                                    <li>
-                                        <i Class="fa fa-male"></i>
-                                        <strong> Ingenieur stabiliteit : </strong>@Model.Project.Engineer.Display
-                                    </li>
-
-                                }
-                                @if (Model.Project.SecurityCoordinator is not null)
-                                {
-
-                                    <li>
-                                        <i Class="fa fa-male"></i>
-                                        <strong> Veiligheidscoördinator : </strong>@Model.Project.SecurityCoordinator.Display
-                                    </li>
-
-                                }
-                                @if (Model.Project.EpbReporter is not null)
-                                {
-
-                                    <li>
-                                        <i Class="fa fa-male"></i>
-                                        <strong> Epb-verslaggever : </strong>@Model.Project.EpbReporter.Display
-                                    </li>
-
-                                }
-
-                            </ul>
-                        </div>
-                    </div>
                 </div>
-                <div class="col-12 col-xl-8 d-flex flex-column gl-detail-hero-col-right">
+                <div class="col-12 col-xl-8 gl-detail-hero-cell">
                     @*AANDACHT VEREIST*@
-                    <section class="card card-modern gl-mc-card gl-detail-mc-card gl-detail-hero-split">
+                    <section class="card card-modern gl-mc-card gl-detail-mc-card">
                         <header class="card-header">
                             <h2 class="card-title">
                                 <i class="bx bx-bell text-primary"></i>
@@ -356,6 +306,7 @@
                                     <button type="button" class="gl-mc-filter-chip" data-cat="@cat.Naam" aria-pressed="false">@cat.Naam (@cat.Aantal)</button>
                                 }
                             </div>
+                            <div id="mcFilterStatus" class="visually-hidden" aria-live="polite"></div>
                         }
                         <div class="card-body p-0 gl-mc-body gl-mc-body-capped">
                             @if (urgentItems.Any())
@@ -368,25 +319,25 @@
                                     <div class="gl-mc-group-body">
                                         @foreach (var item in urgentItems)
                                         {
-                                            <div class="gl-mc-item gl-mc-item-urgent" data-cat="@item.Categorie">
+                                            <a class="gl-mc-item gl-mc-item-urgent" data-cat="@item.Categorie" href="@item.BekijkUrl">
                                                 <i class="bx @item.Icon gl-mc-item-icon"></i>
                                                 <span class="gl-mc-item-text">
                                                     <strong>@item.Type</strong>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")
                                                 </span>
                                                 @if (item.Meta is not null || item.BekijkUrl is not null)
                                                 {
-                                                    <div class="gl-mc-item-actions">
+                                                    <span class="gl-mc-item-actions">
                                                         @if (item.Meta is not null)
                                                         {
                                                             <span class="gl-mc-item-meta">@item.Meta</span>
                                                         }
                                                         @if (item.BekijkUrl is not null)
                                                         {
-                                                            <a href="@item.BekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                                            <span class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
                                                         }
-                                                    </div>
+                                                    </span>
                                                 }
-                                            </div>
+                                            </a>
                                         }
                                     </div>
                                 </div>
@@ -401,25 +352,25 @@
                                     <div class="gl-mc-group-body">
                                         @foreach (var item in normalItems)
                                         {
-                                            <div class="gl-mc-item gl-mc-item-normal" data-cat="@item.Categorie">
+                                            <a class="gl-mc-item gl-mc-item-normal" data-cat="@item.Categorie" href="@item.BekijkUrl">
                                                 <i class="bx @item.Icon gl-mc-item-icon"></i>
                                                 <span class="gl-mc-item-text">
                                                     <strong>@item.Type</strong>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")
                                                 </span>
                                                 @if (item.Meta is not null || item.BekijkUrl is not null)
                                                 {
-                                                    <div class="gl-mc-item-actions">
+                                                    <span class="gl-mc-item-actions">
                                                         @if (item.Meta is not null)
                                                         {
                                                             <span class="gl-mc-item-meta">@item.Meta</span>
                                                         }
                                                         @if (item.BekijkUrl is not null)
                                                         {
-                                                            <a href="@item.BekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                                            <span class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
                                                         }
-                                                    </div>
+                                                    </span>
                                                 }
-                                            </div>
+                                            </a>
                                         }
                                     </div>
                                 </div>
@@ -433,22 +384,165 @@
                             }
                         </div>
                     </section>
+                </div>
+            </div>
+
+            @*HERO-RIJ 2: algemene gegevens + eenheden & verkoopstatus — twee kaarten, gelijke hoogte*@
+            <div class="row mb-3 gl-detail-hero-row gl-detail-hero-row-2">
+                <div class="col-12 col-xl-4 mb-3 mb-xl-0 gl-detail-hero-cell">
+                    @{
+                        var projectLeaderName = Model.Users?.FirstOrDefault(x => x.Id == Model.Project.AspNetUserID)?.DisplayName;
+                        var salesResponsibleName = Model.Users?.FirstOrDefault(x => x.Id == Model.Project.SalesResponsibleUserID)?.DisplayName;
+                        var countryName = Model.Project.Postalcode?.Country?.Name;
+                    }
+                    @*ALGEMENE GEGEVENS*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card mb-0">
+                        <header class="card-header gl-detail-card-header">
+                            <h2 class="card-title mb-0">
+                                <i class="bx bx-info-circle text-primary" aria-hidden="true"></i>
+                                Algemene gegevens
+                            </h2>
+                            @if (canWriteProject)
+                            {
+                                <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-card-edit">
+                                    <i class="bx bx-pencil" aria-hidden="true"></i><span>Bewerken</span>
+                                </a>
+                            }
+                        </header>
+                        <div class="card-body bg-light p-0">
+                            <dl class="gl-detail-kv mb-0">
+                                <div class="gl-detail-kv-row">
+                                    <i class="bx bx-map" aria-hidden="true"></i>
+                                    <dt>Adres</dt>
+                                    <dd>
+                                        @Model.Project.Street @Model.Project.HouseNumber<br />
+                                        @Model.Project.Postalcode.Postcode @Model.Project.Postalcode.Gemeente@(string.IsNullOrWhiteSpace(countryName) ? "" : ", " + countryName)
+                                    </dd>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(Model.Project.ProjectCode))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-hashtag" aria-hidden="true"></i>
+                                        <dt>Projectcode</dt>
+                                        <dd>@Model.Project.ProjectCode</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.Status is not null && !string.IsNullOrWhiteSpace(Model.Project.Status.Name))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-pulse" aria-hidden="true"></i>
+                                        <dt>Status</dt>
+                                        <dd>@Model.Project.Status.Name</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.WheaterStation is not null && !string.IsNullOrWhiteSpace(Model.Project.WheaterStation.Name))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-cloud-sun" aria-hidden="true"></i>
+                                        <dt>Weerstation</dt>
+                                        <dd>@Model.Project.WheaterStation.Name</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.Developer is not null && !string.IsNullOrWhiteSpace(Model.Project.Developer.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-buildings" aria-hidden="true"></i>
+                                        <dt>Ontwikkelaar</dt>
+                                        <dd>@Model.Project.Developer.Display</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.Builder is not null && !string.IsNullOrWhiteSpace(Model.Project.Builder.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-hard-hat" aria-hidden="true"></i>
+                                        <dt>Aannemer</dt>
+                                        <dd>@Model.Project.Builder.Display</dd>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(projectLeaderName))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-user" aria-hidden="true"></i>
+                                        <dt>Projectleider</dt>
+                                        <dd>@projectLeaderName</dd>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(salesResponsibleName))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-user-voice" aria-hidden="true"></i>
+                                        <dt>Verkoopverantw.</dt>
+                                        <dd>@salesResponsibleName</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.Notary is not null && !string.IsNullOrWhiteSpace(Model.Project.Notary.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-bank" aria-hidden="true"></i>
+                                        <dt>Notaris</dt>
+                                        <dd>@Model.Project.Notary.Display</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.Architect is not null && !string.IsNullOrWhiteSpace(Model.Project.Architect.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-ruler" aria-hidden="true"></i>
+                                        <dt>Architect</dt>
+                                        <dd>@Model.Project.Architect.Display</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.Engineer is not null && !string.IsNullOrWhiteSpace(Model.Project.Engineer.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-cube" aria-hidden="true"></i>
+                                        <dt>Ingenieur stab.</dt>
+                                        <dd>@Model.Project.Engineer.Display</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.SecurityCoordinator is not null && !string.IsNullOrWhiteSpace(Model.Project.SecurityCoordinator.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-shield" aria-hidden="true"></i>
+                                        <dt>Veiligheidsco&ouml;rd.</dt>
+                                        <dd>@Model.Project.SecurityCoordinator.Display</dd>
+                                    </div>
+                                }
+                                @if (Model.Project.EpbReporter is not null && !string.IsNullOrWhiteSpace(Model.Project.EpbReporter.Display))
+                                {
+                                    <div class="gl-detail-kv-row">
+                                        <i class="bx bx-file" aria-hidden="true"></i>
+                                        <dt>EPB-verslaggever</dt>
+                                        <dd>@Model.Project.EpbReporter.Display</dd>
+                                    </div>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-8 gl-detail-hero-cell">
                     @*EENHEDEN & VERKOOPSTATUS*@
-                    <div class="card card-modern card-modern-alt-padding gl-detail-card mb-0 gl-detail-hero-split">
-                        <header class="card-header d-flex align-items-center justify-content-between">
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card mb-0">
+                        <header class="card-header gl-detail-card-header">
                             <h2 class="card-title mb-0">Eenheden &amp; verkoopstatus <span class="text-muted small">(@Model.UnitRows.Count)</span></h2>
-                            <a class="text-uppercase text-muted small" data-toggle="tooltip" data-placement="top" data-original-title="Eenheden" href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.Project.Id })">
-                                Alle eenheden <i class="bx bx-link-alt"></i>
+                            <a class="gl-detail-card-edit" href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.Project.Id })">
+                                <i class="bx bx-building-house" aria-hidden="true"></i><span>Alle eenheden</span>
                             </a>
                         </header>
                         <div class="card-body bg-light p-0">
                             @if (Model.UnitRows.Any())
                             {
+                                <div class="gl-detail-units-search">
+                                    <i class="bx bx-search" aria-hidden="true"></i>
+                                    <input type="search" id="unitFilter" class="form-control form-control-sm"
+                                           placeholder="Zoek een eenheid of klant…" autocomplete="off"
+                                           aria-label="Eenheden filteren op eenheid of klant" />
+                                </div>
+                                <div class="gl-detail-units-scroll">
                                 <div class="table-responsive gl-detail-units-body">
                                     <table class="table table-hover mb-0">
                                         <thead>
                                             <tr>
-                                                <th scope="col">Lot</th>
+                                                <th scope="col">Eenheid</th>
                                                 <th scope="col">Type</th>
                                                 <th scope="col" class="text-end">Opp.</th>
                                                 <th scope="col" class="text-end">Vraag-/verkoopprijs</th>
@@ -466,15 +560,36 @@
                                                     <td>@u.TypeName</td>
                                                     <td class="text-end">@(u.Oppervlakte.HasValue ? u.Oppervlakte.Value.ToString("0") + " m²" : "—")</td>
                                                     <td class="text-end">
-                                                        @u.Vraagprijs.ToString("C0", be)
-                                                        @if (u.Afwerkingen.Any())
+                                                        @{
+                                                            var effectiefVerkocht = u.Status == "Verkocht" || u.Status == "Akte verleden";
+                                                        }
+                                                        @if (effectiefVerkocht)
                                                         {
+                                                            @* Verkocht pand: enkel grond + constructiewaarde, geen afwerkingsopties. *@
+                                                            @u.Vraagprijs.ToString("C0", be)
+                                                        }
+                                                        else if (u.Afwerkingen.Count > 1)
+                                                        {
+                                                            <div>vanaf @((u.Vraagprijs + u.Afwerkingen.Min(a => a.Cost)).ToString("C0", be))</div>
                                                             <div class="gl-detail-row-sub">
                                                                 @foreach (var afwerking in u.Afwerkingen)
                                                                 {
-                                                                    <div>+ @afwerking.Description (@afwerking.Cost.ToString("C0", be))</div>
+                                                                    <div>@afwerking.Description: @((u.Vraagprijs + afwerking.Cost).ToString("C0", be))</div>
                                                                 }
                                                             </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            @u.Vraagprijs.ToString("C0", be)
+                                                            @if (u.Afwerkingen.Any())
+                                                            {
+                                                                <div class="gl-detail-row-sub">
+                                                                    @foreach (var afwerking in u.Afwerkingen)
+                                                                    {
+                                                                        <div>+ @afwerking.Description (@afwerking.Cost.ToString("C0", be))</div>
+                                                                    }
+                                                                </div>
+                                                            }
                                                         }
                                                     </td>
                                                     <td><span class="badge bg-@u.StatusVariant">@u.Status</span></td>
@@ -490,8 +605,12 @@
                                                     </td>
                                                 </tr>
                                             }
+                                            <tr id="unitFilterNoResults" hidden>
+                                                <td colspan="6" class="text-muted small p-3">Geen eenheid of klant gevonden.</td>
+                                            </tr>
                                         </tbody>
                                     </table>
+                                </div>
                                 </div>
                             }
                             else
@@ -503,185 +622,17 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-12 col-xl-6 col-lg-6 col-md-6 col-sm-12 mb-3">
-                @*KLANTEN*@
-                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
-                        <header class="card-header">
-
-                            <h2 class="card-title">Klanten</h2>
-                        </header>
-                        <div class="card-body bg-light">
-                            <ul>
-                @if (Model.RecentClients is not null & Model.RecentClients.Count > 0)
-                {
-                    @foreach (var item in Model.RecentClients)
-                    {
-                                        <li>
-                                            <a data-toggle="tooltip" data-placement="top" title="" data-original-title="Klantgegevens" href="@Url.Action("Detail", "Klanten", new {clientid = item.ID, projectid = Model.Project.Id})">
-                                                <span Class="title">@item.Display </span>
-                                            </a>
-                                        </li>
-                    }
-                }
-
-
-                            </ul>
-                            <div Class="text-right">
-                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Klanten" href="@Url.Action("DetailClients", "Projecten", new { projectid = Model.Project.Id })">
-                                    (Toon Alle)
-                                </a>
-                            </div>
-                            <hr Class="dotted short">
-                            <div class="social-icons-list">
-                                <a rel="tooltip" data-placement="bottom" href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.Project.Id })" data-original-title="Klant toevoegen"><i class="fa fa-plus"></i><span>Klant toevoegen</span></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-xl-6 col-lg-6 col-md-6 col-sm-12 mb-3">
-                @*VOORTGANG & VERKOOP*@
-                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
-                        <header class="card-header">
-                            <h2 class="card-title">Voortgang &amp; verkoop</h2>
-                        </header>
-                        <div class="card-body bg-light">
-                            @* Fysieke/financiële voortgang staan al in de KPI-strip bovenaan;
-                               hier enkel wat die strip niet toont (verkochte waarde, openstaand,
-                               levering-detail) — geen herhaling van dezelfde twee cijfers. *@
-                            @if (Model.SalesData is not null)
-                            {
-                                <div class="pb-2">
-                                    <div class="gl-pg-row">
-                                        <span class="gl-pg-label">Verkocht (waarde)</span>
-                                        <span class="gl-pg-pct">@Model.SalesData.PercentageSold.ToString("0.#")%</span>
-                                    </div>
-                                    <div class="progress gl-pg-bar">
-                                        <div class="progress-bar" style="width:@(Model.SalesData.PercentageSold.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
-                                    </div>
-                                </div>
-                            }
-
-                            <p class="mb-2">
-                                <a href="@Url.Action("Index", "ProjectsIssues", new { projectId = Model.Project.Id })">
-                                    <strong>@Model.OpenIssuesCount</strong> open @(Model.OpenIssuesCount == 1 ? "punt" : "punten")
-                                </a>
-                            </p>
-                            @if ((Model.ProjectInvoiceSummary?.OverdueCount ?? 0) > 0)
-                            {
-                                <p class="mb-2">
-                                    <a href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })" class="gl-text-danger">
-                                        <strong>@Model.ProjectInvoiceSummary!.OverdueAmount.ToString("C0", be)</strong> openstaand · @Model.ProjectInvoiceSummary.OverdueCount vervallen @(Model.ProjectInvoiceSummary.OverdueCount == 1 ? "factuur" : "facturen")
-                                    </a>
-                                </p>
-                            }
-
-                            <hr class="dotted short" />
-
-                            @if (Model.Project.DeliveryDate.HasValue)
-                            {
-                                var daysLeft = (Model.Project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
-                                <p class="mb-0 small">
-                                    <strong>Levering:</strong> @Model.Project.DeliveryDate.Value.ToString("dd/MM/yyyy")<br />
-                                    @if (daysLeft < 0)
-                                    {
-                                        <span class="gl-text-danger">Opleverdatum voorbij (@(-daysLeft) dagen)</span>
-                                    }
-                                    else
-                                    {
-                                        <span>@daysLeft dagen resterend</span>
-                                    }
-                                </p>
-                            }
-                            else if (Model.WorkingDaysLeft == -9999)
-                            {
-                                <p class="mb-0 small text-muted">Kan nog geen werkdagen berekenen, gelieve de startdatum en werkdagen in te geven.</p>
-                            }
-                            else
-                            {
-                                <p class="mb-0 small">
-                                    <strong>@Model.WorkingDaysLeft</strong> werkdagen resterend<br />
-                                    <span class="text-muted">Uiterste einddatum: @Model.FinalConstructionDate.ToString("dd/MM/yyyy")</span>
-                                </p>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
-                @*DOCUMENTEN & CONTRACTEN*@
-                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
-                        <header class="card-header">
-                            <h2 class="card-title">Documenten &amp; contracten</h2>
-                        </header>
-                        <div class="card-body bg-light">
-                            <ul class="simple-">
-                @foreach (var doc in Model.LatestDocs)
-                {
-                                    <li>
-
-                        @if (doc.Name is null | doc.Name == "")
-                        {
-
-                                        <a href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank"><span Class="title">@doc.Type.GetDisplayName()</span></a>
-                            @if (doc.DocDate.HasValue)
-                            {
-
-                                                <span Class="message truncate">@doc.DocDate.Value.ToLongDateString()</span>
-                            }
-
-                        }
-                        else
-                        {
-
-                                        <a href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank"> <span Class="title">@doc.Name</span></a>
-                                            <br />
-                            @if (doc.DocDate.HasValue)
-                            {
-                                                <span Class="message truncate">@doc.Type.GetDisplayName() - @doc.DocDate.Value.ToLongDateString()</span>
-                            }
-                            else
-                            {
-                                                <span Class="message truncate">@doc.Type.GetDisplayName()</span>
-                            }
-                        }
-                                    </li>
-                }
-
-                            </ul>
-                            <div Class="text-right">
-                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Documenten" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.Project.Id })">
-                                    (Toon Alle)
-                                </a>
-                            </div>
-                            <hr Class="dotted short">
-                            @{
-                                var contractIssueCount = Model.UnsignedContracts.Count + Model.GuaranteeMissingContracts.Count;
-                            }
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="small @(contractIssueCount > 0 ? "gl-text-danger" : "text-muted")">
-                                    @if (contractIssueCount > 0)
-                                    {
-                                        <text><strong>@contractIssueCount</strong> contract@(contractIssueCount == 1 ? "" : "en") vragen opvolging</text>
-                                    }
-                                    else
-                                    {
-                                        <text>Alle contracten in orde</text>
-                                    }
-                                </span>
-                                <a class="text-uppercase text-muted small" href="@Url.Action("DetailContracts", "Projecten", new { projectid = Model.Project.Id })">Leveranciers <i class="bx bx-link-alt"></i></a>
-                            </div>
-                            <hr Class="dotted short">
-                            <div class="social-icons-list">
-                                <a rel="tooltip" data-placement="bottom" class="modal-with-form" id="btnAddPhoto" href="#modaladddoc" data-original-title="Document toevoegen"><i class="fa fa-plus"></i><span>Document toevoegen</span></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+            <div class="row gl-detail-cards-row">
+                <div class="col-12 col-md-6 col-xl-3 mb-3">
                 @*FACTURATIE*@
                     <div class="card card-modern card-modern-alt-padding gl-detail-card">
-                        <header class="card-header">
-                            <h2 class="card-title">Facturatie</h2>
+                        <header class="card-header gl-detail-card-header">
+                            <h2 class="card-title mb-0">
+                                <a href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-table-link">Facturatie</a>
+                            </h2>
+                            <a href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-card-edit">
+                                <i class="bx bx-receipt" aria-hidden="true"></i><span>Facturatieblad</span>
+                            </a>
                         </header>
                         <div class="card-body bg-light">
                             @if (Model.RecentInvoices.Any())
@@ -691,10 +642,22 @@
                                     {
                                         <div class="gl-detail-row-item">
                                             <div class="gl-detail-row-main">
-                                                <div class="gl-detail-row-title">@(inv.PublicId ?? $"Factuur #{inv.Id}")</div>
-                                                <div class="gl-detail-row-sub">@inv.ClientName · @inv.StatusName</div>
+                                                <div class="gl-detail-row-title">
+                                                    <a href="@Url.Action("Detail", "Invoices", new { id = inv.Id })" class="gl-detail-table-link">@(string.IsNullOrWhiteSpace(inv.PublicId) ? "Proforma" : inv.PublicId)</a>
+                                                </div>
+                                                <div class="gl-detail-row-sub">
+                                                    @if (inv.ClientType == (int)InvoicePartyType.ClientAccount && inv.ClientId.HasValue)
+                                                    {
+                                                        <a href="@Url.Action("Detail", "Klanten", new { clientid = inv.ClientId, projectid = Model.Project.Id })" class="gl-detail-table-link">@inv.ClientName</a>
+                                                    }
+                                                    else
+                                                    {
+                                                        @inv.ClientName
+                                                    }
+                                                    &middot; @inv.StatusName
+                                                </div>
                                             </div>
-                                            <span class="gl-detail-row-value">@((inv.Balance ?? 0m).ToString("C0", be))</span>
+                                            <a href="@Url.Action("Detail", "Invoices", new { id = inv.Id })" class="gl-detail-row-value gl-detail-table-link">@((inv.Balance ?? 0m).ToString("C0", be))</a>
                                         </div>
                                     }
                                 </div>
@@ -703,95 +666,181 @@
                             {
                                 <p class="text-muted small mb-0">Nog geen facturen voor dit project.</p>
                             }
-                            <hr Class="dotted short">
-                            <div Class="text-right">
-                                <a Class="text-uppercase text-muted" href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })">
-                                    (Toon Alle)
-                                </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-xl-3 mb-3">
+                @*VOORTGANG & BUDGET*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card" id="gl-detail-voortgang-card">
+                        <header class="card-header gl-detail-card-header">
+                            <h2 class="card-title mb-0">
+                                <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-table-link">Voortgang &amp; budget</a>
+                            </h2>
+                            <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-card-edit">
+                                <i class="bx bx-calculator" aria-hidden="true"></i><span>Nacalculatie</span>
+                            </a>
+                        </header>
+                        <div class="card-body bg-light">
+                            @{
+                                string VbW(decimal pct) => Math.Clamp(pct, 0m, 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                                var fysPct = Model.Voortgang?.FysiekeVoortgangPct ?? 0m;
+                                var finPct = Model.Voortgang?.FinancieleVoortgangPct ?? 0m;
+                                var soldPct = Model.SalesData?.PercentageSold ?? 0m;
+                                var budgetPct = Model.Voortgang?.BudgetBestedPct ?? 0m;
+                            }
+                            <div class="gl-vb-list">
+                                <div class="gl-vb-item gl-vb-fys">
+                                    <div class="gl-vb-head">
+                                        <span class="gl-vb-label">Fysieke voortgang</span>
+                                        <span class="gl-vb-pct">@fysPct.ToString("0.#", be)%</span>
+                                    </div>
+                                    <div class="gl-vb-track"><div class="gl-vb-fill" style="--gl-vb-width:@VbW(fysPct)%"></div></div>
+                                </div>
+                                <div class="gl-vb-item gl-vb-fin">
+                                    <div class="gl-vb-head">
+                                        <span class="gl-vb-label">Financiële voortgang</span>
+                                        <span class="gl-vb-pct">@finPct.ToString("0.#", be)%</span>
+                                    </div>
+                                    <div class="gl-vb-track"><div class="gl-vb-fill" style="--gl-vb-width:@VbW(finPct)%"></div></div>
+                                </div>
+                                <div class="gl-vb-item gl-vb-sold">
+                                    <div class="gl-vb-head">
+                                        <span class="gl-vb-label">Verkocht (waarde)</span>
+                                        <span class="gl-vb-pct">@soldPct.ToString("0.#", be)%</span>
+                                    </div>
+                                    <div class="gl-vb-track"><div class="gl-vb-fill" style="--gl-vb-width:@VbW(soldPct)%"></div></div>
+                                </div>
+                                <div class="gl-vb-item gl-vb-budget@(budgetPct > 100m ? " gl-vb-over" : "")">
+                                    <div class="gl-vb-head">
+                                        <span class="gl-vb-label">Budget besteed</span>
+                                        <span class="gl-vb-pct">@budgetPct.ToString("0.#", be)%</span>
+                                    </div>
+                                    <div class="gl-vb-track"><div class="gl-vb-fill" style="--gl-vb-width:@VbW(budgetPct)%"></div></div>
+                                </div>
+                            </div>
+                            <div class="gl-vb-stats">
+                                <div class="gl-vb-stat">
+                                    <div class="gl-vb-stat-label">Budget</div>
+                                    <div class="gl-vb-stat-value">@((Model.Voortgang?.TotaalBegroot ?? 0m).ToString("C0", be))</div>
+                                    <div class="gl-vb-stat-sub">besteed @((Model.Voortgang?.TotaalGefactureerd ?? 0m).ToString("C0", be))</div>
+                                </div>
+                                <div class="gl-vb-stat">
+                                    <div class="gl-vb-stat-label">Gecontracteerd</div>
+                                    <div class="gl-vb-stat-value">@((Model.Voortgang?.TotaalGecontracteerd ?? 0m).ToString("C0", be))</div>
+                                    <div class="gl-vb-stat-sub">@((Model.Voortgang?.ContractueleVolwassenheidPct ?? 0m).ToString("0.#", be))% van budget</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+                <div class="col-12 col-md-6 col-xl-3 mb-3">
+                @*DOCUMENTEN*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
+                        <header class="card-header gl-detail-card-header">
+                            <h2 class="card-title mb-0">
+                                <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-table-link">Documenten</a>
+                            </h2>
+                            <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-card-edit">
+                                <i class="bx bx-folder" aria-hidden="true"></i><span>Alle documenten</span>
+                            </a>
+                        </header>
+                        <div class="card-body bg-light">
+                            @{
+                                (string Label, string Cls) DocBadge(string filename)
+                                {
+                                    var e = System.IO.Path.GetExtension(filename ?? string.Empty).TrimStart('.').ToLowerInvariant();
+                                    var c = e switch
+                                    {
+                                        "pdf" => "gl-doc-pdf",
+                                        "doc" or "docx" or "odt" or "rtf" => "gl-doc-word",
+                                        "xls" or "xlsx" or "csv" or "ods" => "gl-doc-excel",
+                                        "dwg" or "dxf" or "dwf" => "gl-doc-cad",
+                                        "jpg" or "jpeg" or "png" or "gif" or "webp" or "tif" or "tiff" or "bmp" => "gl-doc-img",
+                                        _ => string.Empty
+                                    };
+                                    var label = string.IsNullOrEmpty(e) ? "DOC" : (e.Length > 4 ? e.Substring(0, 4) : e).ToUpperInvariant();
+                                    return (label, c);
+                                }
+                            }
+                            @if (Model.LatestDocs.Any())
+                            {
+                                <div class="gl-doc-list">
+                                    @foreach (var doc in Model.LatestDocs)
+                                    {
+                                        var badge = DocBadge(doc.Filename);
+                                        var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? doc.Type.GetDisplayName() : doc.Name;
+                                        <a class="gl-doc-item" href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank" rel="noopener">
+                                            <span class="gl-doc-badge @badge.Cls">@badge.Label</span>
+                                            <span class="gl-doc-main">
+                                                <span class="gl-doc-title">@docTitle</span>
+                                                <span class="gl-doc-sub">@doc.Type.GetDisplayName()@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</span>
+                                            </span>
+                                            <span class="gl-doc-open">Open</span>
+                                        </a>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="gl-doc-empty mb-0">Nog geen documenten voor dit project.</p>
+                            }
+
+                            @if (canWriteProject)
+                            {
+                                <a class="gl-doc-add modal-with-form" href="#modaladddoc" rel="tooltip" data-placement="bottom" title="Document toevoegen">
+                                    <i class="bx bx-plus" aria-hidden="true"></i><span>Document toevoegen</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-xl-3 mb-3">
                 @*FOTOS & MEDIA*@
                     <div class="card card-modern card-modern-alt-padding gl-detail-card">
-                        <header class="card-header">
-                            <h2 class="card-title">Foto's &amp; media</h2>
+                        <header class="card-header gl-detail-card-header">
+                            <h2 class="card-title mb-0">
+                                <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-table-link">Foto's &amp; media</a>
+                            </h2>
+                            <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-card-edit">
+                                <i class="bx bx-images" aria-hidden="true"></i><span>Alle foto's</span>
+                            </a>
                         </header>
                         <div class="card-body bg-light">
-                            @if (Model.LatestPictures.Any())
-                            {
-                                <div class="gl-detail-media-grid mb-3">
-                                    @foreach (var pic in Model.LatestPictures.Take(3))
-                                    {
-                                        <img src="@Url.Content(Configuration["URL:ImageWebURL"] + "pictures/447/" + pic.Name)" alt="@pic.Name" loading="lazy">
-                                    }
-                                    @if (Model.TotalPictureCount > 3)
-                                    {
-                                        <div class="gl-detail-media-more">+@(Model.TotalPictureCount - 3)</div>
-                                    }
-                                </div>
+                            @{
+                                var fotos = Model.LatestPictures.Take(5).ToList();
                             }
-                            else
-                            {
-                                <p class="text-muted small mb-3">Nog geen foto's voor dit project.</p>
-                            }
-                            <div Class="text-right">
-                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Fotos" href="@Url.Action("DetailPhotos", "Projecten", new {projectid = Model.Project.Id})">
-                                    (Toon Alle)
-                                </a>
+                            <div class="gl-detail-media-grid">
+                                @foreach (var pic in fotos)
+                                {
+                                    <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-media-thumb">
+                                        <img src="@Url.Content(Configuration["URL:ImageWebURL"] + "pictures/447/" + pic.Name)" alt="" loading="lazy">
+                                    </a>
+                                }
+                                @for (var i = fotos.Count; i < 5; i++)
+                                {
+                                    <div class="gl-detail-media-empty" aria-hidden="true"></div>
+                                }
+                                @if (canWriteProject)
+                                {
+                                    <a class="gl-detail-media-add modal-with-form" href="#modaladdphoto" rel="tooltip" data-placement="bottom" title="Foto toevoegen" aria-label="Foto toevoegen">
+                                        <i class="bx bx-plus" aria-hidden="true"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a class="gl-detail-media-add" href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })" aria-label="Alle foto's">
+                                        <i class="bx bx-images" aria-hidden="true"></i>
+                                    </a>
+                                }
                             </div>
-                            <hr Class="dotted short">
-                            <div Class="social-icons-list">
-                                <a rel="tooltip" data-placement="bottom" Class="modal-with-form" id="btnAddPhoto" href="#modaladdphoto" data-original-title="Foto toevoegen"><i Class="fa fa-plus"></i><span>Foto toevoegen</span></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
-                @*VERZEKERINGEN*@
-                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
-                        <header class="card-header">
-                            <h2 class="card-title">Verzekeringen</h2>
-                        </header>
-                        <div class="card-body bg-light">
-                            @if (Model.Insurances.Any())
+                            @if (fotos.Count == 0)
                             {
-                                <div class="gl-detail-row-list">
-                                    @foreach (var ins in Model.Insurances)
-                                    {
-                                        var today = DateOnly.FromDateTime(DateTime.Today);
-                                        string insStatus; string insVariant;
-                                        if (!ins.Enddate.HasValue) { insStatus = "Onbekend"; insVariant = "text-muted"; }
-                                        else if (ins.Enddate.Value < today) { insStatus = "Verlopen"; insVariant = "gl-text-danger"; }
-                                        else if (ins.Enddate.Value < today.AddDays(60)) { insStatus = "Verloopt binnenkort"; insVariant = "gl-detail-kpi-value-warning"; }
-                                        else { insStatus = "In orde"; insVariant = "gl-detail-kpi-value-primary"; }
-                                        <div class="gl-detail-row-item">
-                                            <div class="gl-detail-row-main">
-                                                <div class="gl-detail-row-title">@(ins.Type != 0 ? ins.Type.GetDisplayName() : "Onbekend type")</div>
-                                                <div class="gl-detail-row-sub">
-                                                    @(ins.InsuranceCompany?.Name ?? "Onbekende maatschappij")
-                                                    @if (ins.Enddate.HasValue)
-                                                    {
-                                                        @: · Verloopt @ins.Enddate.Value.ToString("dd/MM/yyyy")
-                                                    }
-                                                </div>
-                                            </div>
-                                            <span class="gl-detail-row-value @insVariant">@insStatus</span>
-                                        </div>
-                                    }
-                                </div>
+                                <p class="text-muted small mt-3 mb-0">Nog geen foto's voor dit project.</p>
                             }
-                            else
+                            else if (Model.TotalPictureCount > fotos.Count)
                             {
-                                <p class="text-muted small mb-0">Nog geen verzekeringen ingesteld voor dit project.</p>
+                                <p class="text-muted small mt-3 mb-0">@fotos.Count van @Model.TotalPictureCount foto's</p>
                             }
-                            <hr Class="dotted short">
-                            <div Class="text-right">
-                                <a Class="text-uppercase text-muted" href="@Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id })">
-                                    (Toon Alle)
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -799,6 +848,16 @@
 		</div>
     </div>
 </section>
+@if (canWriteProject)
+{
+    @await Html.PartialAsync("Modals/_ModalAddDoc", new CPMCore.Models.Projecten.ProjectDocModalVM
+    {
+        Document = new BOCore.ProjectDocBO { ProjectId = Model.Project.Id, Type = BOCore.ProjectDocType.Sales },
+        Target = "Project",
+        IsEditMode = false
+    })
+    @await Html.PartialAsync("Modals/_ModalAddPhoto", new BOCore.ProjectPictureBO { ProjectId = Model.Project.Id })
+}
 <div id="modaldeleteproject" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-project-container"></div>
 </div>
@@ -810,7 +869,7 @@
         <div class="card-body">
             <div class="modal-wrapper">
                 <div class="modal-icon">
-                    <i class="fas fa-question-circle"></i>
+                    <i class="bx bx-help-circle" aria-hidden="true"></i>
                 </div>
                 <div class="modal-text">
                     <p>Weet u zeker dat u de standaard foto van dit project wilt verwijderen?</p>
@@ -830,30 +889,34 @@
 
 @section PageScripts {
     <script>
-        // Hero-rij: de rechterkolom (Aandacht vereist + Eenheden) moet exact
-        // even hoog zijn als de linkerkolom (Projectfoto + Algemene gegevens)
-        // en daarbinnen intern scrollen. Puur CSS lost dit niet op — de
-        // rechterkolom heeft anders geen eigen (niet-inhoud-afgeleide) hoogte
-        // om zijn kaarten flex-grow tegen te laten verdelen, dus flex-grow
-        // deed niets en beide kaarten toonden hun volledige inhoud zonder
-        // scroll. Hier meten we de linkerkolom na render en zetten die hoogte
-        // expliciet op de rechterkolom; de bestaande flex/overflow-CSS doet
-        // de rest zodra er een echte hoogte is om te verdelen.
-        function syncHeroColumnHeight() {
-            var leftCol = document.querySelector('.gl-detail-hero-col-left');
-            var rightCol = document.querySelector('.gl-detail-hero-col-right');
-            if (!leftCol || !rightCol) return;
-            if (window.matchMedia('(max-width: 1199.98px)').matches) {
-                // Onder xl staan de kolommen gestapeld (col-12) — geen gedeelde
-                // hoogte nodig, en een oude vaste hoogte zou daar net storen.
-                rightCol.style.height = '';
-                return;
-            }
-            rightCol.style.height = leftCol.offsetHeight + 'px';
-        }
-        window.addEventListener('resize', syncHeroColumnHeight);
-        window.addEventListener('load', syncHeroColumnHeight);
-        syncHeroColumnHeight();
+        // (De hero-kolommen krijgen hun hoogte nu puur uit CSS — geen
+        //  JS-hoogtesynchronisatie meer; zie projecten-custom.css.)
+
+        // Eenheden & verkoopstatus: filter de tabel op eenheid- of klantnaam.
+        (function () {
+            var input = document.getElementById('unitFilter');
+            if (!input) return;
+            var tbody = input.closest('.card-body')?.querySelector('.gl-detail-units-body tbody');
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'))
+                .filter(function (r) { return r.id !== 'unitFilterNoResults'; });
+            var noResults = document.getElementById('unitFilterNoResults');
+
+            input.addEventListener('input', function () {
+                var q = input.value.trim().toLowerCase();
+                var anyVisible = false;
+                rows.forEach(function (row) {
+                    var cells = row.querySelectorAll('td');
+                    // 1e cel = eenheid, laatste cel = klant
+                    var hay = ((cells[0] ? cells[0].textContent : '') + ' ' +
+                               (cells.length ? cells[cells.length - 1].textContent : '')).toLowerCase();
+                    var match = q === '' || hay.indexOf(q) !== -1;
+                    row.hidden = !match;
+                    if (match) anyVisible = true;
+                });
+                if (noResults) noResults.hidden = anyVisible || q === '';
+            });
+        })();
 
         function notify(title, text, type) {
             if (typeof PNotify !== 'undefined') {
@@ -875,17 +938,45 @@
         });
 
         document.getElementById('standardFotoInput')?.addEventListener('change', function () {
-            if (!this.files[0]) return;
+            var file = this.files[0];
+            if (!file) return;
+            var input = this;
+            var btn = document.getElementById('editStandardFotoBtn');
+
+            // Client-side controle vóór het uploaden — een fout meteen benoemen
+            // i.p.v. de server laten falen.
+            if (!/^image\//.test(file.type)) {
+                notify('Kan deze foto niet gebruiken', 'Kies een afbeeldingsbestand (JPG, PNG of WEBP).', 'error');
+                input.value = '';
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                notify('Foto is te groot', 'De foto is ' + (file.size / 1048576).toFixed(1) + ' MB. Maximaal 10 MB — verklein de foto en probeer opnieuw.', 'error');
+                input.value = '';
+                return;
+            }
+
+            if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.setAttribute('title', 'Bezig met uploaden…'); }
+
             var formData = new FormData();
             formData.append('projectId', '@Model.Project.Id');
-            formData.append('file', this.files[0]);
+            formData.append('file', file);
             formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '');
             fetch('@Url.Action("UploadProjectStandardFoto", "Projecten")', { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(d => {
-                    if (d.success) location.reload();
-                    else notify('Upload mislukt', d.error ?? 'Onbekende fout', 'error');
+                    if (d.success) { notify('Foto opgeslagen', 'De projectfoto wordt vernieuwd…', 'success'); location.reload(); }
+                    else { notify('Upload mislukt', d.error ?? 'De server kon de foto niet opslaan. Probeer opnieuw of neem contact op met de beheerder.', 'error'); resetBtn(); }
+                })
+                .catch(function () {
+                    notify('Upload mislukt', 'Geen verbinding met de server. Controleer je netwerk en probeer opnieuw.', 'error');
+                    resetBtn();
                 });
+
+            function resetBtn() {
+                input.value = '';
+                if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.setAttribute('title', 'Foto wijzigen'); }
+            }
         });
 
         document.getElementById('removeStandardFotoBtn')?.addEventListener('click', function () {
@@ -893,6 +984,8 @@
         });
 
         document.getElementById('confirmRemoveFotoBtn')?.addEventListener('click', function () {
+            var btn = this;
+            btn.disabled = true;
             fetch('@Url.Action("RemoveProjectStandardFoto", "Projecten")', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -901,14 +994,36 @@
             .then(r => r.json())
             .then(d => {
                 if (d.success) location.reload();
-                else notify('Verwijderen mislukt', 'De standaard foto kon niet verwijderd worden.', 'error');
+                else { notify('Verwijderen mislukt', 'De server kon de foto niet verwijderen. Probeer opnieuw of neem contact op met de beheerder.', 'error'); btn.disabled = false; }
+            })
+            .catch(function () {
+                notify('Verwijderen mislukt', 'Geen verbinding met de server. Controleer je netwerk en probeer opnieuw.', 'error');
+                btn.disabled = false;
             });
         });
 
+        // KPI-ringen: bij het eerste zien naar hun waarde vegen (--pct 0 -> doel).
+        (function () {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            var rings = document.querySelectorAll('.gl-kpi2-ring');
+            if (!rings.length) return;
+            rings.forEach(function (r) {
+                var target = r.style.getPropertyValue('--pct');
+                r.style.setProperty('--pct', '0');
+                void r.offsetWidth;
+                requestAnimationFrame(function () { r.style.setProperty('--pct', target); });
+            });
+        })();
+
         // Aandachtspaneel: categoriefilter-chips
+        var mcBody = document.querySelector('.gl-detail-mc-card .gl-mc-body-capped');
         document.querySelectorAll('.gl-mc-filter-chip').forEach(function (chip) {
             chip.addEventListener('click', function () {
                 var cat = this.dataset.cat;
+                if (mcBody) {
+                    mcBody.classList.add('is-refiltering');
+                    setTimeout(function () { mcBody.classList.remove('is-refiltering'); }, 140);
+                }
                 document.querySelectorAll('.gl-mc-filter-chip').forEach(function (c) {
                     c.classList.toggle('active', c === chip);
                     c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
@@ -921,6 +1036,14 @@
                         .some(function (item) { return item.style.display !== 'none'; });
                     group.style.display = visible ? '' : 'none';
                 });
+                var shown = document.querySelectorAll('.gl-mc-item').length
+                    ? Array.prototype.filter.call(document.querySelectorAll('.gl-mc-item'), function (i) { return i.style.display !== 'none'; }).length
+                    : 0;
+                var status = document.getElementById('mcFilterStatus');
+                if (status) {
+                    status.textContent = (cat === 'alle' ? 'Alle aandachtspunten' : 'Categorie ' + cat)
+                        + ': ' + shown + (shown === 1 ? ' punt' : ' punten') + ' getoond.';
+                }
             });
         });
 

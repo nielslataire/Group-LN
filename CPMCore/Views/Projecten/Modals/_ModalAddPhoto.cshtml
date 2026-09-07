@@ -1,7 +1,7 @@
 ﻿@model BOCore.ProjectPictureBO
 
 
-<div id="modaladdphoto" class="modal-block modal-block-primary">
+<div id="modaladdphoto" class="modal-block modal-block-primary mfp-hide">
 			@using (Html.BeginForm("UploadImage", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddPhoto", enctype = "multipart/form-data" }))
 			{
 		@Html.HiddenFor(m => m.ProjectId)

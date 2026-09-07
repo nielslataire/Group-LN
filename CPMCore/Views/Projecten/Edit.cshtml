@@ -59,6 +59,8 @@
     @Html.HiddenFor(m => m.Project.SecurityCoordinator.Display, new { id = "Project_SecurityCoordinator_Display" })
     @Html.HiddenFor(m => m.Project.EpbReporter.ID, new { id = "Project_EpbReporter_ID" })
     @Html.HiddenFor(m => m.Project.EpbReporter.Display, new { id = "Project_EpbReporter_Display" })
+    @Html.HiddenFor(m => m.Project.Notary.ID, new { id = "Project_Notary_ID" })
+    @Html.HiddenFor(m => m.Project.Notary.Display, new { id = "Project_Notary_Display" })
 
     <div class="row mt-2">
         <div class="col">
@@ -99,6 +101,15 @@
                                 </label>
                                 <div class="col-lg-8 col-xl-8">
                                     @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_ProjectCode">
+                                    @Html.LabelFor(m => m.Project.ProjectCode)
+                                </label>
+                                <div class="col-lg-8 col-xl-8">
+                                    @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
                                 </div>
                             </div>
 
@@ -321,7 +332,11 @@
                             </div>
 
                             <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_TotalLandShare">@Html.LabelFor(m => m.Project.TotalLandShare)</label>
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_SalesResponsibleUserID">@Html.LabelFor(m => m.Project.SalesResponsibleUserID)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.DropDownListFor(m => m.Project.SalesResponsibleUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.SalesResponsibleUserID), "Selecteer een verkoopverantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_SalesResponsibleUserID" })
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_TotalLandShare">@Html.LabelFor(m => m.Project.TotalLandShare)</label>
                                 <div class="col-lg-3 col-xl-3">
                                     @Html.TextBoxFor(m => m.Project.TotalLandShare, new { @class = "form-control form-control-modern", type = "number", step = "0.01", min = "0" })
                                 </div>
@@ -411,6 +426,18 @@
                                         @if (Model.Project.EpbReporter.ID > 0)
                                         {
                                             <option value="@Model.Project.EpbReporter.ID" selected>@Model.Project.EpbReporter.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="NotarySelect">@Html.LabelFor(m => m.Project.Notary)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="NotarySelect" class="form-control w-100">
+                                        @if (Model.Project.Notary.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Notary.ID" selected>@Model.Project.Notary.Display</option>
                                         }
                                     </select>
                                 </div>
@@ -746,6 +773,10 @@
                 configureSelect('#EpbSelect', companyOptions, function (e) {
                         $('#Project_EpbReporter_ID').val(e.params.data.id);
                         $('#Project_EpbReporter_Display').val(e.params.data.text);
+                });
+                configureSelect('#NotarySelect', companyOptions, function (e) {
+                        $('#Project_Notary_ID').val(e.params.data.id);
+                        $('#Project_Notary_Display').val(e.params.data.text);
                 });
 
                 if ($('#PostalSelect').val()) {
