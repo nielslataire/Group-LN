@@ -359,7 +359,6 @@ namespace CPMCore.Models.Projecten
             _docs = new List<ProjectDocBO>();
             _recentclients = new List<IdNameBO>();
             _LatestNews = new ProjectNewsBO();
-            _latestpicture = new ProjectPictureBO();
             _latestDocs = new List<ProjectDocBO>();
         }
         // Projectgegevens
@@ -605,18 +604,11 @@ namespace CPMCore.Models.Projecten
             }
         }
 
-        private ProjectPictureBO _latestpicture;
-        public ProjectPictureBO LatestPicture
-        {
-            get
-            {
-                return _latestpicture;
-            }
-            set
-            {
-                _latestpicture = value;
-            }
-        }
+        /// <summary>Recentste project-foto's (max. 4), voor de media-grid op de hub.</summary>
+        public List<ProjectPictureBO> LatestPictures { get; set; } = new();
+
+        /// <summary>Totaal aantal foto's/video's van dit project (voor de "+N"-tegel op de media-grid).</summary>
+        public int TotalPictureCount { get; set; }
 
         private List<ProjectDocBO> _latestDocs;
         public List<ProjectDocBO> LatestDocs
@@ -630,6 +622,72 @@ namespace CPMCore.Models.Projecten
                 _latestDocs = value;
             }
         }
+
+        /// <summary>Fysieke/financiële voortgang van dit project; null als er nog geen berekening bestaat.</summary>
+        public ProjectVoortgangBO Voortgang { get; set; }
+
+        /// <summary>Aantal openstaande punten (construction issues) op dit project.</summary>
+        public int OpenIssuesCount { get; set; }
+
+        /// <summary>Openstaande punten (actieve statussen), hoogste prioriteit eerst — voor het aandachtspaneel.</summary>
+        public List<DALCore.Models.ConstructionIssue> OpenIssues { get; set; } = new();
+
+        /// <summary>Contracten op dit project die nog niet getekend zijn.</summary>
+        public List<ContractBO> UnsignedContracts { get; set; } = new();
+
+        /// <summary>Contracten op dit project met een ontbrekend waarborgdocument.</summary>
+        public List<ContractBO> GuaranteeMissingContracts { get; set; } = new();
+
+        /// <summary>Verzekeringswaarschuwingen voor dit project.</summary>
+        public List<WarningBO> ProjectInsuranceWarnings { get; set; } = new();
+
+        /// <summary>De 3 reële polissen (ABR/Brand/10-jarige) van dit project, voor de Verzekeringen-kaart.</summary>
+        public List<InsuranceBO> Insurances { get; set; } = new();
+
+        /// <summary>Verkoop-aggregaat (verkocht/potentieel, in aantal en waarde) — zelfde bron als de projectenlijst.</summary>
+        public ProjectSalesDataBO SalesData { get; set; }
+
+        /// <summary>Eén rij per eenheid met status en klant, voor de Eenheden &amp; verkoopstatus-tabel.</summary>
+        public List<ProjectDetailUnitRowVM> UnitRows { get; set; } = new();
+
+        /// <summary>Recentste vorderingsstaten/facturen van dit project.</summary>
+        public List<InvoiceListItemBO> RecentInvoices { get; set; } = new();
+
+        /// <summary>Openstaand/vervallen-overzicht van dit project (zelfde definitie als de Boekhouding/CEO-dashboards).</summary>
+        public InvoiceDashboardSummaryBO ProjectInvoiceSummary { get; set; }
+    }
+
+    /// <summary>Bewerken/Verwijderen-knoppen voor een project, gedeeld tussen de topbar
+    /// (@section PageActions) en de mobiele fallback-rij in de content-body.</summary>
+    public class ProjectActionButtonsVM
+    {
+        public int ProjectId { get; set; }
+        public bool CanWrite { get; set; }
+        public bool CanDelete { get; set; }
+    }
+
+    /// <summary>Eén rij van de Eenheden &amp; verkoopstatus-tabel op de Detail-hub.</summary>
+    public class ProjectDetailUnitRowVM
+    {
+        public int UnitId { get; set; }
+        public string Naam { get; set; }
+        public string TypeName { get; set; }
+        public decimal? Oppervlakte { get; set; }
+        /// <summary>Verkoopprijs (grond + basisconstructie, ValueSold-velden) als verkocht,
+        /// anders vraagprijs (grond + basisconstructie, Value-velden) — exclusief gekozen
+        /// afwerkingsopties (UnitConstructionValueBO's met FinishingOptionId), die apart
+        /// in Afwerkingen staan i.p.v. blind meegeteld in dit bedrag.</summary>
+        public decimal Vraagprijs { get; set; }
+        /// <summary>Gekozen afwerkingsopties (UnitConstructionValueBO waar FinishingOptionId
+        /// gezet is) met hun eigen kostprijs, apart van de basisprijs — niet in Vraagprijs
+        /// meegeteld, dus apart getoond i.p.v. blind bij de bouwwaarde opgeteld.</summary>
+        public List<(string Description, decimal Cost)> Afwerkingen { get; set; } = new();
+        /// <summary>"Beschikbaar" | "In optie" | "Verkocht" | "Akte verleden".</summary>
+        public string Status { get; set; }
+        /// <summary>Bootstrap-badge-variant voor Status: success/warning/danger/primary.</summary>
+        public string StatusVariant { get; set; }
+        public string KlantNaam { get; set; }
+        public int? ClientId { get; set; }
     }
 
     public class ProjectMediaSectionVM

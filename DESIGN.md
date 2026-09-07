@@ -435,6 +435,79 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
   bar communicates *how far along* and *how good* at once. Standalone
   `gl-pg-bar-laag/midden/hoog` classes give the three solid stops.
 
+### Rol-dashboard componentbibliotheek
+All CSS below lives in `CPMCore/wwwroot/css/dashboard-projectleider.css` —
+the filename is a historical accident (first built for the Projectleider
+dashboard) but every class in it is generic and shared by all three role
+dashboards (Projectleider, CeoCfo, Boekhouding) rendered from `Home/Index`.
+Treat the file as the dashboard component library, not a Projectleider-only
+stylesheet; extend it there rather than forking a per-role copy.
+
+**KPI-strip (`gl-kpi-strip`)**
+- Row of `card-featured-left` cards (Bootstrap admin-theme component), one
+  icon + number per tile via `widget-summary`/`summary-icon`.
+- Established ratio across all three dashboards: 2 neutral tiles
+  (`card-featured-primary`, `bg-primary` icon — portfolio-scale counts) + 2
+  severity tiles (`card-featured-danger`/`card-featured-warning` border,
+  `gl-kpi-icon-danger`/`gl-kpi-icon-warning` icon fill,
+  `gl-kpi-amount-danger`/`gl-kpi-amount-warning` text colour). Not a hard
+  rule, but breaking it on a new dashboard should be a deliberate choice, not
+  an accident.
+- Hidden entirely below 768px (`custom.css`, `.gl-kpi-strip { display:none }`
+  under `max-width:767.98px`) — mobile keeps the dashboard chrome minimal.
+
+**Aandachtspaneel / meldingencentrum (`gl-mc-*`)**
+- Card with three severity-named groups, always in this order: `gl-mc-urgent`
+  ("ACTIE VEREIST", `--danger-tint`/`--danger-text`), `gl-mc-normal` ("OP TE
+  LOSSEN"/"TE VERWERKEN", `--warning-tint`/`--warning-text`), `gl-mc-info`
+  (collapsible, `--info-tint`/`--info-text` — Taupe Grey, deliberately never
+  blue). Each `gl-mc-item` is icon + text + a `gl-mc-btn-bekijk` deep link;
+  Projectleider's construction-meldingen additionally get a snooze button
+  (`gl-mc-btn-snooze`).
+- Sticky on desktop (`gl-mc-col`, ≥992px, offset `var(--topbar-height) + 10px`)
+  when the panel sits beside a tall scrolling grid (Projectleider, CeoCfo).
+  Boekhouding has no grid beside it, so it opts out via the `gl-mc-body-static`
+  modifier (removes the artificial `max-height`/scroll and lets the card grow
+  with its content instead).
+- Empty state: `gl-mc-empty`, a muted check-circle + "niets dat aandacht
+  vraagt"-style copy — always show this rather than an empty card body.
+
+**Werf-kaart grid (`gl-werf-*`)**
+- Card: fixed 250px photo (`gl-werf-foto`) with a bottom-gradient overlay
+  (`gl-werf-overlay`), a status chip top-right (`gl-status-chip` +
+  `sc-groen`/`sc-geel`/`sc-rood`/`sc-donker`), an optional warning badge
+  bottom-left (`gl-warn-badge`, shown when voortgang flags a warning) and,
+  CeoCfo-only, a company badge top-left (`gl-company-chip`, since that grid
+  spans every issuer company). Body: name, gemeente, the two
+  fysiek/financieel `gl-pg-bar` rows, and a footer with delivery countdown or
+  "Opgeleverd op …".
+- `.gl-werf-col` is a flex column (not `height:100%` on the card) specifically
+  so an optional fixed-height header — the drag/arrange bar below — and the
+  card can split a `align-items:stretch`-assigned row height correctly; see
+  the comment at the top of that rule before changing either.
+- **Rangschikken (drag-to-reorder)** — Projectleider's "Mijn Werven" only.
+  `gl-arrange-toggle` switches the grid into arrange mode; each card gets a
+  `gl-arrange-bar` (drag grip `gl-drag-grip` + `gl-arrange-btn` up/down
+  buttons, both real keyboard-operable controls, not drag-only). Dragging
+  uses jQuery UI Sortable with a **cloned** helper appended to `<body>`
+  (`.gl-werf-col.ui-sortable-helper`, `z-index:3000`) rather than the
+  original node — the original's width comes from Bootstrap column
+  percentages and this dashboard's sticky/relative ancestors, which fights a
+  naive `position:absolute` drag. `gl-werf-placeholder` marks the drop slot.
+  Pin toggle (`gl-pin-toggle`, "vastgezet" projects outside a PM's own
+  assignment) is a sibling of the card, not nested inside its `<a>`.
+
+**Snelacties (`gl-snelactie*`, `gl-sa-*`)**
+- Two item shapes: `gl-snelactie` (accordion trigger, expands a
+  `gl-sa-submenu` of `gl-sa-subitem` deep links — used when the action needs
+  a project picked first) and `gl-snelactie-direct` (a plain link/button for
+  an action needing no per-project context).
+- Projectleider additionally ships a phone-only bottom nav
+  (`custom.css`, `.gl-mob-nav`, `d-md-none`) as a thumb-reachable subset of
+  the same actions; CeoCfo/Boekhouding rely on the Snelacties card alone
+  (`d-none d-md-block` — hidden only below 768px, not below 992px, so tablets
+  keep the full action set).
+
 ## Do's and Don'ts
 
 ### Do:

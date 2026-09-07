@@ -109,6 +109,12 @@
 						@await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
 					}
 				</div>
+				@if (IsSectionDefined("PageActions"))
+				{
+					<div class="topbar-page-actions">
+						@RenderSection("PageActions", required: false)
+					</div>
+				}
 			</div>
 			<!-- end: pagina-context -->
 

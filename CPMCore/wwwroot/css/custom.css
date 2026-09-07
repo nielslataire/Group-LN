@@ -458,7 +458,13 @@ html.gl-modal-open .sidebar-left { display: none !important; }
        Warme varianten i.p.v. stock rood/amber/blauw, zodat ze bij het
        "Grounded & Cultivated" palet passen — zie DESIGN.md. --info bestond
        al (taupe); --danger en --warning waren tot nu toe niet gedefinieerd
-       (badge.bg-danger/-warning vielen stil terug op Bootstrap-standaard). */
+       (badge.bg-danger/-warning vielen stil terug op Bootstrap-standaard).
+       --success was in diezelfde situatie over het hoofd gezien: badge.bg-success
+       gebruikte var(--success) zonder dat die ooit gedefinieerd was, dus
+       background-color viel terug op transparant — witte tekst op een witte
+       kaart, onzichtbaar. Geen apart "succes"-groen gedocumenteerd in
+       DESIGN.md, dus hergebruik van --primary (het merkgroen). */
+    --success: var(--primary);
     --danger: #b3452f;        /* Roestrood */
     --danger-tint: #f7ece8;
     --danger-text: #8a3420;
@@ -1566,6 +1572,23 @@ html.fixed .sidebar-left {
 .topbar-page-nobreadcrumb .topbar-page-title {
     font-size: 1.5rem;
     line-height: 40px;
+}
+
+/* Paginaspecifieke acties (bv. Bewerken/Verwijderen) in de topbar zelf i.p.v.
+   een tweede titelbalk in de content-body — opt-in via @section PageActions,
+   onzichtbaar op elke pagina die die sectie niet definieert. Verborgen onder
+   768px: de mobiele topbar is bewust een minimale 60px-balk (hamburger,
+   titel, avatar); paginaspecifieke acties horen daar niet thuis en krijgen
+   op mobiel hun eigen plek in de content-body (zie projecten-custom.css). */
+.topbar-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+@media (max-width: 767.98px) {
+    .topbar-page-actions { display: none; }
 }
 
 .topbar-page-meta .breadcrumbs {

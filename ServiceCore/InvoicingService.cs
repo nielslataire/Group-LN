@@ -252,7 +252,68 @@ namespace ServiceCore
             return items;
         }
 
+        public async Task<IReadOnlyList<InvoiceListItemBO>> GetByProjectAsync(int projectId, CancellationToken ct = default)
+        {
+            var q = _db.Invoices.AsNoTracking()
+                     .Where(i => i.ProjectId == projectId);
+
+            var result =
+                from i in q
+                let contactEmail = i.ClientIdClientContactsNavigation != null
+                   ? (i.ClientIdClientContactsNavigation.InvoiceEmail ?? i.ClientIdClientContactsNavigation.Email)
+                   : null
+                let accountEmail = i.ClientIdClientAccountNavigation != null
+                    ? (i.ClientIdClientAccountNavigation.InvoiceEmail ?? i.ClientIdClientAccountNavigation.Email)
+                    : null
+                from bal in _db.VwInvoiceBalance.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
+                from tot in _db.VwInvoiceTotals.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
+                join seriesLookup in _db.InvoiceSeries.AsNoTracking()
+                    on i.SeriesId equals seriesLookup.Id into seriesJoin
+                from series in seriesJoin.DefaultIfEmpty()
+                orderby i.Date descending
+                select new InvoiceListItemBO
+                {
+                    Id = i.Id,
+                    PublicId = i.PublicId,
+                    ClientName = i.ClientName,
+                    InvoiceDate = i.Date,
+                    StatusId = i.StatusId,
+                    StatusName = null,
+                    IsCreditNote = series != null && series.IsCreditNote,
+                    GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
+                    NetTotal = (decimal?)tot.LinesNet,
+                    Balance = (decimal?)bal.Balance ?? 0m,
+                    RequiresDigitalInvoice = i.CompanyId.HasValue
+                        ? true
+                        : (i.ClientIdClientContactsNavigation != null
+                            ? i.ClientIdClientContactsNavigation.RequiresDigitalInvoice
+                            : i.ClientIdClientAccountNavigation != null && i.ClientIdClientAccountNavigation.RequiresDigitalInvoice),
+                    HasEmail = !string.IsNullOrWhiteSpace(contactEmail ?? accountEmail),
+                    ClientType = i.ClientType,
+                    IsSupplier = i.CompanyId.HasValue,
+                    HasCompanyName = !string.IsNullOrWhiteSpace(i.ClientIdClientAccountNavigation != null
+                        ? i.ClientIdClientAccountNavigation.CompanyName
+                        : i.ClientIdClientContactsNavigation != null
+                            ? i.ClientIdClientContactsNavigation.CompanyName
+                            : null)
+                };
+
+            var projectItems = await result.ToListAsync(ct);
+            foreach (var item in projectItems)
+            {
+                item.StatusName = InvoiceStatusExtensions.GetDisplayName(item.StatusId);
+            }
+
+            return projectItems;
+        }
+
         public async Task<InvoiceDashboardSummaryBO> GetDashboardSummaryAsync(CancellationToken ct = default)
+            => await BuildDashboardSummaryAsync(null, ct);
+
+        public async Task<InvoiceDashboardSummaryBO> GetDashboardSummaryForProjectAsync(int projectId, CancellationToken ct = default)
+            => await BuildDashboardSummaryAsync(projectId, ct);
+
+        private async Task<InvoiceDashboardSummaryBO> BuildDashboardSummaryAsync(int? projectId, CancellationToken ct)
         {
             // Concept/Cancelled/Generating tellen niet mee als "openstaand" — geen
             // reële vordering. Balance>0 sluit Betaald vanzelf uit.
@@ -265,6 +326,7 @@ namespace ServiceCore
                 join bal in _db.VwInvoiceBalance.AsNoTracking() on i.Id equals bal.Id
                 where i.StatusId != draft && i.StatusId != cancelled && i.StatusId != generating
                       && bal.Balance > 0
+                      && (projectId == null || i.ProjectId == projectId)
                 select new
                 {
                     i.Id,

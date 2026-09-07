@@ -22,10 +22,15 @@ namespace FacadeCore
         Task<IReadOnlyList<InvoiceListItemBO>> GetAllAsync(CancellationToken ct = default);
         //Filter op bedrijf
         Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default);
+        //Filter op project — recente vorderingsstaten voor de Detail-hub.
+        Task<IReadOnlyList<InvoiceListItemBO>> GetByProjectAsync(int projectId, CancellationToken ct = default);
         Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default);
 
         /// <summary>Openstaand/vervallen-overzicht voor de Boekhouding- en CeoCfo-dashboards.</summary>
         Task<InvoiceDashboardSummaryBO> GetDashboardSummaryAsync(CancellationToken ct = default);
+
+        /// <summary>Openstaand/vervallen-overzicht voor één project (Detail-hub).</summary>
+        Task<InvoiceDashboardSummaryBO> GetDashboardSummaryForProjectAsync(int projectId, CancellationToken ct = default);
     }
 }
 

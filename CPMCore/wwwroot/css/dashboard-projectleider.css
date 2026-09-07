@@ -196,8 +196,8 @@
 .gl-kpi-strip .card-featured-danger  { border-color: var(--danger); }
 .gl-kpi-strip .card-featured-warning { border-color: var(--warning); }
 
-.gl-kpi-strip .summary-icon.gl-kpi-icon-danger  { background-color: var(--danger); }
-.gl-kpi-strip .summary-icon.gl-kpi-icon-warning { background-color: var(--warning); }
+.gl-kpi-strip .summary-icon.gl-kpi-icon-danger  { background-color: var(--danger) !important; color: #fff !important; }
+.gl-kpi-strip .summary-icon.gl-kpi-icon-warning { background-color: var(--warning) !important; color: #fff !important; }
 
 .gl-kpi-strip .amount.gl-kpi-amount-danger  { color: var(--danger-text); }
 .gl-kpi-strip .amount.gl-kpi-amount-warning { color: var(--warning-text); }
@@ -330,6 +330,13 @@
    werven-kolom (Boekhouding heeft zelfs geen grid), dus geen kunstmatige
    scroll-hoogte nodig — de kaart groeit gewoon met haar inhoud mee. */
 .gl-mc-body-static { max-height: none; overflow: visible; }
+
+/* Projecten/Detail: aandachtspaneel deelt een hero-rij met de Eenheden-tabel
+   (gl-detail-hero-split, projecten-custom.css) — de kaart krijgt haar hoogte
+   van die rij, dus hier vult het paneel gewoon de resterende ruimte i.p.v.
+   een eigen vaste max-height te forceren; scroll kicks in enkel als de
+   toegewezen ruimte kleiner is dan de inhoud. */
+.gl-mc-body-capped { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; overflow-x: hidden; }
 
 /* Groep header */
 .gl-mc-group-hdr {

@@ -52,7 +52,7 @@
 					var showAlgemeen  = canSeeDetail || canSeeClients || canSeeSuppliers;
 					var showDetails   = showPhotos || showNews || canSeeUnits;
 					var showOpvolging = canSeeIssues || canSeeDocs || canSeeInsurances || true;
-					var showFinancieel = canSeeInvoicing || canSeePostCalc || canSeeChangeOrders;
+					var showFinancieel = canSeeInvoicing || canSeeChangeOrders;
 					var showVerkoop   = canSeeForSale || showContacts;
 				}
 				@if (showAlgemeen)
@@ -171,6 +171,15 @@
 							Budgetten
 						</a>
 					</li>
+					@if (canSeePostCalc)
+					{
+						<li>
+							<a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })"
+							   class="menu-item @(currentAction == "Recalculation" && currentController == "Projecten" ? "active" : "")">
+								Nacalculatie
+							</a>
+						</li>
+					}
 				</ul>
 
 				@if (showFinancieel)
@@ -185,13 +194,10 @@
 									Facturatie
 								</a>
 							</li>
-						}
-						@if (canSeePostCalc)
-						{
 							<li>
-								<a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })"
-								   class="menu-item @(currentAction == "Recalculation" && currentController == "Projecten" ? "active" : "")">
-									Nacalculatie
+								<a href="@Url.Action("PaymentStages", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "PaymentStages" && currentController == "Projecten" ? "active" : "")">
+									Betalingen
 								</a>
 							</li>
 						}

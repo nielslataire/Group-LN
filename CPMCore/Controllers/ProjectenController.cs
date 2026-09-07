@@ -74,6 +74,8 @@ namespace CPMCore.Controllers
         private readonly ICountryService _countryService;
         private readonly IPostalcodeService _postalcodeService;
         private readonly IProjectVoortgangService _voortgangService;
+        private readonly IConstructionIssueService _issueService;
+        private readonly IInvoiceQueryService _invoiceQueryService;
         private readonly DALCore.UnitOfWorkCore _uow;
         private readonly IBudgetService _budgetService;
         private readonly BudgetActivityService    _budgetActivityService;
@@ -93,7 +95,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
         {
             _logger = logger;
             Configuration = configuration;
@@ -108,6 +110,8 @@ namespace CPMCore.Controllers
             _countryService = countryService;
             _postalcodeService = postalcodeService;
             _voortgangService = voortgangService;
+            _issueService = issueService;
+            _invoiceQueryService = invoiceQueryService;
             _uow = uow;
             _budgetService          = budgetService;
             _budgetActivityService  = budgetActivityService;
@@ -406,7 +410,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Info")]
         [Breadcrumb("Info", FromAction = "Index")]
-        public ActionResult Detail(int projectid, bool EditGeneralData = false)
+        public async Task<ActionResult> Detail(int projectid, bool EditGeneralData = false)
         {
 
 
@@ -456,12 +460,129 @@ namespace CPMCore.Controllers
                 if (model.LatestNews.TextNL is not null & model.LatestNews.TextNL.Length > 250)
                     model.LatestNews.TextNL = model.LatestNews.TextNL.Substring(0, 250).ToString() + " ...";
             }
-            var response4 = Service.GetLatestProjectPictures(1, projectid);
+            var response4 = Service.GetPicturesByProjectId(projectid);
             if ((response4.Success))
-                model.LatestPicture = response4.Values.FirstOrDefault();
+            {
+                var allPics = response4.Values.OrderByDescending(p => p.DateTimeUploaded).ToList();
+                model.LatestPictures = allPics.Take(4).ToList();
+                model.TotalPictureCount = allPics.Count;
+            }
             var response5 = Service.GetLatestProjectDocs(5, projectid);
             if ((response5.Success))
                 model.LatestDocs = response5.Values;
+
+            // Voortgang: dezelfde databron als de projectenlijst (Index) en het
+            // projectleider-dashboard, hier voor het eerst op de project-hub zelf
+            // getoond i.p.v. enkel op de kaart-overzichten.
+            _voortgangService.GetForProjects(new[] { projectid }).TryGetValue(projectid, out var voortgang);
+            model.Voortgang = voortgang;
+
+            // Punten: enkel de statussen die elders in de app al als "actief" gelden
+            // (zie ProjectIssuesController.SendPreview's activeStatuses) — Search()
+            // zonder statusfilter geeft alles terug, inclusief Opgelost/Afgesloten/
+            // Afgewezen, die geen aandacht meer vragen op een opvolgingspaneel.
+            var activeIssueStatuses = new HashSet<int> { 0, 2, 3, 7 }; // Open, Gepland, WaitingInspection, Reopened
+            var allIssues = await _issueService.Search(projectid, new ConstructionIssueFilterBO());
+            model.OpenIssues = allIssues.Where(i => activeIssueStatuses.Contains(i.Status))
+                .OrderByDescending(i => i.Priority)
+                .ThenBy(i => i.DueDate)
+                .ToList();
+            model.OpenIssuesCount = model.OpenIssues.Count;
+
+            // Contracten: opvolging die nog actie vraagt (niet getekend / waarborg ontbreekt).
+            var contractsResp = Service.GetProjectContracts(projectid);
+            var contracts = contractsResp.Success ? contractsResp.Values : new List<ContractBO>();
+            model.UnsignedContracts = contracts.Where(c => !c.ContractSigned).ToList();
+            model.GuaranteeMissingContracts = contracts.Where(c => c.GuaranteeDocumentMissing).ToList();
+
+            // Verzekeringen: CheckInsurances() heeft geen project-specifieke overload,
+            // dus alle projecten ophalen en hier filteren (zelfde aanpak als HomeController
+            // voor het projectleider-dashboard).
+            var insuranceResp = _insuranceService.CheckInsurances();
+            model.ProjectInsuranceWarnings = insuranceResp.Success
+                ? insuranceResp.Values.Where(w => w.ProjectId == projectid).ToList()
+                : new List<WarningBO>();
+
+            // Verzekeringen: de 3 reële polistypes (ABR/Brand/10-jarige) met hun
+            // eigen start-/einddatum, voor de kaart met status-chips op de hub
+            // (los van de globale waarschuwingenlijst hierboven).
+            var insurancesResp = Service.GetProjectInsurances(projectid);
+            model.Insurances = insurancesResp.Success ? insurancesResp.Values : new List<InsuranceBO>();
+
+            // Verkoop-KPI's: hergebruikt dezelfde aggregatie als de projectenlijst
+            // (Index) — percentage/waarde verkocht, geen eigen berekening nodig.
+            var salesDataResp = Service.GetProjectSalesData(new List<int> { projectid });
+            model.SalesData = salesDataResp.Success ? salesDataResp.Values.FirstOrDefault() : null;
+
+            // Eenheden & verkoopstatus: per-lot rij met status (Beschikbaar/Optie/
+            // Verkocht/Akte verleden) en klantnaam, via een reverse unit->klant
+            // lookup (er bestaat geen klaar-voor-gebruik unit->klant join).
+            var unitsResp = _unitService.GetUnitsWithAttachedByProjectId(projectid);
+            if (unitsResp.Success && unitsResp.Values is not null)
+            {
+                var clientsWithUnitsResp = cservice.GetClientAccountsByProjectIdWithUnits(projectid);
+                var clientByUnitId = new Dictionary<int, ClientAccountWithUnitsBO>();
+                if (clientsWithUnitsResp.Success && clientsWithUnitsResp.Values is not null)
+                {
+                    foreach (var cwu in clientsWithUnitsResp.Values)
+                        foreach (var u in cwu.Units ?? new List<UnitBO>())
+                            clientByUnitId[u.Id] = cwu;
+                }
+
+                model.UnitRows = unitsResp.Values.Select(u =>
+                {
+                    // Verkoopprijs i.p.v. vraagprijs zodra verkocht — en de basisprijs
+                    // apart van gekozen afwerkingsopties (UnitConstructionValueBO's met
+                    // een FinishingOptionId zijn geen deel van de basis-bouwwaarde, dus
+                    // niet blind meetellen in één bedrag; wel elk apart tonen met hun
+                    // eigen kostprijs).
+                    bool isSold = u.Unit.ClientAccountId is not null;
+                    var constructionValues = u.Unit.ConstructionValues ?? new List<UnitConstructionValueBO>();
+                    var baseValues = constructionValues.Where(cv => cv.FinishingOptionId is null);
+                    var finishValues = constructionValues.Where(cv => cv.FinishingOptionId is not null);
+
+                    decimal baseConstructie = isSold
+                        ? baseValues.Sum(cv => cv.ValueSold ?? cv.Value ?? 0m)
+                        : baseValues.Sum(cv => cv.Value ?? 0m);
+                    decimal landPrijs = isSold ? (u.Unit.LandValueSold ?? u.Unit.LandValue ?? 0m) : (u.Unit.LandValue ?? 0m);
+
+                    var afwerkingen = finishValues.Select(cv => (
+                        Description: string.IsNullOrWhiteSpace(cv.Description) ? "Afwerkingsoptie" : cv.Description,
+                        Cost: isSold ? (cv.ValueSold ?? cv.Value ?? 0m) : (cv.Value ?? 0m)
+                    )).ToList();
+
+                    clientByUnitId.TryGetValue(u.Unit.Id, out var clientWithUnits);
+                    var client = clientWithUnits?.Client;
+
+                    string status; string statusVariant;
+                    if (client is not null && client.DateDeedOfSale.HasValue) { status = "Akte verleden"; statusVariant = "primary"; }
+                    else if (isSold) { status = "Verkocht"; statusVariant = "danger"; }
+                    else if (u.Unit.IsOption) { status = "In optie"; statusVariant = "warning"; }
+                    else { status = "Beschikbaar"; statusVariant = "success"; }
+
+                    return new ProjectDetailUnitRowVM
+                    {
+                        UnitId = u.Unit.Id,
+                        Naam = u.Unit.Name,
+                        TypeName = u.Unit.Type?.Name,
+                        Oppervlakte = u.Unit.Surface,
+                        Vraagprijs = landPrijs + baseConstructie,
+                        Afwerkingen = afwerkingen,
+                        Status = status,
+                        StatusVariant = statusVariant,
+                        KlantNaam = client?.DisplayName,
+                        ClientId = client?.Id
+                    };
+                }).ToList();
+            }
+
+            // Facturatie: recentste vorderingsstaten van dit project + openstaand
+            // bedrag (dezelfde "openstaand"-definitie als de Boekhouding/CEO-
+            // dashboards, hier voor één project).
+            model.RecentInvoices = (await _invoiceQueryService.GetByProjectAsync(projectid))
+                .Take(5).ToList();
+            model.ProjectInvoiceSummary = await _invoiceQueryService.GetDashboardSummaryForProjectAsync(projectid);
+
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -2989,7 +3110,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public async Task<ActionResult> AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders, IFormFile guaranteeDoc)
+        public async Task<ActionResult> AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders, IFormFile? guaranteeDoc)
         {
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
             var addAnother = Request.Form["saveAction"] == "addAnother";

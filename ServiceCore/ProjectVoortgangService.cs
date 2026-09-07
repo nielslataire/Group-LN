@@ -202,9 +202,19 @@ namespace ServiceCore
                 }
                 gewogenBijdrage += ratio * begroot;
             }
-            decimal fysiekeVoortgang = totalBegroot > 0m
+            decimal fysiekeVoortgangBudgetBased = totalBegroot > 0m
                 ? Math.Round(gewogenBijdrage / totalBegroot * 100m, 2)
                 : 0m;
+
+            // 4b. Fysieke voortgang o.b.v. reeds gefactureerde betaalschijven aan
+            //     kopers — voor eenheden met een akte in het verleden volgt de
+            //     klantfacturatie schijven die zelf al aan werf-voortgang gekoppeld
+            //     zijn, een directer signaal dan de budget/onderaannemersfactuur-
+            //     verhouding hierboven. Enkel gebruikt wanneer er effectief
+            //     verkochte eenheden met toepasbare schijven bestaan; anders blijft
+            //     de budget-gebaseerde berekening hierboven gewoon gelden (het "oude
+            //     systeem" als backup, zoals gevraagd).
+            decimal fysiekeVoortgang = CalculateVerkoopVoortgang(projectId) ?? fysiekeVoortgangBudgetBased;
 
             // 5. Financiële voortgang: gefactureerd / gecontracteerd
             decimal financieleVoortgang = totalGecontracteerd > 0m
@@ -270,6 +280,105 @@ namespace ServiceCore
                 BerekendOp                  = DateTime.UtcNow,
                 ManueelAfgesloten           = false,
             };
+        }
+
+        // ─── Verkoop-gebaseerde fysieke voortgang ───────────────────────────
+
+        /// <summary>Fysieke voortgang o.b.v. de betaalschijven die al aan kopers
+        /// gefactureerd zijn — enkel voor eenheden met een akte in het verleden.
+        /// Payment-groep-resolutie (eigen groep + groep van elke gekozen
+        /// afwerkingsoptie) volgt exact hetzelfde patroon als
+        /// ProjectService.GetProjectInvoicableUnits. Retourneert null wanneer er
+        /// geen enkele verkochte eenheid met toepasbare, te factureren schijven
+        /// bestaat — de aanroeper valt dan terug op de budget-gebaseerde
+        /// berekening.</summary>
+        private decimal? CalculateVerkoopVoortgang(int projectId)
+        {
+            var cutoffDate = DateOnly.FromDateTime(DateTime.Today).AddDays(1);
+            var units = _uow.Units.GetNoTracking()
+                .Where(u => u.ProjectId == projectId
+                            && u.ClientAccountId != null
+                            && u.ClientAccount.DateDeedOfSale != null
+                            && u.ClientAccount.DateDeedOfSale.Value <= cutoffDate)
+                .Select(u => new { u.Id, u.PaymentGroupId })
+                .ToList();
+
+            if (units.Count == 0) return null;
+
+            var unitIds = units.Select(u => u.Id).ToList();
+
+            // Payment-groepen per eenheid: eigen groep + groep van elke gekozen
+            // afwerkingsoptie.
+            var groupMap = units.ToDictionary(u => u.Id, u => new HashSet<int>());
+            foreach (var u in units)
+                if (u.PaymentGroupId.HasValue)
+                    groupMap[u.Id].Add(u.PaymentGroupId.Value);
+
+            var constructionValues = _uow.UnitConstructionValues.GetNoTracking()
+                .Where(cv => unitIds.Contains(cv.UnitId))
+                .Select(cv => new { cv.UnitId, cv.PaymentGroupId, cv.Value, cv.ValueSold })
+                .ToList();
+
+            foreach (var cv in constructionValues.Where(cv => cv.PaymentGroupId.HasValue))
+                groupMap[cv.UnitId].Add(cv.PaymentGroupId!.Value);
+
+            var groupIds = groupMap.Values.SelectMany(g => g).Distinct().ToList();
+            if (groupIds.Count == 0) return null;
+
+            var stages = _uow.PaymentStages.GetNoTracking()
+                .Where(s => s.Invoicable && groupIds.Contains(s.GroupId))
+                .Select(s => new { s.Id, s.GroupId, s.Percentage })
+                .ToList();
+
+            if (stages.Count == 0) return null;
+
+            var stageIds = stages.Select(s => s.Id).ToList();
+
+            // Enkel echt verzonden facturen tellen mee — een geannuleerde
+            // factuurlijn mag een schijf niet als "gefactureerd" laten gelden.
+            var invoicedPairs = _uow.InvoiceDetails.GetNoTracking()
+                .Where(d => d.PaymentStageId != null && stageIds.Contains(d.PaymentStageId.Value)
+                            && d.UnitId != null && unitIds.Contains(d.UnitId.Value)
+                            && d.Invoice.CancelledAt == null)
+                .Select(d => new { StageId = d.PaymentStageId!.Value, UnitId = d.UnitId!.Value })
+                .ToList()
+                .ToHashSet();
+
+            decimal totalWeightedProgress = 0m;
+            decimal totalWeight = 0m;
+
+            foreach (var u in units)
+            {
+                if (!groupMap.TryGetValue(u.Id, out var unitGroupIds) || unitGroupIds.Count == 0)
+                    continue;
+
+                var unitStages = stages.Where(s => unitGroupIds.Contains(s.GroupId)).ToList();
+                var totalPct = unitStages.Sum(s => s.Percentage);
+                if (totalPct <= 0m) continue;
+
+                var invoicedPct = unitStages
+                    .Where(s => invoicedPairs.Contains(new { StageId = s.Id, UnitId = u.Id }))
+                    .Sum(s => s.Percentage);
+
+                // Afgetopt op 98% — de laatste 2% hangt af van opleveringspunten
+                // die hier nog niet gemodelleerd zijn.
+                var unitProgress = Math.Min(98m, invoicedPct / totalPct * 100m);
+
+                // Gewicht = verkochte bouwwaarde (grondwaarde telt niet mee, die
+                // zegt niets over werf-voortgang): basisconstructie + gekozen
+                // afwerkingsopties, ValueSold met Value als fallback.
+                var weight = constructionValues
+                    .Where(cv => cv.UnitId == u.Id)
+                    .Sum(cv => cv.ValueSold ?? cv.Value ?? 0m);
+                if (weight <= 0m) continue;
+
+                totalWeightedProgress += unitProgress * weight;
+                totalWeight += weight;
+            }
+
+            return totalWeight > 0m
+                ? Math.Round(totalWeightedProgress / totalWeight, 2)
+                : null;
         }
 
         // ─── Hulpmethoden ─────────────────────────────────────────────────

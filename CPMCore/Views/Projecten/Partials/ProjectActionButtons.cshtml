@@ -1,0 +1,18 @@
+@model CPMCore.Models.Projecten.ProjectActionButtonsVM
+@*
+    Gedeeld tussen @section PageActions (topbar, ≥768px) en de mobiele
+    d-md-none fallback-rij in de content-body (<768px) — zie Detail.cshtml.
+    Eén bron voor de knoppen zodat beide plekken altijd in sync blijven.
+*@
+@if (Model.CanWrite)
+{
+    <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-sm px-3">
+        <i class="fas fa-edit me-1"></i>Bewerken
+    </a>
+}
+@if (Model.CanDelete)
+{
+    <a href="#modaldeleteproject" class="btn btn-danger btn-sm px-3 delete-project-trigger" data-project-id="@Model.ProjectId">
+        <i class="fas fa-trash-alt me-1"></i>Verwijderen
+    </a>
+}

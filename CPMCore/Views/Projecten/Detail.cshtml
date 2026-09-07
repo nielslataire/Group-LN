@@ -1,5 +1,6 @@
 ﻿@using CPMCore.Controllers
 @using BOCore
+@using System.Globalization
 @inject IConfiguration Configuration
 @model CPMCore.Models.Projecten.ShowProjectDetail
 @*
@@ -8,6 +9,7 @@
 @{
     var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
     var canDeleteProject = ViewBag.CanDeleteProject as bool? ?? false;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
 }
 @{
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -20,69 +22,249 @@
 @{
     String urlTotal = "";
 }
+@section PageStyle
+{
+    @* gl-mc-*/gl-page-header component library — zie DESIGN.md "Rol-dashboard
+       componentbibliotheek"; hier voor het eerst buiten de Home-dashboards gebruikt. *@
+    <link rel="stylesheet" href="~/css/dashboard-projectleider.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
+}
+@{
+    // Projectacties leven nu in de topbar zelf (@section PageActions, gerenderd
+    // door _Layout.cshtml naast pageTitle/breadcrumb) i.p.v. een eigen titelbalk
+    // hier in de content-body — die was een letterlijke herhaling van de topbar.
+    // Op mobiel (<768px) verbergt de topbar deze sectie bewust (minimale
+    // 60px-balk); daarom hieronder ook een d-md-none fallback-rij met dezelfde
+    // knoppen (via dezelfde partial), puur voor kleine schermen.
+    var actionButtonsModel = new CPMCore.Models.Projecten.ProjectActionButtonsVM
+    {
+        ProjectId = Model.Project.Id,
+        CanWrite = canWriteProject,
+        CanDelete = canDeleteProject
+    };
+}
+@section PageActions
+{
+    @await Html.PartialAsync("Partials/ProjectActionButtons", actionButtonsModel)
+}
 @Html.AntiForgeryToken()
 <!-- start: page -->
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.Project.Id)
-        <div class="inner-body">
-            <div class="row">
-            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                    <h1 class="page-head mb-0 mt-0">@Model.Project.Name</h1>
-                    <h5 class="mb-4 mt-0">Bekijk alle onderdelen van het project</h5>
-                </div>
-                <div class="col-sm-auto px-0">
-                    <div class="btn-group" role="group" aria-label="Project acties">
-                        @if (canWriteProject)
-                        {
-                            <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })" class="btn btn-primary btn-md px-3 me-1">
-                                <i class="fas fa-edit me-1"></i>Bewerken
-                            </a>
-                        }
-                        @if (canDeleteProject)
-                        {
-                            <a href="#modaldeleteproject" class="btn btn-danger btn-md px-3" id="delete-project-button" data-project-id="@Model.Project.Id">
-                                <i class="fas fa-trash-alt me-1"></i>Verwijderen
-                            </a>
-                        }
-                    </div>
-                </div>
+        <div class="inner-body gl-detail-body">
+            <div class="d-flex d-md-none justify-content-end gap-2 mb-3">
+                @await Html.PartialAsync("Partials/ProjectActionButtons", actionButtonsModel)
             </div>
-            </div>
-            <div class="row">
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
-                @*STANDAARD FOTO*@
-                @{
-                    if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
-                        urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.StandardFotoName;
-                    else if (Model.Project.DefaultPicture?.Name is not null)
-                        urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
-                    else
-                        urlTotal = "~/img/no_image.jpg";
-                }
-                <div class="card">
-                    <img src="@Url.Content(urlTotal)" class="card-img-top" alt="@Model.Project.Name" style="aspect-ratio:1/1;object-fit:cover;" />
-                </div>
-                </div>
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
-                    @*ALGEMEEN*@
-                    <div class="card card-modern card-modern-alt-padding">
-                        <header class="card-header">
 
+            @{
+                // KPI-strip: hergebruikt het gedocumenteerde gl-kpi-strip component
+                // (card-featured-left/widget-summary, dezelfde kleurtokens als de
+                // Home-dashboards) i.p.v. een eigen bar — bewust met 7 tegels i.p.v.
+                // de daar gangbare 4, op uitdrukkelijke keuze van de gebruiker.
+                // Sub is de kleine tweede regel (bv. "37,5%", "van €3,41 mio
+                // potentieel"); RingPct != null geeft een donut-icoon i.p.v. een
+                // vlak icoon, gevuld tot dat percentage. Kleuren komen uit ons
+                // eigen systeem (--primary/--info/--danger), niet uit de
+                // aangeleverde referentieafbeelding.
+                var kpiToday = DateOnly.FromDateTime(DateTime.Today);
+                var overdueIssueCount = Model.OpenIssues.Count(i => i.DueDate.HasValue && i.DueDate.Value < kpiToday);
+                string FormatMio(decimal v) => v >= 1_000_000m
+                    ? "€" + (v / 1_000_000m).ToString("0.##", be) + " mio"
+                    : v.ToString("C0", be);
+
+                var kpiTiles = new List<(string Label, string Value, string? Sub, string Icon, bool Severe, decimal? RingPct, string? RingColorVar)>
+                {
+                    ("Status", Model.Project.Status?.Name ?? "—", null, "bx-flag", false, null, null),
+                    ("Verkocht", $"{Model.SalesData?.LivingUnitsSold ?? 0} / {Model.SalesData?.LivingUnits ?? 0} loten",
+                        Model.SalesData is not null ? Model.SalesData.PercentageLivingUnitsSold.ToString("0.#", be) + "%" : null,
+                        "bx-key", false, null, null),
+                    ("Omzet", (Model.SalesData?.ValueSold ?? 0).ToString("C0", be),
+                        (Model.SalesData?.ValueForSale ?? 0) > 0 ? "van " + FormatMio(Model.SalesData!.ValueForSale) + " potentieel" : null,
+                        "bx-euro", false, null, null),
+                    ("Fysiek", Model.Voortgang is not null ? Model.Voortgang.FysiekeVoortgangPct.ToString("0.#") + "%" : "—", "voortgang",
+                        "bx-trending-up", false, Model.Voortgang?.FysiekeVoortgangPct, "--primary"),
+                    ("Financieel", Model.Voortgang is not null ? Model.Voortgang.FinancieleVoortgangPct.ToString("0.#") + "%" : "—", "voortgang",
+                        "bx-wallet", false, Model.Voortgang?.FinancieleVoortgangPct, "--info"),
+                    ("Werkdagen", Model.WorkingDaysLeft == -9999 ? "—" : Model.WorkingDaysLeft.ToString(),
+                        Model.FinalConstructionDate != DateOnly.MinValue ? "tot " + Model.FinalConstructionDate.ToString("dd/MM/yy") : null,
+                        "bx-calendar", false, null, null),
+                    ("Open punten", Model.OpenIssuesCount.ToString(),
+                        overdueIssueCount > 0 ? $"{overdueIssueCount} over datum" : null,
+                        "bx-alert-circle", Model.OpenIssuesCount > 0, null, null),
+                };
+            }
+            <div class="gl-kpi2-strip mb-3">
+                @foreach (var tile in kpiTiles)
+                {
+                    var kpiColorVar = tile.Severe ? "--danger" : (tile.RingColorVar ?? "--primary");
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: var(@kpiColorVar);" title="@tile.Label">
+                            @if (tile.RingPct.HasValue)
+                            {
+                                <div class="gl-kpi2-icon gl-kpi2-ring" style="--pct: @(tile.RingPct.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));">
+                                    <div class="gl-kpi2-ring-inner"><i class="bx @tile.Icon"></i></div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="gl-kpi2-icon"><i class="bx @tile.Icon"></i></div>
+                            }
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">@tile.Label</div>
+                                <div class="gl-kpi2-value @(tile.Severe ? "gl-kpi2-value-severe" : "")">@tile.Value</div>
+                                @if (tile.Sub is not null)
+                                {
+                                    <div class="gl-kpi2-sub">@tile.Sub</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @{
+                // Aandachtspaneel: dezelfde gl-mc-urgent/gl-mc-normal-groepering als de
+                // Home-dashboards, hier gevuld met de opvolging die specifiek dit ene
+                // project aangaat i.p.v. het hele portfolio. Tuple-lijst-aanpak (Tekst/
+                // BekijkUrl/Icon/Categorie) is dezelfde techniek als
+                // _DashboardProjectleider.cshtml's "meldingen"-opbouw, hier uitgebreid
+                // met een Categorie-veld voor de filterchips.
+                var attentionToday = DateOnly.FromDateTime(DateTime.Today);
+                // Type/Entiteit/Extra i.p.v. één platte tekst — Type is het label
+                // ("Contract niet getekend"), Entiteit de leverancier/klant/lot,
+                // Extra een korte omschrijving (contractnaam, punt-titel, ...).
+                var urgentItems = new List<(string Type, string? Entiteit, string? Extra, string? BekijkUrl, string Icon, string Categorie, string? Meta)>();
+                var normalItems = new List<(string Type, string? Entiteit, string? Extra, string? BekijkUrl, string Icon, string Categorie, string? Meta)>();
+
+                foreach (var c in Model.UnsignedContracts)
+                {
+                    string? meta = c.ContractSentDate.HasValue
+                        ? $"{(DateTime.Today - c.ContractSentDate.Value).Days} dagen open"
+                        : null;
+                    urgentItems.Add(("Contract niet getekend", c.Company?.Display ?? "onbekende leverancier", c.ContractName,
+                        Url.Action("EditContract", "Projecten", new { projectid = Model.Project.Id, contractid = c.Id }), "bx-file", "Contracten", meta));
+                }
+                foreach (var c in Model.GuaranteeMissingContracts)
+                {
+                    // Geen meta hier: er is geen datumveld dat "sinds wanneer ontbreekt
+                    // dit" vastlegt (ContractSentDate hoort bij de andere melding,
+                    // GuaranteeDocUploadedAt is enkel gezet zodra het document er wél is).
+                    urgentItems.Add(("Bankwaarborg ontbreekt", c.Company?.Display ?? "onbekende leverancier", c.ContractName,
+                        Url.Action("EditContract", "Projecten", new { projectid = Model.Project.Id, contractid = c.Id }), "bx-shield", "Contracten", null));
+                }
+                if (Model.Voortgang is not null)
+                {
+                    // WarningList geeft interne codes terug (OVERFACTURATIE, ...), geen
+                    // zinnen — hier vertaald naar Type + een omschrijving met de
+                    // werkelijke percentages, i.p.v. de rauwe code te tonen.
+                    foreach (var code in Model.Voortgang.WarningList)
+                    {
+                        string vType; string vExtra;
+                        switch (code)
+                        {
+                            case "OVERFACTURATIE":
+                                vType = "Overfacturatie";
+                                vExtra = $"Financiële voortgang ({Model.Voortgang.FinancieleVoortgangPct.ToString("0.#")}%) loopt voor op fysieke voortgang ({Model.Voortgang.FysiekeVoortgangPct.ToString("0.#")}%)";
+                                break;
+                            case "ONDERFACTURATIE":
+                                vType = "Onderfacturatie";
+                                vExtra = $"Fysieke voortgang ({Model.Voortgang.FysiekeVoortgangPct.ToString("0.#")}%) loopt voor op financiële voortgang ({Model.Voortgang.FinancieleVoortgangPct.ToString("0.#")}%)";
+                                break;
+                            case "KOSTENOVERSCHRIJDING":
+                                vType = "Kostenoverschrijding";
+                                vExtra = "Gefactureerd bedrag ligt meer dan 110% boven het gecontracteerde bedrag";
+                                break;
+                            case "GROTE_AFWIJKING":
+                                vType = "Grote afwijking";
+                                vExtra = $"Fysieke ({Model.Voortgang.FysiekeVoortgangPct.ToString("0.#")}%) en financiële voortgang ({Model.Voortgang.FinancieleVoortgangPct.ToString("0.#")}%) wijken sterk van elkaar af";
+                                break;
+                            default:
+                                vType = "Voortgangswaarschuwing";
+                                vExtra = code;
+                                break;
+                        }
+                        urgentItems.Add((vType, null, vExtra, null, "bx-trending-down", "Financieel", null));
+                    }
+                }
+                foreach (var w in Model.ProjectInsuranceWarnings.Where(x => x.Type == "danger"))
+                {
+                    // WarningBO.Display is één kant-en-klare zin die de projectnaam
+                    // herhaalt — overbodig op de pagina van dat project zelf, dus
+                    // eruit gehaald i.p.v. blind getoond.
+                    var insExtra = w.Display?.Replace($" van project {Model.Project.Name}", "");
+                    urgentItems.Add(("Verzekering", null, insExtra, Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id }), "bx-shield-x", "Financieel", null));
+                }
+                foreach (var i in Model.OpenIssues.Where(x => x.Priority >= (int)ConstructionIssuePriority.High))
+                {
+                    string? meta = i.DueDate.HasValue
+                        ? (i.DueDate.Value < attentionToday ? $"{(attentionToday.ToDateTime(TimeOnly.MinValue) - i.DueDate.Value.ToDateTime(TimeOnly.MinValue)).Days} dagen te laat" : $"Nog {(i.DueDate.Value.ToDateTime(TimeOnly.MinValue) - attentionToday.ToDateTime(TimeOnly.MinValue)).Days} dagen")
+                        : null;
+                    urgentItems.Add((i.Category?.Name ?? "Werfpunt", i.Unit?.Name, i.Title,
+                        Url.Action("Details", "ProjectsIssues", new { projectId = Model.Project.Id, id = i.Id }), "bx-alert-circle", "Werf", meta));
+                }
+
+                foreach (var i in Model.OpenIssues.Where(x => x.Priority < (int)ConstructionIssuePriority.High))
+                {
+                    string? meta = i.DueDate.HasValue
+                        ? (i.DueDate.Value < attentionToday ? $"{(attentionToday.ToDateTime(TimeOnly.MinValue) - i.DueDate.Value.ToDateTime(TimeOnly.MinValue)).Days} dagen te laat" : $"Nog {(i.DueDate.Value.ToDateTime(TimeOnly.MinValue) - attentionToday.ToDateTime(TimeOnly.MinValue)).Days} dagen")
+                        : null;
+                    normalItems.Add((i.Category?.Name ?? "Werfpunt", i.Unit?.Name, i.Title,
+                        Url.Action("Details", "ProjectsIssues", new { projectId = Model.Project.Id, id = i.Id }), "bx-task", "Werf", meta));
+                }
+                foreach (var w in Model.ProjectInsuranceWarnings.Where(x => x.Type != "danger"))
+                {
+                    var insExtra = w.Display?.Replace($" van project {Model.Project.Name}", "");
+                    normalItems.Add(("Verzekering", null, insExtra, Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id }), "bx-shield", "Financieel", null));
+                }
+
+                var allAttentionItems = urgentItems.Concat(normalItems).ToList();
+                var attentionCategories = new[] { "Contracten", "Werf", "Financieel" }
+                    .Select(cat => (Naam: cat, Aantal: allAttentionItems.Count(i => i.Categorie == cat)))
+                    .Where(c => c.Aantal > 0)
+                    .ToList();
+            }
+            @{
+                if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
+                    urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.StandardFotoName;
+                else if (Model.Project.DefaultPicture?.Name is not null)
+                    urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
+                else
+                    urlTotal = "~/img/no_image.jpg";
+            }
+            <div class="row mb-3 gl-detail-hero-row">
+                <div class="col-12 col-xl-4 d-flex flex-column gl-detail-hero-col-left">
+                    @*PROJECTFOTO — de foto zelf is de kaart, geen aparte titelbalk erboven*@
+                    <div class="card card-modern gl-detail-photo-card">
+                        <div class="gl-detail-photo-wrap">
+                            <img src="@Url.Content(urlTotal)" class="gl-detail-photo" alt="@Model.Project.Name" />
+                            @if (canWriteProject)
+                            {
+                                <button type="button" class="gl-detail-thumb-edit" id="editStandardFotoBtn" aria-label="Foto wijzigen" title="Foto wijzigen">
+                                    <i class="fa fa-camera" aria-hidden="true"></i>
+                                </button>
+                                <input type="file" id="standardFotoInput" accept="image/*" hidden />
+                                @if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
+                                {
+                                    <button type="button" class="gl-detail-thumb-remove" id="removeStandardFotoBtn" aria-label="Standaard foto verwijderen" title="Standaard foto verwijderen">
+                                        <i class="fa fa-times" aria-hidden="true"></i>
+                                    </button>
+                                }
+                            }
+                        </div>
+                    </div>
+                    @*ALGEMEEN*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card mb-0 flex-fill">
+                        <header class="card-header">
                             <h2 class="card-title">Algemene gegevens</h2>
                         </header>
                         <div class="card-body bg-light">
-                            <ul class="list list-icons">
-                                <li>
-                                    <i class="fa fa-map-marker"></i>
-                                    <span>
-                                        <strong>Adres: </strong>@Model.Project.Street @Model.Project.HouseNumber<br />
-                                    @Model.Project.Postalcode.Postcode @Model.Project.Postalcode.Gemeente.ToUpper()<br />
-                                    @Model.Project.Postalcode.Country.Name</span>
-                                    
-
-                                </li>
+                            <div class="small mb-3">
+                                <strong>Adres: </strong>@Model.Project.Street @Model.Project.HouseNumber,
+                                @Model.Project.Postalcode.Postcode @Model.Project.Postalcode.Gemeente.ToUpper()<br />
+                                @Model.Project.Postalcode.Country.Name
+                            </div>
+                            <ul class="list list-icons gl-detail-list-icons mb-0">
                                 @if (Model.Project.Status is not null)
                                 {
                                     <li>
@@ -156,13 +338,175 @@
                         </div>
                     </div>
                 </div>
-                
-                
+                <div class="col-12 col-xl-8 d-flex flex-column gl-detail-hero-col-right">
+                    @*AANDACHT VEREIST*@
+                    <section class="card card-modern gl-mc-card gl-detail-mc-card gl-detail-hero-split">
+                        <header class="card-header">
+                            <h2 class="card-title">
+                                <i class="bx bx-bell text-primary"></i>
+                                Aandacht vereist
+                            </h2>
+                        </header>
+                        @if (allAttentionItems.Any())
+                        {
+                            <div class="gl-mc-filters" role="group" aria-label="Filter op categorie">
+                                <button type="button" class="gl-mc-filter-chip active" data-cat="alle" aria-pressed="true">Alles (@allAttentionItems.Count)</button>
+                                @foreach (var cat in attentionCategories)
+                                {
+                                    <button type="button" class="gl-mc-filter-chip" data-cat="@cat.Naam" aria-pressed="false">@cat.Naam (@cat.Aantal)</button>
+                                }
+                            </div>
+                        }
+                        <div class="card-body p-0 gl-mc-body gl-mc-body-capped">
+                            @if (urgentItems.Any())
+                            {
+                                <div class="gl-mc-group gl-mc-urgent">
+                                    <div class="gl-mc-group-hdr">
+                                        <i class="bx bx-alert-circle"></i> ACTIE VEREIST
+                                        <span class="gl-mc-cnt">@urgentItems.Count</span>
+                                    </div>
+                                    <div class="gl-mc-group-body">
+                                        @foreach (var item in urgentItems)
+                                        {
+                                            <div class="gl-mc-item gl-mc-item-urgent" data-cat="@item.Categorie">
+                                                <i class="bx @item.Icon gl-mc-item-icon"></i>
+                                                <span class="gl-mc-item-text">
+                                                    <strong>@item.Type</strong>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")
+                                                </span>
+                                                @if (item.Meta is not null || item.BekijkUrl is not null)
+                                                {
+                                                    <div class="gl-mc-item-actions">
+                                                        @if (item.Meta is not null)
+                                                        {
+                                                            <span class="gl-mc-item-meta">@item.Meta</span>
+                                                        }
+                                                        @if (item.BekijkUrl is not null)
+                                                        {
+                                                            <a href="@item.BekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            @if (normalItems.Any())
+                            {
+                                <div class="gl-mc-group gl-mc-normal">
+                                    <div class="gl-mc-group-hdr">
+                                        <i class="bx bx-clock"></i> OP TE LOSSEN
+                                        <span class="gl-mc-cnt">@normalItems.Count</span>
+                                    </div>
+                                    <div class="gl-mc-group-body">
+                                        @foreach (var item in normalItems)
+                                        {
+                                            <div class="gl-mc-item gl-mc-item-normal" data-cat="@item.Categorie">
+                                                <i class="bx @item.Icon gl-mc-item-icon"></i>
+                                                <span class="gl-mc-item-text">
+                                                    <strong>@item.Type</strong>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")
+                                                </span>
+                                                @if (item.Meta is not null || item.BekijkUrl is not null)
+                                                {
+                                                    <div class="gl-mc-item-actions">
+                                                        @if (item.Meta is not null)
+                                                        {
+                                                            <span class="gl-mc-item-meta">@item.Meta</span>
+                                                        }
+                                                        @if (item.BekijkUrl is not null)
+                                                        {
+                                                            <a href="@item.BekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            @if (!urgentItems.Any() && !normalItems.Any())
+                            {
+                                <div class="gl-mc-empty">
+                                    <i class="bx bx-check-circle"></i>
+                                    <span>Niets dat aandacht vraagt</span>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                    @*EENHEDEN & VERKOOPSTATUS*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card mb-0 gl-detail-hero-split">
+                        <header class="card-header d-flex align-items-center justify-content-between">
+                            <h2 class="card-title mb-0">Eenheden &amp; verkoopstatus <span class="text-muted small">(@Model.UnitRows.Count)</span></h2>
+                            <a class="text-uppercase text-muted small" data-toggle="tooltip" data-placement="top" data-original-title="Eenheden" href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.Project.Id })">
+                                Alle eenheden <i class="bx bx-link-alt"></i>
+                            </a>
+                        </header>
+                        <div class="card-body bg-light p-0">
+                            @if (Model.UnitRows.Any())
+                            {
+                                <div class="table-responsive gl-detail-units-body">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Lot</th>
+                                                <th scope="col">Type</th>
+                                                <th scope="col" class="text-end">Opp.</th>
+                                                <th scope="col" class="text-end">Vraag-/verkoopprijs</th>
+                                                <th scope="col">Status</th>
+                                                <th scope="col">Klant</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var u in Model.UnitRows)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <a href="@Url.Action("EditUnit", "Projecten", new { projectid = Model.Project.Id, unitid = u.UnitId })" class="gl-detail-table-link">@u.Naam</a>
+                                                    </td>
+                                                    <td>@u.TypeName</td>
+                                                    <td class="text-end">@(u.Oppervlakte.HasValue ? u.Oppervlakte.Value.ToString("0") + " m²" : "—")</td>
+                                                    <td class="text-end">
+                                                        @u.Vraagprijs.ToString("C0", be)
+                                                        @if (u.Afwerkingen.Any())
+                                                        {
+                                                            <div class="gl-detail-row-sub">
+                                                                @foreach (var afwerking in u.Afwerkingen)
+                                                                {
+                                                                    <div>+ @afwerking.Description (@afwerking.Cost.ToString("C0", be))</div>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </td>
+                                                    <td><span class="badge bg-@u.StatusVariant">@u.Status</span></td>
+                                                    <td>
+                                                        @if (u.ClientId.HasValue)
+                                                        {
+                                                            <a href="@Url.Action("Detail", "Klanten", new { clientid = u.ClientId, projectid = Model.Project.Id })" class="gl-detail-table-link">@u.KlantNaam</a>
+                                                        }
+                                                        else
+                                                        {
+                                                            @:—
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small p-3 mb-0">Nog geen eenheden ingesteld voor dit project.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <div class="row">
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                <div class="col-12 col-xl-6 col-lg-6 col-md-6 col-sm-12 mb-3">
                 @*KLANTEN*@
-                    <div class="card card-modern card-modern-alt-padding">
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
                         <header class="card-header">
 
                             <h2 class="card-title">Klanten</h2>
@@ -194,115 +538,80 @@
                             </div>
                         </div>
                     </div>
-                @*WERKDAGEN*@
-                @if (Model.Project.DeliveryDate is null)
-                {
-                        <div class="card card-modern card-modern-alt-padding">
-                            <div class="card-body bg-primary">
-                                <div Class="widget-summary widget-summary-md">
-                                    <div Class="widget-summary-col widget-summary-col-icon">
-                                        <div Class="summary-icon">
-                                            <i Class="fa fa-building"></i>
-                                        </div>
-                                    </div>
-                                    <div Class="widget-summary-col">
-                                        <div Class="summary">
-                                            <h4 Class="title">Werkdagen resterend</h4>
-                                            <div Class="info">
-                                            @if (Model.WorkingDaysLeft == -9999)
-                                            {
-
-                                                    <div>Kan nog geen werkdagen berekenen, gelieve de startdatum en werkdagen In te geven</div>
-                                            }
-                                            else
-                                            {
-
-                                                    <strong Class="amount">@Model.WorkingDaysLeft</strong>
-
-                                            }
-
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                        <div class="card card-modern card-modern-alt-padding">
-                            <div class="card-body bg-primary">
-                                <div class="widget-summary widget-summary-md">
-                                    <div class="widget-summary-col widget-summary-col-icon">
-                                        <div class="summary-icon">
-                                            <i class="fa fa-calendar"></i>
-                                        </div>
-                                    </div>
-                                    <div class="widget-summary-col">
-                                        <div class="summary">
-                                            <h4 class="title">Uiterste einddatum</h4>
-                                            <div class="info">
-                                            @if (Model.FinalConstructionDate == DateOnly.MinValue)
-                                            {
-
-                                                    <div>Kan nog geen datum berekenen, gelieve de startdatum en werkdagen in te geven</div>
-
-                                            }
-                                            else
-                                            {
-
-                                                    <strong Class="amount ">@Model.FinalConstructionDate.ToString("ddd dd MMMM yyyy")</strong>
-
-                                            }
-
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                }
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
-                @*NIEUWS*@
-                    <div class="card card-modern card-modern-alt-padding">
+                <div class="col-12 col-xl-6 col-lg-6 col-md-6 col-sm-12 mb-3">
+                @*VOORTGANG & VERKOOP*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
                         <header class="card-header">
-                            <h2 class="card-title">Nieuws</h2>
+                            <h2 class="card-title">Voortgang &amp; verkoop</h2>
                         </header>
                         <div class="card-body bg-light">
-                @if (Model.LatestNews is not null)
-                {
-                                <img src="@Url.Content(Configuration["URL:ImageWebUrl"] + "pictures/News/" + Model.LatestNews.Picture.Name)" class="card-img-top" alt="@Model.LatestNews.TitleNL">
-                                <div class="post-date">
-                                    <span class="day">@Model.LatestNews.NewsDate.Day </span>
-                                    <span class="month">@Model.LatestNews.NewsDate.ToString("MMM")</span>
+                            @* Fysieke/financiële voortgang staan al in de KPI-strip bovenaan;
+                               hier enkel wat die strip niet toont (verkochte waarde, openstaand,
+                               levering-detail) — geen herhaling van dezelfde twee cijfers. *@
+                            @if (Model.SalesData is not null)
+                            {
+                                <div class="pb-2">
+                                    <div class="gl-pg-row">
+                                        <span class="gl-pg-label">Verkocht (waarde)</span>
+                                        <span class="gl-pg-pct">@Model.SalesData.PercentageSold.ToString("0.#")%</span>
+                                    </div>
+                                    <div class="progress gl-pg-bar">
+                                        <div class="progress-bar" style="width:@(Model.SalesData.PercentageSold.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                    </div>
                                 </div>
-                                <div class="post-content">
+                            }
 
-                                    <h4><a href="blog-post.html">@Model.LatestNews.TitleNL </a></h4>
-                                    <p class="small">@Model.LatestNews.TextNL</p>
-
-                                </div>
-                }
-                            <div Class="text-right">
-                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Nieuws" href="@Url.Action("DetailNews", "Projecten", new { projectid = Model.Project.Id })">
-                                    (Toon Alle)
+                            <p class="mb-2">
+                                <a href="@Url.Action("Index", "ProjectsIssues", new { projectId = Model.Project.Id })">
+                                    <strong>@Model.OpenIssuesCount</strong> open @(Model.OpenIssuesCount == 1 ? "punt" : "punten")
                                 </a>
-                            </div>
-                            <hr Class="dotted short">
-                            <div class="social-icons-list">
-                                <a rel="tooltip" data-placement="bottom" class="modal-with-form" id="btnAddNews" href="#modaladdnews" data-original-title="Foto toevoegen"><i class="fa fa-plus"></i><span>Foto toevoegen</span></a>
-                            </div>
+                            </p>
+                            @if ((Model.ProjectInvoiceSummary?.OverdueCount ?? 0) > 0)
+                            {
+                                <p class="mb-2">
+                                    <a href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })" class="gl-text-danger">
+                                        <strong>@Model.ProjectInvoiceSummary!.OverdueAmount.ToString("C0", be)</strong> openstaand · @Model.ProjectInvoiceSummary.OverdueCount vervallen @(Model.ProjectInvoiceSummary.OverdueCount == 1 ? "factuur" : "facturen")
+                                    </a>
+                                </p>
+                            }
+
+                            <hr class="dotted short" />
+
+                            @if (Model.Project.DeliveryDate.HasValue)
+                            {
+                                var daysLeft = (Model.Project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
+                                <p class="mb-0 small">
+                                    <strong>Levering:</strong> @Model.Project.DeliveryDate.Value.ToString("dd/MM/yyyy")<br />
+                                    @if (daysLeft < 0)
+                                    {
+                                        <span class="gl-text-danger">Opleverdatum voorbij (@(-daysLeft) dagen)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@daysLeft dagen resterend</span>
+                                    }
+                                </p>
+                            }
+                            else if (Model.WorkingDaysLeft == -9999)
+                            {
+                                <p class="mb-0 small text-muted">Kan nog geen werkdagen berekenen, gelieve de startdatum en werkdagen in te geven.</p>
+                            }
+                            else
+                            {
+                                <p class="mb-0 small">
+                                    <strong>@Model.WorkingDaysLeft</strong> werkdagen resterend<br />
+                                    <span class="text-muted">Uiterste einddatum: @Model.FinalConstructionDate.ToString("dd/MM/yyyy")</span>
+                                </p>
+                            }
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
-                @*DOCUMENTEN*@
-                    <div class="card card-modern card-modern-alt-padding">
+                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+                @*DOCUMENTEN & CONTRACTEN*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
                         <header class="card-header">
-
-                            <h2 class="card-title">Documenten</h2>
+                            <h2 class="card-title">Documenten &amp; contracten</h2>
                         </header>
                         <div class="card-body bg-light">
                             <ul class="simple-">
@@ -339,12 +648,27 @@
                 }
 
                             </ul>
-
-
                             <div Class="text-right">
                                 <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Documenten" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.Project.Id })">
                                     (Toon Alle)
                                 </a>
+                            </div>
+                            <hr Class="dotted short">
+                            @{
+                                var contractIssueCount = Model.UnsignedContracts.Count + Model.GuaranteeMissingContracts.Count;
+                            }
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="small @(contractIssueCount > 0 ? "gl-text-danger" : "text-muted")">
+                                    @if (contractIssueCount > 0)
+                                    {
+                                        <text><strong>@contractIssueCount</strong> contract@(contractIssueCount == 1 ? "" : "en") vragen opvolging</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Alle contracten in orde</text>
+                                    }
+                                </span>
+                                <a class="text-uppercase text-muted small" href="@Url.Action("DetailContracts", "Projecten", new { projectid = Model.Project.Id })">Leveranciers <i class="bx bx-link-alt"></i></a>
                             </div>
                             <hr Class="dotted short">
                             <div class="social-icons-list">
@@ -352,36 +676,125 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
-                @*FOTOS*@
-                    <div class="card card-modern card-modern-alt-padding">
+                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+                @*FACTURATIE*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
                         <header class="card-header">
-                            <h2 class="card-title">Foto's</h2>
+                            <h2 class="card-title">Facturatie</h2>
                         </header>
                         <div class="card-body bg-light">
-
-                                        @if(Model.LatestPicture is not null ){
-                                            <img src="@Url.Content(Configuration["URL:ImageWebURL"] + "pictures/447/" + Model.LatestPicture.Name)" class="card-img" alt="@Model.LatestPicture.Name">
-                                        }
-                                        <br />
-                                        <br />
-                                        <div Class="text-right">
-                                            <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Fotos" href="@Url.Action("DetailPhotos", "Projecten", new {projectid = Model.Project.Id})">
-                                                (Toon Alle)
-                                            </a>
+                            @if (Model.RecentInvoices.Any())
+                            {
+                                <div class="gl-detail-row-list">
+                                    @foreach (var inv in Model.RecentInvoices)
+                                    {
+                                        <div class="gl-detail-row-item">
+                                            <div class="gl-detail-row-main">
+                                                <div class="gl-detail-row-title">@(inv.PublicId ?? $"Factuur #{inv.Id}")</div>
+                                                <div class="gl-detail-row-sub">@inv.ClientName · @inv.StatusName</div>
+                                            </div>
+                                            <span class="gl-detail-row-value">@((inv.Balance ?? 0m).ToString("C0", be))</span>
                                         </div>
-                                    
-                                    <hr Class="dotted short">
-                                    <div Class="social-icons-list">
-                                        <a rel="tooltip" data-placement="bottom" Class="modal-with-form" id="btnAddPhoto" href="#modaladdphoto" data-original-title="Foto toevoegen"><i Class="fa fa-plus"></i><span>Foto toevoegen</span></a>
-                                    </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Nog geen facturen voor dit project.</p>
+                            }
+                            <hr Class="dotted short">
+                            <div Class="text-right">
+                                <a Class="text-uppercase text-muted" href="@Url.Action("Invoicing", "Projecten", new { projectid = Model.Project.Id })">
+                                    (Toon Alle)
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                
+                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+                @*FOTOS & MEDIA*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
+                        <header class="card-header">
+                            <h2 class="card-title">Foto's &amp; media</h2>
+                        </header>
+                        <div class="card-body bg-light">
+                            @if (Model.LatestPictures.Any())
+                            {
+                                <div class="gl-detail-media-grid mb-3">
+                                    @foreach (var pic in Model.LatestPictures.Take(3))
+                                    {
+                                        <img src="@Url.Content(Configuration["URL:ImageWebURL"] + "pictures/447/" + pic.Name)" alt="@pic.Name" loading="lazy">
+                                    }
+                                    @if (Model.TotalPictureCount > 3)
+                                    {
+                                        <div class="gl-detail-media-more">+@(Model.TotalPictureCount - 3)</div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-3">Nog geen foto's voor dit project.</p>
+                            }
+                            <div Class="text-right">
+                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Fotos" href="@Url.Action("DetailPhotos", "Projecten", new {projectid = Model.Project.Id})">
+                                    (Toon Alle)
+                                </a>
+                            </div>
+                            <hr Class="dotted short">
+                            <div Class="social-icons-list">
+                                <a rel="tooltip" data-placement="bottom" Class="modal-with-form" id="btnAddPhoto" href="#modaladdphoto" data-original-title="Foto toevoegen"><i Class="fa fa-plus"></i><span>Foto toevoegen</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-3 col-lg-6 col-md-6 col-sm-12 mb-3">
+                @*VERZEKERINGEN*@
+                    <div class="card card-modern card-modern-alt-padding gl-detail-card">
+                        <header class="card-header">
+                            <h2 class="card-title">Verzekeringen</h2>
+                        </header>
+                        <div class="card-body bg-light">
+                            @if (Model.Insurances.Any())
+                            {
+                                <div class="gl-detail-row-list">
+                                    @foreach (var ins in Model.Insurances)
+                                    {
+                                        var today = DateOnly.FromDateTime(DateTime.Today);
+                                        string insStatus; string insVariant;
+                                        if (!ins.Enddate.HasValue) { insStatus = "Onbekend"; insVariant = "text-muted"; }
+                                        else if (ins.Enddate.Value < today) { insStatus = "Verlopen"; insVariant = "gl-text-danger"; }
+                                        else if (ins.Enddate.Value < today.AddDays(60)) { insStatus = "Verloopt binnenkort"; insVariant = "gl-detail-kpi-value-warning"; }
+                                        else { insStatus = "In orde"; insVariant = "gl-detail-kpi-value-primary"; }
+                                        <div class="gl-detail-row-item">
+                                            <div class="gl-detail-row-main">
+                                                <div class="gl-detail-row-title">@(ins.Type != 0 ? ins.Type.GetDisplayName() : "Onbekend type")</div>
+                                                <div class="gl-detail-row-sub">
+                                                    @(ins.InsuranceCompany?.Name ?? "Onbekende maatschappij")
+                                                    @if (ins.Enddate.HasValue)
+                                                    {
+                                                        @: · Verloopt @ins.Enddate.Value.ToString("dd/MM/yyyy")
+                                                    }
+                                                </div>
+                                            </div>
+                                            <span class="gl-detail-row-value @insVariant">@insStatus</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Nog geen verzekeringen ingesteld voor dit project.</p>
+                            }
+                            <hr Class="dotted short">
+                            <div Class="text-right">
+                                <a Class="text-uppercase text-muted" href="@Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id })">
+                                    (Toon Alle)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 		</div>
     </div>
@@ -389,10 +802,78 @@
 <div id="modaldeleteproject" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-project-container"></div>
 </div>
+<div id="modalremovefoto" class="modal-block modal-block-warning mfp-hide">
+    <section class="card">
+        <header class="card-header">
+            <h2 class="card-title">Standaard foto verwijderen?</h2>
+        </header>
+        <div class="card-body">
+            <div class="modal-wrapper">
+                <div class="modal-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="modal-text">
+                    <p>Weet u zeker dat u de standaard foto van dit project wilt verwijderen?</p>
+                </div>
+            </div>
+        </div>
+        <footer class="card-footer">
+            <div class="row">
+                <div class="col-md-12 text-end">
+                    <button type="button" class="btn btn-warning" id="confirmRemoveFotoBtn">Verwijderen</button>
+                    <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+                </div>
+            </div>
+        </footer>
+    </section>
+</div>
 
 @section PageScripts {
     <script>
+        // Hero-rij: de rechterkolom (Aandacht vereist + Eenheden) moet exact
+        // even hoog zijn als de linkerkolom (Projectfoto + Algemene gegevens)
+        // en daarbinnen intern scrollen. Puur CSS lost dit niet op — de
+        // rechterkolom heeft anders geen eigen (niet-inhoud-afgeleide) hoogte
+        // om zijn kaarten flex-grow tegen te laten verdelen, dus flex-grow
+        // deed niets en beide kaarten toonden hun volledige inhoud zonder
+        // scroll. Hier meten we de linkerkolom na render en zetten die hoogte
+        // expliciet op de rechterkolom; de bestaande flex/overflow-CSS doet
+        // de rest zodra er een echte hoogte is om te verdelen.
+        function syncHeroColumnHeight() {
+            var leftCol = document.querySelector('.gl-detail-hero-col-left');
+            var rightCol = document.querySelector('.gl-detail-hero-col-right');
+            if (!leftCol || !rightCol) return;
+            if (window.matchMedia('(max-width: 1199.98px)').matches) {
+                // Onder xl staan de kolommen gestapeld (col-12) — geen gedeelde
+                // hoogte nodig, en een oude vaste hoogte zou daar net storen.
+                rightCol.style.height = '';
+                return;
+            }
+            rightCol.style.height = leftCol.offsetHeight + 'px';
+        }
+        window.addEventListener('resize', syncHeroColumnHeight);
+        window.addEventListener('load', syncHeroColumnHeight);
+        syncHeroColumnHeight();
+
+        function notify(title, text, type) {
+            if (typeof PNotify !== 'undefined') {
+                new PNotify({
+                    title: title || '',
+                    text: text || '',
+                    type: type || 'info',
+                    addclass: 'stack-bar-top',
+                    stack: { dir1: 'down', dir2: 'right', push: 'top', spacing1: 5 }
+                });
+            } else {
+                window.alert((title ? title + '\n' : '') + (text || ''));
+            }
+        }
+
         // Standaard foto AJAX upload
+        document.getElementById('editStandardFotoBtn')?.addEventListener('click', function () {
+            document.getElementById('standardFotoInput')?.click();
+        });
+
         document.getElementById('standardFotoInput')?.addEventListener('change', function () {
             if (!this.files[0]) return;
             var formData = new FormData();
@@ -403,22 +884,47 @@
                 .then(r => r.json())
                 .then(d => {
                     if (d.success) location.reload();
-                    else alert('Upload mislukt: ' + (d.error ?? 'onbekende fout'));
+                    else notify('Upload mislukt', d.error ?? 'Onbekende fout', 'error');
                 });
         });
 
         document.getElementById('removeStandardFotoBtn')?.addEventListener('click', function () {
-            if (!confirm('Standaard foto verwijderen?')) return;
+            $.magnificPopup.open({ items: { src: '#modalremovefoto' }, type: 'inline' });
+        });
+
+        document.getElementById('confirmRemoveFotoBtn')?.addEventListener('click', function () {
             fetch('@Url.Action("RemoveProjectStandardFoto", "Projecten")', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'projectId=@Model.Project.Id&__RequestVerificationToken=' + encodeURIComponent(document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '')
             })
             .then(r => r.json())
-            .then(d => { if (d.success) location.reload(); });
+            .then(d => {
+                if (d.success) location.reload();
+                else notify('Verwijderen mislukt', 'De standaard foto kon niet verwijderd worden.', 'error');
+            });
         });
 
-        $(document).on('click', '#delete-project-button', function (e) {
+        // Aandachtspaneel: categoriefilter-chips
+        document.querySelectorAll('.gl-mc-filter-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                var cat = this.dataset.cat;
+                document.querySelectorAll('.gl-mc-filter-chip').forEach(function (c) {
+                    c.classList.toggle('active', c === chip);
+                    c.setAttribute('aria-pressed', c === chip ? 'true' : 'false');
+                });
+                document.querySelectorAll('.gl-mc-item').forEach(function (item) {
+                    item.style.display = (cat === 'alle' || item.dataset.cat === cat) ? '' : 'none';
+                });
+                document.querySelectorAll('.gl-mc-group').forEach(function (group) {
+                    var visible = Array.prototype.slice.call(group.querySelectorAll('.gl-mc-item'))
+                        .some(function (item) { return item.style.display !== 'none'; });
+                    group.style.display = visible ? '' : 'none';
+                });
+            });
+        });
+
+        $(document).on('click', '.delete-project-trigger', function (e) {
             e.preventDefault();
             const projectId = $(this).data('project-id');
 

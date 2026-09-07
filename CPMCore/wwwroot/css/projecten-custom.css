@@ -66,12 +66,394 @@
    Bootstrap-kleuren) door de forest-green/rust tokens. */
 .gl-follow-on { color: var(--primary); }
 .gl-danger-icon { color: var(--danger); }
+.gl-text-danger { color: var(--danger); }
 
 /* Contractenlijst: labeled expand-knop (i.p.v. een ongelabeld chevron-icoon) —
    .btn-link's standaard linkkleur overschrijven zodat het geen stock blauw wordt. */
 .supplier-toggle:hover,
 .supplier-toggle:focus-visible {
     color: var(--primary) !important;
+}
+
+/* ----------------------------------------------------------
+   Detail (projecthub) — dichte kaartengrid voor grote/medium schermen.
+   Standaardfoto als klein thumbnail (i.p.v. een eigen volle kolom die op
+   brede schermen half leeg bleef) en een vaste hoogte op de Nieuws-/Foto's-
+   kaartafbeeldingen, zodat geen van beide de rest van de rij domineert.
+   ---------------------------------------------------------- */
+/* Detail-hub: DESIGN.md's eigen 6/10/16/24/32px-ritme strikter toegepast dan
+   card-modern-alt-padding's theme-standaard (20px, geen treffer op die
+   schaal) — enkel op deze pagina's kaarten, niet op de gedeelde
+   card-modern-alt-padding-klasse zelf. Idem voor de card-header: het
+   theme-default van 25px maakte elke kaart-titelbalk op deze dichte pagina
+   onnodig hoog. */
+.gl-detail-card.card.card-modern.card-modern-alt-padding .card-body { padding: 16px; }
+.gl-detail-card.card.card-modern .card-header,
+.gl-detail-mc-card.card.card-modern .card-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+/* Icoon+titel in een kaart-header stond op de tekst-baseline (default inline
+   uitlijning van een icon-font naast tekst) i.p.v. optisch gecentreerd. */
+.gl-detail-card .card-header .card-title,
+.gl-detail-mc-card .card-header .card-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+/* .inner-body's theme-standaard padding-top (40px) was afgestemd op de
+   verwijderde h1-titel eronder; nu die weg is (acties zitten in de topbar,
+   zie hierboven) oogt diezelfde 40px als dode ruimte boven de KPI-strip. */
+.inner-body.gl-detail-body { padding-top: 16px; }
+
+/* Projectfoto: de foto IS de kaart, geen titelbalk erboven — daarom ook
+   bovenaan afgerond, niet enkel onderaan. Vast beeldformaat (16:9) i.p.v. de
+   intrinsieke fotogrootte, zodat de kaart niet wisselt van hoogte per upload. */
+.gl-detail-photo-wrap { position: relative; }
+.gl-detail-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius, 7px);
+}
+/* Kolom-gutter van de hero-rij verkleind van Bootstrap's 24px-standaard naar
+   16px — gelijk aan de verticale afstand hieronder, en zelf ook krapper dan
+   de 24px die hier te ruim oogde eenmaal alles effectief gelijk stond. */
+.gl-detail-hero-row { --bs-gutter-x: 1rem; }
+.gl-detail-photo-card { margin-bottom: 16px; }
+
+/* Hero-rij (Projectfoto+Algemene gegevens naast Aandacht vereist+Eenheden):
+   syncHeroColumnHeight (PageScripts) zet de rechterkolom se hoogte gelijk aan
+   de linkerkolom se gerenderde hoogte. align-self:flex-start op de linker-
+   kolom is de sleutel: zonder dat zou .row's eigen align-items:stretch de
+   linkerkolom ZELF al oprekken tot de (ongelimiteerde, inhoud-afhankelijke)
+   hoogte van de rechterkolom vóór de JS ooit meet — waardoor de JS een al
+   opgeblazen hoogte afleest en die terug op de rechterkolom zet: een lus die
+   precies de "enorme witruimte in beide kaarten"-bug veroorzaakte. Met
+   flex-start blijft de linkerkolom altijd op haar eigen, echte inhoudshoogte
+   staan, ongeacht wat de rechterkolom doet. min-height:0 op de rechterkolom
+   + flex-grow hieronder werken dan wél zoals bedoeld zodra er een correcte,
+   niet-opgeblazen hoogte is om te verdelen. */
+.gl-detail-hero-col-left { align-self: flex-start; }
+.gl-detail-hero-col-right { min-height: 0; }
+.gl-detail-hero-split { flex: 1 1 0%; min-height: 0; }
+/* Zelfde 16px als de kolom-gutter en de Projectfoto/Algemeen-afstand — via
+   de aangrenzende-sibling-selector i.p.v. mb-3 op de eerste kaart, zodat de
+   laatste (Eenheden) geen ongewenste marge onderaan de kolom krijgt. */
+.gl-detail-hero-split + .gl-detail-hero-split { margin-top: 16px; }
+.gl-detail-hero-split > .card-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+.gl-detail-card-img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    display: block;
+}
+/* Algemene gegevens: iets rustiger ritme tussen rijen dan de theme-default
+   (geen expliciete margin), zonder de list-icons iconpositionering te breken. */
+.gl-detail-list-icons > li {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+.gl-detail-list-icons > li + li {
+    border-top: 1px solid var(--border, #e7e7e7);
+}
+
+/* Standaardfoto-upload overlay op de Projectfoto-kaart. 40x40px tikgebied
+   (The Field-Width Rule) — groter dan het losstaande visuele icoontje zou
+   suggereren, bewust zo gekozen zodat dit ook met werkhandschoenen/buiten
+   bruikbaar blijft op tablet/telefoon. Positief geplaatst (binnen de foto),
+   niet negatief zoals bij het vroegere kleine ronde thumbnail — op een grote
+   rechthoekige foto hoort een overlay-badge binnen de rand, niet erbuiten. */
+.gl-detail-thumb-edit,
+.gl-detail-thumb-remove {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    color: var(--white, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    border: 3px solid var(--white, #fff);
+}
+.gl-detail-thumb-edit:focus-visible,
+.gl-detail-thumb-remove:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.gl-detail-thumb-edit {
+    bottom: 12px;
+    right: 12px;
+    background: var(--primary);
+}
+.gl-detail-thumb-remove {
+    top: 12px;
+    right: 12px;
+    background: var(--danger);
+}
+
+/* KPI-strip: derde iteratie — losstaande witte kaartjes met een dunne rand +
+   icoon in onze eigen kleuren (Primary/Info/Danger; nooit de blauw/oranje/
+   zwart uit de aangeleverde referentieafbeelding). Deze kleur-utility-classes
+   blijven — ze worden ook hergebruikt op de Verzekeringen-kaart hieronder.
+   --muted (#8590a5) komt op ~3.3:1 op wit uit, onder WCAG AA's 4.5:1 voor
+   kleine tekst; gl-detail-text-aa is een donkerdere tint van dezelfde kleur
+   die ~5.4:1 haalt. */
+.gl-detail-kpi-value-primary { color: var(--primary); }
+.gl-detail-kpi-value-warning { color: var(--warning-text, var(--warning)); }
+.gl-detail-kpi-value-danger { color: var(--danger-text, var(--danger)); }
+
+/* 7 tegels i.p.v. het gebruikelijke 4-tal elders — flex-grow met een
+   minimumbreedte i.p.v. een vaste verdeling, zodat het op brede schermen op
+   één rij past en op smallere schermen vanzelf wrapt i.p.v. tekst lelijk
+   middenin een woord af te breken. */
+.gl-kpi2-strip { display: flex; flex-wrap: wrap; gap: 12px; }
+.gl-kpi2-tile-col { flex: 1 1 150px; }
+.gl-kpi2-tile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    padding: 12px 14px;
+    background: var(--white, #fff);
+    border: 1px solid var(--kpi-color, var(--border));
+    border-radius: var(--radius, 7px);
+}
+.gl-kpi2-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--kpi-color, var(--primary));
+    color: var(--white, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+/* Donut-icoon voor voortgangs-tegels: een conic-gradient tot --pct% gevuld
+   met --kpi-color, de rest --border — met een witte binnenring erbovenop zo
+   het als ring i.p.v. een volle taartpunt oogt. */
+.gl-kpi2-icon.gl-kpi2-ring {
+    background: conic-gradient(var(--kpi-color, var(--primary)) calc(var(--pct, 0) * 1%), var(--border, #e7e7e7) 0);
+}
+.gl-kpi2-ring-inner {
+    width: calc(100% - 7px);
+    height: calc(100% - 7px);
+    border-radius: 50%;
+    background: var(--white, #fff);
+    color: var(--kpi-color, var(--primary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+}
+.gl-kpi2-body { min-width: 0; }
+.gl-kpi2-label {
+    font-size: .64rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-kpi2-value {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-kpi2-value-severe { color: var(--danger-text, var(--danger)); }
+.gl-kpi2-sub {
+    font-size: .66rem;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* "voor smaller minder info" — onder deze breedte vallen label en subtekst
+   weg, enkel icoon + waarde blijven staan (dichter, matcht de tweede
+   referentieafbeelding). */
+@media (max-width: 1299.98px) {
+    .gl-kpi2-label, .gl-kpi2-sub { display: none; }
+    .gl-kpi2-tile { justify-content: center; }
+}
+
+/* Aandachtspaneel: categoriefilter-chips boven de gl-mc-groepen. Wit, zoals
+   de rest van de kaart — enkel de hairline eronder scheidt dit van de
+   gl-mc-body. */
+.gl-mc-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--white, #fff);
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.gl-mc-filter-chip {
+    border: 1px solid var(--border, #e7e7e7);
+    background: var(--white, #fff);
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1;
+    min-height: 32px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.gl-mc-filter-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--white, #fff);
+}
+.gl-mc-filter-chip:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Aandachtspaneel op Detail: het inserten van gl-mc-filters tussen de
+   card-header en de gescrolde gl-mc-body brak de kaart se eigen
+   afgeronde onderhoek (overflow:hidden op .gl-mc-card volstond niet meer
+   zodra er meerdere kinderen na elkaar zaten) — hier expliciet herstellen. */
+.gl-detail-mc-card { position: relative; border-radius: var(--radius, 7px); overflow: hidden; }
+.gl-detail-mc-card .gl-mc-body-capped {
+    border-bottom-left-radius: var(--radius, 7px);
+    border-bottom-right-radius: var(--radius, 7px);
+}
+/* Een half afgesneden rij onderaan een vaste-hoogte scrollzone oogt als een
+   renderfout; een zachte fade i.p.v. een harde knip maakt duidelijk dat er
+   nog meer te scrollen valt. Dit MOET een ondoorzichtige overlay zijn, geen
+   mask-image op de scrollzone zelf — een mask maakt ook de eigen witte
+   achtergrond doorzichtig, waardoor de grijze paginakleur er doorheen schijnt
+   (exact de "kaart is niet wit"-bug die dit verving). De overlay zit op de
+   niet-scrollende buitenste kaart, dus hij blijft aan de onderrand van het
+   zichtbare venster staan, ongeacht de scrollpositie. */
+.gl-detail-mc-card::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+    pointer-events: none;
+    border-bottom-left-radius: var(--radius, 7px);
+    border-bottom-right-radius: var(--radius, 7px);
+}
+/* De categoriefilter-chips maken de per-groep bannertekst ("ACTIE VEREIST",
+   "OP TE LOSSEN") overbodig — die twee zeggen op deze pagina in feite twee
+   keer "Aandacht vereist" vlak na elkaar. De rijkleur (--danger-tint/
+   --warning-tint) blijft het ernst-signaal dragen; enkel op deze pagina
+   verborgen, de Home-dashboards hebben geen filterchips en hebben deze
+   banner wél nodig als hun enige categorisatiesignaal. */
+.gl-detail-mc-card .gl-mc-group-hdr { display: none; }
+.gl-detail-mc-card .gl-mc-group + .gl-mc-group > .gl-mc-group-body { border-top: 1px solid rgba(0,0,0,.07); }
+
+/* Contextuele meta-tekst naast "Bekijk" (bv. "24 dagen open"). */
+.gl-mc-item-meta {
+    font-size: 10px;
+    font-weight: 600;
+    color: inherit;
+    opacity: .7;
+    white-space: nowrap;
+}
+/* gl-mc-item's 11.5px/10px was afgestemd op de smalle, sticky sidebar-kolom
+   van de Home-dashboards. Op deze volle-breedte kaart is die ruimtebeperking
+   er niet, en oogde de tekst nodeloos klein — hier vergroot, enkel op deze
+   pagina. */
+.gl-detail-mc-card .gl-mc-item { font-size: 13px; padding: 10px 16px; gap: 10px; }
+.gl-detail-mc-card .gl-mc-item-icon { font-size: 15px; }
+.gl-detail-mc-card .gl-mc-btn-bekijk { font-size: 12px; }
+.gl-detail-mc-card .gl-mc-item-meta { font-size: 11px; }
+
+/* Eenheden & verkoopstatus tabel: compacte badge-varianten passend bij het
+   bestaande Sales.cshtml-kleurenschema (Verkocht=danger, Optie=warning,
+   Beschikbaar=success); "Akte verleden" is hier nieuw en krijgt primary. */
+/* Vult de resterende hoogte van de kaart i.p.v. een vaste max-height — de
+   kaart zelf krijgt haar hoogte nu van de hero-rij (gl-detail-hero-split). */
+.gl-detail-units-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
+/* Bootstrap's table-celpadding (0.5rem/8px) staat los van DESIGN.md's eigen
+   6/10/16/24/32-ritme; hier op scherpte gebracht. Sticky thead zodat je bij
+   het scrollen niet de kolomkoppen kwijtraakt (was al gesignaleerd bij de
+   audit van deze pagina). */
+.gl-detail-units-body table > :not(caption) > * > * { padding: 10px 16px; }
+.gl-detail-units-body thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--white, #fff);
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.gl-detail-units-body tbody tr:last-child td { border-bottom: none; }
+.gl-detail-table-link {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+}
+.gl-detail-table-link:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Facturatie- en verzekeringenkaart: compacte rijenlijst i.p.v. een tabel. */
+.gl-detail-row-list .gl-detail-row-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+}
+.gl-detail-row-list .gl-detail-row-item + .gl-detail-row-item {
+    border-top: 1px solid var(--border, #e7e7e7);
+}
+.gl-detail-row-main { min-width: 0; }
+.gl-detail-row-title { font-size: .85rem; font-weight: 600; }
+.gl-detail-row-sub { font-size: .72rem; color: var(--gl-detail-text-aa, #5f6b7a); }
+.gl-detail-row-value { font-size: .85rem; font-weight: 700; white-space: nowrap; }
+
+/* Foto's & media: dichte thumbnail-grid met een "+N"-tegel voor de rest,
+   i.p.v. één enkele grote foto die de rest van de rij domineerde. */
+.gl-detail-media-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.gl-detail-media-grid img,
+.gl-detail-media-more {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    object-fit: cover;
+    border-radius: var(--radius, 7px);
+}
+.gl-detail-media-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: .95rem;
 }
 
 /* ----------------------------------------------------------
