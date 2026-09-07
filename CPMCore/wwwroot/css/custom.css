@@ -559,15 +559,15 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     display: flex;
     flex-direction: column;
     min-height: 0;
-    /* 80px = .content-body padding (40px boven + 40px onder); 54px = hoogte
-       van .gl-form-shell__tabs hierboven (nu buiten deze kaart, dus telt
-       niet mee in de flex-flow); 24px = marge tussen tabstrip en kaart;
-       84px = hoogte van .gl-form-shell__actions hieronder (grote
-       py-3-knoppen), plus de veilige zone onderaan notched telefoons die
-       die balk er zelf bij optelt — die is position:fixed en telt dus ook
-       niet mee. Alles bij elkaar de ruimte die de kaart zelf NIET krijgt,
-       zodat ze precies past tussen tabstrip en actiebalk. */
-    height: calc(100vh - var(--topbar-height) - 80px - 54px - 24px - 84px - env(safe-area-inset-bottom, 0px));
+    /* De tabstrip (hierboven, buiten deze kaart) vervángt .content-body's
+       top-ruimte volledig, dus die telt hier NIET meer los mee als "40px
+       padding" — enkel wat er nog vóór de tabstrip zit (de 10px van
+       "html.modern.fixed .content-body { margin-top: 10px }" in theme.css,
+       zie .gl-form-shell__tabs) + de tabstrip zelf (54px) + de marge
+       eronder (24px) + de vaste actiebalk-zone onderaan (84px, plus de
+       veilige zone op notched telefoons — .content-body's eigen 40px
+       bottom-padding is kleiner dan die 84px en dus al inbegrepen). */
+    height: calc(100vh - var(--topbar-height) - 10px - 54px - 24px - 84px - env(safe-area-inset-bottom, 0px));
     margin-bottom: 0;
 }
 .gl-form-shell > .card-body {
@@ -694,9 +694,11 @@ html.gl-modal-open .sidebar-left { display: none !important; }
        dus expliciet herhaald i.p.v. "84px + die van de balk"). */
     .gl-form-shell { height: auto; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
     .gl-form-shell > .card-body { display: block; padding: 20px; }
-    /* .content-body heeft op mobiel al geen top-padding (0 15px 15px), dus
-       enkel links/rechts hoeven we uit te breken naar de echte rand. */
-    .gl-form-shell__tabs { height: auto; padding: 0 15px; margin: 0 -15px 16px; }
+    /* .content-body heeft op mobiel geen top-padding (0 15px 15px), maar de
+       ongeconditioneerde "html.modern.fixed .content-body { margin-top:
+       10px }" (theme.css) geldt hier óók — die moeten we dus nog wel
+       uitbreken, samen met links/rechts naar de echte rand. */
+    .gl-form-shell__tabs { height: auto; padding: 0 15px; margin: -10px -15px 16px; }
     .gl-form-shell__panel { overflow-y: visible; padding: 0; }
     .gl-form-shell__actions { padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); }
 }
