@@ -655,8 +655,22 @@ a.gl-kpi2-tile:focus-visible { outline: 2px solid var(--primary); outline-offset
     object-fit: cover;
     border-radius: var(--radius, 7px);
 }
-.gl-detail-media-thumb { display: block; overflow: hidden; }
-.gl-detail-media-thumb img { display: block; aspect-ratio: 1 / 1; }
+.gl-detail-media-thumb { display: block; overflow: hidden; position: relative; background: var(--lightgreen, #e8f0eb); }
+.gl-detail-media-thumb img,
+.gl-detail-media-thumb video { display: block; width: 100%; height: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+/* Afspeel-indicator over een video-tegel. */
+.gl-detail-media-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.6rem;
+    background: rgba(0, 0, 0, .18);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+    pointer-events: none;
+}
 .gl-detail-media-empty {
     background: repeating-linear-gradient(45deg, rgba(0, 0, 0, .03) 0 6px, transparent 6px 12px);
     border: 1px dashed var(--border, #e7e7e7);
@@ -1521,6 +1535,99 @@ a.gl-doc-item:focus-visible { outline: 2px solid var(--primary); outline-offset:
 }
 @media (min-width: 768px) { .gl-detail-mobile-title { display: none; } }
 
+/* ----------------------------------------------------------
+   Projecten/Index - portfolio-grid
+   Eén CSS-grid i.p.v. Isotope + de equalizeCardBodies-hoogtehack: auto-fill
+   met een minimumbreedte zodat kaarten nooit te smal worden, en
+   align-items:stretch (default) laat kaarten op één rij even hoog zijn.
+   De kaart zelf is de gedeelde gl-werf-* component.
+   ---------------------------------------------------------- */
+.gl-projecten-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+.gl-projecten-grid .gl-werf-col { margin-bottom: 0; }
+.gl-projecten-grid .gl-werf-col[hidden] { display: none; }
+
+/* Foto-skeleton -------------------------------------------------------------
+   De kaart-inhoud (naam, gemeente, balken, chip, footer) staat er meteen —
+   die komt server-side mee. Enkel de foto stroomt na: tot ze geladen is toont
+   de foto-zone de groene bodemlaag met een lopende glans; daarna faadt de
+   afbeelding in. JS zet .is-loaded zodra de <img> load/error geeft (of meteen
+   als er geen <img> is, bv. de placeholder-tegel). */
+.gl-projecten-grid .gl-werf-foto img {
+    opacity: 0;
+    transition: opacity .35s ease;
+}
+.gl-projecten-grid .gl-werf-foto.is-loaded img { opacity: 1; }
+.gl-projecten-grid .gl-werf-foto::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background-image: linear-gradient(100deg,
+        rgba(255, 255, 255, 0) 25%,
+        rgba(255, 255, 255, .38) 50%,
+        rgba(255, 255, 255, 0) 75%);
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: gl-werf-shimmer 1.4s ease-in-out infinite;
+    pointer-events: none;
+}
+.gl-projecten-grid .gl-werf-foto.is-loaded::after { content: none; }
+@keyframes gl-werf-shimmer {
+    from { background-position: 220% 0; }
+    to   { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-projecten-grid .gl-werf-foto::after { animation: none; }
+    .gl-projecten-grid .gl-werf-foto img { transition: none; }
+}
+
+/* Inline laad-indicator onder het grid tijdens auto-scroll-laden. */
+.gl-projecten-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 16px;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-size: .85rem;
+}
+.gl-projecten-loader .gl-spin {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border, #e7e7e7);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: gl-werf-spin .7s linear infinite;
+}
+@keyframes gl-werf-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .gl-projecten-loader .gl-spin { animation-duration: 2s; }
+}
+
+/* Lege / geen-resultaten-staat — dezelfde gedachte als gl-mc-empty maar op
+   paginaformaat, met plaats voor een CTA. */
+.gl-projecten-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 4px;
+    padding: 48px 16px;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    font-size: .9rem;
+}
+.gl-projecten-empty > i {
+    font-size: 40px;
+    color: var(--primary);
+    opacity: .35;
+    margin-bottom: 4px;
+}
+
 /* RecalculationDetail JS tabelrij */
 .gl-td-text-right { text-align: right; }
 
@@ -1560,10 +1667,12 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
 .gl-detail-media-add {
     transition: background-color .14s ease, color .14s ease, border-color .14s ease;
 }
-.gl-detail-media-thumb img {
+.gl-detail-media-thumb img,
+.gl-detail-media-thumb video {
     transition: transform .18s cubic-bezier(.16, 1, .3, 1);
 }
-.gl-detail-media-thumb:hover img { transform: scale(1.04); }
+.gl-detail-media-thumb:hover img,
+.gl-detail-media-thumb:hover video { transform: scale(1.04); }
 .gl-detail-mc-card a.gl-mc-item[href] { transition: filter .12s ease; }
 .gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk > i { transform: translateX(2px); transition: transform .14s ease; }
 
@@ -1577,11 +1686,245 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
     .gl-kpi2-ring { transition: none; }
     a.gl-kpi2-tile,
     .gl-detail-media-thumb img,
+    .gl-detail-media-thumb video,
     .gl-detail-mc-card a.gl-mc-item[href],
     .gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk > i { transition: none; }
     a.gl-kpi2-tile:hover { transform: none; box-shadow: none; }
-    .gl-detail-media-thumb:hover img { transform: none; }
+    .gl-detail-media-thumb:hover img,
+    .gl-detail-media-thumb:hover video { transform: none; }
     .gl-detail-mc-card a.gl-mc-item[href]:hover .gl-mc-btn-bekijk > i { transform: none; }
     .gl-detail-mc-card a.gl-mc-item[href]:hover { filter: none; }
     .gl-detail-mc-card .gl-mc-body-capped.is-refiltering { opacity: 1; }
 }
+
+
+/* ==========================================================
+   Projecten/Toevoegen + Projecten/Bewerken — formulier
+   Het "card-big-info" icoon+titel+omschrijving-raster met rechtsuitgelijnde
+   labels is vervangen door: lichte sectiekop + labels bóven de velden in een
+   veld-raster dat vanzelf 1/2/3 breed wordt. Geen wizard — alles op één
+   pagina, gewoon compacter zodat wie het vaak invult er doorheen tabt.
+   ========================================================== */
+.gl-project-form { max-width: 1160px; }
+.gl-project-form .gl-form-section { margin-bottom: 16px; }
+.gl-project-form .gl-form-section:last-of-type { margin-bottom: 0; }
+
+/* Sectiekop: getinte vierkante badge die naast titel + omschrijving staat. */
+.gl-form-section__head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.gl-form-section__head > i {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border-radius: 11px;
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary);
+}
+.gl-form-section__title {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text, #26313a);
+}
+.gl-form-section__hint {
+    margin: 2px 0 0;
+    font-size: .8125rem;
+    line-height: 1.35;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+}
+.gl-form-subtitle {
+    font-size: .875rem;
+    font-weight: 700;
+    margin: 4px 0 12px;
+    color: var(--text, #26313a);
+}
+
+/* Veld-raster: auto-fit kolommen, labels boven het veld. */
+.gl-field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2px 24px;
+    align-items: start;
+}
+.gl-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+    min-width: 0;
+}
+.gl-field--full { grid-column: 1 / -1; }
+.gl-field > label {
+    margin: 0;
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--text, #26313a);
+}
+.gl-field .gl-req { color: var(--danger, #b3452f); margin-left: 2px; font-weight: 700; }
+.gl-field .form-control,
+.gl-field .select2-container { max-width: 100%; }
+.gl-field--full .form-control,
+.gl-field--full .select2-container { max-width: 560px; }
+.gl-field--full.gl-field--wide .form-control { max-width: 100%; }
+
+/* Adres: straat (flexibel) + nummer (smal) op één regel. */
+.gl-field-address { display: flex; gap: 10px; }
+.gl-field-address .gl-street { flex: 1 1 auto; }
+.gl-field-address .gl-nr { flex: 0 0 96px; width: 96px; }
+
+/* Validatieboodschappen dicht bij het veld. */
+.gl-project-form .text-danger,
+.gl-project-form .field-validation-error { font-size: .8125rem; }
+.gl-field > .text-danger:empty { display: none; }
+.gl-project-form input.input-validation-error,
+.gl-project-form select.input-validation-error,
+.gl-project-form textarea.input-validation-error {
+    border-color: var(--danger, #b3452f);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger, #b3452f) 18%, transparent);
+}
+
+/* Standaard-foto voorbeeld. */
+.gl-form-foto-preview {
+    max-height: 160px;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border, #e7e7e7);
+    display: block;
+}
+
+/* Verplichte-documenten checklist. */
+.gl-doc-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px 20px;
+}
+.gl-doc-checklist__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: 8px;
+    font-size: .875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+.gl-doc-checklist__item:hover { background: var(--lightgreen, #e8f0eb); }
+.gl-doc-checklist__item .form-check-input { margin: 0; flex: none; }
+
+/* Losse infomelding onder het formulier. */
+.gl-form-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: 8px;
+    background: var(--lightgreen, #e8f0eb);
+    font-size: .875rem;
+    color: var(--text, #26313a);
+}
+.gl-form-note > i { font-size: 18px; color: var(--primary); flex: none; margin-top: 1px; }
+
+/* Schakelaar-rij: iOS-switch + label naast elkaar. */
+.gl-switch-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.gl-switch-row > label {
+    margin: 0;
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--text, #26313a);
+}
+.gl-switch-row > label small { font-weight: 400; }
+
+/* ==========================================================
+   Projecten/Bewerken — tabs
+   Onderstreepte tab-strip in de gl-* stijl; horizontaal scrollbaar op mobiel.
+   Panelen tonen/verbergen alleen (alle velden blijven in het formulier zodat
+   één Opslaan alles bewaart).
+   ========================================================== */
+.gl-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 22px;
+    border-bottom: 2px solid var(--border, #e7e7e7);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.gl-tabs::-webkit-scrollbar { display: none; }
+.gl-tab {
+    flex: 0 0 auto;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 11px 15px;
+    font-size: .875rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color .12s ease, border-color .12s ease;
+}
+.gl-tab > i { font-size: 16px; }
+.gl-tab:hover { color: var(--text, #26313a); }
+.gl-tab[aria-selected="true"] {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+.gl-tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -3px;
+    border-radius: 4px;
+}
+.gl-tab__badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--danger, #b3452f);
+    color: #fff;
+    font-size: .6875rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-tabpanel[hidden] { display: none; }
+.gl-tabpanel:focus { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-tab { transition: none; }
+}
+
+/* Bare secties (binnen een tab-paneel, geen eigen card meer). */
+.gl-form-section { margin-bottom: 26px; }
+.gl-form-section:last-child { margin-bottom: 0; }
+
+/* Tab-kaart op Bewerken: één card met de strip bovenaan en het actieve paneel eronder. */
+.gl-project-tabcard { margin-bottom: 0; }
+.gl-project-form--tabbed .action-buttons { margin-top: 16px; }

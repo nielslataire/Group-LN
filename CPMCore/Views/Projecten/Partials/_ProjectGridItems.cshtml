@@ -1,151 +1,28 @@
-﻿@model CPMCore.Models.Projecten.ProjectGridRenderModel
-@using System.Linq
-@using System
-@using BOCore
+@model CPMCore.Models.Projecten.ProjectGridRenderModel
+@using CPMCore.Models.Projecten
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
+@*
+    Rendert een reeks project-werfkaarten. Gebruikt zowel voor de eerste
+    lading (Projecten/Index) als voor de "Laad meer"-AJAX (LoadMoreProjects).
+    Eén kaart-uiterlijk via Shared/_ProjectWerfCard.
+*@
 @{
-    var invCulture = System.Globalization.CultureInfo.InvariantCulture;
+    var imgBase = Configuration["URL:ImageWebUrl"] ?? string.Empty;
 }
-
-@{
-    string imageUrl = string.Empty;
-    var canReadProjectsForSale = ViewBag.CanReadProjectsForSale as bool? ?? false;
-}
-
 @if (Model?.Projects != null)
 {
     foreach (var project in Model.Projects)
     {
-        ProjectSalesDataBO projectSalesData = null;
-        var hasSalesData = Model.SalesData != null && Model.SalesData.TryGetValue(project.Id, out projectSalesData);
-        ProjectVoortgangBO vg = null;
-        var hasVg = Model.Voortgang != null && Model.Voortgang.TryGetValue(project.Id, out vg);
+        BOCore.ProjectVoortgangBO vg = null;
+        Model.Voortgang?.TryGetValue(project.Id, out vg);
 
-        var statusName = !string.IsNullOrWhiteSpace(project.Status?.Name)
-            ? project.Status.Name
-            : Model.Statuses?.FirstOrDefault(s => s.Id == project.Status?.Id)?.Name;
-
-        var clientCount = project.ClientCount > 0
-            ? project.ClientCount
-            : (hasSalesData ? projectSalesData.LivingUnitsSold : 0);
-
-        var soldPercentageValue = hasSalesData ? projectSalesData.PercentageSold : 0m;
-        var soldPercentageRounded = Math.Round(soldPercentageValue, 1);
-        var soldPercentageDisplay = soldPercentageRounded.ToString("0.##");
-        var soldPercentageClamped = Math.Min(100m, Math.Max(0m, soldPercentageValue));
-        var soldPercentageStyleText = soldPercentageClamped.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-        var statusId = project.Status?.Id ?? 0;
-
-        if (!string.IsNullOrEmpty(project.StandardFotoName))
-            imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.StandardFotoName;
-        else if (!string.IsNullOrEmpty(project.DefaultPicture?.Name))
-            imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
-        else
-            imageUrl = "~/img/no_image.jpg";
-
-        var hasPhoto = !string.IsNullOrEmpty(project.StandardFotoName) || !string.IsNullOrEmpty(project.DefaultPicture?.Name);
-
-        <div class="isotope-item status-@statusId @(hasPhoto ? "" : "has-no-photo") col-sm-12 col-md-4 col-lg-2 mb-4">
-            <div class="card card-modern h-100 gl-project-card">
-                <div class="image-frame-wrapper position-relative">
-                    @if (!string.IsNullOrWhiteSpace(statusName))
-                    {
-                        <span class="badge bg-primary text-uppercase small fw-semibold position-absolute top-0 start-0 m-3">@statusName</span>
-                    }
-                    <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })">
-                        <img src="@Url.Content(imageUrl)"
-                             class="card-img-top"
-                             loading="lazy"
-                             alt="@project.Name" />
-                    </a>
-                </div>
-
-                <div class="card-body bg-light">
-                    <div class="gl-project-details">
-                        <h4 class="fw-bold mb-1">@project.Name</h4>
-
-                        @if (!string.IsNullOrWhiteSpace(project.CommercialTitleNL))
-                        {
-                            <div class="text-muted mb-4">@project.CommercialTitleNL</div>
-                            ;
-                        }
-
-                        <hr class="d-md-none my-2" />
-                        <div class="gl-project-detail-row text-muted mb-1">
-                            <span class="gl-detail-icon"><i class="fas fa-map-marker-alt"></i></span>
-                            <div>@project.Postalcode?.Gemeente</div>
-                        </div>
-
-                        @if (project.StartDateConstruction != null)
-                        {
-                            <div class="gl-project-detail-row text-muted mb-1">
-                                <span class="gl-detail-icon"><i class="fas fa-calendar-alt"></i></span>
-                                <div>
-                                    Start: @project.StartDateConstruction.Value.ToString("dd/MM/yyyy")
-                                </div>
-                            </div>
-                        }
-
-                        <div class="gl-project-detail-row text-muted">
-                            <span class="gl-detail-icon"><i class="fas fa-users"></i></span>
-                            <div>Aantal klanten: @clientCount</div>
-                        </div>
-
-                        @if (canReadProjectsForSale || (hasVg && vg != null))
-                        {
-                            <div class="mt-3">
-                                @if (canReadProjectsForSale)
-                                {
-                                    <div class="pb-2">
-                                        <div class="gl-pg-row">
-                                            <span class="gl-pg-label">Percentage verkocht</span>
-                                            <span class="gl-pg-pct">@soldPercentageDisplay%</span>
-                                        </div>
-                                        <div class="progress gl-pg-bar">
-                                            <div class="progress-bar gl-pg-bar-sold" role="progressbar" style="--gl-fill-width:@soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                }
-
-                                @if (hasVg && vg != null)
-                                {
-                                    var fysPct  = vg.FysiekeVoortgangPct.ToString("0.#");
-                                    var fysPctW = vg.FysiekeVoortgangPct.ToString("0.##", invCulture);
-                                    var finPct  = vg.FinancieleVoortgangPct.ToString("0.#");
-                                    var finPctW = vg.FinancieleVoortgangPct.ToString("0.##", invCulture);
-
-                                    <div class="pb-2">
-                                        <div class="gl-pg-row">
-                                            <span class="gl-pg-label">
-                                                Fysiek
-                                                @if (!string.IsNullOrEmpty(vg.Warnings))
-                                                {
-                                                    <i class="bx bx-error text-danger ms-1 small" title="@string.Join(", ", vg.WarningList)"></i>
-                                                }
-                                            </span>
-                                            <span class="gl-pg-pct">@fysPct%</span>
-                                        </div>
-                                        <div class="progress gl-pg-bar">
-                                            <div class="progress-bar gl-pg-bar-fys" role="progressbar" style="--gl-fill-width:@fysPctW%;" aria-valuenow="@fysPctW" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                    <div class="pb-2">
-                                        <div class="gl-pg-row">
-                                            <span class="gl-pg-label">Financieel</span>
-                                            <span class="gl-pg-pct">@finPct%</span>
-                                        </div>
-                                        <div class="progress gl-pg-bar">
-                                            <div class="progress-bar gl-pg-bar-fin" role="progressbar" style="--gl-fill-width:@finPctW%;" aria-valuenow="@finPctW" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-
-            </div>
-        </div>
+        @await Html.PartialAsync("_ProjectWerfCard", new ProjectWerfCardVM
+        {
+            Project = project,
+            Voortgang = vg,
+            ImageBaseUrl = imgBase,
+            ColumnClasses = string.Empty
+        })
     }
 }

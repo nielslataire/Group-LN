@@ -1,334 +1,79 @@
-﻿@using CPMCore.Helpers
+@using CPMCore.Helpers
 @using CPMCore.Models.Projecten
 @model CPMCore.Models.Projecten.ProjectModel
 
 @section PageStyle
 {
-    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
-    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
-    <link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
-    <link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+    @await Html.PartialAsync("_ProjectFormStyles")
 }
 
-<div class="row">
-    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-            <div class="row align-items-center">
-                <div class="col-sm-auto d-flex align-items-center">
-                    <a href="@Url.Action("Index", "Projecten")" class="text-decoration-none text-reset d-flex align-items-center">
-                        <i class="bx bx-chevron-left fs-1"></i>
-                    </a>
-                </div>
-                <div class="col-sm-auto">
-                    <h1 class="fw-bold mb-0">Project toevoegen</h1>
-                    <h5 class="mb-4 mt-0">Maak een nieuw project aan en vul de algemene gegevens in</h5>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", enctype = "multipart/form-data" }))
+@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed gl-project-form", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
-    @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
-    @Html.HiddenFor(m => m.Project.Developer.ID, new { id = "Project_Developer_ID" })
-    @Html.HiddenFor(m => m.Project.Developer.Display, new { id = "Project_Developer_Display" })
-    @Html.HiddenFor(m => m.Project.Builder.ID, new { id = "Project_Builder_ID" })
-    @Html.HiddenFor(m => m.Project.Builder.Display, new { id = "Project_Builder_Display" })
-    @Html.HiddenFor(m => m.Project.Notary.ID, new { id = "Project_Notary_ID" })
-    @Html.HiddenFor(m => m.Project.Notary.Display, new { id = "Project_Notary_Display" })
-    @Html.HiddenFor(m => m.Project.WheaterStation.Id, new { id = "Project_WheaterStation_Id" })
-    @Html.HiddenFor(m => m.Project.WheaterStation.Name, new { id = "Project_WheaterStation_Name" })
 
-    <div class="row mt-2">
-        <div class="col">
-            <section class="card card-modern card-big-info">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-2-5 col-xl-1-5">
-                            <i class="card-big-info-icon bx bx-buildings"></i>
-                            <h2 class="card-big-info-title">Projectgegevens</h2>
-                            <p class="card-big-info-desc">Vul hier de algemene informatie van het project in.</p>
+    <div asp-validation-summary="All" class="alert alert-danger @(ViewData.ModelState.IsValid ? "d-none" : "")"></div>
+
+    <div class="card card-modern">
+        <div class="card-body">
+            <section class="gl-form-section">
+                <div class="gl-form-section__body">
+                    <div class="gl-form-section__head">
+                        <i class="bx bx-building-house" aria-hidden="true"></i>
+                        <div>
+                            <h2 class="gl-form-section__title">Nieuw project</h2>
+                            <p class="gl-form-section__hint">Genoeg om het project aan te maken — de rest vul je erna aan bij Bewerken.</p>
                         </div>
-                        <div class="col-lg-3-5 col-xl-4-5">
-                            @if (!ViewData.ModelState.IsValid)
-                            {
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
-                                </label>
-                                <div class="col-lg-8 col-xl-6">
-                                    @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
-                                </div> 
-                            }
-                            <div class="form-group">
-                            <div class="row align-items-center pb-3">
-                                <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2" id="IsCoordinationProject" asp-for="Project.IsCoordinationProject">Zuiver coördinatieproject</label>
-                                <div class="col-lg-7 col-xl-8">
-                                    <div class="switch switch-sm switch-primary">
-                                        @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { data_plugin_ios_switch = "", id = "IsCoordinationProject" })
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
-                                    @Html.LabelFor(m => m.Project.CoordinationIssuerCompanyId)
-                                </label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.Project.CoordinationIssuerCompanyId,
-                                    new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.CoordinationIssuerCompanyId),
-                                                                "-- Selecteer coördinatiebedrijf --",
-                                                                new { @class = "form-control form-control-modern", id = "CoordinationIssuerCompanyId" })
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project.ContractType">
-                                    @Html.LabelFor(m => m.Project.ContractType)
-                                </label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select asp-for="Project.ContractType"
-                                            asp-items="Html.GetEnumSelectList<BOCore.CoordinationContractType>()"
-                                            class="form-control form-control-modern">
-                                        <option value="">-- Selecteer type --</option>
-                                    </select>
-                                    </div>
-                            </div>
-                            @if (Model.Project.ProjectDistanceKm.HasValue)
+                    </div>
+
+                    @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
+
+                    <div class="gl-field-grid">
+                        <div class="gl-field">
+                            <label for="Project_Name">@Html.DisplayNameFor(m => m.Project.Name) <span class="gl-req" aria-hidden="true">*</span></label>
+                            @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off", required = "required" })
+                            <span asp-validation-for="Project.Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="gl-field">
+                            <label for="Project_ProjectCode">@Html.DisplayNameFor(m => m.Project.ProjectCode)</label>
+                            @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
+                            <span asp-validation-for="Project.ProjectCode" class="text-danger"></span>
+                        </div>
+
+                        <div class="gl-field">
+                            <label for="lstProjectCountries">Land</label>
+                            @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
+                        </div>
+
+                        <div class="gl-field">
+                            <label for="PostalSelect">Gemeente <span class="gl-req" aria-hidden="true">*</span></label>
+                            <select id="PostalSelect" class="form-control w-100" aria-label="Gemeente">
+                                @if (Model.SelectedPostalcode > 0)
                                 {
-                                    <div class="row align-items-center pb-3">
-                                        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Afstand</label>
-                                        <div class="col-lg-4 col-xl-4">
-                                            <span class="form-control-plaintext">@Model.Project.ProjectDistanceKm?.ToString("0.##") km</span>
-                                        </div>
-                                    </div>
+                                    <option value="@Model.SelectedPostalcode" selected>
+                                        @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
+                                    </option>
                                 }
-                            </div>
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Name">
-                                    @Html.LabelFor(m => m.Project.Name)
-                                </label>
-                                <div class="col-lg-8 col-xl-8">
-                                    @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off" })
-                                </div>
-                            </div>
-
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_ProjectCode">
-                                    @Html.LabelFor(m => m.Project.ProjectCode)
-                                </label>
-                                <div class="col-lg-8 col-xl-8">
-                                    @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
-                                </div>
-                            </div>
-
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Street">
-                                    @Html.LabelFor(m => m.Project.Street)
-                                </label>
-                                <div class="col-lg-5 col-xl-6">
-                                    @Html.TextBoxFor(m => m.Project.Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
-                                </div>
-                                <div class="col-lg-3 col-xl-2">
-                                    @Html.TextBoxFor(m => m.Project.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr." })
-                                </div>
-                            </div>
-
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="lstProjectCountries">Land</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="PostalSelect">
-                                    @Html.LabelFor(m => m.Project.Postalcode.Gemeente)
-                                </label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select id="PostalSelect" class="form-control w-100">
-                                        @if (Model.SelectedPostalcode > 0)
-                                        {
-                                            <option value="@Model.SelectedPostalcode" selected>
-                                                @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
-                                            </option>
-                                        }
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTitleNL">
-                                    @Html.LabelFor(m => m.Project.CommercialTitleNL)
-                                </label>
-                                <div class="col-lg-8 col-xl-8">
-                                    @Html.TextBoxFor(m => m.Project.CommercialTitleNL, new { @class = "form-control form-control-modern", placeholder = "Commerciële titel" })
-                                </div>
-                            </div>
-
-                            <div class="form-group row align-items-start pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTextNL">
-                                    @Html.LabelFor(m => m.Project.CommercialTextNL)
-                                </label>
-                                <div class="col-lg-8 col-xl-8">
-                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", placeholder = "Beschrijving van het project" })
-                                </div>
-                            </div>
+                            </select>
+                            <span id="postalSelectError" class="text-danger" hidden>Kies een gemeente uit de lijst.</span>
                         </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </div>
 
-    <div class="row mt-4">
-        <div class="col">
-            <section class="card card-modern card-big-info">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-2-5 col-xl-1-5">
-                            <i class="card-big-info-icon bx bx-calendar"></i>
-                            <h2 class="card-big-info-title">Planning & partners</h2>
-                            <p class="card-big-info-desc">Bepaal de start- en opleverdata en koppel de betrokken partijen.</p>
+                        <div class="gl-field">
+                            <label for="Project_AspNetUserID">@Html.DisplayNameFor(m => m.Project.AspNetUserID)</label>
+                            @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_AspNetUserID" })
                         </div>
-                        <div class="col-lg-3-5 col-xl-4-5">
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_StartDateConstruction">@Html.LabelFor(m => m.Project.StartDateConstruction)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </span>
-                                        @Html.TextBoxFor(m => m.Project.StartDateConstruction, "{0:dd/MM/yyyy}", new { @class = "form-control form-control-modern", data_plugin_datepicker = string.Empty, autocomplete = "off" })
-                                    </div>
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_ExecutionDays">@Html.LabelFor(m => m.Project.ExecutionDays)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-hourglass-half"></i>
-                                        </span>
-                                        @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "form-control form-control-modern", type = "number", min = "0" })
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DeliveryDate">@Html.LabelFor(m => m.Project.DeliveryDate)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </span>
-                                        @Html.TextBoxFor(m => m.Project.DeliveryDate, "{0:dd/MM/yyyy}", new { @class = "form-control form-control-modern", data_plugin_datepicker = string.Empty, autocomplete = "off" })
-                                    </div>
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="WheaterSelect">@Html.LabelFor(m => m.Project.WheaterStation)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select id="WheaterSelect" class="form-control w-100">
-                                        @if (Model.Project.WheaterStation.Id > 0)
-                                        {
-                                            <option value="@Model.Project.WheaterStation.Id" selected>@Model.Project.WheaterStation.Name</option>
-                                        }
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="DeveloperSelect">@Html.LabelFor(m => m.Project.Developer)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select id="DeveloperSelect" class="form-control w-100">
-                                        @if (Model.Project.Developer.ID > 0)
-                                        {
-                                            <option value="@Model.Project.Developer.ID" selected>@Model.Project.Developer.Display</option>
-                                        }
-                                    </select>
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="BuilderSelect">@Html.LabelFor(m => m.Project.Builder)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select id="BuilderSelect" class="form-control w-100">
-                                        @if (Model.Project.Builder.ID > 0)
-                                        {
-                                            <option value="@Model.Project.Builder.ID" selected>@Model.Project.Builder.Display</option>
-                                        }
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_IssuerCompanyIdBuilder">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdBuilder)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.Project.IssuerCompanyIdBuilder, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdBuilder), "-- Selecteer --", new { @class = "form-control form-control-modern" })
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_IssuerCompanyLandOwner">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdLandOwner)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.Project.IssuerCompanyIdLandOwner, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdLandOwner), "-- Selecteer --", new { @class = "form-control form-control-modern" })
-                                </div>
-                            </div>
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_AspNetUserID">@Html.LabelFor(m => m.Project.AspNetUserID)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern" })
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_SalesResponsibleUserID">@Html.LabelFor(m => m.Project.SalesResponsibleUserID)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.Project.SalesResponsibleUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.SalesResponsibleUserID), "Selecteer een verkoopverantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_SalesResponsibleUserID" })
-                                </div>
-                            </div>
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="NotarySelect">@Html.LabelFor(m => m.Project.Notary)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select id="NotarySelect" class="form-control w-100">
-                                        @if (Model.Project.Notary.ID > 0)
-                                        {
-                                            <option value="@Model.Project.Notary.ID" selected>@Model.Project.Notary.Display</option>
-                                        }
-                                    </select>
-                                </div>
-                            </div>
+
+                        <div class="gl-field">
+                            <label for="Project_SalesResponsibleUserID">@Html.DisplayNameFor(m => m.Project.SalesResponsibleUserID)</label>
+                            @Html.DropDownListFor(m => m.Project.SalesResponsibleUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.SalesResponsibleUserID), "Selecteer een verkoopverantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_SalesResponsibleUserID" })
                         </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </div>
 
-    <div class="row mt-4">
-        <div class="col">
-            <section class="card card-modern card-big-info">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-2-5 col-xl-1-5">
-                            <i class="card-big-info-icon bx bx-image"></i>
-                            <h2 class="card-big-info-title">Standaard foto</h2>
-                            <p class="card-big-info-desc">Upload een standaard projectfoto (optioneel).</p>
-                        </div>
-                        <div class="col-lg-3-5 col-xl-4-5">
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Foto uploaden</label>
-                                <div class="col-lg-8 col-xl-8">
-                                    <input type="file" name="StandardFotoUpload" id="StandardFotoUpload" accept="image/jpeg,image/png,image/webp" class="form-control form-control-modern" />
-                                    <small class="text-muted">Formaten: JPG, PNG, WEBP. Optioneel — kan later worden toegevoegd.</small>
-                                </div>
-                            </div>
-                            <div class="form-group row align-items-center pb-3 d-none" id="stdFotoPreviewRow">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Voorbeeld</label>
-                                <div class="col-lg-8 col-xl-8">
-                                    <img id="stdFotoPreview" src="" style="max-height:160px;max-width:100%;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" alt="Voorbeeld" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </div>
-
-    @* ── Coördinatieproject ───────────────────────────────────────────────── *@
-    <div class="row mt-4">
-        <div class="col">
-            <section class="card card-modern card-big-info">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-2-5 col-xl-1-5">
-                            <i class="card-big-info-icon bx bx-briefcase"></i>
-                            <h2 class="card-big-info-title">Type project</h2>
-                            <p class="card-big-info-desc">Is dit een eigen project of een coördinatieproject?</p>
-                        </div>
-                        <div class="col-lg-3-5 col-xl-4-5">
-
-
-
+                        <div class="gl-field gl-field--full">
+                            <label for="StandardFotoUpload">Standaard foto <small class="text-muted">— optioneel</small></label>
+                            <input type="file" name="StandardFotoUpload" id="StandardFotoUpload"
+                                   accept="image/jpeg,image/png,image/webp" class="form-control form-control-modern" />
+                            <img id="projectStdFotoPreview" class="gl-form-foto-preview d-none mt-2" alt="Voorbeeld van de standaard projectfoto" />
+                            <span id="projectStdFotoEmpty" class="d-none"></span>
                         </div>
                     </div>
                 </div>
@@ -339,7 +84,7 @@
     <div class="row action-buttons">
         <div class="col-12 col-md-auto">
             <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-                <i class="bx bx-save text-4 me-2"></i> Project opslaan
+                <i class="bx bx-save text-4 me-2" aria-hidden="true"></i> Project aanmaken
             </button>
         </div>
         <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
@@ -350,272 +95,7 @@
 
 @section PageScripts
 {
-    <script src="~/lib/select2/js/select2.js"></script>
-    <script src="~/lib/select2/js/i18n/nl.js"></script>
-    <script src="~/js/theme.admin.extension.js"></script>
-    <script src="~/lib/ios7-switch/ios7-switch.js"></script>
-    <script>
-        function bindSelect(selectId, options) {
-                const $select = $(selectId);
-                $select.select2(options);
-                return $select;
-        }
-
-        $(function () {
-                const countrySelector = '#lstProjectCountries';
-
-                bindSelect('#PostalSelect', {
-                        theme: 'bootstrap',
-                        placeholder: 'Selecteer de gemeente',
-                        width: '100%',
-                        allowClear: true,
-                        language: 'nl',
-                        ajax: {
-                                url: '@Url.Action("GetPostcodesByCountry", "Projecten")',
-                                type: 'POST',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                        return {
-                                                term: params.term,
-                                                countryId: $(countrySelector).val()
-                                        };
-                                },
-                                processResults: function (data) {
-                                        return { results: data };
-                                }
-                        }
-                }).on('select2:select', function (e) {
-                        $('#SelectedPostalcode').val(e.params.data.id);
-                }).on('select2:clear', function () {
-                        $('#SelectedPostalcode').val(0);
-                });
-
-                $('#DeveloperSelect').select2({
-                        theme: 'bootstrap',
-                        placeholder: 'Selecteer de projectontwikkelaar',
-                        width: '100%',
-                        language: 'nl',
-                        allowClear: true,
-                        minimumInputLength: 3,
-                        ajax: {
-                                url: '@Url.Action("GetCompanys", "Projecten")',
-                                type: 'POST',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                        return { term: params.term };
-                                },
-                                processResults: function (data) {
-                                        return { results: data };
-                                }
-                        }
-                }).on('select2:select', function (e) {
-                        $('#Project_Developer_ID').val(e.params.data.id);
-                        $('#Project_Developer_Display').val(e.params.data.text);
-                }).on('select2:clear', function () {
-                        $('#Project_Developer_ID').val(0);
-                        $('#Project_Developer_Display').val('');
-                });
-
-                $('#BuilderSelect').select2({
-                        theme: 'bootstrap',
-                        placeholder: 'Selecteer de bouwheer',
-                        width: '100%',
-                        language: 'nl',
-                        allowClear: true,
-                        minimumInputLength: 3,
-                        ajax: {
-                                url: '@Url.Action("GetCompanys", "Projecten")',
-                                type: 'POST',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                        return { term: params.term };
-                                },
-                                processResults: function (data) {
-                                        return { results: data };
-                                }
-                        }
-                }).on('select2:select', function (e) {
-                        $('#Project_Builder_ID').val(e.params.data.id);
-                        $('#Project_Builder_Display').val(e.params.data.text);
-                }).on('select2:clear', function () {
-                        $('#Project_Builder_ID').val(0);
-                        $('#Project_Builder_Display').val('');
-                });
-
-                $('#NotarySelect').select2({
-                        theme: 'bootstrap',
-                        placeholder: 'Selecteer de notaris',
-                        width: '100%',
-                        language: 'nl',
-                        allowClear: true,
-                        minimumInputLength: 3,
-                        ajax: {
-                                url: '@Url.Action("GetCompanys", "Projecten")',
-                                type: 'POST',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                        return { term: params.term };
-                                },
-                                processResults: function (data) {
-                                        return { results: data };
-                                }
-                        }
-                }).on('select2:select', function (e) {
-                        $('#Project_Notary_ID').val(e.params.data.id);
-                        $('#Project_Notary_Display').val(e.params.data.text);
-                }).on('select2:clear', function () {
-                        $('#Project_Notary_ID').val(0);
-                        $('#Project_Notary_Display').val('');
-                });
-
-                $('#WheaterSelect').select2({
-                        theme: 'bootstrap',
-                        placeholder: 'Selecteer het KMI weerstation',
-                        width: '100%',
-                        language: 'nl',
-                        allowClear: true,
-                        minimumInputLength: 1,
-                        ajax: {
-                                url: '@Url.Action("GetWheaterstations", "Projecten")',
-                                type: 'POST',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                        return { term: params.term };
-                                },
-                                processResults: function (data) {
-                                        return { results: data };
-                                }
-                        }
-                }).on('select2:select', function (e) {
-                        $('#Project_WheaterStation_Id').val(e.params.data.id);
-                        $('#Project_WheaterStation_Name').val(e.params.data.text);
-                }).on('select2:clear', function () {
-                        $('#Project_WheaterStation_Id').val(0);
-                        $('#Project_WheaterStation_Name').val('');
-                });
-
-                // Update selected postal code on initial value
-                if ($('#PostalSelect').val()) {
-                        $('#SelectedPostalcode').val($('#PostalSelect').val());
-                }
-
-                // ── Coördinatieproject logica ─────────────────────────────────────
-                var availableUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                    Model.AvailableUsers.Select(u => new { id = u.Group, text = u.Display }).ToList()));
-
-                function updateCoordinationVisibility() {
-                    var isCoord = $('#IsCoordinationProject').is(':checked');
-                    $('#coordinationFields').toggle(isCoord);
-                    if (isCoord) updateContractTypeVisibility();
-                }
-
-                function updateContractTypeVisibility() {
-                    var type = $('#ContractType').val();
-                    var showSlices = (type === '1' || type === '3');
-                    var showRegie = (type === '2' || type === '3');
-                    $('#slicesSection').toggle(showSlices);
-                    $('#regieSection').toggle(showRegie);
-                    updateSlicesTotal();
-                }
-
-                $('#IsCoordinationProject').on('change', updateCoordinationVisibility);
-                $('#ContractType').on('change', updateContractTypeVisibility);
-
-                // Initialisatie
-                updateCoordinationVisibility();
-
-                // ── Schijven ──────────────────────────────────────────────────────
-                var sliceIndex = @Model.ContractSlices.Count;
-
-                function updateSlicesTotal() {
-                    var total = 0;
-                    $('.slice-pct').each(function () {
-                        var v = parseFloat($(this).val()) || 0;
-                        total += v;
-                    });
-                    var rounded = Math.round(total * 100) / 100;
-                    $('#slicesTotal').text(rounded);
-                    $('#slicesTotal').parent().toggleClass('bg-success', rounded === 100).toggleClass('bg-secondary', rounded !== 100);
-                }
-
-                $(document).on('input', '.slice-pct', updateSlicesTotal);
-
-                $('#addSlice').on('click', function () {
-                    var idx = sliceIndex++;
-                    var row = '<div class="row slice-row mb-2">' +
-                        '<div class="col-lg-6"><input type="text" name="ContractSlices[' + idx + '].Description" class="form-control form-control-modern" placeholder="Omschrijving" /></div>' +
-                        '<div class="col-lg-3"><div class="input-group"><input type="number" name="ContractSlices[' + idx + '].Percentage" class="form-control form-control-modern slice-pct" step="0.01" min="0.01" max="100" placeholder="%" /><span class="input-group-text">%</span></div></div>' +
-                        '<div class="col-lg-1"><button type="button" class="btn btn-danger btn-sm remove-slice"><i class="bx bx-trash"></i></button></div>' +
-                        '</div>';
-                    $('#slicesContainer').append(row);
-                    updateSlicesTotal();
-                });
-
-                $(document).on('click', '.remove-slice', function () {
-                    $(this).closest('.slice-row').remove();
-                    // Hernummer indexes
-                    $('#slicesContainer .slice-row').each(function (i) {
-                        $(this).find('input[name*="Description"]').attr('name', 'ContractSlices[' + i + '].Description');
-                        $(this).find('input[name*="Percentage"]').attr('name', 'ContractSlices[' + i + '].Percentage');
-                    });
-                    sliceIndex = $('#slicesContainer .slice-row').length;
-                    updateSlicesTotal();
-                });
-
-                // ── Uurtarieven ───────────────────────────────────────────────────
-                var rateIndex = @Model.HourlyRates.Count;
-
-                function buildUserOptions(selectedId) {
-                    var html = '<option value="">-- Selecteer persoon --</option>';
-                    availableUsers.forEach(function (u) {
-                        html += '<option value="' + u.id + '"' + (u.id === selectedId ? ' selected' : '') + '>' + u.text + '</option>';
-                    });
-                    return html;
-                }
-
-                $('#addRate').on('click', function () {
-                    var idx = rateIndex++;
-                    var row = '<div class="row rate-row mb-2">' +
-                        '<div class="col-lg-6"><select name="HourlyRates[' + idx + '].UserId" class="form-control form-control-modern rate-user">' + buildUserOptions('') + '</select>' +
-                        '<input type="hidden" name="HourlyRates[' + idx + '].UserFullName" value="" /></div>' +
-                        '<div class="col-lg-3"><div class="input-group"><span class="input-group-text">€</span><input type="number" name="HourlyRates[' + idx + '].HourlyRate" class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" /></div></div>' +
-                        '<div class="col-lg-1"><button type="button" class="btn btn-danger btn-sm remove-rate"><i class="bx bx-trash"></i></button></div>' +
-                        '</div>';
-                    $('#ratesContainer').append(row);
-                });
-
-                $(document).on('change', '.rate-user', function () {
-                    var selected = $(this).find('option:selected').text();
-                    $(this).closest('.rate-row').find('input[name*="UserFullName"]').val(selected);
-                });
-
-                $(document).on('click', '.remove-rate', function () {
-                    $(this).closest('.rate-row').remove();
-                    $('#ratesContainer .rate-row').each(function (i) {
-                        $(this).find('select').attr('name', 'HourlyRates[' + i + '].UserId');
-                        $(this).find('input[name*="UserFullName"]').attr('name', 'HourlyRates[' + i + '].UserFullName');
-                        $(this).find('input[name*="HourlyRate"]').attr('name', 'HourlyRates[' + i + '].HourlyRate');
-                    });
-                    rateIndex = $('#ratesContainer .rate-row').length;
-                });
-
-        });
-
-        // Standaard foto live preview
-        document.getElementById('StandardFotoUpload')?.addEventListener('change', function () {
-            var file = this.files[0];
-            if (!file) return;
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('stdFotoPreview').src = e.target.result;
-                document.getElementById('stdFotoPreviewRow').classList.remove('d-none');
-            };
-            reader.readAsDataURL(file);
-        });
-    </script>
+    @await Html.PartialAsync("_ProjectFormScripts", Model)
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script src="~/lib/jquery-validation/localization/messages_nl.js"></script>
 }

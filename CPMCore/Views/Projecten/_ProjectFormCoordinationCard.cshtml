@@ -1,0 +1,134 @@
+@using BOCore
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+
+<section class="gl-form-section">
+    <div class="gl-form-section__body">
+        <div class="gl-form-section__head">
+            <i class="bx bx-briefcase" aria-hidden="true"></i>
+            <div>
+                <h2 class="gl-form-section__title">Type project</h2>
+                <p class="gl-form-section__hint">Eigen ontwikkeling of coördinatie met contract.</p>
+            </div>
+        </div>
+
+        <div class="gl-switch-row mb-2">
+            <div class="switch switch-sm switch-primary">
+                @Html.CheckBoxFor(m => m.Project.IsOnlyCoordinationProject, new { data_plugin_ios_switch = "", id = "IsOnlyCoordinationProject" })
+            </div>
+            <label for="IsOnlyCoordinationProject">Puur coördinatieproject <small class="text-muted">— enkel coördinatie, geen eigen ontwikkeling</small></label>
+        </div>
+        <div class="gl-switch-row mb-3">
+            <div class="switch switch-sm switch-primary">
+                @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { data_plugin_ios_switch = "", id = "IsCoordinationProject" })
+            </div>
+            <label for="IsCoordinationProject">Heeft coördinatie <small class="text-muted">— toont de contractgegevens hieronder</small></label>
+        </div>
+
+        <div id="coordinationCard">
+            <div class="gl-field-grid">
+                <div class="gl-field">
+                    <label for="Project_CoordinationIssuerCompanyId">@Html.DisplayNameFor(m => m.Project.CoordinationIssuerCompanyId)</label>
+                    @Html.DropDownListFor(m => m.Project.CoordinationIssuerCompanyId,
+                        new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.CoordinationIssuerCompanyId),
+                        "-- Selecteer facturatiebedrijf --",
+                        new { @class = "form-control form-control-modern", id = "Project_CoordinationIssuerCompanyId" })
+                </div>
+                <div class="gl-field">
+                    <label for="Project_ContractType">@Html.DisplayNameFor(m => m.Project.ContractType)</label>
+                    <select asp-for="Project.ContractType"
+                            asp-items="Html.GetEnumSelectList<BOCore.CoordinationContractType>()"
+                            class="form-control form-control-modern">
+                        <option value="">-- Selecteer type --</option>
+                    </select>
+                </div>
+                @if (Model.Project.ProjectDistanceKm.HasValue)
+                {
+                    <div class="gl-field">
+                        <label>Berekende afstand</label>
+                        <span class="form-control-plaintext fw-bold">@Model.Project.ProjectDistanceKm?.ToString("0.##") km</span>
+                    </div>
+                }
+            </div>
+
+            <div id="slicesSection">
+                <hr />
+                <h3 class="gl-form-subtitle">Contractschijven <small class="text-muted">(totaal moet 100% zijn)</small></h3>
+                <div id="slicesContainer">
+                    @for (int i = 0; i < Model.ContractSlices.Count; i++)
+                    {
+                        <div class="row slice-row mb-2">
+                            <div class="col-lg-6">
+                                <input type="text" name="ContractSlices[@i].Description"
+                                       value="@Model.ContractSlices[i].Description"
+                                       class="form-control form-control-modern" placeholder="Omschrijving" aria-label="Omschrijving schijf" />
+                            </div>
+                            <div class="col-lg-3">
+                                <div class="input-group">
+                                    <input type="number" name="ContractSlices[@i].Percentage"
+                                           value="@Model.ContractSlices[i].Percentage.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                           class="form-control form-control-modern slice-pct" step="0.01" min="0.01" max="100" placeholder="%" aria-label="Percentage schijf" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-lg-1">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-slice" aria-label="Schijf verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <span class="badge bg-secondary" id="slicesTotalBadge" aria-live="polite">Totaal: <span id="slicesTotal">0</span>%</span>
+                    <button type="button" id="addSlice" class="btn btn-outline-secondary btn-sm">
+                        <i class="bx bx-plus" aria-hidden="true"></i> Schijf toevoegen
+                    </button>
+                </div>
+            </div>
+
+            <div id="regieSection">
+                <hr />
+                <h3 class="gl-form-subtitle">Uurtarieven (regie)</h3>
+                <div id="ratesContainer">
+                    @for (int i = 0; i < Model.HourlyRates.Count; i++)
+                    {
+                        <div class="row rate-row mb-2">
+                            <div class="col-lg-6">
+                                <select name="HourlyRates[@i].UserId" class="form-control form-control-modern rate-user" aria-label="Persoon">
+                                    <option value="">-- Selecteer persoon --</option>
+                                    @foreach (var u in Model.AvailableUsers)
+                                    {
+                                        if (Model.HourlyRates[i].UserId == u.Group)
+                                        {
+                                            <option value="@u.Group" selected>@u.Display</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@u.Group">@u.Display</option>
+                                        }
+                                    }
+                                </select>
+                                <input type="hidden" name="HourlyRates[@i].UserFullName" value="@Model.HourlyRates[i].UserFullName" />
+                            </div>
+                            <div class="col-lg-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input type="number" name="HourlyRates[@i].HourlyRate"
+                                           value="@Model.HourlyRates[i].HourlyRate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                           class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" aria-label="Uurtarief" />
+                                </div>
+                            </div>
+                            <div class="col-lg-1">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-rate" aria-label="Tarief verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="mt-2">
+                    <button type="button" id="addRate" class="btn btn-outline-secondary btn-sm">
+                        <i class="bx bx-plus" aria-hidden="true"></i> Tarief toevoegen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

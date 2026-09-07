@@ -7,12 +7,12 @@
 @if (Model.CanWrite)
 {
     <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-sm px-3">
-        <i class="fas fa-edit me-1"></i>Bewerken
+        <i class="bx bx-edit me-1"></i>Bewerken
     </a>
 }
 @if (Model.CanDelete)
 {
     <a href="#modaldeleteproject" class="btn btn-danger btn-sm px-3 delete-project-trigger" data-project-id="@Model.ProjectId">
-        <i class="fas fa-trash-alt me-1"></i>Verwijderen
+        <i class="bx bx-trash me-1"></i>Verwijderen
     </a>
 }

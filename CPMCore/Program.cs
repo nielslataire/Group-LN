@@ -88,6 +88,21 @@ builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
     options.Filters.Add<PermissionConventionFilter>();
+
+    // Nederlandse standaardteksten voor model-binding / validatie (i.p.v. de
+    // Engelse framework-defaults zoals "The value 'x' is not valid for Y").
+    var p = options.ModelBindingMessageProvider;
+    p.SetValueIsInvalidAccessor(v => $"De waarde '{v}' is ongeldig.");
+    p.SetValueMustBeANumberAccessor(f => $"Het veld {f} moet een getal zijn.");
+    p.SetNonPropertyValueMustBeANumberAccessor(() => "De waarde moet een getal zijn.");
+    p.SetMissingBindRequiredValueAccessor(f => $"Een waarde voor '{f}' ontbreekt in de aanvraag.");
+    p.SetMissingKeyOrValueAccessor(() => "Een waarde is verplicht.");
+    p.SetMissingRequestBodyRequiredValueAccessor(() => "De aanvraag bevat geen gegevens.");
+    p.SetValueMustNotBeNullAccessor(v => $"De waarde '{v}' is ongeldig.");
+    p.SetAttemptedValueIsInvalidAccessor((v, f) => $"De waarde '{v}' is ongeldig voor {f}.");
+    p.SetNonPropertyAttemptedValueIsInvalidAccessor(v => $"De waarde '{v}' is ongeldig.");
+    p.SetUnknownValueIsInvalidAccessor(f => $"De opgegeven waarde is ongeldig voor {f}.");
+    p.SetNonPropertyUnknownValueIsInvalidAccessor(() => "De opgegeven waarde is ongeldig.");
 })
     .AddJsonOptions(options =>
     {

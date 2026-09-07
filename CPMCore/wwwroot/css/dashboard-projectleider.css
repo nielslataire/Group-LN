@@ -247,7 +247,10 @@
     color: inherit;
     text-decoration: none;
 }
-.gl-werf-foto { position: relative; height: 250px; overflow: hidden; }
+/* Groene gradient als bodemlaag: valt vanzelf bloot als een foto-URL 404't
+   (verwijderd bestand, nog niet gegenereerde thumbnail, video als hoofdmedia). */
+.gl-werf-foto { position: relative; height: 250px; overflow: hidden;
+    background: linear-gradient(135deg, #6aaa7c 0%, #0a5a3b 100%); }
 .gl-werf-foto img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s; }
 .gl-werf-kaart:hover .gl-werf-foto img { transform: scale(1.05); }
 .gl-werf-foto-placeholder {

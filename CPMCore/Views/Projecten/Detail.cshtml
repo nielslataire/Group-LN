@@ -258,9 +258,12 @@
                     .ToList();
             }
             @{
+                // "pictures/447/" bestaat enkel voor afbeeldingen; een video als
+                // standaardfoto (MediaType == 1) heeft er geen en zou een gebroken
+                // afbeelding geven.
                 if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
                     urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.StandardFotoName;
-                else if (Model.Project.DefaultPicture?.Name is not null)
+                else if (Model.Project.DefaultPicture?.Name is not null && Model.Project.DefaultPicture.MediaType != 1)
                     urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
                 else
                     urlTotal = "~/img/no_image.jpg";
@@ -271,7 +274,8 @@
                     @*PROJECTFOTO — de foto zelf is de kaart, geen aparte titelbalk erboven*@
                     <div class="card card-modern gl-detail-photo-card">
                         <div class="gl-detail-photo-wrap">
-                            <img src="@Url.Content(urlTotal)" class="gl-detail-photo" alt="@Model.Project.Name" />
+                            <img src="@Url.Content(urlTotal)" class="gl-detail-photo" alt="@Model.Project.Name"
+                                 onerror="this.onerror=null;this.src='@Url.Content("~/img/no_image.jpg")';" />
                             @if (canWriteProject)
                             {
                                 <button type="button" class="gl-detail-thumb-edit" id="editStandardFotoBtn" aria-label="Foto wijzigen" title="Foto wijzigen">
@@ -808,12 +812,25 @@
                         <div class="card-body bg-light">
                             @{
                                 var fotos = Model.LatestPictures.Take(5).ToList();
+                                var mediaBase = Configuration["URL:ImageWebURL"];
                             }
                             <div class="gl-detail-media-grid">
                                 @foreach (var pic in fotos)
                                 {
-                                    <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-media-thumb">
-                                        <img src="@Url.Content(Configuration["URL:ImageWebURL"] + "pictures/447/" + pic.Name)" alt="" loading="lazy">
+                                    var isVideoThumb = pic.MediaType == 1;
+                                    <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = Model.Project.Id })" class="gl-detail-media-thumb@(isVideoThumb ? " is-video" : "")">
+                                        @if (isVideoThumb)
+                                        {
+                                            @* Video's krijgen geen "pictures/447/"-thumbnail; toon het eerste frame. *@
+                                            <video src="@Url.Content(mediaBase + "videos/" + pic.Name)" preload="metadata" muted playsinline
+                                                   onerror="this.remove();"></video>
+                                            <span class="gl-detail-media-play" aria-hidden="true"><i class="bx bx-play-circle"></i></span>
+                                        }
+                                        else
+                                        {
+                                            <img src="@Url.Content(mediaBase + "pictures/447/" + pic.Name)" alt="" loading="lazy"
+                                                 onerror="this.remove();">
+                                        }
                                     </a>
                                 }
                                 @for (var i = fotos.Count; i < 5; i++)

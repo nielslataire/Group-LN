@@ -5,7 +5,6 @@
 @inject IConfiguration Configuration
 
 @{
-    var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
     var opgeleverdStatusId = (int)ProjectStatusType.Opgeleverd;
     var invCulture         = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
     var imgBase            = Configuration["URL:ImageWebUrl"] ?? string.Empty;
@@ -245,126 +244,20 @@
             <div class="row mb-3">
                 @foreach (var project in activeProjects)
                 {
-                    int? daysLeft  = null;
-                    bool isOverdue = false;
-                    if (project.DeliveryDate.HasValue)
-                    {
-                        daysLeft  = (int)(project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
-                        isOverdue = daysLeft < 0;
-                    }
-
                     Model.ProjectVoortgang.TryGetValue(project.Id, out var vg);
-
-                    var displayFysPct = isOverdue ? 100m : (vg?.FysiekeVoortgangPct  ?? 0m);
-                    var displayFinPct = isOverdue ? 100m : (vg?.FinancieleVoortgangPct ?? 0m);
-                    var showBars      = vg != null || isOverdue;
-
-                    string chipClass, chipLabel;
-                    if (vg != null)
-                    {
-                        if (vg.Fase == VoortgangFase.Afgewerkt) { chipClass = "sc-donker"; chipLabel = "Afgewerkt"; }
-                        else if (vg.Fase == VoortgangFase.Eindfase) { chipClass = "sc-groen"; chipLabel = "Eindfase"; }
-                        else if (vg.Fase == VoortgangFase.InUitvoering) { chipClass = "sc-groen"; chipLabel = "In uitvoering"; }
-                        else if (vg.Fase == VoortgangFase.InVoorbereiding) { chipClass = "sc-geel"; chipLabel = "In voorbereiding"; }
-                        else { chipClass = "sc-geel"; chipLabel = "Opstart"; }
-                    }
-                    else
-                    {
-                        chipClass = project.Status.Id == uitvoeringStatusId ? "sc-groen" : "sc-geel";
-                        chipLabel = project.Status.Name;
-                    }
-
-                    var fotoUrl = project.DefaultPicture?.Name != null
-                        ? imgBase + "pictures/447/" + project.DefaultPicture.Name
-                        : string.Empty;
 
                     var companyId = project.CoordinationIssuerCompanyId ?? project.IssuerCompanyIdBuilder;
                     string companyName = null;
                     if (companyId.HasValue)
                         Model.IssuerCompanyNames.TryGetValue(companyId.Value, out companyName);
 
-                    <div class="col-12 col-sm-6 col-lg-4 col-xxl-3 mb-4 gl-werf-col">
-                        <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart">
-                            <div class="gl-werf-foto">
-                                @if (!string.IsNullOrEmpty(fotoUrl))
-                                {
-                                    <img src="@fotoUrl" alt="@project.Name" />
-                                }
-                                else
-                                {
-                                    <div class="gl-werf-foto-placeholder"></div>
-                                }
-                                <div class="gl-werf-overlay"></div>
-                                @if (!string.IsNullOrWhiteSpace(companyName))
-                                {
-                                    <span class="gl-company-chip" title="@companyName">@companyName</span>
-                                }
-                                <span class="gl-status-chip @chipClass">@chipLabel</span>
-                                @if (vg != null && !string.IsNullOrEmpty(vg.Warnings))
-                                {
-                                    <span class="gl-warn-badge" title="@string.Join(", ", vg.WarningList)">
-                                        <i class="bx bx-alert-circle"></i>
-                                    </span>
-                                }
-                            </div>
-                            <div class="gl-werf-body">
-                                <div>
-                                    <p class="gl-werf-naam">@project.Name</p>
-                                    @if (!string.IsNullOrWhiteSpace(project.Postalcode?.Gemeente))
-                                    {
-                                        <p class="gl-werf-gem">
-                                            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                            @project.Postalcode.Gemeente
-                                        </p>
-                                    }
-                                </div>
-                                @if (showBars)
-                                {
-                                    <div>
-                                        <div class="pb-2">
-                                            <div class="gl-pg-row">
-                                                <span class="gl-pg-label">Fysiek</span>
-                                                <span class="gl-pg-pct">@displayFysPct.ToString("0.#")%</span>
-                                            </div>
-                                            <div class="progress gl-pg-bar">
-                                                <div class="progress-bar gl-pg-bar-fys" style="--gl-fill-width:@(displayFysPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
-                                            </div>
-                                        </div>
-                                        <div class="pb-2">
-                                            <div class="gl-pg-row">
-                                                <span class="gl-pg-label">Financieel</span>
-                                                <span class="gl-pg-pct">@displayFinPct.ToString("0.#")%</span>
-                                            </div>
-                                            <div class="progress gl-pg-bar">
-                                                <div class="progress-bar gl-pg-bar-hoog" style="--gl-fill-width:@(displayFinPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                                <div class="gl-werf-footer">
-                                    <div class="gl-resterende">
-                                        @if (isOverdue)
-                                        {
-                                            <i class="bx bx-check-circle gl-icon-opgeleverd"></i>
-                                            <span class="gl-text-success">Opgeleverd op @project.DeliveryDate!.Value.ToString("dd/MM/yyyy")</span>
-                                        }
-                                        else
-                                        {
-                                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                            @if (daysLeft.HasValue)
-                                            {
-                                                <span class="@(daysLeft.Value < 14 ? "gl-text-danger" : "")">@daysLeft.Value d resterend</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">Geen opleverdatum</span>
-                                            }
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
+                    @await Html.PartialAsync("_ProjectWerfCard", new ProjectWerfCardVM
+                    {
+                        Project      = project,
+                        Voortgang    = vg,
+                        ImageBaseUrl = imgBase,
+                        CompanyLabel = companyName
+                    })
                 }
             </div>
         }

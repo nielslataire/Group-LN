@@ -1,4 +1,4 @@
-﻿@using BOCore
+@using BOCore
 @using CPMCore.Controllers
 @using CPMCore.Models
 @using Microsoft.Extensions.Configuration
@@ -15,44 +15,41 @@
 }
 
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/projecten-custom.css" />
+    @* dashboard-projectleider.css levert de gedeelde werf-kaart (gl-werf-*, sc-*, gl-mc-empty). *@
+    <link rel="stylesheet" href="~/css/dashboard-projectleider.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 }
 
-<div class="row justify-content-between align-items-center mb-3 mb-sm-4">
-    <div class="col">
-        <h1 class="font-weight-bold mb-0">@ViewData["SubTitle"]</h1>
-        <p class="mb-0">@ViewData["SubTitleText"]</p>
-    </div>
-    <div class="col-auto text-end mt-3 mt-sm-0">
-        <a href="@Url.Action("Toevoegen", "Projecten")" class="btn btn-primary btn-md">
-            <i class="bx bx-plus"></i><span class="d-none d-sm-inline"> Project toevoegen</span>
-        </a>
-    </div>
-</div>
+@* Titel/subtitel weg — de topbar toont al "Projecten"; de actieknop staat in
+   de topbar, net als Bewerken/Verwijderen op Projecten/Detail. *@
+@section PageActions {
+    <a href="@Url.Action("Toevoegen", "Projecten")" class="btn btn-primary btn-sm px-3">
+        <i class="bx bx-plus me-1"></i>Project toevoegen
+    </a>
+}
 
 <div class="card card-modern mb-3">
     <div class="card-body">
         <div class="row g-2">
             <div class="col-12 col-sm">
+                <label for="search-term" class="visually-hidden">Zoek op projectnaam of gemeente</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bx bx-search"></i></span>
-                    <input id="search-term"
-                           type="text"
-                           class="form-control form-control-modern"
-                           placeholder="Zoek op projectnaam of gemeente ...">
+                    <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+                    <input id="search-term" type="search" class="form-control form-control-modern"
+                           autocomplete="off" placeholder="Zoek op projectnaam of gemeente ...">
                 </div>
             </div>
-            <div class="col-12 col-sm-auto" id="colvis-container">
+            <div class="col-12 col-sm-auto">
+                <label for="status-filter-select" class="visually-hidden">Filter op projectstatus</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bx bx-filter"></i></span>
-                    <select id="status-filter-select"
-                            class="form-control form-control-modern">
+                    <span class="input-group-text"><i class="bx bx-filter" aria-hidden="true"></i></span>
+                    <select id="status-filter-select" class="form-control form-control-modern">
                         <option value="*">Alle projecten</option>
                         @if (Model.Statuses != null)
                         {
                             foreach (var status in Model.Statuses)
                             {
-                                <option value=".status-@status.Id">@status.Name</option>
+                                <option value="@status.Id">@status.Name</option>
                             }
                         }
                     </select>
@@ -62,8 +59,12 @@
     </div>
 </div>
 
-<!-- 🔥 Enige filterbron = selectbox → GEEN toolbar meer -->
-<div class="row mg-files" id="project-grid" data-total-count="@Model.TotalProjectCount" data-loaded-count="@Model.VisibleProjectCount" data-batch-size="@Model.BatchSize">
+<div id="project-filter-status" class="visually-hidden" aria-live="polite"></div>
+
+<div class="gl-projecten-grid" id="project-grid"
+     data-total-count="@Model.TotalProjectCount"
+     data-loaded-count="@Model.VisibleProjectCount"
+     data-batch-size="@Model.BatchSize">
     @if (Model.Projects != null && Model.Projects.Any())
     {
         @await Html.PartialAsync("_ProjectGridItems", new CPMCore.Models.Projecten.ProjectGridRenderModel
@@ -73,187 +74,269 @@
             SalesData = Model.SalesData ?? new Dictionary<int, ProjectSalesDataBO>(),
             Voortgang = Model.Voortgang ?? new Dictionary<int, ProjectVoortgangBO>()
         })
-        }
-    else
-    {
-        <div class="col-12">
-            <div class="alert alert-info">Er zijn momenteel geen projecten beschikbaar.</div>
-        </div>
     }
 </div>
 
-<div class="text-center mt-4 @(Model.HasMoreProjects && Model.BatchSize > 0 ? string.Empty : "d-none")" id="load-more-container">
-    <button type="button" id="load-more-projects" class="btn btn-primary" data-url="@Url.Action("LoadMoreProjects", "Projecten")">
-        Laad meer
-    </button>
-    <div class="text-muted small mt-2">
-        <span id="loaded-count">@Model.VisibleProjectCount</span> van <span id="total-count">@Model.TotalProjectCount</span> projecten geladen.
+@* Geen projecten in het systeem. *@
+<div class="gl-projecten-empty @(Model.Projects != null && Model.Projects.Any() ? "d-none" : "")" id="projecten-empty-all">
+    <i class="bx bx-building-house" aria-hidden="true"></i>
+    <p class="mb-2">Er zijn nog geen projecten.</p>
+    <a href="@Url.Action("Toevoegen", "Projecten")" class="btn btn-primary btn-sm px-3">
+        <i class="bx bx-plus me-1"></i>Eerste project toevoegen
+    </a>
+</div>
+
+@* Filter levert geen resultaten op. *@
+<div class="gl-projecten-empty d-none" id="projecten-empty-filtered">
+    <i class="bx bx-search-alt" aria-hidden="true"></i>
+    <p class="mb-0">Geen projecten gevonden voor <strong id="projecten-empty-query"></strong>.</p>
+    <button type="button" class="btn btn-outline-primary btn-sm px-3 mt-2" id="projecten-clear-filter">Filter wissen</button>
+</div>
+
+<div class="mt-4 @(Model.HasMoreProjects && Model.BatchSize > 0 ? string.Empty : "d-none")" id="load-more-container">
+    @* Verschijnt terwijl een volgende batch binnenkomt (auto bij verder scrollen). *@
+    <div class="gl-projecten-loader" id="projecten-loader" hidden>
+        <span class="gl-spin" aria-hidden="true"></span>
+        <span>Meer projecten laden…</span>
+    </div>
+    @* Handmatige terugvalknop — auto-laden neemt het over zodra JS actief is. *@
+    <div class="text-center">
+        <button type="button" id="load-more-projects" class="btn btn-outline-primary btn-sm px-3" data-url="@Url.Action("LoadMoreProjects", "Projecten")">
+            Laad meer
+        </button>
+        <div class="text-muted small mt-2" aria-live="polite">
+            <span id="loaded-count">@Model.VisibleProjectCount</span> van <span id="total-count">@Model.TotalProjectCount</span> projecten geladen.
+        </div>
     </div>
 </div>
+
 @section PageScripts {
-    <script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
-    <script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
-
     <script>
-        $(function () {
+        (function () {
+            var grid = document.getElementById('project-grid');
+            if (!grid) return;
 
-            var $grid = $('#project-grid');
-            var $loadMoreButton = $('#load-more-projects');
-            var $loadMoreContainer = $('#load-more-container');
-            var totalCount = parseInt($grid.data('total-count')) || 0;
-            var loadedCount = parseInt($grid.data('loaded-count')) || 0;
-            var batchSize = parseInt($grid.data('batch-size')) || 0;
-            var loadUrl = $loadMoreButton.data('url');
-            var $loadedCountDisplay = $('#loaded-count');
-            var $totalCountDisplay = $('#total-count');
+            var searchInput = document.getElementById('search-term');
+            var statusSelect = document.getElementById('status-filter-select');
+            var liveStatus = document.getElementById('project-filter-status');
+            var emptyAll = document.getElementById('projecten-empty-all');
+            var emptyFiltered = document.getElementById('projecten-empty-filtered');
+            var emptyQuery = document.getElementById('projecten-empty-query');
+            var clearBtn = document.getElementById('projecten-clear-filter');
+            var loadMoreContainer = document.getElementById('load-more-container');
+            var loadMoreBtn = document.getElementById('load-more-projects');
+            var loader = document.getElementById('projecten-loader');
+            var loadedCountEl = document.getElementById('loaded-count');
+            var totalCountEl = document.getElementById('total-count');
 
-            // ⭐ Init Isotope
-            $grid.isotope({
-                itemSelector: '.isotope-item',
-                layoutMode: 'fitRows',
-                percentPosition: true,
-                filter: function () {
-                    var searchText = qsRegex ? $(this).text().toLowerCase().match(qsRegex) : true;
-                    var statusMatch = filterStatus ? $(this).is(filterStatus) : true;
-                    return searchText && statusMatch;
-                }
-            });
+            var totalCount = parseInt(grid.dataset.totalCount, 10) || 0;
+            var loadedCount = parseInt(grid.dataset.loadedCount, 10) || 0;
+            var batchSize = parseInt(grid.dataset.batchSize, 10) || 0;
+            var loadUrl = loadMoreBtn ? loadMoreBtn.dataset.url : null;
 
-            $grid.imagesLoaded(function () {
-                $grid.isotope('layout');
-                equalizeCardBodies();
-            });
+            var query = '';
+            var status = '*';
+            var isLoading = false;
+            var exhausted = !(batchSize > 0 && loadedCount < totalCount);
+            var failed = false;
 
-            updateProgress();
-
-            if (!shouldShowLoadMore()) {
-                $loadMoreContainer.hide();
+            function cards() {
+                return Array.prototype.slice.call(grid.querySelectorAll('.gl-werf-col'));
             }
 
-
-            // ------------------------------
-            // ⭐ FILTERS: STATUS + SEARCH
-            // ------------------------------
-
-            var filterStatus = "*";   // huidige selectbox filter
-            var qsRegex = null;       // zoek regex
-
-            // ⭐ SELECTBOX → FILTER
-            $('#status-filter-select').on('change', function () {
-                filterStatus = $(this).val() || "*";
-                $grid.isotope();
-                relayout();
-            });
-
-            // ⭐ LIVE SEARCH (met debounce)
-            var debounce = function (fn, delay) {
-                var timer = null;
-                return function () {
-                    var context = this, args = arguments;
-                    clearTimeout(timer);
-                    timer = setTimeout(function () {
-                        fn.apply(context, args);
-                    }, delay);
-                };
-            };
-
-            $('#search-term').on('keyup', debounce(function () {
-                var query = $(this).val().toLowerCase();
-                qsRegex = query.length ? new RegExp(query, 'gi') : null;
-                $grid.isotope();
-                relayout();
-            }, 150));
-
-            // ------------------------------
-            // ⭐ HELPER: opnieuw layout + cards gelijk maken
-            // ------------------------------
-
-            function relayout() {
-                setTimeout(function () {
-                    $grid.isotope('layout');
-                    equalizeCardBodies();
-                }, 150);
+            function filtering() {
+                return query.trim() !== '' || status !== '*';
             }
 
-            function equalizeCardBodies() {
-                // On mobile cards stack naturally — skip equalisation to avoid
-                // changing heights after isotope has already positioned items.
-                if (window.innerWidth < 768) {
-                    $('.gl-project-card .card-body').css('min-height', '0');
-                    $grid.isotope('layout');
-                    return;
-                }
-                var maxH = 0;
-                $('.gl-project-card .card-body').css('min-height', '0');
+            // ── Foto-skeleton ────────────────────────────────────────────────
+            // De kaart-inhoud staat er meteen; enkel de <img> stroomt na. Zet
+            // .is-loaded zodra de foto binnen is (of meteen als ze er niet is,
+            // of al mislukt is) zodat de glans-animatie stopt.
+            function hydratePhotos(scope) {
+                var frames = (scope || grid).querySelectorAll('.gl-werf-foto:not(.is-loaded)');
+                Array.prototype.forEach.call(frames, function (frame) {
+                    var img = frame.querySelector('img');
+                    if (!img) { frame.classList.add('is-loaded'); return; }
+                    if (img.complete) {
+                        if (!img.naturalWidth) { img.remove(); }
+                        frame.classList.add('is-loaded');
+                        return;
+                    }
+                    img.addEventListener('load', function () { frame.classList.add('is-loaded'); }, { once: true });
+                    img.addEventListener('error', function () { img.remove(); frame.classList.add('is-loaded'); }, { once: true });
+                });
+            }
 
-                $('.gl-project-card .card-body').each(function () {
-                    var h = $(this).outerHeight();
-                    if (h > maxH) maxH = h;
+            function applyFilter() {
+                var q = query.trim().toLowerCase();
+                var shown = 0;
+                cards().forEach(function (card) {
+                    var okStatus = status === '*' || card.dataset.status === status;
+                    var okText = q === '' || (card.dataset.search || '').indexOf(q) !== -1;
+                    var visible = okStatus && okText;
+                    card.hidden = !visible;
+                    if (visible) shown++;
                 });
 
-                $('.gl-project-card .card-body').css('min-height', maxH + 'px');
-                // Reposition items after height changes so nothing overlaps
-                $grid.isotope('layout');
-            }
+                var isFiltering = filtering();
+                var noneAtAll = cards().length === 0;
 
-            $(window).on('resize', equalizeCardBodies);
-            $loadMoreButton.on('click', function () {
-                if (!shouldShowLoadMore() || !loadUrl) {
-                    return;
+                emptyAll.classList.toggle('d-none', !noneAtAll);
+                emptyFiltered.classList.toggle('d-none', !(isFiltering && shown === 0 && !noneAtAll));
+                if (isFiltering && shown === 0 && !noneAtAll) {
+                    emptyQuery.textContent = q !== '' ? '"' + query.trim() + '"' : 'deze status';
                 }
 
-                $loadMoreButton.prop('disabled', true).text('Laden...');
+                // Bij client-side filteren slaat de teller niet meer op wat je
+                // ziet — verberg het laadblok tot het filter weer los is.
+                if (loadMoreContainer) {
+                    loadMoreContainer.classList.toggle('d-none', isFiltering || exhausted);
+                }
 
-                $.get(loadUrl, { skip: loadedCount, take: batchSize })
-                    .done(function (html) {
-                        if (!html || !html.trim()) {
-                            $loadMoreContainer.hide();
-                            return;
-                        }
+                if (liveStatus) {
+                    liveStatus.textContent = isFiltering
+                        ? shown + (shown === 1 ? ' project' : ' projecten') + ' gevonden.'
+                        : '';
+                }
+            }
 
-                        var parsed = $.parseHTML(html, document, true) || [];
-                        var $parsed = $(parsed);
-                        var $items = $parsed.filter('.isotope-item');
+            function canLoad() {
+                return !isLoading && !exhausted && !failed && loadUrl && !filtering();
+            }
 
-                        if (!$items.length) {
-                            $items = $parsed.find('.isotope-item');
-                        }
+            function loadMore() {
+                if (!canLoad()) return;
+                isLoading = true;
+                if (loader) loader.hidden = false;
+                if (loadMoreBtn) { loadMoreBtn.disabled = true; loadMoreBtn.textContent = 'Laden…'; }
 
-                        if (!$items.length) {
-                            $loadMoreContainer.hide();
-                            return;
-                        }
-
-                        $grid.append($items).isotope('appended', $items);
-
-                        $grid.imagesLoaded(function () {
-                            equalizeCardBodies();
-                            $grid.isotope('layout');
-                        });
-
-                        loadedCount += $items.length;
-                        updateProgress();
-
-                        if (!shouldShowLoadMore()) {
-                            $loadMoreContainer.hide();
-                        } else {
-                            $loadMoreButton.prop('disabled', false).text('Laad meer');
-                        }
+                fetch(loadUrl + '?skip=' + loadedCount + '&take=' + batchSize, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.text();
                     })
-                    .fail(function () {
-                        $loadMoreButton.prop('disabled', false).text('Laad meer');
+                    .then(function (html) {
+                        var tpl = document.createElement('template');
+                        tpl.innerHTML = (html || '').trim();
+                        var added = tpl.content.querySelectorAll('.gl-werf-col');
+
+                        if (!added.length) {
+                            exhausted = true;
+                        } else {
+                            var frag = document.createDocumentFragment();
+                            Array.prototype.forEach.call(added, function (n) { frag.appendChild(n); });
+                            grid.appendChild(frag);
+                            hydratePhotos(grid);
+                            loadedCount += added.length;
+                            if (loadedCountEl) loadedCountEl.textContent = Math.min(loadedCount, totalCount);
+                            if (totalCountEl) totalCountEl.textContent = totalCount;
+                            if (loadedCount >= totalCount) exhausted = true;
+                        }
+
+                        isLoading = false;
+                        if (loader) loader.hidden = true;
+                        applyFilter();
+
+                        if (exhausted) {
+                            loadMoreContainer && loadMoreContainer.classList.add('d-none');
+                        } else if (loadMoreBtn) {
+                            loadMoreBtn.disabled = false;
+                            loadMoreBtn.textContent = 'Laad meer';
+                        }
+                        // Blijf aanvullen zolang de onderkant in zicht is of het
+                        // scherm nog niet scrollbaar is.
+                        maybeContinue();
+                    })
+                    .catch(function () {
+                        isLoading = false;
+                        failed = true;
+                        if (loader) loader.hidden = true;
+                        if (loadMoreBtn) {
+                            loadMoreBtn.disabled = false;
+                            loadMoreBtn.textContent = 'Opnieuw proberen';
+                        }
+                        if (typeof PNotify !== 'undefined') {
+                            new PNotify({ title: 'Laden mislukt', text: 'Kon meer projecten niet laden. Probeer opnieuw.', type: 'error' });
+                        }
                     });
+            }
+
+            function nearBottom(margin) {
+                if (!loadMoreContainer) return false;
+                var r = loadMoreContainer.getBoundingClientRect();
+                return r.top <= (window.innerHeight || document.documentElement.clientHeight) + margin;
+            }
+
+            function maybeContinue() {
+                if (!canLoad()) return;
+                // Auto-laden bij: onderkant bijna in beeld, óf pagina nog niet
+                // scrollbaar (groot scherm dat in één keer gevuld moet worden).
+                var notScrollable = document.documentElement.scrollHeight <= window.innerHeight + 4;
+                if (notScrollable || nearBottom(800)) {
+                    loadMore();
+                }
+            }
+
+            // ── Filter-events ───────────────────────────────────────────────
+            searchInput && searchInput.addEventListener('input', debounce(function () {
+                query = searchInput.value || '';
+                applyFilter();
+                maybeContinue();
+            }, 150));
+
+            statusSelect && statusSelect.addEventListener('change', function () {
+                status = statusSelect.value || '*';
+                applyFilter();
+                maybeContinue();
             });
 
-            function updateProgress() {
-                $loadedCountDisplay.text(Math.min(loadedCount, totalCount));
-                $totalCountDisplay.text(totalCount);
+            clearBtn && clearBtn.addEventListener('click', function () {
+                query = ''; status = '*';
+                if (searchInput) searchInput.value = '';
+                if (statusSelect) statusSelect.value = '*';
+                applyFilter();
+                searchInput && searchInput.focus();
+                maybeContinue();
+            });
+
+            // ── Laden: knop (terugval) + auto bij scrollen ──────────────────
+            loadMoreBtn && loadMoreBtn.addEventListener('click', function () {
+                failed = false;
+                loadMore();
+            });
+
+            var ticking = false;
+            function onScroll() {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(function () {
+                    ticking = false;
+                    maybeContinue();
+                });
+            }
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('resize', onScroll, { passive: true });
+
+            if ('IntersectionObserver' in window && loadMoreContainer) {
+                new IntersectionObserver(function (entries) {
+                    if (entries.some(function (e) { return e.isIntersecting; })) maybeContinue();
+                }, { rootMargin: '800px 0px' }).observe(loadMoreContainer);
             }
 
-            function shouldShowLoadMore() {
-                return batchSize > 0 && loadedCount < totalCount;
+            function debounce(fn, delay) {
+                var t = null;
+                return function () {
+                    var ctx = this, args = arguments;
+                    clearTimeout(t);
+                    t = setTimeout(function () { fn.apply(ctx, args); }, delay);
+                };
             }
-        });
+
+            hydratePhotos(grid);
+            applyFilter();
+            // Vul meteen de eerste viewport (bv. op een breed scherm waar de
+            // server-lading niet volstaat om te kunnen scrollen).
+            maybeContinue();
+        })();
     </script>
 }
-

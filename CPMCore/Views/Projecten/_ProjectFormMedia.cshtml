@@ -1,0 +1,42 @@
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+@{
+    // Edit geeft de huidige foto-URL mee via ViewData; Toevoegen laat 'm leeg.
+    var currentPhotoUrl = ViewData["CurrentPhotoUrl"] as string;
+    var hasCurrent = !string.IsNullOrEmpty(currentPhotoUrl);
+}
+
+<section class="gl-form-section">
+    <div class="gl-form-section__body">
+        <div class="gl-form-section__head">
+            <i class="bx bx-image" aria-hidden="true"></i>
+            <div>
+                <h2 class="gl-form-section__title">Standaard foto</h2>
+                <p class="gl-form-section__hint">Wordt overal als projectbeeld getoond. Optioneel.</p>
+            </div>
+        </div>
+
+        <div class="gl-field-grid">
+            <div class="gl-field">
+                <label>Voorbeeld</label>
+                @if (hasCurrent)
+                {
+                    <img id="projectStdFotoPreview" class="gl-form-foto-preview"
+                         src="@Url.Content(currentPhotoUrl)" alt="Voorbeeld van de standaard projectfoto" />
+                }
+                else
+                {
+                    <img id="projectStdFotoPreview" class="gl-form-foto-preview d-none" alt="Voorbeeld van de standaard projectfoto" />
+                    <p id="projectStdFotoEmpty" class="text-muted small mb-0">Nog geen standaard foto ingesteld.</p>
+                }
+            </div>
+
+            <div class="gl-field">
+                <label for="StandardFotoUpload">@(hasCurrent ? "Nieuwe foto uploaden" : "Foto uploaden")</label>
+                <input type="file" name="StandardFotoUpload" id="StandardFotoUpload"
+                       accept="image/jpeg,image/png,image/webp" class="form-control form-control-modern" />
+                <small class="text-muted">JPG, PNG of WEBP. @(hasCurrent ? "Laat leeg om de huidige foto te behouden." : "Kan ook later worden toegevoegd.")</small>
+            </div>
+        </div>
+    </div>
+</section>

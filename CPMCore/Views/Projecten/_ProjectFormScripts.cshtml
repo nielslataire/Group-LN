@@ -1,0 +1,267 @@
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+@*
+    Gedeelde formulier-JS voor Projecten/Toevoegen en Projecten/Bewerken.
+    Elke select2-init is bewaakt met een element-check zodat één script voor
+    beide schermen werkt; de coördinatie-logica draait alleen als de kaart
+    aanwezig is (Bewerken).
+*@
+<script src="~/lib/select2/js/select2.js"></script>
+<script src="~/lib/select2/js/i18n/nl.js"></script>
+<script src="~/js/theme.admin.extension.js"></script>
+<script src="~/lib/ios7-switch/ios7-switch.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script>
+    (function () {
+        function configureSelect(selector, options, onSelect) {
+            var $list = $(selector);
+            if (!$list.length) return null;
+            var $el = $list.select2(options);
+            if (onSelect) {
+                $el.on('select2:select', onSelect);
+                $el.on('select2:clear', function () {
+                    onSelect({ params: { data: { id: 0, text: '' } } });
+                });
+            }
+            return $el;
+        }
+
+        $(function () {
+            var companyOptions = {
+                theme: 'bootstrap',
+                placeholder: 'Selecteer...',
+                width: '100%',
+                language: 'nl',
+                allowClear: true,
+                minimumInputLength: 3,
+                ajax: {
+                    url: '@Url.Action("GetCompanys", "Projecten")',
+                    type: 'POST',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) { return { term: params.term }; },
+                    processResults: function (data) { return { results: data }; }
+                }
+            };
+
+            configureSelect('#PostalSelect', {
+                theme: 'bootstrap',
+                placeholder: 'Selecteer de gemeente',
+                width: '100%',
+                language: 'nl',
+                allowClear: true,
+                ajax: {
+                    url: '@Url.Action("GetPostcodesByCountry", "Projecten")',
+                    type: 'POST',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return { term: params.term, countryId: $('#lstProjectCountries').val() };
+                    },
+                    processResults: function (data) { return { results: data }; }
+                }
+            }, function (e) {
+                $('#SelectedPostalcode').val(e.params.data.id || 0);
+            });
+
+            configureSelect('#WheaterSelect', {
+                theme: 'bootstrap',
+                placeholder: 'Selecteer het KMI weerstation',
+                width: '100%',
+                language: 'nl',
+                allowClear: true,
+                minimumInputLength: 1,
+                ajax: {
+                    url: '@Url.Action("GetWheaterstations", "Projecten")',
+                    type: 'POST',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) { return { term: params.term }; },
+                    processResults: function (data) { return { results: data }; }
+                }
+            }, function (e) {
+                $('#Project_WheaterStation_Id').val(e.params.data.id || 0);
+                $('#Project_WheaterStation_Name').val(e.params.data.text || '');
+            });
+
+            function partnerSelect(selectId, idField, nameField) {
+                configureSelect(selectId, companyOptions, function (e) {
+                    $(idField).val(e.params.data.id || 0);
+                    $(nameField).val(e.params.data.text || '');
+                });
+            }
+            partnerSelect('#DeveloperSelect', '#Project_Developer_ID', '#Project_Developer_Display');
+            partnerSelect('#BuilderSelect', '#Project_Builder_ID', '#Project_Builder_Display');
+            partnerSelect('#ArchitectSelect', '#Project_Architect_ID', '#Project_Architect_Display');
+            partnerSelect('#EngineerSelect', '#Project_Engineer_ID', '#Project_Engineer_Display');
+            partnerSelect('#SecuritySelect', '#Project_SecurityCoordinator_ID', '#Project_SecurityCoordinator_Display');
+            partnerSelect('#EpbSelect', '#Project_EpbReporter_ID', '#Project_EpbReporter_Display');
+            partnerSelect('#NotarySelect', '#Project_Notary_ID', '#Project_Notary_Display');
+
+            if ($('#PostalSelect').val()) {
+                $('#SelectedPostalcode').val($('#PostalSelect').val());
+            }
+
+            // ── Standaard-foto live voorbeeld ────────────────────────────────
+            var fotoInput = document.getElementById('StandardFotoUpload');
+            if (fotoInput) {
+                fotoInput.addEventListener('change', function () {
+                    var file = this.files && this.files[0];
+                    if (!file) return;
+                    var reader = new FileReader();
+                    reader.onload = function (ev) {
+                        var img = document.getElementById('projectStdFotoPreview');
+                        if (img) { img.src = ev.target.result; img.classList.remove('d-none'); }
+                        var empty = document.getElementById('projectStdFotoEmpty');
+                        if (empty) empty.classList.add('d-none');
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // ── Coördinatie: schijven + regie (alleen bij Bewerken) ──────────
+            if ($('#coordinationCard').length) {
+                var availableUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.AvailableUsers.Select(u => new { id = u.Group, text = u.Display }).ToList()));
+
+                function updateCoordinationVisibility() {
+                    var isCoord = $('#IsCoordinationProject').is(':checked');
+                    $('#coordinationCard').toggle(isCoord);
+                    if (isCoord) updateContractTypeVisibility();
+                }
+                function updateContractTypeVisibility() {
+                    var type = $('#Project_ContractType').val();
+                    $('#slicesSection').toggle(type === '1' || type === '3');
+                    $('#regieSection').toggle(type === '2' || type === '3');
+                    updateSlicesTotal();
+                }
+                function updateSlicesTotal() {
+                    var total = 0;
+                    $('.slice-pct').each(function () { total += parseFloat($(this).val()) || 0; });
+                    var rounded = Math.round(total * 100) / 100;
+                    $('#slicesTotal').text(rounded);
+                    $('#slicesTotalBadge')
+                        .toggleClass('bg-success', rounded === 100)
+                        .toggleClass('bg-secondary', rounded !== 100)
+                        .attr('title', rounded === 100 ? 'Volledig verdeeld' : 'Nog niet 100% verdeeld');
+                }
+
+                $('#IsCoordinationProject').on('change', updateCoordinationVisibility);
+                $('#Project_ContractType').on('change', updateContractTypeVisibility);
+                $(document).on('input', '.slice-pct', updateSlicesTotal);
+
+                var sliceIndex = $('#slicesContainer .slice-row').length;
+                $('#addSlice').on('click', function () {
+                    var idx = sliceIndex++;
+                    $('#slicesContainer').append(
+                        '<div class="row slice-row mb-2">' +
+                        '<div class="col-lg-6"><input type="text" name="ContractSlices[' + idx + '].Description" class="form-control form-control-modern" placeholder="Omschrijving" aria-label="Omschrijving schijf" /></div>' +
+                        '<div class="col-lg-3"><div class="input-group"><input type="number" name="ContractSlices[' + idx + '].Percentage" class="form-control form-control-modern slice-pct" step="0.01" min="0.01" max="100" placeholder="%" aria-label="Percentage schijf" /><span class="input-group-text">%</span></div></div>' +
+                        '<div class="col-lg-1"><button type="button" class="btn btn-outline-danger btn-sm remove-slice" aria-label="Schijf verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button></div>' +
+                        '</div>');
+                    updateSlicesTotal();
+                });
+                $(document).on('click', '.remove-slice', function () {
+                    $(this).closest('.slice-row').remove();
+                    $('#slicesContainer .slice-row').each(function (i) {
+                        $(this).find('input[name*="Description"]').attr('name', 'ContractSlices[' + i + '].Description');
+                        $(this).find('input[name*="Percentage"]').attr('name', 'ContractSlices[' + i + '].Percentage');
+                    });
+                    sliceIndex = $('#slicesContainer .slice-row').length;
+                    updateSlicesTotal();
+                });
+
+                var rateIndex = $('#ratesContainer .rate-row').length;
+                function buildUserOptions() {
+                    var html = '<option value="">-- Selecteer persoon --</option>';
+                    availableUsers.forEach(function (u) {
+                        html += '<option value="' + u.id + '">' + u.text + '</option>';
+                    });
+                    return html;
+                }
+                $('#addRate').on('click', function () {
+                    var idx = rateIndex++;
+                    $('#ratesContainer').append(
+                        '<div class="row rate-row mb-2">' +
+                        '<div class="col-lg-6"><select name="HourlyRates[' + idx + '].UserId" class="form-control form-control-modern rate-user" aria-label="Persoon">' + buildUserOptions() + '</select>' +
+                        '<input type="hidden" name="HourlyRates[' + idx + '].UserFullName" value="" /></div>' +
+                        '<div class="col-lg-3"><div class="input-group"><span class="input-group-text">&euro;</span><input type="number" name="HourlyRates[' + idx + '].HourlyRate" class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" aria-label="Uurtarief" /></div></div>' +
+                        '<div class="col-lg-1"><button type="button" class="btn btn-outline-danger btn-sm remove-rate" aria-label="Tarief verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button></div>' +
+                        '</div>');
+                });
+                $(document).on('change', '.rate-user', function () {
+                    $(this).closest('.rate-row').find('input[name*="UserFullName"]').val($(this).find('option:selected').text());
+                });
+                $(document).on('click', '.remove-rate', function () {
+                    $(this).closest('.rate-row').remove();
+                    $('#ratesContainer .rate-row').each(function (i) {
+                        $(this).find('select').attr('name', 'HourlyRates[' + i + '].UserId');
+                        $(this).find('input[name*="UserFullName"]').attr('name', 'HourlyRates[' + i + '].UserFullName');
+                        $(this).find('input[name*="HourlyRate"]').attr('name', 'HourlyRates[' + i + '].HourlyRate');
+                    });
+                    rateIndex = $('#ratesContainer .rate-row').length;
+                });
+
+                updateCoordinationVisibility();
+                updateSlicesTotal();
+            }
+
+            // ── Gemeente is verplicht: blokkeer opslaan zonder keuze uit de lijst ──
+            var $form = $('form.ecommerce-form');
+            $form.on('submit', function (e) {
+                var $postal = $('#PostalSelect');
+                if (!$postal.length) return;
+                var chosen = parseInt($('#SelectedPostalcode').val(), 10) || 0;
+                var $err = $('#postalSelectError');
+                if (chosen > 0) { $err.attr('hidden', true); return; }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                $err.removeAttr('hidden');
+                // Als het veld op een verborgen tab staat: eerst dat tabblad tonen.
+                var $panel = $postal.closest('.gl-tabpanel');
+                if ($panel.length) {
+                    var key = $panel[0].id.replace('tab-', '');
+                    var $btn = $('.gl-tab[data-tab="' + key + '"]');
+                    if ($btn.length) { $btn[0].click(); }
+                }
+                $postal.next('.select2').find('.select2-selection').trigger('focus');
+                $err[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+            $(document).on('select2:select', '#PostalSelect', function () {
+                $('#postalSelectError').attr('hidden', true);
+            });
+
+            // ── Niet-opgeslagen wijzigingen waarschuwing ─────────────────────
+            var formDirty = false;
+            $form.on('change input', ':input', function () { formDirty = true; });
+            $form.on('submit', function () { formDirty = false; });
+            // Annuleren is een bewuste keuze — geen waarschuwing.
+            $form.find('.cancel-button').on('click', function () { formDirty = false; });
+            window.addEventListener('beforeunload', function (e) {
+                if (!formDirty) return;
+                e.preventDefault();
+                e.returnValue = '';
+            });
+        });
+
+        // ── Quill rich-text voor de commerciële tekst ────────────────────────
+        (function () {
+            var container = document.getElementById('commercialTextEditorContainer');
+            var area = document.getElementById('commercialTextEditor');
+            if (!container || !area || typeof Quill === 'undefined') return;
+            var quill = new Quill(container, {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline'],
+                        [{ list: 'ordered' }, { list: 'bullet' }],
+                        ['link'],
+                        ['clean']
+                    ]
+                }
+            });
+            if (area.value) quill.root.innerHTML = area.value;
+            quill.on('text-change', function () { area.value = quill.root.innerHTML; });
+        })();
+    })();
+</script>

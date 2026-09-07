@@ -1,0 +1,59 @@
+@*
+    Tab-gedrag voor Projecten/Bewerken. Panelen tonen/verbergen alleen — alle
+    velden blijven in het formulier zodat één Opslaan alles bewaart.
+    Bij een mislukte Save zet de server data-force-tab op de eerste tab met een
+    fout; anders wint de URL-hash, anders de eerste tab.
+*@
+<script>
+    (function () {
+        var strip = document.querySelector('.gl-tabs[data-tabgroup="project-edit"]');
+        if (!strip) return;
+
+        var tabs = Array.prototype.slice.call(strip.querySelectorAll('.gl-tab'));
+        var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+
+        function activate(name, updateHash) {
+            var matched = false;
+            tabs.forEach(function (t, i) {
+                var on = t.dataset.tab === name;
+                if (on) { matched = true; }
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+                t.tabIndex = on ? 0 : -1;
+                if (panels[i]) { panels[i].hidden = !on; }
+            });
+            if (!matched) { activate(tabs[0].dataset.tab, updateHash); return; }
+            if (updateHash) {
+                try { history.replaceState(null, '', '#' + name); }
+                catch (e) { location.hash = name; }
+            }
+            // select2 in een net-zichtbaar paneel opnieuw laten meten
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        tabs.forEach(function (t) {
+            t.addEventListener('click', function () { activate(t.dataset.tab, true); });
+            t.addEventListener('keydown', function (e) {
+                var i = tabs.indexOf(t), next = null;
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { next = tabs[(i + 1) % tabs.length]; }
+                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { next = tabs[(i - 1 + tabs.length) % tabs.length]; }
+                else if (e.key === 'Home') { next = tabs[0]; }
+                else if (e.key === 'End') { next = tabs[tabs.length - 1]; }
+                if (next) { e.preventDefault(); next.focus(); activate(next.dataset.tab, true); }
+            });
+        });
+
+        var forced = strip.dataset.forceTab || '';
+        var fromHash = (location.hash || '').replace('#', '');
+        var known = tabs.map(function (t) { return t.dataset.tab; });
+        var initial = (forced && known.indexOf(forced) !== -1) ? forced
+            : (known.indexOf(fromHash) !== -1 ? fromHash : known[0]);
+        activate(initial, false);
+
+        // Na een mislukte Save: spring naar het eerste ongeldige veld in het geforceerde paneel.
+        if (forced) {
+            var panel = document.getElementById('tab-' + forced);
+            var bad = panel && panel.querySelector('.input-validation-error, .text-danger:not(:empty)');
+            if (bad && bad.scrollIntoView) { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        }
+    })();
+</script>

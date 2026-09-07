@@ -142,17 +142,17 @@ namespace CPMCore.Controllers
                 const int initialLimit = 30;
                 const int batchSize = 12;
 
-                var orderedProjects = response.Values
-                    .OrderByDescending(m => m.DeliveryDate == null)
-                    .ThenByDescending(m => m.DeliveryDate)
-                    .ToList();
+                // Voortgang voor álle projecten: de standaardsortering (fase, van
+                // begin naar einde) leunt erop, niet enkel de zichtbare pagina.
+                var voortgangAll = _voortgangService.GetForProjects(response.Values.Select(p => p.Id));
+                var orderedProjects = OrderProjectsForList(response.Values, voortgangAll);
 
                 model.InitialLimit = initialLimit;
                 model.BatchSize = batchSize;
                 model.TotalProjectCount = orderedProjects.Count;
                 model.Projects = orderedProjects.Take(initialLimit).ToList();
                 model.VisibleProjectCount = model.Projects.Count;
-
+                model.Voortgang = voortgangAll;
 
                 var ids = model.Projects.Select(p => p.Id).ToList();
                 if (ids.Count > 0)
@@ -164,8 +164,6 @@ namespace CPMCore.Controllers
                             .GroupBy(v => v.ProjectId)
                             .ToDictionary(g => g.Key, g => g.First());
                     }
-
-                    model.Voortgang = _voortgangService.GetForProjects(ids);
                 }
             }
 
@@ -174,9 +172,6 @@ namespace CPMCore.Controllers
             {
                 model.Statuses = statusResponse.Values;
             }
-
-            ViewData["SubTitle"] = "Alle projecten";
-            ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
 
             return View(model);
         }
@@ -272,10 +267,9 @@ namespace CPMCore.Controllers
                 return Content(string.Empty);
             }
 
-            var orderedProjects = response.Values
-                .OrderByDescending(m => m.DeliveryDate == null)
-                .ThenByDescending(m => m.DeliveryDate)
-                .ToList();
+            // Zelfde sortering als Index, anders springt "Laad meer" door elkaar.
+            var voortgangAll = _voortgangService.GetForProjects(response.Values.Select(p => p.Id));
+            var orderedProjects = OrderProjectsForList(response.Values, voortgangAll);
 
             var projects = orderedProjects.Skip(skip).Take(take).ToList();
             if (projects.Count == 0)
@@ -306,10 +300,26 @@ namespace CPMCore.Controllers
                 Projects = projects,
                 Statuses = statuses,
                 SalesData = salesData,
-                Voortgang = _voortgangService.GetForProjects(ids)
+                Voortgang = voortgangAll
             };
 
             return PartialView("_ProjectGridItems", model);
+        }
+
+        /// <summary>
+        /// Standaardvolgorde voor de projectenlijst: eerst op fase (in uitvoering →
+        /// opstart → afgewerkt → opgeleverd → stopgezet, zie <see cref="ProjectPhase"/>),
+        /// daarbinnen projecten zonder opleverdatum eerst en dan op opleverdatum aflopend.
+        /// </summary>
+        private static List<ProjectBO> OrderProjectsForList(
+            IEnumerable<ProjectBO> projects, IDictionary<int, ProjectVoortgangBO> voortgang)
+        {
+            return projects
+                .OrderBy(p => ProjectPhase.SortKey(
+                    p, voortgang.TryGetValue(p.Id, out var vg) ? vg : null))
+                .ThenByDescending(p => p.DeliveryDate == null)
+                .ThenByDescending(p => p.DeliveryDate)
+                .ToList();
         }
 
         [HttpGet]
@@ -325,6 +335,7 @@ namespace CPMCore.Controllers
             var model = new ProjectModel();
             model.Project.Postalcode.Country.CountryId = 19;
             model.Project.Postalcode.Country.ISOCode = "BE";
+            model.SelectedCountry = 19;
 
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
@@ -348,7 +359,9 @@ namespace CPMCore.Controllers
             }
 
             model.Project.Postalcode.Country.CountryId = model.SelectedCountry;
-            model.Project.Postalcode.PostcodeId = model.SelectedPostalcode;
+            // Geen gemeente gekozen -> null bewaren i.p.v. 0 (0 is geen geldige FK en
+            // liet Detail crashen op (int)PostcodeId).
+            model.Project.Postalcode.PostcodeId = model.SelectedPostalcode > 0 ? model.SelectedPostalcode : (int?)null;
             model.Project.Status.Id = model.Project.Status.Id == 0 ? 1 : model.Project.Status.Id;
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
@@ -397,8 +410,9 @@ namespace CPMCore.Controllers
                         HourlyRate = r.HourlyRate
                     }).ToList());
 
-                AddMessage("success", $"Het project {model.Project.Name} is toegevoegd", "Geslaagd!");
-                return RedirectToAction("Detail", new { projectid = newProjectId });
+                // Minimale aanmaak -> meteen door naar Bewerken om de rest aan te vullen.
+                AddMessage("success", $"Project {model.Project.Name} is aangemaakt — vul de overige gegevens aan.", "Geslaagd!");
+                return RedirectToAction("Edit", new { projectid = newProjectId });
             }
 
             AddMessage("error", $"Het project {model.Project.Name} is NIET toegevoegd", "Fout!");
@@ -434,7 +448,7 @@ namespace CPMCore.Controllers
             model.ProjectName = model.Project.Name;
             FillInAddSelectListsDetail(ref model);
             model.GeneralDataEditMode = EditGeneralData;
-            model.SelectedPostalcode = (int)model.Project.Postalcode.PostcodeId;
+            model.SelectedPostalcode = model.Project.Postalcode.PostcodeId ?? 0;
             model.Docs = Service.GetProjectDocs(projectid).Values;
             model.Users = GetOrderedUsers();
             if (!model.Project.ExecutionDays.HasValue || model.Project.ExecutionDays.Value == 0)
@@ -733,7 +747,8 @@ namespace CPMCore.Controllers
             }
 
             model.Project.Postalcode.Country.CountryId = model.SelectedCountry;
-            model.Project.Postalcode.PostcodeId = model.SelectedPostalcode;
+            // Geen gemeente gekozen -> null bewaren i.p.v. 0 (0 is geen geldige FK).
+            model.Project.Postalcode.PostcodeId = model.SelectedPostalcode > 0 ? model.SelectedPostalcode : (int?)null;
             model.Project.Status.Id = model.SelectedStatus;
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 

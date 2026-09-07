@@ -83,6 +83,7 @@ namespace ServiceCore
             public string Location { get; set; }
             public string DefaultPic { get; set; }
             public string DefaultPicCaption { get; set; }
+            public int DefaultPicMediaType { get; set; }
             public string StandardFotoName { get; set; }
             public DateOnly? DeliveryDate { get; set; }
             public DateOnly? StartDateConstruction { get; set; }
@@ -110,6 +111,7 @@ namespace ServiceCore
                     Location = m.PostalCode.Gemeente,
                     DefaultPic = m.DefaultPicture.Name,
                     DefaultPicCaption = m.DefaultPicture.Caption,
+                    DefaultPicMediaType = (int?)m.DefaultPicture.MediaType ?? 0,
                     StandardFotoName = m.StandardFotoName,
                     DeliveryDate = m.DeliveryDate,
                     StartDateConstruction = m.StartDateConstruction,
@@ -155,6 +157,7 @@ namespace ServiceCore
                 {
                     bo.DefaultPicture.Name = e.DefaultPic;
                     bo.DefaultPicture.Caption = e.DefaultPicCaption;
+                    bo.DefaultPicture.MediaType = e.DefaultPicMediaType;
                 }
                 else
                 {

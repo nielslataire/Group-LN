@@ -117,6 +117,7 @@ namespace ServiceCore.Translators
                 bo.DefaultPicture.Id = _entity.DefaultPicture.Id;
                 bo.DefaultPicture.Name = _entity.DefaultPicture.Name;
                 bo.DefaultPicture.Caption = _entity.DefaultPicture.Caption;
+                bo.DefaultPicture.MediaType = _entity.DefaultPicture.MediaType;
             }
             bo.StandardFotoName = _entity.StandardFotoName;
             bo.SeoTitle = _entity.SeoTitle;

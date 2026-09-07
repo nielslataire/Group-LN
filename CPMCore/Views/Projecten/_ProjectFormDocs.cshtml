@@ -1,0 +1,45 @@
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+
+<section class="gl-form-section">
+    <div class="gl-form-section__body">
+        <div class="gl-form-section__head">
+            <i class="bx bx-check-shield" aria-hidden="true"></i>
+            <div>
+                <h2 class="gl-form-section__title">Verplichte documenten</h2>
+                <p class="gl-form-section__hint">Vink aan welke opleveringsdocumenten binnen zijn.</p>
+            </div>
+        </div>
+
+        <div class="gl-doc-checklist">
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocDelivery", Model.Project.DocDelivery ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocDelivery)</span>
+            </label>
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocDefDelivery", Model.Project.DocDefDelivery ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocDefDelivery)</span>
+            </label>
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocPID", Model.Project.DocPID ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocPID)</span>
+            </label>
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocElectricalInspection", Model.Project.DocElectricalInspection ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocElectricalInspection)</span>
+            </label>
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocWaterInspection", Model.Project.DocWaterInspection ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocWaterInspection)</span>
+            </label>
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocFireInspection", Model.Project.DocFireInspection ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocFireInspection)</span>
+            </label>
+            <label class="gl-doc-checklist__item">
+                @Html.CheckBox("Project.DocSewerInspection", Model.Project.DocSewerInspection ?? false, new { @class = "form-check-input" })
+                <span>@Html.DisplayNameFor(m => m.Project.DocSewerInspection)</span>
+            </label>
+        </div>
+    </div>
+</section>

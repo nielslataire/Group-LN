@@ -11,7 +11,7 @@ using System;
 namespace CPMCore.Models.Projecten
 {
     //test
-    public class ProjectModel
+    public class ProjectModel : IProjectFormModel
     {
         public ProjectModel()
         {
@@ -89,7 +89,7 @@ namespace CPMCore.Models.Projecten
         public IEnumerable<CpmUserOption> Users { get; set; }
     }
 
-    public class EditProjectDetail
+    public class EditProjectDetail : IProjectFormModel
     {
         public EditProjectDetail()
         {

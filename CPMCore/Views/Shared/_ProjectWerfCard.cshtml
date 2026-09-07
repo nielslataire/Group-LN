@@ -1,0 +1,153 @@
+@model CPMCore.Models.Projecten.ProjectWerfCardVM
+@using BOCore
+@*
+    Gedeelde projectkaart (gl-werf-*). Eén uiterlijk voor de rol-dashboards
+    ("Mijn Werven" / "Alle werven") en de projectenlijst (Projecten/Index),
+    zodat de portfolio-kaart niet meer op twee plaatsen los evolueert.
+    Caller-chrome (rangschik-balk, pin, bedrijfsbadge) via de VM-vlaggen.
+*@
+@{
+    var project = Model.Project;
+    var vg = Model.Voortgang;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    int? daysLeft = null;
+    bool isOverdue = false;
+    if (project.DeliveryDate.HasValue)
+    {
+        daysLeft = (int)(project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
+        isOverdue = daysLeft < 0;
+    }
+
+    var displayFysPct = isOverdue ? 100m : (vg?.FysiekeVoortgangPct ?? 0m);
+    var displayFinPct = isOverdue ? 100m : (vg?.FinancieleVoortgangPct ?? 0m);
+    var showBars = vg != null || isOverdue;
+
+    // Chip + sorteervolgorde delen één bron van waarheid (ProjectPhase); een
+    // terminale status als "Stopgezet" wint daar van een verouderde voortgangsfase.
+    var (chipClass, chipLabel) = ProjectPhase.Chip(project, vg);
+
+    // "pictures/447/" is een verkleinde webp-afgeleide die enkel voor afbeeldingen
+    // bestaat. Een hoofd-media van het type video (MediaType == 1) heeft geen
+    // 447-thumbnail, dus val terug op de standaardfoto en anders op de placeholder.
+    static bool IsImageName(string n)
+    {
+        if (string.IsNullOrWhiteSpace(n)) return false;
+        var ext = System.IO.Path.GetExtension(n).ToLowerInvariant();
+        return ext is ".jpg" or ".jpeg" or ".png" or ".webp" or ".gif" or ".bmp" or ".avif";
+    }
+
+    var defaultPicIsImage = project.DefaultPicture?.MediaType != 1
+        && IsImageName(project.DefaultPicture?.Name);
+    var fotoName = defaultPicIsImage ? project.DefaultPicture!.Name
+        : (IsImageName(project.StandardFotoName) ? project.StandardFotoName : null);
+    var fotoUrl = fotoName != null ? Model.ImageBaseUrl + "pictures/447/" + fotoName : string.Empty;
+
+    var searchText = string.Join(" ", new[] { project.Name, project.Postalcode?.Gemeente }
+        .Where(s => !string.IsNullOrWhiteSpace(s))).ToLowerInvariant();
+}
+<div class="@Model.ColumnClasses gl-werf-col" data-project-id="@project.Id"
+     data-status="@(project.Status?.Id ?? 0)" data-search="@searchText">
+    @if (Model.ShowArrangeBar)
+    {
+        <div class="gl-arrange-bar d-none">
+            <button type="button" class="gl-arrange-btn gl-arrange-up" aria-label="@(project.Name) naar boven verplaatsen" title="Naar boven">
+                <i class="bx bx-chevron-up"></i>
+            </button>
+            <span class="gl-drag-grip" aria-hidden="true" title="Sleep om te verplaatsen">
+                <i class="bx bx-grid-vertical"></i> Sleep
+            </span>
+            <button type="button" class="gl-arrange-btn gl-arrange-down" aria-label="@(project.Name) naar onder verplaatsen" title="Naar onder">
+                <i class="bx bx-chevron-down"></i>
+            </button>
+        </div>
+    }
+    @if (Model.IsPinned)
+    {
+        <button type="button" class="gl-pin-toggle" data-project-id="@project.Id" aria-label="Losmaken: @project.Name" title="Vastgezet — klik om los te maken">
+            <i class="bx bx-pin"></i>
+        </button>
+    }
+    <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart">
+        <div class="gl-werf-foto@(string.IsNullOrEmpty(fotoUrl) ? " is-loaded" : "")">
+            @if (!string.IsNullOrEmpty(fotoUrl))
+            {
+                <img src="@fotoUrl" alt="Foto van @project.Name" loading="lazy"
+                     onload="this.closest('.gl-werf-foto').classList.add('is-loaded');"
+                     onerror="var w=this.closest('.gl-werf-foto'); this.remove(); if(w)w.classList.add('is-loaded');" />
+            }
+            else
+            {
+                <div class="gl-werf-foto-placeholder"></div>
+            }
+            <div class="gl-werf-overlay"></div>
+            @if (!string.IsNullOrWhiteSpace(Model.CompanyLabel))
+            {
+                <span class="gl-company-chip" title="@Model.CompanyLabel">@Model.CompanyLabel</span>
+            }
+            <span class="gl-status-chip @chipClass">@chipLabel</span>
+            @if (vg != null && !string.IsNullOrEmpty(vg.Warnings))
+            {
+                <span class="gl-warn-badge" title="@string.Join(", ", vg.WarningList)">
+                    <i class="bx bx-alert-circle"></i>
+                </span>
+            }
+        </div>
+        <div class="gl-werf-body">
+            <div>
+                <p class="gl-werf-naam">@project.Name</p>
+                @if (!string.IsNullOrWhiteSpace(project.Postalcode?.Gemeente))
+                {
+                    <p class="gl-werf-gem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        @project.Postalcode.Gemeente
+                    </p>
+                }
+            </div>
+            @if (showBars)
+            {
+                <div>
+                    <div class="pb-2">
+                        <div class="gl-pg-row">
+                            <span class="gl-pg-label">Fysiek</span>
+                            <span class="gl-pg-pct">@displayFysPct.ToString("0.#")%</span>
+                        </div>
+                        <div class="progress gl-pg-bar" role="progressbar" aria-label="Fysieke voortgang @project.Name" aria-valuenow="@displayFysPct.ToString("0.##", inv)" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar gl-pg-bar-fys" style="--gl-fill-width:@(displayFysPct.ToString("0.##", inv))%"></div>
+                        </div>
+                    </div>
+                    <div class="pb-2">
+                        <div class="gl-pg-row">
+                            <span class="gl-pg-label">Financieel</span>
+                            <span class="gl-pg-pct">@displayFinPct.ToString("0.#")%</span>
+                        </div>
+                        <div class="progress gl-pg-bar" role="progressbar" aria-label="Financiële voortgang @project.Name" aria-valuenow="@displayFinPct.ToString("0.##", inv)" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar gl-pg-bar-hoog" style="--gl-fill-width:@(displayFinPct.ToString("0.##", inv))%"></div>
+                        </div>
+                    </div>
+                </div>
+            }
+            <div class="gl-werf-footer">
+                <div class="gl-resterende">
+                    @if (isOverdue)
+                    {
+                        <i class="bx bx-check-circle gl-icon-opgeleverd" aria-hidden="true"></i>
+                        <span class="gl-text-success">Opgeleverd op @project.DeliveryDate!.Value.ToString("dd/MM/yyyy")</span>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        @if (daysLeft.HasValue)
+                        {
+                            <span class="@(daysLeft.Value < 14 ? "gl-text-danger" : "")">@daysLeft.Value d resterend</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Geen opleverdatum</span>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </a>
+</div>
