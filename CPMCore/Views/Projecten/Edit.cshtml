@@ -10,11 +10,12 @@
     // een mislukte Save een validatiefout bevat.
     private static readonly (string Key, string[] Prefixes)[] TabMap = new[]
     {
-        ("algemeen",    new[] { "Project.Name", "Project.ProjectCode", "Project.Street", "Project.HouseNumber", "SelectedCountry", "SelectedPostalcode", "Project.Postalcode", "Project.Werfmelding", "Project.CommercialTitleNL", "Project.CommercialTextNL", "SelectedStatus", "Project.Status", "Project.ProjectType", "Project.DeliveryDateDef", "Project.TotalLandShare", "Project.IsPublished", "Project.StandardFotoName", "StandardFotoUpload" }),
-        ("planning",    new[] { "Project.StartDateConstruction", "Project.ExecutionDays", "Project.DeliveryDate", "Project.WheaterStation", "Project.AspNetUserID", "Project.SalesResponsibleUserID" }),
-        ("partners",    new[] { "Project.Developer", "Project.Builder", "Project.IssuerCompanyIdBuilder", "Project.IssuerCompanyIdLandOwner", "Project.Architect", "Project.Engineer", "Project.SecurityCoordinator", "Project.EpbReporter", "Project.Notary" }),
+        ("algemeen",    new[] { "Project.Name", "Project.ProjectCode", "Project.Street", "Project.HouseNumber", "SelectedCountry", "SelectedPostalcode", "Project.Postalcode", "Project.Werfmelding", "Project.AspNetUserID", "Project.Developer", "Project.Builder", "Project.IssuerCompanyIdBuilder", "Project.IssuerCompanyIdLandOwner" }),
+        ("status",      new[] { "SelectedStatus", "Project.Status", "Project.ProjectType", "Project.TotalLandShare", "Project.IsPublished", "Project.StandardFotoName", "StandardFotoUpload" }),
+        ("planning",    new[] { "Project.StartDateConstruction", "Project.ExecutionDays", "Project.DeliveryDate", "Project.DeliveryDateDef", "Project.WheaterStation" }),
+        ("partners",    new[] { "Project.Architect", "Project.Engineer", "Project.SecurityCoordinator", "Project.EpbReporter", "Project.Notary", "Project.SalesResponsibleUserID" }),
         ("documenten",  new[] { "Project.Doc" }),
-        ("seo",         new[] { "Project.Seo" }),
+        ("seo",         new[] { "Project.Seo", "Project.CommercialTitleNL", "Project.CommercialTextNL" }),
         ("coordinatie", new[] { "Project.Coordination", "Project.ContractType", "Project.IsCoordinationProject", "Project.IsOnlyCoordinationProject", "Project.KmAllowance", "ContractSlices", "HourlyRates" }),
     };
 }
@@ -48,10 +49,11 @@
     var tabDefs = new (string Key, string Label, string Icon)[]
     {
         ("algemeen", "Algemeen", "bx-info-circle"),
+        ("status", "Status & foto", "bx-flag"),
         ("planning", "Planning", "bx-calendar"),
         ("partners", "Partners", "bx-group"),
         ("documenten", "Documenten", "bx-check-shield"),
-        ("seo", "SEO", "bx-search-alt"),
+        ("seo", "SEO & website", "bx-search-alt"),
         ("coordinatie", "Coördinatie", "bx-briefcase"),
     };
 
@@ -66,7 +68,7 @@
     </style>
 }
 
-@using (Html.BeginForm("Edit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed gl-project-form gl-project-form--tabbed", enctype = "multipart/form-data" }))
+@using (Html.BeginForm("Edit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form gl-project-form", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.Project.Id)
@@ -74,28 +76,30 @@
 
     <div asp-validation-summary="All" class="alert alert-danger @(ViewData.ModelState.IsValid ? "d-none" : "")"></div>
 
-    <div class="card card-modern gl-project-tabcard">
-        <div class="card-body">
-            <div class="gl-tabs" role="tablist" aria-label="Projectgegevens" data-tabgroup="project-edit" data-force-tab="@firstErrorTab">
-                @foreach (var t in tabDefs)
+    <div class="gl-form-shell__tabs" role="tablist" aria-label="Projectgegevens" data-tabgroup="project-edit" data-force-tab="@firstErrorTab">
+        @foreach (var t in tabDefs)
+        {
+            var n = tabErrorCount(t.Key);
+            <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-@t.Key" data-tab="@t.Key"
+                    aria-controls="tab-@t.Key" aria-selected="@(t.Key == "algemeen" ? "true" : "false")"
+                    tabindex="@(t.Key == "algemeen" ? "0" : "-1")">
+                <i class="bx @t.Icon" aria-hidden="true"></i>
+                <span>@t.Label</span>
+                @if (n > 0)
                 {
-                    var n = tabErrorCount(t.Key);
-                    <button type="button" class="gl-tab" role="tab" id="tabbtn-@t.Key" data-tab="@t.Key"
-                            aria-controls="tab-@t.Key" aria-selected="@(t.Key == "algemeen" ? "true" : "false")"
-                            tabindex="@(t.Key == "algemeen" ? "0" : "-1")">
-                        <i class="bx @t.Icon" aria-hidden="true"></i>
-                        <span>@t.Label</span>
-                        @if (n > 0)
-                        {
-                            <span class="gl-tab__badge" title="@n fout(en) op dit tabblad">@n</span>
-                        }
-                    </button>
+                    <span class="gl-form-shell__tab-badge" title="@n fout(en) op dit tabblad">@n</span>
                 }
+            </button>
+        }
+    </div>
+
+    <div class="card card-modern gl-form-shell">
+        <div class="card-body">
+            <div id="tab-algemeen" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-algemeen" tabindex="0">
+                @await Html.PartialAsync("_ProjectFormGeneral", Model)
             </div>
 
-            <div id="tab-algemeen" class="gl-tabpanel" role="tabpanel" aria-labelledby="tabbtn-algemeen" tabindex="0">
-                @await Html.PartialAsync("_ProjectFormGeneral", Model)
-
+            <div id="tab-status" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-status" tabindex="0" hidden>
                 <section class="gl-form-section">
                     <div class="gl-form-section__body">
                         <div class="gl-form-section__head">
@@ -115,11 +119,6 @@
                                 @Html.DropDownListFor(m => m.Project.ProjectType, Html.GetEnumSelectList<ProjectType>(), new { @class = "form-control form-control-modern", id = "Project_ProjectType" })
                             </div>
                             <div class="gl-field">
-                                <label for="Project_DeliveryDateDef">@Html.DisplayNameFor(m => m.Project.DeliveryDateDef)</label>
-                                <input type="date" class="form-control form-control-modern" id="Project_DeliveryDateDef" name="Project.DeliveryDateDef"
-                                       value="@(Model.Project.DeliveryDateDef.HasValue ? Model.Project.DeliveryDateDef.Value.ToString("yyyy-MM-dd") : string.Empty)" />
-                            </div>
-                            <div class="gl-field">
                                 <label for="Project_TotalLandShare">@Html.DisplayNameFor(m => m.Project.TotalLandShare)</label>
                                 @Html.TextBoxFor(m => m.Project.TotalLandShare, new { @class = "form-control form-control-modern", type = "number", step = "0.01", min = "0", id = "Project_TotalLandShare" })
                             </div>
@@ -136,15 +135,15 @@
                 @await Html.PartialAsync("_ProjectFormMedia", Model)
             </div>
 
-            <div id="tab-planning" class="gl-tabpanel" role="tabpanel" aria-labelledby="tabbtn-planning" tabindex="0" hidden>
+            <div id="tab-planning" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-planning" tabindex="0" hidden>
                 @await Html.PartialAsync("_ProjectFormPlanning", Model)
             </div>
 
-            <div id="tab-partners" class="gl-tabpanel" role="tabpanel" aria-labelledby="tabbtn-partners" tabindex="0" hidden>
+            <div id="tab-partners" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-partners" tabindex="0" hidden>
                 @await Html.PartialAsync("_ProjectFormPartners", Model)
             </div>
 
-            <div id="tab-documenten" class="gl-tabpanel" role="tabpanel" aria-labelledby="tabbtn-documenten" tabindex="0" hidden>
+            <div id="tab-documenten" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-documenten" tabindex="0" hidden>
                 @if (canWriteProject)
                 {
                     @await Html.PartialAsync("_ProjectFormDocs", Model)
@@ -155,7 +154,31 @@
                 }
             </div>
 
-            <div id="tab-seo" class="gl-tabpanel" role="tabpanel" aria-labelledby="tabbtn-seo" tabindex="0" hidden>
+            <div id="tab-seo" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-seo" tabindex="0" hidden>
+                <section class="gl-form-section">
+                    <div class="gl-form-section__body">
+                        <div class="gl-form-section__head">
+                            <i class="bx bx-edit-alt" aria-hidden="true"></i>
+                            <div>
+                                <h2 class="gl-form-section__title">Website-presentatie</h2>
+                                <p class="gl-form-section__hint">De commerciële titel en tekst zoals getoond op de publieke website.</p>
+                            </div>
+                        </div>
+                        <div class="gl-field-grid">
+                            <div class="gl-field gl-field--full">
+                                <label for="Project_CommercialTitleNL">@Html.DisplayNameFor(m => m.Project.CommercialTitleNL)</label>
+                                @Html.TextBoxFor(m => m.Project.CommercialTitleNL, new { @class = "form-control form-control-modern", placeholder = "Commerciële titel" })
+                            </div>
+                            <div class="gl-field gl-field--full gl-field--wide">
+                                <label for="commercialTextEditorContainer">@Html.DisplayNameFor(m => m.Project.CommercialTextNL)</label>
+                                <div id="commercialTextEditorContainer"></div>
+                                @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "d-none", id = "commercialTextEditor" })
+                                <small class="text-muted">Opmaak (vet, lijsten, links) wordt bewaard.</small>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="gl-form-section">
                     <div class="gl-form-section__body">
                         <div class="gl-form-section__head">
@@ -174,27 +197,22 @@
                             <div class="gl-field gl-field--full gl-field--wide">
                                 <label for="Project_SeoDescription">Meta-omschrijving</label>
                                 @Html.TextAreaFor(m => m.Project.SeoDescription, 4, 40, new { @class = "form-control form-control-modern", placeholder = "Laat leeg voor automatische omschrijving", maxlength = "320", id = "Project_SeoDescription" })
-                                <small class="text-muted">Max. 155 tekens aanbevolen — getoond onder de titel in Google.</small>
+                                <small class="text-muted"><span id="seoDescCounter">0</span>/155 tekens aanbevolen — getoond onder de titel in Google.</small>
                             </div>
                         </div>
                     </div>
                 </section>
             </div>
 
-            <div id="tab-coordinatie" class="gl-tabpanel" role="tabpanel" aria-labelledby="tabbtn-coordinatie" tabindex="0" hidden>
+            <div id="tab-coordinatie" class="gl-form-shell__panel" role="tabpanel" aria-labelledby="tabbtn-coordinatie" tabindex="0" hidden>
                 @await Html.PartialAsync("_ProjectFormCoordinationCard", Model)
             </div>
-        </div>
-    </div>
 
-    <div class="row action-buttons">
-        <div class="col-12 col-md-auto">
-            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-                <i class="bx bx-save text-4 me-2" aria-hidden="true"></i> Wijzigingen opslaan
-            </button>
-        </div>
-        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-            <a href="@((TempData.Peek("Referrer") as string) ?? Url.Action("Detail", "Projecten", new { projectid = Model.Project.Id }))" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+            @await Html.PartialAsync("_FormShellActions", new CPMCore.Models.FormShellActionsModel
+            {
+                SubmitLabel = "Wijzigingen opslaan",
+                CancelUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("Detail", "Projecten", new { projectid = Model.Project.Id })
+            })
         </div>
     </div>
 }

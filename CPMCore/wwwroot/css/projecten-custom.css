@@ -1705,7 +1705,6 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
    veld-raster dat vanzelf 1/2/3 breed wordt. Geen wizard — alles op één
    pagina, gewoon compacter zodat wie het vaak invult er doorheen tabt.
    ========================================================== */
-.gl-project-form { max-width: 1160px; }
 .gl-project-form .gl-form-section { margin-bottom: 16px; }
 .gl-project-form .gl-form-section:last-of-type { margin-bottom: 0; }
 
@@ -1804,26 +1803,85 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
     display: block;
 }
 
-/* Verplichte-documenten checklist. */
-.gl-doc-checklist {
+/* Verplichte-documenten checklist — huisstijl-groen, twee kolommen, datum
+   van aanlevering (of "ontbreekt") rechts. De checkbox blijft een echt
+   <input>, enkel visueel verborgen, zodat toetsenbord/label-klik werkt; het
+   groene bolletje + de pil-achtergrond volgen de live checked-status via
+   :has() (geen JS nodig om de kleur te laten meebewegen met een klik). */
+.gl-doc2-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 10px 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 16px;
 }
-.gl-doc-checklist__item {
+@media (max-width: 575.98px) {
+    .gl-doc2-grid { grid-template-columns: 1fr; }
+}
+.gl-doc2-item {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 0;
-    padding: 9px 12px;
+    gap: 12px;
+    padding: 12px 16px;
     border: 1px solid var(--border, #e7e7e7);
-    border-radius: 8px;
-    font-size: .875rem;
-    font-weight: 500;
+    border-radius: 10px;
+    background: #fff;
     cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
 }
-.gl-doc-checklist__item:hover { background: var(--lightgreen, #e8f0eb); }
-.gl-doc-checklist__item .form-check-input { margin: 0; flex: none; }
+.gl-doc2-item:has(.gl-doc2-item__input:checked) {
+    background: var(--lightgreen, #e8f0eb);
+    border-color: var(--primary);
+}
+.gl-doc2-item:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.gl-doc2-item__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    margin: 0;
+}
+.gl-doc2-item__dot {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border, #e7e7e7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: background .12s ease, border-color .12s ease;
+}
+.gl-doc2-item__dot > i {
+    font-size: 15px;
+    opacity: 0;
+    transition: opacity .1s ease;
+}
+.gl-doc2-item:has(.gl-doc2-item__input:checked) .gl-doc2-item__dot {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+.gl-doc2-item:has(.gl-doc2-item__input:checked) .gl-doc2-item__dot > i { opacity: 1; }
+.gl-doc2-item__label {
+    flex: 1 1 auto;
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--text, #26313a);
+}
+.gl-doc2-item__value {
+    flex: none;
+    font-size: .8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+}
+.gl-doc2-item__value--missing { color: var(--danger, #b3452f); }
+@media (prefers-reduced-motion: reduce) {
+    .gl-doc2-item, .gl-doc2-item__dot, .gl-doc2-item__dot > i { transition: none; }
+}
 
 /* Losse infomelding onder het formulier. */
 .gl-form-note {
@@ -1854,77 +1912,130 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
 }
 .gl-switch-row > label small { font-weight: 400; }
 
-/* ==========================================================
-   Projecten/Bewerken — tabs
-   Onderstreepte tab-strip in de gl-* stijl; horizontaal scrollbaar op mobiel.
-   Panelen tonen/verbergen alleen (alle velden blijven in het formulier zodat
-   één Opslaan alles bewaart).
-   ========================================================== */
-.gl-tabs {
+/* Coördinatie — drie kaarten naast elkaar (Type & vergoeding / Contractschijven
+   / Uurtarieven) i.p.v. gestapelde secties met <hr>. Zelfde kaarttaal als de
+   rest van het systeem (Hairline-rand, Card-rest-schaduw, 7px radius). */
+.gl-coord-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+.gl-coord-card {
+    background: #fff;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+    padding: 20px 22px;
+}
+.gl-coord-card__head {
     display: flex;
-    gap: 2px;
-    margin: 0 0 22px;
-    border-bottom: 2px solid var(--border, #e7e7e7);
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
 }
-.gl-tabs::-webkit-scrollbar { display: none; }
-.gl-tab {
-    flex: 0 0 auto;
-    appearance: none;
-    background: none;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    padding: 11px 15px;
-    font-size: .875rem;
-    font-weight: 600;
-    line-height: 1;
-    color: var(--gl-detail-text-aa, #5f6b7a);
-    white-space: nowrap;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: color .12s ease, border-color .12s ease;
+.gl-coord-card__head-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
 }
-.gl-tab > i { font-size: 16px; }
-.gl-tab:hover { color: var(--text, #26313a); }
-.gl-tab[aria-selected="true"] {
+.gl-coord-card__icon {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius, 7px);
+    background: var(--lightgreen, #e8f0eb);
     color: var(--primary);
-    border-bottom-color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
 }
-.gl-tab:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: -3px;
-    border-radius: 4px;
-}
-.gl-tab__badge {
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    background: var(--danger, #b3452f);
-    color: #fff;
-    font-size: .6875rem;
+.gl-coord-card__title {
+    margin: 0;
+    font-size: .9375rem;
     font-weight: 700;
-    display: inline-flex;
+    color: var(--text, #26313a);
+}
+.gl-coord-card__subtitle {
+    margin: 2px 0 0;
+    font-size: .75rem;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+}
+
+.gl-coord-total {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border, #e7e7e7);
+}
+.gl-coord-total__label {
+    flex: none;
+    font-size: .8125rem;
+    font-weight: 700;
+    color: var(--text, #26313a);
+}
+.gl-coord-progress {
+    flex: 1 1 auto;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .07);
+    overflow: hidden;
+}
+.gl-coord-progress__fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border-radius: 999px;
+    background: var(--warning, #c17d1f);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .25s ease, background .15s ease;
+}
+.gl-coord-progress__fill.is-complete { background: var(--primary); }
+.gl-coord-total__pct {
+    flex: none;
+    min-width: 38px;
+    text-align: right;
+    font-size: .8125rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text, #26313a);
+}
+
+/* Schijf-/tariefrij: flex i.p.v. Bootstrap's .row/.col-lg-* — die breekt op
+   VIEWPORT-breedte, niet op de breedte van de (nu smalle, één-van-drie)
+   kaart, en liet een vaste 2/12-kolom lege strook rechts staan terwijl de
+   omschrijving verdrukt werd. De naam-/omschrijving-cel krijgt al het
+   overschot (flex:1), de knop deelt de rij-hoogte via align-items:stretch
+   (default), dus even hoog als de tekstvelden zonder een losse height. */
+.gl-coord-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.gl-coord-row__desc { flex: 1 1 auto; min-width: 0; }
+.gl-coord-row__pct { flex: 0 0 120px; }
+.gl-coord-row__del {
+    flex: 0 0 46px;
+    width: 46px;
+    padding: 0;
+    display: flex;
     align-items: center;
     justify-content: center;
 }
-.gl-tabpanel[hidden] { display: none; }
-.gl-tabpanel:focus { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
-    .gl-tab { transition: none; }
+    .gl-coord-progress__fill { transition: none; }
 }
+
+/* De tabs zelf (.gl-form-shell__tabs/__tab/__panel) leven nu in custom.css —
+   herbruikbaar over meerdere formulieren, zie daar. */
 
 /* Bare secties (binnen een tab-paneel, geen eigen card meer). */
 .gl-form-section { margin-bottom: 26px; }
 .gl-form-section:last-child { margin-bottom: 0; }
-
-/* Tab-kaart op Bewerken: één card met de strip bovenaan en het actieve paneel eronder. */
-.gl-project-tabcard { margin-bottom: 0; }
-.gl-project-form--tabbed .action-buttons { margin-top: 16px; }

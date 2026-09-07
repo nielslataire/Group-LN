@@ -1,0 +1,16 @@
+@model CPMCore.Models.FormShellActionsModel
+@*
+    Herbruikbare Opslaan/Annuleren-balk voor .gl-form-shell (zie custom.css,
+    "Formulierschil"). Altijd zichtbaar onderaan de schil (position: fixed
+    t.o.v. de viewport, zie het commentaar bij .gl-form-shell__actions),
+    grote knoppen in dezelfde stijl als de rest van de app (bv.
+    Projecten/AddContract) i.p.v. de kleinere topbar-knopmaat.
+    Gebruikt door Projecten/Bewerken en Projecten/Toevoegen; elk nieuw
+    formulier dat de schil gebruikt neemt deze partial gewoon over.
+*@
+<div class="gl-form-shell__actions">
+    <a href="@Model.CancelUrl" class="cancel-button btn btn-light border btn-px-4 py-3 font-weight-semibold text-color-dark text-3">@Model.CancelLabel</a>
+    <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+        <i class="bx @Model.SubmitIcon text-4 me-2" aria-hidden="true"></i>@Model.SubmitLabel
+    </button>
+</div>

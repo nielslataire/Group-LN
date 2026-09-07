@@ -10,26 +10,19 @@
             <i class="bx bx-info-circle" aria-hidden="true"></i>
             <div>
                 <h2 class="gl-form-section__title">Algemene info</h2>
-                <p class="gl-form-section__hint">Naam, code, adres en de commerciële teksten.</p>
+                <p class="gl-form-section__hint">Naam, code, adres, verantwoordelijke en de betrokken bedrijven.</p>
             </div>
         </div>
 
-        @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
+        @Html.HiddenFor(m => m.Project.Developer.ID, new { id = "Project_Developer_ID" })
+        @Html.HiddenFor(m => m.Project.Developer.Display, new { id = "Project_Developer_Display" })
+        @Html.HiddenFor(m => m.Project.Builder.ID, new { id = "Project_Builder_ID" })
+        @Html.HiddenFor(m => m.Project.Builder.Display, new { id = "Project_Builder_Display" })
 
         <div class="gl-field-grid">
-            <div class="gl-field">
-                <label for="Project_Name">@Html.DisplayNameFor(m => m.Project.Name) <span class="gl-req" aria-hidden="true">*</span></label>
-                @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off", required = "required" })
-                <span asp-validation-for="Project.Name" class="text-danger"></span>
-            </div>
+            @await Html.PartialAsync("_ProjectFormCoreFields", Model)
 
-            <div class="gl-field">
-                <label for="Project_ProjectCode">@Html.DisplayNameFor(m => m.Project.ProjectCode)</label>
-                @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
-                <span asp-validation-for="Project.ProjectCode" class="text-danger"></span>
-            </div>
-
-            <div class="gl-field gl-field--full">
+            <div class="gl-field gl-field--full gl-field--wide">
                 <label for="Project_Street">@Html.DisplayNameFor(m => m.Project.Street)</label>
                 <div class="gl-field-address">
                     <div class="gl-street">
@@ -39,24 +32,6 @@
                         @Html.TextBoxFor(m => m.Project.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr.", aria_label = "Huisnummer" })
                     </div>
                 </div>
-            </div>
-
-            <div class="gl-field">
-                <label for="lstProjectCountries">Land</label>
-                @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
-            </div>
-
-            <div class="gl-field">
-                <label for="PostalSelect">Gemeente <span class="gl-req" aria-hidden="true">*</span></label>
-                <select id="PostalSelect" class="form-control w-100" aria-label="Gemeente">
-                    @if (Model.SelectedPostalcode > 0)
-                    {
-                        <option value="@Model.SelectedPostalcode" selected>
-                            @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
-                        </option>
-                    }
-                </select>
-                <span id="postalSelectError" class="text-danger" hidden>Kies een gemeente uit de lijst.</span>
             </div>
 
             @if (showWerfmelding)
@@ -71,16 +46,31 @@
                 </div>
             }
 
-            <div class="gl-field gl-field--full">
-                <label for="Project_CommercialTitleNL">@Html.DisplayNameFor(m => m.Project.CommercialTitleNL)</label>
-                @Html.TextBoxFor(m => m.Project.CommercialTitleNL, new { @class = "form-control form-control-modern", placeholder = "Commerciële titel" })
+            <div class="gl-field">
+                <label for="Project_IssuerCompanyIdBuilder">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdBuilder)</label>
+                @Html.DropDownListFor(m => m.Project.IssuerCompanyIdBuilder, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdBuilder), "-- Selecteer --", new { @class = "form-control form-control-modern", id = "Project_IssuerCompanyIdBuilder" })
             </div>
-
-            <div class="gl-field gl-field--full gl-field--wide">
-                <label for="commercialTextEditorContainer">@Html.DisplayNameFor(m => m.Project.CommercialTextNL)</label>
-                <div id="commercialTextEditorContainer"></div>
-                @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "d-none", id = "commercialTextEditor" })
-                <small class="text-muted">Opmaak (vet, lijsten, links) wordt bewaard.</small>
+            <div class="gl-field">
+                <label for="Project_IssuerCompanyIdLandOwner">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdLandOwner)</label>
+                @Html.DropDownListFor(m => m.Project.IssuerCompanyIdLandOwner, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdLandOwner), "-- Selecteer --", new { @class = "form-control form-control-modern", id = "Project_IssuerCompanyIdLandOwner" })
+            </div>
+            <div class="gl-field">
+                <label for="BuilderSelect">@Html.DisplayNameFor(m => m.Project.Builder)</label>
+                <select id="BuilderSelect" class="form-control form-control-modern w-100" aria-label="Bouwheer">
+                    @if (Model.Project.Builder.ID > 0)
+                    {
+                        <option value="@Model.Project.Builder.ID" selected>@Model.Project.Builder.Display</option>
+                    }
+                </select>
+            </div>
+            <div class="gl-field">
+                <label for="DeveloperSelect">@Html.DisplayNameFor(m => m.Project.Developer)</label>
+                <select id="DeveloperSelect" class="form-control form-control-modern w-100" aria-label="Projectontwikkelaar">
+                    @if (Model.Project.Developer.ID > 0)
+                    {
+                        <option value="@Model.Project.Developer.ID" selected>@Model.Project.Developer.Display</option>
+                    }
+                </select>
             </div>
         </div>
     </div>

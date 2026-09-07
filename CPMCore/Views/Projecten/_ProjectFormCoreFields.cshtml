@@ -1,0 +1,46 @@
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+@*
+    Naam/Projectcode/Land/Gemeente/Verantwoordelijke — de velden die
+    Projecten/Toevoegen en de Algemeen-tab van Projecten/Bewerken tot nu toe
+    allebei apart onderhielden (en dus konden laten uiteenlopen). Callers
+    plaatsen dit binnen hun eigen .gl-field-grid, ernaast/erna hun overige
+    velden (Straat, Werfmelding, ... op Bewerken; Verkoopverantwoordelijke,
+    Standaard foto, ... op Toevoegen).
+*@
+@Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
+
+<div class="gl-field">
+    <label for="Project_Name">@Html.DisplayNameFor(m => m.Project.Name) <span class="gl-req" aria-hidden="true">*</span></label>
+    @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off", required = "required" })
+    <span asp-validation-for="Project.Name" class="text-danger"></span>
+</div>
+
+<div class="gl-field">
+    <label for="Project_ProjectCode">@Html.DisplayNameFor(m => m.Project.ProjectCode)</label>
+    @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
+    <span asp-validation-for="Project.ProjectCode" class="text-danger"></span>
+</div>
+
+<div class="gl-field">
+    <label for="lstProjectCountries">Land</label>
+    @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
+</div>
+
+<div class="gl-field">
+    <label for="PostalSelect">Gemeente <span class="gl-req" aria-hidden="true">*</span></label>
+    <select id="PostalSelect" class="form-control form-control-modern w-100" aria-label="Gemeente" aria-required="true">
+        @if (Model.SelectedPostalcode > 0)
+        {
+            <option value="@Model.SelectedPostalcode" selected>
+                @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
+            </option>
+        }
+    </select>
+    <span id="postalSelectError" class="text-danger" role="alert" hidden>Kies een gemeente uit de lijst.</span>
+</div>
+
+<div class="gl-field">
+    <label for="Project_AspNetUserID">@Html.DisplayNameFor(m => m.Project.AspNetUserID)</label>
+    @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_AspNetUserID" })
+</div>

@@ -536,6 +536,171 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     .gl-page-header__actions { width: 100%; }
 }
 
+/* ── Formulierschil (gl-form-shell) ──────────────────────────────────────
+   Herbruikbare, volle-breedte "one-screen" schil voor tabformulieren.
+   .gl-form-shell__tabs zit BUITEN de kaart — het is de primaire in-page
+   navigatie van dit scherm, niet een widget die toevallig in een kaart zit,
+   dus krijgt het paginabrede chrome direct onder de topbar (negative-margin
+   uitbraak uit .content-body's padding), net zoals de topbar zelf geen
+   marge heeft. Het paneel (flex:1, eigen overflow-y) blijft wél in een
+   kaart eronder. De paginabody scrolt nooit; enkel het actieve paneel, en
+   alleen als zijn eigen inhoud de resterende hoogte overschrijdt. Eerst
+   gebouwd voor Projecten/Toevoegen + Bewerken; nieuwe klassenprefix (i.p.v.
+   het vroegere .gl-tabs/.gl-tab/.gl-tabpanel in projecten-custom.css)
+   voorkomt de toevallige naamsbotsing met klanten-custom.css' eigen,
+   ongerelateerde .gl-tabs (een Bootstrap nav-tabs-wrapper) — zo kan elk
+   formulier dat zijn .gl-form-section/.gl-field-grid-inhoud in deze schil
+   wrapt dezelfde tabs + one-screen-fit + volle breedte krijgen. Opslaan/
+   Annuleren leven in .gl-form-shell__actions (Views/Shared/
+   _FormShellActions.cshtml), niet in de topbar (dat paste bij
+   Detail.cshtml's paginabrede navigatie-acties, niet bij een
+   formulier-submit). */
+.gl-form-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* 80px = .content-body padding (40px boven + 40px onder); 54px = hoogte
+       van .gl-form-shell__tabs hierboven (nu buiten deze kaart, dus telt
+       niet mee in de flex-flow); 24px = marge tussen tabstrip en kaart;
+       84px = hoogte van .gl-form-shell__actions hieronder (grote
+       py-3-knoppen), plus de veilige zone onderaan notched telefoons die
+       die balk er zelf bij optelt — die is position:fixed en telt dus ook
+       niet mee. Alles bij elkaar de ruimte die de kaart zelf NIET krijgt,
+       zodat ze precies past tussen tabstrip en actiebalk. */
+    height: calc(100vh - var(--topbar-height) - 80px - 54px - 24px - 84px - env(safe-area-inset-bottom, 0px));
+    margin-bottom: 0;
+}
+.gl-form-shell > .card-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+}
+
+.gl-form-shell__tabs {
+    height: 54px;
+    display: flex;
+    gap: 2px;
+    padding: 0 40px;
+    /* breekt uit .content-body's 40px padding-top ÉN de losse
+       "html.modern.fixed .content-body { margin-top: 10px }" uit theme.css
+       (een aparte, ongeconditioneerde regel — geen padding, dus een gewone
+       negative margin op een kind kan 'm niet "gratis" meenemen): 40+10=50px
+       naar boven, zodat de tabstrip echt vlak onder de topbar valt. */
+    margin: -50px -40px 24px;
+    background: #fff;
+    border-bottom: 2px solid var(--border, #e7e7e7);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.gl-form-shell__tabs::-webkit-scrollbar { display: none; }
+.gl-form-shell__tab {
+    flex: 0 0 auto;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 15px;
+    font-size: .875rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color .12s ease, border-color .12s ease;
+}
+.gl-form-shell__tab > i { font-size: 16px; }
+.gl-form-shell__tab:hover { color: var(--text, #26313a); }
+.gl-form-shell__tab[aria-selected="true"] {
+    color: var(--primary);
+    border-bottom-color: var(--warning, #c17d1f);
+}
+.gl-form-shell__tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -3px;
+    border-radius: 4px;
+}
+.gl-form-shell__tab-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--danger, #b3452f);
+    color: #fff;
+    font-size: .6875rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gl-form-shell__panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px;
+}
+.gl-form-shell__panel[hidden] { display: none; }
+.gl-form-shell__panel:focus { outline: none; }
+.gl-form-shell__panel:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -3px;
+    border-radius: 4px;
+}
+
+/* Opslaan/Annuleren horen bij dít formulier, niet bij de generieke topbar —
+   daarom een derde, altijd zichtbare zone onderaan de schil zelf. Echt
+   `position: fixed` t.o.v. de viewport (zoals het thema's eigen, niet meer
+   gebruikte .action-buttons-fixed .action-buttons-mechanisme) i.p.v.
+   `sticky`: de zone is een gewone flex-sibling van het paneel, niet er een
+   afstammeling van, dus heeft ze geen scrollende voorouder om "sticky" aan
+   op te hangen — `sticky` bleek daardoor in de praktijk niets te doen zodra
+   .gl-form-shell zelf ook maar een fractie afweek van de exacte viewport-
+   hoogte. `fixed` maakt de balk onafhankelijk van die berekening: altijd
+   letterlijk onderaan het browservenster, links uitgelijnd naast de
+   sidebar. .gl-form-shell trekt hierboven zijn eigen hoogte al met 84px
+   (de hoogte van deze balk) in om eronder te blijven passen. */
+.gl-form-shell__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border, #e7e7e7);
+    background: var(--surface, #fff);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+}
+@media (min-width: 768px) {
+    .gl-form-shell__actions { left: 300px; }
+    html.sidebar-left-collapsed .gl-form-shell__actions { left: 73px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-form-shell__tab { transition: none; }
+}
+
+@media (max-width: 767.98px) {
+    /* ruimte voor de vaste actiebalk onderaan, incl. de safe-area die de
+       balk zelf ook krijgt (env(...) telt niet mee in een simpele optelling,
+       dus expliciet herhaald i.p.v. "84px + die van de balk"). */
+    .gl-form-shell { height: auto; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+    .gl-form-shell > .card-body { display: block; padding: 20px; }
+    /* .content-body heeft op mobiel al geen top-padding (0 15px 15px), dus
+       enkel links/rechts hoeven we uit te breken naar de echte rand. */
+    .gl-form-shell__tabs { height: auto; padding: 0 15px; margin: 0 -15px 16px; }
+    .gl-form-shell__panel { overflow-y: visible; padding: 0; }
+    .gl-form-shell__actions { padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); }
+}
+
 /* ── Skip-to-content link (a11y: WCAG 2.4.1) ─────────────────────────────
    Verborgen tot hij focus krijgt via Tab; springt dan zichtbaar linksboven.
    ─────────────────────────────────────────────────────────────────────── */

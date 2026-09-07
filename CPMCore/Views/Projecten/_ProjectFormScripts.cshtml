@@ -119,6 +119,18 @@
                 });
             }
 
+            // ── SEO-omschrijving: live teller t.o.v. de 155 tekens-aanbeveling ──
+            var $seoDesc = $('#Project_SeoDescription');
+            var $seoDescCounter = $('#seoDescCounter');
+            if ($seoDesc.length && $seoDescCounter.length) {
+                var updateSeoDescCounter = function () {
+                    var len = $seoDesc.val().length;
+                    $seoDescCounter.text(len).toggleClass('text-danger', len > 155);
+                };
+                $seoDesc.on('input', updateSeoDescCounter);
+                updateSeoDescCounter();
+            }
+
             // ── Coördinatie: schijven + regie (alleen bij Bewerken) ──────────
             if ($('#coordinationCard').length) {
                 var availableUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
@@ -140,10 +152,9 @@
                     $('.slice-pct').each(function () { total += parseFloat($(this).val()) || 0; });
                     var rounded = Math.round(total * 100) / 100;
                     $('#slicesTotal').text(rounded);
-                    $('#slicesTotalBadge')
-                        .toggleClass('bg-success', rounded === 100)
-                        .toggleClass('bg-secondary', rounded !== 100)
-                        .attr('title', rounded === 100 ? 'Volledig verdeeld' : 'Nog niet 100% verdeeld');
+                    $('#slicesProgressFill')
+                        .css('transform', 'scaleX(' + (Math.min(Math.max(rounded, 0), 100) / 100) + ')')
+                        .toggleClass('is-complete', rounded === 100);
                 }
 
                 $('#IsCoordinationProject').on('change', updateCoordinationVisibility);
@@ -154,10 +165,10 @@
                 $('#addSlice').on('click', function () {
                     var idx = sliceIndex++;
                     $('#slicesContainer').append(
-                        '<div class="row slice-row mb-2">' +
-                        '<div class="col-lg-6"><input type="text" name="ContractSlices[' + idx + '].Description" class="form-control form-control-modern" placeholder="Omschrijving" aria-label="Omschrijving schijf" /></div>' +
-                        '<div class="col-lg-3"><div class="input-group"><input type="number" name="ContractSlices[' + idx + '].Percentage" class="form-control form-control-modern slice-pct" step="0.01" min="0.01" max="100" placeholder="%" aria-label="Percentage schijf" /><span class="input-group-text">%</span></div></div>' +
-                        '<div class="col-lg-1"><button type="button" class="btn btn-outline-danger btn-sm remove-slice" aria-label="Schijf verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button></div>' +
+                        '<div class="gl-coord-row slice-row">' +
+                        '<div class="gl-coord-row__desc"><input type="text" name="ContractSlices[' + idx + '].Description" class="form-control form-control-modern" placeholder="Omschrijving" aria-label="Omschrijving schijf" /></div>' +
+                        '<div class="gl-coord-row__pct"><div class="input-group"><input type="number" name="ContractSlices[' + idx + '].Percentage" class="form-control form-control-modern slice-pct" step="0.01" min="0.01" max="100" placeholder="%" aria-label="Percentage schijf" /><span class="input-group-text">%</span></div></div>' +
+                        '<button type="button" class="btn btn-outline-danger gl-coord-row__del remove-slice" aria-label="Schijf verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button>' +
                         '</div>');
                     updateSlicesTotal();
                 });
@@ -182,11 +193,11 @@
                 $('#addRate').on('click', function () {
                     var idx = rateIndex++;
                     $('#ratesContainer').append(
-                        '<div class="row rate-row mb-2">' +
-                        '<div class="col-lg-6"><select name="HourlyRates[' + idx + '].UserId" class="form-control form-control-modern rate-user" aria-label="Persoon">' + buildUserOptions() + '</select>' +
+                        '<div class="gl-coord-row rate-row">' +
+                        '<div class="gl-coord-row__desc"><select name="HourlyRates[' + idx + '].UserId" class="form-control form-control-modern rate-user" aria-label="Persoon">' + buildUserOptions() + '</select>' +
                         '<input type="hidden" name="HourlyRates[' + idx + '].UserFullName" value="" /></div>' +
-                        '<div class="col-lg-3"><div class="input-group"><span class="input-group-text">&euro;</span><input type="number" name="HourlyRates[' + idx + '].HourlyRate" class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" aria-label="Uurtarief" /></div></div>' +
-                        '<div class="col-lg-1"><button type="button" class="btn btn-outline-danger btn-sm remove-rate" aria-label="Tarief verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button></div>' +
+                        '<div class="gl-coord-row__pct"><div class="input-group"><span class="input-group-text">&euro;</span><input type="number" name="HourlyRates[' + idx + '].HourlyRate" class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" aria-label="Uurtarief" /></div></div>' +
+                        '<button type="button" class="btn btn-outline-danger gl-coord-row__del remove-rate" aria-label="Tarief verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button>' +
                         '</div>');
                 });
                 $(document).on('change', '.rate-user', function () {
@@ -218,10 +229,10 @@
                 e.stopImmediatePropagation();
                 $err.removeAttr('hidden');
                 // Als het veld op een verborgen tab staat: eerst dat tabblad tonen.
-                var $panel = $postal.closest('.gl-tabpanel');
+                var $panel = $postal.closest('.gl-form-shell__panel');
                 if ($panel.length) {
                     var key = $panel[0].id.replace('tab-', '');
-                    var $btn = $('.gl-tab[data-tab="' + key + '"]');
+                    var $btn = $('.gl-form-shell__tab[data-tab="' + key + '"]');
                     if ($btn.length) { $btn[0].click(); }
                 }
                 $postal.next('.select2').find('.select2-selection').trigger('focus');
@@ -230,13 +241,50 @@
             $(document).on('select2:select', '#PostalSelect', function () {
                 $('#postalSelectError').attr('hidden', true);
             });
+            // Proactief i.p.v. pas bij een mislukte Save: zodra de gebruiker de
+            // lijst opent en weer sluit zonder iets te kiezen, meteen tonen —
+            // zelfde live-gevoel als de schijven-totaalbalk hieronder.
+            $(document).on('select2:close', '#PostalSelect', function () {
+                var chosen = parseInt($('#SelectedPostalcode').val(), 10) || 0;
+                if (chosen === 0) { $('#postalSelectError').removeAttr('hidden'); }
+            });
+
+            // ── Contractschijven moeten samen 100% zijn wanneer actief ───────
+            var $slicesSection = $('#slicesSection');
+            if ($slicesSection.length) {
+                $form.on('submit', function (e) {
+                    if (!$slicesSection.is(':visible')) return;
+                    var total = 0;
+                    $('.slice-pct').each(function () { total += parseFloat($(this).val()) || 0; });
+                    var rounded = Math.round(total * 100) / 100;
+                    var $err = $('#slicesTotalError');
+                    if (rounded === 100) { $err.attr('hidden', true); return; }
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    $err.removeAttr('hidden');
+                    var $panel = $slicesSection.closest('.gl-form-shell__panel');
+                    if ($panel.length) {
+                        var key = $panel[0].id.replace('tab-', '');
+                        var $btn = $('.gl-form-shell__tab[data-tab="' + key + '"]');
+                        if ($btn.length) { $btn[0].click(); }
+                    }
+                    $err[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            }
 
             // ── Niet-opgeslagen wijzigingen waarschuwing ─────────────────────
             var formDirty = false;
             $form.on('change input', ':input', function () { formDirty = true; });
             $form.on('submit', function () { formDirty = false; });
-            // Annuleren is een bewuste keuze — geen waarschuwing.
-            $form.find('.cancel-button').on('click', function () { formDirty = false; });
+            // Annuleren bij niet-opgeslagen wijzigingen: eerst bevestigen, geen
+            // stille discard naast de Opslaan-knop.
+            $(document).on('click', '.cancel-button', function (e) {
+                if (formDirty && !window.confirm('Je hebt niet-opgeslagen wijzigingen. Toch annuleren?')) {
+                    e.preventDefault();
+                    return;
+                }
+                formDirty = false;
+            });
             window.addEventListener('beforeunload', function (e) {
                 if (!formDirty) return;
                 e.preventDefault();

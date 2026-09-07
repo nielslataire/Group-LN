@@ -1,5 +1,32 @@
 @using CPMCore.Models.Projecten
+@using BOCore
 @model IProjectFormModel
+@{
+    // Deze partial wordt enkel vanuit Bewerken gerenderd (Toevoegen heeft geen
+    // documenten-tab), dus de cast is veilig — Docs leeft bewust niet op de
+    // gedeelde IProjectFormModel-interface, zie de opmerking daar.
+    var edit = Model as EditProjectDetail;
+    var docDatesByType = (edit?.Docs ?? new List<ProjectDocBO>())
+        .Where(d => d.DocDate.HasValue)
+        .GroupBy(d => d.Type)
+        .ToDictionary(g => g.Key, g => g.Max(d => d.DocDate));
+
+    DateOnly? DocDateFor(ProjectDocType type) => docDatesByType.TryGetValue(type, out var d) ? d : null;
+
+    // (Formulierveld, is dit document verplicht voor dit project?, label, datum indien aangeleverd)
+    // Voorlopige/definitieve oplevering tonen de echte opleverdatum uit Planning;
+    // de overige vijf tonen de datum van het laatst geüploade document van dat type.
+    var docItems = new (string FieldName, bool? Required, string Label, DateOnly? DeliveredOn)[]
+    {
+        ("Project.DocDelivery", Model.Project.DocDelivery, "Voorlopige oplevering", Model.Project.DeliveryDate),
+        ("Project.DocDefDelivery", Model.Project.DocDefDelivery, "Definitieve oplevering", Model.Project.DeliveryDateDef),
+        ("Project.DocPID", Model.Project.DocPID, "Postinterventiedossier", DocDateFor(ProjectDocType.PID)),
+        ("Project.DocElectricalInspection", Model.Project.DocElectricalInspection, "Elektrische keuring", DocDateFor(ProjectDocType.Electrical_inspection)),
+        ("Project.DocWaterInspection", Model.Project.DocWaterInspection, "Waterkeuring", DocDateFor(ProjectDocType.Water_inspection)),
+        ("Project.DocFireInspection", Model.Project.DocFireInspection, "Branddetectie keuring", DocDateFor(ProjectDocType.Fire_inspection)),
+        ("Project.DocSewerInspection", Model.Project.DocSewerInspection, "Rioolkeuring", DocDateFor(ProjectDocType.Sewer_inspection)),
+    };
+}
 
 <section class="gl-form-section">
     <div class="gl-form-section__body">
@@ -7,39 +34,22 @@
             <i class="bx bx-check-shield" aria-hidden="true"></i>
             <div>
                 <h2 class="gl-form-section__title">Verplichte documenten</h2>
-                <p class="gl-form-section__hint">Vink aan welke opleveringsdocumenten binnen zijn.</p>
+                <p class="gl-form-section__hint">Documenten die verplicht aan te leveren zijn voor dit project.</p>
             </div>
         </div>
 
-        <div class="gl-doc-checklist">
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocDelivery", Model.Project.DocDelivery ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocDelivery)</span>
-            </label>
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocDefDelivery", Model.Project.DocDefDelivery ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocDefDelivery)</span>
-            </label>
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocPID", Model.Project.DocPID ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocPID)</span>
-            </label>
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocElectricalInspection", Model.Project.DocElectricalInspection ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocElectricalInspection)</span>
-            </label>
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocWaterInspection", Model.Project.DocWaterInspection ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocWaterInspection)</span>
-            </label>
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocFireInspection", Model.Project.DocFireInspection ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocFireInspection)</span>
-            </label>
-            <label class="gl-doc-checklist__item">
-                @Html.CheckBox("Project.DocSewerInspection", Model.Project.DocSewerInspection ?? false, new { @class = "form-check-input" })
-                <span>@Html.DisplayNameFor(m => m.Project.DocSewerInspection)</span>
-            </label>
+        <div class="gl-doc2-grid">
+            @foreach (var item in docItems)
+            {
+                <label class="gl-doc2-item">
+                    @Html.CheckBox(item.FieldName, item.Required ?? false, new { @class = "gl-doc2-item__input" })
+                    <span class="gl-doc2-item__dot"><i class="bx bx-check" aria-hidden="true"></i></span>
+                    <span class="gl-doc2-item__label">@item.Label</span>
+                    <span class="gl-doc2-item__value @(item.DeliveredOn.HasValue ? "" : "gl-doc2-item__value--missing")">
+                        @(item.DeliveredOn.HasValue ? item.DeliveredOn.Value.ToString("dd/MM/yy") : "ontbreekt")
+                    </span>
+                </label>
+            }
         </div>
     </div>
 </section>

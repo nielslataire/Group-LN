@@ -10,14 +10,10 @@
             <i class="bx bx-group" aria-hidden="true"></i>
             <div>
                 <h2 class="gl-form-section__title">Partners</h2>
-                <p class="gl-form-section__hint">De betrokken bedrijven en de facturatiebedrijven.</p>
+                <p class="gl-form-section__hint">Architect, veiligheid, EPB, notaris en verkoopverantwoordelijke.</p>
             </div>
         </div>
 
-        @Html.HiddenFor(m => m.Project.Developer.ID, new { id = "Project_Developer_ID" })
-        @Html.HiddenFor(m => m.Project.Developer.Display, new { id = "Project_Developer_Display" })
-        @Html.HiddenFor(m => m.Project.Builder.ID, new { id = "Project_Builder_ID" })
-        @Html.HiddenFor(m => m.Project.Builder.Display, new { id = "Project_Builder_Display" })
         @Html.HiddenFor(m => m.Project.Notary.ID, new { id = "Project_Notary_ID" })
         @Html.HiddenFor(m => m.Project.Notary.Display, new { id = "Project_Notary_Display" })
         @if (showExtended)
@@ -33,39 +29,11 @@
         }
 
         <div class="gl-field-grid">
-            <div class="gl-field">
-                <label for="DeveloperSelect">@Html.DisplayNameFor(m => m.Project.Developer)</label>
-                <select id="DeveloperSelect" class="form-control w-100" aria-label="Projectontwikkelaar">
-                    @if (Model.Project.Developer.ID > 0)
-                    {
-                        <option value="@Model.Project.Developer.ID" selected>@Model.Project.Developer.Display</option>
-                    }
-                </select>
-            </div>
-            <div class="gl-field">
-                <label for="BuilderSelect">@Html.DisplayNameFor(m => m.Project.Builder)</label>
-                <select id="BuilderSelect" class="form-control w-100" aria-label="Bouwheer">
-                    @if (Model.Project.Builder.ID > 0)
-                    {
-                        <option value="@Model.Project.Builder.ID" selected>@Model.Project.Builder.Display</option>
-                    }
-                </select>
-            </div>
-
-            <div class="gl-field">
-                <label for="Project_IssuerCompanyIdBuilder">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdBuilder)</label>
-                @Html.DropDownListFor(m => m.Project.IssuerCompanyIdBuilder, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdBuilder), "-- Selecteer --", new { @class = "form-control form-control-modern", id = "Project_IssuerCompanyIdBuilder" })
-            </div>
-            <div class="gl-field">
-                <label for="Project_IssuerCompanyIdLandOwner">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdLandOwner)</label>
-                @Html.DropDownListFor(m => m.Project.IssuerCompanyIdLandOwner, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdLandOwner), "-- Selecteer --", new { @class = "form-control form-control-modern", id = "Project_IssuerCompanyIdLandOwner" })
-            </div>
-
             @if (showExtended)
             {
                 <div class="gl-field">
                     <label for="ArchitectSelect">@Html.DisplayNameFor(m => m.Project.Architect)</label>
-                    <select id="ArchitectSelect" class="form-control w-100" aria-label="Architect">
+                    <select id="ArchitectSelect" class="form-control form-control-modern w-100" aria-label="Architect">
                         @if (Model.Project.Architect.ID > 0)
                         {
                             <option value="@Model.Project.Architect.ID" selected>@Model.Project.Architect.Display</option>
@@ -74,7 +42,7 @@
                 </div>
                 <div class="gl-field">
                     <label for="EngineerSelect">@Html.DisplayNameFor(m => m.Project.Engineer)</label>
-                    <select id="EngineerSelect" class="form-control w-100" aria-label="Ingenieur">
+                    <select id="EngineerSelect" class="form-control form-control-modern w-100" aria-label="Ingenieur">
                         @if (Model.Project.Engineer.ID > 0)
                         {
                             <option value="@Model.Project.Engineer.ID" selected>@Model.Project.Engineer.Display</option>
@@ -83,7 +51,7 @@
                 </div>
                 <div class="gl-field">
                     <label for="SecuritySelect">@Html.DisplayNameFor(m => m.Project.SecurityCoordinator)</label>
-                    <select id="SecuritySelect" class="form-control w-100" aria-label="Veiligheidscoördinator">
+                    <select id="SecuritySelect" class="form-control form-control-modern w-100" aria-label="Veiligheidscoördinator">
                         @if (Model.Project.SecurityCoordinator.ID > 0)
                         {
                             <option value="@Model.Project.SecurityCoordinator.ID" selected>@Model.Project.SecurityCoordinator.Display</option>
@@ -92,7 +60,7 @@
                 </div>
                 <div class="gl-field">
                     <label for="EpbSelect">@Html.DisplayNameFor(m => m.Project.EpbReporter)</label>
-                    <select id="EpbSelect" class="form-control w-100" aria-label="EPB-verslaggever">
+                    <select id="EpbSelect" class="form-control form-control-modern w-100" aria-label="EPB-verslaggever">
                         @if (Model.Project.EpbReporter.ID > 0)
                         {
                             <option value="@Model.Project.EpbReporter.ID" selected>@Model.Project.EpbReporter.Display</option>
@@ -103,12 +71,16 @@
 
             <div class="gl-field">
                 <label for="NotarySelect">@Html.DisplayNameFor(m => m.Project.Notary)</label>
-                <select id="NotarySelect" class="form-control w-100" aria-label="Notaris">
+                <select id="NotarySelect" class="form-control form-control-modern w-100" aria-label="Notaris">
                     @if (Model.Project.Notary.ID > 0)
                     {
                         <option value="@Model.Project.Notary.ID" selected>@Model.Project.Notary.Display</option>
                     }
                 </select>
+            </div>
+            <div class="gl-field">
+                <label for="Project_SalesResponsibleUserID">@Html.DisplayNameFor(m => m.Project.SalesResponsibleUserID)</label>
+                @Html.DropDownListFor(m => m.Project.SalesResponsibleUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.SalesResponsibleUserID), "Selecteer een verkoopverantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_SalesResponsibleUserID" })
             </div>
         </div>
     </div>

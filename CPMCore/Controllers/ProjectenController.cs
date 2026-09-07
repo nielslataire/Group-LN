@@ -694,6 +694,7 @@ namespace CPMCore.Controllers
             }
 
             model.Project = response.Value;
+            model.Docs = service.GetProjectDocs(projectid).Values;
             model.Project.Postalcode.Country.CountryId = model.Project.Postalcode.Country.CountryId == 0 ? 19 : model.Project.Postalcode.Country.CountryId;
             model.Project.Postalcode.Country.ISOCode = string.IsNullOrWhiteSpace(model.Project.Postalcode.Country.ISOCode) ? "BE" : model.Project.Postalcode.Country.ISOCode;
             model.SelectedCountry = model.Project.Postalcode.Country.CountryId;

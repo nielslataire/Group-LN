@@ -6,10 +6,10 @@
 *@
 <script>
     (function () {
-        var strip = document.querySelector('.gl-tabs[data-tabgroup="project-edit"]');
+        var strip = document.querySelector('.gl-form-shell__tabs[data-tabgroup="project-edit"]');
         if (!strip) return;
 
-        var tabs = Array.prototype.slice.call(strip.querySelectorAll('.gl-tab'));
+        var tabs = Array.prototype.slice.call(strip.querySelectorAll('.gl-form-shell__tab'));
         var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
 
         function activate(name, updateHash) {

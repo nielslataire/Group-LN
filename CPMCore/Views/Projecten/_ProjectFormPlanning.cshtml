@@ -7,7 +7,7 @@
             <i class="bx bx-calendar" aria-hidden="true"></i>
             <div>
                 <h2 class="gl-form-section__title">Planning</h2>
-                <p class="gl-form-section__hint">Uitvoering en verantwoordelijken.</p>
+                <p class="gl-form-section__hint">Uitvoering en oplevering.</p>
             </div>
         </div>
 
@@ -24,15 +24,9 @@
                 <label for="Project_ExecutionDays">@Html.DisplayNameFor(m => m.Project.ExecutionDays)</label>
                 @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "form-control form-control-modern", type = "number", min = "0", id = "Project_ExecutionDays" })
             </div>
-
-            <div class="gl-field">
-                <label for="Project_DeliveryDate">@Html.DisplayNameFor(m => m.Project.DeliveryDate)</label>
-                <input type="date" class="form-control form-control-modern" id="Project_DeliveryDate" name="Project.DeliveryDate"
-                       value="@(Model.Project.DeliveryDate.HasValue ? Model.Project.DeliveryDate.Value.ToString("yyyy-MM-dd") : string.Empty)" />
-            </div>
             <div class="gl-field">
                 <label for="WheaterSelect">@Html.DisplayNameFor(m => m.Project.WheaterStation)</label>
-                <select id="WheaterSelect" class="form-control w-100" aria-label="Weerstation">
+                <select id="WheaterSelect" class="form-control form-control-modern w-100" aria-label="Weerstation">
                     @if (Model.Project.WheaterStation.Id > 0)
                     {
                         <option value="@Model.Project.WheaterStation.Id" selected>@Model.Project.WheaterStation.Name</option>
@@ -41,12 +35,14 @@
             </div>
 
             <div class="gl-field">
-                <label for="Project_AspNetUserID">@Html.DisplayNameFor(m => m.Project.AspNetUserID)</label>
-                @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_AspNetUserID" })
+                <label for="Project_DeliveryDate">@Html.DisplayNameFor(m => m.Project.DeliveryDate)</label>
+                <input type="date" class="form-control form-control-modern" id="Project_DeliveryDate" name="Project.DeliveryDate"
+                       value="@(Model.Project.DeliveryDate.HasValue ? Model.Project.DeliveryDate.Value.ToString("yyyy-MM-dd") : string.Empty)" />
             </div>
             <div class="gl-field">
-                <label for="Project_SalesResponsibleUserID">@Html.DisplayNameFor(m => m.Project.SalesResponsibleUserID)</label>
-                @Html.DropDownListFor(m => m.Project.SalesResponsibleUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.SalesResponsibleUserID), "Selecteer een verkoopverantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_SalesResponsibleUserID" })
+                <label for="Project_DeliveryDateDef">@Html.DisplayNameFor(m => m.Project.DeliveryDateDef)</label>
+                <input type="date" class="form-control form-control-modern" id="Project_DeliveryDateDef" name="Project.DeliveryDateDef"
+                       value="@(Model.Project.DeliveryDateDef.HasValue ? Model.Project.DeliveryDateDef.Value.ToString("yyyy-MM-dd") : string.Empty)" />
             </div>
         </div>
     </div>

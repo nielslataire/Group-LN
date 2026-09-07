@@ -7,14 +7,20 @@
     @await Html.PartialAsync("_ProjectFormStyles")
 }
 
-@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed gl-project-form", enctype = "multipart/form-data" }))
+@* Zelfde schil als Projecten/Bewerken (gl-form-shell): volle breedte, past op
+   één scherm. Geen tabs nodig — één sectie is genoeg om aan te maken.
+   Aanmaken/Annuleren horen bij dít formulier, dus ze leven in de derde,
+   altijd zichtbare zone (gl-form-shell__actions) onderaan de schil, niet in
+   de generieke topbar. *@
+@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form gl-project-form", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
 
     <div asp-validation-summary="All" class="alert alert-danger @(ViewData.ModelState.IsValid ? "d-none" : "")"></div>
 
-    <div class="card card-modern">
+    <div class="card card-modern gl-form-shell">
         <div class="card-body">
+            <div class="gl-form-shell__panel">
             <section class="gl-form-section">
                 <div class="gl-form-section__body">
                     <div class="gl-form-section__head">
@@ -25,43 +31,8 @@
                         </div>
                     </div>
 
-                    @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
-
                     <div class="gl-field-grid">
-                        <div class="gl-field">
-                            <label for="Project_Name">@Html.DisplayNameFor(m => m.Project.Name) <span class="gl-req" aria-hidden="true">*</span></label>
-                            @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off", required = "required" })
-                            <span asp-validation-for="Project.Name" class="text-danger"></span>
-                        </div>
-
-                        <div class="gl-field">
-                            <label for="Project_ProjectCode">@Html.DisplayNameFor(m => m.Project.ProjectCode)</label>
-                            @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "form-control form-control-modern", placeholder = "bv. P-2024-118", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
-                            <span asp-validation-for="Project.ProjectCode" class="text-danger"></span>
-                        </div>
-
-                        <div class="gl-field">
-                            <label for="lstProjectCountries">Land</label>
-                            @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
-                        </div>
-
-                        <div class="gl-field">
-                            <label for="PostalSelect">Gemeente <span class="gl-req" aria-hidden="true">*</span></label>
-                            <select id="PostalSelect" class="form-control w-100" aria-label="Gemeente">
-                                @if (Model.SelectedPostalcode > 0)
-                                {
-                                    <option value="@Model.SelectedPostalcode" selected>
-                                        @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
-                                    </option>
-                                }
-                            </select>
-                            <span id="postalSelectError" class="text-danger" hidden>Kies een gemeente uit de lijst.</span>
-                        </div>
-
-                        <div class="gl-field">
-                            <label for="Project_AspNetUserID">@Html.DisplayNameFor(m => m.Project.AspNetUserID)</label>
-                            @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern", id = "Project_AspNetUserID" })
-                        </div>
+                        @await Html.PartialAsync("_ProjectFormCoreFields", Model)
 
                         <div class="gl-field">
                             <label for="Project_SalesResponsibleUserID">@Html.DisplayNameFor(m => m.Project.SalesResponsibleUserID)</label>
@@ -78,17 +49,13 @@
                     </div>
                 </div>
             </section>
-        </div>
-    </div>
+            </div>
 
-    <div class="row action-buttons">
-        <div class="col-12 col-md-auto">
-            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-                <i class="bx bx-save text-4 me-2" aria-hidden="true"></i> Project aanmaken
-            </button>
-        </div>
-        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-            <a href="@((TempData.Peek("Referrer") as string) ?? Url.Action("Index", "Projecten"))" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+            @await Html.PartialAsync("_FormShellActions", new CPMCore.Models.FormShellActionsModel
+            {
+                SubmitLabel = "Project aanmaken",
+                CancelUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("Index", "Projecten")
+            })
         </div>
     </div>
 }
