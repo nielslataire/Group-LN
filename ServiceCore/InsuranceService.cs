@@ -73,6 +73,9 @@ namespace ServiceCore
         {
             var response = new GetResponse<WarningBO>();
             var q = _uow.Insurances.GetNoTracking()
+                .Include(m => m.ContractActivity)
+                    .ThenInclude(m => m.Contract)
+                        .ThenInclude(m => m.Project)
                 .Where(m => m.Type == (int)InsuranceType.ABR
                             && m.ContractActivity.Contract.Project.DeliveryDate == null
                             && m.Enddate == null);
@@ -83,16 +86,18 @@ namespace ServiceCore
             // Binnen 1 maand verlopen
             var warnSoon = q.Where(m =>
                 m.Startdate.HasValue &&
-                m.Startdate.Value < DateOnly.FromDateTime(DateTime.Now.AddMonths(-(int)m.Period - (int)m.ExtensionPeriod + 1)) &&
-                m.Startdate.Value >= DateOnly.FromDateTime(DateTime.Now.AddMonths(-(int)m.Period - (int)m.ExtensionPeriod)));
+                m.Startdate.Value < DateOnly.FromDateTime(DateTime.Now.AddMonths(-(m.Period ?? 0) - (m.ExtensionPeriod ?? 0) + 1)) &&
+                m.Startdate.Value >= DateOnly.FromDateTime(DateTime.Now.AddMonths(-(m.Period ?? 0) - (m.ExtensionPeriod ?? 0))));
 
             foreach (var e in warnSoon)
             {
+                var project = e.ContractActivity?.Contract?.Project;
+                if (project == null) continue;
                 response.AddValue(new WarningBO
                 {
                     ID = e.Id,
-                    ProjectId = e.ContractActivity.Contract.ProjectId,
-                    Display = $"De ABR polis van project {e.ContractActivity.Contract.Project.ProjectName} vervalt binnen één maand, gelieve deze te verlengen !",
+                    ProjectId = project.ProjectId,
+                    Display = $"De ABR polis van project {project.ProjectName} vervalt binnen één maand, gelieve deze te verlengen !",
                     Type = "warning",
                     Category = "verzekering"
                 });
@@ -100,15 +105,18 @@ namespace ServiceCore
 
             // Reeds vervallen
             var expired = q.Where(m =>
-                m.Startdate >= DateOnly.FromDateTime(DateTime.Now.AddMonths(-(int)m.Period - (int)m.ExtensionPeriod)));
+                m.Startdate.HasValue &&
+                m.Startdate.Value >= DateOnly.FromDateTime(DateTime.Now.AddMonths(-(m.Period ?? 0) - (m.ExtensionPeriod ?? 0))));
 
             foreach (var e in expired)
             {
+                var project = e.ContractActivity?.Contract?.Project;
+                if (project == null) continue;
                 response.AddValue(new WarningBO
                 {
                     ID = e.Id,
-                    ProjectId = e.ContractActivity.Contract.ProjectId,
-                    Display = $"De ABR polis van project {e.ContractActivity.Contract.Project.ProjectName} is vervallen, gelieve deze te verlengen !",
+                    ProjectId = project.ProjectId,
+                    Display = $"De ABR polis van project {project.ProjectName} is vervallen, gelieve deze te verlengen !",
                     Type = "danger",
                     Category = "verzekering"
                 });
@@ -194,11 +202,45 @@ namespace ServiceCore
                 entry.Property("GuaranteePeriod").IsModified = true;
                 entry.Property("Type").IsModified = true;
                 entry.Property("Enddate").IsModified = true;
+                entry.Property("Polisnummer").IsModified = true;
 
                 var resultUpdate = _uow.SaveChanges();
                 response.AddSaveChangesResult(resultUpdate, "Verzekering aangepast", "Verzekering niet aangepast");
                 return response;
             }
+        }
+
+        public Response Delete(int id)
+        {
+            var response = new Response();
+            if (id <= 0) { response.AddError("Ongeldige verzekering."); return response; }
+
+            var entity = _uow.Insurances.GetNormal().FirstOrDefault(m => m.Id == id);
+            if (entity == null) { response.AddError("Verzekering niet gevonden."); return response; }
+
+            var contractActivityId = entity.ContractActivityId;
+
+            _uow.Insurances.DeleteObject(entity);
+            var saved = _uow.SaveChanges();
+
+            // De 1-op-1 ContractActivity (activiteit "Verzekeringen") heeft geen bestaansreden
+            // zonder verzekering — best-effort opruimen zodat er geen weesregels achterblijven.
+            if (saved > 0 && contractActivityId > 0)
+            {
+                try
+                {
+                    var ca = _uow.ContractActivities.GetById(contractActivityId);
+                    if (ca != null)
+                    {
+                        _uow.ContractActivities.DeleteObject(ca);
+                        _uow.SaveChanges();
+                    }
+                }
+                catch { /* mag de verzekering-verwijdering niet blokkeren */ }
+            }
+
+            response.AddSaveChangesResult(saved, "Verzekering verwijderd", "Verzekering niet verwijderd");
+            return response;
         }
 
         public GetResponse<InsuranceCompanyBO> GetInsuranceCompanies()

@@ -36,8 +36,11 @@ namespace ServiceCore.Budget
                 .Where(l => l.BudgetVersieId == budgetVersieId)
                 .ToListAsync();
 
-            // Lijnprijzen zijn per woon-/commerciële eenheid
-            decimal totaalBouw = lijnen.Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm);
+            // Lijnprijzen zijn per woon-/commerciële eenheid, met de per-activiteit correctie-%
+            // (stap 6). Correctiefactor 0 op oude rijen telt als 1 (geen correctie).
+            decimal totaalBouw = lijnen.Sum(l =>
+                (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm
+                * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
 
             var p = await GetOrCreateParamsAsync(budgetVersieId);
 
@@ -67,7 +70,7 @@ namespace ServiceCore.Budget
             AddPerc("Projectcoördinatie", p.ProjectcoordinatiePerc);
             AddPerc("Architect",          p.ArchitectPerc);
             AddPerc("Veiligheidscoörd. + EPB", p.VeiligheidscoordEPBPerc);
-            AddPerc("Studie IR",          p.StudieIRPerc);
+            AddPerc("Ingenieur",          p.StudieIRPerc);
             AddPerc("Decennale gesloten ruwbouw", p.DecennaleGeslRuwbouwPerc);
             AddPerc("ABR + plaatsbeschrijving",   p.ABRPlaatsbeschrPerc);
 
@@ -163,15 +166,42 @@ namespace ServiceCore.Budget
 
         public async Task<BudgetParams> GetOrCreateParamsAsync(int budgetVersieId)
         {
+            // Standaard-erelonen komen uit Instellingen > Bouwkost % (vaste systeemrijen).
+            // Daar staan ze in procentpunten (5,25) — BudgetParams bewaart een fractie.
+            var std = await _uow.BouwkostPercentages.GetNoTracking()
+                .Where(p => p.Sleutel != null)
+                .ToDictionaryAsync(p => p.Sleutel, p => p.Percentage / 100m);
+
+            decimal StdFractie(string sleutel) =>
+                std.TryGetValue(sleutel, out var v) ? v : 0m;
+
             var bestaand = await _uow.BudgetParams.GetNoTracking()
                 .FirstOrDefaultAsync(p => p.BudgetVersieId == budgetVersieId);
 
-            if (bestaand != null) return bestaand;
+            if (bestaand != null)
+            {
+                // Effectieve standaard tonen voor velden die dit budget nog nooit
+                // expliciet ingevuld heeft (null), of nog op de oude vaste default
+                // stonden. Zodra de gebruiker op Parameters opslaat, blijft z'n waarde.
+                var archStd = StdFractie("architect");
+                var ingStd  = StdFractie("ingenieur");
+                var pcStd    = StdFractie("projectcoordinatie");
+
+                if (bestaand.ArchitectPerc == null && archStd != 0m) bestaand.ArchitectPerc = archStd;
+                if (bestaand.StudieIRPerc  == null && ingStd  != 0m) bestaand.StudieIRPerc  = ingStd;
+                if ((bestaand.ProjectcoordinatiePerc == 0m || bestaand.ProjectcoordinatiePerc == 0.0525m)
+                    && pcStd != 0m)
+                    bestaand.ProjectcoordinatiePerc = pcStd;
+
+                return bestaand;
+            }
 
             var nieuw = new BudgetParams
             {
                 BudgetVersieId         = budgetVersieId,
-                ProjectcoordinatiePerc = 0.0525m,
+                ProjectcoordinatiePerc = StdFractie("projectcoordinatie") is var pc && pc != 0m ? pc : 0.0525m,
+                ArchitectPerc          = StdFractie("architect") is var a && a != 0m ? a : (decimal?)null,
+                StudieIRPerc           = StdFractie("ingenieur")  is var i && i != 0m ? i : (decimal?)null,
                 WetBreynePerc          = 0.01m,
                 StraightloanGebouwPerc = 0.0125m,
                 StraightloanGrondPerc  = 0.0125m,

@@ -5,35 +5,35 @@
 }
 
 @* ── Rij toevoegen ── *@
-<div class="dak-add-row d-flex gap-2 align-items-end flex-wrap mb-2">
-    <div>
-        <label class="form-label small mb-1">Locatie</label>
-        <input type="text" class="form-control form-control-sm add-eenheid"
-               data-type="@Model.ElementType" placeholder="bv. W2" style="width:90px;" />
+<div class="bw-dt__toolbar">
+    <div class="bw-dt__field">
+        <label>Locatie</label>
+        <input type="text" class="bw-cell-input add-eenheid"
+               data-type="@Model.ElementType" placeholder="bv. W2" style="width:100px;" />
     </div>
-    <div>
-        <label class="form-label small mb-1">Beschrijving</label>
-        <input type="text" class="form-control form-control-sm add-beschrijving"
-               data-type="@Model.ElementType" placeholder="optioneel" style="width:110px;" />
+    <div class="bw-dt__field">
+        <label>Beschrijving</label>
+        <input type="text" class="bw-cell-input add-beschrijving"
+               data-type="@Model.ElementType" placeholder="optioneel" style="width:120px;" />
     </div>
-    <button class="btn btn-sm btn-primary btn-add-element" data-type="@Model.ElementType">
-        <i class="bi bi-plus me-1"></i>Toevoegen
+    <button type="button" class="btn btn-sm btn-primary btn-add-element" data-type="@Model.ElementType">
+        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>Toevoegen
     </button>
 </div>
 
 @* ── Tabel ── *@
-<div class="table-responsive">
-    <table class="table table-sm table-hover dak-table table-hide-hoogte align-middle mb-1">
-        <thead class="table-light small">
+<div class="bw-dt__scroll">
+    <table class="bw-table dak-table table-hide-hoogte">
+        <thead class="small">
             <tr>
-                <th>Locatie</th>
-                <th>Beschrijving</th>
-                <th class="text-end">Aantal</th>
-                <th class="text-end">Breedte (m)</th>
-                <th class="text-end text-muted">Hoogte (m)</th>@* hidden *@
-                <th class="text-end">Lengte (m)</th>
-                <th class="text-end text-primary">m²</th>
-                <th style="width:44px;"></th>
+                <th class="bw-th-cell" style="width:16%;">Locatie</th>
+                <th class="bw-th-cell" style="width:24%;">Beschrijving</th>
+                <th class="bw-num bw-th-cell" style="width:92px;">Aantal</th>
+                <th class="bw-num bw-th-cell" style="width:120px;">Breedte (m)</th>
+                <th class="bw-num bw-th-cell">Hoogte (m)</th>@* hidden *@
+                <th class="bw-num bw-th-cell" style="width:120px;">Lengte (m)</th>
+                <th class="bw-num" style="width:104px;">m²</th>
+                <th style="width:76px;"></th>
             </tr>
         </thead>
         <tbody id="tbody-@Model.ElementType">
@@ -42,12 +42,12 @@
                 @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
             }
         </tbody>
-        <tfoot class="table-secondary small">
+        <tfoot class="small">
             <tr>
                 <td colspan="4" class="text-muted fw-semibold">Subtotaal</td>
                 <td></td>@* Hoogte (hidden) *@
                 <td></td>@* Lengte *@
-                <td class="text-end text-primary fw-bold" id="tfoot-@Model.ElementType">
+                <td class="bw-num fw-bold" id="tfoot-@Model.ElementType">
                     @Fmt(Model.Subtotaal) m²
                 </td>
                 <td></td>

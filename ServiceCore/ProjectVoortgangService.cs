@@ -164,11 +164,15 @@ namespace ServiceCore
             var contractActivities = _uow.ContractActivities.GetNoTracking()
                 .Where(ca => ca.Contract.ProjectId == projectId)
                 .Include(ca => ca.Activity)
+                .Include(ca => ca.ContractAdditionalOrder)
                 .ToList();
 
+            // Gecontracteerd = basisprijs van het lot + de bijbestellingen erop.
             var gecontracterrdPerGroep = contractActivities
                 .GroupBy(ca => ca.Activity.GroupId)
-                .ToDictionary(g => g.Key, g => g.Sum(ca => ca.Price ?? 0m));
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(ca => (ca.Price ?? 0m) + ca.ContractAdditionalOrder.Sum(o => o.Price)));
 
             decimal totalGecontracteerd = gecontracterrdPerGroep.Values.Sum();
             decimal totalGefactureerd = factuurPerGroep.Values.Sum();

@@ -92,7 +92,7 @@
                                     <div class="summary">
                                         <p class="mb-1">Totaal Gecontracteerd</p>
                                         <div class="info">
-                                            <strong class="amount">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</strong>
+                                            <strong class="amount">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.EffectivePrice)))</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -141,7 +141,7 @@
                                         <div class="info">
                                             @{
                                                 decimal budgetSum = Model.BudgetActivities.Sum(s => (decimal?)s.Price) ?? 0;
-                                                decimal contractS = Model.Contracts.Sum(s => s.Activities.Sum(f => (decimal?)f.Price)) ?? 0;
+                                                decimal contractS = Model.Contracts.Sum(s => s.Activities.Sum(f => f.EffectivePrice));
 
                                                 var verschil = budgetSum - contractS;
                                                 var cssClass = verschil < 0 ? "amount text-danger" : "amount";
@@ -155,10 +155,10 @@
                             </div>
                         </div>
                         @{
-                            // Som van alle prijzen in contractactiviteiten
+                            // Som van alle prijzen in contractactiviteiten (incl. bijbestellingen)
                             decimal contractS2 = Model.Contracts
                             .SelectMany(c => c.Activities)
-                            .Sum(a => (decimal?)a.Price) ?? 0;
+                            .Sum(a => a.EffectivePrice);
 
                             // Som van alle inkomende factuurprijzen
                             decimal factuurSum = Model.IncommingInvoicesActivities
@@ -209,7 +209,7 @@
 
                                         var contractSum = Model.Contracts
                                         .SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == categorie.ID))
-                                        .Sum(s => (decimal?)s.Price) ?? 0;
+                                        .Sum(s => s.EffectivePrice);
 
                                         var incomingInvoiceSum = Model.IncommingInvoicesActivities
                                         .Where(l => l.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
@@ -313,7 +313,7 @@
                                                     var budgetActivitySum2 = Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
                                                     var contractSum2 = Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID))
                                                     .GroupBy(g => g.ContractId)
-                                                   .Sum(s => s.Sum(t => t.Price));
+                                                   .Sum(s => s.Sum(t => t.EffectivePrice));
                                                     var incomingInvoiceSum2 = Model.IncommingInvoicesActivities
                                                     .Where(l => l.Activity.ID == activity.ID && l.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
                                                     .Sum(t => t.Price);

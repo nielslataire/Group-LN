@@ -13,8 +13,7 @@ namespace FacadeCore
         GetResponse<InsuranceBO> GetInsuranceById(int id);
         GetResponse<WarningBO> CheckInsurances(string userid = "");
         Response InsertUpdate(InsuranceBO bo);
-        //Response Delete(List<int> ids);
-        //Response Delete(List<InsuranceBO> bos);
+        Response Delete(int id);
         GetResponse<InsuranceCompanyBO> GetInsuranceCompanies();
         GetResponse<IdNameBO> GetInsuranceCompaniesForSelect();
     }

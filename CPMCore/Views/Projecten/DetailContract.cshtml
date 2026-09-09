@@ -32,6 +32,7 @@
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
+            @Html.AntiForgeryToken()
             <div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
                 <div class="col-sm-auto mb-3 mb-sm-0">
                     <div class="d-flex align-items-center">
@@ -63,7 +64,7 @@
                         @foreach (var contract in Model.Contracts)
                         {
                             var activityCount = contract.Activities?.Count ?? 0;
-                            var contractTotal = contract.Activities?.Sum(a => a.Price ?? 0) ?? 0;
+                            var contractTotal = contract.Activities?.Sum(a => a.EffectivePrice) ?? 0;
                             <div class="col-xl-6 mb-4">
                                 <section class="card card-modern h-100">
                                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -204,9 +205,24 @@
                                             </div>
                                         </div>
 
+                                        @{
+                                            var contractLotsJson = System.Text.Json.JsonSerializer.Serialize(
+                                                (contract.Activities ?? new List<ContractActivityBO>())
+                                                    .Where(a => a.ContractActivityId > 0)
+                                                    .Select(a => new { id = a.ContractActivityId, label = a.Activity?.Name ?? "Lot" }));
+                                        }
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="fw-semibold fs-6">Loten (@activityCount)</span>
-                                            <span class="fw-semibold">@contractTotal.ToString("C", currencyCulture)</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="fw-semibold">@contractTotal.ToString("C", currencyCulture)</span>
+                                                @if (canWriteProjectSuppliers && contract.Activities?.Any(a => a.ContractActivityId > 0) == true)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-primary js-add-bijbestelling"
+                                                            data-lots="@contractLotsJson">
+                                                        <i class="bx bx-plus me-1"></i>Bijbestelling
+                                                    </button>
+                                                }
+                                            </div>
                                         </div>
                                         @if (contract.Activities?.Any() == true)
                                         {
@@ -216,15 +232,53 @@
                                                         <tr>
                                                             <th>Lot</th>
                                                             <th class="text-end">Prijs</th>
+                                                            @if (canWriteProjectSuppliers)
+                                                            {
+                                                                <th class="text-end" style="width:1%"></th>
+                                                            }
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         @foreach (var activity in contract.Activities)
                                                         {
                                                             <tr>
-                                                                <td>@activity.Activity?.Name</td>
+                                                                <td class="fw-semibold">@activity.Activity?.Name</td>
                                                                 <td class="text-end">@(activity.Price.HasValue ? activity.Price.Value.ToString("C", currencyCulture) : "-")</td>
+                                                                @if (canWriteProjectSuppliers)
+                                                                {
+                                                                    <td class="text-end">
+                                                                        @if (activity.ContractActivityId > 0)
+                                                                        {
+                                                                            <button type="button" class="btn btn-sm btn-outline-primary text-nowrap js-add-bijbestelling"
+                                                                                    data-contractactivityid="@activity.ContractActivityId"
+                                                                                    data-lotname="@activity.Activity?.Name"
+                                                                                    title="Bijbestelling toevoegen op dit lot">
+                                                                                <i class="bx bx-plus"></i>
+                                                                            </button>
+                                                                        }
+                                                                    </td>
+                                                                }
                                                             </tr>
+                                                            @foreach (var order in activity.AdditionalOrders)
+                                                            {
+                                                                <tr class="text-muted">
+                                                                    <td class="ps-4"><i class="bx bx-subdirectory-right"></i> Bijbestelling@(string.IsNullOrWhiteSpace(order.Description) ? "" : " — " + order.Description)</td>
+                                                                    <td class="text-end">@order.Price.ToString("C", currencyCulture)</td>
+                                                                    @if (canWriteProjectSuppliers)
+                                                                    {
+                                                                        <td class="text-end text-nowrap">
+                                                                            <button type="button" class="btn btn-sm btn-outline-secondary js-edit-bijbestelling"
+                                                                                    data-id="@order.Id" data-lotname="@activity.Activity?.Name"
+                                                                                    data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                                                    title="Bijbestelling bewerken"><i class="bx bx-edit"></i></button>
+                                                                            <button type="button" class="btn btn-sm btn-outline-danger js-delete-bijbestelling"
+                                                                                    data-id="@order.Id" data-lotname="@activity.Activity?.Name"
+                                                                                    data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                                                    title="Bijbestelling verwijderen"><i class="bx bx-trash"></i></button>
+                                                                        </td>
+                                                                    }
+                                                                </tr>
+                                                            }
                                                         }
                                                     </tbody>
                                                 </table>
@@ -392,6 +446,8 @@
 <div id="modaldeletecontract" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-contract-container"></div>
 </div>
+
+@await Html.PartialAsync("Partials/_BijbestellingModal")
 
 @section PageScripts {
     <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>

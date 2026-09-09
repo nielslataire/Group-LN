@@ -2,7 +2,8 @@
 @using BOCore
 @model CPMCore.Models.Projecten.BudgetSanitairModel
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 }
 @{
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -19,156 +20,119 @@
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
-        <div class="inner-body">
+        <div class="inner-body bw-inner-body">
 
             @* ── Wizard tabbladen ── *@
             @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 3 })
 
-            @* ── Pagina-koptekst ── *@
-            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
-            {
-                StepNum    = 3,
-                PageTitle  = "Sanitair",
-                PageDescription = "Sanitaire elementen per eenheid: badkamers, toiletten en doucheruimtes.",
-                MasterNaam = Model.MasterNaam,
-                VersieLabel= Model.VersieLabel,
-                PrevUrl    = Url.Action("BudgetOppervlaktes","Projecten", new { versieId = Model.VersieId }),
-                NextUrl    = Url.Action("BudgetGevels",      "Projecten", new { versieId = Model.VersieId })
-            })
+            <div class="bw-scroll">
 
-            @* ── KPI kaarten ── *@
-            <div class="row g-3 mb-4">
-                <div class="col-6 col-md">
-                    <div class="card card-modern text-center p-3">
-                        <div class="fs-3 fw-bold text-primary" id="kpi-badkamer">@Model.Totaal.TotaalBadkamers</div>
-                        <div class="small text-muted">Badkamers</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md">
-                    <div class="card card-modern text-center p-3">
-                        <div class="fs-3 fw-bold text-primary" id="kpi-toilet-bk">@Model.Totaal.TotaalToilettenInBadkamer</div>
-                        <div class="small text-muted">Toiletten in BK</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md">
-                    <div class="card card-modern text-center p-3">
-                        <div class="fs-3 fw-bold text-primary" id="kpi-toilet-afz">@Model.Totaal.TotaalAfzonderlijkeToiletten</div>
-                        <div class="small text-muted">Afz. toiletten</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md">
-                    <div class="card card-modern text-center p-3">
-                        <div class="fs-3 fw-bold text-primary" id="kpi-douche-bk">@Model.Totaal.TotaalDouchesInBadkamer</div>
-                        <div class="small text-muted">Douches in BK</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md">
-                    <div class="card card-modern text-center p-3">
-                        <div class="fs-3 fw-bold text-primary" id="kpi-douchekamer">@Model.Totaal.TotaalDouchekamers</div>
-                        <div class="small text-muted">Douchekamers</div>
-                    </div>
-                </div>
-            </div>
-
-            @* ── Info banner ── *@
-            <div class="alert alert-info d-flex align-items-center mb-3">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                <span>
-                    Eenheden worden automatisch gesynchroniseerd vanuit de oppervlaktestabel.
-                    <a href="@Url.Action("BudgetOppervlaktes", new { versieId = Model.VersieId })"
-                       class="alert-link">Oppervlaktes bewerken</a>
-                </span>
-            </div>
-
-            @* ── Rij toevoegen ── *@
-            <div class="card card-modern mb-3 bg-light border-0">
-                <div class="card-body py-2">
-                    <div class="d-flex gap-2 align-items-end">
+            <section class="gl-form-section">
+                <div class="gl-form-section__body">
+                    <div class="gl-form-section__head">
+                        <i class="fa-solid fa-bath" aria-hidden="true"></i>
                         <div>
-                            <label class="form-label small mb-1">Eenheid naam</label>
-                            <input type="text" id="sanitairNaam" class="form-control form-control-sm"
-                                   placeholder="bv. Lot 1" style="width:140px;" />
+                            <h2 class="gl-form-section__title">Sanitair</h2>
+                            <p class="gl-form-section__hint">
+                                Sanitaire elementen per eenheid — synchroniseert automatisch vanuit
+                                <a href="@Url.Action("BudgetOppervlaktes", new { versieId = Model.VersieId })">Oppervlaktes</a>.
+                            </p>
                         </div>
-                        <button id="btnSanitairToevoegen" class="btn btn-primary btn-sm">
-                            <i class="bi bi-plus me-1"></i> Toevoegen
-                        </button>
+                        @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+                        {
+                            StepNum      = 3,
+                            MasterNaam   = Model.MasterNaam,
+                            VersieLabel  = Model.VersieLabel
+                        })
+                    </div>
+
+                    @* ── Cijferstrip (gl-kpi2, één lijn) ── *@
+                    @{
+                        var sanKpis = new (string Id, string Icon, string Lbl, int Val)[]
+                        {
+                            ("kpi-badkamer",   "fa-bath",     "Badkamers",       Model.Totaal.TotaalBadkamers),
+                            ("kpi-toilet-bk",  "fa-toilet","Toiletten in BK", Model.Totaal.TotaalToilettenInBadkamer),
+                            ("kpi-toilet-afz", "fa-toilet","Afz. toiletten",  Model.Totaal.TotaalAfzonderlijkeToiletten),
+                            ("kpi-douche-bk",  "fa-droplet",  "Douches in BK",   Model.Totaal.TotaalDouchesInBadkamer),
+                            ("kpi-douchekamer","fa-shower",   "Douchekamers",    Model.Totaal.TotaalDouchekamers),
+                        };
+                    }
+                    <div class="gl-kpi2-strip bw-kpi-row mb-3">
+                        @foreach (var (id, icon, lbl, val) in sanKpis)
+                        {
+                            <div class="gl-kpi2-tile-col">
+                                <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                                    <div class="gl-kpi2-icon"><i class="fa-solid @icon" aria-hidden="true"></i></div>
+                                    <div class="gl-kpi2-body">
+                                        <div class="gl-kpi2-label">@lbl</div>
+                                        <div class="gl-kpi2-value" id="@id">@val</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="bw-dt">
+                        <div class="bw-dt__toolbar">
+                            <div class="bw-dt__field">
+                                <label for="sanitairNaam">Eenheid naam</label>
+                                <input type="text" id="sanitairNaam" class="bw-cell-input" placeholder="bv. Lot 1" style="width:150px;" />
+                            </div>
+                            <button id="btnSanitairToevoegen" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i> Rij toevoegen
+                            </button>
+                        </div>
+                        <div class="bw-dt__scroll">
+                            <table class="bw-table" id="sanitairTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;">#</th>
+                                        <th>Eenheid</th>
+                                        <th class="text-center">Badkamer</th>
+                                        <th class="text-center">Toilet in BK</th>
+                                        <th class="text-center">Afz. toilet</th>
+                                        <th class="text-center">Douche in BK</th>
+                                        <th class="text-center">Douchekamer</th>
+                                        <th class="text-center">Totaal</th>
+                                        <th style="width:56px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sanitairTableBody">
+                                    @foreach (var rij in Model.Rijen)
+                                    {
+                                        @await Html.PartialAsync("Partials/_BudgetSanitairRij", rij)
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="2">Totaal</td>
+                                        <td class="text-center"><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="tot-badkamer" style="width:60px;">@Model.Totaal.TotaalBadkamers</span></td>
+                                        <td class="text-center"><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="tot-toilet-bk" style="width:60px;">@Model.Totaal.TotaalToilettenInBadkamer</span></td>
+                                        <td class="text-center"><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="tot-toilet-afz" style="width:60px;">@Model.Totaal.TotaalAfzonderlijkeToiletten</span></td>
+                                        <td class="text-center"><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="tot-douche-bk" style="width:60px;">@Model.Totaal.TotaalDouchesInBadkamer</span></td>
+                                        <td class="text-center"><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="tot-douchekamer" style="width:60px;">@Model.Totaal.TotaalDouchekamers</span></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            @* ── Tabel ── *@
-            <div class="table-responsive mb-3">
-                <table class="table table-hover align-middle" id="sanitairTable">
-                    <thead class="table-light sticky-top" style="z-index:2;">
-                        <tr>
-                            <th style="width:36px;">#</th>
-                            <th>Eenheid</th>
-                            <th class="text-center">
-                                Badkamer
-                                <i class="bi bi-info-circle text-muted"
-                                   title="Volledige badkamer met bad en/of douche"
-                                   data-bs-toggle="tooltip"></i>
-                            </th>
-                            <th class="text-center">
-                                Toilet in BK
-                                <i class="bi bi-info-circle text-muted"
-                                   title="Toilet geïntegreerd in badkamer"
-                                   data-bs-toggle="tooltip"></i>
-                            </th>
-                            <th class="text-center">
-                                Afz. toilet
-                                <i class="bi bi-info-circle text-muted"
-                                   title="Afzonderlijk toilet buiten badkamer"
-                                   data-bs-toggle="tooltip"></i>
-                            </th>
-                            <th class="text-center">
-                                Douche in BK
-                                <i class="bi bi-info-circle text-muted"
-                                   title="Douche geïntegreerd in badkamer"
-                                   data-bs-toggle="tooltip"></i>
-                            </th>
-                            <th class="text-center">
-                                Douchekamer
-                                <i class="bi bi-info-circle text-muted"
-                                   title="Aparte douchekamer"
-                                   data-bs-toggle="tooltip"></i>
-                            </th>
-                            <th class="text-center text-muted">Totaal</th>
-                            <th style="width:44px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="sanitairTableBody">
-                        @foreach (var rij in Model.Rijen)
-                        {
-                            @await Html.PartialAsync("Partials/_BudgetSanitairRij", rij)
-                        }
-                    </tbody>
-                    <tfoot class="table-dark fw-bold">
-                        <tr>
-                            <td colspan="2">Totaal</td>
-                            <td class="text-center" id="tot-badkamer">@Model.Totaal.TotaalBadkamers</td>
-                            <td class="text-center" id="tot-toilet-bk">@Model.Totaal.TotaalToilettenInBadkamer</td>
-                            <td class="text-center" id="tot-toilet-afz">@Model.Totaal.TotaalAfzonderlijkeToiletten</td>
-                            <td class="text-center" id="tot-douche-bk">@Model.Totaal.TotaalDouchesInBadkamer</td>
-                            <td class="text-center" id="tot-douchekamer">@Model.Totaal.TotaalDouchekamers</td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            @* ── Bottom actions ── *@
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })"
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+            </div>@* /bw-scroll *@
+            <div class="bw-bottom-nav">
+                <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })" class="bw-bottom-nav__back">
+                    <i class="fas fa-chevron-left me-1"></i>Vorige: Oppervlaktes
                 </a>
-                <a href="@Url.Action("BudgetGevels", "Projecten", new { versieId = Model.VersieId })"
-                   class="btn btn-primary">
-                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                <span class="bw-bottom-nav__indicator">Stap 3 van 9 — Sanitair</span>
+                <a href="@Url.Action("BudgetGevels", "Projecten", new { versieId = Model.VersieId })" class="bw-bottom-nav__next">
+                    Volgende: Gevels <i class="fas fa-chevron-right ms-1"></i>
                 </a>
             </div>
+
+            @await Html.PartialAsync("Partials/_BudgetConfirmModal")
 
         </div>
     </div>
@@ -282,7 +246,10 @@
         const btn = e.target.closest('.btn-delete-sanitair');
         if (!btn) return;
 
-        if (!confirm('Rij verwijderen?')) return;
+        if (!await BudgetWizard.confirmModal({
+            title: 'Rij verwijderen',
+            body: 'Ben je zeker dat je deze eenheid uit de sanitairtabel wil verwijderen?'
+        })) return;
 
         const row    = btn.closest('tr');
         const rijId  = row.dataset.rijId;

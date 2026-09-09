@@ -684,6 +684,33 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     html.sidebar-left-collapsed .gl-form-shell__actions { left: 73px; }
 }
 
+/* Vaste actiebalk (.gl-form-shell__actions) buiten een .gl-form-shell gebruikt
+   — bv. Projecten/AddContract + EditContract, die geen tab-schil hebben maar
+   wél dezelfde vaste Opslaan/Annuleren-balk onderaan willen. De schil trekt
+   die 84px anders van zijn eigen hoogte af; zonder schil reserveert de
+   paginabody de ruimte zelf zodat de laatste velden niet achter de balk
+   verdwijnen. */
+.gl-fixed-actions-offset {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 991.98px) {
+    /* Smalle schermen: de balk niet vastzetten maar mee laten scrollen, met
+       de knoppen onder elkaar (zoals de vroegere .action-buttons). */
+    .gl-fixed-actions-offset { padding-bottom: 0; }
+    .gl-fixed-actions-offset .gl-form-shell__actions {
+        position: static;
+        width: auto;
+        flex-wrap: wrap;
+    }
+    .gl-fixed-actions-offset .gl-form-shell__actions .btn {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+    .gl-fixed-actions-offset .gl-form-shell__actions > .me-auto {
+        flex-basis: 100%;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .gl-form-shell__tab { transition: none; }
 }

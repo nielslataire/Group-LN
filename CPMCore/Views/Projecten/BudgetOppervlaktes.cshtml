@@ -2,7 +2,8 @@
 @using BOCore
 @model CPMCore.Models.Projecten.BudgetOppervlaktesModel
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 }
 @{
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -19,172 +20,145 @@
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
-        <div class="inner-body">
+        <div class="inner-body bw-inner-body">
 
             @* ── Wizard tabbladen ── *@
             @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 2 })
 
             @* ── Tab-bar styles (identiek aan BudgetGegevens) ── *@
 
-            @* ── Pagina-koptekst ── *@
-            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
-            {
-                StepNum    = 2,
-                PageTitle  = "Oppervlaktes",
-                PageDescription = "Bewoonbare en bijkomende oppervlaktes per eenheid, met VMSW-reductiefactoren.",
-                MasterNaam = Model.MasterNaam,
-                VersieLabel= Model.VersieLabel,
-                PrevUrl    = Url.Action("BudgetGegevens",    "Projecten", new { versieId = Model.VersieId }),
-                NextUrl    = Url.Action("BudgetSanitair",    "Projecten", new { versieId = Model.VersieId })
-            })
+            <div class="bw-scroll">
 
-            @* ── KPI kaarten (rij 1: aantallen) ── *@
-            <div class="row g-3 mb-3">
-                @{
-                    var kpi1 = new[]
-                    {
-                        ("kpi-wooneenheden",    "Wooneenheden",     Model.Totalen.AantalWooneenheden.ToString()),
-                        ("kpi-parkeerplaatsen", "Parkeerplaatsen",  Model.Totalen.AantalParkeerplaatsen.ToString()),
-                        ("kpi-commercieel",     "Commercieel",      Model.Totalen.AantalCommercieel.ToString()),
-                        ("kpi-totaal",          "Totaal eenheden",  Model.Totalen.AantalTotaal.ToString()),
-                    };
-                }
-                @foreach (var (id, lbl, val) in kpi1)
-                {
-                    <div class="col-6 col-md-3">
-                        <div class="card text-center py-3">
-                            <div class="card-body p-2">
-                                <div class="fs-2 fw-bold text-primary" id="@id">@val</div>
-                                <div class="small text-muted">@lbl</div>
-                            </div>
+            <section class="gl-form-section">
+                <div class="gl-form-section__body">
+                    <div class="gl-form-section__head">
+                        <i class="fa-solid fa-vector-square" aria-hidden="true"></i>
+                        <div>
+                            <h2 class="gl-form-section__title">Oppervlaktes</h2>
+                            <p class="gl-form-section__hint">Bewoonbare en bijkomende oppervlaktes per eenheid; de gereduceerde m² komt uit de VMSW-reductiefactoren.</p>
                         </div>
-                    </div>
-                }
-            </div>
-
-            @* ── KPI kaarten (rij 2: oppervlaktes) ── *@
-            <div class="row g-3 mb-3">
-                @{
-                    var kpi2 = new[]
-                    {
-                        ("kpi-totaal-bew",  "Totaal bewoonbaar",    Model.Totalen.TotaalBewoonbaar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
-                        ("kpi-totaal-gered","Totaal gereduceerd",   Model.Totalen.TotaalGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
-                        ("kpi-gem-m2",      "Gem. m²/eenheid",      Model.Totalen.GemiddeldeM2PerEenheid.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
-                        ("kpi-totaal-grond","Grondopp. totaal",      Model.Totalen.TotaalGrondopp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
-                    };
-                }
-                @foreach (var (id, lbl, val) in kpi2)
-                {
-                    <div class="col-6 col-md-3">
-                        <div class="card text-center py-2">
-                            <div class="card-body p-2">
-                                <div class="fs-5 fw-semibold text-dark" id="@id">@val</div>
-                                <div class="small text-muted">@lbl</div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            @* ── Coëfficiënten legende ── *@
-            <div class="card mb-3 bg-light border-0" id="legendeCard">
-                <div class="card-body py-2 px-3">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <small class="fw-semibold text-muted">Reductiefactoren VMSW</small>
-                        <button type="button" class="btn btn-link btn-sm p-0 text-muted" id="btnToggleLegende">
-                            Verberg <i class="fas fa-chevron-up"></i>
-                        </button>
-                    </div>
-                    <div id="legendeBody" class="d-flex flex-wrap gap-1">
-                        @{
-                            var coeffs = new[]
-                            {
-                                ("Bewoonbaar",   "×1,0"),  ("Tuin",         "×0,05"), ("Terras prefab",  "×1,0"),
-                                ("Terras gvl.",  "×0,1"),  ("Dakterras",    "×0,33"), ("Garage bgr.",    "×0,9"),
-                                ("Berg. ond.",   "×0,5"),  ("Berg. gvl.",   "×0,4"),  ("Carport",        "×0,3"),
-                                ("Doorrit",      "×0,6"),  ("Zolder",       "×0,3"),  ("Gem. delen",     "×1,0"),
-                                ("Wegenis",      "×0,1"),
-                            };
-                        }
-                        @foreach (var (name, factor) in coeffs)
+                        @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
                         {
-                            <span class="badge bg-white border text-dark fw-normal">
-                                @name <strong>@factor</strong>
-                            </span>
+                            StepNum      = 2,
+                            MasterNaam   = Model.MasterNaam,
+                            VersieLabel  = Model.VersieLabel
+                        })
+                    </div>
+
+                    @* ── Cijferstrips (gl-kpi2, altijd op één lijn) ── *@
+                    @{
+                        var oppKpis = new (string Id, string Icon, string Lbl, string Val)[]
+                        {
+                            ("kpi-wooneenheden",    "fa-house",           "Wooneenheden",      Model.Totalen.AantalWooneenheden.ToString()),
+                            ("kpi-parkeerplaatsen", "fa-car",            "Parkeerplaatsen",   Model.Totalen.AantalParkeerplaatsen.ToString()),
+                            ("kpi-commercieel",     "fa-store",      "Commercieel",       Model.Totalen.AantalCommercieel.ToString()),
+                            ("kpi-totaal",          "fa-city",      "Totaal eenheden",   Model.Totalen.AantalTotaal.ToString()),
+                            ("kpi-totaal-bew",      "fa-vector-square",           "Totaal bewoonbaar", Model.Totalen.TotaalBewoonbaar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                            ("kpi-totaal-gered",    "fa-crop-simple",           "Gereduceerd",       Model.Totalen.TotaalGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                            ("kpi-gem-m2",          "fa-ruler",          "Gem. m²/eenheid",   Model.Totalen.GemiddeldeM2PerEenheid.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                            ("kpi-totaal-grond",    "fa-map",            "Grondopp. totaal",  Model.Totalen.TotaalGrondopp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                        };
+                    }
+                    <div class="gl-kpi2-strip bw-kpi-row mb-3">
+                        @foreach (var (id, icon, lbl, val) in oppKpis)
+                        {
+                            <div class="gl-kpi2-tile-col">
+                                <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                                    <div class="gl-kpi2-icon"><i class="fa-solid @icon" aria-hidden="true"></i></div>
+                                    <div class="gl-kpi2-body">
+                                        <div class="gl-kpi2-label">@lbl</div>
+                                        <div class="gl-kpi2-value" id="@id">@val</div>
+                                    </div>
+                                </div>
+                            </div>
                         }
                     </div>
-                </div>
-            </div>
 
-            @* ── Eenheid toevoegen ── *@
-            <div class="card mb-3 bg-light border-dashed">
-                <div class="card-body py-2 px-3">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-auto">
-                            <label class="form-label small mb-1 fw-semibold">Naam eenheid</label>
-                            <input type="text" id="addNaam" class="form-control form-control-sm"
-                                   placeholder="bv. Lot 1" style="min-width:140px;" />
-                        </div>
-                        <div class="col-md-auto">
-                            <label class="form-label small mb-1 fw-semibold">Hoofdtype</label>
-                            <select id="addGroupType" class="form-select form-select-sm" style="min-width:160px;">
-                                <option value="">— kies type —</option>
-                                @foreach (var item in Model.GroupTypes.Skip(1))
-                                {
-                                    <option value="@item.Value">@item.Text</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-auto">
-                            <label class="form-label small mb-1 fw-semibold">Subtype</label>
-                            <select id="addType" class="form-select form-select-sm" disabled style="min-width:140px;">
-                                <option value="">— eerst hoofdtype —</option>
-                            </select>
-                        </div>
-                        <div class="col-md-auto">
-                            <button type="button" class="btn btn-sm btn-primary" id="btnToevoegen">
-                                <i class="fas fa-plus me-1"></i>Toevoegen
+                    @* ── Coëfficiënten legende ── *@
+                    <div class="bw-panel mb-3" id="legendeCard">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="bw-panel__title mb-0">Reductiefactoren VMSW</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-muted text-decoration-none" id="btnToggleLegende">
+                                Verberg <i class="fas fa-chevron-up"></i>
                             </button>
                         </div>
+                        <div id="legendeBody" class="d-flex flex-wrap gap-1">
+                            @{
+                                var coeffs = new[]
+                                {
+                                    ("Bewoonbaar",   "×1,0"),  ("Tuin",         "×0,05"), ("Terras prefab",  "×1,0"),
+                                    ("Terras gvl.",  "×0,1"),  ("Dakterras",    "×0,33"), ("Garage bgr.",    "×0,9"),
+                                    ("Berg. ond.",   "×0,5"),  ("Berg. gvl.",   "×0,4"),  ("Carport",        "×0,3"),
+                                    ("Doorrit",      "×0,6"),  ("Zolder",       "×0,3"),  ("Gem. delen",     "×1,0"),
+                                    ("Wegenis",      "×0,1"),
+                                };
+                            }
+                            @foreach (var (name, factor) in coeffs)
+                            {
+                                <span class="bw-coeff">@name <strong>@factor</strong></span>
+                            }
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            @* ── Tabel ── *@
-            <div class="table-responsive mb-3" style="max-height:60vh; overflow-y:auto;">
-                <table class="table table-hover table-sm table-bordered align-middle mb-0"
-                       id="oppervlaktesTable" style="min-width:1800px;">
-                    <thead class="sticky-top" style="z-index:2;">
-                        <tr class="table-secondary text-center small">
+                    <div class="bw-dt">
+                        <div class="bw-dt__toolbar">
+                            <div class="bw-dt__field">
+                                <label for="addNaam">Naam eenheid</label>
+                                <input type="text" id="addNaam" class="bw-cell-input" placeholder="bv. Lot 1" style="min-width:140px;" />
+                            </div>
+                            <div class="bw-dt__field">
+                                <label for="addGroupType">Hoofdtype</label>
+                                <select id="addGroupType" class="bw-cell-input" style="min-width:160px;">
+                                    <option value="">— kies type —</option>
+                                    @foreach (var item in Model.GroupTypes.Skip(1))
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="bw-dt__field">
+                                <label for="addType">Subtype</label>
+                                <select id="addType" class="bw-cell-input" disabled style="min-width:140px;">
+                                    <option value="">— eerst hoofdtype —</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" id="btnToevoegen">
+                                <i class="fas fa-plus me-1"></i>Rij toevoegen
+                            </button>
+                        </div>
+                        <div class="bw-dt__scroll bw-dt__scroll--tall">
+                <table class="bw-table" id="oppervlaktesTable" style="min-width:1800px;">
+                    <thead>
+                        <tr class="text-center">
                             <th rowspan="2" style="width:36px;">#</th>
-                            <th rowspan="2" style="min-width:120px;">Naam</th>
-                            <th rowspan="2" style="min-width:130px;">Hoofdtype</th>
-                            <th rowspan="2" style="min-width:120px;">Subtype</th>
-                            <th colspan="1" class="text-primary border-start">Bewoonbaar</th>
-                            <th colspan="4" class="border-start">Buitenruimtes</th>
-                            <th colspan="4" class="border-start">Parkeren &amp; Berging</th>
-                            <th colspan="5" class="border-start">Overige</th>
-                            <th rowspan="2" class="text-info border-start" style="min-width:90px;"
+                            <th rowspan="2" class="bw-th-cell text-start" style="min-width:120px;">Naam</th>
+                            <th rowspan="2" class="bw-th-cell text-start" style="min-width:130px;">Hoofdtype</th>
+                            <th rowspan="2" class="bw-th-cell text-start" style="min-width:120px;">Subtype</th>
+                            <th colspan="1">Bewoonbaar</th>
+                            <th colspan="4">Buitenruimtes</th>
+                            <th colspan="4">Parkeren &amp; Berging</th>
+                            <th colspan="5">Overige</th>
+                            <th rowspan="2" class="bw-num" style="min-width:90px;"
                                 data-bs-toggle="tooltip" title="Berekend met VMSW-reductiefactoren">
                                 Gered. m²
                             </th>
-                            <th rowspan="2" style="width:50px;"></th>
+                            <th rowspan="2" style="width:76px;"></th>
                         </tr>
-                        <tr class="table-light small text-center">
-                            <th class="text-primary border-start" style="min-width:70px;">Bew. m²</th>
-                            <th class="border-start" style="min-width:70px;">Tuin</th>
-                            <th style="min-width:70px;">T.prefab</th>
-                            <th style="min-width:70px;">T.gvl.</th>
-                            <th style="min-width:70px;">Dakt.</th>
-                            <th class="border-start" style="min-width:70px;">Gar.bgr.</th>
-                            <th style="min-width:70px;">Berg.ond.</th>
-                            <th style="min-width:70px;">Berg.gvl.</th>
-                            <th style="min-width:70px;">Carport</th>
-                            <th class="border-start" style="min-width:70px;">Doorrit</th>
-                            <th style="min-width:70px;">Zolder</th>
-                            <th style="min-width:70px;">Gem.del.</th>
-                            <th style="min-width:70px;">Wegenis</th>
-                            <th style="min-width:70px;">Grond</th>
+                        <tr>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Bew. m²</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Tuin</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">T.prefab</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">T.gvl.</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Dakt.</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Gar.bgr.</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Berg.ond.</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Berg.gvl.</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Carport</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Doorrit</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Zolder</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Gem.del.</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Wegenis</th>
+                            <th class="bw-num bw-th-cell" style="min-width:70px;">Grond</th>
                         </tr>
                     </thead>
                     <tbody id="oppervlaktesTableBody">
@@ -193,31 +167,37 @@
                             @await Html.PartialAsync("Partials/_BudgetOppervlaktesRij", rij)
                         }
                     </tbody>
-                    <tfoot id="totals-row" class="table-dark fw-semibold text-end small">
+                    <tfoot id="totals-row">
                         <tr>
                             <td colspan="4" class="text-start ps-2">Totaal</td>
-                            <td class="text-primary" id="ft-bew">@Model.Totalen.TotaalBewoonbaar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="ft-bew">@Model.Totalen.TotaalBewoonbaar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</span></td>
+                            @* Tuin, T.prefab, T.gvl, Dakt, Gar.bgr, Berg.ond, Berg.gvl, Carport, Doorrit, Zolder, Gem.del, Wegenis *@
                             <td></td><td></td><td></td><td></td>
                             <td></td><td></td><td></td><td></td>
-                            <td></td><td></td>
-                            <td id="ft-grond">@Model.Totalen.TotaalGrondopp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
-                            <td class="text-info" id="ft-gered">@Model.Totalen.TotaalGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td></td><td></td><td></td><td></td>
+                            <td><span class="bw-cell-input bw-cell-input--num bw-cell-input--total" id="ft-grond">@Model.Totalen.TotaalGrondopp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</span></td>
+                            <td class="bw-num" id="ft-gered">@Model.Totalen.TotaalGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
+                        </div>@* /bw-dt__scroll *@
+                    </div>@* /bw-dt *@
+                </div>@* /gl-form-section__body *@
+            </section>
+
+            </div>@* /bw-scroll *@
+            <div class="bw-bottom-nav">
+                <a href="@Url.Action("BudgetGegevens", "Projecten", new { versieId = Model.VersieId })" class="bw-bottom-nav__back">
+                    <i class="fas fa-chevron-left me-1"></i>Vorige: Gegevens
+                </a>
+                <span class="bw-bottom-nav__indicator">Stap 2 van 9 — Oppervlaktes</span>
+                <a href="@Url.Action("BudgetSanitair", "Projecten", new { versieId = Model.VersieId })" class="bw-bottom-nav__next">
+                    Volgende: Sanitair <i class="fas fa-chevron-right ms-1"></i>
+                </a>
             </div>
 
-            @* ── Bottom actions ── *@
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <a href="@Url.Action("BudgetGegevens", "Projecten", new { versieId = Model.VersieId })"
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
-                </a>
-                <a href="@Url.Action("BudgetSanitair", "Projecten", new { versieId = Model.VersieId })" class="btn btn-primary">
-                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
-                </a>
-            </div>
+            @await Html.PartialAsync("Partials/_BudgetConfirmModal")
 
         </div>
     </div>
@@ -432,7 +412,10 @@
         if (!row) return;
 
         if (e.target.closest('.btn-delete-rij')) {
-            if (!confirm('Rij verwijderen?')) return;
+            if (!await BudgetWizard.confirmModal({
+                title: 'Rij verwijderen',
+                body: 'Ben je zeker dat je deze eenheid uit de oppervlaktetabel wil verwijderen?'
+            })) return;
             const rijId   = row.dataset.rijId;
             const params  = new URLSearchParams({ rijId, versieId });
             const resp    = await fetch('/Projecten/BudgetOppervlaktesRijVerwijderen', {

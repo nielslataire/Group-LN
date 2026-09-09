@@ -121,9 +121,9 @@
                             <td>TOTAAL</td>
                             <td></td>
                             <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price))</td>
-                            <td class="text-right">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
+                            <td class="text-right">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.EffectivePrice)))</td>
                             <td class="text-right">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
-                            <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
+                            <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.Contracts.Sum(s => s.Activities.Sum(f => f.EffectivePrice)))</td>
                             <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
                         </tr>
                     </tfoot>

@@ -21,6 +21,8 @@ public partial class Insurances
 
     public DateOnly? Enddate { get; set; }
 
+    public string Polisnummer { get; set; }
+
     public int ContractActivityId { get; set; }
 
     public int Id { get; set; }

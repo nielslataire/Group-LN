@@ -113,6 +113,16 @@ components:
     rounded: "{rounded.sm}"
     height: "46px"
     padding: "6px 17px"
+  form-section-icon:
+    backgroundColor: "{colors.mist-green}"
+    textColor: "{colors.forest-green}"
+    rounded: "{rounded.md}"
+    size: "42px"
+  form-tab-active:
+    backgroundColor: "transparent"
+    textColor: "{colors.forest-green}"
+    rounded: "{rounded.xs}"
+    padding: "15px"
   badge-primary:
     backgroundColor: "{colors.forest-green}"
     textColor: "{colors.surface-white}"
@@ -367,15 +377,97 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
 - **`card-big-info` (signature):** a two-zone card — a ~230px left rail (white,
   1px Hairline divider, 24px padding) holding a 40px Mist-Green rounded icon box,
   a 13px/700 green title and 11.5px muted description; the right zone holds the
-  form/content. Collapses to stacked single-column ≤768px. Used on
-  supplier/contract forms.
+  form/content, one `form-group row` per field with the label right-aligned
+  (`col-*-4 control-label text-md-end`) beside it. Non-standard Bootstrap column
+  breakpoints `col-lg-2-5 col-xl-1-5` (rail) / `col-lg-3-5 col-xl-4-5` (content),
+  from `theme.css`. Collapses to stacked single-column ≤768px. This is the
+  **older** of the two form idioms — see *Formulieren (`gl-form-shell`)* below;
+  new forms use the shell, `card-big-info` stays for the existing two-zone
+  explanatory supplier/contract forms (`Projecten/AddContract`, `AddUnit`).
 
 ### Inputs / Fields
-- **Style:** Surface White, 1px border, 7px radius. The `form-control-modern`
-  variant is **46px** tall with `6px 17px` padding; Select2 single/multi controls
-  are matched to the same height and padding so native and enhanced fields align.
-- **Focus:** green-tinted focus ring consistent with buttons.
-- **Labels:** Label style (600, 0.78rem), sat directly above the field.
+- **Style:** Surface White, 1px Hairline border, 7px radius. Every text field
+  carries `form-control form-control-modern`: the modern variant is **46px** tall
+  with `6px 17px` padding. Select2 single/multi controls and the
+  bootstrap-datepicker are matched to the same height and padding so native and
+  enhanced fields align — never restyle them looser.
+- **Focus:** green-tinted focus ring consistent with buttons
+  (`0 0 0 0.2rem rgba(10,90,59,.25)`).
+- **Wrapper — two patterns, one per form idiom:** in a `gl-form-shell` form the
+  field sits in `.gl-field` with the **label above** the control (600, 0.8125rem);
+  in a `card-big-info` form it sits in `.form-group.row` with the label
+  **right-aligned** (`control-label text-md-end`) beside it. Do not mix the two
+  within one form.
+- **Prefix / suffix:** money, %, date and similar use an `input-group` with a
+  `input-group-text` chip (`€`, `%`, calendar glyph). Shared EditorTemplates in
+  `Views/Shared/EditorTemplates/` — `Currency`, `CurrencyWithActions`,
+  `Percentage`, `Surface`, `Postalcode`, `Date`, `Phone`, `Cellphone` — render
+  these; `.Currencymask` inputs are initialised via `CurrencyMask.init(...)`,
+  re-run on ajax-added rows.
+- **Toggle:** prefer the iOS switch (`.switch.switch-sm.switch-primary` +
+  `data-plugin-ios-switch`, init `new ios7Switch(el)`) over `.checkbox-custom`
+  for a boolean.
+- **Error:** `input.input-validation-error` gets a Rust (`#b3452f`) border + a
+  `0 0 0 2px` Rust-tint glow; `<span asp-validation-for>` renders `.text-danger`
+  directly under the field.
+
+### Formulieren (`gl-form-shell`)
+The current pattern for a data-entry form. CSS in `custom.css` ("Formulierschil")
++ `projecten-custom.css` ("Projecten/Toevoegen + Bewerken — formulier"). Reference
+views: `CPMCore/Views/Projecten/Toevoegen.cshtml` (short, no tabs) and
+`Edit.cshtml` (long, tabbed). The single skeleton doc is
+`CPMCore/Views/Projecten/FORMULIER-STRAMIEN.md`.
+
+- **Shell (`gl-form-shell`):** one full-width `card card-modern` whose height is
+  `calc(100vh − topbar − …)` so the page body never scrolls — only the active
+  panel does. The form is wrapped in
+  `Html.BeginForm(… @class = "ecommerce-form gl-project-form", enctype = "multipart/form-data")`.
+- **Tabstrip (`gl-form-shell__tabs` / `__tab` / `__tab-badge`):** sits *outside*
+  the card — it is the screen's primary in-page navigation — and breaks out of
+  the content padding to sit flush under the topbar. `role="tablist"`; each
+  `__tab` is `role="tab"` with an icon + label. Active tab = Deep Forest Green
+  text + a 3px Ochre bottom border (the active-tab marker). `__tab-badge` is a
+  Rust pill counting validation errors on that tab. All fields stay in the DOM on
+  every tab — one Save submits everything; the show/hide + keyboard script is
+  `_ProjectFormTabs.cshtml`, and on a failed POST the server sets
+  `data-force-tab` to the first tab carrying an error.
+- **Panels (`gl-form-shell__panel`):** `overflow-y:auto`, 24px padding;
+  non-active panels carry `hidden`.
+- **Actions (`gl-form-shell__actions`):** a third, always-visible zone rendered
+  by `_FormShellActions.cshtml`
+  (`FormShellActionsModel { SubmitLabel, SubmitIcon = "bx-save", CancelUrl, CancelLabel = "Annuleren" }`).
+  `position: fixed` to the viewport bottom, left-aligned next to the sidebar
+  (`left: 300px` / `73px` collapsed / `0` ≤767px), respecting
+  `env(safe-area-inset-bottom)`. Buttons use the large app size
+  (`btn-px-4 py-3`, `submit-button` / `cancel-button`), not the topbar size.
+- **Section (`gl-form-section` + `__body`):** a block inside a panel.
+  `gl-form-section__head` is a flex row — a **42px** Mist-Green rounded (≈`md`,
+  11px) icon badge + `__title` (700, 1.0625rem) + `__hint` (0.8125rem, muted),
+  Hairline under it.
+- **Field grid (`gl-field-grid`):**
+  `display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2px 24px`
+  — resolves to 1 / 2 / 3 columns by width on its own.
+- **Field (`gl-field`):** flex column, label above the control, 6px gap, 18px
+  bottom margin. `gl-field--full` spans the whole grid row (control capped at
+  560px); add `gl-field--wide` to let a textarea / rich-text control fill 100%.
+  `gl-req` is the Rust `*` after a required label. `gl-field-address` puts street
+  (`flex:1`) + number (`gl-nr`, 96px fixed) on one line. `gl-switch-row` lays an
+  iOS switch beside its label; `gl-form-note` is a Mist-Green hint box inside a
+  section.
+- **Shared partials:** `_ProjectFormCoreFields.cshtml` renders Naam / Projectcode
+  / Land / Gemeente / Verantwoordelijke as loose `.gl-field`s for callers to drop
+  into their own grid; `_ProjectFormStyles.cshtml` is the fixed `<link>` set.
+- **Legacy / anti-reference:** `Projecten/AddContact.cshtml` +
+  `EditContact.cshtml` still use a bare `card card-modern` + `row g-3` +
+  `col-md-6` + `form-label` + plain `form-control`. That is the pattern to
+  *replace*, not copy — migrate those views to this section when touched.
+
+**The Form-Shell Rule.** A new data-entry form is a `gl-form-shell` with
+`gl-form-section` heads and a `gl-field-grid` of `gl-field`s (label above the
+control), and its Save / Cancel come from `_FormShellActions`. `card-big-info`
+(labels right of the control) is kept only for the existing two-zone explanatory
+supplier/contract forms. Never start a new form on bare `card-modern` +
+`row g-3` + `form-label` + `form-control`.
 
 ### Navigation (sidebar)
 - **Rail:** solid Deep Forest Green (`#0a5a3b`), fixed full height, 300px /
@@ -425,11 +517,13 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
 - **Title / subtitle:** plain `<h1>`/`<h5>`, font-size intentionally left to the
   theme's base heading styles (unchanged); `gl-page-header` only standardizes
   spacing (4px between title and subtitle) and the row's own bottom margin (24px).
-- **Usage:** `CPMCore/Views/Projecten/AddContract.cshtml` (back + title +
-  subtitle, no actions) and `CPMCore/Views/Projecten/DetailContracts.cshtml`
-  (title + subtitle + actions, no back) are the first two migrated pages. The
-  ~28 other pages carrying the old ad-hoc pattern are not yet migrated —
-  do so opportunistically when touching those views, not as a bulk sweep.
+- **Usage:** an expanding set of content pages use it — e.g.
+  `CPMCore/Views/Projecten/AddContract.cshtml` (back + title + subtitle, no
+  actions) and `CPMCore/Views/Projecten/DetailContracts.cshtml` (title +
+  subtitle + actions, no back). The remaining ad-hoc title rows are migrated
+  opportunistically when a view is touched, not in a bulk sweep. Note: a
+  `gl-form-shell` form does not use `gl-page-header` — its title lives in the
+  `gl-form-section__head`, its actions in `gl-form-shell__actions`.
 
 ### Badges
 - Solid fills mapped to tokens: `bg-primary` → Deep Forest Green,
@@ -622,6 +716,9 @@ klikbare KPI-strip, "Voortgang & budget"-kaart, "Aandacht vereist".
   fills, in keeping with the restrained tone.
 - **Do** use Rust / Ochre / Taupe Grey for danger / warning / info severity —
   never stock Bootstrap red (`#dc3545`-family), amber, or blue.
+- **Do** build a new data-entry form as a `gl-form-shell` with
+  `gl-form-section` heads and a `gl-field-grid` of `gl-field`s (label above the
+  control); render Save / Cancel with `_FormShellActions` (The Form-Shell Rule).
 
 ### Don't:
 - **Don't** introduce cool blue-greys for neutrals; keep them warm — Page Grey
@@ -636,3 +733,8 @@ klikbare KPI-strip, "Voortgang & budget"-kaart, "Aandacht vereist".
   no 4px/12px one-offs outside the documented scale.
 - **Don't** restyle Select2 / datepicker / multiselect controls away from the
   46px `form-control-modern` height; native and enhanced fields must stay aligned.
+- **Don't** start a new form on a bare `card-modern` + `row g-3` + `col-md-6` +
+  `form-label` + plain `form-control` (the `AddContact` / `EditContact` legacy
+  pattern); use `gl-form-shell`, and migrate those two views when you touch them.
+- **Don't** mix label placement in one form — labels are above the control in a
+  `gl-form-shell` form, right-aligned in a `card-big-info` form, never both.

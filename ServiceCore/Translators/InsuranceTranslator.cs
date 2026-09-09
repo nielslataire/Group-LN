@@ -33,6 +33,7 @@ namespace ServiceCore.Translators
             bo.ProjectID = _entity.ContractActivity.Contract.ProjectId;
             bo.Startdate = _entity.Startdate;
             bo.Type = (InsuranceType)_entity.Type;
+            bo.Polisnummer = _entity.Polisnummer;
             if (_entity.Enddate is not null)
                 bo.Enddate = _entity.Enddate;
 
@@ -53,6 +54,7 @@ namespace ServiceCore.Translators
             e.GuaranteePeriod = bo.GuaranteePeriod;
             if (bo.Type != 0) e.Type = (int)bo.Type;
             e.Enddate = bo.Enddate;
+            e.Polisnummer = string.IsNullOrWhiteSpace(bo.Polisnummer) ? null : bo.Polisnummer.Trim();
 
             // Navigations NIET zetten bij write
             // e.ContractActivity = null; e.InsuranceCompany = null;

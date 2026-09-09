@@ -173,7 +173,13 @@ namespace ServiceCore.IncomingInvoices
                 var contractAmt = await _db.ContractActivity
                     .Where(ca => ca.ContractId == vm.ContractId)
                     .SumAsync(ca => (decimal?)ca.Price, ct);
-                vm.ContractTotalAmount = contractAmt;
+                // Bijbestellingen op de loten tellen mee in het gecontracteerde totaal.
+                var contractExtra = await _db.ContractAdditionalOrder
+                    .Where(o => o.ContractActivity.ContractId == vm.ContractId)
+                    .SumAsync(o => (decimal?)o.Price, ct);
+                vm.ContractTotalAmount = (contractAmt.HasValue || contractExtra.HasValue)
+                    ? (contractAmt ?? 0m) + (contractExtra ?? 0m)
+                    : (decimal?)null;
             }
             if (!string.IsNullOrEmpty(vm.SupplierVatNumber))
             {
@@ -395,6 +401,13 @@ namespace ServiceCore.IncomingInvoices
                 .Select(g => new { ContractId = g.Key, Total = g.Sum(ca => (decimal?)ca.Price) ?? 0m })
                 .ToDictionaryAsync(x => x.ContractId, x => x.Total, ct);
 
+            // Bijbestellingen per contract (via lot) — tellen mee in het gecontracteerde totaal.
+            var contractExtraTotals = await _db.ContractAdditionalOrder
+                .Where(o => contractIds.Contains(o.ContractActivity.ContractId))
+                .GroupBy(o => o.ContractActivity.ContractId)
+                .Select(g => new { ContractId = g.Key, Total = g.Sum(o => (decimal?)o.Price) ?? 0m })
+                .ToDictionaryAsync(x => x.ContractId, x => x.Total, ct);
+
             var contractNames = await _db.Contract
                 .Where(c => contractIds.Contains(c.Id))
                 .Select(c => new { c.Id, c.ContractName })
@@ -413,7 +426,9 @@ namespace ServiceCore.IncomingInvoices
                 if (!item.ContractId.HasValue) continue;
                 var cid = item.ContractId.Value;
                 item.ContractName = contractNames.TryGetValue(cid, out var name) ? name : null;
-                item.ContractTotalAmount = contractTotals.TryGetValue(cid, out var total) ? total : (decimal?)null;
+                var hasBase = contractTotals.TryGetValue(cid, out var total);
+                var hasExtra = contractExtraTotals.TryGetValue(cid, out var extra);
+                item.ContractTotalAmount = (hasBase || hasExtra) ? total + extra : (decimal?)null;
                 if (contractInvoicedAll.TryGetValue(cid, out var invoicedAll))
                     item.ContractInvoicedBefore = invoicedAll - item.TotalAmountInclVat;
             }

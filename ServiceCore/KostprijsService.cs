@@ -229,7 +229,7 @@ public class KostprijsService : IKostprijsService {
         foreach (var e in list)
             r.AddValue(new BouwkostPercentageBO {
                 Id = e.Id, GroepId = e.GroepId, GroepNaam = e.Groep?.Naam,
-                Naam = e.Naam, Percentage = e.Percentage, Volgorde = e.Volgorde
+                Naam = e.Naam, Percentage = e.Percentage, Volgorde = e.Volgorde, Sleutel = e.Sleutel
             });
         return r;
     }
@@ -265,7 +265,12 @@ public class KostprijsService : IKostprijsService {
         } else {
             var e = _uow.BouwkostPercentages.GetById(bo.Id);
             if (e == null) { r.AddError("Niet gevonden."); return r; }
-            e.GroepId = bo.GroepId; e.Naam = bo.Naam; e.Percentage = bo.Percentage; e.Volgorde = bo.Volgorde;
+            if (!string.IsNullOrEmpty(e.Sleutel)) {
+                // Vaste systeemrij: enkel het percentage mag wijzigen, niet naam/groep/volgorde.
+                e.Percentage = bo.Percentage;
+            } else {
+                e.GroepId = bo.GroepId; e.Naam = bo.Naam; e.Percentage = bo.Percentage; e.Volgorde = bo.Volgorde;
+            }
             _uow.BouwkostPercentages.Update(e);
             r.AddSuccess("Percentage opgeslagen.");
         }
@@ -274,6 +279,11 @@ public class KostprijsService : IKostprijsService {
     }
     public Response DeletePercentage(int id) {
         var r = new Response();
+        var e = _uow.BouwkostPercentages.GetById(id);
+        if (e != null && !string.IsNullOrEmpty(e.Sleutel)) {
+            r.AddError("Deze standaardrij is vast en kan niet verwijderd worden.");
+            return r;
+        }
         _uow.BouwkostPercentages.DeleteObject(id);
         _uow.SaveChanges();
         r.AddSuccess("Percentage verwijderd.");

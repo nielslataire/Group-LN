@@ -8,11 +8,20 @@
 	@Html.HiddenFor(m => m.Insurance.Id)
 	<section class="card">
 		<header class="card-header">
-			<h2 class="card-title">Verzekering bewerken </h2>
+			<h2 class="card-title">@(Model.Insurance.Id == 0 ? "Verzekering toevoegen" : "Verzekering bewerken")</h2>
 		</header>
 		<div class="card-body">
 
 				<div class="form-group">
+					@if (Model.Insurance.Id == 0)
+					{
+						<div class="row align-items-center pb-3">
+							<label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.SelectedBrokerId)</label>
+							<div class="col-md-8">
+								@Html.DropDownListFor(m => m.SelectedBrokerId, new SelectList(Model.Brokers, "ID", "Display"), "-- Kies makelaar --", new { @class = "form-control form-control-modern" })
+							</div>
+						</div>
+					}
 					<div class="row align-items-center  pb-3">
 						<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.InsuranceCompany)</label>
 						<div class="col-md-8">
@@ -26,9 +35,15 @@
 					</div>
 				</div>
 				<div class="row align-items-center  pb-3">
-					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.Startdate)</label>
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="Insurance_Polisnummer">@Html.LabelFor(m => m.Insurance.Polisnummer)</label>
 					<div class="col-md-8">
-						@Html.EditorFor(m => m.Insurance.Startdate)
+						@Html.TextBoxFor(m => m.Insurance.Polisnummer, new { @class = "form-control form-control-modern", id = "Insurance_Polisnummer", maxlength = "100", placeholder = "Polisnummer" })
+					</div>
+				</div>
+				<div class="row align-items-center  pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="Insurance_Startdate">@Html.LabelFor(m => m.Insurance.Startdate)</label>
+					<div class="col-md-8">
+						@Html.TextBoxFor(m => m.Insurance.Startdate, "{0:yyyy-MM-dd}", new { type = "date", @class = "form-control form-control-modern", id = "Insurance_Startdate" })
 					</div>
 				</div>
 				<div class="row align-items-center pb-3">
@@ -59,9 +74,9 @@
 					</div>
 				</div>
 				<div class="row align-items-center  pb-3">
-					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.Enddate)</label>
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="Insurance_Enddate">@Html.LabelFor(m => m.Insurance.Enddate)</label>
 					<div class="col-md-8">
-						@Html.EditorFor(m => m.Insurance.Enddate)
+						@Html.TextBoxFor(m => m.Insurance.Enddate, "{0:yyyy-MM-dd}", new { type = "date", @class = "form-control form-control-modern", id = "Insurance_Enddate" })
 					</div>
 				</div>
 				</div>		
@@ -69,7 +84,7 @@
 			<footer class="card-footer">
 				<div class="row">
 					<div class="col-md-12 text-end">
-						<button type="submit" class="btn btn-primary">Bewerken</button>
+						<button type="submit" class="btn btn-primary">@(Model.Insurance.Id == 0 ? "Toevoegen" : "Bewerken")</button>
 						<button class="btn btn-default modal-dismiss">Annuleren</button>
 					</div>
 				</div>

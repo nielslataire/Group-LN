@@ -1007,16 +1007,18 @@ namespace CPMCore.Services.Octopus
         public int? ExternalRelationId { get; set; }
     }
 
-    // ClientAccount.Id en CompanyInfo.CompanyId zijn onafhankelijke, eigen ID-reeksen die kunnen
-    // overlappen (bv. ClientAccount #1327 en CompanyInfo #1327 bestaan allebei, maar zijn totaal
-    // verschillende partijen). Beide worden ongewijzigd als externalRelationNr naar Octopus gestuurd,
-    // dus zonder disambiguatie kan een company botsen met een client die toevallig hetzelfde Id heeft
-    // (Octopus weigert dan de insert/update van de relatie). Deze offset verschuift alle op
-    // CompanyInfo.CompanyId gebaseerde externalRelationId's naar een bereik dat een ClientAccount.Id
-    // nooit zal bereiken.
+    // ClientAccount.Id, ClientContacts.Id en CompanyInfo.CompanyId zijn onafhankelijke, eigen
+    // ID-reeksen die kunnen overlappen (bv. ClientAccount #1327, ClientContacts #1327 en
+    // CompanyInfo #1327 bestaan allemaal, maar zijn totaal verschillende partijen). Ze worden
+    // als externalRelationNr naar Octopus gestuurd; zonder disambiguatie botsen ze en weigert
+    // Octopus de insert/update van de relatie. Elke bron krijgt daarom een eigen bereik:
+    //   ClientAccount  -> ongewijzigd            (0            .. ~1 mld)
+    //   Company        -> + CompanyOffset        (1 mld        .. ~2 mld)
+    //   ClientContact  -> + ClientContactOffset  (2 mld        .. int.MaxValue)
     public static class OctopusExternalRelationIds
     {
         public const int CompanyOffset = 1_000_000_000;
+        public const int ClientContactOffset = 2_000_000_000;
     }
 
     public class OctopusRelationKey

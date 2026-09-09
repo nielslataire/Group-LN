@@ -1,18 +1,161 @@
 /* ============================================================
    Budget Wizard — gedeelde stijlen voor alle wizardstappen
+
+   Volgt DESIGN.md ("Grounded & Cultivated"): één merkgroen, warme
+   neutralen, 7px radius, hairline-randen, Poppins, gewicht i.p.v.
+   grootte/uppercase. Alle kleuren komen uit de :root-tokens in
+   custom.css — geen losse hex hier.
+
+   De genummerde stepper is een VOORTGANGSSTEPPER (een echte volgorde
+   van 9 stappen), bewust anders dan .gl-form-shell__tabs — zie
+   DESIGN.md, "The Wizard-Stepper Rule".
    ============================================================ */
 
-/* ── Tab bar container ───────────────────────────────────────── */
+/* ── One-screen schil ────────────────────────────────────────────
+   Tabstrip (boven) én actiebalk (onder) staan vast t.o.v. de
+   viewport (position: fixed), naast sidebar + DetailMenu via één set
+   offsets (--bw-left). De inhoud scrolt met de pagina mee tussen die
+   twee balken; .inner-body houdt boven/onder ruimte vrij. */
+:root { --bw-left: 0px; }
+@media (min-width: 768px) {
+    :root { --bw-left: 600px; }                       /* 300 sidebar + 300 DetailMenu */
+    html.sidebar-left-collapsed { --bw-left: 373px; } /* 73 + 300 */
+}
+
+.bw-inner-body {
+    padding-top: 74px !important;      /* ruimte voor de vaste tabstrip */
+    padding-bottom: 112px !important;  /* ruimte + luchtruimte boven de vaste actiebalk */
+}
+.bw-scroll { display: block; }
+
+/* ── Stap-overgang ───────────────────────────────────────────────
+   Bij navigeren tussen stappen: de huidige inhoud vervaagt kort
+   omhoog terwijl er wordt opgeslagen, een dunne lijn veegt onder de
+   vaste tabstrip door, en de nieuwe stap rijst binnen. Tab-bar en
+   bottom-nav blijven staan — enkel .bw-scroll wisselt. */
+@keyframes bw-step-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.bw-scroll {
+    animation: bw-step-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html.bw-leaving .bw-scroll {
+    opacity: 0.4;
+    transform: translateY(-6px);
+    transition: opacity 0.16s ease-in, transform 0.16s ease-in;
+    animation: none;
+    pointer-events: none;
+}
+
+/* Voortgangslijn: dunne merkgroene lijn onder de vaste tabstrip die
+   naar rechts veegt zodra een stapnavigatie start. */
+.bw-nav-progress {
+    position: fixed;
+    left: var(--bw-left, 0px);
+    right: 0;
+    top: calc(var(--topbar-height, 72px) + 54px);
+    height: 2px;
+    background: var(--primary, #0a5a3b);
+    transform: scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+    z-index: 40;
+    pointer-events: none;
+}
+.bw-nav-progress.bw-nav-progress--go {
+    opacity: 1;
+    transform: scaleX(0.8);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.1s ease;
+}
+@media (max-width: 767.98px) {
+    .bw-nav-progress { top: calc(56px + 54px); }
+}
+
+/* Centrale laad-indicatie voor tragere overgangen: een steenlaag die
+   in lus wordt gemetseld (Timber = bouwmateriaal, DESIGN.md). Verschijnt
+   pas na ~450ms zodat snelle stappen niet flitsen. */
+.bw-nav-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    background: rgba(248, 249, 252, 0.82);
+    backdrop-filter: blur(1.5px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+.bw-nav-loader.bw-nav-loader--on { opacity: 1; }
+.bw-nav-loader__wall {
+    display: grid;
+    grid-template-columns: repeat(4, 22px);
+    grid-auto-rows: 11px;
+    gap: 3px;
+    padding: 8px;
+    overflow: hidden;               /* stenen komen van boven "aangedragen" binnen */
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.bw-nav-loader__wall span {
+    border-radius: 1px;
+    background: var(--timber, #8B6B4A);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+    animation: bw-wall-loop 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+@keyframes bw-wall-loop {
+    0%   { transform: translateY(-7px); opacity: 0; }
+    22%  { transform: translateY(0);    opacity: 1; }
+    72%  { transform: translateY(0);    opacity: 1; }
+    92%  { transform: translateY(0);    opacity: 0; }
+    100% { transform: translateY(-7px); opacity: 0; }
+}
+.bw-nav-loader__label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary, #0a5a3b);
+    letter-spacing: 0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bw-scroll { animation: none; }
+    html.bw-leaving .bw-scroll { transform: none; transition: opacity 0.12s ease; }
+    .bw-nav-loader { backdrop-filter: none; }
+    .bw-nav-loader__wall span { animation: bw-wall-fade 1.2s ease-in-out infinite; transform: none; }
+    @keyframes bw-wall-fade { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+}
+
+/* ── Tab bar container ─ vast onder de topbar ────────────────── */
 .bw-tab-bar {
+    position: fixed !important;
+    top: var(--topbar-height, 72px) !important;
+    left: var(--bw-left, 0px) !important;
+    right: 0 !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    z-index: 25;
     display: flex;
     align-items: center;
-    background: #fff;
-    border-top: 1px solid #dee2e6;
-    border-bottom: 1px solid #dee2e6;
-    margin: -40px -40px 0 -40px;
+    background: var(--white, #fff);
+    border-bottom: 2px solid var(--border, #e7e7e7);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     padding: 0 1.5rem;
-    min-height: 60px;
+    min-height: 54px;
     gap: 0;
+}
+@media (max-width: 767.98px) {
+    .bw-tab-bar { top: 56px; }
+    .bw-inner-body {
+        padding-top: 66px !important;
+        padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    }
 }
 
 /* ── Steps scroll container ──────────────────────────────────── */
@@ -23,21 +166,21 @@
     overflow-x: auto;
     padding-bottom: 4px;
     scrollbar-width: thin;
-    scrollbar-color: #dee2e6 transparent;
+    scrollbar-color: var(--border, #e7e7e7) transparent;
     gap: 0;
 }
 .bw-steps::-webkit-scrollbar         { height: 3px; display: block; }
 .bw-steps::-webkit-scrollbar-track   { background: transparent; }
-.bw-steps::-webkit-scrollbar-thumb   { background: #dee2e6; border-radius: 3px; }
+.bw-steps::-webkit-scrollbar-thumb   { background: var(--border, #e7e7e7); border-radius: 3px; }
 
-/* ── Step (default = inactive) ───────────────────────────────── */
+/* ── Step (default = upcoming) ───────────────────────────────── */
 .bw-step {
     display: flex;
     align-items: center;
     gap: 7px;
     white-space: nowrap;
     padding: 0.3rem 0.65rem;
-    border-radius: 10px;
+    border-radius: var(--radius, 7px);
     background: transparent;
     cursor: default;
     user-select: none;
@@ -45,7 +188,7 @@
     text-decoration: none;
     transition: background 0.15s ease;
 }
-.bw-step:hover { background: var(--lightgreen); }
+.bw-step:hover { background: var(--lightgreen, #e8f0eb); }
 
 .bw-step__circle {
     display: inline-flex;
@@ -56,51 +199,52 @@
     border-radius: 50%;
     font-size: 11px;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
     flex-shrink: 0;
-    color: #adb5bd;
+    color: var(--muted, #8590a5);
     background: transparent;
-    border: 1.5px solid #adb5bd;
+    border: 1.5px solid var(--muted, #8590a5);
 }
+.bw-step__circle i { font-size: 10px; line-height: 1; }
 .bw-step__label {
     font-size: 0.8125rem;
-    font-weight: 400;
-    color: #adb5bd;
+    font-weight: 500;
+    color: var(--muted, #8590a5);
 }
+/* Waarschuwing op een stap (bv. poorten nog niet gekozen op stap 1) */
+.bw-step__warn { color: var(--danger, #b3452f); font-size: 0.8rem; }
 
 /* ── Active ──────────────────────────────────────────────────── */
-.bw-step--active                    { background: var(--lightgreen); }
-.bw-step--active .bw-step__circle   { background: var(--primary); border-color: var(--primary); color: #fff; }
-.bw-step--active .bw-step__label    { color: var(--primary); font-weight: 600; }
+.bw-step--active                    { background: var(--lightgreen, #e8f0eb); }
+.bw-step--active .bw-step__circle   { background: var(--primary, #0a5a3b); border-color: var(--primary, #0a5a3b); color: #fff; }
+.bw-step--active .bw-step__label    { color: var(--primary, #0a5a3b); font-weight: 700; }
 
 /* ── Done ────────────────────────────────────────────────────── */
 .bw-step--done                      { background: transparent; cursor: pointer; }
     .bw-step--done .bw-step__circle {
-        background: #e6f2ed;
-        border-color: var(--primary);
-        color: var(--primary);
+        background: var(--lightgreen, #e8f0eb);
+        border-color: var(--primary, #0a5a3b);
+        color: var(--primary, #0a5a3b);
     }
     .bw-step--done .bw-step__label {
-        color: var(--primary);
-        font-weight: 500;
+        color: var(--primary, #0a5a3b);
+        font-weight: 600;
     }
 
 a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: inherit; }
+a.bw-step:focus-visible {
+    outline: 2px solid var(--primary, #0a5a3b);
+    outline-offset: 1px;
+}
 
 .bw-step__connector {
     flex-shrink: 0;
     width: 32px;
     height: 1px;
-    background: #dee2e6;
+    background: var(--border, #e7e7e7);
     margin: 0 4px;
 }
 
-/* ── Inner body override ─────────────────────────────────────── */
-.bw-inner-body {
-    padding-bottom: 0 !important;
-    display: flex;
-    flex-direction: column;
-    min-height: calc(100vh - 52px);
-}
 
 /* ── Pagina-koptekst ─────────────────────────────────────────── */
 .bw-page-header {
@@ -109,30 +253,22 @@ a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: in
     justify-content: space-between;
     padding: 1.5rem 0 1rem;
     gap: 1rem;
-    color:var(--primary);
 }
-.bw-page-header__step {
-    font-size: 0.7rem;
-    font-weight: 600;
-    background-color: var(--lightgreen);
-    color: #1a4a3a;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    margin-bottom: 0.15rem;
-    padding: 0.3rem 0.65rem;
-    border-radius: 50px;
-}
+.bw-page-header__left { min-width: 0; }
 .bw-page-header__title {
     font-size: 1.4rem;
     font-weight: 700;
-    color: var(--primary);
+    line-height: 1.3;
+    color: var(--primary, #0a5a3b);
     margin: 0 0 0.35rem;
+    text-wrap: balance;
 }
 .bw-page-header__sub {
-    font-size: 0.75rem;
-    color: #6c757d;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--muted, #8590a5);
     margin: 0 0 0.75rem;
-    max-width: 600px;
+    max-width: 65ch;
 }
 .bw-page-header__chips {
     display: flex;
@@ -142,49 +278,93 @@ a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: in
 }
 .bw-page-header__right {
     flex-shrink: 0;
-    padding-top: 0.25rem;
+    padding-top: 0.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 /* ── Chips ───────────────────────────────────────────────────── */
 .bw-chip {
     display: inline-flex;
     align-items: center;
-    padding: 0.2rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
+    gap: 0.3rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
     font-weight: 600;
+    line-height: 1;
     white-space: nowrap;
 }
+.bw-chip--step {
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary, #0a5a3b);
+    font-variant-numeric: tabular-nums;
+}
 .bw-chip--budget {
-    background: #fff;
-    color: var(--primary);
-    border: 1px solid #dee2e6;
+    background: var(--primary, #0a5a3b);
+    color: #fff;
 }
 .bw-chip--versie {
-    background: #fff;
-    color: var(--primary);
-    border: 1px solid #dee2e6;
+    background: var(--white, #fff);
+    color: var(--primary, #0a5a3b);
+    border: 1px solid var(--border, #e7e7e7);
     font-weight: 500;
 }
-.bw-chip--concept   { background: #fff3cd; color: #856404; border: 1px solid #ffe69c; }
-.bw-chip--goedgekeurd { background: #d1e7dd; color: #0a3622; border: 1px solid #a3cfbb; }
-.bw-chip--other     { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+/* Status: "goed/neutraal" is groen, alleen een écht aandachtssignaal is getint
+   (DESIGN.md — The Status-Is-Not-Severity Rule). */
+.bw-chip--concept {
+    background: var(--warning-tint, #faf1df);
+    color: var(--warning-text, #7a5210);
+    border: 1px solid color-mix(in srgb, var(--warning, #c17d1f) 30%, transparent);
+}
+.bw-chip--goedgekeurd {
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary, #0a5a3b);
+    border: 1px solid color-mix(in srgb, var(--primary, #0a5a3b) 25%, transparent);
+}
+.bw-chip--other {
+    background: var(--lightgray, #f8f9fc);
+    color: var(--muted, #8590a5);
+    border: 1px solid var(--border, #e7e7e7);
+}
 
-/* ── Opslaan-knop ────────────────────────────────────────────── */
-.bw-btn-save {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    color: #1a4a3a;
-    font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.4rem 1rem;
-    border-radius: 6px;
+/* ── Autosave-status (vervangt de vroegere spook-Opslaan-knop) ─
+   Eén blijvende, eerlijke indicatie: opgeslagen / bezig / mislukt.
+   Aangestuurd via het data-bw-save-attribuut; budget-wizard.js
+   biedt BudgetWizard.setSaveStatus(). */
+.bw-autosave {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    transition: background 0.15s, border-color 0.15s;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--dark, #222);
+    white-space: nowrap;
 }
-.bw-btn-save:hover { background: #f0f7f4; border-color: #1a4a3a; color: #1a4a3a; }
+.bw-autosave::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted, #8590a5);
+    flex-shrink: 0;
+}
+.bw-autosave[data-bw-save="saved"]  { color: var(--primary, #0a5a3b); }
+.bw-autosave[data-bw-save="saved"]::before  { background: var(--primary, #0a5a3b); }
+.bw-autosave[data-bw-save="saving"] { color: var(--dark, #222); }
+.bw-autosave[data-bw-save="saving"]::before {
+    background: transparent;
+    border: 1.5px solid var(--border, #e7e7e7);
+    border-top-color: var(--primary, #0a5a3b);
+    animation: bw-spin 0.7s linear infinite;
+}
+.bw-autosave[data-bw-save="error"]  { color: var(--danger-text, #8a3420); }
+.bw-autosave[data-bw-save="error"]::before  { background: var(--danger, #b3452f); }
+@keyframes bw-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .bw-autosave[data-bw-save="saving"]::before { animation: none; border-top-color: var(--primary, #0a5a3b); }
+}
 
 /* ── Body grid ───────────────────────────────────────────────── */
 .bw-body-grid {
@@ -201,9 +381,10 @@ a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: in
 
 /* ── Invoer-kaart ────────────────────────────────────────────── */
 .bw-invoer-card {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     margin-bottom: 0;
 }
@@ -211,51 +392,57 @@ a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: in
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid #dee2e6;
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--primary);
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--primary, #0a5a3b);
 }
 .bw-invoer-card__body {
     padding: 1.25rem;
 }
 
-/* ── Auto-opgeslagen label ───────────────────────────────────── */
-.bw-autosave {
+/* ── Auto-opgeslagen label (in-body variant) ─────────────────── */
+.bw-autosave-inline {
     font-size: 0.75rem;
     font-weight: 400;
-    color: #6c757d;
+    color: var(--muted, #8590a5);
 }
 
 /* ── Sectielabels binnen de invoerkaart ──────────────────────── */
 .bw-section-label {
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
     font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: #495057;
+    color: var(--dark, #222);
     margin-bottom: 0.75rem;
     padding-bottom: 0.4rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
+.bw-section-label > i { color: var(--primary, #0a5a3b); }
 
 /* ── Info-note boven een sectie ──────────────────────────────── */
 .bw-section-note {
     font-size: 0.8125rem;
-    color: #6c757d;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
+    color: var(--dark, #222);
+    background: var(--lightgreen, #e8f0eb);
+    border: 1px solid color-mix(in srgb, var(--primary, #0a5a3b) 14%, transparent);
+    border-radius: var(--radius, 7px);
+    padding: 0.6rem 0.85rem;
     margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
 }
-.bw-section-note a { color: #1a4a3a; font-weight: 600; text-decoration: underline; }
+.bw-section-note > i { color: var(--primary, #0a5a3b); margin-top: 0.15rem; flex-shrink: 0; }
+.bw-section-note a { color: var(--primary, #0a5a3b); font-weight: 600; text-decoration: underline; }
 
 /* ── ABEX-hint (link onder veld) ─────────────────────────────── */
 .bw-abex-hint {
     font-size: 0.75rem;
-    color: #1a4a3a;
+    color: var(--primary, #0a5a3b);
     margin-top: 0.3rem;
     font-weight: 500;
     display: flex;
@@ -265,41 +452,47 @@ a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: in
 }
 .bw-abex-inline-input {
     border: none;
-    border-bottom: 1.5px solid #1a4a3a;
+    border-bottom: 1.5px solid var(--primary, #0a5a3b);
     background: transparent;
-    color: #1a4a3a;
+    color: var(--primary, #0a5a3b);
     font-weight: 700;
     font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
     width: 90px;
     padding: 0 2px;
     outline: none;
     text-align: right;
 }
-.bw-abex-inline-input::placeholder { color: #adb5bd; font-weight: 400; }
-.bw-abex-inline-input:focus { border-bottom-color: #0d6efd; }
+.bw-abex-inline-input::placeholder { color: var(--muted, #8590a5); font-weight: 400; }
+.bw-abex-inline-input:focus {
+    border-bottom-color: var(--primary, #0a5a3b);
+    box-shadow: 0 1px 0 0 var(--primary, #0a5a3b);
+}
 
 /* ── Live berekening panel ───────────────────────────────────── */
 .bw-live-panel {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     overflow: hidden;
 }
 .bw-live-panel__header {
     display: flex;
     align-items: center;
-    background: var(--primary);
+    background: var(--primary, #0a5a3b);
     color: #fff;
     padding: 0.75rem 1rem;
     font-weight: 600;
     font-size: 0.875rem;
-    gap: 0.25rem;
+    gap: 0.4rem;
 }
 .bw-live-dot {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    color: #4ade80;
     letter-spacing: .04em;
+    /* Mint Ice — de enige tekst/icoonkleur op merkgroen (DESIGN.md) */
+    color: #e7fff1;
 }
 .bw-live-panel__body {
     padding: 1rem;
@@ -309,65 +502,640 @@ a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: in
     justify-content: space-between;
     align-items: baseline;
     font-size: 0.8125rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border, #e7e7e7);
     gap: 0.5rem;
 }
 .bw-live-row:last-of-type { border-bottom: none; }
-.bw-live-row span { color: #6c757d; flex: 1; }
-.bw-live-row strong { color: #1a1f1e; white-space: nowrap; }
+.bw-live-row span { color: var(--muted, #8590a5); flex: 1; }
+.bw-live-row strong {
+    color: var(--dark, #222);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
 .bw-live-note {
     font-size: 0.75rem;
-    color: #6c757d;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    line-height: 1.4;
+    color: var(--dark, #222);
+    background: var(--lightgreen, #e8f0eb);
+    border: 1px solid color-mix(in srgb, var(--primary, #0a5a3b) 14%, transparent);
+    border-radius: var(--radius, 7px);
+    padding: 0.55rem 0.8rem;
+    line-height: 1.45;
 }
 
-/* ── Bottom navigatiebalk ────────────────────────────────────── */
+/* ── Bottom navigatiebalk ────────────────────────────────────────
+   Altijd zichtbaar onderaan de viewport (position: fixed), naast de
+   sidebar + het DetailMenu. Zelfde offset-logica als
+   gl-form-shell__actions, uitgebreid met de 300px DetailMenu-kolom
+   van .content-with-menu. */
 .bw-bottom-nav {
+    position: fixed !important;
+    left: var(--bw-left, 0px) !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    margin: 0 !important;   /* Bootstrap .mt-4/.mb-4 uit _utilities.scss overrulen */
+    z-index: 30;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-top: 1px solid #dee2e6;
-    background: transparent;
-    padding: 0.875rem 0;
-    margin-top: 1.5rem;
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
+    gap: 0.75rem;
+    border-top: 1px solid var(--border, #e7e7e7);
+    background: var(--white, #fff);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    padding: 0.7rem 40px calc(0.7rem + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 767.98px) {
+    .bw-bottom-nav { padding: 0.7rem 15px calc(0.7rem + env(safe-area-inset-bottom, 0px)); }
 }
 .bw-bottom-nav__back {
     font-size: 0.875rem;
-    color: #495057;
+    font-weight: 600;
+    color: var(--dark, #222);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #dee2e6;
-    background: #fff;
-    transition: background 0.15s;
+    gap: 0.35rem;
+    padding: 0.7rem 1.15rem;
+    border-radius: var(--radius, 7px);
+    border: 1px solid var(--border, #e7e7e7);
+    background: var(--white, #fff);
+    transition: background 0.15s ease;
 }
-.bw-bottom-nav__back:hover { background: #f8f9fa; color: #212529; }
+.bw-bottom-nav__back:hover { background: var(--lightgray, #f8f9fc); color: var(--dark, #222); }
+.bw-bottom-nav__back:focus-visible { outline: 2px solid var(--primary, #0a5a3b); outline-offset: 1px; }
 .bw-bottom-nav__indicator {
     font-size: 0.8125rem;
-    color: #6c757d;
+    color: var(--muted, #8590a5);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
 }
 .bw-bottom-nav__next {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    background: #1a4a3a;
+    gap: 0.4rem;
+    background: var(--primary, #0a5a3b);
     color: #fff;
+    font-family: inherit;
     font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.5rem 1.25rem;
-    border-radius: 6px;
+    font-size: 0.9rem;
+    padding: 0.7rem 1.5rem;
+    border: 1px solid var(--primary, #0a5a3b);
+    border-radius: var(--radius, 7px);
     text-decoration: none;
-    transition: background 0.15s;
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
-.bw-bottom-nav__next:hover { background: #143d2f; color: #fff; }
+.bw-bottom-nav__next:hover { background: #0f4b40; border-color: #0f4b40; color: #fff; }
+.bw-bottom-nav__next:focus-visible { outline: none; box-shadow: 0 0 0 0.2rem rgba(10, 90, 59, 0.25); }
+
+/* ── KPI-strip binnen een wizardstap ────────────────────────────
+   Ontleend aan gl-kpi2 (Projecthub): hairline-rand, het icoon draagt
+   de kleur — --primary standaard, --danger alleen bij een probleem.
+   Getallen tabular. Gebruik <a class="bw-kpi"> waar de tegel linkt. */
+.bw-kpi {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    padding: 12px 14px;
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+a.bw-kpi:hover {
+    border-color: var(--primary, #0a5a3b);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+a.bw-kpi:focus-visible { outline: 2px solid var(--primary, #0a5a3b); outline-offset: 2px; }
+.bw-kpi__icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary, #0a5a3b);
+}
+.bw-kpi--flag .bw-kpi__icon { background: var(--danger-tint, #f7ece8); color: var(--danger, #b3452f); }
+.bw-kpi__body { min-width: 0; display: flex; flex-direction: column; }
+.bw-kpi__label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted, #8590a5);
+}
+.bw-kpi__value {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+}
+.bw-kpi--flag .bw-kpi__value { color: var(--danger-text, #8a3420); }
+.bw-kpi__sub { font-size: 0.7rem; color: var(--muted, #8590a5); }
+
+/* ── Meta-chips rechts op de section-head-lijn ───────────────────
+   De stap-titel komt uit gl-form-section__head; deze partial-output
+   (stap/budget/versie/status + autosave) hangt er rechts naast. */
+.gl-form-section__head { flex-wrap: wrap; }
+.bw-head-meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+@media (max-width: 900px) {
+    .bw-head-meta {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
+}
+/* Stap-kop bovenaan de scrollzone (bare gl-form-section__head). */
+.bw-step-head { margin-top: 2px; }
+.bw-step-head .bw-autosave { margin-left: 0.25rem; }
+
+/* ── KPI-strip op één lijn ────────────────────────────────────────
+   Gebruikt de échte gl-kpi2-component (Projecten/Detail). Deze
+   modifier dwingt alle tegels op één rij; smalle schermen laten
+   horizontaal scrollen i.p.v. wrappen. */
+.gl-kpi2-strip.bw-kpi-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+.gl-kpi2-strip.bw-kpi-row::-webkit-scrollbar { height: 4px; }
+.gl-kpi2-strip.bw-kpi-row .gl-kpi2-tile-col {
+    flex: 1 1 0;
+    min-width: 128px;
+}
+/* Niet-klikbare budget-tegel: zelfde uiterlijk als a.gl-kpi2-tile, geen hover. */
+.gl-kpi2-tile[role="presentation"], div.gl-kpi2-tile { cursor: default; }
+.gl-kpi2-strip.bw-kpi-row .gl-kpi2-value { font-size: 0.95rem; }
+
+/* ── Cijfertegel (zelfde model als Projecthub gl-kpi2) ─────────
+   Hairline-tegel, label bovenaan in kleinkapitaal, groot getal
+   eronder, links uitgelijnd. Markup houdt value-dan-label aan;
+   column-reverse zet het label visueel bovenaan zonder markup-churn. */
+.bw-stat {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 2px;
+    height: 100%;
+    padding: 12px 14px;
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+}
+.bw-stat__value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--dark, #222);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.bw-stat__value--muted { font-size: 1rem; font-weight: 700; }
+.bw-stat__label {
+    font-size: 0.64rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted, #8590a5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.bw-stat--flag { border-color: color-mix(in srgb, var(--danger, #b3452f) 40%, transparent); }
+.bw-stat--flag .bw-stat__value { color: var(--danger-text, #8a3420); }
+
+/* ── Sectiekaart (Gevels / Dak: blok met eigen kop + subtotaal) ─ */
+.bw-section-card {
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+.bw-section-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--primary, #0a5a3b);
+}
+.bw-section-card__body { padding: 0.75rem 0.9rem; }
+
+/* ── Secundair inline paneel ──────────────────────────────────
+   Toevoegrij, legende: lichter dan de invoerkaart, geen schaduw. */
+.bw-panel {
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    padding: 0.85rem 1rem;
+}
+.bw-panel--tint { background: var(--lightgray, #f8f9fc); }
+.bw-panel__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted, #8590a5);
+    margin-bottom: 0.5rem;
+}
+
+/* ── Coëfficiënt-tag (legende) ────────────────────────────────── */
+.bw-coeff {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius, 7px);
+    background: var(--lightgray, #f8f9fc);
+    border: 1px solid var(--border, #e7e7e7);
+    font-size: 0.72rem;
+    color: var(--dark, #222);
+}
+.bw-coeff strong { color: var(--primary, #0a5a3b); font-variant-numeric: tabular-nums; }
+
+/* ── Dichte tabelinvoer ────────────────────────────────────────
+   De wizard-uitzondering op de 46px form-control-modern: compacte,
+   wél-getokende invoer voor grote bewerkbare tabellen (Oppervlaktes,
+   Sanitair, Gevels, Dak). ~34px, --border, 7px, groene focusring,
+   getallen rechts uitgelijnd en tabular. */
+.bw-cell-input {
+    height: 34px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--dark, #222);
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    width: 100%;
+}
+.bw-cell-input--num { text-align: right; font-variant-numeric: tabular-nums; }
+.bw-cell-input::placeholder { color: var(--muted, #8590a5); }
+
+/* Totaalwaarde in een tfoot-cel: exact dezelfde doos als de .bw-cell-input
+   erboven (34px hoog, 1px rand, 10px binnenmarge) maar rand + achtergrond
+   onzichtbaar, zodat het getal precies onder de kolominvoer valt. Blijft een
+   <span>, dus bestaande textContent-updates werken ongewijzigd. */
+.bw-cell-input--total {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 24px;                 /* 34 - 2px rand - 8px marge → verticaal gecentreerd */
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    font-weight: 700;
+    color: var(--primary, #0a5a3b);
+    pointer-events: none;
+}
+select.bw-cell-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M10.293 3.293 6 7.586 1.707 3.293A1 1 0 0 0 .293 4.707l5 5a1 1 0 0 0 1.414 0l5-5a1 1 0 1 0-1.414-1.414Z' fill='%23777'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+.bw-cell-input:focus {
+    outline: none;
+    border-color: var(--primary, #0a5a3b);
+    box-shadow: 0 0 0 0.15rem rgba(10, 90, 59, 0.2);
+}
+.bw-cell-input:disabled { background: var(--lightgray, #f8f9fc); color: var(--muted, #8590a5); }
+
+/* ── Rij-acties: vlakke icoonknoppen (hairline, geen vulling) ────────
+   Herbruikbaar in elke bw-table i.p.v. een "…"-menu per rij. */
+.bw-row-actions {
+    display: inline-flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+.bw-row-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    background: var(--white, #fff);
+    color: var(--muted, #8590a5);
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.bw-row-btn:hover {
+    background: var(--lightgreen, #e8f0eb);
+    border-color: var(--primary, #0a5a3b);
+    color: var(--primary, #0a5a3b);
+}
+.bw-row-btn:focus-visible {
+    outline: none;
+    border-color: var(--primary, #0a5a3b);
+    box-shadow: 0 0 0 0.15rem rgba(10, 90, 59, 0.2);
+}
+.bw-row-btn--danger:hover {
+    background: var(--danger-tint, #f7ece8);
+    border-color: var(--danger, #b3452f);
+    color: var(--danger, #b3452f);
+}
+
+/* ── Dubbelveld (bv. % + maanden op één regel in een gl-field) ── */
+.bw-dual {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.bw-dual .form-control { flex: 1 1 0; min-width: 0; }
+.bw-dual > span {
+    flex: none;
+    font-size: 0.8125rem;
+    color: var(--muted, #8590a5);
+}
+
+/* ── Datatabel-drager (bw-dt) ─────────────────────────────────────
+   Eén tabelcomponent voor élke tabelgedreven stap. Witte drager met
+   hairline-rand + zachte lift zodat de tabel niet in de pagina
+   verdwijnt, met vaste zones:
+     .bw-dt__head    — titel links, actieknoppen rechts
+     .bw-dt__toolbar — snelle rij-toevoegen (parameter-velden + knop)
+     .bw-dt__scroll  — de scrollende <table class="bw-table">
+     .bw-dt__empty   — lege staat i.p.v. een lege tabel
+     .bw-dt__foot    — totaal/samenvatting onder de tabel
+   ───────────────────────────────────────────────────────────────── */
+.bw-dt {
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+.bw-dt + .bw-dt { margin-top: 1rem; }
+.bw-dt__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.bw-dt__title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--primary, #0a5a3b);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.bw-dt__title .bw-dt__count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted, #8590a5);
+    background: var(--lightgray, #f8f9fc);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+    font-variant-numeric: tabular-nums;
+}
+.bw-dt__actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.bw-dt__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.6rem;
+    padding: 0.7rem 1rem;
+    background: var(--lightgray, #f8f9fc);
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.bw-dt__field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bw-dt__field > label {
+    font-size: 0.64rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted, #8590a5);
+    margin: 0;
+}
+.bw-dt__toolbar .btn { flex-shrink: 0; }
+.bw-dt__scroll { overflow-x: auto; }
+.bw-dt__scroll--tall { max-height: 58vh; overflow-y: auto; }
+.bw-dt__scroll--tall .bw-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.bw-dt__empty {
+    margin: 0;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    color: var(--muted, #8590a5);
+    font-size: 0.83rem;
+}
+.bw-dt__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border, #e7e7e7);
+    background: var(--lightgray, #f8f9fc);
+    font-size: 0.85rem;
+}
+.bw-dt__foot strong { color: var(--primary, #0a5a3b); font-variant-numeric: tabular-nums; }
+.bw-dt .bw-table { margin: 0; }
+.bw-dt .bw-table th { border-top: 0; }
+.bw-dt .bw-table tbody tr:last-child td { border-bottom: 0; }
+
+/* ── Dak & afbraak: type-rail ─────────────────────────────────────
+   Vervangt de KPI-strip. Eén chip per dak-/afbraaktype: toont het
+   subtotaal én is de sprong-/toevoegknop. Een leeg type toont een +
+   en een streepjesrand; klikken maakt de sectie aan. */
+.dak-rail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.dak-rail__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    color: var(--dark, #222);
+    font: inherit;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.dak-rail__chip > i { color: var(--primary, #0a5a3b); font-size: 0.95rem; }
+.dak-rail__chip:hover { background: var(--lightgreen, #e8f0eb); border-color: var(--primary, #0a5a3b); }
+.dak-rail__chip:focus-visible {
+    outline: none;
+    border-color: var(--primary, #0a5a3b);
+    box-shadow: 0 0 0 0.15rem rgba(10, 90, 59, 0.2);
+}
+.dak-rail__name { font-size: 0.8rem; font-weight: 600; }
+.dak-rail__val {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary, #0a5a3b);
+    font-variant-numeric: tabular-nums;
+}
+.dak-rail__chip--empty { border-style: dashed; }
+.dak-rail__chip--empty > i,
+.dak-rail__chip--empty .dak-rail__name,
+.dak-rail__chip--empty .dak-rail__val { color: var(--muted, #8590a5); }
+
+/* ── Gevels: sub-tabs binnen de stap ──────────────────────────────
+   Zelfde taal als gl-form-shell__tabs: platte knoppen, groene actieve
+   tekst + oker-onderlijn, geen pillen of gekleurde nav-tabs. */
+.bw-subtabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 2px solid var(--border, #e7e7e7);
+    margin-bottom: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+/* eerste blok in een tab-paneel: geen dubbele top-marge onder de tabs */
+.bw-subtabs + .tab-content .tab-pane > .row:first-child,
+.bw-subtabs + .tab-content .tab-pane > .bw-split:first-child { margin-top: 0; }
+.bw-subtabs::-webkit-scrollbar { display: none; }
+.bw-subtabs .nav-link {
+    flex: 0 0 auto;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 12px 15px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--muted, #8590a5);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.12s ease, border-color 0.12s ease;
+}
+.bw-subtabs .nav-link:hover { color: var(--dark, #222); }
+.bw-subtabs .nav-link.active {
+    color: var(--primary, #0a5a3b);
+    background: none;
+    border-bottom-color: var(--warning, #c17d1f);
+}
+.bw-subtabs .nav-link:focus-visible { outline: 2px solid var(--primary, #0a5a3b); outline-offset: -3px; border-radius: 4px; }
+.bw-subtabs .bw-tabcount {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary, #0a5a3b);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Twee tabellen binnen één tab: geen geneste kaart, wel een divider. */
+.bw-split { display: grid; gap: 1.25rem; }
+@media (min-width: 992px) { .bw-split--2 { grid-template-columns: 1fr 1fr; } }
+.bw-split__part { min-width: 0; }
+.bw-split__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--dark, #222);
+}
+
+/* Elke los-geplaatste bw-table in de wizard (Dak- en Activiteiten-
+   accordions, Verkoop-referentie) krijgt dezelfde subtiele drager als een
+   .bw-dt__scroll, zodat alle tabellen er identiek uitzien. Gevels gebruikt
+   sinds de bw-dt-conversie geen .table-responsive meer. */
+.bw-inner-body .accordion-body .table-responsive,
+.bw-inner-body .bw-section-card .table-responsive {
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    background: var(--white, #fff);
+    overflow: auto;
+}
+
+/* ── Bewerkbare wizardtabel ────────────────────────────────────
+   Eén tabeltaal voor alle tabelgedreven stappen: hairline-randen,
+   warme zebra, compacte cellen. */
+.bw-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.bw-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--muted, #8590a5);
+    background: var(--lightgray, #f8f9fc);
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+    white-space: nowrap;
+}
+.bw-table td {
+    padding: 0.4rem 0.7rem;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+    vertical-align: middle;
+}
+/* nth-of-type (niet nth-child): rij-partials zetten soms een <script> naast
+   de <tr> in de tbody — nth-child zou daardoor de zebra laten verspringen. */
+.bw-table tbody tr:nth-of-type(even) td { background: var(--lightgray, #f8f9fc); }
+.bw-table tbody tr:hover td { background: var(--lightgreen, #e8f0eb); }
+.bw-table td.bw-num, .bw-table th.bw-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Kolomkop boven een cel met een .bw-cell-input: de veldtekst springt
+   0.7rem celmarge + 1px rand + 10px veldmarge in. Dezelfde inspringing
+   op de kop, zodat label, invoer en totaal in één rechte lijn vallen. */
+.bw-table th.bw-th-cell {
+    padding-left: calc(0.7rem + 11px);
+    padding-right: calc(0.7rem + 11px);
+}
+.bw-table tfoot td {
+    padding: 0.55rem 0.7rem;
+    border-top: 2px solid var(--border, #e7e7e7);
+    font-weight: 700;
+    color: var(--primary, #0a5a3b);
+}

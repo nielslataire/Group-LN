@@ -12,19 +12,23 @@
 }
 @Html.AntiForgeryToken()
 
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
+}
+
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
-            <div class="row justify-content-between align-items-center pt-2 pb-3">
-                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                    <h1 class="page-head mb-0 mt-0">Budgetten</h1>
-                    <h5 class="mb-4 mt-0">
-                        Elk project kan meerdere budgetten bevatten, elk met genummerde versies.
-                        Eén versie is steeds de actieve. Open een versie om de berekeningswizard te starten.
-                    </h5>
-                </div>
-                <div class="col-auto">
+
+            <div class="gl-page-header">
+                @await Html.PartialAsync("_PageHeader", new CPMCore.Models.PageHeaderModel
+                {
+                    Title = "Budgetten",
+                    Subtitle = "Meerdere budgetten per project, elk met genummerde versies. Eén versie is de actieve — open een versie om de berekeningswizard te starten."
+                })
+                <div class="gl-page-header__actions">
                     <a href="@Url.Action("BudgetMasterAanmaken", "Projecten", new { projectId = Model.ProjectId })"
                        class="btn btn-primary">
                         <i class="fas fa-plus me-1"></i> Nieuw budget aanmaken
@@ -34,8 +38,12 @@
 
             @if (!Model.BudgetMasters.Any())
             {
-                <div class="alert alert-info">
-                    Nog geen budgetten aangemaakt voor dit project.
+                <div class="bw-panel bw-panel--tint text-center py-4">
+                    <p class="mb-1 fw-semibold">Nog geen budgetten voor dit project</p>
+                    <p class="text-muted mb-3">Maak een eerste budget aan om de berekeningswizard te starten.</p>
+                    <a href="@Url.Action("BudgetMasterAanmaken", "Projecten", new { projectId = Model.ProjectId })" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i> Nieuw budget aanmaken
+                    </a>
                 </div>
             }
 
@@ -43,22 +51,21 @@
                 @foreach (var master in Model.BudgetMasters)
                 {
                     <div class="col-xl-6 col-lg-12 mb-4">
-                        <div class="card h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center"
-                                 style="background-color:#1a4a3a; color:#fff;">
-                                <h5 class="mb-0">@master.Naam</h5>
+                        <div class="bw-section-card h-100">
+                            <div class="bw-section-card__header">
+                                <span>@master.Naam</span>
                                 @if (master.IsActief)
                                 {
-                                    <span class="badge bg-light text-dark">Actief</span>
+                                    <span class="badge bg-primary">Actief</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Inactief</span>
+                                    <span class="badge bg-dark">Inactief</span>
                                 }
                             </div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm mb-0">
-                                    <thead class="table-light">
+                            <div class="bw-section-card__body" style="padding:0">
+                                <table class="bw-table mb-0">
+                                    <thead>
                                         <tr>
                                             <th>Versie</th>
                                             <th>Naam</th>
@@ -71,17 +78,17 @@
                                         @foreach (var versie in master.Versies)
                                         {
                                             <tr>
-                                                <td>v@versie.Versienummer</td>
+                                                <td class="fw-semibold">v@versie.Versienummer</td>
                                                 <td>@(versie.VersieNaam ?? "—")</td>
                                                 <td>@versie.CreatedAt.ToString("dd/MM/yy")</td>
                                                 <td>
                                                     @if (versie.IsHuidig)
                                                     {
-                                                        <span class="badge bg-success">Huidig</span>
+                                                        <span class="badge bg-primary">Huidig</span>
                                                     }
                                                     else if (versie.Status == "Concept")
                                                     {
-                                                        <span class="badge bg-primary">Concept</span>
+                                                        <span class="bw-chip bw-chip--concept">Concept</span>
                                                     }
                                                     else
                                                     {
@@ -90,12 +97,12 @@
                                                 </td>
                                                 <td class="d-flex gap-1 flex-wrap">
                                                     <a href="@Url.Action("BudgetGegevens", "Projecten", new { versieId = versie.Id })"
-                                                       class="btn btn-sm btn-outline-primary">
+                                                       class="btn btn-sm btn-primary">
                                                         <i class="fas fa-folder-open me-1"></i>Open
                                                     </a>
                                                     @if (!versie.IsHuidig)
                                                     {
-                                                        <button class="btn btn-sm btn-outline-secondary btn-activeer-versie"
+                                                        <button class="btn btn-sm btn-outline-primary btn-activeer-versie"
                                                                 data-versie-id="@versie.Id">
                                                             <i class="fas fa-check me-1"></i>Activeer
                                                         </button>
@@ -103,24 +110,23 @@
                                                 </td>
                                             </tr>
                                         }
-                                        <tr class="table-light">
-                                            <td colspan="5">
-                                                <button class="btn btn-sm btn-link text-success btn-nieuwe-versie"
+                                        <tr>
+                                            <td colspan="5" style="background:var(--lightgray,#f8f9fc)">
+                                                <button class="btn btn-sm btn-link text-decoration-none p-0 btn-nieuwe-versie"
+                                                        style="color:var(--primary,#0a5a3b)"
                                                         data-master-id="@master.Id">
                                                     <i class="fas fa-plus-circle me-1"></i>Nieuwe versie op basis van v@(master.Versies.FirstOrDefault()?.Versienummer)
                                                 </button>
                                                 <div class="nieuwe-versie-form d-none mt-2" data-master-id="@master.Id">
-                                                    <div class="input-group input-group-sm mb-1">
-                                                        <span class="input-group-text">Naam</span>
-                                                        <input type="text" class="form-control versie-naam-input" placeholder="Optionele naam" />
+                                                    <div class="mb-2">
+                                                        <input type="text" class="bw-cell-input versie-naam-input" placeholder="Optionele naam" />
                                                     </div>
-                                                    <div class="input-group input-group-sm mb-1">
-                                                        <span class="input-group-text">Notitie</span>
-                                                        <input type="text" class="form-control versie-notitie-input" placeholder="Optionele notitie" />
+                                                    <div class="mb-2">
+                                                        <input type="text" class="bw-cell-input versie-notitie-input" placeholder="Optionele notitie" />
                                                     </div>
                                                     <div class="d-flex gap-2">
-                                                        <button class="btn btn-sm btn-success btn-versie-opslaan">Aanmaken</button>
-                                                        <button class="btn btn-sm btn-outline-secondary btn-versie-annuleren">Annuleren</button>
+                                                        <button class="btn btn-sm btn-primary btn-versie-opslaan">Aanmaken</button>
+                                                        <button class="btn btn-sm btn-light border btn-versie-annuleren">Annuleren</button>
                                                     </div>
                                                 </div>
                                             </td>
@@ -128,12 +134,12 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="card-footer d-flex gap-2">
+                            <div class="bw-section-card__body d-flex gap-2 align-items-center" style="border-top:1px solid var(--border,#e7e7e7)">
                                 <a href="@Url.Action("BudgetMasterAanmaken", "Projecten", new { projectId = Model.ProjectId })"
-                                   class="btn btn-sm btn-outline-secondary">
+                                   class="btn btn-sm btn-light border">
                                     <i class="fas fa-edit me-1"></i>Bewerken
                                 </a>
-                                <span class="ms-auto text-muted small align-self-center">
+                                <span class="ms-auto text-muted small">
                                     @master.Versies.Count versie@(master.Versies.Count == 1 ? "" : "s")
                                 </span>
                             </div>

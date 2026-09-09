@@ -17,6 +17,15 @@
         ],
         "createdAt": "2026-09-05T13:18:19.082Z",
         "reason": "Agent: .tabs-modern .nav-link.active is a functional active-state indicator on EditUnit.cshtml's vertical tab list, not a decorative card border (the pattern this rule targets); pre-existing code, unrelated to this session's edits"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "CPMCore/wwwroot/css/budget-wizard.css"
+        ],
+        "createdAt": "2026-09-08T09:25:14.410Z",
+        "reason": "impeccable: .bw-subtabs .nav-link border-bottom:3px transparent is a tab-underline indicator (border-radius:0, not a card), mirroring the documented gl-form-shell__tab pattern in DESIGN.md"
       }
     ]
   }

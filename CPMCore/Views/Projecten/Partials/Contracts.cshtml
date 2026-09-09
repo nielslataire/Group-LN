@@ -116,7 +116,7 @@
 								{
 									id          = c.Id,
 									name        = string.IsNullOrWhiteSpace(c.ContractName) ? "Contract" : c.ContractName,
-									price       = (c.Activities?.Sum(a => a.Price ?? 0) ?? 0).ToString("C", currencyCulture),
+									price       = (c.Activities?.Sum(a => a.EffectivePrice) ?? 0).ToString("C", currencyCulture),
 									signed      = c.ContractSigned,
 									vat         = FmtVat(c),
 									paymentTerm = FmtPaymentTerm(c),
@@ -216,22 +216,28 @@
 							<td class="actions align-middle">
 								@if (row.Company != null)
 								{
-									<a class="ms-1 me-1" title="Detail"
-									   href="@Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
-										<i class="bx bx-eye fs-5"></i>
-									</a>
+									@* Volgorde: bijbestelling, bewerken, verwijderen, contract toevoegen, detail *@
+									@if (canWriteProjectSuppliers && row.HasContract)
+									{
+										var contractsMeta = row.Contracts.Select(c => new
+										{
+											id = c.Id,
+											name = string.IsNullOrWhiteSpace(c.ContractName) ? "Contract" : c.ContractName,
+											activityIds = (c.Activities ?? new List<ContractActivityBO>())
+												.Select(a => a.Activity?.ID ?? 0).Where(x => x > 0).Distinct().ToArray()
+										});
+										<a href="#" class="ms-1 me-1 js-add-bijbestelling" title="Bijbestelling toevoegen"
+										   data-company-id="@row.Company.ID"
+										   data-company-name="@row.Company.Display"
+										   data-contracts="@JsonSerializer.Serialize(contractsMeta)">
+											<i class="bx bx-receipt fs-5"></i>
+										</a>
+									}
 									@if (hasSingle && canWriteProjectSuppliers)
 									{
 										<a class="ms-1 me-1" title="Bewerken"
 										   href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })">
 											<i class="bx bx-edit fs-5"></i>
-										</a>
-									}
-									@if (canWriteProjectSuppliers)
-									{
-										<a class="ms-1 me-1" title="Contract toevoegen"
-										   href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
-											<i class="bx bx-plus fs-5"></i>
 										</a>
 									}
 									@if (hasSingle && canDeleteProjectSuppliers)
@@ -241,6 +247,17 @@
 											<i class="bx bx-trash fs-5"></i>
 										</a>
 									}
+									@if (canWriteProjectSuppliers)
+									{
+										<a class="ms-1 me-1" title="Contract toevoegen"
+										   href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
+											<i class="bx bx-plus fs-5"></i>
+										</a>
+									}
+									<a class="ms-1 me-1" title="Detail"
+									   href="@Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
+										<i class="bx bx-eye fs-5"></i>
+									</a>
 								}
 							</td>
 						</tr>

@@ -3821,6 +3821,10 @@ namespace CPMCore.Models.Projecten
                 _brokers = value;
             }
         }
+
+        /// <summary>Gekozen makelaar bij het toevoegen van een nieuwe verzekering (Id=0).</summary>
+        [Display(Name = "Makelaar")]
+        public int SelectedBrokerId { get; set; }
     }
 
     // CONTRACTS
@@ -3886,7 +3890,8 @@ namespace CPMCore.Models.Projecten
         public decimal TotalInvoiced { get; set; }
         public bool HasContract => Contracts?.Any() == true;
         public bool AllContractsSigned => Contracts?.Any() == true && Contracts.All(c => c.ContractSigned);
-        public decimal TotalContractPrice => Contracts?.Sum(c => c.Activities?.Sum(a => a.Price ?? 0) ?? 0) ?? 0;
+        // Effectieve lotprijs = basisprijs + bijbestellingen op dat lot.
+        public decimal TotalContractPrice => Contracts?.Sum(c => c.Activities?.Sum(a => a.EffectivePrice) ?? 0) ?? 0;
     }
 
     /// <summary>Welke optionele kolommen mee op de aannemerslijst-PDF komen.</summary>

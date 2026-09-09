@@ -5,27 +5,27 @@
 }
 <tr class="verkoop-row">
     <td>
-        <input type="text" class="form-control form-control-sm eenheid-naam"
+        <input type="text" class="bw-cell-input eenheid-naam"
                value="@Model.EenheidNaam" placeholder="naam eenheid" />
     </td>
     <td>
-        <input type="number" class="form-control form-control-sm code-bouw"
+        <input type="number" class="bw-cell-input bw-cell-input--num code-bouw"
                value="@Model.CodeBouw" placeholder="code" />
     </td>
     <td>
-        <input type="number" class="form-control form-control-sm code-grond"
+        <input type="number" class="bw-cell-input bw-cell-input--num code-grond"
                value="@Model.CodeGrond" placeholder="code" />
     </td>
     <td>
-        <input type="number" class="form-control form-control-sm opp-tuin"
+        <input type="number" class="bw-cell-input bw-cell-input--num opp-tuin"
                value="@FmtDec(Model.OppTuin)" step="0.01" placeholder="0.00" />
     </td>
     <td>
-        <input type="number" class="form-control form-control-sm opp-terras"
+        <input type="number" class="bw-cell-input bw-cell-input--num opp-terras"
                value="@FmtDec(Model.OppTerras)" step="0.01" placeholder="0.00" />
     </td>
     <td>
-        <input type="number" class="form-control form-control-sm opp-dakterras"
+        <input type="number" class="bw-cell-input bw-cell-input--num opp-dakterras"
                value="@FmtDec(Model.OppDakterras)" step="0.01" placeholder="0.00" />
     </td>
     <td class="text-center">
@@ -34,12 +34,15 @@
         </div>
     </td>
     <td>
-        <input type="number" class="form-control form-control-sm extra-forfait"
+        <input type="number" class="bw-cell-input bw-cell-input--num extra-forfait"
                value="@FmtDec(Model.ExtraForfait)" step="0.01" placeholder="0.00" />
     </td>
-    <td class="text-end">
-        <a href="#" class="text-danger delete-verkoop-row" title="Verwijderen">
-            <i class="bx bx-trash"></i>
-        </a>
+    <td class="text-end" style="width:56px;">
+        <div class="bw-row-actions">
+            <button type="button" class="bw-row-btn bw-row-btn--danger delete-verkoop-row"
+                    title="Rij verwijderen" aria-label="Rij verwijderen">
+                <i class="fa-solid fa-trash-alt" aria-hidden="true"></i>
+            </button>
+        </div>
     </td>
 </tr>

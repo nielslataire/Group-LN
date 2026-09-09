@@ -54,6 +54,7 @@ namespace DALCore
         public GenericRepository<ClientPoa> ClientPoas { get; }
         public GenericRepository<Contract> Contracts { get; }
         public GenericRepository<ContractActivity> ContractActivities { get; }
+        public GenericRepository<ContractAdditionalOrder> ContractAdditionalOrders { get; }
         public GenericRepository<ProjectBudget> Budgets { get; }
         public GenericRepository<ChangeOrder> ChangeOrders { get; }
         public GenericRepository<ChangeOrderDetail> ChangeOrderDetails { get; }
@@ -171,6 +172,7 @@ namespace DALCore
             ClientPoas = new GenericRepository<ClientPoa>(_context);
             Contracts = new GenericRepository<Contract>(_context);
             ContractActivities = new GenericRepository<ContractActivity>(_context);
+            ContractAdditionalOrders = new GenericRepository<ContractAdditionalOrder>(_context);
             Budgets = new GenericRepository<ProjectBudget>(_context);
             ChangeOrders = new GenericRepository<ChangeOrder>(_context);
             ChangeOrderDetails = new GenericRepository<ChangeOrderDetail>(_context);

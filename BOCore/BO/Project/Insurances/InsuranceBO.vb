@@ -118,4 +118,15 @@ Public Class InsuranceBO
             _enddate = value
         End Set
     End Property
+
+    Private _polisnummer As String
+    <Display(Name:="Polisnummer")>
+    Public Property Polisnummer() As String
+        Get
+            Return _polisnummer
+        End Get
+        Set(ByVal value As String)
+            _polisnummer = value
+        End Set
+    End Property
 End Class

@@ -44,6 +44,10 @@
                     <label for="Project_WerfmeldingDossier">@Html.DisplayNameFor(m => m.Project.WerfmeldingDossier)</label>
                     @Html.TextBoxFor(m => m.Project.WerfmeldingDossier, new { @class = "form-control form-control-modern", placeholder = "Dossiernummer", maxlength = "100", id = "Project_WerfmeldingDossier" })
                 </div>
+                <div class="gl-field">
+                    <label for="Project_WerfmeldingEndDate">@Html.DisplayNameFor(m => m.Project.WerfmeldingEndDate)</label>
+                    @Html.TextBoxFor(m => m.Project.WerfmeldingEndDate, "{0:yyyy-MM-dd}", new { type = "date", @class = "form-control form-control-modern", id = "Project_WerfmeldingEndDate" })
+                </div>
             }
 
             <div class="gl-field">

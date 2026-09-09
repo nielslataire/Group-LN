@@ -1,114 +1,95 @@
 @model BOCore.Budget.BudgetActivityLijnBO
 @{
-    var ic = System.Globalization.CultureInfo.InvariantCulture;
-    string FmtDec(decimal v, int d = 2) => v.ToString("F" + d, ic);
+    var inv  = System.Globalization.CultureInfo.InvariantCulture;
+    var nlBE = new System.Globalization.CultureInfo("nl-BE");
+    string Eur(decimal v) => v.ToString("N2", nlBE);
 
-    string verschilClass = Model.Verschil > 0 ? "bg-warning text-dark"
-                         : Model.Verschil < 0 ? "bg-primary"
-                                              : "bg-success";
+    var basis        = Model.TotaalAlternatief;                              // € basis = €/eenheid × aantal eenheden
+    var corr         = Model.Correctiefactor <= 0 ? 1m : Model.Correctiefactor;
+    var pct          = corr * 100m;
+    var gecorrigeerd = basis * corr;
 }
-<tr class="activity-row" data-activity-id="@Model.ActivityId">
-    <td>
-        @Model.ActivityOmschrijving
-        <input type="hidden" class="hdn-activity-id" value="@Model.ActivityId" />
-    </td>
-    <td>
-        <div class="d-flex align-items-center gap-1">
-            <input type="number" step="0.01" min="0"
-                   class="form-control form-control-sm alt-prijs"
-                   value="@FmtDec(Model.AlternatievePrijsPerEenheid)" />
-            @if (Model.HeeftVoorstel)
+<tr class="act-row"
+    data-activity-id="@Model.ActivityId"
+    data-basis="@basis.ToString(inv)"
+    data-prijs="@Model.AlternatievePrijsPerEenheid.ToString(inv)"
+    data-nacalc="@Model.NacalcPrijsPerEenheid.ToString(inv)"
+    data-manueel="@Model.IsManueel.ToString().ToLowerInvariant()">
+
+    <td class="act-row__naam">
+        <span>@Model.ActivityOmschrijving</span>
+        @if (Model.HeeftVoorstel)
+        {
+            string N2(decimal v) => v.ToString("N2", nlBE);
+            string N0(decimal v) => v.ToString("N0", nlBE);
+            var nEenh = Model.VoorstelAantalEenheden ?? 0;
+
+            string popTitle;
+            string popContent;
+
+            if (Model.VoorstelRuwbouwPrijs.HasValue)
             {
-                var nlBE = new System.Globalization.CultureInfo("nl-BE");
-                string N2(decimal v) => v.ToString("N2", nlBE);
-                string N0(decimal v) => v.ToString("N0", nlBE);
-
-                string popTitle;
-                string popContent;
-
-                var nEenh = Model.VoorstelAantalEenheden ?? 0;
-
-                if (Model.VoorstelRuwbouwPrijs.HasValue)
-                {
-                    var rPrijs = Model.VoorstelRuwbouwPrijs  ?? 0m;
-                    var rOpp   = Model.VoorstelRuwbouwOpp    ?? 0m;
-                    var tPrijs = Model.VoorstelTerrasPrijs   ?? 0m;
-                    var tOpp   = Model.VoorstelTerrasOpp     ?? 0m;
-                    var gPrijs = Model.VoorstelGevelPrijs    ?? 0m;
-                    var gOpp   = Model.VoorstelGevelOpp      ?? 0m;
-                    var iPrijs = Model.VoorstelGipsPrijs     ?? 0m;
-                    var iAant  = (int)(Model.VoorstelGipsOpp ?? 0m);
-                    var rTot   = rPrijs * rOpp;
-                    var tTot   = tPrijs * tOpp;
-                    var gTot   = gPrijs * gOpp;
-                    var iTot   = iPrijs * iAant;
-                    var totaal = rTot + tTot + gTot + iTot;
-                    popTitle   = "Ruwbouw berekening";
-                    popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;width:100%;'>
+                var rPrijs = Model.VoorstelRuwbouwPrijs ?? 0m;
+                var rOpp   = Model.VoorstelRuwbouwOpp   ?? 0m;
+                var tPrijs = Model.VoorstelTerrasPrijs  ?? 0m;
+                var tOpp   = Model.VoorstelTerrasOpp    ?? 0m;
+                var gPrijs = Model.VoorstelGevelPrijs   ?? 0m;
+                var gOpp   = Model.VoorstelGevelOpp     ?? 0m;
+                var iPrijs = Model.VoorstelGipsPrijs    ?? 0m;
+                var iAant  = (int)(Model.VoorstelGipsOpp ?? 0m);
+                var rTot   = rPrijs * rOpp;
+                var tTot   = tPrijs * tOpp;
+                var gTot   = gPrijs * gOpp;
+                var iTot   = iPrijs * iAant;
+                var totaal = rTot + tTot + gTot + iTot;
+                popTitle   = "Ruwbouw berekening";
+                popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;width:100%;'>
 <tr><td>Ruwbouwprijs</td><td style='padding:0 6px;text-align:right'>€ {N2(rPrijs)}/m²</td><td style='text-align:right'>× {N2(rOpp)} m²</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(rTot)}</td></tr>
 <tr><td>Terrasprijs</td><td style='padding:0 6px;text-align:right'>€ {N2(tPrijs)}/m²</td><td style='text-align:right'>× {N2(tOpp)} m²</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(tTot)}</td></tr>
 <tr><td>Gevelprijs</td><td style='padding:0 6px;text-align:right'>€ {N2(gPrijs)}/m²</td><td style='text-align:right'>× {N2(gOpp)} m²</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(gTot)}</td></tr>
 <tr><td>Gipsblokken</td><td style='padding:0 6px;text-align:right'>€ {N2(iPrijs)}/eenh.</td><td style='text-align:right'>× {iAant} eenh.</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(iTot)}</td></tr>
-<tr style='border-top:1px solid #dee2e6'><td colspan='3'><strong>Totaal project</strong></td><td style='padding-left:8px;text-align:right;font-weight:700'>€ {N0(totaal)}</td></tr>
-<tr><td colspan='3'>÷ {nEenh} wooneenheden</td><td style='padding-left:8px;text-align:right;color:#0d6efd;font-weight:700'>= € {N2(Model.VoorgesteldePrijsPerEenheid ?? 0m)}/eenh.</td></tr>
+<tr style='border-top:1px solid #e7e7e7'><td colspan='3'><strong>Totaal project</strong></td><td style='padding-left:8px;text-align:right;font-weight:700'>€ {N0(totaal)}</td></tr>
+<tr><td colspan='3'>÷ {nEenh} wooneenheden</td><td style='padding-left:8px;text-align:right;color:#0a5a3b;font-weight:700'>= € {N2(Model.VoorgesteldePrijsPerEenheid ?? 0m)}/eenh.</td></tr>
 </table>";
-                }
-                else
-                {
-                    var ePrijs     = Model.VoorstelEnkelPrijs       ?? 0m;
-                    var eHoev      = Model.VoorstelEnkelHoeveelheid ?? 0m;
-                    var eEenh      = Model.VoorstelEnkelEenheid     ?? "";
-                    var eLabel     = Model.VoorstelEnkelLabel        ?? "";
-                    var eTot       = ePrijs * eHoev;
-                    var detailRows = Model.VoorstelEnkelDetail       ?? "";
-                    popTitle   = $"{eLabel} berekening";
-                    popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;width:100%;'>
+            }
+            else
+            {
+                var ePrijs     = Model.VoorstelEnkelPrijs       ?? 0m;
+                var eHoev      = Model.VoorstelEnkelHoeveelheid ?? 0m;
+                var eEenh      = Model.VoorstelEnkelEenheid     ?? "";
+                var eLabel     = Model.VoorstelEnkelLabel        ?? "";
+                var eTot       = ePrijs * eHoev;
+                var detailRows = Model.VoorstelEnkelDetail       ?? "";
+                popTitle   = $"{eLabel} berekening";
+                popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;width:100%;'>
 {detailRows}
 <tr><td>{eLabel}</td><td style='padding:0 6px;text-align:right'>€ {N2(ePrijs)}/{eEenh}</td><td style='text-align:right'>× {N2(eHoev)} {eEenh}</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(eTot)}</td></tr>
-<tr style='border-top:1px solid #dee2e6'><td colspan='3'><strong>Totaal project</strong></td><td style='padding-left:8px;text-align:right;font-weight:700'>€ {N0(eTot)}</td></tr>
-<tr><td colspan='3'>÷ {nEenh} wooneenheden</td><td style='padding-left:8px;text-align:right;color:#0d6efd;font-weight:700'>= € {N2(Model.VoorgesteldePrijsPerEenheid ?? 0m)}/eenh.</td></tr>
+<tr style='border-top:1px solid #e7e7e7'><td colspan='3'><strong>Totaal project</strong></td><td style='padding-left:8px;text-align:right;font-weight:700'>€ {N0(eTot)}</td></tr>
+<tr><td colspan='3'>÷ {nEenh} wooneenheden</td><td style='padding-left:8px;text-align:right;color:#0a5a3b;font-weight:700'>= € {N2(Model.VoorgesteldePrijsPerEenheid ?? 0m)}/eenh.</td></tr>
 </table>";
-                }
-
-                <span class="badge bg-info text-dark flex-shrink-0 voorstel-calc-badge"
-                      data-bs-toggle="popover"
-                      data-bs-trigger="hover focus"
-                      data-bs-placement="bottom"
-                      data-bs-html="true"
-                      data-bs-custom-class="popover-ruwbouw"
-                      data-bs-title="@popTitle"
-                      data-bs-content="@popContent"
-                      style="cursor:pointer;">
-                    <i class="bx bx-calculator"></i>
-                </span>
             }
+
+            <button type="button" class="act-row__info voorstel-calc-badge"
+                    data-bs-toggle="popover" data-bs-trigger="hover focus"
+                    data-bs-placement="right" data-bs-html="true"
+                    data-bs-custom-class="popover-ruwbouw"
+                    data-bs-title="@popTitle" data-bs-content="@popContent"
+                    aria-label="Toon voorstelberekening">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            </button>
+        }
+    </td>
+
+    <td class="bw-num act-row__basis">€ @Eur(basis)</td>
+
+    <td class="bw-num">
+        <div class="act-row__pct">
+            <input type="number" step="1" min="0" inputmode="numeric"
+                   class="bw-cell-input bw-cell-input--num corr-pct"
+                   value="@pct.ToString("0.##", inv)" aria-label="Correctie in procent" />
+            <span>%</span>
         </div>
     </td>
-    <td class="text-end alt-totaal">€ @FmtDec(Model.TotaalAlternatief)</td>
-    <td>
-        <input type="number" step="0.01" min="0"
-               class="form-control form-control-sm nacalc-prijs"
-               value="@FmtDec(Model.NacalcPrijsPerEenheid)" />
-    </td>
-    <td>
-        <input type="number" step="0.0001" min="0"
-               class="form-control form-control-sm corr-factor"
-               value="@FmtDec(Model.Correctiefactor, 4)" />
-    </td>
-    <td class="text-end nacalc-geind">€ @FmtDec(Model.NacalcGeindexeerd)</td>
-    <td class="text-end verschil-cel">
-        <span class="badge @verschilClass">
-            € @FmtDec(Model.Verschil)
-        </span>
-    </td>
-    <td>
-        <div class="calc-detail small font-monospace text-muted ps-2" style="border-left:3px solid #0d6efd">
-            Nacalc: @Model.NacalcPrijsPerEenheid.ToString("N2") €/eenh.
-            × @Model.Correctiefactor.ToString("F4") (corr.)
-            × @Model.GewogenIndexFactor.ToString("F4") (gew.factor)
-            = @Model.NacalcGeindexeerd.ToString("N2") €/eenh.
-            × @Model.AantalEenheden eenheden
-            = € @Model.TotaalNacalc.ToString("N2")
-        </div>
-    </td>
+
+    <td class="bw-num fw-bold text-primary act-row__gecorrigeerd">€ @Eur(gecorrigeerd)</td>
 </tr>

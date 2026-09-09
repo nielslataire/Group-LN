@@ -21,6 +21,8 @@ public partial class ContractActivity
 
     public virtual ICollection<ChangeOrder> ChangeOrder { get; set; } = new List<ChangeOrder>();
 
+    public virtual ICollection<ContractAdditionalOrder> ContractAdditionalOrder { get; set; } = new List<ContractAdditionalOrder>();
+
     public virtual Contract Contract { get; set; }
 
     public virtual ICollection<IncommingInvoiceDetail> IncommingInvoiceDetail { get; set; } = new List<IncommingInvoiceDetail>();

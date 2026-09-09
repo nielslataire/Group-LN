@@ -75,6 +75,7 @@ public partial class cpmRunningContext {
             entity.Property(e => e.Naam).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Percentage).HasColumnType("decimal(7,4)");
             entity.Property(e => e.Volgorde).HasDefaultValue(0);
+            entity.Property(e => e.Sleutel).HasMaxLength(50);
             entity.HasOne(d => d.Groep).WithMany(p => p.Percentages)
                 .HasForeignKey(d => d.GroepId).OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BouwkostPercentage_Groep");

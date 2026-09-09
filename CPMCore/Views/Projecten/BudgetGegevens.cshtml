@@ -24,7 +24,9 @@
     var terrasSRef       = fTerras?.MateriaalSRef ?? 100m;
 }
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    @* gl-field / gl-field-grid komen uit de gedeelde Projecten-formulierstijl *@
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 }
 
 <section class="content-with-menu">
@@ -36,24 +38,31 @@
             @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 1, ShowCalcToggle = false })
 
             @* ── Pagina-koptekst ── *@
-            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
-            {
-                StepNum         = 1,
-                PageTitle       = "Projectgegevens",
-                PageDescription = "Aantallen, dimensies en S/I bouwkostindexering. Deze waarden voeden alle volgende stappen.",
-                MasterNaam      = Model.MasterNaam,
-                VersieLabel     = Model.VersieLabel,
-                VersieStatus    = Model.VersieStatus,
-                ShowSaveButton  = true,
-                SaveFormId      = "bw-form"
-            })
+            <div class="bw-scroll">
+
+            <div class="gl-form-section__head bw-step-head">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                <div>
+                    <h2 class="gl-form-section__title">Projectgegevens</h2>
+                    <p class="gl-form-section__hint">Aantallen, dimensies en S/I bouwkostindexering — deze waarden voeden alle volgende stappen.</p>
+                </div>
+                @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+                {
+                    StepNum      = 1,
+                    MasterNaam   = Model.MasterNaam,
+                    VersieLabel  = Model.VersieLabel,
+                    VersieStatus = Model.VersieStatus,
+                    ShowSaveButton = true
+                })
+            </div>
 
             <div class="bw-body-grid">
 
                 @* ── Linker kolom: formulier ── *@
                 <div class="bw-col-main">
 
-                    <form id="bw-form" asp-action="BudgetGegevens" method="post">
+                    <form id="bw-form" asp-action="BudgetGegevens" method="post"
+                          data-bw-save-url="@Url.Action("BudgetGegevensOpslaan", "Projecten")">
                         @Html.AntiForgeryToken()
                         <input type="hidden" asp-for="VersieId" />
                         <input type="hidden" asp-for="MasterId" />
@@ -68,7 +77,6 @@
                         <div class="bw-invoer-card">
                             <div class="bw-invoer-card__header">
                                 <span><i class="fas fa-pencil-alt me-2"></i>Invoer</span>
-                                <span class="bw-autosave" id="autosave-label"></span>
                             </div>
                             <div class="bw-invoer-card__body">
 
@@ -81,57 +89,65 @@
                                     <a asp-action="BudgetOppervlaktes" asp-route-versieId="@Model.VersieId">stap 2 — Oppervlaktes</a>.
                                 </div>
 
-                                <div class="row g-3 mb-4">
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.AantalLiften" class="form-label">Aantal liften</label>
-                                        <div class="input-group input-group-sm">
+                                <div class="gl-field-grid mb-4">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalLiften">Aantal liften</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.AantalLiften" type="number" min="0"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text fs-7">st</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.AantalBinnentrappen" class="form-label">Aantal binnentrappen</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalBinnentrappen">Aantal binnentrappen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.AantalBinnentrappen" type="number" min="0"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">st</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.AantalTrapzalen" class="form-label">Aantal trapzalen</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalTrapzalen">Aantal trapzalen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.AantalTrapzalen" type="number" min="0"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">st</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.AantalToegangspoorten" class="form-label">Aantal toegangspoorten</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalToegangspoorten">Aantal toegangspoorten</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.AantalToegangspoorten" type="number" min="0"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">st</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.AantalBovengrondseVerdiepingen" class="form-label">Bovengrondse verdiepingen</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalAanTeBouwenBuren">Aan te bouwen buren</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.AantalAanTeBouwenBuren" type="number" min="0"
+                                                   class="form-control form-control-modern text-end" />
+                                            <span class="input-group-text">st</span>
+                                        </div>
+                                    </div>
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalBovengrondseVerdiepingen">Bovengrondse verdiepingen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.AantalBovengrondseVerdiepingen" type="number" min="0"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">st</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.AantalVerdiepingenOndergronds" class="form-label">Ondergrondse verdiepingen</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.AantalVerdiepingenOndergronds">Ondergrondse verdiepingen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.AantalVerdiepingenOndergronds" type="number" min="0"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">st</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.TypePoorten" class="form-label">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.TypePoorten">
                                             Type poorten
                                             @if (poortWaarschuwing)
                                             {
@@ -141,7 +157,7 @@
                                             }
                                         </label>
                                         <select asp-for="Gegevens.TypePoorten" asp-items="Model.TypePoortenOptions"
-                                                class="form-select form-select-sm">
+                                                class="form-control form-control-modern">
                                             <option value="">— kies type —</option>
                                         </select>
                                     </div>
@@ -149,51 +165,51 @@
 
                                 @* ── DIMENSIES ── *@
                                 <div class="bw-section-label">Dimensies</div>
-                                <div class="row g-3 mb-4">
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.OppFunderingen" class="form-label">Oppervlakte funderingen</label>
-                                        <div class="input-group input-group-sm">
+                                <div class="gl-field-grid mb-4">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.OppFunderingen">Oppervlakte funderingen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.OppFunderingen" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">m²</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.M3Grondwerk" class="form-label">Grondwerk</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.M3Grondwerk">Grondwerk</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.M3Grondwerk" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">m²</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.LmBerlinerwanden" class="form-label">Berlinerwanden</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.LmBerlinerwanden">Berlinerwanden</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.LmBerlinerwanden" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">lm</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.LmSecanpalen" class="form-label">Secanpalen</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.LmSecanpalen">Secanpalen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.LmSecanpalen" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">lm</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.M3Onderschoeiingen" class="form-label">Onderschoeiingen</label>
-                                        <div class="input-group input-group-sm">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.M3Onderschoeiingen">Onderschoeiingen</label>
+                                        <div class="input-group">
                                             <input asp-for="Gegevens.M3Onderschoeiingen" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" />
+                                                   class="form-control form-control-modern text-end" />
                                             <span class="input-group-text">m³</span>
                                         </div>
                                     </div>
-                                    <div class="col-sm-6">
-                                        <label asp-for="Gegevens.TypeDak" class="form-label">Type dak</label>
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.TypeDak">Type dak</label>
                                         <select asp-for="Gegevens.TypeDak" asp-items="Model.TypeDakOptions"
-                                                class="form-select form-select-sm">
+                                                class="form-control form-control-modern">
                                             <option value="">— kies type —</option>
                                         </select>
                                     </div>
@@ -203,144 +219,144 @@
                                 <div class="bw-section-label">
                                     <i class="fas fa-chart-line me-1"></i>Bouwkostindexering (S/I)
                                 </div>
-                                <div class="row g-3">
+                                <div class="gl-field-grid">
                                     @* Ruwbouw basisprijs *@
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.NacalcBasisprijs" class="form-label">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.NacalcBasisprijs">
                                             Nacalc basisprijs ruwbouw
                                             @if (fRuwbouw?.MNaam != null) {
-                                                <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem;font-weight:400;"
+                                                <span class="bw-chip bw-chip--other ms-1" style="font-size:.7rem;font-weight:400;"
                                                       title="Materiaal: @fRuwbouw.MNaam">
-                                                    <i class="bx bx-link-alt me-1"></i>@fRuwbouw.MNaam
+                                                    <i class="fa-solid fa-link me-1"></i>@fRuwbouw.MNaam
                                                 </span>
                                             }
                                         </label>
-                                        <div class="input-group input-group-sm">
+                                        <div class="input-group">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.NacalcBasisprijs" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" id="inp-basisprijs" />
+                                                   class="form-control form-control-modern text-end" id="inp-basisprijs" />
                                             <span class="input-group-text">/m²</span>
                                             @if (ruwbouwBasePrijs != null) {
-                                                <button type="button" class="btn btn-sm btn-default"
+                                                <button type="button" class="btn btn-sm btn-light border"
                                                         onclick="document.getElementById('inp-basisprijs').value='@ruwbouwBasePrijs.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)'; updateIndexFactors();"
                                                         title="Basisprijs overnemen uit Kostprijsmaterialen">
-                                                    <i class="bx bx-repeat"></i>
+                                                    <i class="fa-solid fa-arrows-rotate"></i>
                                                 </button>
                                             }
                                         </div>
                                         @if (ruwbouwBasePrijs != null) {
                                             <div class="form-text text-primary">
-                                                <i class="bx bx-link-external me-1"></i>Basisprijs materiaal: <strong>€ @ruwbouwBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Basisprijs materiaal: <strong>€ @ruwbouwBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
                                                 @if (fRuwbouw.MNaam != null) { <span class="text-muted">— @fRuwbouw.MNaam</span> }
                                             </div>
                                         } else if (fRuwbouw != null) {
                                             <div class="form-text text-muted">
-                                                <i class="bx bx-link-external me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
                                             </div>
                                         }
                                     </div>
                                     @* Gevelmetselwerk *@
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.GevelMetselwerkPrijsPerM2" class="form-label">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.GevelMetselwerkPrijsPerM2">
                                             Gevelmetselwerk
                                             @if (fGevel?.MNaam != null) {
-                                                <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem;font-weight:400;"
+                                                <span class="bw-chip bw-chip--other ms-1" style="font-size:.7rem;font-weight:400;"
                                                       title="Materiaal: @fGevel.MNaam">
-                                                    <i class="bx bx-link-alt me-1"></i>@fGevel.MNaam
+                                                    <i class="fa-solid fa-link me-1"></i>@fGevel.MNaam
                                                 </span>
                                             }
                                         </label>
-                                        <div class="input-group input-group-sm">
+                                        <div class="input-group">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.GevelMetselwerkPrijsPerM2" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" id="inp-gevel" />
+                                                   class="form-control form-control-modern text-end" id="inp-gevel" />
                                             <span class="input-group-text">/m²</span>
                                             @if (gevelBasePrijs != null) {
-                                                <button type="button" class="btn btn-sm btn-default"
+                                                <button type="button" class="btn btn-sm btn-light border"
                                                         onclick="document.getElementById('inp-gevel').value='@gevelBasePrijs.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)'; updateIndexFactors();"
                                                         title="Basisprijs overnemen uit Kostprijsmaterialen">
-                                                    <i class="bx bx-repeat"></i>
+                                                    <i class="fa-solid fa-arrows-rotate"></i>
                                                 </button>
                                             }
                                         </div>
                                         @if (gevelBasePrijs != null) {
                                             <div class="form-text text-primary">
-                                                <i class="bx bx-link-external me-1"></i>Basisprijs materiaal: <strong>€ @gevelBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Basisprijs materiaal: <strong>€ @gevelBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
                                                 @if (fGevel.MNaam != null) { <span class="text-muted">— @fGevel.MNaam</span> }
                                             </div>
                                         } else if (fGevel != null) {
                                             <div class="form-text text-muted">
-                                                <i class="bx bx-link-external me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
                                             </div>
                                         }
                                     </div>
                                     @* Gipsblokken *@
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.GipswerkenPrijsPerM2" class="form-label">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.GipswerkenPrijsPerM2">
                                             Gipsblokken
                                             @if (fGips?.MNaam != null) {
-                                                <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem;font-weight:400;"
+                                                <span class="bw-chip bw-chip--other ms-1" style="font-size:.7rem;font-weight:400;"
                                                       title="Materiaal: @fGips.MNaam">
-                                                    <i class="bx bx-link-alt me-1"></i>@fGips.MNaam
+                                                    <i class="fa-solid fa-link me-1"></i>@fGips.MNaam
                                                 </span>
                                             }
                                         </label>
-                                        <div class="input-group input-group-sm">
+                                        <div class="input-group">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.GipswerkenPrijsPerM2" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" id="inp-gips" />
+                                                   class="form-control form-control-modern text-end" id="inp-gips" />
                                             <span class="input-group-text">/unit</span>
                                             @if (gipsBasePrijs != null) {
-                                                <button type="button" class="btn btn-sm btn-default"
+                                                <button type="button" class="btn btn-sm btn-light border"
                                                         onclick="document.getElementById('inp-gips').value='@gipsBasePrijs.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)'; updateIndexFactors();"
                                                         title="Basisprijs overnemen uit Kostprijsmaterialen">
-                                                    <i class="bx bx-repeat"></i>
+                                                    <i class="fa-solid fa-arrows-rotate"></i>
                                                 </button>
                                             }
                                         </div>
                                         @if (gipsBasePrijs != null) {
                                             <div class="form-text text-primary">
-                                                <i class="bx bx-link-external me-1"></i>Basisprijs materiaal: <strong>€ @gipsBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Basisprijs materiaal: <strong>€ @gipsBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
                                                 @if (fGips.MNaam != null) { <span class="text-muted">— @fGips.MNaam</span> }
                                             </div>
                                         } else if (fGips != null) {
                                             <div class="form-text text-muted">
-                                                <i class="bx bx-link-external me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
                                             </div>
                                         }
                                     </div>
                                     @* Terras *@
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.TerrasPrijsPerM2" class="form-label">
+                                    <div class="gl-field">
+                                        <label asp-for="Gegevens.TerrasPrijsPerM2">
                                             Terras
                                             @if (fTerras?.MNaam != null) {
-                                                <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem;font-weight:400;"
+                                                <span class="bw-chip bw-chip--other ms-1" style="font-size:.7rem;font-weight:400;"
                                                       title="Materiaal: @fTerras.MNaam">
-                                                    <i class="bx bx-link-alt me-1"></i>@fTerras.MNaam
+                                                    <i class="fa-solid fa-link me-1"></i>@fTerras.MNaam
                                                 </span>
                                             }
                                         </label>
-                                        <div class="input-group input-group-sm">
+                                        <div class="input-group">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.TerrasPrijsPerM2" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end" id="inp-terras" />
+                                                   class="form-control form-control-modern text-end" id="inp-terras" />
                                             <span class="input-group-text">/m²</span>
                                             @if (terrasBasePrijs != null) {
-                                                <button type="button" class="btn btn-sm btn-default"
+                                                <button type="button" class="btn btn-sm btn-light border"
                                                         onclick="document.getElementById('inp-terras').value='@terrasBasePrijs.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)'; updateIndexFactors();"
                                                         title="Basisprijs overnemen uit Kostprijsmaterialen">
-                                                    <i class="bx bx-repeat"></i>
+                                                    <i class="fa-solid fa-arrows-rotate"></i>
                                                 </button>
                                             }
                                         </div>
                                         @if (terrasBasePrijs != null) {
                                             <div class="form-text text-primary">
-                                                <i class="bx bx-link-external me-1"></i>Basisprijs materiaal: <strong>€ @terrasBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Basisprijs materiaal: <strong>€ @terrasBasePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
                                                 @if (fTerras.MNaam != null) { <span class="text-muted">— @fTerras.MNaam</span> }
                                             </div>
                                         } else if (fTerras != null) {
                                             <div class="form-text text-muted">
-                                                <i class="bx bx-link-external me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
                                             </div>
                                         }
                                     </div>
@@ -351,36 +367,28 @@
                                     <i class="fas fa-chart-bar me-1"></i>S-index (lonen) &amp; I-index (materialen)
                                 </div>
 
-                                @* S-index huidig *@
-                                <div class="form-group row align-items-center pb-3">
-                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
-                                        S-index (lonen)
-                                    </label>
-                                    <div class="col-lg-3 col-xl-2">
-                                        @Html.TextBoxFor(m => m.Gegevens.SIndexHuidig,
-                                            new { @class = "form-control form-control-sm", type = "number",
-                                                  step = "0.0001", placeholder = "bv. 119.1000" })
+                                <div class="gl-field-grid">
+                                    <div class="gl-field">
+                                        <label for="Gegevens_SIndexHuidig">S-index (lonen)</label>
+                                        <div class="input-group">
+                                            @Html.TextBoxFor(m => m.Gegevens.SIndexHuidig,
+                                                new { @class = "form-control form-control-modern text-end", type = "number",
+                                                      step = "0.0001", placeholder = "bv. 119,1000" })
+                                            <button type="button" class="btn btn-outline-secondary" id="btnPickSIndex" title="Kies uit historiek">
+                                                <i class="fas fa-history" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="col-auto">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnPickSIndex">
-                                            <i class="fas fa-history me-1"></i> Uit historiek
-                                        </button>
-                                    </div>
-                                </div>
-                                @* I-index huidig *@
-                                <div class="form-group row align-items-center pb-3">
-                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
-                                        I2021-index (materialen)
-                                    </label>
-                                    <div class="col-lg-3 col-xl-2">
-                                        @Html.TextBoxFor(m => m.Gegevens.IIndexHuidig,
-                                            new { @class = "form-control form-control-sm", type = "number",
-                                                  step = "0.0001", placeholder = "bv. 123.5000" })
-                                    </div>
-                                    <div class="col-auto">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnPickIIndex">
-                                            <i class="fas fa-history me-1"></i> Uit historiek
-                                        </button>
+                                    <div class="gl-field">
+                                        <label for="Gegevens_IIndexHuidig">I2021-index (materialen)</label>
+                                        <div class="input-group">
+                                            @Html.TextBoxFor(m => m.Gegevens.IIndexHuidig,
+                                                new { @class = "form-control form-control-modern text-end", type = "number",
+                                                      step = "0.0001", placeholder = "bv. 123,5000" })
+                                            <button type="button" class="btn btn-outline-secondary" id="btnPickIIndex" title="Kies uit historiek">
+                                                <i class="fas fa-history" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -440,15 +448,14 @@
 
             </div>
 
-            @* ── Bottom navigatiebalk ── *@
+            @* ── Onderaan navigeren ── *@
+            </div>
             <div class="bw-bottom-nav">
                 <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })"
                    class="bw-bottom-nav__back">
                     <i class="fas fa-chevron-left me-1"></i>Terug naar overzicht
                 </a>
-                <span class="bw-bottom-nav__indicator">
-                    <i class="fas fa-check-circle me-1 text-success"></i>Stap 1 van 10 — Projectgegevens
-                </span>
+                <span class="bw-bottom-nav__indicator">Stap 1 van 9 — Projectgegevens</span>
                 <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })"
                    class="bw-bottom-nav__next">
                     Volgende: Oppervlaktes <i class="fas fa-chevron-right ms-1"></i>
@@ -511,33 +518,8 @@
       '#inp-basisprijs,#inp-gevel,#inp-gips,#inp-terras')
         .on('input', updateIndexFactors);
 
-    // ── Auto-opslaan bij navigeren ────────────────────────────────────────────
-    async function autoSaveEnNavigeer(targetUrl) {
-        const form   = document.getElementById('bw-form');
-        const label  = document.getElementById('autosave-label');
-        label.textContent = 'Opslaan…';
-        try {
-            const resp = await fetch('@Url.Action("BudgetGegevensOpslaan", "Projecten")', {
-                method: 'POST',
-                body:   new FormData(form)
-            });
-            const json = await resp.json();
-            if (json.success) {
-                window.location.href = targetUrl;
-            } else {
-                label.textContent = '⚠ Fout bij opslaan';
-            }
-        } catch {
-            label.textContent = '⚠ Fout bij opslaan';
-        }
-    }
-
-    document.querySelectorAll('a.bw-step, a.bw-bottom-nav__next, a.bw-bottom-nav__back').forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            autoSaveEnNavigeer(this.href);
-        });
-    });
+    // Opslaan-bij-navigeren + stap-overgang: gedeeld in budget-wizard.js
+    // (initStepNav leest form[data-bw-save-url] — zie het form hierboven).
 
     $(document).ready(function () {
         if (ruwbouwBasePrijs !== null) {

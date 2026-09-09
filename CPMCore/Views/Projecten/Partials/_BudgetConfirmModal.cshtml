@@ -1,0 +1,26 @@
+@*
+    Gedeelde bevestigingsdialoog voor de budgetwizard.
+    Zelfde thema-opmaak als de Magnific-popup in projecten/edit (coördinatie).
+    Aangestuurd via BudgetWizard.confirmModal({ title, body, okLabel }) → Promise<bool>.
+*@
+<div id="bw-confirm-modal" class="modal-block modal-block-sm modal-block-danger mfp-hide">
+    <section class="card">
+        <div class="card-body text-center">
+            <div class="modal-wrapper">
+                <div class="modal-icon center">
+                    <i class="fas fa-question-circle" aria-hidden="true"></i>
+                </div>
+                <div class="modal-text">
+                    <h4 data-bw-confirm-title>Verwijderen</h4>
+                    <p data-bw-confirm-body>Ben je zeker dat je dit wil verwijderen?</p>
+                </div>
+            </div>
+        </div>
+        <footer class="card-footer">
+            <div class="col-md-12 text-end">
+                <button type="button" data-bw-confirm-ok class="btn btn-danger">Verwijderen</button>
+                <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+            </div>
+        </footer>
+    </section>
+</div>

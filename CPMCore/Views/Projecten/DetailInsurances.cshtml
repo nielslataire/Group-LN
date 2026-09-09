@@ -161,6 +161,24 @@
             .fail(function () { alert('Kon de modal niet laden.'); });
         });
 
+                // ADD (nieuwe verzekering — zelfde modal als edit, id = 0)
+        $(document).on('click', '.addInsurance', function (e) {
+          e.preventDefault();
+          const projectid = $(this).data('id') || $('#txtProjectId').val();
+
+          $('#edit-insurance-container').empty();
+
+          $.get('@Url.Action("ModalEditInsurance", "Projecten")', { id: 0, projectid: projectid })
+            .done(function (html) {
+              $('#edit-insurance-container').html(html);
+              $.magnificPopup.open({
+                items: { src: '#modaleditinsurance' },
+                type: 'inline'
+              });
+            })
+            .fail(function () { alert('Kon de modal niet laden.'); });
+        });
+
                 // EDIT
         $(document).on('click', '.editInsurance', function (e) {
           e.preventDefault();

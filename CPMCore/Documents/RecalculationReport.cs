@@ -353,7 +353,7 @@ namespace CPMCore.Documents
                         var contract = _m.Contracts
                             .SelectMany(cn => cn.Activities.Where(w => w.Activity.ID == a.ID))
                             .GroupBy(g => g.ContractId)
-                            .Sum(g => g.Sum(x => (decimal?)x.Price) ?? 0m);
+                            .Sum(g => g.Sum(x => x.EffectivePrice));
                         var invoice = _m.IncommingInvoicesActivities.Where(ii => ii.Activity.ID == a.ID).Sum(x => (decimal?)x.Price) ?? 0m;
                         var diffBC = budget - contract;
                         var diffCF = contract - invoice;
@@ -457,7 +457,7 @@ namespace CPMCore.Documents
                 _m.BudgetActivities.Sum(s => (decimal?)s.Price) ?? 0m;
 
             private decimal SumContractAll() =>
-                _m.Contracts.SelectMany(s => s.Activities).Sum(s => (decimal?)s.Price) ?? 0m;
+                _m.Contracts.SelectMany(s => s.Activities).Sum(s => s.EffectivePrice);
 
             private decimal SumInvoicedAll() =>
                 _m.IncommingInvoicesActivities.Sum(s => (decimal?)s.Price) ?? 0m;
@@ -468,7 +468,7 @@ namespace CPMCore.Documents
 
             private decimal SumContractByGroup(int groupId) =>
                 _m.Contracts.SelectMany(c => c.Activities.Where(a => a.Activity.Group.ID == groupId))
-                  .Sum(x => (decimal?)x.Price) ?? 0m;
+                  .Sum(x => x.EffectivePrice);
 
             private decimal SumInvoicedByGroup(int groupId) =>
                 _m.IncommingInvoicesActivities.Where(ii => ii.Activity.Group.ID == groupId)

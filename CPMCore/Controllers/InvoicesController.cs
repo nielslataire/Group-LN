@@ -3439,12 +3439,9 @@ namespace CPMCore.Controllers
                 RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
                 {
                     RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
-                    // ClientAccount.Id en CompanyInfo.CompanyId zijn onafhankelijke ID-reeksen die
-                    // kunnen overlappen — de company-tak krijgt daarom een offset (zie OctopusExternalRelationIds).
-                    ExternalRelationId = context.Invoice.ClientIdClientAccountNavigation?.Id
-                        ?? context.Invoice.ClientId
-                        ?? (context.Invoice.CompanyId is int companyId ? OctopusExternalRelationIds.CompanyOffset + companyId : (int?)null)
-                        ?? 0
+                    // ClientAccount.Id, ClientContacts.Id en CompanyInfo.CompanyId zijn onafhankelijke
+                    // ID-reeksen die overlappen — elke bron krijgt een eigen bereik (zie OctopusExternalRelationIds).
+                    ExternalRelationId = ResolveExternalRelationId(context.Invoice)
                 },
                 Comment = context.Invoice.Text,
                 OrderReference = null,
@@ -4070,8 +4067,11 @@ namespace CPMCore.Controllers
                     return null;
                 }
 
-                var accountId = clientAccount?.Id ?? clientContact?.ClientAccountId;
-                if (accountId is int clientAccountId)
+                // Elke factuurpartij (account / contact / bedrijf) krijgt zijn eigen Octopus-relatie.
+                // Een mede-eigenaar-factuur (ClientContact) mag NIET terugvallen op het account:
+                // dan zouden hoofd- en mede-eigenaar dezelfde relatie-id delen en elkaars naam
+                // overschrijven bij het boeken.
+                if (clientAccount?.Id is int clientAccountId)
                 {
                     var relationId = await QueryRelationIdAsync("ClientAccountIssuerCompany", "ClientAccountId", clientAccountId);
                     if (relationId.HasValue)
@@ -4164,8 +4164,10 @@ END";
                     await command.ExecuteNonQueryAsync(ct);
                 }
 
-                var accountId = clientAccount?.Id ?? clientContact?.ClientAccountId;
-                if (accountId is int clientAccountId)
+                // Enkel de eigen partij bijwerken. Een mede-eigenaar-factuur (ClientContact)
+                // mag het relatie-id NIET ook op het gedeelde account wegschrijven, anders
+                // pikt de hoofdeigenaar-factuur diezelfde relatie op.
+                if (clientAccount?.Id is int clientAccountId)
                 {
                     await UpsertRelationIdAsync("ClientAccountIssuerCompany", "ClientAccountId", clientAccountId);
                 }
@@ -4187,6 +4189,23 @@ END";
                     await connection.CloseAsync();
                 }
             }
+        }
+
+        // externalRelationId per factuurpartij. ClientAccount.Id, ClientContacts.Id en
+        // CompanyInfo.CompanyId zijn aparte ID-reeksen die overlappen; elke bron krijgt daarom
+        // een eigen bereik (zie OctopusExternalRelationIds) zodat Octopus ze niet verwart.
+        private static int ResolveExternalRelationId(Invoices invoice)
+        {
+            if (invoice.ClientType == (int)InvoicePartyType.ClientContact && invoice.ClientId is int contactId)
+                return OctopusExternalRelationIds.ClientContactOffset + contactId;
+
+            if (invoice.ClientType == (int)InvoicePartyType.ClientAccount && invoice.ClientId is int accountId)
+                return accountId;
+
+            if (invoice.CompanyId is int companyId)
+                return OctopusExternalRelationIds.CompanyOffset + companyId;
+
+            return invoice.ClientId ?? 0;
         }
 
         private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(
@@ -4247,6 +4266,17 @@ END";
             if (Different(current.CurrencyCode, desired.CurrencyCode)) return true;
             if (current.Client != desired.Client || current.Supplier != desired.Supplier || current.Active != desired.Active) return true;
 
+            // Een bestaand externalRelationId dat afwijkt van de canonieke (offset-)waarde zetten
+            // we recht: relaties die ooit met het rauwe id zijn gepusht migreren zo vanzelf mee bij
+            // de volgende boeking, zonder manuele opkuis. (Ontbreekt het veld in de GET-respons van
+            // Octopus, dan forceren we geen update — de factuur-payload draagt het juiste id al.)
+            var wanted = desired.RelationIdentificationServiceData?.ExternalRelationId;
+            var have = current.RelationIdentificationServiceData?.ExternalRelationId;
+            if (wanted is int w && w > 0 && have is int h && h != w)
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -4281,10 +4311,9 @@ END";
                     RelationKey = issuerRelationId.HasValue && issuerRelationId.Value > 0
                         ? new OctopusRelationKey { Id = issuerRelationId.Value }
                         : null,
-                    // ClientAccount.Id en CompanyInfo.CompanyId zijn onafhankelijke ID-reeksen die
-                    // kunnen overlappen — de company-tak krijgt daarom een offset (zie OctopusExternalRelationIds).
-                    ExternalRelationId = invoice.ClientId
-                        ?? (invoice.CompanyId is int companyId ? OctopusExternalRelationIds.CompanyOffset + companyId : (int?)null)
+                    // ClientAccount.Id, ClientContacts.Id en CompanyInfo.CompanyId zijn onafhankelijke
+                    // ID-reeksen die overlappen — elke bron krijgt een eigen bereik (zie OctopusExternalRelationIds).
+                    ExternalRelationId = ResolveExternalRelationId(invoice)
                 },
                 Name = clientName,
                 Firstname = firstName,

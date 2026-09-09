@@ -33,6 +33,22 @@ namespace ServiceCore.Translators
                     return err2;
                 bo.InsuranceData = insurance;
             }
+            // Bijbestellingen zijn read-only in dit pad: ze worden apart beheerd via
+            // de dedicated AJAX-endpoints, niet via het contract-opslaan-pad.
+            if (_entity.ContractAdditionalOrder != null)
+            {
+                foreach (var order in _entity.ContractAdditionalOrder.OrderBy(o => o.Id))
+                {
+                    ContractAdditionalOrderBO orderBo = new ContractAdditionalOrderBO
+                    {
+                        ActivityName = activity.Name
+                    };
+                    var errAo = ContractAdditionalOrderTranslator.TranslateEntityToBO(order, orderBo);
+                    if (errAo != ErrorCode.Success)
+                        return errAo;
+                    bo.AdditionalOrders.Add(orderBo);
+                }
+            }
             return ErrorCode.Success;
         }
 
@@ -53,6 +69,8 @@ namespace ServiceCore.Translators
                     return err;
                 _entity.Insurances = insurance;
             }
+            // Bewust géén sync van ContractAdditionalOrder hier: die worden los
+            // beheerd (AJAX), zodat een gewone contract-save ze nooit raakt.
             return ErrorCode.Success;
         }
     }

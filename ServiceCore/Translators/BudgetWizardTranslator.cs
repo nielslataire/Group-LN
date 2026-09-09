@@ -77,6 +77,7 @@ namespace ServiceCore.Translators
             bo.AantalVeluxen                    = entity.AantalVeluxen;
             bo.AantalTrapzalen                  = entity.AantalTrapzalen;
             bo.AantalToegangspoorten            = entity.AantalToegangspoorten;
+            bo.AantalAanTeBouwenBuren           = entity.AantalAanTeBouwenBuren;
             bo.NacalcBasisprijs                 = entity.NacalcBasisprijs;
             bo.NacalcBasisJaar                  = entity.NacalcBasisJaar;
             bo.SIndexStart                      = entity.SIndexStart;
@@ -111,6 +112,7 @@ namespace ServiceCore.Translators
             entity.AantalVeluxen                    = bo.AantalVeluxen;
             entity.AantalTrapzalen                  = bo.AantalTrapzalen;
             entity.AantalToegangspoorten            = bo.AantalToegangspoorten;
+            entity.AantalAanTeBouwenBuren           = bo.AantalAanTeBouwenBuren;
             entity.NacalcBasisprijs                 = bo.NacalcBasisprijs;
             entity.NacalcBasisJaar                  = bo.NacalcBasisJaar;
             entity.SIndexStart                      = bo.SIndexStart;

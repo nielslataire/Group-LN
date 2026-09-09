@@ -1,23 +1,90 @@
 @using CPMCore.Controllers
 @model CPMCore.Models.Budget.BudgetActivityLijnenModel
 @{
-    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    var ic   = System.Globalization.CultureInfo.InvariantCulture;
+    var nlBE = new System.Globalization.CultureInfo("nl-BE");
     string Fmt(decimal v, int d = 2) => v.ToString("F" + d, ic);
-    string FmtN(decimal v) => v.ToString("N0", ic);
+    string Eur0(decimal v) => v.ToString("N0", nlBE);
+    string Eur2(decimal v) => v.ToString("N2", nlBE);
+
+    decimal Corr(BOCore.Budget.BudgetActivityLijnBO l) => l.Correctiefactor <= 0 ? 1m : l.Correctiefactor;
+    decimal LotGecorrigeerd(BOCore.Budget.BudgetLotGroepBO g) =>
+        g.Lijnen.Where(l => l.TotaalAlternatief > 0).Sum(l => l.TotaalAlternatief * Corr(l));
+
+    var lotenMetBedrag  = Model.LotGroepen.Where(g => g.Lijnen.Any(l => l.TotaalAlternatief > 0)).ToList();
+    var totaalGecorrigeerd = lotenMetBedrag.Sum(LotGecorrigeerd);
+    var prijsPerM2      = Model.OppervlakteGBA == 0 ? 0m : totaalGecorrigeerd / Model.OppervlakteGBA;
 }
 
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 <style>
-    .calc-detail               { display: none; }
-    .calc-detail.visible       { display: block; }
-    .lot-accordion .accordion-button:not(.collapsed) { background-color: #e8f0fe; color: #0d6efd; }
-    .kpi-card                  { border-top: 3px solid; }
-    .kpi-card.alt              { border-color: #0d6efd; }
-    .kpi-card.nacalc           { border-color: #198754; }
-    .kpi-card.verschil         { border-color: #ffc107; }
-    .kpi-card.m2               { border-color: #6c757d; }
-    .activity-row input        { min-width: 80px; }
+    /* ── Activiteiten-overzicht: één compacte tabel, loten als hoofdrijen ──
+       Alle rij-scheidingen zijn inset-box-shadows (géén echte randen), dus
+       ze nemen geen ruimte in en border-collapse kan geen enkele rij korter
+       renderen dan de andere. Rijhoogte staat vast. */
+    .bw-actlijn { font-size: .82rem; border-collapse: collapse; }
+    .bw-actlijn td, .bw-actlijn th { padding: .18rem .55rem; border: 0; }
+    .bw-actlijn thead th {
+        padding-top: .4rem; padding-bottom: .4rem;
+        box-shadow: inset 0 -1px 0 var(--border, #e7e7e7);
+    }
+    .bw-actlijn .act-row td {
+        height: 28px;
+        line-height: 1.2;
+        box-shadow: inset 0 -1px 0 var(--border, #e7e7e7);
+    }
+    .bw-actlijn tbody tr:nth-of-type(even) td { background: var(--lightgray, #f8f9fc); }
+    .bw-actlijn tbody tr:hover td { background: var(--lightgreen, #e8f0eb); }
+
+    .bw-actlijn .act-row__naam { white-space: nowrap; }
+    .bw-actlijn .act-row__basis { color: var(--muted, #8590a5); font-variant-numeric: tabular-nums; }
+    .bw-actlijn .act-row__gecorrigeerd { font-variant-numeric: tabular-nums; }
+
+    .act-row__info {
+        vertical-align: middle;
+        width: 18px; height: 18px;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin-left: .3rem;
+        padding: 0; border: 0; border-radius: 999px;
+        background: transparent; color: var(--muted, #8590a5);
+        font-size: .72rem; cursor: help;
+    }
+    .act-row__info:hover { color: var(--primary, #0a5a3b); background: var(--lightgreen, #e8f0eb); }
+
+    .act-row__pct { display: inline-flex; align-items: center; gap: .25rem; justify-content: flex-end; }
+    .act-row__pct > input.bw-cell-input { width: 58px; height: 24px; padding: 1px 6px; font-size: .8rem; }
+    .act-row__pct > span { color: var(--muted, #8590a5); font-size: .78rem; }
+
+    /* Hoofdrij = lot */
+    .bw-actlijn .actlijn-lot__head th {
+        height: 30px;
+        background: var(--lightgreen, #e8f0eb);
+        box-shadow: inset 0 2px 0 var(--primary, #0a5a3b), inset 0 -1px 0 var(--border, #e7e7e7);
+        white-space: nowrap;
+    }
+    .bw-actlijn tbody.actlijn-lot:first-of-type .actlijn-lot__head th {
+        box-shadow: inset 0 -1px 0 var(--border, #e7e7e7);
+    }
+    .actlijn-lot__toggle {
+        display: inline-flex; align-items: center; gap: .45rem;
+        border: 0; background: transparent; padding: 0;
+        font: inherit; font-weight: 700; color: var(--primary, #0a5a3b);
+        cursor: pointer;
+    }
+    .actlijn-lot__toggle > .fa-chevron-down { font-size: .62rem; transition: transform .15s ease; }
+    .actlijn-lot--collapsed .actlijn-lot__toggle > .fa-chevron-down { transform: rotate(-90deg); }
+    .actlijn-lot--collapsed .act-row { display: none; }
+    .actlijn-lot__sum { color: var(--primary, #0a5a3b); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .bw-actlijn tfoot td {
+        height: 34px;
+        box-shadow: inset 0 2px 0 var(--border, #e7e7e7);
+        font-weight: 700;
+    }
+    .bw-actlijn tfoot strong { color: var(--primary, #0a5a3b); font-variant-numeric: tabular-nums; }
+
     .popover-ruwbouw           { max-width: 560px; }
     .popover-ruwbouw table     { width: auto !important; }
     .popover-ruwbouw td        { white-space: nowrap; }
@@ -33,292 +100,188 @@
             @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.BudgetVersieId, ActiveStep = 6, ShowCalcToggle = false })
 
             @* ── Pagina-koptekst ── *@
-            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
-            {
-                StepNum         = 6,
-                PageTitle       = "Activiteiten",
-                PageDescription = "Nacalc- en alternatiefprijzen per activiteit (VMSW-structuur), geïndexeerd met de gewogen S/I bouwkostfactor.",
-                MasterNaam      = Model.BudgetNaam,
-                VersieLabel     = Model.VersieLabel,
-                VersieStatus    = Model.VersieStatus,
-                PrevUrl         = Url.Action("BudgetDakAfbraak", "Projecten", new { versieId = Model.BudgetVersieId }),
-                NextUrl         = Url.Action("BudgetParams",     "Projecten", new { versieId = Model.BudgetVersieId })
-            })
+            <div class="bw-scroll">
 
-            @* ── 4 KPI cards ── *@
-            <div class="row g-3 mb-4">
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card alt p-3 text-center">
-                        <div class="fs-4 fw-bold text-primary" id="kpiAlt">€ @FmtN(Model.TotaalAlternatief)</div>
-                        <div class="small text-muted">Alternatief totaal</div>
+            <div class="gl-form-section__head bw-step-head">
+                <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                <div>
+                    <h2 class="gl-form-section__title">Activiteiten</h2>
+                    <p class="gl-form-section__hint">Overzicht per lot van de activiteiten met een bedrag. Stuur elk bedrag bij met een correctie in procent.</p>
+                </div>
+                @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+                {
+                    StepNum      = 6,
+                    MasterNaam   = Model.BudgetNaam,
+                    VersieLabel  = Model.VersieLabel,
+                    VersieStatus = Model.VersieStatus
+                })
+            </div>
+
+            @* ── Cijferstrip (gl-kpi2) ── *@
+            <div class="gl-kpi2-strip bw-kpi-row mb-4">
+                <div class="gl-kpi2-tile-col">
+                    <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                        <div class="gl-kpi2-icon"><i class="fa-solid fa-list-check" aria-hidden="true"></i></div>
+                        <div class="gl-kpi2-body">
+                            <div class="gl-kpi2-label">Totaal activiteiten (gecorrigeerd)</div>
+                            <div class="gl-kpi2-value" id="kpiTotaal">€ @Eur0(totaalGecorrigeerd)</div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card nacalc p-3 text-center">
-                        <div class="fs-4 fw-bold text-success" id="kpiNacalc">€ @FmtN(Model.TotaalNacalc)</div>
-                        <div class="small text-muted">Nacalc totaal</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card verschil p-3 text-center">
-                        <div class="fs-4 fw-bold text-warning" id="kpiVerschil">€ @FmtN(Model.Verschil)</div>
-                        <div class="small text-muted">Verschil</div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card m2 p-3 text-center">
-                        <div class="fs-4 fw-bold text-secondary" id="kpiM2">€ @Fmt(Model.PrijsPerM2GBA)</div>
-                        <div class="small text-muted">
-                            €/m² GBA
-                            <br />
-                            <span class="text-muted" style="font-size:.75rem;">
-                                @Fmt(Model.OppervlakteGBA) m² · @Model.AantalEenheden woon/comm. eenheden
-                            </span>
+                <div class="gl-kpi2-tile-col">
+                    <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                        <div class="gl-kpi2-icon"><i class="fa-solid fa-vector-square" aria-hidden="true"></i></div>
+                        <div class="gl-kpi2-body">
+                            <div class="gl-kpi2-label">€/m² GBA — @Fmt(Model.OppervlakteGBA) m² · @Model.AantalEenheden eenh.</div>
+                            <div class="gl-kpi2-value" id="kpiM2">€ @Eur2(prijsPerM2)</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            @* ── S/I bouwindex + nacalc import balk ── *@
-            <div class="card card-modern mb-4">
-                <div class="card-body">
-                    <div class="row align-items-center g-3">
-                        <div class="col-md-auto d-flex flex-wrap gap-2">
-                            <span class="badge bg-light text-dark border">
-                                S-start: <strong>@Model.SIndexStart.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
-                            </span>
-                            <span class="badge bg-light text-dark border">
-                                S-huidig: <strong>@Model.SIndexHuidig.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
-                            </span>
-                            <span class="badge bg-light text-dark border">
-                                I-start: <strong>@Model.IIndexStart.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
-                            </span>
-                            <span class="badge bg-light text-dark border">
-                                I-huidig: <strong>@Model.IIndexHuidig.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
-                            </span>
-                            <span class="badge bg-primary">
-                                Gewogen factor: <strong>@Model.GewogenFactor.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
-                            </span>
-                            <span class="text-muted small align-self-center">(I/I₀)×0.40 + (S/S₀)×0.40 + 0.20</span>
-                        </div>
-                        <div class="col-md-auto ms-md-auto d-flex align-items-center gap-2">
-                            <div class="form-check form-switch mb-0 me-1">
-                                <input class="form-check-input" type="checkbox" role="switch" id="chkAltFilter" checked>
-                                <label class="form-check-label small text-muted user-select-none" for="chkAltFilter">
-                                    Enkel rijen met alt. totaal
-                                </label>
-                            </div>
-                            <select class="form-select form-select-sm" id="ddlBronProject" style="min-width:200px">
-                                <option value="">Kies bronproject...</option>
-                                @foreach (var item in Model.BeschikbareProjecten)
-                                {
-                                    <option value="@item.Value">@item.Text</option>
-                                }
-                            </select>
-                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnImportNacalc">
-                                <i class="bx bx-import me-1"></i> Nacalc importeren
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleCalc">
-                                <i class="bx bx-calculator me-1"></i> Formules
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            @* ── Accordion per lot ── *@
+            @* ── Overzicht: één tabel, loten als in-/uitklapbare hoofdrijen ── *@
             <form id="frmActivityLijnen">
                 <input type="hidden" id="hdnVersieId" value="@Model.BudgetVersieId" />
 
-                <div class="accordion lot-accordion mb-4" id="lotAccordion">
-                    @{int lotIdx = 0;}
-                    @foreach (var lot in Model.LotGroepen)
-                    {
-                        string collapseId = $"lotCollapse{lotIdx}";
-                        string headerId   = $"lotHeader{lotIdx}";
-                        bool   isFirst    = lotIdx == 0;
-                        lotIdx++;
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="@headerId">
-                            <button class="accordion-button @(isFirst ? "" : "collapsed")"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#@collapseId"
-                                    aria-expanded="@(isFirst ? "true" : "false")"
-                                    aria-controls="@collapseId">
-                                <span class="badge bg-primary me-2">Lot @lot.LotNummer.ToString("G", ic)</span>
-                                <span class="me-3">@lot.LotNaam</span>
-                                <span class="ms-auto me-3 small text-muted">
-                                    Alt: <strong class="lot-totaal-alt text-primary">
-                                        € @Fmt(lot.TotaalAlternatief)
-                                    </strong>
-                                </span>
-                                <span class="small text-muted">
-                                    Nacalc: <strong class="lot-totaal-nacalc text-success">
-                                        € @Fmt(lot.TotaalNacalc)
-                                    </strong>
-                                </span>
-                            </button>
-                        </h2>
-                        <div id="@collapseId"
-                             class="accordion-collapse collapse @(isFirst ? "show" : "")"
-                             aria-labelledby="@headerId"
-                             data-bs-parent="#lotAccordion">
-                            <div class="accordion-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Activiteit</th>
-                                                <th style="min-width:90px;">Alt. €/eenh.</th>
-                                                <th class="text-end">Alt. totaal</th>
-                                                <th style="min-width:90px;">Nacalc €/eenh.</th>
-                                                <th style="min-width:80px;">Corr.</th>
-                                                <th class="text-end">Nacalc geïnd.</th>
-                                                <th class="text-end">Verschil</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="lot-tbody">
-                                            @foreach (var lijn in lot.Lijnen)
-                                            {
-                                                @await Html.PartialAsync("Partials/_ActivityLijnRow", lijn)
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                @if (!lotenMetBedrag.Any())
+                {
+                    <p class="bw-dt__empty" style="border:1px dashed var(--border);border-radius:var(--radius);background:var(--white);">
+                        Nog geen activiteiten met een bedrag in dit budget.
+                    </p>
+                }
+                else
+                {
+                    <div class="bw-dt">
+                        <div class="bw-dt__scroll">
+                            <table class="bw-table bw-actlijn mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Activiteit</th>
+                                        <th class="bw-num" style="width:150px;">€ basis</th>
+                                        <th class="bw-num" style="width:116px;">Correctie</th>
+                                        <th class="bw-num" style="width:150px;">Gecorrigeerd</th>
+                                    </tr>
+                                </thead>
+                                @foreach (var lot in lotenMetBedrag)
+                                {
+                                    var lijnenMetBedrag = lot.Lijnen.Where(l => l.TotaalAlternatief > 0).ToList();
+                                    <tbody class="actlijn-lot" data-lot="@lot.LotNummer.ToString("G", ic)">
+                                        <tr class="actlijn-lot__head">
+                                            <th colspan="3">
+                                                <button type="button" class="actlijn-lot__toggle" aria-expanded="true">
+                                                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                                                    <span class="badge bg-primary">Lot @lot.LotNummer.ToString("G", ic)</span>
+                                                    @lot.LotNaam
+                                                    <span class="text-muted fw-normal ms-1">· @lijnenMetBedrag.Count</span>
+                                                </button>
+                                            </th>
+                                            <th class="bw-num actlijn-lot__sum lot-gecorrigeerd">€ @Eur2(LotGecorrigeerd(lot))</th>
+                                        </tr>
+                                        @foreach (var lijn in lijnenMetBedrag)
+                                        {
+                                            @await Html.PartialAsync("Partials/_ActivityLijnRow", lijn)
+                                        }
+                                    </tbody>
+                                }
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3">Totaal activiteiten</td>
+                                        <td class="bw-num"><strong id="actGrand">€ @Eur2(totaalGecorrigeerd)</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
-                    }
-                </div>
-
-                @* ── Actie-knoppen ── *@
-                <div class="d-flex gap-2 align-items-center mb-4">
-                    <button type="button" id="btnSaveActivity" class="btn btn-primary">
-                        <i class="bx bx-save me-1"></i>Opslaan
-                    </button>
-                    @if (!string.IsNullOrEmpty(ViewData["Referrer"] as string))
-                    {
-                        <a href="@ViewData["Referrer"]" class="btn btn-outline-secondary">Annuleren</a>
-                    }
-                </div>
+                }
             </form>
+            </div>@* /bw-scroll *@
+
+            @* ── Onderaan: opslaan + navigeren ── *@
+            <div class="bw-bottom-nav">
+                <a href="@Url.Action("BudgetDakAfbraak", "Projecten", new { versieId = Model.BudgetVersieId })" class="bw-bottom-nav__back">
+                    <i class="fas fa-chevron-left me-1"></i>Vorige: Dak &amp; Afbraak
+                </a>
+                <span class="bw-bottom-nav__indicator">Stap 6 van 9 — Activiteiten</span>
+                <div class="d-flex gap-2 align-items-center">
+                    <button type="button" id="btnSaveActivity" form="frmActivityLijnen" class="btn btn-light border">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Opslaan
+                    </button>
+                    <a href="@Url.Action("BudgetParams", "Projecten", new { versieId = Model.BudgetVersieId })" class="bw-bottom-nav__next">
+                        Volgende: Parameters <i class="fas fa-chevron-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
 
         </div>
     </div>
 </section>
 
 @section PageScripts {
+<script src="~/js/budget-wizard.js" asp-append-version="true"></script>
 <script>
-    // Initialiseer popovers
+    // Voorstel-popovers (rekendetail per activiteit)
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
 
-    const versieId       = @Model.BudgetVersieId;
-    const aantalEenheden = @Model.AantalEenheden;
-    const oppGBA         = @Fmt(Model.OppervlakteGBA);
-    const antiForgery    = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-    const gewogenFactor  = @Model.GewogenFactor.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+    const versieId    = @Model.BudgetVersieId;
+    const oppGBA      = @Fmt(Model.OppervlakteGBA);
+    const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-    // ── Herbereken één rij ─────────────────────────────────────────────────
-    function herbereken($tr) {
-        const altPrijs    = parseFloat($tr.find('.alt-prijs').val())    || 0;
-        const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
-        const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
+    const nf2 = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    const eur2 = v => '€ ' + (v || 0).toLocaleString('nl-BE', nf2);
+    const eur0 = v => '€ ' + Math.round(v || 0).toLocaleString('nl-BE');
 
-        const altTotaal  = altPrijs * aantalEenheden;
-        const nacalcGein = nacalcPrijs * corr * gewogenFactor;
-        const nacalcTot  = nacalcGein * aantalEenheden;
-        const verschil   = altTotaal - nacalcTot;
-
-        $tr.find('.alt-totaal').text('€ ' + altTotaal.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
-        $tr.find('.nacalc-geind').text('€ ' + nacalcGein.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
-
-        const $badge = $tr.find('.verschil-cel .badge');
-        $badge.text('€ ' + verschil.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
-        $badge.removeClass('bg-warning text-dark bg-primary bg-success');
-        if (verschil > 0.01)       $badge.addClass('bg-warning text-dark');
-        else if (verschil < -0.01) $badge.addClass('bg-primary');
-        else                       $badge.addClass('bg-success');
+    function rowGecorrigeerd(tr) {
+        const basis = parseFloat(tr.dataset.basis) || 0;
+        const pct   = parseFloat(tr.querySelector('.corr-pct').value);
+        return basis * (isNaN(pct) ? 1 : pct / 100);
     }
 
-    // ── Herbereken lot-totalen ─────────────────────────────────────────────
-    function herberekenLotTotalen($tbody) {
-        let sumAlt    = 0;
-        let sumNacalc = 0;
-        $tbody.find('.activity-row').each(function () {
-            const $tr = $(this);
-            const altPrijs    = parseFloat($tr.find('.alt-prijs').val())    || 0;
-            const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
-            const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
-            sumAlt    += altPrijs * aantalEenheden;
-            sumNacalc += nacalcPrijs * corr * gewogenFactor * aantalEenheden;
+    // ── Herbereken: rij-bedrag → lot-subtotaal → eindtotaal + KPI ─────────
+    function recalc() {
+        let grand = 0;
+        document.querySelectorAll('.actlijn-lot').forEach(lot => {
+            let lotSum = 0;
+            lot.querySelectorAll('.act-row').forEach(tr => {
+                const g = rowGecorrigeerd(tr);
+                lotSum += g;
+                tr.querySelector('.act-row__gecorrigeerd').textContent = eur2(g);
+            });
+            grand += lotSum;
+            const lotEl = lot.querySelector('.lot-gecorrigeerd');
+            if (lotEl) lotEl.textContent = eur2(lotSum);
         });
-        const $accItem = $tbody.closest('.accordion-item');
-        $accItem.find('.lot-totaal-alt').text('€ ' + sumAlt.toFixed(2));
-        $accItem.find('.lot-totaal-nacalc').text('€ ' + sumNacalc.toFixed(2));
+        const grandEl = document.getElementById('actGrand');
+        if (grandEl) grandEl.textContent = eur2(grand);
+        document.getElementById('kpiTotaal').textContent = eur0(grand);
+        document.getElementById('kpiM2').textContent =
+            '€ ' + (oppGBA > 0 ? grand / oppGBA : 0).toLocaleString('nl-BE', nf2);
     }
 
-    // ── Update KPI-cards ───────────────────────────────────────────────────
-    function updateKPIs() {
-        let totAlt    = 0;
-        let totNacalc = 0;
-        $('.activity-row').each(function () {
-            const $tr = $(this);
-            const altPrijs    = parseFloat($tr.find('.alt-prijs').val())    || 0;
-            const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
-            const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
-            totAlt    += altPrijs * aantalEenheden;
-            totNacalc += nacalcPrijs * corr * gewogenFactor * aantalEenheden;
-        });
-        const verschil = totAlt - totNacalc;
-        const m2Prijs  = oppGBA > 0 ? totAlt / oppGBA : 0;
-
-        $('#kpiAlt').text('€ ' + Math.round(totAlt).toLocaleString('nl-BE'));
-        $('#kpiNacalc').text('€ ' + Math.round(totNacalc).toLocaleString('nl-BE'));
-        $('#kpiVerschil').text('€ ' + Math.round(verschil).toLocaleString('nl-BE'));
-        $('#kpiM2').text('€ ' + m2Prijs.toFixed(2));
-    }
-
-    // ── Input event: één handler voor alles ───────────────────────────────
-    $(document).on('input', '.activity-row input', function () {
-        const $tr    = $(this).closest('tr');
-        const $tbody = $(this).closest('tbody');
-        herbereken($tr);
-        herberekenLotTotalen($tbody);
-        updateKPIs();
-        applyAltTotaalFilter();
+    document.addEventListener('input', e => {
+        if (e.target.classList.contains('corr-pct')) recalc();
     });
+    recalc();
 
-    // ── Filter: enkel rijen met een alt. totaal tonen ──────────────────────
-    function applyAltTotaalFilter() {
-        const onlyWithValue = $('#chkAltFilter').is(':checked');
-        $('.activity-row').each(function () {
-            const $tr      = $(this);
-            const altPrijs = parseFloat($tr.find('.alt-prijs').val()) || 0;
-            $tr.toggle(!onlyWithValue || altPrijs > 0);
+    // ── Lot in-/uitklappen ────────────────────────────────────────────────
+    document.querySelectorAll('.actlijn-lot__toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lot = btn.closest('.actlijn-lot');
+            const collapsed = lot.classList.toggle('actlijn-lot--collapsed');
+            btn.setAttribute('aria-expanded', String(!collapsed));
         });
-    }
-    $('#chkAltFilter').on('change', applyAltTotaalFilter);
-    applyAltTotaalFilter();
-
-    // ── Formules toggle ────────────────────────────────────────────────────
-    $('#btnToggleCalc').on('click', function () {
-        $('.calc-detail').toggleClass('visible');
-        $(this).toggleClass('btn-outline-primary btn-primary');
     });
 
     // ── Opslaan ────────────────────────────────────────────────────────────
     $('#btnSaveActivity').on('click', function () {
         const lijnen = [];
-        $('.activity-row').each(function () {
-            const $tr = $(this);
+        document.querySelectorAll('.act-row').forEach(tr => {
+            const pct = parseFloat(tr.querySelector('.corr-pct').value);
             lijnen.push({
-                activityId:                  parseInt($tr.data('activity-id')),
-                alternatievePrijsPerEenheid:  parseFloat($tr.find('.alt-prijs').val())    || 0,
-                nacalcPrijsPerEenheid:        parseFloat($tr.find('.nacalc-prijs').val()) || 0,
-                correctiefactor:              parseFloat($tr.find('.corr-factor').val())  || 1,
-                isManueel:                    false
+                activityId:                  parseInt(tr.dataset.activityId),
+                alternatievePrijsPerEenheid: parseFloat(tr.dataset.prijs)  || 0,
+                nacalcPrijsPerEenheid:       parseFloat(tr.dataset.nacalc) || 0,
+                correctiefactor:             isNaN(pct) ? 1 : pct / 100,
+                isManueel:                   tr.dataset.manueel === 'true'
             });
         });
 
@@ -341,21 +304,6 @@
                 else alert('Verbindingsfout.');
             }
         });
-    });
-
-    // ── Nacalc importeren ──────────────────────────────────────────────────
-    $('#btnImportNacalc').on('click', function () {
-        const bronId = $('#ddlBronProject').val();
-        if (!bronId) { alert('Kies eerst een bronproject.'); return; }
-        $.post('@Url.Action("ImportNacalcVanProject", "Projecten")',
-            { bronProjectId: bronId, doelVersieId: versieId },
-            function (result) {
-                if (result.success) { location.reload(); }
-                else {
-                    if (typeof toastr !== 'undefined') toastr.info(result.message);
-                    else alert(result.message);
-                }
-            });
     });
 </script>
 }

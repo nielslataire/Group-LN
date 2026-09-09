@@ -15,30 +15,37 @@
 	<link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css">
 	<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
 	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+	<style>
+		/* Waarborgdocument: klikbare bestandstegel + rood kruis om te verwijderen
+		   (zelfde idee als de foto-thumbnail op Projecten/Detail). */
+		.gl-doc-tile { position: relative; display: inline-flex; }
+		.gl-doc-tile__open {
+			display: flex; flex-direction: column; align-items: center; justify-content: center;
+			width: 96px; height: 108px; gap: .35rem;
+			border: 1px solid var(--border, #d9dee3); border-radius: .5rem;
+			background: var(--white, #fff); color: var(--muted, #5c6b7a); text-decoration: none;
+			transition: border-color .15s ease, color .15s ease, box-shadow .15s ease;
+		}
+		.gl-doc-tile__open:hover,
+		.gl-doc-tile__open:focus-visible { border-color: var(--primary, #0d6efd); color: var(--primary, #0d6efd); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+		.gl-doc-tile__open i { font-size: 2.6rem; line-height: 1; }
+		.gl-doc-tile__label { font-size: .7rem; font-weight: 600; letter-spacing: .04em; }
+		.gl-doc-tile__remove {
+			position: absolute; top: -9px; right: -9px;
+			width: 26px; height: 26px; padding: 0; border-radius: 50%;
+			border: 2px solid var(--white, #fff); background: var(--danger, #dc3545); color: #fff;
+			display: flex; align-items: center; justify-content: center; cursor: pointer;
+			font-size: 1.05rem; line-height: 1; transition: transform .15s ease;
+		}
+		.gl-doc-tile__remove:hover { transform: scale(1.12); }
+	</style>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
 	</style>
 
 }
 
 
-<div class="row">
-	<div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-		<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-			<div class="row align-items-center">
-				<div class="col-sm-auto d-flex align-items-center">
-					<a href="@Url.Action("DetailContracts", "Projecten",new {projectid = Model.ProjectId})" class="text-decoration-none text-reset d-flex align-items-center">
-						<i class="bx bx-chevron-left fs-1"></i>
-					</a>
-				</div>
-				<div class="col-sm-auto">
-					<h1 class="fw-bold mb-0">Leverancier bewerken</h1>
-					<h5 class="mb-4 mt-0">Bewerk het contract van een leverancier van het project</h5>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
-@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#", enctype = "multipart/form-data" }))
+@using (Html.BeginForm("EditContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form gl-fixed-actions-offset", enctype = "multipart/form-data" }))
 {
 	@Html.AntiForgeryToken()
 	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
@@ -140,18 +147,31 @@
 							<div class="form-group row align-items-center pb-3" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
 								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="fileGuaranteeDoc">Waarborgdocument <span class="text-muted">(pdf/jpg)</span></label>
 								<div class="col-lg-8 col-xl-6">
-									@if (!string.IsNullOrWhiteSpace(Model.Contract.GuaranteeDocFilename))
+									@if (string.IsNullOrWhiteSpace(Model.Contract.GuaranteeDocFilename))
 									{
-										<div class="d-flex align-items-center gap-2 mb-2">
-											<a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id })" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bx bx-file" aria-hidden="true"></i> Bekijken</a>
-											<button type="submit" formnovalidate formaction="@Url.Action("RemoveGuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id, projectid = Model.ProjectId })" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash" aria-hidden="true"></i> Verwijderen</button>
-											@if (Model.Contract.GuaranteeDocUploadedAt.HasValue)
-											{
-												<span class="text-muted small">toegevoegd op @Model.Contract.GuaranteeDocUploadedAt.Value.ToString("dd/MM/yyyy")</span>
-											}
-										</div>
+										<input type="file" name="guaranteeDoc" id="fileGuaranteeDoc" class="form-control form-control-modern" accept=".pdf,.jpg,.jpeg,image/jpeg,application/pdf" />
 									}
-									<input type="file" name="guaranteeDoc" id="fileGuaranteeDoc" class="form-control form-control-modern" accept=".pdf,.jpg,.jpeg,image/jpeg,application/pdf" />
+									else
+									{
+										var gext = System.IO.Path.GetExtension(Model.Contract.GuaranteeDocFilename)?.ToLowerInvariant();
+										var gicon = gext == ".pdf" ? "bx-file" : (gext is ".jpg" or ".jpeg" or ".png" ? "bx-image" : "bx-file");
+										<div class="gl-doc-tile">
+											<a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id })" target="_blank" rel="noopener"
+											   class="gl-doc-tile__open" title="Waarborgdocument bekijken" aria-label="Waarborgdocument bekijken">
+												<i class="bx @gicon" aria-hidden="true"></i>
+												<span class="gl-doc-tile__label">@(gext?.TrimStart('.').ToUpperInvariant())</span>
+											</a>
+											<button type="submit" formnovalidate
+											        formaction="@Url.Action("RemoveGuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id, projectid = Model.ProjectId })"
+											        class="gl-doc-tile__remove" title="Waarborgdocument verwijderen" aria-label="Waarborgdocument verwijderen">
+												<i class="bx bx-x" aria-hidden="true"></i>
+											</button>
+										</div>
+										@if (Model.Contract.GuaranteeDocUploadedAt.HasValue)
+										{
+											<span class="text-muted small d-block mt-1">toegevoegd op @Model.Contract.GuaranteeDocUploadedAt.Value.ToString("dd/MM/yyyy")</span>
+										}
+									}
 								</div>
 							</div>
 							<div class="form-group row pb-3" id="guaranteeDocWarningRow" style="@(Model.Contract.GuaranteeDocumentMissing ? "" : "display:none")">
@@ -262,18 +282,100 @@
 			</section>
 		</div>
 	</div>
-	<div class="row action-buttons">
-		<div class="col-12 col-md-auto">
-			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-				<i class="bx bx-save text-4 me-2"></i> Leverancier opslaan
-			</button>
-		</div>
-		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
-		</div>
 
+	<div class="row mt-2">
+		<div class="col-12">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="row">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<i class="card-big-info-icon bx bx-plus-circle" aria-hidden="true"></i>
+							<h2 class="card-big-info-title">Bijbestellingen</h2>
+							<p class="card-big-info-desc">Extra bestellingen op een bestaand lot. De prijs verhoogt de totale contractprijs.</p>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							@if (Model.Contract.Id == 0)
+							{
+								<p class="text-muted mb-0">Sla het contract eerst op; daarna kan je bijbestellingen op de loten toevoegen.</p>
+							}
+							else if (Model.Contract.Activities == null || !Model.Contract.Activities.Any())
+							{
+								<p class="text-muted mb-0">Voeg eerst een lot toe.</p>
+							}
+							else
+							{
+								<div class="d-flex flex-column gap-3">
+									@foreach (var lot in Model.Contract.Activities)
+									{
+										<div class="border rounded p-3">
+											<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+												<div>
+													<span class="fw-semibold">@lot.Activity?.Name</span>
+													<span class="text-muted ms-2">Lot: @((lot.Price ?? 0m).ToString("C"))</span>
+													@if (lot.AdditionalOrders.Any())
+													{
+														<span class="small text-primary fw-semibold ms-2">+ @lot.AdditionalOrders.Count bijbestelling(en) · @(lot.AdditionalOrders.Sum(o => o.Price).ToString("C"))</span>
+													}
+												</div>
+												@if (lot.ContractActivityId > 0)
+												{
+													<button type="button" class="btn btn-sm btn-outline-primary js-add-bijbestelling"
+															data-contractactivityid="@lot.ContractActivityId" data-lotname="@lot.Activity?.Name">
+														<i class="bx bx-plus me-1"></i>Bijbestelling toevoegen
+													</button>
+												}
+												else
+												{
+													<span class="text-muted small">Sla het contract eerst op</span>
+												}
+											</div>
+
+											@if (lot.AdditionalOrders.Any())
+											{
+												<table class="table table-sm align-middle mt-2 mb-0">
+													<tbody>
+														@foreach (var order in lot.AdditionalOrders)
+														{
+															<tr>
+																<td class="ps-3">
+																	<i class="bx bx-subdirectory-right text-muted"></i>
+																	@(string.IsNullOrWhiteSpace(order.Description) ? "(geen omschrijving)" : order.Description)
+																</td>
+																<td class="text-end" style="width:8rem">@order.Price.ToString("C")</td>
+																<td class="text-end text-nowrap" style="width:6rem">
+																	<button type="button" class="btn btn-sm btn-outline-secondary js-edit-bijbestelling"
+																			data-id="@order.Id" data-lotname="@lot.Activity?.Name"
+																			data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+																			title="Bijbestelling bewerken"><i class="bx bx-edit"></i></button>
+																	<button type="button" class="btn btn-sm btn-outline-danger js-delete-bijbestelling"
+																			data-id="@order.Id" data-lotname="@lot.Activity?.Name"
+											data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+											title="Bijbestelling verwijderen"><i class="bx bx-trash"></i></button>
+																</td>
+															</tr>
+														}
+													</tbody>
+												</table>
+											}
+										</div>
+									}
+								</div>
+							}
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
 	</div>
+
+	@await Html.PartialAsync("_FormShellActions", new CPMCore.Models.FormShellActionsModel
+	{
+		SubmitLabel = "Leverancier opslaan",
+		CancelUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId })
+	})
 }
+
+@await Html.PartialAsync("Partials/_BijbestellingModal")
 
 
 @section PageScripts

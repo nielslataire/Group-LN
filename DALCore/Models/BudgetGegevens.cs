@@ -47,6 +47,8 @@ public partial class BudgetGegevens
 
     public int? AantalToegangspoorten { get; set; }
 
+    public int? AantalAanTeBouwenBuren { get; set; }
+
     public decimal? NacalcBasisprijs { get; set; }
 
     public int? NacalcBasisJaar { get; set; }

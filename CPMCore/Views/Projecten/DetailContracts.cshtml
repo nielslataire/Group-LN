@@ -19,6 +19,53 @@
 	var canWriteProjectSuppliers = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
 	var canDeleteProjectSuppliers = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
 }
+@* Projectacties in de topbar zelf (naast titel/breadcrumb), net als
+   Projecten/Detail — i.p.v. een tweede titelbalk in de content-body. Onder
+   768px verbergt de topbar deze sectie; daarvoor staat er een d-md-none
+   fallback-rij in de inner-body (de export-/afdrukknoppen blijven wel
+   desktop-only: hun dropdown-state laat zich niet dubbel renderen). *@
+@section PageActions
+{
+    <div class="btn-group" role="group" aria-label="Leverancier acties">
+        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary btn-md px-3 me-1 dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Aannemerslijst afdrukken">
+                <i class="bx bx-printer"></i> Aannemerslijst
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px;">
+                <p class="text-muted small mb-2">Kolommen op de aannemerslijst</p>
+                <div class="checkbox-custom checkbox-default mb-2">
+                    <input type="checkbox" id="chkSupplierListSent" checked>
+                    <label for="chkSupplierListSent">Contract verstuurd</label>
+                </div>
+                <div class="checkbox-custom checkbox-default mb-2">
+                    <input type="checkbox" id="chkSupplierListSigned" checked>
+                    <label for="chkSupplierListSigned">Getekend</label>
+                </div>
+                <div class="checkbox-custom checkbox-default mb-2">
+                    <input type="checkbox" id="chkSupplierListVgm" checked>
+                    <label for="chkSupplierListVgm">VGM charter</label>
+                </div>
+                <div class="checkbox-custom checkbox-default mb-2">
+                    <input type="checkbox" id="chkSupplierListNotification" checked>
+                    <label for="chkSupplierListNotification">Werfmelding</label>
+                </div>
+                <div class="checkbox-custom checkbox-default mb-3">
+                    <input type="checkbox" id="chkSupplierListPid" checked>
+                    <label for="chkSupplierListPid">PID attesten</label>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm w-100" id="btnPrintSupplierList">
+                    <i class="bx bx-download"></i> PDF afdrukken
+                </button>
+            </div>
+        </div>
+        @if (canWriteProjectSuppliers)
+        {
+            <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
+        }
+    </div>
+}
 @section PageStyle
 {
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
@@ -47,60 +94,21 @@
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
-            <div class="row">
-            <div class="gl-page-header">
-                @await Html.PartialAsync("_PageHeader", new CPMCore.Models.PageHeaderModel
+            <div class="d-flex d-md-none justify-content-end flex-wrap gap-2 mb-3">
+                @if (canWriteProjectSuppliers)
                 {
-                    Title = "Leveranciers",
-                    Subtitle = "Beheer de leveranciers van het project"
-                })
-                <div class="gl-page-header__actions">
-                    <div class="btn-group" role="group" aria-label="Project acties">
-                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
-                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-primary btn-md px-3 me-1 dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Aannemerslijst afdrukken">
-                                <i class="bx bx-printer"></i> Aannemerslijst
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px;">
-                                <p class="text-muted small mb-2">Kolommen op de aannemerslijst</p>
-                                <div class="checkbox-custom checkbox-default mb-2">
-                                    <input type="checkbox" id="chkSupplierListSent" checked>
-                                    <label for="chkSupplierListSent">Contract verstuurd</label>
-                                </div>
-                                <div class="checkbox-custom checkbox-default mb-2">
-                                    <input type="checkbox" id="chkSupplierListSigned" checked>
-                                    <label for="chkSupplierListSigned">Getekend</label>
-                                </div>
-                                <div class="checkbox-custom checkbox-default mb-2">
-                                    <input type="checkbox" id="chkSupplierListVgm" checked>
-                                    <label for="chkSupplierListVgm">VGM charter</label>
-                                </div>
-                                <div class="checkbox-custom checkbox-default mb-2">
-                                    <input type="checkbox" id="chkSupplierListNotification" checked>
-                                    <label for="chkSupplierListNotification">Werfmelding</label>
-                                </div>
-                                <div class="checkbox-custom checkbox-default mb-3">
-                                    <input type="checkbox" id="chkSupplierListPid" checked>
-                                    <label for="chkSupplierListPid">PID attesten</label>
-                                </div>
-                                <button type="button" class="btn btn-primary btn-sm w-100" id="btnPrintSupplierList">
-                                    <i class="bx bx-download"></i> PDF afdrukken
-                                </button>
-                            </div>
-                        </div>
-                        @if (canWriteProjectSuppliers)
-                        {
-                            <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
-                        }
-                    </div>
-                </div>
+                    <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-sm">+ Leverancier toevoegen</a>
+                }
             </div>
+            <div class="row">
+            @Html.AntiForgeryToken()
             @await Html.PartialAsync("Contracts", Model)
             </div>
         </div>
     </div>
 </section>
+
+@await Html.PartialAsync("Partials/_BijbestellingModal")
 <div id="modaldeletecontract" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-contract-container"></div>
 </div>

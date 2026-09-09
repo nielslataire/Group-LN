@@ -25,6 +25,10 @@
 				<i class="bx bx-search"></i>
 			</span>
 			<input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+			@if (canWriteProjectInsurances)
+			{
+				<button type="button" class="btn btn-primary btn-md ms-2 text-nowrap addInsurance" id="btnAddInsurance" data-id="@Model.ProjectId"><i class="bx bx-plus"></i> Verzekering toevoegen</button>
+			}
 		</div>
 	</div>
 </div>
@@ -86,7 +90,7 @@
 								@item.InsuranceCompany.Name
 							</td>
 							<td>
-								<!-- polisnummer nog toe te voegen -->
+								@item.Polisnummer
 							</td>
 							<td>
 									@if(item.Type != 0)
@@ -158,7 +162,7 @@ else
 				<h4>Nog geen documenten toegevoegd</h4>
 			</div>
 			<div class="col-12 text-muted">
-				<a href="#modaladdinsurance" class="btn btn-default btn-md modal-with-form text-muted" type="button" id="btnAddIns2"><i class="fa fa-upload"></i> Een eerste verzekering toevoegen</a>
+				<a href="#" class="btn btn-default btn-md text-muted addInsurance" type="button" id="btnAddIns2" data-id="@Model.ProjectId"><i class="fa fa-plus"></i> Een eerste verzekering toevoegen</a>
 
 			</div>
 		</div>

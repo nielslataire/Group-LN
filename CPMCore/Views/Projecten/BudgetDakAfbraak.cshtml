@@ -2,28 +2,105 @@
 @using BOCore
 @model CPMCore.Models.Projecten.BudgetGevelsDakModel
 @{
-    var platDak    = Model.Elementen.GetValueOrDefault("PlatDak")          ?? new List<BudgetGevelElementBO>();
-    var hellendDak = Model.Elementen.GetValueOrDefault("HellendDak")       ?? new List<BudgetGevelElementBO>();
-    var groenDak   = Model.Elementen.GetValueOrDefault("GroenDak")         ?? new List<BudgetGevelElementBO>();
-    var overst     = Model.Elementen.GetValueOrDefault("Dakoversteken")    ?? new List<BudgetGevelElementBO>();
-    var doorrit    = Model.Elementen.GetValueOrDefault("OnderkantDoorrit") ?? new List<BudgetGevelElementBO>();
-    var afbraak    = Model.Elementen.GetValueOrDefault("Afbraak")          ?? new List<BudgetGevelElementBO>();
-    var t          = Model.Totaal;
-
+    var t = Model.Totaal;
     string Fmt(decimal v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+    List<BudgetGevelElementBO> Rows(string key) =>
+        Model.Elementen.GetValueOrDefault(key) ?? new List<BudgetGevelElementBO>();
+
+    // Eén definitie voor de zes types — voedt zowel de type-rail als de accordion.
+    var dakTypes = new (string Key, string Label, string Icon, List<BudgetGevelElementBO> Rijen, decimal Sub)[]
+    {
+        ("PlatDak",          "Plat dak",          "fa-square",          Rows("PlatDak"),          t.TotaalPlatDak),
+        ("HellendDak",       "Hellend dak",       "fa-caret-up",        Rows("HellendDak"),       t.TotaalHellendDak),
+        ("GroenDak",         "Groen dak",         "fa-leaf",            Rows("GroenDak"),         t.TotaalGroenDak),
+        ("Dakoversteken",    "Dakoversteken",     "fa-arrows-up-down",  Rows("Dakoversteken"),    t.TotaalDakoversteken),
+        ("OnderkantDoorrit", "Onderkant doorrit", "fa-door-open",       Rows("OnderkantDoorrit"), t.TotaalOnderkantDoorrit),
+        ("Afbraak",          "Afbraak",           "fa-hammer",          Rows("Afbraak"),          t.TotaalAfbraak),
+    };
+    var anyRows = dakTypes.Any(x => x.Rijen.Count > 0);
 }
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
     <style>
         /* Hide Hoogte column (5th) — Dak/Afbraak use Breedte × Lengte */
         .table-hide-hoogte th:nth-child(5),
         .table-hide-hoogte td:nth-child(5) { display: none; }
 
-        .dak-section-card .card-header { padding: .5rem .75rem; }
-        .dak-add-row { background: #f8f9fa; border-radius: .25rem; padding: .5rem .75rem; margin-bottom: .5rem; }
-        .table-sm.dak-table td, .table-sm.dak-table th { padding: .25rem .4rem; }
-        #dakAccordion .accordion-button { padding: .6rem .75rem; font-weight: 600; }
-        #dakAccordion .accordion-body { padding: .5rem; }
+        .bw-table.dak-table td, .bw-table.dak-table th { padding: .35rem .6rem; }
+        .bw-table.dak-table th.bw-th-cell { padding-left: calc(.6rem + 11px); padding-right: calc(.6rem + 11px); }
+
+        /* ── Elke sectie = een losstaande kaart, met lucht ertussen ── */
+        #dakAccordion { display: flex; flex-direction: column; gap: .85rem; }
+        #dakAccordion .accordion-item {
+            border: 1px solid var(--border, #e7e7e7);
+            border-radius: var(--radius, 7px);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+            background: var(--white, #fff);
+            overflow: hidden;
+        }
+        #dakAccordion .accordion-header { margin: 0; }
+        #dakAccordion .accordion-button {
+            padding: .7rem 1rem;
+            font-weight: 700;
+            font-size: .95rem;
+            color: var(--dark, #222);
+            background: var(--white, #fff);
+        }
+        #dakAccordion .accordion-button:not(.collapsed) {
+            background: var(--lightgreen, #e8f0eb);
+            color: var(--primary, #0a5a3b);
+            box-shadow: inset 0 -1px 0 var(--border, #e7e7e7);
+        }
+        #dakAccordion .accordion-button.collapsed { box-shadow: none; }
+        #dakAccordion .accordion-button:focus {
+            border-color: var(--primary, #0a5a3b);
+            box-shadow: 0 0 0 .2rem rgba(10, 90, 59, .2);
+        }
+        #dakAccordion .accordion-button::after {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230a5a3b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
+            background-size: 1rem;
+        }
+        #dakAccordion .accordion-body { padding: 0; }
+
+        /* Veluxen — losse teller, eigen kaartje onder de type-rail */
+        .dak-velux {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            margin-bottom: 1rem;
+            padding: .6rem .9rem;
+            border: 1px solid var(--border, #e7e7e7);
+            border-radius: var(--radius, 7px);
+            background: var(--white, #fff);
+        }
+        .dak-velux__badge {
+            flex: none;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius, 7px);
+            background: var(--lightgreen, #e8f0eb);
+            color: var(--primary, #0a5a3b);
+        }
+        .dak-velux__text { display: flex; flex-direction: column; line-height: 1.25; }
+        .dak-velux__title { font-size: .85rem; font-weight: 700; color: var(--dark, #222); }
+        .dak-velux__hint { font-size: .75rem; color: var(--muted, #8590a5); }
+        .dak-velux > input { margin-left: auto; width: 88px; flex: none; }
+
+        #dak-empty {
+            margin: 0;
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--muted, #8590a5);
+            font-size: .85rem;
+            border: 1px dashed var(--border, #e7e7e7);
+            border-radius: var(--radius, 7px);
+            background: var(--white, #fff);
+        }
     </style>
 }
 @{
@@ -41,249 +118,108 @@
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
-        <div class="inner-body">
+        <div class="inner-body bw-inner-body">
 
             @* ── Wizard tabbladen ── *@
             @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 5 })
 
-            @* ── Pagina-koptekst ── *@
-            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
-            {
-                StepNum    = 5,
-                PageTitle  = "Dak & Afbraak",
-                PageDescription = "Dakoppervlaktes per type (plat, hellend, groen), dakoversteken, doorritten en afbraakwerken.",
-                MasterNaam = Model.MasterNaam,
-                VersieLabel= Model.VersieLabel,
-                PrevUrl    = Url.Action("BudgetGevels",          "Projecten", new { versieId = Model.VersieId }),
-                NextUrl    = Url.Action("BudgetActivityLijnen",  "Projecten", new { versieId = Model.VersieId })
-            })
+            <div class="bw-scroll">
 
-            @* ── KPI kaarten ── *@
-            <div class="row g-3 mb-3">
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="fs-5 fw-semibold text-primary" id="kpi-platdak">@Fmt(t.TotaalPlatDak) m²</div>
-                            <div class="small text-muted">Plat dak</div>
-                        </div>
-                    </div>
+            <div class="gl-form-section__head bw-step-head">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <div>
+                    <h2 class="gl-form-section__title">Dak &amp; afbraak</h2>
+                    <p class="gl-form-section__hint">Dakoppervlaktes per type (plat, hellend, groen), dakoversteken, doorritten en afbraakwerken.</p>
                 </div>
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="fs-5 fw-semibold text-primary" id="kpi-hellend">@Fmt(t.TotaalHellendDak) m²</div>
-                            <div class="small text-muted">Hellend dak</div>
-                        </div>
-                    </div>
+                @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+                {
+                    StepNum     = 5,
+                    MasterNaam  = Model.MasterNaam,
+                    VersieLabel = Model.VersieLabel
+                })
+            </div>
+
+            @* ── Type-rail: subtotaal + sprong/toevoegen per type ── *@
+            <div class="dak-rail" id="dakRail">
+                @foreach (var dt in dakTypes)
+                {
+                    var has = dt.Rijen.Count > 0;
+                    <button type="button"
+                            class="dak-rail__chip@(has ? "" : " dak-rail__chip--empty")"
+                            data-type="@dt.Key"
+                            aria-label="@(has ? $"Ga naar {dt.Label}" : $"{dt.Label} toevoegen")">
+                        <i class="fa-solid @dt.Icon" aria-hidden="true"></i>
+                        <span class="dak-rail__name">@dt.Label</span>
+                        <span class="dak-rail__val" id="rail-@dt.Key">
+                            @if (has)
+                            {
+                                @($"{Fmt(dt.Sub)} m²")
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            }
+                        </span>
+                    </button>
+                }
+            </div>
+
+            @* ── Veluxen: losse teller, geen tabel ── *@
+            <div class="dak-velux">
+                <span class="dak-velux__badge"><i class="fa-solid fa-window-maximize" aria-hidden="true"></i></span>
+                <div class="dak-velux__text">
+                    <span class="dak-velux__title">Veluxen</span>
+                    <span class="dak-velux__hint">Aantal dakvensters in dit budget</span>
                 </div>
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="fs-5 fw-semibold text-success" id="kpi-groen">@Fmt(t.TotaalGroenDak) m²</div>
-                            <div class="small text-muted">Groen dak</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="fs-5 fw-semibold text-secondary" id="kpi-overst">@Fmt(t.TotaalDakoversteken) m²</div>
-                            <div class="small text-muted">Dakoversteken</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="fs-5 fw-semibold text-secondary" id="kpi-doorrit">@Fmt(t.TotaalOnderkantDoorrit) m²</div>
-                            <div class="small text-muted">Onderkant doorrit</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="fs-5 fw-semibold text-danger" id="kpi-afbraak">@Fmt(t.TotaalAfbraak) m²</div>
-                            <div class="small text-muted">Afbraak</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-4">
-                    <div class="card text-center py-2">
-                        <div class="card-body p-2">
-                            <div class="d-flex align-items-center justify-content-center gap-2">
-                                <input type="number" min="0" id="input-veluxen"
-                                       class="form-control form-control-sm text-end"
-                                       style="width:80px"
-                                       value="@(Model.AantalVeluxen ?? 0)" />
-                                <span class="small text-muted">st</span>
+                <input type="number" min="0" id="input-veluxen"
+                       class="bw-cell-input bw-cell-input--num" value="@(Model.AantalVeluxen ?? 0)" />
+            </div>
+
+            @* ── Secties: enkel de types die rijen hebben (of net toegevoegd zijn) ── *@
+            <div class="accordion accordion-flush" id="dakAccordion">
+                @foreach (var dt in dakTypes)
+                {
+                    var has = dt.Rijen.Count > 0;
+                    <div class="accordion-item" data-type="@dt.Key" @(has ? "" : "hidden")>
+                        <h2 class="accordion-header">
+                            <button class="accordion-button@(has ? "" : " collapsed")" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#dak-@dt.Key"
+                                    aria-expanded="@(has ? "true" : "false")" aria-controls="dak-@dt.Key">
+                                <i class="fa-solid @dt.Icon me-2 text-primary" aria-hidden="true"></i>@dt.Label
+                                <span class="badge bg-primary ms-auto" id="sub-@dt.Key">@Fmt(dt.Sub) m²</span>
+                            </button>
+                        </h2>
+                        <div id="dak-@dt.Key" class="accordion-collapse collapse@(has ? " show" : "")">
+                            <div class="accordion-body">
+                                @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
+                                    ElementType = dt.Key,
+                                    Rijen       = dt.Rijen,
+                                    VersieId    = Model.VersieId,
+                                    Subtotaal   = dt.Sub
+                                })
                             </div>
-                            <div class="small text-muted mt-1">Veluxen</div>
                         </div>
                     </div>
-                </div>
+                }
             </div>
 
-            @* ── Hoofd layout: Dak (links) | Afbraak (rechts) ── *@
-            <div class="row g-4 align-items-start">
+            <p id="dak-empty" @(anyRows ? "hidden" : "")>
+                Nog geen dak- of afbraakwerken. Kies hierboven een type om te beginnen.
+            </p>
 
-                @* ══════ LINKER KOLOM: DAK ══════ *@
-                <div class="col-lg-8">
-                    <div class="card dak-section-card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-house-fill me-1 text-primary"></i>Dakwerken</h6>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="accordion accordion-flush" id="dakAccordion">
-
-                                @* ── Plat dak ── *@
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#dak-plat"
-                                                aria-expanded="true" aria-controls="dak-plat">
-                                            <i class="bi bi-square me-2 text-primary"></i>Plat dak
-                                            <span class="badge bg-primary ms-2" id="sub-PlatDak">@Fmt(t.TotaalPlatDak) m²</span>
-                                        </button>
-                                    </h2>
-                                    <div id="dak-plat" class="accordion-collapse collapse show">
-                                        <div class="accordion-body">
-                                            @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
-                                                ElementType = "PlatDak",
-                                                Rijen       = platDak,
-                                                VersieId    = Model.VersieId,
-                                                Subtotaal   = t.TotaalPlatDak
-                                            })
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @* ── Hellend dak ── *@
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#dak-hellend"
-                                                aria-expanded="false" aria-controls="dak-hellend">
-                                            <i class="bi bi-triangle me-2 text-primary"></i>Hellend dak
-                                            <span class="badge bg-secondary ms-2" id="sub-HellendDak">@Fmt(t.TotaalHellendDak) m²</span>
-                                        </button>
-                                    </h2>
-                                    <div id="dak-hellend" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
-                                                ElementType = "HellendDak",
-                                                Rijen       = hellendDak,
-                                                VersieId    = Model.VersieId,
-                                                Subtotaal   = t.TotaalHellendDak
-                                            })
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @* ── Groen dak ── *@
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#dak-groen"
-                                                aria-expanded="false" aria-controls="dak-groen">
-                                            <i class="bi bi-tree me-2 text-success"></i>Groen dak
-                                            <span class="badge bg-success ms-2" id="sub-GroenDak">@Fmt(t.TotaalGroenDak) m²</span>
-                                        </button>
-                                    </h2>
-                                    <div id="dak-groen" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
-                                                ElementType = "GroenDak",
-                                                Rijen       = groenDak,
-                                                VersieId    = Model.VersieId,
-                                                Subtotaal   = t.TotaalGroenDak
-                                            })
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @* ── Dakoversteken ── *@
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#dak-overst"
-                                                aria-expanded="false" aria-controls="dak-overst">
-                                            <i class="bi bi-arrows-expand-vertical me-2 text-secondary"></i>Dakoversteken
-                                            <span class="badge bg-secondary ms-2" id="sub-Dakoversteken">@Fmt(t.TotaalDakoversteken) m²</span>
-                                        </button>
-                                    </h2>
-                                    <div id="dak-overst" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
-                                                ElementType = "Dakoversteken",
-                                                Rijen       = overst,
-                                                VersieId    = Model.VersieId,
-                                                Subtotaal   = t.TotaalDakoversteken
-                                            })
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @* ── Onderkant doorrit ── *@
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button"
-                                                data-bs-toggle="collapse" data-bs-target="#dak-doorrit"
-                                                aria-expanded="false" aria-controls="dak-doorrit">
-                                            <i class="bi bi-door-open me-2 text-secondary"></i>Onderkant doorrit
-                                            <span class="badge bg-secondary ms-2" id="sub-OnderkantDoorrit">@Fmt(t.TotaalOnderkantDoorrit) m²</span>
-                                        </button>
-                                    </h2>
-                                    <div id="dak-doorrit" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
-                                                ElementType = "OnderkantDoorrit",
-                                                Rijen       = doorrit,
-                                                VersieId    = Model.VersieId,
-                                                Subtotaal   = t.TotaalOnderkantDoorrit
-                                            })
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>@* /accordion *@
-                        </div>
-                    </div>
-                </div>
-
-                @* ══════ RECHTER KOLOM: AFBRAAK ══════ *@
-                <div class="col-lg-4">
-                    <div class="card dak-section-card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">
-                                <i class="bi bi-hammer me-1 text-danger"></i>Afbraak
-                            </h6>
-                            <span class="badge bg-danger" id="sub-Afbraak">@Fmt(t.TotaalAfbraak) m²</span>
-                        </div>
-                        <div class="card-body p-2">
-                            @await Html.PartialAsync("Partials/_DakAfbraakSectie", new CPMCore.Models.Projecten.DakSectieVM {
-                                ElementType = "Afbraak",
-                                Rijen       = afbraak,
-                                VersieId    = Model.VersieId,
-                                Subtotaal   = t.TotaalAfbraak
-                            })
-                        </div>
-                    </div>
-                </div>
-
-            </div>@* /row *@
-
-            @* ── Bottom actions ── *@
-            <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
-                <a href="@Url.Action("BudgetGevels", "Projecten", new { versieId = Model.VersieId })"
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+            @* ── Onderaan navigeren ── *@
+            </div>
+            <div class="bw-bottom-nav">
+                <a href="@Url.Action("BudgetGevels", "Projecten", new { versieId = Model.VersieId })" class="bw-bottom-nav__back">
+                    <i class="fas fa-chevron-left me-1"></i>Vorige: Gevels
                 </a>
-                <a href="@Url.Action("BudgetActivityLijnen", "Projecten", new { versieId = Model.VersieId })"
-                   class="btn btn-primary">
-                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                <span class="bw-bottom-nav__indicator">Stap 5 van 9 — Dak &amp; Afbraak</span>
+                <a href="@Url.Action("BudgetActivityLijnen", "Projecten", new { versieId = Model.VersieId })" class="bw-bottom-nav__next">
+                    Volgende: Activiteiten <i class="fas fa-chevron-right ms-1"></i>
                 </a>
             </div>
+
+            @await Html.PartialAsync("Partials/_BudgetConfirmModal")
 
         </div>
     </div>
@@ -295,25 +231,45 @@
     const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
     const versieId    = @Model.VersieId;
 
+    const DAK_TYPES = ['PlatDak', 'HellendDak', 'GroenDak', 'Dakoversteken', 'OnderkantDoorrit', 'Afbraak'];
 
-    // ── Accordion state (sessionStorage) ─────────────────────────────────────
-    const ACC_IDS = ['dak-plat', 'dak-hellend', 'dak-groen', 'dak-overst', 'dak-doorrit'];
+    // ── Type-rail: sectie openen / aanmaken ─────────────────────────────────
+    function sectionItem(type) { return document.querySelector(`.accordion-item[data-type="${type}"]`); }
+    function railChip(type)    { return document.querySelector(`.dak-rail__chip[data-type="${type}"]`); }
 
-    ACC_IDS.forEach(id => {
-        const stored = sessionStorage.getItem('dakAcc_@(Model.VersieId)_' + id);
-        if (stored === '0') {
-            const el = document.getElementById(id);
-            if (el) el.classList.remove('show');
-            const btn = document.querySelector(`[data-bs-target="#${id}"]`);
-            if (btn) { btn.classList.add('collapsed'); btn.setAttribute('aria-expanded', 'false'); }
+    function openSection(type, focusAdd) {
+        const item = sectionItem(type);
+        if (!item) return;
+        const wasHidden = item.hidden;
+        item.hidden = false;
+        document.getElementById('dak-empty')?.setAttribute('hidden', '');
+
+        const chip = railChip(type);
+        if (chip && chip.classList.contains('dak-rail__chip--empty')) {
+            chip.classList.remove('dak-rail__chip--empty');
+            const val = document.getElementById('rail-' + type);
+            if (val) val.textContent = '0,00 m²';
         }
-    });
 
-    document.getElementById('dakAccordion').addEventListener('shown.bs.collapse', e => {
-        sessionStorage.setItem('dakAcc_@(Model.VersieId)_' + e.target.id, '1');
-    });
-    document.getElementById('dakAccordion').addEventListener('hidden.bs.collapse', e => {
-        sessionStorage.setItem('dakAcc_@(Model.VersieId)_' + e.target.id, '0');
+        const collapseEl = item.querySelector('.accordion-collapse');
+        if (collapseEl) bootstrap.Collapse.getOrCreateInstance(collapseEl).show();
+
+        if (wasHidden || focusAdd) {
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            if (focusAdd) setTimeout(() => item.querySelector('.add-eenheid')?.focus(), 350);
+        }
+    }
+
+    function syncEmptyState() {
+        const anyVisible = DAK_TYPES.some(tp => sectionItem(tp) && !sectionItem(tp).hidden);
+        const empty = document.getElementById('dak-empty');
+        if (empty) empty.hidden = anyVisible;
+    }
+
+    document.getElementById('dakRail').addEventListener('click', e => {
+        const chip = e.target.closest('.dak-rail__chip');
+        if (!chip) return;
+        openSection(chip.dataset.type, chip.classList.contains('dak-rail__chip--empty'));
     });
 
     // ── Client-side calculation (Breedte × Lengte voor dak/afbraak) ───────────
@@ -364,7 +320,7 @@
             });
             const result = await resp.json();
             if (result.success) {
-                updateKpi(result.totaal);
+                updateTotals(result.totaal);
                 const detail = row.querySelector('.calc-detail');
                 if (detail) detail.textContent = result.formula;
                 const cell = row.querySelector('.gevel-resultaat-cell');
@@ -381,39 +337,29 @@
         }
     });
 
-    // ── KPI updater ───────────────────────────────────────────────────────────
+    // ── Totalen bijwerken: rail-chip, sectiekop-badge, tabel-subtotaal ──────
     function fmt(v) { return parseFloat(v || 0).toFixed(2).replace('.', ','); }
 
-    function updateKpi(totaal) {
-        const pd  = totaal.totaalPlatDak          ?? 0;
-        const hd  = totaal.totaalHellendDak       ?? 0;
-        const gd  = totaal.totaalGroenDak         ?? 0;
-        const ov  = totaal.totaalDakoversteken    ?? 0;
-        const dr  = totaal.totaalOnderkantDoorrit ?? 0;
-        const af  = totaal.totaalAfbraak          ?? 0;
+    const TOTAL_KEY = {
+        PlatDak: 'totaalPlatDak', HellendDak: 'totaalHellendDak', GroenDak: 'totaalGroenDak',
+        Dakoversteken: 'totaalDakoversteken', OnderkantDoorrit: 'totaalOnderkantDoorrit', Afbraak: 'totaalAfbraak'
+    };
 
-        // KPI cards
-        document.getElementById('kpi-platdak').textContent = fmt(pd) + ' m²';
-        document.getElementById('kpi-hellend').textContent = fmt(hd) + ' m²';
-        document.getElementById('kpi-groen').textContent   = fmt(gd) + ' m²';
-        document.getElementById('kpi-overst').textContent  = fmt(ov) + ' m²';
-        document.getElementById('kpi-doorrit').textContent = fmt(dr) + ' m²';
-        document.getElementById('kpi-afbraak').textContent = fmt(af) + ' m²';
+    function updateTotals(totaal) {
+        DAK_TYPES.forEach(key => {
+            const txt = fmt(totaal[TOTAL_KEY[key]] ?? 0) + ' m²';
 
-        // Accordion badges + tfoot
-        [
-            ['PlatDak',         pd],
-            ['HellendDak',      hd],
-            ['GroenDak',        gd],
-            ['Dakoversteken',   ov],
-            ['OnderkantDoorrit',dr],
-            ['Afbraak',         af],
-        ].forEach(([key, val]) => {
             const subEl   = document.getElementById('sub-' + key);
             const tfootEl = document.getElementById('tfoot-' + key);
-            const sfx     = ' m²';
-            if (subEl)   subEl.textContent   = fmt(val) + sfx;
-            if (tfootEl) tfootEl.textContent = fmt(val) + sfx;
+            const railEl  = document.getElementById('rail-' + key);
+            if (subEl)   subEl.textContent   = txt;
+            if (tfootEl) tfootEl.textContent = txt;
+
+            // rail toont het cijfer zodra het type een sectie heeft
+            const chip = railChip(key);
+            if (railEl && chip && !chip.classList.contains('dak-rail__chip--empty')) {
+                railEl.textContent = txt;
+            }
         });
     }
 
@@ -448,13 +394,18 @@
 
             if (eenheidInp) eenheidInp.value = '';
             if (beschrInp)  beschrInp.value  = '';
+            syncEmptyState();
         }
 
         // ── Verwijderen ───────────────────────────────────────────────────
         const delBtn = e.target.closest('.btn-delete-gevel');
         if (delBtn) {
             const row = delBtn.closest('tr');
-            if (!row || !confirm('Element verwijderen?')) return;
+            if (!row) return;
+            if (!await BudgetWizard.confirmModal({
+                title: 'Element verwijderen',
+                body: 'Ben je zeker dat je dit dak-/afbraakelement wil verwijderen?'
+            })) return;
 
             const params = new URLSearchParams({ elementId: row.dataset.elementId, versieId });
             const resp   = await fetch('/Projecten/BudgetGevelElementVerwijderen', {
@@ -463,7 +414,23 @@
                 body:    params.toString()
             });
             const result = await resp.json();
-            if (result.success) { row.remove(); updateKpi(result.totaal); }
+            if (result.success) {
+                const type  = row.dataset.elementType;
+                const tbody = document.getElementById('tbody-' + type);
+                row.remove();
+                updateTotals(result.totaal);
+
+                // laatste rij weg → sectie verdwijnt, type keert terug als lege chip
+                if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                    const item = sectionItem(type);
+                    if (item) item.hidden = true;
+                    const chip = railChip(type);
+                    if (chip) chip.classList.add('dak-rail__chip--empty');
+                    const val = document.getElementById('rail-' + type);
+                    if (val) val.innerHTML = '<i class="fa-solid fa-plus" aria-hidden="true"></i>';
+                    syncEmptyState();
+                }
+            }
         }
 
         // ── Dupliceren ────────────────────────────────────────────────────

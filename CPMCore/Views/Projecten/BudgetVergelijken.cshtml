@@ -1,17 +1,18 @@
 @using CPMCore.Models.Budget
 @model BudgetVergelijkenModel
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 <style>
     .versie-col { min-width: 180px; }
-    .vergelijk-tabel th.versie-header { background: #e8f0fe; color: #0d6efd; text-align: center; font-weight: 700; }
-    .vergelijk-tabel td.bedrag { text-align: right; font-weight: 600; }
-    .vergelijk-tabel .groep-header { background: #f0f4ff; font-size: .8rem; text-transform: uppercase; color: #0d6efd; letter-spacing: .05em; }
-    .vergelijk-tabel .totaal-row td { background: #e8f0fe; font-weight: 700; border-top: 2px solid #0d6efd; }
-    .beste { color: #198754; }
-    .slechtste { color: #dc3545; }
+    .vergelijk-tabel th.versie-header { background: var(--lightgreen, #e8f0eb); color: var(--primary, #0a5a3b); text-align: center; font-weight: 700; }
+    .vergelijk-tabel td.bedrag { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .vergelijk-tabel .groep-header { background: var(--lightgray, #f8f9fc); font-size: .8rem; font-weight: 700; color: var(--primary, #0a5a3b); }
+    .vergelijk-tabel .totaal-row td { background: var(--lightgreen, #e8f0eb); color: var(--primary, #0a5a3b); font-weight: 700; border-top: 2px solid var(--border, #e7e7e7); }
+    .beste { color: var(--primary, #0a5a3b); }
+    .slechtste { color: var(--danger, #b3452f); }
     .versie-toggle { cursor: pointer; transition: background .15s, color .15s; }
-    .versie-toggle.geselecteerd { background: #0d6efd !important; color: #fff !important; }
+    .versie-toggle.geselecteerd { background: var(--primary, #0a5a3b) !important; color: #fff !important; border-color: var(--primary, #0a5a3b) !important; }
 </style>
 }
 
@@ -20,26 +21,24 @@
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body bw-inner-body">
 
-            @* ── Koptekst ── *@
-            <div class="d-flex justify-content-between align-items-start mb-4">
-                <div>
-                    <h2 class="bw-page-header__title mb-1">Versies vergelijken</h2>
-                    <p class="text-muted mb-0">Budget <strong>@Model.BudgetNaam</strong> — @Model.ProjectName</p>
-                </div>
-                <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
-                    <i class="bx bx-arrow-back me-1"></i> Terug
-                </a>
+            <div class="gl-page-header">
+                @await Html.PartialAsync("_PageHeader", new CPMCore.Models.PageHeaderModel
+                {
+                    Title = "Versies vergelijken",
+                    Subtitle = $"Budget {Model.BudgetNaam} — {Model.ProjectName}",
+                    BackUrl = Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId }),
+                    BackAriaLabel = "Terug naar budgetten"
+                })
             </div>
 
             @* ── Versie selector ── *@
-            <div class="card card-modern mb-4">
-                <div class="card-header"><strong>Selecteer versies om te vergelijken</strong></div>
-                <div class="card-body">
+            <div class="bw-section-card mb-4">
+                <div class="bw-section-card__header"><span>Selecteer versies om te vergelijken</span></div>
+                <div class="bw-section-card__body">
                     <div class="d-flex flex-wrap gap-2" id="versieToggles">
                         @foreach (var v in Model.AlleVersies)
                         {
-                            <span class="badge bg-light text-dark border versie-toggle p-2 fs-6"
-                                  data-versie-id="@v.Id">
+                            <span class="bw-chip bw-chip--other versie-toggle" data-versie-id="@v.Id">
                                 v@v.Versienummer — @v.VersieNaam
                                 <span class="text-muted small ms-1">(@v.Status)</span>
                             </span>
@@ -47,7 +46,7 @@
                     </div>
                     <div class="mt-3 d-flex align-items-center gap-3">
                         <button type="button" class="btn btn-primary btn-sm" id="btnVergelijk">
-                            <i class="bx bx-git-compare me-1"></i> Vergelijken
+                            <i class="fa-solid fa-code-compare me-1"></i> Vergelijken
                         </button>
                         <span class="text-muted small" id="lblSelectie">0 versies geselecteerd</span>
                     </div>
@@ -57,16 +56,16 @@
             @* ── Spinner ── *@
             <div id="vergelijkSpinner" class="text-center py-4 d-none">
                 <div class="spinner-border text-primary" role="status"></div>
-                <div class="mt-2 text-muted">Berekenen...</div>
+                <div class="mt-2 text-muted">Berekenen…</div>
             </div>
 
             @* ── Vergelijkingstabel (dynamisch gevuld) ── *@
             <div id="vergelijkResultaat" class="d-none">
-                <div class="card card-modern">
-                    <div class="card-header"><strong>Vergelijking</strong></div>
-                    <div class="card-body p-0">
+                <div class="bw-section-card">
+                    <div class="bw-section-card__header"><span>Vergelijking</span></div>
+                    <div class="bw-section-card__body" style="padding:0">
                         <div class="table-responsive">
-                            <table class="table vergelijk-tabel mb-0">
+                            <table class="bw-table vergelijk-tabel mb-0">
                                 <thead id="vergelijkHead"></thead>
                                 <tbody id="vergelijkBody"></tbody>
                             </table>
@@ -155,15 +154,15 @@
 
         function groepHeader(label, icon) {
             const colspan = resultaten.length + 1;
-            return '<tr><th colspan="' + colspan + '" class="groep-header"><i class="bx ' + icon + ' me-1"></i>' + label + '</th></tr>';
+            return '<tr><th colspan="' + colspan + '" class="groep-header"><i class="fa-solid ' + icon + ' me-1"></i>' + label + '</th></tr>';
         }
 
-        let tbody = groepHeader('Bouwkost (activiteiten)', 'bx-buildings');
+        let tbody = groepHeader('Bouwkost (activiteiten)', 'fa-city');
         tbody += rij('Totaal bouwkost', function (r) { return r.TotaalBouw; }, false);
 
         const heeftKosten = resultaten.some(function (r) { return r.KostenOpBouw && r.KostenOpBouw.length > 0; });
         if (heeftKosten) {
-            tbody += groepHeader('Erelonen & Studies', 'bx-user-check');
+            tbody += groepHeader('Erelonen & Studies', 'fa-user-check');
             const keys = [...new Set(resultaten.flatMap(function (r) {
                 return (r.KostenOpBouw || []).map(function (k) { return k.Omschrijving; });
             }))];
@@ -179,7 +178,7 @@
             return r.Forfaits && r.Forfaits.some(function (f) { return f.Bedrag > 0; });
         });
         if (heeftForfaits) {
-            tbody += groepHeader('Forfaits', 'bx-list-check');
+            tbody += groepHeader('Forfaits', 'fa-list-check');
             const keys = [...new Set(resultaten.flatMap(function (r) {
                 return (r.Forfaits || []).filter(function (f) { return f.Bedrag > 0; }).map(function (k) { return k.Omschrijving; });
             }))];
@@ -195,7 +194,7 @@
             return r.Financiering && r.Financiering.some(function (f) { return f.Bedrag > 0; });
         });
         if (heeftFin) {
-            tbody += groepHeader('Financiering', 'bx-euro');
+            tbody += groepHeader('Financiering', 'fa-euro-sign');
             const keys = [...new Set(resultaten.flatMap(function (r) {
                 return (r.Financiering || []).filter(function (f) { return f.Bedrag > 0; }).map(function (k) { return k.Omschrijving; });
             }))];
@@ -207,7 +206,7 @@
             });
         }
 
-        tbody += groepHeader('Onvoorzien', 'bx-question-mark');
+        tbody += groepHeader('Onvoorzien', 'fa-question');
         tbody += rij('Onvoorzien', function (r) { return r.Onvoorzien; }, true);
 
         // Totaalrij

@@ -1,0 +1,331 @@
+@*
+    Herbruikbare modal + AJAX-logica voor bijbestellingen op een lot (ContractActivity).
+    Gebruikt op Projecten/DetailContracts, DetailContract en EditContract.
+
+    Verwacht in de pagina: een antiforgery-token (@Html.AntiForgeryToken() of een form met token).
+
+    Knop-varianten (allemaal class .js-add-bijbestelling):
+      1. Lot al gekend:      data-contractactivityid + data-lotname
+      2. Kies uit bestaande loten: data-lots='[{"id":123,"label":"Contract X — Lot Y"}]'
+      3. Leverancier-modus:  data-company-id, data-company-name,
+                             data-contracts='[{"id":1,"name":"Contract X","activityIds":[12,34]}]'
+                             -> kies contract (bij >1, label = leverancier - contract) + activiteit
+                                (activiteiten die al op het contract staan worden gemarkeerd);
+                                bestaat het lot nog niet op dat contract, dan wordt het aangemaakt.
+    Bewerken:  .js-edit-bijbestelling  (data-id, data-lotname, data-description, data-price [invariant])
+    Verwijderen: .js-delete-bijbestelling (data-id, data-lotname, data-description, data-price [invariant])
+                 -> toont een bevestigingsmodal (magnific-popup, zelfde stijl als de
+                    contract-verwijdermodal op Projecten/DetailContracts).
+
+    Na een geslaagde bewerking wordt de pagina herladen zodat alle totalen kloppen.
+*@
+<div class="modal fade" id="modalBijbestelling" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bijbestellingModalTitle">Bijbestelling toevoegen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bijbestellingError" class="alert alert-danger d-none" role="alert"></div>
+                <input type="hidden" id="bijbestellingId" value="0" />
+                <input type="hidden" id="bijbestellingContractActivityId" value="0" />
+
+                <div class="mb-3 d-none" id="bijbestellingContractRow">
+                    <label class="control-label mb-1" for="bijbestellingContractSelect">Contract</label>
+                    <div class="fw-semibold" id="bijbestellingContractName">-</div>
+                    <select id="bijbestellingContractSelect" class="form-control form-control-modern d-none" aria-label="Kies het contract"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="control-label mb-1" for="bijbestellingLotSelect">Lot</label>
+                    <div class="fw-semibold" id="bijbestellingLotName">-</div>
+                    <select id="bijbestellingLotSelect" class="form-control form-control-modern d-none" aria-label="Kies het lot"></select>
+                    <select id="bijbestellingActivitySelect" class="form-control form-control-modern d-none" aria-label="Kies de activiteit / het lot"></select>
+                    <div class="form-text d-none" id="bijbestellingNewLotHint">
+                        <i class="bx bx-info-circle"></i> Staat het lot nog niet op het contract, dan wordt het bij het opslaan aangemaakt (zonder basisprijs).
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="control-label mb-1" for="bijbestellingDescription">Omschrijving</label>
+                    <input type="text" id="bijbestellingDescription" class="form-control form-control-modern" maxlength="200" placeholder="bv. Extra grondwerk zone B" />
+                </div>
+                <div class="mb-3">
+                    <label class="control-label mb-1" for="bijbestellingPrice">Prijs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">&euro;</span>
+                        <input type="text" id="bijbestellingPrice" class="form-control form-control-modern" inputmode="decimal" placeholder="0,00" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="btnSaveBijbestelling">Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Bevestigingsmodal bij verwijderen — zelfde opzet als _ModalDeleteContract (magnific-popup inline). *@
+<div id="modaldeletebijbestelling" class="modal-block modal-block-warning mfp-hide">
+    <section class="card">
+        <header class="card-header">
+            <h2 class="card-title">Bijbestelling verwijderen</h2>
+        </header>
+        <div class="card-body">
+            <div class="modal-wrapper">
+                <div class="modal-icon">
+                    <i class="fas fa-question-circle text-warning"></i>
+                </div>
+                <div class="modal-text">
+                    <p>
+                        U staat op het punt de bijbestelling <strong id="delBijbOmschrijving"></strong>
+                        op lot <strong id="delBijbLot"></strong> te verwijderen. Bent u zeker?
+                    </p>
+                </div>
+            </div>
+        </div>
+        <footer class="card-footer">
+            <div class="row">
+                <div class="col-md-12 text-end">
+                    <button type="button" class="btn btn-danger" id="btnConfirmDeleteBijbestelling">
+                        <i class="bx bx-trash me-1"></i>Verwijderen
+                    </button>
+                    <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+                </div>
+            </div>
+        </footer>
+    </section>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var addUrl        = '@Url.Action("AddContractAdditionalOrder", "Projecten")';
+        var updateUrl     = '@Url.Action("UpdateContractAdditionalOrder", "Projecten")';
+        var deleteUrl     = '@Url.Action("DeleteContractAdditionalOrder", "Projecten")';
+        var activitiesUrl = '@Url.Action("GetCompanyActivities", "Projecten")';
+
+        var MODE_KNOWN = 'known', MODE_LOTS = 'lots', MODE_SUPPLIER = 'supplier';
+        var mode = MODE_KNOWN;
+
+        function token() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        // "1.234,56" of "1234.56" -> invariante string "1234.56"
+        function toInvariantAmount(raw) {
+            if (raw == null) return '0';
+            var s = String(raw).trim().replace(/\s|€/g, '').replace(/\./g, '').replace(',', '.');
+            var v = parseFloat(s);
+            return isNaN(v) ? '0' : String(v);
+        }
+
+        var modalEl = document.getElementById('modalBijbestelling');
+        function getModal() {
+            return (modalEl && window.bootstrap) ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+        }
+
+        var $contractRow = $('#bijbestellingContractRow');
+        var $contractSel = $('#bijbestellingContractSelect');
+        var $contractName = $('#bijbestellingContractName');
+        var $lotName = $('#bijbestellingLotName');
+        var $lotSel  = $('#bijbestellingLotSelect');
+        var $actSel  = $('#bijbestellingActivitySelect');
+        var $newHint = $('#bijbestellingNewLotHint');
+
+        var supplierContracts = [];   // [{id, name, activityIds:[]}]  voor de leverancier-modus
+
+        function resetSections() {
+            $contractRow.addClass('d-none');
+            $contractSel.addClass('d-none').empty();
+            $contractName.addClass('d-none').text('-');
+            $lotName.addClass('d-none').text('-');
+            $lotSel.addClass('d-none').empty();
+            $actSel.addClass('d-none').empty();
+            $newHint.addClass('d-none');
+            supplierContracts = [];
+        }
+
+        function currentContract() {
+            if (!supplierContracts.length) return null;
+            if (supplierContracts.length === 1) return supplierContracts[0];
+            var id = parseInt($contractSel.val(), 10) || 0;
+            for (var i = 0; i < supplierContracts.length; i++) {
+                if (supplierContracts[i].id === id) return supplierContracts[i];
+            }
+            return supplierContracts[0];
+        }
+
+        // Markeer in de activiteitenlijst welke al als lot op het gekozen contract staan.
+        function decorateActivityOptions() {
+            var c = currentContract();
+            var inContract = (c && c.activityIds) ? c.activityIds : [];
+            $actSel.children('option').each(function () {
+                var $o = $(this);
+                var base = $o.attr('data-base');
+                if (base == null) { base = $o.text(); $o.attr('data-base', base); }
+                var val = parseInt($o.val(), 10) || 0;
+                $o.text(val && inContract.indexOf(val) !== -1 ? base + '  — al in contract' : base);
+            });
+        }
+
+        function loadCompanyActivities(companyId) {
+            $actSel.empty().append($('<option>').val('').text('Activiteiten laden…'));
+            $.post(activitiesUrl, { companyid: companyId }).done(function (data) {
+                $actSel.empty();
+                (data || []).forEach(function (a) {
+                    $actSel.append($('<option>').val(a.id).text(a.text));
+                });
+                if (!$actSel.children().length) {
+                    $actSel.append($('<option>').val('').text('(geen activiteiten voor deze leverancier)'));
+                }
+                decorateActivityOptions();
+            }).fail(function () {
+                $actSel.empty().append($('<option>').val('').text('(activiteiten laden mislukt)'));
+            });
+        }
+
+        $contractSel.on('change', decorateActivityOptions);
+
+        function openModal(opts) {
+            $('#bijbestellingError').addClass('d-none').text('');
+            resetSections();
+            $('#bijbestellingId').val(opts.id || 0);
+            $('#bijbestellingContractActivityId').val(opts.contractActivityId || 0);
+            $('#bijbestellingDescription').val(opts.description || '');
+            $('#bijbestellingPrice').val(opts.price != null && opts.price !== '' ? String(opts.price).replace('.', ',') : '');
+            $('#bijbestellingModalTitle').text(opts.id ? 'Bijbestelling bewerken' : 'Bijbestelling toevoegen');
+
+            if (!opts.id && Array.isArray(opts.contracts)) {
+                // Leverancier-modus: contract (bij >1) + activiteit kiezen
+                mode = MODE_SUPPLIER;
+                supplierContracts = opts.contracts;
+                var prefix = opts.companyName ? opts.companyName + ' - ' : '';
+                if (opts.contracts.length > 1) {
+                    opts.contracts.forEach(function (c) {
+                        $contractSel.append($('<option>').val(c.id).text(prefix + c.name));
+                    });
+                    $contractSel.removeClass('d-none');
+                    $contractRow.removeClass('d-none');
+                } else if (opts.contracts.length === 1) {
+                    $contractSel.append($('<option>').val(opts.contracts[0].id).text(prefix + opts.contracts[0].name));
+                    $contractName.removeClass('d-none').text(prefix + opts.contracts[0].name);
+                    $contractRow.removeClass('d-none');
+                }
+                $actSel.removeClass('d-none');
+                $newHint.removeClass('d-none');
+                if (opts.companyId) { loadCompanyActivities(opts.companyId); }
+            } else if (!opts.id && Array.isArray(opts.lots) && opts.lots.length) {
+                // Kies uit bestaande loten
+                mode = MODE_LOTS;
+                opts.lots.forEach(function (l) { $lotSel.append($('<option>').val(l.id).text(l.label)); });
+                if (opts.contractActivityId) { $lotSel.val(String(opts.contractActivityId)); }
+                $lotSel.removeClass('d-none');
+            } else {
+                // Lot al gekend (of bewerken)
+                mode = MODE_KNOWN;
+                $lotName.removeClass('d-none').text(opts.lotName || '-');
+            }
+
+            var m = getModal();
+            if (m) { m.show(); } else { window.alert('Kan het venster niet openen.'); }
+        }
+
+        $(document).on('click', '.js-add-bijbestelling', function () {
+            var $b = $(this);
+            openModal({
+                contractActivityId: $b.data('contractactivityid'),
+                lotName: $b.data('lotname'),
+                lots: $b.data('lots'),
+                contracts: $b.data('contracts'),
+                companyId: $b.data('company-id'),
+                companyName: $b.data('company-name')
+            });
+        });
+
+        $(document).on('click', '.js-edit-bijbestelling', function () {
+            openModal({
+                id: $(this).data('id'),
+                lotName: $(this).data('lotname'),
+                description: $(this).data('description'),
+                price: $(this).data('price')
+            });
+        });
+
+        $('#btnSaveBijbestelling').on('click', function () {
+            var id = parseInt($('#bijbestellingId').val(), 10) || 0;
+            var payload = {
+                id: id,
+                contractActivityId: 0,
+                contractId: 0,
+                activityId: 0,
+                description: $('#bijbestellingDescription').val(),
+                price: toInvariantAmount($('#bijbestellingPrice').val()),
+                __RequestVerificationToken: token()
+            };
+
+            if (!id) {
+                if (mode === MODE_SUPPLIER) {
+                    payload.contractId = parseInt($contractSel.val(), 10) || 0;
+                    payload.activityId = parseInt($actSel.val(), 10) || 0;
+                    if (!payload.contractId) { showErr('Kies eerst een contract.'); return; }
+                    if (!payload.activityId) { showErr('Kies eerst een lot / activiteit.'); return; }
+                } else if (mode === MODE_LOTS) {
+                    payload.contractActivityId = parseInt($lotSel.val(), 10) || 0;
+                    if (!payload.contractActivityId) { showErr('Kies eerst een lot.'); return; }
+                } else {
+                    payload.contractActivityId = parseInt($('#bijbestellingContractActivityId').val(), 10) || 0;
+                    if (!payload.contractActivityId) { showErr('Geen lot gekozen.'); return; }
+                }
+            }
+
+            var $btn = $(this).prop('disabled', true);
+            $.post(id ? updateUrl : addUrl, payload).done(function (res) {
+                if (res && res.success) { window.location.reload(); }
+                else { showErr((res && res.error) || 'Opslaan mislukt.'); }
+            }).fail(function () {
+                showErr('Opslaan mislukt.');
+            }).always(function () { $btn.prop('disabled', false); });
+        });
+
+        function showErr(msg) { $('#bijbestellingError').removeClass('d-none').text(msg); }
+
+        // ===== Verwijderen via bevestigingsmodal (magnific-popup) =====
+        var deleteId = 0;
+
+        $(document).on('click', '.js-delete-bijbestelling', function () {
+            var $b = $(this);
+            deleteId = parseInt($b.data('id'), 10) || 0;
+            var desc = $b.data('description');
+            var price = $b.data('price');
+            var omschrijving = (desc != null && String(desc).trim() !== '') ? '“' + desc + '”' : '(zonder omschrijving)';
+            if (price != null && price !== '') { omschrijving += ' — € ' + String(price).replace('.', ','); }
+            $('#delBijbOmschrijving').text(omschrijving);
+            $('#delBijbLot').text($b.data('lotname') || '-');
+
+            if ($.magnificPopup) {
+                $.magnificPopup.open({ items: { src: '#modaldeletebijbestelling' }, type: 'inline', closeBtnInside: true });
+            } else if (window.confirm('Deze bijbestelling verwijderen?')) {
+                $('#btnConfirmDeleteBijbestelling').trigger('click');
+            }
+        });
+
+        $('#btnConfirmDeleteBijbestelling').on('click', function () {
+            if (!deleteId) return;
+            var $b = $(this).prop('disabled', true);
+            $.post(deleteUrl, { id: deleteId, __RequestVerificationToken: token() })
+                .done(function (res) {
+                    if (res && res.success) { window.location.reload(); }
+                    else { if ($.magnificPopup) { $.magnificPopup.close(); } window.alert((res && res.error) || 'Verwijderen mislukt.'); }
+                })
+                .fail(function () { if ($.magnificPopup) { $.magnificPopup.close(); } window.alert('Verwijderen mislukt.'); })
+                .always(function () { $b.prop('disabled', false); });
+        });
+
+        $(document).on('click', '#modaldeletebijbestelling .modal-dismiss', function () {
+            if ($.magnificPopup) { $.magnificPopup.close(); }
+        });
+    });
+</script>

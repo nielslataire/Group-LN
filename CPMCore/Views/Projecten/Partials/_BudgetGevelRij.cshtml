@@ -10,18 +10,18 @@
     data-element-type="@Model.ElementType">
 
     <td style="min-width:90px;">
-        <input type="text" class="form-control form-control-sm gevel-input"
+        <input type="text" class="bw-cell-input gevel-input"
                data-field="eenheidNaam" value="@Model.EenheidNaam" placeholder="bv. L1" />
     </td>
 
     <td style="min-width:110px;">
-        <input type="text" class="form-control form-control-sm gevel-input"
+        <input type="text" class="bw-cell-input gevel-input"
                data-field="beschrijving" value="@Model.Beschrijving" placeholder="bv. VG" />
     </td>
 
     <td style="min-width:65px;">
         <input type="number" step="0.01"
-               class="form-control form-control-sm text-end gevel-input"
+               class="bw-cell-input bw-cell-input--num gevel-input"
                data-field="aantal"
                value="@Model.Aantal.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" />
     </td>
@@ -31,7 +31,7 @@
         @if (!heeftLengte)
         {
             <input type="number" min="0" step="0.001"
-                   class="form-control form-control-sm text-end gevel-input"
+                   class="bw-cell-input bw-cell-input--num gevel-input"
                    data-field="breedte"
                    value="@(Model.Breedte.HasValue ? Model.Breedte.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "")" />
         }
@@ -46,7 +46,7 @@
         @if (heeftHoogte)
         {
             <input type="number" step="0.001"
-                   class="form-control form-control-sm text-end gevel-input"
+                   class="bw-cell-input bw-cell-input--num gevel-input"
                    data-field="hoogte"
                    value="@(Model.Hoogte.HasValue ? Model.Hoogte.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "")" />
         }
@@ -61,7 +61,7 @@
         @if (heeftLengte || heeftBreedteLengte)
         {
             <input type="number" min="0" step="0.001"
-                   class="form-control form-control-sm text-end gevel-input"
+                   class="bw-cell-input bw-cell-input--num gevel-input"
                    data-field="lengte"
                    value="@(Model.Lengte.HasValue ? Model.Lengte.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) : "")" />
         }
@@ -71,7 +71,7 @@
         }
     </td>
 
-    <td class="gevel-resultaat-cell text-end fw-semibold text-primary"
+    <td class="gevel-resultaat-cell bw-num fw-semibold text-primary"
         style="min-width:80px;"
         data-bs-toggle="tooltip"
         data-bs-placement="top"
@@ -84,24 +84,16 @@
         </small>
     </td>
 
-    <td class="text-center" style="width:44px;">
-        <div class="dropdown">
-            <button class="btn btn-sm btn-light dropdown-toggle" type="button"
-                    data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-ellipsis-v"></i>
+    <td class="text-end" style="width:76px;">
+        <div class="bw-row-actions">
+            <button type="button" class="bw-row-btn btn-duplicate-gevel"
+                    title="Element dupliceren" aria-label="Element dupliceren">
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li>
-                    <button type="button" class="dropdown-item text-danger btn-delete-gevel">
-                        <i class="fas fa-trash-alt me-1"></i>Verwijderen
-                    </button>
-                </li>
-                <li>
-                    <button type="button" class="dropdown-item btn-duplicate-gevel">
-                        <i class="fas fa-copy me-1"></i>Dupliceren
-                    </button>
-                </li>
-            </ul>
+            <button type="button" class="bw-row-btn bw-row-btn--danger btn-delete-gevel"
+                    title="Element verwijderen" aria-label="Element verwijderen">
+                <i class="fa-solid fa-trash-alt" aria-hidden="true"></i>
+            </button>
         </div>
     </td>
 </tr>

@@ -157,6 +157,14 @@ namespace FacadeCore
         decimal GetContractActivityPrice(int contractid);
         GetResponse<ContractActivityBO> GetProjectContractActivitiesByActivityId(int projectid, int activityid);
 
+        // Bijbestellingen op een lot (ContractActivity)
+        int GetOrCreateContractActivity(int contractId, int activityId);
+        // Nieuwe verzekering: verse ContractActivity (142) op het makelaarscontract aanmaken.
+        int CreateInsuranceContractActivity(int projectId, int brokerCompanyId);
+        Response AddContractAdditionalOrder(int contractActivityId, string description, decimal price);
+        Response UpdateContractAdditionalOrder(int id, string description, decimal price);
+        Response DeleteContractAdditionalOrder(int id);
+
 
         // Budget
         GetResponse<BudgetActivityBO> GetProjectBudget(int projectid);

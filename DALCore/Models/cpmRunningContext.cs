@@ -105,6 +105,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ContractActivity> ContractActivity { get; set; }
 
+    public virtual DbSet<ContractAdditionalOrder> ContractAdditionalOrder { get; set; }
+
     public virtual DbSet<Country> Country { get; set; }
 
     public virtual DbSet<IncomingInvoiceAttachments> IncomingInvoiceAttachments { get; set; }
@@ -1347,6 +1349,21 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_ContractActivity_Contract1");
         });
 
+        modelBuilder.Entity<ContractAdditionalOrder>(entity =>
+        {
+            entity.ToTable("ContractAdditionalOrder");
+
+            entity.HasIndex(e => e.ContractActivityId, "IX_ContractAdditionalOrder_ContractActivityId");
+
+            entity.Property(e => e.Description).HasMaxLength(200);
+            entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2").HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.ContractActivity).WithMany(p => p.ContractAdditionalOrder)
+                .HasForeignKey(d => d.ContractActivityId)
+                .HasConstraintName("FK_ContractAdditionalOrder_ContractActivity");
+        });
+
         modelBuilder.Entity<Country>(entity =>
         {
             entity.Property(e => e.Id).HasColumnName("ID");
@@ -1553,6 +1570,7 @@ public partial class cpmRunningContext : DbContext
 
             entity.Property(e => e.ContractActivityId).HasColumnName("ContractActivityID");
             entity.Property(e => e.InsuranceCompanyId).HasColumnName("InsuranceCompanyID");
+            entity.Property(e => e.Polisnummer).HasMaxLength(100);
 
             entity.HasOne(d => d.ContractActivity).WithOne(p => p.Insurances)
                 .HasForeignKey<Insurances>(d => d.ContractActivityId)
@@ -2384,6 +2402,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.TotalLandShare).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.WerfmeldingDate).HasColumnType("date");
             entity.Property(e => e.WerfmeldingDossier).HasMaxLength(100);
+            entity.Property(e => e.WerfmeldingEndDate).HasColumnType("date");
             entity.Property(e => e.WheaterStationId).HasColumnName("WheaterStationID");
 
             entity.HasOne(d => d.Architect).WithMany(p => p.ProjectArchitect)
@@ -3247,6 +3266,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LmSecanpalen).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.M3Onderschoeiingen).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.AantalVeluxen);
+            entity.Property(e => e.AantalAanTeBouwenBuren);
             entity.Property(e => e.NacalcBasisprijs).HasColumnType("decimal(8, 2)");
             entity.Property(e => e.SIndexStart).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.SIndexHuidig).HasColumnType("decimal(10, 4)");

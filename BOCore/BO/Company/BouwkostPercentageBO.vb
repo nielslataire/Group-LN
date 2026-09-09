@@ -5,4 +5,11 @@ Public Class BouwkostPercentageBO
     Public Property Naam As String
     Public Property Percentage As Decimal
     Public Property Volgorde As Integer
+    ''' <summary>Niet leeg voor vaste systeemrijen (standaard voor Budget > Parameters).</summary>
+    Public Property Sleutel As String
+    Public ReadOnly Property IsSysteem As Boolean
+        Get
+            Return Not String.IsNullOrEmpty(Sleutel)
+        End Get
+    End Property
 End Class

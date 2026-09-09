@@ -1,51 +1,60 @@
 @using CPMCore.Controllers
 @model CPMCore.Models.Projecten.BudgetMasterAanmakenModel
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
+}
+
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
 
-            <div class="row justify-content-between align-items-center pt-2 pb-3">
-                <div class="col-auto">
-                    <h1 class="font-weight-bold mb-0">Nieuw budget aanmaken</h1>
-                    <p class="text-muted mb-0">@Model.ProjectName</p>
-                </div>
+            <div class="gl-page-header">
+                @await Html.PartialAsync("_PageHeader", new CPMCore.Models.PageHeaderModel
+                {
+                    Title = "Nieuw budget aanmaken",
+                    Subtitle = Model.ProjectName,
+                    BackUrl = Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId }),
+                    BackAriaLabel = "Terug naar budgetten"
+                })
             </div>
 
             <div class="row">
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <form asp-action="BudgetMasterAanmaken" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" asp-for="ProjectId" />
-                                <input type="hidden" asp-for="ProjectName" />
+                <div class="col-lg-7 col-xl-6">
+                    <form asp-action="BudgetMasterAanmaken" method="post" class="gl-project-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="ProjectId" />
+                        <input type="hidden" asp-for="ProjectName" />
 
-                                <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none"></div>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none"></div>
 
-                                <div class="mb-3">
-                                    <label asp-for="Naam" class="form-label fw-semibold"></label>
-                                    <input asp-for="Naam" class="form-control" placeholder="Bv. 8 Woningen" required />
-                                    <span asp-validation-for="Naam" class="text-danger small"></span>
+                        <section class="card card-modern">
+                            <div class="card-body">
+                                <div class="gl-field-grid">
+                                    <div class="gl-field gl-field--full">
+                                        <label asp-for="Naam">Naam <span class="gl-req" aria-hidden="true">*</span></label>
+                                        <input asp-for="Naam" class="form-control form-control-modern" placeholder="bv. 8 woningen" required aria-required="true" />
+                                        <span asp-validation-for="Naam" class="text-danger"></span>
+                                    </div>
+                                    <div class="gl-field gl-field--full gl-field--wide">
+                                        <label asp-for="Omschrijving">Omschrijving <span class="text-muted">(optioneel)</span></label>
+                                        <textarea asp-for="Omschrijving" class="form-control form-control-modern" rows="3" placeholder="Korte toelichting bij dit budget"></textarea>
+                                    </div>
                                 </div>
+                            </div>
+                        </section>
 
-                                <div class="mb-3">
-                                    <label asp-for="Omschrijving" class="form-label fw-semibold">Omschrijving <span class="text-muted fw-normal">(optioneel)</span></label>
-                                    <textarea asp-for="Omschrijving" class="form-control" rows="3" placeholder="Korte toelichting bij dit budget"></textarea>
-                                </div>
-
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })"
-                                       class="btn btn-outline-secondary">
-                                        Annuleren
-                                    </a>
-                                    <button type="submit" class="btn btn-primary">
-                                        Aanmaken <i class="fas fa-arrow-right ms-1"></i>
-                                    </button>
-                                </div>
-                            </form>
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1">
+                                <i class="fa-solid fa-floppy-disk text-4 me-2" aria-hidden="true"></i> Budget aanmaken
+                            </button>
+                            <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })"
+                               class="btn btn-light border btn-px-4 py-3 font-weight-semibold text-color-dark text-3">
+                                Annuleren
+                            </a>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
 

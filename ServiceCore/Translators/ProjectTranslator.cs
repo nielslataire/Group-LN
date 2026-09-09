@@ -124,6 +124,7 @@ namespace ServiceCore.Translators
             bo.SeoDescription = _entity.SeoDescription;
             bo.WerfmeldingDate = _entity.WerfmeldingDate;
             bo.WerfmeldingDossier = _entity.WerfmeldingDossier;
+            bo.WerfmeldingEndDate = _entity.WerfmeldingEndDate;
             bo.ProjectCode = _entity.ProjectCode;
             bo.SalesResponsibleUserID = _entity.SalesResponsibleAspNetUserId;
             // Notaris (CompanyInfo, zelfde patroon als Ontwikkelaar/Bouwheer)
@@ -192,6 +193,7 @@ namespace ServiceCore.Translators
             _entity.SeoDescription       = bo.SeoDescription;
             _entity.WerfmeldingDate      = bo.WerfmeldingDate;
             _entity.WerfmeldingDossier   = string.IsNullOrWhiteSpace(bo.WerfmeldingDossier) ? null : bo.WerfmeldingDossier.Trim();
+            _entity.WerfmeldingEndDate   = bo.WerfmeldingEndDate;
             _entity.ProjectCode          = string.IsNullOrWhiteSpace(bo.ProjectCode) ? null : bo.ProjectCode.Trim();
             _entity.SalesResponsibleAspNetUserId = string.IsNullOrWhiteSpace(bo.SalesResponsibleUserID) ? null : bo.SalesResponsibleUserID;
             _entity.NotaryCompanyId      = (bo.Notary != null && bo.Notary.ID != 0) ? bo.Notary.ID : (int?)null;

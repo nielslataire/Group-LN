@@ -125,7 +125,7 @@
 		/* Dubbelklik-zoom op touch vermijden */
 		.ecommerce-form .btn,
 		.ecommerce-form .form-control,
-		.action-buttons .btn { touch-action: manipulation; }
+		.gl-form-shell__actions .btn { touch-action: manipulation; }
 		/* Datumveld nooit onbruikbaar smal laten worden in een krappe kolom */
 		#txtContractSentDate { min-width: 8rem; }
 		@@media (prefers-reduced-motion: reduce) {
@@ -133,16 +133,6 @@
 		}
 	</style>
 }
-
-<div class="gl-page-header">
-	@await Html.PartialAsync("_PageHeader", new CPMCore.Models.PageHeaderModel
-	{
-		Title = "Contract toevoegen",
-		Subtitle = $"Voeg een nieuw leverancierscontract toe aan project {Model.ProjectName}",
-		BackUrl = Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId }),
-		BackAriaLabel = "Terug naar leveranciers"
-	})
-</div>
 
 <div class="row mt-0 pt-0">
 	<div class="col">
@@ -153,7 +143,7 @@
 	</div>
 </div>
 
-@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", id = "addContractForm", enctype = "multipart/form-data" }))
+@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form gl-fixed-actions-offset", id = "addContractForm", enctype = "multipart/form-data" }))
 {
 	@Html.AntiForgeryToken()
 	@if (!ViewData.ModelState.IsValid)
@@ -396,24 +386,17 @@
 			</section>
 		</div>
 	</div>
-	<div class="row action-buttons align-items-center">
-		<div class="col-12 col-md-auto">
-			<button type="submit" name="saveAction" value="save" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden…">
-				<i class="bx bx-save text-4 me-2" aria-hidden="true"></i> Contract opslaan
-			</button>
-		</div>
-		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-			<button type="submit" name="saveAction" value="addAnother" class="submit-button btn btn-light border btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 text-color-dark" data-loading-text="Laden…">
-				<i class="bx bx-plus-circle text-4 me-2" aria-hidden="true"></i> Opslaan &amp; nog een contract toevoegen
-			</button>
-		</div>
-		<div class="col-12 col-md-auto">
-			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
-		</div>
-		<div class="col-12 col-md px-md-0 mt-3 mt-md-0 text-muted text-3">
+	<div class="gl-form-shell__actions">
+		<span class="me-auto text-muted text-3 d-none d-lg-block">
 			Tip: gebruik <strong>Opslaan &amp; nog een contract toevoegen</strong> als je meerdere leveranciers na elkaar invoert.
-		</div>
-
+		</span>
+		<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light border btn-px-4 py-3 font-weight-semibold text-color-dark text-3">Annuleren</a>
+		<button type="submit" name="saveAction" value="addAnother" class="submit-button btn btn-light border btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 text-color-dark" data-loading-text="Laden…">
+			<i class="bx bx-plus-circle text-4 me-2" aria-hidden="true"></i> Opslaan &amp; nog een contract toevoegen
+		</button>
+		<button type="submit" name="saveAction" value="save" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden…">
+			<i class="bx bx-save text-4 me-2" aria-hidden="true"></i> Contract opslaan
+		</button>
 	</div>
 }
 

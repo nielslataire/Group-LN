@@ -111,6 +111,8 @@ public partial class Project
 
     public string WerfmeldingDossier { get; set; }
 
+    public DateOnly? WerfmeldingEndDate { get; set; }
+
     public string ProjectCode { get; set; }
 
     public string SalesResponsibleAspNetUserId { get; set; }

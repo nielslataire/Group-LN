@@ -186,6 +186,47 @@
                     urgentItems.Add(("Bankwaarborg ontbreekt", c.Company?.Display ?? "onbekende leverancier", c.ContractName,
                         Url.Action("EditContract", "Projecten", new { projectid = Model.Project.Id, contractid = c.Id }), "bx-shield", "Contracten", null));
                 }
+                // Enkel voor projecten in uitvoering: een ontbrekende/verlopen
+                // werfmelding en een ontbrekende/vervallen ABR-polis zijn dringend.
+                if (Model.Project.Status?.Id == (int)ProjectStatusType.Uitvoering)
+                {
+                    var werfmeldingEditUrl = Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id });
+                    if (!Model.Project.WerfmeldingDate.HasValue)
+                    {
+                        urgentItems.Add(("Werfmelding ontbreekt", null,
+                            "Project is in uitvoering maar er is nog geen werfmelding ingediend",
+                            werfmeldingEditUrl, "bx-file", "Werf", null));
+                    }
+                    else if (Model.Project.WerfmeldingEndDate.HasValue && Model.Project.WerfmeldingEndDate.Value < attentionToday)
+                    {
+                        var werfEinde = Model.Project.WerfmeldingEndDate.Value;
+                        var dagenVerlopen = (attentionToday.ToDateTime(TimeOnly.MinValue) - werfEinde.ToDateTime(TimeOnly.MinValue)).Days;
+                        urgentItems.Add(("Werfmelding verlopen", null,
+                            $"Einddatum {werfEinde.ToString("dd/MM/yyyy", be)} is verstreken — werfmelding verlengen",
+                            werfmeldingEditUrl, "bx-calendar-x", "Werf", $"{dagenVerlopen} dagen verlopen"));
+                    }
+
+                    // ABR-polis: CheckInsurances() waarschuwt enkel voor bestaande
+                    // ABR-polissen zonder einddatum; hier vullen we aan met de twee
+                    // gevallen die daar buiten vallen — géén ABR-polis, en een
+                    // ABR-polis met een verstreken einddatum.
+                    var insurancesEditUrl = Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id });
+                    var abrPolicies = Model.Insurances.Where(i => i.Type == InsuranceType.ABR).ToList();
+                    if (abrPolicies.Count == 0)
+                    {
+                        urgentItems.Add(("ABR-verzekering ontbreekt", null,
+                            "Project is in uitvoering maar er is geen ABR-polis geregistreerd",
+                            insurancesEditUrl, "bx-shield-x", "Financieel", null));
+                    }
+                    else if (abrPolicies.All(i => i.Enddate.HasValue && i.Enddate.Value < attentionToday))
+                    {
+                        var abrEinde = abrPolicies.Max(i => i.Enddate.Value);
+                        var dagenVervallen = (attentionToday.ToDateTime(TimeOnly.MinValue) - abrEinde.ToDateTime(TimeOnly.MinValue)).Days;
+                        urgentItems.Add(("ABR-verzekering vervallen", null,
+                            $"ABR-polis vervallen sinds {abrEinde.ToString("dd/MM/yyyy", be)} — verlengen",
+                            insurancesEditUrl, "bx-shield-x", "Financieel", $"{dagenVervallen} dagen vervallen"));
+                    }
+                }
                 if (Model.Voortgang is not null)
                 {
                     // WarningList geeft interne codes terug (OVERFACTURATIE, ...), geen

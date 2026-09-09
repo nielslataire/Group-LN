@@ -5,20 +5,20 @@
     var poortWaarschuwing = await FormuleSvc.IsPoortWaarschuwingAsync(Model.VersieId);
     var steps = new[]
     {
-        (1, "Gegevens",           Url.Action("BudgetGegevens",    "Projecten", new { versieId = Model.VersieId })),
-        (2, "Oppervlaktes",       Url.Action("BudgetOppervlaktes","Projecten", new { versieId = Model.VersieId })),
-        (3, "Sanitair",           Url.Action("BudgetSanitair",    "Projecten", new { versieId = Model.VersieId })),
-        (4, "Gevels",             Url.Action("BudgetGevels",      "Projecten", new { versieId = Model.VersieId })),
-        (5, "Dak & Afbraak",      Url.Action("BudgetDakAfbraak",  "Projecten", new { versieId = Model.VersieId })),
-        (6, "Activiteiten",  Url.Action("BudgetActivityLijnen", "Projecten", new { versieId = Model.VersieId })),
-        (7, "Parameters",   Url.Action("BudgetParams",        "Projecten", new { versieId = Model.VersieId })),
-        (8, "Verkoop",      Url.Action("BudgetVerkoop",       "Projecten", new { versieId = Model.VersieId })),
-        (9, "Resultaat",    Url.Action("BudgetResultaat", "Projecten", new { versieId = Model.VersieId })),
+        (1, "Gegevens",      Url.Action("BudgetGegevens",      "Projecten", new { versieId = Model.VersieId })),
+        (2, "Oppervlaktes",  Url.Action("BudgetOppervlaktes",  "Projecten", new { versieId = Model.VersieId })),
+        (3, "Sanitair",      Url.Action("BudgetSanitair",      "Projecten", new { versieId = Model.VersieId })),
+        (4, "Gevels",        Url.Action("BudgetGevels",        "Projecten", new { versieId = Model.VersieId })),
+        (5, "Dak & Afbraak", Url.Action("BudgetDakAfbraak",    "Projecten", new { versieId = Model.VersieId })),
+        (6, "Activiteiten",  Url.Action("BudgetActivityLijnen","Projecten", new { versieId = Model.VersieId })),
+        (7, "Parameters",    Url.Action("BudgetParams",        "Projecten", new { versieId = Model.VersieId })),
+        (8, "Verkoop",       Url.Action("BudgetVerkoop",       "Projecten", new { versieId = Model.VersieId })),
+        (9, "Resultaat",     Url.Action("BudgetResultaat",     "Projecten", new { versieId = Model.VersieId })),
     };
 }
 
 <div class="bw-tab-bar">
-    <div class="bw-steps">
+    <div class="bw-steps" role="list" aria-label="Wizardstappen">
         @foreach (var (num, label, url) in steps)
         {
             bool isActive = num == Model.ActiveStep;
@@ -27,11 +27,12 @@
 
             if (url != null)
             {
-                <a href="@url" class="bw-step @cls">
+                <a href="@url" class="bw-step @cls" role="listitem"
+                   aria-current="@(isActive ? "step" : null)">
                     <span class="bw-step__circle">
                         @if (isDone)
                         {
-                            <i class="fas fa-check" style="font-size:9px;"></i>
+                            <i class="fas fa-check" aria-hidden="true"></i>
                         }
                         else
                         {
@@ -41,7 +42,7 @@
                     <span class="bw-step__label">@label</span>
                     @if (num == 1 && poortWaarschuwing)
                     {
-                        <i class="fas fa-exclamation-triangle text-danger ms-1"
+                        <i class="fas fa-exclamation-triangle bw-step__warn ms-1"
                            data-bs-toggle="tooltip" data-bs-placement="top"
                            title="Type poorten nog niet geselecteerd op het tabblad Gegevens."></i>
                     }
@@ -49,12 +50,12 @@
             }
             else
             {
-                <div class="bw-step @cls">
+                <div class="bw-step @cls" role="listitem">
                     <span class="bw-step__circle">@(isDone ? "" : num.ToString())</span>
                     <span class="bw-step__label">@label</span>
                     @if (num == 1 && poortWaarschuwing)
                     {
-                        <i class="fas fa-exclamation-triangle text-danger ms-1"
+                        <i class="fas fa-exclamation-triangle bw-step__warn ms-1"
                            data-bs-toggle="tooltip" data-bs-placement="top"
                            title="Type poorten nog niet geselecteerd op het tabblad Gegevens."></i>
                     }
@@ -69,8 +70,8 @@
     </div>
     @if (Model.ShowCalcToggle)
     {
-        <div class="bw-tab-actions">
-            <label class="small text-muted me-2 mb-0 user-select-none" for="bw-calc-toggle">
+        <div class="bw-tab-actions d-flex align-items-center gap-2 ps-3">
+            <label class="small text-muted mb-0 user-select-none" for="bw-calc-toggle">
                 Toon berekeningen
             </label>
             <div class="form-check form-switch mb-0">

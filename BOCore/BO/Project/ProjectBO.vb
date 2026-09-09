@@ -534,6 +534,8 @@ Public Class ProjectBO
     Public Property WerfmeldingDate As DateOnly?
     <Display(Name:="Dossiernummer werfmelding")>
     Public Property WerfmeldingDossier As String
+    <Display(Name:="Einddatum werfmelding")>
+    Public Property WerfmeldingEndDate As DateOnly?
 
     Private _hourlyRates As List(Of ProjectHourlyRateBO)
     Public Property HourlyRates() As List(Of ProjectHourlyRateBO)

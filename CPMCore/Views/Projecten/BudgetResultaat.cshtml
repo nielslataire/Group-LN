@@ -9,20 +9,25 @@
 }
 
 @section PageStyle {
-    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <link rel="stylesheet" href="~/css/budget-wizard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 <style>
-    .kpi-card { border-top: 3px solid; }
-    .kpi-card.totaal   { border-color: #0d6efd; }
-    .kpi-card.eenh     { border-color: #198754; }
-    .kpi-card.m2       { border-color: #6c757d; }
-    .kpi-card.verschil { border-color: #ffc107; }
-    .kosten-tabel td.bedrag { text-align: right; font-weight: 600; min-width: 140px; }
-    .kosten-tabel td.perc   { text-align: right; color: #6c757d; font-size: .85rem; min-width: 70px; }
-    .kosten-groep th { background: #f0f4ff; color: #0d6efd; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
-    .kosten-totaal td { background: #e8f0fe; font-weight: 700; font-size: 1.05rem; border-top: 2px solid #0d6efd; }
-    .alt-nacalc-balk { height: 10px; border-radius: 5px; }
-    .versie-chip { cursor: pointer; transition: all .15s; text-decoration: none; }
-    .versie-chip:hover { background: #0d6efd !important; color: #fff !important; }
+    .kosten-tabel td.bedrag { text-align: right; font-weight: 600; min-width: 140px; font-variant-numeric: tabular-nums; }
+    .kosten-tabel td.perc   { text-align: right; color: var(--muted, #8590a5); font-size: .85rem; min-width: 70px; font-variant-numeric: tabular-nums; }
+    .kosten-groep th {
+        background: var(--lightgray, #f8f9fc);
+        color: var(--primary, #0a5a3b);
+        font-size: .8rem; font-weight: 700;
+    }
+    .kosten-totaal td {
+        background: var(--lightgreen, #e8f0eb);
+        color: var(--primary, #0a5a3b);
+        font-weight: 700; font-size: 1.05rem;
+        border-top: 2px solid var(--border, #e7e7e7);
+    }
+    .alt-nacalc-balk { height: 10px; border-radius: 999px; }
+    .versie-chip { cursor: pointer; transition: background .15s, color .15s; text-decoration: none; }
+    .versie-chip:hover { background: var(--primary, #0a5a3b) !important; color: #fff !important; }
 </style>
 }
 
@@ -34,83 +39,71 @@
             @* ── Wizard tabbladen ── *@
             @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.BudgetVersieId, ActiveStep = 9, ShowCalcToggle = false })
 
-            @* ── Pagina-koptekst ── *@
-            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
-            {
-                StepNum         = 9,
-                PageTitle       = "Resultaat",
-                PageDescription = "Volledige kostprijsberekening voor dit budget.",
-                MasterNaam      = Model.BudgetNaam,
-                VersieLabel     = Model.VersieLabel,
-                VersieStatus    = Model.VersieStatus,
-                PrevUrl         = Url.Action("BudgetVerkoop", "Projecten", new { versieId = Model.BudgetVersieId })
-            })
+            <div class="bw-scroll">
 
-            @* ── Knoppen ── *@
-            <div class="d-flex gap-2 mb-4">
+            <div class="gl-form-section__head bw-step-head">
+                <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+                <div>
+                    <h2 class="gl-form-section__title">Resultaat</h2>
+                    <p class="gl-form-section__hint">Volledige kostprijsberekening voor dit budget.</p>
+                </div>
+                @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+                {
+                    StepNum      = 9,
+                    MasterNaam   = Model.BudgetNaam,
+                    VersieLabel  = Model.VersieLabel,
+                    VersieStatus = Model.VersieStatus
+                })
+            </div>
+
+            @* ── Acties ── *@
+            <div class="d-flex gap-2 mb-4 flex-wrap">
                 <a href="@Url.Action("BudgetVergelijken", "Projecten", new { masterId = Model.BudgetMasterId })"
                    class="btn btn-outline-primary btn-sm">
-                    <i class="bx bx-git-compare me-1"></i> Versies vergelijken
+                    <i class="fa-solid fa-code-compare me-1"></i> Versies vergelijken
                 </a>
                 <a href="@Url.Action("DownloadBudgetPDF", "Projecten", new { versieId = Model.BudgetVersieId })"
-                   class="btn btn-danger btn-sm" target="_blank">
-                    <i class="bx bx-file-pdf me-1"></i> PDF
+                   class="btn btn-light border btn-sm" target="_blank">
+                    <i class="fa-solid fa-file-pdf me-1"></i> PDF
                 </a>
                 <a href="@Url.Action("DownloadBudgetExcel", "Projecten", new { versieId = Model.BudgetVersieId })"
-                   class="btn btn-success btn-sm">
-                    <i class="bx bx-spreadsheet me-1"></i> Excel
+                   class="btn btn-light border btn-sm">
+                    <i class="fa-solid fa-file-excel me-1"></i> Excel
                 </a>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnHerstelVersie"
                         data-versie-id="@Model.BudgetVersieId">
-                    <i class="bx bx-copy me-1"></i> Herstel als nieuwe versie
+                    <i class="fa-solid fa-copy me-1"></i> Herstel als nieuwe versie
                 </button>
             </div>
 
-            @* ── 4 KPI cards ── *@
-            <div class="row g-3 mb-4">
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card totaal h-100">
-                        <div class="card-body text-center py-3">
-                            <div class="text-muted small mb-1">Totale kostprijs</div>
-                            <div class="h3 fw-bold mb-0">€ @Model.Resultaat.TotaalKosten.ToString("N0")</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card eenh h-100">
-                        <div class="card-body text-center py-3">
-                            <div class="text-muted small mb-1">Per eenheid</div>
-                            <div class="h3 fw-bold mb-0">€ @Model.Resultaat.TotaalPerEenheid.ToString("N0")</div>
-                            <div class="text-muted" style="font-size:.75rem">@Model.Resultaat.AantalEenheden eenh.</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card m2 h-100">
-                        <div class="card-body text-center py-3">
-                            <div class="text-muted small mb-1">Per m² GBA</div>
-                            <div class="h3 fw-bold mb-0">€ @Model.Resultaat.TotaalPerM2GBA.ToString("N0")</div>
-                            <div class="text-muted" style="font-size:.75rem">@Model.Resultaat.TotaalGBA.ToString("N0") m²</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="card kpi-card verschil h-100">
-                        <div class="card-body text-center py-3">
-                            <div class="text-muted small mb-1">Alt. vs Nacalc (bouwkost)</div>
-                            <div class="h3 fw-bold mb-0">
-                                € @((Model.TotaalBouwAlternatief - Model.TotaalBouwNacalc).ToString("N0"))
+            @* ── Cijferstrip (gl-kpi2) ── *@
+            @{
+                var resKpis = new (string Icon, string Lbl, string Val)[]
+                {
+                    ("fa-euro-sign",       "Totale kostprijs",                          "€ " + Model.Resultaat.TotaalKosten.ToString("N0")),
+                    ("fa-house",       $"Per eenheid — {Model.Resultaat.AantalEenheden} eenh.", "€ " + Model.Resultaat.TotaalPerEenheid.ToString("N0")),
+                    ("fa-vector-square",       $"Per m² GBA — {Model.Resultaat.TotaalGBA.ToString("N0")} m²", "€ " + Model.Resultaat.TotaalPerM2GBA.ToString("N0")),
+                    ("fa-right-left",   "Alt. vs nacalc (bouwkost)",                 "€ " + (Model.TotaalBouwAlternatief - Model.TotaalBouwNacalc).ToString("N0")),
+                };
+            }
+            <div class="gl-kpi2-strip bw-kpi-row mb-4">
+                @foreach (var (icon, lbl, val) in resKpis)
+                {
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                            <div class="gl-kpi2-icon"><i class="fa-solid @icon" aria-hidden="true"></i></div>
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">@lbl</div>
+                                <div class="gl-kpi2-value">@val</div>
                             </div>
-                            <div class="text-muted" style="font-size:.75rem">verschil</div>
                         </div>
                     </div>
-                </div>
+                }
             </div>
 
             @* ── Alternatief vs Nacalc balk ── *@
-            <div class="card card-modern mb-4">
-                <div class="card-body">
-                    <div class="row align-items-center g-3">
+            <div class="bw-panel mb-4">
+                <div class="row align-items-center g-3">
                         <div class="col-md-auto">
                             <span class="badge bg-primary me-1">Alternatief</span>
                             <strong>€ @Model.TotaalBouwAlternatief.ToString("N0")</strong>
@@ -126,27 +119,26 @@
                                      style="width:@percAlt.ToString("F1", ic)%"></div>
                             </div>
                             <div>
-                                <div class="alt-nacalc-balk bg-success"
-                                     style="width:@percNac.ToString("F1", ic)%"></div>
+                                <div class="alt-nacalc-balk"
+                                     style="width:@percNac.ToString("F1", ic)%;background:var(--custom-accent,#8B6B4A)"></div>
                             </div>
                         </div>
                         <div class="col-md-auto">
-                            <span class="badge bg-success me-1">Nacalc (geïnd.)</span>
+                            <span class="badge bg-accent me-1">Nacalc (geïnd.)</span>
                             <strong>€ @Model.TotaalBouwNacalc.ToString("N0")</strong>
                             <span class="text-muted small ms-1">(factor @Model.GewogenFactor.ToString("F4", ic))</span>
                         </div>
                     </div>
-                </div>
             </div>
 
             @* ── Kostenoverzicht + zijpaneel ── *@
             <div class="row g-4">
                 <div class="col-lg-8">
-                    <div class="card card-modern">
-                        <div class="card-header"><strong>Kostenoverzicht</strong></div>
-                        <div class="card-body p-0">
-                            <table class="table kosten-tabel mb-0">
-                                <thead class="table-light">
+                    <div class="bw-section-card">
+                        <div class="bw-section-card__header"><span>Kostenoverzicht</span></div>
+                        <div class="bw-section-card__body" style="padding:0">
+                            <table class="bw-table kosten-tabel mb-0">
+                                <thead>
                                     <tr>
                                         <th>Kostenpost</th>
                                         <th class="text-end">Bedrag</th>
@@ -155,7 +147,7 @@
                                 </thead>
                                 <tbody>
                                     @* Bouwkost *@
-                                    <tr><th colspan="3" class="kosten-groep"><i class="bx bx-buildings me-1"></i>Bouwkost (activiteiten)</th></tr>
+                                    <tr><th colspan="3" class="kosten-groep"><i class="fa-solid fa-city me-1"></i>Bouwkost (activiteiten)</th></tr>
                                     <tr>
                                         <td class="ps-3">Totaal bouwkost alternatief</td>
                                         <td class="bedrag">€ @Model.Resultaat.TotaalBouw.ToString("N0")</td>
@@ -165,7 +157,7 @@
                                     @* Erelonen *@
                                     @if (Model.Resultaat.KostenOpBouw.Any())
                                     {
-                                        <tr><th colspan="3" class="kosten-groep"><i class="bx bx-user-check me-1"></i>Erelonen & Studies</th></tr>
+                                        <tr><th colspan="3" class="kosten-groep"><i class="fa-solid fa-user-check me-1"></i>Erelonen & Studies</th></tr>
                                         @foreach (var k in Model.Resultaat.KostenOpBouw)
                                         {
                                             <tr>
@@ -185,7 +177,7 @@
                                     @* Forfaits *@
                                     @if (Model.Resultaat.Forfaits.Any(f => f.Bedrag > 0))
                                     {
-                                        <tr><th colspan="3" class="kosten-groep"><i class="bx bx-list-check me-1"></i>Forfaits</th></tr>
+                                        <tr><th colspan="3" class="kosten-groep"><i class="fa-solid fa-list-check me-1"></i>Forfaits</th></tr>
                                         @foreach (var k in Model.Resultaat.Forfaits.Where(f => f.Bedrag > 0))
                                         {
                                             <tr>
@@ -199,7 +191,7 @@
                                     @* Financiering *@
                                     @if (Model.Resultaat.Financiering.Any(f => f.Bedrag > 0))
                                     {
-                                        <tr><th colspan="3" class="kosten-groep"><i class="bx bx-euro me-1"></i>Financiering</th></tr>
+                                        <tr><th colspan="3" class="kosten-groep"><i class="fa-solid fa-euro-sign me-1"></i>Financiering</th></tr>
                                         @foreach (var k in Model.Resultaat.Financiering.Where(f => f.Bedrag > 0))
                                         {
                                             <tr>
@@ -213,7 +205,7 @@
                                     @* Onvoorzien *@
                                     @if (Model.Resultaat.Onvoorzien > 0)
                                     {
-                                        <tr><th colspan="3" class="kosten-groep"><i class="bx bx-question-mark me-1"></i>Onvoorzien</th></tr>
+                                        <tr><th colspan="3" class="kosten-groep"><i class="fa-solid fa-question me-1"></i>Onvoorzien</th></tr>
                                         <tr>
                                             <td class="ps-3">Onvoorzien</td>
                                             <td class="bedrag">€ @Model.Resultaat.Onvoorzien.ToString("N0")</td>
@@ -235,9 +227,9 @@
 
                 @* Zijpaneel *@
                 <div class="col-lg-4">
-                    <div class="card card-modern mb-3">
-                        <div class="card-header"><strong>Per eenheid</strong></div>
-                        <div class="card-body">
+                    <div class="bw-section-card mb-3">
+                        <div class="bw-section-card__header"><span>Per eenheid</span></div>
+                        <div class="bw-section-card__body">
                             @{
                                 int n = Model.Resultaat.AantalEenheden;
                                 string PerE(decimal v) => n > 0 ? "€ " + (v / n).ToString("N0") : "—";
@@ -263,13 +255,13 @@
 
                     @if (Model.AndereVersies.Any())
                     {
-                        <div class="card card-modern">
-                            <div class="card-header"><strong>Andere versies</strong></div>
-                            <div class="card-body">
+                        <div class="bw-section-card">
+                            <div class="bw-section-card__header"><span>Andere versies</span></div>
+                            <div class="bw-section-card__body">
                                 @foreach (var v in Model.AndereVersies)
                                 {
                                     <a href="@Url.Action("BudgetResultaat", "Projecten", new { versieId = v.Id })"
-                                       class="badge bg-light text-dark border versie-chip me-1 mb-1 p-2">
+                                       class="bw-chip bw-chip--other versie-chip me-1 mb-1">
                                         v@v.Versienummer — @v.VersieNaam
                                     </a>
                                 }
@@ -279,28 +271,37 @@
                 </div>
             </div>
 
-            @* ── Bottom navigatiebalk ── *@
-            <div class="bw-bottom-nav mt-4">
+            @* ── Onderaan navigeren ── *@
+            </div>
+            <div class="bw-bottom-nav">
                 <a href="@Url.Action("BudgetVerkoop", "Projecten", new { versieId = Model.BudgetVersieId })"
                    class="bw-bottom-nav__back">
-                    <i class="fas fa-chevron-left me-1"></i>Terug: Verkoop
+                    <i class="fas fa-chevron-left me-1"></i>Vorige: Verkoop
                 </a>
-                <span class="bw-bottom-nav__indicator">
-                    <i class="fas fa-check-circle me-1 text-success"></i>Stap 9 van 9 — Resultaat
-                </span>
-                <span></span>
+                <span class="bw-bottom-nav__indicator">Stap 9 van 9 — Resultaat · afgerond</span>
+                <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })" class="bw-bottom-nav__next">
+                    Naar het overzicht <i class="fas fa-chevron-right ms-1"></i>
+                </a>
             </div>
+
+            @await Html.PartialAsync("Partials/_BudgetConfirmModal")
 
         </div>
     </div>
 </section>
 
 @section PageScripts {
+<script src="~/js/budget-wizard.js" asp-append-version="true"></script>
 <script>
-    $('#btnHerstelVersie').on('click', function () {
+    $('#btnHerstelVersie').on('click', async function () {
         const versieId = $(this).data('versie-id');
-        if (!confirm('Een nieuwe versie aanmaken op basis van versie @Model.Versienummer?')) return;
-        const btn = $(this).prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i> Bezig...');
+        if (!await BudgetWizard.confirmModal({
+            title: 'Nieuwe versie aanmaken',
+            body: 'Een nieuwe budgetversie aanmaken op basis van versie @Model.Versienummer?',
+            okLabel: 'Nieuwe versie',
+            okClass: 'btn-primary'
+        })) return;
+        const btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-circle-notch fa-spin me-1"></i> Bezig...');
         $.post('@Url.Action("HerstelVersie", "Projecten")',
             {
                 versieId: versieId,
@@ -315,7 +316,7 @@
                 } else {
                     if (typeof toastr !== 'undefined') toastr.error(res.message);
                     else alert(res.message);
-                    $('#btnHerstelVersie').prop('disabled', false).html('<i class="bx bx-copy me-1"></i> Herstel als nieuwe versie');
+                    $('#btnHerstelVersie').prop('disabled', false).html('<i class="fa-solid fa-copy me-1"></i> Herstel als nieuwe versie');
                 }
             }
         );

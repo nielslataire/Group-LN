@@ -2155,6 +2155,8 @@ namespace ServiceCore
                 .Include(m => m.ContractActivity)
                     .ThenInclude(m => m.Activity)
                         .ThenInclude(m => m.Group)
+                .Include(m => m.ContractActivity)
+                    .ThenInclude(m => m.ContractAdditionalOrder)
                 .Include(m => m.Company);
 
             foreach (var e in entities)
@@ -2218,6 +2220,8 @@ namespace ServiceCore
                         .Where(m => m.Id == contractBo.Id)
                         .Include(m => m.ContractActivity)
                             .ThenInclude(m => m.Activity)
+                        .Include(m => m.ContractActivity)
+                            .ThenInclude(m => m.ContractAdditionalOrder)
                         .SingleOrDefault();
 
             if (entity != null)
@@ -2240,6 +2244,7 @@ namespace ServiceCore
                 .Include(m => m.Company)
                 .Include(m => m.ContractActivity).ThenInclude(m => m.Activity)
                 .Include(m => m.ContractActivity).ThenInclude(m => m.ChangeOrder)
+                .Include(m => m.ContractActivity).ThenInclude(m => m.ContractAdditionalOrder)
                 .FirstOrDefault();
 
             var bo = new ContractBO();
@@ -2293,6 +2298,7 @@ namespace ServiceCore
                 entities = _uow.Contracts.GetNoTracking()
                     .Where(m => m.ProjectId == projectid && m.IncommingInvoices.Count == 0)
                     .Include(m => m.ContractActivity).ThenInclude(m => m.Activity).ThenInclude(m => m.Group)
+                    .Include(m => m.ContractActivity).ThenInclude(m => m.ContractAdditionalOrder)
                     .Include(m => m.Company);
             }
             else
@@ -2303,6 +2309,7 @@ namespace ServiceCore
                         m.ContractActivity.Any(s => s.ActivityId == activityid) &&
                         m.IncommingInvoices.Count(l => l.IncommingInvoiceDetail.Any(i => i.ContractAct.ActivityId == activityid)) == 0)
                     .Include(m => m.ContractActivity).ThenInclude(m => m.Activity).ThenInclude(m => m.Group)
+                    .Include(m => m.ContractActivity).ThenInclude(m => m.ContractAdditionalOrder)
                     .Include(m => m.Company);
             }
 
@@ -2318,7 +2325,112 @@ namespace ServiceCore
 
         public decimal GetContractActivityPrice(int contractactid)
         {
-            return (decimal)(_uow.ContractActivities.GetById(contractactid).Price ?? 0m);
+            var ca = _uow.ContractActivities.GetNoTracking()
+                .Where(m => m.Id == contractactid)
+                .Include(m => m.ContractAdditionalOrder)
+                .FirstOrDefault();
+            if (ca == null) return 0m;
+            return (ca.Price ?? 0m) + ca.ContractAdditionalOrder.Sum(o => o.Price);
+        }
+
+        /// <summary>
+        /// Zoekt het lot (ContractActivity) voor deze activiteit op het contract; bestaat het nog
+        /// niet, dan wordt het aangemaakt (zonder basisprijs). Zo kan een bijbestelling ook op een
+        /// lot dat nog niet in het contract zat. Geeft 0 terug bij een ongeldig contract/activiteit.
+        /// </summary>
+        public int GetOrCreateContractActivity(int contractId, int activityId)
+        {
+            if (contractId <= 0 || activityId <= 0) return 0;
+            if (_uow.Contracts.GetById(contractId) == null) return 0;
+            if (_uow.Activities.GetById(activityId) == null) return 0;
+
+            var existing = _uow.ContractActivities.GetNoTracking()
+                .FirstOrDefault(m => m.ContractId == contractId && m.ActivityId == activityId);
+            if (existing != null) return existing.Id;
+
+            var entity = _uow.ContractActivities.GetNew();
+            entity.ContractId = contractId;
+            entity.ActivityId = activityId;
+            entity.Price = null;
+            _uow.SaveChanges();
+            return entity.Id;
+        }
+
+        // Verzekeringsactiviteit in de activiteitencatalogus (lot "Verzekeringen").
+        private const int InsuranceActivityId = 142;
+
+        /// <summary>
+        /// Maakt een verse ContractActivity (activiteit 142 "Verzekeringen") aan om een nieuwe
+        /// verzekering op te hangen. Het contract met de makelaar wordt hergebruikt als het bestaat,
+        /// anders aangemaakt. Elke verzekering krijgt een eigen ContractActivity (1-op-1, unieke
+        /// constraint op Insurances.ContractActivityId). Geeft 0 bij een ongeldig project/makelaar.
+        /// </summary>
+        public int CreateInsuranceContractActivity(int projectId, int brokerCompanyId)
+        {
+            if (projectId <= 0 || brokerCompanyId <= 0) return 0;
+            if (_uow.Projects.GetById(projectId) == null) return 0;
+            if (_uow.CompanyInfo.GetById(brokerCompanyId) == null) return 0;
+
+            var contract = _uow.Contracts.GetNormal()
+                .FirstOrDefault(c => c.ProjectId == projectId && c.CompanyId == brokerCompanyId);
+            if (contract == null)
+            {
+                contract = _uow.Contracts.GetNew();
+                contract.ProjectId = projectId;
+                contract.CompanyId = brokerCompanyId;
+                contract.GuaranteeType = (int)ContractGuaranteeType.NoGuarantee;
+                _uow.SaveChanges();
+            }
+
+            var activity = _uow.ContractActivities.GetNew();
+            activity.ContractId = contract.Id;
+            activity.ActivityId = InsuranceActivityId;
+            activity.Price = null;
+            _uow.SaveChanges();
+            return activity.Id;
+        }
+
+        public Response AddContractAdditionalOrder(int contractActivityId, string description, decimal price)
+        {
+            var response = new Response();
+            if (contractActivityId <= 0) { response.AddError("Geen geldig lot geselecteerd."); return response; }
+            if (_uow.ContractActivities.GetById(contractActivityId) == null) { response.AddError("Lot niet gevonden."); return response; }
+
+            var entity = _uow.ContractAdditionalOrders.GetNew();
+            entity.ContractActivityId = contractActivityId;
+            entity.Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+            entity.Price = price;
+            entity.CreatedAt = DateTime.UtcNow;
+
+            var saved = _uow.SaveChanges();
+            response.AddSaveChangesResult(saved, "Bijbestelling toegevoegd", "Bijbestelling niet toegevoegd");
+            return response;
+        }
+
+        public Response UpdateContractAdditionalOrder(int id, string description, decimal price)
+        {
+            var response = new Response();
+            var entity = _uow.ContractAdditionalOrders.GetById(id);
+            if (entity == null) { response.AddError("Bijbestelling niet gevonden."); return response; }
+
+            entity.Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+            entity.Price = price;
+
+            var saved = _uow.SaveChanges();
+            response.AddSaveChangesResult(saved, "Bijbestelling bijgewerkt", "Bijbestelling niet bijgewerkt");
+            return response;
+        }
+
+        public Response DeleteContractAdditionalOrder(int id)
+        {
+            var response = new Response();
+            var entity = _uow.ContractAdditionalOrders.GetById(id);
+            if (entity == null) { response.AddError("Bijbestelling niet gevonden."); return response; }
+
+            _uow.ContractAdditionalOrders.DeleteObject(entity);
+            var saved = _uow.SaveChanges();
+            response.AddSaveChangesResult(saved, "Bijbestelling verwijderd", "Bijbestelling niet verwijderd");
+            return response;
         }
 
         public GetResponse<ContractActivityBO> GetProjectContractActivitiesByActivityId(int projectid, int activityid)
@@ -2327,6 +2439,7 @@ namespace ServiceCore
             var entities = _uow.ContractActivities.GetNormal()
                 .Where(m => m.Contract.ProjectId == projectid && m.ActivityId == activityid)
                 .Include(m => m.Activity).ThenInclude(m => m.Group)
+                .Include(m => m.ContractAdditionalOrder)
                 .Include(m => m.Insurances).ThenInclude(m => m.InsuranceCompany);
 
             foreach (var e in entities)

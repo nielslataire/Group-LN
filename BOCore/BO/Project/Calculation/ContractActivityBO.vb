@@ -73,4 +73,19 @@ Public Class ContractActivityBO
             _additionalorders = value
         End Set
     End Property
+
+    ''' <summary>Som van de bijbestellingen op dit lot.</summary>
+    Public ReadOnly Property AdditionalOrdersTotal() As Decimal
+        Get
+            If _additionalorders Is Nothing Then Return 0D
+            Return _additionalorders.Sum(Function(o) o.Price)
+        End Get
+    End Property
+
+    ''' <summary>Effectieve lotprijs = basisprijs + som van de bijbestellingen.</summary>
+    Public ReadOnly Property EffectivePrice() As Decimal
+        Get
+            Return If(_price, 0D) + AdditionalOrdersTotal
+        End Get
+    End Property
 End Class

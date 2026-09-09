@@ -125,6 +125,31 @@ namespace CPMCore.Controllers
             _emailSender            = emailSender;
         }
 
+        // De projecthub (Detail + alle onderliggende tabbladen met het linkermenu)
+        // toont de linker-sidebar ingeklapt. Dat werd voorheen per actie met
+        // "ViewBag.sidebarcollapsed" gezet en bij nieuwere pagina's (betalings-
+        // schijven, budgetten, wijzigingsopdrachten, ...) telkens vergeten.
+        // Hier centraal: elke View-actie van deze controller klapt de sidebar in,
+        // behalve de overzichts-/losstaande pagina's hieronder. Een actie die de
+        // waarde zelf al zet, blijft leidend.
+        private static readonly HashSet<string> _sidebarExpandedActions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            nameof(Index), nameof(Toevoegen), nameof(Edit), nameof(Weather)
+        };
+
+        public override void OnActionExecuted(Microsoft.AspNetCore.Mvc.Filters.ActionExecutedContext context)
+        {
+            base.OnActionExecuted(context);
+
+            if (context.Result is ViewResult
+                && context.RouteData.Values["action"] is string action
+                && !_sidebarExpandedActions.Contains(action)
+                && ViewBag.sidebarcollapsed is null)
+            {
+                ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            }
+        }
+
         // ========== PROJECT DETAIL ==========
         [Breadcrumb("Projecten", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
         public IActionResult Index(bool showAll = false)
@@ -728,7 +753,22 @@ namespace CPMCore.Controllers
                     }).ToList();
             }
 
-            SetPageHeader("bx bx-building-house", $"Project - {model.Project.Name}");
+            // BREADCRUMBS: Home / Projecten / {projectnaam} / Gegevens bewerken
+            var bcHome = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var bcProjecten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = bcHome };
+            var bcDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.Project.Name)
+            {
+                Parent = bcProjecten,
+                RouteValues = new { projectid = projectid }
+            };
+            var bcEdit = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Edit", "Projecten", "Gegevens bewerken")
+            {
+                Parent = bcDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = bcEdit;
+
+            SetPageHeader("bx bx-building-house", $"{model.Project.Name} — gegevens bewerken");
 
             return View(model);
         }
@@ -3079,7 +3119,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         [Breadcrumb("Contract toevoegen", FromAction = "DetailContracts")]
         //[Breadcrumb("Contract toevoegen")]
-        public ActionResult AddContract(int projectid, int contractid = 0)
+        public ActionResult AddContract(int projectid, int contractid = 0, int companyid = 0)
         {
             //Referrer
             var referrer = Request.Headers["Referer"].ToString();
@@ -3095,6 +3135,15 @@ namespace CPMCore.Controllers
             {
                 model.Contract.ProjectId = projectid;
                 model.Contract.GuaranteeType = ContractGuaranteeType.NoGuarantee;
+
+                // Vanuit de leverancierslijst (+ "Contract toevoegen" bij een bedrijf)
+                // komt companyid mee: het nieuwe contract meteen aan diezelfde
+                // leverancier koppelen zodat er niet opnieuw gezocht moet worden.
+                if (companyid > 0)
+                {
+                    model.Contract.Company.ID = companyid;
+                    model.Contract.Company.Display = _companyService.GetCompanyNameById(companyid);
+                }
             }
             else
             {
@@ -3318,9 +3367,15 @@ namespace CPMCore.Controllers
                 Parent = projectDetail,
                 RouteValues = new { projectid = projectid }
             };
-            var projectContractsEdit = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditContract", "Projecten", "Toevoegen")
+            var supplierName = string.IsNullOrWhiteSpace(model.Contract.Company?.Display) ? "Leverancier" : model.Contract.Company.Display;
+            var supplierDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContract", "Projecten", supplierName)
             {
-                Parent = projectContracts
+                Parent = projectContracts,
+                RouteValues = new { projectid = projectid, contractid = contractid }
+            };
+            var projectContractsEdit = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditContract", "Projecten", "Contract bewerken")
+            {
+                Parent = supplierDetail
             };
             ViewData["BreadcrumbNode"] = projectContractsEdit;
 
@@ -3328,10 +3383,8 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult EditContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders)
+        public async Task<ActionResult> EditContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders, IFormFile? guaranteeDoc)
         {
-
-            var errors = new Dictionary<string, List<string>>();
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
 
             var projectId = model.ProjectId > 0 ? model.ProjectId : (model.Contract?.ProjectId ?? 0);
@@ -3339,54 +3392,79 @@ namespace CPMCore.Controllers
             if (model.Contract != null && model.Contract.ProjectId <= 0)
                 model.Contract.ProjectId = projectId;
 
-            foreach (var key in ModelState.Keys)
-            {
-                var state = ModelState[key];
-                if (state != null && state.Errors.Count > 0)
-                {
-                    errors[key] = state.Errors.Select(e => e.ErrorMessage).ToList();
-                }
-            }
+            // Bankwaarborg-document (pdf/jpg/jpeg) — optioneel, maar indien meegestuurd valideren.
+            if (guaranteeDoc is { Length: > 0 } && !ValidateGuaranteeDoc(guaranteeDoc, out var guaranteeDocError))
+                ModelState.AddModelError("guaranteeDoc", guaranteeDocError);
 
-            if ((!ModelState.IsValid))
+            if (!ModelState.IsValid)
             {
+                var firstError = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault();
+                AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract bewerken");
+                PopulateAddContractLookups(model);
                 return View(model);
             }
-            if ((ModelState.IsValid))
-            {
-                var backToList = Url.Action("DetailContracts", "Projecten", new { projectid = projectId });
-                foreach (var contractactivity in activities)
-                {
-                    if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
-                    {
-                        InsuranceBO i = new InsuranceBO();
-                        i.Startdate = DateOnly.FromDateTime(DateTime.Now);
-                        contractactivity.InsuranceData = i;
-                    }
-                    model.Contract.Activities.Add(contractactivity);
-                }
 
-                var service = _projectService;
-                var response = service.InsertUpdateProjectContract(model.Contract);
-                if (response.Success)
+            // Bestaande waarborgdoc-gegevens (staan niet in het formulier) — nodig om te
+            // behouden bij geen upload, en om het oude bestand op te ruimen bij een vervanging.
+            string? oldGuaranteeFile = null;
+            if (model.Contract.Id > 0)
+            {
+                var existing = _projectService.GetContract(model.Contract.Id);
+                if (existing.Success && existing.Value != null)
                 {
-                    EnsureSupplierIssuerLink(model.Contract.Company.ID, projectId);
-                    AddMessage("success", "Het contract is bijgewerkt voor project " + model.ProjectName, "Geslaagd!");
-                    return Redirect(backToList);
+                    oldGuaranteeFile = existing.Value.GuaranteeDocFilename;
+                    model.Contract.GuaranteeDocFilename = existing.Value.GuaranteeDocFilename;
+                    model.Contract.GuaranteeDocUploadedAt = existing.Value.GuaranteeDocUploadedAt;
                 }
-                else
+            }
+
+            if (guaranteeDoc is { Length: > 0 })
+            {
+                var storedName = await UploadAssetToStorageAsync(guaranteeDoc, "guarantees");
+                if (string.IsNullOrWhiteSpace(storedName))
                 {
-                    AddMessage("error", "Het contract is NIET bijgewerkt voor project " + model.ProjectName, "Fout!");
+                    AddMessage("error", "Het waarborgdocument kon niet naar de storage geüpload worden.", "Fout!");
                     SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
+                    PopulateAddContractLookups(model);
                     return View(model);
                 }
+                model.Contract.GuaranteeDocFilename = storedName;
+                model.Contract.GuaranteeDocUploadedAt = DateTime.Now;
             }
-            else
+
+            var backToList = Url.Action("DetailContracts", "Projecten", new { projectid = projectId });
+            foreach (var contractactivity in activities ?? Enumerable.Empty<ContractActivityBO>())
             {
-                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
-                return View(model);
+                if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
+                {
+                    InsuranceBO i = new InsuranceBO();
+                    i.Startdate = DateOnly.FromDateTime(DateTime.Now);
+                    contractactivity.InsuranceData = i;
+                }
+                model.Contract.Activities.Add(contractactivity);
             }
+
+            var service = _projectService;
+            var response = service.InsertUpdateProjectContract(model.Contract);
+            if (response.Success)
+            {
+                // Vervangen waarborgdocument: het oude bestand uit de storage opruimen.
+                if (!string.IsNullOrWhiteSpace(oldGuaranteeFile)
+                    && !string.Equals(oldGuaranteeFile, model.Contract.GuaranteeDocFilename, StringComparison.OrdinalIgnoreCase))
+                {
+                    await DeleteGuaranteeDocFromStorageAsync(oldGuaranteeFile);
+                }
+
+                EnsureSupplierIssuerLink(model.Contract.Company.ID, projectId);
+                AddMessage("success", "Het contract is bijgewerkt voor project " + model.ProjectName, "Geslaagd!");
+                return Redirect(backToList);
+            }
+
+            AddMessage("error", "Het contract is NIET bijgewerkt voor project " + model.ProjectName, "Fout!");
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
+            PopulateAddContractLookups(model);
+            return View(model);
         }
         [HttpGet]
         public ActionResult ModalDeleteContract(int id)
@@ -3526,6 +3604,49 @@ namespace CPMCore.Controllers
 
             ViewData["mode"] = "add";
             return PartialView("_AdditionalOrderRow", nAdditionalOrder);
+        }
+
+        // ===== Bijbestellingen op een lot — directe AJAX-CRUD vanaf de contractdetailpagina =====
+        // Prijs komt als invariante string (JS Number.toString, punt als decimaalteken)
+        // binnen: de request-cultuur is nl-BE, dus decimal-modelbinding zou "1234.5"
+        // fout lezen. Daarom hier expliciet invariant parsen.
+        private static decimal ParseInvariantAmount(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return 0m;
+            return decimal.TryParse(raw.Trim(), System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0m;
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSuppliers)]
+        public IActionResult AddContractAdditionalOrder(int contractActivityId, int contractId, int activityId, string description, string price)
+        {
+            // Geen bestaand lot gekozen maar wel contract + activiteit: het lot bestaat
+            // (nog) niet op het contract -> aanmaken en daarop de bijbestelling zetten.
+            if (contractActivityId <= 0 && contractId > 0 && activityId > 0)
+                contractActivityId = _projectService.GetOrCreateContractActivity(contractId, activityId);
+
+            var response = _projectService.AddContractAdditionalOrder(contractActivityId, description, ParseInvariantAmount(price));
+            return Json(new { success = response.Success, error = response.Messages.FirstOrDefault(m => m.Type == MessageType.Error)?.Message });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSuppliers)]
+        public IActionResult UpdateContractAdditionalOrder(int id, string description, string price)
+        {
+            var response = _projectService.UpdateContractAdditionalOrder(id, description, ParseInvariantAmount(price));
+            return Json(new { success = response.Success, error = response.Messages.FirstOrDefault(m => m.Type == MessageType.Error)?.Message });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsSuppliers)]
+        public IActionResult DeleteContractAdditionalOrder(int id)
+        {
+            var response = _projectService.DeleteContractAdditionalOrder(id);
+            return Json(new { success = response.Success, error = response.Messages.FirstOrDefault(m => m.Type == MessageType.Error)?.Message });
         }
         [Breadcrumb("Budget instellen", FromAction = "DetailContracts")]
         [HttpGet]
@@ -5721,8 +5842,30 @@ namespace CPMCore.Controllers
                 else
                 {
                     viewmodel.Insurance.ProjectID = viewmodel.ProjectId;
-                    var service = _insuranceService;
-                    response = service.InsertUpdate(viewmodel.Insurance);
+
+                    // Nieuwe verzekering: maak de ContractActivity (142) aan op het contract van de
+                    // gekozen makelaar; de verzekering hangt daar 1-op-1 aan vast.
+                    if (viewmodel.Insurance.Id == 0 && viewmodel.Insurance.ContractActivityID == 0)
+                    {
+                        if (viewmodel.SelectedBrokerId <= 0)
+                        {
+                            response.AddError("Kies een makelaar.");
+                        }
+                        else
+                        {
+                            var caId = _projectService.CreateInsuranceContractActivity(viewmodel.ProjectId, viewmodel.SelectedBrokerId);
+                            if (caId <= 0)
+                                response.AddError("De verzekeringsactiviteit kon niet aangemaakt worden.");
+                            else
+                                viewmodel.Insurance.ContractActivityID = caId;
+                        }
+                    }
+
+                    if (response.Success)
+                    {
+                        var service = _insuranceService;
+                        response = service.InsertUpdate(viewmodel.Insurance);
+                    }
                 }
             }
 
@@ -5751,6 +5894,17 @@ namespace CPMCore.Controllers
             }
 
             return PartialView("_ModalDeleteInsurance", viewModel);
+        }
+
+        [HttpGet]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsInsurances)]
+        public IActionResult DeleteInsurance(int id, int projectId)
+        {
+            var response = _insuranceService.Delete(id);
+            AddMessage(response.Success ? "success" : "error",
+                response.Success ? "De verzekering is verwijderd." : "De verzekering kon niet verwijderd worden.",
+                response.Success ? "Geslaagd!" : "Fout!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid = projectId });
         }
 
         [HttpGet]
@@ -5807,7 +5961,7 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public IActionResult ModalEditInsurance(int id)
+        public IActionResult ModalEditInsurance(int id, int projectid = 0)
         {
             var viewModel = new ProjectAddInsurancesModel();
 
@@ -5815,10 +5969,14 @@ namespace CPMCore.Controllers
             {
                 var dservice = _insuranceService;
                 viewModel.Insurance = dservice.GetInsuranceById(id).Value;
+                // zeker dat ProjectId gezet is
+                viewModel.ProjectId = viewModel.Insurance?.ProjectID ?? viewModel.ProjectId;
             }
-
-            // zeker dat ProjectId gezet is
-            viewModel.ProjectId = viewModel.Insurance?.ProjectID ?? viewModel.ProjectId;
+            else
+            {
+                // Nieuwe verzekering: project komt via de route mee (staat niet in een bestaand record).
+                viewModel.ProjectId = projectid;
+            }
 
             var service = _insuranceService;
             var cservice = _companyService;
@@ -8442,20 +8600,34 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSuppliers)]
-        public IActionResult RemoveGuaranteeDoc(int contractid, int projectid)
+        public async Task<IActionResult> RemoveGuaranteeDoc(int contractid, int projectid)
         {
             var response = _projectService.GetContract(contractid);
             if (response.Success && response.Value != null)
             {
                 var bo = response.Value;
+                var oldFile = bo.GuaranteeDocFilename;
                 bo.GuaranteeDocFilename = null;
                 bo.GuaranteeDocUploadedAt = null;
                 var saved = _projectService.InsertUpdateProjectContract(bo);
+                if (saved.Success)
+                    await DeleteGuaranteeDocFromStorageAsync(oldFile);
                 AddMessage(saved.Success ? "success" : "error",
                     saved.Success ? "Het waarborgdocument is verwijderd." : "Het waarborgdocument kon niet verwijderd worden.",
                     saved.Success ? "Geslaagd!" : "Fout!");
             }
             return RedirectToAction(nameof(EditContract), new { projectid, contractid });
+        }
+
+        // Best-effort verwijdering van een waarborgdocument uit de storage.
+        private async Task DeleteGuaranteeDocFromStorageAsync(string? fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return;
+            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+            var writeKey = Configuration["StorageApi:WriteApiKey"];
+            if (!string.IsNullOrWhiteSpace(baseUrl) && !string.IsNullOrWhiteSpace(writeKey))
+                await DeleteStorageFileAsync(baseUrl, writeKey, "guarantees", fileName);
         }
 
         [HttpPost]
@@ -9629,6 +9801,62 @@ namespace CPMCore.Controllers
 
         // ── Budget Wizard ────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Zet topbar-titel + volledige broodkruimel voor een budgetpagina.
+        /// Zonder versie: Home / Projecten / {projectnaam} / Budgetten / {stap}.
+        /// Met versie:    … / Budgetten / {versie} / {stap}.
+        /// </summary>
+        private void SetBudgetPageContext(int projectId, string projectName, string stepAction, string stepLabel,
+            object stepRoute = null, int? versieId = null, string versieLabel = null)
+        {
+            var naam = string.IsNullOrWhiteSpace(projectName) ? "Project" : projectName;
+
+            var bcHome = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var bcProjecten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = bcHome };
+            var bcDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", naam)
+            {
+                Parent = bcProjecten,
+                RouteValues = new { projectid = projectId }
+            };
+
+            SmartBreadcrumbs.Nodes.MvcBreadcrumbNode current;
+            if (stepAction == nameof(BudgetIndex))
+            {
+                current = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("BudgetIndex", "Projecten", "Budgetten")
+                {
+                    Parent = bcDetail,
+                    RouteValues = new { projectId }
+                };
+            }
+            else
+            {
+                SmartBreadcrumbs.Nodes.MvcBreadcrumbNode parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("BudgetIndex", "Projecten", "Budgetten")
+                {
+                    Parent = bcDetail,
+                    RouteValues = new { projectId }
+                };
+
+                if (versieId.HasValue)
+                {
+                    parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("BudgetGegevens", "Projecten",
+                        string.IsNullOrWhiteSpace(versieLabel) ? $"Versie {versieId.Value}" : versieLabel)
+                    {
+                        Parent = parent,
+                        RouteValues = new { versieId = versieId.Value }
+                    };
+                }
+
+                current = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(stepAction, "Projecten", stepLabel)
+                {
+                    Parent = parent,
+                    RouteValues = stepRoute
+                };
+            }
+
+            ViewData["BreadcrumbNode"] = current;
+            SetPageHeader("bx bx-euro", string.IsNullOrWhiteSpace(projectName) ? stepLabel : $"{projectName} — {stepLabel}");
+        }
+
         [HttpGet]
         public IActionResult BudgetIndex(int projectId)
         {
@@ -9645,15 +9873,7 @@ namespace CPMCore.Controllers
                 BudgetMasters = mastersResponse.Success ? mastersResponse.Values : new List<BudgetMasterBO>()
             };
 
-            ViewBag.Breadcrumbs = new List<Breadcrumb>
-            {
-                new Breadcrumb("Home",      nameof(HomeController.Index),        "Home",       true),
-                new Breadcrumb("Projecten", nameof(ProjectenController.Index),   "Projecten",  true),
-                new Breadcrumb("Detail",    nameof(ProjectenController.Detail),  "Projecten",  true),
-                new Breadcrumb("Budgetten", nameof(BudgetIndex),                 "Projecten",  false),
-            };
-
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetten");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetIndex), "Budgetten");
             return View(model);
         }
 
@@ -9670,7 +9890,7 @@ namespace CPMCore.Controllers
                 ProjectName = projectResponse.Value?.Name
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetmaster aanmaken");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetMasterAanmaken), "Nieuw budget", new { projectId = model.ProjectId });
             return View(model);
         }
 
@@ -9777,7 +9997,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Gegevens",  nameof(BudgetGegevens),              "Projecten",  false),
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget gegevens");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetGegevens), "Gegevens", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -9884,7 +10104,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Oppervlaktes",  nameof(BudgetOppervlaktes),         "Projecten",  false),
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget oppervlaktes");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetOppervlaktes), "Oppervlaktes", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10082,7 +10302,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Sanitair",   nameof(BudgetSanitair),            "Projecten",  false),
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget sanitair");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetSanitair), "Sanitair", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10220,7 +10440,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Gevels",     nameof(BudgetGevels),              "Projecten",  false),
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget gevels");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetGevels), "Gevels & ramen", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10281,7 +10501,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Dak & Afbraak",nameof(BudgetDakAfbraak),            "Projecten",  false),
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget dak & afbraak");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetDakAfbraak), "Dak & afbraak", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10455,7 +10675,7 @@ namespace CPMCore.Controllers
 
             ViewData["Referrer"] = Request.Headers["Referer"].ToString();
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Activiteitslijnen");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetActivityLijnen), "Activiteiten", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10515,18 +10735,22 @@ namespace CPMCore.Controllers
             var aantalEenh = _uow.BudgetOppervlaktes.GetNoTracking()
                 .Count(o => o.BudgetVersieId == versieId);
 
-            // Lijnprijzen zijn per woon-/commerciële eenheid
+            // Lijnprijzen zijn per woon-/commerciële eenheid, met de per-activiteit correctie-%
+            // (stap 6). Correctiefactor 0 op oude rijen telt als 1 (geen correctie).
             var aantalWoonComm = await _budgetActivityService.GetAantalWoonCommEenhedenAsync(versieId);
             var totaalBouw = _uow.BudgetActivityLijnen.GetNoTracking()
                 .Where(l => l.BudgetVersieId == versieId)
                 .AsEnumerable()
-                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm);
+                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm
+                          * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
+
+            var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
 
             var model = new BudgetParamsModel
             {
                 BudgetVersieId = versieId,
                 ProjectId      = versie.ProjectId,
-                ProjectName    = versie.BudgetMaster?.Naam ?? string.Empty,
+                ProjectName    = projectNaam,
                 BudgetNaam     = versie.BudgetMaster?.Naam ?? string.Empty,
                 Versienummer   = versie.Versienummer,
                 VersieLabel    = string.IsNullOrWhiteSpace(versie.VersieNaam)
@@ -10539,14 +10763,22 @@ namespace CPMCore.Controllers
                 AantalLiften   = versie.BudgetGegevens?.AantalLiften ?? 0
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget parameters");
+            SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetParams), "Parameters", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> BudgetParams(BudgetParamsModel model)
+        public async Task<IActionResult> BudgetParams(BudgetParamsModel model,
+            decimal? pctProjectcoord, decimal? pctArchitect, decimal? pctIngenieur)
         {
+            // Projectcoördinatie / Architect / Ingenieur worden in procentpunten (5,25)
+            // ingevoerd maar als fractie bewaard. Leeg of 0 bij architect/ingenieur =
+            // "niet overschreven" (null) → blijft de standaard uit Instellingen volgen.
+            model.Params.ProjectcoordinatiePerc = Math.Round((pctProjectcoord ?? 0m) / 100m, 6);
+            model.Params.ArchitectPerc = pctArchitect.GetValueOrDefault() == 0m ? (decimal?)null : Math.Round(pctArchitect.Value / 100m, 6);
+            model.Params.StudieIRPerc  = pctIngenieur.GetValueOrDefault() == 0m ? (decimal?)null : Math.Round(pctIngenieur.Value / 100m, 6);
+
             var bestaand = await _db.BudgetParams
                 .FirstOrDefaultAsync(p => p.BudgetVersieId == model.BudgetVersieId);
 
@@ -10604,11 +10836,13 @@ namespace CPMCore.Controllers
                 .Distinct()
                 .ToListAsync();
 
+            var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
+
             var model = new BudgetVerkoopModel
             {
                 BudgetVersieId        = versieId,
                 ProjectId             = versie.ProjectId,
-                ProjectName           = versie.BudgetMaster?.Naam ?? string.Empty,
+                ProjectName           = projectNaam,
                 BudgetNaam            = versie.BudgetMaster?.Naam ?? string.Empty,
                 Versienummer          = versie.Versienummer,
                 VersieLabel           = string.IsNullOrWhiteSpace(versie.VersieNaam)
@@ -10627,7 +10861,7 @@ namespace CPMCore.Controllers
                 BeschikbareEenheden   = eenheden
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget verkoop");
+            SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetVerkoop), "Verkoop", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10709,11 +10943,13 @@ namespace CPMCore.Controllers
                 .OrderByDescending(v => v.Versienummer)
                 .ToList();
 
+            var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
+
             var model = new BudgetResultaatModel
             {
                 BudgetVersieId       = versieId,
                 ProjectId            = versie.ProjectId,
-                ProjectName          = versie.BudgetMaster?.Naam ?? string.Empty,
+                ProjectName          = projectNaam,
                 BudgetNaam           = versie.BudgetMaster?.Naam ?? string.Empty,
                 Versienummer         = versie.Versienummer,
                 VersieLabel          = string.IsNullOrWhiteSpace(versie.VersieNaam)
@@ -10728,7 +10964,7 @@ namespace CPMCore.Controllers
                 AndereVersies        = andereVersies
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget resultaat");
+            SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetResultaat), "Resultaat", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
         }
 
@@ -10756,7 +10992,7 @@ namespace CPMCore.Controllers
                                     .ToList()
             };
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget vergelijken");
+            SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetVergelijken), "Versies vergelijken", new { masterId });
             return View(model);
         }
 
