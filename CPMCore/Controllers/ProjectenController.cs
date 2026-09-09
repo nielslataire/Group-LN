@@ -10735,14 +10735,9 @@ namespace CPMCore.Controllers
             var aantalEenh = _uow.BudgetOppervlaktes.GetNoTracking()
                 .Count(o => o.BudgetVersieId == versieId);
 
-            // Lijnprijzen zijn per woon-/commerciële eenheid, met de per-activiteit correctie-%
-            // (stap 6). Correctiefactor 0 op oude rijen telt als 1 (geen correctie).
-            var aantalWoonComm = await _budgetActivityService.GetAantalWoonCommEenhedenAsync(versieId);
-            var totaalBouw = _uow.BudgetActivityLijnen.GetNoTracking()
-                .Where(l => l.BudgetVersieId == versieId)
-                .AsEnumerable()
-                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm
-                          * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
+            // Zelfde bouwkost als stap 6: effectief bedrag per activiteit (opgeslagen alt.prijs
+            // óf het voorstel/formule-bedrag), per woon-/comm. eenheid, met de correctie-%.
+            var totaalBouw = await _budgetActivityService.GetTotaalGecorrigeerdeBouwAsync(versieId);
 
             var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
 

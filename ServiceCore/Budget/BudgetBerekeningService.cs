@@ -12,10 +12,12 @@ namespace ServiceCore.Budget
     public class BudgetBerekeningService
     {
         private readonly UnitOfWorkCore _uow;
+        private readonly BudgetActivityService _activityService;
 
-        public BudgetBerekeningService(UnitOfWorkCore uow)
+        public BudgetBerekeningService(UnitOfWorkCore uow, BudgetActivityService activityService)
         {
             _uow = uow;
+            _activityService = activityService;
         }
 
         public async Task<BudgetResultaatBO> BerekenAsync(int budgetVersieId)
@@ -32,15 +34,9 @@ namespace ServiceCore.Budget
             var aantalWoonComm = BudgetActivityService.TelWoonCommEenheden(opps);
             var totaalGBA      = opps.Sum(o => o.BewoonbareOpp);
 
-            var lijnen = await _uow.BudgetActivityLijnen.GetNoTracking()
-                .Where(l => l.BudgetVersieId == budgetVersieId)
-                .ToListAsync();
-
-            // Lijnprijzen zijn per woon-/commerciële eenheid, met de per-activiteit correctie-%
-            // (stap 6). Correctiefactor 0 op oude rijen telt als 1 (geen correctie).
-            decimal totaalBouw = lijnen.Sum(l =>
-                (l.AlternatievePrijsPerEenheid ?? 0m) * aantalWoonComm
-                * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
+            // Bouwkost = de effectieve, gecorrigeerde activiteitentotalen zoals op stap 6
+            // (opgeslagen alt.prijs óf het voorstel/formule-bedrag als er nog niets is bewaard).
+            decimal totaalBouw = await _activityService.GetTotaalGecorrigeerdeBouwAsync(budgetVersieId);
 
             var p = await GetOrCreateParamsAsync(budgetVersieId);
 

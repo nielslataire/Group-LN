@@ -62,6 +62,21 @@ namespace ServiceCore.Budget
             return TelWoonCommEenheden(opps);
         }
 
+        /// <summary>
+        /// Totale bouwkost uit de activiteiten zoals ze op stap 6 getoond worden:
+        /// effectief bedrag per lijn (opgeslagen alt.prijs óf het voorstel/formule-bedrag),
+        /// per woon-/comm. eenheid, met de per-activiteit correctie-% (0 telt als 1).
+        /// Enkel lijnen met een bedrag tellen mee.
+        /// </summary>
+        public async Task<decimal> GetTotaalGecorrigeerdeBouwAsync(int budgetVersieId)
+        {
+            var groepen = await GetLotGroepenAsync(budgetVersieId);
+            return groepen
+                .SelectMany(g => g.Lijnen)
+                .Where(l => l.TotaalAlternatief > 0m)
+                .Sum(l => l.TotaalAlternatief * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
+        }
+
         private static decimal GevelLm(DALCore.Models.BudgetGevelElementen e)
             => e.Aantal * (e.Lengte ?? 0m);
 

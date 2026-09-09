@@ -100,7 +100,7 @@
                         </div>
                         <div class="gl-field-grid">
                             @{
-                                string Pct(decimal? f) => ((f ?? 0m) * 100m).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+                                string Pct(decimal? f) => ((f ?? 0m) * 100m).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
                             }
                             <div class="gl-field">
                                 <label for="pctProjectcoord">Projectcoördinatie (%)</label>
