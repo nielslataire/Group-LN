@@ -1,0 +1,146 @@
+@using BOCore
+@using System.Text.Json
+@model CPMCore.Models.Traject.TrajectSjabloonEditVm
+@{
+    ViewData["Title"] ??= "Trajectsjabloon";
+    var s = Model.Sjabloon;
+
+    var initial = new
+    {
+        id = s?.Id ?? 0,
+        naam = s?.Naam ?? "",
+        projectType = s?.ProjectType,
+        isStandaard = s?.IsStandaard ?? false,
+        isActief = s?.IsActief ?? true,
+        omschrijving = s?.Omschrijving ?? "",
+        fases = (s?.Fases.OrderBy(f => f.Volgorde) ?? Enumerable.Empty<DALCore.Models.TrajectSjabloonFase>())
+            .Select(f => new
+            {
+                naam = f.Naam,
+                code = f.Code,
+                volgorde = f.Volgorde,
+                standaardProjectStatusId = f.StandaardProjectStatusId,
+                mijlpalen = f.Mijlpalen.OrderBy(m => m.Volgorde).Select(m => new
+                {
+                    naam = m.Naam,
+                    code = m.Code,
+                    volgorde = m.Volgorde,
+                    mijlpaalType = m.MijlpaalType,
+                    scope = m.Scope,
+                    verantwoordelijkeRol = m.VerantwoordelijkeRol,
+                    doeldatumAnkerCode = m.DoeldatumAnkerCode,
+                    doeldatumOffsetDagen = m.DoeldatumOffsetDagen,
+                    isVerplicht = m.IsVerplicht,
+                    bronBinding = m.BronBinding,
+                    bronParam = m.BronParam,
+                    dossierKind = m.DossierKind,
+                    omschrijving = m.Omschrijving
+                })
+            })
+    };
+
+    var typeOpties = Enum.GetValues(typeof(MijlpaalType)).Cast<MijlpaalType>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var rolOpties = Enum.GetValues(typeof(InterneRol)).Cast<InterneRol>().Where(x => (int)x != 0)
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var bindingOpties = Enum.GetValues(typeof(ComputedBinding)).Cast<ComputedBinding>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+}
+
+<form method="post" asp-action="Opslaan" id="sjabloonForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="payloadJson" id="payloadJson" />
+
+    <div class="row justify-content-between align-items-center pt-2 mb-3">
+        <div class="col-sm-auto">
+            <h1 class="font-weight-bold mb-0">@(Model.IsNieuw ? "Nieuw trajectsjabloon" : "Sjabloon bewerken")</h1>
+        </div>
+        <div class="col-sm-auto">
+            <a asp-action="Index" class="btn btn-default">Terug</a>
+            <button type="submit" class="btn btn-primary"><i class="bx bx-check"></i> Opslaan</button>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body row g-3">
+            <div class="col-md-5">
+                <label class="form-label">Naam</label>
+                <input type="text" id="sj-naam" class="form-control" value="@(s?.Naam)" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Projecttype</label>
+                <select id="sj-type" class="form-select">
+                    <option value="">Alle</option>
+                    <option value="1" selected="@(s?.ProjectType == 1)">Woonproject</option>
+                    <option value="2" selected="@(s?.ProjectType == 2)">Commercieel</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="sj-standaard" @(s?.IsStandaard == true ? "checked" : "") />
+                    <label class="form-check-label" for="sj-standaard">Standaard</label>
+                </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="sj-actief" @(s == null || s.IsActief ? "checked" : "") />
+                    <label class="form-check-label" for="sj-actief">Actief</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Omschrijving</label>
+                <textarea id="sj-omschrijving" class="form-control" rows="2">@(s?.Omschrijving)</textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="fasesContainer"></div>
+    <button type="button" class="btn btn-default" id="btnAddFase"><i class="bx bx-plus"></i> Fase toevoegen</button>
+</form>
+
+<template id="tplFase">
+    <div class="gl-sjabloon-fase" data-fase>
+        <div class="row g-2 align-items-end mb-2">
+            <div class="col-md-4"><label class="form-label mb-0">Fasenaam</label><input class="form-control form-control-sm" data-f="naam" /></div>
+            <div class="col-md-3"><label class="form-label mb-0">Code</label><input class="form-control form-control-sm" data-f="code" /></div>
+            <div class="col-md-2"><label class="form-label mb-0">Volgorde</label><input type="number" class="form-control form-control-sm" data-f="volgorde" value="0" /></div>
+            <div class="col-md-2"><label class="form-label mb-0">ProjectStatusId</label><input type="number" class="form-control form-control-sm" data-f="status" /></div>
+            <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-del-fase><i class="bx bx-trash"></i></button></div>
+        </div>
+        <div data-mijlpalen></div>
+        <button type="button" class="btn btn-xs btn-default" data-add-mijlpaal><i class="bx bx-plus"></i> Mijlpaal</button>
+    </div>
+</template>
+
+<template id="tplMijlpaal">
+    <div class="gl-sjabloon-mijlpaal" data-mijlpaal>
+        <div class="gl-sm-row1">
+            <input class="form-control form-control-sm" placeholder="Naam" data-m="naam" />
+            <input class="form-control form-control-sm" placeholder="Code" data-m="code" />
+            <select class="form-select form-select-sm" data-m="type" title="Type"></select>
+            <select class="form-select form-select-sm" data-m="scope" title="Scope">
+                <option value="0">Project</option>
+                <option value="1">Per eenheid</option>
+            </select>
+            <button type="button" class="btn btn-xs btn-outline-danger" data-del-mijlpaal><i class="bx bx-x"></i></button>
+        </div>
+        <div class="gl-sm-row2">
+            <input class="form-control form-control-sm" placeholder="Anker-code" data-m="anker" title="Anker-code voor de streefdatum" />
+            <input type="number" class="form-control form-control-sm" placeholder="Offset (dagen)" data-m="offset" />
+            <select class="form-select form-select-sm" data-m="binding" title="Automatische bron-binding"></select>
+            <input class="form-control form-control-sm" placeholder="Bron-parameter" data-m="param" title="Kolomnaam / type-id / fase, afhankelijk van de binding" />
+        </div>
+    </div>
+</template>
+
+@section PageScripts {
+    <script id="sjabloonData" type="application/json">@Html.Raw(JsonSerializer.Serialize(initial))</script>
+    <script id="typeOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(typeOpties))</script>
+    <script id="rolOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(rolOpties))</script>
+    <script id="bindingOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(bindingOpties))</script>
+    <script src="~/js/trajectsjabloon.admin.js" asp-append-version="true"></script>
+}

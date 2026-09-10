@@ -83,16 +83,21 @@ namespace ServiceCore
             return e?.Company?.BedrijfsNaam ?? string.Empty;
         }
 
-        public GetResponse<SelectBO> GetCompanyForSearchList(string searchterm)
+        public GetResponse<SelectBO> GetCompanyForSearchList(string searchterm, bool activeOnly = false)
         {
             var response = new GetResponse<SelectBO>();
 
             var query = _uow.CompanyInfo.GetNoTracking()
-                .Where(CompanyQuery.GetNameQuery(searchterm))
+                .Where(CompanyQuery.GetNameQuery(searchterm));
+
+            if (activeOnly)
+                query = query.Where(m => m.IsActive);
+
+            var projection = query
                 .OrderBy(m => m.BedrijfsNaam)
                 .Select(m => new SelectBO { id = m.CompanyId, text = m.BedrijfsNaam, extra = m.Ondernemingsnummer ?? m.VatNumber });
 
-            response.Values = query.ToList();
+            response.Values = projection.ToList();
             return response;
         }
 

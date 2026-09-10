@@ -8660,10 +8660,10 @@ namespace CPMCore.Controllers
             return Json(list);
         }
         [HttpPost]
-        public JsonResult GetCompanys(string term)
+        public JsonResult GetCompanys(string term, bool activeOnly = false)
         {
             var pservice = _companyService;
-            var presponse = pservice.GetCompanyForSearchList(term);
+            var presponse = pservice.GetCompanyForSearchList(term, activeOnly);
             var iList = new List<SelectBO>();
 
             if (presponse.Success)

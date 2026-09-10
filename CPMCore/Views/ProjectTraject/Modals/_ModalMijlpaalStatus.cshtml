@@ -1,0 +1,40 @@
+@using BOCore
+@model CPMCore.Models.Traject.TrajectIndexVm
+
+<div class="modal fade" id="modalMijlpaalStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-controller="ProjectTraject" asp-action="MijlpaalStatusWijzigen" asp-route-projectId="@Model.ProjectId">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MijlpaalId" id="mps-id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Status wijzigen — <span id="mps-naam"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nieuwe status</label>
+                        <select name="NieuweStatus" id="mps-status" class="form-select">
+                            @foreach (MijlpaalStatus ms in Enum.GetValues(typeof(MijlpaalStatus)))
+                            {
+                                <option value="@((int)ms)">@ms.GetDisplayName()</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Werkelijke datum <span class="text-muted">(bij "Bereikt")</span></label>
+                        <input type="date" name="WerkelijkeDatum" id="mps-datum" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Opmerking</label>
+                        <textarea name="Opmerking" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

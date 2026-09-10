@@ -1,0 +1,80 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.TrajectIndexVm
+@{
+    var today = DateOnly.FromDateTime(DateTime.Today);
+
+    // Kolommen = distinct per-eenheid mijlpalen op Code, in volgorde
+    var kolommen = Model.EenheidMijlpalen
+        .GroupBy(m => m.Code ?? m.Naam)
+        .Select(g => g.OrderBy(x => x.Volgorde).First())
+        .OrderBy(m => m.Volgorde)
+        .ToList();
+
+    var cel = Model.EenheidMijlpalen
+        .GroupBy(m => (m.UnitId!.Value, m.Code ?? m.Naam))
+        .ToDictionary(g => g.Key, g => g.First());
+
+    // Toon alle eenheden van het project; ook zonder mijlpalen (dan lege cellen)
+    var eenheden = Model.ProjectUnits;
+}
+
+@if (kolommen.Count == 0)
+{
+    <div class="gl-mc-card"><div class="card-body text-muted">
+        Er zijn nog geen per-eenheid mijlpalen in dit traject. Voeg ze toe via het sjabloon
+        (markeer een mijlpaal als <em>Per eenheid</em>) en klik daarna op <strong>Sync met sjabloon</strong>,
+        of voeg een mijlpaal toe en koppel er een eenheid aan.
+    </div></div>
+}
+else
+{
+    <div class="table-responsive gl-unit-matrix-wrap">
+        <table class="table table-bordered table-sm gl-unit-matrix">
+            <thead>
+                <tr>
+                    <th class="gl-um-unit-col">Eenheid</th>
+                    @foreach (var k in kolommen)
+                    {
+                        <th>@k.Naam</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in eenheden)
+                {
+                    <tr>
+                        <th class="gl-um-unit-col">@u.Name</th>
+                        @foreach (var k in kolommen)
+                        {
+                            var key = (u.Id, k.Code ?? k.Naam);
+                            if (cel.TryGetValue(key, out var m))
+                            {
+                                var eff = m.Doeldatum ?? m.DoeldatumBerekend;
+                                var overdue = eff is DateOnly d && d < today
+                                              && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
+                                <td class="gl-um-cell m-status-@m.Status @(overdue ? "is-overdue" : "")">
+                                    <button type="button" class="btn btn-xs btn-default js-mijlpaal-status w-100"
+                                            data-id="@m.Id" data-naam="@($"{u.Name} — {m.Naam}")" data-status="@m.Status">
+                                        <span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span>
+                                    </button>
+                                    <div class="gl-um-datum @(overdue ? "text-danger fw-bold" : "text-muted")">
+                                        @(m.WerkelijkeDatum?.ToString("dd/MM/yy") ?? eff?.ToString("dd/MM/yy") ?? "—")
+                                    </div>
+                                </td>
+                            }
+                            else
+                            {
+                                <td class="gl-um-cell text-muted text-center">—</td>
+                            }
+                        }
+                    </tr>
+                }
+                @if (eenheden.Count == 0)
+                {
+                    <tr><td colspan="@(kolommen.Count + 1)" class="text-muted text-center py-3">Dit project heeft nog geen eenheden.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -241,6 +241,17 @@ builder.Services.AddScoped<IContractorPortalService, ContractorPortalServiceStub
 builder.Services.AddScoped<IIssueNotificationSenderService, IssueNotificationSenderService>();
 builder.Services.AddScoped<IIssueNotificationSchedulerService, IssueNotificationSchedulerService>();
 builder.Services.AddScoped<IContractorPortalDigestService, ContractorPortalDigestService>();
+
+// ── Trajectopvolging ─────────────────────────────────────────────────────────
+builder.Services.AddScoped<FacadeCore.IProjecttrajectService, ServiceCore.Traject.ProjecttrajectService>();
+builder.Services.AddScoped<FacadeCore.IMijlpaalService, ServiceCore.Traject.MijlpaalService>();
+builder.Services.AddScoped<FacadeCore.ITrajectSjabloonService, ServiceCore.Traject.TrajectSjabloonService>();
+builder.Services.AddScoped<FacadeCore.ITrajectInstantiationService, ServiceCore.Traject.TrajectInstantiationService>();
+builder.Services.AddScoped<FacadeCore.IMijlpaalBindingResolver, ServiceCore.Traject.MijlpaalBindingResolver>();
+builder.Services.AddScoped<FacadeCore.ITrajectRecalculationService, ServiceCore.Traject.TrajectRecalculationService>();
+builder.Services.AddSingleton<CPMCore.Services.TrajectHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CPMCore.Services.TrajectHostedService>());
+
 builder.Services.AddSingleton<IssueNotificationHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<IssueNotificationHostedService>());
 builder.Services.AddSingleton<VoortgangHostedService>();

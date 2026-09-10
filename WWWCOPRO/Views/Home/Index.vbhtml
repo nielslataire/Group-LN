@@ -43,33 +43,33 @@ End Code
 End Section
 
 <section id="homeHero" class="home-hero">
-    <video class="home-hero-video" autoplay muted loop playsinline preload="auto">
+    <video class="home-hero-video" muted loop playsinline preload="metadata"
+           poster="@Url.Content("~/Content/video/hero-poster.jpg")"
+           data-poster="@Url.Content("~/Content/video/hero-poster.jpg")"
+           data-poster-portrait="@Url.Content("~/Content/video/hero-poster-portrait.jpg")">
         <source src="@Url.Content("~/Content/video/hero-portrait.webm")" type="video/webm" media="(orientation: portrait)">
         <source src="@Url.Content("~/Content/video/hero-portrait.mp4")" type="video/mp4" media="(orientation: portrait)">
         <source src="@Url.Content("~/Content/video/hero.webm")" type="video/webm">
         <source src="@Url.Content("~/Content/video/hero.mp4")" type="video/mp4">
     </video>
-    <script>
-        (function () {
-            var heroVideo = document.currentScript.previousElementSibling;
-            if (!heroVideo || heroVideo.tagName !== 'VIDEO') return;
-            heroVideo.poster = window.matchMedia('(orientation: portrait)').matches
-                ? '@Url.Content("~/Content/video/hero-poster-portrait.jpg")'
-                : '@Url.Content("~/Content/video/hero-poster.jpg")';
-        })();
-    </script>
+    <button type="button" id="heroVideoToggle" class="home-hero-video-toggle" aria-label="Achtergrondvideo pauzeren" hidden>
+        <i class="fa fa-pause" aria-hidden="true"></i>
+    </button>
     <div class="home-hero-overlay"></div>
     <div class="home-hero-content">
         <p class="hero-kicker"><span class="hero-rule"></span>PROJECTONTWIKKELING & PROJECTCOÖRDINATIE<span class="hero-rule"></span></p>
         <p class="hero-headline">Bijzondere plekken, doordacht ontwikkeld.</p>
         <h1 class="hero-subtext">Group LN is projectontwikkelaar van tijdloze appartementen en woningen op de mooiste locaties in Vlaanderen.</h1>
     </div>
-    <a class="hero-cta" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">
-        Bekijk ons aanbod te koop <i class="fa fa-arrow-right"></i>
-    </a>
-    <button type="button" id="heroSearchToggle" class="hero-search-toggle" aria-expanded="false" aria-controls="homeHeroSearch" aria-label="Zoeken">
-        <i class="fa fa-search"></i>
-    </button>
+    <div class="home-hero-actions">
+        <a class="hero-cta" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">
+            Bekijk ons aanbod te koop <i class="fa fa-arrow-right" aria-hidden="true"></i>
+        </a>
+        <button type="button" id="heroSearchToggle" class="hero-search-trigger" aria-expanded="false" aria-controls="homeHeroSearch">
+            <i class="fa fa-search" aria-hidden="true"></i>
+            <span>Zoek in het aanbod</span>
+        </button>
+    </div>
     <div class="home-hero-search" id="homeHeroSearch">
         <form id="heroSearchForm" method="get" action="@Url.Action("Index", "Projects")">
             <div class="hero-search-field hero-search-term" style="display:none;">
@@ -117,7 +117,7 @@ End Section
                     <input type="hidden" id="heroSearchUnitCategory" value="" />
                 </div>
             End If
-            <button type="submit" class="hero-search-btn" aria-label="Zoeken"><i class="fa fa-search"></i></button>
+            <button type="submit" class="hero-search-btn" aria-label="Zoeken"><i class="fa fa-search" aria-hidden="true"></i></button>
         </form>
     </div>
     <div class="home-hero-disclaimer" style="display:none;">
@@ -125,7 +125,7 @@ End Section
     </div>
     <a href="#aboutSection" class="hero-scroll-cue" aria-label="Scroll naar beneden voor meer">
         <span class="hero-scroll-label">Ontdek meer</span>
-        <span class="hero-scroll-dot"><i class="fa fa-chevron-down"></i></span>
+        <span class="hero-scroll-dot"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>
     </a>
 </section>
 <section id="aboutSection" class="about-section">
@@ -138,10 +138,10 @@ End Section
                 <p class="about-text">Onze zaakvoerders brachten bij de oprichting al jarenlange ervaring mee als werfleider en projectleider bij diverse aannemingsbedrijven — ervaring die sindsdien alleen maar is gegroeid.</p>
                 <p class="about-text">Die combinatie van bedrijfscontinuïteit en praktijkkennis is vandaag de garantie voor een kwalitatief afgewerkt project, van eerste ontwerp tot oplevering.</p>
                 <p class="about-text">Elk project is anders. Daarom werken we nauw samen met architecten om uw woonwensen te vertalen naar een ontwerp dat vandaag functioneel is, en morgen nog steeds klopt.</p>
-                <a class="about-btn" href="@Url.Action("Index","AboutUs")">Meer over Group LN <i class="fa fa-arrow-right"></i></a>
+                <a class="about-btn" href="@Url.Action("Index","AboutUs")">Meer over Group LN <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
             </div>
             <div class="about-media reveal reveal-slide-right">
-                <img class="about-media-foto" src="@Url.Content("~/Content/img/about.webp")" alt="Group LN" />
+                <img class="about-media-foto" src="@Url.Content("~/Content/img/about.webp")" alt="Group LN" width="1000" height="1200" loading="lazy" decoding="async" />
             </div>
         </div>
     </div>
@@ -167,9 +167,9 @@ End Section
     @<section class="featured-project-section">
         <div class="featured-project-media">
             @If heroFeatured.IsVideo Then
-                @<video src="@heroFeatured.VideoSrc" autoplay muted loop playsinline></video>
+                @<video class="featured-project-video" src="@heroFeatured.VideoSrc" muted loop playsinline preload="none"></video>
             Else
-                @<img src="@heroFeatured.ImageSrc" alt="@heroFeatured.ProjectTitel">
+                @<img src="@heroFeatured.ImageSrc" alt="@heroFeatured.ProjectTitel" loading="lazy" decoding="async">
             End If
         </div>
         <div class="featured-project-overlay"></div>
@@ -184,7 +184,7 @@ End Section
                 @If Not String.IsNullOrWhiteSpace(heroFeatured.Tekst) Then
                     @<p class="featured-project-text">@heroFeatured.Tekst</p>
                 End If
-                <a class="about-btn featured-project-btn" href="@heroFeatured.DetailUrl">Ontdek @heroFeatured.ProjectTitel <i class="fa fa-arrow-right"></i></a>
+                <a class="about-btn featured-project-btn" href="@heroFeatured.DetailUrl">Ontdek @heroFeatured.ProjectTitel <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
             </div>
         </div>
     </section>
@@ -194,7 +194,7 @@ End If
     <div class="container reveal">
         <h2 class="cta-title">Grond of pand met ontwikkelingspotentieel?</h2>
         <p class="cta-text">Of het nu gaat om een perceel, een oude woning of een verouderd pand — wij onderzoeken graag vrijblijvend de mogelijkheden voor een samenwerking of overname, en ontzorgen u doorheen het volledige traject.</p>
-        <a class="cta-btn" href="@Url.Action("Index", "Contact")">Neem contact op <i class="fa fa-arrow-right"></i></a>
+        <a class="cta-btn" href="@Url.Action("Index", "Contact")">Neem contact op <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
     </div>
 </section>
 

@@ -40,10 +40,11 @@ Public Class BundleConfig
                     "~/vendor/magnific-popup/jquery.magnific-popup.min.js",
                     "~/vendor/pnotify/pnotify.custom.js"))
 
+        ' view.home.js verwijderd: dat is ongebruikte Okler-thema-code (nivoSlider /
+        ' flipshow / "move cloud") voor elementen die niet op de herwerkte homepage staan.
         bundles.Add(New ScriptBundle("~/Scripts/jsbundle").Include(
                     "~/Scripts/theme.js",
                     "~/Scripts/custom.js",
-                    "~/scripts/views/view.home.js",
                     "~/scripts/real-estate.js",
                     "~/Scripts/theme.init.js",
                     "~/Scripts/reveal.js"

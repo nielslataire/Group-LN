@@ -1,0 +1,87 @@
+@using BOCore
+@using DALCore.Models
+@using FacadeCore
+@model int
+@inject IPermissionService PermissionService
+@inject IProjecttrajectService TrajectService
+@{
+    await PermissionService.EnsureLoadedAsync();
+    if (!PermissionService.HasRead(PermissionCodes.ProjectsTraject)) { return; }
+
+    var projectId = Model;
+    var traject = await TrajectService.GetByProject(projectId, includeDetails: true);
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+}
+
+<div class="card card-modern gl-detail-card mb-0">
+    <header class="card-header gl-detail-card-header">
+        <h2 class="card-title mb-0">
+            <i class="bx bx-git-branch text-primary" aria-hidden="true"></i> Traject
+        </h2>
+        <a href="/Projects/@projectId/Traject" class="gl-detail-card-edit">
+            <i class="bx bx-right-arrow-alt" aria-hidden="true"></i><span>Openen</span>
+        </a>
+    </header>
+    <div class="card-body">
+        @if (traject == null)
+        {
+            <p class="text-muted mb-0">
+                Nog geen traject voor dit project.
+                <a href="/Projects/@projectId/Traject">Traject aanmaken uit een sjabloon</a>.
+            </p>
+        }
+        else
+        {
+            var mijlpalen = traject.Mijlpalen;
+            var bereikt = mijlpalen.Count(m => m.Status == (int)MijlpaalStatus.Bereikt);
+            var achterstallig = mijlpalen.Count(m =>
+                m.IsVerplicht && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing
+                && (m.Doeldatum ?? m.DoeldatumBerekend) is DateOnly d && d < vandaag);
+            var huidigeFase = traject.Fases.OrderBy(f => f.Volgorde)
+                .FirstOrDefault(f => f.Status == (int)FaseStatus.Actief)
+                ?? traject.Fases.OrderBy(f => f.Volgorde).FirstOrDefault(f => f.Status != (int)FaseStatus.Afgerond);
+            var volgende = mijlpalen
+                .Where(m => m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing
+                            && (m.Doeldatum ?? m.DoeldatumBerekend) != null)
+                .OrderBy(m => m.Doeldatum ?? m.DoeldatumBerekend)
+                .Take(3)
+                .ToList();
+
+            <div class="row g-3">
+                <div class="col-sm-4">
+                    <div class="text-muted small">Huidige fase</div>
+                    <div class="fw-bold">@(huidigeFase?.Naam ?? "—")</div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="text-muted small">Mijlpalen bereikt</div>
+                    <div class="fw-bold">@bereikt / @mijlpalen.Count</div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="text-muted small">Achterstallig</div>
+                    <div class="fw-bold @(achterstallig > 0 ? "text-danger" : "")">@achterstallig</div>
+                </div>
+            </div>
+
+            @if (volgende.Count > 0)
+            {
+                <hr class="my-3" />
+                <div class="text-muted small mb-2">Volgende mijlpalen</div>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var m in volgende)
+                    {
+                        var eff = m.Doeldatum ?? m.DoeldatumBerekend;
+                        var over = eff is DateOnly d2 && d2 < vandaag;
+                        <li class="d-flex justify-content-between py-1 border-top">
+                            <span>@m.Naam @(m.UnitId != null && m.Unit != null ? $"· {m.Unit.Name}" : "")</span>
+                            <span class="@(over ? "text-danger fw-bold" : "text-muted")">@eff?.ToString("dd/MM/yyyy")</span>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (traject.HerberekendOp != null)
+            {
+                <div class="text-muted small mt-2">Laatst herberekend: @traject.HerberekendOp.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+            }
+        }
+    </div>
+</div>

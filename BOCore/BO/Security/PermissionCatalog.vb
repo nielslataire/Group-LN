@@ -20,7 +20,9 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.ProjectsNews, "Nieuws", PermissionCodes.ProjectsDetails, 48),
             New PermissionDefinition(PermissionCodes.ProjectsUnits, "Eenheden", PermissionCodes.ProjectsDetails, 49),
             New PermissionDefinition(PermissionCodes.ProjectsOpvolging, "Opvolging", PermissionCodes.Projects, 50),
-            New PermissionDefinition(PermissionCodes.ProjectsIssues, "Punten", PermissionCodes.ProjectsOpvolging, 51),
+            New PermissionDefinition(PermissionCodes.ProjectsTraject, "Traject", PermissionCodes.ProjectsOpvolging, 50),
+            New PermissionDefinition(PermissionCodes.ProjectsDossiers, "Dossiers", PermissionCodes.ProjectsOpvolging, 51),
+            New PermissionDefinition(PermissionCodes.ProjectsIssues, "Punten", PermissionCodes.ProjectsOpvolging, 52),
             New PermissionDefinition(PermissionCodes.ProjectsDocuments, "Documenten", PermissionCodes.ProjectsOpvolging, 52),
             New PermissionDefinition(PermissionCodes.ProjectsInsurances, "Verzekeringen", PermissionCodes.ProjectsOpvolging, 53),
             New PermissionDefinition(PermissionCodes.ProjectsDetailCoordinatie, "Coördinatie", PermissionCodes.ProjectsOpvolging, 54),
@@ -52,11 +54,14 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.SettingsAutomatisatie, "Automatisatie", PermissionCodes.Settings, 94),
             New PermissionDefinition(PermissionCodes.SettingsIssueNotifications, "Puntmeldingen", PermissionCodes.SettingsAutomatisatie, 95),
             New PermissionDefinition(PermissionCodes.SettingsMarketDataStatus, "Marktdata-status", PermissionCodes.SettingsAutomatisatie, 97),
+            New PermissionDefinition(PermissionCodes.SettingsTrajectSjablonen, "Trajectsjablonen", PermissionCodes.SettingsAutomatisatie, 99),
             New PermissionDefinition(PermissionCodes.SettingsHomeHeroProject, "Home hero — uitgelicht project", PermissionCodes.SettingsWebsite, 98),
             New PermissionDefinition(PermissionCodes.Marktanalyse, "Marktanalyse", Nothing, 90),
             New PermissionDefinition(PermissionCodes.DocumentCenter, "Documentencentrum", Nothing, 100),
             New PermissionDefinition(PermissionCodes.DocumentCenterByBillingCompany, "Per facturatiebedrijf", PermissionCodes.DocumentCenter, 101),
-            New PermissionDefinition(PermissionCodes.SettingsVacatureBeheer, "Vacatures", PermissionCodes.SettingsWebsite, 102)
+            New PermissionDefinition(PermissionCodes.SettingsVacatureBeheer, "Vacatures", PermissionCodes.SettingsWebsite, 102),
+            New PermissionDefinition(PermissionCodes.MijnTaken, "Mijn taken", Nothing, 110),
+            New PermissionDefinition(PermissionCodes.PortfolioDeadlines, "Deadlines (portfolio)", Nothing, 111)
         }
 
 End Class

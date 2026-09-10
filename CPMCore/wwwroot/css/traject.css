@@ -1,0 +1,122 @@
+/* Trajectopvolging — per-project trajectpagina + sjabloon-admin */
+
+.gl-traject-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.gl-traject-fase {
+    border: 1px solid #e6e6ec;
+    border-radius: 10px;
+    padding: 1rem 1.15rem;
+    background: #fff;
+}
+
+.gl-traject-fase.fase-status-1 { border-color: #cdd9e6; background: #f7f9fc; }
+.gl-traject-fase.fase-status-2 { opacity: .78; }
+.gl-traject-fase.fase-status-3 { opacity: .55; }
+
+.gl-traject-fase-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: .6rem;
+}
+
+.gl-traject-fase-naam { font-weight: 700; font-size: 1.02rem; }
+.gl-traject-fase-meta { display: inline-flex; gap: .55rem; align-items: baseline; font-size: .85rem; }
+
+.gl-traject-mijlpalen { list-style: none; margin: 0; padding: 0; }
+
+.gl-traject-mijlpaal {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) 110px auto auto;
+    align-items: center;
+    gap: .65rem;
+    padding: .4rem 0;
+    border-top: 1px dashed #eef0f4;
+}
+.gl-traject-mijlpaal:first-child { border-top: none; }
+
+.gl-tm-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #ced4da; border: 2px solid #fff; box-shadow: 0 0 0 1px #ced4da;
+}
+.gl-traject-mijlpaal.m-status-1 .gl-tm-dot { background: #ffc107; box-shadow: 0 0 0 1px #ffc107; }
+.gl-traject-mijlpaal.m-status-2 .gl-tm-dot { background: #198754; box-shadow: 0 0 0 1px #198754; }
+.gl-traject-mijlpaal.m-status-3 .gl-tm-dot { background: #adb5bd; }
+.gl-traject-mijlpaal.m-status-4 .gl-tm-dot { background: #dc3545; box-shadow: 0 0 0 1px #dc3545; }
+.gl-traject-mijlpaal.is-overdue .gl-tm-dot { background: #dc3545; box-shadow: 0 0 0 1px #dc3545; }
+
+.gl-tm-naam { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-tm-datum { font-size: .85rem; text-align: right; }
+
+.badge.gl-mijlpaal-status { font-weight: 600; }
+.badge.gl-mijlpaal-status.s-0 { background: #6c757d; }
+.badge.gl-mijlpaal-status.s-1 { background: #ffc107; color: #212529; }
+.badge.gl-mijlpaal-status.s-2 { background: #198754; }
+.badge.gl-mijlpaal-status.s-3 { background: #adb5bd; }
+.badge.gl-mijlpaal-status.s-4 { background: #dc3545; }
+
+/* kalender */
+.gl-traject-kalender { display: flex; flex-direction: column; gap: 1rem; }
+.gl-kal-maand { border: 1px solid #e6e6ec; border-radius: 10px; overflow: hidden; }
+.gl-kal-maand-kop {
+    background: #f7f9fc; padding: .5rem .9rem; font-weight: 700; text-transform: capitalize;
+    border-bottom: 1px solid #e6e6ec;
+}
+.gl-kal-item {
+    display: grid; grid-template-columns: 56px 1fr auto; gap: .75rem; align-items: center;
+    padding: .45rem .9rem; border-top: 1px dashed #eef0f4;
+}
+.gl-kal-item:first-child { border-top: none; }
+.gl-kal-datum { font-variant-numeric: tabular-nums; color: #6c757d; font-size: .85rem; }
+.gl-kal-item.is-bereikt { opacity: .6; }
+.gl-kal-item.is-overdue .gl-kal-datum { color: #dc3545; font-weight: 700; }
+
+/* sjabloon-editor */
+.gl-sjabloon-fase {
+    border: 1px solid #e6e6ec;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #fbfbfd;
+}
+.gl-sjabloon-mijlpaal-rij {
+    display: grid;
+    grid-template-columns: minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) 80px minmax(0,1fr) minmax(0,1fr) 40px;
+    gap: .5rem;
+    align-items: center;
+    margin-bottom: .4rem;
+}
+.gl-sjabloon-mijlpaal {
+    border: 1px solid #eef0f4;
+    border-radius: 8px;
+    padding: .5rem;
+    margin-bottom: .45rem;
+    background: #fff;
+}
+.gl-sm-row1 { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 34px; gap: .4rem; }
+.gl-sm-row2 { display: grid; grid-template-columns: minmax(0,1.4fr) 110px minmax(0,1.4fr) minmax(0,1.6fr); gap: .4rem; margin-top: .35rem; }
+
+/* eenheden-matrix */
+.gl-unit-matrix-wrap { max-height: 70vh; overflow: auto; }
+.gl-unit-matrix { min-width: 640px; }
+.gl-unit-matrix th.gl-um-unit-col {
+    position: sticky; left: 0; background: #fff; z-index: 2; text-align: left; white-space: nowrap;
+}
+.gl-unit-matrix thead th { position: sticky; top: 0; background: #f7f9fc; z-index: 1; font-size: .8rem; }
+.gl-um-cell { text-align: center; vertical-align: middle; min-width: 110px; }
+.gl-um-cell .btn { border: 0; background: transparent; padding: .15rem; }
+.gl-um-datum { font-size: .72rem; margin-top: .1rem; }
+.gl-um-cell.is-overdue { background: #fff2f2; }
+.gl-um-cell.m-status-2 { background: #f2faf5; }
+
+@media (max-width: 992px) {
+    .gl-sjabloon-mijlpaal-rij { grid-template-columns: 1fr 1fr; }
+    .gl-traject-mijlpaal { grid-template-columns: 14px 1fr auto; }
+    .gl-tm-datum { grid-column: 2; text-align: left; }
+}

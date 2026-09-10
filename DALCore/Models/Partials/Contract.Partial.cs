@@ -20,9 +20,12 @@ namespace DALCore.Models
 
             var parts = new List<string>();
 
+            if (!string.IsNullOrWhiteSpace(this.ContractName))
+                parts.Add(this.ContractName!.Trim());
+
             if (!string.IsNullOrWhiteSpace(companyName))
                 parts.Add(companyName!.Trim());
-            else
+            else if (string.IsNullOrWhiteSpace(this.ContractName))
                 parts.Add($"Contract {id}");
 
             if (activityNames.Count > 0)

@@ -52,6 +52,12 @@ public class PermissionResolver : IPermissionResolver
             return PermissionCodes.ProjectsDetail;
         }
 
+        if (string.Equals(controller, "ProjectTraject", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.ProjectsTraject;
+        if (string.Equals(controller, "ProjectDossiers", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.ProjectsDossiers;
+        if (string.Equals(controller, "MijnTaken", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.MijnTaken;
+        if (string.Equals(controller, "Deadlines", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.PortfolioDeadlines;
+        if (string.Equals(controller, "TrajectSjabloonAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsTrajectSjablonen;
+
         if (string.Equals(controller, "IssueNotificationAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsIssueNotifications;
         if (string.Equals(controller, "Marktanalyse", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Marktanalyse;
         if (string.Equals(controller, "DocumentenCentrum", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.DocumentCenter;

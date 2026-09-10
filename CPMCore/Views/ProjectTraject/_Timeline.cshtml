@@ -1,0 +1,54 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.TrajectIndexVm
+@{
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var mijlpalenPerFase = Model.ProjectMijlpalen
+        .GroupBy(m => m.ProjecttrajectFaseId)
+        .ToDictionary(g => g.Key ?? 0, g => g.OrderBy(x => x.Volgorde).ToList());
+}
+
+<div class="gl-traject-timeline">
+    @foreach (var fase in Model.Fases)
+    {
+        mijlpalenPerFase.TryGetValue(fase.Id, out var items);
+        items ??= new List<Mijlpaal>();
+        var bereikt = items.Count(m => m.Status == (int)MijlpaalStatus.Bereikt);
+        <div class="gl-traject-fase fase-status-@fase.Status">
+            <div class="gl-traject-fase-head">
+                <span class="gl-traject-fase-naam">@fase.Naam</span>
+                <span class="gl-traject-fase-meta">
+                    <span class="badge bg-light text-dark">@(((FaseStatus)fase.Status).GetDisplayName())</span>
+                    <span class="text-muted">@bereikt / @items.Count mijlpalen</span>
+                    @if (fase.StartGepland != null || fase.EindGepland != null)
+                    {
+                        <span class="text-muted">· @(fase.StartGepland?.ToString("MM/yyyy") ?? "?") – @(fase.EindGepland?.ToString("MM/yyyy") ?? "?")</span>
+                    }
+                </span>
+            </div>
+            <ul class="gl-traject-mijlpalen">
+                @foreach (var m in items)
+                {
+                    var eff = m.Doeldatum ?? m.DoeldatumBerekend;
+                    var overdue = eff is DateOnly d && d < today
+                                  && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
+                    <li class="gl-traject-mijlpaal m-status-@m.Status @(overdue ? "is-overdue" : "")">
+                        <span class="gl-tm-dot"></span>
+                        <span class="gl-tm-naam">@m.Naam</span>
+                        <span class="gl-tm-datum @(overdue ? "text-danger fw-bold" : "text-muted")">
+                            @(m.WerkelijkeDatum?.ToString("dd/MM/yyyy") ?? eff?.ToString("dd/MM/yyyy") ?? "—")
+                        </span>
+                        <span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span>
+                        <button type="button" class="btn btn-xs btn-default js-mijlpaal-status" data-id="@m.Id" data-naam="@m.Naam" data-status="@m.Status">
+                            <i class="bx bx-check-circle"></i>
+                        </button>
+                    </li>
+                }
+                @if (items.Count == 0)
+                {
+                    <li class="text-muted ps-3"><em>Geen mijlpalen in deze fase.</em></li>
+                }
+            </ul>
+        </div>
+    }
+</div>

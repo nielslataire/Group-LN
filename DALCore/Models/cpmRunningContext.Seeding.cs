@@ -31,6 +31,7 @@ namespace DALCore.Models
 );
             ConfigureKostprijsMaterialenEntities(modelBuilder);
             ConfigureHomeHeroProjectEntities(modelBuilder);
+            ConfigureTrajectEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>
             {

@@ -432,6 +432,13 @@
                 </div>
             </div>
 
+            @*TRAJECT-SAMENVATTING*@
+            <div class="row mb-3">
+                <div class="col-12">
+                    @await Html.PartialAsync("_TrajectSummaryCard", Model.Project.Id)
+                </div>
+            </div>
+
             @*HERO-RIJ 2: algemene gegevens + eenheden & verkoopstatus — twee kaarten, gelijke hoogte*@
             <div class="row mb-3 gl-detail-hero-row gl-detail-hero-row-2">
                 <div class="col-12 col-xl-4 mb-3 mb-xl-0 gl-detail-hero-cell">

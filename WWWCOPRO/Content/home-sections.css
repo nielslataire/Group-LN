@@ -8,13 +8,13 @@
     font-size: 11px;
     font-weight: 700;
     font-family: var(--font-sans);
-    color: var(--color-primary, #00532D);
+    color: var(--color-primary);
 }
 
 /* --- CTA: eigen project realiseren --- */
 .cta-section {
     padding: 100px 0;
-    background: var(--mist, #F2F5EF);
+    background: var(--mist);
     text-align: center;
 }
 
@@ -23,7 +23,7 @@
     font-weight: 500;
     font-size: 34px;
     line-height: 1.2;
-    color: var(--groen-diep, #2C3B2A);
+    color: var(--groen-diep);
     margin: 0 0 16px;
 }
 
@@ -31,7 +31,7 @@
     font-family: var(--font-sans);
     font-size: 16px;
     line-height: 1.6;
-    color: var(--tekst-sub, #5a6b58);
+    color: var(--tekst-sub);
     max-width: 560px;
     margin: 0 auto 32px;
 }
@@ -48,12 +48,12 @@
     font-size: 13px;
     font-weight: 700;
     color: #fff;
-    background: var(--color-primary, #00532D);
+    background: var(--color-primary);
     text-decoration: none !important;
     transition: background 0.25s ease;
 }
 .cta-btn:hover {
-    background: var(--color-primary-hover, #006638);
+    background: var(--color-primary-hover);
     color: #fff;
 }
 
@@ -69,7 +69,7 @@
 /* --- Wie zijn we --- */
 .about-section {
     padding: 100px 0;
-    background: var(--mist, #F2F5EF);
+    background: var(--mist);
     /* .about-media heeft .reveal-slide-right (translateX(60px) in rusttoestand);
        zonder deze clip duwt die 60px de pagina breder op smalle schermen. */
     overflow-x: hidden;
@@ -91,7 +91,7 @@
     font-weight: 500;
     font-size: 34px;
     line-height: 1.2;
-    color: var(--groen-diep, #2C3B2A);
+    color: var(--groen-diep);
     margin: 0 0 22px;
 }
 
@@ -99,7 +99,7 @@
     font-family: var(--font-sans);
     font-size: 16px;
     line-height: 1.7;
-    color: var(--tekst-sub, #5a6b58);
+    color: var(--tekst-sub);
     margin: 0 0 18px;
 }
 
@@ -109,21 +109,21 @@
     gap: 10px;
     margin-top: 20px;
     padding: 14px 22px;
-    border: 1.5px solid var(--groen-diep, #2C3B2A);
+    border: 1.5px solid var(--groen-diep);
     border-radius: 6px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-family: var(--font-sans);
     font-size: 13px;
     font-weight: 700;
-    color: var(--groen-diep, #2C3B2A);
+    color: var(--groen-diep);
     background: transparent;
     text-decoration: none !important;
     transition: background 0.25s ease, color 0.25s ease;
 }
 .about-btn:hover {
-    background: var(--color-primary, #00532D);
-    border-color: var(--color-primary, #00532D);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
     color: #fff;
 }
 
@@ -141,7 +141,7 @@
 /* --- Onze troeven --- */
 .troeven-section {
     padding: 20px 0 100px;
-    background: var(--mist, #F2F5EF);
+    background: var(--mist);
 }
 
 .troeven-headline {
@@ -149,14 +149,14 @@
     font-weight: 500;
     font-size: 34px;
     line-height: 1.2;
-    color: var(--groen-diep, #2C3B2A);
+    color: var(--groen-diep);
     margin: 0;
     max-width: 640px;
 }
 
 .troeven-divider {
     height: 1px;
-    background: var(--border, rgba(0, 83, 45, 0.10));
+    background: var(--border);
     margin: 40px 0 48px;
 }
 
@@ -168,7 +168,7 @@
 
 .troeven-item {
     padding-left: 28px;
-    border-left: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+    border-left: 1px solid var(--border);
 }
 .troeven-item:first-child {
     padding-left: 0;
@@ -179,7 +179,7 @@
     font-family: var(--font-serif);
     font-weight: 600;
     font-size: 19px;
-    color: var(--groen-diep, #2C3B2A);
+    color: var(--groen-diep);
     margin: 0 0 10px;
     text-transform: none;
     letter-spacing: normal;
@@ -189,7 +189,7 @@
     font-family: var(--font-sans);
     font-size: 15px;
     line-height: 1.65;
-    color: var(--tekst-sub, #5a6b58);
+    color: var(--tekst-sub);
     margin: 0;
 }
 
@@ -209,16 +209,16 @@
     }
     .troeven-item:nth-child(2) {
         padding-left: 28px;
-        border-left: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+        border-left: 1px solid var(--border);
     }
     .troeven-item:nth-child(3) {
         padding-left: 0;
         border-left: none;
-        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+        border-top: 1px solid var(--border);
         padding-top: 24px;
     }
     .troeven-item:nth-child(4) {
-        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10));
+        border-top: 1px solid var(--border);
         padding-top: 24px;
     }
 }
@@ -246,7 +246,7 @@
         border-left: none !important;
     }
     .troeven-item:nth-child(n+2) {
-        border-top: 1px solid var(--border, rgba(0, 83, 45, 0.10)) !important;
+        border-top: 1px solid var(--border) !important;
         padding-top: 24px !important;
     }
 }

@@ -130,7 +130,8 @@ End Code
     <!-- Web Fonts  -->
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" type="text/css">
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @* reCAPTCHA wordt niet meer globaal geladen: elke pagina met een formulier (Contact, Blog/Artikel,
+       Projects/Detail, Projects/Inschrijving) laadt zelf de juiste v3-api.js met render-sleutel. *@
     @Styles.Render("~/Vendor/css")
     @Styles.Render("~/Content/theme")
     @Styles.Render("~/Content/skin")
@@ -167,7 +168,7 @@ End Code
                                 </a>
                             </div>
                             <a href="tel:+3292164950" class="header-phone">
-                                <span class="header-phone-icon"><i class="fa fa-phone"></i></span>
+                                <span class="header-phone-icon"><i class="fa fa-phone" aria-hidden="true"></i></span>
                                 <span class="header-phone-text">
                                     <span class="header-phone-label">Bel ons</span>
                                     <span class="header-phone-number">+32 (0)9 216 49 50</span>
@@ -177,12 +178,12 @@ End Code
                         <div class="header-column header-nav-col">
                             <nav class="hero-nav-items" id="heroNavItems">
                                 <a class="hero-nav-item" href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">Woonprojecten</a>
-                                <a class="hero-nav-item" href="@Url.Action("Commercieel", "Projects")">Commercieel</a>
+                                <a class="hero-nav-item" href="@Url.RouteUrl("Grondverwerving")">Grond aanbieden</a>
                                 <a class="hero-nav-item" href="@Url.Action("Index", "Blog")">Blog</a>
                                 <a class="hero-nav-item" href="@Url.Action("Index", "Contact")">Contact</a>
                             </nav>
-                            <button type="button" id="navOverlayToggle" class="hamburger-circle-btn" aria-expanded="false" aria-controls="navOverlay">
-                                <span class="hamburger-lines"><span></span><span></span><span></span></span>
+                            <button type="button" id="navOverlayToggle" class="hamburger-btn" aria-label="Menu openen" aria-expanded="false" aria-controls="navOverlay">
+                                <span class="hamburger-lines" aria-hidden="true"><span></span><span></span><span></span></span>
                             </button>
                         </div>
                     </div>
@@ -191,9 +192,9 @@ End Code
         </header>
 
         <div id="navOverlay" class="nav-overlay" aria-hidden="true">
-            <div class="nav-overlay-backdrop"></div>
-            <div class="nav-overlay-panel">
-                <button type="button" id="navOverlayClose" class="nav-overlay-close" aria-label="Sluiten">&times;</button>
+            <div class="nav-overlay-backdrop" data-nav-overlay-close></div>
+            <div class="nav-overlay-panel" role="dialog" aria-modal="true" aria-label="Menu">
+                <button type="button" id="navOverlayClose" class="nav-overlay-close" aria-label="Menu sluiten">&times;</button>
                 <nav>
                     <ul class="nav-overlay-list" id="mainNav">
                         <li>
@@ -209,6 +210,11 @@ End Code
                         <li>
                             <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})">
                                 Woonprojecten
+                            </a>
+                        </li>
+                        <li>
+                            <a href="@Url.RouteUrl("Grondverwerving")">
+                                Grond aanbieden
                             </a>
                         </li>
                         <li>
@@ -231,7 +237,7 @@ End Code
                                 Team
                             </a>
                         </li>
-                        <li style="display:none;">
+                        <li>
                             <a href="@Url.RouteUrl("Vacatures")">
                                 Vacatures
                             </a>
@@ -277,11 +283,11 @@ End Code
                             </span>
                         </a>
                         <ul class="footer-social">
-                            <li><a href="https://www.instagram.com/group.ln/" target="_blank" rel="noopener" aria-label="Instagram"><i class="bx bxl-instagram"></i></a></li>
-                            <li><a href="https://www.linkedin.com/company/group-ln" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bx bxl-linkedin"></i></a></li>
-                            <li><a href="https://www.facebook.com/GROUPLN" target="_blank" rel="noopener" aria-label="Facebook"><i class="bx bxl-facebook"></i></a></li>
-                            <li><a href="@("https://www.tiktok.com/@groupln_")" target="_blank" rel="noopener" aria-label="TikTok"><i class="bx bxl-tiktok"></i></a></li>
-                            <li><a href="@("https://www.youtube.com/@Group_LN")" target="_blank" rel="noopener" aria-label="YouTube"><i class="bx bxl-youtube"></i></a></li>
+                            <li><a href="https://www.instagram.com/group.ln/" target="_blank" rel="noopener" aria-label="Instagram"><i class="bx bxl-instagram" aria-hidden="true"></i></a></li>
+                            <li><a href="https://www.linkedin.com/company/group-ln" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bx bxl-linkedin" aria-hidden="true"></i></a></li>
+                            <li><a href="https://www.facebook.com/GROUPLN" target="_blank" rel="noopener" aria-label="Facebook"><i class="bx bxl-facebook" aria-hidden="true"></i></a></li>
+                            <li><a href="@("https://www.tiktok.com/@groupln_")" target="_blank" rel="noopener" aria-label="TikTok"><i class="bx bxl-tiktok" aria-hidden="true"></i></a></li>
+                            <li><a href="@("https://www.youtube.com/@Group_LN")" target="_blank" rel="noopener" aria-label="YouTube"><i class="bx bxl-youtube" aria-hidden="true"></i></a></li>
                         </ul>
                     </div>
                     <div class="footer-col footer-col-projecten">
@@ -319,7 +325,7 @@ End Code
                         <li><a href="@Url.Action("Cookiebeleid", "Legal")">Cookiebeleid</a></li>
                         <li><a href="@Url.Action("AlgemeneVoorwaarden", "Legal")">Algemene voorwaarden</a></li>
                     </ul>
-                    <p class="footer-ai-note"><i class="bx bx-time-five"></i> Onderdelen van deze site zijn met AI-ondersteuning gebouwd</p>
+                    <p class="footer-ai-note"><i class="bx bx-time-five" aria-hidden="true"></i> Onderdelen van deze site zijn met AI-ondersteuning gebouwd</p>
                 </div>
             </div>
         </footer>

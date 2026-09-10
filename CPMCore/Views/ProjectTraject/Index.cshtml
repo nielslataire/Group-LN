@@ -1,0 +1,190 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.TrajectIndexVm
+@{
+    ViewData["Title"] ??= "Traject";
+    var t = Model.Traject;
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
+    <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            <div class="row justify-content-between align-items-center pt-2">
+                <div class="col-sm-auto">
+                    <h1 class="font-weight-bold mb-0 mt-0">Traject</h1>
+                    <h5 class="mb-3 mt-0 text-muted">Fases, mijlpalen en streefdata voor @Model.ProjectName</h5>
+                </div>
+                @if (t != null)
+                {
+                    <div class="col-sm-auto px-0">
+                        <button type="button" class="btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#modalMijlpaal" id="btnNieuweMijlpaal">
+                            <i class="bx bx-plus"></i> Mijlpaal
+                        </button>
+                        <form method="post" asp-action="Sync" asp-route-projectId="@Model.ProjectId" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-default btn-md" title="Nieuwe mijlpalen uit het sjabloon overnemen">
+                                <i class="bx bx-refresh"></i> Sync met sjabloon
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+
+            @if (t == null)
+            {
+                <div class="card gl-mc-card mt-3">
+                    <div class="card-body">
+                        <h4 class="mb-2"><i class="bx bx-git-branch"></i> Nog geen traject</h4>
+                        <p class="text-muted">
+                            Maak een traject aan op basis van een sjabloon. Fases en mijlpalen worden gekopieerd
+                            en de streefdata worden berekend uit de opgegeven startdatum.
+                        </p>
+                        <form method="post" asp-action="Aanmaken" asp-route-projectId="@Model.ProjectId" class="row g-3 align-items-end">
+                            @Html.AntiForgeryToken()
+                            <div class="col-sm-5">
+                                <label class="form-label">Sjabloon</label>
+                                <select name="sjabloonId" class="form-select">
+                                    @foreach (var s in Model.Sjablonen)
+                                    {
+                                        <option value="@s.Id" selected="@(s.Id == Model.VoorgesteldSjabloonId)">
+                                            @s.Naam @(s.IsStandaard ? "(standaard)" : "")
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label">Startdatum (anker)</label>
+                                <input type="date" name="startdatum" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-sm-3">
+                                <button type="submit" class="btn btn-primary w-100" @(Model.Sjablonen.Count == 0 ? "disabled" : "")>
+                                    <i class="bx bx-check"></i> Traject aanmaken
+                                </button>
+                            </div>
+                        </form>
+                        @if (Model.Sjablonen.Count == 0)
+                        {
+                            <p class="text-danger mt-2 mb-0">Er zijn nog geen actieve sjablonen. Maak er eerst één aan onder Instellingen → Trajectsjablonen.</p>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="gl-kpi2-strip mt-3">
+                    <div class="gl-kpi2-tile">
+                        <span class="gl-kpi2-label">Huidige fase</span>
+                        <span class="gl-kpi2-value">@(Model.HuidigeFase?.Naam ?? "—")</span>
+                    </div>
+                    <div class="gl-kpi2-tile">
+                        <span class="gl-kpi2-label">Mijlpalen bereikt</span>
+                        <span class="gl-kpi2-value">@Model.AantalBereikt / @Model.AantalMijlpalen</span>
+                    </div>
+                    <div class="gl-kpi2-tile @(Model.AantalAchterstallig > 0 ? "gl-kpi2-severe" : "")">
+                        <span class="gl-kpi2-label">Achterstallig</span>
+                        <span class="gl-kpi2-value">@Model.AantalAchterstallig</span>
+                    </div>
+                    <div class="gl-kpi2-tile">
+                        <span class="gl-kpi2-label">Binnen 14 dagen</span>
+                        <span class="gl-kpi2-value">@Model.AantalBinnen14Dagen</span>
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs mt-4" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-tijdlijn" type="button">Tijdlijn</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mijlpalen" type="button">Mijlpalen</button></li>
+                    @if (Model.EenheidMijlpalen.Count > 0 || Model.ProjectUnits.Count > 0)
+                    {
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-eenheden" type="button">Per eenheid <span class="badge bg-light text-dark">@Model.EenheidMijlpalen.Count</span></button></li>
+                    }
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-kalender" type="button">Kalender</button></li>
+                </ul>
+                <div class="tab-content pt-3">
+                    <div class="tab-pane fade show active" id="tab-tijdlijn">
+                        @await Html.PartialAsync("_Timeline", Model)
+                    </div>
+                    <div class="tab-pane fade" id="tab-mijlpalen">
+                        <table id="datatable-mijlpalen" class="table table-hover w-100">
+                            <thead>
+                                <tr>
+                                    <th>Mijlpaal</th><th>Fase</th><th>Type</th><th>Streefdatum</th>
+                                    <th>Werkelijk</th><th>Status</th><th>Verantw.</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in Model.ProjectMijlpalen)
+                                {
+                                    var eff = m.Doeldatum ?? m.DoeldatumBerekend;
+                                    var overdue = eff is DateOnly d && d < DateOnly.FromDateTime(DateTime.Today)
+                                                  && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
+                                    <tr>
+                                        <td>
+                                            <strong>@m.Naam</strong>
+                                            @if (m.IsVerplicht)
+                                            {
+                                                <span class="badge bg-light text-dark ms-1">verplicht</span>
+                                            }
+                                        </td>
+                                        <td>@(m.ProjecttrajectFase?.Naam ?? "—")</td>
+                                        <td>@(((MijlpaalType)m.MijlpaalType).GetDisplayName())</td>
+                                        <td class="@(overdue ? "text-danger fw-bold" : "")">
+                                            @(eff?.ToString("dd/MM/yyyy") ?? "—")
+                                            @if (m.Doeldatum == null && m.DoeldatumBerekend != null)
+                                            {
+                                                <i class="bx bx-calculator" title="Berekend uit sjabloon"></i>
+                                            }
+                                        </td>
+                                        <td>@(m.WerkelijkeDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td><span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span></td>
+                                        <td>@(m.VerantwoordelijkeRol.HasValue ? ((InterneRol)m.VerantwoordelijkeRol.Value).GetDisplayName() : "—")</td>
+                                        <td class="text-end text-nowrap">
+                                            <button type="button" class="btn btn-xs btn-default js-mijlpaal-status" data-id="@m.Id" data-naam="@m.Naam" data-status="@m.Status" title="Status wijzigen"><i class="bx bx-check-circle"></i></button>
+                                            <button type="button" class="btn btn-xs btn-default js-mijlpaal-edit" data-id="@m.Id" title="Bewerken"><i class="bx bx-edit"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (Model.EenheidMijlpalen.Count > 0 || Model.ProjectUnits.Count > 0)
+                    {
+                        <div class="tab-pane fade" id="tab-eenheden">
+                            @await Html.PartialAsync("_UnitMatrix", Model)
+                        </div>
+                    }
+                    <div class="tab-pane fade" id="tab-kalender">
+                        @await Html.PartialAsync("_Kalender", Model)
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-2 border-top">
+                    <form method="post" asp-action="Verwijderen" asp-route-projectId="@Model.ProjectId"
+                          onsubmit="return confirm('Het volledige traject en alle mijlpalen verwijderen?');" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash"></i> Traject verwijderen</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@if (t != null)
+{
+    @await Html.PartialAsync("Modals/_ModalMijlpaalUpsert", Model)
+    @await Html.PartialAsync("Modals/_ModalMijlpaalStatus", Model)
+}
+
+@section PageScripts {
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.min.js"></script>
+    <script src="~/js/traject.index.js" asp-append-version="true"></script>
+}

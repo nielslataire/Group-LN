@@ -1,0 +1,57 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.TrajectIndexVm
+@{
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+
+    var items = Model.Mijlpalen
+        .Select(m => new
+        {
+            M = m,
+            Datum = m.WerkelijkeDatum ?? m.Doeldatum ?? m.DoeldatumBerekend
+        })
+        .Where(x => x.Datum != null)
+        .OrderBy(x => x.Datum)
+        .ToList();
+
+    var perMaand = items
+        .GroupBy(x => new DateOnly(x.Datum!.Value.Year, x.Datum.Value.Month, 1))
+        .OrderBy(g => g.Key)
+        .ToList();
+}
+
+@if (perMaand.Count == 0)
+{
+    <div class="gl-mc-card"><div class="card-body text-muted">Geen mijlpalen met een datum.</div></div>
+}
+else
+{
+    <div class="gl-traject-kalender">
+        @foreach (var maand in perMaand)
+        {
+            <div class="gl-kal-maand">
+                <div class="gl-kal-maand-kop">@maand.Key.ToString("MMMM yyyy", new System.Globalization.CultureInfo("nl-BE"))</div>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var x in maand)
+                    {
+                        var m = x.M;
+                        var bereikt = m.Status == (int)MijlpaalStatus.Bereikt;
+                        var overdue = !bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing
+                                      && x.Datum!.Value < vandaag;
+                        <li class="gl-kal-item @(bereikt ? "is-bereikt" : "") @(overdue ? "is-overdue" : "")">
+                            <span class="gl-kal-datum">@x.Datum!.Value.ToString("dd/MM")</span>
+                            <span class="gl-kal-naam">
+                                @m.Naam
+                                @if (m.UnitId != null && m.Unit != null)
+                                {
+                                    <span class="text-muted">· @m.Unit.Name</span>
+                                }
+                            </span>
+                            <span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+}

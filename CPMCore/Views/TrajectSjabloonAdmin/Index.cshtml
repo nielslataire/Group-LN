@@ -1,0 +1,63 @@
+@using BOCore
+@model CPMCore.Models.Traject.TrajectSjabloonListVm
+@{
+    ViewData["Title"] ??= "Trajectsjablonen";
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+}
+
+<div class="row justify-content-between align-items-center pt-2 mb-3">
+    <div class="col-sm-auto">
+        <h1 class="font-weight-bold mb-0">Trajectsjablonen</h1>
+        <h5 class="text-muted mt-0">Standaardtrajecten met fases en mijlpalen per projecttype</h5>
+    </div>
+    <div class="col-sm-auto">
+        <a asp-action="Nieuw" class="btn btn-primary"><i class="bx bx-plus"></i> Nieuw sjabloon</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Naam</th><th>Projecttype</th><th>Fases</th><th>Mijlpalen</th>
+                    <th>In gebruik</th><th>Status</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var s in Model.Sjablonen)
+            {
+                var aantalFases = s.Fases?.Count ?? 0;
+                var aantalMijlpalen = s.Fases?.Sum(f => f.Mijlpalen?.Count ?? 0) ?? 0;
+                Model.AantalTrajectenPerSjabloon.TryGetValue(s.Id, out var inGebruik);
+                <tr>
+                    <td>
+                        <strong>@s.Naam</strong>
+                        @if (s.IsStandaard) { <span class="badge bg-primary ms-1">standaard</span> }
+                    </td>
+                    <td>@(s.ProjectType == 1 ? "Woonproject" : s.ProjectType == 2 ? "Commercieel" : "Alle")</td>
+                    <td>@aantalFases</td>
+                    <td>@aantalMijlpalen</td>
+                    <td>@inGebruik</td>
+                    <td>@(s.IsActief ? "Actief" : "Inactief")</td>
+                    <td class="text-end text-nowrap">
+                        <a asp-action="Bewerken" asp-route-id="@s.Id" class="btn btn-xs btn-default"><i class="bx bx-edit"></i> Bewerken</a>
+                        <form method="post" asp-action="Verwijderen" asp-route-id="@s.Id" class="d-inline"
+                              onsubmit="return confirm('Dit sjabloon verwijderen? Als er trajecten aan hangen wordt het gedeactiveerd.');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bx bx-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Sjablonen.Count == 0)
+            {
+                <tr><td colspan="7" class="text-muted text-center py-4">Nog geen sjablonen.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

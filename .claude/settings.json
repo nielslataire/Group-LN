@@ -674,7 +674,20 @@
       "Bash(grep -iv \"// \")",
       "Bash(grep -n \"jquery-mask\\\\|jquery.mask\\\\|\\\\.mask\\(\\\\|Phonemask\\\\|Currencymask\\\\|CurrencyMask\\\\|initCoOwner\\\\|addCoOwner\\\\|coOwnerRow\\\\|coownerContainer\\\\|BlankCoOwnerRow\\\\|\\\\$\\(document\\).ready\\\\|\\\\$\\(function\" e:/TFS/CPMCore/Views/Klanten/AddClientAccount.cshtml)",
       "Bash(awk 'NR>=1000 && NR<=1098 && /public .*\\(ActionResult|PartialViewResult|IActionResult\\)/' e:/TFS/CPMCore/Controllers/KlantenController.cs)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(dotnet --version)",
+      "Bash(timeout 300 dotnet build DALCore/DALCore.csproj -v q --nologo)",
+      "Bash(awk '/modelBuilder.Entity<Project>\\\\\\(entity =>/{found=1} found{print NR\": \"$0; c++} c>25{exit}' DALCore/Models/cpmRunningContext.cs)",
+      "Bash(timeout 300 dotnet build BOCore/BOCore.vbproj -v q --nologo)",
+      "Bash(timeout 300 dotnet build FacadeCore/FacadeCore.csproj -v q --nologo)",
+      "Bash(timeout 300 dotnet build ServiceCore/ServiceCore.csproj -v q --nologo)",
+      "Bash(timeout 600 dotnet build CPMCore/CPMCore.csproj -v q --nologo)",
+      "Bash(timeout 600 dotnet build Copro.sln -v q --nologo)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(grep -n \"Mijlpaal\\\\` \\(instantie\\)\\\\|### Instantielaag\\\\|| \\\\`Mijlpaal\\\\` |\\\\|Per-unit\\\\|per unit\\\\|per eenheid\\\\|UnitId\\\\|increment-roadmap\\\\|## Increment-roadmap\" C:/Users/latni/.claude/plans/cd-cpmcore-tender-pizza.md)",
+      "Read(//c/Users/latni/.claude/plans/**)",
+      "Bash(sed -i 's/`032_TrajectTriggers.sql`/`033_TrajectTriggers.sql`/; s/`033_TrajectDossierCore.sql`/`034_TrajectDossierCore.sql`/; s/reuse `033` \\(+ lookup-seed\\)/reuse `034` \\(+ lookup-seed\\)/; s/`034_ProjectTaak.sql`/`035_ProjectTaak.sql`/; s/`035_TrajectPermissions.sql`, `036_TrajectIndexes.sql`/`036_TrajectPermissions.sql`/' cd-cpmcore-tender-pizza.md)",
+      "Bash(grep -n \"TrajectTriggers.sql\\\\|TrajectDossierCore.sql\\\\|ProjectTaak.sql\\\\|TrajectPermissions.sql\\\\|reuse \\\\`034\\\\`\" cd-cpmcore-tender-pizza.md)"
     ],
     "additionalDirectories": [
       "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",

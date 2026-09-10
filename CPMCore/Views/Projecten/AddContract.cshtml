@@ -657,7 +657,7 @@
 					type: 'POST',
 					dataType: 'json',
 					delay: 250,
-					data: params => ({ term: params.term }),
+					data: params => ({ term: params.term, activeOnly: true }),
 					processResults: data => {
 						const results = $.map(data, item => ({ id: item.id, text: item.text, vat: item.extra }));
 						results.push({ id: '__new__', text: 'Nieuwe leverancier toevoegen' });

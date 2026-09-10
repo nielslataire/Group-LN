@@ -14,7 +14,7 @@ namespace FacadeCore
         GetResponse<CompanyBO> GetCompanyBySearchfilter(CompanyFilter filter);
         string GetCompanyNameById(int id);
         string GetCompanyNameByContractId(int id);
-        GetResponse<SelectBO> GetCompanyForSearchList(string searchterm);
+        GetResponse<SelectBO> GetCompanyForSearchList(string searchterm, bool activeOnly = false);
         Response InsertUpdate(CompanyBO company);
         Response Delete(List<int> ids);
         Response Delete(List<CompanyBO> bos);

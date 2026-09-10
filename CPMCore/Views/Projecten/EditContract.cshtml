@@ -402,6 +402,43 @@
 		$(function () {
 
 			// ==============================
+			// LEVERANCIER ZOEKEN (enkel actieve bedrijven)
+			// ==============================
+			if ($('#ddlCompany').length) {
+				$('#ddlCompany').select2({
+					theme: 'bootstrap',
+					minimumInputLength: 3,
+					width: '100%',
+					placeholder: "Typ om een leverancier te zoeken...",
+					allowClear: true,
+					language: "nl",
+					ajax: {
+						url: '@Url.Action("GetCompanys", "Projecten")',
+						type: 'POST',
+						dataType: 'json',
+						delay: 250,
+						data: params => ({ term: params.term, activeOnly: true }),
+						processResults: data => ({
+							results: $.map(data, item => ({ id: item.id, text: item.text }))
+						}),
+						cache: true
+					}
+				});
+
+				$('#ddlCompany').on('select2:select', function (e) {
+					const selected = e.params && e.params.data;
+					if (!selected || !selected.id) return;
+					$('#txtCompanyID').val(selected.id);
+					LoadSiteManagers(selected.id, '#ddlSiteManager');
+				});
+
+				$('#ddlCompany').on('select2:clear', function () {
+					$('#txtCompanyID').val('0');
+					$('#ddlSiteManager').empty().append(new Option('Geen', '', false, false));
+				});
+			}
+
+			// ==============================
 			// ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
 			// ==============================
 			$("#lstActivities").select2({

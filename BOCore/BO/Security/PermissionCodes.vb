@@ -34,6 +34,10 @@ Public NotInheritable Class PermissionCodes
     Public Const ProjectsVerkoop As String = "Projects.Verkoop"
     Public Const ProjectsForSale As String = "Projects.ForSale"
     Public Const ProjectsContacts As String = "Projects.Contacts"
+    Public Const ProjectsTraject As String = "Projects.Traject"
+    Public Const ProjectsDossiers As String = "Projects.Dossiers"
+    Public Const MijnTaken As String = "MijnTaken"
+    Public Const PortfolioDeadlines As String = "PortfolioDeadlines"
 
     Public Const Invoicing As String = "Invoicing"
     Public Const InvoicingByBillingCompany As String = "Invoicing.ByBillingCompany"
@@ -59,6 +63,7 @@ Public NotInheritable Class PermissionCodes
     Public Const SettingsAutomatisatie As String = "Settings.Automatisatie"
     Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"
     Public Const SettingsMarketDataStatus As String = "Settings.MarketDataStatus"
+    Public Const SettingsTrajectSjablonen As String = "Settings.TrajectSjablonen"
 
     ' Marktanalyse
     Public Const Marktanalyse As String = "Marktanalyse"
