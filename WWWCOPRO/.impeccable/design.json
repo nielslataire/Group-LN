@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T00:00:00Z",
+  "title": "Design System: Group LN — Public Site",
+  "extensions": {
+    "colorMeta": {
+      "deep-green": {
+        "role": "primary",
+        "displayName": "Deep Green",
+        "canonical": "#00532D",
+        "tonalRamp": ["#031a10", "#04331f", "#00532D", "#0a6a3d", "#2f8a5c", "#6bad8a", "#a9cebc", "#dcebe3"]
+      },
+      "warm-gold": {
+        "role": "secondary",
+        "displayName": "Warm Gold",
+        "canonical": "#C9A96E",
+        "tonalRamp": ["#3a2c14", "#5c4622", "#856637", "#a9854e", "#C9A96E", "#d9c091", "#e9dabb", "#f7efdf"]
+      },
+      "near-black-green": {
+        "role": "neutral",
+        "displayName": "Near-Black Green",
+        "canonical": "#2C3B2A",
+        "tonalRamp": ["#141a13", "#1f291d", "#2C3B2A", "#465943", "#6d8168", "#9aac96", "#c6d3c3", "#e8eee6"]
+      },
+      "warm-offwhite": {
+        "role": "neutral",
+        "displayName": "Warm Off-White",
+        "canonical": "#F2F5EF",
+        "tonalRamp": ["#6c7168", "#899080", "#a7ae9d", "#c3c9bb", "#dde2d6", "#eaefe4", "#F2F5EF", "#fbfcf9"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "canonical": "#5A6B58",
+        "tonalRamp": ["#222a21", "#333f31", "#455343", "#5A6B58", "#788870", "#9bab93", "#c1cdbb", "#e5eae1"]
+      },
+      "brick-red": {
+        "role": "status",
+        "displayName": "Brick Red",
+        "canonical": "#C0392B",
+        "tonalRamp": ["#3d0f0a", "#5f1811", "#87261b", "#a83024", "#C0392B", "#d46c60", "#e6a9a1", "#FDF1F0"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Home hero headline and the largest page-hero titles. Playfair Display 500, ~39px, scaling to ~30px on phones." },
+      "headline": { "displayName": "Headline", "purpose": "Section headlines on content pages and the footer quote. Playfair Display 500, ~34px." },
+      "title": { "displayName": "Title", "purpose": "Sub-section headers and card/list-item titles. Playfair Display 600, ~19px." },
+      "body": { "displayName": "Body", "purpose": "Paragraph text and form values. Avenir 400, 16px, line-height 1.7." },
+      "label": { "displayName": "Label", "purpose": "Section kickers, footer column titles, button text, nav links. Avenir 700 UPPERCASE, 10-13px, letter-spacing 1-2.6px." }
+    },
+    "shadows": [
+      { "name": "cta-lift", "value": "0 10px 30px rgba(0, 0, 0, 0.28)", "purpose": "Under the white hero CTA sitting on photo/video so it reads as foremost and pressable. Deepens to 0 14px 34px on hover with translateY(-2px)." },
+      { "name": "card-hover", "value": "0 6px 24px rgba(0, 0, 0, 0.09)", "purpose": "Content cards are near-flat at rest and rise to this (up to 0 16px 40px rgba(0,0,0,0.12)) on hover, paired with a small translateY." },
+      { "name": "card-rest-soft", "value": "0 8px 32px rgba(0, 0, 0, 0.10)", "purpose": "Optional faint resting shadow on some standalone content cards (e.g. About)." },
+      { "name": "overlay", "value": "0 16px 40px rgba(0, 0, 0, 0.45)", "purpose": "Structural depth for elements that truly float: hero search dropdowns, the navigation overlay panel, modals." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions and the scroll-cue hint loop." },
+      { "name": "hover-fast", "value": "0.15s ease", "purpose": "Button background/border and hover feedback." },
+      { "name": "reveal", "value": "opacity 0.95s ease, transform 0.95s ease", "purpose": "Scroll-reveal entrance for .reveal blocks (from opacity:0 translateY(24px)); staggered 100ms per sibling, capped at 4, gated behind html.js-reveal and prefers-reduced-motion: no-preference." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "576px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "992px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (solid green)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on content pages, e.g. \"Neem contact op\".",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Neem contact op <svg viewBox=\"0 0 16 16\" width=\"12\" height=\"12\" aria-hidden=\"true\"><path d=\"M1 8h12M9 3l5 5-5 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></a>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 10px; padding: 16px 28px; border-radius: 6px; background: var(--color-primary, #00532D); color: #fff; font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; transition: background 0.25s ease; } .ds-btn-primary:hover { background: var(--color-primary-hover, #006638); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-cta, #C9A96E); outline-offset: 2px; box-shadow: 0 0 0 4px var(--groen-diep, #2C3B2A); } .ds-btn-primary svg { transition: transform 0.18s ease; } .ds-btn-primary:hover svg { transform: translateX(3px); }"
+    },
+    {
+      "name": "Light Button (primary CTA over media)",
+      "kind": "button",
+      "refersTo": "button-light",
+      "description": "The hero's primary call-to-action, white on the video, lifting on a soft shadow.",
+      "html": "<a class=\"ds-btn-light\" href=\"#\">Bekijk ons aanbod te koop <svg viewBox=\"0 0 16 16\" width=\"12\" height=\"12\" aria-hidden=\"true\"><path d=\"M1 8h12M9 3l5 5-5 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></a>",
+      "css": ".ds-btn-light { display: inline-flex; align-items: center; gap: 10px; padding: 16px 30px; border-radius: 4px; background: #fff; color: var(--groen-diep, #2C3B2A); font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; text-decoration: none; box-shadow: 0 10px 30px rgba(0,0,0,0.28); transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease; } .ds-btn-light:hover { background: var(--color-cta, #C9A96E); transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,0,0,0.32); } .ds-btn-light:focus-visible { outline: 2px solid var(--color-cta, #C9A96E); outline-offset: 2px; box-shadow: 0 0 0 4px var(--groen-diep, #2C3B2A); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary link on content pages, e.g. \"Meer over Group LN\". Inverts to a green fill on hover.",
+      "html": "<a class=\"ds-btn-outline\" href=\"#\">Meer over Group LN <svg viewBox=\"0 0 16 16\" width=\"12\" height=\"12\" aria-hidden=\"true\"><path d=\"M1 8h12M9 3l5 5-5 5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></a>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border: 1.5px solid var(--groen-diep, #2C3B2A); border-radius: 6px; background: transparent; color: var(--groen-diep, #2C3B2A); font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease; } .ds-btn-outline:hover { background: var(--color-primary, #00532D); border-color: var(--color-primary, #00532D); color: #fff; } .ds-btn-outline:focus-visible { outline: 2px solid var(--color-cta, #C9A96E); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button (secondary over media)",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "The hero's quieter secondary action beside the white CTA — opens the search bar.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\"><svg viewBox=\"0 0 16 16\" width=\"13\" height=\"13\" aria-hidden=\"true\"><circle cx=\"7\" cy=\"7\" r=\"5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/><path d=\"M11 11l4 4\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg> Zoek in het aanbod</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 10px; padding: 16px 24px; border: 1px solid rgba(255,255,255,0.55); border-radius: 4px; background: rgba(255,255,255,0.06); color: #fff; font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-ghost:hover, .ds-btn-ghost[aria-expanded=\"true\"] { background: rgba(255,255,255,0.14); border-color: #fff; } .ds-btn-ghost:focus-visible { outline: 2px solid var(--color-cta, #C9A96E); outline-offset: 2px; }"
+    },
+    {
+      "name": "Round Menu Button",
+      "kind": "button",
+      "refersTo": "icon-button-round",
+      "description": "The navigation menu toggle — a round brass icon button, present at every width; the only nav affordance below 992px.",
+      "html": "<button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Menu openen\"><svg viewBox=\"0 0 20 16\" width=\"20\" height=\"16\" aria-hidden=\"true\"><path d=\"M0 1.25h20M0 8h20M0 14.75h20\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-icon-btn { width: 46px; height: 46px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--color-cta, #C9A96E); color: var(--groen-diep, #2C3B2A); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12); cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; } .ds-icon-btn:hover { background: var(--color-cta-hover, #B8935A); } .ds-icon-btn:active { transform: translateY(1px); } .ds-icon-btn:focus-visible { outline: 2px solid var(--color-cta, #C9A96E); outline-offset: 2px; box-shadow: 0 0 0 4px var(--groen-diep, #2C3B2A); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Contact / application form field. Border-shift + faint green wash on focus, no glow.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Naam</span><input class=\"ds-input\" type=\"text\" placeholder=\"Uw naam\"></label>",
+      "css": ".ds-field { display: block; } .ds-field-label { display: block; font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.8px; color: var(--tekst-sub, #5A6B58); margin-bottom: 8px; } .ds-input { width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid var(--border, rgba(0,83,45,0.10)); border-radius: 3px; background: #fff; color: var(--groen-diep, #2C3B2A); font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 16px; } .ds-input::placeholder { color: var(--tekst-sub, #5A6B58); opacity: 0.6; } .ds-input:focus { outline: none; border-color: var(--color-primary, #00532D); background: rgba(0,83,45,0.03); } .ds-input.ds-invalid { border-color: #C0392B; }"
+    },
+    {
+      "name": "Content Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White card on the warm off-white canvas; near-flat at rest, lifts on hover.",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card-title\">Vakmanschap</h3><p class=\"ds-card-body\">Onze zaakvoerders stonden zelf jarenlang als werfleider en projectleider op de werf.</p></article>",
+      "css": ".ds-card { background: #fff; border: 1px solid var(--border, rgba(0,83,45,0.10)); border-radius: 3px; padding: 24px; transition: box-shadow 0.22s ease, transform 0.22s ease; } .ds-card:hover { box-shadow: 0 16px 40px rgba(0,0,0,0.12); transform: translateY(-3px); } .ds-card-title { margin: 0 0 10px; font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 19px; color: var(--groen-diep, #2C3B2A); } .ds-card-body { margin: 0; font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.65; color: var(--tekst-sub, #5A6B58); }"
+    },
+    {
+      "name": "Section Kicker",
+      "kind": "custom",
+      "refersTo": "section-kicker",
+      "description": "The uppercase Avenir-700 label above almost every section heading. Green on light, gold on dark.",
+      "html": "<p class=\"ds-kicker\">Onze troeven</p><h2 class=\"ds-kicker-heading\">Eén partner, van eerste ontwerp tot laatste afwerkingsdetail.</h2>",
+      "css": ".ds-kicker { margin: 0 0 16px; font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2.6px; color: var(--color-primary, #00532D); } .ds-kicker-heading { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: 34px; line-height: 1.2; color: var(--groen-diep, #2C3B2A); max-width: 640px; }"
+    },
+    {
+      "name": "Navigation Overlay Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "A link inside the full Deep Green navigation overlay opened by the menu button.",
+      "html": "<nav class=\"ds-navpanel\"><a href=\"#\">Woonprojecten</a><a href=\"#\" class=\"is-active\">Grond aanbieden</a><a href=\"#\">Blog</a><a href=\"#\">Contact</a></nav>",
+      "css": ".ds-navpanel { background: var(--color-primary, #00532D); padding: 24px; display: flex; flex-direction: column; } .ds-navpanel a { padding: 16px 0; font-family: 'Avenir', 'Open Sans', system-ui, sans-serif; font-size: 22px; color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.15); } .ds-navpanel a:last-child { border-bottom: 0; } .ds-navpanel a:hover, .ds-navpanel a.is-active { color: var(--color-cta, #C9A96E); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Pine & Brass",
+    "overview": "The Group LN public site is built from two materials. A deep pine green does almost all the structural work — header, footer, primary buttons, links, and the small tracked labels that head every section. Against it sits exactly one accent: a warm brass-gold, used sparingly for the things that must be noticed first — a call-to-action over a photograph, the round menu button, a focus ring, a hover state on an otherwise quiet outline. Everything else is warm neutral: pages rest on a green-tinted off-white, never pure white and never cool grey, and text is a near-black green rather than true black. The result should feel like worked timber and aged metal — grounded, warm, and unhurried.\n\nThe type carries the warmth. Playfair Display sets every heading — high-contrast, slightly old-world, confident at large sizes — while Avenir handles body copy and the uppercase labels with a clean, humanist calm. Headings are large and set in medium weight (500); the drama comes from scale and the serif's own contrast, not from weight. Body text runs generous and airy (16px, line-height 1.7).\n\nComponents lean warm and tactile. Buttons carry real vertical padding, primary actions over imagery lift on a genuine soft shadow, cards raise slightly on hover, and the recurring round brass icon button reads as a physical control. Depth is used, not avoided — but it is quiet: hairline green borders separate most surfaces, and a heavy shadow is reserved for things that genuinely float. The site is implemented on a heavily-overridden Okler/Porto admin theme; that theme is the substrate, not the identity.",
+    "keyCharacteristics": [
+      "Two-material identity: deep pine green structure + one warm-gold accent, nothing else saturated.",
+      "Warm neutrals only — green-tinted off-white page (#F2F5EF), near-black-green text, hairline green borders. No cool blue-grey.",
+      "Playfair Display headings at medium weight; Avenir body and uppercase tracked labels.",
+      "A small uppercase kicker heads most sections — an established, deliberate convention here.",
+      "Near-flat surfaces with a tactile touch: soft lift on primary CTAs and hovered cards; structural shadow only for floating layers.",
+      "Base corner radius 3px; bespoke marketing components soften to 4–8px; icon buttons and avatars are fully round.",
+      "Solid pine-green header (transparent over the home hero) and a solid pine-green footer."
+    ],
+    "rules": [
+      { "name": "The Two-Material Rule", "body": "Deep Green and Warm Gold are the only saturated colours on any screen. Green is structure and default action; gold is the one thing to look at first. A third saturated colour is either a validation error (Brick Red) or a mistake.", "section": "colors" },
+      { "name": "The Warm-Neutral Rule", "body": "Every neutral leans warm and green. Reach for Warm Off-White and the green Hairline before any cool #f1f5f9-family grey. The page is never pure white.", "section": "colors" },
+      { "name": "The Gold-Is-Rare Rule", "body": "If gold appears more than about once per viewport of content, it has stopped meaning \"look here\". Kickers on light backgrounds are green, not gold; gold kickers are only for dark/photographic backgrounds.", "section": "colors" },
+      { "name": "The Medium-Weight Heading Rule", "body": "Headings are Playfair at 500. Do not reach for 700/800 or a second family for emphasis — go up in size, or let the serif's own contrast carry it.", "section": "typography" },
+      { "name": "The Uppercase-Label Rule", "body": "Small tracked uppercase text is always Avenir 700. It is the only place tracking is used; body and headings are set at normal spacing.", "section": "typography" },
+      { "name": "The Warm-Canvas Rule", "body": "Page background is always Warm Off-White (#F2F5EF). Cards and panels are white on top of it; the tonal step plus a hairline border is what separates them.", "section": "layout" },
+      { "name": "The Float-Earns-Shadow Rule", "body": "A heavy (Overlay-strength) shadow means the element literally floats above the page — a menu, a dropdown, a dialog. Resting content gets a hairline border and, at most, the soft Card-hover lift on interaction.", "section": "elevation" },
+      { "name": "The 3-to-8 Rule", "body": "Corners run 3px (theme base) → 4–6px (bespoke marketing buttons and sections) → 8px (floating panels). Nothing in between drifts to a random one-off value, and nothing that isn't a round icon button or avatar becomes a pill.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep Deep Green (#00532D) as the structural colour and Warm Gold (#C9A96E) as the single accent — about one gold mark per viewport.",
+      "Do put every page on the Warm Off-White canvas (#F2F5EF); white is for cards and panels on top of it.",
+      "Do set headings in Playfair Display at weight 500 and build hierarchy by size, not weight.",
+      "Do head new sections with the uppercase Avenir-700 kicker — green on light, gold on dark.",
+      "Do separate resting surfaces with the 1px green Hairline; reserve heavy shadows for menus, dropdowns and dialogs.",
+      "Do give buttons real vertical padding (14–16px) and let primary CTAs over imagery carry the soft lift shadow and a translateY(-2px) hover.",
+      "Do use Brick Red (#C0392B / tint #FDF1F0) for form validation — never stock Bootstrap red.",
+      "Do keep corners in the 3 → 6 → 8px range; only round icon buttons and avatars are circular.",
+      "Do keep every target ≥44px and every screen usable at 360px — on-site phone use is first-class."
+    ],
+    "donts": [
+      "Don't introduce a third saturated colour, a gradient wash on a content surface, or gold as decoration.",
+      "Don't use cool blue-grey neutrals (#f1f5f9 family) or pure white page backgrounds.",
+      "Don't set headings bold (700+), in a second family, or with letter-spacing — tracking belongs only to the uppercase labels.",
+      "Don't put a glow/box-shadow on a focused input; the border-shift + faint green wash is the focus treatment.",
+      "Don't let the underlying Porto/Okler theme show through — no section-*-scale-* bands, revolution-slider chrome, template card shadows, or its cool greys.",
+      "Don't give the desktop nav a fifth link; overflow goes into the menu overlay.",
+      "Don't animate section entrances outside the .reveal system, and always leave the prefers-reduced-motion path intact."
+    ]
+  }
+}
