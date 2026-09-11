@@ -38,6 +38,7 @@
 					var canSeeNews         = PermissionService.HasRead(PermissionCodes.ProjectsNews);
 					var canSeeUnits        = PermissionService.HasRead(PermissionCodes.ProjectsUnits);
 					var canSeeTraject      = PermissionService.HasRead(PermissionCodes.ProjectsTraject);
+					var canSeeDossiers     = PermissionService.HasRead(PermissionCodes.ProjectsDossiers);
 					var canSeeIssues       = PermissionService.HasRead(PermissionCodes.ProjectsIssues);
 					var canSeeDocs         = PermissionService.HasRead(PermissionCodes.ProjectsDocuments);
 					var canSeeInsurances   = PermissionService.HasRead(PermissionCodes.ProjectsInsurances);
@@ -134,6 +135,15 @@
 								<a href="@Url.Action("Index", "ProjectTraject", new { projectId = projectId })"
 								   class="menu-item @(currentController == "ProjectTraject" ? "active" : "")">
 									<span>Traject</span>
+								</a>
+							</li>
+						}
+						@if (canSeeDossiers)
+						{
+							<li>
+								<a href="@Url.Action("Index", "ProjectDossiers", new { projectId = projectId })"
+								   class="menu-item @(currentController == "ProjectDossiers" ? "active" : "")">
+									<span>Dossiers</span>
 								</a>
 							</li>
 						}

@@ -118,6 +118,24 @@
 							<span class="main-nav-label">Dashboard</span>
 						</a>
 					</li>
+					@if (PermissionService.HasRead(PermissionCodes.MijnTaken))
+					{
+						<li class="@(currentController == "MijnTaken" ? "nav-active" : string.Empty)">
+							<a class="main-nav-tile" href="@Url.Action("Index", "MijnTaken")">
+								<i class="bx bx-task" aria-hidden="true"></i>
+								<span class="main-nav-label">Mijn taken</span>
+							</a>
+						</li>
+					}
+					@if (PermissionService.HasRead(PermissionCodes.PortfolioDeadlines))
+					{
+						<li class="@(currentController == "Deadlines" ? "nav-active" : string.Empty)">
+							<a class="main-nav-tile" href="@Url.Action("Index", "Deadlines")">
+								<i class="bx bx-calendar-check" aria-hidden="true"></i>
+								<span class="main-nav-label">Deadlines</span>
+							</a>
+						</li>
+					}
 					@if (canSeeLeveranciers)
 					{
 						<li class="nav-parent @(currentController == "Leveranciers" ? "nav-active" : string.Empty)">
@@ -199,7 +217,7 @@
 					}
 					@if (canSeeInstellingen)
 				{
-					<li class="@(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" || currentController == "BlogBeheer" || currentController == "HomeHeroProject" || currentController == "VacatureBeheer" ? "nav-active" : string.Empty)">
+					<li class="@(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" || currentController == "BlogBeheer" || currentController == "HomeHeroProject" || currentController == "VacatureBeheer" || currentController == "CookieConsentStats" ? "nav-active" : string.Empty)">
 						<a class="main-nav-tile" href="@Url.Action("Index", "Instellingen")">
 							<i class="bx bx-cog" aria-hidden="true"></i>
 							<span class="main-nav-label">Instellingen</span>

@@ -25,6 +25,10 @@ public sealed class TrajectBronContext
     public int OpenIssuesTotaal { get; init; }
     public bool HeeftConnectionSettlement { get; init; }
     public DateOnly? LaatsteConnectionSettlement { get; init; }
+    /// <summary>Dossiers van dit project, per Id (voor de <c>Dossier</c>-binding).</summary>
+    public Dictionary<int, ProjectDossier> DossiersById { get; init; } = new();
+    /// <summary>Checklist-stappen per dossier-Id (voor de <c>DossierSubstap</c>-binding).</summary>
+    public Dictionary<int, List<ProjectDossierSubstap>> SubstappenPerDossier { get; init; } = new();
 }
 
 /// <summary>Leidt de status/werkelijke datum van een mijlpaal af uit bestaande records (read-only).</summary>

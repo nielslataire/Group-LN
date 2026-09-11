@@ -22,6 +22,15 @@
     ViewData("ogurl") = "https://www.groupln.be/blog/" & canonicalSlug
     ViewData("canonical") = "https://www.groupln.be/blog/" & canonicalSlug
     Layout = "~/Views/Shared/_Layout.vbhtml"
+
+    ' BlogPosting-structured data — helpt Google vertrouwen dat onze eigen titel/omschrijving
+    ' kloppen i.p.v. zelf iets uit de pagina te herschrijven. Waarden komen uit vrij CMS-veld
+    ' -tekst, dus escapen vóór ze in de JSON-string belanden (zelfde patroon als de
+    ' Organization-JSON-LD op de homepage).
+    Dim jsonLdHeadline As String = titel.Replace("\", "\\").Replace(Chr(34), "\" & Chr(34))
+    Dim jsonLdDescription As String = If(metaDescStr, "").Replace("\", "\\").Replace(Chr(34), "\" & Chr(34))
+    Dim jsonLdImage As String = CStr(ViewData("ogimage")).Replace("\", "\\").Replace(Chr(34), "\" & Chr(34))
+    Dim jsonLdUrl As String = CStr(ViewData("canonical")).Replace("\", "\\").Replace(Chr(34), "\" & Chr(34))
 End Code
 
 @section PageMeta
@@ -42,6 +51,27 @@ End Code
             <meta name="ICBM" content="@Model.GeoPositie.Replace(";", ", ")" />
         </text>
     End If
+    @* Voorvertoning (?prev=token) mag nooit indexeren, mocht een link ooit lekken. *@
+    @If ViewData("IsVoorvertoning") IsNot Nothing Then
+        @<meta name="robots" content="noindex, nofollow" />
+    End If
+    <script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@type": "BlogPosting",
+      "mainEntityOfPage": { "@@type": "WebPage", "@@id": "@Html.Raw(jsonLdUrl)" },
+      "headline": "@Html.Raw(jsonLdHeadline)",
+      "description": "@Html.Raw(jsonLdDescription)",
+      "image": "@Html.Raw(jsonLdImage)",
+      "datePublished": "@Model.Datum.ToString("yyyy-MM-dd")",
+      "author": { "@@type": "Organization", "name": "Group LN" },
+      "publisher": {
+        "@@type": "Organization",
+        "name": "Group LN",
+        "logo": { "@@type": "ImageObject", "url": "https://www.groupln.be/Content/img/logoimg.jpg" }
+      }
+    }
+    </script>
 End Section
 
 @section PageStyle
@@ -67,7 +97,7 @@ End If
         <ul class="breadcrumb">
             <li><a href="@Url.Action("Index", "Home")">Home</a></li>
             <li><a href="@Url.RouteUrl("Blog")">Blog</a></li>
-            <li class="active">@Model.Titel</li>
+            <li class="active">@titel</li>
         </ul>
         <h1 class="artikel-titel">@titel</h1>
         <div class="artikel-meta">
@@ -200,16 +230,16 @@ End If
                 </a>
                 <div class="artikel-delen">
                     <span class="artikel-delen-label">Delen</span>
-                    <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.groupln.be/Blog/@Model.Slug" target="_blank" rel="noopener" class="artikel-deel-btn" title="Delen via Facebook" aria-label="Delen via Facebook">
+                    <a href="https://www.facebook.com/sharer/sharer.php?u=https://www.groupln.be/blog/@canonicalSlug" target="_blank" rel="noopener" class="artikel-deel-btn" title="Delen via Facebook" aria-label="Delen via Facebook">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                     </a>
-                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.groupln.be/Blog/@Model.Slug" target="_blank" rel="noopener" class="artikel-deel-btn" title="Delen via LinkedIn" aria-label="Delen via LinkedIn">
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://www.groupln.be/blog/@canonicalSlug" target="_blank" rel="noopener" class="artikel-deel-btn" title="Delen via LinkedIn" aria-label="Delen via LinkedIn">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
                     </a>
-                    <a href="https://wa.me/?text=https://www.groupln.be/Blog/@Model.Slug" target="_blank" rel="noopener" class="artikel-deel-btn" title="Delen via WhatsApp" aria-label="Delen via WhatsApp">
+                    <a href="https://wa.me/?text=https://www.groupln.be/blog/@canonicalSlug" target="_blank" rel="noopener" class="artikel-deel-btn" title="Delen via WhatsApp" aria-label="Delen via WhatsApp">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.123 1.532 5.852L0 24l6.338-1.51A11.954 11.954 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.807 9.807 0 0 1-5.031-1.388l-.36-.214-3.732.889.934-3.62-.235-.372A9.808 9.808 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
                     </a>
-                    <a href="mailto:?subject=@Uri.EscapeDataString(titel)&body=https://www.groupln.be/Blog/@Model.Slug" class="artikel-deel-btn" title="Delen via e-mail" aria-label="Delen via e-mail">
+                    <a href="mailto:?subject=@Uri.EscapeDataString(titel)&body=https://www.groupln.be/blog/@canonicalSlug" class="artikel-deel-btn" title="Delen via e-mail" aria-label="Delen via e-mail">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     </a>
                     <button type="button" class="artikel-deel-btn" id="btnKopieer" title="Kopieer link" aria-label="Kopieer link">

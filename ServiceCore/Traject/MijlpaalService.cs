@@ -154,6 +154,12 @@ public class MijlpaalService : IMijlpaalService
     {
         var entity = await _db.Mijlpaal.FirstOrDefaultAsync(m => m.ProjecttrajectId == projecttrajectId && m.Id == id);
         if (entity == null) return false;
+
+        // FK_ProjectDossierMijlpaal_Mijlpaal is NO ACTION (dubbel cascade-pad via ProjectDossier
+        // vermeden) — koppelingen dus zelf opruimen vóór het verwijderen van de mijlpaal.
+        var koppelingen = await _db.ProjectDossierMijlpaal.Where(x => x.MijlpaalId == id).ToListAsync();
+        if (koppelingen.Count > 0) _db.ProjectDossierMijlpaal.RemoveRange(koppelingen);
+
         _db.Mijlpaal.Remove(entity);
         await _db.SaveChangesAsync();
         return true;
@@ -175,6 +181,38 @@ public class MijlpaalService : IMijlpaalService
             Opmerking = comment
         });
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<List<Mijlpaal>> SearchPortfolio(IEnumerable<int> projectIds, MijlpaalFilterBO f)
+    {
+        var ids = projectIds.ToList();
+        var q = _db.Mijlpaal
+            .Include(m => m.ProjecttrajectFase)
+            .Include(m => m.Unit)
+            .Include(m => m.Projecttraject).ThenInclude(t => t.Project)
+            .Where(m => ids.Contains(m.Projecttraject.ProjectId));
+
+        if (f.ProjectId.HasValue) q = q.Where(m => m.Projecttraject.ProjectId == f.ProjectId.Value);
+        if (f.Status.HasValue) q = q.Where(m => m.Status == f.Status.Value);
+        if (f.FaseId.HasValue) q = q.Where(m => m.ProjecttrajectFaseId == f.FaseId.Value);
+        if (f.UnitId.HasValue) q = q.Where(m => m.UnitId == f.UnitId.Value);
+        if (f.AlleenProjectniveau == true) q = q.Where(m => m.UnitId == null);
+        else if (f.AlleenProjectniveau == false) q = q.Where(m => m.UnitId != null);
+        if (f.MijlpaalType.HasValue) q = q.Where(m => m.MijlpaalType == f.MijlpaalType.Value);
+        if (f.VerantwoordelijkeRol.HasValue) q = q.Where(m => m.VerantwoordelijkeRol == f.VerantwoordelijkeRol.Value);
+        if (!string.IsNullOrWhiteSpace(f.VerantwoordelijkeUserId)) q = q.Where(m => m.VerantwoordelijkeUserId == f.VerantwoordelijkeUserId);
+        if (f.AlleenVerplicht == true) q = q.Where(m => m.IsVerplicht);
+        if (f.Overdue == true)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            q = q.Where(m => m.Status != StatusBereikt && m.Status != StatusNvt
+                             && (m.Doeldatum ?? m.DoeldatumBerekend) != null
+                             && (m.Doeldatum ?? m.DoeldatumBerekend) < today);
+        }
+        if (!string.IsNullOrWhiteSpace(f.Text))
+            q = q.Where(m => m.Naam.Contains(f.Text) || (m.Opmerking ?? "").Contains(f.Text));
+
+        return await q.OrderBy(m => m.Doeldatum ?? m.DoeldatumBerekend ?? DateOnly.MaxValue).ThenBy(m => m.Volgorde).ToListAsync();
     }
 
     public Task<int> CountOverdue(IEnumerable<int> projectIds)

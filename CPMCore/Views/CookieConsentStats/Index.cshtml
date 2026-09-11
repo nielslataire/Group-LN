@@ -1,0 +1,40 @@
+@model CPMCore.Models.Instellingen.CookieConsentStatsVM
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle {
+    <style>
+        .ccs-period-title { font-weight: 700; font-size: 1.05rem; color: var(--ink, #222); margin-bottom: .25rem; }
+        .ccs-period-sub { font-size: .82rem; color: var(--text-muted, #8590a5); margin-bottom: 1rem; }
+        .ccs-note {
+            background: var(--mist-green, #e8f0eb);
+            border-radius: var(--radius, 7px);
+            padding: .85rem 1rem;
+            font-size: .85rem;
+            color: var(--ink, #222);
+            margin-bottom: 1.75rem;
+        }
+    </style>
+}
+
+<div class="ccs-note">
+    <i class="bx bx-info-circle me-1"></i>
+    Deze telling loopt los van Google Analytics: die laadt pas ná toestemming en kan dus nooit
+    meten wie weigert of geen keuze maakt. Hier telt elke weergave van de banner, elke klik op
+    "Alles aanvaarden" en elke klik op "Alles weigeren" apart mee — anoniem, zonder IP of
+    bezoekers-id. "Geen keuze" is het verschil tussen wat getoond werd en wat effectief
+    beantwoord is.
+</div>
+
+<section class="card mb-4">
+    <div class="card-body">
+        @await Html.PartialAsync("_Period", Model.Last30Days)
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-body">
+        @await Html.PartialAsync("_Period", Model.AllTime)
+    </div>
+</section>

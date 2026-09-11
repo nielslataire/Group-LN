@@ -114,7 +114,12 @@ namespace ServiceCore
             }
 
             entity.Titel             = bo.Titel;
-            entity.Slug              = string.IsNullOrWhiteSpace(bo.Slug) ? GenereerSlug(bo.Titel) : bo.Slug;
+            // Ook een handmatig ingetypte slug loopt door GenereerSlug(): anders overleven
+            // hoofdletters, spaties en accenten uit het vrije invoerveld (Bewerken.cshtml),
+            // terwijl sitemap/canonical elders enkel .ToLowerInvariant() toepassen — dat
+            // dicht alleen de casing, niet spaties/accenten/ongeldige tekens. GenereerSlug()
+            // is idempotent op een reeds-geldige slug, dus dit is veilig op bestaande waarden.
+            entity.Slug              = string.IsNullOrWhiteSpace(bo.Slug) ? GenereerSlug(bo.Titel) : GenereerSlug(bo.Slug);
             entity.PreviewTekst      = bo.PreviewTekst;
             entity.DetailTitel       = bo.DetailTitel;
             entity.DetailTitelTekst  = bo.DetailTitelTekst;

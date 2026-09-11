@@ -15,6 +15,7 @@ public partial class cpmRunningContext
     public virtual DbSet<TrajectSjabloonFase> TrajectSjabloonFase { get; set; }
     public virtual DbSet<TrajectSjabloonMijlpaal> TrajectSjabloonMijlpaal { get; set; }
     public virtual DbSet<TrajectSjabloonMijlpaalAfhankelijkheid> TrajectSjabloonMijlpaalAfhankelijkheid { get; set; }
+    public virtual DbSet<TrajectSjabloonMijlpaalTrigger> TrajectSjabloonMijlpaalTrigger { get; set; }
 
     // --- Instantie-laag ---
     public virtual DbSet<Projecttraject> Projecttraject { get; set; }
@@ -22,6 +23,8 @@ public partial class cpmRunningContext
     public virtual DbSet<Mijlpaal> Mijlpaal { get; set; }
     public virtual DbSet<MijlpaalHistoriek> MijlpaalHistoriek { get; set; }
     public virtual DbSet<MijlpaalAfhankelijkheid> MijlpaalAfhankelijkheid { get; set; }
+    public virtual DbSet<MijlpaalTrigger> MijlpaalTrigger { get; set; }
+    public virtual DbSet<MijlpaalTriggerRun> MijlpaalTriggerRun { get; set; }
 
     private void ConfigureTrajectEntities(ModelBuilder modelBuilder)
     {
@@ -84,6 +87,21 @@ public partial class cpmRunningContext
                 .HasForeignKey(d => d.VereistMijlpaalId)
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_SjabloonMijlpaalAfh_Vereist");
+        });
+
+        modelBuilder.Entity<TrajectSjabloonMijlpaalTrigger>(entity =>
+        {
+            entity.ToTable("TrajectSjabloonMijlpaalTrigger");
+            entity.Property(e => e.Omschrijving).HasMaxLength(300);
+            entity.Property(e => e.TriggerEvent).HasDefaultValue(0);
+            entity.Property(e => e.TriggerActie).HasDefaultValue(0);
+            entity.Property(e => e.MagProjectWijzigen).HasDefaultValue(false);
+            entity.Property(e => e.IsActief).HasDefaultValue(true);
+            entity.HasIndex(e => e.TrajectSjabloonMijlpaalId);
+            entity.HasOne(d => d.TrajectSjabloonMijlpaal).WithMany(p => p.Triggers)
+                .HasForeignKey(d => d.TrajectSjabloonMijlpaalId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_SjabloonMijlpaalTrigger_Mijlpaal");
         });
 
         // ---------------------------------------------------------------
@@ -187,6 +205,33 @@ public partial class cpmRunningContext
                 .HasForeignKey(d => d.VereistMijlpaalId)
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_MijlpaalAfhankelijkheid_Vereist");
+        });
+
+        modelBuilder.Entity<MijlpaalTrigger>(entity =>
+        {
+            entity.ToTable("MijlpaalTrigger");
+            entity.Property(e => e.TriggerEvent).HasDefaultValue(0);
+            entity.Property(e => e.TriggerActie).HasDefaultValue(0);
+            entity.Property(e => e.MagProjectWijzigen).HasDefaultValue(false);
+            entity.Property(e => e.IsActief).HasDefaultValue(true);
+            entity.HasIndex(e => e.MijlpaalId);
+            entity.HasOne(d => d.Mijlpaal).WithMany(p => p.Triggers)
+                .HasForeignKey(d => d.MijlpaalId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MijlpaalTrigger_Mijlpaal");
+        });
+
+        modelBuilder.Entity<MijlpaalTriggerRun>(entity =>
+        {
+            entity.ToTable("MijlpaalTriggerRun");
+            entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.Uitgevoerd).HasDefaultValueSql("(sysutcdatetime())");
+            entity.HasIndex(e => e.MijlpaalTriggerId);
+            entity.HasIndex(e => e.Uitgevoerd);
+            entity.HasOne(d => d.MijlpaalTrigger).WithMany(p => p.Runs)
+                .HasForeignKey(d => d.MijlpaalTriggerId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MijlpaalTriggerRun_Trigger");
         });
     }
 }

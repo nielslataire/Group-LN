@@ -134,6 +134,11 @@
 .about-media-foto {
     display: block;
     width: 100%;
+    /* height: auto is vereist naast de width/height-attributen op de <img> zelf
+       (toegevoegd tegen layout-shift): zonder deze regel wint het HTML height="1200"
+       -attribuut van width:100%, en krijg je een vaste 1200px-hoge foto ongeacht
+       kolombreedte. aspect-ratio berekent de juiste hoogte dan zelf uit de breedte. */
+    height: auto;
     aspect-ratio: 5 / 6;
     object-fit: cover;
 }

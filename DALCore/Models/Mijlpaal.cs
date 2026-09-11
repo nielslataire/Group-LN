@@ -85,4 +85,6 @@ public partial class Mijlpaal
     public virtual ICollection<MijlpaalHistoriek> Historiek { get; set; } = new List<MijlpaalHistoriek>();
 
     public virtual ICollection<MijlpaalAfhankelijkheid> Afhankelijkheden { get; set; } = new List<MijlpaalAfhankelijkheid>();
+
+    public virtual ICollection<MijlpaalTrigger> Triggers { get; set; } = new List<MijlpaalTrigger>();
 }

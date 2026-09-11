@@ -21,20 +21,23 @@ public class TrajectSjabloonService : ITrajectSjabloonService
     {
         IQueryable<TrajectSjabloon> q = _db.TrajectSjabloon;
         if (includeDetails)
-            q = q.Include(s => s.Fases.OrderBy(f => f.Volgorde)).ThenInclude(f => f.Mijlpalen.OrderBy(m => m.Volgorde));
+        {
+            q = q.Include(s => s.Fases.OrderBy(f => f.Volgorde)).ThenInclude(f => f.Mijlpalen.OrderBy(m => m.Volgorde))
+                 .ThenInclude(m => m.Triggers);
+        }
         return q.FirstOrDefaultAsync(s => s.Id == id)!;
     }
 
     public async Task<TrajectSjabloon?> GetStandaardVoorProjectType(int? projectType)
     {
         // 1) exacte match op projecttype, 2) type-onafhankelijk standaardsjabloon, 3) eender welk standaardsjabloon
-        return await _db.TrajectSjabloon.Include(s => s.Fases).ThenInclude(f => f.Mijlpalen)
+        return await _db.TrajectSjabloon.Include(s => s.Fases).ThenInclude(f => f.Mijlpalen).ThenInclude(m => m.Triggers)
                    .Where(s => s.IsActief && s.IsStandaard && s.ProjectType == projectType)
                    .OrderBy(s => s.Id).FirstOrDefaultAsync()
-               ?? await _db.TrajectSjabloon.Include(s => s.Fases).ThenInclude(f => f.Mijlpalen)
+               ?? await _db.TrajectSjabloon.Include(s => s.Fases).ThenInclude(f => f.Mijlpalen).ThenInclude(m => m.Triggers)
                    .Where(s => s.IsActief && s.IsStandaard && s.ProjectType == null)
                    .OrderBy(s => s.Id).FirstOrDefaultAsync()
-               ?? await _db.TrajectSjabloon.Include(s => s.Fases).ThenInclude(f => f.Mijlpalen)
+               ?? await _db.TrajectSjabloon.Include(s => s.Fases).ThenInclude(f => f.Mijlpalen).ThenInclude(m => m.Triggers)
                    .Where(s => s.IsActief && s.IsStandaard)
                    .OrderBy(s => s.Id).FirstOrDefaultAsync();
     }
@@ -83,7 +86,7 @@ public class TrajectSjabloonService : ITrajectSjabloonService
             int mVolgorde = 0;
             foreach (var mb in fb.Mijlpalen ?? new())
             {
-                fase.Mijlpalen.Add(new TrajectSjabloonMijlpaal
+                var mijlpaal = new TrajectSjabloonMijlpaal
                 {
                     Naam = (mb.Naam ?? string.Empty).Trim(),
                     Code = (mb.Code ?? string.Empty).Trim(),
@@ -98,7 +101,21 @@ public class TrajectSjabloonService : ITrajectSjabloonService
                     BronParam = mb.BronParam,
                     DossierKind = mb.DossierKind,
                     Omschrijving = mb.Omschrijving
-                });
+                };
+                foreach (var tb in mb.Triggers ?? new())
+                {
+                    mijlpaal.Triggers.Add(new TrajectSjabloonMijlpaalTrigger
+                    {
+                        TriggerEvent = tb.TriggerEvent,
+                        TriggerActie = tb.TriggerActie,
+                        OffsetDagen = tb.OffsetDagen,
+                        ActieParametersJson = tb.ActieParametersJson,
+                        MagProjectWijzigen = tb.MagProjectWijzigen,
+                        IsActief = tb.IsActief,
+                        Omschrijving = tb.Omschrijving
+                    });
+                }
+                fase.Mijlpalen.Add(mijlpaal);
             }
             entity.Fases.Add(fase);
         }

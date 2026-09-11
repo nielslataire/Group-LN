@@ -23,8 +23,34 @@ public class MijlpaalBindingResolver : IMijlpaalBindingResolver
             ComputedBinding.ConstructionIssue => ResolveConstructionIssue(m, ctx),
             ComputedBinding.ProjectVoortgangFase => ResolveVoortgangFase(m, ctx),
             ComputedBinding.ConnectionSettlement => ResolveConnectionSettlement(ctx),
-            _ => null // Handmatig, Dossier (increment 4), onbekend
+            ComputedBinding.Dossier => ResolveDossier(m, ctx),
+            ComputedBinding.DossierSubstap => ResolveDossierSubstap(m, ctx),
+            _ => null // Handmatig, onbekend
         };
+    }
+
+    private static BindingUitkomst? ResolveDossier(Mijlpaal m, TrajectBronContext ctx)
+    {
+        if (m.DossierId is not int id || !ctx.DossiersById.TryGetValue(id, out var dossier))
+            return new BindingUitkomst(false, null);
+
+        return dossier.Status == (int)DossierStatus.Afgehandeld
+            ? new BindingUitkomst(true, dossier.AfgehandeldDatum)
+            : new BindingUitkomst(false, null);
+    }
+
+    private static BindingUitkomst? ResolveDossierSubstap(Mijlpaal m, TrajectBronContext ctx)
+    {
+        if (m.DossierId is not int id || string.IsNullOrWhiteSpace(m.BronParam)
+            || !ctx.SubstappenPerDossier.TryGetValue(id, out var stappen))
+            return new BindingUitkomst(false, null);
+
+        var stap = stappen.FirstOrDefault(s => string.Equals(s.Code, m.BronParam, StringComparison.OrdinalIgnoreCase));
+        if (stap == null) return new BindingUitkomst(false, null);
+
+        return stap.Status == (int)DossierSubstapStatus.Afgerond
+            ? new BindingUitkomst(true, stap.Datum)
+            : new BindingUitkomst(false, null);
     }
 
     /// <summary>Int-parameter voor bindingen die op een id/type werken: eerst <c>BronRefId</c>, anders <c>BronParam</c> als getal.</summary>

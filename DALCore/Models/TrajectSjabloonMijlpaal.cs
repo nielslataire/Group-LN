@@ -46,4 +46,6 @@ public partial class TrajectSjabloonMijlpaal
     public string Omschrijving { get; set; }
 
     public virtual TrajectSjabloonFase TrajectSjabloonFase { get; set; }
+
+    public virtual ICollection<TrajectSjabloonMijlpaalTrigger> Triggers { get; set; } = new List<TrajectSjabloonMijlpaalTrigger>();
 }

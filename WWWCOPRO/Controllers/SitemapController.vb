@@ -59,7 +59,11 @@ Public Class SitemapController
         Try
             Using conn As New SqlConnection(ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString)
                 conn.Open()
-                Dim cmd As New SqlCommand("SELECT Slug, Datum FROM BlogArtikel WHERE IsGepubliceerd = 1 ORDER BY Datum DESC", conn)
+                ' lastmod komt uit GewijzigdOp (echte laatste-wijzigingsdatum), niet Datum
+                ' (de redactionele publicatiedatum die een editor los daarvan kan zetten/
+                ' terugdateren) — anders krijgt Google bij een pas gepubliceerd of bewerkt
+                ' artikel een verouderd lastmod-signaal en verlaagt dat de hercrawl-prioriteit.
+                Dim cmd As New SqlCommand("SELECT Slug, GewijzigdOp FROM BlogArtikel WHERE IsGepubliceerd = 1 ORDER BY Datum DESC", conn)
                 Using reader = cmd.ExecuteReader()
                     While reader.Read()
                         Dim slug As String = reader.GetString(0).ToLowerInvariant()

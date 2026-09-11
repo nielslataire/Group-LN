@@ -186,6 +186,7 @@ builder.Services.AddScoped<ICompanyQueryService, CompanyQueryService>();
 builder.Services.AddScoped<IIssuerCompanyService, IssuerCompanyService>();
 builder.Services.AddScoped<IIssuerBankAccountService, IssuerBankAccountService>();
 builder.Services.AddScoped<IHomeHeroProjectService, HomeHeroProjectService>();
+builder.Services.AddScoped<ICookieConsentStatsService, CookieConsentStatsService>();
 builder.Services.AddScoped<IIssuerSeriesService, IssuerSeriesService>();
 builder.Services.AddScoped<IPartyLookupService, PartyLookupService>();
 builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();
@@ -249,6 +250,19 @@ builder.Services.AddScoped<FacadeCore.ITrajectSjabloonService, ServiceCore.Traje
 builder.Services.AddScoped<FacadeCore.ITrajectInstantiationService, ServiceCore.Traject.TrajectInstantiationService>();
 builder.Services.AddScoped<FacadeCore.IMijlpaalBindingResolver, ServiceCore.Traject.MijlpaalBindingResolver>();
 builder.Services.AddScoped<FacadeCore.ITrajectRecalculationService, ServiceCore.Traject.TrajectRecalculationService>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerDispatcher, ServiceCore.Traject.TrajectTriggerDispatcher>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.VerwittigRolAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.VerwittigGebruikerAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.PlanHerinneringAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.DeblokkeerVolgendeFaseAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.ZetProjectVlagAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.ZetProjectStatusAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.MaakDossierAction>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.StuurDossierAanvraagMailAction>();
+builder.Services.AddScoped<FacadeCore.IProjectDossierService, ServiceCore.Traject.ProjectDossierService>();
+builder.Services.AddScoped<FacadeCore.INutsAansluitingService, ServiceCore.Traject.NutsAansluitingService>();
+builder.Services.AddScoped<FacadeCore.IProjectTaakService, ServiceCore.Traject.ProjectTaakService>();
+builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.MaakTaakAction>();
 builder.Services.AddSingleton<CPMCore.Services.TrajectHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CPMCore.Services.TrajectHostedService>());
 
@@ -480,6 +494,24 @@ app.Map("/api/trigger", triggerApp =>
             }
             var hosted = ctx.RequestServices.GetRequiredService<IssueNotificationHostedService>();
             _ = Task.Run(() => hosted.RunJobsAsync("http-trigger"));
+            ctx.Response.StatusCode = 202;
+            await ctx.Response.WriteAsJsonAsync(new { status = "Accepted", timestamp = DateTime.UtcNow });
+            return;
+        }
+
+        if (path.Equals("/traject-recalc", StringComparison.OrdinalIgnoreCase)
+            && ctx.Request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+        {
+            var expectedKey = cfg["TriggerKeys:TrajectRecalc"] ?? cfg["TriggerKeys:IssueNotifications"];
+            var key = ctx.Request.Query["key"].FirstOrDefault();
+            if (string.IsNullOrEmpty(expectedKey) || key != expectedKey)
+            {
+                ctx.Response.StatusCode = 401;
+                await ctx.Response.WriteAsJsonAsync(new { error = "Ongeldige sleutel." });
+                return;
+            }
+            var trajectHosted = ctx.RequestServices.GetRequiredService<TrajectHostedService>();
+            _ = Task.Run(() => trajectHosted.RunAsync("http-trigger"));
             ctx.Response.StatusCode = 202;
             await ctx.Response.WriteAsJsonAsync(new { status = "Accepted", timestamp = DateTime.UtcNow });
             return;

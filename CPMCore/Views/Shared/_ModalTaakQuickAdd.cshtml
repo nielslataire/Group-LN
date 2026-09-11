@@ -1,0 +1,43 @@
+@model CPMCore.Models.Traject.TaakQuickAddVm
+
+<div class="modal fade" id="@Model.ModalId" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-controller="MijnTaken" asp-action="Opslaan" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+            <input type="hidden" name="UnitId" value="@Model.UnitId" />
+            <input type="hidden" name="MijlpaalId" value="@Model.MijlpaalId" />
+            <input type="hidden" name="ProjectDossierId" value="@Model.ProjectDossierId" />
+            <input type="hidden" name="ConstructionIssueId" value="@Model.ConstructionIssueId" />
+            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <div class="modal-header">
+                <h5 class="modal-title">Taak aanmaken</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label">Titel</label>
+                    <input type="text" name="Titel" class="form-control" value="@Model.DefaultTitel" required />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Omschrijving</label>
+                    <textarea name="Omschrijving" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-2">
+                        <label class="form-label">Vervaldatum</label>
+                        <input type="date" name="Vervaldatum" class="form-control" />
+                    </div>
+                    <div class="col-6 mb-2">
+                        <label class="form-label">Toegewezen aan (leeg = mezelf)</label>
+                        <input type="text" name="ToegewezenAanUserId" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" class="btn btn-primary">Taak aanmaken</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,141 @@
+@model CPMCore.Models.Home.HomeModel
+@using BOCore
+@using DALCore.Models
+@using FacadeCore
+@inject IMijlpaalService MijlpaalService
+@{
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var projectIds = Model.Projects.Select(p => p.Id).ToList();
+
+    var perEenheid = projectIds.Count > 0
+        ? await MijlpaalService.SearchPortfolio(projectIds, new MijlpaalFilterBO { AlleenProjectniveau = false })
+        : new List<Mijlpaal>();
+
+    var openstaand = perEenheid
+        .Where(m => m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing)
+        .OrderBy(m => m.Doeldatum ?? m.DoeldatumBerekend ?? DateOnly.MaxValue)
+        .ToList();
+
+    var achterstallig = openstaand.Count(m => (m.Doeldatum ?? m.DoeldatumBerekend) is DateOnly d && d < vandaag);
+    var eenhedenMetActie = openstaand.Select(m => m.UnitId).Distinct().Count();
+    var eerstvolgende = openstaand.Take(12).ToList();
+}
+
+<!-- ── KPI STRIP ──────────────────────────────────────────── -->
+<div class="row gl-kpi-strip mb-2">
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Projecten in je portfolio">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary"><i class="bx bx-building-house"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Projecten</h4>
+                            <div class="info"><strong class="amount">@Model.Projects.Count</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-warning h-100 mb-0" title="Eenheden met een openstaande verkoop-/opleveringsmijlpaal">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-warning"><i class="bx bx-home"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Eenheden in opvolging</h4>
+                            <div class="info"><strong class="amount gl-kpi-amount-warning">@eenhedenMetActie</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-danger h-100 mb-0" title="Per-eenheid mijlpalen waarvan de streefdatum voorbij is">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-danger"><i class="bx bx-timer"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Achterstallig</h4>
+                            <div class="info"><strong class="amount gl-kpi-amount-danger">@achterstallig</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Volledig portfolio-overzicht van mijlpalen en deadlines">
+            <div class="card-body d-flex align-items-center">
+                <a href="@Url.Action("Index", "Deadlines")" class="widget-summary widget-summary-md w-100 text-decoration-none">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary"><i class="bx bx-calendar-check"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Alle deadlines</h4>
+                            <div class="info"><strong class="amount">Bekijk</strong></div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+<div class="row pt-3 gl-dashboard">
+    <div class="col-lg-8">
+        <section class="card card-modern gl-detail-card">
+            <header class="card-header gl-detail-card-header">
+                <h2 class="card-title mb-0">Verkooppijplijn — eerstvolgende deadlines per eenheid</h2>
+            </header>
+            <div class="card-body p-0">
+                @if (eerstvolgende.Count == 0)
+                {
+                    <p class="text-muted mb-0 p-3">Geen openstaande per-eenheid mijlpalen in je portfolio.</p>
+                }
+                else
+                {
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Project</th><th>Eenheid</th><th>Mijlpaal</th><th>Doeldatum</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in eerstvolgende)
+                            {
+                                var datum = m.Doeldatum ?? m.DoeldatumBerekend;
+                                var over = datum is DateOnly d && d < vandaag;
+                                <tr>
+                                    <td><a href="@Url.Action("Index", "ProjectTraject", new { projectId = m.Projecttraject.ProjectId })">@m.Projecttraject.Project?.ProjectName</a></td>
+                                    <td>@(m.Unit?.Name ?? "—")</td>
+                                    <td>@m.Naam</td>
+                                    <td class="@(over ? "text-danger fw-bold" : "")">@(datum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                    <td><span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-4">
+        <div class="mb-3">
+            @await Html.PartialAsync("_MijnKeypointsWidget")
+        </div>
+        <div>
+            @await Html.PartialAsync("_MijnTakenWidget")
+        </div>
+    </div>
+</div>

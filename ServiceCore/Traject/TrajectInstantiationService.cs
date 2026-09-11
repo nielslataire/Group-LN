@@ -9,13 +9,15 @@ public class TrajectInstantiationService : ITrajectInstantiationService
 {
     private readonly cpmRunningContext _db;
     private readonly ITrajectSjabloonService _sjablonen;
+    private readonly IProjectDossierService _dossiers;
 
     private const string AnkerProjectCreated = "PROJECT_CREATED";
 
-    public TrajectInstantiationService(cpmRunningContext db, ITrajectSjabloonService sjablonen)
+    public TrajectInstantiationService(cpmRunningContext db, ITrajectSjabloonService sjablonen, IProjectDossierService dossiers)
     {
         _db = db;
         _sjablonen = sjablonen;
+        _dossiers = dossiers;
     }
 
     public async Task<Projecttraject> Instantiate(TrajectInstantiatieBO dto, string? userId)
@@ -114,7 +116,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
     {
         var traject = await _db.Projecttraject
             .Include(t => t.Fases)
-            .Include(t => t.Mijlpalen)
+            .Include(t => t.Mijlpalen).ThenInclude(m => m.Triggers)
             .FirstOrDefaultAsync(t => t.Id == projecttrajectId)
             ?? throw new InvalidOperationException($"Projecttraject {projecttrajectId} niet gevonden.");
 
@@ -191,6 +193,16 @@ public class TrajectInstantiationService : ITrajectInstantiationService
                 m.SjabloonMijlpaalId = sm.Id;
                 changed = true;
             }
+
+            var bestaandeSjabloonTriggerIds = new HashSet<int>(
+                m.Triggers.Where(t => t.SjabloonTriggerId != null).Select(t => t.SjabloonTriggerId!.Value));
+            foreach (var st in sm.Triggers)
+            {
+                if (bestaandeSjabloonTriggerIds.Contains(st.Id)) continue;
+                m.Triggers.Add(BuildTrigger(st));
+                changed = true;
+            }
+
             if (changed) { m.ModifiedByUserId = userId; m.ModifiedDate = DateTime.UtcNow; bijgewerkt++; }
         }
 
@@ -225,6 +237,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         if (toegevoegd.Count == 0)
         {
             if (_db.ChangeTracker.HasChanges()) await _db.SaveChangesAsync(); // enkel nieuwe fases / bijgewerkte bindings
+            bijgewerkt += await _dossiers.RelinkVergunningMijlpalen(traject.ProjectId, userId);
             return bijgewerkt;
         }
 
@@ -243,25 +256,47 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             });
         }
         await _db.SaveChangesAsync();
-        return toegevoegd.Count + bijgewerkt;
+
+        // Nieuwe/bestaande vergunning-mijlpalen die nog aan geen dossier hangen (bv. dossier was al
+        // aangemaakt vóór deze mijlpalen bestonden) alsnog koppelen aan een bestaand vergunningsdossier.
+        var herkoppeld = await _dossiers.RelinkVergunningMijlpalen(traject.ProjectId, userId);
+
+        return toegevoegd.Count + bijgewerkt + herkoppeld;
     }
 
-    private static Mijlpaal BuildMijlpaal(TrajectSjabloonMijlpaal sm, ProjecttrajectFase? fase, int? unitId, string? userId) => new()
+    private static Mijlpaal BuildMijlpaal(TrajectSjabloonMijlpaal sm, ProjecttrajectFase? fase, int? unitId, string? userId)
     {
-        SjabloonMijlpaalId = sm.Id,
-        ProjecttrajectFase = fase,
-        UnitId = unitId,
-        Code = sm.Code,
-        Naam = sm.Naam,
-        Volgorde = sm.Volgorde,
-        MijlpaalType = sm.MijlpaalType,
-        Status = (int)MijlpaalStatus.Open,
-        VerantwoordelijkeRol = sm.VerantwoordelijkeRol,
-        BronBinding = sm.BronBinding,
-        BronParam = sm.BronParam,
-        IsVerplicht = sm.IsVerplicht,
-        CreatedByUserId = userId,
-        CreatedDate = DateTime.UtcNow
+        var m = new Mijlpaal
+        {
+            SjabloonMijlpaalId = sm.Id,
+            ProjecttrajectFase = fase,
+            UnitId = unitId,
+            Code = sm.Code,
+            Naam = sm.Naam,
+            Volgorde = sm.Volgorde,
+            MijlpaalType = sm.MijlpaalType,
+            Status = (int)MijlpaalStatus.Open,
+            VerantwoordelijkeRol = sm.VerantwoordelijkeRol,
+            BronBinding = sm.BronBinding,
+            BronParam = sm.BronParam,
+            IsVerplicht = sm.IsVerplicht,
+            CreatedByUserId = userId,
+            CreatedDate = DateTime.UtcNow
+        };
+        foreach (var st in sm.Triggers)
+            m.Triggers.Add(BuildTrigger(st));
+        return m;
+    }
+
+    private static MijlpaalTrigger BuildTrigger(TrajectSjabloonMijlpaalTrigger st) => new()
+    {
+        SjabloonTriggerId = st.Id,
+        TriggerEvent = st.TriggerEvent,
+        TriggerActie = st.TriggerActie,
+        OffsetDagen = st.OffsetDagen,
+        ActieParametersJson = st.ActieParametersJson,
+        MagProjectWijzigen = st.MagProjectWijzigen,
+        IsActief = st.IsActief
     };
 
     /// <summary>

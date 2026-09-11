@@ -1,0 +1,92 @@
+@using BOCore
+@model CPMCore.Models.Traject.DossierDetailsVm
+@{
+    var d = Model.Dossier;
+}
+
+<div class="modal fade" id="modalDossierEdit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-controller="ProjectDossiers" asp-action="Opslaan" asp-route-projectId="@Model.ProjectId">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" value="@d.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Dossier bewerken</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Titel</label>
+                            <input type="text" name="Titel" class="form-control" required maxlength="200" value="@d.Titel" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Type</label>
+                            <select name="DossierKind" class="form-select">
+                                @foreach (DossierKind k in Enum.GetValues(typeof(DossierKind)))
+                                {
+                                    <option value="@((int)k)" selected="@(d.DossierKind == (int)k)">@k.GetDisplayName()</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Eenheid <span class="text-muted">(optioneel)</span></label>
+                            <select name="UnitId" class="form-select">
+                                <option value="">— projectniveau —</option>
+                                @foreach (var u in Model.ProjectUnits)
+                                {
+                                    <option value="@u.Id" selected="@(d.UnitId == u.Id)">@u.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Referentie</label>
+                            <input type="text" name="Referentie" class="form-control" maxlength="100" value="@d.Referentie" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="Status" class="form-select">
+                                @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
+                                {
+                                    <option value="@((int)s)" selected="@(d.Status == (int)s)">@s.GetDisplayName()</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Extern contact — naam</label>
+                            <input type="text" name="ExterneContactNaam" class="form-control" maxlength="150" value="@d.ExterneContactNaam" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Extern contact — e-mail</label>
+                            <input type="email" name="ExterneContactEmail" class="form-control" maxlength="254" value="@d.ExterneContactEmail" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Aanvraagdatum</label>
+                            <input type="date" name="AanvraagDatum" class="form-control" value="@(d.AanvraagDatum?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Verwachte afhandeling</label>
+                            <input type="date" name="VerwachteAfhandelingDatum" class="form-control" value="@(d.VerwachteAfhandelingDatum?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Afgehandeld op</label>
+                            <input type="date" name="AfgehandeldDatum" class="form-control" value="@(d.AfgehandeldDatum?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bedrag (€)</label>
+                            <input type="number" step="0.01" name="Bedrag" class="form-control" value="@d.Bedrag" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Omschrijving</label>
+                            <textarea name="Omschrijving" class="form-control" rows="2">@d.Omschrijving</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

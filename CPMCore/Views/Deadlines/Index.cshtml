@@ -1,0 +1,116 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.DeadlinesIndexVm
+@{
+    ViewData["Title"] ??= "Deadlines";
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var statussen = Enum.GetValues(typeof(MijlpaalStatus)).Cast<MijlpaalStatus>().ToList();
+    var rollen = Enum.GetValues(typeof(InterneRol)).Cast<InterneRol>().ToList();
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+}
+
+<div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
+    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+        <h1 class="font-weight-bold mb-0 mt-0">Deadlines</h1>
+        <h5 class="mb-0 mt-0 text-muted">Alle mijlpalen over je zichtbare projecten heen</h5>
+    </div>
+</div>
+
+<div class="gl-kpi2-strip mt-1 mb-3">
+    <div class="gl-kpi2-tile">
+        <span class="gl-kpi2-label">Totaal</span>
+        <span class="gl-kpi2-value">@Model.Mijlpalen.Count</span>
+    </div>
+    <div class="gl-kpi2-tile @(Model.AantalAchterstallig > 0 ? "gl-kpi2-severe" : "")">
+        <span class="gl-kpi2-label">Achterstallig</span>
+        <span class="gl-kpi2-value">@Model.AantalAchterstallig</span>
+    </div>
+    <div class="gl-kpi2-tile">
+        <span class="gl-kpi2-label">Komende 30 dagen</span>
+        <span class="gl-kpi2-value">@Model.AantalDeze30Dagen</span>
+    </div>
+</div>
+
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label small mb-1">Project</label>
+        <select name="ProjectId" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Alle projecten</option>
+            @foreach (var p in Model.Projecten)
+            {
+                <option value="@p.ID" selected="@(Model.Filter.ProjectId == p.ID)">@p.Display</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label small mb-1">Status</label>
+        <select name="Status" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Alle</option>
+            @foreach (var s in statussen)
+            {
+                <option value="@((int)s)" selected="@(Model.Filter.Status == (int)s)">@s.GetDisplayName()</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label small mb-1">Rol</label>
+        <select name="VerantwoordelijkeRol" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Alle</option>
+            @foreach (var r in rollen)
+            {
+                <option value="@((int)r)" selected="@(Model.Filter.VerantwoordelijkeRol == (int)r)">@r.GetDisplayName()</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto form-check mt-4">
+        <input type="checkbox" class="form-check-input" name="Overdue" value="true" id="chkOverdue"
+               checked="@(Model.Filter.Overdue == true)" onchange="this.form.submit()" />
+        <label class="form-check-label small" for="chkOverdue">Enkel achterstallig</label>
+    </div>
+</form>
+
+<table id="datatable-deadlines" class="table table-hover w-100">
+    <thead>
+        <tr>
+            <th>Project</th><th>Mijlpaal</th><th>Eenheid</th><th>Doeldatum</th><th>Status</th><th>Verantwoordelijke</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var m in Model.Mijlpalen)
+        {
+            var datum = m.Doeldatum ?? m.DoeldatumBerekend;
+            var over = m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing
+                       && datum is DateOnly d && d < vandaag;
+            <tr>
+                <td><a href="@Url.Action("Index", "ProjectTraject", new { projectId = m.Projecttraject.ProjectId })">@m.Projecttraject.Project?.ProjectName</a></td>
+                <td>@m.Naam</td>
+                <td>@(m.Unit?.Name ?? "—")</td>
+                <td class="@(over ? "text-danger fw-bold" : "")">@(datum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                <td><span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span></td>
+                <td>@(m.VerantwoordelijkeRol.HasValue ? ((InterneRol)m.VerantwoordelijkeRol.Value).GetDisplayName() : "—")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+@if (Model.Mijlpalen.Count == 0)
+{
+    <div class="text-muted text-center py-4">Geen mijlpalen gevonden.</div>
+}
+
+@section PageScripts {
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(function () {
+            $('#datatable-deadlines').DataTable({
+                order: [],
+                pageLength: 25,
+                language: { url: '//cdn.datatables.net/plug-ins/2.2.2/i18n/nl-NL.json' }
+            });
+        });
+    </script>
+}

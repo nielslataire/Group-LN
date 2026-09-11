@@ -6,7 +6,9 @@
 @{
     var isRoleDashboard = Model.DashboardType is CPMCore.Models.DashboardType.Projectleider
         or CPMCore.Models.DashboardType.CeoCfo
-        or CPMCore.Models.DashboardType.Boekhouding;
+        or CPMCore.Models.DashboardType.Boekhouding
+        or CPMCore.Models.DashboardType.Ontwikkelaar
+        or CPMCore.Models.DashboardType.Verkoper;
 }
 
 @section PageStyle
@@ -66,6 +68,14 @@ else if (Model.DashboardType == CPMCore.Models.DashboardType.CeoCfo)
 else if (Model.DashboardType == CPMCore.Models.DashboardType.Boekhouding)
 {
     await Html.RenderPartialAsync("_DashboardBoekhouding", Model);
+}
+else if (Model.DashboardType == CPMCore.Models.DashboardType.Ontwikkelaar)
+{
+    await Html.RenderPartialAsync("_DashboardOntwikkelaar", Model);
+}
+else if (Model.DashboardType == CPMCore.Models.DashboardType.Verkoper)
+{
+    await Html.RenderPartialAsync("_DashboardVerkoper", Model);
 }
 else
 {

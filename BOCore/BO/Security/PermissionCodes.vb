@@ -59,6 +59,7 @@ Public NotInheritable Class PermissionCodes
     Public Const SettingsBlogBeheer As String = "Settings.BlogBeheer"
     Public Const SettingsEmailTemplates As String = "Settings.EmailTemplates"
     Public Const SettingsHomeHeroProject As String = "Settings.HomeHeroProject"
+    Public Const SettingsCookieConsentStats As String = "Settings.CookieConsentStats"
     Public Const SettingsVacatureBeheer As String = "Settings.VacatureBeheer"
     Public Const SettingsAutomatisatie As String = "Settings.Automatisatie"
     Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"

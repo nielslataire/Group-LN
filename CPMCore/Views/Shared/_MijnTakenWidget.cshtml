@@ -1,0 +1,47 @@
+@using BOCore
+@using CPMCore.Helpers
+@using DALCore.Models
+@using FacadeCore
+@inject IProjectTaakService TaakService
+@{
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var userId = Context.User.FindFirst(CpmClaims.UserId)?.Value;
+    var taken = !string.IsNullOrEmpty(userId) ? await TaakService.GetTopOpenVoorGebruiker(userId, 5) : new List<ProjectTaak>();
+}
+
+@if (!string.IsNullOrEmpty(userId))
+{
+    <section class="card card-modern gl-detail-card h-100">
+        <header class="card-header gl-detail-card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0">Mijn taken</h2>
+            <a href="@Url.Action("Index", "MijnTaken")" class="small">Alles bekijken</a>
+        </header>
+        <div class="card-body p-0">
+            @if (taken.Count == 0)
+            {
+                <p class="text-muted mb-0 p-3">Geen open taken.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var t in taken)
+                    {
+                        var over = t.Vervaldatum != null && t.Vervaldatum.Value < vandaag;
+                        <li class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                            <div class="me-2">
+                                <div class="fw-medium">@t.Titel</div>
+                                @if (t.Project != null)
+                                {
+                                    <div class="text-muted small">@t.Project.ProjectName</div>
+                                }
+                            </div>
+                            <span class="small @(over ? "text-danger fw-bold" : "text-muted")">
+                                @(t.Vervaldatum?.ToString("dd/MM") ?? "")
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+}

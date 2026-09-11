@@ -142,6 +142,11 @@ public class TrajectRecalculationService : ITrajectRecalculationService
         var settlements = await _db.ConnectionSettlement.AsNoTracking()
             .Where(c => c.ProjectId == projectId).Select(c => c.CreatedOn).ToListAsync();
 
+        var dossiers = await _db.ProjectDossier.AsNoTracking().Where(d => d.ProjectId == projectId).ToListAsync();
+        var dossierIds = dossiers.Select(d => d.Id).ToList();
+        var substappen = await _db.ProjectDossierSubstap.AsNoTracking()
+            .Where(s => dossierIds.Contains(s.ProjectDossierId)).ToListAsync();
+
         return new TrajectBronContext
         {
             Project = project,
@@ -157,7 +162,9 @@ public class TrajectRecalculationService : ITrajectRecalculationService
             HeeftConnectionSettlement = settlements.Count > 0,
             LaatsteConnectionSettlement = settlements.Count > 0
                 ? DateOnly.FromDateTime(settlements.Max())
-                : null
+                : null,
+            DossiersById = dossiers.ToDictionary(d => d.Id),
+            SubstappenPerDossier = substappen.GroupBy(s => s.ProjectDossierId).ToDictionary(g => g.Key, g => g.ToList())
         };
     }
 

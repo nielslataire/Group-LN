@@ -1,0 +1,97 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.DossierIndexVm
+@{
+    ViewData["Title"] ??= "Dossiers";
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var kinden = Enum.GetValues(typeof(DossierKind)).Cast<DossierKind>().ToList();
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
+    <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            <div class="row justify-content-between align-items-center pt-2">
+                <div class="col-sm-auto">
+                    <h1 class="font-weight-bold mb-0 mt-0">Dossiers</h1>
+                    <h5 class="mb-3 mt-0 text-muted">Opvolging van aanvragen, vergunningen, akten en andere dossiers voor @Model.ProjectName</h5>
+                </div>
+                <div class="col-sm-auto px-0">
+                    <button type="button" class="btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#modalNuts" id="btnNieuwNuts">
+                        <i class="bx bx-plus"></i> Nutsaansluiting
+                    </button>
+                    <button type="button" class="btn btn-default btn-md" data-bs-toggle="modal" data-bs-target="#modalDossier" id="btnNieuwDossier">
+                        <i class="bx bx-plus"></i> Ander dossier
+                    </button>
+                </div>
+            </div>
+
+            <div class="gl-kpi2-strip mt-3">
+                <div class="gl-kpi2-tile">
+                    <span class="gl-kpi2-label">Totaal</span>
+                    <span class="gl-kpi2-value">@Model.Dossiers.Count</span>
+                </div>
+                <div class="gl-kpi2-tile @(Model.AantalOpen > 0 ? "gl-kpi2-severe" : "")">
+                    <span class="gl-kpi2-label">Nog open</span>
+                    <span class="gl-kpi2-value">@Model.AantalOpen</span>
+                </div>
+            </div>
+
+            <ul class="nav nav-pills gl-dossier-kind-nav mt-3" role="tablist">
+                <li class="nav-item"><a class="nav-link js-kind-filter active" href="#" data-kind="">Alle</a></li>
+                @foreach (var k in kinden)
+                {
+                    <li class="nav-item"><a class="nav-link js-kind-filter" href="#" data-kind="@((int)k)">@k.GetDisplayName()</a></li>
+                }
+            </ul>
+
+            <table id="datatable-dossiers" class="table table-hover w-100 mt-2">
+                <thead>
+                    <tr>
+                        <th>Titel</th><th>Type</th><th>Eenheid</th><th>Status</th>
+                        <th>Aanvraag</th><th>Verwacht</th><th>Afgehandeld</th><th data-kind-col></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model.Dossiers)
+                    {
+                        var over = d.Status != (int)DossierStatus.Afgehandeld && d.Status != (int)DossierStatus.Geannuleerd
+                                   && d.VerwachteAfhandelingDatum is DateOnly vd && vd < vandaag;
+                        <tr data-kind="@d.DossierKind">
+                            <td><a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = d.Id })">@d.Titel</a></td>
+                            <td>@(((DossierKind)d.DossierKind).GetDisplayName())</td>
+                            <td>@(d.Unit?.Name ?? "—")</td>
+                            <td><span class="badge gl-mijlpaal-status s-@d.Status">@(((DossierStatus)d.Status).GetDisplayName())</span></td>
+                            <td>@(d.AanvraagDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                            <td class="@(over ? "text-danger fw-bold" : "")">@(d.VerwachteAfhandelingDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                            <td>@(d.AfgehandeldDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                            <td class="text-end">
+                                <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = d.Id })" class="btn btn-xs btn-default"><i class="bx bx-show"></i></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (Model.Dossiers.Count == 0)
+            {
+                <div class="text-muted text-center py-4">Nog geen dossiers voor dit project.</div>
+            }
+        </div>
+    </div>
+</section>
+
+@await Html.PartialAsync("Modals/_ModalDossierUpsert", Model)
+@await Html.PartialAsync("Modals/_ModalNutsAansluiting", new CPMCore.Models.Traject.NutsAansluitingModalVm { ProjectId = Model.ProjectId, ProjectUnits = Model.ProjectUnits })
+
+@section PageScripts {
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.min.js"></script>
+    <script src="~/js/dossiers.js" asp-append-version="true"></script>
+}

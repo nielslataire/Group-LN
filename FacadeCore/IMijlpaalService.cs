@@ -20,4 +20,7 @@ public interface IMijlpaalService
 
     /// <summary>Aantal achterstallige (streefdatum verstreken, niet bereikt) mijlpalen over de opgegeven projecten.</summary>
     Task<int> CountOverdue(IEnumerable<int> projectIds);
+
+    /// <summary>Portfolio-brede mijlpalenlijst over meerdere projecten (voor de /Deadlines-pagina).</summary>
+    Task<List<Mijlpaal>> SearchPortfolio(IEnumerable<int> projectIds, MijlpaalFilterBO filters);
 }

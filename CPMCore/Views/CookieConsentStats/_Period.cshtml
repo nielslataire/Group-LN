@@ -1,0 +1,85 @@
+@model CPMCore.Models.Instellingen.CookieConsentStatsPeriodVM
+@{
+    var s = Model.Stats;
+}
+<div class="ccs-period-title">@Model.Titel</div>
+<div class="ccs-period-sub">@Model.Subtitel</div>
+<div class="row gl-kpi-strip mb-0">
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Aantal keer dat de cookiebanner getoond werd">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary"><i class="bx bx-cookie"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Getoond</h4>
+                            <div class="info"><strong class="amount">@s.ShownCount</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0" title="Klikte op &quot;Alles aanvaarden&quot;">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary"><i class="bx bx-check"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Aanvaard</h4>
+                            <div class="info">
+                                <strong class="amount">@s.AcceptedCount</strong>
+                                <span class="text-muted ms-1">(@s.AcceptedPercentage.ToString("0.0")%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left h-100 mb-0" title="Klikte op &quot;Alles weigeren&quot; — een geldige, gerespecteerde keuze, geen probleem">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-secondary"><i class="bx bx-x"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Geweigerd</h4>
+                            <div class="info">
+                                <strong class="amount">@s.RejectedCount</strong>
+                                <span class="text-muted ms-1">(@s.RejectedPercentage.ToString("0.0")%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-warning h-100 mb-0" title="Banner getoond, geen van beide knoppen aangeklikt">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon gl-kpi-icon-warning"><i class="bx bx-help-circle"></i></div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Geen keuze</h4>
+                            <div class="info">
+                                <strong class="amount gl-kpi-amount-warning">@s.NoDecisionCount</strong>
+                                <span class="text-muted ms-1">(@s.NoDecisionPercentage.ToString("0.0")%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

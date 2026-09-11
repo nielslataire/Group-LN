@@ -78,4 +78,30 @@ Public Class TrajectSjabloonMijlpaalBO
 
     Public Property Omschrijving As String
 
+    Public Property Triggers As List(Of TrajectSjabloonMijlpaalTriggerBO) = New List(Of TrajectSjabloonMijlpaalTriggerBO)
+
+End Class
+
+''' <summary>Trigger-definitie binnen een <see cref="TrajectSjabloonMijlpaalBO"/>.</summary>
+Public Class TrajectSjabloonMijlpaalTriggerBO
+
+    Public Property Id As Integer?
+
+    ''' <summary>BOCore.TriggerEvent.</summary>
+    Public Property TriggerEvent As Integer
+
+    ''' <summary>BOCore.TriggerActie.</summary>
+    Public Property TriggerActie As Integer
+
+    Public Property OffsetDagen As Integer?
+
+    Public Property ActieParametersJson As String
+
+    Public Property MagProjectWijzigen As Boolean
+
+    Public Property IsActief As Boolean = True
+
+    <StringLength(300)>
+    Public Property Omschrijving As String
+
 End Class

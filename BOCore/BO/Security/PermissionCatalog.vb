@@ -60,6 +60,7 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.DocumentCenter, "Documentencentrum", Nothing, 100),
             New PermissionDefinition(PermissionCodes.DocumentCenterByBillingCompany, "Per facturatiebedrijf", PermissionCodes.DocumentCenter, 101),
             New PermissionDefinition(PermissionCodes.SettingsVacatureBeheer, "Vacatures", PermissionCodes.SettingsWebsite, 102),
+            New PermissionDefinition(PermissionCodes.SettingsCookieConsentStats, "Cookiebanner — statistieken", PermissionCodes.SettingsWebsite, 103),
             New PermissionDefinition(PermissionCodes.MijnTaken, "Mijn taken", Nothing, 110),
             New PermissionDefinition(PermissionCodes.PortfolioDeadlines, "Deadlines (portfolio)", Nothing, 111)
         }

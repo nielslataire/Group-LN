@@ -1,0 +1,80 @@
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models
+@using DALCore.Models
+@using FacadeCore
+@using Microsoft.EntityFrameworkCore
+@inject IMijlpaalService MijlpaalService
+@inject IProjectService ProjectService
+@inject cpmRunningContext Db
+@{
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var over14Dagen = vandaag.AddDays(14);
+    var userId = Context.User.FindFirst(CpmClaims.UserId)?.Value;
+
+    var mijlpalen = new List<Mijlpaal>();
+    if (!string.IsNullOrEmpty(userId))
+    {
+        var currentUserCode = Context.User.GetCpmUserCode() ?? string.Empty;
+        var response = ProjectService.GetProjectsForList(0, 0, currentUserCode);
+        var projectIds = response.Success ? response.Values.Select(p => p.Id).ToList() : new List<int>();
+
+        var dashboardType = await Db.Users.AsNoTracking()
+            .Where(u => u.UserId == userId).Select(u => u.DashboardType).FirstOrDefaultAsync();
+        InterneRol? rol = dashboardType.HasValue ? (DashboardType)dashboardType.Value switch
+        {
+            DashboardType.Projectleider => InterneRol.Projectleider,
+            DashboardType.CeoCfo => InterneRol.CeoCfo,
+            DashboardType.Boekhouding => InterneRol.Boekhouder,
+            _ => (InterneRol?)null
+        } : null;
+
+        if (projectIds.Count > 0)
+        {
+            var alles = await MijlpaalService.SearchPortfolio(projectIds, new MijlpaalFilterBO { Status = (int)MijlpaalStatus.Open });
+            var bezig = await MijlpaalService.SearchPortfolio(projectIds, new MijlpaalFilterBO { Status = (int)MijlpaalStatus.Bezig });
+            mijlpalen = alles.Concat(bezig)
+                .Where(m => m.VerantwoordelijkeUserId == userId || (rol.HasValue && m.VerantwoordelijkeRol == (int)rol.Value))
+                .Where(m => (m.Doeldatum ?? m.DoeldatumBerekend) != null)
+                .OrderBy(m => m.Doeldatum ?? m.DoeldatumBerekend)
+                .Take(8)
+                .ToList();
+        }
+    }
+}
+
+@if (!string.IsNullOrEmpty(userId))
+{
+    <section class="card card-modern gl-detail-card h-100">
+        <header class="card-header gl-detail-card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0">Mijn mijlpalen</h2>
+            <a href="@Url.Action("Index", "Deadlines")" class="small">Alles bekijken</a>
+        </header>
+        <div class="card-body p-0">
+            @if (mijlpalen.Count == 0)
+            {
+                <p class="text-muted mb-0 p-3">Geen open mijlpalen toegewezen.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var m in mijlpalen)
+                    {
+                        var datum = m.Doeldatum ?? m.DoeldatumBerekend;
+                        var over = datum is DateOnly d1 && d1 < vandaag;
+                        var binnenkort = !over && datum is DateOnly d2 && d2 <= over14Dagen;
+                        <li class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                            <div class="me-2">
+                                <div class="fw-medium">@m.Naam</div>
+                                <div class="text-muted small">@(m.Projecttraject?.Project?.ProjectName)</div>
+                            </div>
+                            <span class="small @(over ? "text-danger fw-bold" : binnenkort ? "text-warning fw-bold" : "text-muted")">
+                                @(datum?.ToString("dd/MM") ?? "")
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+}

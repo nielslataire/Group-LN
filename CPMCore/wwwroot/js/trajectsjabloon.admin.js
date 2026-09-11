@@ -10,16 +10,32 @@
     var data = readJson("sjabloonData", { fases: [] });
     var typeOpties = readJson("typeOpties", []);
     var bindingOpties = readJson("bindingOpties", [{ v: 0, n: "Handmatig" }]);
+    var triggerEventOpties = readJson("triggerEventOpties", []);
+    var triggerActieOpties = readJson("triggerActieOpties", []);
 
     var container = document.getElementById("fasesContainer");
     var tplFase = document.getElementById("tplFase");
     var tplMijlpaal = document.getElementById("tplMijlpaal");
-    if (!container || !tplFase || !tplMijlpaal) return;
+    var tplTrigger = document.getElementById("tplTrigger");
+    if (!container || !tplFase || !tplMijlpaal || !tplTrigger) return;
 
-    function typeSelectHtml(selected) {
-        return typeOpties.map(function (o) {
+    function optionsHtml(opties, selected) {
+        return opties.map(function (o) {
             return '<option value="' + o.v + '"' + (o.v === selected ? " selected" : "") + ">" + o.n + "</option>";
         }).join("");
+    }
+
+    function addTrigger(triggersHost, t) {
+        t = t || {};
+        var node = tplTrigger.content.firstElementChild.cloneNode(true);
+        node.querySelector('[data-t="event"]').innerHTML = optionsHtml(triggerEventOpties, t.triggerEvent || 0);
+        node.querySelector('[data-t="actie"]').innerHTML = optionsHtml(triggerActieOpties, t.triggerActie || 0);
+        node.querySelector('[data-t="offset"]').value = (t.offsetDagen != null ? t.offsetDagen : "");
+        node.querySelector('[data-t="params"]').value = t.actieParametersJson || "";
+        node.querySelector('[data-t="magwijzigen"]').checked = !!t.magProjectWijzigen;
+        node.querySelector('[data-t="actief"]').checked = t.isActief !== false;
+        node.querySelector("[data-del-trigger]").addEventListener("click", function () { node.remove(); });
+        triggersHost.appendChild(node);
     }
 
     function addMijlpaal(mijlpalenHost, m) {
@@ -29,16 +45,17 @@
         node.querySelector('[data-m="code"]').value = m.code || "";
         node.querySelector('[data-m="anker"]').value = m.doeldatumAnkerCode || "";
         node.querySelector('[data-m="offset"]').value = (m.doeldatumOffsetDagen != null ? m.doeldatumOffsetDagen : "");
-        var sel = node.querySelector('[data-m="type"]');
-        sel.innerHTML = typeSelectHtml(m.mijlpaalType || 0);
+        node.querySelector('[data-m="type"]').innerHTML = optionsHtml(typeOpties, m.mijlpaalType || 0);
         node.querySelector('[data-m="scope"]').value = String(m.scope || 0);
         var bindSel = node.querySelector('[data-m="binding"]');
-        bindSel.innerHTML = bindingOpties.map(function (o) {
-            return '<option value="' + o.v + '">' + o.n + "</option>";
-        }).join("");
-        bindSel.value = String(m.bronBinding != null ? m.bronBinding : 0);
+        bindSel.innerHTML = optionsHtml(bindingOpties, m.bronBinding != null ? m.bronBinding : 0);
         node.querySelector('[data-m="param"]').value = m.bronParam || "";
         node.querySelector("[data-del-mijlpaal]").addEventListener("click", function () { node.remove(); });
+
+        var tHost = node.querySelector("[data-triggers]");
+        (m.triggers || []).forEach(function (t) { addTrigger(tHost, t); });
+        node.querySelector("[data-add-trigger]").addEventListener("click", function () { addTrigger(tHost, {}); });
+
         mijlpalenHost.appendChild(node);
     }
 
@@ -69,6 +86,21 @@
                 var offset = mn.querySelector('[data-m="offset"]').value;
                 var binding = parseInt(mn.querySelector('[data-m="binding"]').value, 10) || 0;
                 var param = mn.querySelector('[data-m="param"]').value.trim();
+
+                var triggers = [];
+                mn.querySelectorAll("[data-trigger]").forEach(function (tn) {
+                    var paramsJson = tn.querySelector('[data-t="params"]').value.trim();
+                    var toff = tn.querySelector('[data-t="offset"]').value;
+                    triggers.push({
+                        triggerEvent: parseInt(tn.querySelector('[data-t="event"]').value, 10) || 0,
+                        triggerActie: parseInt(tn.querySelector('[data-t="actie"]').value, 10) || 0,
+                        offsetDagen: toff === "" ? null : parseInt(toff, 10),
+                        actieParametersJson: paramsJson || null,
+                        magProjectWijzigen: tn.querySelector('[data-t="magwijzigen"]').checked,
+                        isActief: tn.querySelector('[data-t="actief"]').checked
+                    });
+                });
+
                 mijlpalen.push({
                     naam: naam,
                     code: mn.querySelector('[data-m="code"]').value.trim(),
@@ -79,7 +111,8 @@
                     doeldatumOffsetDagen: offset === "" ? null : parseInt(offset, 10),
                     bronBinding: binding === 0 ? null : binding,
                     bronParam: param || null,
-                    isVerplicht: true
+                    isVerplicht: true,
+                    triggers: triggers
                 });
             });
             var fnaam = fn.querySelector('[data-f="naam"]').value.trim();

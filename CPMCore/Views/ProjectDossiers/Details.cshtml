@@ -1,0 +1,242 @@
+@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Traject.DossierDetailsVm
+@{
+    ViewData["Title"] ??= Model.Dossier.Titel;
+    var d = Model.Dossier;
+    var isNuts = d.DossierKind == (int)DossierKind.NutsAansluiting;
+    var isVergunning = d.DossierKind == (int)DossierKind.Omgevingsvergunning;
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            <div class="row justify-content-between align-items-center pt-2">
+                <div class="col-sm-auto">
+                    <a href="@Url.Action("Index", new { projectId = Model.ProjectId })" class="text-muted small"><i class="bx bx-arrow-back"></i> Dossiers</a>
+                    <h1 class="font-weight-bold mb-0 mt-1">@d.Titel</h1>
+                    <h5 class="mb-3 mt-0 text-muted">@(((DossierKind)d.DossierKind).GetDisplayName()) @(d.Unit != null ? $"· {d.Unit.Name}" : "")</h5>
+                </div>
+                <div class="col-sm-auto px-0">
+                    <button type="button" class="btn btn-default btn-md" data-bs-toggle="modal" data-bs-target="#modalTaakQuickAdd">
+                        <i class="bx bx-task"></i> Taak aanmaken
+                    </button>
+                    @if (isNuts)
+                    {
+                        <button type="button" class="btn btn-default btn-md" data-bs-toggle="modal" data-bs-target="#modalNutsEdit@(d.Id)">
+                            <i class="bx bx-edit"></i> Bewerken
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-default btn-md" data-bs-toggle="modal" data-bs-target="#modalDossierEdit">
+                            <i class="bx bx-edit"></i> Bewerken
+                        </button>
+                    }
+                    <form method="post" asp-action="Verwijderen" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-inline"
+                          onsubmit="return confirm('Dit dossier verwijderen?');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger btn-md"><i class="bx bx-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+
+            @if (isVergunning)
+            {
+                <div class="card card-modern gl-detail-card mt-3">
+                    <header class="card-header gl-detail-card-header"><h2 class="card-title mb-0">Vergunningschecklist</h2></header>
+                    <div class="card-body">
+                        <ul class="gl-vergunning-checklist list-unstyled mb-0">
+                            @foreach (var stap in d.Substappen.OrderBy(s => s.Volgorde))
+                            {
+                                <li class="gl-vc-item vc-status-@stap.Status">
+                                    <span class="gl-vc-dot"></span>
+                                    <span class="gl-vc-naam">@stap.Naam</span>
+                                    <span class="gl-vc-datum text-muted">@(stap.Datum?.ToString("dd/MM/yyyy") ?? "")</span>
+                                    <form method="post" asp-action="SubstapStatus" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" asp-route-substapId="@stap.Id" class="d-flex gap-1">
+                                        @Html.AntiForgeryToken()
+                                        <select name="nieuweStatus" class="form-select form-select-sm">
+                                            @foreach (DossierSubstapStatus s in Enum.GetValues(typeof(DossierSubstapStatus)))
+                                            {
+                                                <option value="@((int)s)" selected="@(stap.Status == (int)s)">@s.GetDisplayName()</option>
+                                            }
+                                        </select>
+                                        <input type="date" name="datum" class="form-control form-control-sm" value="@(stap.Datum?.ToString("yyyy-MM-dd"))" />
+                                        <button type="submit" class="btn btn-xs btn-primary">Zet</button>
+                                    </form>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            <div class="row g-3 mt-1">
+                <div class="col-12 col-lg-4">
+                    <div class="card card-modern gl-detail-card mb-3">
+                        <header class="card-header gl-detail-card-header"><h2 class="card-title mb-0">Gegevens</h2></header>
+                        <div class="card-body">
+                            <dl class="gl-detail-kv mb-0">
+                                <dt>Status</dt>
+                                <dd>
+                                    <form method="post" asp-action="Status" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-flex gap-2">
+                                        @Html.AntiForgeryToken()
+                                        <select name="nieuweStatus" class="form-select form-select-sm">
+                                            @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
+                                            {
+                                                <option value="@((int)s)" selected="@(d.Status == (int)s)">@s.GetDisplayName()</option>
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-xs btn-primary">Zet</button>
+                                    </form>
+                                </dd>
+                                <dt>Referentie</dt><dd>@(d.Referentie ?? "—")</dd>
+                                <dt>Extern contact</dt><dd>@(d.ExterneContactNaam ?? "—") @(!string.IsNullOrWhiteSpace(d.ExterneContactEmail) ? $"({d.ExterneContactEmail})" : "")</dd>
+                                <dt>Aanvraagdatum</dt><dd>@(d.AanvraagDatum?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                <dt>Verwachte afhandeling</dt><dd>@(d.VerwachteAfhandelingDatum?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                <dt>Afgehandeld op</dt><dd>@(d.AfgehandeldDatum?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                <dt>Bedrag</dt><dd>@(d.Bedrag?.ToString("0.00 €") ?? "—")</dd>
+                            </dl>
+                            @if (!string.IsNullOrWhiteSpace(d.Omschrijving))
+                            {
+                                <hr /><p class="mb-0">@d.Omschrijving</p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (isNuts && Model.Nuts != null)
+                    {
+                        <div class="card card-modern gl-detail-card mb-3">
+                            <header class="card-header gl-detail-card-header"><h2 class="card-title mb-0">Nutsaansluiting</h2></header>
+                            <div class="card-body">
+                                <dl class="gl-detail-kv mb-0">
+                                    <dt>Type</dt><dd>@(((NutsType)Model.Nuts.NutsType).GetDisplayName())</dd>
+                                    <dt>Netbeheerder</dt><dd>@(Model.Nuts.NetbeheerderCompany?.BedrijfsNaam ?? "—")</dd>
+                                    <dt>EAN</dt><dd>@(Model.Nuts.Ean ?? "—")</dd>
+                                    <dt>Meternummer</dt><dd>@(Model.Nuts.Meternummer ?? "—")</dd>
+                                    <dt>Gevraagd vermogen</dt><dd>@(Model.Nuts.GevraagdVermogen ?? "—")</dd>
+                                    <dt>Aanvraag verstuurd</dt><dd>@(Model.Nuts.AanvraagVerstuurdOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Kost raming</dt><dd>@(Model.Nuts.AansluitkostRaming?.ToString("0.00 €") ?? "—")</dd>
+                                    <dt>Kost definitief</dt><dd>@(Model.Nuts.AansluitkostDefinitief?.ToString("0.00 €") ?? "—")</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="card card-modern gl-detail-card mb-3">
+                        <header class="card-header gl-detail-card-header"><h2 class="card-title mb-0">Gekoppelde mijlpalen</h2></header>
+                        <div class="card-body">
+                            @if (Model.GekoppeldeMijlpalen.Count == 0)
+                            {
+                                <p class="text-muted mb-2">Geen mijlpalen gekoppeld.</p>
+                            }
+                            <ul class="list-unstyled mb-2">
+                                @foreach (var m in Model.GekoppeldeMijlpalen)
+                                {
+                                    <li class="d-flex justify-content-between align-items-center py-1 border-top">
+                                        <span>@m.Naam</span>
+                                        <form method="post" asp-action="OntkoppelMijlpaal" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" asp-route-mijlpaalId="@m.Id">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Ontkoppelen"><i class="bx bx-x"></i></button>
+                                        </form>
+                                    </li>
+                                }
+                            </ul>
+                            @if (Model.BeschikbareMijlpalen.Count > 0)
+                            {
+                                <form method="post" asp-action="KoppelMijlpaal" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-flex gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <select name="mijlpaalId" class="form-select form-select-sm">
+                                        @foreach (var m in Model.BeschikbareMijlpalen)
+                                        {
+                                            <option value="@m.Id">@m.Naam</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-xs btn-default">Koppel</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <div class="card card-modern gl-detail-card">
+                        <header class="card-header gl-detail-card-header"><h2 class="card-title mb-0">Tijdlijn</h2></header>
+                        <div class="card-body">
+                            <form method="post" asp-action="Gebeurtenis" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="row g-2 align-items-end mb-3">
+                                @Html.AntiForgeryToken()
+                                <div class="col-md-3">
+                                    <select name="Type" class="form-select form-select-sm">
+                                        @foreach (DossierGebeurtenisType t in Enum.GetValues(typeof(DossierGebeurtenisType)))
+                                        {
+                                            <option value="@((int)t)">@t.GetDisplayName()</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="Titel" class="form-control form-control-sm" placeholder="Titel" />
+                                </div>
+                                <div class="col-md-5">
+                                    <input type="text" name="Tekst" class="form-control form-control-sm" placeholder="Opmerking / tekst" />
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bx bx-plus"></i></button>
+                                </div>
+                            </form>
+
+                            <ul class="gl-dossier-tijdlijn list-unstyled mb-0">
+                                @foreach (var g in d.Gebeurtenissen.OrderByDescending(x => x.Datum))
+                                {
+                                    <li>
+                                        <div class="gl-dt-datum">@g.Datum.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                                        <div class="gl-dt-body">
+                                            <span class="badge bg-light text-dark">@(((DossierGebeurtenisType)g.Type).GetDisplayName())</span>
+                                            @if (!string.IsNullOrWhiteSpace(g.Titel)) { <strong> @g.Titel</strong> }
+                                            @if (!string.IsNullOrWhiteSpace(g.Tekst)) { <div class="text-muted">@g.Tekst</div> }
+                                        </div>
+                                    </li>
+                                }
+                                @if (d.Gebeurtenissen.Count == 0)
+                                {
+                                    <li class="text-muted">Nog geen gebeurtenissen.</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@if (isNuts && Model.Nuts != null)
+{
+    @await Html.PartialAsync("Modals/_ModalNutsAansluiting", new CPMCore.Models.Traject.NutsAansluitingModalVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectUnits = Model.ProjectUnits,
+        Bestaand = Model.Nuts
+    })
+}
+else
+{
+    @await Html.PartialAsync("Modals/_ModalDossierEdit", Model)
+}
+
+@await Html.PartialAsync("_ModalTaakQuickAdd", new CPMCore.Models.Traject.TaakQuickAddVm
+{
+    ModalId = "modalTaakQuickAdd",
+    ProjectId = Model.ProjectId,
+    ProjectDossierId = d.Id,
+    DefaultTitel = $"Opvolgen: {d.Titel}"
+})
+
+@section PageScripts {
+    <script src="~/js/dossiers.js" asp-append-version="true"></script>
+}

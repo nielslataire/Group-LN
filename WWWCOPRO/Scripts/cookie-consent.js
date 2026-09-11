@@ -12,10 +12,36 @@
 
     var COOKIE_NAME = 'groupln_cookie_consent';
     var COOKIE_DAYS = 182; // ~6 maanden
+    var EVENT_URL = '/cookie-consent-event';
+    var SHOWN_LOGGED_KEY = 'groupln_cc_shown_logged';
 
     var root = document.getElementById('ccConsent');
     var fab = document.getElementById('ccFab');
     if (!root || !fab) { return; }
+
+    // ── Anonieme meting van de banner-uitkomst (zie migratie 033_CookieConsentEvents,
+    //    zichtbaar in CPMCore/Instellingen). Los van Google Analytics — die laadt zelf pas
+    //    ná toestemming en kan dus nooit "geweigerd" of "geen keuze" meten. Best-effort:
+    //    een netwerkfout hier mag nooit iets anders op de pagina breken. ──
+    function logEvent(eventType) {
+        try {
+            var body = JSON.stringify({ EventType: eventType });
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(EVENT_URL, new Blob([body], { type: 'application/json' }));
+            } else {
+                fetch(EVENT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true })
+                    .catch(function () { });
+            }
+        } catch (e) { /* meting mag de pagina nooit breken */ }
+    }
+
+    function logShownOnce() {
+        try {
+            if (sessionStorage.getItem(SHOWN_LOGGED_KEY)) { return; }
+            sessionStorage.setItem(SHOWN_LOGGED_KEY, '1');
+        } catch (e) { /* privé-modus e.d.: dan liever te vaak dan nooit tellen */ }
+        logEvent('Shown');
+    }
 
     var banner = root.querySelector('.cc-banner');
     var dialog = root.querySelector('.cc-dialog');
@@ -102,7 +128,7 @@
     }
 
     // ── UI ───────────────────────────────────────────────────────────
-    function openBanner() { banner.classList.add('is-open'); }
+    function openBanner() { banner.classList.add('is-open'); logShownOnce(); }
     function closeBanner() { banner.classList.remove('is-open'); }
 
     function openDialog() {
@@ -139,6 +165,9 @@
             };
         }
         save(cats, isChange);
+        // Enkel de allereerste keuze (nog geen cookie) telt mee als "Aanvaard"/"Geweigerd" —
+        // een latere wijziging via het cookie-icoon is geen antwoord op de banner meer.
+        if (!isChange) { logEvent((cats.analytics || cats.marketing) ? 'Accepted' : 'Rejected'); }
         closeDialog();
         closeBanner();
         showFab();

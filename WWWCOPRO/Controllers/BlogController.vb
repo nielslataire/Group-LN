@@ -1,5 +1,6 @@
 Imports System.Data.SqlClient
 Imports System.Configuration
+Imports System.Text.RegularExpressions
 Imports WWWCOPRO.Models.Blog
 
 Public Class BlogController
@@ -54,7 +55,50 @@ Public Class BlogController
             ViewData("IsVoorvertoning") = True
         End If
 
+        ' Zonder eigen MetaOmschrijving of PreviewTekst viel de omschrijving in de view terug
+        ' op de generieke site-brede tekst uit _Layout.vbhtml — identiek over meerdere
+        ' artikels heen, wat Google er meestal toe brengt de omschrijving zelf te herschrijven
+        ' i.p.v. de onze te tonen. Bij ontstentenis knippen we hier een eigen samenvatting uit
+        ' de eerste inhoudsblokken van het artikel zelf, uniek per artikel.
+        If String.IsNullOrWhiteSpace(artikelfull.MetaOmschrijving) AndAlso String.IsNullOrWhiteSpace(artikelfull.PreviewTekst) Then
+            artikelfull.MetaOmschrijving = DeriveMetaOmschrijvingUitInhoud(artikelfull)
+        End If
+
         Return View(artikelfull)
+    End Function
+
+    ' Knipt een omschrijving van max. ~155 tekens uit de eerste tekst-blokken van het artikel,
+    ' zodat elk artikel zonder eigen MetaOmschrijving/PreviewTekst toch een unieke omschrijving
+    ' krijgt i.p.v. de generieke sitebrede fallback in _Layout.vbhtml.
+    Private Function DeriveMetaOmschrijvingUitInhoud(artikel As BlogArtikelModel) As String
+        Const maxLengte As Integer = 155
+        Dim opgebouwd As New System.Text.StringBuilder()
+
+        For Each blok In artikel.Blokken.OrderBy(Function(b) b.SortOrder)
+            If String.IsNullOrWhiteSpace(blok.RijkeTekst) Then Continue For
+            Dim platteTekst = StripHtml(blok.RijkeTekst)
+            If String.IsNullOrWhiteSpace(platteTekst) Then Continue For
+
+            If opgebouwd.Length > 0 Then opgebouwd.Append(" ")
+            opgebouwd.Append(platteTekst)
+            If opgebouwd.Length >= maxLengte Then Exit For
+        Next
+
+        Dim resultaat = opgebouwd.ToString().Trim()
+        If resultaat.Length <= maxLengte Then Return resultaat
+
+        ' Afknippen op een woordgrens vlak vóór de limiet, i.p.v. midden in een woord.
+        Dim afgeknipt = resultaat.Substring(0, maxLengte)
+        Dim laatsteSpatie = afgeknipt.LastIndexOf(" "c)
+        If laatsteSpatie > 0 Then afgeknipt = afgeknipt.Substring(0, laatsteSpatie)
+        Return afgeknipt.TrimEnd() & "…"
+    End Function
+
+    Private Function StripHtml(html As String) As String
+        If String.IsNullOrWhiteSpace(html) Then Return html
+        Dim tekst = Regex.Replace(html, "<[^>]+>", " ")
+        tekst = System.Net.WebUtility.HtmlDecode(tekst)
+        Return Regex.Replace(tekst, "\s+", " ").Trim()
     End Function
 
     ' ── private helpers ────────────────────────────────────────────────
@@ -81,9 +125,9 @@ Public Class BlogController
                         Dim totaalChars As Integer = reader.GetInt32(6)
                         result.Add(New BlogArtikelModel With {
                             .ID = reader.GetInt32(0),
-                            .Titel = reader.GetString(1),
+                            .Titel = reader.GetString(1).Trim(),
                             .Slug = reader.GetString(2),
-                            .PreviewTekst = If(reader.IsDBNull(3), Nothing, reader.GetString(3)),
+                            .PreviewTekst = If(reader.IsDBNull(3), Nothing, reader.GetString(3).Trim()),
                             .FotoBestand = If(reader.IsDBNull(4), Nothing, reader.GetString(4)),
                             .Datum = reader.GetDateTime(5),
                             .LeestijdMinuten = If(totaalChars = 0, 0, CInt(Math.Max(1, Math.Round(totaalChars / 1000.0))))
@@ -116,17 +160,20 @@ Public Class BlogController
 
                 Using reader = cmd.ExecuteReader()
                     If reader.Read() Then
+                        ' .Trim() op de tekstvelden: een vergeten spatie na de titel in de
+                        ' redactie-invoer duikt anders letterlijk op als dubbele spatie vóór
+                        ' " | Group LN" in de <title> die Google toont.
                         artikel = New BlogArtikelModel With {
                             .ID              = reader.GetInt32(0),
-                            .Titel           = reader.GetString(1),
+                            .Titel           = reader.GetString(1).Trim(),
                             .Slug            = reader.GetString(2),
-                            .PreviewTekst    = If(reader.IsDBNull(3), Nothing, reader.GetString(3)),
-                            .DetailTitel     = If(reader.IsDBNull(4), Nothing, reader.GetString(4)),
+                            .PreviewTekst    = If(reader.IsDBNull(3), Nothing, reader.GetString(3).Trim()),
+                            .DetailTitel     = If(reader.IsDBNull(4), Nothing, reader.GetString(4).Trim()),
                             .DetailTitelTekst = If(reader.IsDBNull(5), Nothing, reader.GetString(5)),
                             .FotoBestand     = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
                             .Datum           = reader.GetDateTime(7),
-                            .MetaTitel       = If(reader.IsDBNull(8), Nothing, reader.GetString(8)),
-                            .MetaOmschrijving = If(reader.IsDBNull(9), Nothing, reader.GetString(9)),
+                            .MetaTitel       = If(reader.IsDBNull(8), Nothing, reader.GetString(8).Trim()),
+                            .MetaOmschrijving = If(reader.IsDBNull(9), Nothing, reader.GetString(9).Trim()),
                             .MetaKeywords    = If(reader.IsDBNull(10), Nothing, reader.GetString(10)),
                             .GeoRegio        = If(reader.IsDBNull(11), Nothing, reader.GetString(11)),
                             .GeoPlaatsnaam   = If(reader.IsDBNull(12), Nothing, reader.GetString(12)),
@@ -206,9 +253,9 @@ Public Class BlogController
                         If reader.Read() Then
                             Return New OntdekMeerItemModel With {
                                 .ItemType    = "artikel",
-                                .Titel       = reader.GetString(0),
+                                .Titel       = reader.GetString(0).Trim(),
                                 .Slug        = reader.GetString(1),
-                                .PreviewTekst = If(reader.IsDBNull(2), Nothing, reader.GetString(2)),
+                                .PreviewTekst = If(reader.IsDBNull(2), Nothing, reader.GetString(2).Trim()),
                                 .FotoUrl     = If(reader.IsDBNull(3), Nothing, reader.GetString(3)),
                                 .Datum       = reader.GetDateTime(4)
                             }

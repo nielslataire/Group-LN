@@ -42,4 +42,7 @@ Public Enum ComputedBinding As Integer
     <Display(Name:="Gekoppeld dossier")>
     Dossier = 11
 
+    <Display(Name:="Stap in gekoppeld dossier")>
+    DossierSubstap = 12
+
 End Enum

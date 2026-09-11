@@ -2,8 +2,10 @@ namespace CPMCore.Models;
 
 public enum DashboardType
 {
-    Geen          = 0,
-    Boekhouding   = 1,
-    CeoCfo        = 2,
-    Projectleider = 3,
+    Geen             = 0,
+    Boekhouding      = 1,
+    CeoCfo           = 2,
+    Projectleider    = 3,
+    Ontwikkelaar     = 4,
+    Verkoper         = 5,
 }

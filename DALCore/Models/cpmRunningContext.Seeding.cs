@@ -32,6 +32,9 @@ namespace DALCore.Models
             ConfigureKostprijsMaterialenEntities(modelBuilder);
             ConfigureHomeHeroProjectEntities(modelBuilder);
             ConfigureTrajectEntities(modelBuilder);
+            ConfigureDossierEntities(modelBuilder);
+            ConfigureTaakEntities(modelBuilder);
+            ConfigureCookieConsentEventEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>
             {
