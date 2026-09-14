@@ -5,7 +5,84 @@ triggers, taken). Origineel plan: `.claude`-sessie-plan (zie chatgeschiedenis) �
 werkende samenvatting om een volgende sessie snel weer op te starten. Bijwerken bij elke increment.
 
 **Laatste update:** 2026-09-14 (increment 7 klaar en bevestigd; nu bezig met UX-verfijningspassen
-over de bestaande admin-pagina's, te beginnen bij `Instellingen/Trajectsjablonen/Bewerken`).
+over de bestaande admin-pagina's — twee passen op `Instellingen/Trajectsjablonen/Bewerken` deze
+sessie, zie de twee secties hieronder, nieuwste eerst).
+
+## Herwerking: sjabloon-editor naar master/detail — 2026-09-14
+
+**Aanleiding:** de gebruiker leverde een referentiescreenshot van de gewenste `Instellingen/
+Trajectsjablonen/Bewerken`-pagina (master/detail met een fases-en-mijlpalenboom links en een
+genummerd sectie-formulier rechts) en vroeg om zowel de styling als de functionaliteit ervan over
+te nemen, met behoud van het bestaande `_Layout`-stramien. Aanpak: rechtstreeks gebouwd volgens de
+al bestaande, gedocumenteerde conventies in `DESIGN.md` (`gl-page-header`, `gl-form-shell__tabs`,
+`gl-field-grid`/`gl-field`) — geen losstaande stylingpas nodig, de bouwstenen lagen er al.
+
+**Wat er veranderd is:**
+- **Paginakop herbouwd** met `gl-page-header` (partial `_PageHeader`): titel = sjabloonnaam,
+  ondertitel = `"N fases · M mijlpalen · K acties · gebruikt door P projecten"` (nieuw berekend in
+  `TrajectSjabloonAdminController.Bewerken`, opgeslagen op `TrajectSjabloonEditVm`). Acties-rij kreeg
+  een live "Niet-bewaarde wijzigingen"-indicator (JS, dirty-tracking op elke input/change binnen de
+  pagina) naast Terug/Dupliceren/Sjabloon opslaan.
+- **Nieuwe "Dupliceren"-actie**: `TrajectSjabloonAdminController.Dupliceren` (POST
+  `{id}/Dupliceren`) kloont het volledige sjabloon (fases, mijlpalen, triggers, alle Id's op
+  `null`, naam + " (kopie)", `IsStandaard` bewust `false` om dubbele standaardsjablonen per
+  projecttype te vermijden) via de bestaande `ITrajectSjabloonService.Upsert`, en redirect naar de
+  nieuwe kopie.
+- **Tabs** (`gl-form-shell__tabs`, hergebruikt patroon): **Structuur** (de bestaande editor,
+  herwerkt — zie hieronder), **Tijdlijn & simulatie** (nieuw — berekent per mijlpaal de streefdag via
+  de anker/offset-keten en toont die uitgezet vanaf een instelbare "project aangemaakt op"-datum;
+  puur een preview, bewaart niets), **Controle** (nieuw — client-side validatiepas met een
+  foutenbadge op de tab: dubbele technische codes, ontbrekende naam/code, onbekende of cyclische
+  ankerreferenties, automatische bron zonder bron-parameter, trigger "X dagen voor streefdatum"
+  zonder ingevulde dagen, ongeldige trigger-Parameters-JSON; elke melding is klikbaar en springt naar
+  de betrokken mijlpaal in de Structuur-tab).
+- **Structuur-tab herbouwd als master/detail** i.p.v. één lange, alles-tegelijk-getoonde pagina:
+  - Links **"Fases & mijlpalen"**: een sleepbare boom (jQuery UI Sortable, al elders in de app
+    gebruikt) van fases (met een kleurstip — nieuw gebruik van het al bestaande maar tot nu toe
+    ongebruikte `TrajectSjabloonFase.KleurCode`-veld, instelbaar via een swatch-rij op de
+    fase-editor) en, ingeklapt/uitgeklapt per fase, hun mijlpalen (met een automatisch-vs-handmatig
+    icoon en een badge met het aantal acties).
+  - Rechts een **detailpaneel** dat meekomt met de selectie: een simpele fase-editor (naam, code,
+    volgorde, ProjectStatusId, kleur, verwijderen) of — voor een mijlpaal — het volledige,
+    genummerde sectieformulier uit het referentiebeeld: *1 Wat is deze mijlpaal?* (naam, technische
+    code + "afleiden uit de naam"-knop, soort, verantwoordelijke rol — dit laatste veld bestond al
+    in de data maar had nog geen UI —, "Geldt voor"-segmentcontrol, Verplicht-toggle — ook nieuw in
+    de UI), *2 Wanneer is ze bereikt?* (Handmatig/Automatisch-keuzekaarten i.p.v. één
+    binding-dropdown; bij Automatisch de bestaande Bron + Bron-parameter-velden uit de vorige
+    verfijningspas), *3 Streefdatum* (de bestaande anker+offset-regel, nu met een live berekend
+    "dag N · datum"-label), *4 Acties bij deze mijlpaal* (triggers, herwerkt als genummerde
+    kaartjes met een leesbare "Gebeurtenis → Actie"-samenvatting en een toggle), *5 Toelichting*
+    (het `Omschrijving`-veld op mijlpaal-niveau — bestond al in de data/BO maar werd tot nu toe
+    nergens getoond of bewaard in de admin-UI).
+  - Mijlpaal en fase zijn nu ook **dupliceerbaar** (knop in het detailpaneel), niet enkel
+    verwijderbaar.
+- **Architectuurwissel in de JS** (`trajectsjabloon.admin.js`, volledig herschreven): van "de DOM is
+  de brontabel, bij Opslaan alles uitlezen" naar een in-memory state-object (`state.fases`) dat de
+  boom en het detailpaneel rendert; bij Opslaan wordt de payload rechtstreeks uit `state`
+  geserialiseerd. Nodig omdat een master/detail-scherm maar één mijlpaal-editor tegelijk toont — de
+  oude aanpak (één grote vorm met alle mijlpalen als verborgen/getoonde DOM-nodes) paste daar niet
+  meer bij. Tekstvelden gebruiken gerichte live DOM-patches (boomlabel, streefdatum-badge) i.p.v. een
+  volledige her-render, zodat de cursor/focus niet verspringt tijdens het typen.
+- **Bijvangst-fix**: `DossierKind` op een mijlpaal werd door de oude JS bij elke Opslaan stil op
+  `null` gezet (nooit gelezen/geschreven in de vorige versie van het script) — de nieuwe
+  state-gebaseerde aanpak leest en bewaart dit veld nu gewoon door, ook al heeft het nog geen eigen
+  UI-control.
+- Bestanden: `CPMCore/Controllers/TrajectSjabloonAdminController.cs` (stats + Dupliceren-actie),
+  `CPMCore/Models/Traject/TrajectSjabloonAdminVm.cs` (stats-properties + `StatsSubtitle`),
+  `CPMCore/Views/TrajectSjabloonAdmin/Edit.cshtml` (herbouwd), `CPMCore/wwwroot/js/
+  trajectsjabloon.admin.js` (volledig herschreven), `CPMCore/wwwroot/css/traject.css` (nieuwe
+  `.gl-tsa-*`-klassen toegevoegd, bestaande klassen ongewijzigd/hergebruikt).
+- **Geen DB-migratie nodig** — geen schemawijziging, enkel presentatie/UX + twee al bestaande maar
+  ongebruikte velden (`KleurCode`, `Omschrijving`) alsnog een UI gegeven, plus de nieuwe
+  Dupliceren-actie die de bestaande `Upsert` hergebruikt.
+- Build geverifieerd (0 `error CS`/`error RZ`, enkel de routineuze MSB3021/3027-file-lock-ruis van de
+  VS-sessie van de gebruiker) + JS-syntax gecontroleerd (`node --check`) + alle gebruikte
+  Boxicons-klassenamen geverifieerd tegen de gebundelde `boxicons.css` (drie namen bestonden niet in
+  deze versie en zijn vervangen: `bx-check-shield`→`bx-shield-alt`, `bx-time-five`→`bx-timer`,
+  `bx-grid-vertical`→`bx-dots-vertical-rounded`, `bx-error(-circle)`→`bx-alert-triangle`/
+  `bx-alert-circle`). **Nog niet live in de browser getest** — vereist een ingelogde sessie;
+  graag zelf verifiëren, in het bijzonder: het slepen (fases/mijlpalen herordenen), select2 in het
+  dynamisch her-gerenderde detailpaneel, en de Dupliceren-actie.
 
 ## Verfijningspas: sjabloon-editor (Instellingen/Trajectsjablonen/Bewerken) — 2026-09-14
 

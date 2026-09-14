@@ -66,7 +66,68 @@ public class TrajectSjabloonAdminController : BaseController
 
         SetBreadcrumbs(sjabloon.Naam);
         SetPageHeader("bx bx-git-branch", $"Sjabloon — {sjabloon.Naam}", "Instellingen");
+
         return View("Edit", new TrajectSjabloonEditVm { Sjabloon = sjabloon });
+    }
+
+    [HttpPost("{id:int}/Dupliceren")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsTrajectSjablonen)]
+    public async Task<IActionResult> Dupliceren(int id)
+    {
+        var bron = await _service.GetById(id, includeDetails: true);
+        if (bron == null) return NotFound();
+
+        var kopie = new TrajectSjabloonBO
+        {
+            Id = null,
+            Naam = $"{bron.Naam} (kopie)",
+            ProjectType = bron.ProjectType,
+            IsStandaard = false, // twee standaardsjablonen voor hetzelfde projecttype zou dubbelzinnig zijn
+            IsActief = bron.IsActief,
+            Omschrijving = bron.Omschrijving,
+            Fases = bron.Fases.OrderBy(f => f.Volgorde).Select(f => new TrajectSjabloonFaseBO
+            {
+                Id = null,
+                Naam = f.Naam,
+                Code = f.Code,
+                Volgorde = f.Volgorde,
+                KleurCode = f.KleurCode,
+                StandaardProjectStatusId = f.StandaardProjectStatusId,
+                Mijlpalen = f.Mijlpalen.OrderBy(m => m.Volgorde).Select(m => new TrajectSjabloonMijlpaalBO
+                {
+                    Id = null,
+                    Naam = m.Naam,
+                    Code = m.Code,
+                    Volgorde = m.Volgorde,
+                    MijlpaalType = m.MijlpaalType,
+                    Scope = m.Scope,
+                    VerantwoordelijkeRol = m.VerantwoordelijkeRol,
+                    DoeldatumAnkerCode = m.DoeldatumAnkerCode,
+                    DoeldatumOffsetDagen = m.DoeldatumOffsetDagen,
+                    IsVerplicht = m.IsVerplicht,
+                    BronBinding = m.BronBinding,
+                    BronParam = m.BronParam,
+                    DossierKind = m.DossierKind,
+                    Omschrijving = m.Omschrijving,
+                    Triggers = m.Triggers.Select(t => new TrajectSjabloonMijlpaalTriggerBO
+                    {
+                        Id = null,
+                        TriggerEvent = t.TriggerEvent,
+                        TriggerActie = t.TriggerActie,
+                        OffsetDagen = t.OffsetDagen,
+                        ActieParametersJson = t.ActieParametersJson,
+                        MagProjectWijzigen = t.MagProjectWijzigen,
+                        IsActief = t.IsActief,
+                        Omschrijving = t.Omschrijving
+                    }).ToList()
+                }).ToList()
+            }).ToList()
+        };
+
+        var saved = await _service.Upsert(kopie, UserId);
+        AddMessage("success", $"'{bron.Naam}' is gedupliceerd naar '{saved.Naam}'.", "Gedupliceerd");
+        return RedirectToAction(nameof(Bewerken), new { id = saved.Id });
     }
 
     [HttpPost("Opslaan")]

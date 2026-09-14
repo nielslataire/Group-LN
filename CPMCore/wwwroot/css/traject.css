@@ -241,3 +241,267 @@
     .gl-traject-mijlpaal { grid-template-columns: 14px 1fr auto; }
     .gl-tm-datum { grid-column: 2; text-align: left; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Trajectsjabloon-editor — master/detail herwerking (Instellingen/Trajectsjablonen/Bewerken)
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+    /* --muted (#8590a5) valt op wit terug op 3.22:1 — onder de WCAG AA-vloer van 4.5:1 voor
+       gewone tekst. Dat is een bestaand, app-breed token (custom.css) dat hier bewust niet wordt
+       aangepast (te grote blast radius voor deze pagina-pas); voor tekst die deze pagina zelf
+       introduceert gebruiken we in plaats daarvan dit lokale, wel-AA-conforme token. */
+    --tsa-muted-aa: #5b6472;
+    /* Idem voor het oranje actie-aantal-badge: --warning (#c17d1f) geeft met witte tekst maar
+       3.38:1 op de kleine 0.65rem badge-tekst — hier eigen (donkerder) tint, geen bestaand token. */
+    --tsa-badge-warn: #8a5a0f;
+    /* Niet-tekst-UI (toggle "uit"-track, sleepgrepen) moet zelf ook 3:1 halen (WCAG 1.4.11). */
+    --tsa-chrome-muted: #7a8494;
+}
+
+.gl-tsa-dirty {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .8rem; font-weight: 600; color: var(--warning-text);
+    background: var(--warning-tint); border-radius: 999px; padding: .35rem .7rem;
+}
+
+.gl-tsa-panel { padding-top: 1rem; }
+
+/* Generieke flex-rij-helper — o.a. de "Geldt voor + Verplicht"-rij in het mijlpaal-detailpaneel
+   (trajectsjabloon.admin.js). Losstaand van .gl-tsa-meta-row hieronder, dat een specifiekere
+   variant is voor de sjabloon-metadatarij bovenaan de pagina. */
+.gl-tsa-switch-row { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+.gl-tsa-switch-row .gl-switch-row { display: flex; align-items: center; gap: .55rem; margin: 0; }
+.gl-tsa-switch-row label[for] { font-size: .85rem; font-weight: 500; color: #222; margin: 0; cursor: pointer; }
+
+/* Sjabloon-metadata (naam/type/omschrijving + de twee toggles) — bewust één rij: velden
+   krijgen een gewicht (flex-grow) i.p.v. een gelijke-breedte grid, toggles blijven intrinsiek
+   breed en lijnen via align-items:flex-end uit op de onderkant van de velden. Wrapt vanzelf
+   onder ~900px (The Field-Width Rule blijft gelden). */
+.gl-tsa-meta-row { display: flex; align-items: flex-end; gap: 1.25rem 1.75rem; flex-wrap: wrap; }
+.gl-tsa-meta-row .gl-field { min-width: 160px; margin-bottom: 0; }
+.gl-tsa-meta-row .gl-switch-row { display: flex; align-items: center; gap: .55rem; flex: 0 0 auto; padding-bottom: .6rem; }
+.gl-tsa-meta-row .gl-switch-row label[for] { font-size: .85rem; font-weight: 500; color: #222; margin: 0; cursor: pointer; white-space: nowrap; }
+
+/* Eigen, volledig JS-eigendomsvrije toggle (i.p.v. het ios7Switch-jQuery-plugin) — nodig omdat
+   Verplicht/Actief/"Mag project wijzigen" op elke selectie/re-render opnieuw getekend worden en
+   een plugin-levenscyclus daar niet tegen bestand is. Visueel gematcht aan .switch-primary.
+   De wrapper is met opzet 40×40px (The Field-Width Rule) met de 38×22px schakelaar gecentreerd
+   erin — een onzichtbare, ruimere tikzone rond een compact visueel element, niet een opgeblazen
+   schakelaar. Markup gebruikt hiervoor een <span> (niet <label>) als wrapper: het echte,
+   zichtbare tekstlabel staat er los naast met een eigen for/id-koppeling. */
+.gl-toggle { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 auto; cursor: pointer; }
+.gl-toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.gl-toggle span {
+    position: relative; display: block; width: 38px; height: 22px; background: var(--tsa-chrome-muted);
+    border-radius: 999px; transition: background-color .15s ease; pointer-events: none;
+}
+.gl-toggle span::before {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    transition: transform .15s ease;
+}
+.gl-toggle input:checked + span { background: var(--primary); }
+.gl-toggle input:checked + span::before { transform: translateX(16px); }
+.gl-toggle input:focus-visible + span { box-shadow: 0 0 0 .2rem rgba(10,90,59,.25); }
+.gl-toggle.gl-toggle-sm span { width: 32px; height: 19px; }
+.gl-toggle.gl-toggle-sm span::before { width: 15px; height: 15px; }
+.gl-toggle.gl-toggle-sm input:checked + span::before { transform: translateX(13px); }
+
+/* Master/detail-split */
+.gl-tsa-split { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 992px) { .gl-tsa-split { grid-template-columns: 1fr; } }
+
+.gl-tsa-tree-col {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden;
+    position: sticky; top: calc(var(--topbar-height, 72px) + 10px);
+    max-height: calc(100vh - var(--topbar-height, 72px) - 30px);
+    display: flex; flex-direction: column;
+}
+@media (max-width: 992px) { .gl-tsa-tree-col { position: static; max-height: none; } }
+
+/* Kopregel van deze kaart hergebruikt bewust dezelfde klassen als het detailpaneel rechts
+   (.gl-tsa-detail-head/-head-left/-icon/-title/-subtitle) — zelfde titel-layout, andere kaart. */
+.gl-tsa-tree-col > .gl-tsa-detail-head { flex: 0 0 auto; }
+
+/* Body onder de kopregel: eigen padding + krimpbaar (min-height:0) zodat #faseTree binnenin kan
+   scrollen terwijl de kaart als geheel op zijn plaats blijft (sticky, vaste max-height). */
+.gl-tsa-tree-body { padding: 1rem; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+
+.gl-tsa-tree { overflow-y: auto; flex: 1 1 auto; margin: 0 -.25rem; padding: 0 .25rem; }
+.gl-tsa-tree-foot { display: flex; flex-direction: column; gap: .35rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border); }
+
+/* Elke fase als eigen kaartje (lichtgrijze achtergrond + grijze rand) binnen de fasenboom. */
+.gl-tsa-fase {
+    margin-bottom: .5rem; border-radius: var(--radius);
+    background: var(--lightgray); border: 1px solid var(--border); padding: .3rem;
+}
+.gl-tsa-fase:last-child { margin-bottom: 0; }
+.gl-tsa-fase-head {
+    display: flex; align-items: center; gap: .35rem; padding: .5rem .4rem;
+    border-radius: var(--radius); cursor: pointer; user-select: none;
+}
+.gl-tsa-fase-head:hover { background: #fff; }
+.gl-tsa-fase-head.is-selected { background: var(--lightgreen); }
+.gl-tsa-fase-head:focus-visible, .gl-tsa-mijlpaal-row:focus-visible {
+    outline: none; box-shadow: inset 0 0 0 2px var(--primary);
+}
+.gl-tsa-fase-drag { cursor: grab; color: var(--tsa-chrome-muted); font-size: 1rem; flex: 0 0 auto; touch-action: none; }
+.gl-tsa-fase-drag:active { cursor: grabbing; }
+.gl-tsa-fase-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.gl-tsa-fase-naam { font-weight: 700; font-size: .9rem; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-tsa-fase-badge {
+    font-size: .65rem; font-weight: 700; letter-spacing: .02em; color: var(--tsa-muted-aa);
+    background: #f1f3f7; border-radius: 999px; padding: .1rem .5rem; flex: 0 0 auto;
+}
+/* Sleepgreep + in-/uitklap-chevron zijn nu echte <button>s (toetsenbord-bedienbaar), niet enkel
+   decoratieve <i>'s — reset hun standaard knopstijl maar behoud het compacte icoon-uiterlijk. */
+.gl-tsa-fase-chevron {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border: 0; background: none; padding: 0; margin: 0;
+    color: var(--tsa-muted-aa); border-radius: var(--radius); cursor: pointer;
+    transition: transform .15s ease, background-color .15s ease; flex: 0 0 auto;
+}
+.gl-tsa-fase-chevron:hover { background: #eef0f4; }
+.gl-tsa-fase-chevron:focus-visible { outline: none; box-shadow: 0 0 0 .2rem rgba(10,90,59,.25); }
+.gl-tsa-fase.is-collapsed .gl-tsa-fase-chevron { transform: rotate(-90deg); }
+.gl-tsa-fase.is-collapsed .gl-tsa-mijlpalen { display: none; }
+
+.gl-tsa-mijlpalen { list-style: none; margin: 0 0 .15rem; padding: 0 0 0 1.4rem; }
+.gl-tsa-mijlpaal-row {
+    display: flex; align-items: center; gap: .4rem; padding: .4rem .4rem;
+    border-radius: var(--radius); cursor: pointer; font-size: .85rem;
+}
+.gl-tsa-mijlpaal-row:hover { background: #fff; }
+.gl-tsa-mijlpaal-row.is-selected { background: var(--primary); color: #fff; }
+.gl-tsa-mijlpaal-row.is-selected .gl-tsa-m-meta { color: rgba(255,255,255,.75); }
+.gl-tsa-m-drag { cursor: grab; color: var(--tsa-chrome-muted); font-size: .9rem; flex: 0 0 auto; touch-action: none; }
+.gl-tsa-mijlpaal-row.is-selected .gl-tsa-m-drag { color: rgba(255,255,255,.7); }
+.gl-tsa-m-drag:active { cursor: grabbing; }
+.gl-tsa-m-icon { flex: 0 0 auto; color: var(--tsa-muted-aa); font-size: .95rem; }
+.gl-tsa-mijlpaal-row.is-selected .gl-tsa-m-icon { color: rgba(255,255,255,.9); }
+.gl-tsa-m-naam { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-tsa-m-naam.is-unnamed { font-style: italic; opacity: .65; }
+.gl-tsa-m-badge {
+    flex: 0 0 auto; min-width: 16px; height: 16px; padding: 0 .3rem; border-radius: 999px;
+    background: var(--tsa-badge-warn); color: #fff; font-size: .65rem; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.gl-tsa-add-mijlpaal {
+    display: flex; align-items: center; gap: .35rem; padding: .35rem .4rem .35rem 1.4rem;
+    font-size: .8rem; color: var(--primary); font-weight: 600; cursor: pointer; background: none; border: 0; width: 100%; text-align: left;
+    min-height: 40px;
+}
+.gl-tsa-add-mijlpaal:hover { text-decoration: underline; }
+.gl-tsa-fase-placeholder, .gl-tsa-mijlpaal-placeholder { background: var(--lightgreen); border-radius: var(--radius); }
+
+/* Detailpaneel (rechts) */
+.gl-tsa-detail-col {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); min-height: 320px;
+}
+.gl-tsa-detail-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 4rem 2rem; color: var(--tsa-muted-aa); min-height: 320px;
+}
+.gl-tsa-detail-empty i { font-size: 2.2rem; color: #ced4da; margin-bottom: .5rem; }
+
+.gl-tsa-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+.gl-tsa-detail-head-left { display: flex; align-items: flex-start; gap: .75rem; min-width: 0; }
+.gl-tsa-detail-icon { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px; background: var(--lightgreen); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.gl-tsa-detail-title { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.gl-tsa-detail-subtitle { font-size: .8rem; color: var(--tsa-muted-aa); margin: .15rem 0 0; }
+.gl-tsa-detail-actions { display: flex; gap: .4rem; flex: 0 0 auto; }
+
+.gl-tsa-detail-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.75rem; }
+
+.gl-tsa-section-head { display: flex; align-items: baseline; gap: .55rem; margin-bottom: .85rem; }
+.gl-tsa-section-num {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff;
+    font-size: .72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.gl-tsa-section-title { font-size: .95rem; font-weight: 700; margin: 0; }
+.gl-tsa-section-hint { font-size: .76rem; color: var(--tsa-muted-aa); margin: .1rem 0 0; }
+.gl-tsa-section-actions { margin-left: auto; }
+
+/* "Geldt voor" — gesegmenteerde keuze */
+.gl-segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.gl-segmented button {
+    border: 0; background: #fff; color: #4a5566; font-size: .82rem; font-weight: 600;
+    padding: .45rem .9rem; min-height: 40px; cursor: pointer; transition: background-color .15s, color .15s;
+}
+.gl-segmented button + button { border-left: 1px solid var(--border); }
+.gl-segmented button.is-active { background: var(--primary); color: #fff; }
+.gl-segmented button:not(.is-active):hover { background: #f7f9fc; }
+.gl-segmented button:focus-visible { outline: none; box-shadow: inset 0 0 0 .15rem rgba(10,90,59,.4); position: relative; z-index: 1; }
+
+/* "Wanneer is ze bereikt?" — radiokaarten */
+.gl-radiocard-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+@media (max-width: 576px) { .gl-radiocard-row { grid-template-columns: 1fr; } }
+.gl-radiocard {
+    display: flex; align-items: flex-start; gap: .6rem; text-align: left;
+    border: 1px solid var(--border); border-radius: 8px; background: #fff; padding: .85rem .9rem;
+    cursor: pointer; transition: border-color .15s, background-color .15s;
+}
+.gl-radiocard:hover { border-color: #b9c9c0; }
+.gl-radiocard.is-active { border-color: var(--primary); background: var(--lightgreen); }
+.gl-radiocard:focus-visible { outline: none; box-shadow: 0 0 0 .2rem rgba(10,90,59,.25); }
+.gl-radiocard i { flex: 0 0 auto; font-size: 1.15rem; color: var(--tsa-muted-aa); margin-top: .1rem; }
+.gl-radiocard.is-active i { color: var(--primary); }
+.gl-radiocard-title { font-weight: 700; font-size: .85rem; }
+.gl-radiocard-desc { font-size: .74rem; color: var(--tsa-muted-aa); margin-top: .1rem; }
+
+/* "Acties bij deze mijlpaal" */
+.gl-tsa-actie { border: 1px solid var(--border); border-radius: 8px; padding: .7rem .8rem; margin-bottom: .6rem; background: #fbfbfd; }
+.gl-tsa-actie:last-child { margin-bottom: 0; }
+.gl-tsa-actie-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .6rem; }
+.gl-tsa-actie-num {
+    flex: 0 0 auto; width: 20px; height: 20px; border-radius: 5px; background: #f1f3f7; color: #4a5566;
+    font-size: .7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.gl-tsa-actie-summary { font-size: .84rem; font-weight: 600; flex: 1 1 auto; min-width: 0; }
+.gl-tsa-actie-summary b { color: var(--primary); }
+.gl-tsa-actie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem .6rem; }
+.gl-tsa-actie-check-row { display: flex; align-items: center; gap: 1.25rem; margin-top: .55rem; flex-wrap: wrap; }
+.gl-tsa-actie-check-row label { display: flex; align-items: center; gap: .4rem; font-size: .78rem; color: #4a5566; margin: 0; cursor: pointer; }
+.gl-tsa-empty-hint { font-size: .8rem; color: var(--tsa-muted-aa); padding: .5rem 0; }
+
+/* Tijdlijn & simulatie — hergebruikt .gl-traject-timeline/.gl-traject-fase/.gl-traject-mijlpaal */
+.gl-tsa-tl-dag { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--primary); }
+.gl-tsa-tl-onbekend { color: var(--danger); font-size: .8rem; }
+
+/* Controle */
+.gl-tsa-issue-group { margin-bottom: 1.1rem; }
+.gl-tsa-issue-group:last-child { margin-bottom: 0; }
+.gl-tsa-issue-group-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-bottom: .5rem; }
+.gl-tsa-issue {
+    display: flex; align-items: flex-start; gap: .6rem; padding: .6rem .75rem; border-radius: var(--radius);
+    margin-bottom: .4rem; font-size: .85rem; width: 100%; text-align: left; border: 0; font-family: inherit;
+}
+.gl-tsa-issue i { flex: 0 0 auto; margin-top: .1rem; }
+.gl-tsa-issue-urgent { background: var(--danger-tint); color: var(--danger-text); }
+.gl-tsa-issue-normal { background: var(--warning-tint); color: var(--warning-text); }
+.gl-tsa-issue-info { background: var(--info-tint); color: var(--info-text); }
+button.gl-tsa-issue { cursor: pointer; }
+button.gl-tsa-issue:hover { filter: brightness(.97); }
+button.gl-tsa-issue:focus-visible { outline: none; box-shadow: 0 0 0 .2rem rgba(10,90,59,.35); }
+.gl-tsa-issue-loc { display: block; font-size: .72rem; opacity: .8; margin-top: .1rem; }
+.gl-tsa-controle-ok { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3rem 1rem; color: var(--primary); }
+.gl-tsa-controle-ok i { font-size: 2.4rem; margin-bottom: .5rem; }
+
+/* Fasekleur-zwatches (fase-editor) */
+.gl-swatch-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+.gl-swatch {
+    /* 40x40 tikzone (The Field-Width Rule); de opake 7px witte rand laat er visueel enkel een
+       26px gekleurde cirkel van overblijven, zonder background-clip-trucs nodig te hebben. */
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer; padding: 0;
+    box-sizing: border-box; border: 7px solid #fff; box-shadow: 0 0 0 1px var(--border);
+}
+.gl-swatch.is-active { box-shadow: 0 0 0 2px #222; }
+.gl-swatch:focus-visible { outline: none; box-shadow: 0 0 0 2px #222, 0 0 0 4px rgba(10,90,59,.25); }
+
+@media (max-width: 767px) {
+    .gl-tsa-detail-head { flex-direction: column; }
+    .gl-tsa-detail-actions { align-self: flex-end; }
+}

@@ -19,6 +19,7 @@
                 naam = f.Naam,
                 code = f.Code,
                 volgorde = f.Volgorde,
+                kleurCode = f.KleurCode,
                 standaardProjectStatusId = f.StandaardProjectStatusId,
                 mijlpalen = f.Mijlpalen.OrderBy(m => m.Volgorde).Select(m => new
                 {
@@ -136,140 +137,122 @@
     <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
 }
 
+@section PageActions {
+    <span class="gl-tsa-dirty" id="tsaDirty" role="status" hidden><i class="bx bx-alert-circle" aria-hidden="true"></i> Niet-bewaarde wijzigingen</span>
+    @await Html.PartialAsync("_TrajectSjabloonActions", Model)
+}
+
+@if (!Model.IsNieuw)
+{
+    <form method="post" asp-action="Dupliceren" asp-route-id="@s!.Id" id="duplicerenForm" class="d-none"
+          onsubmit="return confirm('Dit sjabloon dupliceren naar een nieuwe kopie?');">
+        @Html.AntiForgeryToken()
+    </form>
+}
+
+<!-- Topbar-acties (hierboven) verdwijnen < 768px — daar krijgen ze een eigen rij in de content-body. -->
+<div class="d-flex d-md-none justify-content-end gap-2 mb-3">
+    @await Html.PartialAsync("_TrajectSjabloonActions", Model)
+</div>
+
+<div class="gl-form-shell__tabs" role="tablist" aria-label="Trajectsjabloon" data-tabgroup="tsa-edit">
+    <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-structuur" data-tab="structuur"
+            aria-controls="tab-structuur" aria-selected="true" tabindex="0">
+        <i class="bx bx-git-branch" aria-hidden="true"></i><span>Structuur</span>
+    </button>
+    <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-tijdlijn" data-tab="tijdlijn"
+            aria-controls="tab-tijdlijn" aria-selected="false" tabindex="-1">
+        <i class="bx bx-timer" aria-hidden="true"></i><span>Tijdlijn &amp; simulatie</span>
+    </button>
+    <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-controle" data-tab="controle"
+            aria-controls="tab-controle" aria-selected="false" tabindex="-1">
+        <i class="bx bx-shield-alt" aria-hidden="true"></i><span>Controle</span>
+        <span class="gl-form-shell__tab-badge" id="tsaControleBadge" hidden>0</span>
+    </button>
+</div>
+
 <form method="post" asp-action="Opslaan" id="sjabloonForm">
     @Html.AntiForgeryToken()
     <input type="hidden" name="payloadJson" id="payloadJson" />
-
-    <div class="row justify-content-between align-items-center pt-2 mb-3">
-        <div class="col-sm-auto">
-            <h1 class="font-weight-bold mb-0">@(Model.IsNieuw ? "Nieuw trajectsjabloon" : "Sjabloon bewerken")</h1>
-        </div>
-        <div class="col-sm-auto">
-            <a asp-action="Index" class="btn btn-default">Terug</a>
-            <button type="submit" class="btn btn-primary"><i class="bx bx-check"></i> Opslaan</button>
-        </div>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-body row g-3">
-            <div class="col-md-5">
-                <label class="form-label">Naam</label>
-                <input type="text" id="sj-naam" class="form-control" value="@(s?.Naam)" required />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Projecttype</label>
-                <select id="sj-type" class="form-select">
-                    <option value="">Alle</option>
-                    <option value="1" selected="@(s?.ProjectType == 1)">Woonproject</option>
-                    <option value="2" selected="@(s?.ProjectType == 2)">Commercieel</option>
-                </select>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="sj-standaard" @(s?.IsStandaard == true ? "checked" : "") />
-                    <label class="form-check-label" for="sj-standaard">Standaard</label>
-                </div>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="sj-actief" @(s == null || s.IsActief ? "checked" : "") />
-                    <label class="form-check-label" for="sj-actief">Actief</label>
-                </div>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Omschrijving</label>
-                <textarea id="sj-omschrijving" class="form-control" rows="2">@(s?.Omschrijving)</textarea>
-            </div>
-        </div>
-    </div>
-
-    <div id="fasesContainer"></div>
-    <button type="button" class="btn btn-default" id="btnAddFase"><i class="bx bx-plus"></i> Fase toevoegen</button>
 </form>
 
-<template id="tplFase">
-    <div class="gl-sjabloon-fase" data-fase>
-        <div class="row g-2 align-items-end mb-2">
-            <div class="col-md-4"><label class="form-label mb-0">Fasenaam</label><input class="form-control form-control-sm" data-f="naam" /></div>
-            <div class="col-md-3"><label class="form-label mb-0">Code</label><input class="form-control form-control-sm" data-f="code" /></div>
-            <div class="col-md-2"><label class="form-label mb-0">Volgorde</label><input type="number" class="form-control form-control-sm" data-f="volgorde" value="0" /></div>
-            <div class="col-md-2"><label class="form-label mb-0">ProjectStatusId</label><input type="number" class="form-control form-control-sm" data-f="status" /></div>
-            <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-del-fase><i class="bx bx-trash"></i></button></div>
+<div id="tab-structuur" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-structuur" tabindex="0">
+    <section class="gl-form-section">
+        <div class="gl-form-section__body">
+            <div class="gl-tsa-meta-row">
+                <div class="gl-field" style="flex:2 1 220px">
+                    <label for="sj-naam">Naam van het sjabloon</label>
+                    <input type="text" id="sj-naam" class="form-control form-control-modern" value="@(s?.Naam)" required />
+                </div>
+                <div class="gl-field" style="flex:1 1 160px">
+                    <label for="sj-type">Projecttype</label>
+                    <select id="sj-type" class="form-select form-control-modern">
+                        <option value="">Alle</option>
+                        <option value="1" selected="@(s?.ProjectType == 1)">Woonproject</option>
+                        <option value="2" selected="@(s?.ProjectType == 2)">Commercieel</option>
+                    </select>
+                </div>
+                <div class="gl-field" style="flex:2 1 220px">
+                    <label for="sj-omschrijving">Korte omschrijving</label>
+                    <textarea id="sj-omschrijving" class="form-control form-control-modern" rows="1">@(s?.Omschrijving)</textarea>
+                </div>
+                <div class="gl-switch-row">
+                    <span class="gl-toggle"><input type="checkbox" id="sj-standaard" @(s?.IsStandaard == true ? "checked" : "") /><span></span></span>
+                    <label for="sj-standaard">Standaard voor dit type</label>
+                </div>
+                <div class="gl-switch-row">
+                    <span class="gl-toggle"><input type="checkbox" id="sj-actief" @(s == null || s.IsActief ? "checked" : "") /><span></span></span>
+                    <label for="sj-actief">Actief</label>
+                </div>
+            </div>
         </div>
-        <div data-mijlpalen></div>
-        <button type="button" class="btn btn-xs btn-default" data-add-mijlpaal><i class="bx bx-plus"></i> Mijlpaal</button>
+    </section>
+
+    <div class="gl-tsa-split">
+        <div class="gl-tsa-tree-col">
+            <div class="gl-tsa-detail-head">
+                <div class="gl-tsa-detail-head-left">
+                    <div class="gl-tsa-detail-icon" aria-hidden="true"><i class="bx bx-git-branch"></i></div>
+                    <div>
+                        <h2 class="gl-tsa-detail-title">Fases &amp; mijlpalen</h2>
+                        <p class="gl-tsa-detail-subtitle">sleep, of gebruik pijltjestoetsen + Alt om te verplaatsen</p>
+                    </div>
+                </div>
+            </div>
+            <div class="gl-tsa-tree-body">
+                <div id="faseTree" class="gl-tsa-tree"></div>
+                <div class="gl-tsa-tree-foot">
+                    <button type="button" class="btn btn-sm btn-light border" id="btnAddFase"><i class="bx bx-plus" aria-hidden="true"></i> Fase toevoegen</button>
+                    <button type="button" class="btn btn-sm btn-light border" id="btnToggleAll">Alles openen</button>
+                </div>
+            </div>
+        </div>
+        <div class="gl-tsa-detail-col" id="detailPane"></div>
     </div>
-</template>
+</div>
 
-<template id="tplMijlpaal">
-    <div class="gl-sjabloon-mijlpaal" data-mijlpaal>
-        <div class="gl-sm-row1">
-            <div class="gl-sm-field">
-                <label class="gl-sm-caption">Naam</label>
-                <input class="form-control form-control-sm" placeholder="bv. Vergunning ingediend" data-m="naam" />
+<div id="tab-tijdlijn" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-tijdlijn" tabindex="0" hidden>
+    <section class="gl-form-section">
+        <div class="gl-form-section__body">
+            <div class="gl-form-section__head">
+                <i class="bx bx-timer" aria-hidden="true"></i>
+                <div>
+                    <h2 class="gl-form-section__title">Simulatie</h2>
+                    <p class="gl-form-section__hint">Berekende streefdagen op basis van de ankers en offsets hierboven, uitgezet vanaf een gekozen startdatum. Enkel een preview — er wordt niets bewaard.</p>
+                </div>
             </div>
-            <div class="gl-sm-field">
-                <label class="gl-sm-caption">Technische code</label>
-                <input class="form-control form-control-sm" placeholder="bv. VERGUNNING_INGEDIEND" data-m="code" />
-                <small class="gl-sm-hint">Uniek — hiermee herkennen andere mijlpalen, bindingen en triggers deze mijlpaal</small>
-            </div>
-            <div class="gl-sm-field gl-sm-field--narrow">
-                <label class="gl-sm-caption">Type</label>
-                <select class="form-select form-select-sm" data-m="type" title="Type"></select>
-            </div>
-            <div class="gl-sm-field gl-sm-field--narrow">
-                <label class="gl-sm-caption">Niveau</label>
-                <select class="form-select form-select-sm" data-m="scope" title="Project- of eenheidsniveau">
-                    <option value="0">Project</option>
-                    <option value="1">Per eenheid</option>
-                </select>
-            </div>
-            <button type="button" class="btn btn-xs btn-outline-danger gl-sm-del" data-del-mijlpaal title="Mijlpaal verwijderen"><i class="bx bx-x"></i></button>
-        </div>
-
-        <div class="gl-sm-daterule">
-            <label class="gl-sm-caption">Streefdatum</label>
-            <div class="gl-sm-daterule-row">
-                <span class="gl-sm-daterule-text">telt vanaf</span>
-                <select class="gl-sm-anchor" data-m="anker" title="Waarop deze streefdatum gebaseerd is"></select>
-                <span class="gl-sm-daterule-text">+</span>
-                <input type="number" class="form-control form-control-sm gl-sm-offset" placeholder="0" data-m="offset" title="Aantal dagen na de ankermijlpaal" />
-                <span class="gl-sm-daterule-text">dagen</span>
+            <div class="gl-field" style="max-width:220px">
+                <label for="tsaSimStart">Project aangemaakt op</label>
+                <input type="date" id="tsaSimStart" class="form-control form-control-modern" />
             </div>
         </div>
+    </section>
+    <div id="tijdlijnContainer"></div>
+</div>
 
-        <div class="gl-sm-row2">
-            <div class="gl-sm-field">
-                <label class="gl-sm-caption">Automatische bron</label>
-                <select class="form-select form-select-sm" data-m="binding" title="Automatische bron-binding"></select>
-            </div>
-            <div class="gl-sm-field" data-m-param-cell>
-                <label class="gl-sm-caption" data-m-param-label>Bron-parameter</label>
-                <div data-m-param-control></div>
-                <small class="gl-sm-hint" data-m-param-hint></small>
-            </div>
-        </div>
-
-        <div class="gl-sm-triggers" data-triggers></div>
-        <button type="button" class="btn btn-xs btn-outline-primary mt-1" data-add-trigger><i class="bx bx-bell-plus"></i> Trigger toevoegen</button>
-    </div>
-</template>
-
-<template id="tplTrigger">
-    <div class="gl-sjabloon-trigger" data-trigger>
-        <select class="form-select form-select-sm" data-t="event" title="Gebeurtenis"></select>
-        <select class="form-select form-select-sm" data-t="actie" title="Actie"></select>
-        <input type="number" class="form-control form-control-sm" placeholder="Dagen vooraf" data-t="offset" title="Enkel bij 'X dagen voor streefdatum'" />
-        <input class="form-control form-control-sm" placeholder='Parameters JSON, bv. {"rol":5}' data-t="params" title="Kleine JSON-payload voor de actie" />
-        <label class="form-check form-check-inline gl-st-check" title="Mag Project.StatusId/vlaggen wijzigen">
-            <input class="form-check-input" type="checkbox" data-t="magwijzigen" /> <span class="form-check-label">Mag project wijzigen</span>
-        </label>
-        <label class="form-check form-check-inline gl-st-check">
-            <input class="form-check-input" type="checkbox" data-t="actief" checked /> <span class="form-check-label">Actief</span>
-        </label>
-        <button type="button" class="btn btn-xs btn-outline-danger" data-del-trigger><i class="bx bx-x"></i></button>
-    </div>
-</template>
+<div id="tab-controle" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-controle" tabindex="0" hidden>
+    <div id="controleContainer"></div>
+</div>
 
 @section PageScripts {
     <script id="sjabloonData" type="application/json">@Html.Raw(JsonSerializer.Serialize(initial))</script>
@@ -281,5 +264,34 @@
     <script id="bronParamOptiesByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamOptiesByBinding))</script>
     <script id="bronParamModeByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamModeByBinding))</script>
     <script id="bronParamHintByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamHintByBinding))</script>
+    <script>
+        (function () {
+            var strip = document.querySelector('.gl-form-shell__tabs[data-tabgroup="tsa-edit"]');
+            if (!strip) return;
+            var tabs = Array.prototype.slice.call(strip.querySelectorAll('.gl-form-shell__tab'));
+            var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+
+            function activate(name) {
+                tabs.forEach(function (t, i) {
+                    var on = t.dataset.tab === name;
+                    t.setAttribute('aria-selected', on ? 'true' : 'false');
+                    t.tabIndex = on ? 0 : -1;
+                    if (panels[i]) panels[i].hidden = !on;
+                });
+                document.dispatchEvent(new CustomEvent('tsa:tab', { detail: { tab: name } }));
+                window.dispatchEvent(new Event('resize'));
+            }
+
+            tabs.forEach(function (t) {
+                t.addEventListener('click', function () { activate(t.dataset.tab); });
+                t.addEventListener('keydown', function (e) {
+                    var i = tabs.indexOf(t), next = null;
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(i + 1) % tabs.length];
+                    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(i - 1 + tabs.length) % tabs.length];
+                    if (next) { e.preventDefault(); next.focus(); activate(next.dataset.tab); }
+                });
+            });
+        })();
+    </script>
     <script src="~/js/trajectsjabloon.admin.js" asp-append-version="true"></script>
 }

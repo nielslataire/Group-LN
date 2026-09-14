@@ -1,0 +1,18 @@
+@model CPMCore.Models.Traject.TrajectSjabloonEditVm
+@*
+    Gedeeld tussen @section PageActions (topbar, ≥768px) en de mobiele d-md-none
+    fallback-rij in de content-body (<768px) — zelfde patroon als
+    Projecten/Partials/ProjectActionButtons.cshtml (zie Projecten/Detail.cshtml).
+    Eén bron voor de knoppen zodat beide plekken in sync blijven. De "Niet-bewaarde
+    wijzigingen"-indicator (id="tsaDirty") hoort hier bewust niet bij — die leeft
+    enkel in de topbar-instantie om dubbele id's in de DOM te vermijden.
+*@
+@if (!Model.IsNieuw)
+{
+    <button type="submit" form="duplicerenForm" class="btn btn-light btn-sm px-3">
+        <i class="bx bx-copy me-1" aria-hidden="true"></i>Dupliceren
+    </button>
+}
+<button type="submit" form="sjabloonForm" class="btn btn-primary btn-sm px-3">
+    <i class="bx bx-check me-1" aria-hidden="true"></i>Sjabloon opslaan
+</button>
