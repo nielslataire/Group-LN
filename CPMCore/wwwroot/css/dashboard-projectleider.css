@@ -512,4 +512,18 @@
 .gl-sa-subitem:last-child { border-bottom: none; }
 .gl-sa-subitem:hover { background: rgba(0,0,0,.05); color: #0a5a3b; text-decoration: none; }
 .gl-sa-subitem::before { content: '›'; margin-right: 6px; color: #aaa; font-size: 13px; }
+
+/* ── Funnel (Ontwikkelaar: projecten per fase / Verkoper: eenheden per verkoopstatus) ── */
+.gl-funnel { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.gl-funnel-row { display: flex; align-items: center; gap: 10px; }
+.gl-funnel-label {
+    flex: 0 0 170px; font-size: 12.5px; color: #555;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gl-funnel-track { flex: 1 1 auto; background: #f1f1f1; border-radius: 4px; height: 22px; overflow: hidden; }
+.gl-funnel-bar {
+    width: 100%; height: 100%; background: var(--primary, #0a5a3b); border-radius: 4px;
+    transform: scaleX(var(--gl-funnel-fill, 0)); transform-origin: left; transition: transform .4s ease;
+}
+.gl-funnel-count { flex: 0 0 28px; text-align: right; font-weight: 700; font-size: 12.5px; }
 .gl-sa-empty { padding: 7px 16px 7px 40px; font-size: 11px; color: #999; font-style: italic; }

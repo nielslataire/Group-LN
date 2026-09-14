@@ -2,7 +2,9 @@
 @using BOCore
 @using DALCore.Models
 @using FacadeCore
+@using Microsoft.EntityFrameworkCore
 @inject IMijlpaalService MijlpaalService
+@inject cpmRunningContext Db
 @{
     var vandaag = DateOnly.FromDateTime(DateTime.Today);
     var projectIds = Model.Projects.Select(p => p.Id).ToList();
@@ -19,6 +21,30 @@
     var achterstallig = openstaand.Count(m => (m.Doeldatum ?? m.DoeldatumBerekend) is DateOnly d && d < vandaag);
     var eenhedenMetActie = openstaand.Select(m => m.UnitId).Distinct().Count();
     var eerstvolgende = openstaand.Take(12).ToList();
+
+    // Verkooppijplijn rechtstreeks via ClientAccount i.p.v. enkel afgeleid uit mijlpaal-bindingen —
+    // zelfde statuscategorisering (Beschikbaar/In optie/Verkocht/Akte verleden) als de unit-rijen op
+    // Projecten/Detail.cshtml. Enkel top-level verkoopbare eenheden (geen attached/linked sub-units).
+    var verkoopUnits = await Db.Units.AsNoTracking()
+        .Where(u => projectIds.Contains(u.ProjectId) && u.AttachedUnitId == null && u.LinkedUnitId == null)
+        .Select(u => new
+        {
+            u.IsOption,
+            u.ClientAccountId,
+            DateDeedOfSale = u.ClientAccount != null ? u.ClientAccount.DateDeedOfSale : (DateOnly?)null
+        })
+        .ToListAsync();
+
+    var akteVerleden = verkoopUnits.Count(u => u.ClientAccountId != null && u.DateDeedOfSale.HasValue);
+    var verkocht = verkoopUnits.Count(u => u.ClientAccountId != null && !u.DateDeedOfSale.HasValue);
+    var inOptie = verkoopUnits.Count(u => u.ClientAccountId == null && u.IsOption);
+    var beschikbaar = verkoopUnits.Count(u => u.ClientAccountId == null && !u.IsOption);
+    var verkoopMax = new[] { beschikbaar, inOptie, verkocht, akteVerleden }.DefaultIfEmpty(0).Max();
+
+    // CSS custom properties zijn cultuur-onafhankelijk (punt als decimaalteken) — de view draait
+    // onder nl-BE, dus expliciet InvariantCulture i.p.v. het Razor-standaard ToString().
+    Func<int, string> funnelFill = aantal => (verkoopMax > 0 ? (double)aantal / verkoopMax : 0)
+        .ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
 
 <!-- ── KPI STRIP ──────────────────────────────────────────── -->
@@ -88,6 +114,48 @@
                         </div>
                     </div>
                 </a>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- ── VERKOOPPIJPLIJN PER STATUS ────────────────────────────── -->
+<div class="row pt-3 gl-dashboard">
+    <div class="col-12">
+        <section class="card card-modern gl-detail-card">
+            <header class="card-header gl-detail-card-header">
+                <h2 class="card-title mb-0">Eenheden per verkoopstatus</h2>
+            </header>
+            <div class="card-body p-0">
+                @if (verkoopUnits.Count == 0)
+                {
+                    <p class="text-muted mb-0 p-3">Geen eenheden in je portfolio.</p>
+                }
+                else
+                {
+                    <div class="gl-funnel">
+                        <div class="gl-funnel-row">
+                            <span class="gl-funnel-label">Beschikbaar</span>
+                            <div class="gl-funnel-track"><div class="gl-funnel-bar" style="--gl-funnel-fill: @funnelFill(beschikbaar)"></div></div>
+                            <span class="gl-funnel-count">@beschikbaar</span>
+                        </div>
+                        <div class="gl-funnel-row">
+                            <span class="gl-funnel-label">In optie</span>
+                            <div class="gl-funnel-track"><div class="gl-funnel-bar" style="--gl-funnel-fill: @funnelFill(inOptie)"></div></div>
+                            <span class="gl-funnel-count">@inOptie</span>
+                        </div>
+                        <div class="gl-funnel-row">
+                            <span class="gl-funnel-label">Verkocht</span>
+                            <div class="gl-funnel-track"><div class="gl-funnel-bar" style="--gl-funnel-fill: @funnelFill(verkocht)"></div></div>
+                            <span class="gl-funnel-count">@verkocht</span>
+                        </div>
+                        <div class="gl-funnel-row">
+                            <span class="gl-funnel-label">Akte verleden</span>
+                            <div class="gl-funnel-track"><div class="gl-funnel-bar" style="--gl-funnel-fill: @funnelFill(akteVerleden)"></div></div>
+                            <span class="gl-funnel-count">@akteVerleden</span>
+                        </div>
+                    </div>
+                }
             </div>
         </section>
     </div>

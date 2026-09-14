@@ -60,6 +60,10 @@ else
                                     </button>
                                     <div class="gl-um-datum @(overdue ? "text-danger fw-bold" : "text-muted")">
                                         @(m.WerkelijkeDatum?.ToString("dd/MM/yy") ?? eff?.ToString("dd/MM/yy") ?? "—")
+                                        @if (Model.PuntenPerMijlpaal.TryGetValue(m.Id, out var umPuntenAantal) && umPuntenAantal > 0)
+                                        {
+                                            <span class="badge bg-light text-dark" title="Gekoppelde punten"><i class="bx bx-error-circle"></i> @umPuntenAantal</span>
+                                        }
                                     </div>
                                 </td>
                             }

@@ -269,6 +269,26 @@
                     var insExtra = w.Display?.Replace($" van project {Model.Project.Name}", "");
                     urgentItems.Add(("Verzekering", null, insExtra, Url.Action("DetailInsurances", "Projecten", new { projectid = Model.Project.Id }), "bx-shield-x", "Financieel", null));
                 }
+                // Trajectmijlpalen: achterstallig (streefdatum voorbij) is urgent, binnen 14
+                // dagen komt bij "op te lossen" — zelfde afkapping als _MijnKeypointsWidget en
+                // de KPI-strip op de trajectpagina zelf.
+                var mijlpaalTrajectUrl = Url.Action("Index", "ProjectTraject", new { projectId = Model.Project.Id });
+                foreach (var m in Model.AttentionMijlpalen)
+                {
+                    var datum = (m.Doeldatum ?? m.DoeldatumBerekend)!.Value;
+                    var entiteit = m.Unit?.Name;
+                    if (datum < attentionToday)
+                    {
+                        var dagenTeLaat = (attentionToday.ToDateTime(TimeOnly.MinValue) - datum.ToDateTime(TimeOnly.MinValue)).Days;
+                        urgentItems.Add(("Mijlpaal achterstallig", entiteit, m.Naam, mijlpaalTrajectUrl, "bx-flag", "Traject", $"{dagenTeLaat} dagen te laat"));
+                    }
+                    else if (datum <= attentionToday.AddDays(14))
+                    {
+                        var dagenNog = (datum.ToDateTime(TimeOnly.MinValue) - attentionToday.ToDateTime(TimeOnly.MinValue)).Days;
+                        normalItems.Add(("Mijlpaal nadert", entiteit, m.Naam, mijlpaalTrajectUrl, "bx-flag", "Traject", $"Nog {dagenNog} dagen"));
+                    }
+                }
+
                 foreach (var i in Model.OpenIssues.Where(x => x.Priority >= (int)ConstructionIssuePriority.High))
                 {
                     string? meta = i.DueDate.HasValue
@@ -293,7 +313,7 @@
                 }
 
                 var allAttentionItems = urgentItems.Concat(normalItems).ToList();
-                var attentionCategories = new[] { "Contracten", "Werf", "Financieel" }
+                var attentionCategories = new[] { "Contracten", "Werf", "Financieel", "Traject" }
                     .Select(cat => (Naam: cat, Aantal: allAttentionItems.Count(i => i.Categorie == cat)))
                     .Where(c => c.Aantal > 0)
                     .ToList();

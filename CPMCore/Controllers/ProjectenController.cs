@@ -75,6 +75,7 @@ namespace CPMCore.Controllers
         private readonly IPostalcodeService _postalcodeService;
         private readonly IProjectVoortgangService _voortgangService;
         private readonly IConstructionIssueService _issueService;
+        private readonly IMijlpaalService _mijlpaalService;
         private readonly IInvoiceQueryService _invoiceQueryService;
         private readonly DALCore.UnitOfWorkCore _uow;
         private readonly IBudgetService _budgetService;
@@ -95,7 +96,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IMijlpaalService mijlpaalService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
         {
             _logger = logger;
             Configuration = configuration;
@@ -111,6 +112,7 @@ namespace CPMCore.Controllers
             _postalcodeService = postalcodeService;
             _voortgangService = voortgangService;
             _issueService = issueService;
+            _mijlpaalService = mijlpaalService;
             _invoiceQueryService = invoiceQueryService;
             _uow = uow;
             _budgetService          = budgetService;
@@ -530,6 +532,15 @@ namespace CPMCore.Controllers
                 .ThenBy(i => i.DueDate)
                 .ToList();
             model.OpenIssuesCount = model.OpenIssues.Count;
+
+            // Mijlpalen: enkel de nog niet bereikte/n.v.t. mijlpalen van dit project, voor het
+            // aandachtspaneel (achterstallig = urgent, binnen 14 dagen = op te lossen) — zelfde
+            // statusuitsluiting als ProjectTraject/Index.cshtml en _MijnKeypointsWidget.
+            var alleMijlpalen = await _mijlpaalService.SearchPortfolio(new[] { projectid }, new MijlpaalFilterBO { ProjectId = projectid });
+            model.AttentionMijlpalen = alleMijlpalen
+                .Where(m => m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing)
+                .Where(m => (m.Doeldatum ?? m.DoeldatumBerekend) != null)
+                .ToList();
 
             // Contracten: opvolging die nog actie vraagt (niet getekend / waarborg ontbreekt).
             var contractsResp = Service.GetProjectContracts(projectid);

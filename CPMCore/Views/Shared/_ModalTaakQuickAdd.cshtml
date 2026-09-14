@@ -4,11 +4,11 @@
     <div class="modal-dialog">
         <form method="post" asp-controller="MijnTaken" asp-action="Opslaan" class="modal-content">
             @Html.AntiForgeryToken()
-            <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
-            <input type="hidden" name="UnitId" value="@Model.UnitId" />
-            <input type="hidden" name="MijlpaalId" value="@Model.MijlpaalId" />
-            <input type="hidden" name="ProjectDossierId" value="@Model.ProjectDossierId" />
-            <input type="hidden" name="ConstructionIssueId" value="@Model.ConstructionIssueId" />
+            <input type="hidden" name="ProjectId" id="@(Model.ModalId)-project-id" value="@Model.ProjectId" />
+            <input type="hidden" name="UnitId" id="@(Model.ModalId)-unit-id" value="@Model.UnitId" />
+            <input type="hidden" name="MijlpaalId" id="@(Model.ModalId)-mijlpaal-id" value="@Model.MijlpaalId" />
+            <input type="hidden" name="ProjectDossierId" id="@(Model.ModalId)-dossier-id" value="@Model.ProjectDossierId" />
+            <input type="hidden" name="ConstructionIssueId" id="@(Model.ModalId)-issue-id" value="@Model.ConstructionIssueId" />
             <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
             <div class="modal-header">
                 <h5 class="modal-title">Taak aanmaken</h5>
@@ -17,7 +17,7 @@
             <div class="modal-body">
                 <div class="mb-2">
                     <label class="form-label">Titel</label>
-                    <input type="text" name="Titel" class="form-control" value="@Model.DefaultTitel" required />
+                    <input type="text" name="Titel" id="@(Model.ModalId)-titel" class="form-control" value="@Model.DefaultTitel" required />
                 </div>
                 <div class="mb-2">
                     <label class="form-label">Omschrijving</label>

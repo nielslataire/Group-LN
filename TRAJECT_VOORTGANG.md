@@ -4,8 +4,8 @@ Doorlopend statusdocument voor de grote "trajectopvolging"-feature (werf/project
 triggers, taken). Origineel plan: `.claude`-sessie-plan (zie chatgeschiedenis) — dit bestand is de
 werkende samenvatting om een volgende sessie snel weer op te starten. Bijwerken bij elke increment.
 
-**Laatste update:** 2026-09-11 (increment 6 klaar; increment 7 gestart: /Deadlines,
-Ontwikkelaar/Verkoper-dashboards en _MijnKeypointsWidget klaar).
+**Laatste update:** 2026-09-13 (increment 7 klaar; migratie 039 en de vergunning-koppel-bugfix
+bevestigd werkend door de gebruiker op de live DB).
 
 ## Architectuur in één oogopslag
 
@@ -38,7 +38,7 @@ Ontwikkelaar/Verkoper-dashboards en _MijnKeypointsWidget klaar).
 | 4 | Generiek dossier-model + nutsmaatschappijen | ✅ Klaar |
 | 5 | Omgevingsvergunning-dossier (checklist + auto-koppeling) | ✅ Klaar (zie bugfix hieronder) |
 | 6 | Interne taken ("Mijn taken") | ✅ Klaar |
-| 7 | Rol-overzichten/dashboards/permissies/polish | 🔶 Gestart — Deadlines-pagina + Ontwikkelaar/Verkoper-dashboards + keypoints-widget klaar, rest nog open |
+| 7 | Rol-overzichten/dashboards/permissies/polish | ✅ Klaar |
 
 ## Migraties — **nog uit te voeren op de live DB indien nog niet gebeurd**
 
@@ -46,10 +46,12 @@ Volgorde is belangrijk (`_migrations/029` t/m `039`). Controleer met `sqlcmd` of
 bevat vóór je een script opnieuw draait — alle scripts zijn idempotent (`PRINT ... overgeslagen` bij
 tweede run, geen destructieve DDL).
 
-- `029_TrajectMijlpalen.sql` … `038_TrajectDossierSubstappen.sql` — increments 1 t/m 5, zouden al
-  gedraaid moeten zijn (increment 5 was live getest deze sessie).
-- **`039_ProjectTaak.sql`** — **NIEUW, nog niet bevestigd gedraaid.** Maakt tabel `ProjectTaak` aan
-  (increment 6, "Mijn taken"). Geen destructieve wijzigingen, veilig meermaals uitvoerbaar.
+- `029_TrajectMijlpalen.sql` … `039_ProjectTaak.sql` — increments 1 t/m 6, **bevestigd gedraaid en
+  werkend** op de live DB (incl. de vergunning-koppel-bugfix hieronder, live getest door de gebruiker).
+- **`040_TrajectPerfIndexen.sql`** — **NIEUW, nog niet bevestigd gedraaid.** 2 extra indexen op
+  `Mijlpaal` (`VerantwoordelijkeUserId`, `VerantwoordelijkeRol`) — increment 7 draait op elke
+  dashboard-load een portfolio-brede rol-/gebruiker-gefilterde mijlpalenscan (5 rol-dashboards +
+  Deadlines), die kolommen hadden nog geen index. Geen destructieve wijzigingen.
 
 Na elke migratie: rebuild + herstart de app (VS-sessie van de gebruiker) om de nieuwe code op te pikken.
 
@@ -63,8 +65,7 @@ dat moment simpelweg geen kandidaten en faalde stil (geen retry).
 alsnog niet-gekoppelde VERGUNNING_*-mijlpalen aan het (oudste actieve) vergunningsdossier van het
 project. Wordt nu automatisch aangeroepen vanuit `TrajectInstantiationService.SyncMissing`, dus élke
 "Sync met sjabloon"-actie op de trajectpagina herstelt dit soort gevallen vanzelf (self-healing, geen
-handmatige stap nodig). **Nog te bevestigen door de gebruiker**: na rebuild op project 73 "Sync met
-sjabloon" draaien + herberekenen, dan moet `VERGUNNING_INGEDIEND` op Bereikt springen (12/09/2026).
+handmatige stap nodig). **Bevestigd werkend door de gebruiker** op de live DB (2026-09-13).
 
 ## Increment 6 — wat er is bijgekomen ("Mijn taken")
 
@@ -84,9 +85,9 @@ sjabloon" draaien + herberekenen, dan moet `VERGUNNING_INGEDIEND` op Bereikt spr
   `IProjectTaakService` zelf), ingebed in alle 3 bestaande dashboards
   (`_DashboardProjectleider/CeoCfo/Boekhouding.cshtml`)
 - `CPMCore/Views/Shared/_ModalTaakQuickAdd.cshtml` + `CPMCore/Models/Traject/TaakQuickAddVm.cs` —
-  herbruikbare "Taak aanmaken"-knop/modal met context (project/mijlpaal/dossier/punt); nu ingebed op
-  de dossier-detailpagina (`ProjectDossiers/Details.cshtml`). **Nog niet** ingebed op mijlpaal-detail of
-  punt-detail — zie openstaande punten.
+  herbruikbare "Taak aanmaken"-knop/modal met context (project/mijlpaal/dossier/punt); ingebed op de
+  dossier-detailpagina (`ProjectDossiers/Details.cshtml`); increment 7 voegde de mijlpaal- en
+  punt-detail-embeds toe (zie increment 7, punt 6).
 - Navigatie-item "Mijn taken" toegevoegd aan beide sidebar-varianten
   (`_LeftSidebarPartial.cshtml`/`_LeftSidebarPartialA.cshtml`), permissie-gated op
   `PermissionCodes.MijnTaken` (stond al in `PermissionCatalog.vb`, geen migratie nodig — permissies zijn
@@ -95,9 +96,8 @@ sjabloon" draaien + herberekenen, dan moet `VERGUNNING_INGEDIEND` op Bereikt spr
 Build geverifieerd: 0 `error CS`/`error RZ` op dat moment (enkel routineuze MSB3021/3027-file-lock-ruis
 van de VS-sessie van de gebruiker, en MVC1000-warnings).
 
-## Increment 7 — in uitvoering
+## Increment 7 — klaar
 
-**Klaar:**
 1. ✅ **`/Deadlines`** — portfolio-brede pagina, af. `IMijlpaalService.SearchPortfolio(projectIds, filters)`
    toegevoegd (nieuwe methode, `MijlpaalService.cs`); `MijlpaalFilterBO.ProjectId` filterveld toegevoegd.
    `CPMCore/Controllers/DeadlinesController.cs` (`/Deadlines`, permissie `PortfolioDeadlines`, zelfde
@@ -109,28 +109,58 @@ van de VS-sessie van de gebruiker, en MVC1000-warnings).
    (`CPMCore/Models/DashboardType.cs`) + geselecteerbaar gemaakt in de admin-UI
    (`Views/UserAdmin/Modals/_UserAdminModals.cshtml`, twee `<select id="edit-dashboard-type">`'s).
    `Views/Home/Index.cshtml` dispatcht nu ook naar `_DashboardOntwikkelaar.cshtml` (KPI-strip +
-   "vergunningen in opvolging"-tabel over de hele portfolio + keypoints/taken-widgets) en
-   `_DashboardVerkoper.cshtml` (KPI-strip + "verkooppijplijn per eenheid"-tabel, per-eenheid mijlpalen
-   via `IMijlpaalService.SearchPortfolio(..., AlleenProjectniveau:false)` + keypoints/taken-widgets).
-   Beide zijn een **eerste, functionele versie** — geen "fase-funnel" of aparte `ClientAccount`-query
-   (leunen bewust op de al bestaande mijlpaal-bindingen i.p.v. een parallel datapad).
+   "vergunningen in opvolging"-tabel + "projecten per fase"-funnel + keypoints/taken-widgets) en
+   `_DashboardVerkoper.cshtml` (KPI-strip + "verkooppijplijn per eenheid"-tabel + "eenheden per
+   verkoopstatus"-funnel + keypoints/taken-widgets).
 3. ✅ **`_MijnKeypointsWidget.cshtml`** ("mijn mijlpalen", apart van "mijn taken" — achterstallig/rood,
    ≤14 dagen/oranje, verder/grijs; filtert op `VerantwoordelijkeUserId == ik OR VerantwoordelijkeRol ==
    mijn (uit DashboardType afgeleide) rol`) — zelfvoorzienend zoals `_MijnTakenWidget`, nu ingebed in
    **alle 5** rol-dashboards (de 3 bestaande + de 2 nieuwe).
+4. ✅ **"Aandacht vereist"** op `Projecten/Detail.cshtml` gevoed met mijlpaal-waarschuwingen. Nieuwe
+   `IMijlpaalService`-dependency in `ProjectenController` (was er nog niet); `Detail()` haalt de nog
+   niet bereikte/n.v.t. mijlpalen van het project op (`ShowProjectDetail.AttentionMijlpalen`,
+   `ProjectModel.cs`) en toont ze als "Mijlpaal achterstallig" (urgent, rood) / "Mijlpaal nadert"
+   (≤14 dagen, "op te lossen") in het bestaande `gl-mc-*`-paneel, met een nieuwe filterchip
+   "Traject" naast Contracten/Werf/Financieel. Link gaat naar `ProjectTraject/Index` (er bestaat geen
+   losse mijlpaal-detailpagina om naar door te linken).
+5. ✅ **Permissie-/rol-polish + perf-indexen + "Punten" als gekoppelde component.**
+   - **Rol-mapping-bug gevonden en gefixt**: de `DashboardType → InterneRol`-switch (bepaalt "mijn rol"
+     voor de keypoints/taken-widgets) had nog geen cases voor de twee nieuwe dashboardtypes —
+     Ontwikkelaar en Verkoper kregen dus `rol = null` en zagen enkel taken/mijlpalen op hun eigen
+     `UserId`, nooit op hun rol. Gefixt op de twee plekken waar die switch stond:
+     `_MijnKeypointsWidget.cshtml` en `MijnTakenController.BepaalRollen`.
+   - **`_migrations/040_TrajectPerfIndexen.sql`** (nog te draaien, zie migratie-sectie) — 2 indexen op
+     `Mijlpaal.VerantwoordelijkeUserId`/`VerantwoordelijkeRol`, de kolommen waarop de
+     portfolio-brede `SearchPortfolio`-scan nu op elke dashboard-load filtert (5 dashboards).
+   - **"Punten" zichtbaar als gekoppelde component**: `TrajectIndexVm.PuntenPerMijlpaal` (nieuw,
+     `Dictionary<MijlpaalId, aantal>`) geeft het aantal distinct `ConstructionIssue`'s dat via een
+     `ProjectTaak` (met zowel `MijlpaalId` als `ConstructionIssueId` gezet) aan een mijlpaal hangt.
+     Gevuld in `ProjectTrajectController.Index()`, getoond als klein badge-icoontje naast de mijlpaal
+     in zowel de hoofdtabel (`ProjectTraject/Index.cshtml`) als de per-eenheid-matrix
+     (`_UnitMatrix.cshtml`) — enkel zichtbaar als er effectief gekoppelde punten zijn.
+6. ✅ **"Maak taak"-quickadd op mijlpaal-detail en punt-detail.**
+   - **Punt-detail** (`ProjectsIssues/Details.cshtml`): identiek patroon als dossier-detail — knop in
+     de header + `_ModalTaakQuickAdd` met `ConstructionIssueId` vast ingevuld.
+   - **Mijlpaal**: er bestaat geen losse mijlpaal-detailpagina (mijlpalen worden bewerkt via de
+     AJAX-gevoede `_ModalMijlpaalStatus`-modal op `ProjectTraject/Index`), dus de quickadd zit als
+     knop in de footer van díe modal (`mps-btn-taak`). `_ModalTaakQuickAdd.cshtml`'s hidden velden
+     kregen `id`-attributen (`{ModalId}-project-id`/`-mijlpaal-id`/etc.) zodat `traject.index.js` het
+     `MijlpaalId` en een default-titel kan invullen vanuit de al-geladen status-modal (`mps-id`/
+     `mps-naam`) vóór het openen van de quickadd-modal.
+7. ✅ **Ontwikkelaar-dashboard: "projecten per fase"-funnel** — actieve fase (`FaseStatus.Actief`) per
+   projecttraject in de portfolio, gegroepeerd op naam+volgorde, als horizontale bar-funnel
+   (`.gl-funnel*`, nieuw in `dashboard-projectleider.css`). **Verkoper-dashboard: rechtstreekse
+   `ClientAccount`-koppeling** — "eenheden per verkoopstatus"-funnel (Beschikbaar/In optie/Verkocht/
+   Akte verleden), dezelfde categorisering als de unit-rijen op `Projecten/Detail.cshtml`
+   (`Units.ClientAccountId`/`IsOption` + `ClientAccount.DateDeedOfSale`), rechtstreeks via
+   `cpmRunningContext.Units` i.p.v. enkel afgeleid uit de per-eenheid-mijlpaal-bindingen. Beide
+   funnels zijn een **eerste, functionele versie** (geen sjabloon-brede fase-normalisatie voor
+   Ontwikkelaar; geen aparte pijplijn-trechter-UI met percentages voor Verkoper).
 
-Build na dit alles opnieuw geverifieerd: 0 `error CS`/`error RZ`. **Nog niet live boot-getest** door mij
-deze ronde (geen nieuwe DI-registraties nodig, dus laag risico, maar nog te bevestigen door de
-gebruiker net als de rest).
-
-**Nog te doen:**
-4. **"Aandacht vereist"** op `Projecten/Detail.cshtml` voeden met mijlpaal-waarschuwingen (`gl-mc-*`).
-5. Permissie-/rol-polish, perf-indexen, "Punten" zichtbaar als gekoppelde component (tellingen op
-   mijlpalen, `ProjectTaak.ConstructionIssueId`) — geen tabelmigratie.
-6. "Maak taak"-quickadd ook op mijlpaal-detail en punt (`ConstructionIssue`)-detail (nu enkel op
-   dossier-detail).
-7. Ontwikkelaar-dashboard: échte "projecten per fase"-funnel (nu enkel vergunning-board); Verkoper-
-   dashboard: rechtstreekse `ClientAccount`-koppeling i.p.v. enkel de per-eenheid-mijlpaal-bindingen.
+Build geverifieerd: 0 `error CS`/`error RZ` (enkel de routineuze MSB3021/3027-file-lock-ruis van de
+VS-sessie van de gebruiker). **Nog niet live boot-getest** door mij — punt 5's indexmigratie (040) moet
+nog draaien, en de nieuwe UI (aandachtspaneel-mijlpalen, funnels, mijlpaal-quickadd-knop) is nog niet
+in de browser bevestigd.
 
 ## Live-testwerkwijze (gebruikt doorheen dit hele traject, blijft gelden)
 

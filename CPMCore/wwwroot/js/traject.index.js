@@ -29,8 +29,10 @@
 
     var modalMijlpaalEl = document.getElementById("modalMijlpaal");
     var modalStatusEl = document.getElementById("modalMijlpaalStatus");
+    var modalTaakEl = document.getElementById("modalTaakQuickAdd");
     var bsMijlpaal = modalMijlpaalEl && window.bootstrap ? new bootstrap.Modal(modalMijlpaalEl) : null;
     var bsStatus = modalStatusEl && window.bootstrap ? new bootstrap.Modal(modalStatusEl) : null;
+    var bsTaak = modalTaakEl && window.bootstrap ? new bootstrap.Modal(modalTaakEl) : null;
 
     function resetUpsert() {
         if (!modalMijlpaalEl) return;
@@ -80,6 +82,20 @@
             if (bsStatus) bsStatus.show();
         }
     });
+
+    var btnMpsTaak = document.getElementById("mps-btn-taak");
+    if (btnMpsTaak && modalTaakEl) {
+        btnMpsTaak.addEventListener("click", function () {
+            var mijlpaalId = modalStatusEl.querySelector("#mps-id").value;
+            var mijlpaalNaam = modalStatusEl.querySelector("#mps-naam").textContent || "";
+            var mijlpaalIdField = modalTaakEl.querySelector("#modalTaakQuickAdd-mijlpaal-id");
+            var titelField = modalTaakEl.querySelector("#modalTaakQuickAdd-titel");
+            if (mijlpaalIdField) mijlpaalIdField.value = mijlpaalId;
+            if (titelField) titelField.value = mijlpaalNaam ? ("Opvolgen: " + mijlpaalNaam) : "";
+            if (bsStatus) bsStatus.hide();
+            if (bsTaak) bsTaak.show();
+        });
+    }
 
     function setVal(sel, val) {
         var el = (modalMijlpaalEl || document).querySelector(sel) || document.querySelector(sel);

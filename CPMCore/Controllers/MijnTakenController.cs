@@ -109,6 +109,8 @@ public class MijnTakenController : BaseController
             DashboardType.Projectleider => InterneRol.Projectleider,
             DashboardType.CeoCfo => InterneRol.CeoCfo,
             DashboardType.Boekhouding => InterneRol.Boekhouder,
+            DashboardType.Ontwikkelaar => InterneRol.Projectontwikkelaar,
+            DashboardType.Verkoper => InterneRol.Verkoper,
             _ => (InterneRol?)null
         } : null;
 

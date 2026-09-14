@@ -132,6 +132,10 @@
                                             {
                                                 <span class="badge bg-light text-dark ms-1">verplicht</span>
                                             }
+                                            @if (Model.PuntenPerMijlpaal.TryGetValue(m.Id, out var puntenAantal) && puntenAantal > 0)
+                                            {
+                                                <span class="badge bg-light text-dark ms-1" title="Gekoppelde punten"><i class="bx bx-error-circle"></i> @puntenAantal</span>
+                                            }
                                         </td>
                                         <td>@(m.ProjecttrajectFase?.Naam ?? "—")</td>
                                         <td>@(((MijlpaalType)m.MijlpaalType).GetDisplayName())</td>
@@ -181,6 +185,11 @@
 {
     @await Html.PartialAsync("Modals/_ModalMijlpaalUpsert", Model)
     @await Html.PartialAsync("Modals/_ModalMijlpaalStatus", Model)
+    @await Html.PartialAsync("_ModalTaakQuickAdd", new CPMCore.Models.Traject.TaakQuickAddVm
+    {
+        ModalId = "modalTaakQuickAdd",
+        ProjectId = Model.ProjectId
+    })
 }
 
 @section PageScripts {

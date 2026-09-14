@@ -93,6 +93,17 @@ public class ProjectTrajectController : BaseController
         vm.AantalBinnen14Dagen = alle.Count(m =>
             m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing
             && (m.Doeldatum ?? m.DoeldatumBerekend) is DateOnly d && d >= today && d <= today.AddDays(14));
+        // Punten (ConstructionIssue) zichtbaar als gekoppelde component op de mijlpaal die ze
+        // helpen bereiken — enkel taken die zowel aan een mijlpaal als aan een punt hangen.
+        var mijlpaalIds = mijlpalen.Select(m => m.Id).ToList();
+        vm.PuntenPerMijlpaal = mijlpaalIds.Count > 0
+            ? await _db.ProjectTaak.AsNoTracking()
+                .Where(t => t.MijlpaalId.HasValue && mijlpaalIds.Contains(t.MijlpaalId.Value) && t.ConstructionIssueId.HasValue)
+                .GroupBy(t => t.MijlpaalId!.Value)
+                .Select(g => new { MijlpaalId = g.Key, Aantal = g.Select(t => t.ConstructionIssueId).Distinct().Count() })
+                .ToDictionaryAsync(g => g.MijlpaalId, g => g.Aantal)
+            : new Dictionary<int, int>();
+
         vm.HuidigeFase = traject.Fases.OrderBy(f => f.Volgorde)
             .FirstOrDefault(f => f.Status == (int)FaseStatus.Actief)
             ?? traject.Fases.OrderBy(f => f.Volgorde).FirstOrDefault(f => f.Status != (int)FaseStatus.Afgerond);

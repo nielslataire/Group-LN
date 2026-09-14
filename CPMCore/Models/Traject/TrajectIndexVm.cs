@@ -38,4 +38,8 @@ public class TrajectIndexVm
     public int AantalAchterstallig { get; set; }
     public int AantalBinnen14Dagen { get; set; }
     public ProjecttrajectFase? HuidigeFase { get; set; }
+
+    /// <summary>Aantal gekoppelde "Punten" (ConstructionIssue, via ProjectTaak.ConstructionIssueId)
+    /// per MijlpaalId — maakt zichtbaar dat een mijlpaal aan een werfpunt-opvolging hangt.</summary>
+    public Dictionary<int, int> PuntenPerMijlpaal { get; set; } = new();
 }

@@ -15,7 +15,12 @@
         <div class="inner-body">
             <div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
                 <div class="col-sm-auto mb-3 mb-sm-0"><div class="d-flex align-items-center"><a href="@Url.Action("Index", new { projectId })" class="text-decoration-none text-reset d-flex align-items-center me-3"><i class="bx bx-chevron-left fs-1"></i></a><div><h1 class="fw-bold mb-0">@issue.Title</h1><h5 class="mb-0 text-muted">Punt details</h5></div></div></div>
-                <div class="col-sm-auto"><a class="btn btn-primary" href="@Url.Action("Index", new { projectId })">Terug naar puntenlijst</a></div>
+                <div class="col-sm-auto">
+                    <button type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#modalTaakQuickAdd">
+                        <i class="bx bx-task"></i> Taak aanmaken
+                    </button>
+                    <a class="btn btn-primary" href="@Url.Action("Index", new { projectId })">Terug naar puntenlijst</a>
+                </div>
             </div>
 
             <section class="card card-modern mb-4">
@@ -108,6 +113,14 @@
         </div>
     </div>
 </section>
+
+@await Html.PartialAsync("_ModalTaakQuickAdd", new CPMCore.Models.Traject.TaakQuickAddVm
+{
+    ModalId = "modalTaakQuickAdd",
+    ProjectId = projectId,
+    ConstructionIssueId = issue.Id,
+    DefaultTitel = $"Opvolgen: {issue.Title}"
+})
 
 @section PageScripts {
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>

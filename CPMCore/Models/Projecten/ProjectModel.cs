@@ -645,6 +645,9 @@ namespace CPMCore.Models.Projecten
         /// <summary>Verzekeringswaarschuwingen voor dit project.</summary>
         public List<WarningBO> ProjectInsuranceWarnings { get; set; } = new();
 
+        /// <summary>Nog niet bereikte/n.v.t. trajectmijlpalen van dit project — voor het aandachtspaneel.</summary>
+        public List<DALCore.Models.Mijlpaal> AttentionMijlpalen { get; set; } = new();
+
         /// <summary>De 3 reële polissen (ABR/Brand/10-jarige) van dit project, voor de Verzekeringen-kaart.</summary>
         public List<InsuranceBO> Insurances { get; set; } = new();
 
