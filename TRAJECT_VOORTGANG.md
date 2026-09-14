@@ -4,8 +4,58 @@ Doorlopend statusdocument voor de grote "trajectopvolging"-feature (werf/project
 triggers, taken). Origineel plan: `.claude`-sessie-plan (zie chatgeschiedenis) — dit bestand is de
 werkende samenvatting om een volgende sessie snel weer op te starten. Bijwerken bij elke increment.
 
-**Laatste update:** 2026-09-13 (increment 7 klaar; migratie 039 en de vergunning-koppel-bugfix
-bevestigd werkend door de gebruiker op de live DB).
+**Laatste update:** 2026-09-14 (increment 7 klaar en bevestigd; nu bezig met UX-verfijningspassen
+over de bestaande admin-pagina's, te beginnen bij `Instellingen/Trajectsjablonen/Bewerken`).
+
+## Verfijningspas: sjabloon-editor (Instellingen/Trajectsjablonen/Bewerken) — 2026-09-14
+
+**Aanleiding:** de gebruiker vond het koppelen van een mijlpaal aan een andere (voor de streefdatum)
+verwarrend omdat je de technische code moest **typen**, en het onderscheid met het losse "Code"-veld
+was onduidelijk; ook `BronParam` was een vrij tekstveld terwijl de meeste bindingen een vaste, gekende
+set geldige waarden hebben. Uitgevoerd via de `impeccable`-skill (`shape` + een lichte, code-gegronde
+`critique` — de volledige dubbele-subagent+browser-pijplijn is bewust overgeslagen: dit is een
+authenticatie-vereisende, live-DB-gebonden interne adminpagina, geen losstaand te draaien frontend, en
+de gebruiker had zelf al precieze, eerstehands probleembeschrijvingen aangeleverd).
+
+**Wat er veranderd is:**
+- **Ankermijlpaal (streefdatum) is nu een doorzoekbare select2-keuzelijst** i.p.v. een vrij tekstveld:
+  toont elke andere mijlpaal in het sjabloon als "Fasenaam · Mijlpaalnaam (CODE)", plus een vaste optie
+  "Bij aanmaken van het project". Lijst herbouwt live terwijl je typt/toevoegt/verwijdert elders op de
+  pagina (`buildRegistry()`/`refreshAllAnchors()` in `trajectsjabloon.admin.js`, gedebouncet).
+  **Niet-destructief**: een reeds opgeslagen ankercode die niet (meer) bij een gekende mijlpaal hoort
+  wordt niet stil overschreven — verschijnt als een aparte "⚠ Onbekende mijlpaal-code"-optie zodat de
+  waarde bewaard blijft en zichtbaar blijft dat ze niet herkend is.
+- **Anker + offset zijn visueel samengevoegd tot één leesbare regel** ("Streefdatum telt vanaf
+  [ankerkeuze] + [N] dagen") in een Mist-Green-getint blok (`gl-sm-daterule*`), i.p.v. twee losse,
+  ongerelateerde velden — het rekenmodel is nu meteen zichtbaar.
+- **Het mijlpaal-"Code"-veld is herlabeld en gescheiden** ("Technische code" + een hint-regel wat het
+  doet) van de ankerkeuzelijst, zodat de twee niet langer met elkaar te verwarren zijn.
+- **BronParam is nu een dynamische, van de gekozen binding afhankelijke keuzelijst** i.p.v. één vrij
+  tekstveld voor alle 13 bindingen: vaste select2-dropdown met leesbare labels voor `ProjectDoc`
+  (`ProjectDocType`-enum), `ProjectDatum`/`ProjectVlag`/`ClientAccountDatum` (vaste kolomnamen, nu
+  Nederlandse labels i.p.v. rauwe C#-veldnamen), `ConstructionIssue` (`ConstructionIssuePhase`-enum),
+  `ProjectVoortgangFase` (`VoortgangFase`-enum — kreeg nu ook `<Display>`-namen), en `DossierSubstap`
+  (de 7 standaard vergunning-checklist-stappen). Voor `PlanningTaak`/`PlanningSectie`/
+  `InvoicingPaymentStage` (verwijzen naar een numeriek ID van één specifiek project — niet zinvol te
+  kiezen in een projectonafhankelijk sjabloon) blijft een gewoon tekstveld met een uitleg-hint; voor
+  `Handmatig`/`ConnectionSettlement`/`Dossier` (geen parameter nodig) verdwijnt het veld en toont enkel
+  een korte uitleg. Ook hier: een reeds opgeslagen waarde die niet in de nieuwe lijst voorkomt wordt niet
+  stilzwijgend gewist, maar als aparte "⚠ Huidige waarde ... (niet in lijst)"-optie bewaard.
+- **Dedup-bijvangst**: de standaard-vergunningschecklist (7 stappen + Code-mapping) stond dubbel
+  gedefinieerd (privé in `ProjectDossierService.cs`, en nu ook nodig voor de BronParam-keuzelijst) —
+  verplaatst naar één gedeelde bron `BOCore/BO/Project/Traject/VergunningChecklistDefaults.vb`;
+  `ProjectDossierService.cs` verwijst er nu ook naar (geen gedragswijziging, wel één bron van waarheid).
+- **Scope, bewust**: dit is enkel de eerste verfijningspas. Trigger-"Parameters JSON" (nog een vrij
+  tekstveld met dezelfde "type de juiste sleutels"-vraag), het rauwe `ProjectStatusId`-veld op fases, en
+  een volledige `gl-form-shell`-migratie van deze pagina zijn expliciet **niet** meegenomen — apart, later.
+- Bestanden: `BOCore/BO/Project/Traject/VergunningChecklistDefaults.vb` (nieuw),
+  `BOCore/Enum/VoortgangFase.vb` (Display-namen toegevoegd), `ServiceCore/Traject/ProjectDossierService.cs`
+  (dedup), `CPMCore/Views/TrajectSjabloonAdmin/Edit.cshtml`, `CPMCore/wwwroot/js/trajectsjabloon.admin.js`
+  (grotendeels herschreven), `CPMCore/wwwroot/css/traject.css`. Geen DB-migratie nodig — puur
+  presentatie/UX over dezelfde bestaande payload-contract (BOCore-BO's ongewijzigd).
+- Build geverifieerd (0 `error CS`/`error RZ`) + JS-syntax gecontroleerd (`node --check`). **Nog niet
+  live in de browser getest** — vereist een ingelogde sessie op een sjabloon met echte fases/mijlpalen;
+  graag zelf verifiëren en teruggeven wat er nog niet klopt.
 
 ## Architectuur in één oogopslag
 

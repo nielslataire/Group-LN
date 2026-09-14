@@ -133,12 +133,57 @@
 .gl-sjabloon-mijlpaal {
     border: 1px solid #eef0f4;
     border-radius: 8px;
-    padding: .5rem;
-    margin-bottom: .45rem;
+    padding: .6rem .65rem;
+    margin-bottom: .5rem;
     background: #fff;
 }
-.gl-sm-row1 { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 34px; gap: .4rem; }
-.gl-sm-row2 { display: grid; grid-template-columns: minmax(0,1.4fr) 110px minmax(0,1.4fr) minmax(0,1.6fr); gap: .4rem; margin-top: .35rem; }
+
+.gl-sm-caption {
+    display: block;
+    font-size: .72rem;
+    font-weight: 600;
+    color: #8590a5;
+    margin-bottom: .2rem;
+}
+.gl-sm-hint {
+    display: block;
+    font-size: .7rem;
+    color: #8590a5;
+    margin-top: .2rem;
+    line-height: 1.3;
+}
+.gl-sm-field { min-width: 0; }
+.gl-sm-field--narrow { max-width: 150px; }
+
+.gl-sm-row1 {
+    display: grid;
+    grid-template-columns: minmax(0,1.6fr) minmax(0,1.8fr) minmax(0,.9fr) minmax(0,.9fr) 34px;
+    gap: .5rem;
+    align-items: start;
+}
+
+/* "Streefdatum"-regel: ankermijlpaal + offset visueel als één leesbare zin i.p.v. twee losse velden. */
+.gl-sm-daterule {
+    margin-top: .55rem;
+    padding: .5rem .6rem;
+    background: #e8f0eb;
+    border-radius: 7px;
+}
+.gl-sm-daterule-row { display: flex; align-items: center; gap: .4rem; margin-top: .25rem; flex-wrap: wrap; }
+.gl-sm-daterule-text { font-size: .78rem; color: #0f4b40; white-space: nowrap; }
+/* Select2 kopieert de klasse van het brondoosje niet naar zijn eigen container, dus de
+   flex-sizing van de ankerkeuzelijst richt zich op .select2-container binnen deze rij. */
+.gl-sm-daterule-row .select2-container { flex: 1 1 260px; min-width: 200px; }
+.gl-sm-anchor { flex: 1 1 260px; min-width: 200px; }
+.gl-sm-offset { width: 72px; flex: 0 0 72px; }
+
+.gl-sm-row2 {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1.6fr);
+    gap: .5rem .6rem;
+    margin-top: .5rem;
+}
+.gl-sm-row2 [data-m-param-hint]:empty { display: none; }
 
 .gl-sm-triggers { margin-top: .5rem; padding-top: .4rem; border-top: 1px dashed #eef0f4; display: flex; flex-direction: column; gap: .35rem; }
 .gl-sjabloon-trigger {
@@ -153,6 +198,29 @@
 .gl-st-check { display: inline-flex; align-items: center; gap: .3rem; font-size: .78rem; white-space: nowrap; margin: 0; }
 @media (max-width: 1200px) {
     .gl-sjabloon-trigger { grid-template-columns: 1fr 1fr; }
+}
+
+/* Select2 in de sjabloon-editor draait op de compacte -sm-hoogte van deze dichte tabelachtige
+   rijen (niet de 46px form-control-modern van gewone data-entry-formulieren) — native en
+   verrijkte velden moeten hier op elkaar aansluiten, net zoals elders in de app. */
+.gl-sjabloon-mijlpaal .select2-container .select2-selection--single {
+    height: 31px;
+    border-color: #ced4da;
+    border-radius: .2rem;
+}
+.gl-sjabloon-mijlpaal .select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 29px;
+    padding-left: .5rem;
+    font-size: .875rem;
+}
+.gl-sjabloon-mijlpaal .select2-container .select2-selection--single .select2-selection__arrow {
+    height: 29px;
+}
+.gl-sjabloon-mijlpaal .select2-container { width: 100% !important; }
+
+@media (max-width: 992px) {
+    .gl-sm-row1 { grid-template-columns: 1fr 1fr; }
+    .gl-sm-row2 { grid-template-columns: 1fr; }
 }
 
 /* eenheden-matrix */

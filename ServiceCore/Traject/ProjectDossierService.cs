@@ -13,27 +13,10 @@ public class ProjectDossierService : IProjectDossierService
     private static readonly int StatusAfgehandeld = (int)DossierStatus.Afgehandeld;
     private static readonly int StatusGeannuleerd = (int)DossierStatus.Geannuleerd;
 
-    /// <summary>Standaard checklist voor een Omgevingsvergunning-dossier (Code, Naam, Volgorde).</summary>
-    private static readonly (string Code, string Naam, int Volgorde)[] VergunningStappen =
-    {
-        ("INGEDIEND",           "Ingediend",                              10),
-        ("VOLLEDIG_VERKLAARD",  "Volledig en ontvankelijk verklaard",     20),
-        ("OPENBAAR_ONDERZOEK",  "Openbaar onderzoek afgerond",            30),
-        ("ADVIEZEN",            "Adviezen ontvangen",                     40),
-        ("COLLEGEBESLISSING",   "Beslissing college van B&W",             50),
-        ("BEROEPSTERMIJN",      "Beroepstermijn verstreken",              60),
-        ("DEFINITIEF",          "Vergunning definitief",                  70)
-    };
-
-    /// <summary>Bekende sjabloon-mijlpaal-Codes voor de vergunningsstappen -> substap-Code, voor automatisch koppelen.</summary>
-    private static readonly Dictionary<string, string> VergunningMijlpaalNaarSubstap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["VERGUNNING_INGEDIEND"] = "INGEDIEND",
-        ["VERGUNNING_VOLLEDIG"] = "VOLLEDIG_VERKLAARD",
-        ["OPENBAAR_ONDERZOEK"] = "OPENBAAR_ONDERZOEK",
-        ["VERGUNNING_VERLEEND"] = "COLLEGEBESLISSING",
-        ["VERGUNNING_DEFINITIEF"] = "DEFINITIEF"
-    };
+    // Standaard checklist + Code-mapping: gedeelde bron van waarheid in BOCore.VergunningChecklistDefaults
+    // (ook gebruikt door de trajectsjabloon-admin-UI voor de DossierSubstap-BronParam-keuzelijst).
+    private static readonly VergunningChecklistStapBO[] VergunningStappen = VergunningChecklistDefaults.Stappen;
+    private static readonly Dictionary<string, string> VergunningMijlpaalNaarSubstap = VergunningChecklistDefaults.MijlpaalNaarSubstap;
 
     public Task<ProjectDossier?> GetById(int projectId, int id) =>
         _db.ProjectDossier
@@ -93,14 +76,14 @@ public class ProjectDossierService : IProjectDossierService
     /// </summary>
     private async Task SeedVergunningStappenEnKoppelMijlpalen(ProjectDossier dossier, string? userId)
     {
-        foreach (var (code, naam, volgorde) in VergunningStappen)
+        foreach (var stap in VergunningStappen)
         {
             _db.ProjectDossierSubstap.Add(new ProjectDossierSubstap
             {
                 ProjectDossierId = dossier.Id,
-                Code = code,
-                Naam = naam,
-                Volgorde = volgorde,
+                Code = stap.Code,
+                Naam = stap.Naam,
+                Volgorde = stap.Volgorde,
                 Status = (int)DossierSubstapStatus.NietGestart,
                 CreatedDate = DateTime.UtcNow
             });

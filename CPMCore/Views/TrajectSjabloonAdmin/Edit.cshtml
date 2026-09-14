@@ -59,6 +59,77 @@
         .Select(x => new { v = (int)x, n = x.GetDisplayName() });
     var triggerActieOpties = Enum.GetValues(typeof(TriggerActie)).Cast<TriggerActie>()
         .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+
+    // Bron-parameter: per binding ofwel een vaste keuzelijst (leesbare labels i.p.v. vrije tekst),
+    // ofwel "numeriek" (verwijst naar een record van één specifiek project — kan pas zinvol gekozen
+    // worden ná instantiatie, op de mijlpaal zelf, niet hier in het projectonafhankelijke sjabloon),
+    // ofwel "hidden" (binding heeft geen parameter nodig). Zie ook MijlpaalBindingResolver.cs — de
+    // vaste stringwaarden hieronder moeten exact overeenkomen met de switch-cases daar.
+    var bronParamOptiesByBinding = new Dictionary<int, object>
+    {
+        [(int)ComputedBinding.ProjectDoc] = Enum.GetValues(typeof(ProjectDocType)).Cast<ProjectDocType>()
+            .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() })
+            .OrderBy(x => x.n).ToList(),
+        [(int)ComputedBinding.ProjectDatum] = new[]
+        {
+            new { v = "StartDateConstruction", n = "Startdatum bouw" },
+            new { v = "DeliveryDate", n = "Opleverdatum (voorlopig)" },
+            new { v = "DeliveryDateDef", n = "Opleverdatum (definitief)" },
+            new { v = "WerfmeldingDate", n = "Werfmelding — startdatum" },
+            new { v = "WerfmeldingEndDate", n = "Werfmelding — einddatum" },
+        },
+        [(int)ComputedBinding.ProjectVlag] = new[]
+        {
+            new { v = "DocPid", n = "PID aanwezig" },
+            new { v = "DocElectricalInspection", n = "Elektrische keuring OK" },
+            new { v = "DocWaterInspection", n = "Waterkeuring OK" },
+            new { v = "DocSewerInspection", n = "Rioolkeuring OK" },
+            new { v = "DocFireInspection", n = "Brandkeuring OK" },
+            new { v = "DocDelivery", n = "Voorlopige oplevering OK" },
+            new { v = "DocDefDelivery", n = "Definitieve oplevering OK" },
+        },
+        [(int)ComputedBinding.ClientAccountDatum] = new[]
+        {
+            new { v = "DateSalesAgreement", n = "Compromis getekend" },
+            new { v = "DateDeedOfSale", n = "Akte verleden" },
+            new { v = "DeedOfSaleExpDate", n = "Uiterste aktedatum" },
+            new { v = "DeliveryDate", n = "Oplevering (voorlopig)" },
+            new { v = "DeliveryDateDef", n = "Oplevering (definitief)" },
+        },
+        [(int)ComputedBinding.ConstructionIssue] = Enum.GetValues(typeof(ConstructionIssuePhase)).Cast<ConstructionIssuePhase>()
+            .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() }).ToList(),
+        [(int)ComputedBinding.ProjectVoortgangFase] = Enum.GetValues(typeof(VoortgangFase)).Cast<VoortgangFase>()
+            .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() }).ToList(),
+        [(int)ComputedBinding.DossierSubstap] = VergunningChecklistDefaults.Stappen
+            .OrderBy(x => x.Volgorde).Select(x => new { v = x.Code, n = x.Naam }).ToList(),
+    };
+
+    var bronParamModeByBinding = new Dictionary<int, string>
+    {
+        [(int)ComputedBinding.Handmatig] = "hidden",
+        [(int)ComputedBinding.ProjectDoc] = "select",
+        [(int)ComputedBinding.ProjectDatum] = "select",
+        [(int)ComputedBinding.ProjectVlag] = "select",
+        [(int)ComputedBinding.PlanningTaak] = "numeriek",
+        [(int)ComputedBinding.PlanningSectie] = "numeriek",
+        [(int)ComputedBinding.InvoicingPaymentStage] = "numeriek",
+        [(int)ComputedBinding.ClientAccountDatum] = "select",
+        [(int)ComputedBinding.ConnectionSettlement] = "hidden",
+        [(int)ComputedBinding.ConstructionIssue] = "select",
+        [(int)ComputedBinding.ProjectVoortgangFase] = "select",
+        [(int)ComputedBinding.Dossier] = "hidden",
+        [(int)ComputedBinding.DossierSubstap] = "select",
+    };
+
+    var bronParamHintByBinding = new Dictionary<int, string>
+    {
+        [(int)ComputedBinding.Handmatig] = "Geen bron-parameter nodig — de datum wordt manueel ingevuld op de mijlpaal.",
+        [(int)ComputedBinding.PlanningTaak] = "Numeriek ID van een planningstaak van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
+        [(int)ComputedBinding.PlanningSectie] = "Numeriek ID van een planningssectie van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
+        [(int)ComputedBinding.InvoicingPaymentStage] = "Numeriek ID van een facturatieschijf van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
+        [(int)ComputedBinding.ConnectionSettlement] = "Geen bron-parameter nodig — bereikt zodra de nutsafrekening van het project is afgerond.",
+        [(int)ComputedBinding.Dossier] = "Geen bron-parameter nodig — bereikt zodra het gekoppelde dossier is afgehandeld (koppeling gebeurt op de mijlpaal zelf).",
+    };
 }
 
 @section PageStyle {
@@ -133,21 +204,52 @@
 <template id="tplMijlpaal">
     <div class="gl-sjabloon-mijlpaal" data-mijlpaal>
         <div class="gl-sm-row1">
-            <input class="form-control form-control-sm" placeholder="Naam" data-m="naam" />
-            <input class="form-control form-control-sm" placeholder="Code" data-m="code" />
-            <select class="form-select form-select-sm" data-m="type" title="Type"></select>
-            <select class="form-select form-select-sm" data-m="scope" title="Scope">
-                <option value="0">Project</option>
-                <option value="1">Per eenheid</option>
-            </select>
-            <button type="button" class="btn btn-xs btn-outline-danger" data-del-mijlpaal><i class="bx bx-x"></i></button>
+            <div class="gl-sm-field">
+                <label class="gl-sm-caption">Naam</label>
+                <input class="form-control form-control-sm" placeholder="bv. Vergunning ingediend" data-m="naam" />
+            </div>
+            <div class="gl-sm-field">
+                <label class="gl-sm-caption">Technische code</label>
+                <input class="form-control form-control-sm" placeholder="bv. VERGUNNING_INGEDIEND" data-m="code" />
+                <small class="gl-sm-hint">Uniek — hiermee herkennen andere mijlpalen, bindingen en triggers deze mijlpaal</small>
+            </div>
+            <div class="gl-sm-field gl-sm-field--narrow">
+                <label class="gl-sm-caption">Type</label>
+                <select class="form-select form-select-sm" data-m="type" title="Type"></select>
+            </div>
+            <div class="gl-sm-field gl-sm-field--narrow">
+                <label class="gl-sm-caption">Niveau</label>
+                <select class="form-select form-select-sm" data-m="scope" title="Project- of eenheidsniveau">
+                    <option value="0">Project</option>
+                    <option value="1">Per eenheid</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-xs btn-outline-danger gl-sm-del" data-del-mijlpaal title="Mijlpaal verwijderen"><i class="bx bx-x"></i></button>
         </div>
+
+        <div class="gl-sm-daterule">
+            <label class="gl-sm-caption">Streefdatum</label>
+            <div class="gl-sm-daterule-row">
+                <span class="gl-sm-daterule-text">telt vanaf</span>
+                <select class="gl-sm-anchor" data-m="anker" title="Waarop deze streefdatum gebaseerd is"></select>
+                <span class="gl-sm-daterule-text">+</span>
+                <input type="number" class="form-control form-control-sm gl-sm-offset" placeholder="0" data-m="offset" title="Aantal dagen na de ankermijlpaal" />
+                <span class="gl-sm-daterule-text">dagen</span>
+            </div>
+        </div>
+
         <div class="gl-sm-row2">
-            <input class="form-control form-control-sm" placeholder="Anker-code" data-m="anker" title="Anker-code voor de streefdatum" />
-            <input type="number" class="form-control form-control-sm" placeholder="Offset (dagen)" data-m="offset" />
-            <select class="form-select form-select-sm" data-m="binding" title="Automatische bron-binding"></select>
-            <input class="form-control form-control-sm" placeholder="Bron-parameter" data-m="param" title="Kolomnaam / type-id / fase, afhankelijk van de binding" />
+            <div class="gl-sm-field">
+                <label class="gl-sm-caption">Automatische bron</label>
+                <select class="form-select form-select-sm" data-m="binding" title="Automatische bron-binding"></select>
+            </div>
+            <div class="gl-sm-field" data-m-param-cell>
+                <label class="gl-sm-caption" data-m-param-label>Bron-parameter</label>
+                <div data-m-param-control></div>
+                <small class="gl-sm-hint" data-m-param-hint></small>
+            </div>
         </div>
+
         <div class="gl-sm-triggers" data-triggers></div>
         <button type="button" class="btn btn-xs btn-outline-primary mt-1" data-add-trigger><i class="bx bx-bell-plus"></i> Trigger toevoegen</button>
     </div>
@@ -176,5 +278,8 @@
     <script id="bindingOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(bindingOpties))</script>
     <script id="triggerEventOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(triggerEventOpties))</script>
     <script id="triggerActieOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(triggerActieOpties))</script>
+    <script id="bronParamOptiesByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamOptiesByBinding))</script>
+    <script id="bronParamModeByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamModeByBinding))</script>
+    <script id="bronParamHintByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamHintByBinding))</script>
     <script src="~/js/trajectsjabloon.admin.js" asp-append-version="true"></script>
 }
