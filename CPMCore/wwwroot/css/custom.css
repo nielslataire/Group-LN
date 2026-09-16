@@ -586,7 +586,9 @@ html.gl-modal-open .sidebar-left { display: none !important; }
        "html.modern.fixed .content-body { margin-top: 10px }" uit theme.css
        (een aparte, ongeconditioneerde regel — geen padding, dus een gewone
        negative margin op een kind kan 'm niet "gratis" meenemen): 40+10=50px
-       naar boven, zodat de tabstrip echt vlak onder de topbar valt. */
+       naar boven, zodat de tabstrip echt vlak onder de topbar valt (bij
+       benadering — zie hieronder waarom dit niet meer op de pixel moet
+       kloppen). */
     margin: -50px -40px 24px;
     background: #fff;
     border-bottom: 2px solid var(--border, #e7e7e7);
@@ -597,23 +599,24 @@ html.gl-modal-open .sidebar-left { display: none !important; }
 }
 .gl-form-shell__tabs::-webkit-scrollbar { display: none; }
 @media (min-width: 768px) {
-    /* Blijft zichtbaar tijdens scrollen (project-wide gevraagd) — niet via position:sticky, die
-       rekent zijn rustpositie i.c.m. de negative-margin-uitbraak hierboven zichtbaar fout af (bleek
-       zowel op deze schil als op ProjectTraject's .gl-traject-tabrow: geen "vastklikken", en de
-       rustpositie schuift). .gl-form-shell__actions (hieronder) liep tegen exact hetzelfde probleem
-       aan en loste het al op met fixed + een expliciete left-offset i.p.v. sticky; dezelfde aanpak
-       hier, ingeschakeld via JS zodra de rustpositie toch al voorbij de topbar zou scrollen
-       (custom.js, onderaan het bestand — .gl-is-pinned + een live gemeten spacer die voorkomt dat de
-       rest van de pagina opspringt). left/right: deze klasse wordt enkel gebruikt op platte
-       .content-body-pagina's (Projecten/Edit, TrajectSjabloonAdmin/Edit) — geen extra .inner-menu-
-       kolom zoals bij .gl-traject-tabrow, dus dezelfde vaste 300px/73px als .gl-form-shell__actions
-       volstaat hier wél. */
+    /* Blijft zichtbaar tijdens scrollen (project-wide gevraagd) — niet via position:sticky: die
+       bleek herhaaldelijk niet vast te klikken (zowel hier als op ProjectTraject's
+       .gl-traject-tabrow) en liet bovendien een zichtbare kloof t.o.v. de topbar zien, ook nadat
+       de -50px hierboven op papier exact topbar-hoogte had moeten opleveren. custom.js (onderaan
+       dit bestand) meet daarom zelf de werkelijk gerenderde rustpositie en corrigeert die live
+       (transform) i.p.v. op de -50px-marge te vertrouwen, en zet deze klasse pas aan zodra
+       scrollen dat vereist — synchroon op het scroll-event, niet via IntersectionObserver (die
+       vuurt async, één frame te laat, en gaf de eerder gemelde "korte sprong"). left/right: deze
+       klasse wordt enkel gebruikt op platte .content-body-pagina's (Projecten/Edit,
+       TrajectSjabloonAdmin/Edit) — geen extra .inner-menu-kolom zoals bij .gl-traject-tabrow, dus
+       een vaste 300px/73px (zelfde als .gl-form-shell__actions hierboven) volstaat hier wél. */
     .gl-form-shell__tabs.gl-is-pinned {
         position: fixed;
         top: var(--topbar-height, 72px);
         left: 300px;
         right: 0;
         margin: 0;
+        transform: none;
         z-index: 900;
     }
     html.sidebar-left-collapsed .gl-form-shell__tabs.gl-is-pinned { left: 73px; }

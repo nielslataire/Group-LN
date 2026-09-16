@@ -177,15 +177,15 @@
     initTabrowPin();
 
     // ══ Tabbar blijft zichtbaar tijdens scrollen (gl-traject-tabrow) ═════════════════════
-    // position:sticky rekent in deze .content-with-menu-schil (.inner-body) zichtbaar fout af
-    // (rustpositie schuift, "vastklikken" gebeurt niet). Een hardcoded position:fixed met vaste
-    // left-waarden botst op zijn beurt met de extra .inner-menu-kolom van deze pagina — die kolom
-    // heeft zelf óók een vaste breedte, verschuift naar een ander punt zodra de sidebar-links wordt
-    // ingeklapt, en de theme kent daarnaast nog sidebar-left-sm/-xs-varianten met elk hun eigen
-    // getallen: te veel combinaties om hier betrouwbaar te hardcoderen (zie traject.css). Daarom
-    // hier zelf een minimale "affix": een sentinel + IntersectionObserver bepaalt wanneer de rij
-    // zou wegscrollen (pin/unpin), en de linker rand/breedte van de gepinde rij wordt bij elke pin
-    // live afgelezen van .inner-body's eigen gerenderde positie i.p.v. verondersteld.
+    // position:sticky (met de handmatig herrekende -43px-marge) bleek herhaaldelijk niet vast te
+    // klikken en liet bovendien een zichtbare kloof t.o.v. de topbar zien — de aanname dat die
+    // marge de rustpositie exact op topbar-hoogte zet, klopt in de echte cascade van deze pagina
+    // niet precies genoeg. Deze functie vertrouwt daarom geen enkele afgeleide pixelwaarde meer:
+    // ze meet zelf (getBoundingClientRect) waar de rij werkelijk staat en corrigeert dat live —
+    // zowel in rust (transform, zet 'm exact onder de topbar ongeacht wat de CSS-marge oplevert)
+    // als gepind (position:fixed met live van .inner-body afgelezen left/width). Vastklikken zelf
+    // gebeurt synchroon op het scroll-event (rAF-gebufferd) i.p.v. IntersectionObserver — die vuurt
+    // async, één frame te laat, en gaf precies de "korte sprong" die eerder gemeld werd.
     function initTabrowPin() {
         var row = document.querySelector(".gl-traject-tabrow");
         var innerBody = document.querySelector(".inner-body");
@@ -193,30 +193,43 @@
         if (!row || !innerBody || !card) return;
 
         var mq = window.matchMedia("(min-width: 768px)");
-        var sentinel = document.createElement("div");
-        sentinel.className = "gl-traject-tabrow-sentinel";
-        sentinel.setAttribute("aria-hidden", "true");
-        row.parentNode.insertBefore(sentinel, row);
         var spacer = document.createElement("div");
-        spacer.className = "gl-traject-tabrow-spacer";
         spacer.setAttribute("aria-hidden", "true");
+        spacer.style.height = "0";
         row.parentNode.insertBefore(spacer, card);
 
         var pinned = false;
+        var restTop = 0;   // documentgebonden top van de rij in rust (na de CSS-marge, vóór correctie)
+        var rowHeight = 0;
+        var ticking = false;
 
-        function syncBounds() {
+        function topbarPx() {
+            var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height"));
+            return isNaN(v) ? 72 : v;
+        }
+
+        function measureRest() {
+            row.style.transform = "";
+            var r = row.getBoundingClientRect();
+            restTop = r.top + window.scrollY;
+            rowHeight = r.height;
+            var delta = topbarPx() - r.top;
+            // Kleine correctie i.p.v. de -43px-marge zelf opnieuw te berekenen: wat de cascade ook
+            // precies oplevert, dit zet de rij hoe dan ook exact vlak onder de topbar in rust.
+            if (Math.abs(delta) > 0.5) row.style.transform = "translateY(" + delta + "px)";
+        }
+
+        function syncHorizontal() {
             var r = innerBody.getBoundingClientRect();
             row.style.left = r.left + "px";
             row.style.width = r.width + "px";
         }
 
         function pin() {
-            if (pinned || !mq.matches) return;
-            // Meten terwijl de rij nog gewoon in-flow staat — de vrijgekomen ruimte is exact het
-            // verschil tussen waar de kaart en de rij nu staan, ongeacht de precieze marge-som.
-            var gap = card.getBoundingClientRect().top - row.getBoundingClientRect().top;
-            spacer.style.height = gap + "px";
-            syncBounds();
+            if (pinned) return;
+            spacer.style.height = rowHeight + "px";
+            row.style.transform = "";
+            syncHorizontal();
             row.classList.add("gl-is-pinned");
             pinned = true;
         }
@@ -228,23 +241,36 @@
             row.style.width = "";
             spacer.style.height = "0";
             pinned = false;
+            measureRest();
         }
 
-        var io = "IntersectionObserver" in window ? new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-                if (entry.isIntersecting) unpin(); else pin();
-            });
-        }, { rootMargin: "-" + Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height")) || 72) + "px 0px 0px 0px", threshold: 0 }) : null;
-        if (io) io.observe(sentinel);
-
-        function onLayoutChange() {
-            if (!mq.matches) { unpin(); return; }
-            if (pinned) syncBounds();
+        function update() {
+            ticking = false;
+            if (!mq.matches) { if (pinned) unpin(); return; }
+            var shouldPin = window.scrollY + topbarPx() >= restTop;
+            if (shouldPin && !pinned) pin();
+            else if (!shouldPin && pinned) unpin();
+            if (pinned) syncHorizontal();
         }
-        window.addEventListener("resize", onLayoutChange);
+
+        function requestUpdate() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(update);
+        }
+
+        measureRest();
+        update();
+        window.addEventListener("scroll", requestUpdate, { passive: true });
+        window.addEventListener("resize", function () {
+            if (!pinned) measureRest();
+            requestUpdate();
+        });
         // Sidebar-inklap/uitklap en het openen/sluiten van .inner-menu wijzigen enkel html's
         // class-attribuut, geen resize-event — MutationObserver vangt die live op.
-        new MutationObserver(onLayoutChange).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+        new MutationObserver(function () {
+            if (pinned) syncHorizontal(); else measureRest();
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     }
 
     // ══ Kalender 2.0: Maand / Kwartaal / Jaar / Agenda, volledig custom ══════════════════
