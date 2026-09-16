@@ -1,0 +1,27 @@
+@model CPMCore.Models.Traject.TrajectIndexVm
+@*
+    Gedeeld tussen @section PageActions (topbar, ≥768px) en de mobiele d-md-none
+    fallback-rij in de content-body (<768px) — zelfde patroon als
+    TrajectSjabloonAdmin/_TrajectSjabloonActions.cshtml. Wordt dus tweemaal in de
+    DOM gerenderd; "Mijlpaal toevoegen" heeft daarom geen id meer (zie
+    traject.index.js — .js-mijlpaal-new i.p.v. getElementById zodat beide knoppen
+    de modal even correct resetten) en de verwijder-bevestiging hieronder gebruikt
+    dezelfde querySelectorAll-aanpak (Index.cshtml @section PageScripts) i.p.v. één
+    element bij id op te halen.
+*@
+<button type="button" class="btn btn-primary btn-sm js-mijlpaal-new" data-bs-toggle="modal" data-bs-target="#modalMijlpaal">
+    <i class="bx bx-plus me-1" aria-hidden="true"></i>Mijlpaal
+</button>
+<form method="post" asp-action="Sync" asp-route-projectId="@Model.ProjectId" class="d-inline">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-default btn-sm" title="Nieuwe mijlpalen uit het sjabloon overnemen">
+        <i class="bx bx-refresh me-1" aria-hidden="true"></i>Sync met sjabloon
+    </button>
+</form>
+@* window.confirmDialog (confirm-modal.js) i.p.v. de kale browser-confirm() — zelfde patroon als
+   TrajectSjabloonAdmin/Index.cshtml, nu ook hier i.p.v. de enige overgebleven kale confirm()
+   in deze featuremap. *@
+<form method="post" asp-action="Verwijderen" asp-route-projectId="@Model.ProjectId" class="d-inline gl-delete-traject-form">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-gl-remove btn-sm" title="Traject verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button>
+</form>

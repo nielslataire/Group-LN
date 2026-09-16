@@ -1,0 +1,22 @@
+@*
+    Herbruikbare in-systeem vervanger voor het kale browser-confirm() op destructieve acties
+    (verwijderen, dupliceren, ...) — een echte Bootstrap-modal (Overlay-schaduw per DESIGN.md)
+    i.p.v. een OS-dialoog die buiten het "Grounded & Cultivated"-systeem valt.
+    Gebruik: 1x @await Html.PartialAsync("_ConfirmModal") per pagina + ~/js/confirm-modal.js laden,
+    dan window.confirmDialog(title, bodyHtml, confirmLabel) aanroepen — geeft een Promise<boolean>.
+*@
+<div class="modal fade" id="glConfirmModal" tabindex="-1" aria-hidden="true" aria-labelledby="glConfirmTitle">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="glConfirmTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Annuleren"></button>
+            </div>
+            <div class="modal-body" id="glConfirmBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-danger" id="glConfirmBtn"></button>
+            </div>
+        </div>
+    </div>
+</div>

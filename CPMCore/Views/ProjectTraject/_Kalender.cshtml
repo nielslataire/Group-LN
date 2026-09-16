@@ -1,57 +1,174 @@
+@using System.Text.Json
 @using BOCore
 @using DALCore.Models
 @model CPMCore.Models.Traject.TrajectIndexVm
 @{
-    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    // Rendert enkel de skeleton + databron; de vier weergaves (Maand/Kwartaal/Jaar/Agenda) + alle
+    // interactie (navigeren, filteren, mijlpaal-detail) worden client-side opgebouwd door
+    // initKalender2() in traject.index.js — zie dat bestand voor de eigenlijke rendering.
 
-    var items = Model.Mijlpalen
-        .Select(m => new
+    // Vaste, gedempte kleurenreeks (geen fel/stock-Bootstrap) voor fase-onderscheid in de
+    // tijdlijn/swimlane — DESIGN.md's "One Green Rule" geldt voor merk-/actieknoppen, niet voor
+    // data-categorisering; ProjecttrajectFase.KleurCode is in de praktijk zelden ingevuld, dus
+    // vult de cyclus aan als fallback.
+    string[] FasePalet = { "#0a5a3b", "#c17d1f", "#3d4a5c", "#a88b6a", "#4f7a63", "#7a8494", "#8a5a0f", "#5b7a8c" };
+    string FaseKleur(ProjecttrajectFase f, int idx) => !string.IsNullOrWhiteSpace(f.KleurCode) ? f.KleurCode : FasePalet[idx % FasePalet.Length];
+
+    string FormatTriggerActie(MijlpaalTrigger t)
+    {
+        JsonElement? p = null;
+        if (!string.IsNullOrWhiteSpace(t.ActieParametersJson))
         {
-            M = m,
-            Datum = m.WerkelijkeDatum ?? m.Doeldatum ?? m.DoeldatumBerekend
-        })
-        .Where(x => x.Datum != null)
-        .OrderBy(x => x.Datum)
-        .ToList();
-
-    var perMaand = items
-        .GroupBy(x => new DateOnly(x.Datum!.Value.Year, x.Datum.Value.Month, 1))
-        .OrderBy(g => g.Key)
-        .ToList();
-}
-
-@if (perMaand.Count == 0)
-{
-    <div class="gl-mc-card"><div class="card-body text-muted">Geen mijlpalen met een datum.</div></div>
-}
-else
-{
-    <div class="gl-traject-kalender">
-        @foreach (var maand in perMaand)
-        {
-            <div class="gl-kal-maand">
-                <div class="gl-kal-maand-kop">@maand.Key.ToString("MMMM yyyy", new System.Globalization.CultureInfo("nl-BE"))</div>
-                <ul class="list-unstyled mb-0">
-                    @foreach (var x in maand)
-                    {
-                        var m = x.M;
-                        var bereikt = m.Status == (int)MijlpaalStatus.Bereikt;
-                        var overdue = !bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing
-                                      && x.Datum!.Value < vandaag;
-                        <li class="gl-kal-item @(bereikt ? "is-bereikt" : "") @(overdue ? "is-overdue" : "")">
-                            <span class="gl-kal-datum">@x.Datum!.Value.ToString("dd/MM")</span>
-                            <span class="gl-kal-naam">
-                                @m.Naam
-                                @if (m.UnitId != null && m.Unit != null)
-                                {
-                                    <span class="text-muted">· @m.Unit.Name</span>
-                                }
-                            </span>
-                            <span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span>
-                        </li>
-                    }
-                </ul>
-            </div>
+            try { p = JsonDocument.Parse(t.ActieParametersJson).RootElement; } catch { p = null; }
         }
-    </div>
+        string? GetStr(string key) => p.HasValue && p.Value.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+        int? GetInt(string key) => p.HasValue && p.Value.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : (int?)null;
+
+        switch ((TriggerActie)t.TriggerActie)
+        {
+            case TriggerActie.VerwittigRol:
+                var rol = GetInt("rol");
+                return "Verwittig " + (rol.HasValue && rol.Value != 0 ? ((InterneRol)rol.Value).GetDisplayName() : "verantwoordelijke");
+            case TriggerActie.VerwittigGebruiker:
+                return "Verwittig gebruiker";
+            case TriggerActie.MaakTaak:
+                return "Taak: " + (GetStr("titel") ?? "opvolgtaak aanmaken");
+            case TriggerActie.MaakDossier:
+                return "Dossier aanmaken";
+            case TriggerActie.ZetProjectVlag:
+                return "Projectvlag bijwerken";
+            case TriggerActie.ZetProjectStatus:
+                return "Projectstatus bijwerken";
+            case TriggerActie.PlanHerinnering:
+                return "Herinnering plannen";
+            case TriggerActie.DeblokkeerVolgendeFase:
+                return "Ontgrendelt volgende fase";
+            case TriggerActie.StuurDossierAanvraagMail:
+                return "Dossier-aanvraagmail versturen";
+            default:
+                return ((TriggerActie)t.TriggerActie).GetDisplayName();
+        }
+    }
+
+    var fasesOrdered = Model.Fases.OrderBy(f => f.Volgorde).ToList();
+    var mijlpalenPerFase = Model.Mijlpalen.GroupBy(m => m.ProjecttrajectFaseId ?? 0).ToDictionary(g => g.Key, g => g.ToList());
+
+    var fasesData = fasesOrdered.Select((f, idx) =>
+    {
+        mijlpalenPerFase.TryGetValue(f.Id, out var mpn);
+        mpn ??= new List<Mijlpaal>();
+        var data = mpn.Select(m => m.Doeldatum ?? m.DoeldatumBerekend ?? m.WerkelijkeDatum).Where(d => d != null).Select(d => d!.Value).ToList();
+        var start = f.StartGepland ?? (data.Count > 0 ? data.Min() : (DateOnly?)null);
+        var eind = f.EindGepland ?? (data.Count > 0 ? data.Max() : (DateOnly?)null);
+        return new
+        {
+            id = f.Id,
+            naam = f.Naam,
+            code = f.Code,
+            kleur = FaseKleur(f, idx),
+            volgorde = f.Volgorde,
+            status = f.Status,
+            statusLabel = ((FaseStatus)f.Status).GetDisplayName(),
+            start = start?.ToString("yyyy-MM-dd"),
+            eind = eind?.ToString("yyyy-MM-dd"),
+            mijlpaalCount = mpn.Count,
+            bereiktCount = mpn.Count(m => m.Status == (int)MijlpaalStatus.Bereikt)
+        };
+    }).ToList();
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var mijlpalenData = Model.Mijlpalen.Select(m =>
+    {
+        var eff = m.WerkelijkeDatum ?? m.Doeldatum ?? m.DoeldatumBerekend;
+        var isBereikt = m.Status == (int)MijlpaalStatus.Bereikt;
+        var isNvt = m.Status == (int)MijlpaalStatus.NietVanToepassing;
+        var streef = m.Doeldatum ?? m.DoeldatumBerekend;
+        var overdue = !isBereikt && !isNvt && streef is DateOnly sd && sd < today;
+        Model.TriggersPerMijlpaal.TryGetValue(m.Id, out var trg);
+        return new
+        {
+            id = m.Id,
+            naam = m.Naam,
+            faseId = m.ProjecttrajectFaseId ?? 0,
+            datum = eff?.ToString("yyyy-MM-dd"),
+            streefdatum = streef?.ToString("yyyy-MM-dd"),
+            bereiktOp = m.WerkelijkeDatum?.ToString("yyyy-MM-dd"),
+            status = m.Status,
+            statusLabel = ((MijlpaalStatus)m.Status).GetDisplayName(),
+            isBereikt,
+            isNvt,
+            overdue,
+            dagenTeLaat = overdue && streef is DateOnly sd2 ? today.DayNumber - sd2.DayNumber : 0,
+            rol = m.VerantwoordelijkeRol.HasValue ? ((InterneRol)m.VerantwoordelijkeRol.Value).GetDisplayName() : null,
+            scope = m.UnitId == null ? "project" : "unit",
+            geldtVoor = m.UnitId == null ? "Heel het project" : (m.Unit?.Name ?? "Eenheid"),
+            isVerplicht = m.IsVerplicht,
+            triggers = (trg ?? new List<MijlpaalTrigger>()).Select(t => new { label = FormatTriggerActie(t), eventLabel = ((TriggerEvent)t.TriggerEvent).GetDisplayName() }).ToList()
+        };
+    }).Where(x => x.datum != null).ToList();
+
+    var payload = new { fases = fasesData, mijlpalen = mijlpalenData };
 }
+
+<div class="gl-kal2" id="trajectKalender2">
+    <div class="gl-kal2-toolbar">
+        <div class="gl-kal2-toolbar-row">
+            <div class="gl-kal2-nav">
+                <button type="button" class="gl-kal2-navbtn" data-nav="prev" aria-label="Vorige periode"><i class="bx bx-chevron-left" aria-hidden="true"></i></button>
+                <button type="button" class="gl-kal2-navbtn" data-nav="next" aria-label="Volgende periode"><i class="bx bx-chevron-right" aria-hidden="true"></i></button>
+                <button type="button" class="gl-kal2-btn" data-nav="today"><i class="bx bx-target-lock" aria-hidden="true"></i>Vandaag</button>
+            </div>
+            <div class="gl-kal2-title">
+                <div class="gl-kal2-title-main" id="kal2Title"></div>
+                <div class="gl-kal2-title-sub" id="kal2Subtitle"></div>
+            </div>
+            <div class="gl-kal2-viewswitch" role="tablist" aria-label="Kalenderweergave">
+                <button type="button" role="tab" class="is-active" aria-selected="true" tabindex="0" data-view="maand"><i class="bx bx-calendar" aria-hidden="true"></i>Maand</button>
+                <button type="button" role="tab" aria-selected="false" tabindex="-1" data-view="kwartaal"><i class="bx bx-calendar" aria-hidden="true"></i>Kwartaal</button>
+                <button type="button" role="tab" aria-selected="false" tabindex="-1" data-view="jaar"><i class="bx bx-calendar" aria-hidden="true"></i>Jaar</button>
+                <button type="button" role="tab" aria-selected="false" tabindex="-1" data-view="agenda"><i class="bx bx-list-ul" aria-hidden="true"></i>Agenda</button>
+            </div>
+        </div>
+        <div class="gl-kal2-toolbar-row gl-kal2-toolbar-row--end">
+            <div class="gl-kal2-filters" role="group" aria-label="Filter op status">
+                <button type="button" class="is-active" data-filter="alle">Alles</button>
+                <button type="button" data-filter="nogtedoen">Nog te doen</button>
+                <button type="button" data-filter="achterstallig">Achterstallig</button>
+                <button type="button" data-filter="bereikt">Bereikt</button>
+            </div>
+            <div class="gl-kal2-opties">
+                <button type="button" class="gl-kal2-btn" id="kal2OptiesBtn" aria-expanded="false" aria-haspopup="true">
+                    <i class="bx bx-filter-alt" aria-hidden="true"></i>Fases &amp; opties
+                </button>
+                <div class="gl-kal2-opties-menu" id="kal2OptiesMenu" hidden role="menu"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-kal2-body">
+        <div class="gl-kal2-main" id="kal2Main"></div>
+        <aside class="gl-kal2-side">
+            <div class="gl-kal2-stats">
+                <div class="gl-kal2-stats-head">
+                    <span>Deze periode</span>
+                    <span class="gl-kal2-stats-count" id="kal2StatsCount"></span>
+                </div>
+                <div class="gl-kal2-stats-grid">
+                    <div class="gl-kal2-stat is-bereikt"><strong id="kal2StatBereikt">0</strong><span>bereikt in periode</span></div>
+                    <div class="gl-kal2-stat is-achterstallig"><strong id="kal2StatAchterstallig">0</strong><span>achterstallig</span></div>
+                    <div class="gl-kal2-stat"><strong id="kal2StatNogTeDoen">0</strong><span>nog te doen</span></div>
+                    <div class="gl-kal2-stat"><strong id="kal2StatBinnen14">0</strong><span>binnen 14 dagen</span></div>
+                </div>
+                <div class="gl-kal2-legend">
+                    <span class="gl-kal2-legend-item"><i class="gl-kal2-dot is-bereikt"></i>bereikt</span>
+                    <span class="gl-kal2-legend-item"><i class="gl-kal2-dot is-nogtedoen"></i>nog te doen</span>
+                    <span class="gl-kal2-legend-item"><i class="gl-kal2-dot is-achterstallig"></i>achterstallig</span>
+                    <span class="gl-kal2-legend-item"><i class="gl-kal2-ring"></i>triggert acties</span>
+                </div>
+            </div>
+            <div class="gl-kal2-detail" id="kal2Detail" hidden></div>
+        </aside>
+    </div>
+</div>
+
+<script id="kalenderData" type="application/json">@Html.Raw(JsonSerializer.Serialize(payload))</script>

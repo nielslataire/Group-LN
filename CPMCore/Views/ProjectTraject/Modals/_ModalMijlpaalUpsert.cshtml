@@ -3,7 +3,7 @@
 @model CPMCore.Models.Traject.TrajectIndexVm
 
 <div class="modal fade" id="modalMijlpaal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <form method="post" asp-controller="ProjectTraject" asp-action="MijlpaalUpsert" asp-route-projectId="@Model.ProjectId">
                 @Html.AntiForgeryToken()
@@ -13,82 +13,99 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label">Naam</label>
-                            <input type="text" name="Naam" id="mp-naam" class="form-control" required maxlength="200" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Fase</label>
-                            <select name="ProjecttrajectFaseId" id="mp-fase" class="form-select">
-                                <option value="">— geen —</option>
-                                @foreach (var f in Model.Fases)
-                                {
-                                    <option value="@f.Id">@f.Naam</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Eenheid <span class="text-muted">(optioneel)</span></label>
-                            <select name="UnitId" id="mp-unit" class="form-select">
-                                <option value="">— projectniveau —</option>
-                                @foreach (var u in Model.ProjectUnits)
-                                {
-                                    <option value="@u.Id">@u.Name</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Type</label>
-                            <select name="MijlpaalType" id="mp-type" class="form-select">
-                                @foreach (MijlpaalType mt in Enum.GetValues(typeof(MijlpaalType)))
-                                {
-                                    <option value="@((int)mt)">@mt.GetDisplayName()</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Status</label>
-                            <select name="Status" id="mp-status" class="form-select">
-                                @foreach (MijlpaalStatus ms in Enum.GetValues(typeof(MijlpaalStatus)))
-                                {
-                                    <option value="@((int)ms)">@ms.GetDisplayName()</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Verantwoordelijke rol</label>
-                            <select name="VerantwoordelijkeRol" id="mp-rol" class="form-select">
-                                <option value="">— geen —</option>
-                                @foreach (InterneRol r in Enum.GetValues(typeof(InterneRol)))
-                                {
-                                    if ((int)r == 0) { continue; }
-                                    <option value="@((int)r)">@r.GetDisplayName()</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Streefdatum</label>
-                            <input type="date" name="Doeldatum" id="mp-doeldatum" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Werkelijke datum</label>
-                            <input type="date" name="WerkelijkeDatum" id="mp-werkelijk" class="form-control" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Volgorde</label>
-                            <input type="number" name="Volgorde" id="mp-volgorde" class="form-control" value="0" />
-                        </div>
-                        <div class="col-md-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="IsVerplicht" id="mp-verplicht" value="true" checked />
-                                <input type="hidden" name="IsVerplicht" value="false" />
-                                <label class="form-check-label" for="mp-verplicht">Verplichte mijlpaal</label>
+                    @* Drie secties i.p.v. 11 velden in één ongebroken raster (/impeccable critique P2-fix)
+                       — Mijlpaal (wat is het) / Planning (wanneer + welke status) / Verantwoordelijkheid
+                       & notities (wie + vrije tekst), zelfde chunking-gedachte als gl-form-section op de
+                       volle pagina, gecomprimeerd voor in een modal (.gl-mp-modal-section in traject.css). *@
+                    <div class="gl-mp-modal-section">
+                        <div class="gl-mp-modal-section-title">Mijlpaal</div>
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Naam</label>
+                                <input type="text" name="Naam" id="mp-naam" class="form-control form-control-modern" required maxlength="200" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Type</label>
+                                <select name="MijlpaalType" id="mp-type" class="form-select form-control-modern">
+                                    @foreach (MijlpaalType mt in Enum.GetValues(typeof(MijlpaalType)))
+                                    {
+                                        <option value="@((int)mt)">@mt.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fase</label>
+                                <select name="ProjecttrajectFaseId" id="mp-fase" class="form-select form-control-modern">
+                                    <option value="">— geen —</option>
+                                    @foreach (var f in Model.Fases)
+                                    {
+                                        <option value="@f.Id">@f.Naam</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Eenheid <span class="text-muted">(optioneel)</span></label>
+                                <select name="UnitId" id="mp-unit" class="form-select form-control-modern">
+                                    <option value="">— projectniveau —</option>
+                                    @foreach (var u in Model.ProjectUnits)
+                                    {
+                                        <option value="@u.Id">@u.Name</option>
+                                    }
+                                </select>
                             </div>
                         </div>
-                        <div class="col-md-12">
-                            <label class="form-label">Opmerking</label>
-                            <textarea name="Opmerking" id="mp-opmerking" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="gl-mp-modal-section">
+                        <div class="gl-mp-modal-section-title">Planning</div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Status</label>
+                                <select name="Status" id="mp-status" class="form-select form-control-modern">
+                                    @foreach (MijlpaalStatus ms in Enum.GetValues(typeof(MijlpaalStatus)))
+                                    {
+                                        <option value="@((int)ms)">@ms.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Streefdatum</label>
+                                <input type="date" name="Doeldatum" id="mp-doeldatum" class="form-control form-control-modern" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Werkelijke datum</label>
+                                <input type="date" name="WerkelijkeDatum" id="mp-werkelijk" class="form-control form-control-modern" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Volgorde <span class="text-muted">(bepaalt de plaats binnen de fase)</span></label>
+                                <input type="number" name="Volgorde" id="mp-volgorde" class="form-control form-control-modern" value="0" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-mp-modal-section">
+                        <div class="gl-mp-modal-section-title">Verantwoordelijkheid &amp; notities</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Verantwoordelijke rol</label>
+                                <select name="VerantwoordelijkeRol" id="mp-rol" class="form-select form-control-modern">
+                                    <option value="">— geen —</option>
+                                    @foreach (InterneRol r in Enum.GetValues(typeof(InterneRol)))
+                                    {
+                                        if ((int)r == 0) { continue; }
+                                        <option value="@((int)r)">@r.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="IsVerplicht" id="mp-verplicht" value="true" checked />
+                                    <input type="hidden" name="IsVerplicht" value="false" />
+                                    <label class="form-check-label" for="mp-verplicht">Verplichte mijlpaal</label>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Opmerking</label>
+                                <textarea name="Opmerking" id="mp-opmerking" class="form-control form-control-modern" rows="2"></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>

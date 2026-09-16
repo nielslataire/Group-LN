@@ -596,6 +596,28 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     -webkit-overflow-scrolling: touch;
 }
 .gl-form-shell__tabs::-webkit-scrollbar { display: none; }
+@media (min-width: 768px) {
+    /* Blijft zichtbaar tijdens scrollen (project-wide gevraagd) — niet via position:sticky, die
+       rekent zijn rustpositie i.c.m. de negative-margin-uitbraak hierboven zichtbaar fout af (bleek
+       zowel op deze schil als op ProjectTraject's .gl-traject-tabrow: geen "vastklikken", en de
+       rustpositie schuift). .gl-form-shell__actions (hieronder) liep tegen exact hetzelfde probleem
+       aan en loste het al op met fixed + een expliciete left-offset i.p.v. sticky; dezelfde aanpak
+       hier, ingeschakeld via JS zodra de rustpositie toch al voorbij de topbar zou scrollen
+       (custom.js, onderaan het bestand — .gl-is-pinned + een live gemeten spacer die voorkomt dat de
+       rest van de pagina opspringt). left/right: deze klasse wordt enkel gebruikt op platte
+       .content-body-pagina's (Projecten/Edit, TrajectSjabloonAdmin/Edit) — geen extra .inner-menu-
+       kolom zoals bij .gl-traject-tabrow, dus dezelfde vaste 300px/73px als .gl-form-shell__actions
+       volstaat hier wél. */
+    .gl-form-shell__tabs.gl-is-pinned {
+        position: fixed;
+        top: var(--topbar-height, 72px);
+        left: 300px;
+        right: 0;
+        margin: 0;
+        z-index: 900;
+    }
+    html.sidebar-left-collapsed .gl-form-shell__tabs.gl-is-pinned { left: 73px; }
+}
 .gl-form-shell__tab {
     flex: 0 0 auto;
     appearance: none;
@@ -725,10 +747,114 @@ html.gl-modal-open .sidebar-left { display: none !important; }
        ongeconditioneerde "html.modern.fixed .content-body { margin-top:
        10px }" (theme.css) geldt hier óók — die moeten we dus nog wel
        uitbreken, samen met links/rechts naar de echte rand. */
+    /* Geen pin op mobiel — hieronder scrollen de tabs toch al gewoon horizontaal in-flow (net als
+       .gl-traject-tabrow), en de JS (custom.js) pint enkel vanaf 768px. */
     .gl-form-shell__tabs { height: auto; padding: 0 15px; margin: -10px -15px 16px; }
     .gl-form-shell__panel { overflow-y: visible; padding: 0; }
     .gl-form-shell__actions { padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ── Formulier-veldsysteem (gl-form-section/gl-field-grid/gl-field/gl-switch-row/gl-form-note) ──
+   Was tot nu toe enkel gedefinieerd in projecten-custom.css (geladen door de Projecten-pagina's
+   zelf), terwijl DESIGN.md dit als "hét" gedeelde veldsysteem voor élke gl-form-shell-vorm
+   documenteert. Hierheen verplaatst zodat elke pagina die enkel custom.css laadt (globaal, zie
+   _Layout.cshtml) er ook automatisch dezelfde stijl van krijgt, zonder projecten-custom.css als
+   extra stylesheet te moeten binnenhalen. De Projecten-eigen override
+   (.gl-project-form .gl-form-section { margin-bottom: 16px }, in projecten-custom.css) wint daar
+   nog steeds dankzij hogere CSS-specificiteit. */
+.gl-form-section { margin-bottom: 26px; }
+.gl-form-section:last-child { margin-bottom: 0; }
+
+.gl-form-section__head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.gl-form-section__head > i {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border-radius: 11px;
+    background: var(--lightgreen, #e8f0eb);
+    color: var(--primary);
+}
+.gl-form-section__title {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text, #26313a);
+}
+.gl-form-section__hint {
+    margin: 2px 0 0;
+    font-size: .8125rem;
+    line-height: 1.35;
+    color: var(--gl-detail-text-aa, #5f6b7a);
+}
+
+/* Veld-raster: auto-fit kolommen, labels boven het veld. */
+.gl-field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2px 24px;
+    align-items: start;
+}
+.gl-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+    min-width: 0;
+}
+.gl-field--full { grid-column: 1 / -1; }
+.gl-field > label {
+    margin: 0;
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--text, #26313a);
+}
+.gl-field .gl-req { color: var(--danger, #b3452f); margin-left: 2px; font-weight: 700; }
+.gl-field .form-control,
+.gl-field .select2-container { max-width: 100%; }
+.gl-field--full .form-control,
+.gl-field--full .select2-container { max-width: 560px; }
+.gl-field--full.gl-field--wide .form-control { max-width: 100%; }
+
+/* Losse infomelding onder het formulier. */
+.gl-form-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: 8px;
+    background: var(--lightgreen, #e8f0eb);
+    font-size: .875rem;
+    color: var(--text, #26313a);
+}
+.gl-form-note > i { font-size: 18px; color: var(--primary); flex: none; margin-top: 1px; }
+
+/* Schakelaar-rij: iOS-switch + label naast elkaar. */
+.gl-switch-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.gl-switch-row > label {
+    margin: 0;
+    font-weight: 600;
+    font-size: .8125rem;
+    color: var(--text, #26313a);
+}
+.gl-switch-row > label small { font-weight: 400; }
 
 /* ── Skip-to-content link (a11y: WCAG 2.4.1) ─────────────────────────────
    Verborgen tot hij focus krijgt via Tab; springt dan zichtbaar linksboven.

@@ -6,6 +6,18 @@
     var mijlpalenPerFase = Model.ProjectMijlpalen
         .GroupBy(m => m.ProjecttrajectFaseId)
         .ToDictionary(g => g.Key ?? 0, g => g.OrderBy(x => x.Volgorde).ToList());
+
+    // Zelfde mapping als Index.cshtml — zie de toelichting daar (.gl-mijlpaal-status-icon in
+    // traject.css, geen gedeelde helper voor deze 5 cases).
+    string StatusIcon(int status) => status switch
+    {
+        0 => "bx-circle",
+        1 => "bx-time-five",
+        2 => "bx-check-circle",
+        3 => "bx-minus-circle",
+        4 => "bx-block",
+        _ => "bx-circle"
+    };
 }
 
 <div class="gl-traject-timeline">
@@ -33,14 +45,15 @@
                     var overdue = eff is DateOnly d && d < today
                                   && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
                     <li class="gl-traject-mijlpaal m-status-@m.Status @(overdue ? "is-overdue" : "")">
-                        <span class="gl-tm-dot"></span>
+                        @{ var mStatusLabel = ((MijlpaalStatus)m.Status).GetDisplayName(); }
+                        <span class="gl-mijlpaal-status-icon s-@m.Status" title="@mStatusLabel"><i class="bx @StatusIcon(m.Status)" aria-hidden="true"></i></span>
+                        <span class="visually-hidden">@mStatusLabel</span>
                         <span class="gl-tm-naam">@m.Naam</span>
-                        <span class="gl-tm-datum @(overdue ? "text-danger fw-bold" : "text-muted")">
+                        <span class="gl-tm-datum @(overdue ? "gl-traject-overdue-text" : "text-muted")">
                             @(m.WerkelijkeDatum?.ToString("dd/MM/yyyy") ?? eff?.ToString("dd/MM/yyyy") ?? "—")
                         </span>
-                        <span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span>
-                        <button type="button" class="btn btn-xs btn-default js-mijlpaal-status" data-id="@m.Id" data-naam="@m.Naam" data-status="@m.Status">
-                            <i class="bx bx-check-circle"></i>
+                        <button type="button" class="gl-row-action-btn js-mijlpaal-status" data-id="@m.Id" data-naam="@m.Naam" data-status="@m.Status" title="Status wijzigen" aria-label="Status wijzigen van @m.Naam">
+                            <i class="bx bx-repeat" aria-hidden="true"></i>
                         </button>
                     </li>
                 }

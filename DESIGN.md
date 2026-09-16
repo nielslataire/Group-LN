@@ -411,6 +411,144 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
   `0 0 0 2px` Rust-tint glow; `<span asp-validation-for>` renders `.text-danger`
   directly under the field.
 
+### Table status indicators (`gl-mijlpaal-status-icon`)
+A colored icon replacing a text status badge — same 5-state color mapping,
+smaller footprint, and it's the *leading* signal on the row instead of one
+more thing to read at the end. New for `ProjectTraject`; the older text-badge
+class (`.gl-mijlpaal-status`, see below) is **shared app-wide** (Deadlines,
+the Home role dashboards, ProjectDossiers all use it directly) — never rename
+or repurpose that class itself, add the icon variant alongside it instead.
+- **Markup:** `<span class="gl-mijlpaal-status-icon s-{status}" title="{label}">
+  <i class="bx {icon}" aria-hidden="true"></i></span>` plus a
+  `<span class="visually-hidden">{label}</span>` sibling — the icon alone has
+  no accessible name, and in a DataTable the hidden text is also what keeps
+  the column searchable/sortable (pair with `<td data-order="{status}">` for
+  correct numeric sort once there's no visible text left to sort by).
+  Reference: `ProjectTraject/Index.cshtml`, `_Timeline.cshtml`,
+  `_UnitMatrix.cshtml` (there the icon *is* the clickable status-change
+  button — see Table row actions below).
+- **Icon-per-status mapping** (`MijlpaalStatus`, but the principle — one
+  unambiguous glyph per state, colored by the same 5-token system as the
+  badge — applies to any status enum): Open `bx-circle`, Bezig `bx-time-five`,
+  Bereikt `bx-check-circle`, Niet van toepassing `bx-minus-circle` (dimmed),
+  Geblokkeerd `bx-block`. Color from the same tokens as the badge (`--primary`
+  bereikt, `--warning` bezig, `--danger` geblokkeerd, muted neutral for the
+  rest) — never a second parallel palette for the icon form.
+- **Never reuse a status icon's glyph as an action icon in the same row.**
+  `bx-check-circle` was tried as the generic "change status" action button —
+  it's *also* the Bereikt status icon, so a completed row showed the same
+  glyph twice with two different meanings a few columns apart. Pick an action
+  icon with no overlap with the status set it sits next to.
+- **Verify the icon actually renders in this app before committing to it.**
+  Boxicons is loaded from a CDN "basic" font subset
+  (`cdn.boxicons.com/…/basic/boxicons.min.css`, see `_Layout.cshtml`), not the
+  full library, and the locally vendored `wwwroot/lib/boxicons` copy is a
+  different, incomplete version too — neither is a reliable yes/no oracle.
+  `bx-transfer` looked valid (it's referenced in `Projecten/DetailPhotos.cshtml`)
+  but didn't render here. The one real signal is: grep for the exact class
+  already in live, working use elsewhere in *this* app
+  (`grep -rn "bx-{name}\b" CPMCore/Views`) — ideally more than one call site —
+  before using a `bx-` icon you haven't seen rendered yourself.
+
+### Table row actions (`gl-row-action-btn`)
+Two competing patterns exist for the small icon actions at the end of a table
+row (edit, change status, delete). **`gl-row-action-btn` is the current one for
+new tables**; `theme.css`'s older `.table .actions a` (bare `<a>` + icon,
+`color:#666` → `#333` on hover, no background, no explicit touch size) is the
+pre-existing app-wide convention and stays where it already is
+(`Projecten/DetailContracts.cshtml` and others) — migrate a table to the new
+pattern when you touch it, not in a bulk sweep.
+- **Markup:** `<span class="gl-row-actions">` wrapping one
+  `<button type="button" class="gl-row-action-btn" aria-label="…">` per action,
+  each holding one `bx`-icon (`aria-hidden="true"`) at 16px. Reference:
+  `ProjectTraject/Index.cshtml` (Mijlpalen-tabel) and `_Timeline.cshtml`.
+- **Size & rest state:** 30×30px, 7px radius (`--radius`), transparent, icon
+  in muted gray (`--tsa-muted-aa`) — quiet by design, not the row's focal
+  point at rest.
+- **Hover/focus:** Mist-Green background, a `#bcd6c7` hairline border, and the
+  icon switches to Forest Green Deep (`#0f4b40`) — the extra border matters:
+  a background tint alone on a near-white table row read as too small a
+  change to register as "hover" (the actual complaint that led to adding it).
+  Same "quiet icon, green on interaction" language as `gl-page-header__back`
+  and `gl-detail-card-edit`, just the compact 30px table-row variant, not a
+  third style. A destructive action adds `.is-danger` for a Rust-tint hover
+  instead of green.
+- **Hidden until the row is interacted with.** `.gl-row-actions
+  .gl-row-action-btn` and `.gl-traject-mijlpaal .gl-row-action-btn` (i.e. the
+  *secondary-action* role specifically, not every use of the class — see
+  below) sit at `opacity:0` by default and reveal on `tr:hover` /
+  `tr:focus-within` / the button's own `:focus-visible`, plus a
+  `@media (hover: none)` fallback that forces them visible on touch (no hover
+  to reveal them with there). Two muted icons sitting permanently on every
+  row of a long table is more visual noise than signal; revealing them on
+  approach removes that noise without removing the affordance.
+- **Except when the icon button *is* the primary content, not a secondary
+  action** — `_UnitMatrix.cshtml` reuses `gl-row-action-btn` for its
+  status-change button, but there the icon *is* the cell's main content (the
+  status itself), so it must stay always-visible. That's why the hide-on-rest
+  rule above is scoped to `.gl-row-actions`/`.gl-traject-mijlpaal`
+  specifically rather than the bare class — check which role a new use case
+  is playing before copying the hide-until-hover rule onto it.
+- **Vertical alignment:** give the table (or its cells) `vertical-align:middle`.
+  A status icon/badge and a 30px action button have different intrinsic
+  heights; without middle-alignment a row with both looks visibly uneven even
+  though neither element itself is wrong.
+- **Status badges in the same row (only relevant where the older text badge
+  is still used, not the icon form above):** `.badge` is em-relative by
+  default (sizes off the surrounding text), which renders noticeably shorter
+  than a 30px action button next to it. Give a status badge fixed (non-`em`)
+  `font-size` / `padding` — see `.badge.gl-mijlpaal-status` in `traject.css`
+  — rather than leaving it to inherit.
+- **Row dividers use the Hairline token, never an ad-hoc lighter gray.**
+  `#f1f3f7`/`#eef1f4`-style near-white grays read as *no border at all* next to
+  white row backgrounds and make a table or list feel like an undifferentiated
+  block of text — the opposite of scannable. Every structural row/cell
+  separator is `1px solid var(--border, #e7e7e7)` (Hairline), full stop; reach
+  for a paler value only for a genuine *fill* (a muted badge/pill background),
+  never for a line meant to be seen.
+
+### Table column order & alignment
+- **A status indicator leads the row**, as the first column, not buried
+  mid-row or at the end — it's the fastest thing a user scans a table for.
+  When adding one to an existing table, move it, don't just insert it wherever
+  is easiest (`ProjectTraject/Index.cshtml`'s Mijlpalen-tabel puts Status
+  first; the DataTable's default-sort column index has to move with it).
+- **Date, currency, and other numeric columns are right-aligned** — header
+  and cells both (`class="text-end"` on the `<th>` and every `<td>`).
+  Right-aligned numbers/dates line up on their ones place and scan as a
+  column; left-aligned, they don't align with anything and read as prose.
+- **No decorative icon riding along inside a date/number cell** (e.g. a
+  calculator glyph marking "this date was computed, not entered manually").
+  It breaks the column's scannability for a distinction most users don't need
+  moment-to-moment; if that distinction matters, say it in the row's detail
+  view/tooltip instead of every cell in the column.
+
+### Table search + column filter
+A DataTable with a custom search box and a column-visibility ("colvis") button
+— the search input replaces DataTables' own `.dt-search` (hidden via CSS), the
+colvis button is moved out of the default toolbar into a page-chosen container.
+Origin: `Projecten/DetailClients.cshtml` (`Clients.cshtml`); current best
+version: `ProjectTraject/Index.cshtml` (Mijlpalen-tabel).
+- **Layout:** a `d-flex align-items-center gap-2` row holding two children —
+  the search `.input-group` (`flex-grow-1`, so it fills all available width)
+  and the colvis button's container (`flex-shrink-0`) beside it with a real
+  `gap-2`. **Don't** put the colvis container *inside* the same `.input-group`
+  as the search box (`Clients.cshtml`'s original approach) — the two controls
+  end up visually fused with no breathing room between them, which reads as
+  unfinished rather than deliberate.
+- **DataTable init:** `layout: { topStart: { buttons: [{ extend: "colvis",
+  text: '<i class="bx bx-columns me-2"></i><span>Kolommen</span>', columns:
+  ":not(.noVis)", init: (api, node) => $(node).removeClass("btn-secondary")
+  .addClass("btn btn-default") }] } }`, then
+  `table.buttons(0, null).containers().appendTo("#<id>-colvis-container")` and
+  hide `.dt-search` inside the panel. A column that must never be hideable
+  (typically the actions column) gets class `noVis` on its `<th>`.
+- **Assets:** the combined DataTables bundle (core + Buttons + ColVis), not
+  the bare core build — `https://cdn.datatables.net/v/bs5/…/datatables.min.{js,css}`
+  (see the `<script>`/`<link>` tags in `ProjectTraject/Index.cshtml` for the
+  exact pinned URL) — the plain `dataTables.min.js` + `dataTables.bootstrap5.js`
+  pair used elsewhere has no Buttons/ColVis support at all.
+
 ### Formulieren (`gl-form-shell`)
 The current pattern for a data-entry form. CSS in `custom.css` ("Formulierschil")
 + `projecten-custom.css` ("Projecten/Toevoegen + Bewerken — formulier"). Reference
@@ -422,15 +560,41 @@ views: `CPMCore/Views/Projecten/Toevoegen.cshtml` (short, no tabs) and
   `calc(100vh − topbar − …)` so the page body never scrolls — only the active
   panel does. The form is wrapped in
   `Html.BeginForm(… @class = "ecommerce-form gl-project-form", enctype = "multipart/form-data")`.
-- **Tabstrip (`gl-form-shell__tabs` / `__tab` / `__tab-badge`):** sits *outside*
-  the card — it is the screen's primary in-page navigation — and breaks out of
-  the content padding to sit flush under the topbar. `role="tablist"`; each
-  `__tab` is `role="tab"` with an icon + label. Active tab = Deep Forest Green
-  text + a 3px Ochre bottom border (the active-tab marker). `__tab-badge` is a
-  Rust pill counting validation errors on that tab. All fields stay in the DOM on
-  every tab — one Save submits everything; the show/hide + keyboard script is
+- **Tabstrip (`gl-form-shell__tabs` / `__tab` / `__tab-badge`):** always sits
+  *outside* the card — it is the screen's primary in-page navigation, not a
+  widget that happens to live in one — flush under the topbar with **no
+  visible gap**, full page width. `role="tablist"`; each `__tab` is `role="tab"`
+  with an icon + label. Active tab = Deep Forest Green text + a 3px Ochre
+  bottom border (the active-tab marker). `__tab-badge` is a Rust pill counting
+  validation errors on that tab. All fields stay in the DOM on every tab — one
+  Save submits everything; the show/hide + keyboard script is
   `_ProjectFormTabs.cshtml`, and on a failed POST the server sets
   `data-force-tab` to the first tab carrying an error.
+  - **The breakout margin depends on which layout shell the page uses** — the
+    two ancestor chains have different vertical chrome, so **never copy one
+    page's numbers onto the other shell**:
+    - **`.content-body`** (a plain top-level page, no project-detail sidebar —
+      `Projecten/Edit.cshtml`, `TrajectSjabloonAdmin/Edit.cshtml`):
+      `margin: -50px -40px 24px; padding: 0 40px; height: 54px;` — cancels
+      `.content-body`'s own 40px padding-top plus the separate
+      `html.modern.fixed .content-body{margin-top:10px}` rule (`theme.css`).
+      Mobile: `margin: -10px -15px 16px; padding: 0 15px; height: auto;`.
+    - **`.content-with-menu`** (a project sub-page with the `DetailMenu`
+      sidebar — `ProjectTraject/Index.cshtml`, the reference implementation):
+      `margin: -43px -40px 20px; padding: 0 40px; min-height: 54px;` (≥768px
+      only — below that `.inner-body` falls back to a third, non-fixed padding
+      recipe and the tabs scroll horizontally in-flow instead). This shell
+      nests `.content-with-menu` *inside* `.content-body` (`_Layout.cshtml`
+      wraps `@RenderBody()` in `<main class="content-body">` unconditionally),
+      so the page must *also* neutralize `.content-body`'s own 10px
+      margin-top via `html.modern.fixed .content-body.<flush-class>{margin-
+      top:0}` scoped through `ViewBag.ContentBodyClass` (set in the
+      controller action, consumed by `<main class="content-body
+      @ViewBag.ContentBodyClass">` in `_Layout.cshtml`) — never edit the
+      shared `.content-body` rule directly, it would shift every other page.
+      The remaining -43px cancels `groupln.css`'s `html.modern.fixed
+      [.inner-body]{border-top:113px solid transparent;margin-top:-110px}`
+      stacked on its ordinary (non-fixed) 40px padding: -110 + 113 + 40 = 43.
 - **Panels (`gl-form-shell__panel`):** `overflow-y:auto`, 24px padding;
   non-active panels carry `hidden`.
 - **Actions (`gl-form-shell__actions`):** a third, always-visible zone rendered
@@ -469,6 +633,25 @@ control), and its Save / Cancel come from `_FormShellActions`. `card-big-info`
 supplier/contract forms. Never start a new form on bare `card-modern` +
 `row g-3` + `form-label` + `form-control`.
 
+### Modals
+- **Always vertically centered.** Every `.modal-dialog` carries
+  `modal-dialog-centered` — never Bootstrap's default top-anchored dialog,
+  which floats near the top of the viewport and reads off-balance on a tall
+  screen. `Views/Shared/_ConfirmModal.cshtml` already does this; several older
+  modals across the app still don't. Add it the next time one of those is
+  touched, not as a bulk sweep.
+- **Confirm dialogs never use the bare browser `confirm()`.** Use
+  `Views/Shared/_ConfirmModal.cshtml` (`@await Html.PartialAsync("_ConfirmModal")`,
+  once per page, already `modal-dialog-centered`) with `~/js/confirm-modal.js`'s
+  `window.confirmDialog(title, bodyHtml, confirmLabel)` → `Promise<boolean>`.
+  `bodyHtml` may hold small inline markup (`<b>`) but never unescaped user
+  input. Wire the calling form/button with a `data-confirmed` guard so the
+  real submit passes through once the promise resolves `true` — see
+  `ProjectTraject/_TrajectActionButtons.cshtml` (`gl-delete-traject-form`) or
+  `TrajectSjabloonAdmin/Index.cshtml` (`gl-delete-sjabloon-form`) for the exact
+  pattern, including how it stays safe when the same form is rendered twice
+  (topbar + mobile fallback).
+
 ### Navigation (sidebar)
 - **Rail:** solid Deep Forest Green (`#0a5a3b`), fixed full height, 300px /
   73px collapsed.
@@ -496,6 +679,19 @@ supplier/contract forms. Never start a new form on bare `card-modern` +
   7px radius with Mist-Green hover + green text/icon.
 - **Mobile (≤767px):** whole bar becomes 60px solid Deep Forest Green; only
   hamburger, centred title, avatar.
+- **Page actions (`@section PageActions` → `.topbar-page-actions`):**
+  page-specific buttons rendered inside the topbar itself — right-aligned
+  (`margin-left:auto`), `gap:10px`, right of the breadcrumb. Distinct from
+  `gl-page-header__actions` below, which sits in the content body, not the bar.
+  **Always `btn-sm`** — the bar is only 72px tall and the app's default/`btn-md`
+  sizing reads oversized against it (reference: `ProjectTraject/Index.cshtml` +
+  `_TrajectActionButtons.cshtml`, `TrajectSjabloonAdmin/Edit.cshtml` +
+  `_TrajectSjabloonActions.cshtml`). `.topbar-page-actions` is hidden entirely
+  below 768px; the calling page repeats the *same* buttons — via the same
+  partial, never duplicated markup — in a `d-flex d-md-none justify-content-end
+  gap-2 mb-3` fallback row at the top of its own content body. A few earlier
+  pages (`Projecten/DetailContracts.cshtml`) still use `btn-md` here; migrate to
+  `btn-sm` when you touch them, not in a bulk sweep.
 
 ### Paginakop (`gl-page-header`)
 - **What it replaces:** the ad-hoc title/subtitle/back-button/actions block that

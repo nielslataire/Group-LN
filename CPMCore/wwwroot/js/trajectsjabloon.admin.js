@@ -31,12 +31,19 @@
     var uidSeq = 0;
     function uid() { return "u" + (++uidSeq); }
 
+    // confirmDialog() (in-systeem vervanger voor browser-confirm()) leeft nu in het gedeelde
+    // ~/js/confirm-modal.js (window.confirmDialog) + Views/Shared/_ConfirmModal.cshtml, geladen
+    // vóór dit bestand — zie Edit.cshtml.
+    var confirmDialog = window.confirmDialog;
+
     var initial = readJson("sjabloonData", { fases: [] });
     var typeOpties = readJson("typeOpties", []);
     var rolOpties = readJson("rolOpties", []);
     var bindingOpties = readJson("bindingOpties", [{ v: 0, n: "Handmatig" }]);
     var triggerEventOpties = readJson("triggerEventOpties", []);
     var triggerActieOpties = readJson("triggerActieOpties", []);
+    var dossierKindOpties = readJson("dossierKindOpties", []);
+    var projectVlagOpties = readJson("projectVlagOpties", []);
     var bronParamOptiesByBinding = readJson("bronParamOptiesByBinding", {});
     var bronParamModeByBinding = readJson("bronParamModeByBinding", {});
     var bronParamHintByBinding = readJson("bronParamHintByBinding", {});
@@ -169,6 +176,11 @@
     var dateFmt = (typeof Intl !== "undefined")
         ? new Intl.DateTimeFormat("nl-BE", { day: "2-digit", month: "short", year: "numeric" })
         : null;
+    // Maand+jaar i.p.v. volle datum — de tijdsas heeft maar een handvol, schaars verdeelde
+    // meetpunten (d0/d7/d14/...), daar leest "okt 2026" prettiger dan een volle kalenderdatum.
+    var monthFmt = (typeof Intl !== "undefined")
+        ? new Intl.DateTimeFormat("nl-BE", { month: "short", year: "numeric" })
+        : null;
 
     function formatDagLabel(dag) {
         if (dag == null) return '<span class="gl-tsa-tl-onbekend">⚠ streefdag onbekend (ankerketen)</span>';
@@ -185,6 +197,17 @@
         var $el = window.jQuery(el);
         if ($el.data("select2")) $el.select2("destroy");
         $el.select2({ theme: "bootstrap", width: "100%", language: "nl", dropdownAutoWidth: false, minimumResultsForSearch: 8 });
+        // select2 zet de onderliggende <select> z'n waarde en roept jQuery's eigen .trigger('change')
+        // aan — dat bereikt jQuery-gebonden .on('change', ...)-handlers, maar niet betrouwbaar de
+        // native addEventListener('change', ...)-delegatie op #detailPane (geen echt, bubbelend
+        // DOM-event). Zonder deze regel werd een gekozen rol/anker/bron-parameter dus nooit in
+        // `state` geschreven: leek in de UI wel gekozen, maar Controle bleef "niet gekozen" melden
+        // en Opslaan verstuurde de oude waarde. select2:select/clear zijn wél betrouwbare, native
+        // jQuery-custom-events (zelfde patroon als #header-search in _Layout.cshtml) — die dispatchen
+        // we hier door als een echt, bubbelend 'change'-DOM-event.
+        $el.on("select2:select select2:clear", function () {
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
     }
 
     /** Select2 hangt zijn dropdown/event-handlers los van de DOM (append aan <body>) — bij een
@@ -194,7 +217,7 @@
     function destroySelect2Within(host) {
         if (!hasSelect2 || !host) return;
         var $ = window.jQuery;
-        host.querySelectorAll('[data-select2="1"]').forEach(function (el) {
+        host.querySelectorAll('[data-tsa-select2="1"]').forEach(function (el) {
             var $el = $(el);
             if ($el.data("select2")) { try { $el.select2("destroy"); } catch (e) { /* al opgeruimd */ } }
         });
@@ -486,7 +509,7 @@
                 optHtml = '<option value="' + escapeHtml(m.bronParam) + '" selected>⚠ Huidige waarde: ' + escapeHtml(m.bronParam) + " (niet in lijst)</option>" + optHtml;
             }
             return {
-                cellHtml: '<div class="gl-field"><label for="m-bronParam">Bron-parameter</label><select id="m-bronParam" class="form-select form-select-sm" data-field="bronParam" data-select2="1">' + optHtml + "</select></div>",
+                cellHtml: '<div class="gl-field"><label for="m-bronParam">Bron-parameter</label><select id="m-bronParam" class="form-select form-select-sm" data-field="bronParam" data-tsa-select2="1">' + optHtml + "</select></div>",
                 hidden: false
             };
         }
@@ -507,6 +530,105 @@
         return escapeHtml(ev) + " &rarr; <b>" + escapeHtml(ac) + "</b>";
     }
 
+    // BOCore.TriggerActie → welke velden TriggerParamHelper (ServiceCore/Traject/TriggerActions)
+    // effectief uit ActieParametersJson leest. Vroeger moest je dit blind als JSON intikken; nu
+    // rendert renderTriggerParamFields() per gekozen actie de échte velden (dropdown/tekst/getal/
+    // schakelaar), en wordt de JSON er zelf uit opgebouwd — zie updateTriggerParam(). "select-int"
+    // vs "select-str" bepaalt of de gekozen waarde als getal (rol/kind) of tekst (vlag) in de JSON
+    // terechtkomt; ontbrekende optionele velden worden niet in de JSON opgenomen (fallback-gedrag
+    // van TriggerParamHelper.GetString/GetInt/GetBool blijft dan gewoon gelden).
+    var TRIGGER_ACTIE_PARAM_SCHEMA = {
+        0: [ // VerwittigRol
+            { key: "rol", label: "Rol (optioneel)", type: "select-int", options: rolOpties, blank: "(rol van de mijlpaal)" },
+            { key: "email", label: "E-mailadres, override (optioneel)", type: "text", placeholder: "naam@bedrijf.be" }
+        ],
+        1: [ // VerwittigGebruiker
+            { key: "userId", label: "Gebruiker-Id (optioneel)", type: "text", placeholder: "(verantwoordelijke van de mijlpaal)" }
+        ],
+        2: [ // MaakTaak
+            { key: "titel", label: "Titel (optioneel)", type: "text", placeholder: "(mijlpaalnaam)" },
+            { key: "omschrijving", label: "Omschrijving (optioneel)", type: "text" },
+            { key: "userId", label: "Toegewezen gebruiker-Id (optioneel)", type: "text" },
+            { key: "rol", label: "Of toegewezen rol (optioneel)", type: "select-int", options: rolOpties, blank: "(geen)" },
+            { key: "offsetDagen", label: "Vervaldag — dagen na bereiken (optioneel)", type: "number", placeholder: "7" }
+        ],
+        3: [ // MaakDossier
+            { key: "kind", label: "Soort dossier (optioneel)", type: "select-int", options: dossierKindOpties, blank: "Vrij dossier" },
+            { key: "titel", label: "Titel (optioneel)", type: "text", placeholder: "(mijlpaalnaam)" }
+        ],
+        4: [ // ZetProjectVlag
+            { key: "vlag", label: "Vlag", type: "select-str", options: projectVlagOpties, required: true, blank: "— kies een vlag —" },
+            { key: "waarde", label: "Waarde", type: "toggle", default: true }
+        ],
+        5: [ // ZetProjectStatus
+            { key: "status", label: "Nieuwe Project.StatusId", type: "number", required: true, hint: "Bekende waarden: 1 Opgeleverd, 2 Uitvoering, 3 Ontwerp, 4 Bouwaanvraag, 5 Voorverkoop, 6 Stopgezet — mogelijk bestaan er meer." }
+        ],
+        6: [ // PlanHerinnering
+            { key: "userId", label: "Gebruiker-Id (optioneel)", type: "text", placeholder: "(verantwoordelijke van de mijlpaal)" }
+        ],
+        7: [], // DeblokkeerVolgendeFase — geen parameters
+        8: []  // StuurDossierAanvraagMail — geen parameters
+    };
+
+    function paramsToObject(json) {
+        if (!json) return {};
+        try {
+            var o = JSON.parse(json);
+            return (o && typeof o === "object" && !Array.isArray(o)) ? o : {};
+        } catch (e) { return {}; }
+    }
+
+    /** Herbouwt trigger.actieParametersJson met één sleutel bijgewerkt — leeg/afwezig optioneel veld
+     * wordt uit de JSON weggelaten (i.p.v. bv. "email":"" te bewaren), zodat het fallback-gedrag
+     * server-side (TriggerParamHelper) blijft gelden zoals bij een écht leeg veld. */
+    function updateTriggerParam(trigger, key, rawValue, type) {
+        var obj = paramsToObject(trigger.actieParametersJson);
+        if (type === "toggle") {
+            obj[key] = !!rawValue;
+        } else if (type === "number" || type === "select-int") {
+            if (rawValue === "" || rawValue == null) delete obj[key];
+            else obj[key] = parseInt(rawValue, 10);
+        } else {
+            if (rawValue === "" || rawValue == null) delete obj[key];
+            else obj[key] = rawValue;
+        }
+        trigger.actieParametersJson = Object.keys(obj).length ? JSON.stringify(obj) : "";
+    }
+
+    function renderTriggerParamFields(t, idx) {
+        var schema = TRIGGER_ACTIE_PARAM_SCHEMA[t.triggerActie] || [];
+        if (!schema.length) return '<p class="gl-tsa-empty-hint" style="margin:0">Geen parameters nodig voor deze actie.</p>';
+        var values = paramsToObject(t.actieParametersJson);
+        return '<div class="gl-tsa-actie-grid">' + schema.map(function (f) {
+            var id = "m-trig-param-" + idx + "-" + f.key;
+            var val = values[f.key];
+            if (f.type === "select-int" || f.type === "select-str") {
+                var optHtml = optionsHtml(f.options, val != null ? val : undefined, f.blank || null);
+                return '<div class="gl-field"><label for="' + id + '">' + escapeHtml(f.label) + '</label><select id="' + id + '" class="form-select form-select-sm" data-field="trigger-param" data-idx="' + idx + '" data-key="' + f.key + '" data-type="' + f.type + '">' + optHtml + "</select></div>";
+            }
+            if (f.type === "toggle") {
+                var checked = val != null ? !!val : !!f.default;
+                return '<div class="gl-field"><label for="' + id + '">' + escapeHtml(f.label) + '</label><span class="gl-toggle" style="margin-top:.15rem"><input id="' + id + '" type="checkbox" data-field="trigger-param" data-idx="' + idx + '" data-key="' + f.key + '" data-type="toggle"' + (checked ? " checked" : "") + "/><span></span></span></div>";
+            }
+            return '<div class="gl-field"><label for="' + id + '">' + escapeHtml(f.label) + '</label><input id="' + id + '" type="' + (f.type === "number" ? "number" : "text") + '" class="form-control form-control-sm" placeholder="' + escapeHtml(f.placeholder || "") + '" data-field="trigger-param" data-idx="' + idx + '" data-key="' + f.key + '" data-type="' + f.type + '" value="' + escapeHtml(val != null ? val : "") + '" />' +
+                (f.hint ? '<small class="gl-sm-hint">' + escapeHtml(f.hint) + "</small>" : "") + "</div>";
+        }).join("") + "</div>";
+    }
+
+    /** Volledig naslag: welke velden elke actie gebruikt, allemaal tegelijk zichtbaar (niet enkel
+     * de actie die nu net gekozen is) — dichtgeklapt <details>, dus geen ruimte-impact ongeopend. */
+    function renderParamsReference() {
+        var rows = triggerActieOpties.map(function (o) {
+            var schema = TRIGGER_ACTIE_PARAM_SCHEMA[o.v] || [];
+            var desc = schema.length ? schema.map(function (f) { return f.label.replace(/ \(optioneel\)$/, ""); }).join(", ") : "Geen parameters nodig.";
+            return "<tr><td>" + escapeHtml(o.n) + "</td><td>" + escapeHtml(desc) + "</td></tr>";
+        }).join("");
+        return '<details class="gl-tsa-params-ref">' +
+            "<summary>Naslag: welke velden gebruikt elke actie?</summary>" +
+            '<table class="gl-tsa-params-ref-table"><thead><tr><th>Actie</th><th>Velden</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+            "</details>";
+    }
+
     function renderTriggerRow(m, t, idx) {
         var showOffset = t.triggerEvent === XDAGEN_VOOR_DOELDATUM;
         return '<div class="gl-tsa-actie" data-trigger-idx="' + idx + '">' +
@@ -520,8 +642,8 @@
             '<div class="gl-field"><label for="m-trig-event-' + idx + '">Gebeurtenis</label><select id="m-trig-event-' + idx + '" class="form-select form-select-sm" data-field="trigger-event" data-idx="' + idx + '">' + optionsHtml(triggerEventOpties, t.triggerEvent) + "</select></div>" +
             '<div class="gl-field"><label for="m-trig-actie-' + idx + '">Actie</label><select id="m-trig-actie-' + idx + '" class="form-select form-select-sm" data-field="trigger-actie" data-idx="' + idx + '">' + optionsHtml(triggerActieOpties, t.triggerActie) + "</select></div>" +
             (showOffset ? '<div class="gl-field"><label for="m-trig-offset-' + idx + '">Dagen vooraf</label><input id="m-trig-offset-' + idx + '" type="number" class="form-control form-control-sm" data-field="trigger-offset" data-idx="' + idx + '" value="' + (t.offsetDagen != null ? t.offsetDagen : "") + '" /></div>' : "") +
-            '<div class="gl-field"><label for="m-trig-params-' + idx + '">Parameters JSON</label><input id="m-trig-params-' + idx + '" type="text" class="form-control form-control-sm" placeholder=\'{"rol":5}\' data-field="trigger-params" data-idx="' + idx + '" value="' + escapeHtml(t.actieParametersJson) + '" /></div>' +
             "</div>" +
+            renderTriggerParamFields(t, idx) +
             '<div class="gl-tsa-actie-check-row">' +
             '<label for="m-trig-mag-' + idx + '"><input id="m-trig-mag-' + idx + '" type="checkbox" data-field="trigger-magwijzigen" data-idx="' + idx + '"' + (t.magProjectWijzigen ? " checked" : "") + " /> Mag project wijzigen</label>" +
             "</div>" +
@@ -548,25 +670,28 @@
             "</div></div>" +
             '<div class="gl-tsa-detail-body">';
 
-        // 1 — Wat is deze mijlpaal?
+        // 1 — Wat is deze mijlpaal? — labels op rij 1, velden op rij 2, toelichtingen op rij 3
+        // (zie .gl-tsa-field-row in traject.css: rij wordt op elementtype bepaald, kolom hieronder inline).
         html += '<section><div class="gl-tsa-section-head"><span class="gl-tsa-section-num" aria-hidden="true">1</span><div><h4 class="gl-tsa-section-title">Wat is deze mijlpaal?</h4></div></div>' +
-            '<div class="gl-field-grid">' +
-            '<div class="gl-field"><label for="m-naam">Naam voor de gebruiker</label><input id="m-naam" class="form-control form-control-sm" placeholder="bv. Vergunning ingediend" data-field="naam" value="' + escapeHtml(m.naam) + '" /></div>' +
-            '<div class="gl-field"><div style="display:flex;justify-content:space-between;align-items:baseline">' +
-            '<label for="m-code">Technische code</label>' +
-            '<button type="button" class="btn btn-link btn-xs p-0" data-action="derive-code" style="font-size:.72rem">afleiden uit de naam</button></div>' +
-            '<input id="m-code" class="form-control form-control-sm" placeholder="bv. VERGUNNING_INGEDIEND" data-field="code" value="' + escapeHtml(m.code) + '" aria-describedby="m-code-hint" />' +
-            '<small id="m-code-hint" class="gl-sm-hint">Uniek — hiermee herkennen andere mijlpalen, bindingen en triggers deze mijlpaal.</small></div>' +
-            '<div class="gl-field"><label for="m-type">Soort</label><select id="m-type" class="form-select form-select-sm" data-field="type">' + optionsHtml(typeOpties, m.mijlpaalType) + "</select></div>" +
-            '<div class="gl-field"><label for="m-rol">Verantwoordelijke rol</label><select id="m-rol" class="form-select form-select-sm" data-field="rol" data-select2="1">' + optionsHtml(rolOpties, m.verantwoordelijkeRol, "Geen") + "</select></div>" +
-            "</div>" +
-            '<div class="gl-tsa-switch-row" style="margin-top:.9rem">' +
-            '<div><span class="gl-sm-caption" id="m-scope-label" style="margin-bottom:.3rem;display:block">Geldt voor</span>' +
-            '<div class="gl-segmented" role="group" aria-labelledby="m-scope-label">' +
+            '<div class="gl-tsa-field-row">' +
+            '<label class="gl-tsa-field-label" for="m-naam" style="grid-column:1">Naam voor de gebruiker</label>' +
+            '<label class="gl-tsa-field-label" for="m-code" style="grid-column:2">Technische code</label>' +
+            '<label class="gl-tsa-field-label" for="m-type" style="grid-column:3">Soort</label>' +
+            '<label class="gl-tsa-field-label" for="m-rol" style="grid-column:4">Verantwoordelijke rol</label>' +
+            '<span class="gl-tsa-field-label" id="m-scope-label" style="grid-column:5">Geldt voor</span>' +
+            '<label class="gl-tsa-field-label" for="m-verplicht" style="grid-column:6">Verplicht</label>' +
+
+            '<input id="m-naam" class="form-control form-control-sm" style="grid-column:1" placeholder="bv. Vergunning ingediend" data-field="naam" value="' + escapeHtml(m.naam) + '" />' +
+            '<input id="m-code" class="form-control form-control-sm" style="grid-column:2" placeholder="bv. VERGUNNING_INGEDIEND" data-field="code" value="' + escapeHtml(m.code) + '" aria-describedby="m-code-hint" />' +
+            '<select id="m-type" class="form-select form-select-sm" style="grid-column:3" data-field="type">' + optionsHtml(typeOpties, m.mijlpaalType) + "</select>" +
+            '<select id="m-rol" class="form-select form-select-sm" style="grid-column:4" data-field="rol" data-tsa-select2="1">' + optionsHtml(rolOpties, m.verantwoordelijkeRol, "Geen") + "</select>" +
+            '<div class="gl-segmented" style="grid-column:5" role="group" aria-labelledby="m-scope-label">' +
             '<button type="button" data-action="set-scope" data-scope="0" aria-pressed="' + (m.scope === 0 ? "true" : "false") + '" class="' + (m.scope === 0 ? "is-active" : "") + '">Heel het project</button>' +
-            '<button type="button" data-action="set-scope" data-scope="1" aria-pressed="' + (m.scope === 1 ? "true" : "false") + '" class="' + (m.scope === 1 ? "is-active" : "") + '">Per eenheid</button></div></div>' +
-            '<div class="gl-switch-row"><span class="gl-toggle"><input id="m-verplicht" type="checkbox" data-field="verplicht"' + (m.isVerplicht ? " checked" : "") + " /><span></span></span>" +
-            '<label for="m-verplicht">Verplicht <small class="text-muted">— moet bereikt worden vóór de fase afronden</small></label></div>' +
+            '<button type="button" data-action="set-scope" data-scope="1" aria-pressed="' + (m.scope === 1 ? "true" : "false") + '" class="' + (m.scope === 1 ? "is-active" : "") + '">Per eenheid</button></div>' +
+            '<span class="gl-toggle" style="grid-column:6"><input id="m-verplicht" type="checkbox" data-field="verplicht"' + (m.isVerplicht ? " checked" : "") + " /><span></span></span>" +
+
+            '<small id="m-code-hint" class="gl-sm-hint" style="grid-column:2">Uniek — hiermee herkennen andere mijlpalen, bindingen en triggers deze mijlpaal. <button type="button" class="btn btn-link btn-xs p-0" data-action="derive-code" style="font-size:.7rem">afleiden uit de naam</button></small>' +
+            '<small class="gl-sm-hint" style="grid-column:6">Moet bereikt zijn vóór de fase afronden.</small>' +
             "</div></section>";
 
         // 2 — Wanneer is ze bereikt?
@@ -591,7 +716,7 @@
             '<label for="m-offset" class="gl-sm-caption" style="flex:0 0 72px">Dagen</label>' +
             "</div>" +
             '<div class="gl-sm-daterule-row">' +
-            '<select id="m-anker" class="gl-sm-anchor" data-field="anker" data-select2="1">' + anchorOptionsHtml(m) + "</select>" +
+            '<select id="m-anker" class="gl-sm-anchor" data-field="anker" data-tsa-select2="1">' + anchorOptionsHtml(m) + "</select>" +
             '<span class="gl-sm-daterule-text" aria-hidden="true">+</span>' +
             '<input id="m-offset" type="number" class="form-control form-control-sm gl-sm-offset" placeholder="0" data-field="offset" value="' + (m.doeldatumOffsetDagen != null ? m.doeldatumOffsetDagen : "") + '" />' +
             '<span class="gl-sm-daterule-text" aria-hidden="true">dagen</span>' +
@@ -601,6 +726,7 @@
         // 4 — Acties
         html += '<section><div class="gl-tsa-section-head"><span class="gl-tsa-section-num" aria-hidden="true">4</span><div><h4 class="gl-tsa-section-title">Acties bij deze mijlpaal</h4><p class="gl-tsa-section-hint">' + (m.triggers.length ? m.triggers.length + " actie(s)" : "geen acties") + "</p></div>" +
             '<div class="gl-tsa-section-actions"><button type="button" class="btn btn-sm btn-outline-primary" data-action="add-trigger"><i class="bx bx-bell-plus" aria-hidden="true"></i> Actie toevoegen</button></div></div>' +
+            renderParamsReference() +
             (m.triggers.length ? m.triggers.map(function (t, i) { return renderTriggerRow(m, t, i); }).join("") : '<p class="gl-tsa-empty-hint">Nog geen acties bij deze mijlpaal.</p>') +
             "</section>";
 
@@ -611,7 +737,7 @@
 
         html += "</div>";
         detailPane.innerHTML = html;
-        detailPane.querySelectorAll('[data-select2="1"]').forEach(select2ify);
+        detailPane.querySelectorAll('[data-tsa-select2="1"]').forEach(select2ify);
     }
 
     function renderFaseDetail(f) {
@@ -710,7 +836,11 @@
             case "offset": m.doeldatumOffsetDagen = el.value === "" ? null : parseInt(el.value, 10); patchStreefdatumBadge(m); break;
             case "omschrijving": m.omschrijving = el.value; break;
             case "trigger-offset": m.triggers[idx].offsetDagen = el.value === "" ? null : parseInt(el.value, 10); break;
-            case "trigger-params": m.triggers[idx].actieParametersJson = el.value; break;
+            case "trigger-param":
+                if (el.getAttribute("data-type") !== "toggle") { // toggles vuren "change", niet "input"
+                    updateTriggerParam(m.triggers[idx], el.getAttribute("data-key"), el.value, el.getAttribute("data-type"));
+                }
+                break;
         }
         markDirty();
         scheduleControleRefresh();
@@ -735,19 +865,18 @@
             case "binding": m.bronBinding = parseInt(el.value, 10) || 0; m.bronParam = ""; markDirty(); scheduleControleRefresh(); renderMijlpaalDetail(findFase(sel.faseUid), m); return;
             case "anker": m.doeldatumAnkerCode = el.value; patchStreefdatumBadge(m); scheduleControleRefresh(); markDirty(); return;
             case "trigger-event": m.triggers[idx].triggerEvent = parseInt(el.value, 10) || 0; markDirty(); scheduleControleRefresh(); renderMijlpaalDetail(findFase(sel.faseUid), m); return;
-            case "trigger-actie": m.triggers[idx].triggerActie = parseInt(el.value, 10) || 0; break;
+            // De parametervelden zelf verschillen per actie (zie TRIGGER_ACTIE_PARAM_SCHEMA) — een
+            // volledige her-render is hier dus nodig, niet enkel een tekstpatch.
+            case "trigger-actie": m.triggers[idx].triggerActie = parseInt(el.value, 10) || 0; markDirty(); scheduleControleRefresh(); renderMijlpaalDetail(findFase(sel.faseUid), m); return;
+            case "trigger-param":
+                updateTriggerParam(m.triggers[idx], el.getAttribute("data-key"), el.type === "checkbox" ? el.checked : el.value, el.getAttribute("data-type"));
+                break;
             case "trigger-actief": m.triggers[idx].isActief = el.checked; break;
             case "trigger-magwijzigen": m.triggers[idx].magProjectWijzigen = el.checked; break;
             default: return;
         }
         markDirty();
         scheduleControleRefresh();
-        // korte samenvattingszin (Gebeurtenis/Actie) kan gewijzigd zijn
-        var summaryHost = el.closest(".gl-tsa-actie");
-        if (summaryHost && (field === "trigger-actie")) {
-            var sumEl = summaryHost.querySelector(".gl-tsa-actie-summary");
-            if (sumEl) sumEl.innerHTML = triggerSummary(m.triggers[idx]);
-        }
     });
 
     detailPane.addEventListener("click", function (e) {
@@ -819,25 +948,37 @@
         if (delM) {
             var f7 = findFase(sel.faseUid), m7 = findMijlpaal(sel.faseUid, sel.mijlpaalUid);
             if (!f7 || !m7) return;
-            if (!confirm('Mijlpaal "' + (m7.naam || "(naamloos)") + '" verwijderen?')) return;
-            f7.mijlpalen.splice(f7.mijlpalen.indexOf(m7), 1);
-            markDirty();
-            if (f7.mijlpalen.length) selectMijlpaal(f7._uid, f7.mijlpalen[0]._uid);
-            else selectFase(f7._uid);
-            scheduleControleRefresh();
+            confirmDialog(
+                "Mijlpaal verwijderen?",
+                'Mijlpaal "<b>' + escapeHtml(m7.naam || "(naamloos)") + "</b>\" en " + m7.triggers.length + " bijhorende actie(s) verwijderen? Dit kan niet ongedaan gemaakt worden.",
+                "Verwijderen"
+            ).then(function (ok) {
+                if (!ok) return;
+                f7.mijlpalen.splice(f7.mijlpalen.indexOf(m7), 1);
+                markDirty();
+                if (f7.mijlpalen.length) selectMijlpaal(f7._uid, f7.mijlpalen[0]._uid);
+                else selectFase(f7._uid);
+                scheduleControleRefresh();
+            });
             return;
         }
         var delF = e.target.closest("[data-action='delete-fase']");
         if (delF) {
             var f8 = findFase(sel.faseUid);
             if (!f8) return;
-            if (!confirm('Fase "' + (f8.naam || "(naamloos)") + '" met ' + f8.mijlpalen.length + ' mijlpalen verwijderen?')) return;
-            state.fases.splice(state.fases.indexOf(f8), 1);
-            state.selection = null;
-            markDirty();
-            renderTree();
-            renderDetail();
-            scheduleControleRefresh();
+            confirmDialog(
+                "Fase verwijderen?",
+                'Fase "<b>' + escapeHtml(f8.naam || "(naamloos)") + "</b>\" met " + f8.mijlpalen.length + " mijlpalen verwijderen? Dit kan niet ongedaan gemaakt worden.",
+                "Verwijderen"
+            ).then(function (ok) {
+                if (!ok) return;
+                state.fases.splice(state.fases.indexOf(f8), 1);
+                state.selection = null;
+                markDirty();
+                renderTree();
+                renderDetail();
+                scheduleControleRefresh();
+            });
             return;
         }
         var kleurBtn = e.target.closest("[data-action='set-kleur']");
@@ -863,6 +1004,22 @@
         renderTijdlijn();
     });
 
+    state.tlMode = "dagen"; // "dagen" | "datums" — enkel het label onder elke markering, geen invloed op de layout
+    var tlModeEl = document.getElementById("tsaTlMode");
+    if (tlModeEl) {
+        tlModeEl.addEventListener("click", function (e) {
+            var btn = e.target.closest("button[data-mode]");
+            if (!btn) return;
+            state.tlMode = btn.getAttribute("data-mode");
+            tlModeEl.querySelectorAll("button").forEach(function (b) {
+                var on = b === btn;
+                b.classList.toggle("is-active", on);
+                b.setAttribute("aria-pressed", on ? "true" : "false");
+            });
+            renderTijdlijn();
+        });
+    }
+
     function patchStreefdatumBadgeIfVisible() {
         if (state.selection && state.selection.type === "mijlpaal") {
             var m = findMijlpaal(state.selection.faseUid, state.selection.mijlpaalUid);
@@ -870,24 +1027,104 @@
         }
     }
 
+    /** Wortelschaal (i.p.v. lineair): de eerste maanden krijgen zichtbaar meer plaats dan het
+     * lange, rustige staartje (nazorg na 1-2 jaar) — zonder dat de as ooit achteruitloopt of
+     * negatieve dagen anders behandelt dan dag 0. */
+    function tlScalePct(dag, maxDag) {
+        if (!maxDag || maxDag <= 0) return 0;
+        var d = Math.max(dag || 0, 0);
+        return Math.sqrt(Math.min(d, maxDag) / maxDag) * 100;
+    }
+
+    var TL_AXIS_CANDIDATES = [0, 7, 14, 30, 60, 90, 180, 270, 365, 540, 730, 915, 1095, 1460];
+
+    function tlAxisTicks(maxDag) {
+        var ticks = TL_AXIS_CANDIDATES.filter(function (d) { return d <= maxDag; });
+        if (!ticks.length || ticks[ticks.length - 1] < maxDag) ticks.push(maxDag);
+        return ticks;
+    }
+
+    /** Label onder een as-streepje: "dN" in dagen-modus, maand+jaar in datums-modus. */
+    function tlAxisLabel(dag) {
+        if (state.tlMode !== "datums") return "d" + dag;
+        var start = new Date(state.simStart + "T00:00:00");
+        var d = new Date(start.getTime() + dag * 86400000);
+        return monthFmt ? monthFmt.format(d) : d.toLocaleDateString();
+    }
+
+    function tlDagLabel(dag) {
+        if (dag == null) return "onbekend";
+        if (state.tlMode === "datums") {
+            var start = new Date(state.simStart + "T00:00:00");
+            var d = new Date(start.getTime() + dag * 86400000);
+            return dateFmt ? dateFmt.format(d) : d.toLocaleDateString();
+        }
+        return "dag " + dag;
+    }
+
     function renderTijdlijn() {
         var host = document.getElementById("tijdlijnContainer");
         if (!host) return;
         if (!state.fases.length) { host.innerHTML = '<p class="gl-tsa-empty-hint">Nog geen fases om te simuleren.</p>'; return; }
 
-        var html = '<div class="gl-traject-timeline">' + state.fases.map(function (f, fi) {
-            var rows = f.mijlpalen.map(function (m) {
+        // Alle mijlpalen (met hun echte of teruggevallen dag) vooraf berekenen om de gedeelde
+        // maximumdag — en dus dezelfde schaal/as voor elke fase-rij — te kennen.
+        var allDagen = [0];
+        state.fases.forEach(function (f) {
+            f.mijlpalen.forEach(function (m) {
                 var dag = computeMijlpaalDag(m);
-                return '<li class="gl-traject-mijlpaal" style="grid-template-columns:14px minmax(0,1fr) auto">' +
-                    '<span class="gl-tm-dot" style="background:' + faseKleur(f, fi) + '" aria-hidden="true"></span>' +
-                    '<span class="gl-tm-naam">' + (escapeHtml(m.naam) || "(naamloos)") + "</span>" +
-                    '<span class="gl-tm-datum">' + formatDagLabel(dag) + "</span>" +
-                    "</li>";
+                allDagen.push(dag == null ? 0 : dag);
+            });
+        });
+        var maxDag = Math.max.apply(null, allDagen);
+        var ticks = tlAxisTicks(maxDag);
+
+        var axisHtml = '<div class="gl-tsa-tl-row gl-tsa-tl-axis-row"><div></div><div class="gl-tsa-tl-axis">' + ticks.map(function (d) {
+            return '<span class="gl-tsa-tl-tick" style="left:' + tlScalePct(d, maxDag).toFixed(2) + '%">' +
+                '<span class="gl-tsa-tl-tick-line" aria-hidden="true"></span>' +
+                '<span class="gl-tsa-tl-tick-label">' + escapeHtml(tlAxisLabel(d)) + "</span></span>";
+        }).join("") + "</div></div>";
+
+        var rowsHtml = state.fases.map(function (f, fi) {
+            var markers = f.mijlpalen.slice()
+                .sort(function (a, b) { return (computeMijlpaalDag(a) || 0) - (computeMijlpaalDag(b) || 0); });
+
+            var lastLabelPct = null;
+            var markersHtml = markers.map(function (m) {
+                var dagRaw = computeMijlpaalDag(m);
+                var onbekend = dagRaw == null;
+                var dag = onbekend ? 0 : dagRaw;
+                var pct = tlScalePct(dag, maxDag);
+                // Labels die minder dan ~5% van de asbreedte van de vorige verwijderd staan, zouden
+                // overlappen — die krijgen enkel een stille markeerstreep, geen tekstlabel.
+                var showLabel = lastLabelPct == null || Math.abs(pct - lastLabelPct) >= 5;
+                if (showLabel) lastLabelPct = pct;
+
+                var isAuto = !!m.bronBinding;
+                var cls = "gl-tsa-tl-marker" + (onbekend ? " is-onbekend" : (isAuto ? " is-auto" : " is-handmatig")) + (showLabel ? "" : " is-tick-only");
+                var titel = (m.naam || "(naamloze mijlpaal)") + (onbekend ? " — geen geldig anker, teruggevallen op projectstart" : "");
+                var acties = m.triggers && m.triggers.length ? '<span class="gl-tsa-tl-acties" title="' + m.triggers.length + ' actie(s)" aria-hidden="true"></span>' : "";
+
+                return '<div class="' + cls + '" style="left:' + pct.toFixed(2) + '%" title="' + escapeHtml(titel) + '">' +
+                    '<span class="gl-tsa-tl-dot" aria-hidden="true"></span>' + acties +
+                    (showLabel ? '<span class="gl-tsa-tl-label"><span class="gl-tsa-tl-naam">' + escapeHtml(m.naam || "(naamloos)") + '</span><span class="gl-tsa-tl-dag">' + escapeHtml(tlDagLabel(onbekend ? null : dag)) + "</span></span>" : "") +
+                    "</div>";
             }).join("");
-            return '<div class="gl-traject-fase"><div class="gl-traject-fase-head"><span class="gl-traject-fase-naam">' + escapeHtml(f.naam) + '</span></div>' +
-                '<ul class="gl-traject-mijlpalen">' + (rows || '<li class="gl-tsa-empty-hint">Geen mijlpalen in deze fase.</li>') + "</ul></div>";
-        }).join("") + "</div>";
-        host.innerHTML = html;
+
+            return '<div class="gl-tsa-tl-row">' +
+                '<div class="gl-tsa-tl-row-label"><span class="gl-tsa-tl-row-naam">' + escapeHtml(f.naam) + '</span><span class="gl-tsa-tl-row-meta">' +
+                (f.mijlpalen.length === 1 ? "1 mijlpaal" : f.mijlpalen.length + " mijlpalen") + (f.code ? " · " + escapeHtml(f.code) : "") + "</span></div>" +
+                '<div class="gl-tsa-tl-track"><span class="gl-tsa-tl-track-line" style="background:' + faseKleur(f, fi) + '22" aria-hidden="true"></span>' + markersHtml + "</div>" +
+                "</div>";
+        }).join("");
+
+        host.innerHTML = '<div class="gl-tsa-tl">' + rowsHtml + axisHtml + "</div>" +
+            '<div class="gl-tsa-tl-legend">' +
+            '<span><span class="gl-tsa-tl-dot is-auto" aria-hidden="true"></span>automatisch bereikt</span>' +
+            '<span><span class="gl-tsa-tl-dot is-handmatig" aria-hidden="true"></span>handmatig aan te vinken</span>' +
+            '<span><span class="gl-tsa-tl-acties" aria-hidden="true"></span>heeft acties</span>' +
+            '<span><span class="gl-tsa-tl-dot is-onbekend" aria-hidden="true"></span>anker onbekend — valt terug op projectstart</span>' +
+            "</div>";
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -931,6 +1168,13 @@
                         try { JSON.parse(t.actieParametersJson); }
                         catch (e) { issues.push({ severity: "normal", text: "Actie " + (ti + 1) + ' op "' + (m.naam || "?") + '" heeft ongeldige Parameters JSON.', loc: loc, faseUid: f._uid, mijlpaalUid: m._uid }); }
                     }
+                    var schema = TRIGGER_ACTIE_PARAM_SCHEMA[t.triggerActie] || [];
+                    var paramVals = paramsToObject(t.actieParametersJson);
+                    schema.filter(function (fld) { return fld.required; }).forEach(function (fld) {
+                        if (paramVals[fld.key] == null || paramVals[fld.key] === "") {
+                            issues.push({ severity: "urgent", text: "Actie " + (ti + 1) + ' op "' + (m.naam || "?") + '" mist een verplicht veld: ' + fld.label.replace(/ \(optioneel\)$/, "") + ".", loc: loc, faseUid: f._uid, mijlpaalUid: m._uid });
+                        }
+                    });
                 });
             });
         });
@@ -1014,6 +1258,26 @@
         var el = document.getElementById(id);
         if (el) { el.addEventListener("input", markDirty); el.addEventListener("change", markDirty); }
     });
+    document.getElementById("sj-naam").addEventListener("input", function () {
+        if (!this.value.trim()) return;
+        var errorEl = document.getElementById("sj-naam-error");
+        if (errorEl) errorEl.hidden = true;
+        this.classList.remove("input-validation-error");
+    });
+
+    var duplicerenForm = document.getElementById("duplicerenForm");
+    if (duplicerenForm) {
+        duplicerenForm.addEventListener("submit", function (e) {
+            if (duplicerenForm.dataset.confirmed) return; // tweede, al-bevestigde submit: laten doorgaan
+            e.preventDefault();
+            confirmDialog("Sjabloon dupliceren?", "Dit sjabloon dupliceren naar een nieuwe kopie?", "Dupliceren").then(function (ok) {
+                if (!ok) return;
+                duplicerenForm.dataset.confirmed = "1";
+                if (duplicerenForm.requestSubmit) duplicerenForm.requestSubmit();
+                else duplicerenForm.submit();
+            });
+        });
+    }
 
     window.addEventListener("beforeunload", function (e) {
         if (!state.dirty) return;
@@ -1025,10 +1289,29 @@
     // Opslaan — serialiseer de volledige state naar payloadJson
     // ═══════════════════════════════════════════════════════════════════════
 
-    document.getElementById("sjabloonForm").addEventListener("submit", function () {
+    document.getElementById("sjabloonForm").addEventListener("submit", function (e) {
+        var naamEl = document.getElementById("sj-naam");
+        var naamErrorEl = document.getElementById("sj-naam-error");
+        // #sj-naam draagt bewust `required`, maar staat buiten dit <form> (enkel het verborgen
+        // payloadJson-veld zit er echt in) — de browser valideert het dus nooit vanzelf. Zonder deze
+        // check postte een leeg-genaamd sjabloon gewoon door, en gooide de server (Opslaan-actie,
+        // TrajectSjabloonAdminController.cs) de hele boom fases/mijlpalen/acties weg met enkel een
+        // toastmelding als uitleg. Hier alsnog tegenhouden, vóórdat er iets verloren kan gaan.
+        if (!naamEl.value.trim()) {
+            e.preventDefault();
+            if (naamErrorEl) naamErrorEl.hidden = false;
+            naamEl.classList.add("input-validation-error");
+            var structuurTab = document.getElementById("tabbtn-structuur");
+            if (structuurTab) structuurTab.click();
+            naamEl.focus();
+            return;
+        }
+        if (naamErrorEl) naamErrorEl.hidden = true;
+        naamEl.classList.remove("input-validation-error");
+
         var payload = {
             id: initial.id || null,
-            naam: document.getElementById("sj-naam").value.trim(),
+            naam: naamEl.value.trim(),
             projectType: document.getElementById("sj-type").value === "" ? null : parseInt(document.getElementById("sj-type").value, 10),
             isStandaard: document.getElementById("sj-standaard").checked,
             isActief: document.getElementById("sj-actief").checked,

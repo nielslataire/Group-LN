@@ -60,6 +60,22 @@
         .Select(x => new { v = (int)x, n = x.GetDisplayName() });
     var triggerActieOpties = Enum.GetValues(typeof(TriggerActie)).Cast<TriggerActie>()
         .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var dossierKindOpties = Enum.GetValues(typeof(DossierKind)).Cast<DossierKind>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+
+    // Zelfde vaste 7 vlagnamen als hieronder bij ComputedBinding.ProjectVlag — ook nodig voor de
+    // "Zet projectvlag"-triggeractie (ZetProjectVlagAction.cs) z'n eigen "vlag"-parameter, dus als
+    // gedeelde variabele i.p.v. de lijst twee keer te definiëren.
+    var projectVlagOpties = new[]
+    {
+        new { v = "DocPid", n = "PID aanwezig" },
+        new { v = "DocElectricalInspection", n = "Elektrische keuring OK" },
+        new { v = "DocWaterInspection", n = "Waterkeuring OK" },
+        new { v = "DocSewerInspection", n = "Rioolkeuring OK" },
+        new { v = "DocFireInspection", n = "Brandkeuring OK" },
+        new { v = "DocDelivery", n = "Voorlopige oplevering OK" },
+        new { v = "DocDefDelivery", n = "Definitieve oplevering OK" },
+    };
 
     // Bron-parameter: per binding ofwel een vaste keuzelijst (leesbare labels i.p.v. vrije tekst),
     // ofwel "numeriek" (verwijst naar een record van één specifiek project — kan pas zinvol gekozen
@@ -79,16 +95,7 @@
             new { v = "WerfmeldingDate", n = "Werfmelding — startdatum" },
             new { v = "WerfmeldingEndDate", n = "Werfmelding — einddatum" },
         },
-        [(int)ComputedBinding.ProjectVlag] = new[]
-        {
-            new { v = "DocPid", n = "PID aanwezig" },
-            new { v = "DocElectricalInspection", n = "Elektrische keuring OK" },
-            new { v = "DocWaterInspection", n = "Waterkeuring OK" },
-            new { v = "DocSewerInspection", n = "Rioolkeuring OK" },
-            new { v = "DocFireInspection", n = "Brandkeuring OK" },
-            new { v = "DocDelivery", n = "Voorlopige oplevering OK" },
-            new { v = "DocDefDelivery", n = "Definitieve oplevering OK" },
-        },
+        [(int)ComputedBinding.ProjectVlag] = projectVlagOpties,
         [(int)ComputedBinding.ClientAccountDatum] = new[]
         {
             new { v = "DateSalesAgreement", n = "Compromis getekend" },
@@ -144,8 +151,7 @@
 
 @if (!Model.IsNieuw)
 {
-    <form method="post" asp-action="Dupliceren" asp-route-id="@s!.Id" id="duplicerenForm" class="d-none"
-          onsubmit="return confirm('Dit sjabloon dupliceren naar een nieuwe kopie?');">
+    <form method="post" asp-action="Dupliceren" asp-route-id="@s!.Id" id="duplicerenForm" class="d-none">
         @Html.AntiForgeryToken()
     </form>
 }
@@ -154,6 +160,11 @@
 <div class="d-flex d-md-none justify-content-end gap-2 mb-3">
     @await Html.PartialAsync("_TrajectSjabloonActions", Model)
 </div>
+
+@* Vervangt de kale browser-confirm() op Dupliceren/fase- en mijlpaal-verwijderen — het enige moment
+   waarop deze pagina voorheen buiten het "Grounded & Cultivated"-systeem (DESIGN.md) viel. Inhoud
+   (titel/body/knoplabel) wordt per aanroep ingevuld door window.confirmDialog() (~/js/confirm-modal.js). *@
+@await Html.PartialAsync("_ConfirmModal")
 
 <div class="gl-form-shell__tabs" role="tablist" aria-label="Trajectsjabloon" data-tabgroup="tsa-edit">
     <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-structuur" data-tab="structuur"
@@ -176,13 +187,16 @@
     <input type="hidden" name="payloadJson" id="payloadJson" />
 </form>
 
+<div class="card card-modern gl-fixed-actions-offset">
+<div class="card-body">
 <div id="tab-structuur" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-structuur" tabindex="0">
     <section class="gl-form-section">
         <div class="gl-form-section__body">
             <div class="gl-tsa-meta-row">
                 <div class="gl-field" style="flex:2 1 220px">
                     <label for="sj-naam">Naam van het sjabloon</label>
-                    <input type="text" id="sj-naam" class="form-control form-control-modern" value="@(s?.Naam)" required />
+                    <input type="text" id="sj-naam" class="form-control form-control-modern" value="@(s?.Naam)" required aria-describedby="sj-naam-error" />
+                    <small id="sj-naam-error" class="text-danger" role="alert" hidden>Vul een naam in — dit is verplicht om het sjabloon te kunnen opslaan.</small>
                 </div>
                 <div class="gl-field" style="flex:1 1 160px">
                     <label for="sj-type">Projecttype</label>
@@ -194,7 +208,7 @@
                 </div>
                 <div class="gl-field" style="flex:2 1 220px">
                     <label for="sj-omschrijving">Korte omschrijving</label>
-                    <textarea id="sj-omschrijving" class="form-control form-control-modern" rows="1">@(s?.Omschrijving)</textarea>
+                    <input type="text" id="sj-omschrijving" class="form-control form-control-modern" value="@(s?.Omschrijving)" />
                 </div>
                 <div class="gl-switch-row">
                     <span class="gl-toggle"><input type="checkbox" id="sj-standaard" @(s?.IsStandaard == true ? "checked" : "") /><span></span></span>
@@ -232,27 +246,39 @@
 </div>
 
 <div id="tab-tijdlijn" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-tijdlijn" tabindex="0" hidden>
-    <section class="gl-form-section">
-        <div class="gl-form-section__body">
-            <div class="gl-form-section__head">
-                <i class="bx bx-timer" aria-hidden="true"></i>
-                <div>
-                    <h2 class="gl-form-section__title">Simulatie</h2>
-                    <p class="gl-form-section__hint">Berekende streefdagen op basis van de ankers en offsets hierboven, uitgezet vanaf een gekozen startdatum. Enkel een preview — er wordt niets bewaard.</p>
-                </div>
-            </div>
-            <div class="gl-field" style="max-width:220px">
-                <label for="tsaSimStart">Project aangemaakt op</label>
-                <input type="date" id="tsaSimStart" class="form-control form-control-modern" />
+    <div class="gl-tsa-tl-toolbar">
+        <div class="gl-field" style="flex:0 0 auto">
+            <label for="tsaSimStart">Fictieve projectstart</label>
+            <input type="date" id="tsaSimStart" class="form-control form-control-modern" />
+        </div>
+        <div style="flex:0 0 auto">
+            <span class="gl-tsa-field-label" id="tsaTlModeLabel" style="display:block;margin-bottom:.3rem">Weergave</span>
+            <div class="gl-segmented" id="tsaTlMode" role="group" aria-labelledby="tsaTlModeLabel" style="height:38px">
+                <button type="button" data-mode="dagen" aria-pressed="true" class="is-active">Dagen na start</button>
+                <button type="button" data-mode="datums" aria-pressed="false">Datums</button>
             </div>
         </div>
-    </section>
+        <p class="gl-tsa-tl-toolbar-hint">De streefdatums worden berekend door de ankerketen te volgen. Een mijlpaal zonder geldig anker valt terug op de projectstart en wordt rood gemarkeerd. Enkel een preview — er wordt niets bewaard.</p>
+    </div>
     <div id="tijdlijnContainer"></div>
 </div>
 
 <div id="tab-controle" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-controle" tabindex="0" hidden>
     <div id="controleContainer"></div>
 </div>
+</div>
+</div>
+
+@* Opslaan hoort bij dit formulier, niet bij de generieke topbar (DESIGN.md Form-Shell Rule) — vaste
+   balk onderaan i.p.v. de eerdere bespoke topbar-knop, en levert meteen ook de Annuleren-knop die
+   deze pagina nog niet had. SubmitFormId="sjabloonForm": de knop leeft buiten dat <form> (de balk is
+   position:fixed t.o.v. de viewport, geen DOM-afstammeling), dus posten via het form="..."-attribuut. *@
+@await Html.PartialAsync("_FormShellActions", new CPMCore.Models.FormShellActionsModel
+{
+    SubmitLabel = "Sjabloon opslaan",
+    SubmitFormId = "sjabloonForm",
+    CancelUrl = Url.Action("Index")
+})
 
 @section PageScripts {
     <script id="sjabloonData" type="application/json">@Html.Raw(JsonSerializer.Serialize(initial))</script>
@@ -261,6 +287,8 @@
     <script id="bindingOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(bindingOpties))</script>
     <script id="triggerEventOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(triggerEventOpties))</script>
     <script id="triggerActieOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(triggerActieOpties))</script>
+    <script id="dossierKindOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(dossierKindOpties))</script>
+    <script id="projectVlagOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(projectVlagOpties))</script>
     <script id="bronParamOptiesByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamOptiesByBinding))</script>
     <script id="bronParamModeByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamModeByBinding))</script>
     <script id="bronParamHintByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamHintByBinding))</script>
@@ -293,5 +321,6 @@
             });
         })();
     </script>
+    <script src="~/js/confirm-modal.js" asp-append-version="true"></script>
     <script src="~/js/trajectsjabloon.admin.js" asp-append-version="true"></script>
 }

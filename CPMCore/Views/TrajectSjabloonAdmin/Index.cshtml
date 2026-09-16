@@ -8,56 +8,102 @@
     <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
 }
 
-<div class="row justify-content-between align-items-center pt-2 mb-3">
-    <div class="col-sm-auto">
-        <h1 class="font-weight-bold mb-0">Trajectsjablonen</h1>
-        <h5 class="text-muted mt-0">Standaardtrajecten met fases en mijlpalen per projecttype</h5>
-    </div>
-    <div class="col-sm-auto">
-        <a asp-action="Nieuw" class="btn btn-primary"><i class="bx bx-plus"></i> Nieuw sjabloon</a>
+@* Geen eigen titel/subtitel hier — de topbar (SetPageHeader in TrajectSjabloonAdminController.Index)
+   toont icoon + "Trajectsjablonen" + omschrijving al; een lokale h1/h5 zou dat woordelijk herhalen
+   (zie DESIGN.md "Paginakop (gl-page-header)"). *@
+@section PageActions {
+    <a asp-action="Nieuw" class="btn btn-primary btn-sm px-3"><i class="bx bx-plus me-1" aria-hidden="true"></i>Nieuw sjabloon</a>
+}
+
+@await Html.PartialAsync("_ConfirmModal")
+
+<div class="card card-modern">
+    <div class="card-body @(Model.Sjablonen.Count == 0 ? "" : "p-0")">
+        @if (Model.Sjablonen.Count == 0)
+        {
+            <div class="gl-tsa-list-empty">
+                <i class="bx bx-git-branch" aria-hidden="true"></i>
+                <p class="gl-tsa-list-empty-title">Nog geen trajectsjablonen</p>
+                <p class="gl-tsa-list-empty-hint">Een sjabloon legt de standaardfases en -mijlpalen vast die een nieuw project bij aanmaak meekrijgt.</p>
+                <a asp-action="Nieuw" class="btn btn-primary btn-sm px-3"><i class="bx bx-plus me-1" aria-hidden="true"></i>Eerste sjabloon aanmaken</a>
+            </div>
+        }
+        else
+        {
+            <table class="table table-hover gl-tsa-list-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Projecttype</th>
+                        <th class="text-end">Fases</th>
+                        <th class="text-end">Mijlpalen</th>
+                        <th class="text-end">In gebruik</th>
+                        <th>Status</th>
+                        <th class="text-end"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var s in Model.Sjablonen)
+                {
+                    var aantalFases = s.Fases?.Count ?? 0;
+                    var aantalMijlpalen = s.Fases?.Sum(f => f.Mijlpalen?.Count ?? 0) ?? 0;
+                    Model.AantalTrajectenPerSjabloon.TryGetValue(s.Id, out var inGebruik);
+                    <tr>
+                        <td>
+                            <strong>@s.Naam</strong>
+                            @if (s.IsStandaard) { <span class="badge bg-primary ms-1">standaard</span> }
+                        </td>
+                        <td><span class="gl-tsa-list-pill">@(s.ProjectType == 1 ? "Woonproject" : s.ProjectType == 2 ? "Commercieel" : "Alle")</span></td>
+                        <td class="text-end gl-tsa-list-num">@aantalFases</td>
+                        <td class="text-end gl-tsa-list-num">@aantalMijlpalen</td>
+                        <td class="text-end gl-tsa-list-num">@inGebruik</td>
+                        <td>
+                            @if (s.IsActief)
+                            {
+                                <span class="badge bg-primary">Actief</span>
+                            }
+                            else
+                            {
+                                <span class="badge gl-tsa-list-badge-muted">Inactief</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Bewerken" asp-route-id="@s.Id" class="btn btn-xs btn-default"><i class="bx bx-edit"></i> Bewerken</a>
+                            <form method="post" asp-action="Verwijderen" asp-route-id="@s.Id" class="d-inline gl-delete-sjabloon-form"
+                                  data-sjabloon-naam="@s.Naam">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bx bx-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Naam</th><th>Projecttype</th><th>Fases</th><th>Mijlpalen</th>
-                    <th>In gebruik</th><th>Status</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var s in Model.Sjablonen)
-            {
-                var aantalFases = s.Fases?.Count ?? 0;
-                var aantalMijlpalen = s.Fases?.Sum(f => f.Mijlpalen?.Count ?? 0) ?? 0;
-                Model.AantalTrajectenPerSjabloon.TryGetValue(s.Id, out var inGebruik);
-                <tr>
-                    <td>
-                        <strong>@s.Naam</strong>
-                        @if (s.IsStandaard) { <span class="badge bg-primary ms-1">standaard</span> }
-                    </td>
-                    <td>@(s.ProjectType == 1 ? "Woonproject" : s.ProjectType == 2 ? "Commercieel" : "Alle")</td>
-                    <td>@aantalFases</td>
-                    <td>@aantalMijlpalen</td>
-                    <td>@inGebruik</td>
-                    <td>@(s.IsActief ? "Actief" : "Inactief")</td>
-                    <td class="text-end text-nowrap">
-                        <a asp-action="Bewerken" asp-route-id="@s.Id" class="btn btn-xs btn-default"><i class="bx bx-edit"></i> Bewerken</a>
-                        <form method="post" asp-action="Verwijderen" asp-route-id="@s.Id" class="d-inline"
-                              onsubmit="return confirm('Dit sjabloon verwijderen? Als er trajecten aan hangen wordt het gedeactiveerd.');">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bx bx-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-            }
-            @if (Model.Sjablonen.Count == 0)
-            {
-                <tr><td colspan="7" class="text-muted text-center py-4">Nog geen sjablonen.</td></tr>
-            }
-            </tbody>
-        </table>
-    </div>
-</div>
+@section PageScripts {
+    <script src="~/js/confirm-modal.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            document.querySelectorAll(".gl-delete-sjabloon-form").forEach(function (form) {
+                form.addEventListener("submit", function (e) {
+                    if (form.dataset.confirmed) return; // tweede, al-bevestigde submit: laten doorgaan
+                    e.preventDefault();
+                    var naam = form.getAttribute("data-sjabloon-naam") || "";
+                    window.confirmDialog(
+                        "Sjabloon verwijderen?",
+                        'Sjabloon "<b>' + naam.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</b>" verwijderen? Als er trajecten aan hangen wordt het gedeactiveerd in plaats van verwijderd.',
+                        "Verwijderen"
+                    ).then(function (ok) {
+                        if (!ok) return;
+                        form.dataset.confirmed = "1";
+                        if (form.requestSubmit) form.requestSubmit();
+                        else form.submit();
+                    });
+                });
+            });
+        })();
+    </script>
+}

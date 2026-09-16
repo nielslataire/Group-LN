@@ -42,4 +42,9 @@ public class TrajectIndexVm
     /// <summary>Aantal gekoppelde "Punten" (ConstructionIssue, via ProjectTaak.ConstructionIssueId)
     /// per MijlpaalId — maakt zichtbaar dat een mijlpaal aan een werfpunt-opvolging hangt.</summary>
     public Dictionary<int, int> PuntenPerMijlpaal { get; set; } = new();
+
+    /// <summary>Actieve triggers per MijlpaalId — voor de "Acties bij bereiken"-sectie in de
+    /// kalender (_Kalender.cshtml). MijlpaalService.Search() include't Triggers niet (andere
+    /// callers hebben dat niet nodig), dus apart geladen in de controller.</summary>
+    public Dictionary<int, List<MijlpaalTrigger>> TriggersPerMijlpaal { get; set; } = new();
 }

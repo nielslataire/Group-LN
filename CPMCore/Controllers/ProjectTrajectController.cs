@@ -56,6 +56,11 @@ public class ProjectTrajectController : BaseController
         SetBreadcrumbs(projectName, projectId);
         SetPageHeader("bx bx-git-branch", $"{projectName} - Traject");
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+        // Neutraliseert theme.css' html.modern.fixed .content-body{margin-top:10px} — de tabbar
+        // (.gl-traject-tabrow, traject.css) breekt uit tot vlak onder de topbar en rekent zelf al
+        // het volledige .inner-body-recept (border-top/margin-top/padding) na; deze extra 10px op
+        // de gedeelde .content-body-ouder zat daar nog niet in verrekend.
+        ViewBag.ContentBodyClass = "gl-traject-flush";
 
         filters ??= new MijlpaalFilterBO();
         var traject = await _traject.GetByProject(projectId, includeDetails: true);
@@ -103,6 +108,15 @@ public class ProjectTrajectController : BaseController
                 .Select(g => new { MijlpaalId = g.Key, Aantal = g.Select(t => t.ConstructionIssueId).Distinct().Count() })
                 .ToDictionaryAsync(g => g.MijlpaalId, g => g.Aantal)
             : new Dictionary<int, int>();
+
+        // Triggers apart geladen — MijlpaalService.Search() include't ze niet (zie TrajectIndexVm).
+        vm.TriggersPerMijlpaal = mijlpaalIds.Count > 0
+            ? (await _db.MijlpaalTrigger.AsNoTracking()
+                .Where(t => mijlpaalIds.Contains(t.MijlpaalId) && t.IsActief)
+                .ToListAsync())
+                .GroupBy(t => t.MijlpaalId)
+                .ToDictionary(g => g.Key, g => g.ToList())
+            : new Dictionary<int, List<DALCore.Models.MijlpaalTrigger>>();
 
         vm.HuidigeFase = traject.Fases.OrderBy(f => f.Volgorde)
             .FirstOrDefault(f => f.Status == (int)FaseStatus.Actief)

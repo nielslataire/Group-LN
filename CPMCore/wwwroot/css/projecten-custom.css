@@ -1705,77 +1705,20 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
    veld-raster dat vanzelf 1/2/3 breed wordt. Geen wizard — alles op één
    pagina, gewoon compacter zodat wie het vaak invult er doorheen tabt.
    ========================================================== */
+/* De ongescoopte .gl-form-section/__head/__title/__hint-basisstijl (en .gl-field-grid/.gl-field/
+   .gl-switch-row/.gl-form-note hieronder) verhuisden naar custom.css — dat is globaal geladen
+   (_Layout.cshtml) en dit veldsysteem is niet Projecten-specifiek (zie DESIGN.md). Deze regel hier
+   blijft wél Projecten-eigen: ze wint dankzij hogere specificiteit (.gl-project-form
+   .gl-form-section) op de generieke 26px uit custom.css. */
 .gl-project-form .gl-form-section { margin-bottom: 16px; }
 .gl-project-form .gl-form-section:last-of-type { margin-bottom: 0; }
 
-/* Sectiekop: getinte vierkante badge die naast titel + omschrijving staat. */
-.gl-form-section__head {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding-bottom: 14px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--border, #e7e7e7);
-}
-.gl-form-section__head > i {
-    flex: none;
-    width: 42px;
-    height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    border-radius: 11px;
-    background: var(--lightgreen, #e8f0eb);
-    color: var(--primary);
-}
-.gl-form-section__title {
-    margin: 0;
-    font-size: 1.0625rem;
-    font-weight: 700;
-    line-height: 1.2;
-    color: var(--text, #26313a);
-}
-.gl-form-section__hint {
-    margin: 2px 0 0;
-    font-size: .8125rem;
-    line-height: 1.35;
-    color: var(--gl-detail-text-aa, #5f6b7a);
-}
 .gl-form-subtitle {
     font-size: .875rem;
     font-weight: 700;
     margin: 4px 0 12px;
     color: var(--text, #26313a);
 }
-
-/* Veld-raster: auto-fit kolommen, labels boven het veld. */
-.gl-field-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 2px 24px;
-    align-items: start;
-}
-.gl-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 18px;
-    min-width: 0;
-}
-.gl-field--full { grid-column: 1 / -1; }
-.gl-field > label {
-    margin: 0;
-    font-weight: 600;
-    font-size: .8125rem;
-    color: var(--text, #26313a);
-}
-.gl-field .gl-req { color: var(--danger, #b3452f); margin-left: 2px; font-weight: 700; }
-.gl-field .form-control,
-.gl-field .select2-container { max-width: 100%; }
-.gl-field--full .form-control,
-.gl-field--full .select2-container { max-width: 560px; }
-.gl-field--full.gl-field--wide .form-control { max-width: 100%; }
 
 /* Adres: straat (flexibel) + nummer (smal) op één regel. */
 .gl-field-address { display: flex; gap: 10px; }
@@ -1882,35 +1825,6 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) {
     .gl-doc2-item, .gl-doc2-item__dot, .gl-doc2-item__dot > i { transition: none; }
 }
-
-/* Losse infomelding onder het formulier. */
-.gl-form-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    margin-bottom: 16px;
-    border: 1px solid var(--border, #e7e7e7);
-    border-radius: 8px;
-    background: var(--lightgreen, #e8f0eb);
-    font-size: .875rem;
-    color: var(--text, #26313a);
-}
-.gl-form-note > i { font-size: 18px; color: var(--primary); flex: none; margin-top: 1px; }
-
-/* Schakelaar-rij: iOS-switch + label naast elkaar. */
-.gl-switch-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.gl-switch-row > label {
-    margin: 0;
-    font-weight: 600;
-    font-size: .8125rem;
-    color: var(--text, #26313a);
-}
-.gl-switch-row > label small { font-weight: 400; }
 
 /* Coördinatie — drie kaarten naast elkaar (Type & vergoeding / Contractschijven
    / Uurtarieven) i.p.v. gestapelde secties met <hr>. Zelfde kaarttaal als de
@@ -2034,8 +1948,5 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
 }
 
 /* De tabs zelf (.gl-form-shell__tabs/__tab/__panel) leven nu in custom.css —
-   herbruikbaar over meerdere formulieren, zie daar. */
-
-/* Bare secties (binnen een tab-paneel, geen eigen card meer). */
-.gl-form-section { margin-bottom: 26px; }
-.gl-form-section:last-child { margin-bottom: 0; }
+   herbruikbaar over meerdere formulieren, zie daar. Idem voor het bare-
+   .gl-form-section/.gl-field-grid/.gl-field/.gl-switch-row/.gl-form-note-veldsysteem. */

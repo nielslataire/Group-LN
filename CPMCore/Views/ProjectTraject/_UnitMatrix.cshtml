@@ -17,15 +17,31 @@
 
     // Toon alle eenheden van het project; ook zonder mijlpalen (dan lege cellen)
     var eenheden = Model.ProjectUnits;
+
+    // Zelfde mapping als Index.cshtml/_Timeline.cshtml.
+    string StatusIcon(int status) => status switch
+    {
+        0 => "bx-circle",
+        1 => "bx-time-five",
+        2 => "bx-check-circle",
+        3 => "bx-minus-circle",
+        4 => "bx-block",
+        _ => "bx-circle"
+    };
 }
 
 @if (kolommen.Count == 0)
 {
-    <div class="gl-mc-card"><div class="card-body text-muted">
-        Er zijn nog geen per-eenheid mijlpalen in dit traject. Voeg ze toe via het sjabloon
-        (markeer een mijlpaal als <em>Per eenheid</em>) en klik daarna op <strong>Sync met sjabloon</strong>,
-        of voeg een mijlpaal toe en koppel er een eenheid aan.
-    </div></div>
+    @* Zit al binnen de gedeelde tab-kaart (Index.cshtml) — geen geneste kaart hier, zelfde
+       opbouw als de lege staten van de Kalender-tab (.gl-kal2-tl-empty/.gl-kal2-agenda-empty). *@
+    <div class="gl-traject-empty">
+        <i class="bx bx-grid-alt" aria-hidden="true"></i>
+        <p class="gl-traject-empty-title">Nog geen per-eenheid mijlpalen</p>
+        <p class="gl-traject-empty-hint">
+            Voeg ze toe via het sjabloon (markeer een mijlpaal als <em>Per eenheid</em>) en klik daarna op
+            <strong>Sync met sjabloon</strong>, of voeg een mijlpaal toe en koppel er een eenheid aan.
+        </p>
+    </div>
 }
 else
 {
@@ -54,11 +70,12 @@ else
                                 var overdue = eff is DateOnly d && d < today
                                               && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
                                 <td class="gl-um-cell m-status-@m.Status @(overdue ? "is-overdue" : "")">
-                                    <button type="button" class="btn btn-xs btn-default js-mijlpaal-status w-100"
-                                            data-id="@m.Id" data-naam="@($"{u.Name} — {m.Naam}")" data-status="@m.Status">
-                                        <span class="badge gl-mijlpaal-status s-@m.Status">@(((MijlpaalStatus)m.Status).GetDisplayName())</span>
+                                    @{ var umStatusLabel = ((MijlpaalStatus)m.Status).GetDisplayName(); }
+                                    <button type="button" class="gl-row-action-btn gl-mijlpaal-status-icon s-@m.Status js-mijlpaal-status"
+                                            data-id="@m.Id" data-naam="@($"{u.Name} — {m.Naam}")" data-status="@m.Status" title="@umStatusLabel — status wijzigen" aria-label="@umStatusLabel — status wijzigen">
+                                        <i class="bx @StatusIcon(m.Status)" aria-hidden="true"></i>
                                     </button>
-                                    <div class="gl-um-datum @(overdue ? "text-danger fw-bold" : "text-muted")">
+                                    <div class="gl-um-datum @(overdue ? "gl-traject-overdue-text" : "text-muted")">
                                         @(m.WerkelijkeDatum?.ToString("dd/MM/yy") ?? eff?.ToString("dd/MM/yy") ?? "—")
                                         @if (Model.PuntenPerMijlpaal.TryGetValue(m.Id, out var umPuntenAantal) && umPuntenAantal > 0)
                                         {

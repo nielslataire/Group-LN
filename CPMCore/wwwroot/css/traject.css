@@ -13,7 +13,10 @@
     background: #fff;
 }
 
-.gl-traject-fase.fase-status-1 { border-color: #cdd9e6; background: #f7f9fc; }
+/* Actieve fase krijgt de merkgroen-tint (--lightgreen) i.p.v. het eerdere koele blauwgrijs
+   (#cdd9e6) — dat schond de Warm-Grey Rule (DESIGN.md: geen koele blauwtint voor neutralen) en
+   was bovendien de enige plek op deze pagina die "actief/huidig" niet met groen markeerde. */
+.gl-traject-fase.fase-status-1 { border-color: #bcd6c7; background: var(--lightgreen, #e8f0eb); }
 .gl-traject-fase.fase-status-2 { opacity: .78; }
 .gl-traject-fase.fase-status-3 { opacity: .55; }
 
@@ -31,9 +34,12 @@
 
 .gl-traject-mijlpalen { list-style: none; margin: 0; padding: 0; }
 
+/* Het statusicoon (.gl-mijlpaal-status-icon) leidt de rij nu — verving de losse kleurendot
+   (.gl-tm-dot, verwijderd) die vlak naast de "status wijzigen"-actieknop verwarrend dubbelop
+   stond met een 2e statusweergave. Grid: icoon | naam | datum | actieknop (4 kolommen i.p.v. 5). */
 .gl-traject-mijlpaal {
     display: grid;
-    grid-template-columns: 14px minmax(0, 1fr) 110px auto auto;
+    grid-template-columns: auto minmax(0, 1fr) 110px auto;
     align-items: center;
     gap: .65rem;
     padding: .4rem 0;
@@ -41,25 +47,132 @@
 }
 .gl-traject-mijlpaal:first-child { border-top: none; }
 
-.gl-tm-dot {
-    width: 11px; height: 11px; border-radius: 50%;
-    background: #ced4da; border: 2px solid #fff; box-shadow: 0 0 0 1px #ced4da;
-}
-.gl-traject-mijlpaal.m-status-1 .gl-tm-dot { background: #ffc107; box-shadow: 0 0 0 1px #ffc107; }
-.gl-traject-mijlpaal.m-status-2 .gl-tm-dot { background: #198754; box-shadow: 0 0 0 1px #198754; }
-.gl-traject-mijlpaal.m-status-3 .gl-tm-dot { background: #adb5bd; }
-.gl-traject-mijlpaal.m-status-4 .gl-tm-dot { background: #dc3545; box-shadow: 0 0 0 1px #dc3545; }
-.gl-traject-mijlpaal.is-overdue .gl-tm-dot { background: #dc3545; box-shadow: 0 0 0 1px #dc3545; }
-
 .gl-tm-naam { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gl-tm-datum { font-size: .85rem; text-align: right; }
 
-.badge.gl-mijlpaal-status { font-weight: 600; }
-.badge.gl-mijlpaal-status.s-0 { background: #6c757d; }
-.badge.gl-mijlpaal-status.s-1 { background: #ffc107; color: #212529; }
-.badge.gl-mijlpaal-status.s-2 { background: #198754; }
-.badge.gl-mijlpaal-status.s-3 { background: #adb5bd; }
-.badge.gl-mijlpaal-status.s-4 { background: #dc3545; }
+/* Statuskleuren hergebruiken de echte DESIGN.md-tokens i.p.v. stock Bootstrap-rood/amber/groen
+   (Open/NietVanToepassing = neutraal, Bezig = Ochre, Bereikt = het merkgroen — "een bereikte
+   mijlpaal is de gewenste uitkomst", zelfde logica als een verkochte eenheid, Geblokkeerd = Rust).
+   Zelfde 4 tinten als --kal2-* hierboven, dus de Kalender- en Mijlpalen/Tijdlijn/Eenheden-tabs
+   tonen nu dezelfde status overal op deze pagina i.p.v. losse kleursystemen per tab. */
+/* Bootstrap's eigen .badge is em-relatief (padding .35em .65em, font-size .75em) en valt dus
+   terug op de omringende celtekstgrootte — in een tabelrij naast een 30px .gl-row-action-btn
+   (hieronder) rendert dat maar ~18-20px, duidelijk korter dan de knoppen ernaast. Vaste,
+   niet-relatieve maten i.p.v. em's lossen dat op én maken de status in één oogopslag beter
+   leesbaar (was vrij klein). */
+.badge.gl-mijlpaal-status {
+    font-weight: 600; font-size: .72rem; line-height: 1; padding: .38rem .55rem; border-radius: .35rem;
+}
+.badge.gl-mijlpaal-status.s-0 { background: var(--kal2-nogtedoen); }
+.badge.gl-mijlpaal-status.s-1 { background: var(--warning, #c17d1f); }
+.badge.gl-mijlpaal-status.s-2 { background: var(--primary, #0a5a3b); }
+.badge.gl-mijlpaal-status.s-3 { background: var(--kal2-nogtedoen); }
+.badge.gl-mijlpaal-status.s-4 { background: var(--danger, #b3452f); }
+
+/* Icoonvariant van bovenstaande — enkel binnen ProjectTraject (Mijlpalen-tabel/_Timeline/
+   _UnitMatrix). .gl-mijlpaal-status zelf blijft ongewijzigd: die klasse is GEDEELD (Deadlines,
+   Home-dashboards, ProjectDossiers gebruiken 'm ook als tekstbadge) — dus een eigen klasse i.p.v.
+   'm hier ombouwen, dat zou die andere pagina's meeslepen. Kleur draagt de status i.p.v. een
+   achtergrondvlak; icoon + title/aria-label houden het toegankelijk zonder tekst nodig te hebben. */
+.gl-mijlpaal-status-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; flex: 0 0 auto; font-size: 18px; line-height: 1;
+}
+.gl-mijlpaal-status-icon.s-0 { color: var(--kal2-nogtedoen); }
+.gl-mijlpaal-status-icon.s-1 { color: var(--warning, #c17d1f); }
+.gl-mijlpaal-status-icon.s-2 { color: var(--kal2-bereikt); }
+.gl-mijlpaal-status-icon.s-3 { color: var(--kal2-nogtedoen); opacity: .6; }
+.gl-mijlpaal-status-icon.s-4 { color: var(--danger, #b3452f); }
+
+/* Herbruikbare "achterstallig"-tekststijl — vervangt het overal verspreide `text-danger fw-bold`
+   (stock Bootstrap-rood) in Index.cshtml/_Timeline.cshtml/_UnitMatrix.cshtml. */
+.gl-traject-overdue-text { color: var(--danger, #b3452f); font-weight: 700; }
+
+/* ── Rij-acties in een tabel (Mijlpalen-tabel, Eenheden-matrix) ────────────
+   Vervangt `btn btn-xs btn-default` (zichtbare rand + grijze vulling — matchte
+   noch de status-badge ernaast in hoogte, noch de rustige "groen-tint-bij-hover"
+   iconentaal die de rest van de app al gebruikt voor rij-/kaartacties, zie
+   DESIGN.md "Topbar" gl-page-header__back en Projecthub gl-detail-card-edit).
+   30px i.p.v. hun 40px: dit is de compacte, dichte-tabelrij-variant van diezelfde
+   taal, niet een derde losse stijl. */
+.gl-row-actions { display: inline-flex; align-items: center; gap: 2px; }
+.gl-row-action-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; flex: 0 0 auto; border: 0; border-radius: var(--radius, 7px);
+    background: transparent; color: var(--tsa-muted-aa, #5b6472); cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, opacity .12s ease; touch-action: manipulation;
+}
+.gl-row-action-btn i { font-size: 16px; }
+/* Sterker, ondubbelzinnig hover-contrast: donkerder groen + een hairline-rand i.p.v. enkel de
+   vorige Mist-Green vulling, die op wit/lichtgrijze tabelachtergrond te weinig verschilde van de
+   rusttoestand om als "hover" te lezen. */
+.gl-row-action-btn:hover { background: var(--lightgreen, #e8f0eb); border: 1px solid #bcd6c7; color: #0f4b40; }
+.gl-row-action-btn:focus-visible { outline: none; box-shadow: 0 0 0 .15rem rgba(10, 90, 59, .25); }
+.gl-row-action-btn.is-danger:hover { background: var(--danger-tint, #f7ece8); border-color: #eec3b8; color: var(--danger-text, #8a3420); }
+
+/* Rij-acties (bewerken/status wijzigen) blijven onzichtbaar tot je over de rij zweeft of er met
+   het toetsenbord in focust — vermindert de blijvende visuele ruis van 2 muted iconen op élke
+   rij, en laat de knop pas verschijnen op het moment dat 'ie relevant is i.p.v. een zwakke
+   rusttoestand-tint die voortdurend zichtbaar moet blijven. Enkel voor de "losse
+   actieknoppen"-rol (Mijlpalen-tabel via .gl-row-actions, Tijdlijn via .gl-traject-mijlpaal) —
+   NIET voor de Eenheden-matrix, waar hetzelfde .gl-row-action-btn het statusicoon zélf is en dus
+   altijd zichtbaar moet blijven (geen van beide scopes hieronder raakt die knop). */
+.gl-row-actions .gl-row-action-btn,
+.gl-traject-mijlpaal .gl-row-action-btn {
+    opacity: 0;
+}
+tr:hover .gl-row-actions .gl-row-action-btn,
+tr:focus-within .gl-row-actions .gl-row-action-btn,
+.gl-traject-mijlpaal:hover .gl-row-action-btn,
+.gl-traject-mijlpaal:focus-within .gl-row-action-btn,
+.gl-row-action-btn:focus-visible {
+    opacity: 1;
+}
+@media (hover: none) {
+    /* Geen hover op touch-schermen — daar altijd tonen, anders zijn de knoppen onbereikbaar. */
+    .gl-row-actions .gl-row-action-btn,
+    .gl-traject-mijlpaal .gl-row-action-btn {
+        opacity: 1;
+    }
+}
+
+/* Cellen middelen verticaal uit i.p.v. Bootstrap's standaard top-uitlijning — anders staat een
+   korte badge/tekstcel bovenaan de rij terwijl de rij-acties ernaast (30px) de rij hoger maken,
+   wat als een hoogteverschil oogt ook al is elk element zelf consistent. */
+#datatable-mijlpalen td { vertical-align: middle; }
+
+/* Mijlpaal-upsertmodal — drie gescheiden secties i.p.v. 11 velden in één ongebroken raster
+   (/impeccable critique P2-fix). Zelfde labeltypografie als gl-form-section__title-taal (600,
+   .78rem) maar gecomprimeerd voor een modal i.p.v. de volle gl-form-section-kop met icoonbadge. */
+.gl-mp-modal-section + .gl-mp-modal-section {
+    margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border, #e7e7e7);
+}
+.gl-mp-modal-section-title {
+    font-size: .78rem; font-weight: 600; color: var(--tsa-muted-aa, #5b6472); margin-bottom: 10px;
+}
+
+/* Statusmodal — toont de geconfigureerde triggers (dossier aanmaken, projectstatus wijzigen, …)
+   vóór opslaan i.p.v. dat pas achteraf te laten blijken (/impeccable critique P1-fix). Zelfde
+   Mist-Green infomelding-taal als .gl-form-note (custom.css), gecomprimeerd voor in een modal. */
+.gl-mps-triggers {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 10px 12px; margin-top: 4px;
+    border: 1px solid var(--border, #e7e7e7); border-radius: 8px;
+    background: var(--lightgreen, #e8f0eb);
+}
+.gl-mps-triggers-head {
+    display: flex; align-items: center; gap: 6px;
+    font-size: .78rem; font-weight: 600; color: var(--primary, #0a5a3b);
+}
+.gl-mps-triggers-head > i { font-size: 15px; }
+.gl-mps-triggers-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.gl-mps-triggers-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: .82rem; }
+.gl-mps-trigger-event {
+    flex: none; padding: 1px 7px; border-radius: 999px;
+    background: #fff; border: 1px solid #bcd6c7; color: var(--primary, #0a5a3b);
+    font-size: .72rem; font-weight: 600;
+}
+.gl-mps-trigger-label { color: var(--text, #26313a); }
 
 /* dossiers */
 .gl-dossier-kind-nav { flex-wrap: wrap; gap: .35rem; }
@@ -99,45 +212,362 @@
     .gl-vc-datum { display: none; }
 }
 
-/* kalender */
-.gl-traject-kalender { display: flex; flex-direction: column; gap: 1rem; }
-.gl-kal-maand { border: 1px solid #e6e6ec; border-radius: 10px; overflow: hidden; }
-.gl-kal-maand-kop {
-    background: #f7f9fc; padding: .5rem .9rem; font-weight: 700; text-transform: capitalize;
-    border-bottom: 1px solid #e6e6ec;
+/* ══ Kalender 2.0 (ProjectTraject/Index, tab Kalender) ═══════════════════════
+   Volledig custom (Maand/Kwartaal/Jaar/Agenda + statusfilter + detailpaneel) —
+   zie traject.index.js initKalender2() voor de opbouw. Geen bibliotheek: geen
+   van de 4 weergaves (swimlane-maandrooster, Gantt-achtige kwartaal/jaartijdlijn,
+   gegroepeerde agenda-lijst) komt kant-en-klaar uit FullCalendar, en de rest van
+   deze featuremap (Tijdlijn-tab hierboven, sjabloon-editor) is ook altijd
+   handgebouwd i.p.v. een widget-library. Statuskleuren hergebruiken bewust
+   dezelfde tinten als .gl-mijlpaal-status (s-2 groen/s-4 rood) elders op deze
+   pagina i.p.v. een derde parallelle palet te introduceren. */
+.gl-form-shell__panel.gl-traject-kal-panel { padding: 16px 20px 24px; }
+
+:root {
+    --kal2-bereikt: var(--primary, #0a5a3b);
+    --kal2-nogtedoen: #495363;
+    --kal2-achterstallig: var(--danger, #b3452f);
+    --kal2-nvt: var(--text-muted, #8590a5);
+    --kal2-trigger-ring: var(--warning, #c17d1f);
 }
-.gl-kal-item {
-    display: grid; grid-template-columns: 56px 1fr auto; gap: .75rem; align-items: center;
-    padding: .45rem .9rem; border-top: 1px dashed #eef0f4;
+
+.gl-kal2 { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────── */
+.gl-kal2-toolbar { display: flex; flex-direction: column; gap: 10px; }
+.gl-kal2-toolbar-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.gl-kal2-toolbar-row--end { justify-content: space-between; }
+.gl-kal2-nav { display: flex; align-items: center; gap: 4px; }
+.gl-kal2-navbtn {
+    width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px); background: #fff;
+    color: var(--text, #26313a); cursor: pointer; touch-action: manipulation;
 }
-.gl-kal-item:first-child { border-top: none; }
-.gl-kal-datum { font-variant-numeric: tabular-nums; color: #6c757d; font-size: .85rem; }
-.gl-kal-item.is-bereikt { opacity: .6; }
-.gl-kal-item.is-overdue .gl-kal-datum { color: #dc3545; font-weight: 700; }
+.gl-kal2-navbtn:hover { background: var(--lightgreen, #e8f0eb); border-color: var(--primary); color: var(--primary); }
+.gl-kal2-navbtn:disabled { opacity: .4; cursor: default; }
+.gl-kal2-navbtn:disabled:hover { background: #fff; border-color: var(--border, #e7e7e7); color: var(--text, #26313a); }
+/* Zelfde look als .gl-kal2-navbtn (rand/hover/hoogte) maar auto-breed voor tekst+icoon i.p.v. een
+   vast 34×34-vierkant — "Vandaag" en "Fases & opties" stonden hiervoor op de generieke
+   btn-btn-default-thema-stijl, duidelijk anders (hoogte/kleur/rand) dan de pijltjesknoppen ernaast. */
+.gl-kal2-btn {
+    height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    padding: 0 12px; border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px);
+    background: #fff; color: var(--text, #26313a); font-size: .8rem; font-weight: 600;
+    cursor: pointer; touch-action: manipulation; white-space: nowrap;
+}
+.gl-kal2-btn i { font-size: 15px; }
+.gl-kal2-btn:hover { background: var(--lightgreen, #e8f0eb); border-color: var(--primary); color: var(--primary); }
+.gl-kal2-btn:disabled { opacity: .4; cursor: default; }
+.gl-kal2-btn:disabled:hover { background: #fff; border-color: var(--border, #e7e7e7); color: var(--text, #26313a); }
+.gl-kal2-btn[aria-expanded="true"] { background: var(--lightgreen, #e8f0eb); border-color: var(--primary); color: var(--primary); }
+.gl-kal2-title { flex: 1 1 auto; min-width: 140px; }
+.gl-kal2-title-main { font-size: 1.05rem; font-weight: 700; text-transform: capitalize; line-height: 1.2; }
+.gl-kal2-title-sub { font-size: .78rem; color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-viewswitch, .gl-kal2-filters {
+    display: inline-flex; border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px);
+    overflow: hidden; flex: 0 0 auto;
+}
+.gl-kal2-viewswitch button, .gl-kal2-filters button {
+    appearance: none; background: #fff; border: 0; border-right: 1px solid var(--border, #e7e7e7);
+    padding: 7px 14px; font-size: .8rem; font-weight: 600; color: var(--text, #26313a); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; touch-action: manipulation;
+}
+.gl-kal2-viewswitch button:last-child, .gl-kal2-filters button:last-child { border-right: 0; }
+.gl-kal2-viewswitch button i { font-size: 15px; }
+.gl-kal2-viewswitch button:hover, .gl-kal2-filters button:hover { background: var(--lightgreen, #e8f0eb); }
+.gl-kal2-viewswitch button.is-active, .gl-kal2-filters button.is-active {
+    background: var(--lightgreen, #e8f0eb); color: var(--primary); position: relative;
+}
+.gl-kal2-opties { position: relative; }
+.gl-kal2-opties-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 240px; max-height: 320px;
+    overflow-y: auto; background: #fff; border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px);
+    box-shadow: 0 8px 24px rgba(20, 30, 40, .12); padding: 10px;
+}
+.gl-kal2-opties-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 5px; font-size: .82rem; }
+.gl-kal2-opties-row:hover { background: #f7f9fc; }
+.gl-kal2-opties-row .gl-kal2-dot { flex: 0 0 auto; }
+.gl-kal2-opties-row label { flex: 1 1 auto; cursor: pointer; margin: 0; }
+.gl-kal2-opties-foot { display: flex; justify-content: space-between; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border, #e7e7e7); }
+.gl-kal2-opties-foot button { background: none; border: 0; color: var(--primary); font-size: .76rem; font-weight: 600; cursor: pointer; padding: 2px 4px; }
+
+@media (max-width: 767.98px) {
+    .gl-kal2-toolbar-row--end { flex-direction: column; align-items: stretch; }
+    .gl-kal2-filters { overflow-x: auto; }
+}
+
+/* ── Layout: main + zijpaneel ───────────────────────────────────────── */
+.gl-kal2-body { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+@media (max-width: 991.98px) {
+    .gl-kal2-body { grid-template-columns: 1fr; }
+}
+.gl-kal2-main { min-width: 0; }
+.gl-kal2-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 12px; }
+
+.gl-kal2-stats { border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px); padding: 14px; }
+.gl-kal2-stats-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: .85rem; margin-bottom: 10px; }
+.gl-kal2-stats-count { font-weight: 500; color: var(--tsa-muted-aa, #5b6472); font-size: .76rem; }
+.gl-kal2-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gl-kal2-stat { border: 1px solid var(--border, #e7e7e7); border-radius: 6px; padding: 8px 10px; }
+.gl-kal2-stat strong { display: block; font-size: 1.3rem; line-height: 1.1; font-weight: 700; }
+.gl-kal2-stat span { font-size: .72rem; color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-stat.is-bereikt strong { color: var(--kal2-bereikt); }
+.gl-kal2-stat.is-achterstallig strong { color: var(--kal2-achterstallig); }
+.gl-kal2-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border, #e7e7e7); }
+.gl-kal2-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--kal2-nogtedoen); }
+.gl-kal2-dot.is-bereikt { background: var(--kal2-bereikt); }
+.gl-kal2-dot.is-nogtedoen { background: var(--kal2-nogtedoen); }
+.gl-kal2-dot.is-achterstallig { background: var(--kal2-achterstallig); }
+.gl-kal2-ring { width: 9px; height: 9px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px var(--kal2-trigger-ring); }
+
+/* ── Detailpaneel (mijlpaal) ────────────────────────────────────────── */
+.gl-kal2-detail { border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px); padding: 14px; }
+.gl-kal2-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+.gl-kal2-detail-title { font-weight: 700; font-size: .95rem; line-height: 1.3; }
+.gl-kal2-detail-close { background: none; border: 0; color: var(--tsa-muted-aa, #5b6472); cursor: pointer; padding: 2px; font-size: 1.1rem; line-height: 1; }
+.gl-kal2-detail-close:hover { color: var(--text, #26313a); }
+.gl-kal2-detail-badge { display: inline-block; font-size: .7rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; margin: 6px 0 12px; }
+.gl-kal2-detail-badge.is-bereikt { background: #e6f4ec; color: var(--kal2-bereikt); }
+.gl-kal2-detail-badge.is-achterstallig { background: var(--danger-tint, #f7ece8); color: var(--danger-text, #8a3420); }
+.gl-kal2-detail-badge.is-nogtedoen { background: #eef1f4; color: var(--kal2-nogtedoen); }
+.gl-kal2-detail-badge.is-nvt { background: #f1f3f7; color: #7a8494; }
+.gl-kal2-detail-row { display: flex; justify-content: space-between; gap: 10px; font-size: .8rem; padding: 5px 0; border-top: 1px solid var(--border, #e7e7e7); }
+.gl-kal2-detail-row:first-of-type { border-top: 0; }
+.gl-kal2-detail-row dt { color: var(--tsa-muted-aa, #5b6472); flex: 0 0 auto; }
+.gl-kal2-detail-row dd { margin: 0; font-weight: 600; text-align: right; }
+.gl-kal2-detail-row dd.is-overdue { color: var(--kal2-achterstallig); }
+.gl-kal2-detail-fasedot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+.gl-kal2-detail-actions-head { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--tsa-muted-aa, #5b6472); margin: 12px 0 6px; }
+.gl-kal2-detail-action { display: flex; align-items: center; gap: 6px; font-size: .8rem; padding: 3px 0; }
+.gl-kal2-detail-action i { color: var(--kal2-trigger-ring); font-size: 15px; }
+.gl-kal2-detail-foot { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+/* ── Maandweergave: swimlane + dagrooster ──────────────────────────────── */
+.gl-kal2-swimlane { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.gl-kal2-swimlane-row { position: relative; height: 26px; background: #f7f9fc; border-radius: 6px; overflow: hidden; }
+.gl-kal2-swimlane-bar {
+    position: absolute; top: 0; bottom: 0; border-radius: 6px; display: flex; align-items: center;
+    padding: 0 10px; font-size: .72rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden;
+}
+.gl-kal2-swimlane-bar.is-muted { opacity: .45; color: var(--text, #26313a); background: #e2e6ec !important; }
+.gl-kal2-swimlane-bar .gl-kal2-swimlane-count { font-weight: 500; opacity: .85; margin-left: 6px; }
+
+.gl-kal2-grid { border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px); overflow: hidden; }
+.gl-kal2-grid-head { display: grid; grid-template-columns: repeat(7, 1fr); background: #f7f9fc; border-bottom: 1px solid var(--border, #e7e7e7); }
+.gl-kal2-grid-head span { padding: 8px 10px; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-grid-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+.gl-kal2-day {
+    min-height: 90px; border-right: 1px solid var(--border, #e7e7e7); border-bottom: 1px solid var(--border, #e7e7e7); padding: 6px;
+    display: flex; flex-direction: column; gap: 3px;
+}
+.gl-kal2-day:nth-child(7n) { border-right: 0; }
+.gl-kal2-day.is-outside { background: #fafbfc; }
+.gl-kal2-day.is-outside .gl-kal2-daynum { color: #ced2d9; }
+.gl-kal2-daynum { font-size: .78rem; font-weight: 600; color: var(--text, #26313a); }
+.gl-kal2-day.is-today { background: var(--lightgreen, #e8f0eb); }
+.gl-kal2-day.is-today .gl-kal2-daynum {
+    display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--primary); color: #fff;
+}
+.gl-kal2-chip {
+    display: flex; align-items: center; gap: 4px; font-size: .68rem; font-weight: 600; padding: 2px 6px;
+    border-radius: 5px; border: 1px solid transparent; cursor: pointer; overflow: hidden; text-align: left;
+    white-space: nowrap; text-overflow: ellipsis; touch-action: manipulation;
+}
+.gl-kal2-chip span { overflow: hidden; text-overflow: ellipsis; }
+.gl-kal2-chip i { font-size: 11px; flex: 0 0 auto; }
+.gl-kal2-chip.is-bereikt { background: #e6f4ec; color: var(--kal2-bereikt); }
+.gl-kal2-chip.is-achterstallig { background: var(--danger-tint, #f7ece8); color: var(--danger-text, #8a3420); }
+.gl-kal2-chip.is-nogtedoen { background: #eef1f4; color: var(--kal2-nogtedoen); }
+.gl-kal2-chip.is-nvt { background: #f1f3f7; color: #7a8494; }
+.gl-kal2-chip.is-selected { border-color: currentColor; box-shadow: 0 0 0 1px currentColor; }
+.gl-kal2-chip.has-trigger { box-shadow: 0 0 0 1.5px var(--kal2-trigger-ring); }
+@media (max-width: 767.98px) {
+    .gl-kal2-day { min-height: 64px; }
+    .gl-kal2-grid-head span { padding: 6px 4px; font-size: .6rem; }
+}
+
+/* ── Kwartaal/Jaar: fase-lijst + Gantt-tijdlijn ─────────────────────────── */
+/* Eén platte Grid (230px vaste linkerkolom + 1fr rechts) i.p.v. twee losse kolom-blokken — de
+   fase-metacel en de bijhorende tijdlijn-rij worden als opeenvolgende siblings gerenderd
+   (traject.index.js), zodat Grid ze in dezelfde grid-rij plaatst en automatisch op gelijke
+   hoogte uitlijnt, ook als de linkertekst meer regels nodig heeft dan de rechterkant. */
+.gl-kal2-tl { display: grid; grid-template-columns: 230px 1fr; border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px); overflow: hidden; overflow-x: auto; }
+.gl-kal2-tl-axis-spacer { border-right: 1px solid var(--border, #e7e7e7); border-bottom: 1px solid var(--border, #e7e7e7); background: #f7f9fc; position: sticky; top: 0; }
+.gl-kal2-tl-axis { display: flex; border-bottom: 1px solid var(--border, #e7e7e7); background: #f7f9fc; position: sticky; top: 0; }
+.gl-kal2-tl-axis span {
+    flex: 1 1 0; text-align: center; font-size: .66rem; font-weight: 700; color: var(--tsa-muted-aa, #5b6472);
+    padding: 8px 2px; border-right: 1px dashed #e6e9ee; white-space: nowrap; overflow: hidden;
+}
+.gl-kal2-tl-fase-row { padding: 10px 12px; border-right: 1px solid var(--border, #e7e7e7); border-bottom: 1px solid var(--border, #e7e7e7); }
+.gl-kal2-tl-fase-naam { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: .82rem; }
+.gl-kal2-tl-fase-meta { font-size: .7rem; color: var(--tsa-muted-aa, #5b6472); margin-top: 2px; line-height: 1.4; }
+.gl-kal2-tl-fase-meta .is-achterstallig { color: var(--kal2-achterstallig); font-weight: 600; }
+
+.gl-kal2-tl-row { position: relative; min-height: 62px; border-bottom: 1px solid var(--border, #e7e7e7); }
+.gl-kal2-tl-bar { position: absolute; top: 27px; height: 8px; border-radius: 4px; opacity: .35; }
+.gl-kal2-tl-point { position: absolute; top: 20px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; touch-action: manipulation; z-index: 1; }
+.gl-kal2-tl-point.has-trigger { box-shadow: 0 0 0 2px var(--kal2-trigger-ring); }
+.gl-kal2-tl-point.is-selected { box-shadow: 0 0 0 3px var(--text, #26313a); }
+.gl-kal2-tl-label {
+    position: absolute; width: 150px; margin-left: -75px; text-align: center; font-size: .64rem;
+    line-height: 1.25; pointer-events: none;
+}
+.gl-kal2-tl-label strong { display: block; font-weight: 700; color: var(--text, #26313a); }
+.gl-kal2-tl-label span { color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--kal2-achterstallig); z-index: 2; }
+.gl-kal2-tl-empty { padding: 24px; text-align: center; color: var(--tsa-muted-aa, #5b6472); font-size: .85rem; }
+
+/* ── Agenda ──────────────────────────────────────────────────────────── */
+.gl-kal2-agenda-group { margin-bottom: 4px; }
+.gl-kal2-agenda-group-head {
+    display: flex; justify-content: space-between; align-items: baseline; padding: 10px 4px 6px;
+    font-weight: 700; font-size: .85rem; text-transform: capitalize; position: sticky; top: 0; background: #fff;
+}
+.gl-kal2-agenda-group-head span { font-weight: 500; font-size: .72rem; color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-agenda-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: 6px; cursor: pointer;
+    touch-action: manipulation; border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.gl-kal2-agenda-group .gl-kal2-agenda-row:last-child { border-bottom: 0; }
+.gl-kal2-agenda-row:hover { background: #f7f9fc; }
+.gl-kal2-agenda-row.is-selected { background: var(--lightgreen, #e8f0eb); }
+.gl-kal2-agenda-row.is-achterstallig { background: var(--danger-tint, #f7ece8); }
+.gl-kal2-agenda-row.is-achterstallig:hover { background: #f5e0da; }
+.gl-kal2-agenda-date { flex: 0 0 74px; font-size: .8rem; font-variant-numeric: tabular-nums; color: var(--tsa-muted-aa, #5b6472); }
+.gl-kal2-agenda-row.is-achterstallig .gl-kal2-agenda-date { color: var(--kal2-achterstallig); font-weight: 700; }
+.gl-kal2-agenda-dot { flex: 0 0 auto; }
+.gl-kal2-agenda-main { flex: 1 1 auto; min-width: 0; }
+.gl-kal2-agenda-naam { font-weight: 600; font-size: .85rem; color: var(--text, #26313a); }
+.gl-kal2-agenda-row.is-achterstallig .gl-kal2-agenda-naam { color: var(--danger-text, #8a3420); }
+.gl-kal2-agenda-meta { font-size: .72rem; color: var(--tsa-muted-aa, #5b6472); margin-top: 1px; }
+.gl-kal2-agenda-right { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.gl-kal2-agenda-trigger { display: inline-flex; align-items: center; gap: 3px; font-size: .68rem; font-weight: 700; padding: .15rem .4rem; border-radius: 999px; background: #fdf3e4; color: var(--kal2-trigger-ring); }
+.gl-kal2-agenda-badge { font-size: .68rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; white-space: nowrap; }
+.gl-kal2-agenda-badge.is-bereikt { background: #e6f4ec; color: var(--kal2-bereikt); }
+.gl-kal2-agenda-badge.is-achterstallig { background: var(--danger-tint, #f7ece8); color: var(--danger-text, #8a3420); }
+.gl-kal2-agenda-badge.is-nogtedoen { background: #eef1f4; color: var(--kal2-nogtedoen); }
+.gl-kal2-agenda-badge.is-nvt { background: #f1f3f7; color: #7a8494; }
+.gl-kal2-agenda-empty { padding: 40px; text-align: center; color: var(--tsa-muted-aa, #5b6472); }
+@media (max-width: 575.98px) {
+    .gl-kal2-agenda-date { flex-basis: 56px; font-size: .72rem; }
+}
+
+/* ── Toetsenbordfocus ─────────────────────────────────────────────────────
+   Alle klikbare Kalender 2.0-elementen (toolbar-knoppen, dag-chips, agenda-
+   rijen, tijdlijn-stippen) krijgen hetzelfde groene focusringpatroon als de
+   rest van de app (DESIGN.md: 0 0 0 .2rem rgba(10,90,59,.25)). De
+   agenda-rij en tijdlijn-stip zijn losse <div>'s met tabindex="0" (zie
+   wireMpClickable in traject.index.js) — zonder deze regel waren ze met het
+   toetsenbord bereikbaar maar onzichtbaar gefocust. .gl-kal2-tl-point
+   gebruikt outline i.p.v. box-shadow: die laatste draagt al de
+   has-trigger/is-selected-status en zou anders overschreven worden. */
+.gl-kal2-navbtn:focus-visible,
+.gl-kal2-btn:focus-visible,
+.gl-kal2-viewswitch button:focus-visible,
+.gl-kal2-filters button:focus-visible,
+.gl-kal2-opties-foot button:focus-visible,
+.gl-kal2-chip:focus-visible,
+.gl-kal2-agenda-row:focus-visible,
+.gl-kal2-detail-close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 .2rem rgba(10, 90, 59, .25);
+}
+.gl-kal2-viewswitch button:focus-visible,
+.gl-kal2-filters button:focus-visible {
+    position: relative;
+    z-index: 1;
+}
+.gl-kal2-tl-point:focus-visible {
+    outline: 2px solid var(--primary, #0a5a3b);
+    outline-offset: 2px;
+}
+.gl-kal2-agenda-row:focus-visible {
+    background: #f7f9fc;
+}
+
+/* ── Tabrij: tabstrip + compacte statuspillen op dezelfde regel, vlak onder de
+   topbar (net als TrajectSjabloonAdmin/Edit) ─────────────────────────────
+   .inner-body zit hier niet rechtstreeks onder .content-body maar onder
+   .content-with-menu (project-detailmenu-schil), MET .content-with-menu zelf
+   wél als kind van .content-body (zie _Layout.cshtml: <main class="content-body">
+   omvat altijd @RenderBody()) — dus beide vertical-offset-recepten stapelen:
+   1) theme.css: html.modern.fixed .content-body { margin-top: 10px } — geneutraliseerd
+      via ViewBag.ContentBodyClass="gl-traject-flush" (ProjectTrajectController.Index)
+      + de override hieronder, want dit is .content-body's ENIGE gebruik in deze
+      pagina en zou zonder scoping alle andere .content-body-pagina's meeslepen.
+   2) groupln.css, html.modern.fixed: [.inner-body] krijgt `border-top:113px solid
+      transparent; margin-top:-110px;` bovenop de gewone (niet-fixed-specifieke)
+      `padding:40px`. Netto inzet t.o.v. .inner-body's normale flow-positie:
+      -110 + 113 + 40 = 43px. Enkel op ≥768px: daaronder valt .inner-body terug op
+      een heel ander (niet-fixed) padding-recept en scrollen de tabs toch al
+      gewoon horizontaal in-flow, dus blijft de tabrij daar gewoon in-flow (geen
+      position:fixed, zie hieronder). */
+html.modern.fixed .content-body.gl-traject-flush { margin-top: 0; }
+.gl-traject-tabrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 0 0 20px; }
+@media (min-width: 768px) {
+    /* Rustpositie (niet gepind): exact de oorspronkelijke, beproefde -43px-breakout — ongewijzigd
+       t.o.v. voor de sticky/fixed-pogingen. Noch position:sticky (rekent in deze .inner-body-schil
+       zichtbaar fout af), noch een hardcoded position:fixed met vaste left-waarden (botst met de
+       extra .inner-menu-kolom van deze .content-with-menu-pagina — 300px op zichzelf genomen, máár
+       .inner-menu zélf neemt ook nog eens 300px in, en dat verschuift bovendien nog eens naar 73px
+       zodra de sidebar-links wordt ingeklapt: te veel theme-varianten (sidebar-left-sm/-xs, boxed
+       vs. fixed, ingeklapt of niet) om hier betrouwbaar te hardcoderen) bleken houdbaar. Vastpinnen
+       tijdens scrollen gebeurt daarom in JS (traject.index.js, initTabrowPin()): een sentinel +
+       IntersectionObserver schakelt ".gl-is-pinned" pas in zodra de rustpositie toch al voorbij de
+       topbar zou scrollen, en de linker rand/breedte van de gepinde rij wordt daar telkens live
+       afgelezen van .inner-body's eigen gerenderde positie i.p.v. hier geraden. */
+    .gl-traject-tabrow {
+        margin: -43px -40px 20px;
+        padding: 0 40px;
+        min-height: 54px;
+        background: #fff;
+        border-bottom: 2px solid var(--border, #e7e7e7);
+    }
+    .gl-traject-tabrow.gl-is-pinned {
+        position: fixed;
+        top: var(--topbar-height, 72px);
+        margin: 0;
+        z-index: 900;
+        /* left + width: inline style, live gemeten van .inner-body — zie hierboven. */
+    }
+    .gl-traject-tabrow-spacer { display: block; height: 0; }
+}
+.gl-traject-tabrow-sentinel { height: 0; }
+.gl-traject-tabrow .gl-form-shell__tabs.gl-traject-tabs {
+    /* De gedeelde .gl-form-shell__tabs (custom.css) heeft z'n eigen position:sticky; hier expliciet
+       geneutraliseerd, want .gl-traject-tabrow (de ouder) regelt het pin-gedrag zelf. */
+    position: static;
+    flex: 1 1 auto; min-width: 0; margin: 0; padding: 0;
+    background: transparent; border-bottom: 0; height: auto;
+}
+.gl-traject-stats { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; white-space: nowrap; padding-right: 4px; }
+.gl-traject-stat { font-size: .8rem; color: var(--tsa-muted-aa, #5b6472); }
+.gl-traject-stat strong { color: var(--text, #26313a); font-weight: 700; }
+.gl-traject-stat.is-severe { color: var(--danger, #b3452f); font-weight: 700; }
+/* Onder 992px vallen "Fase" en "binnen 14d" weg (--sec) i.p.v. de hele rij te verbergen —
+   "bereikt"/"achterstallig" blijven staan: op een werf-tablet is "achterstallig" net het cijfer
+   waarvoor een PM deze pagina opent (/impeccable critique P1-fix — voorheen verdween de volledige
+   statusrij hier, inclusief dat cijfer). */
+@media (max-width: 991.98px) {
+    .gl-traject-stats { gap: 10px; }
+    .gl-traject-stat--sec { display: none; }
+}
+
+/* ── Lege staten (geen traject / geen per-eenheid mijlpalen) ──────────────
+   Zelfde opbouw als TrajectSjabloonAdmin/Index's .gl-tsa-list-empty: gecentreerde
+   icoon + titel + hint + call-to-action, i.p.v. de eerdere linkse <h4>-met-icoontje
+   (die niet bij de rest van deze pagina — of bij de sjabloon-lijst één klik verderop
+   in hetzelfde menu — paste). */
+.gl-traject-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4rem 2rem; }
+.gl-traject-empty i { font-size: 2.4rem; color: #ced4da; margin-bottom: .75rem; }
+.gl-traject-empty-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 .35rem; }
+.gl-traject-empty-hint { font-size: .85rem; color: var(--tsa-muted-aa, #5b6472); max-width: 460px; margin: 0 0 1.5rem; line-height: 1.5; }
+.gl-traject-empty-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: center; max-width: 620px; width: 100%; text-align: left; }
+.gl-traject-empty-form .gl-field { flex: 1 1 220px; margin-bottom: 0; }
 
 /* sjabloon-editor */
-.gl-sjabloon-fase {
-    border: 1px solid #e6e6ec;
-    border-radius: 10px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background: #fbfbfd;
-}
-.gl-sjabloon-mijlpaal-rij {
-    display: grid;
-    grid-template-columns: minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) 80px minmax(0,1fr) minmax(0,1fr) 40px;
-    gap: .5rem;
-    align-items: center;
-    margin-bottom: .4rem;
-}
-.gl-sjabloon-mijlpaal {
-    border: 1px solid #eef0f4;
-    border-radius: 8px;
-    padding: .6rem .65rem;
-    margin-bottom: .5rem;
-    background: #fff;
-}
-
 .gl-sm-caption {
     display: block;
     font-size: .72rem;
@@ -152,16 +582,6 @@
     margin-top: .2rem;
     line-height: 1.3;
 }
-.gl-sm-field { min-width: 0; }
-.gl-sm-field--narrow { max-width: 150px; }
-
-.gl-sm-row1 {
-    display: grid;
-    grid-template-columns: minmax(0,1.6fr) minmax(0,1.8fr) minmax(0,.9fr) minmax(0,.9fr) 34px;
-    gap: .5rem;
-    align-items: start;
-}
-
 /* "Streefdatum"-regel: ankermijlpaal + offset visueel als één leesbare zin i.p.v. twee losse velden. */
 .gl-sm-daterule {
     margin-top: .55rem;
@@ -177,52 +597,6 @@
 .gl-sm-anchor { flex: 1 1 260px; min-width: 200px; }
 .gl-sm-offset { width: 72px; flex: 0 0 72px; }
 
-.gl-sm-row2 {
-    display: grid;
-    grid-template-columns: minmax(0,1fr) minmax(0,1.6fr);
-    gap: .5rem .6rem;
-    margin-top: .5rem;
-}
-.gl-sm-row2 [data-m-param-hint]:empty { display: none; }
-
-.gl-sm-triggers { margin-top: .5rem; padding-top: .4rem; border-top: 1px dashed #eef0f4; display: flex; flex-direction: column; gap: .35rem; }
-.gl-sjabloon-trigger {
-    display: grid;
-    grid-template-columns: minmax(0,1.3fr) minmax(0,1.3fr) 110px minmax(0,1.6fr) auto auto 30px;
-    gap: .4rem;
-    align-items: center;
-    background: #f7f9fc;
-    border-radius: 6px;
-    padding: .3rem .4rem;
-}
-.gl-st-check { display: inline-flex; align-items: center; gap: .3rem; font-size: .78rem; white-space: nowrap; margin: 0; }
-@media (max-width: 1200px) {
-    .gl-sjabloon-trigger { grid-template-columns: 1fr 1fr; }
-}
-
-/* Select2 in de sjabloon-editor draait op de compacte -sm-hoogte van deze dichte tabelachtige
-   rijen (niet de 46px form-control-modern van gewone data-entry-formulieren) — native en
-   verrijkte velden moeten hier op elkaar aansluiten, net zoals elders in de app. */
-.gl-sjabloon-mijlpaal .select2-container .select2-selection--single {
-    height: 31px;
-    border-color: #ced4da;
-    border-radius: .2rem;
-}
-.gl-sjabloon-mijlpaal .select2-container .select2-selection--single .select2-selection__rendered {
-    line-height: 29px;
-    padding-left: .5rem;
-    font-size: .875rem;
-}
-.gl-sjabloon-mijlpaal .select2-container .select2-selection--single .select2-selection__arrow {
-    height: 29px;
-}
-.gl-sjabloon-mijlpaal .select2-container { width: 100% !important; }
-
-@media (max-width: 992px) {
-    .gl-sm-row1 { grid-template-columns: 1fr 1fr; }
-    .gl-sm-row2 { grid-template-columns: 1fr; }
-}
-
 /* eenheden-matrix */
 .gl-unit-matrix-wrap { max-height: 70vh; overflow: auto; }
 .gl-unit-matrix { min-width: 640px; }
@@ -233,13 +607,19 @@
 .gl-um-cell { text-align: center; vertical-align: middle; min-width: 110px; }
 .gl-um-cell .btn { border: 0; background: transparent; padding: .15rem; }
 .gl-um-datum { font-size: .72rem; margin-top: .1rem; }
-.gl-um-cell.is-overdue { background: #fff2f2; }
-.gl-um-cell.m-status-2 { background: #f2faf5; }
+.gl-um-cell.is-overdue { background: var(--danger-tint, #f7ece8); }
+.gl-um-cell.m-status-2 { background: var(--lightgreen, #e8f0eb); }
 
 @media (max-width: 992px) {
-    .gl-sjabloon-mijlpaal-rij { grid-template-columns: 1fr 1fr; }
-    .gl-traject-mijlpaal { grid-template-columns: 14px 1fr auto; }
-    .gl-tm-datum { grid-column: 2; text-align: left; }
+    /* Flex i.p.v. Grid hieronder 992px: icoon/naam/actieknop delen één regel (wrapt vanzelf als
+       de naam lang is), de datum krijgt altijd zijn eigen volle-breedte regel eronder via
+       flex-basis:100% + order — betrouwbaarder dan Grid-auto-placement forceren voor een 4-koppige
+       flow waarvan het 3e item (datum) een eigen regel moet nemen maar het 4e (knop) niet. */
+    .gl-traject-mijlpaal { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .65rem; }
+    .gl-traject-mijlpaal .gl-mijlpaal-status-icon { order: 1; }
+    .gl-traject-mijlpaal .gl-tm-naam { order: 2; flex: 1 1 auto; min-width: 0; }
+    .gl-traject-mijlpaal .gl-row-action-btn { order: 3; }
+    .gl-traject-mijlpaal .gl-tm-datum { order: 4; flex: 1 1 100%; text-align: left; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -265,8 +645,6 @@
     background: var(--warning-tint); border-radius: 999px; padding: .35rem .7rem;
 }
 
-.gl-tsa-panel { padding-top: 1rem; }
-
 /* Generieke flex-rij-helper — o.a. de "Geldt voor + Verplicht"-rij in het mijlpaal-detailpaneel
    (trajectsjabloon.admin.js). Losstaand van .gl-tsa-meta-row hieronder, dat een specifiekere
    variant is voor de sjabloon-metadatarij bovenaan de pagina. */
@@ -282,6 +660,44 @@
 .gl-tsa-meta-row .gl-field { min-width: 160px; margin-bottom: 0; }
 .gl-tsa-meta-row .gl-switch-row { display: flex; align-items: center; gap: .55rem; flex: 0 0 auto; padding-bottom: .6rem; }
 .gl-tsa-meta-row .gl-switch-row label[for] { font-size: .85rem; font-weight: 500; color: #222; margin: 0; cursor: pointer; white-space: nowrap; }
+
+/* .form-control-modern (theme.css) is geschreven als .form-control.form-control-modern — een
+   <select class="form-select form-control-modern"> (Projecttype) mist de vereiste .form-control-
+   klasse en valt dus terug op Bootstrap's kortere standaard-.form-select-hoogte, los van zijn
+   46px-buren op dezelfde rij. Hier expliciet gelijkgetrokken. */
+.form-select.form-control-modern { height: 46px; padding: 6px 17px; border-color: #e7e7e7; }
+
+/* "Wat is deze mijlpaal?" — labels op één lijn, velden op één lijn eronder, toelichtingen op een
+   derde lijn: elk item krijgt in de markup enkel zijn kolom (grid-column, inline) mee; welke van
+   de 3 rijen het wordt, bepalen de selectors hieronder op elementtype (label/veld/hint), niet de
+   volgorde in de markup — robuuster dan op auto-placement leunen. Kolommen krijgen een ondergrens
+   (minmax) zodat de rij nooit onleesbaar smal wordt; ze scrollt liever horizontaal bij extreem
+   smalle schermen dan dat labels en velden uit elkaar zouden vallen — dat zou de hele afspraak
+   ("alles op één lijn") ondermijnen. align-items:center zorgt dat kortere velden (tekstvakken)
+   verticaal in het midden van hun rij komen te staan t.o.v. hogere buren (het gesegmenteerde
+   "Geldt voor"). */
+.gl-tsa-field-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 2fr) minmax(170px, 2fr) minmax(100px, 1fr) minmax(120px, 1.2fr) auto auto;
+    column-gap: 16px; row-gap: 6px; align-items: center; margin-bottom: 4px;
+    overflow-x: auto; padding-bottom: 2px;
+}
+.gl-tsa-field-label {
+    grid-row: 1; margin: 0; font-weight: 600; font-size: .8125rem; color: #26313a; white-space: nowrap;
+}
+.gl-tsa-field-row .form-control, .gl-tsa-field-row .form-select, .gl-tsa-field-row .select2-container { grid-row: 2; }
+.gl-tsa-field-row .gl-segmented, .gl-tsa-field-row .gl-toggle { grid-row: 2; }
+.gl-tsa-field-row .gl-sm-hint { grid-row: 3; margin-top: 0; }
+
+/* Select2-vervangers moeten dezelfde hoogte als hun .form-control-sm/.form-select-sm buren op
+   dezelfde rij hebben — select2 rendert zonder dit standaard hoger/lager. */
+.gl-tsa-detail-body .select2-container .select2-selection--single {
+    height: 31px; border-color: var(--border); border-radius: .2rem;
+}
+.gl-tsa-detail-body .select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 29px; padding-left: .5rem; font-size: .875rem;
+}
+.gl-tsa-detail-body .select2-container .select2-selection--single .select2-selection__arrow { height: 29px; }
 
 /* Eigen, volledig JS-eigendomsvrije toggle (i.p.v. het ios7Switch-jQuery-plugin) — nodig omdat
    Verplicht/Actief/"Mag project wijzigen" op elke selectie/re-render opnieuw getekend worden en
@@ -425,11 +841,14 @@
 .gl-tsa-section-hint { font-size: .76rem; color: var(--tsa-muted-aa); margin: .1rem 0 0; }
 .gl-tsa-section-actions { margin-left: auto; }
 
-/* "Geldt voor" — gesegmenteerde keuze */
-.gl-segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+/* "Geldt voor" — gesegmenteerde keuze. Hoogte bewust gelijk aan de 31px .form-control-sm/
+   .form-select-sm buren op dezelfde rij (padding i.p.v. een vaste min-height) — dat is smaller dan
+   de 40px-aanraakzone uit de eerdere toegankelijkheidspas; ruimere horizontale padding compenseert
+   het verkleinde verticale tikoppervlak enigszins. */
+.gl-segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; height: 31px; }
 .gl-segmented button {
     border: 0; background: #fff; color: #4a5566; font-size: .82rem; font-weight: 600;
-    padding: .45rem .9rem; min-height: 40px; cursor: pointer; transition: background-color .15s, color .15s;
+    padding: 0 1rem; height: 100%; cursor: pointer; transition: background-color .15s, color .15s;
 }
 .gl-segmented button + button { border-left: 1px solid var(--border); }
 .gl-segmented button.is-active { background: var(--primary); color: #fff; }
@@ -464,8 +883,77 @@
 .gl-tsa-actie-summary b { color: var(--primary); }
 .gl-tsa-actie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem .6rem; }
 .gl-tsa-actie-check-row { display: flex; align-items: center; gap: 1.25rem; margin-top: .55rem; flex-wrap: wrap; }
-.gl-tsa-actie-check-row label { display: flex; align-items: center; gap: .4rem; font-size: .78rem; color: #4a5566; margin: 0; cursor: pointer; }
+.gl-tsa-actie-check-row label { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: #4a5566; margin: 0; cursor: pointer; }
+/* accent-color volstaat hier (puur CSS, geen icoon-font/plugin nodig) om de checkbox in de groene
+   merkkleur te tekenen — groter dan de browserstandaard, in lijn met de rest van de schakelaars. */
+.gl-tsa-actie-check-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; flex: 0 0 auto; }
 .gl-tsa-empty-hint { font-size: .8rem; color: var(--tsa-muted-aa); padding: .5rem 0; }
+
+/* Naslagtabel "welke Parameters JSON-sleutels per actie" — dichtgeklapt, geen ruimte-impact tenzij
+   geopend. */
+.gl-tsa-params-ref { margin-bottom: .75rem; font-size: .78rem; }
+.gl-tsa-params-ref summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+.gl-tsa-params-ref summary:hover { text-decoration: underline; }
+.gl-tsa-params-ref-table { width: 100%; margin-top: .5rem; border-collapse: collapse; }
+.gl-tsa-params-ref-table th, .gl-tsa-params-ref-table td { text-align: left; padding: .4rem .5rem; border-top: 1px solid var(--border); vertical-align: top; }
+.gl-tsa-params-ref-table th { color: var(--tsa-muted-aa); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .02em; border-top: 0; }
+.gl-tsa-params-ref-table td:first-child { white-space: nowrap; font-weight: 600; }
+.gl-tsa-params-ref-table td:last-child { color: #4a5566; }
+
+/* ── Tijdlijn & simulatie ───────────────────────────────────────────────── */
+
+.gl-tsa-tl-toolbar { display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+.gl-tsa-tl-toolbar .gl-field { margin-bottom: 0; }
+.gl-tsa-tl-toolbar-hint { flex: 1 1 320px; margin: 0 0 .5rem; font-size: .78rem; color: var(--tsa-muted-aa); line-height: 1.4; }
+/* Zelfde hoogte als de 46px form-control-modern-datumbox ernaast op deze rij. */
+#tsaTlMode.gl-segmented { height: 46px; }
+
+/* Deze kaart moet altijd in één oogopslag passen — geen geneste scrollbars. .gl-form-shell__panel
+   (custom.css) zet overflow-y:auto, wat deze pagina (geen .gl-form-shell-hoogtevastzetting, zie
+   Edit.cshtml) niet wil; de samengestelde selector wint op specificiteit, ongeacht laadvolgorde. */
+.gl-form-shell__panel.gl-tsa-panel { overflow-y: visible; }
+.gl-tsa-tl { border: 1px solid var(--border); border-radius: var(--radius); background: #fff; overflow: visible; }
+.gl-tsa-tl-row { display: grid; grid-template-columns: 210px minmax(320px, 1fr); border-top: 1px dashed var(--border); }
+.gl-tsa-tl-row:first-child { border-top: 0; }
+.gl-tsa-tl-row-label { padding: .65rem 1rem; display: flex; flex-direction: column; gap: .15rem; justify-content: center; min-width: 0; }
+.gl-tsa-tl-row-naam { font-weight: 700; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-tsa-tl-row-meta { font-size: .72rem; color: var(--tsa-muted-aa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.gl-tsa-tl-track { position: relative; height: 60px; margin: 16px 44px; }
+.gl-tsa-tl-track-line { position: absolute; left: 0; right: 0; top: 12px; height: 2px; border-radius: 1px; }
+
+.gl-tsa-tl-marker { position: absolute; top: 6px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 5px; max-width: 130px; }
+.gl-tsa-tl-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; box-sizing: border-box;
+    background: var(--primary); border: 2px solid var(--primary);
+}
+.gl-tsa-tl-dot.is-auto, .gl-tsa-tl-marker.is-auto .gl-tsa-tl-dot { background: var(--primary); border-color: var(--primary); }
+.gl-tsa-tl-dot.is-handmatig, .gl-tsa-tl-marker.is-handmatig .gl-tsa-tl-dot { background: #fff; border-color: var(--tsa-muted-aa); }
+.gl-tsa-tl-dot.is-onbekend, .gl-tsa-tl-marker.is-onbekend .gl-tsa-tl-dot { background: var(--danger); border-color: var(--danger); }
+.gl-tsa-tl-marker.is-tick-only { top: 9px; }
+.gl-tsa-tl-marker.is-tick-only .gl-tsa-tl-dot { width: 6px; height: 6px; opacity: .55; }
+.gl-tsa-tl-acties { position: absolute; top: -2px; left: 15px; width: 6px; height: 6px; border-radius: 50%; background: var(--tsa-badge-warn); }
+
+.gl-tsa-tl-label { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.25; }
+.gl-tsa-tl-naam { font-size: .72rem; font-weight: 600; color: #26313a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+.gl-tsa-tl-dag { font-size: .68rem; color: var(--tsa-muted-aa); font-variant-numeric: tabular-nums; }
+.gl-tsa-tl-marker.is-onbekend .gl-tsa-tl-naam, .gl-tsa-tl-marker.is-onbekend .gl-tsa-tl-dag { color: var(--danger-text); }
+
+.gl-tsa-tl-axis-row { border-top: 1px solid var(--border); }
+.gl-tsa-tl-axis { position: relative; height: 30px; margin: 0 44px; }
+.gl-tsa-tl-tick { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.gl-tsa-tl-tick-line { width: 1px; height: 6px; background: var(--border); }
+.gl-tsa-tl-tick-label { font-size: .68rem; color: var(--tsa-muted-aa); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.gl-tsa-tl-legend { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; font-size: .76rem; color: var(--tsa-muted-aa); }
+.gl-tsa-tl-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.gl-tsa-tl-legend .gl-tsa-tl-dot { position: static; }
+.gl-tsa-tl-legend .gl-tsa-tl-acties { position: static; }
+
+@media (max-width: 767px) {
+    .gl-tsa-tl-row, .gl-tsa-tl-axis-row { grid-template-columns: 120px minmax(320px, 1fr); }
+    .gl-tsa-tl-track, .gl-tsa-tl-axis { margin: 0 24px; }
+}
 
 /* Tijdlijn & simulatie — hergebruikt .gl-traject-timeline/.gl-traject-fase/.gl-traject-mijlpaal */
 .gl-tsa-tl-dag { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--primary); }
@@ -505,3 +993,33 @@ button.gl-tsa-issue:focus-visible { outline: none; box-shadow: 0 0 0 .2rem rgba(
     .gl-tsa-detail-head { flex-direction: column; }
     .gl-tsa-detail-actions { align-self: flex-end; }
 }
+
+/* ── Instellingen/Trajectsjablonen (Index) — sjabloonlijst ──────────────────────────────── */
+
+.gl-tsa-list-table th {
+    font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--tsa-muted-aa); border-bottom: 1px solid var(--border); border-top: 0;
+    padding: .85rem 1.25rem; white-space: nowrap;
+}
+.gl-tsa-list-table td { padding: .85rem 1.25rem; vertical-align: middle; border-top: 1px solid var(--border); font-size: .875rem; }
+.gl-tsa-list-table tbody tr:first-child td { border-top: 0; }
+
+/* Numerieke kolommen (Fases/Mijlpalen/In gebruik) — rustig, tabelair, secundair aan de naam. */
+.gl-tsa-list-num { font-variant-numeric: tabular-nums; color: var(--tsa-muted-aa); font-weight: 600; }
+
+/* Projecttype als rustige neutrale pil i.p.v. kale tekst. */
+.gl-tsa-list-pill {
+    display: inline-block; padding: .2rem .65rem; border-radius: 999px;
+    background: #f1f3f7; color: #4a5566; font-size: .78rem; font-weight: 600;
+}
+
+/* "Inactief" is een neutrale levenscyclusstatus, geen probleem — bewust geen Rust/Ochre
+   (Status-Is-Not-Severity Rule, DESIGN.md), gewoon stil/neutraal grijs i.p.v. Bootstraps
+   standaard badge-kleuren. */
+.gl-tsa-list-badge-muted { background: #f1f3f7; color: var(--tsa-muted-aa); font-weight: 600; }
+
+.gl-tsa-list-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4.5rem 2rem; }
+.gl-tsa-list-empty i { font-size: 2.4rem; color: #ced4da; margin-bottom: .75rem; }
+.gl-tsa-list-empty-title { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
+.gl-tsa-list-empty-hint { font-size: .85rem; color: var(--tsa-muted-aa); max-width: 380px; margin: 0 0 1.25rem; line-height: 1.5; }
+

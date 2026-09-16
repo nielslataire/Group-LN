@@ -155,7 +155,7 @@
 			<!-- start: sidebar -->
 			@await Html.PartialAsync("_LeftSidebarPartial")
 			<!-- end: sidebar -->
-			<main id="main-content" class="content-body" tabindex="-1">
+			<main id="main-content" class="content-body @ViewBag.ContentBodyClass" tabindex="-1">
 			@RenderBody()
 			</main>
 		</div>

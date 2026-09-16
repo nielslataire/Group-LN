@@ -135,6 +135,14 @@ public class TrajectSjabloonAdminController : BaseController
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsTrajectSjablonen)]
     public async Task<IActionResult> Opslaan([FromForm] string payloadJson)
     {
+        // De JS-kant blokkeert een lege naam al vóór de POST (zie trajectsjabloon.admin.js, submit-
+        // handler op #sjabloonForm) — dit hier is enkel het vangnet voor wie dat client-side pad
+        // omzeilt. Bij een falende validatie NIET naar Index redirecten: dat gooide voorheen de hele
+        // sessie (fases/mijlpalen/acties, enkel in de browser opgebouwd) weg met niets dan een
+        // toastmelding. Terug naar de bewerkpagina van hetzelfde sjabloon (of Nieuw voor een nog
+        // niet bewaard sjabloon) is geen volledig herstel — de niet-bewaarde wijzigingen blijven wel
+        // verloren — maar laat de gebruiker tenminste in de juiste context verder werken i.p.v. naar
+        // de lijst gestuurd te worden.
         TrajectSjabloonBO? dto;
         try
         {
@@ -149,7 +157,9 @@ public class TrajectSjabloonAdminController : BaseController
         if (dto == null || string.IsNullOrWhiteSpace(dto.Naam))
         {
             AddMessage("danger", "Geef minstens een naam op voor het sjabloon.", "Opslaan mislukt");
-            return RedirectToAction(nameof(Index));
+            return dto?.Id is int existingId and > 0
+                ? RedirectToAction(nameof(Bewerken), new { id = existingId })
+                : RedirectToAction(nameof(Nieuw));
         }
 
         var saved = await _service.Upsert(dto, UserId);
