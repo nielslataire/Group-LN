@@ -1,0 +1,116 @@
+@using BOCore
+@model CPMCore.Models.Traject.DossierIndexVm
+@{
+    // Alle NutsType-waarden behalve de legacy "Telecom" (BOCore.NutsType — zie de doc-comment op
+    // dat enum-lid): nieuwe aanvragen kiezen Proximus/Telenet/Overig, Telecom blijft enkel bestaan
+    // voor reeds bestaande dossiers van vóór die opsplitsing.
+    var nutsTypes = Enum.GetValues(typeof(NutsType)).Cast<NutsType>().Where(t => t != NutsType.Telecom).ToList();
+}
+
+<div class="modal fade" id="modalNutsBulk" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-controller="ProjectDossiers" asp-action="NutsBulkAanmaken" asp-route-projectId="@Model.ProjectId">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">Nutsaansluiting per eenheid — bulk aanmaken</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Maakt hetzelfde type nutsaanvraag in één keer aan voor elke aangevinkte eenheid. EAN/meternummer wordt, indien gekend, voorgevuld vanuit de eenheid. Een eenheid die al een niet-geannuleerd dossier van dit type heeft, wordt overgeslagen.</p>
+
+                    <div class="gl-mp-modal-section">
+                        <div class="gl-mp-modal-section-title">Type &amp; eenheden</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Type nutsvoorziening</label>
+                                <select name="NutsType" class="form-select" required>
+                                    @foreach (var t in nutsTypes)
+                                    {
+                                        <option value="@((int)t)">@t.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Titel-prefix <span class="text-muted">(optioneel)</span></label>
+                                <input type="text" name="TitelPrefix" class="form-control" maxlength="150" placeholder="bv. Elektriciteit" />
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label mb-0">Eenheden</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-link btn-sm p-0 js-nuts-bulk-all">Alles</button>
+                                        <button type="button" class="btn btn-link btn-sm p-0 js-nuts-bulk-none">Geen</button>
+                                    </div>
+                                </div>
+                                <div class="gl-nuts-bulk-units">
+                                    @foreach (var u in Model.ProjectUnits)
+                                    {
+                                        <label class="gl-nuts-bulk-unit">
+                                            <input type="checkbox" name="UnitIds" value="@u.Id" />
+                                            <span>@u.Name</span>
+                                        </label>
+                                    }
+                                    @if (Model.ProjectUnits.Count == 0)
+                                    {
+                                        <p class="text-muted mb-0">Dit project heeft nog geen eenheden.</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gl-mp-modal-section">
+                        <div class="gl-mp-modal-section-title">Aanvraag &amp; netbeheerder</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Netbeheerder</label>
+                                <select name="NetbeheerderCompanyId" class="form-select js-netbeheerder-select"
+                                        style="width:100%" data-url="@Url.Action("GetCompanys", "Projecten")"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                <select name="Status" class="form-select">
+                                    @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
+                                    {
+                                        <option value="@((int)s)">@s.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Aanvraagdatum</label>
+                                <input type="date" name="AanvraagDatum" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Verwachte afhandeling</label>
+                                <input type="date" name="VerwachteAfhandelingDatum" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gl-mp-modal-section">
+                        <div class="gl-mp-modal-section-title">Contact &amp; omschrijving</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Extern contact — naam</label>
+                                <input type="text" name="ExterneContactNaam" class="form-control" maxlength="150" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Extern contact — e-mail</label>
+                                <input type="email" name="ExterneContactEmail" class="form-control" maxlength="254" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Omschrijving</label>
+                                <textarea name="Omschrijving" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary">Aanmaken</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -28,13 +28,18 @@
 </div> *@
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
 @if (Model.ClientAccounts.Any())
-{<div class="card card-modern">
+{
+@* Zoekveld + kolommenfilter — colvis-knop zit bewust terug ÍN dezelfde .input-group als het
+   zoekveld (op uitdrukkelijk verzoek — DESIGN.md "Table search + column filter" hield hiervoor
+   het omgekeerde aan; die regel is inmiddels bijgewerkt, zie daar). *@
+<div class="card card-modern">
 	<div class="card-body">
 		<div class="input-group">
 			<span class="input-group-text">
-				<i class="bx bx-search"></i>
+				<i class="ph ph-magnifying-glass" aria-hidden="true"></i>
 			</span>
-			<input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+			<input type="text" class="form-control" name="search-term" id="search-term" placeholder="Zoeken…" aria-label="Zoeken in klanten">
+			<div id="colvis-container"></div>
 		</div>
 	</div>
 </div>
@@ -42,16 +47,11 @@
 <div class="card card-modern">
 	<div class="card-body">
 		<div class="datatables-header-footer-wrapper mt-2">
-			<div class="datatable-header">
-				
-			</div>
-
-			<table class="table table-responsive-md table-hover mb-0 gl-table-min-w" id="datatable-clients-list" data-toggle="table" data-show-columns="true" data-toolbar="#toolbar" data-toolbar-align="right">
-
+			<table class="table table-responsive-md table-hover mb-0 gl-table-min-w" id="datatable-clients-list">
 				<thead>
 					<tr>
 						<th>Naam</th>
-						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 1).Count()) > 0) 
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 1).Count()) > 0)
 						{
 							<th>Wooneenheid</th>
 						}
@@ -67,10 +67,13 @@
 						{
 							<th class="hidden-xs">Berging</th>
 						}
-						<th class="hidden-xs" data-visible="false" data-sortable="true">Verkoopdatum</th>
-						<th class="hidden-xs" data-visible="false" data-sortable="true">Aktedatum</th>
-						<th class="hidden-xs" data-visible="false" data-sortable="true">Opleverdatum</th>
-						<th class="hidden-xs noVis" data-sortable="false">Acties</th>
+						@* data-visible/data-sortable waren Bootstrap Table-plugin-attributen (data-toggle="table",
+						   nu verwijderd) — DataTables v2 leest die niet. Alle kolommen staan standaard aan;
+						   colvis (hierboven) laat een gebruiker zelf kolommen verbergen. *@
+						<th class="hidden-xs">Verkoopdatum</th>
+						<th class="hidden-xs">Aktedatum</th>
+						<th class="hidden-xs">Opleverdatum</th>
+						<th class="hidden-xs noVis text-end" data-orderable="false">Acties</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -170,11 +173,14 @@
 											@Html.DisplayFor(m => item.Client.DeliveryDate)
 										}
 							</td>
-							<td class="actions">
-									<a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editAccount" href="@Url.Action("EditProject", "Klanten", new { projectid = Model.ProjectId, clientid = item.Client.Id, activetab = 0 })"><i class="bx bx-edit"></i></a>
+							<td class="text-end text-nowrap">
+								@* DESIGN.md "Table row actions (gl-row-action-btn)" i.p.v. de kale <a>+icoon-variant. *@
+								<span class="gl-row-actions">
+									<a class="gl-row-action-btn" title="Bewerken" aria-label="@(item.Client.DisplayName) bewerken" href="@Url.Action("EditProject", "Klanten", new { projectid = Model.ProjectId, clientid = item.Client.Id, activetab = 0 })"><i class="ph ph-note-pencil" aria-hidden="true"></i></a>
                                                 @if(canDeleteProjectCustomers) {
-                                                <a href="#modaldeleteclient" data-toggle="tooltip" id="deleteClient" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteClient" data-id="@item.Client.Id"><i class="bx bx-trash "></i></a>
+                                                <a href="#modaldeleteclient" title="Verwijderen" aria-label="@(item.Client.DisplayName) verwijderen" class="gl-row-action-btn is-danger deleteClient" data-id="@item.Client.Id"><i class="ph ph-trash" aria-hidden="true"></i></a>
 												}
+								</span>
 							</td>
 						</tr>
 
@@ -212,15 +218,17 @@ else
 {
 <div class="card card-modern mb-4">
 	<div class="card-body align-items-center text-center card-big-info">
+		@* Kopie was "Nog geen documenten toegevoegd" met bx-file — overgenomen van een documenten-
+		   lege-staat en nooit aangepast voor Klanten. bx-group is hetzelfde icoon als de Klanten-
+		   navigatielink zelf (Projecten/Detail.cshtml). *@
 		<div class="col-12 mb-3 gl-empty-state-icon">
-			<i class="bx bx-file"></i>
-
+			<i class="ph ph-users" aria-hidden="true"></i>
 		</div>
 		<div class="col-12 text-muted mb-3">
-			<h4>Nog geen documenten toegevoegd</h4>
+			<h4>Nog geen klanten toegevoegd</h4>
 		</div>
 		<div class="col-12 text-muted">
-				<a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-default btn-md">+ Een eerste klant toevoegen</a>
+				<a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-md"><i class="ph ph-plus me-1" aria-hidden="true"></i>Een eerste klant toevoegen</a>
 		</div>
 	</div>
 </div>

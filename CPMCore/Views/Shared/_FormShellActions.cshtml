@@ -10,7 +10,19 @@
 *@
 <div class="gl-form-shell__actions">
     <a href="@Model.CancelUrl" class="cancel-button btn btn-light border btn-px-4 py-3 font-weight-semibold text-color-dark text-3">@Model.CancelLabel</a>
-    <button type="submit" @(!string.IsNullOrEmpty(Model.SubmitFormId) ? $"form=\"{Model.SubmitFormId}\"" : "") class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+    @{
+        // Bewust een "echte" conditionele Razor-attribuutwaarde (form="@(... : null)"), niet zelf
+        // form="...ID..." als string samenstellen in een @(...)-expressie: Razor encodeert de
+        // TEKST-inhoud van zo'n expressie HTML-veilig (de aanhalingstekens werden &quot;), waardoor
+        // het attribuut letterlijk `form="&quot;ID&quot;"` werd — de browser zocht dan naar een
+        // element met ID `"ID"` (mét aanhalingstekens), vond niks, en de knop hing aan geen enkel
+        // formulier: klikken deed dan zonder enige fout helemaal niets (gevonden via een gebruiker
+        // die "opslaan doet niets" meldde op TrajectSjabloonAdmin/Edit.cshtml, dat als enige pagina
+        // SubmitFormId gebruikt). Met deze syntax laat Razor het hele attribuut gewoon weg wanneer
+        // de waarde null is (nodig voor Projecten/Bewerken en /Toevoegen, die geen SubmitFormId
+        // meegeven — hun knop hoort dan aan de omvattende <form> te hangen, niet aan form="").
+    }
+    <button type="submit" form="@(string.IsNullOrEmpty(Model.SubmitFormId) ? null : Model.SubmitFormId)" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
         <i class="bx @Model.SubmitIcon text-4 me-2" aria-hidden="true"></i>@Model.SubmitLabel
     </button>
 </div>

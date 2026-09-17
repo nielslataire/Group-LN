@@ -6,23 +6,23 @@
     var t = Model.Traject;
 
     // Icoon per MijlpaalStatus (0 Open .. 4 Geblokkeerd) — vervangt de tekstbadge (.gl-mijlpaal-
-    // status-icon in traject.css draagt de kleur; hier enkel de vorm). "Bezig" = bx-time-five
-    // (klok, universeel "in behandeling") i.p.v. de eerdere bx-loader-alt, die eerder "actief aan
-    // het laden" suggereert dan een blijvende status. Zelfde mapping ook lokaal in
-    // _Timeline.cshtml/_UnitMatrix.cshtml — 5 cases, geen gedeelde helper nodig hiervoor. Gebruikt
-    // bewust geen enkel icoon dat ook als actie-icoon voorkomt (bx-check-circle stond hier eerst,
-    // botste met de "status wijzigen"-knop ernaast, zie die knop hieronder — bx-repeat. bx-transfer
-    // was het eerste alternatief maar rendert niet met dit project's boxicons-build (CDN "basic"
-    // subset, zie _Layout.cshtml — niet de volledige set; enkel iconen die al elders in de app
-    // bewezen renderen gebruiken, niet enkel "bestaat in boxicons").
+    // status-icon in traject.css draagt de kleur; hier enkel de vorm). Phosphor (DESIGN.md
+    // "Icons" — ph-*, Regular-gewicht; deze pagina was voordien Boxicons, hier gemigreerd).
+    // "Bezig" = ph-clock (universeel "in behandeling"). Zelfde mapping ook lokaal in
+    // _Timeline.cshtml/_UnitMatrix.cshtml (die twee behouden ph-check-circle) — enkel hier in de
+    // Mijlpalen-tabel wordt "Bereikt" ph-check (kale vink, geen eigen cirkelrand): traject.css
+    // geeft déze tabel se s-2-icoon een volle achtergrondcirkel (omgekeerde kleursetting — groen
+    // vlak, wit icoon), dus een icoon dat zelf ook al een cirkel tekent zou dubbelop ogen. Gebruikt
+    // bewust geen enkel icoon dat ook als actie-icoon voorkomt in dezelfde rij (zie de "status
+    // wijzigen"-knop hieronder — ph-repeat, geen overlap met welk statusicoon dan ook).
     string StatusIcon(int status) => status switch
     {
-        0 => "bx-circle",
-        1 => "bx-time-five",
-        2 => "bx-check-circle",
-        3 => "bx-minus-circle",
-        4 => "bx-block",
-        _ => "bx-circle"
+        0 => "ph-circle",
+        1 => "ph-clock",
+        2 => "ph-check",
+        3 => "ph-minus-circle",
+        4 => "ph-prohibit",
+        _ => "ph-circle"
     };
 }
 
@@ -35,8 +35,9 @@
 }
 
 @* Geen eigen titel/subtitel hier — de topbar (SetPageHeader in ProjectTrajectController.Index)
-   toont icoon + "{project} - Traject" al; een lokale h1/h5 zou dat woordelijk herhalen
-   (zelfde regel als TrajectSjabloonAdmin, zie DESIGN.md "Paginakop (gl-page-header)"). *@
+   toont icoon + "{project} - Traject" al; een lokale h1/h5 zou dat woordelijk herhalen. Was al
+   zo voordat de regel bestond — zie DESIGN.md "The Content Body Has No Page Chrome Rule", die
+   dit later expliciet maakte (met deze pagina als het voorbeeld dat het al goed deed). *@
 @section PageActions {
     @if (t != null)
     {
@@ -69,7 +70,7 @@
                 <div class="card card-modern">
                     <div class="card-body">
                         <div class="gl-traject-empty">
-                            <i class="bx bx-git-branch" aria-hidden="true"></i>
+                            <i class="ph ph-git-branch" aria-hidden="true"></i>
                             <p class="gl-traject-empty-title">Nog geen traject</p>
                             <p class="gl-traject-empty-hint">
                                 Maak een traject aan op basis van een sjabloon. Fases en mijlpalen worden gekopieerd
@@ -93,7 +94,7 @@
                                     <input type="date" name="startdatum" id="traject-startdatum" class="form-control form-control-modern" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
                                 </div>
                                 <button type="submit" class="btn btn-primary" style="height:46px" @(Model.Sjablonen.Count == 0 ? "disabled" : "")>
-                                    <i class="bx bx-check me-1" aria-hidden="true"></i>Traject aanmaken
+                                    <i class="ph ph-check me-1" aria-hidden="true"></i>Traject aanmaken
                                 </button>
                             </form>
                             @if (Model.Sjablonen.Count == 0)
@@ -117,23 +118,23 @@
                     <div class="gl-form-shell__tabs gl-traject-tabs" role="tablist" aria-label="Traject" data-tabgroup="traject-index">
                         <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-tijdlijn" data-tab="tijdlijn"
                                 aria-controls="tab-tijdlijn" aria-selected="true" tabindex="0">
-                            <i class="bx bx-timeline" aria-hidden="true"></i><span>Tijdlijn</span>
+                            <i class="ph ph-flow-arrow" aria-hidden="true"></i><span>Tijdlijn</span>
                         </button>
                         <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-mijlpalen" data-tab="mijlpalen"
                                 aria-controls="tab-mijlpalen" aria-selected="false" tabindex="-1">
-                            <i class="bx bx-flag" aria-hidden="true"></i><span>Mijlpalen</span>
+                            <i class="ph ph-flag" aria-hidden="true"></i><span>Mijlpalen</span>
                         </button>
                         @if (Model.EenheidMijlpalen.Count > 0 || Model.ProjectUnits.Count > 0)
                         {
                             <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-eenheden" data-tab="eenheden"
                                     aria-controls="tab-eenheden" aria-selected="false" tabindex="-1">
-                                <i class="bx bx-grid-alt" aria-hidden="true"></i><span>Per eenheid</span>
+                                <i class="ph ph-grid-four" aria-hidden="true"></i><span>Per eenheid</span>
                                 <span class="gl-form-shell__tab-badge">@Model.EenheidMijlpalen.Count</span>
                             </button>
                         }
                         <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-kalender" data-tab="kalender"
                                 aria-controls="tab-kalender" aria-selected="false" tabindex="-1">
-                            <i class="bx bx-calendar" aria-hidden="true"></i><span>Kalender</span>
+                            <i class="ph ph-calendar" aria-hidden="true"></i><span>Kalender</span>
                         </button>
                     </div>
                     <div class="gl-traject-stats" aria-label="Trajectstatus">
@@ -150,23 +151,30 @@
                             @await Html.PartialAsync("_Timeline", Model)
                         </div>
                         <div id="tab-mijlpalen" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-mijlpalen" tabindex="0" hidden>
-                            @* Zelfde zoekveld + kolommenfilter-patroon als Projecten/DetailClients (Clients.cshtml):
-                               .dt-search van DataTables verborgen, eigen #mp-search-term i.p.v., colvis-knop
-                               verplaatst naar #mp-colvis-container. Zoekveld neemt de volledige breedte in
-                               (flex-grow:1) i.p.v. een vaste max-width, kolommenknop ernaast met echte gap
-                               i.p.v. samengeklonken in dezelfde input-group-rand. Zie traject.index.js voor
-                               de DataTable-init. *@
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                                <div class="input-group flex-grow-1">
-                                    <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+                            @* Zelfde zoekveld + kolommenfilter-patroon als Projecten/DetailClients (Clients.cshtml,
+                               DESIGN.md "Table search + column filter"): .dt-search van DataTables verborgen,
+                               eigen #mp-search-term i.p.v., colvis-knop in dezelfde .input-group als het
+                               zoekveld met een kleine tussenruimte (8px) i.p.v. Bootstrap's naadloze verbinding
+                               of — de eerdere versie hier — een volledig losse tweede doos ernaast. Zie
+                               traject.index.js voor de DataTable-init en projecten-custom.css#mp-colvis-container
+                               voor de tussenruimte/afronding (herbruikt van de Klanten-tabel). *@
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
                                     <input type="text" class="form-control" id="mp-search-term" placeholder="Zoeken…" aria-label="Zoeken in mijlpalen" />
+                                    <div id="mp-colvis-container"></div>
                                 </div>
-                                <div id="mp-colvis-container" class="flex-shrink-0"></div>
                             </div>
+                            @* .table-responsive: enkel de tabel zelf scrolt horizontaal op smalle
+                               schermen i.p.v. de hele pagina te laten overlopen — DataTables wrapt
+                               zijn eigen #datatable-mijlpalen_wrapper hier direct omheen, zodat de
+                               zoek/kolommen-rij erboven en de paginering eronder gewoon volle breedte
+                               blijven (/impeccable adapt). *@
+                            <div class="table-responsive">
                             <table id="datatable-mijlpalen" class="table table-hover w-100">
                                 <thead>
                                     <tr>
-                                        <th>Status</th><th>Mijlpaal</th><th>Fase</th><th>Type</th><th class="text-end">Streefdatum</th>
+                                        <th class="text-center"><span class="visually-hidden">Status</span></th><th>Mijlpaal</th><th>Fase</th><th>Type</th><th class="text-end">Streefdatum</th>
                                         <th class="text-end">Werkelijk</th><th>Verantw.</th><th class="noVis" data-orderable="false"></th>
                                     </tr>
                                 </thead>
@@ -177,9 +185,9 @@
                                     var overdue = eff is DateOnly d && d < DateOnly.FromDateTime(DateTime.Today)
                                                   && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
                                     <tr>
-                                        <td data-order="@m.Status">
+                                        <td class="text-center" data-order="@m.Status">
                                             @{ var statusLabel = ((MijlpaalStatus)m.Status).GetDisplayName(); }
-                                            <span class="gl-mijlpaal-status-icon s-@m.Status" title="@statusLabel"><i class="bx @StatusIcon(m.Status)" aria-hidden="true"></i></span>
+                                            <span class="gl-mijlpaal-status-icon s-@m.Status" title="@statusLabel"><i class="ph @StatusIcon(m.Status)" aria-hidden="true"></i></span>
                                             <span class="visually-hidden">@statusLabel</span>
                                         </td>
                                         <td>
@@ -190,7 +198,7 @@
                                             }
                                             @if (Model.PuntenPerMijlpaal.TryGetValue(m.Id, out var puntenAantal) && puntenAantal > 0)
                                             {
-                                                <span class="badge bg-light text-dark ms-1" title="Gekoppelde punten"><i class="bx bx-error-circle"></i> @puntenAantal</span>
+                                                <span class="badge bg-light text-dark ms-1" title="Gekoppelde punten"><i class="ph ph-warning-circle"></i> @puntenAantal</span>
                                             }
                                         </td>
                                         <td>@(m.ProjecttrajectFase?.Naam ?? "—")</td>
@@ -200,14 +208,15 @@
                                         <td>@(m.VerantwoordelijkeRol.HasValue ? ((InterneRol)m.VerantwoordelijkeRol.Value).GetDisplayName() : "—")</td>
                                         <td class="text-end text-nowrap">
                                             <span class="gl-row-actions">
-                                                <button type="button" class="gl-row-action-btn js-mijlpaal-status" data-id="@m.Id" data-naam="@m.Naam" data-status="@m.Status" title="Status wijzigen" aria-label="Status wijzigen van @m.Naam"><i class="bx bx-repeat" aria-hidden="true"></i></button>
-                                                <button type="button" class="gl-row-action-btn js-mijlpaal-edit" data-id="@m.Id" title="Bewerken" aria-label="@m.Naam bewerken"><i class="bx bx-edit" aria-hidden="true"></i></button>
+                                                <button type="button" class="gl-row-action-btn js-mijlpaal-status" data-id="@m.Id" data-naam="@m.Naam" data-status="@m.Status" title="Status wijzigen" aria-label="Status wijzigen van @m.Naam"><i class="ph ph-repeat" aria-hidden="true"></i></button>
+                                                <button type="button" class="gl-row-action-btn js-mijlpaal-edit" data-id="@m.Id" title="Bewerken" aria-label="@m.Naam bewerken"><i class="ph ph-note-pencil" aria-hidden="true"></i></button>
                                             </span>
                                         </td>
                                     </tr>
                                 }
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                         @if (Model.EenheidMijlpalen.Count > 0 || Model.ProjectUnits.Count > 0)
                         {

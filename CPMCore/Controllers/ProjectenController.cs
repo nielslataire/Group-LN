@@ -210,7 +210,10 @@ namespace CPMCore.Controllers
                 return Json(Array.Empty<object>());
 
             var results = _uow.Projects.GetNoTracking()
-                .Where(p => p.ProjectName.Contains(q))
+                .Where(p => p.ProjectName.Contains(q)
+                            || p.Street.Contains(q)
+                            || p.PostalCode.Gemeente.Contains(q)
+                            || p.PostalCode.Postcode.Contains(q))
                 .OrderBy(p => p.ProjectName)
                 .Take(10)
                 .Select(p => new { id = p.ProjectId, name = p.ProjectName })
@@ -979,6 +982,7 @@ namespace CPMCore.Controllers
         public ActionResult DetailClients(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            SetPageHeader("ph ph-users", "Klanten");
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectCustomers = _ps.HasWrite(PermissionCodes.ProjectsCustomers);
             ViewBag.CanDeleteProjectCustomers = _ps.HasDelete(PermissionCodes.ProjectsCustomers);
@@ -2318,7 +2322,7 @@ namespace CPMCore.Controllers
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectSuppliers = _ps.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _ps.HasDelete(PermissionCodes.ProjectsSuppliers);
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Leveranciers");
+            SetPageHeader("ph ph-hard-hat", $"{model.ProjectName} - Leveranciers");
             return View(model);
         }
 

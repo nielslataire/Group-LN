@@ -536,6 +536,48 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     .gl-page-header__actions { width: 100%; }
 }
 
+/* ── Rij-acties in een tabel (gl-row-actions / gl-row-action-btn) ─────────
+   DESIGN.md "Table row actions" documenteert dit als hét app-brede patroon voor
+   nieuwe tabellen, maar de klasse zelf leefde tot nu toe enkel in traject.css
+   (ProjectTraject-only) — onbruikbaar op elke andere pagina die 'm probeerde te
+   hergebruiken. Hierheen verplaatst (gedeeld, altijd geladen) zodat DESIGN.md's
+   eigen claim klopt; traject.css's eigen kopie blijft ongemoeid staan (identieke
+   waarden, geen visueel verschil, en het risicoloze pad t.o.v. die pagina
+   aanraken tijdens een niet-gerelateerde pas). Zelfde "rustig icoon, groen bij
+   interactie"-taal als gl-page-header__back hierboven, gecomprimeerd naar 30px
+   voor een dichte tabelrij. Referentie: `Projecten/Partials/Clients.cshtml`,
+   `ProjectTraject/Index.cshtml`. */
+.gl-row-actions { display: inline-flex; align-items: center; gap: 0; }
+.gl-row-action-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; flex: 0 0 auto; border: 0; border-radius: var(--radius, 7px);
+    background: transparent; color: var(--tsa-muted-aa, #5b6472); cursor: pointer;
+    transition: background-color .15s ease, color .15s ease; touch-action: manipulation;
+}
+.gl-row-action-btn i { font-size: 16px; }
+.gl-row-action-btn:hover { background: var(--lightgreen, #e8f0eb); border: 1px solid #bcd6c7; color: #0f4b40; }
+.gl-row-action-btn:focus-visible { outline: none; box-shadow: 0 0 0 .15rem rgba(10, 90, 59, .25); }
+.gl-row-action-btn.is-danger:hover { background: var(--danger-tint, #f7ece8); border-color: #eec3b8; color: var(--danger-text, #8a3420); }
+/* `.table td.datatable-actions a{background:transparent;color:inherit}` (below — the older
+   bare-<a>-icon convention, auto-applied to ANY table with an "Acties" header by custom.js'
+   applyActionColumnStyles(), a global script) outranks .gl-row-action-btn's own rules by pure
+   specificity (.table+td+.datatable-actions+a = 3 classes/types vs. .gl-row-action-btn's 1), so
+   a gl-row-action-btn inside such a column silently never showed its hover background/border —
+   the higher-specificity rest-state rule always won, hover or not. Its nested "i{color:inherit
+   !important}" also freezes the icon to whatever the <a> currently computes, so these overrides
+   fix the <a>/button itself; the icon then inherits correctly since `inherit` is live, not a
+   snapshot. Re-assert at matching-or-higher specificity rather than editing that older rule,
+   which the bare-<a> convention still legitimately needs elsewhere (DESIGN.md "Table row
+   actions"). */
+.table td.datatable-actions .gl-row-action-btn { background: transparent; color: var(--tsa-muted-aa, #5b6472); }
+.table td.datatable-actions .gl-row-action-btn:hover { background: var(--lightgreen, #e8f0eb); border: 1px solid #bcd6c7; color: #0f4b40; }
+.table td.datatable-actions .gl-row-action-btn:focus-visible { outline: none; box-shadow: 0 0 0 .15rem rgba(10, 90, 59, .25); }
+.table td.datatable-actions .gl-row-action-btn.is-danger:hover { background: var(--danger-tint, #f7ece8); border-color: #eec3b8; color: var(--danger-text, #8a3420); }
+/* Same rule's "i{font-size:1.25rem !important}" also forces every icon in an Acties column to
+   20px, drowning out .gl-row-action-btn's own 16px — needs !important too to win (specificity
+   still breaks ties between two !important rules; this selector is the more specific one). */
+.table td.datatable-actions .gl-row-action-btn i { font-size: 16px !important; }
+
 /* ── Formulierschil (gl-form-shell) ──────────────────────────────────────
    Herbruikbare, volle-breedte "one-screen" schil voor tabformulieren.
    .gl-form-shell__tabs zit BUITEN de kaart — het is de primaire in-page
@@ -1692,6 +1734,22 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     html.fixed .inner-body {
         border-top: 71px solid transparent;
         margin-top: -68px;
+    }
+}
+
+/* Detail menu positie correctie, mobiel: theme.css's ongeconditioneerde ".content-with-menu
+   {margin:-20px -15px 0}" stapelt met .inner-wrapper's 72px padding-top en .content-body's eigen
+   10px margin-top (die laatste enkel op ≥768px geannuleerd wordt, zie .gl-traject-flush in
+   traject.css) tot 72+10-20=62px totale ruimte boven .content-with-menu — tegenover de 60px
+   mobiele topbar (DESIGN.md) maar 2px marge. Genoeg om Shared/DetailMenu.cshtml's
+   ".inner-menu-toggle" ("Toon Menu") net (te net — /impeccable adapt) onder de vaste topbar te
+   houden. -10px i.p.v. -20px geeft 10px extra lucht i.p.v. op de rand te blijven balanceren.
+   !important: dezelfde selector/specificiteit (0,0,1,0) als theme.css's eigen regel — zonder dit
+   wint bij gelijke specificiteit normaal de laatst-geladen stylesheet (custom.css, na theme.css),
+   maar bleek in de praktijk niet dominant genoeg. */
+@media only screen and (max-width: 767.98px) {
+    .content-with-menu {
+        margin-top: -10px !important;
     }
 }
 

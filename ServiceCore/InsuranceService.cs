@@ -106,7 +106,7 @@ namespace ServiceCore
             // Reeds vervallen
             var expired = q.Where(m =>
                 m.Startdate.HasValue &&
-                m.Startdate.Value >= DateOnly.FromDateTime(DateTime.Now.AddMonths(-(m.Period ?? 0) - (m.ExtensionPeriod ?? 0))));
+                m.Startdate.Value < DateOnly.FromDateTime(DateTime.Now.AddMonths(-(m.Period ?? 0) - (m.ExtensionPeriod ?? 0))));
 
             foreach (var e in expired)
             {

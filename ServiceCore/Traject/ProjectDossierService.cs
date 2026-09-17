@@ -29,7 +29,7 @@ public class ProjectDossierService : IProjectDossierService
 
     public async Task<List<ProjectDossier>> Search(int projectId, DossierFilterBO f)
     {
-        var q = _db.ProjectDossier.Include(d => d.Unit).Where(d => d.ProjectId == projectId);
+        var q = _db.ProjectDossier.Include(d => d.Unit).Include(d => d.NutsAansluiting).Where(d => d.ProjectId == projectId);
 
         if (f.DossierKind.HasValue) q = q.Where(d => d.DossierKind == f.DossierKind.Value);
         if (f.Status.HasValue) q = q.Where(d => d.Status == f.Status.Value);

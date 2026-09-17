@@ -25,6 +25,8 @@ public class MijlpaalBindingResolver : IMijlpaalBindingResolver
             ComputedBinding.ConnectionSettlement => ResolveConnectionSettlement(ctx),
             ComputedBinding.Dossier => ResolveDossier(m, ctx),
             ComputedBinding.DossierSubstap => ResolveDossierSubstap(m, ctx),
+            ComputedBinding.AlleGekoppeldeDossierSubstappen => ResolveAlleGekoppeldeDossierSubstappen(m, ctx),
+            ComputedBinding.AlleNutsaanvragenSubstap => ResolveAlleNutsaanvragenSubstap(m, ctx),
             _ => null // Handmatig, onbekend
         };
     }
@@ -51,6 +53,68 @@ public class MijlpaalBindingResolver : IMijlpaalBindingResolver
         return stap.Status == (int)DossierSubstapStatus.Afgerond
             ? new BindingUitkomst(true, stap.Datum)
             : new BindingUitkomst(false, null);
+    }
+
+    /// <summary>
+    /// Zoals <see cref="ResolveDossierSubstap"/>, maar over élk dossier gekoppeld aan deze mijlpaal
+    /// (ProjectDossierMijlpaal — een mijlpaal kan aan meerdere dossiers hangen, bv. één
+    /// nutsaanvraag per eenheid). Bereikt pas zodra elk gekoppeld dossier de stap (BronParam)
+    /// heeft afgerond; geen gekoppelde dossiers of één ontbrekende/niet-afgeronde stap = niet bereikt.
+    /// Werkelijke datum = de laatste (strengste) van de individuele stap-datums.
+    /// </summary>
+    private static BindingUitkomst? ResolveAlleGekoppeldeDossierSubstappen(Mijlpaal m, TrajectBronContext ctx)
+    {
+        if (string.IsNullOrWhiteSpace(m.BronParam)
+            || !ctx.GekoppeldeDossierIdsPerMijlpaal.TryGetValue(m.Id, out var dossierIds) || dossierIds.Count == 0)
+            return new BindingUitkomst(false, null);
+
+        DateOnly? laatste = null;
+        foreach (var dossierId in dossierIds)
+        {
+            if (!ctx.SubstappenPerDossier.TryGetValue(dossierId, out var stappen))
+                return new BindingUitkomst(false, null);
+
+            var stap = stappen.FirstOrDefault(s => string.Equals(s.Code, m.BronParam, StringComparison.OrdinalIgnoreCase));
+            if (stap == null || stap.Status != (int)DossierSubstapStatus.Afgerond)
+                return new BindingUitkomst(false, null);
+
+            if (stap.Datum is DateOnly d && (laatste == null || d > laatste))
+                laatste = d;
+        }
+
+        return new BindingUitkomst(true, laatste);
+    }
+
+    /// <summary>
+    /// Zoals <see cref="ResolveAlleGekoppeldeDossierSubstappen"/>, maar zonder de koppel-stap: neemt
+    /// automatisch élk niet-geannuleerd Nutsaansluiting-dossier van het project (geen "Koppel"-actie
+    /// op de mijlpaal nodig — nieuwe nutsdossiers tellen vanzelf mee zodra ze bestaan). Geen
+    /// nutsdossiers (nog) = niet bereikt, net als hierboven.
+    /// </summary>
+    private static BindingUitkomst? ResolveAlleNutsaanvragenSubstap(Mijlpaal m, TrajectBronContext ctx)
+    {
+        if (string.IsNullOrWhiteSpace(m.BronParam)) return new BindingUitkomst(false, null);
+
+        var nutsDossierIds = ctx.DossiersById.Values
+            .Where(d => d.DossierKind == (int)DossierKind.NutsAansluiting && d.Status != (int)DossierStatus.Geannuleerd)
+            .Select(d => d.Id).ToList();
+        if (nutsDossierIds.Count == 0) return new BindingUitkomst(false, null);
+
+        DateOnly? laatste = null;
+        foreach (var dossierId in nutsDossierIds)
+        {
+            if (!ctx.SubstappenPerDossier.TryGetValue(dossierId, out var stappen))
+                return new BindingUitkomst(false, null);
+
+            var stap = stappen.FirstOrDefault(s => string.Equals(s.Code, m.BronParam, StringComparison.OrdinalIgnoreCase));
+            if (stap == null || stap.Status != (int)DossierSubstapStatus.Afgerond)
+                return new BindingUitkomst(false, null);
+
+            if (stap.Datum is DateOnly d && (laatste == null || d > laatste))
+                laatste = d;
+        }
+
+        return new BindingUitkomst(true, laatste);
     }
 
     /// <summary>Int-parameter voor bindingen die op een id/type werken: eerst <c>BronRefId</c>, anders <c>BronParam</c> als getal.</summary>

@@ -309,6 +309,30 @@ icon buttons with small gaps.
 Tables collapse or scroll, controls stay ≥40px tall, the green mobile bar is the
 only chrome. On-site phone use is a first-class case, not a fallback.
 
+**`.content-with-menu`'s mobile top-clearance is razor-thin — treat it as
+fragile, not fixed.** On any project sub-page with the `DetailMenu` sidebar
+(`ProjectTraject`, `DetailClients`, etc.), the vertical budget above
+`Shared/DetailMenu.cshtml`'s mobile "Toon Menu" toggle stacks three
+unconditional numbers that were never designed together: `.inner-wrapper`'s
+`72px` `padding-top` (`custom.css`) + `.content-body`'s own `10px`
+`margin-top` (`theme.css`, `html.modern.fixed .content-body`) − `.content-with-menu`'s
+own `-20px` `margin-top` (`theme.css`, unconditional) = `62px` of clearance
+against a `60px` mobile topbar — **2px of slack, app-wide, on every page
+using this shell.** `ProjectTraject/Index.cshtml`'s `ViewBag.ContentBodyClass
+= "gl-traject-flush"` (see the Tabstrip breakout-margin bullet above)
+zeroed that `10px` unconditionally when it was first added, which ate the
+2px and then some — the toggle rendered visibly clipped behind the mobile
+topbar, a real regression caught only by testing the phone view directly.
+Fixed two ways: `gl-traject-flush`'s cancellation is now scoped to
+`≥768px` only (`traject.css`), and `custom.css` independently widens the
+shared budget for every page on this shell via
+`@media (max-width:767.98px) { .content-with-menu { margin-top: -10px
+!important; } }` (`!important` because it has the same specificity as
+theme.css's own unconditional rule and source order alone wasn't reliably
+winning). **Before touching any of `.inner-wrapper`/`.content-body`/
+`.content-with-menu`'s vertical spacing again, re-add up this chain first**
+— it is not a coincidence-proof margin, it is a coincidence.
+
 ## Elevation & Depth
 
 The system is **near-flat with a soft lift**. Surfaces are separated primarily by
@@ -351,6 +375,25 @@ chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is stil
 7px, a nav tile in content is still 14px.
 
 ## Components
+
+**The Shared-CSS-By-Default Rule.** When a pattern documented anywhere in
+this file is genuinely a *component* — something another page could
+plausibly reuse (a button variant, a row-action pattern, a status icon, a
+card shape) rather than something specific to one page's own layout — its
+CSS belongs in `custom.css` (loaded on every page) by default, not in a
+page- or feature-scoped file (`traject.css`, `projecten-custom.css`,
+`budget-wizard.css`, …). This isn't a style preference; it's already caused a
+real bug: `gl-row-action-btn` was written straight into `traject.css` when
+first built, and DESIGN.md documented it as "the current pattern for new
+tables" without noticing that claim was only true on `ProjectTraject` — any
+other page reaching for it got nothing, silently, no error. Moved to
+`custom.css` once discovered (see Table row actions). Before adding a new
+component's CSS, ask: would a page other than this one ever want this? If
+the honest answer is "maybe" as much as "no," default to `custom.css`. Only
+keep something page-scoped when it's genuinely bound to that page's own
+markup/data shape (e.g. `#mp-search-term`-specific selectors, a Kalender-only
+layout grid) — a *reusable* shape wrapped around page-specific *content* is
+still shared CSS with page-specific markup, not the other way around.
 
 ### Buttons
 - **Shape:** gently rounded (7px), 1px border matching fill.
@@ -434,6 +477,22 @@ or repurpose that class itself, add the icon variant alongside it instead.
   Geblokkeerd `bx-block`. Color from the same tokens as the badge (`--primary`
   bereikt, `--warning` bezig, `--danger` geblokkeerd, muted neutral for the
   rest) — never a second parallel palette for the icon form.
+- **A terminal "reached/complete" state can invert instead of just recoloring
+  — solid fill, white glyph, and a plainer icon than the other states.**
+  `ProjectTraject/Index.cshtml`'s Mijlpalen-tabel specifically (not
+  `_Timeline`/`_UnitMatrix`, which keep the outline form) renders Bereikt
+  (`s-2`) as a small filled circle (`20px`, down from the shared `30px` —
+  a badge reads as a heavier accent than an outline icon at the same size,
+  so it's deliberately smaller) in `--kal2-bereikt` with a plain white
+  `bx-check`, not `bx-check-circle` — the outline glyph draws its own ring,
+  which doubled up visibly against the new solid background. Scope this to
+  the specific table via `#datatable-mijlpalen .gl-mijlpaal-status-icon.s-2`
+  (never the bare shared rule — `_UnitMatrix`'s icon is *also* its
+  click-to-change-status button and needs to stay recognizable as a button,
+  not read as "already done and inert"). The completed row becomes the one
+  glance-able "done" mark in an otherwise all-outline column, which is the
+  point — but it's a table-specific embellishment, not a new app-wide
+  status-icon rule.
 - **Never reuse a status icon's glyph as an action icon in the same row.**
   `bx-check-circle` was tried as the generic "change status" action button —
   it's *also* the Bereikt status icon, so a completed row showed the same
@@ -457,11 +516,19 @@ new tables**; `theme.css`'s older `.table .actions a` (bare `<a>` + icon,
 `color:#666` → `#333` on hover, no background, no explicit touch size) is the
 pre-existing app-wide convention and stays where it already is
 (`Projecten/DetailContracts.cshtml` and others) — migrate a table to the new
-pattern when you touch it, not in a bulk sweep.
+pattern when you touch it, not in a bulk sweep. Definition lives in
+`custom.css` (shared, always loaded) — it was originally written into
+`traject.css` only, which made it unusable on any page outside
+`ProjectTraject` despite this doc already calling it "the current pattern for
+new tables"; moved once discovered, `traject.css` keeps an identical (now
+redundant, harmless) copy rather than risk touching that page to remove it.
 - **Markup:** `<span class="gl-row-actions">` wrapping one
   `<button type="button" class="gl-row-action-btn" aria-label="…">` per action,
-  each holding one `bx`-icon (`aria-hidden="true"`) at 16px. Reference:
-  `ProjectTraject/Index.cshtml` (Mijlpalen-tabel) and `_Timeline.cshtml`.
+  each holding one icon (`aria-hidden="true"`) at 16px — `bx-*` on
+  not-yet-migrated pages, `ph-*` on Phosphor-migrated ones (see Icons); the
+  component itself doesn't care which icon font, only that there's exactly
+  one glyph inside. Reference: `ProjectTraject/Index.cshtml` (Mijlpalen-tabel,
+  Boxicons), `Projecten/Partials/Clients.cshtml` (Phosphor).
 - **Size & rest state:** 30×30px, 7px radius (`--radius`), transparent, icon
   in muted gray (`--tsa-muted-aa`) — quiet by design, not the row's focal
   point at rest.
@@ -473,22 +540,70 @@ pattern when you touch it, not in a bulk sweep.
   and `gl-detail-card-edit`, just the compact 30px table-row variant, not a
   third style. A destructive action adds `.is-danger` for a Rust-tint hover
   instead of green.
-- **Hidden until the row is interacted with.** `.gl-row-actions
-  .gl-row-action-btn` and `.gl-traject-mijlpaal .gl-row-action-btn` (i.e. the
-  *secondary-action* role specifically, not every use of the class — see
-  below) sit at `opacity:0` by default and reveal on `tr:hover` /
-  `tr:focus-within` / the button's own `:focus-visible`, plus a
-  `@media (hover: none)` fallback that forces them visible on touch (no hover
-  to reveal them with there). Two muted icons sitting permanently on every
-  row of a long table is more visual noise than signal; revealing them on
-  approach removes that noise without removing the affordance.
-- **Except when the icon button *is* the primary content, not a secondary
-  action** — `_UnitMatrix.cshtml` reuses `gl-row-action-btn` for its
-  status-change button, but there the icon *is* the cell's main content (the
-  status itself), so it must stay always-visible. That's why the hide-on-rest
-  rule above is scoped to `.gl-row-actions`/`.gl-traject-mijlpaal`
-  specifically rather than the bare class — check which role a new use case
-  is playing before copying the hide-until-hover rule onto it.
+- **Inside a `<td class="datatable-actions">` (or a `<th>` reading exactly
+  "Acties" — `custom.js`'s `applyActionColumnStyles()` auto-tags that column
+  on *every* table, globally, no opt-in), the hover above silently doesn't
+  fire — a specificity bug, not a hover-state bug.** That auto-applied
+  styling was written for the older bare-`<a>` convention above
+  (`.table td.datatable-actions a { background:transparent; color:inherit;
+  … }`, plus `i { font-size:1.25rem !important; color:inherit !important; }`)
+  and outranks `gl-row-action-btn`'s own rules by pure specificity
+  (`.table`+`td`+`.datatable-actions`+`a` beats a bare `.gl-row-action-btn`
+  class every time, hover or not — background and icon size stay frozen at
+  the non-hover value regardless of what `.gl-row-action-btn:hover` says).
+  Fixed with matching-or-higher-specificity re-assertions scoped to
+  `.table td.datatable-actions .gl-row-action-btn` (rest, hover,
+  `:focus-visible`, `.is-danger:hover`, and an `!important` icon `font-size`
+  to beat the other `!important`) in `custom.css`, right after the base
+  component rules. **Whenever a `gl-row-action-btn` sits inside a table with
+  an "Acties" header, verify its hover state after building it** — this is
+  exactly the kind of silent, no-error failure that's easy to ship without
+  noticing.
+- **Always visible, not hidden until the row is interacted with.** An earlier
+  version of this rule hid `.gl-row-actions .gl-row-action-btn` /
+  `.gl-traject-mijlpaal .gl-row-action-btn` at `opacity:0` at rest, revealing
+  only on `tr:hover`/`tr:focus-within`/`:focus-visible` (plus a
+  `@media (hover: none)` touch fallback) — reasoning being that two muted
+  icons on every row of a long table was more noise than signal. **Reversed
+  by explicit user feedback**: action icons should stay visible so the
+  affordance itself is scannable, not just discoverable on approach. Both the
+  `custom.css` (canonical, see above) and `traject.css` (redundant, kept in
+  sync) copies now simply omit the `opacity:0`/reveal-on-hover rules —
+  `gl-row-action-btn` renders at its normal rest state (muted icon,
+  transparent background) all the time, hover/focus only changes its color
+  per the Hover/focus bullet above. Applies to `Partials/Clients.cshtml`,
+  `Partials/Contracts.cshtml` (+ `DetailContracts.cshtml`'s JS-built child
+  rows), and `ProjectTraject/Index.cshtml` (Mijlpalen-tabel) /
+  `_Timeline.cshtml`.
+- `_UnitMatrix.cshtml` reuses `gl-row-action-btn` for its status-change
+  button, where the icon *is* the cell's main content (the status itself) —
+  always-visible there too, so this exception no longer needs its own scoping
+  now that the general rule matches it.
+- **Gap between actions:** `.gl-row-actions` uses `gap: 0` (not a few px) —
+  with icons always visible (see above), any gap read as too loose for a
+  cluster of same-row actions; adjacent 30×30px buttons with 0 gap still read
+  as separate targets because each only paints a background on hover.
+- **An icon-only `.btn-link` (e.g. `Partials/Contracts.cshtml`'s
+  `.supplier-toggle` row-expand caret) needs an explicit
+  `text-decoration: none`.** Bootstrap's `.btn-link` defaults to
+  `text-decoration: underline`, meant for text links — on an icon-only button
+  it rendered as a visible underline beneath the caret glyph. Fixed in
+  `projecten-custom.css`'s existing `.supplier-toggle` override (already
+  there to swap the stock link-blue for `--primary`). Check any other
+  icon-only `.btn-link` usage for the same silent underline.
+- **A `.dropdown-toggle` button that gets an explicit Phosphor caret icon
+  (`ph-caret-down`) for consistency shows TWO carets** —
+  Bootstrap's own `.dropdown-toggle::after` (a border-triangle) still renders
+  alongside it, since adding a manual icon doesn't remove Bootstrap's default
+  one. Explicitly kill it with `.{scope}::after { display:none !important;
+  content:none !important; }` and rotate the manual icon on open via
+  `.{scope}[aria-expanded="true"] .{icon-class} { transform: rotate(180deg);
+  }` — Bootstrap's dropdown JS manages `aria-expanded` on the toggle
+  automatically, no extra JS needed. Fixed on `DetailContracts.cshtml`'s
+  "Aannemerslijst afdrukken" button (`.gl-supplier-list-toggle` /
+  `.gl-supplier-list-caret` in `projecten-custom.css`); check any other
+  `dropdown-toggle` button that carries its own icon for the same doubled
+  caret before shipping it.
 - **Vertical alignment:** give the table (or its cells) `vertical-align:middle`.
   A status icon/badge and a 30px action button have different intrinsic
   heights; without middle-alignment a row with both looks visibly uneven even
@@ -522,22 +637,99 @@ pattern when you touch it, not in a bulk sweep.
   It breaks the column's scannability for a distinction most users don't need
   moment-to-moment; if that distinction matters, say it in the row's detail
   view/tooltip instead of every cell in the column.
+- **An icon-only column keeps an accessible header, not a visible one.**
+  The Mijlpalen-tabel's status column has no visible `<th>` text (the leading
+  icon already says what the column is) — `<th class="text-center"><span
+  class="visually-hidden">Status</span></th>`, cells also `text-center` so
+  the icon centers under nothing rather than hugging the left edge. Empty a
+  header visually only when the column's own content is already
+  self-explanatory (an icon, a single glyph) — never to save space on a
+  column whose content needs a label to be understood.
+- **A DataTable's default `pageLength` can size itself to the viewport
+  instead of a fixed guess.** The Mijlpalen-tabel's `pageLength` used to be a
+  flat `25`; `traject.index.js`'s `fitMijlpalenPageLength()` instead measures
+  a real rendered row's height and the wrapper's own chrome (toolbar + head +
+  info/paging, via `wrapper`'s bounding rect minus `tbody`'s — robust to
+  DataTables' exact internal markup) to compute how many rows fit between the
+  table and the bottom of the viewport, then sets `page.len()` to that —
+  recomputed on resize and on every tab switch (the tab-activation script
+  already dispatches `resize` on show/hide, so no extra wiring needed to
+  catch the panel becoming visible). Guarded with a `MP_MIN_ROWS` floor and,
+  because the estimate can't account for every stray padding elsewhere on the
+  page, a self-correcting fallback: if the page still ends up with a vertical
+  scrollbar after the computed fit, drop rows one at a time
+  (`document.documentElement.scrollHeight > window.innerHeight`) until it's
+  gone, capped at a few iterations. Prefer this self-correction over trying
+  to hand-derive one more precise gap constant — this session repeatedly
+  found that guessing this legacy shell's exact stacked padding/margin by
+  hand produces confidently-wrong numbers; measuring and correcting against
+  reality is the more reliable default here.
+
+### Table pagination controls
+DataTables v2's `bs5` styling integration renders plain Bootstrap
+`.pagination`/`.page-item`/`.page-link` markup (`.dt-paging` is only the
+outer wrapper) — neither the CDN combined bundle nor the locally-vendored
+`dataTables.bootstrap5.css` sets any color on `.page-link`, so it inherits
+Bootstrap's own link-blue (`--bs-pagination-color`) untouched. Fixed on the
+Mijlpalen-tabel first (`#datatable-mijlpalen_wrapper` in `traject.css`) and
+the Klanten-tabel second (`#datatable-clients-list_wrapper` in
+`projecten-custom.css`) — same recipe both times, and the same one
+`.issue-table-footer` in `custom.css` already used, so it's one language
+reused three times, not three inventions:
+- **Colors:** default `.page-link` — hairline border, muted gray text (no
+  blue anywhere). Hover/focus — Mist-Green background + `#bcd6c7` border +
+  Forest-Green-Deep text, the same "quiet control, green on interaction"
+  language as `gl-row-action-btn`. Active page — solid Deep Forest Green
+  fill, white text. Disabled (prev/next at the ends) — faded muted, no hover.
+- **First/Previous/Next/Last as icons, not text — `ph-caret-left`/
+  `ph-caret-right` for previous/next, the real `ph-caret-double-left`/
+  `ph-caret-double-right` for first/last, both tables now (Klanten-tabel and
+  Mijlpalen-tabel).** Boxicons never had a verified-rendering double-chevron
+  glyph, so the Mijlpalen-tabel's *original* Boxicons version faked one —
+  `bx-chevron-left`/`bx-chevron-right` reused twice each, pulled tight via a
+  negative `margin-left` on the second `<i>`. Dropped entirely once that
+  table migrated to Phosphor; if you ever see the doubled-icon trick again
+  on a not-yet-migrated page, that's what it's standing in for, not a
+  considered look — replace it with the real glyph, don't carry the trick
+  forward. `language.paginate` accepts HTML either way, so each value pairs
+  the icon with a `visually-hidden` span carrying the original word
+  ("Vorige", "Volgende", …) — screen readers get real text, sighted users
+  get the icon only.
+- **Every pagination button gets an explicit `height`, not just padding.** A
+  digit ("1") and an icon glyph don't share an intrinsic line-height, so
+  sizing purely off Bootstrap's text padding rendered the arrow/first/last
+  buttons visibly shorter than the numbered ones next to them. Fixed with a
+  flat `height: 36px` + `display:inline-flex; align-items:center;
+  justify-content:center;` on every `.page-link` regardless of content type.
 
 ### Table search + column filter
 A DataTable with a custom search box and a column-visibility ("colvis") button
 — the search input replaces DataTables' own `.dt-search` (hidden via CSS), the
 colvis button is moved out of the default toolbar into a page-chosen container.
-Origin: `Projecten/DetailClients.cshtml` (`Clients.cshtml`); current best
-version: `ProjectTraject/Index.cshtml` (Mijlpalen-tabel).
-- **Layout:** a `d-flex align-items-center gap-2` row holding two children —
-  the search `.input-group` (`flex-grow-1`, so it fills all available width)
-  and the colvis button's container (`flex-shrink-0`) beside it with a real
-  `gap-2`. **Don't** put the colvis container *inside* the same `.input-group`
-  as the search box (`Clients.cshtml`'s original approach) — the two controls
-  end up visually fused with no breathing room between them, which reads as
-  unfinished rather than deliberate.
+Origin and current reference: `Projecten/DetailClients.cshtml` (`Clients.cshtml`).
+- **Layout: colvis sits *inside* the search `.input-group`, right after the
+  field, but with a small `8px` gap before it — not Bootstrap's default
+  seamless input-group join.** An earlier version of this rule split them
+  into a `d-flex gap-2` row (search `.input-group` + colvis in its own
+  `flex-shrink-0` container beside it) reasoning that a fully fused look
+  "read as unfinished" — briefly the Mijlpalen-tabel's own layout too, since
+  it was built from that version of the rule. Overruled on which *box* they
+  share (colvis moved back inside the same `.input-group` as the icon span
+  and `<input>`, confirmed), but the gap complaint was legitimate too, so
+  it's a hybrid: `#search-term + #colvis-container { margin-left: 8px; }`
+  (`#mp-search-term + #mp-colvis-container` on the Mijlpalen-tabel) — one
+  shared control cluster, not two separate floating boxes, but with
+  breathing room between the field and the button. Bootstrap's input-group
+  CSS otherwise strips the left border-radius off a `:last-child` button (it
+  assumes a seamless join); since there's now a visible gap, that button
+  gets its OWN right-side radius back — `border-radius: 0 var(--radius)
+  var(--radius) 0` — while the *left* edge stays intentionally square (not
+  fully rounded on all four corners): it still reads as "belongs to this
+  row" despite the gap, not as a free-floating pill. Reference:
+  `#colvis-container` rules in `projecten-custom.css`,
+  `#mp-colvis-container` rules in `traject.css`.
 - **DataTable init:** `layout: { topStart: { buttons: [{ extend: "colvis",
-  text: '<i class="bx bx-columns me-2"></i><span>Kolommen</span>', columns:
+  text: '<i class="ph ph-columns me-2"></i><span>Kolommen</span>', columns:
   ":not(.noVis)", init: (api, node) => $(node).removeClass("btn-secondary")
   .addClass("btn btn-default") }] } }`, then
   `table.buttons(0, null).containers().appendTo("#<id>-colvis-container")` and
@@ -548,6 +740,54 @@ version: `ProjectTraject/Index.cshtml` (Mijlpalen-tabel).
   (see the `<script>`/`<link>` tags in `ProjectTraject/Index.cshtml` for the
   exact pinned URL) — the plain `dataTables.min.js` + `dataTables.bootstrap5.js`
   pair used elsewhere has no Buttons/ColVis support at all.
+
+### Mobile adaptation patterns
+Three reusable techniques from adapting `ProjectTraject` for phone width
+(`/impeccable adapt` — see The Field-Width Rule above; these are the *how*,
+that's the *why*).
+- **A DataTable that might overflow its column width wraps in
+  `.table-responsive`, not the whole page.** The Mijlpalen-tabel (7 columns +
+  actions) had no responsive strategy at all — at phone width it would
+  either force the entire page to scroll horizontally or get illegibly
+  cramped. Fixed by wrapping only the `<table>` element itself in
+  `<div class="table-responsive">` *before* `new DataTable(...)` runs —
+  DataTables nests its own `#..._wrapper` around whatever currently sits
+  where the table is, so the search/colvis row above and the pagination
+  below stay full-width and only the data grid scrolls sideways. Same
+  contained-horizontal-scroll idea already proven in this codebase by
+  `.gl-unit-matrix-wrap` and the Kalender Gantt timeline — don't invent a
+  fourth pattern (card-per-row, column-hiding) when this one already fits.
+- **Hide a button's label text at a breakpoint with `font-size: 0` on the
+  button, not `display:none`/`aria-hidden` on the text.** Kalender 2.0's
+  4-button view-switch (Maand/Kwartaal/Jaar/Agenda, icon + bare text, no
+  wrapping `<span>` around the label) had no mobile treatment at all — at
+  360–400px the buttons simply clipped past the container's `overflow:
+  hidden` edge, making "Agenda" physically unreachable. Fixed at ≤767.98px
+  by giving the button `font-size: 0` (collapses the bare text node to zero
+  visual size without touching the DOM or adding a wrapper element) while
+  its `<i>` icon keeps its own explicit `font-size` and stays fully visible
+  — unlike `display:none`/`aria-hidden`, the text is still in the
+  accessible-name computation, so a screen reader still hears "Maand", just
+  nothing is drawn for it. Pair with explicit `order` on the toolbar's flex
+  children instead of trusting `flex-wrap` to split nav/title/view-switch
+  predictably, and bump touch targets to the `44px` minimum this session's
+  `adapt.md` reference calls for (was `34px`, fine for a mouse, tight for a
+  thumb).
+- **A matrix table (rows × columns, not a simple list) transposes to
+  "pick one row, see its columns as a card" on mobile — not to
+  cards-per-row.** `_UnitMatrix.cshtml`'s Eenheden-tab is a real matrix
+  (eenheid × mijlpaal-kolom); adapt.md's usual "table → cards" advice
+  (one card per row, columns become labelled fields inside it) doesn't fit
+  a matrix, because the unit a user actually wants to see stays buried
+  behind whichever mijlpaal-columns happen to be visible. Instead: a
+  `<select>` (mobile-only, `d-md-none`) lists the units, and every unit gets
+  its own server-rendered card (`hidden` except the selected one) listing
+  *its* mijlpalen as a vertical list — the same clickable
+  status-icon-as-button cell markup as the desktop matrix, so status-changing
+  stays identical between viewports. The desktop matrix itself just gets
+  `d-none d-md-block`; nothing is removed, the two views are alternate
+  renders of the same data. A plain `change` listener toggles `hidden` on
+  the matching card — no fetch, all units are already in the DOM.
 
 ### Formulieren (`gl-form-shell`)
 The current pattern for a data-entry form. CSS in `custom.css` ("Formulierschil")
@@ -580,7 +820,9 @@ views: `CPMCore/Views/Projecten/Toevoegen.cshtml` (short, no tabs) and
       `html.modern.fixed .content-body{margin-top:10px}` rule (`theme.css`).
       Mobile: `margin: -10px -15px 16px; padding: 0 15px; height: auto;`.
     - **`.content-with-menu`** (a project sub-page with the `DetailMenu`
-      sidebar — `ProjectTraject/Index.cshtml`, the reference implementation):
+      sidebar — `ProjectTraject/Index.cshtml`, the reference implementation;
+      `ProjectDossiers/Index.cshtml` reuses the identical markup/CSS, see
+      below):
       `margin: -43px -40px 20px; padding: 0 40px; min-height: 54px;` (≥768px
       only — below that `.inner-body` falls back to a third, non-fixed padding
       recipe and the tabs scroll horizontally in-flow instead). This shell
@@ -595,6 +837,83 @@ views: `CPMCore/Views/Projecten/Toevoegen.cshtml` (short, no tabs) and
       The remaining -43px cancels `groupln.css`'s `html.modern.fixed
       [.inner-body]{border-top:113px solid transparent;margin-top:-110px}`
       stacked on its ordinary (non-fixed) 40px padding: -110 + 113 + 40 = 43.
+      **Any new page reusing `.gl-traject-tabrow` must set
+      `ViewBag.ContentBodyClass = "gl-traject-flush"` in its own controller
+      action** — it's per-page, not inherited from the CSS class alone.
+      `ProjectDossiersController.Index` originally shipped without it: the
+      tabrow rendered ~10px lower than `ProjectTraject`'s (the uncancelled
+      `.content-body{margin-top:10px}`), which read as "the tabbar isn't
+      10px higher, like on the Traject page" — fixed by adding the same
+      `ViewBag.ContentBodyClass = "gl-traject-flush"` line there too.
+  - **Stays visible while scrolling — via JS, never `position: sticky`.**
+    Project-wide requirement: the tabstrip pins under the topbar once the page
+    scrolls past it. `position: sticky` was tried twice on both shells
+    (`.content-body` *and* `.content-with-menu`) — correct-looking `top` math
+    included — and in both cases it silently failed to stick at all, with a
+    visible gap between the topbar and the tabstrip at rest that no amount of
+    recalculating the breakout margin closed. Treat sticky as **not usable**
+    on either shell; the durable fix is a small JS "affix" instead, both
+    halves living in `custom.js` (project-wide, runs on every page): one IIFE
+    for the bare `.gl-form-shell__tabs` used on `Projecten/Edit.cshtml` and
+    `TrajectSjabloonAdmin/Edit.cshtml`, and a second, separate IIFE for the
+    `.gl-traject-tabrow` wrapper (`.gl-form-shell__tabs.gl-traject-tabs`
+    inside it), which additionally has the `DetailMenu` inner-menu column to
+    account for — see below. **This second IIFE originally lived only in
+    `traject.index.js` as `initTabrowPin()`, scoped to `ProjectTraject/
+    Index.cshtml` specifically** — moved to `custom.js` and generalized to
+    `document.querySelectorAll(".gl-traject-tabrow").forEach(...)` when
+    `ProjectDossiers/Index.cshtml` shipped the same `.gl-traject-tabrow`
+    markup without loading `traject.index.js` (it loads its own `dossiers.js`
+    instead, which only handles tab click/keyboard activation, not the
+    affix), silently getting no pin/flush-correction behavior at all. Any new
+    page using this markup now gets the behavior automatically instead of
+    needing its own copy — check `custom.js` first before writing a new one.
+    Both IIFEs follow the same recipe: measure the tabstrip's real rendered position with
+    `getBoundingClientRect()` and nudge it flush under the topbar via
+    `transform` (self-correcting — no need to re-derive the breakout margin by
+    hand), then swap to `position: fixed` (class `gl-is-pinned`) the instant a
+    **synchronous** `scroll` listener (`requestAnimationFrame`-throttled) says
+    the rest position would scroll past the topbar, with a same-sized spacer
+    inserted so the page doesn't jump. **Never use `IntersectionObserver`
+    for this** — it was tried first and fires asynchronously (~1 frame after
+    the real threshold), which read as a visible "flash" before snapping to
+    the correct pinned position; the synchronous scroll+rAF version has no
+    such delay.
+  - **`left`/width of the pinned bar:** `.gl-form-shell__tabs.gl-is-pinned`
+    (bare `.content-body` pages) can hardcode `left: 300px` / `73px`
+    (`html.sidebar-left-collapsed`), matching `.gl-form-shell__actions`
+    exactly — no complication there. `.gl-traject-tabrow.gl-is-pinned`
+    (`ProjectTraject`) **cannot** hardcode this: the page has an extra fixed
+    `.inner-menu` (DetailMenu) column whose own width/offset shifts across
+    `sidebar-left-sm`/`-xs` variants and the collapsed state, too many
+    combinations to hardcode reliably. Its `custom.js` IIFE instead reads
+    `.inner-body`'s live `getBoundingClientRect()` on every pin and on an
+    `html`-class `MutationObserver` (sidebar collapse/inner-menu toggle),
+    so it's always correct regardless of sidebar state.
+  - **The flush-under-topbar `transform` correction is desktop-only — guard it
+    explicitly, don't assume the pin logic's own `mq.matches` check covers
+    it.** Both affix scripts read `--topbar-height` to compute the nudge, but
+    that variable has no mobile counterpart (the mobile topbar is a separate,
+    shorter 60px bar — see Layout below) and the tabstrip has no desktop-style
+    breakout margin at that width either. The first version of this fix
+    applied `measureRest()`'s transform unconditionally; on
+    `ProjectTraject/Index.cshtml` specifically that yanked the tabstrip
+    sharply upward on phones, landing it on top of the topbar-actions row
+    rendered above it (a real, screenshotted regression, not a hypothetical).
+    Fixed by returning out of the transform step before it runs whenever
+    `!mq.matches` — the pin/unpin logic already had this guard, the
+    measurement step didn't, and that mismatch was enough to break it.
+  - **Compact stats sharing the tabstrip row don't fully hide on narrow
+    screens — they thin out.** `ProjectTraject/Index.cshtml` puts a small KPI
+    strip (`.gl-traject-stats`, e.g. "8/38 bereikt · 1 achterstallig") beside
+    the tabs on the same row. Below 992px, only the *secondary* stats
+    (`.gl-traject-stat--sec`) disappear; the count that actually drives a
+    decision (here: achterstallig) always stays visible, even on a phone.
+    Hiding the whole strip was tried first and hid exactly the number a PM on
+    a jobsite tablet opens the page to check — a direct conflict with The
+    Field-Width Rule ("on-site phone use is a first-class case"). When adding
+    stats to a tabstrip row, mark the merely-nice-to-have ones `--sec` and
+    keep the one number someone would actually act on.
 - **Panels (`gl-form-shell__panel`):** `overflow-y:auto`, 24px padding;
   non-active panels carry `hidden`.
 - **Actions (`gl-form-shell__actions`):** a third, always-visible zone rendered
@@ -604,10 +923,29 @@ views: `CPMCore/Views/Projecten/Toevoegen.cshtml` (short, no tabs) and
   (`left: 300px` / `73px` collapsed / `0` ≤767px), respecting
   `env(safe-area-inset-bottom)`. Buttons use the large app size
   (`btn-px-4 py-3`, `submit-button` / `cancel-button`), not the topbar size.
+- **`gl-form-shell__actions` outside a `gl-form-shell` (`.gl-fixed-actions-offset`):**
+  `Projecten/AddContract.cshtml` / `EditContract.cshtml` want the same fixed
+  Save/Cancel bar but have no tab shell to sit inside — a plain long
+  `<form>` instead. `gl-form-shell` normally reserves room for the 84px bar
+  itself (see above); without that shell, the page's own content would
+  scroll the last fields *behind* the fixed bar. Add class
+  `.gl-fixed-actions-offset` directly to the `<form>` — it adds
+  `padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px))`, matching
+  the bar's own height/safe-area so the last field always clears it. Below
+  992px the bar itself stops being fixed (mirrors the phone action-buttons
+  pattern: full-width stacked buttons, `position: static`), so
+  `.gl-fixed-actions-offset` cancels its own padding-bottom there too — the
+  bar no longer needs the reservation once it's back in normal flow.
 - **Section (`gl-form-section` + `__body`):** a block inside a panel.
   `gl-form-section__head` is a flex row — a **42px** Mist-Green rounded (≈`md`,
   11px) icon badge + `__title` (700, 1.0625rem) + `__hint` (0.8125rem, muted),
-  Hairline under it.
+  Hairline under it. Reference: `Projecten/Edit.cshtml`'s "Status &
+  publicatie" / "Website-presentatie" / "SEO" sections. **The badge icon
+  names the section's own subject** (`bx-flag` for status, `bx-edit-alt` for
+  the website-presentation section, `bx-search-alt` for SEO) — same
+  matches-the-subject convention as the topbar icon (see "Topbar" above) and
+  the tab icons on the same page, not a generic "form section" glyph reused
+  everywhere.
 - **Field grid (`gl-field-grid`):**
   `display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2px 24px`
   — resolves to 1 / 2 / 3 columns by width on its own.
@@ -651,6 +989,32 @@ supplier/contract forms. Never start a new form on bare `card-modern` +
   `TrajectSjabloonAdmin/Index.cshtml` (`gl-delete-sjabloon-form`) for the exact
   pattern, including how it stays safe when the same form is rendered twice
   (topbar + mobile fallback).
+- **A commit modal that triggers side effects discloses them before submit,
+  not just in a read-only view elsewhere.** `ProjectTraject`'s mijlpaal
+  status-change modal can, depending on which status is picked, silently
+  cascade into automation (create a dossier, flip the project status, unlock
+  the next fase) configured on that mijlpaal — the modal itself only showed
+  Status/Datum/Opmerking, and the trigger list was visible only in the
+  *read-only* Kalender detail panel, a path most status changes never go
+  through. Fixed via `.gl-mps-triggers` (`Modals/_ModalMijlpaalStatus.cshtml`
+  + `traject.index.js`'s `renderMpsTriggers()`): a small Mist-Green panel
+  inside the modal body, populated from the same trigger data the Kalender
+  already computes, labelled per trigger event ("Bij bereiken", "Bij
+  statuswijziging", …). Hidden entirely when the mijlpaal has no configured
+  triggers. The general rule: if committing a form can do something beyond
+  what the form's own fields describe, say so inside that form, not only in
+  a preview screen the user may never open.
+- **A modal with more than ~6 fields gets chunked into labelled sections, the
+  same instinct as `gl-form-section` on a full page — just compressed for a
+  modal's footprint.** `Modals/_ModalMijlpaalUpsert.cshtml`'s 11 fields used
+  to sit in one flat `row g-3` with no grouping; split into three
+  `.gl-mp-modal-section`s (Mijlpaal / Planning / Verantwoordelijkheid &
+  notities — `traject.css`), each just a muted 600/.78rem title
+  (`.gl-mp-modal-section-title`, same label typography as everywhere else)
+  over a hairline divider between sections. Don't reach for a full
+  `gl-form-section` head (icon badge + hint text) inside a modal — that's
+  sized for a page, not a dialog; the plain title + divider is the modal-scale
+  equivalent.
 
 ### Navigation (sidebar)
 - **Rail:** solid Deep Forest Green (`#0a5a3b`), fixed full height, 300px /
@@ -689,43 +1053,194 @@ supplier/contract forms. Never start a new form on bare `card-modern` +
   `_TrajectSjabloonActions.cshtml`). `.topbar-page-actions` is hidden entirely
   below 768px; the calling page repeats the *same* buttons — via the same
   partial, never duplicated markup — in a `d-flex d-md-none justify-content-end
-  gap-2 mb-3` fallback row at the top of its own content body. A few earlier
-  pages (`Projecten/DetailContracts.cshtml`) still use `btn-md` here; migrate to
-  `btn-sm` when you touch them, not in a bulk sweep.
+  gap-2 mb-3` fallback row at the top of its own content body.
+  `Projecten/DetailContracts.cshtml` used to be the standing example of a page
+  that still hadn't migrated to `btn-sm` here — fixed when that page was
+  brought in line with DESIGN.md; if you find another one, migrate it the
+  same way when you touch it, not in a bulk sweep.
 
-### Paginakop (`gl-page-header`)
-- **What it replaces:** the ad-hoc title/subtitle/back-button/actions block that
-  had drifted into 30+ near-duplicate variants across content pages
-  (`font-weight-bold` vs `fw-bold`, `mb-4 mt-0` vs `mb-0`, `btn-group` vs
-  `d-flex gap-2`, inconsistent row-wrapper classes). This is the single
-  successor pattern; new content pages use it instead of reinventing the row.
+**The Content Body Has No Page Chrome Rule.** A page's title and its
+page-level actions never live in the content body — full stop, no exceptions
+for "just this once, it fits better here." Where they go depends on what kind
+of page it is:
+- **An ordinary content page** (a list, a detail view, anything that isn't a
+  data-entry form): title + icon come from `SetPageHeader(icon, title)`
+  (`BaseController`, sets `ViewData["PageIcon"]`/`["Title"]`, which the topbar
+  in `_Layout.cshtml` renders) — never a local `<h1>`. Actions come from
+  `@section PageActions` → `.topbar-page-actions` (see above), with the same
+  `d-md-none` fallback-row duplication for `<768px`.
+- **A form** (`gl-form-shell`): title lives in the `gl-form-section__head`,
+  actions in the sticky `gl-form-shell__actions` bottom bar — already the
+  established pattern, unchanged by this rule.
+- **A subtitle has nowhere to go and is simply dropped, not relocated.** The
+  topbar has no subtitle slot (title + breadcrumb only). A subtitle in the
+  content body underneath a topbar title would just restate context the
+  breadcrumb already gives — see `ProjectTraject/Index.cshtml`'s own comment
+  on this exact point, which predates this rule and already got it right by
+  instinct: *"de topbar toont icoon + titel al; een lokale h1/h5 zou dat
+  woordelijk herhalen."*
+- **Reference migration:** `Projecten/DetailClients.cshtml` — was a
+  content-body `<h1>`/`<h5>` + `btn-group`; now `SetPageHeader("ph ph-users",
+  "Klanten")` in `ProjectenController.DetailClients` + `@section PageActions`
+  rendering the shared `Partials/_ClientsActionButtons.cshtml` (also reused
+  for the `d-md-none` mobile fallback row) — subtitle ("Beheer de klanten van
+  het project") dropped per the rule above, not relocated.
+
+### Paginakop (`gl-page-header`) — superseded, legacy only
+**Do not use this for a new page or when migrating one you touch.** It
+predates The Content Body Has No Page Chrome Rule above and put title +
+subtitle + actions in the content body, which is exactly what that rule now
+forbids — `gl-page-header__actions` in particular duplicated
+`.topbar-page-actions` badly (default/`btn-md` sizing instead of `btn-sm`,
+a second place page actions could live). Still in real use on a handful of
+pages (`Projecten/AddContract.cshtml`, `Projecten/Detail.cshtml`,
+`Projecten/BudgetIndex.cshtml`, `TrajectSjabloonAdmin/Index.cshtml` — kept
+here only so those remain documented, not as guidance to extend), so the
+shape is recorded for reference, not as a pattern to reach for:
 - **Structure:** one flex row (`gl-page-header`, `justify-content: space-between`,
   wraps below 576px) with two zones — `gl-page-header__left` (back button +
   title + subtitle, rendered by the shared partial `Views/Shared/_PageHeader.cshtml`
   with `Models.PageHeaderModel { Title, Subtitle?, BackUrl?, BackAriaLabel? }`)
-  and `gl-page-header__actions` (page-specific buttons, authored directly by the
-  calling page — action content varies too much across pages to generalize
-  further; only its position and inter-button gap are standardized).
+  and `gl-page-header__actions` (page-specific buttons, default/`btn-md` size).
 - **Back button:** 40×40px icon button (`gl-page-header__back`, The Field-Width
   Rule), `bx-chevron-left` at 1.5rem, Muted by default, Mist-Green background +
   Deep Forest Green icon on hover/focus — same interaction language as the
   dashboard icon buttons.
-- **Title / subtitle:** plain `<h1>`/`<h5>`, font-size intentionally left to the
-  theme's base heading styles (unchanged); `gl-page-header` only standardizes
-  spacing (4px between title and subtitle) and the row's own bottom margin (24px).
-- **Usage:** an expanding set of content pages use it — e.g.
-  `CPMCore/Views/Projecten/AddContract.cshtml` (back + title + subtitle, no
-  actions) and `CPMCore/Views/Projecten/DetailContracts.cshtml` (title +
-  subtitle + actions, no back). The remaining ad-hoc title rows are migrated
-  opportunistically when a view is touched, not in a bulk sweep. Note: a
-  `gl-form-shell` form does not use `gl-page-header` — its title lives in the
-  `gl-form-section__head`, its actions in `gl-form-shell__actions`.
+- **Migrate a page off this when you touch it** (not a bulk sweep, same as
+  every other legacy-pattern migration in this doc): move the title to
+  `SetPageHeader`, drop the subtitle, move the actions into
+  `@section PageActions` (resized to `btn-sm`) + the `d-md-none` mobile
+  fallback. `Projecten/DetailClients.cshtml` is the worked example.
 
 ### Badges
 - Solid fills mapped to tokens: `bg-primary` → Deep Forest Green,
   `bg-secondary` → Sage, `bg-info` → Taupe Grey, `bg-accent` → Timber, plus
   standard success/warning/danger/dark/light. White text except warning/light
   (black). Pill radius.
+
+### Icons — migrating Boxicons → Phosphor (in progress, page by page)
+The app is mid-migration from Boxicons to [Phosphor](https://phosphoricons.com/)
+— **not a bulk sweep**: a page's icons convert to Phosphor the next time that
+page is touched, same discipline as every other legacy-pattern migration in
+this doc. Both icon fonts stay loaded (`_Layout.cshtml`) until the migration
+is complete, so an unconverted page's `bx-*` classes keep working untouched.
+Converted so far: `Projecten/DetailClients.cshtml` + `Partials/Clients.cshtml`
+(the first page, treat as the reference) and the whole `ProjectTraject`
+feature (`Index.cshtml`, `_Timeline.cshtml`, `_UnitMatrix.cshtml`,
+`_Kalender.cshtml`, `_TrajectActionButtons.cshtml`,
+`Modals/_ModalMijlpaalStatus.cshtml`, `traject.index.js`,
+`ProjectTrajectController.cs`'s `SetPageHeader` call) — the second full page,
+and the one that added most of the dictionary entries below. Third:
+`Projecten/DetailContracts.cshtml` + `Partials/Contracts.cshtml` (plus its
+`ProjectenController.cs`'s `SetPageHeader` call) — the richest table of the
+three (up to 5 row actions, expandable child rows built client-side), see
+its own callout below for what that surfaced. Shared partials
+a migrated page merely *calls* (e.g. `Views/Shared/_ModalTaakQuickAdd.cshtml`,
+used by `ProjectTraject` among others) are **not** part of that page's
+migration — they stay on Boxicons until a page migration specifically
+touches them, same "not a bulk sweep" discipline, just one level removed.
+- **Weight: Regular, not Thin.** Phosphor ships six weights (Thin, Light,
+  Regular, Bold, Fill, Duotone). Thin's hairline stroke is drawn for large
+  display use; most of this app's icons render at 14–18px (row-action
+  buttons, table cells, small toolbar buttons), where a hairline stroke loses
+  legibility and reads as washed-out next to Poppins 600/700, the weight this
+  app's type leans on throughout (The Weight-Not-Size Rule). Regular is the
+  closest match to Boxicons' existing stroke weight, so the icon-set swap
+  doesn't also silently shift the app's visual weight. Reach for Bold only if
+  a specific icon needs more presence than Regular gives it at its actual
+  render size — not as a blanket choice.
+- **Loading:** the full official web-font bundle via jsDelivr
+  (`https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css`,
+  pin the version), **not a subset build.** This app already got burned once
+  by Boxicons' CDN "basic" subset silently missing glyphs (see the
+  `bx-transfer` incident under Table status indicators below) — Phosphor's
+  jsDelivr bundle ships the complete regular-weight set (1,500+ icons,
+  verified directly against the downloaded CSS+font before adopting it), so
+  that specific failure mode doesn't recur. Markup is two classes:
+  `<i class="ph ph-{icon-name}"></i>` (`ph` = weight class for Regular,
+  `ph-{name}` = the glyph) — a different weight needs its own additional
+  stylesheet link plus its own weight class (`ph-bold`, `ph-thin`, …); this
+  app only loads Regular.
+- **One glyph per meaning, everywhere — a semantic dictionary, not a
+  per-page choice.** The whole point of migrating is that "edit" is always
+  the same icon; picking a different reasonable-looking pencil on each page
+  defeats it. Confirmed mapping so far (extend this table as new pages
+  migrate, don't invent a second glyph for a meaning already listed here):
+
+  | Meaning | Class |
+  |---|---|
+  | Search | `ph-magnifying-glass` |
+  | Edit | `ph-note-pencil` |
+  | Delete | `ph-trash` |
+  | Add / create | `ph-plus` |
+  | Columns (colvis) | `ph-columns` |
+  | Print | `ph-printer` |
+  | Excel / spreadsheet export | `ph-file-xls` |
+  | Pagination previous / next | `ph-caret-left` / `ph-caret-right` |
+  | Pagination first / last | `ph-caret-double-left` / `ph-caret-double-right` — a real icon, unlike Boxicons (see Table pagination controls) |
+  | People / clients | `ph-users` |
+  | Confirm / check | `ph-check` |
+  | Status: Open | `ph-circle` |
+  | Status: Bezig / in progress | `ph-clock` |
+  | Status: Bereikt / done (outline form) | `ph-check-circle` — the filled-circle *table* exception still uses bare `ph-check`, see Table status indicators |
+  | Status: Niet van toepassing | `ph-minus-circle` |
+  | Status: Geblokkeerd | `ph-prohibit` |
+  | Warning / linked-items badge | `ph-warning-circle` |
+  | Change status (action, distinct from any status glyph above) | `ph-repeat` |
+  | Sync / refresh from source | `ph-arrows-clockwise` — deliberately not `ph-repeat`, which already means "change status" in this feature; don't reuse one action glyph for two different actions in the same feature |
+  | Automation trigger indicator | `ph-lightning` |
+  | Jump to today | `ph-target` |
+  | Filter / options | `ph-funnel` |
+  | Task / checklist | `ph-list-checks` |
+  | Grid / matrix view | `ph-grid-four` |
+  | Timeline / sequence of steps | `ph-flow-arrow` |
+  | Flag / milestone | `ph-flag` |
+  | List view | `ph-list` |
+  | Branch / process start | `ph-git-branch` |
+  | Suppliers / contractors (topbar) | `ph-hard-hat` |
+- **The topbar page-icon (`SetPageHeader`'s first argument) matches the page's
+  own subject, not a generic folder/file glyph — and the empty-state icon on
+  that same page matches the topbar icon too, not a separate choice.**
+  `ph-users` for Klanten, `ph-hard-hat` for Leveranciers (construction
+  subcontractors — deliberately not the more generic `ph-buildings`, since
+  this app's own domain is construction, see PRODUCT.md). Established on
+  `DetailClients`/`DetailContracts`; carry the same discipline into the next
+  page migrated — check `SetPageHeader`'s icon argument for a subject-specific
+  choice, don't default to whatever the old `bx-*` mapped to literally.
+- **Migrating `DetailContracts` surfaced two real, pre-existing bugs unrelated
+  to icons — fix them when you find them mid-migration, they're not optional
+  polish.** (1) The Leveranciers-tabel's DataTable `language` object never
+  overrode `paginate` at all, so it showed DataTables' hardcoded default
+  *English* words ("First"/"Previous"/…) — not stale Dutch, no Dutch ever
+  existed there. Added the same icon-based `paginate` block the other two
+  tables use. (2) `.js-add-bijbestelling` was a bare `<a href="#">` on this
+  page specifically, while its two other usages
+  (`Projecten/DetailContract.cshtml`, `EditContract.cshtml`) already use
+  `<button type="button">` — the shared click handler
+  (`_BijbestellingModal.cshtml`) doesn't care which, so this was a silent
+  inconsistency with no functional symptom. Made it a `<button>` here too,
+  matching its own established convention elsewhere. Also cleaned up a
+  leftover dead CSS rule (`#datatable-clients-list_wrapper .page-link i + i`)
+  from before the Klanten-tabel had real double-caret icons — a reminder to
+  actually delete a workaround's CSS when removing the workaround, not just
+  the markup that used it.
+- **A hidden legacy script rewrites icons inside any table's "Acties" column
+  — it needs to recognize `ph-*` too, or it silently destroys them.**
+  `custom.js` (global, every page) finds every table with a header cell
+  reading exactly "Acties" and runs each icon in that column through
+  `replaceWithBoxIcon()`: if the icon doesn't already start with `bx`, it
+  looks for an `fa-` class to remap to a `bx-*` equivalent, and — critically
+  — **falls back to a generic `bx-dots-horizontal-rounded` (three dots) icon
+  with no warning if it finds neither.** A freshly-migrated `ph-note-pencil`/
+  `ph-trash` matches neither condition, so every Acties-column icon on
+  `Projecten/DetailClients.cshtml` silently became three dots the first time
+  this was tested live — not a CSS problem, a JS one, and easy to miss
+  because nothing errors. Fixed by teaching `replaceWithBoxIcon` that
+  `ph`/`ph-*` also counts as "already a real icon, leave it alone" (same
+  treatment `bx-*` already got). **Whenever migrating a page whose table has
+  an "Acties" column header, verify the row-action icons after
+  migrating — this script runs globally and its default assumption (`bx-*`
+  is a real icon, other icon fonts aren't) is now half wrong.**
 
 ### Progress bars (signature — `gl-pg-bar`)
 - 4px tall, 2px radius, `#e9ecef` track. Fill is a fixed left-to-right gradient

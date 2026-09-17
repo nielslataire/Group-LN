@@ -69,10 +69,16 @@
 .gl-text-danger { color: var(--danger); }
 
 /* Contractenlijst: labeled expand-knop (i.p.v. een ongelabeld chevron-icoon) —
-   .btn-link's standaard linkkleur overschrijven zodat het geen stock blauw wordt. */
+   .btn-link's standaard linkkleur overschrijven zodat het geen stock blauw wordt, en
+   .btn-link's standaard text-decoration:underline overschrijven — dat is bedoeld voor
+   tekstlinks, niet voor een icoon-only knop (het caret-icoon toonde een onderlijning). */
+.supplier-toggle {
+    text-decoration: none !important;
+}
 .supplier-toggle:hover,
 .supplier-toggle:focus-visible {
     color: var(--primary) !important;
+    text-decoration: none !important;
 }
 
 /* ----------------------------------------------------------
@@ -794,6 +800,23 @@ div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
     border-color: #e3e6ea;
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
+
+/* ----------------------------------------------------------
+   DetailContracts – "Aannemerslijst afdrukken"-dropdown
+   ---------------------------------------------------------- */
+/* .checkbox-custom label heeft geen eigen font-size (theme.css) en valt dus terug op de
+   normale body-grootte (1rem) — te groot naast de "Kolommen op de aannemerslijst"-koptekst
+   erboven (.small, .875rem) in dit smalle (260px) dropdown-menu. */
+.gl-supplier-list-menu label {
+    font-size: .8125rem;
+}
+/* De knop toonde TWEE onderpijltjes: Bootstrap's eigen `.dropdown-toggle::after`
+   (border-driehoek) naast een expliciet `ph-caret-down`-icoon — hier bewust exact 1
+   behouden (het Phosphor-icoon, consistent met de rest van de iconenmigratie) en
+   Bootstrap's eigen `::after` uitgeschakeld. */
+.gl-supplier-list-toggle::after { display: none !important; content: none !important; }
+.gl-supplier-list-caret { font-size: .85rem; margin-left: .35rem; transition: transform .15s ease; }
+.gl-supplier-list-toggle[aria-expanded="true"] .gl-supplier-list-caret { transform: rotate(180deg); }
 
 /* ----------------------------------------------------------
    Leverancier/contract – tab navigatie (DetailContract)
@@ -1950,3 +1973,98 @@ a.gl-kpi2-tile:active { transform: translateY(0); }
 /* De tabs zelf (.gl-form-shell__tabs/__tab/__panel) leven nu in custom.css —
    herbruikbaar over meerdere formulieren, zie daar. Idem voor het bare-
    .gl-form-section/.gl-field-grid/.gl-field/.gl-switch-row/.gl-form-note-veldsysteem. */
+
+/* Klanten-tabel: zoekveld + colvis-knop zitten in dezelfde .input-group (DESIGN.md "Table
+   search + column filter") maar met wat ademruimte ertussen i.p.v. volledig aan elkaar geplakt —
+   expliciet gevraagd i.p.v. Bootstrap's standaard naadloze input-group-verbinding. Rechterkant
+   krijgt zijn eigen afronding terug (Bootstrap's input-group-CSS platst die anders af voor een
+   :last-child-knop); links blijft bewust vlak i.p.v. volledig afgerond — leest ondanks de
+   tussenruimte nog als "hoort bij dezelfde rij", niet als een losse, vrijzwevende knop. */
+#search-term + #colvis-container { margin-left: 8px; }
+#colvis-container .btn { border-radius: 0 var(--radius, 7px) var(--radius, 7px) 0; }
+
+/* Klanten-tabel: paginering (DESIGN.md "Table pagination controls") — zelfde recept als de
+   Mijlpalen-tabel (traject.css): DataTables v2's bs5-integratie erft anders rechtstreeks
+   Bootstrap's paginering-blauw (--bs-pagination-color), nergens in dit project gereset. */
+#datatable-clients-list_wrapper .dt-paging { margin-top: 16px; }
+#datatable-clients-list_wrapper .dt-info { margin-top: 16px; color: var(--tsa-muted-aa, #5b6472); font-size: .85rem; }
+#datatable-clients-list_wrapper .dt-paging .pagination { gap: 4px; }
+#datatable-clients-list_wrapper .page-item .page-link {
+    height: 36px;
+    min-width: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    color: var(--tsa-muted-aa, #5b6472);
+    text-align: center;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+#datatable-clients-list_wrapper .page-item .page-link:hover,
+#datatable-clients-list_wrapper .page-item .page-link:focus {
+    background: var(--lightgreen, #e8f0eb);
+    border-color: #bcd6c7;
+    color: #0f4b40;
+    box-shadow: none;
+}
+#datatable-clients-list_wrapper .page-item.active .page-link {
+    background: var(--primary, #0a5a3b);
+    border-color: var(--primary, #0a5a3b);
+    color: #fff;
+}
+#datatable-clients-list_wrapper .page-item.disabled .page-link {
+    color: var(--text-muted, #8590a5);
+    background: transparent;
+    border-color: var(--border, #e7e7e7);
+    opacity: .6;
+    box-shadow: none;
+}
+
+/* Klanten-tabel: rijen middelen verticaal uit (DESIGN.md "Table row actions" —
+   status/knop-hoogteverschillen ogen anders als scheefstand). */
+#datatable-clients-list td { vertical-align: middle; }
+
+/* Leveranciers-tabel (DetailContracts): zelfde zoek/colvis-gap (#search-term/#colvis-container,
+   hierboven, id's herbruikt over de twee pagina's) en dezelfde paginering-taal als de Klanten-
+   tabel — DESIGN.md "Table pagination controls" / "Table search + column filter". */
+#datatable-contracts-list_wrapper .dt-paging { margin-top: 16px; }
+#datatable-contracts-list_wrapper .dt-info { margin-top: 16px; color: var(--tsa-muted-aa, #5b6472); font-size: .85rem; }
+#datatable-contracts-list_wrapper .dt-paging .pagination { gap: 4px; }
+#datatable-contracts-list_wrapper .page-item .page-link {
+    height: 36px;
+    min-width: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    color: var(--tsa-muted-aa, #5b6472);
+    text-align: center;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+#datatable-contracts-list_wrapper .page-item .page-link:hover,
+#datatable-contracts-list_wrapper .page-item .page-link:focus {
+    background: var(--lightgreen, #e8f0eb);
+    border-color: #bcd6c7;
+    color: #0f4b40;
+    box-shadow: none;
+}
+#datatable-contracts-list_wrapper .page-item.active .page-link {
+    background: var(--primary, #0a5a3b);
+    border-color: var(--primary, #0a5a3b);
+    color: #fff;
+}
+#datatable-contracts-list_wrapper .page-item.disabled .page-link {
+    color: var(--text-muted, #8590a5);
+    background: transparent;
+    border-color: var(--border, #e7e7e7);
+    opacity: .6;
+    box-shadow: none;
+}
+/* Rijen middelen verticaal uit — zelfde reden als de Klanten-tabel hierboven. */
+#datatable-contracts-list td { vertical-align: middle; }

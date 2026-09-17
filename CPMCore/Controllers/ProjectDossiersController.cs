@@ -43,8 +43,12 @@ public class ProjectDossiersController : BaseController
             ?? $"Project {projectId}";
 
         SetBreadcrumbs(projectName, projectId);
-        SetPageHeader("bx bx-folder-open", $"{projectName} - Dossiers");
+        SetPageHeader("ph ph-folder-open", $"{projectName} - Dossiers");
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+        // Zelfde .gl-traject-tabrow als ProjectTraject/Index — die rij rekent op deze klasse om
+        // theme.css's ongeconditioneerde .content-body-marge (10px) te neutraliseren op desktop,
+        // anders staat de tabrij 10px te laag t.o.v. de topbar (zie DESIGN.md ".gl-traject-tabrow").
+        ViewBag.ContentBodyClass = "gl-traject-flush";
 
         filters ??= new DossierFilterBO();
         var vm = new DossierIndexVm
@@ -69,7 +73,8 @@ public class ProjectDossiersController : BaseController
             ?? $"Project {projectId}";
 
         SetBreadcrumbs(projectName, projectId, dossier.Titel);
-        SetPageHeader("bx bx-folder-open", dossier.Titel, projectName);
+        var dossierIcon = dossier.DossierKind == (int)DossierKind.NutsAansluiting ? "ph ph-lightning" : "ph ph-folder-open";
+        SetPageHeader(dossierIcon, dossier.Titel);
 
         var mijlpaalIds = await _db.ProjectDossierMijlpaal.Where(x => x.ProjectDossierId == id).Select(x => x.MijlpaalId).ToListAsync();
         var gekoppeld = await _db.Mijlpaal.Where(m => mijlpaalIds.Contains(m.Id)).ToListAsync();
@@ -125,6 +130,20 @@ public class ProjectDossiersController : BaseController
 
         AddMessage("success", "Het nutsaansluitingsdossier is opgeslagen.", "Opgeslagen");
         return RedirectToAction(nameof(Details), new { projectId, id = saved.ProjectDossierId });
+    }
+
+    [HttpPost("Nuts/BulkAanmaken")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsDossiers)]
+    public async Task<IActionResult> NutsBulkAanmaken(int projectId, [FromForm] NutsAansluitingBulkCreateBO dto)
+    {
+        dto.ProjectId = projectId;
+        var result = await _nuts.CreateBulkForUnits(dto, UserId);
+        var msg = $"{result.AantalAangemaakt} nutsaansluitingsdossier(s) aangemaakt.";
+        if (result.OvergeslagenEenheden.Count > 0)
+            msg += $" Overgeslagen (bestond al voor dit type): {string.Join(", ", result.OvergeslagenEenheden)}.";
+        AddMessage(result.OvergeslagenEenheden.Count > 0 ? "warning" : "success", msg, "Bulk aanmaken");
+        return RedirectToAction(nameof(Index), new { projectId });
     }
 
     [HttpGet("Units/{unitId:int}/Meterdata")]

@@ -16,7 +16,6 @@
 } *@
 @{
 	String urlTotal = "";
-	var canWriteProjectCustomers = ViewBag.CanWriteProjectCustomers as bool? ?? false;
 }
 @section PageStyle
 {
@@ -25,32 +24,25 @@
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
+@* Titel/subtitel en acties leven niet meer in de content-body (DESIGN.md "Paginakop" is
+   vervangen — zie de "Titel/acties horen in de topbar/sticky actiebalk" regel): titel+icoon
+   komen uit SetPageHeader (ProjectenController.DetailClients), acties uit @section PageActions
+   hieronder (topbar, ≥768px) + de mobiele fallback-rij in .inner-body (<768px) — zelfde patroon
+   als ProjectTraject/Index.cshtml + _TrajectActionButtons.cshtml. Geen subtitel meer: de topbar
+   heeft daar geen slot voor, en een losse ondertitel-regel in de content-body zou het topbar-
+   patroon net weer gedeeltelijk herhalen. *@
+@section PageActions
+{
+    @await Html.PartialAsync("Partials/_ClientsActionButtons", Model)
+}
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
-            <div class="row">
-            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                    <h1 class="font-weight-bold mb-0 mt-0">Klanten</h1>
-                    <h5 class="mb-4 mt-0">Beheer de klanten van het project</h5>
-                </div>
-                <div class="col-sm-auto px-0">
-                        <div class="btn-group" role="group" aria-label="Project acties">
-                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
-                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnPrintClientList" title="Klantenlijst afdrukken">
-                                <i class="bx bx-printer"></i> Klantenlijst
-                            </button>
-                            @if (canWriteProjectCustomers)
-                            {
-                                <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
-                            }
-                        </div>
-
-                </div>
+            <div class="d-flex d-md-none justify-content-end gap-2 mb-3">
+                @await Html.PartialAsync("Partials/_ClientsActionButtons", Model)
             </div>
             @await Html.PartialAsync("Clients", Model)
-            </div>
         </div>
     </div>
 </section>
@@ -86,6 +78,18 @@
                 zeroRecords:    `Geen ${e.plural} om weer te geven`,
                 emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
 
+                // Klassieke pijltjes-iconen i.p.v. tekst (DESIGN.md "Table pagination controls").
+                // Phosphor heeft — anders dan Boxicons — een echt dubbel-caret-icoon (ph-caret-
+                // double-left/-right) voor eerste/laatste, dus geen kunstgreep meer nodig (twee
+                // enkele iconen tegen elkaar aan) zoals bij de Mijlpalen-tabel. Tekst blijft
+                // visually-hidden staan voor schermlezers.
+                paginate: {
+                  first: '<i class="ph ph-caret-double-left" aria-hidden="true"></i><span class="visually-hidden">Eerste</span>',
+                  previous: '<i class="ph ph-caret-left" aria-hidden="true"></i><span class="visually-hidden">Vorige</span>',
+                  next: '<i class="ph ph-caret-right" aria-hidden="true"></i><span class="visually-hidden">Volgende</span>',
+                  last: '<i class="ph ph-caret-double-right" aria-hidden="true"></i><span class="visually-hidden">Laatste</span>'
+                },
+
                 aria: {
                   sortAscending:  ": activeer om oplopend te sorteren",
                   sortDescending: ": activeer om aflopend te sorteren"
@@ -97,12 +101,16 @@
             const table = new DataTable('#datatable-clients-list', {
               order: [[1, 'asc']],
               language: buildLanguage(entity),
+              // Alle kolommen staan standaard aan — Verkoopdatum/Aktedatum/Opleverdatum stonden
+              // vroeger als data-visible="false" op de <th> (een Bootstrap Table-plugin-attribuut
+              // dat DataTables v2 sowieso niet leest, dus in de praktijk al nooit verborgen was);
+              // colvis blijft beschikbaar om zelf kolommen te verbergen, maar niet meer standaard.
               layout: {
                 topStart: {
                   buttons: [
                     {
                       extend: 'excel',
-                      text: '<i class="fa fa-file-excel"></i>',
+                      text: '<i class="ph ph-file-xls"></i>',
                       className: 'btn btn-default me-2',
                       titleAttr: 'Exporteer naar Excel',
                       attr: { "data-bs-toggle": "tooltip" },
@@ -110,7 +118,7 @@
                     },
                     {
                       extend: 'colvis',
-                      text: '<i class="bx bx-columns me-2"></i><span>Alle kolommen</span>',
+                      text: '<i class="ph ph-columns me-2"></i><span>Alle kolommen</span>',
                       titleAttr: 'Selecteer kolommen',
                       attr: { "data-bs-toggle": "tooltip" },
                       columns: ':not(.noVis)',
@@ -129,13 +137,15 @@
             $(".buttons-excel").hide();
             $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
 
-            // Koppel custom export-knoppen
-            $("#btnExportExcel").on('click', function () {
+            // Koppel custom export-knoppen — class i.p.v. id: _ClientsActionButtons.cshtml wordt
+            // tweemaal gerenderd (topbar + mobiele fallback), een id-selector zou enkel de eerste
+            // knop binden.
+            $(".js-export-excel").on('click', function () {
               $(".buttons-excel").trigger("click");
             });
 
             // Klantenlijst-PDF (server-side, Group LN-huisstijl)
-            $("#btnPrintClientList").on('click', function () {
+            $(".js-print-clientlist").on('click', function () {
               window.open('@Url.Action("PrintClientList", "Projecten")' + '?projectid=' + @Model.ProjectId, '_blank');
             });
 

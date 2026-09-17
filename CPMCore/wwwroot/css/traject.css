@@ -56,7 +56,7 @@
    Zelfde 4 tinten als --kal2-* hierboven, dus de Kalender- en Mijlpalen/Tijdlijn/Eenheden-tabs
    tonen nu dezelfde status overal op deze pagina i.p.v. losse kleursystemen per tab. */
 /* Bootstrap's eigen .badge is em-relatief (padding .35em .65em, font-size .75em) en valt dus
-   terug op de omringende celtekstgrootte — in een tabelrij naast een 30px .gl-row-action-btn
+   terug op de omringende celtekstgrootte — in een tabelrij naast een 30px hoge .gl-row-action-btn
    (hieronder) rendert dat maar ~18-20px, duidelijk korter dan de knoppen ernaast. Vaste,
    niet-relatieve maten i.p.v. em's lossen dat op én maken de status in één oogopslag beter
    leesbaar (was vrij klein). */
@@ -83,6 +83,23 @@
 .gl-mijlpaal-status-icon.s-2 { color: var(--kal2-bereikt); }
 .gl-mijlpaal-status-icon.s-3 { color: var(--kal2-nogtedoen); opacity: .6; }
 .gl-mijlpaal-status-icon.s-4 { color: var(--danger, #b3452f); }
+/* Mijlpalen-tabel enkel: "Bereikt" omgekeerd — een volle groene cirkel met wit vinkje i.p.v. een
+   groen icoon op transparante grond, zodat een voltooide rij in één oogopslag afsteekt tegen de
+   nog-open rijen eronder. Gescoped op de tabel (niet de gedeelde .s-2-regel hierboven) — _Timeline/
+   _UnitMatrix houden bewust het gewone icoon aan (_UnitMatrix se icoon is óók de klikbare
+   statuswijzig-knop, waar dit vollere vlak minder gepast is). Index.cshtml's StatusIcon() geeft
+   deze tabel voor status 2 daarom ph-check (kale vink) i.p.v. ph-check-circle — dat laatste tekent
+   zelf al een cirkelrand, wat dubbelop zou ogen op deze volle achtergrondcirkel. */
+#datatable-mijlpalen .gl-mijlpaal-status-icon.s-2 {
+    /* Kleiner dan de andere statusiconen (30px) — een volle badge oogt op hetzelfde formaat al
+       snel te zwaar tussen de open outline-iconen; 20px houdt 'm als accent, niet als blok. */
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    background: var(--kal2-bereikt);
+    border-radius: 50%;
+    color: #fff;
+}
 
 /* Herbruikbare "achterstallig"-tekststijl — vervangt het overal verspreide `text-danger fw-bold`
    (stock Bootstrap-rood) in Index.cshtml/_Timeline.cshtml/_UnitMatrix.cshtml. */
@@ -95,12 +112,12 @@
    DESIGN.md "Topbar" gl-page-header__back en Projecthub gl-detail-card-edit).
    30px i.p.v. hun 40px: dit is de compacte, dichte-tabelrij-variant van diezelfde
    taal, niet een derde losse stijl. */
-.gl-row-actions { display: inline-flex; align-items: center; gap: 2px; }
+.gl-row-actions { display: inline-flex; align-items: center; gap: 0; }
 .gl-row-action-btn {
     display: inline-flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; flex: 0 0 auto; border: 0; border-radius: var(--radius, 7px);
     background: transparent; color: var(--tsa-muted-aa, #5b6472); cursor: pointer;
-    transition: background-color .15s ease, color .15s ease, opacity .12s ease; touch-action: manipulation;
+    transition: background-color .15s ease, color .15s ease; touch-action: manipulation;
 }
 .gl-row-action-btn i { font-size: 16px; }
 /* Sterker, ondubbelzinnig hover-contrast: donkerder groen + een hairline-rand i.p.v. enkel de
@@ -110,36 +127,67 @@
 .gl-row-action-btn:focus-visible { outline: none; box-shadow: 0 0 0 .15rem rgba(10, 90, 59, .25); }
 .gl-row-action-btn.is-danger:hover { background: var(--danger-tint, #f7ece8); border-color: #eec3b8; color: var(--danger-text, #8a3420); }
 
-/* Rij-acties (bewerken/status wijzigen) blijven onzichtbaar tot je over de rij zweeft of er met
-   het toetsenbord in focust — vermindert de blijvende visuele ruis van 2 muted iconen op élke
-   rij, en laat de knop pas verschijnen op het moment dat 'ie relevant is i.p.v. een zwakke
-   rusttoestand-tint die voortdurend zichtbaar moet blijven. Enkel voor de "losse
-   actieknoppen"-rol (Mijlpalen-tabel via .gl-row-actions, Tijdlijn via .gl-traject-mijlpaal) —
-   NIET voor de Eenheden-matrix, waar hetzelfde .gl-row-action-btn het statusicoon zélf is en dus
-   altijd zichtbaar moet blijven (geen van beide scopes hieronder raakt die knop). */
-.gl-row-actions .gl-row-action-btn,
-.gl-traject-mijlpaal .gl-row-action-btn {
-    opacity: 0;
-}
-tr:hover .gl-row-actions .gl-row-action-btn,
-tr:focus-within .gl-row-actions .gl-row-action-btn,
-.gl-traject-mijlpaal:hover .gl-row-action-btn,
-.gl-traject-mijlpaal:focus-within .gl-row-action-btn,
-.gl-row-action-btn:focus-visible {
-    opacity: 1;
-}
-@media (hover: none) {
-    /* Geen hover op touch-schermen — daar altijd tonen, anders zijn de knoppen onbereikbaar. */
-    .gl-row-actions .gl-row-action-btn,
-    .gl-traject-mijlpaal .gl-row-action-btn {
-        opacity: 1;
-    }
-}
-
 /* Cellen middelen verticaal uit i.p.v. Bootstrap's standaard top-uitlijning — anders staat een
    korte badge/tekstcel bovenaan de rij terwijl de rij-acties ernaast (30px) de rij hoger maken,
    wat als een hoogteverschil oogt ook al is elk element zelf consistent. */
 #datatable-mijlpalen td { vertical-align: middle; }
+
+/* Mijlpalen-tabel: zoekveld + colvis-knop, zelfde recept als de Klanten-tabel
+   (projecten-custom.css#colvis-container — DESIGN.md "Table search + column filter"): colvis in
+   dezelfde .input-group, kleine 8px-tussenruimte i.p.v. Bootstrap's naadloze verbinding, eigen
+   rechterafronding terug (links bewust vlak — hoort nog bij de rij, is geen losse knop). */
+#mp-search-term + #mp-colvis-container { margin-left: 8px; }
+#mp-colvis-container .btn { border-radius: 0 var(--radius, 7px) var(--radius, 7px) 0; }
+
+/* Mijlpalen-tabel: paginering. DataTables v2's bs5-integratie rendert gewone Bootstrap
+   .pagination/.page-item/.page-link-markup (.dt-paging is enkel de buitenste wrapper — geen van
+   beide bundels (de CDN-combi, noch de losse ~/lib/datatables/media/css/dataTables.bootstrap5.css)
+   zet zelf kleuren op .page-link), dus die erft rechtstreeks Bootstrap's eigen paginering-blauw
+   (--bs-pagination-color) — nergens in dit project gereset. Vervangt dat door dezelfde neutrale/
+   groene taal als de rest van de tabel (One Green Rule, DESIGN.md): grijze tekst in rust, Mist-
+   Green hover/focus, Deep Forest Green voor de actieve pagina — zelfde recept als het bestaande
+   .issue-table-footer hierboven, hier toegepast op de Mijlpalen-tabel specifiek. */
+#datatable-mijlpalen_wrapper .dt-paging { margin-top: 16px; }
+#datatable-mijlpalen_wrapper .dt-info { margin-top: 16px; }
+#datatable-mijlpalen_wrapper .dt-paging .pagination { gap: 4px; }
+#datatable-mijlpalen_wrapper .page-item .page-link {
+    /* Vaste hoogte + flex-centrering i.p.v. Bootstrap's tekst-padding: een cijfer ("1") en een
+       icoonglyph (ph-caret-*) hebben niet dezelfde intrinsieke regelhoogte, dus zonder dit
+       vielen de pijltjes-knoppen zichtbaar lager/hoger uit dan de genummerde knoppen ernaast. */
+    height: 36px;
+    min-width: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border, #e7e7e7);
+    border-radius: var(--radius, 7px);
+    color: var(--tsa-muted-aa, #5b6472);
+    text-align: center;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    gap: 0;
+}
+#datatable-mijlpalen_wrapper .page-item .page-link:hover,
+#datatable-mijlpalen_wrapper .page-item .page-link:focus {
+    background: var(--lightgreen, #e8f0eb);
+    border-color: #bcd6c7;
+    color: #0f4b40;
+    box-shadow: none;
+}
+#datatable-mijlpalen_wrapper .page-item.active .page-link {
+    background: var(--primary, #0a5a3b);
+    border-color: var(--primary, #0a5a3b);
+    color: #fff;
+}
+#datatable-mijlpalen_wrapper .page-item.disabled .page-link {
+    color: var(--text-muted, #8590a5);
+    background: transparent;
+    border-color: var(--border, #e7e7e7);
+    opacity: .6;
+    box-shadow: none;
+}
+#datatable-mijlpalen_wrapper .dt-info { color: var(--tsa-muted-aa, #5b6472); font-size: .85rem; }
 
 /* Mijlpaal-upsertmodal — drie gescheiden secties i.p.v. 11 velden in één ongebroken raster
    (/impeccable critique P2-fix). Zelfde labeltypografie als gl-form-section__title-taal (600,
@@ -187,9 +235,84 @@ tr:focus-within .gl-row-actions .gl-row-action-btn,
 .gl-dossier-tijdlijn li:first-child { border-top: none; padding-top: 0; }
 .gl-dt-datum { color: #8892a4; font-size: .8rem; white-space: nowrap; }
 
-/* vergunningschecklist */
-.gl-vergunning-checklist { display: flex; flex-direction: column; gap: .1rem; }
-.gl-vc-item {
+/* Nutsaanvragen-tab (ProjectDossiers/Index): algemene aansluitingen als rij-is-link lijst
+   (zelfde taal als gl-doc-item/gl-mc-item, DESIGN.md Projecthub-componentbibliotheek) + een
+   eenheid×nutstype-matrix die de eenheden-matrix van ProjectTraject hergebruikt (.gl-unit-matrix*,
+   .gl-um-*) — zelfde vorm (rijen=eenheid, kolommen=een tweede as, cel=status), enig verschil is
+   dat een dossier te veel eigen velden heeft voor een klik-om-te-wisselen statusknop zoals bij een
+   mijlpaal: een cel is hier een link naar Details (bestaat) of een "+"-knop (bestaat nog niet). */
+.gl-nuts-algemeen-list { list-style: none; margin: 0; padding: 0; }
+.gl-nuts-algemeen-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 4px; border-top: 1px solid var(--border, #e7e7e7);
+    text-decoration: none; color: inherit; border-radius: var(--radius, 7px);
+}
+.gl-nuts-algemeen-item:first-child { border-top: 0; }
+.gl-nuts-algemeen-item:hover { background: var(--lightgreen, #e8f0eb); }
+.gl-nuts-algemeen-icon {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius, 7px);
+    background: var(--lightgreen, #e8f0eb); color: var(--primary, #0a5a3b);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem;
+}
+.gl-nuts-algemeen-body { flex: 1 1 auto; min-width: 0; }
+.gl-nuts-algemeen-titel { font-weight: 600; }
+.gl-nuts-algemeen-meta { font-size: .8rem; color: var(--text-muted, #8590a5); }
+.gl-nuts-algemeen-meta span + span::before { content: "·"; margin: 0 .35rem; }
+
+.gl-um-cell-link {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    text-decoration: none; color: inherit; padding: .25rem; border-radius: var(--radius, 7px);
+}
+.gl-um-cell-link:hover { background: rgba(255,255,255,.6); }
+.gl-um-cell-add {
+    width: 28px; height: 28px; border-radius: 50%; border: 1px dashed var(--border, #cbd2dc);
+    background: transparent; color: var(--text-muted, #8590a5);
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.gl-um-cell-add:hover { background: var(--lightgreen, #e8f0eb); border-color: #bcd6c7; border-style: solid; color: var(--primary, #0a5a3b); }
+.gl-um-cell.m-status-3 { opacity: .55; }
+
+.gl-nuts-bulk-units {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .35rem .75rem;
+    max-height: 220px; overflow-y: auto; padding: .6rem; border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px);
+}
+.gl-nuts-bulk-unit { display: flex; align-items: center; gap: .45rem; font-size: .88rem; }
+.gl-nuts-bulk-unit input { margin: 0; }
+
+/* Alle-dossiers-tabel: zelfde zoekveld+colvis-recept en paginering-taal als de Mijlpalen-tabel
+   hierboven (#mp-search-term / #datatable-mijlpalen_wrapper) — één taal, hier een derde keer
+   toegepast i.p.v. opnieuw uitgevonden. */
+#doss-search-term + #doss-colvis-container { margin-left: 8px; }
+#doss-colvis-container .btn { border-radius: 0 var(--radius, 7px) var(--radius, 7px) 0; }
+#datatable-dossiers td { vertical-align: middle; }
+#datatable-dossiers_wrapper .dt-paging { margin-top: 16px; }
+#datatable-dossiers_wrapper .dt-info { margin-top: 16px; color: var(--tsa-muted-aa, #5b6472); font-size: .85rem; }
+#datatable-dossiers_wrapper .dt-paging .pagination { gap: 4px; }
+#datatable-dossiers_wrapper .page-item .page-link {
+    height: 36px; min-width: 36px; padding: 0 10px;
+    border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px);
+    color: var(--tsa-muted-aa, #5b6472); text-align: center; box-shadow: none;
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1; gap: 0;
+}
+#datatable-dossiers_wrapper .page-item .page-link:hover,
+#datatable-dossiers_wrapper .page-item .page-link:focus {
+    background: var(--lightgreen, #e8f0eb); border-color: #bcd6c7; color: #0f4b40; box-shadow: none;
+}
+#datatable-dossiers_wrapper .page-item.active .page-link {
+    background: var(--primary, #0a5a3b); border-color: var(--primary, #0a5a3b); color: #fff;
+}
+#datatable-dossiers_wrapper .page-item.disabled .page-link {
+    color: var(--text-muted, #8590a5); background: transparent; border-color: var(--border, #e7e7e7);
+    opacity: .6; box-shadow: none;
+}
+
+/* dossierchecklist — generiek: Substappen van elk DossierKind dat een stappenplan gebruikt
+   (Omgevingsvergunning én Nutsaansluiting delen deze ene markup/CSS, zie Details.cshtml).
+   Was .gl-vergunning-checklist/.gl-vc-* toen enkel Omgevingsvergunning substappen had; hernoemd
+   generiek zodra Nutsaansluiting (BOCore.NutsChecklistDefaults) hetzelfde mechanisme kreeg — enige
+   gebruiker is Details.cshtml, dus geen bulk-sweep nodig. */
+.gl-dossier-checklist { display: flex; flex-direction: column; gap: .1rem; }
+.gl-dchk-item {
     display: grid;
     grid-template-columns: 14px minmax(0,1fr) 90px auto;
     align-items: center;
@@ -197,19 +320,19 @@ tr:focus-within .gl-row-actions .gl-row-action-btn,
     padding: .45rem 0;
     border-top: 1px dashed #eef0f4;
 }
-.gl-vc-item:first-child { border-top: none; }
-.gl-vc-dot { width: 11px; height: 11px; border-radius: 50%; background: #ced4da; border: 2px solid #fff; box-shadow: 0 0 0 1px #ced4da; }
-.gl-vc-item.vc-status-1 .gl-vc-dot { background: #ffc107; box-shadow: 0 0 0 1px #ffc107; }
-.gl-vc-item.vc-status-2 .gl-vc-dot { background: #198754; box-shadow: 0 0 0 1px #198754; }
-.gl-vc-item.vc-status-3 .gl-vc-dot { background: #adb5bd; }
-.gl-vc-naam { font-weight: 500; }
-.gl-vc-datum { font-size: .82rem; }
-.gl-vc-item form { align-items: center; }
-.gl-vc-item select, .gl-vc-item input[type="date"] { min-width: 120px; }
+.gl-dchk-item:first-child { border-top: none; }
+.gl-dchk-dot { width: 11px; height: 11px; border-radius: 50%; background: #ced4da; border: 2px solid #fff; box-shadow: 0 0 0 1px #ced4da; }
+.gl-dchk-item.dchk-status-1 .gl-dchk-dot { background: #ffc107; box-shadow: 0 0 0 1px #ffc107; }
+.gl-dchk-item.dchk-status-2 .gl-dchk-dot { background: #198754; box-shadow: 0 0 0 1px #198754; }
+.gl-dchk-item.dchk-status-3 .gl-dchk-dot { background: #adb5bd; }
+.gl-dchk-naam { font-weight: 500; }
+.gl-dchk-datum { font-size: .82rem; }
+.gl-dchk-item form { align-items: center; }
+.gl-dchk-item select, .gl-dchk-item input[type="date"] { min-width: 120px; }
 @media (max-width: 768px) {
-    .gl-vc-item { grid-template-columns: 14px 1fr; }
-    .gl-vc-item form { grid-column: 1 / -1; margin-top: .3rem; }
-    .gl-vc-datum { display: none; }
+    .gl-dchk-item { grid-template-columns: 14px 1fr; }
+    .gl-dchk-item form { grid-column: 1 / -1; margin-top: .3rem; }
+    .gl-dchk-datum { display: none; }
 }
 
 /* ══ Kalender 2.0 (ProjectTraject/Index, tab Kalender) ═══════════════════════
@@ -294,6 +417,26 @@ tr:focus-within .gl-row-actions .gl-row-action-btn,
 @media (max-width: 767.98px) {
     .gl-kal2-toolbar-row--end { flex-direction: column; align-items: stretch; }
     .gl-kal2-filters { overflow-x: auto; }
+    /* /impeccable adapt: de bovenste toolbarrij (nav + titel + weergaveschakelaar) had geen
+       mobiele behandeling — 4 tekst+icoon-knoppen (Maand/Kwartaal/Jaar/Agenda) in een
+       overflow:hidden-strip werden simpelweg afgesneden voorbij de viewportrand op 360-400px,
+       zonder scroll-aanwijzing: "Agenda" was onbereikbaar. Expliciete volgorde i.p.v. op
+       flex-wrap vertrouwen (die zou nav/titel/schakelaar onvoorspelbaar over de regels verdelen),
+       schakelaar als volle-breedte rij met 4 gelijke, icoon-only knoppen (tekst blijft via
+       font-size:0 wél in de accessibility-tree — geen aria-hidden/display:none nodig). */
+    .gl-kal2-toolbar-row { gap: 8px; }
+    .gl-kal2-nav { order: 1; }
+    .gl-kal2-title { order: 2; min-width: 0; }
+    .gl-kal2-viewswitch {
+        order: 3; flex: 1 1 100%; width: 100%; display: flex;
+    }
+    .gl-kal2-viewswitch button {
+        flex: 1 1 0; justify-content: center; font-size: 0; min-height: 44px; padding: 0 4px;
+    }
+    .gl-kal2-viewswitch button i { font-size: 17px; }
+    /* Aanraakdoel ≥44px (adapt.md) — 34px navbtn/gl-kal2-btn is op desktop prima (muis), op
+       touch net iets krap. */
+    .gl-kal2-navbtn, .gl-kal2-btn { min-height: 44px; }
 }
 
 /* ── Layout: main + zijpaneel ───────────────────────────────────────── */
@@ -497,14 +640,25 @@ tr:focus-within .gl-row-actions .gl-row-action-btn,
       via ViewBag.ContentBodyClass="gl-traject-flush" (ProjectTrajectController.Index)
       + de override hieronder, want dit is .content-body's ENIGE gebruik in deze
       pagina en zou zonder scoping alle andere .content-body-pagina's meeslepen.
-   2) groupln.css, html.modern.fixed: [.inner-body] krijgt `border-top:113px solid
+   2) theme.css, html.fixed [.inner-body] krijgt `border-top:113px solid
       transparent; margin-top:-110px;` bovenop de gewone (niet-fixed-specifieke)
       `padding:40px`. Netto inzet t.o.v. .inner-body's normale flow-positie:
       -110 + 113 + 40 = 43px. Enkel op ≥768px: daaronder valt .inner-body terug op
       een heel ander (niet-fixed) padding-recept en scrollen de tabs toch al
       gewoon horizontaal in-flow, dus blijft de tabrij daar gewoon in-flow (geen
       position:fixed, zie hieronder). */
-html.modern.fixed .content-body.gl-traject-flush { margin-top: 0; }
+@media (min-width: 768px) {
+    /* Enkel ≥768px annuleren — /impeccable adapt vond een echte mobiele regressie: die 10px
+       margin-top was op ELKE .content-with-menu-pagina toch al maar net genoeg (samen met
+       .content-with-menu's eigen ongeconditioneerde -20px margin en .inner-wrapper's 72px
+       padding-top: 72 + 10 - 20 = 62px, tegenover de 60px mobiele topbar — 2px marge) om
+       Shared/DetailMenu.cshtml's ".inner-menu-toggle" ("Toon Menu") net onder de vaste mobiele
+       topbar te houden. Die 2px marge wegnemen op déze pagina (zonder deze media-scoping) trok
+       de kop van die balk zichtbaar onder de topbar — vandaar enkel op desktop, waar de tabrij
+       de -43px/-50px-breakout wél nodig heeft en .inner-menu-toggle sowieso al position:fixed
+       met zijn eigen top-correctie krijgt (custom.css). */
+    html.modern.fixed .content-body.gl-traject-flush { margin-top: 0; }
+}
 .gl-traject-tabrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 0 0 20px; }
 @media (min-width: 768px) {
     /* position:sticky is hier tweemaal geprobeerd (met en zonder de geneste-sticky-conflict-fix
@@ -512,8 +666,9 @@ html.modern.fixed .content-body.gl-traject-flush { margin-top: 0; }
        zichtbare kloof t.o.v. de topbar — de negative-margin-uitbraak (-43px) die op papier exact
        topbar-hoogte zou moeten opleveren, doet dat in de echte cascade van deze pagina duidelijk
        niet. In plaats van nog een keer op basis van handmatig herrekende pixels te gokken: JS
-       (traject.index.js, initTabrowPin()) meet de werkelijk gerenderde positie en corrigeert die
-       zelf naar exact onder de topbar (transform, geen herberekening van deze marge nodig), en
+       (custom.js, de .gl-traject-tabrow-IIFE — project-wide, niet enkel deze pagina) meet de
+       werkelijk gerenderde positie en corrigeert die zelf naar exact onder de topbar (transform,
+       geen herberekening van deze marge nodig), en
        zet zelf position:fixed aan zodra scrollen dat vereist — synchroon op het scroll-event
        (geen IntersectionObserver: die vuurt async, één frame te laat, en gaf precies de "korte
        sprong" die eerder gemeld werd). */
@@ -605,6 +760,25 @@ html.modern.fixed .content-body.gl-traject-flush { margin-top: 0; }
 .gl-um-datum { font-size: .72rem; margin-top: .1rem; }
 .gl-um-cell.is-overdue { background: var(--danger-tint, #f7ece8); }
 .gl-um-cell.m-status-2 { background: var(--lightgreen, #e8f0eb); }
+
+/* Eenheden-tab, mobiel (< 768px, d-md-none in _UnitMatrix.cshtml): één eenheid per keer als
+   verticale kaart i.p.v. de matrix-tabel — /impeccable adapt. Hergebruikt de kaart-loze
+   .gl-traject-empty-achtige "geen eigen omkadering nodig, zit al in de gedeelde tab-kaart"-lijn:
+   enkel een hairline-lijst, geen geneste card. */
+.gl-um-mobile-select { margin-bottom: 16px; max-width: 320px; }
+.gl-um-mobile-list { list-style: none; margin: 0; padding: 0; }
+.gl-um-mobile-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-top: 1px solid var(--border, #e7e7e7);
+}
+.gl-um-mobile-row:first-child { border-top: 0; }
+.gl-um-mobile-naam { flex: 1 1 auto; min-width: 0; font-weight: 500; }
+.gl-um-mobile-datum { flex: 0 0 auto; font-size: .82rem; }
+.gl-um-mobile-row.is-empty { color: var(--tsa-muted-aa, #5b6472); }
+.gl-um-mobile-dash {
+    flex: 0 0 auto; width: 30px; height: 30px; display: inline-flex; align-items: center;
+    justify-content: center; color: var(--tsa-muted-aa, #5b6472);
+}
 
 @media (max-width: 992px) {
     /* Flex i.p.v. Grid hieronder 992px: icoon/naam/actieknop delen één regel (wrapt vanzelf als

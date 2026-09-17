@@ -5,93 +5,339 @@
     ViewData["Title"] ??= "Dossiers";
     var vandaag = DateOnly.FromDateTime(DateTime.Today);
     var kinden = Enum.GetValues(typeof(DossierKind)).Cast<DossierKind>().ToList();
+
+    var nutsAlle = Model.Dossiers.Where(dd => dd.DossierKind == (int)DossierKind.NutsAansluiting).ToList();
+    var nutsAlgemeen = nutsAlle.Where(dd => dd.UnitId == null)
+        .OrderBy(dd => dd.NutsAansluiting?.NutsType ?? 0).ThenBy(dd => dd.Titel).ToList();
+    var nutsPerEenheid = nutsAlle.Where(dd => dd.UnitId != null).ToList();
+
+    // Vaste startkolommen (de meest voorkomende per-eenheid-aansluitingen) + elk ander type zodra
+    // er minstens één per-eenheid-dossier van bestaat — zo blijft de matrix bruikbaar op een vers
+    // project (nog 0 dossiers) én dekt ze elk type dat in de praktijk toch per eenheid loopt.
+    var matrixKolommen = new[] { NutsType.Elektriciteit, NutsType.Gas, NutsType.Water }
+        .Concat(nutsPerEenheid.Select(dd => (NutsType)(dd.NutsAansluiting?.NutsType ?? 0)))
+        .Distinct().OrderBy(t => (int)t).ToList();
+
+    var matrixCel = nutsPerEenheid
+        .GroupBy(dd => (dd.UnitId!.Value, (NutsType)(dd.NutsAansluiting?.NutsType ?? 0)))
+        .ToDictionary(g => g.Key, g => g.OrderByDescending(dd => dd.Status != (int)DossierStatus.Geannuleerd)
+                                          .ThenByDescending(dd => dd.CreatedDate).First());
+
+    // Eén icoon per NutsType — DESIGN.md "one glyph per meaning": Proximus/Telenet (en de legacy
+    // "Telecom") delen bewust hetzelfde wifi-icoon, dat is hier de betekenis ("telecom/data"), niet
+    // de operator; de operatornaam zelf staat al in de tekst ernaast.
+    string NutsIcon(NutsType t) => t switch
+    {
+        NutsType.Elektriciteit => "ph-lightning",
+        NutsType.Gas => "ph-flame",
+        NutsType.Water => "ph-drop",
+        NutsType.Riolering => "ph-toilet",
+        NutsType.Proximus => "ph-wifi-high",
+        NutsType.Telenet => "ph-wifi-high",
+        NutsType.Telecom => "ph-wifi-high",
+        _ => "ph-plug"
+    };
+
+    // DossierStatus (Nieuw/Aangevraagd/InBehandeling/Afgehandeld/Geannuleerd) hergebruikt bewust
+    // dezelfde 5 statusglyphs/kleuren als MijlpaalStatus i.p.v. een eigen set te verzinnen (DESIGN.md
+    // Icons-tabel): Aangevraagd + InBehandeling zijn allebei een vlak "bezig", Afgehandeld = bereikt,
+    // Geannuleerd = het gedimde nvt-icoon (geen probleem-signaal zoals geblokkeerd zou zijn).
+    string DossierStatusIcon(int status) => (DossierStatus)status switch
+    {
+        DossierStatus.Nieuw => "ph-circle",
+        DossierStatus.Afgehandeld => "ph-check-circle",
+        DossierStatus.Geannuleerd => "ph-minus-circle",
+        _ => "ph-clock"
+    };
+    int DossierStatusVisual(int status) => (DossierStatus)status switch
+    {
+        DossierStatus.Nieuw => 0,
+        DossierStatus.Afgehandeld => 2,
+        DossierStatus.Geannuleerd => 3,
+        _ => 1
+    };
 }
 
 @section PageStyle {
-    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    @* Combined DataTables-bundel (core + Buttons + ColVis) — zelfde bron/versie als
+       ProjectTraject/Index.cshtml en Projecten/DetailClients, nodig voor de kolommenfilter op de
+       Alle-dossiers-tabel. *@
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/projecten-custom.css" />
     <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
 }
+
+@* Geen eigen h1/h5 hier — de topbar (SetPageHeader in ProjectDossiersController.Index) toont
+   icoon + "{project} - Dossiers" al (DESIGN.md "The Content Body Has No Page Chrome Rule").
+   De acties zelf staan wél in de body (op uitdrukkelijke keuze) i.p.v. de topbar — zie de knoppenrij
+   onder de tabbar hieronder, niet in @@section PageActions. *@
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
 
-            <div class="row justify-content-between align-items-center pt-2">
-                <div class="col-sm-auto">
-                    <h1 class="font-weight-bold mb-0 mt-0">Dossiers</h1>
-                    <h5 class="mb-3 mt-0 text-muted">Opvolging van aanvragen, vergunningen, akten en andere dossiers voor @Model.ProjectName</h5>
+            <div class="gl-traject-tabrow">
+                <div class="gl-form-shell__tabs gl-traject-tabs" role="tablist" aria-label="Dossiers" data-tabgroup="dossiers-index">
+                    <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-nuts" data-tab="nuts"
+                            aria-controls="tab-nuts" aria-selected="true" tabindex="0">
+                        <i class="ph ph-lightning" aria-hidden="true"></i><span>Nutsaanvragen</span>
+                        <span class="gl-form-shell__tab-badge">@nutsAlle.Count</span>
+                    </button>
+                    <button type="button" class="gl-form-shell__tab" role="tab" id="tabbtn-alle" data-tab="alle"
+                            aria-controls="tab-alle" aria-selected="false" tabindex="-1">
+                        <i class="ph ph-folder-open" aria-hidden="true"></i><span>Alle dossiers</span>
+                    </button>
                 </div>
-                <div class="col-sm-auto px-0">
-                    <button type="button" class="btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#modalNuts" id="btnNieuwNuts">
-                        <i class="bx bx-plus"></i> Nutsaansluiting
-                    </button>
-                    <button type="button" class="btn btn-default btn-md" data-bs-toggle="modal" data-bs-target="#modalDossier" id="btnNieuwDossier">
-                        <i class="bx bx-plus"></i> Ander dossier
-                    </button>
+                <div class="gl-traject-stats" aria-label="Dossierstatus">
+                    <span class="gl-traject-stat"><strong>@Model.Dossiers.Count</strong> totaal</span>
+                    <span class="gl-traject-stat @(Model.AantalOpen > 0 ? "is-severe" : "")"><strong>@Model.AantalOpen</strong> nog open</span>
                 </div>
             </div>
 
-            <div class="gl-kpi2-strip mt-3">
-                <div class="gl-kpi2-tile">
-                    <span class="gl-kpi2-label">Totaal</span>
-                    <span class="gl-kpi2-value">@Model.Dossiers.Count</span>
-                </div>
-                <div class="gl-kpi2-tile @(Model.AantalOpen > 0 ? "gl-kpi2-severe" : "")">
-                    <span class="gl-kpi2-label">Nog open</span>
-                    <span class="gl-kpi2-value">@Model.AantalOpen</span>
-                </div>
+            <!-- Acties onder de tabbar, in de body — op uitdrukkelijke keuze i.p.v. de topbar. -->
+            <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+                @await Html.PartialAsync("Partials/_DossierActionButtons", Model)
             </div>
 
-            <ul class="nav nav-pills gl-dossier-kind-nav mt-3" role="tablist">
-                <li class="nav-item"><a class="nav-link js-kind-filter active" href="#" data-kind="">Alle</a></li>
-                @foreach (var k in kinden)
-                {
-                    <li class="nav-item"><a class="nav-link js-kind-filter" href="#" data-kind="@((int)k)">@k.GetDisplayName()</a></li>
-                }
-            </ul>
+            <div class="card card-modern">
+                <div class="card-body">
+                    <div id="tab-nuts" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-nuts" tabindex="0">
 
-            <table id="datatable-dossiers" class="table table-hover w-100 mt-2">
-                <thead>
-                    <tr>
-                        <th>Titel</th><th>Type</th><th>Eenheid</th><th>Status</th>
-                        <th>Aanvraag</th><th>Verwacht</th><th>Afgehandeld</th><th data-kind-col></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var d in Model.Dossiers)
-                    {
-                        var over = d.Status != (int)DossierStatus.Afgehandeld && d.Status != (int)DossierStatus.Geannuleerd
-                                   && d.VerwachteAfhandelingDatum is DateOnly vd && vd < vandaag;
-                        <tr data-kind="@d.DossierKind">
-                            <td><a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = d.Id })">@d.Titel</a></td>
-                            <td>@(((DossierKind)d.DossierKind).GetDisplayName())</td>
-                            <td>@(d.Unit?.Name ?? "—")</td>
-                            <td><span class="badge gl-mijlpaal-status s-@d.Status">@(((DossierStatus)d.Status).GetDisplayName())</span></td>
-                            <td>@(d.AanvraagDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
-                            <td class="@(over ? "text-danger fw-bold" : "")">@(d.VerwachteAfhandelingDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
-                            <td>@(d.AfgehandeldDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
-                            <td class="text-end">
-                                <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = d.Id })" class="btn btn-xs btn-default"><i class="bx bx-show"></i></a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            @if (Model.Dossiers.Count == 0)
-            {
-                <div class="text-muted text-center py-4">Nog geen dossiers voor dit project.</div>
-            }
+                        @if (nutsAlle.Count == 0 && Model.ProjectUnits.Count == 0)
+                        {
+                            <div class="gl-traject-empty">
+                                <i class="ph ph-lightning" aria-hidden="true"></i>
+                                <p class="gl-traject-empty-title">Nog geen nutsaanvragen</p>
+                                <p class="gl-traject-empty-hint">
+                                    Maak een algemene aansluiting aan (bv. de technische ruimte) via <strong>Nutsaansluiting</strong> hierboven,
+                                    of voeg eerst eenheden toe aan dit project om per eenheid te kunnen opvolgen.
+                                </p>
+                            </div>
+                        }
+                        else
+                        {
+                            <h2 class="gl-detail-card-header h6 text-uppercase text-muted mb-2" style="letter-spacing:normal;font-size:.78rem;font-weight:600;">Algemene aansluitingen</h2>
+                            @if (nutsAlgemeen.Count == 0)
+                            {
+                                <p class="text-muted small mb-4">Nog geen algemene aansluiting (projectniveau) — bv. gemeenschappelijke technische ruimte of lift.</p>
+                            }
+                            else
+                            {
+                                <ul class="gl-nuts-algemeen-list mb-4">
+                                    @foreach (var dd in nutsAlgemeen)
+                                    {
+                                        var nt = (NutsType)(dd.NutsAansluiting?.NutsType ?? 0);
+                                        <li>
+                                            <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })" class="gl-nuts-algemeen-item">
+                                                <span class="gl-nuts-algemeen-icon"><i class="ph @NutsIcon(nt)" aria-hidden="true"></i></span>
+                                                <span class="gl-nuts-algemeen-body">
+                                                    <span class="gl-nuts-algemeen-titel">@dd.Titel</span>
+                                                    <span class="gl-nuts-algemeen-meta">
+                                                        <span>@nt.GetDisplayName()</span>
+                                                        @if (!string.IsNullOrWhiteSpace(dd.NutsAansluiting?.Ean)) { <span>EAN @dd.NutsAansluiting.Ean</span> }
+                                                        @if (!string.IsNullOrWhiteSpace(dd.NutsAansluiting?.Meternummer)) { <span>Meter @dd.NutsAansluiting.Meternummer</span> }
+                                                    </span>
+                                                </span>
+                                                @{ var algStatusLabel = ((DossierStatus)dd.Status).GetDisplayName(); }
+                                                <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@algStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+
+                            @if (Model.ProjectUnits.Count > 0)
+                            {
+                                <h2 class="gl-detail-card-header h6 text-uppercase text-muted mb-2" style="letter-spacing:normal;font-size:.78rem;font-weight:600;">Per eenheid</h2>
+                                <div class="table-responsive gl-unit-matrix-wrap d-none d-md-block">
+                                    <table class="table table-bordered table-sm gl-unit-matrix">
+                                        <thead>
+                                            <tr>
+                                                <th class="gl-um-unit-col">Eenheid</th>
+                                                @foreach (var k in matrixKolommen)
+                                                {
+                                                    <th><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</th>
+                                                }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var u in Model.ProjectUnits)
+                                            {
+                                                <tr>
+                                                    <th class="gl-um-unit-col">@u.Name</th>
+                                                    @foreach (var k in matrixKolommen)
+                                                    {
+                                                        var key = (u.Id, k);
+                                                        if (matrixCel.TryGetValue(key, out var dd))
+                                                        {
+                                                            var over = dd.Status != (int)DossierStatus.Afgehandeld && dd.Status != (int)DossierStatus.Geannuleerd
+                                                                       && dd.VerwachteAfhandelingDatum is DateOnly vd && vd < vandaag;
+                                                            <td class="gl-um-cell m-status-@DossierStatusVisual(dd.Status) @(over ? "is-overdue" : "")">
+                                                                @{ var cellStatusLabel = ((DossierStatus)dd.Status).GetDisplayName(); }
+                                                                <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })" class="gl-um-cell-link" title="@u.Name — @k.GetDisplayName(): @cellStatusLabel">
+                                                                    <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
+                                                                    <span class="gl-um-datum @(over ? "gl-traject-overdue-text" : "text-muted")">@(dd.AfgehandeldDatum?.ToString("dd/MM/yy") ?? dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yy") ?? "—")</span>
+                                                                </a>
+                                                            </td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td class="gl-um-cell text-center">
+                                                                <button type="button" class="gl-um-cell-add js-nuts-matrix-add" data-bs-toggle="modal" data-bs-target="#modalNuts"
+                                                                        data-unit-id="@u.Id" data-nuts-type="@((int)k)" title="Nutsaansluiting @k.GetDisplayName() toevoegen voor @u.Name" aria-label="Nutsaansluiting @k.GetDisplayName() toevoegen voor @u.Name">
+                                                                    <i class="ph ph-plus" aria-hidden="true"></i>
+                                                                </button>
+                                                            </td>
+                                                        }
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="d-md-none">
+                                    <div class="gl-field gl-um-mobile-select">
+                                        <label for="nuts-um-unit-select">Eenheid</label>
+                                        <select id="nuts-um-unit-select" class="form-select form-control-modern">
+                                            @foreach (var u in Model.ProjectUnits)
+                                            {
+                                                <option value="@u.Id">@u.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    @foreach (var u in Model.ProjectUnits)
+                                    {
+                                        <div class="gl-um-mobile-card" data-unit-id="@u.Id" hidden>
+                                            <ul class="gl-um-mobile-list">
+                                                @foreach (var k in matrixKolommen)
+                                                {
+                                                    var key = (u.Id, k);
+                                                    if (matrixCel.TryGetValue(key, out var dd))
+                                                    {
+                                                        var mobStatusLabel = ((DossierStatus)dd.Status).GetDisplayName();
+                                                        <li class="gl-um-mobile-row">
+                                                            <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })" class="d-flex align-items-center gap-2 flex-fill text-decoration-none text-reset">
+                                                                <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@mobStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
+                                                                <span class="gl-um-mobile-naam"><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</span>
+                                                                <span class="gl-um-mobile-datum text-muted">@(dd.AfgehandeldDatum?.ToString("dd/MM/yy") ?? dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yy") ?? "—")</span>
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                    else
+                                                    {
+                                                        <li class="gl-um-mobile-row is-empty">
+                                                            <button type="button" class="gl-um-cell-add js-nuts-matrix-add" data-bs-toggle="modal" data-bs-target="#modalNuts"
+                                                                    data-unit-id="@u.Id" data-nuts-type="@((int)k)" aria-label="Nutsaansluiting @k.GetDisplayName() toevoegen voor @u.Name">
+                                                                <i class="ph ph-plus" aria-hidden="true"></i>
+                                                            </button>
+                                                            <span class="gl-um-mobile-naam"><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</span>
+                                                        </li>
+                                                    }
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div id="tab-alle" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-alle" tabindex="0" hidden>
+                        <ul class="nav nav-pills gl-dossier-kind-nav mb-3" role="tablist">
+                            <li class="nav-item"><a class="nav-link js-kind-filter active" href="#" data-kind="">Alle</a></li>
+                            @foreach (var k in kinden)
+                            {
+                                <li class="nav-item"><a class="nav-link js-kind-filter" href="#" data-kind="@((int)k)">@k.GetDisplayName()</a></li>
+                            }
+                        </ul>
+
+                        @* Zelfde zoekveld + kolommenfilter-patroon als Mijlpalen-tabel/Klanten-tabel
+                           (DESIGN.md "Table search + column filter"). *@
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+                                <input type="text" class="form-control" id="doss-search-term" placeholder="Zoeken…" aria-label="Zoeken in dossiers" />
+                                <div id="doss-colvis-container"></div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                        <table id="datatable-dossiers" class="table table-hover w-100">
+                            <thead>
+                                <tr>
+                                    <th class="text-center"><span class="visually-hidden">Status</span></th>
+                                    <th>Titel</th><th>Type</th><th>Eenheid</th>
+                                    <th class="text-end">Aanvraag</th><th class="text-end">Verwacht</th><th class="text-end">Afgehandeld</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var dd in Model.Dossiers)
+                                {
+                                    var overAlle = dd.Status != (int)DossierStatus.Afgehandeld && dd.Status != (int)DossierStatus.Geannuleerd
+                                               && dd.VerwachteAfhandelingDatum is DateOnly vda && vda < vandaag;
+                                    <tr data-kind="@dd.DossierKind">
+                                        <td class="text-center" data-order="@DossierStatusVisual(dd.Status)">
+                                            @{ var alleStatusLabel = ((DossierStatus)dd.Status).GetDisplayName(); }
+                                            <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@alleStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
+                                            <span class="visually-hidden">@alleStatusLabel</span>
+                                        </td>
+                                        <td><a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })">@dd.Titel</a></td>
+                                        <td>@(((DossierKind)dd.DossierKind).GetDisplayName())</td>
+                                        <td>@(dd.Unit?.Name ?? "—")</td>
+                                        <td class="text-end" data-order="@(dd.AanvraagDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.AanvraagDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td class="text-end @(overAlle ? "gl-traject-overdue-text" : "")" data-order="@(dd.VerwachteAfhandelingDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td class="text-end" data-order="@(dd.AfgehandeldDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.AfgehandeldDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        </div>
+                        @if (Model.Dossiers.Count == 0)
+                        {
+                            <div class="text-muted text-center py-4">Nog geen dossiers voor dit project.</div>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
 @await Html.PartialAsync("Modals/_ModalDossierUpsert", Model)
 @await Html.PartialAsync("Modals/_ModalNutsAansluiting", new CPMCore.Models.Traject.NutsAansluitingModalVm { ProjectId = Model.ProjectId, ProjectUnits = Model.ProjectUnits })
+@await Html.PartialAsync("Modals/_ModalNutsBulkAanmaken", Model)
 
 @section PageScripts {
-    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
     <script src="~/js/dossiers.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var strip = document.querySelector('.gl-form-shell__tabs[data-tabgroup="dossiers-index"]');
+            if (!strip) return;
+            var tabs = Array.prototype.slice.call(strip.querySelectorAll('.gl-form-shell__tab'));
+            var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+
+            function activate(name) {
+                tabs.forEach(function (t, i) {
+                    var on = t.dataset.tab === name;
+                    t.setAttribute('aria-selected', on ? 'true' : 'false');
+                    t.tabIndex = on ? 0 : -1;
+                    if (panels[i]) panels[i].hidden = !on;
+                });
+                window.dispatchEvent(new Event('resize'));
+            }
+
+            tabs.forEach(function (t) {
+                t.addEventListener('click', function () { activate(t.dataset.tab); });
+                t.addEventListener('keydown', function (e) {
+                    var i = tabs.indexOf(t), next = null;
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = tabs[(i + 1) % tabs.length];
+                    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = tabs[(i - 1 + tabs.length) % tabs.length];
+                    if (next) { e.preventDefault(); next.focus(); activate(next.dataset.tab); }
+                });
+            });
+        })();
+    </script>
 }

@@ -47,6 +47,12 @@
 	<link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
 @* 	<link rel="stylesheet" href="~/lib/boxicons/css/boxicons.min.css" /> *@
 	<link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
+	@* Iconenmigratie naar Phosphor (phosphoricons.com), regular-gewicht — DESIGN.md "Iconensysteem
+	   (Phosphor)". Lopende, per-pagina migratie (niet in bulk): Boxicons blijft daarom voorlopig
+	   ook geladen zodat nog-niet-gemigreerde pagina's `bx-*` gewoon blijven werken. Volledige,
+	   officiële webfont-bundel via jsDelivr (npm-pakket @phosphor-icons/web) i.p.v. een subset —
+	   zie DESIGN.md voor waarom dat met Boxicons' CDN-subset wél een probleem bleek. *@
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@phosphor-icons/web@@2.1.2/src/regular/style.css">
 	<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
 	<link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css" />
 	<link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.css" />

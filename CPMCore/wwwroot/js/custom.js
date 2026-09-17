@@ -40,11 +40,17 @@ jQuery(function ($) {
 
     const normalizeIcon = (iconClass) => iconClass?.trim().toLowerCase();
 
+    // Iconenmigratie Boxicons -> Phosphor (DESIGN.md "Icons"): dit script "corrigeerde" elk
+    // icoon in een Acties-kolom dat niet met bx- begint naar een bx-*-equivalent (of, zonder fa-
+    // klasse gevonden, stil terug naar het generieke bx-dots-horizontal-rounded) — precies wat
+    // een migrerende pagina's ph-* iconen (bv. ph-note-pencil, ph-trash) overkwam: geen fa-klasse
+    // om op te matchen, dus stille vervanging door drie puntjes. ph-* telt nu ook als "al goed",
+    // zelfde behandeling als bx-* (enkel de fs-5-sizingklasse erbij, verder met rust laten).
     const replaceWithBoxIcon = ($icon) => {
         const classList = ($icon.attr('class') || '').split(/\s+/);
-        const hasBoxIcon = classList.some((cls) => cls.startsWith('bx'));
+        const hasIconFont = classList.some((cls) => cls.startsWith('bx') || cls === 'ph' || cls.startsWith('ph-'));
 
-        if (hasBoxIcon) {
+        if (hasIconFont) {
             $icon.addClass('fs-5');
             return;
         }
@@ -123,6 +129,11 @@ jQuery(function ($) {
             var r = row.getBoundingClientRect();
             restTop = r.top + window.scrollY;
             rowHeight = r.height;
+            // Desktop-only correctie/pin — zie de uitgebreide toelichting bij dezelfde guard in
+            // de .gl-traject-tabrow-IIFE verderop in dit bestand: --topbar-height blijft op
+            // mobiel de desktop-waarde, dus zonder deze guard trekt transform de rij hier ook
+            // fors omhoog.
+            if (!mq.matches) return;
             var delta = topbarPx() - r.top;
             if (Math.abs(delta) > 0.5) row.style.transform = "translateY(" + delta + "px)";
         }
@@ -166,6 +177,109 @@ jQuery(function ($) {
         });
         new MutationObserver(function () {
             if (!pinned) measureRest();
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    });
+})();
+
+// Dezelfde blijft-zichtbaar-tijdens-scrollen-logica als hierboven, maar voor de
+// .gl-traject-tabrow-variant (tabstrip + compacte statuspillen op één rij, binnen een
+// .content-with-menu-schil met een extra .inner-menu (DetailMenu) kolom naast .inner-body).
+// Die extra kolom is precies waarom dit GEEN vaste 300px/73px kan hardcoden zoals de generieke
+// versie hierboven — .inner-menu's breedte/status verschilt per sidebar-variant
+// (sidebar-left-sm/-xs, ingeklapt) en schuift dus .inner-body's eigen linkerrand mee, dus wordt
+// live van .inner-body's getBoundingClientRect() afgelezen i.p.v. hardcoded. Oorspronkelijk enkel
+// ProjectTraject/Index.cshtml's eigen initTabrowPin() (traject.index.js) — hierheen verplaatst
+// (project-wide, elke pagina met deze markup) toen ProjectDossiers/Index.cshtml dezelfde
+// .gl-traject-tabrow kreeg zonder deze JS geladen te hebben (dossiers.js regelt enkel tab-klik/
+// toetsenbord, geen affix), waardoor de rij daar 10px te laag stond (geen .gl-traject-flush op
+// .content-body — zie de CSS-toelichting bij .gl-traject-tabrow in traject.css) én nooit ging
+// pinnen bij scrollen.
+(function () {
+    "use strict";
+    var mq = window.matchMedia("(min-width: 768px)");
+
+    function topbarPx() {
+        var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height"));
+        return isNaN(v) ? 72 : v;
+    }
+
+    document.querySelectorAll(".gl-traject-tabrow").forEach(function (row) {
+        var innerBody = row.closest(".inner-body");
+        var card = row.nextElementSibling;
+        if (!innerBody || !card) return;
+
+        var spacer = document.createElement("div");
+        spacer.setAttribute("aria-hidden", "true");
+        spacer.style.height = "0";
+        row.parentNode.insertBefore(spacer, card);
+
+        var pinned = false;
+        var restTop = 0;
+        var rowHeight = 0;
+        var ticking = false;
+
+        function measureRest() {
+            row.style.transform = "";
+            var r = row.getBoundingClientRect();
+            restTop = r.top + window.scrollY;
+            rowHeight = r.height;
+            // Desktop-only, zelfde reden als de generieke .gl-form-shell__tabs-versie hierboven.
+            if (!mq.matches) return;
+            var delta = topbarPx() - r.top;
+            if (Math.abs(delta) > 0.5) row.style.transform = "translateY(" + delta + "px)";
+        }
+
+        function syncHorizontal() {
+            var r = innerBody.getBoundingClientRect();
+            row.style.left = r.left + "px";
+            row.style.width = r.width + "px";
+        }
+
+        function pin() {
+            if (pinned) return;
+            spacer.style.height = rowHeight + "px";
+            row.style.transform = "";
+            syncHorizontal();
+            row.classList.add("gl-is-pinned");
+            pinned = true;
+        }
+
+        function unpin() {
+            if (!pinned) return;
+            row.classList.remove("gl-is-pinned");
+            row.style.left = "";
+            row.style.width = "";
+            spacer.style.height = "0";
+            pinned = false;
+            measureRest();
+        }
+
+        function update() {
+            ticking = false;
+            if (!mq.matches) { if (pinned) unpin(); return; }
+            var shouldPin = window.scrollY + topbarPx() >= restTop;
+            if (shouldPin && !pinned) pin();
+            else if (!shouldPin && pinned) unpin();
+            if (pinned) syncHorizontal();
+        }
+
+        function requestUpdate() {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(update);
+        }
+
+        measureRest();
+        update();
+        window.addEventListener("scroll", requestUpdate, { passive: true });
+        window.addEventListener("resize", function () {
+            if (!pinned) measureRest();
+            requestUpdate();
+        });
+        // Sidebar-inklap/uitklap en het openen/sluiten van .inner-menu wijzigen enkel html's
+        // class-attribuut, geen resize-event — MutationObserver vangt die live op.
+        new MutationObserver(function () {
+            if (pinned) syncHorizontal(); else measureRest();
         }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     });
 })();

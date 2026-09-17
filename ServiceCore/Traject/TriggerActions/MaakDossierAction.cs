@@ -6,7 +6,8 @@ namespace ServiceCore.Traject.TriggerActions;
 
 /// <summary>
 /// Maakt een <see cref="ProjectDossier"/> aan en koppelt het aan de mijlpaal. Parameters (optioneel):
-/// <c>{"kind":1,"titel":"..."}</c> — kind = BOCore.DossierKind (default Vrij).
+/// <c>{"kind":1,"titel":"...","nutsType":0}</c> — kind = BOCore.DossierKind (default Vrij);
+/// nutsType = BOCore.NutsType, enkel gelezen wanneer kind NutsAansluiting is.
 /// </summary>
 public class MaakDossierAction : ITrajectTriggerAction
 {
@@ -23,6 +24,7 @@ public class MaakDossierAction : ITrajectTriggerAction
         var parameters = TriggerParamHelper.Parse(trigger.ActieParametersJson);
         var kind = TriggerParamHelper.GetInt(parameters, "kind") ?? (int)DossierKind.Vrij;
         var titel = TriggerParamHelper.GetString(parameters, "titel") ?? mijlpaal.Naam;
+        var nutsType = TriggerParamHelper.GetInt(parameters, "nutsType");
 
         var dossier = new ProjectDossier
         {
@@ -49,6 +51,29 @@ public class MaakDossierAction : ITrajectTriggerAction
             Datum = DateTime.UtcNow,
             CreatedDate = DateTime.UtcNow
         });
+
+        if (kind == (int)DossierKind.NutsAansluiting)
+        {
+            _db.ProjectNutsAansluiting.Add(new ProjectNutsAansluiting
+            {
+                ProjectDossierId = dossier.Id,
+                UnitId = mijlpaal.UnitId,
+                NutsType = nutsType ?? (int)NutsType.Elektriciteit
+            });
+
+            foreach (var stap in NutsChecklistDefaults.Stappen)
+            {
+                _db.ProjectDossierSubstap.Add(new ProjectDossierSubstap
+                {
+                    ProjectDossierId = dossier.Id,
+                    Code = stap.Code,
+                    Naam = stap.Naam,
+                    Volgorde = stap.Volgorde,
+                    Status = (int)DossierSubstapStatus.NietGestart,
+                    CreatedDate = DateTime.UtcNow
+                });
+            }
+        }
 
         return TriggerActieResultaat.Success($"Dossier '{titel}' ({(DossierKind)kind}) aangemaakt (Id {dossier.Id}).");
     }

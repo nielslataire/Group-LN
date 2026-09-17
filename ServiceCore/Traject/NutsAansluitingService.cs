@@ -63,8 +63,79 @@ public class NutsAansluitingService : INutsAansluitingService
             CreatedDate = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
+
+        foreach (var stap in NutsChecklistDefaults.Stappen)
+        {
+            _db.ProjectDossierSubstap.Add(new ProjectDossierSubstap
+            {
+                ProjectDossierId = dossier.Id,
+                Code = stap.Code,
+                Naam = stap.Naam,
+                Volgorde = stap.Volgorde,
+                Status = (int)DossierSubstapStatus.NietGestart,
+                CreatedDate = DateTime.UtcNow
+            });
+        }
+        await _db.SaveChangesAsync();
+
         return nuts;
     }
+
+    public async Task<NutsAansluitingBulkResultBO> CreateBulkForUnits(NutsAansluitingBulkCreateBO dto, string? userId)
+    {
+        var result = new NutsAansluitingBulkResultBO();
+        var units = await _db.Units.AsNoTracking()
+            .Where(u => u.ProjectId == dto.ProjectId && dto.UnitIds.Contains(u.Id))
+            .ToListAsync();
+
+        foreach (var unit in units)
+        {
+            bool bestaatAl = await _db.ProjectDossier.AnyAsync(d =>
+                d.UnitId == unit.Id && d.DossierKind == (int)DossierKind.NutsAansluiting
+                && d.Status != (int)DossierStatus.Geannuleerd
+                && d.NutsAansluiting != null && d.NutsAansluiting.NutsType == dto.NutsType);
+            if (bestaatAl)
+            {
+                result.OvergeslagenEenheden.Add(unit.Name);
+                continue;
+            }
+
+            var titel = string.IsNullOrWhiteSpace(dto.TitelPrefix)
+                ? $"{((NutsType)dto.NutsType).GetDisplayName()} — {unit.Name}"
+                : $"{dto.TitelPrefix} — {unit.Name}";
+
+            var (ean, meternummer) = PrefillMeterdata(dto.NutsType, unit);
+
+            var perUnit = new NutsAansluitingUpsertBO
+            {
+                ProjectId = dto.ProjectId,
+                UnitId = unit.Id,
+                Titel = titel,
+                Status = dto.Status,
+                ExterneContactNaam = dto.ExterneContactNaam,
+                ExterneContactEmail = dto.ExterneContactEmail,
+                AanvraagDatum = dto.AanvraagDatum,
+                VerwachteAfhandelingDatum = dto.VerwachteAfhandelingDatum,
+                Omschrijving = dto.Omschrijving,
+                NutsType = dto.NutsType,
+                NetbeheerderCompanyId = dto.NetbeheerderCompanyId,
+                Ean = ean,
+                Meternummer = meternummer
+            };
+            await Create(perUnit, userId);
+            result.AantalAangemaakt++;
+        }
+
+        return result;
+    }
+
+    private static (string? Ean, string? Meternummer) PrefillMeterdata(int nutsType, Units unit) => (NutsType)nutsType switch
+    {
+        NutsType.Elektriciteit => (unit.EanElektriciteit, null),
+        NutsType.Gas => (unit.EanGas, null),
+        NutsType.Water => (null, unit.WatermeterNummer),
+        _ => (null, null)
+    };
 
     public async Task<ProjectNutsAansluiting?> Update(int id, NutsAansluitingUpsertBO dto, string? userId)
     {

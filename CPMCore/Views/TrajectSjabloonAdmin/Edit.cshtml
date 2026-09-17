@@ -77,6 +77,18 @@
         new { v = "DocDefDelivery", n = "Definitieve oplevering OK" },
     };
 
+    // Substap-codes over alle DossierKind-checklists heen, met het dossiertype vóór de naam zodat
+    // een admin niet hoeft te raden welke checklist een code hoort — gedeeld door DossierSubstap
+    // (één gekoppeld dossier) én AlleGekoppeldeDossierSubstappen (elk gekoppeld dossier moet de
+    // stap gehaald hebben, bv. één nutsaanvraag per eenheid).
+    var dossierSubstapOpties = VergunningChecklistDefaults.Stappen.OrderBy(x => x.Volgorde)
+        .Select(x => new { v = x.Code, n = $"Vergunning — {x.Naam}" })
+        .Concat(NutsChecklistDefaults.Stappen.OrderBy(x => x.Volgorde)
+            .Select(x => new { v = x.Code, n = $"Nutsaansluiting — {x.Naam}" }))
+        .ToList();
+    var nutsSubstapOpties = NutsChecklistDefaults.Stappen.OrderBy(x => x.Volgorde)
+        .Select(x => new { v = x.Code, n = x.Naam }).ToList();
+
     // Bron-parameter: per binding ofwel een vaste keuzelijst (leesbare labels i.p.v. vrije tekst),
     // ofwel "numeriek" (verwijst naar een record van één specifiek project — kan pas zinvol gekozen
     // worden ná instantiatie, op de mijlpaal zelf, niet hier in het projectonafhankelijke sjabloon),
@@ -108,8 +120,9 @@
             .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() }).ToList(),
         [(int)ComputedBinding.ProjectVoortgangFase] = Enum.GetValues(typeof(VoortgangFase)).Cast<VoortgangFase>()
             .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() }).ToList(),
-        [(int)ComputedBinding.DossierSubstap] = VergunningChecklistDefaults.Stappen
-            .OrderBy(x => x.Volgorde).Select(x => new { v = x.Code, n = x.Naam }).ToList(),
+        [(int)ComputedBinding.DossierSubstap] = dossierSubstapOpties,
+        [(int)ComputedBinding.AlleGekoppeldeDossierSubstappen] = dossierSubstapOpties,
+        [(int)ComputedBinding.AlleNutsaanvragenSubstap] = nutsSubstapOpties,
     };
 
     var bronParamModeByBinding = new Dictionary<int, string>
@@ -127,6 +140,8 @@
         [(int)ComputedBinding.ProjectVoortgangFase] = "select",
         [(int)ComputedBinding.Dossier] = "hidden",
         [(int)ComputedBinding.DossierSubstap] = "select",
+        [(int)ComputedBinding.AlleGekoppeldeDossierSubstappen] = "select",
+        [(int)ComputedBinding.AlleNutsaanvragenSubstap] = "select",
     };
 
     var bronParamHintByBinding = new Dictionary<int, string>
@@ -137,6 +152,8 @@
         [(int)ComputedBinding.InvoicingPaymentStage] = "Numeriek ID van een facturatieschijf van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
         [(int)ComputedBinding.ConnectionSettlement] = "Geen bron-parameter nodig — bereikt zodra de nutsafrekening van het project is afgerond.",
         [(int)ComputedBinding.Dossier] = "Geen bron-parameter nodig — bereikt zodra het gekoppelde dossier is afgehandeld (koppeling gebeurt op de mijlpaal zelf).",
+        [(int)ComputedBinding.AlleGekoppeldeDossierSubstappen] = "Voor een mijlpaal met méérdere gekoppelde dossiers (bv. één nutsaanvraag per eenheid): bereikt zodra élk gekoppeld dossier deze stap heeft afgerond. Koppel eerst alle betrokken dossiers aan deze mijlpaal via 'Koppel' op de dossierpagina — dat gebeurt op de mijlpaal zelf, niet hier in het sjabloon.",
+        [(int)ComputedBinding.AlleNutsaanvragenSubstap] = "Geen koppelstap nodig: bereikt zodra élk nutsaansluitingsdossier van het project (nu en later aangemaakt) deze stap heeft afgerond. De eenvoudigste keuze wanneer je gewoon wil dat 'alle nutsaanvragen zijn klaar' automatisch een mijlpaal afvinkt.",
     };
 }
 

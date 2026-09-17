@@ -19,14 +19,25 @@
                 infoFiltered: "(gefilterd uit _MAX_)",
                 zeroRecords: "Geen mijlpalen gevonden",
                 emptyTable: "Nog geen mijlpalen",
-                paginate: { first: "Eerste", last: "Laatste", next: "Volgende", previous: "Vorige" }
+                // Klassieke pijltjes-iconen i.p.v. tekst (DESIGN.md "Table pagination controls").
+                // Phosphor (DESIGN.md "Icons" — deze pagina was Boxicons, hier gemigreerd) heeft
+                // een echt dubbel-caret-icoon voor eerste/laatste, dus geen kunstgreep meer nodig
+                // (twee enkele iconen tegen elkaar aan, zoals de Boxicons-versie deed omdat er geen
+                // geverifieerd dubbel-chevron-icoon bestond in die set). De tekst blijft als
+                // visually-hidden staan voor schermlezers.
+                paginate: {
+                    first: '<i class="ph ph-caret-double-left" aria-hidden="true"></i><span class="visually-hidden">Eerste</span>',
+                    previous: '<i class="ph ph-caret-left" aria-hidden="true"></i><span class="visually-hidden">Vorige</span>',
+                    next: '<i class="ph ph-caret-right" aria-hidden="true"></i><span class="visually-hidden">Volgende</span>',
+                    last: '<i class="ph ph-caret-double-right" aria-hidden="true"></i><span class="visually-hidden">Laatste</span>'
+                }
             },
             layout: {
                 topStart: {
                     buttons: [
                         {
                             extend: "colvis",
-                            text: '<i class="bx bx-columns me-2"></i><span>Kolommen</span>',
+                            text: '<i class="ph ph-columns me-2"></i><span>Kolommen</span>',
                             titleAttr: "Selecteer kolommen",
                             columns: ":not(.noVis)",
                             init: function (api, node) { $(node).removeClass("btn-secondary").addClass("btn btn-default"); }
@@ -45,6 +56,65 @@
         if (mpSearchInput) {
             mpSearchInput.addEventListener("keyup", function () { mpTable.search(mpSearchInput.value).draw(); });
         }
+
+        // De Mijlpalen-tabel moet altijd in één scherm passen — geen browserscroll om bij de
+        // paginering te komen. i.p.v. een vaste pageLength (25) berekent dit hoeveel rijen er
+        // werkelijk passen tussen de tabel en de onderkant van het viewport, en past page.len()
+        // daarop aan. Rij-hoogte wordt van een echt gerenderde rij afgelezen (niet aangenomen),
+        // en "wat er buiten de rijen zelf nog staat" (toolbar/kop/paginering samen) door het
+        // wrapper-element te meten min de tbody — dat blijft kloppen ongeacht DataTables' exacte
+        // interne opbouw. Herberekent op resize, wat ook al gebeurt bij elke tabwissel (zie de
+        // inline tab-activatiescript in Index.cshtml: activate() dispatcht 'resize'), dus de
+        // Mijlpalen-tab krijgt de juiste pageLength zodra hij voor het eerst zichtbaar wordt.
+        var MP_MIN_ROWS = 5;
+        var MP_BOTTOM_GAP = 40; // ademruimte tussen de paginering en de onderkant van het venster
+        var mpFitTicking = false;
+
+        function fitMijlpalenPageLength() {
+            mpFitTicking = false;
+            var panel = document.getElementById("tab-mijlpalen");
+            var wrapper = document.getElementById("datatable-mijlpalen_wrapper");
+            if (!panel || panel.hidden || !wrapper) return;
+
+            var tbody = wrapper.querySelector("table tbody");
+            if (!tbody) return;
+
+            var firstRow = tbody.querySelector("tr");
+            var rowHeight = firstRow ? firstRow.getBoundingClientRect().height : 0;
+            if (!rowHeight || rowHeight < 10) rowHeight = 45;
+
+            var wrapperRect = wrapper.getBoundingClientRect();
+            var tbodyRect = tbody.getBoundingClientRect();
+            var chromeAboveRows = tbodyRect.top - wrapperRect.top;   // toolbar + kop
+            var chromeBelowRows = wrapperRect.bottom - tbodyRect.bottom; // info + paginering
+
+            var available = window.innerHeight - wrapperRect.top - MP_BOTTOM_GAP - chromeAboveRows - chromeBelowRows;
+            var newLen = Math.max(MP_MIN_ROWS, Math.floor(available / rowHeight));
+
+            if (newLen !== mpTable.page.len()) {
+                mpTable.page.len(newLen).draw(false);
+            }
+
+            // Zelfcorrigerend vangnet: MP_BOTTOM_GAP + de gemeten chrome zijn een goede inschatting,
+            // maar tellen niet élke padding/marge elders op de pagina mee (bv. .inner-body's eigen
+            // bottom-padding, die ná de wrapper komt en dus buiten dit meetpunt valt). In plaats van
+            // die overal handmatig na te rekenen: als de pagina ondanks de berekening toch nog een
+            // verticale scrollbar geeft, rijen laten zakken tot hij weg is.
+            var guard = 0;
+            while (document.documentElement.scrollHeight > window.innerHeight + 1 && mpTable.page.len() > MP_MIN_ROWS && guard < 15) {
+                mpTable.page.len(mpTable.page.len() - 1).draw(false);
+                guard++;
+            }
+        }
+
+        function requestMpFit() {
+            if (mpFitTicking) return;
+            mpFitTicking = true;
+            requestAnimationFrame(fitMijlpalenPageLength);
+        }
+
+        requestMpFit();
+        window.addEventListener("resize", requestMpFit);
     }
 
     var projectId = (location.pathname.match(/\/Projects\/(\d+)\/Traject/i) || [])[1];
@@ -173,105 +243,25 @@
         });
     }
 
-    initKalender2();
-    initTabrowPin();
-
-    // ══ Tabbar blijft zichtbaar tijdens scrollen (gl-traject-tabrow) ═════════════════════
-    // position:sticky (met de handmatig herrekende -43px-marge) bleek herhaaldelijk niet vast te
-    // klikken en liet bovendien een zichtbare kloof t.o.v. de topbar zien — de aanname dat die
-    // marge de rustpositie exact op topbar-hoogte zet, klopt in de echte cascade van deze pagina
-    // niet precies genoeg. Deze functie vertrouwt daarom geen enkele afgeleide pixelwaarde meer:
-    // ze meet zelf (getBoundingClientRect) waar de rij werkelijk staat en corrigeert dat live —
-    // zowel in rust (transform, zet 'm exact onder de topbar ongeacht wat de CSS-marge oplevert)
-    // als gepind (position:fixed met live van .inner-body afgelezen left/width). Vastklikken zelf
-    // gebeurt synchroon op het scroll-event (rAF-gebufferd) i.p.v. IntersectionObserver — die vuurt
-    // async, één frame te laat, en gaf precies de "korte sprong" die eerder gemeld werd.
-    function initTabrowPin() {
-        var row = document.querySelector(".gl-traject-tabrow");
-        var innerBody = document.querySelector(".inner-body");
-        var card = row && row.nextElementSibling;
-        if (!row || !innerBody || !card) return;
-
-        var mq = window.matchMedia("(min-width: 768px)");
-        var spacer = document.createElement("div");
-        spacer.setAttribute("aria-hidden", "true");
-        spacer.style.height = "0";
-        row.parentNode.insertBefore(spacer, card);
-
-        var pinned = false;
-        var restTop = 0;   // documentgebonden top van de rij in rust (na de CSS-marge, vóór correctie)
-        var rowHeight = 0;
-        var ticking = false;
-
-        function topbarPx() {
-            var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-height"));
-            return isNaN(v) ? 72 : v;
+    // Eenheden-tab, mobiel: keuzelijst i.p.v. de matrix-tabel (_UnitMatrix.cshtml, /impeccable
+    // adapt) — elke eenheid heeft al een eigen kaart (server-side gerenderd, `hidden`), dit toont
+    // enkel de gekozen kaart. Eén status-wijzig-knop-delegatie hierboven bedient ze allemaal al
+    // (.js-mijlpaal-status), dus hier enkel de select→kaart-koppeling.
+    var umSelect = document.getElementById("um-unit-select");
+    if (umSelect) {
+        var umCards = document.querySelectorAll(".gl-um-mobile-card");
+        function showUmCard(unitId) {
+            umCards.forEach(function (card) { card.hidden = card.getAttribute("data-unit-id") !== String(unitId); });
         }
-
-        function measureRest() {
-            row.style.transform = "";
-            var r = row.getBoundingClientRect();
-            restTop = r.top + window.scrollY;
-            rowHeight = r.height;
-            var delta = topbarPx() - r.top;
-            // Kleine correctie i.p.v. de -43px-marge zelf opnieuw te berekenen: wat de cascade ook
-            // precies oplevert, dit zet de rij hoe dan ook exact vlak onder de topbar in rust.
-            if (Math.abs(delta) > 0.5) row.style.transform = "translateY(" + delta + "px)";
-        }
-
-        function syncHorizontal() {
-            var r = innerBody.getBoundingClientRect();
-            row.style.left = r.left + "px";
-            row.style.width = r.width + "px";
-        }
-
-        function pin() {
-            if (pinned) return;
-            spacer.style.height = rowHeight + "px";
-            row.style.transform = "";
-            syncHorizontal();
-            row.classList.add("gl-is-pinned");
-            pinned = true;
-        }
-
-        function unpin() {
-            if (!pinned) return;
-            row.classList.remove("gl-is-pinned");
-            row.style.left = "";
-            row.style.width = "";
-            spacer.style.height = "0";
-            pinned = false;
-            measureRest();
-        }
-
-        function update() {
-            ticking = false;
-            if (!mq.matches) { if (pinned) unpin(); return; }
-            var shouldPin = window.scrollY + topbarPx() >= restTop;
-            if (shouldPin && !pinned) pin();
-            else if (!shouldPin && pinned) unpin();
-            if (pinned) syncHorizontal();
-        }
-
-        function requestUpdate() {
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(update);
-        }
-
-        measureRest();
-        update();
-        window.addEventListener("scroll", requestUpdate, { passive: true });
-        window.addEventListener("resize", function () {
-            if (!pinned) measureRest();
-            requestUpdate();
-        });
-        // Sidebar-inklap/uitklap en het openen/sluiten van .inner-menu wijzigen enkel html's
-        // class-attribuut, geen resize-event — MutationObserver vangt die live op.
-        new MutationObserver(function () {
-            if (pinned) syncHorizontal(); else measureRest();
-        }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+        umSelect.addEventListener("change", function () { showUmCard(umSelect.value); });
+        showUmCard(umSelect.value);
     }
+
+    initKalender2();
+    // Tabbar blijft zichtbaar tijdens scrollen (.gl-traject-tabrow) — deze logica verhuisde naar
+    // custom.js (project-wide, elke pagina met deze markup: ook ProjectDossiers/Index.cshtml
+    // gebruikt 'm nu) zodat een nieuwe pagina met dezelfde markup 'm niet zelf hoeft te herbouwen
+    // of te vergeten te laden. Zie custom.js voor de volledige toelichting.
 
     // ══ Kalender 2.0: Maand / Kwartaal / Jaar / Agenda, volledig custom ══════════════════
     // Geen widget-library — zie traject.css bovenaan de "Kalender 2.0"-sectie voor waarom.
@@ -437,7 +427,7 @@
             if (m.triggers && m.triggers.length) {
                 actiesHtml = '<div class="gl-kal2-detail-actions-head">Acties bij bereiken</div>' +
                     m.triggers.map(function (t) {
-                        return '<div class="gl-kal2-detail-action"><i class="bx bx-bolt-circle" aria-hidden="true"></i>' + escapeHtml(t.label) + "</div>";
+                        return '<div class="gl-kal2-detail-action"><i class="ph ph-lightning" aria-hidden="true"></i>' + escapeHtml(t.label) + "</div>";
                     }).join("");
             }
 
@@ -452,8 +442,8 @@
                 '<div class="gl-kal2-detail-row"><dt>Geldt voor</dt><dd>' + escapeHtml(m.geldtVoor) + "</dd></div>" +
                 "</dl>" + actiesHtml +
                 '<div class="gl-kal2-detail-foot">' +
-                (m.isBereikt ? "" : '<button type="button" class="btn btn-primary btn-sm" id="kal2BtnBereikt"><i class="bx bx-check me-1" aria-hidden="true"></i>Markeer bereikt</button>') +
-                '<button type="button" class="btn btn-default btn-sm" id="kal2BtnDatum"><i class="bx bx-calendar-edit me-1" aria-hidden="true"></i>Datum wijzigen</button>' +
+                (m.isBereikt ? "" : '<button type="button" class="btn btn-primary btn-sm" id="kal2BtnBereikt"><i class="ph ph-check me-1" aria-hidden="true"></i>Markeer bereikt</button>') +
+                '<button type="button" class="btn btn-default btn-sm" id="kal2BtnDatum"><i class="ph ph-calendar me-1" aria-hidden="true"></i>Datum wijzigen</button>' +
                 "</div>";
             detailEl.hidden = false;
 
@@ -558,9 +548,9 @@
                 var isToday = sameDay(day, today);
                 var dayItems = mijlpalen.filter(function (m) { return m._datum && sameDay(m._datum, day) && visible(m); });
                 var chips = dayItems.map(function (m) {
-                    var icon = m.isBereikt ? "bx-check-circle" : (bucket(m) === "achterstallig" ? "bx-error-circle" : "bx-circle");
+                    var icon = m.isBereikt ? "ph-check-circle" : (bucket(m) === "achterstallig" ? "ph-warning-circle" : "ph-circle");
                     return '<button type="button" class="gl-kal2-chip is-' + bucket(m) + (m.triggers && m.triggers.length ? " has-trigger" : "") + '" data-mp-id="' + m.id + '" title="' + escapeHtml(m.naam) + '">' +
-                        '<i class="bx ' + icon + '" aria-hidden="true"></i><span>' + escapeHtml(m.naam) + "</span></button>";
+                        '<i class="ph ' + icon + '" aria-hidden="true"></i><span>' + escapeHtml(m.naam) + "</span></button>";
                 }).join("");
                 return '<div class="gl-kal2-day' + (outside ? " is-outside" : "") + (isToday ? " is-today" : "") + '"><span class="gl-kal2-daynum">' + day.getDate() + "</span>" + chips + "</div>";
             }).join("") + "</div>";
@@ -687,7 +677,7 @@
                     var metaParts = [fase ? fase.naam : "", m.rol || ""].filter(Boolean);
                     var dateTxt = m.isBereikt ? "bereikt op " + fmtNl(m._datum) : (m.overdue ? m.dagenTeLaat + " dagen te laat" : "");
                     if (dateTxt) metaParts.push(dateTxt);
-                    var triggerBadge = m.triggers && m.triggers.length ? '<span class="gl-kal2-agenda-trigger"><i class="bx bx-bolt-circle" aria-hidden="true"></i>' + m.triggers.length + "</span>" : "";
+                    var triggerBadge = m.triggers && m.triggers.length ? '<span class="gl-kal2-agenda-trigger"><i class="ph ph-lightning" aria-hidden="true"></i>' + m.triggers.length + "</span>" : "";
                     return '<div class="gl-kal2-agenda-row is-' + b + (state.selectedId === m.id ? " is-selected" : "") + '" data-mp-id="' + m.id + '" tabindex="0" role="button" aria-label="' + escapeHtml(m.naam + ", " + statusLabel(m)) + '">' +
                         '<div class="gl-kal2-agenda-date">' + fmtNl(m._datum) + "</div>" +
                         '<span class="gl-kal2-dot is-' + b + '"></span>' +

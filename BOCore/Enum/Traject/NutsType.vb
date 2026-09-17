@@ -15,10 +15,17 @@ Public Enum NutsType As Integer
     <Display(Name:="Riolering")>
     Riolering = 3
 
+    ''' <summary>Behouden voor backward compatibility met bestaande data; nieuwe dossiers kiezen Proximus/Telenet/Overig.</summary>
     <Display(Name:="Telecom / data")>
     Telecom = 4
 
     <Display(Name:="Overig")>
     Overig = 5
+
+    <Display(Name:="Proximus")>
+    Proximus = 6
+
+    <Display(Name:="Telenet")>
+    Telenet = 7
 
 End Enum

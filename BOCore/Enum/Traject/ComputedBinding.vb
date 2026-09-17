@@ -45,4 +45,21 @@ Public Enum ComputedBinding As Integer
     <Display(Name:="Stap in gekoppeld dossier")>
     DossierSubstap = 12
 
+    ''' <summary>
+    ''' Voor een mijlpaal met meerdere gekoppelde dossiers (bv. één nutsaanvraag per eenheid):
+    ''' bereikt zodra élk gekoppeld dossier (via ProjectDossierMijlpaal) dezelfde checklist-stap
+    ''' (BronParam) heeft afgerond. Werkelijke datum = de laatste (strengste) van die stap-datums.
+    ''' </summary>
+    <Display(Name:="Stap op alle gekoppelde dossiers")>
+    AlleGekoppeldeDossierSubstappen = 13
+
+    ''' <summary>
+    ''' Zoals AlleGekoppeldeDossierSubstappen, maar zonder dat er iets gekoppeld moet worden: kijkt
+    ''' automatisch naar élk Nutsaansluiting-dossier van het project (huidige en toekomstige, geen
+    ''' handmatige "Koppel"-stap nodig). Bereikt zodra elk niet-geannuleerd nutsdossier de gekozen
+    ''' checklist-stap (BronParam) heeft afgerond.
+    ''' </summary>
+    <Display(Name:="Stap op alle nutsaanvragen (heel het project)")>
+    AlleNutsaanvragenSubstap = 14
+
 End Enum

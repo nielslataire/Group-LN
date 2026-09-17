@@ -11,6 +11,9 @@ public interface INutsAansluitingService
     Task<ProjectNutsAansluiting> Create(NutsAansluitingUpsertBO dto, string? userId);
     Task<ProjectNutsAansluiting?> Update(int id, NutsAansluitingUpsertBO dto, string? userId);
 
+    /// <summary>Maakt hetzelfde type nutsaansluiting in één keer aan voor meerdere eenheden.</summary>
+    Task<NutsAansluitingBulkResultBO> CreateBulkForUnits(NutsAansluitingBulkCreateBO dto, string? userId);
+
     /// <summary>Voorvult EAN/watermeternummer uit de eenheid, voor het aanmaakformulier.</summary>
     Task<(string? EanGas, string? EanElektriciteit, string? Watermeter)> GetUnitMeterData(int unitId);
 }

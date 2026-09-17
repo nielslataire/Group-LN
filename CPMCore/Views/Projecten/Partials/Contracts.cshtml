@@ -28,9 +28,9 @@
     string FmtSent(ContractBO c) =>
         c.ContractSentDate?.ToString("dd/MM/yyyy", currencyCulture) ?? "-";
 
-    // Compacte iconencluster voor de drie opvolgvlaggen. Het geladen boxicons "basic"-pack
-    // bevat geen bxs-* (solid) varianten, dus tekenen we de solid-vorm rechtstreeks als
-    // inline-SVG (pad uit lib/boxicons/svg/solid/*.svg). fill=currentColor laat gl-follow-on
+    // Compacte iconencluster voor de drie opvolgvlaggen. Geen icoonfont-gewicht in deze app
+    // (noch Boxicons' "basic"-pack, noch de geladen Phosphor Regular-lading) tekent een solid-
+    // vorm, dus tekenen we die rechtstreeks als inline-SVG. fill=currentColor laat gl-follow-on
     // (forest-green = "ja", DESIGN.md-token) / text-muted (gedempt = "nee") de kleur sturen;
     // titel + aria-label zorgen dat de betekenis niet louter op kleur steunt.
     const string IcoSigned = "M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm-1.999 14.413-3.713-3.705L7.7 11.292l2.299 2.295 5.294-5.294 1.414 1.414-6.706 6.706z";
@@ -65,34 +65,42 @@
 @if (Model.SupplierRows.Any())
 {
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+@* Zoekveld + kolommenfilter (DESIGN.md "Table search + column filter"): colvis in dezelfde
+   .input-group als het zoekveld met een kleine tussenruimte i.p.v. Bootstrap's naadloze
+   verbinding — projecten-custom.css#colvis-container regelt de 8px-gap + eigen rechterafronding
+   (herbruikt van de Klanten-tabel, zelfde id's, andere pagina). *@
 <div class="card card-modern">
 	<div class="card-body">
 		<div class="input-group">
 			<span class="input-group-text">
-				<i class="bx bx-search"></i>
+				<i class="ph ph-magnifying-glass" aria-hidden="true"></i>
 			</span>
-			<input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+			<input type="text" class="form-control" name="search-term" id="search-term" placeholder="Zoeken…" aria-label="Zoeken in leveranciers">
+			<div id="colvis-container"></div>
 		</div>
 	</div>
 </div>
 <div class="card card-modern">
 	<div class="card-body">
 		<div class="datatables-header-footer-wrapper mt-2">
+			@* data-sortable was een Bootstrap Table-plugin-attribuut, nooit door DataTables v2
+			   gelezen — kolommen die écht niet sorteerbaar mogen zijn krijgen data-orderable="false"
+			   (wél gelezen), de rest laat DataTables gewoon op z'n standaard (sorteerbaar). *@
 			<table class="table table-responsive-md table-hover mb-0 gl-table-min-w" id="datatable-contracts-list">
 				<thead>
 					<tr>
-						<th data-sortable="false" style="width:2rem"></th>
-						<th data-sortable="true">Bedrijf</th>
-						<th data-sortable="true" class="text-end">Contracten</th>
-						<th data-sortable="true" class="text-end">Totale contractprijs</th>
-						<th data-sortable="true" class="text-end">Totaal gefactureerd</th>
-						<th data-sortable="false" class="text-end">BTW %</th>
-						<th data-sortable="false" class="text-end">Betaaltermijn</th>
-						<th data-sortable="false" class="text-end">Korting contant</th>
-						<th data-sortable="false" class="text-end">Waarborg</th>
-						<th data-sortable="false" class="text-center">Verstuurd</th>
-						<th data-sortable="false" class="text-center" title="Getekend / VGM charter / Werfmelding">Opvolging</th>
-						<th class="noVis" data-sortable="false">Acties</th>
+						<th data-orderable="false" style="width:2rem"></th>
+						<th>Bedrijf</th>
+						<th class="text-end">Contracten</th>
+						<th class="text-end">Totale contractprijs</th>
+						<th class="text-end">Totaal gefactureerd</th>
+						<th data-orderable="false" class="text-end">BTW %</th>
+						<th data-orderable="false" class="text-end">Betaaltermijn</th>
+						<th data-orderable="false" class="text-end">Korting contant</th>
+						<th data-orderable="false" class="text-end">Waarborg</th>
+						<th data-orderable="false" class="text-center">Verstuurd</th>
+						<th data-orderable="false" class="text-center" title="Getekend / VGM charter / Werfmelding">Opvolging</th>
+						<th class="noVis text-end" data-orderable="false">Acties</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -137,7 +145,7 @@
 									<button type="button" class="btn btn-link p-2 text-muted supplier-toggle" style="line-height:1"
 									        aria-expanded="false"
 									        aria-label="Toon @row.Contracts.Count contracten van @row.Company?.Display">
-										<i class="bx bx-chevron-right fs-5" aria-hidden="true"></i>
+										<i class="ph ph-caret-right fs-5" aria-hidden="true"></i>
 									</button>
 								}
 								else
@@ -199,7 +207,7 @@
 									@FmtGuarantee(row.Contract)
 									@if (row.Contract.GuaranteeDocumentMissing)
 									{
-										<i class="bx bx-alert-circle gl-danger-icon ms-1" style="font-size:18px;vertical-align:-.2em" title="Nog te ontvangen" role="img" aria-label="Bankwaarborg nog te ontvangen"></i>
+										<i class="ph ph-warning-circle gl-danger-icon ms-1" style="font-size:18px;vertical-align:-.2em" title="Nog te ontvangen" role="img" aria-label="Bankwaarborg nog te ontvangen"></i>
 									}
 								}
 								else
@@ -213,10 +221,12 @@
 							<td class="text-center align-middle">
 								@(hasSingle ? FollowUpIcons(row.Contract) : new HtmlString("-"))
 							</td>
-							<td class="actions align-middle">
+							<td class="actions text-end align-middle">
 								@if (row.Company != null)
 								{
-									@* Volgorde: bijbestelling, bewerken, verwijderen, contract toevoegen, detail *@
+									@* Volgorde: bijbestelling, bewerken, verwijderen, contract toevoegen, detail.
+									   DESIGN.md "Table row actions" — gl-row-action-btn i.p.v. de kale <a>+icoon. *@
+									<span class="gl-row-actions">
 									@if (canWriteProjectSuppliers && row.HasContract)
 									{
 										var contractsMeta = row.Contracts.Select(c => new
@@ -226,38 +236,39 @@
 											activityIds = (c.Activities ?? new List<ContractActivityBO>())
 												.Select(a => a.Activity?.ID ?? 0).Where(x => x > 0).Distinct().ToArray()
 										});
-										<a href="#" class="ms-1 me-1 js-add-bijbestelling" title="Bijbestelling toevoegen"
+										<button type="button" class="gl-row-action-btn js-add-bijbestelling" title="Bijbestelling toevoegen" aria-label="Bijbestelling toevoegen voor @row.Company.Display"
 										   data-company-id="@row.Company.ID"
 										   data-company-name="@row.Company.Display"
 										   data-contracts="@JsonSerializer.Serialize(contractsMeta)">
-											<i class="bx bx-receipt fs-5"></i>
-										</a>
+											<i class="ph ph-receipt" aria-hidden="true"></i>
+										</button>
 									}
 									@if (hasSingle && canWriteProjectSuppliers)
 									{
-										<a class="ms-1 me-1" title="Bewerken"
+										<a class="gl-row-action-btn" title="Bewerken" aria-label="@row.Company.Display bewerken"
 										   href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })">
-											<i class="bx bx-edit fs-5"></i>
+											<i class="ph ph-note-pencil" aria-hidden="true"></i>
 										</a>
 									}
 									@if (hasSingle && canDeleteProjectSuppliers)
 									{
-										<a href="#" class="ms-1 me-1 deleteContract" title="Contract verwijderen"
+										<a href="#" class="gl-row-action-btn is-danger deleteContract" title="Contract verwijderen" aria-label="Contract van @row.Company.Display verwijderen"
 										   data-id="@row.Contract.Id">
-											<i class="bx bx-trash fs-5"></i>
+											<i class="ph ph-trash" aria-hidden="true"></i>
 										</a>
 									}
 									@if (canWriteProjectSuppliers)
 									{
-										<a class="ms-1 me-1" title="Contract toevoegen"
+										<a class="gl-row-action-btn" title="Contract toevoegen" aria-label="Contract toevoegen voor @row.Company.Display"
 										   href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
-											<i class="bx bx-plus fs-5"></i>
+											<i class="ph ph-plus" aria-hidden="true"></i>
 										</a>
 									}
-									<a class="ms-1 me-1" title="Detail"
+									<a class="gl-row-action-btn" title="Detail" aria-label="Detail van @row.Company.Display"
 									   href="@Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
-										<i class="bx bx-eye fs-5"></i>
+										<i class="ph ph-eye" aria-hidden="true"></i>
 									</a>
+									</span>
 								}
 							</td>
 						</tr>
@@ -272,14 +283,16 @@ else
 {
 	<div class="card card-modern mb-4">
 		<div class="card-body align-items-center text-center card-big-info">
+			@* ph-hard-hat — zelfde icoon als de topbar (ProjectenController.DetailContracts'
+			   SetPageHeader), niet een generiek documenticoon. *@
 			<div class="col-12 mb-3 gl-empty-state-icon">
-				<i class="bx bx-file"></i>
+				<i class="ph ph-hard-hat" aria-hidden="true"></i>
 			</div>
 			<div class="col-12 text-muted mb-3">
 				<h4>Nog geen leveranciers toegevoegd</h4>
 			</div>
 			<div class="col-12 text-muted">
-				<a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default btn-md">+ Een eerste leverancier toevoegen</a>
+				<a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-md"><i class="ph ph-plus me-1" aria-hidden="true"></i>Een eerste leverancier toevoegen</a>
 			</div>
 		</div>
 	</div>

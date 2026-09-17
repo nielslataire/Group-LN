@@ -146,6 +146,8 @@ public class TrajectRecalculationService : ITrajectRecalculationService
         var dossierIds = dossiers.Select(d => d.Id).ToList();
         var substappen = await _db.ProjectDossierSubstap.AsNoTracking()
             .Where(s => dossierIds.Contains(s.ProjectDossierId)).ToListAsync();
+        var dossierMijlpaalLinks = await _db.ProjectDossierMijlpaal.AsNoTracking()
+            .Where(x => dossierIds.Contains(x.ProjectDossierId)).ToListAsync();
 
         return new TrajectBronContext
         {
@@ -164,7 +166,9 @@ public class TrajectRecalculationService : ITrajectRecalculationService
                 ? DateOnly.FromDateTime(settlements.Max())
                 : null,
             DossiersById = dossiers.ToDictionary(d => d.Id),
-            SubstappenPerDossier = substappen.GroupBy(s => s.ProjectDossierId).ToDictionary(g => g.Key, g => g.ToList())
+            SubstappenPerDossier = substappen.GroupBy(s => s.ProjectDossierId).ToDictionary(g => g.Key, g => g.ToList()),
+            GekoppeldeDossierIdsPerMijlpaal = dossierMijlpaalLinks.GroupBy(x => x.MijlpaalId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.ProjectDossierId).ToList())
         };
     }
 

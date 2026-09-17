@@ -1,0 +1,15 @@
+@*
+    Gedeeld tussen @section PageActions (topbar, ≥768px) en de mobiele d-md-none fallback-rij
+    in de content-body (<768px) — zelfde patroon als ProjectTraject/_TrajectActionButtons.cshtml.
+    Wordt dus tweemaal in de DOM gerenderd; geen van de knoppen heeft een id (enkel data-bs-*),
+    dus dat is geen probleem.
+*@
+<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuts">
+    <i class="ph ph-lightning me-1" aria-hidden="true"></i>Nutsaansluiting
+</button>
+<button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalNutsBulk">
+    <i class="ph ph-grid-four me-1" aria-hidden="true"></i>Bulk per eenheid
+</button>
+<button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalDossier">
+    <i class="ph ph-plus me-1" aria-hidden="true"></i>Ander dossier
+</button>

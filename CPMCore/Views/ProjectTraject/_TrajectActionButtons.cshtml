@@ -10,12 +10,12 @@
     element bij id op te halen.
 *@
 <button type="button" class="btn btn-primary btn-sm js-mijlpaal-new" data-bs-toggle="modal" data-bs-target="#modalMijlpaal">
-    <i class="bx bx-plus me-1" aria-hidden="true"></i>Mijlpaal
+    <i class="ph ph-plus me-1" aria-hidden="true"></i>Mijlpaal
 </button>
 <form method="post" asp-action="Sync" asp-route-projectId="@Model.ProjectId" class="d-inline">
     @Html.AntiForgeryToken()
     <button type="submit" class="btn btn-default btn-sm" title="Nieuwe mijlpalen uit het sjabloon overnemen">
-        <i class="bx bx-refresh me-1" aria-hidden="true"></i>Sync met sjabloon
+        <i class="ph ph-arrows-clockwise me-1" aria-hidden="true"></i>Sync met sjabloon
     </button>
 </form>
 @* window.confirmDialog (confirm-modal.js) i.p.v. de kale browser-confirm() — zelfde patroon als
@@ -23,5 +23,5 @@
    in deze featuremap. *@
 <form method="post" asp-action="Verwijderen" asp-route-projectId="@Model.ProjectId" class="d-inline gl-delete-traject-form">
     @Html.AntiForgeryToken()
-    <button type="submit" class="btn btn-gl-remove btn-sm" title="Traject verwijderen"><i class="bx bx-trash" aria-hidden="true"></i></button>
+    <button type="submit" class="btn btn-gl-remove btn-sm" title="Traject verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
 </form>

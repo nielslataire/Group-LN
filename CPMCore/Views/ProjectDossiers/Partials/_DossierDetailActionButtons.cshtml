@@ -1,0 +1,27 @@
+@using BOCore
+@model CPMCore.Models.Traject.DossierDetailsVm
+@{
+    var d = Model.Dossier;
+    var isNuts = d.DossierKind == (int)DossierKind.NutsAansluiting;
+}
+@* Gedeeld tussen @section PageActions (topbar, ≥768px) en de mobiele d-md-none fallback-rij —
+   zelfde patroon als ProjectTraject/_TrajectActionButtons.cshtml. *@
+<button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalTaakQuickAdd">
+    <i class="ph ph-list-checks me-1" aria-hidden="true"></i>Taak
+</button>
+@if (isNuts)
+{
+    <button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalNutsEdit@(d.Id)">
+        <i class="ph ph-note-pencil me-1" aria-hidden="true"></i>Bewerken
+    </button>
+}
+else
+{
+    <button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalDossierEdit">
+        <i class="ph ph-note-pencil me-1" aria-hidden="true"></i>Bewerken
+    </button>
+}
+<form method="post" asp-controller="ProjectDossiers" asp-action="Verwijderen" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-inline gl-delete-dossier-form">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-gl-remove btn-sm" title="Dossier verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+</form>

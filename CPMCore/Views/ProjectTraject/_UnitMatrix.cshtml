@@ -18,15 +18,15 @@
     // Toon alle eenheden van het project; ook zonder mijlpalen (dan lege cellen)
     var eenheden = Model.ProjectUnits;
 
-    // Zelfde mapping als Index.cshtml/_Timeline.cshtml.
+    // Zelfde mapping als Index.cshtml/_Timeline.cshtml. Phosphor (DESIGN.md "Icons").
     string StatusIcon(int status) => status switch
     {
-        0 => "bx-circle",
-        1 => "bx-time-five",
-        2 => "bx-check-circle",
-        3 => "bx-minus-circle",
-        4 => "bx-block",
-        _ => "bx-circle"
+        0 => "ph-circle",
+        1 => "ph-clock",
+        2 => "ph-check-circle",
+        3 => "ph-minus-circle",
+        4 => "ph-prohibit",
+        _ => "ph-circle"
     };
 }
 
@@ -35,7 +35,7 @@
     @* Zit al binnen de gedeelde tab-kaart (Index.cshtml) — geen geneste kaart hier, zelfde
        opbouw als de lege staten van de Kalender-tab (.gl-kal2-tl-empty/.gl-kal2-agenda-empty). *@
     <div class="gl-traject-empty">
-        <i class="bx bx-grid-alt" aria-hidden="true"></i>
+        <i class="ph ph-grid-four" aria-hidden="true"></i>
         <p class="gl-traject-empty-title">Nog geen per-eenheid mijlpalen</p>
         <p class="gl-traject-empty-hint">
             Voeg ze toe via het sjabloon (markeer een mijlpaal als <em>Per eenheid</em>) en klik daarna op
@@ -45,7 +45,14 @@
 }
 else
 {
-    <div class="table-responsive gl-unit-matrix-wrap">
+    @* Matrix (eenheid × mijlpaal) is een tabelvorm — leesbaar op tablet/desktop dankzij de sticky
+       eerste kolom, maar op telefoonbreedte moet je zowel horizontaal (kolommen) als verticaal
+       (rijen) tegelijk oriënteren om één eenheid te volgen. d-none d-md-block: enkel ≥768px
+       zichtbaar. Op mobiel (hieronder) kies je in plaats daarvan één eenheid uit een keuzelijst en
+       zie je haar mijlpalen als een verticale kaart — dezelfde transpositie als /impeccable adapt's
+       "tabel → kaart"-richtlijn, per eenheid i.p.v. per rij omdat dát hier de zinvolle eenheid is
+       waarin een gebruiker denkt ("hoe staat Lot 1 ervoor"), niet per mijlpaal-kolom. *@
+    <div class="table-responsive gl-unit-matrix-wrap d-none d-md-block">
         <table class="table table-bordered table-sm gl-unit-matrix">
             <thead>
                 <tr>
@@ -73,13 +80,13 @@ else
                                     @{ var umStatusLabel = ((MijlpaalStatus)m.Status).GetDisplayName(); }
                                     <button type="button" class="gl-row-action-btn gl-mijlpaal-status-icon s-@m.Status js-mijlpaal-status"
                                             data-id="@m.Id" data-naam="@($"{u.Name} — {m.Naam}")" data-status="@m.Status" title="@umStatusLabel — status wijzigen" aria-label="@umStatusLabel — status wijzigen">
-                                        <i class="bx @StatusIcon(m.Status)" aria-hidden="true"></i>
+                                        <i class="ph @StatusIcon(m.Status)" aria-hidden="true"></i>
                                     </button>
                                     <div class="gl-um-datum @(overdue ? "gl-traject-overdue-text" : "text-muted")">
                                         @(m.WerkelijkeDatum?.ToString("dd/MM/yy") ?? eff?.ToString("dd/MM/yy") ?? "—")
                                         @if (Model.PuntenPerMijlpaal.TryGetValue(m.Id, out var umPuntenAantal) && umPuntenAantal > 0)
                                         {
-                                            <span class="badge bg-light text-dark" title="Gekoppelde punten"><i class="bx bx-error-circle"></i> @umPuntenAantal</span>
+                                            <span class="badge bg-light text-dark" title="Gekoppelde punten"><i class="ph ph-warning-circle"></i> @umPuntenAantal</span>
                                         }
                                     </div>
                                 </td>
@@ -98,4 +105,54 @@ else
             </tbody>
         </table>
     </div>
+
+    @if (eenheden.Count > 0)
+    {
+        <div class="d-md-none">
+            <div class="gl-field gl-um-mobile-select">
+                <label for="um-unit-select">Eenheid</label>
+                <select id="um-unit-select" class="form-select form-control-modern">
+                    @foreach (var u in eenheden)
+                    {
+                        <option value="@u.Id">@u.Name</option>
+                    }
+                </select>
+            </div>
+            @foreach (var u in eenheden)
+            {
+                <div class="gl-um-mobile-card" data-unit-id="@u.Id" hidden>
+                    <ul class="gl-um-mobile-list">
+                        @foreach (var k in kolommen)
+                        {
+                            var key = (u.Id, k.Code ?? k.Naam);
+                            if (cel.TryGetValue(key, out var m))
+                            {
+                                var eff = m.Doeldatum ?? m.DoeldatumBerekend;
+                                var overdue = eff is DateOnly d && d < today
+                                              && m.Status != (int)MijlpaalStatus.Bereikt && m.Status != (int)MijlpaalStatus.NietVanToepassing;
+                                var umStatusLabel = ((MijlpaalStatus)m.Status).GetDisplayName();
+                                <li class="gl-um-mobile-row">
+                                    <button type="button" class="gl-row-action-btn gl-mijlpaal-status-icon s-@m.Status js-mijlpaal-status"
+                                            data-id="@m.Id" data-naam="@($"{u.Name} — {m.Naam}")" data-status="@m.Status" title="@umStatusLabel — status wijzigen" aria-label="@umStatusLabel — status wijzigen">
+                                        <i class="ph @StatusIcon(m.Status)" aria-hidden="true"></i>
+                                    </button>
+                                    <span class="gl-um-mobile-naam">@k.Naam</span>
+                                    <span class="gl-um-mobile-datum @(overdue ? "gl-traject-overdue-text" : "text-muted")">
+                                        @(m.WerkelijkeDatum?.ToString("dd/MM/yy") ?? eff?.ToString("dd/MM/yy") ?? "—")
+                                    </span>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="gl-um-mobile-row is-empty">
+                                    <span class="gl-um-mobile-dash">—</span>
+                                    <span class="gl-um-mobile-naam">@k.Naam</span>
+                                </li>
+                            }
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    }
 }

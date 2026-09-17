@@ -54,7 +54,7 @@ public class ProjectTrajectController : BaseController
         var projectName = project?.ProjectName ?? $"Project {projectId}";
 
         SetBreadcrumbs(projectName, projectId);
-        SetPageHeader("bx bx-git-branch", $"{projectName} - Traject");
+        SetPageHeader("ph ph-git-branch", $"{projectName} - Traject");
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
         // Neutraliseert theme.css' html.modern.fixed .content-body{margin-top:10px} — de tabbar
         // (.gl-traject-tabrow, traject.css) breekt uit tot vlak onder de topbar en rekent zelf al

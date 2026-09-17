@@ -1,0 +1,23 @@
+@model CPMCore.Models.Klanten.DetailClientsModel
+@{
+    var canWriteProjectCustomers = ViewBag.CanWriteProjectCustomers as bool? ?? false;
+}
+@*
+    Gedeeld tussen @section PageActions (topbar, ≥768px) en de mobiele d-md-none fallback-rij in
+    de content-body (<768px) — zelfde patroon als ProjectTraject/_TrajectActionButtons.cshtml.
+    Wordt dus tweemaal in de DOM gerenderd; class-hooks i.p.v. id's (DetailClients.cshtml
+    @section PageScripts bindt op .js-export-excel/.js-print-clientlist) zodat beide knoppen
+    werken i.p.v. enkel de eerste (jQuery's #id-selector matcht maar één element).
+*@
+<button type="button" class="btn btn-default btn-sm js-export-excel">
+    <i class="ph ph-file-xls me-1" aria-hidden="true"></i>Excel
+</button>
+<button type="button" class="btn btn-default btn-sm js-print-clientlist" title="Klantenlijst afdrukken">
+    <i class="ph ph-printer me-1" aria-hidden="true"></i>Klantenlijst
+</button>
+@if (canWriteProjectCustomers)
+{
+    <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-sm">
+        <i class="ph ph-plus me-1" aria-hidden="true"></i>Klant toevoegen
+    </a>
+}

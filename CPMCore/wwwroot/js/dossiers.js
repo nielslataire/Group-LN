@@ -1,46 +1,110 @@
 (function () {
     "use strict";
 
-    // ===== DataTable + kind-filter pills (Index) =====
-    if (window.jQuery && jQuery.fn.DataTable) {
-        var $t = jQuery("#datatable-dossiers");
-        if ($t.length) {
-            var table = $t.DataTable({
-                order: [[4, "desc"]],
-                pageLength: 25,
-                language: {
-                    search: "Zoeken:",
-                    lengthMenu: "Toon _MENU_",
-                    info: "_START_ tot _END_ van _TOTAL_ dossiers",
-                    infoEmpty: "0 dossiers",
-                    infoFiltered: "(gefilterd uit _MAX_)",
-                    zeroRecords: "Geen dossiers gevonden",
-                    emptyTable: "Nog geen dossiers",
-                    paginate: { first: "Eerste", last: "Laatste", next: "Volgende", previous: "Vorige" }
+    // ===== Alle-dossiers-tabel: DataTable + zoekveld/colvis (zelfde patroon als de
+    // Mijlpalen-tabel, traject.index.js) + kind-filter pills =====
+    if (window.DataTable && document.getElementById("datatable-dossiers")) {
+        var table = new DataTable("#datatable-dossiers", {
+            order: [[4, "desc"]],
+            pageLength: 25,
+            language: {
+                info: "_START_ tot _END_ van _TOTAL_ dossiers",
+                infoEmpty: "0 dossiers",
+                infoFiltered: "(gefilterd uit _MAX_)",
+                zeroRecords: "Geen dossiers gevonden",
+                emptyTable: "Nog geen dossiers",
+                paginate: {
+                    first: '<i class="ph ph-caret-double-left" aria-hidden="true"></i><span class="visually-hidden">Eerste</span>',
+                    previous: '<i class="ph ph-caret-left" aria-hidden="true"></i><span class="visually-hidden">Vorige</span>',
+                    next: '<i class="ph ph-caret-right" aria-hidden="true"></i><span class="visually-hidden">Volgende</span>',
+                    last: '<i class="ph ph-caret-double-right" aria-hidden="true"></i><span class="visually-hidden">Laatste</span>'
                 }
-            });
-
-            jQuery(".js-kind-filter").on("click", function (e) {
-                e.preventDefault();
-                jQuery(".js-kind-filter").removeClass("active");
-                jQuery(this).addClass("active");
-                var kind = jQuery(this).data("kind");
-                table.column(1).search("").draw(); // reset text search on type col if any
-                jQuery.fn.dataTable.ext.search = jQuery.fn.dataTable.ext.search.filter(function (fn) {
-                    return fn.__dossierKindFilter !== true;
-                });
-                if (kind !== "" && kind != null) {
-                    var filterFn = function (settings, data, index, rowData, counter) {
-                        var row = table.row(index).node();
-                        return String(jQuery(row).data("kind")) === String(kind);
-                    };
-                    filterFn.__dossierKindFilter = true;
-                    jQuery.fn.dataTable.ext.search.push(filterFn);
+            },
+            layout: {
+                topStart: {
+                    buttons: [
+                        {
+                            extend: "colvis",
+                            text: '<i class="ph ph-columns me-2"></i><span>Kolommen</span>',
+                            titleAttr: "Selecteer kolommen",
+                            init: function (api, node) { $(node).removeClass("btn-secondary").addClass("btn btn-default"); }
+                        }
+                    ]
                 }
-                table.draw();
-            });
+            }
+        });
+        var dossSearchWrap = document.querySelector("#datatable-dossiers").closest(".gl-form-shell__panel");
+        if (dossSearchWrap) {
+            var dtSearch = dossSearchWrap.querySelector(".dt-search");
+            if (dtSearch) dtSearch.style.display = "none";
         }
+        table.buttons(0, null).containers().appendTo("#doss-colvis-container");
+        var dossSearchInput = document.getElementById("doss-search-term");
+        if (dossSearchInput) {
+            dossSearchInput.addEventListener("keyup", function () { table.search(dossSearchInput.value).draw(); });
+        }
+
+        jQuery(".js-kind-filter").on("click", function (e) {
+            e.preventDefault();
+            jQuery(".js-kind-filter").removeClass("active");
+            jQuery(this).addClass("active");
+            var kind = jQuery(this).data("kind");
+            jQuery.fn.dataTable.ext.search = jQuery.fn.dataTable.ext.search.filter(function (fn) {
+                return fn.__dossierKindFilter !== true;
+            });
+            if (kind !== "" && kind != null) {
+                var filterFn = function (settings, data, index) {
+                    var row = table.row(index).node();
+                    return String(jQuery(row).data("kind")) === String(kind);
+                };
+                filterFn.__dossierKindFilter = true;
+                jQuery.fn.dataTable.ext.search.push(filterFn);
+            }
+            table.draw();
+        });
     }
+
+    // ===== Nuts-matrix (Nutsaanvragen-tab): mobiele eenheid-select toggelt de juiste kaart =====
+    var numSelect = document.getElementById("nuts-um-unit-select");
+    if (numSelect) {
+        var numCards = document.querySelectorAll(".gl-um-mobile-card[data-unit-id]");
+        var toggleNumCard = function () {
+            var id = numSelect.value;
+            numCards.forEach(function (c) { c.hidden = c.dataset.unitId !== id; });
+        };
+        numSelect.addEventListener("change", toggleNumCard);
+        toggleNumCard();
+    }
+
+    // ===== Nuts-matrix: "+" op een lege cel opent de aanmaakmodal, vooringevuld met eenheid+type =====
+    document.querySelectorAll(".js-nuts-matrix-add").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var modal = document.getElementById("modalNuts");
+            if (!modal) return;
+            var form = modal.querySelector("form");
+            if (form) form.reset(); // schone lei: de modal is één gedeeld element, hergebruikt over meerdere "+"-klikken
+            var unitSelect = modal.querySelector(".js-nuts-unit");
+            var typeSelect = modal.querySelector(".js-nuts-type");
+            if (unitSelect) {
+                unitSelect.value = btn.dataset.unitId || "";
+                unitSelect.dispatchEvent(new Event("change"));
+            }
+            if (typeSelect) {
+                typeSelect.value = btn.dataset.nutsType || "0";
+                typeSelect.dispatchEvent(new Event("change"));
+            }
+        });
+    });
+
+    // ===== Bulk-aanmaakmodal: "Alles"/"Geen" op de eenhedenlijst =====
+    document.querySelectorAll(".js-nuts-bulk-all, .js-nuts-bulk-none").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var checked = btn.classList.contains("js-nuts-bulk-all");
+            var modal = btn.closest(".modal");
+            if (!modal) return;
+            modal.querySelectorAll(".gl-nuts-bulk-units input[type=checkbox]").forEach(function (cb) { cb.checked = checked; });
+        });
+    });
 
     // ===== Nuts-modal: netbeheerder select2 =====
     if (window.jQuery && jQuery.fn.select2) {

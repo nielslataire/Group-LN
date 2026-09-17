@@ -29,6 +29,10 @@ public sealed class TrajectBronContext
     public Dictionary<int, ProjectDossier> DossiersById { get; init; } = new();
     /// <summary>Checklist-stappen per dossier-Id (voor de <c>DossierSubstap</c>-binding).</summary>
     public Dictionary<int, List<ProjectDossierSubstap>> SubstappenPerDossier { get; init; } = new();
+    /// <summary>Gekoppelde dossier-Id's per Mijlpaal-Id, via ProjectDossierMijlpaal (voor de
+    /// <c>AlleGekoppeldeDossierSubstappen</c>-binding — een mijlpaal kan aan meerdere dossiers
+    /// hangen, bv. één nutsaanvraag per eenheid).</summary>
+    public Dictionary<int, List<int>> GekoppeldeDossierIdsPerMijlpaal { get; init; } = new();
 }
 
 /// <summary>Leidt de status/werkelijke datum van een mijlpaal af uit bestaande records (read-only).</summary>
