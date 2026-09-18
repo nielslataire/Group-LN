@@ -163,10 +163,17 @@
                     }
                 </td>
                 <td>
-                    @{ var toegewezenNaam = !string.IsNullOrEmpty(t.ToegewezenAanUserId) ? Model.GebruikersNamen.GetValueOrDefault(t.ToegewezenAanUserId) : null; }
-                    @if (!string.IsNullOrEmpty(toegewezenNaam))
+                    @{
+                        // Onderscheid "niemand toegewezen" (—) van "toegewezen aan een user-id die niet
+                        // (meer) bestaat" (Onbekende gebruiker) i.p.v. beide hetzelfde te tonen — anders
+                        // valt de select2-prefill in de edit-modal ook stil terug op de rauwe GUID
+                        // (/impeccable critique P2).
+                        var heeftToewijzing = !string.IsNullOrEmpty(t.ToegewezenAanUserId);
+                        var toegewezenWeergave = heeftToewijzing ? (Model.GebruikersNamen.GetValueOrDefault(t.ToegewezenAanUserId) ?? "Onbekende gebruiker") : null;
+                    }
+                    @if (toegewezenWeergave != null)
                     {
-                        @toegewezenNaam
+                        @toegewezenWeergave
                     }
                     else
                     {
@@ -175,13 +182,21 @@
                 </td>
                 <td>
                     @{
+                        // var(--danger)/var(--warning) i.p.v. Bootstraps kale .text-danger: die stocktint
+                        // is nergens in dit systeem geretokend en botst met de wél-getokende rode tint op
+                        // de KPI-tegel hierboven — twee verschillende rodes op één scherm (/impeccable
+                        // critique P1).
                         var prio = (TaakPrioriteit)t.Prioriteit;
-                        var prioKlasse = prio == TaakPrioriteit.Dringend ? "text-danger fw-bold" : prio == TaakPrioriteit.Hoog ? "fw-semibold" : "";
-                        var prioStyle = prio == TaakPrioriteit.Hoog ? "color: var(--warning, #c17d1f);" : "";
+                        var prioStyle = prio switch
+                        {
+                            TaakPrioriteit.Dringend => "color: var(--danger, #b3452f); font-weight: 700;",
+                            TaakPrioriteit.Hoog => "color: var(--warning, #c17d1f); font-weight: 600;",
+                            _ => ""
+                        };
                     }
-                    <span class="@prioKlasse" style="@prioStyle">@prio.GetDisplayName()</span>
+                    <span style="@prioStyle">@prio.GetDisplayName()</span>
                 </td>
-                <td class="@(over ? "text-danger fw-bold" : "")">@(t.Vervaldatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                <td style="@(over ? "color: var(--danger, #b3452f); font-weight: 700;" : "")">@(t.Vervaldatum?.ToString("dd/MM/yyyy") ?? "—")</td>
                 <td>
                     <form method="post" asp-action="Status" asp-route-id="@t.Id" class="d-flex align-items-center gap-1">
                         @Html.AntiForgeryToken()
@@ -190,10 +205,13 @@
                             <i class="bx @TaakStatusIcon(t.Status)" aria-hidden="true"></i>
                             <span class="visually-hidden">@taakStatusLabel</span>
                         </span>
-                        @* Auto-submit i.p.v. een aparte "Zet"-knop — zelfde onchange-patroon als de
-                           filter-selects hierboven op deze pagina. Kiezen ís bevestigen; een tweede
-                           klik voor exact dezelfde intentie was dubbel werk (gebruikerswens). *@
-                        <select name="nieuweStatus" class="form-control form-control-modern form-control-sm" onchange="this.form.submit()">
+                        @* Auto-submit i.p.v. een aparte "Zet"-knop (gebruikerswens: een tweede klik
+                           voor exact dezelfde intentie was dubbel werk) — maar NIET het kale
+                           onchange="this.form.submit()"-patroon van de filter-selects hierboven:
+                           een gesloten <select> vuurt "change" bij elke pijltjestoets, niet enkel bij
+                           bevestigen, dus dat patroon zou hier elke tussenstap als échte statuswijziging
+                           posten. .js-mt-status-select (PageScripts) debouncet i.p.v. daarvan. *@
+                        <select name="nieuweStatus" class="form-control form-control-modern form-control-sm js-mt-status-select">
                             @foreach (var s in statussen)
                             {
                                 <option value="@((int)s)" selected="@(t.Status == (int)s)">@s.GetDisplayName()</option>
@@ -210,7 +228,7 @@
                             data-id="@t.Id" data-titel="@t.Titel" data-omschrijving="@t.Omschrijving"
                             data-project-id="@t.ProjectId" data-prioriteit="@t.Prioriteit"
                             data-vervaldatum="@(t.Vervaldatum?.ToString("yyyy-MM-dd"))"
-                            data-toegewezen-aan-id="@t.ToegewezenAanUserId" data-toegewezen-aan-tekst="@toegewezenNaam"
+                            data-toegewezen-aan-id="@t.ToegewezenAanUserId" data-toegewezen-aan-tekst="@toegewezenWeergave"
                             data-bs-toggle="modal" data-bs-target="#modalTaakUpsert"
                             title="Bewerken" aria-label="Taak bewerken: @t.Titel">
                         <i class="bx bx-edit-alt" aria-hidden="true"></i>
@@ -245,15 +263,15 @@
             </div>
             <div class="modal-body">
                 <div class="mb-2">
-                    <label class="form-label">Titel</label>
+                    <label class="form-label" for="mt-form-titel">Titel</label>
                     <input type="text" name="Titel" id="mt-form-titel" class="form-control form-control-modern" required />
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Omschrijving</label>
+                    <label class="form-label" for="mt-form-omschrijving">Omschrijving</label>
                     <textarea name="Omschrijving" id="mt-form-omschrijving" class="form-control form-control-modern" rows="2"></textarea>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Project</label>
+                    <label class="form-label" for="mt-form-project">Project</label>
                     <select name="ProjectId" id="mt-form-project" class="form-control form-control-modern">
                         <option value="">— Geen project —</option>
                         @foreach (var p in Model.Projecten)
@@ -264,7 +282,7 @@
                 </div>
                 <div class="row">
                     <div class="col-6 mb-2">
-                        <label class="form-label">Prioriteit</label>
+                        <label class="form-label" for="mt-form-prioriteit">Prioriteit</label>
                         <select name="Prioriteit" id="mt-form-prioriteit" class="form-control form-control-modern">
                             @foreach (TaakPrioriteit p in Enum.GetValues(typeof(TaakPrioriteit)))
                             {
@@ -273,12 +291,12 @@
                         </select>
                     </div>
                     <div class="col-6 mb-2">
-                        <label class="form-label">Vervaldatum</label>
+                        <label class="form-label" for="mt-form-vervaldatum">Vervaldatum</label>
                         <input type="date" name="Vervaldatum" id="mt-form-vervaldatum" class="form-control form-control-modern" />
                     </div>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Toegewezen aan <span class="text-muted">(leeg = mezelf)</span></label>
+                    <label class="form-label" for="mt-form-toegewezen">Toegewezen aan <span class="text-muted">(leeg = mezelf)</span></label>
                     @* Zelfde select2-ajax-patroon als de Netbeheerder-picker in
                        ProjectDossiers/Modals/_ModalNutsAansluiting.cshtml (js-netbeheerder-select),
                        nu voor gebruikers i.p.v. bedrijven — vervangt het rauwe gebruikers-id-tekstveld
@@ -302,6 +320,24 @@
     <script>
         (function () {
             "use strict";
+
+            // ===== Statuswijziging per rij: gedebouncede auto-submit i.p.v. de aparte "Zet"-knop.
+            // Een gesloten <select> vuurt "change" al bij elke pijltjestoets (niet enkel bij
+            // bevestigen) — direct posten op elke "change" zou een toetsenbordgebruiker die met de
+            // pijltjes door de opties bladert elke tussenstap als échte statuswijziging laten posten
+            // (/impeccable critique P0, na de eerdere kale onchange="this.form.submit()"-poging).
+            // 400ms debounce: enkel de uiteindelijke keuze wordt verstuurd, ongeacht hoe die gekozen
+            // werd (klik of pijltjes). =====
+            document.querySelectorAll(".js-mt-status-select").forEach(function (select) {
+                var timer = null;
+                select.addEventListener("change", function () {
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        if (select.form.requestSubmit) select.form.requestSubmit();
+                        else select.form.submit();
+                    }, 400);
+                });
+            });
 
             document.querySelectorAll(".gl-delete-taak-form").forEach(function (form) {
                 form.addEventListener("submit", function (e) {
