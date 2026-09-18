@@ -35,12 +35,13 @@ public class NutsAansluitingService : INutsAansluitingService
             DossierKind = (int)DossierKind.NutsAansluiting,
             Titel = (dto.Titel ?? string.Empty).Trim(),
             Referentie = dto.Referentie,
-            Status = dto.Status,
             ExterneContactNaam = dto.ExterneContactNaam,
             ExterneContactEmail = dto.ExterneContactEmail,
-            AanvraagDatum = dto.AanvraagDatum,
+            // Gespiegeld vanuit AanvraagVerstuurdOp (het enige "aanvraagdatum"-veld dat het
+            // formulier nog toont) i.p.v. een apart dto.AanvraagDatum-veld — anders blijft deze
+            // generieke kolom (gebruikt door de Alle-dossiers-tabel op Index.cshtml) leeg.
+            AanvraagDatum = dto.AanvraagVerstuurdOp,
             VerwachteAfhandelingDatum = dto.VerwachteAfhandelingDatum,
-            AfgehandeldDatum = dto.AfgehandeldDatum,
             Bedrag = dto.Bedrag,
             Omschrijving = dto.Omschrijving,
             CreatedByUserId = userId,
@@ -49,6 +50,11 @@ public class NutsAansluitingService : INutsAansluitingService
         var nuts = new ProjectNutsAansluiting();
         ApplyNuts(nuts, dto);
         dossier.NutsAansluiting = nuts;
+        // Status/AfgehandeldDatum volgen uit de werkstroomdatums i.p.v. een apart handmatig veld —
+        // zie NutsChecklistSpiegel.BerekenStatus (gedeeld met ProjectDossierService.ChangeSubstapStatus,
+        // anders herhaalt de checklist-knop dezelfde one-way-sync bug als de datums zelf hadden).
+        dossier.Status = NutsChecklistSpiegel.BerekenStatus(nuts, dto.Geannuleerd);
+        dossier.AfgehandeldDatum = nuts.UitgevoerdOp;
 
         _db.ProjectDossier.Add(dossier);
         await _db.SaveChangesAsync();
@@ -77,6 +83,8 @@ public class NutsAansluitingService : INutsAansluitingService
             });
         }
         await _db.SaveChangesAsync();
+
+        await MirrorNaarChecklist(dossier.Id, nuts);
 
         return nuts;
     }
@@ -111,14 +119,16 @@ public class NutsAansluitingService : INutsAansluitingService
                 ProjectId = dto.ProjectId,
                 UnitId = unit.Id,
                 Titel = titel,
-                Status = dto.Status,
                 ExterneContactNaam = dto.ExterneContactNaam,
                 ExterneContactEmail = dto.ExterneContactEmail,
-                AanvraagDatum = dto.AanvraagDatum,
+                // Create() spiegelt AanvraagDatum vanuit AanvraagVerstuurdOp (zie toelichting
+                // daar) — dto.AanvraagDatum hier zou anders stil genegeerd worden.
+                AanvraagVerstuurdOp = dto.AanvraagDatum,
                 VerwachteAfhandelingDatum = dto.VerwachteAfhandelingDatum,
                 Omschrijving = dto.Omschrijving,
                 NutsType = dto.NutsType,
                 NetbeheerderCompanyId = dto.NetbeheerderCompanyId,
+                GevraagdVermogen = dto.GevraagdVermogen,
                 Ean = ean,
                 Meternummer = meternummer
             };
@@ -146,23 +156,23 @@ public class NutsAansluitingService : INutsAansluitingService
         dossier.UnitId = dto.UnitId;
         dossier.Titel = (dto.Titel ?? string.Empty).Trim();
         dossier.Referentie = dto.Referentie;
-        dossier.Status = dto.Status;
         dossier.ExterneContactNaam = dto.ExterneContactNaam;
         dossier.ExterneContactEmail = dto.ExterneContactEmail;
-        dossier.AanvraagDatum = dto.AanvraagDatum;
+        dossier.AanvraagDatum = dto.AanvraagVerstuurdOp; // zie toelichting in Create()
         dossier.VerwachteAfhandelingDatum = dto.VerwachteAfhandelingDatum;
-        dossier.AfgehandeldDatum = dto.AfgehandeldDatum;
         dossier.Bedrag = dto.Bedrag;
         dossier.Omschrijving = dto.Omschrijving;
         dossier.ModifiedByUserId = userId;
         dossier.ModifiedDate = DateTime.UtcNow;
 
         ApplyNuts(dossier.NutsAansluiting, dto);
-
-        if (dto.Status == (int)DossierStatus.Afgehandeld && dossier.AfgehandeldDatum == null)
-            dossier.AfgehandeldDatum = DateOnly.FromDateTime(DateTime.Today);
+        // Status/AfgehandeldDatum volgen uit de werkstroomdatums — zie toelichting in Create()/
+        // NutsChecklistSpiegel.BerekenStatus.
+        dossier.Status = NutsChecklistSpiegel.BerekenStatus(dossier.NutsAansluiting, dto.Geannuleerd);
+        dossier.AfgehandeldDatum = dossier.NutsAansluiting.UitgevoerdOp;
 
         await _db.SaveChangesAsync();
+        await MirrorNaarChecklist(dossier.Id, dossier.NutsAansluiting);
 
         if (oudStatus != dossier.Status)
         {
@@ -199,7 +209,52 @@ public class NutsAansluitingService : INutsAansluitingService
         nuts.Meternummer = dto.Meternummer;
         nuts.GevraagdVermogen = dto.GevraagdVermogen;
         nuts.AanvraagVerstuurdOp = dto.AanvraagVerstuurdOp;
+        nuts.VerwachteOfferteDatum = dto.VerwachteOfferteDatum;
+        nuts.OfferteOntvangenOp = dto.OfferteOntvangenOp;
+        nuts.OfferteGoedgekeurdOp = dto.OfferteGoedgekeurdOp;
+        nuts.UitvoeringGevraagdOp = dto.UitvoeringGevraagdOp;
+        nuts.UitgevoerdOp = dto.UitgevoerdOp;
         nuts.AansluitkostRaming = dto.AansluitkostRaming;
         nuts.AansluitkostDefinitief = dto.AansluitkostDefinitief;
+    }
+
+    /// <summary>
+    /// Spiegelt de getypeerde werkstroomdatums (rechtstreeks bewerkbaar op het formulier) naar de
+    /// bijhorende ProjectDossierSubstap-rijen, zodat de generieke trajectbindingen (DossierSubstap,
+    /// AlleGekoppeldeDossierSubstappen, AlleNutsaanvragenSubstap) blijven werken ongeacht of de
+    /// gebruiker dit formulier gebruikt of de checklist-knoppen op de dossierpagina. Enkel
+    /// vooruit-of-terug op basis van "is de datum ingevuld" — een stap die de gebruiker handmatig op
+    /// "Bezig" zette (nog geen datum) blijft onaangeroerd.
+    /// </summary>
+    private async Task MirrorNaarChecklist(int dossierId, ProjectNutsAansluiting nuts)
+    {
+        var stappen = await _db.ProjectDossierSubstap
+            .Where(s => s.ProjectDossierId == dossierId).ToListAsync();
+        if (stappen.Count == 0) return;
+
+        bool gewijzigd = false;
+        foreach (var (code, datumVan, _) in NutsChecklistSpiegel.Velden)
+        {
+            var stap = stappen.FirstOrDefault(s => string.Equals(s.Code, code, StringComparison.OrdinalIgnoreCase));
+            if (stap == null) continue;
+
+            var datum = datumVan(nuts);
+            if (datum.HasValue && (stap.Status != (int)DossierSubstapStatus.Afgerond || stap.Datum != datum))
+            {
+                stap.Status = (int)DossierSubstapStatus.Afgerond;
+                stap.Datum = datum;
+                stap.ModifiedDate = DateTime.UtcNow;
+                gewijzigd = true;
+            }
+            else if (!datum.HasValue && stap.Status == (int)DossierSubstapStatus.Afgerond)
+            {
+                stap.Status = (int)DossierSubstapStatus.NietGestart;
+                stap.Datum = null;
+                stap.ModifiedDate = DateTime.UtcNow;
+                gewijzigd = true;
+            }
+        }
+
+        if (gewijzigd) await _db.SaveChangesAsync();
     }
 }

@@ -44,24 +44,24 @@
             dossSearchInput.addEventListener("keyup", function () { table.search(dossSearchInput.value).draw(); });
         }
 
-        jQuery(".js-kind-filter").on("click", function (e) {
-            e.preventDefault();
-            jQuery(".js-kind-filter").removeClass("active");
-            jQuery(this).addClass("active");
-            var kind = jQuery(this).data("kind");
-            jQuery.fn.dataTable.ext.search = jQuery.fn.dataTable.ext.search.filter(function (fn) {
-                return fn.__dossierKindFilter !== true;
+        var kindFilterSelect = document.getElementById("doss-kind-filter");
+        if (kindFilterSelect) {
+            kindFilterSelect.addEventListener("change", function () {
+                var kind = kindFilterSelect.value;
+                jQuery.fn.dataTable.ext.search = jQuery.fn.dataTable.ext.search.filter(function (fn) {
+                    return fn.__dossierKindFilter !== true;
+                });
+                if (kind !== "" && kind != null) {
+                    var filterFn = function (settings, data, index) {
+                        var row = table.row(index).node();
+                        return String(jQuery(row).data("kind")) === String(kind);
+                    };
+                    filterFn.__dossierKindFilter = true;
+                    jQuery.fn.dataTable.ext.search.push(filterFn);
+                }
+                table.draw();
             });
-            if (kind !== "" && kind != null) {
-                var filterFn = function (settings, data, index) {
-                    var row = table.row(index).node();
-                    return String(jQuery(row).data("kind")) === String(kind);
-                };
-                filterFn.__dossierKindFilter = true;
-                jQuery.fn.dataTable.ext.search.push(filterFn);
-            }
-            table.draw();
-        });
+        }
     }
 
     // ===== Nuts-matrix (Nutsaanvragen-tab): mobiele eenheid-select toggelt de juiste kaart =====
@@ -96,15 +96,116 @@
         });
     });
 
-    // ===== Bulk-aanmaakmodal: "Alles"/"Geen" op de eenhedenlijst =====
+    // ===== Bulk-aanmaakmodal: "Alles"/"Geen" op de eenhedenlijst + live telling vóór het aanmaken =====
     document.querySelectorAll(".js-nuts-bulk-all, .js-nuts-bulk-none").forEach(function (btn) {
         btn.addEventListener("click", function () {
             var checked = btn.classList.contains("js-nuts-bulk-all");
             var modal = btn.closest(".modal");
             if (!modal) return;
             modal.querySelectorAll(".gl-nuts-bulk-units input[type=checkbox]").forEach(function (cb) { cb.checked = checked; });
+            updateBulkCount(modal);
         });
     });
+
+    function updateBulkCount(modal) {
+        var countEl = modal.querySelector(".js-nuts-bulk-count");
+        if (!countEl) return;
+        var n = modal.querySelectorAll(".gl-nuts-bulk-units input[type=checkbox]:checked").length;
+        countEl.textContent = n === 0 ? "Geen eenheden geselecteerd"
+            : n === 1 ? "Dit maakt 1 dossier aan"
+            : "Dit maakt dossiers aan voor " + n + " eenheden";
+    }
+
+    document.querySelectorAll(".gl-nuts-bulk-units").forEach(function (list) {
+        var modal = list.closest(".modal");
+        if (!modal) return;
+        list.addEventListener("change", function (e) {
+            if (e.target.matches('input[type=checkbox]')) updateBulkCount(modal);
+        });
+    });
+
+    // ===== Nuts-matrix: bulk-selectie van meerdere lege cellen -> vult de bulk-aanmaakmodal
+    // vooraf in i.p.v. de eenheden daar nog eens los te moeten aanvinken (/impeccable critique
+    // projects/dossiers/index: de matrix toont al exact welke cellen leeg zijn, "Bulk per eenheid"
+    // liet je dat tot nu toe met het blote oog opnieuw opzoeken in een losse checkboxlijst). =====
+    (function () {
+        var region = document.getElementById("nuts-um-matrix-region");
+        var toggleBtn = document.getElementById("nuts-um-select-toggle");
+        var bar = document.getElementById("nuts-um-selection-bar");
+        var countEl = document.getElementById("nuts-um-selection-count");
+        var clearBtn = document.getElementById("nuts-um-selection-clear");
+        var bulkBtn = document.getElementById("nuts-um-selection-bulk");
+        var modalBulk = document.getElementById("modalNutsBulk");
+        if (!region || !toggleBtn || !bar) return;
+
+        var selectedType = null; // string, of null zolang niets aangevinkt is
+
+        function allCheckboxes() {
+            return Array.prototype.slice.call(region.querySelectorAll(".js-nuts-cell-select"));
+        }
+        function checkedBoxes() {
+            return allCheckboxes().filter(function (cb) { return cb.checked; });
+        }
+        function cellOf(cb) {
+            return cb.closest("td, li");
+        }
+
+        function refresh() {
+            var checked = checkedBoxes();
+            selectedType = checked.length ? checked[0].dataset.nutsType : null;
+
+            // Bulk aanmaken werkt server-side per één type tegelijk (NutsAansluitingBulkCreateBO)
+            // -> zodra één type geselecteerd is, sluiten we de andere kolommen tijdelijk af i.p.v.
+            // stil een gemengde selectie te laten ontstaan die de gebruiker niet kan aanmaken.
+            allCheckboxes().forEach(function (cb) {
+                var locked = selectedType !== null && cb.dataset.nutsType !== selectedType;
+                cb.disabled = locked;
+                var cell = cellOf(cb);
+                if (!cell) return;
+                cell.classList.toggle("is-selected", cb.checked);
+                cell.classList.toggle("is-type-locked", locked);
+            });
+
+            if (checked.length === 0) {
+                bar.classList.add("d-none");
+                return;
+            }
+            bar.classList.remove("d-none");
+            var typeLabel = checked[0].dataset.nutsTypeLabel || "";
+            countEl.textContent = (checked.length === 1 ? "1 geselecteerd" : checked.length + " geselecteerd") + " (" + typeLabel + ")";
+        }
+
+        function clearSelection() {
+            allCheckboxes().forEach(function (cb) { cb.checked = false; });
+            refresh();
+        }
+
+        toggleBtn.addEventListener("click", function () {
+            var on = region.classList.toggle("is-selecting");
+            toggleBtn.querySelector("span").textContent = on ? "Selectie annuleren" : "Meerdere selecteren voor bulk aanmaken";
+            toggleBtn.querySelector("i").className = on ? "ph ph-x me-1" : "ph ph-check-square-offset me-1";
+            if (!on) clearSelection();
+        });
+
+        region.addEventListener("change", function (e) {
+            if (e.target.matches(".js-nuts-cell-select")) refresh();
+        });
+
+        if (clearBtn) clearBtn.addEventListener("click", clearSelection);
+
+        if (modalBulk && bulkBtn) {
+            modalBulk.addEventListener("show.bs.modal", function (e) {
+                if (e.relatedTarget !== bulkBtn) return; // enkel voorvullen als ónze knop de modal opende
+                var ids = checkedBoxes().map(function (cb) { return cb.value; });
+                var typeSelect = modalBulk.querySelector('select[name="NutsType"]');
+                if (typeSelect && selectedType !== null) typeSelect.value = selectedType;
+                modalBulk.querySelectorAll(".gl-nuts-bulk-units input[type=checkbox]").forEach(function (cb) {
+                    cb.checked = ids.indexOf(cb.value) !== -1;
+                });
+                updateBulkCount(modalBulk);
+            });
+        }
+    })();
 
     // ===== Nuts-modal: netbeheerder select2 =====
     if (window.jQuery && jQuery.fn.select2) {

@@ -25,6 +25,21 @@ public partial class ProjectNutsAansluiting
 
     public DateOnly? AanvraagVerstuurdOp { get; set; }
 
+    /// <summary>Streefdatum — puur planning, geen bijhorende checklist-stap.</summary>
+    public DateOnly? VerwachteOfferteDatum { get; set; }
+
+    /// <summary>Gespiegeld naar/vanuit ProjectDossierSubstap "OFFERTE_ONTVANGEN" (NutsChecklistDefaults).</summary>
+    public DateOnly? OfferteOntvangenOp { get; set; }
+
+    /// <summary>Gespiegeld naar/vanuit ProjectDossierSubstap "OFFERTE_GOEDGEKEURD".</summary>
+    public DateOnly? OfferteGoedgekeurdOp { get; set; }
+
+    /// <summary>Gespiegeld naar/vanuit ProjectDossierSubstap "UITVOERINGSDATUM_DOORGEGEVEN".</summary>
+    public DateOnly? UitvoeringGevraagdOp { get; set; }
+
+    /// <summary>Gespiegeld naar/vanuit ProjectDossierSubstap "UITGEVOERD".</summary>
+    public DateOnly? UitgevoerdOp { get; set; }
+
     public int? KeuringDocId { get; set; }
 
     public decimal? AansluitkostRaming { get; set; }

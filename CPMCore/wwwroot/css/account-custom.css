@@ -11,14 +11,28 @@
 
 /* ── Reset ───────────────────────────────────────────────────────── */
 html, body { height: 100%; margin: 0; padding: 0; }
-body > div  { height: 100%; }
+/* _Base.cshtml wraps @RenderBody() in <main> (was a bare <div>, no landmark for
+   screen-reader users — /impeccable audit Account/Login finding). */
+body > main { height: 100%; }
+
+/* Brand-groene achtergrond en de knop hergebruiken hetzelfde token als de rest
+   van de app (custom.css --primary) i.p.v. een eigen losse hex-waarde — was
+   voorheen consequent hard-coded terwijl de ACCESS DENIED-sectie verderop in
+   dit bestand dat wél al goed deed (/impeccable audit Account/Login P3). De
+   hover-kleur was een eigen uitvinding (#084d32); #0f4b40 is de kleur die de
+   rest van de app al overal als "Forest Green Deep" gebruikt (zie custom.css/
+   traject.css se .gl-row-action-btn:hover) — geen derde groentint erbij. */
+:root {
+    --gl-login-primary: var(--primary, #0a5a3b);
+    --gl-login-primary-deep: #0f4b40;
+}
 
 /* ════════════════════════════════════════════════════════════════════
    DESKTOP GRID  –  twee kolommen elk 50 %
 ════════════════════════════════════════════════════════════════════ */
 .gl-login {
     min-height: 100vh;
-    background: #0a5a3b;
+    background: var(--gl-login-primary);
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto 1fr auto;
@@ -26,6 +40,148 @@ body > div  { height: 100%; }
         "logo  card"
         "feat  card"
         "copy  card";
+    position: relative; /* draagvlak voor .gl-aurora hieronder */
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MOTION — /impeccable overdrive: één doordacht aankomstverhaal.
+   Grondslag (gefaseerde entree) → Levend decor (ambient + cursor) →
+   Aankomstmoment (de SSO-knop "opent" het scherm). Elk stuk heeft een pad
+   zonder animatie: prefers-reduced-motion zet alles meteen op de eindstand,
+   niets blijft ooit op opacity:0 hangen.
+════════════════════════════════════════════════════════════════════ */
+
+/* ── Levend decor: traag driftend, gedempt lichtveld in het bestaande groen —
+   puur CSS (background-position), geen canvas/WebGL. z-index:-1 (i.p.v. 0):
+   een positioned element met z-index 0+ schildert normaliter VOOR niet-
+   gepositioneerde inhoud (CSS2.1 stacking-volgorde), dus 0 zou de hele pagina
+   overdekken; -1 hoort bij de negatieve-z-index-laag, vóór alle gewone inhoud. */
+.gl-aurora {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(600px circle at 15% 20%, rgba(15,122,82,.55), transparent 60%),
+        radial-gradient(700px circle at 85% 75%, rgba(231,255,241,.10), transparent 55%),
+        radial-gradient(500px circle at 60% 15%, rgba(15,122,82,.35), transparent 60%);
+    background-repeat: no-repeat;
+    background-size: 160% 160%;
+    animation: gl-aurora-drift 26s ease-in-out infinite alternate;
+}
+.gl-aurora.is-paused { animation-play-state: paused; }
+@keyframes gl-aurora-drift {
+    0%   { background-position: 0% 0%, 100% 100%, 40% 0%; }
+    50%  { background-position: 20% 15%, 80% 85%, 55% 20%; }
+    100% { background-position: 5% 25%, 95% 70%, 30% 10%; }
+}
+
+/* ── Grondslag: gefaseerde entree. "to" gebruikt letterlijk transform:none
+   (niet translateX(0)/scale(1)) — een niet-"none"-transformwaarde vormt zelf
+   een fixed-positioneringscontext voor nakomelingen, wat het aankomstmoment
+   hieronder (dat de SSO-knop naar position:fixed t.o.v. de viewport promoot)
+   zou breken zodra .gl-card's intro-animatie is afgelopen. */
+@keyframes gl-rise-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes gl-slide-in-right {
+    from { opacity: 0; transform: translateX(28px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+}
+.gl-logo-bar        { opacity: 0; animation: gl-rise-in .7s cubic-bezier(.16,1,.3,1) 80ms forwards; }
+.gl-features-label  { opacity: 0; animation: gl-rise-in .6s cubic-bezier(.16,1,.3,1) 260ms forwards; }
+/* Tegels krijgen bewust enkel een fade (geen transform in de keyframe): een
+   forwards-gevulde animatie blijft haar eindwaarde permanent "vasthouden" en
+   wint dan altijd van een latere, gewone regel op dezelfde eigenschap — dat
+   zou de cursor-kanteling hieronder (.gl-tile[data-tilt], ook transform)
+   voorgoed hebben overstemd. Enkel opacity animeren laat transform volledig
+   vrij voor die interactie. */
+@keyframes gl-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.gl-tile {
+    opacity: 0;
+    animation: gl-fade-in .5s ease-out forwards;
+    animation-delay: calc(340ms + var(--tile-i, 0) * 90ms);
+}
+.gl-tile:nth-child(1) { --tile-i: 0; }
+.gl-tile:nth-child(2) { --tile-i: 1; }
+.gl-tile:nth-child(3) { --tile-i: 2; }
+.gl-tile:nth-child(4) { --tile-i: 3; }
+.gl-copy-bar        { opacity: 0; animation: gl-rise-in .6s cubic-bezier(.16,1,.3,1) 560ms forwards; }
+.gl-card            { opacity: 0; animation: gl-slide-in-right .75s cubic-bezier(.16,1,.3,1) 200ms forwards; }
+
+/* ── Levend decor: cursor-reactieve kanteling + spotlight op de tegels.
+   --mx/--my (0–1) worden per frame door login.js gezet; zonder JS (of buiten
+   bereik van de muis) vallen ze terug op hun default .5 = vlak, gecentreerd. */
+.gl-tile {
+    overflow: hidden;
+    transition: transform .25s cubic-bezier(.2,.8,.2,1), background .15s;
+}
+.gl-tile[data-tilt] {
+    transform: perspective(700px) rotateX(calc((var(--my, .5) - .5) * -8deg)) rotateY(calc((var(--mx, .5) - .5) * 8deg));
+}
+.gl-tile::before {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit;
+    background: radial-gradient(160px circle at calc(var(--mx, .5) * 100%) calc(var(--my, .5) * 100%), rgba(255,255,255,.14), transparent 70%);
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
+}
+.gl-tile:hover::before { opacity: 1; }
+
+/* ── Aankomstmoment: de rest van de kaart vervaagt terwijl de gekloonde
+   SSO-knop (login.js) uitdijt tot volledig scherm — zie .gl-launch-morph
+   daar. */
+.gl-login.is-launching .gl-logo-bar,
+.gl-login.is-launching .gl-features-bar,
+.gl-login.is-launching .gl-copy-bar,
+.gl-login.is-launching .gl-card > *:not(.btn-gl-ms) {
+    transition: opacity .22s ease-out;
+    opacity: 0;
+}
+/* background:transparent liet hier eerder .gl-login's eigen achtergrond
+   doorschijnen — dat is niet zuiver --gl-login-primary maar dat gemengd met
+   .gl-aurora's lichtere/helderdere gradients erbovenop (#0f7a52 e.a.), dus
+   precies in het gat tussen "kaart verdwijnt" en "gekloonde knop dekt de hele
+   viewport al" zag je een ANDERE, helderdere groentint dan de knop zelf
+   (gemelde bug: "een ander kleur dan mijn primary kleur"). Effen
+   --gl-login-primary i.p.v. transparant maakt dat gat exact dezelfde kleur
+   als de uitdijende kloon, dus geen zichtbare naad meer. */
+.gl-login.is-launching .gl-card {
+    transition: opacity .22s ease-out, box-shadow .22s ease-out, background .22s ease-out;
+    box-shadow: none;
+    background: var(--gl-login-primary);
+}
+.gl-launch-morph {
+    z-index: 2147483647;
+    will-change: transform;
+}
+
+/* Merkteken dat in het midden van het uitdijende vlak verschijnt — zonder dit
+   was er na de knop-morph enkel een vlakke kleur te zien ("ik denk dat ik
+   meer moet zien"): dit geeft het aankomstmoment een echt focuspunt i.p.v.
+   een kleurvlak zonder inhoud. */
+.gl-launch-mark {
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 64px; height: 64px;
+    transform: translate(-50%, -50%) scale(.7);
+    opacity: 0;
+    z-index: 2147483647;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-logo-bar, .gl-features-label, .gl-tile, .gl-copy-bar, .gl-card {
+        opacity: 1;
+        animation: none;
+    }
+    .gl-aurora { animation: none; }
+    .gl-tile { transition: none; }
 }
 
 /* ── Logo-balk ───────────────────────────────────────────────────── */
@@ -38,11 +194,24 @@ body > div  { height: 100%; }
     align-items: center;
     gap: 14px;
     text-decoration: none;
+    border-radius: 8px;
+}
+/* Zichtbare focusring i.p.v. de globale "body a { outline:none !important }"
+   (theme.css) die elke link op deze pagina — ook deze — anders onzichtbaar
+   maakt voor toetsenbordgebruikers (/impeccable audit Account/Login P1). Wit
+   i.p.v. het gebruikelijke groen: deze link zit op de donkergroene achtergrond,
+   niet op een witte kaart. */
+.gl-logo:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.6);
 }
 .gl-logo img  { height: 88px; }
 .gl-company   { font-size: 2.4rem; font-weight: 700; color: #fff; line-height: 1.4; }
+/* rgba(255,255,255,.5) op #0a5a3b mat ≈3.3:1 — onder de WCAG AA-minimumdrempel
+   (4.5:1) voor tekst van deze grootte/gewicht. .72 haalt ≈5:1
+   (/impeccable audit Account/Login P2). */
 .gl-platform  { font-size: 1.2rem; font-weight: 500; letter-spacing: .18em;
-                 color: rgba(255,255,255,.5); text-transform: uppercase; }
+                 color: rgba(255,255,255,.72); text-transform: uppercase; }
 
 /* ── Feature-tegels ──────────────────────────────────────────────── */
 .gl-features-bar {
@@ -79,7 +248,10 @@ body > div  { height: 100%; }
     grid-area: copy;
     padding: 0 52px 52px;
     font-size: .76rem;
-    color: rgba(255,255,255,.3);
+    /* rgba(255,255,255,.3) op #0a5a3b mat ≈2.1:1 — ruim onder de WCAG AA-drempel
+       (/impeccable audit Account/Login P2). .72 haalt ≈5:1, zelfde niveau als
+       .gl-platform hierboven. */
+    color: rgba(255,255,255,.72);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -115,7 +287,7 @@ body > div  { height: 100%; }
 .btn-gl-ms {
     display: flex; align-items: center; justify-content: center;
     gap: 10px; width: 100%;
-    background: #0a5a3b; color: #fff;
+    background: var(--gl-login-primary); color: #fff;
     border: none; border-radius: 8px;
     padding: 13px 20px;
     font-size: .97rem; font-weight: 600;
@@ -123,8 +295,17 @@ body > div  { height: 100%; }
     transition: background .18s, box-shadow .18s;
 }
 .btn-gl-ms:hover {
-    background: #084d32; color: #fff;
+    background: var(--gl-login-primary-deep); color: #fff;
     box-shadow: 0 4px 16px rgba(10,90,59,.3);
+}
+/* Zelfde reden als .gl-logo:focus-visible hierboven — de globale
+   "body a { outline:none !important }" (theme.css) treft ook déze knop, het
+   enige echte doel van de hele pagina (/impeccable audit Account/Login P1).
+   Deze zit op de witte kaart, dus het gebruikelijke groene focus-recept van de
+   rest van de app (custom.css .gl-row-action-btn:focus-visible). */
+.btn-gl-ms:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 .2rem rgba(10,90,59,.35);
 }
 .btn-gl-ms .ms-icon  { font-size: 1.15rem; }
 .btn-gl-ms .ms-arrow { margin-left: auto; font-size: 1.05rem; }
@@ -171,6 +352,12 @@ body > div  { height: 100%; }
 }
 .gl-help a { color: #0a5a3b; font-weight: 600; text-decoration: none; }
 .gl-help a:hover { text-decoration: underline; }
+.gl-help a:focus-visible,
+.gl-portal-links a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 .2rem rgba(10,90,59,.35);
+    border-radius: 2px;
+}
 
 /* Externe portalen links */
 .gl-portal-links {
@@ -216,6 +403,14 @@ body > div  { height: 100%; }
 ════════════════════════════════════════════════════════════════════ */
 @media (max-width: 575px) {
     .gl-logo-bar     { padding: 24px 20px 16px; }
+    /* Logo + wordmark hadden geen eigen mobiele maat (in tegenstelling tot de
+       kaartinhoud hierboven/-onder) — 88px logo + 2.4rem "GROUP LN" naast
+       elkaar liet nauwelijks marge over op een 360px-scherm
+       (/impeccable audit Account/Login P2, The Field-Width Rule). */
+    .gl-logo         { gap: 10px; }
+    .gl-logo img     { height: 56px; }
+    .gl-company      { font-size: 1.7rem; }
+    .gl-platform     { font-size: .95rem; }
     .gl-right        { padding: 0 16px 20px; }
     .gl-card         { border-radius: 14px; padding: 28px 20px; }
     .gl-card h1      { font-size: 1.5rem; }

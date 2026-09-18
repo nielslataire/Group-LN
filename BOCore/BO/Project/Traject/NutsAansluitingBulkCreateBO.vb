@@ -15,7 +15,8 @@ Public Class NutsAansluitingBulkCreateBO
 
     Public Property NetbeheerderCompanyId As Integer?
 
-    Public Property Status As Integer
+    <StringLength(50)>
+    Public Property GevraagdVermogen As String
 
     <StringLength(150)>
     Public Property ExterneContactNaam As String

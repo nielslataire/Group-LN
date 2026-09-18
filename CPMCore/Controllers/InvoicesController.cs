@@ -1013,7 +1013,9 @@ namespace CPMCore.Controllers
                 PaymentTermId = duplicateDetail?.PaymentTermId ?? selectedTermId,
                 VatTypeId = duplicateDetail?.Lines?.FirstOrDefault()?.VatTypeId ?? selectedVatId,
                 IssuerBankAccountId = selectedAccountId,
-                InvoiceDate = duplicateDetail?.InvoiceDate ?? DateOnly.FromDateTime(DateTime.Today),
+                // Bij dupliceren altijd vandaag als datum voorstellen, niet de datum van de
+                // originele factuur.
+                InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
 
                 Issuers = issuersBo
                     .Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId))
@@ -1056,9 +1058,10 @@ namespace CPMCore.Controllers
                 vm.FooterDescription = NormalizeMultiline(duplicateDetail.ExtraInfo);
                 vm.ProjectId = duplicateDetail.ProjectId;
                 vm.SupplierContractId = duplicateDetail.SupplierContractId;
-                vm.IsCreditNote = duplicateDetail.IsCreditNote;
+                var duplicateIsCreditNote = DetermineCreditNote(duplicateDetail.IsCreditNote, duplicateDetail.StatusName, duplicateDetail.TotalInclVat);
+                vm.IsCreditNote = duplicateIsCreditNote;
                 vm.IsPrepaid = duplicateDetail.IsPrepaid;
-                vm.Lines = MapLinesForCompose(duplicateDetail.Lines);
+                vm.Lines = MapLinesForCompose(duplicateDetail.Lines, duplicateIsCreditNote);
 
                 if (duplicateDetail.CompanyId.HasValue)
                 {
@@ -2124,6 +2127,8 @@ namespace CPMCore.Controllers
                 ? await _ics.ListVatTypeAsync(selectedIssuerId, ct)
                 : Array.Empty<VatTypeBO>();
 
+            var draftIsCreditNote = posted?.IsCreditNote ?? DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat);
+
             var vm = new InvoiceDraftEditVM
             {
                 InvoiceId = detail.Id,
@@ -2138,7 +2143,7 @@ namespace CPMCore.Controllers
                 HeaderDescription = posted?.HeaderDescription ?? NormalizeMultiline(detail.HeaderText),
                 DetailDescription = posted?.DetailDescription ?? NormalizeMultiline(detail.DetailText),
                 FooterDescription = posted?.FooterDescription ?? NormalizeMultiline(detail.ExtraInfo),
-                IsCreditNote = posted?.IsCreditNote ?? DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat),
+                IsCreditNote = draftIsCreditNote,
                 IsPrepaid = posted?.IsPrepaid ?? detail.IsPrepaid,
                 PaymentTermId = posted?.PaymentTermId ?? detail.PaymentTermId,
                 ProjectId = posted?.ProjectId ?? detail.ProjectId,
@@ -2150,7 +2155,7 @@ namespace CPMCore.Controllers
                 PartyType = posted?.PartyType,
                 PartyDisplayName = posted?.PartyDisplayName ?? detail.ClientName,
                 PartyLookupValue = posted?.PartyLookupValue,
-                Lines = posted?.Lines != null ? posted.Lines.ToList() : MapLinesForCompose(detail.Lines),
+                Lines = posted?.Lines != null ? posted.Lines.ToList() : MapLinesForCompose(detail.Lines, draftIsCreditNote),
                 StageIds = posted?.StageIds != null && posted.StageIds.Count > 0
                     ? new List<int>(posted.StageIds)
                     : detail.Lines?
@@ -2234,7 +2239,7 @@ namespace CPMCore.Controllers
             return vm;
         }
 
-        private static List<InvoiceLineVM> MapLinesForCompose(IEnumerable<InvoiceLineBO> lines)
+        private static List<InvoiceLineVM> MapLinesForCompose(IEnumerable<InvoiceLineBO> lines, bool isCreditNote)
         {
             if (lines == null)
                 return new List<InvoiceLineVM>();
@@ -2242,7 +2247,13 @@ namespace CPMCore.Controllers
             return lines.Select(l => new InvoiceLineVM
             {
                 Text = l.Text ?? string.Empty,
-                Price = l.Price,
+                // Price staat in de DB al getekend (bij een creditnota is elke lijn met -1 vermenigvuldigd,
+                // zie CreateWithLinesAsync/UpdateDraftAsync * sign). De compose-UI verwacht het ingevoerde
+                // bedrag zoals de gebruiker het typte en past het teken zelf opnieuw toe op basis van de
+                // IsCreditNote-toggle, dus hier moeten we exact diezelfde vermenigvuldiging ongedaan maken
+                // (niet zomaar Math.Abs — anders verliest een bewust negatieve lijn op een gewone (niet-
+                // credit) factuur, bv. een kortingslijn, zijn minteken bij het bewerken/dupliceren).
+                Price = isCreditNote ? -l.Price : l.Price,
                 VatPercentage = l.VatPercentage,
                 VatTypeId = l.VatTypeId,
                 VatCode = l.VatCode,
@@ -2271,7 +2282,11 @@ namespace CPMCore.Controllers
                     text = line.Text,
                     price = line.Price,
                     quantity = line.Quantity,
-                    unitPrice = line.UnitPrice,
+                    // MapLinesForCompose vult UnitPrice nooit in (blijft dus 0, niet null) voor een
+                    // gedupliceerde lijn. invoices.freelines.js (loadInitialRows) geeft echter
+                    // voorrang aan unitPrice zodra die != null is, dus een letterlijke 0 hier zorgt
+                    // ervoor dat het bedrag van elke lijn als 0,00 verschijnt i.p.v. de echte prijs.
+                    unitPrice = line.UnitPrice != 0 ? line.UnitPrice : (decimal?)null,
                     vatPercentage = line.VatPercentage,
                     vatTypeId = matchedVatType?.Id ?? line.VatTypeId,
                     vatCode = line.VatCode ?? matchedVatType?.Code,

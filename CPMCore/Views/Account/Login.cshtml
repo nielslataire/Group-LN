@@ -45,6 +45,11 @@
 
 <div class="gl-login">
 
+    <!-- Trage, gedempte kleurverloop-achtergrond achter het groene paneel — puur CSS
+         (background-position-animatie, geen WebGL/canvas nodig), pauzeert via login.js
+         zodra het tabblad niet zichtbaar is of prefers-reduced-motion aan staat. -->
+    <div class="gl-aurora" aria-hidden="true"></div>
+
     <!-- ── Logo ──────────────────────────────────────────────────── -->
     <div class="gl-logo-bar">
         <a href="/" class="gl-logo">
@@ -63,22 +68,22 @@
             @if (isCustomer)
             {
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-home-alt"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-home-alt" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Uw woning volgen</div>
                     <div class="gl-tile-desc">Bekijk de voortgang van uw project, van fundering tot oplevering.</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-list-plus"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-list-plus" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Meerwerken bekijken</div>
                     <div class="gl-tile-desc">Overzicht van alle aangevraagde en goedgekeurde meerwerken.</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-file"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-file" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Documenten raadplegen</div>
                     <div class="gl-tile-desc">Al uw contracten, plannen en facturen op één plek.</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-message"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-message" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Berichten ontvangen</div>
                     <div class="gl-tile-desc">Rechtstreeks communiceren met uw projectteam.</div>
                 </div>
@@ -86,22 +91,22 @@
             else if (isContractor)
             {
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-building-house"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-building-house" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Projecten volgen</div>
                     <div class="gl-tile-desc">Blijf op de hoogte van de voortgang van uw projecten in real-time.</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-task"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-task" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Punten beheren</div>
                     <div class="gl-tile-desc">Uw punten raadplegen en afvinken voor controle.</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-folder"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-folder" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Documenten beheren</div>
                     <div class="gl-tile-desc">Veilig documenten delen en raadplegen op één centrale plek.</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-group"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-group" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Direct communiceren</div>
                     <div class="gl-tile-desc">Snel en efficiënt communiceren met het Group LN team.</div>
                 </div>
@@ -109,22 +114,22 @@
             else
             {
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-grid-alt"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-grid-alt" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Project dashboard</div>
                     <div class="gl-tile-desc">Volledig overzicht</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-bar-chart-alt-2" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Financieel beheer</div>
                     <div class="gl-tile-desc">Facturatie &amp; budget</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-group"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-group" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Relatiebeheer</div>
                     <div class="gl-tile-desc">Klanten &amp; leveranciers</div>
                 </div>
                 <div class="gl-tile">
-                    <div class="gl-tile-icon"><i class="bx bx-cog"></i></div>
+                    <div class="gl-tile-icon"><i class="bx bx-cog" aria-hidden="true"></i></div>
                     <div class="gl-tile-name">Configuratie</div>
                     <div class="gl-tile-desc">Rollen &amp; rechten</div>
                 </div>
@@ -150,20 +155,20 @@
             @if (!string.IsNullOrWhiteSpace(loginError))
             {
                 <div class="gl-error-box">
-                    <i class="bx bx-error-circle gl-error-icon"></i>
+                    <i class="bx bx-error-circle gl-error-icon" aria-hidden="true"></i>
                     <span>@loginError</span>
                 </div>
             }
 
             <a class="btn-gl-ms"
                href="@Url.Action("SignIn", "Account", new { returnUrl = Model.ReturnUrl })">
-                <i class="bx bxl-microsoft ms-icon"></i>
+                <i class="bx bxl-microsoft ms-icon" aria-hidden="true"></i>
                 Aanmelden met Microsoft
-                <i class="bx bx-chevron-right ms-arrow"></i>
+                <i class="bx bx-chevron-right ms-arrow" aria-hidden="true"></i>
             </a>
 
             <div class="gl-info-box">
-                <i class="bx bx-shield info-icon"></i>
+                <i class="bx bx-shield info-icon" aria-hidden="true"></i>
                 <span>@infoBox</span>
             </div>
 
@@ -189,3 +194,7 @@
     </div>
 
 </div>
+
+@section scripts {
+    <script src="~/js/login.js" asp-append-version="true"></script>
+}

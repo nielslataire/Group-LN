@@ -29,7 +29,8 @@ public class ProjectDossierService : IProjectDossierService
 
     public async Task<List<ProjectDossier>> Search(int projectId, DossierFilterBO f)
     {
-        var q = _db.ProjectDossier.Include(d => d.Unit).Include(d => d.NutsAansluiting).Where(d => d.ProjectId == projectId);
+        var q = _db.ProjectDossier.Include(d => d.Unit).Include(d => d.NutsAansluiting).Include(d => d.Substappen)
+            .Where(d => d.ProjectId == projectId);
 
         if (f.DossierKind.HasValue) q = q.Where(d => d.DossierKind == f.DossierKind.Value);
         if (f.Status.HasValue) q = q.Where(d => d.Status == f.Status.Value);
@@ -287,6 +288,33 @@ public class ProjectDossierService : IProjectDossierService
             Datum = DateTime.UtcNow,
             CreatedDate = DateTime.UtcNow
         });
+
+        // Omgekeerde richting van NutsAansluitingService.MirrorNaarChecklist: een datum gezet via
+        // de "Zet"-knop op de checklist (hier) moet ook in het getypeerde veld verschijnen dat het
+        // bewerkformulier toont — anders leek de datum daar "weg" (gemeld: "als ik een datum zet
+        // krijg ik deze niet in mijn edit modal"), terwijl ze wél op de checklist stond.
+        var (_, _, zetVeld) = NutsChecklistSpiegel.Velden
+            .FirstOrDefault(v => string.Equals(v.Code, stap.Code, StringComparison.OrdinalIgnoreCase));
+        if (zetVeld != null)
+        {
+            var nuts = await _db.ProjectNutsAansluiting.FirstOrDefaultAsync(n => n.ProjectDossierId == projectDossierId);
+            if (nuts != null)
+            {
+                zetVeld(nuts, stap.Status == (int)DossierSubstapStatus.Afgerond ? stap.Datum : null);
+
+                // Dossierstatus volgt uit dezelfde datums (NutsChecklistSpiegel.BerekenStatus) —
+                // zonder dit blijft de checklist-knop hier een tweede weg om deze datums te zetten
+                // die de dossierstatus niet meeneemt, exact dezelfde bug als hierboven maar dan voor
+                // status i.p.v. datum. Een reeds Geannuleerd dossier blijft geannuleerd: een
+                // checklist-datum zet dat niet stil terug, enkel de bewerkmodal doet dat expliciet.
+                var dossier = await _db.ProjectDossier.FirstOrDefaultAsync(d => d.Id == projectDossierId);
+                if (dossier != null && dossier.Status != (int)DossierStatus.Geannuleerd)
+                {
+                    dossier.Status = NutsChecklistSpiegel.BerekenStatus(nuts, geannuleerd: false);
+                    dossier.AfgehandeldDatum = nuts.UitgevoerdOp;
+                }
+            }
+        }
 
         await _db.SaveChangesAsync();
         return true;

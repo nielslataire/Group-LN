@@ -177,7 +177,15 @@ namespace ServiceCore
                 if (issueNow)
                 {
                     // default reeks kiezen (verbeteren we later met expliciete reeks-keuze)
+                    // Eerst een reeks die specifiek voor creditnota's (of net niet) is opgezet; als er
+                    // geen aparte creditnotareeks bestaat, val terug op eender welke actieve reeks van
+                    // dit bedrijf zodat facturen en creditnota's gewoon dezelfde reeks kunnen delen.
                     var seriesId = await _db.InvoiceSeries
+                        .Where(s => s.IssuerCompanyId == bo.IssuerCompanyId && s.IsActive && s.IsCreditNote == bo.IsCreditNote)
+                        .OrderBy(s => s.Id)
+                        .Select(s => (int?)s.Id)
+                        .FirstOrDefaultAsync(ct)
+                        ?? await _db.InvoiceSeries
                         .Where(s => s.IssuerCompanyId == bo.IssuerCompanyId && s.IsActive)
                         .OrderBy(s => s.Id)
                         .Select(s => (int?)s.Id)
@@ -269,6 +277,13 @@ namespace ServiceCore
                 var issuerId = invoice.IssuerCompanyId
                     ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
 
+                // De factuur zelf houdt geen IsCreditNote-vlag bij (die volgt pas achteraf uit de
+                // toegewezen reeks) — bij nummering leiden we het dus af uit het brutototaal van de
+                // lijnen, net als de fallback die de UI al gebruikt voor nog niet genummerde concepten.
+                var isCreditNote = await _db.InvoicesDetails
+                    .Where(d => d.InvoiceId == invoiceId)
+                    .SumAsync(d => d.Price ?? 0m, ct) < 0m;
+
                 int chosenSeriesId;
                 if (seriesId.HasValue)
                 {
@@ -278,11 +293,22 @@ namespace ServiceCore
                     if (!belongsToIssuer)
                         throw new InvalidOperationException("Geselecteerde reeks hoort niet bij dit facturatiebedrijf of is niet actief.");
 
+                    // Geen harde eis dat de reeks IsCreditNote == isCreditNote is: sommige bedrijven
+                    // gebruiken bewust één gedeelde reeks voor facturen én creditnota's. Wie dat wil
+                    // kan hier expliciet dezelfde reeks kiezen/meegeven.
                     chosenSeriesId = seriesId.Value;
                 }
                 else
                 {
+                    // Eerst een reeks die specifiek voor creditnota's (of net niet) is opgezet; als de
+                    // klant geen aparte creditnotareeks bijhoudt, val terug op eender welke actieve
+                    // reeks van dit bedrijf zodat facturen en creditnota's gewoon dezelfde reeks delen.
                     chosenSeriesId = await _db.InvoiceSeries
+                        .Where(s => s.IssuerCompanyId == issuerId && s.IsActive && s.IsCreditNote == isCreditNote)
+                        .OrderBy(s => s.Id)
+                        .Select(s => (int?)s.Id)
+                        .FirstOrDefaultAsync(ct)
+                        ?? await _db.InvoiceSeries
                         .Where(s => s.IssuerCompanyId == issuerId && s.IsActive)
                         .OrderBy(s => s.Id)
                         .Select(s => (int?)s.Id)

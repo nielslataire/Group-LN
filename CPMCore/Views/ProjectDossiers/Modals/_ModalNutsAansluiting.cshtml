@@ -11,7 +11,7 @@
 }
 
 <div class="modal fade" id="@modalId" tabindex="-1" aria-hidden="true" data-meterdata-url-template="@Url.Action("UnitMeterdata", new { projectId = Model.ProjectId, unitId = 0 })">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <form method="post" asp-controller="ProjectDossiers" asp-action="NutsOpslaan" asp-route-projectId="@Model.ProjectId">
                 @Html.AntiForgeryToken()
@@ -26,12 +26,12 @@
                         <div class="row g-3">
                             <div class="col-md-8">
                                 <label class="form-label">Titel</label>
-                                <input type="text" name="Titel" class="form-control" required maxlength="200"
+                                <input type="text" name="Titel" class="form-control form-control-modern" required maxlength="200"
                                        value="@(b?.ProjectDossier?.Titel)" />
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Type nutsvoorziening</label>
-                                <select name="NutsType" class="form-select js-nuts-type">
+                                <select name="NutsType" class="form-control form-control-modern js-nuts-type">
                                     @foreach (var t in nutsTypes)
                                     {
                                         <option value="@((int)t)" selected="@(b != null && b.NutsType == (int)t)">@t.GetDisplayName()</option>
@@ -40,7 +40,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Eenheid <span class="text-muted">(optioneel)</span></label>
-                                <select name="UnitId" class="form-select js-nuts-unit">
+                                <select name="UnitId" class="form-control form-control-modern js-nuts-unit">
                                     <option value="">— projectniveau (algemene aansluiting) —</option>
                                     @foreach (var u in Model.ProjectUnits)
                                     {
@@ -50,67 +50,77 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Netbeheerder</label>
-                                <select name="NetbeheerderCompanyId" class="form-select js-netbeheerder-select"
+                                <select name="NetbeheerderCompanyId" class="form-control form-control-modern js-netbeheerder-select"
                                         style="width:100%" data-url="@Url.Action("GetCompanys", "Projecten")"
                                         data-selected-id="@(b?.NetbeheerderCompanyId)" data-selected-text="@(b?.NetbeheerderCompany?.BedrijfsNaam)"></select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">EAN</label>
-                                <input type="text" name="Ean" class="form-control js-nuts-ean" maxlength="50" value="@(b?.Ean)" />
+                                <input type="text" name="Ean" class="form-control form-control-modern js-nuts-ean" maxlength="50" value="@(b?.Ean)" />
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Meternummer</label>
-                                <input type="text" name="Meternummer" class="form-control js-nuts-meter" maxlength="50" value="@(b?.Meternummer)" />
+                                <input type="text" name="Meternummer" class="form-control form-control-modern js-nuts-meter" maxlength="50" value="@(b?.Meternummer)" />
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Gevraagd vermogen</label>
-                                <input type="text" name="GevraagdVermogen" class="form-control" maxlength="50" value="@(b?.GevraagdVermogen)" />
+                                <input type="text" name="GevraagdVermogen" class="form-control form-control-modern" maxlength="50" value="@(b?.GevraagdVermogen)" />
                             </div>
                         </div>
                     </div>
 
                     <div class="gl-mp-modal-section">
-                        <div class="gl-mp-modal-section-title">Opvolging &amp; kost</div>
-                        <p class="text-muted small mb-2">Aanvraag, offerte, uitvoering, keuring en overdracht volg je stap per stap op via de checklist op de dossierpagina zodra dit dossier is aangemaakt.</p>
+                        <div class="gl-mp-modal-section-title">Werkstroom</div>
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">Referentie</label>
-                                <input type="text" name="Referentie" class="form-control" maxlength="100" value="@(b?.ProjectDossier?.Referentie)" />
+                                <input type="text" name="Referentie" class="form-control form-control-modern" maxlength="100" value="@(b?.ProjectDossier?.Referentie)" />
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="Geannuleerd" id="@($"nuts-geannuleerd-{modalId}")" value="true" checked="@(b != null && b.ProjectDossier.Status == (int)DossierStatus.Geannuleerd)" />
+                                    <input type="hidden" name="Geannuleerd" value="false" />
+                                    <label class="form-check-label" for="@($"nuts-geannuleerd-{modalId}")">Dossier geannuleerd</label>
+                                </div>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Status</label>
-                                <select name="Status" class="form-select">
-                                    @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
-                                    {
-                                        <option value="@((int)s)" selected="@(b != null && b.ProjectDossier.Status == (int)s)">@s.GetDisplayName()</option>
-                                    }
-                                </select>
+                                <label class="form-label">Aanvraagdatum</label>
+                                <input type="date" name="AanvraagVerstuurdOp" class="form-control form-control-modern" value="@(b?.AanvraagVerstuurdOp?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Aanvraag verstuurd op</label>
-                                <input type="date" name="AanvraagVerstuurdOp" class="form-control" value="@(b?.AanvraagVerstuurdOp?.ToString("yyyy-MM-dd"))" />
+                                <label class="form-label">Verwachte offertedatum</label>
+                                <input type="date" name="VerwachteOfferteDatum" class="form-control form-control-modern" value="@(b?.VerwachteOfferteDatum?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Aanvraagdatum (dossier)</label>
-                                <input type="date" name="AanvraagDatum" class="form-control" value="@(b?.ProjectDossier?.AanvraagDatum?.ToString("yyyy-MM-dd"))" />
+                                <label class="form-label">Offertedatum</label>
+                                <input type="date" name="OfferteOntvangenOp" class="form-control form-control-modern" value="@(b?.OfferteOntvangenOp?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Verwachte afhandeling</label>
-                                <input type="date" name="VerwachteAfhandelingDatum" class="form-control" value="@(b?.ProjectDossier?.VerwachteAfhandelingDatum?.ToString("yyyy-MM-dd"))" />
+                                <label class="form-label">Datum goedkeuring</label>
+                                <input type="date" name="OfferteGoedgekeurdOp" class="form-control form-control-modern" value="@(b?.OfferteGoedgekeurdOp?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Afgehandeld op</label>
-                                <input type="date" name="AfgehandeldDatum" class="form-control" value="@(b?.ProjectDossier?.AfgehandeldDatum?.ToString("yyyy-MM-dd"))" />
+                                <label class="form-label">Datum uitvoering gevraagd</label>
+                                <input type="date" name="UitvoeringGevraagdOp" class="form-control form-control-modern" value="@(b?.UitvoeringGevraagdOp?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Datum uitgevoerd</label>
+                                <input type="date" name="UitgevoerdOp" class="form-control form-control-modern" value="@(b?.UitgevoerdOp?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Aansluitkost raming (€)</label>
-                                <input type="number" step="0.01" name="AansluitkostRaming" class="form-control" value="@(b?.AansluitkostRaming)" />
+                                <input type="number" step="0.01" name="AansluitkostRaming" class="form-control form-control-modern" value="@(b?.AansluitkostRaming)" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Aansluitkost definitief (€)</label>
-                                <input type="number" step="0.01" name="AansluitkostDefinitief" class="form-control" value="@(b?.AansluitkostDefinitief)" />
+                                <input type="number" step="0.01" name="AansluitkostDefinitief" class="form-control form-control-modern" value="@(b?.AansluitkostDefinitief)" />
                             </div>
                         </div>
+                        <p class="text-muted small mt-2 mb-0">
+                            Status en de datum "Afgehandeld" worden automatisch bepaald op basis van de datums hierboven
+                            (afgehandeld zodra "Datum uitgevoerd" ingevuld is) — enkel annuleren zet je hier zelf.
+                            Keuring en overdracht volg je verder op via de checklist op de dossierpagina zodra dit dossier is aangemaakt.
+                        </p>
                     </div>
 
                     <div class="gl-mp-modal-section">
@@ -118,15 +128,15 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Extern contact — naam</label>
-                                <input type="text" name="ExterneContactNaam" class="form-control" maxlength="150" value="@(b?.ProjectDossier?.ExterneContactNaam)" />
+                                <input type="text" name="ExterneContactNaam" class="form-control form-control-modern" maxlength="150" value="@(b?.ProjectDossier?.ExterneContactNaam)" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Extern contact — e-mail</label>
-                                <input type="email" name="ExterneContactEmail" class="form-control" maxlength="254" value="@(b?.ProjectDossier?.ExterneContactEmail)" />
+                                <input type="email" name="ExterneContactEmail" class="form-control form-control-modern" maxlength="254" value="@(b?.ProjectDossier?.ExterneContactEmail)" />
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Omschrijving</label>
-                                <textarea name="Omschrijving" class="form-control" rows="2">@(b?.ProjectDossier?.Omschrijving)</textarea>
+                                <textarea name="Omschrijving" class="form-control form-control-modern" rows="2">@(b?.ProjectDossier?.Omschrijving)</textarea>
                             </div>
                         </div>
                     </div>

@@ -26,6 +26,12 @@
         ],
         "createdAt": "2026-09-08T09:25:14.410Z",
         "reason": "impeccable: .bw-subtabs .nav-link border-bottom:3px transparent is a tab-underline indicator (border-radius:0, not a card), mirroring the documented gl-form-shell__tab pattern in DESIGN.md"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "avenir-black",
+        "createdAt": "2026-09-18T08:00:38.294Z",
+        "reason": "Pre-existing, deliberate self-hosted @font-face for the unrelated AccessDenied page brand title; out of scope for the Account/Login overdrive task"
       }
     ]
   }

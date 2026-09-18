@@ -96,6 +96,26 @@ public class ProjectTaakService : IProjectTaakService
         return true;
     }
 
+    public async Task<int> ChangeStatusBulk(IEnumerable<int> ids, int newStatus, string? userId)
+    {
+        var idLijst = ids?.Distinct().ToList() ?? new List<int>();
+        if (idLijst.Count == 0) return 0;
+
+        var entiteiten = await _db.ProjectTaak.Where(t => idLijst.Contains(t.Id)).ToListAsync();
+        foreach (var entity in entiteiten)
+        {
+            entity.Status = newStatus;
+            if (newStatus == StatusAfgerond && entity.AfgewerktOp == null)
+                entity.AfgewerktOp = DateTime.UtcNow;
+            else if (newStatus != StatusAfgerond)
+                entity.AfgewerktOp = null;
+            entity.ModifiedByUserId = userId;
+            entity.ModifiedDate = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+        return entiteiten.Count;
+    }
+
     public async Task<bool> Reassign(int id, string? toegewezenAanUserId, int? toegewezenAanRol, string? userId)
     {
         var entity = await _db.ProjectTaak.FirstOrDefaultAsync(t => t.Id == id);

@@ -24,7 +24,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Type nutsvoorziening</label>
-                                <select name="NutsType" class="form-select" required>
+                                <select name="NutsType" class="form-control form-control-modern" required>
                                     @foreach (var t in nutsTypes)
                                     {
                                         <option value="@((int)t)">@t.GetDisplayName()</option>
@@ -33,7 +33,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Titel-prefix <span class="text-muted">(optioneel)</span></label>
-                                <input type="text" name="TitelPrefix" class="form-control" maxlength="150" placeholder="bv. Elektriciteit" />
+                                <input type="text" name="TitelPrefix" class="form-control form-control-modern" maxlength="150" placeholder="bv. Elektriciteit" />
                             </div>
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -65,25 +65,20 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Netbeheerder</label>
-                                <select name="NetbeheerderCompanyId" class="form-select js-netbeheerder-select"
+                                <select name="NetbeheerderCompanyId" class="form-control form-control-modern js-netbeheerder-select"
                                         style="width:100%" data-url="@Url.Action("GetCompanys", "Projecten")"></select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Status</label>
-                                <select name="Status" class="form-select">
-                                    @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
-                                    {
-                                        <option value="@((int)s)">@s.GetDisplayName()</option>
-                                    }
-                                </select>
+                                <label class="form-label">Gevraagd vermogen</label>
+                                <input type="text" name="GevraagdVermogen" class="form-control form-control-modern" maxlength="50" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Aanvraagdatum</label>
-                                <input type="date" name="AanvraagDatum" class="form-control" />
+                                <input type="date" name="AanvraagDatum" class="form-control form-control-modern" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Verwachte afhandeling</label>
-                                <input type="date" name="VerwachteAfhandelingDatum" class="form-control" />
+                                <input type="date" name="VerwachteAfhandelingDatum" class="form-control form-control-modern" />
                             </div>
                         </div>
                     </div>
@@ -93,20 +88,21 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Extern contact — naam</label>
-                                <input type="text" name="ExterneContactNaam" class="form-control" maxlength="150" />
+                                <input type="text" name="ExterneContactNaam" class="form-control form-control-modern" maxlength="150" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Extern contact — e-mail</label>
-                                <input type="email" name="ExterneContactEmail" class="form-control" maxlength="254" />
+                                <input type="email" name="ExterneContactEmail" class="form-control form-control-modern" maxlength="254" />
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Omschrijving</label>
-                                <textarea name="Omschrijving" class="form-control" rows="2"></textarea>
+                                <textarea name="Omschrijving" class="form-control form-control-modern" rows="2"></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <span class="text-muted small me-auto js-nuts-bulk-count" aria-live="polite">Geen eenheden geselecteerd</span>
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
                     <button type="submit" class="btn btn-primary">Aanmaken</button>
                 </div>

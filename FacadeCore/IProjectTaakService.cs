@@ -21,6 +21,11 @@ public interface IProjectTaakService
     Task<ProjectTaak> Create(TaakUpsertBO dto, string? userId);
     Task<ProjectTaak?> Update(int id, TaakUpsertBO dto, string? userId);
     Task<bool> ChangeStatus(int id, int newStatus, string? userId);
+
+    /// <summary>Zet dezelfde status op meerdere taken in één keer (bulk-actie op "Mijn taken").
+    /// Negeert id's die niet bestaan i.p.v. de hele bulk te laten falen; retourneert het aantal
+    /// effectief bijgewerkte taken.</summary>
+    Task<int> ChangeStatusBulk(IEnumerable<int> ids, int newStatus, string? userId);
     Task<bool> Reassign(int id, string? toegewezenAanUserId, int? toegewezenAanRol, string? userId);
     Task<bool> Delete(int id, string? userId);
 

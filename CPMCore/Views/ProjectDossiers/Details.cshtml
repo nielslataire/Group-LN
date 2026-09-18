@@ -65,7 +65,7 @@
                                     <span class="gl-dchk-datum text-muted">@(stap.Datum?.ToString("dd/MM/yyyy") ?? "")</span>
                                     <form method="post" asp-action="SubstapStatus" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" asp-route-substapId="@stap.Id" class="d-flex gap-1">
                                         @Html.AntiForgeryToken()
-                                        <select name="nieuweStatus" class="form-select form-select-sm">
+                                        <select name="nieuweStatus" class="form-control form-control-sm">
                                             @foreach (DossierSubstapStatus s in Enum.GetValues(typeof(DossierSubstapStatus)))
                                             {
                                                 <option value="@((int)s)" selected="@(stap.Status == (int)s)">@s.GetDisplayName()</option>
@@ -94,16 +94,25 @@
                                         <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(d.Status)" title="@kvStatusLabel"><i class="ph @DossierStatusIcon(d.Status)" aria-hidden="true"></i></span>
                                         <span>@kvStatusLabel</span>
                                     </div>
-                                    <form method="post" asp-action="Status" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-flex gap-2">
-                                        @Html.AntiForgeryToken()
-                                        <select name="nieuweStatus" class="form-select form-select-sm">
-                                            @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
-                                            {
-                                                <option value="@((int)s)" selected="@(d.Status == (int)s)">@s.GetDisplayName()</option>
-                                            }
-                                        </select>
-                                        <button type="submit" class="btn btn-xs btn-primary">Zet</button>
-                                    </form>
+                                    @if (isNuts)
+                                    {
+                                        <p class="text-muted small mb-0">
+                                            Automatisch bepaald op basis van de werkstroomdatums hiernaast — annuleren zet je via <strong>Bewerken</strong>.
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-action="Status" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-flex gap-2">
+                                            @Html.AntiForgeryToken()
+                                            <select name="nieuweStatus" class="form-control form-control-sm">
+                                                @foreach (DossierStatus s in Enum.GetValues(typeof(DossierStatus)))
+                                                {
+                                                    <option value="@((int)s)" selected="@(d.Status == (int)s)">@s.GetDisplayName()</option>
+                                                }
+                                            </select>
+                                            <button type="submit" class="btn btn-xs btn-primary">Zet</button>
+                                        </form>
+                                    }
                                 </dd>
                                 <dt>Referentie</dt><dd>@(d.Referentie ?? "—")</dd>
                                 <dt>Extern contact</dt><dd>@(d.ExterneContactNaam ?? "—") @(!string.IsNullOrWhiteSpace(d.ExterneContactEmail) ? $"({d.ExterneContactEmail})" : "")</dd>
@@ -131,7 +140,12 @@
                                     <dt>EAN</dt><dd>@(Model.Nuts.Ean ?? "—")</dd>
                                     <dt>Meternummer</dt><dd>@(Model.Nuts.Meternummer ?? "—")</dd>
                                     <dt>Gevraagd vermogen</dt><dd>@(Model.Nuts.GevraagdVermogen ?? "—")</dd>
-                                    <dt>Aanvraag verstuurd</dt><dd>@(Model.Nuts.AanvraagVerstuurdOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Aanvraagdatum</dt><dd>@(Model.Nuts.AanvraagVerstuurdOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Verwachte offertedatum</dt><dd>@(Model.Nuts.VerwachteOfferteDatum?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Offertedatum</dt><dd>@(Model.Nuts.OfferteOntvangenOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Datum goedkeuring</dt><dd>@(Model.Nuts.OfferteGoedgekeurdOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Datum uitvoering gevraagd</dt><dd>@(Model.Nuts.UitvoeringGevraagdOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                                    <dt>Datum uitgevoerd</dt><dd>@(Model.Nuts.UitgevoerdOp?.ToString("dd/MM/yyyy") ?? "—")</dd>
                                     <dt>Kost raming</dt><dd>@(Model.Nuts.AansluitkostRaming?.ToString("0.00 €") ?? "—")</dd>
                                     <dt>Kost definitief</dt><dd>@(Model.Nuts.AansluitkostDefinitief?.ToString("0.00 €") ?? "—")</dd>
                                 </dl>
@@ -162,7 +176,7 @@
                             {
                                 <form method="post" asp-action="KoppelMijlpaal" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="d-flex gap-2">
                                     @Html.AntiForgeryToken()
-                                    <select name="mijlpaalId" class="form-select form-select-sm">
+                                    <select name="mijlpaalId" class="form-control form-control-sm">
                                         @foreach (var m in Model.BeschikbareMijlpalen)
                                         {
                                             <option value="@m.Id">@m.Naam</option>
@@ -182,7 +196,7 @@
                             <form method="post" asp-action="Gebeurtenis" asp-route-projectId="@Model.ProjectId" asp-route-id="@d.Id" class="row g-2 align-items-end mb-3">
                                 @Html.AntiForgeryToken()
                                 <div class="col-md-3">
-                                    <select name="Type" class="form-select form-select-sm">
+                                    <select name="Type" class="form-control form-control-sm">
                                         @foreach (DossierGebeurtenisType t in Enum.GetValues(typeof(DossierGebeurtenisType)))
                                         {
                                             <option value="@((int)t)">@t.GetDisplayName()</option>

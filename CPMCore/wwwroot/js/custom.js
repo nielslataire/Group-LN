@@ -283,3 +283,21 @@ jQuery(function ($) {
         }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     });
 })();
+
+// Generieke busy-state op modal-formulieren: elke <form> binnen een .modal met een submit-knop
+// krijgt automatisch een spinner + disabled state zodra "submit" vuurt (dus na geslaagde HTML5-
+// validatie, vóór de round-trip). Voorkomt een dubbele klik/dubbele POST op een trage verbinding
+// en geeft de gebruiker zichtbare bevestiging dat de klik geregistreerd is — project-wide i.p.v.
+// per modal herhaald, zodat nieuwe modals dit gratis krijgen.
+(function () {
+    "use strict";
+    document.addEventListener("submit", function (e) {
+        var form = e.target;
+        if (!(form instanceof HTMLFormElement) || !form.closest(".modal")) return;
+        var btn = form.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.dataset.busyLabel = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + btn.textContent.trim();
+    });
+})();

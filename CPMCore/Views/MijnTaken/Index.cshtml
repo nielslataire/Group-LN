@@ -5,32 +5,77 @@
     ViewData["Title"] ??= "Mijn taken";
     var vandaag = DateOnly.FromDateTime(DateTime.Today);
     var statussen = Enum.GetValues(typeof(TaakStatus)).Cast<TaakStatus>().ToList();
+
+    // Hergebruikt dezelfde 5-glyph-taal als ProjectDossiers/Index.cshtml (DossierStatusIcon) i.p.v.
+    // een derde parallelle iconenset te verzinnen — /impeccable critique P2 (status droeg voorheen
+    // geen enkel icoon/kleursignaal, enkel platte tekst in de select).
+    string TaakStatusIcon(int status) => (TaakStatus)status switch
+    {
+        TaakStatus.Open => "bx-circle",
+        TaakStatus.Wachtend => "bx-pause-circle",
+        TaakStatus.Afgerond => "bx-check-circle",
+        TaakStatus.Geannuleerd => "bx-minus-circle",
+        _ => "bx-time-five"
+    };
+    int TaakStatusVisual(int status) => (TaakStatus)status switch
+    {
+        TaakStatus.Open => 0,
+        TaakStatus.Afgerond => 2,
+        TaakStatus.Geannuleerd => 3,
+        _ => 1
+    };
 }
 
 @section PageStyle {
+    @* traject.css draagt al .bulk-bar/.count-pill (zelfde patroon als DocumentenCentrum) — geen
+       apart stylesheet nodig, dit bestand laadt traject.css toch al.
+       projecten-custom.css is nodig voor .gl-kpi2-* (de KPI-strip stond hieronder al in de markup
+       maar rendert zonder dit bestand volledig ongestyled — /impeccable critique P0). *@
     <link rel="stylesheet" href="~/css/traject.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/projecten-custom.css" asp-append-version="true" />
 }
 
-<div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
-    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-        <h1 class="font-weight-bold mb-0 mt-0">Mijn taken</h1>
-        <h5 class="mb-0 mt-0 text-muted">Persoonlijke opvolging over al je projecten heen</h5>
-    </div>
-    <div class="col-sm-auto px-0">
-        <button type="button" class="btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#modalTaakUpsert">
-            <i class="bx bx-plus"></i> Nieuwe taak
-        </button>
-    </div>
+@section PageActions {
+    <button type="button" class="btn btn-primary btn-sm js-mt-new" data-bs-toggle="modal" data-bs-target="#modalTaakUpsert">
+        <i class="bx bx-plus"></i> Nieuwe taak
+    </button>
+}
+
+@* Geen eigen h1/h5 hier — de topbar (SetPageHeader in MijnTakenController.Index) toont icoon +
+   "Mijn taken" al (DESIGN.md "The Content Body Has No Page Chrome Rule"); "Nieuwe taak" staat
+   daarom in @@section PageActions, met een mobiele d-md-none fallback hieronder (topbar-acties
+   verdwijnen < 768px) — /impeccable critique P1. *@
+<div class="d-flex d-md-none justify-content-end mb-3">
+    <button type="button" class="btn btn-primary btn-sm js-mt-new" data-bs-toggle="modal" data-bs-target="#modalTaakUpsert">
+        <i class="bx bx-plus"></i> Nieuwe taak
+    </button>
 </div>
 
+@* KPI-strip volgens het echte gl-kpi2-*-componentcontract (Projecten/Detail.cshtml): tile-col-
+   wrapper + icoonbadge + body, i.p.v. de kale label/value-spans die zonder projecten-custom.css
+   volledig ongestyled bleven en een niet-bestaande "gl-kpi2-severe"-modifier gebruikten
+   (/impeccable critique P0 — de echte severe-klasse zit op de waarde: gl-kpi2-value-severe). Beide
+   tegels zijn ook een filter-link, zelfde <a>-patroon als de rest van de gl-kpi2-tiles. *@
 <div class="gl-kpi2-strip mt-1 mb-3">
-    <div class="gl-kpi2-tile">
-        <span class="gl-kpi2-label">Open</span>
-        <span class="gl-kpi2-value">@Model.AantalOpen</span>
+    <div class="gl-kpi2-tile-col">
+        <a class="gl-kpi2-tile" href="@Url.Action("Index")" style="--kpi-color: var(--primary);" aria-label="Open taken: @Model.AantalOpen">
+            <div class="gl-kpi2-icon"><i class="bx bx-task" aria-hidden="true"></i></div>
+            <div class="gl-kpi2-body">
+                <div class="gl-kpi2-label">Open</div>
+                <div class="gl-kpi2-value">@Model.AantalOpen</div>
+            </div>
+        </a>
     </div>
-    <div class="gl-kpi2-tile @(Model.AantalAchterstallig > 0 ? "gl-kpi2-severe" : "")">
-        <span class="gl-kpi2-label">Achterstallig</span>
-        <span class="gl-kpi2-value">@Model.AantalAchterstallig</span>
+    <div class="gl-kpi2-tile-col">
+        <a class="gl-kpi2-tile" href="@Url.Action("Index", new { AlleenAchterstallig = true })"
+           style="--kpi-color: var(@(Model.AantalAchterstallig > 0 ? "--danger" : "--primary"));"
+           aria-label="Achterstallige taken: @Model.AantalAchterstallig">
+            <div class="gl-kpi2-icon"><i class="bx bx-error" aria-hidden="true"></i></div>
+            <div class="gl-kpi2-body">
+                <div class="gl-kpi2-label">Achterstallig</div>
+                <div class="gl-kpi2-value @(Model.AantalAchterstallig > 0 ? "gl-kpi2-value-severe" : "")">@Model.AantalAchterstallig</div>
+            </div>
+        </a>
     </div>
 </div>
 
@@ -62,10 +107,31 @@
     </div>
 </form>
 
+@* Bulk-actiebalk — zelfde .bulk-bar/.count-pill-patroon als DocumentenCentrum/Index.cshtml en
+   ProjectDossiers/Index.cshtml, i.p.v. een nieuwe visuele taal voor "N geselecteerd" te verzinnen. *@
+<div id="mt-bulk-bar" class="bulk-bar d-none mb-2">
+    <span class="count-pill" id="mt-bulk-count">0 geselecteerd</span>
+    <form method="post" asp-action="StatusBulk" class="d-flex gap-2 align-items-center flex-wrap" id="mt-bulk-form">
+        @Html.AntiForgeryToken()
+        <div id="mt-bulk-ids"></div>
+        <select name="nieuweStatus" class="form-control form-control-modern form-control-sm" style="width:auto">
+            @foreach (var s in statussen)
+            {
+                <option value="@((int)s)">@s.GetDisplayName()</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-light">Zet voor geselecteerde</button>
+    </form>
+</div>
+
+@* .table-responsive: zonder wrapper crasht/overflowt deze 7-koloms tabel met ingebedde formulieren
+   op telefoonbreedte — Casey (mobiel/on-site) kon de tabel voorheen niet bruikbaar bekijken. *@
+<div class="table-responsive">
 <table class="table table-hover w-100">
     <thead>
         <tr>
-            <th>Titel</th><th>Project</th><th>Prioriteit</th><th>Vervaldatum</th><th>Status</th><th></th>
+            <th style="width:32px"><input type="checkbox" class="form-check-input" id="mt-select-all" aria-label="Alles selecteren" /></th>
+            <th>Titel</th><th>Project</th><th>Toegewezen</th><th>Prioriteit</th><th>Vervaldatum</th><th>Status</th><th></th>
         </tr>
     </thead>
     <tbody>
@@ -74,6 +140,7 @@
             var over = t.Vervaldatum != null && t.Vervaldatum.Value < vandaag
                        && t.Status != (int)TaakStatus.Afgerond && t.Status != (int)TaakStatus.Geannuleerd;
             <tr>
+                <td><input type="checkbox" class="form-check-input js-mt-select" value="@t.Id" aria-label="Selecteer taak: @t.Titel" /></td>
                 <td>
                     <strong>@t.Titel</strong>
                     @if (!string.IsNullOrWhiteSpace(t.Omschrijving))
@@ -95,55 +162,99 @@
                         <span class="text-muted">—</span>
                     }
                 </td>
-                <td>@(((TaakPrioriteit)t.Prioriteit).GetDisplayName())</td>
+                <td>
+                    @{ var toegewezenNaam = !string.IsNullOrEmpty(t.ToegewezenAanUserId) ? Model.GebruikersNamen.GetValueOrDefault(t.ToegewezenAanUserId) : null; }
+                    @if (!string.IsNullOrEmpty(toegewezenNaam))
+                    {
+                        @toegewezenNaam
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </td>
+                <td>
+                    @{
+                        var prio = (TaakPrioriteit)t.Prioriteit;
+                        var prioKlasse = prio == TaakPrioriteit.Dringend ? "text-danger fw-bold" : prio == TaakPrioriteit.Hoog ? "fw-semibold" : "";
+                        var prioStyle = prio == TaakPrioriteit.Hoog ? "color: var(--warning, #c17d1f);" : "";
+                    }
+                    <span class="@prioKlasse" style="@prioStyle">@prio.GetDisplayName()</span>
+                </td>
                 <td class="@(over ? "text-danger fw-bold" : "")">@(t.Vervaldatum?.ToString("dd/MM/yyyy") ?? "—")</td>
                 <td>
-                    <form method="post" asp-action="Status" asp-route-id="@t.Id" class="d-flex gap-1">
+                    <form method="post" asp-action="Status" asp-route-id="@t.Id" class="d-flex align-items-center gap-1">
                         @Html.AntiForgeryToken()
-                        <select name="nieuweStatus" class="form-select form-select-sm">
+                        @{ var taakStatusLabel = ((TaakStatus)t.Status).GetDisplayName(); }
+                        <span class="gl-mijlpaal-status-icon s-@TaakStatusVisual(t.Status)" title="@taakStatusLabel">
+                            <i class="bx @TaakStatusIcon(t.Status)" aria-hidden="true"></i>
+                            <span class="visually-hidden">@taakStatusLabel</span>
+                        </span>
+                        @* Auto-submit i.p.v. een aparte "Zet"-knop — zelfde onchange-patroon als de
+                           filter-selects hierboven op deze pagina. Kiezen ís bevestigen; een tweede
+                           klik voor exact dezelfde intentie was dubbel werk (gebruikerswens). *@
+                        <select name="nieuweStatus" class="form-control form-control-modern form-control-sm" onchange="this.form.submit()">
                             @foreach (var s in statussen)
                             {
                                 <option value="@((int)s)" selected="@(t.Status == (int)s)">@s.GetDisplayName()</option>
                             }
                         </select>
-                        <button type="submit" class="btn btn-xs btn-primary">Zet</button>
                     </form>
                 </td>
                 <td class="text-end">
-                    <form method="post" asp-action="Verwijderen" asp-route-id="@t.Id" onsubmit="return confirm('Deze taak verwijderen?');">
+                    @* Zelfde gedeelde modal als "Nieuwe taak" (js-mt-edit vult 'm vooraf in i.p.v.
+                       een tweede, bijna-identieke bewerkmodal per rij te renderen)
+                       — /impeccable critique P1: Opslaan's update-branch was tot nu toe onbereikbaar
+                       vanuit deze view. *@
+                    <button type="button" class="btn btn-xs btn-outline-secondary js-mt-edit"
+                            data-id="@t.Id" data-titel="@t.Titel" data-omschrijving="@t.Omschrijving"
+                            data-project-id="@t.ProjectId" data-prioriteit="@t.Prioriteit"
+                            data-vervaldatum="@(t.Vervaldatum?.ToString("yyyy-MM-dd"))"
+                            data-toegewezen-aan-id="@t.ToegewezenAanUserId" data-toegewezen-aan-tekst="@toegewezenNaam"
+                            data-bs-toggle="modal" data-bs-target="#modalTaakUpsert"
+                            title="Bewerken" aria-label="Taak bewerken: @t.Titel">
+                        <i class="bx bx-edit-alt" aria-hidden="true"></i>
+                    </button>
+                    @* window.confirmDialog (confirm-modal.js) i.p.v. de kale browser-confirm() —
+                       zelfde patroon als ProjectTraject/_TrajectActionButtons.cshtml. *@
+                    <form method="post" asp-action="Verwijderen" asp-route-id="@t.Id" class="gl-delete-taak-form d-inline">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bx bx-trash"></i></button>
+                        <button type="submit" class="btn btn-xs btn-outline-danger" title="Verwijderen" aria-label="Taak verwijderen: @t.Titel"><i class="bx bx-trash" aria-hidden="true"></i></button>
                     </form>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+</div>
 @if (Model.Taken.Count == 0)
 {
     <div class="text-muted text-center py-4">Geen taken gevonden.</div>
 }
 
+@* Eén gedeelde modal voor aanmaken én bewerken (js-mt-new reset 'm, js-mt-edit vult 'm vooraf in
+   — zie @@section PageScripts) i.p.v. een tweede, bijna-identieke bewerkmodal te renderen. *@
 <div class="modal fade" id="modalTaakUpsert" tabindex="-1">
     <div class="modal-dialog">
         <form method="post" asp-action="Opslaan" class="modal-content">
             @Html.AntiForgeryToken()
+            <input type="hidden" name="Id" id="mt-form-id" value="" />
             <div class="modal-header">
-                <h5 class="modal-title">Nieuwe taak</h5>
+                <h5 class="modal-title" id="mt-form-title">Nieuwe taak</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-2">
                     <label class="form-label">Titel</label>
-                    <input type="text" name="Titel" class="form-control" required />
+                    <input type="text" name="Titel" id="mt-form-titel" class="form-control form-control-modern" required />
                 </div>
                 <div class="mb-2">
                     <label class="form-label">Omschrijving</label>
-                    <textarea name="Omschrijving" class="form-control" rows="2"></textarea>
+                    <textarea name="Omschrijving" id="mt-form-omschrijving" class="form-control form-control-modern" rows="2"></textarea>
                 </div>
                 <div class="mb-2">
                     <label class="form-label">Project</label>
-                    <select name="ProjectId" class="form-select">
+                    <select name="ProjectId" id="mt-form-project" class="form-control form-control-modern">
                         <option value="">— Geen project —</option>
                         @foreach (var p in Model.Projecten)
                         {
@@ -154,7 +265,7 @@
                 <div class="row">
                     <div class="col-6 mb-2">
                         <label class="form-label">Prioriteit</label>
-                        <select name="Prioriteit" class="form-select">
+                        <select name="Prioriteit" id="mt-form-prioriteit" class="form-control form-control-modern">
                             @foreach (TaakPrioriteit p in Enum.GetValues(typeof(TaakPrioriteit)))
                             {
                                 <option value="@((int)p)" selected="@(p == TaakPrioriteit.Normaal)">@p.GetDisplayName()</option>
@@ -163,12 +274,17 @@
                     </div>
                     <div class="col-6 mb-2">
                         <label class="form-label">Vervaldatum</label>
-                        <input type="date" name="Vervaldatum" class="form-control" />
+                        <input type="date" name="Vervaldatum" id="mt-form-vervaldatum" class="form-control form-control-modern" />
                     </div>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Toegewezen aan (gebruikers-id, leeg = mezelf)</label>
-                    <input type="text" name="ToegewezenAanUserId" class="form-control" />
+                    <label class="form-label">Toegewezen aan <span class="text-muted">(leeg = mezelf)</span></label>
+                    @* Zelfde select2-ajax-patroon als de Netbeheerder-picker in
+                       ProjectDossiers/Modals/_ModalNutsAansluiting.cshtml (js-netbeheerder-select),
+                       nu voor gebruikers i.p.v. bedrijven — vervangt het rauwe gebruikers-id-tekstveld
+                       (/impeccable critique: "nobody has a coworker's GUID memorized"). *@
+                    <select name="ToegewezenAanUserId" id="mt-form-toegewezen" class="form-control form-control-modern js-user-select"
+                            style="width:100%" data-url="@Url.Action("GetGebruikers")"></select>
                 </div>
             </div>
             <div class="modal-footer">
@@ -178,3 +294,142 @@
         </form>
     </div>
 </div>
+
+@await Html.PartialAsync("_ConfirmModal")
+
+@section PageScripts {
+    <script src="~/js/confirm-modal.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            "use strict";
+
+            document.querySelectorAll(".gl-delete-taak-form").forEach(function (form) {
+                form.addEventListener("submit", function (e) {
+                    if (form.dataset.confirmed) return;
+                    e.preventDefault();
+                    window.confirmDialog(
+                        "Taak verwijderen?",
+                        "Deze taak wordt definitief verwijderd. Deze actie kan niet ongedaan gemaakt worden.",
+                        "Verwijderen"
+                    ).then(function (ok) {
+                        if (!ok) return;
+                        form.dataset.confirmed = "1";
+                        if (form.requestSubmit) form.requestSubmit();
+                        else form.submit();
+                    });
+                });
+            });
+
+            // ===== Bulk-statuswijziging: checkboxes per rij + "alles selecteren" in de kop
+            // voeden de bulk-actiebalk (.bulk-bar), die bij Zet de geselecteerde id's als verborgen
+            // velden meestuurt naar StatusBulk — zelfde .bulk-bar/.count-pill-patroon als
+            // DocumentenCentrum/Index.cshtml en ProjectDossiers/Index.cshtml. =====
+            var selectAll = document.getElementById("mt-select-all");
+            var rowChecks = Array.prototype.slice.call(document.querySelectorAll(".js-mt-select"));
+            var bar = document.getElementById("mt-bulk-bar");
+            var countEl = document.getElementById("mt-bulk-count");
+            var idsContainer = document.getElementById("mt-bulk-ids");
+            var bulkForm = document.getElementById("mt-bulk-form");
+
+            if (selectAll && bar && rowChecks.length > 0) {
+                var checked = function () { return rowChecks.filter(function (cb) { return cb.checked; }); };
+
+                var refresh = function () {
+                    var n = checked().length;
+                    bar.classList.toggle("d-none", n === 0);
+                    countEl.textContent = n === 1 ? "1 geselecteerd" : n + " geselecteerd";
+                    selectAll.checked = n === rowChecks.length;
+                    selectAll.indeterminate = n > 0 && n < rowChecks.length;
+                };
+
+                rowChecks.forEach(function (cb) { cb.addEventListener("change", refresh); });
+                selectAll.addEventListener("change", function () {
+                    rowChecks.forEach(function (cb) { cb.checked = selectAll.checked; });
+                    refresh();
+                });
+
+                bulkForm.addEventListener("submit", function () {
+                    idsContainer.innerHTML = "";
+                    checked().forEach(function (cb) {
+                        var hidden = document.createElement("input");
+                        hidden.type = "hidden";
+                        hidden.name = "ids";
+                        hidden.value = cb.value;
+                        idsContainer.appendChild(hidden);
+                    });
+                });
+            }
+
+            // ===== Taakmodal: één gedeelde modal voor aanmaken én bewerken (/impeccable critique
+            // P1 — het bewerken van een bestaande taak had geen ingang vanuit deze pagina). js-mt-new
+            // reset het formulier naar lege staat; js-mt-edit vult 'm vooraf in met de rijdata. =====
+            var taakModal = document.getElementById("modalTaakUpsert");
+            var taakForm = taakModal ? taakModal.querySelector("form") : null;
+            var taakTitle = document.getElementById("mt-form-title");
+            var $toegewezenSelect = window.jQuery ? jQuery("#mt-form-toegewezen") : null;
+
+            function resetToegewezen(selectedId, selectedText) {
+                if (!$toegewezenSelect) return;
+                $toegewezenSelect.empty();
+                if (selectedId) {
+                    var opt = new Option(selectedText || selectedId, selectedId, true, true);
+                    $toegewezenSelect.append(opt).trigger("change");
+                } else {
+                    $toegewezenSelect.trigger("change");
+                }
+            }
+
+            if (taakForm) {
+                document.querySelectorAll(".js-mt-new").forEach(function (btn) {
+                    btn.addEventListener("click", function () {
+                        taakForm.reset();
+                        document.getElementById("mt-form-id").value = "";
+                        if (taakTitle) taakTitle.textContent = "Nieuwe taak";
+                        resetToegewezen(null, null);
+                    });
+                });
+
+                document.querySelectorAll(".js-mt-edit").forEach(function (btn) {
+                    btn.addEventListener("click", function () {
+                        taakForm.reset();
+                        document.getElementById("mt-form-id").value = btn.dataset.id || "";
+                        document.getElementById("mt-form-titel").value = btn.dataset.titel || "";
+                        document.getElementById("mt-form-omschrijving").value = btn.dataset.omschrijving || "";
+                        document.getElementById("mt-form-project").value = btn.dataset.projectId || "";
+                        document.getElementById("mt-form-prioriteit").value = btn.dataset.prioriteit || "1";
+                        document.getElementById("mt-form-vervaldatum").value = btn.dataset.vervaldatum || "";
+                        if (taakTitle) taakTitle.textContent = "Taak bewerken";
+                        resetToegewezen(btn.dataset.toegewezenAanId, btn.dataset.toegewezenAanTekst);
+                    });
+                });
+            }
+
+            // ===== Gebruikers-select2 ("Toegewezen aan") — zelfde ajax-patroon als de
+            // Netbeheerder-picker (dossiers.js js-netbeheerder-select), nu voor Users i.p.v.
+            // Companys. dropdownParent blijft nodig: zonder dat hangt de dropdown aan <body>,
+            // buiten de focus-trap van deze modal, en kan je niets typen. =====
+            if ($toegewezenSelect && $toegewezenSelect.length && jQuery.fn.select2) {
+                $toegewezenSelect.select2({
+                    theme: "bootstrap",
+                    minimumInputLength: 1,
+                    width: "100%",
+                    placeholder: "Typ om een collega te zoeken... (leeg = mezelf)",
+                    allowClear: true,
+                    language: "nl",
+                    dropdownParent: jQuery(taakModal),
+                    ajax: {
+                        url: $toegewezenSelect.data("url"),
+                        type: "POST",
+                        dataType: "json",
+                        delay: 250,
+                        data: function (params) { return { term: params.term, activeOnly: true }; },
+                        processResults: function (data) {
+                            return { results: jQuery.map(data, function (item) { return { id: item.id, text: item.text }; }) };
+                        },
+                        cache: true
+                    }
+                });
+            }
+        })();
+    </script>
+}

@@ -149,7 +149,9 @@ namespace ServiceCore
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     NetTotal = (decimal?)tot.LinesNet,
                     Balance = (decimal?)bal.Balance ?? 0m,
-                    IsCreditNote = series != null && series.IsCreditNote,
+                    // Fallback op negatief brutototaal: een nog niet genummerd concept heeft geen
+                    // SeriesId (dus geen series.IsCreditNote) maar kan wel al een creditnota zijn.
+                    IsCreditNote = (series != null && series.IsCreditNote) || (bal.GrossTotal ?? 0m) < 0m,
                     ProjectName = project != null ? project.ProjectName : null,
                     OctopusDeliveryState = i.OctopusDeliveryState,
                     OctopusBookyearId = i.OctopusBookyearId,
@@ -218,7 +220,9 @@ namespace ServiceCore
                     InvoiceDate = i.Date,
                     StatusId = i.StatusId,
                     StatusName = null,
-                    IsCreditNote = series != null && series.IsCreditNote,
+                    // Fallback op negatief brutototaal: een nog niet genummerd concept heeft geen
+                    // SeriesId (dus geen series.IsCreditNote) maar kan wel al een creditnota zijn.
+                    IsCreditNote = (series != null && series.IsCreditNote) || (bal.GrossTotal ?? 0m) < 0m,
                     ProjectName = project != null ? project.ProjectName : null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     NetTotal = (decimal?)tot.LinesNet,
@@ -282,7 +286,9 @@ namespace ServiceCore
                     InvoiceDate = i.Date,
                     StatusId = i.StatusId,
                     StatusName = null,
-                    IsCreditNote = series != null && series.IsCreditNote,
+                    // Fallback op negatief brutototaal: een nog niet genummerd concept heeft geen
+                    // SeriesId (dus geen series.IsCreditNote) maar kan wel al een creditnota zijn.
+                    IsCreditNote = (series != null && series.IsCreditNote) || (bal.GrossTotal ?? 0m) < 0m,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     NetTotal = (decimal?)tot.LinesNet,
                     Balance = (decimal?)bal.Balance ?? 0m,

@@ -56,6 +56,27 @@
         DossierStatus.Geannuleerd => 3,
         _ => 1
     };
+
+    // Toont, i.p.v. de grove DossierStatus-emmer (Nieuw/Aangevraagd/InBehandeling/...), de naam +
+    // datum van de verst gevorderde afgeronde opvolgstap (ProjectDossierSubstap) — precieze
+    // voortgang i.p.v. een emmer waarin "Offerte ontvangen" en "Uitvoeringsdatum doorgegeven" allebei
+    // gewoon "In behandeling" heten (gebruikerswens). Geannuleerd heeft geen zinvolle "laatste stap"
+    // en een dossier zonder checklist (kind zonder stappenplan, of nog geen stap afgerond) valt terug
+    // op de generieke statuslabel.
+    (string Label, DateOnly? Datum) LaatsteOpvolgstap(ProjectDossier dossier)
+    {
+        if (dossier.Status == (int)DossierStatus.Geannuleerd)
+            return (((DossierStatus)dossier.Status).GetDisplayName(), null);
+
+        var stap = dossier.Substappen?
+            .Where(s => s.Status == (int)DossierSubstapStatus.Afgerond)
+            .OrderByDescending(s => s.Volgorde)
+            .FirstOrDefault();
+
+        return stap != null
+            ? (stap.Naam, stap.Datum)
+            : (((DossierStatus)dossier.Status).GetDisplayName(), null);
+    }
 }
 
 @section PageStyle {
@@ -89,7 +110,8 @@
                         <i class="ph ph-folder-open" aria-hidden="true"></i><span>Alle dossiers</span>
                     </button>
                 </div>
-                <div class="gl-traject-stats" aria-label="Dossierstatus">
+                <div class="gl-traject-stats" aria-label="Dossierstatus, alle dossiertypes van dit project">
+                    <span class="gl-traject-stat-scope text-muted small">Project-breed:</span>
                     <span class="gl-traject-stat"><strong>@Model.Dossiers.Count</strong> totaal</span>
                     <span class="gl-traject-stat @(Model.AantalOpen > 0 ? "is-severe" : "")"><strong>@Model.AantalOpen</strong> nog open</span>
                 </div>
@@ -117,7 +139,9 @@
                         }
                         else
                         {
-                            <h2 class="gl-detail-card-header h6 text-uppercase text-muted mb-2" style="letter-spacing:normal;font-size:.78rem;font-weight:600;">Algemene aansluitingen</h2>
+                            <div class="gl-dossier-section-head">
+                                <h2 class="gl-dossier-section-title">Algemene aansluitingen</h2>
+                            </div>
                             @if (nutsAlgemeen.Count == 0)
                             {
                                 <p class="text-muted small mb-4">Nog geen algemene aansluiting (projectniveau) — bv. gemeenschappelijke technische ruimte of lift.</p>
@@ -140,7 +164,7 @@
                                                     </span>
                                                 </span>
                                                 @{ var algStatusLabel = ((DossierStatus)dd.Status).GetDisplayName(); }
-                                                <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@algStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
+                                                <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@algStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i><span class="visually-hidden">@algStatusLabel</span></span>
                                             </a>
                                         </li>
                                     }
@@ -149,15 +173,32 @@
 
                             @if (Model.ProjectUnits.Count > 0)
                             {
-                                <h2 class="gl-detail-card-header h6 text-uppercase text-muted mb-2" style="letter-spacing:normal;font-size:.78rem;font-weight:600;">Per eenheid</h2>
+                                <div class="gl-dossier-section-head">
+                                    <h2 class="gl-dossier-section-title">Per eenheid</h2>
+                                    <button type="button" id="nuts-um-select-toggle" class="btn btn-link btn-sm p-0">
+                                        <i class="ph ph-check-square-offset me-1" aria-hidden="true"></i><span>Meerdere selecteren voor bulk aanmaken</span>
+                                    </button>
+                                </div>
+
+                                @* Bulk-actiebalk — zelfde patroon/klassen als DocumentenCentrum/Index.cshtml
+                                   (.bulk-bar/.count-pill), i.p.v. een nieuwe visuele taal te verzinnen. *@
+                                <div id="nuts-um-selection-bar" class="bulk-bar d-none mb-2">
+                                    <span class="count-pill" id="nuts-um-selection-count">0 geselecteerd</span>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" id="nuts-um-selection-clear" class="btn btn-sm btn-outline-light">Wis selectie</button>
+                                        <button type="button" id="nuts-um-selection-bulk" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#modalNutsBulk">Bulk aanmaken</button>
+                                    </div>
+                                </div>
+
+                                <div id="nuts-um-matrix-region">
                                 <div class="table-responsive gl-unit-matrix-wrap d-none d-md-block">
-                                    <table class="table table-bordered table-sm gl-unit-matrix">
+                                    <table class="table gl-unit-matrix">
                                         <thead>
                                             <tr>
                                                 <th class="gl-um-unit-col">Eenheid</th>
                                                 @foreach (var k in matrixKolommen)
                                                 {
-                                                    <th><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</th>
+                                                    <th class="gl-um-type-col"><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</th>
                                                 }
                                             </tr>
                                         </thead>
@@ -174,20 +215,26 @@
                                                             var over = dd.Status != (int)DossierStatus.Afgehandeld && dd.Status != (int)DossierStatus.Geannuleerd
                                                                        && dd.VerwachteAfhandelingDatum is DateOnly vd && vd < vandaag;
                                                             <td class="gl-um-cell m-status-@DossierStatusVisual(dd.Status) @(over ? "is-overdue" : "")">
-                                                                @{ var cellStatusLabel = ((DossierStatus)dd.Status).GetDisplayName(); }
-                                                                <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })" class="gl-um-cell-link" title="@u.Name — @k.GetDisplayName(): @cellStatusLabel">
-                                                                    <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
-                                                                    <span class="gl-um-datum @(over ? "gl-traject-overdue-text" : "text-muted")">@(dd.AfgehandeldDatum?.ToString("dd/MM/yy") ?? dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yy") ?? "—")</span>
+                                                                @{ var cellStap = LaatsteOpvolgstap(dd); }
+                                                                <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })" class="gl-um-cell-link" title="@u.Name — @k.GetDisplayName(): @cellStap.Label">
+                                                                    <span class="visually-hidden">@u.Name — @k.GetDisplayName(): @cellStap.Label</span>
+                                                                    <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" aria-hidden="true"><i class="ph @DossierStatusIcon(dd.Status)"></i></span>
+                                                                    <span class="gl-um-status-text s-@DossierStatusVisual(dd.Status)" aria-hidden="true">@cellStap.Label</span>
+                                                                    <span class="gl-um-datum @(over ? "gl-traject-overdue-text" : "text-muted")" aria-hidden="true">@(cellStap.Datum?.ToString("dd/MM/yy") ?? "—")</span>
                                                                 </a>
                                                             </td>
                                                         }
                                                         else
                                                         {
-                                                            <td class="gl-um-cell text-center">
+                                                            <td class="gl-um-cell text-center gl-um-cell-empty">
                                                                 <button type="button" class="gl-um-cell-add js-nuts-matrix-add" data-bs-toggle="modal" data-bs-target="#modalNuts"
                                                                         data-unit-id="@u.Id" data-nuts-type="@((int)k)" title="Nutsaansluiting @k.GetDisplayName() toevoegen voor @u.Name" aria-label="Nutsaansluiting @k.GetDisplayName() toevoegen voor @u.Name">
                                                                     <i class="ph ph-plus" aria-hidden="true"></i>
                                                                 </button>
+                                                                <label class="gl-um-cell-check">
+                                                                    <input type="checkbox" class="js-nuts-cell-select" value="@u.Id" data-unit-name="@u.Name" data-nuts-type="@((int)k)" data-nuts-type-label="@k.GetDisplayName()" />
+                                                                    <span class="visually-hidden">Selecteer @u.Name — @k.GetDisplayName() voor bulk aanmaken</span>
+                                                                </label>
                                                             </td>
                                                         }
                                                     }
@@ -200,7 +247,7 @@
                                 <div class="d-md-none">
                                     <div class="gl-field gl-um-mobile-select">
                                         <label for="nuts-um-unit-select">Eenheid</label>
-                                        <select id="nuts-um-unit-select" class="form-select form-control-modern">
+                                        <select id="nuts-um-unit-select" class="form-control form-control-modern">
                                             @foreach (var u in Model.ProjectUnits)
                                             {
                                                 <option value="@u.Id">@u.Name</option>
@@ -216,12 +263,15 @@
                                                     var key = (u.Id, k);
                                                     if (matrixCel.TryGetValue(key, out var dd))
                                                     {
-                                                        var mobStatusLabel = ((DossierStatus)dd.Status).GetDisplayName();
+                                                        var mobStap = LaatsteOpvolgstap(dd);
                                                         <li class="gl-um-mobile-row">
                                                             <a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })" class="d-flex align-items-center gap-2 flex-fill text-decoration-none text-reset">
-                                                                <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@mobStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
-                                                                <span class="gl-um-mobile-naam"><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</span>
-                                                                <span class="gl-um-mobile-datum text-muted">@(dd.AfgehandeldDatum?.ToString("dd/MM/yy") ?? dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yy") ?? "—")</span>
+                                                                <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" aria-hidden="true"><i class="ph @DossierStatusIcon(dd.Status)"></i></span>
+                                                                <span class="gl-um-mobile-naam">
+                                                                    <i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()
+                                                                    <span class="gl-um-mobile-status-text s-@DossierStatusVisual(dd.Status)">@mobStap.Label</span>
+                                                                </span>
+                                                                <span class="gl-um-mobile-datum text-muted">@(mobStap.Datum?.ToString("dd/MM/yy") ?? "—")</span>
                                                             </a>
                                                         </li>
                                                     }
@@ -232,6 +282,10 @@
                                                                     data-unit-id="@u.Id" data-nuts-type="@((int)k)" aria-label="Nutsaansluiting @k.GetDisplayName() toevoegen voor @u.Name">
                                                                 <i class="ph ph-plus" aria-hidden="true"></i>
                                                             </button>
+                                                            <label class="gl-um-cell-check">
+                                                                <input type="checkbox" class="js-nuts-cell-select" value="@u.Id" data-unit-name="@u.Name" data-nuts-type="@((int)k)" data-nuts-type-label="@k.GetDisplayName()" />
+                                                                <span class="visually-hidden">Selecteer @u.Name — @k.GetDisplayName() voor bulk aanmaken</span>
+                                                            </label>
                                                             <span class="gl-um-mobile-naam"><i class="ph @NutsIcon(k) me-1" aria-hidden="true"></i>@k.GetDisplayName()</span>
                                                         </li>
                                                     }
@@ -240,18 +294,22 @@
                                         </div>
                                     }
                                 </div>
+                                </div>
                             }
                         }
                     </div>
 
                     <div id="tab-alle" class="gl-form-shell__panel gl-tsa-panel" role="tabpanel" aria-labelledby="tabbtn-alle" tabindex="0" hidden>
-                        <ul class="nav nav-pills gl-dossier-kind-nav mb-3" role="tablist">
-                            <li class="nav-item"><a class="nav-link js-kind-filter active" href="#" data-kind="">Alle</a></li>
-                            @foreach (var k in kinden)
-                            {
-                                <li class="nav-item"><a class="nav-link js-kind-filter" href="#" data-kind="@((int)k)">@k.GetDisplayName()</a></li>
-                            }
-                        </ul>
+                        <div class="gl-field gl-doss-kind-filter mb-3">
+                            <label for="doss-kind-filter">Type dossier</label>
+                            <select id="doss-kind-filter" class="form-control form-control-modern">
+                                <option value="">Alle types</option>
+                                @foreach (var k in kinden)
+                                {
+                                    <option value="@((int)k)">@k.GetDisplayName()</option>
+                                }
+                            </select>
+                        </div>
 
                         @* Zelfde zoekveld + kolommenfilter-patroon als Mijlpalen-tabel/Klanten-tabel
                            (DESIGN.md "Table search + column filter"). *@
@@ -267,7 +325,7 @@
                         <table id="datatable-dossiers" class="table table-hover w-100">
                             <thead>
                                 <tr>
-                                    <th class="text-center"><span class="visually-hidden">Status</span></th>
+                                    <th>Status</th>
                                     <th>Titel</th><th>Type</th><th>Eenheid</th>
                                     <th class="text-end">Aanvraag</th><th class="text-end">Verwacht</th><th class="text-end">Afgehandeld</th>
                                 </tr>
@@ -278,17 +336,20 @@
                                     var overAlle = dd.Status != (int)DossierStatus.Afgehandeld && dd.Status != (int)DossierStatus.Geannuleerd
                                                && dd.VerwachteAfhandelingDatum is DateOnly vda && vda < vandaag;
                                     <tr data-kind="@dd.DossierKind">
-                                        <td class="text-center" data-order="@DossierStatusVisual(dd.Status)">
-                                            @{ var alleStatusLabel = ((DossierStatus)dd.Status).GetDisplayName(); }
-                                            <span class="gl-mijlpaal-status-icon s-@DossierStatusVisual(dd.Status)" title="@alleStatusLabel"><i class="ph @DossierStatusIcon(dd.Status)" aria-hidden="true"></i></span>
-                                            <span class="visually-hidden">@alleStatusLabel</span>
+                                        @{ var alleStap = LaatsteOpvolgstap(dd); }
+                                        <td class="align-middle" data-order="@DossierStatusVisual(dd.Status)">
+                                            <span class="badge gl-mijlpaal-status s-@DossierStatusVisual(dd.Status)">@alleStap.Label</span>
+                                            @if (alleStap.Datum.HasValue)
+                                            {
+                                                <div class="small text-muted mt-1">@alleStap.Datum.Value.ToString("dd/MM/yyyy")</div>
+                                            }
                                         </td>
-                                        <td><a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })">@dd.Titel</a></td>
-                                        <td>@(((DossierKind)dd.DossierKind).GetDisplayName())</td>
-                                        <td>@(dd.Unit?.Name ?? "—")</td>
-                                        <td class="text-end" data-order="@(dd.AanvraagDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.AanvraagDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
-                                        <td class="text-end @(overAlle ? "gl-traject-overdue-text" : "")" data-order="@(dd.VerwachteAfhandelingDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
-                                        <td class="text-end" data-order="@(dd.AfgehandeldDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.AfgehandeldDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td class="align-middle"><a href="@Url.Action("Details", new { projectId = Model.ProjectId, id = dd.Id })"><strong>@dd.Titel</strong></a></td>
+                                        <td class="align-middle">@(((DossierKind)dd.DossierKind).GetDisplayName())</td>
+                                        <td class="align-middle">@(dd.Unit?.Name ?? "—")</td>
+                                        <td class="text-end align-middle" data-order="@(dd.AanvraagDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.AanvraagDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td class="text-end align-middle @(overAlle ? "gl-traject-overdue-text" : "")" data-order="@(dd.VerwachteAfhandelingDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.VerwachteAfhandelingDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td class="text-end align-middle" data-order="@(dd.AfgehandeldDatum?.ToString("yyyy-MM-dd") ?? "")">@(dd.AfgehandeldDatum?.ToString("dd/MM/yyyy") ?? "—")</td>
                                     </tr>
                                 }
                             </tbody>

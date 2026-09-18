@@ -1791,6 +1791,18 @@ html.gl-modal-open .sidebar-left { display: none !important; }
         height: 100%;
         top: 0;
     }
+
+/* Select2's vendor theme (lib/select2-bootstrap-theme) hard-codes Bootstrap 3's classic blue
+   (#337ab7) for the highlighted/selected option in an open dropdown — never overridden app-wide,
+   only patched per page with an id-scoped selector (e.g. Projecten/AddContract.cshtml's
+   #select2-ddlCompany-results). One global rule instead of N more one-off copies (One Green Rule
+   — blue has no place in this palette; /impeccable request "select-item highlight isn't in my
+   color scheme"). */
+.select2-container--bootstrap .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--primary, #0a5a3b);
+    color: #fff;
+}
+
 .checkbox-custom {
     margin-top: 0;
     margin-bottom: 0;

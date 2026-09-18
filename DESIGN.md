@@ -434,8 +434,28 @@ still shared CSS with page-specific markup, not the other way around.
   with `6px 17px` padding. Select2 single/multi controls and the
   bootstrap-datepicker are matched to the same height and padding so native and
   enhanced fields align — never restyle them looser.
+- **Native `<select>` elements use `form-control form-control-modern`, never
+  Bootstrap 5's `form-select`.** `form-control-modern` (`theme.css`) is written
+  as the compound selector `.form-control.form-control-modern` — a `<select
+  class="form-select form-control-modern">` doesn't match it and silently falls
+  back to Bootstrap's default (larger, un-aligned) select sizing. This isn't
+  hypothetical: `traject.css` carries its own `.form-select.form-control-modern`
+  patch precisely because a page shipped with `form-select` and needed a
+  supplemental fix to look right — a patch that only helps on pages that happen
+  to load `traject.css`, not the app as a whole. `Projecten/AddContract.cshtml`'s
+  `<select id="ddlCompany" class="form-control form-control-modern w-100">` is
+  the reference: `form-control` on every `<select>`, same as text inputs, no
+  exceptions and no per-page patch needed.
 - **Focus:** green-tinted focus ring consistent with buttons
   (`0 0 0 0.2rem rgba(10,90,59,.25)`).
+- **Select2's highlighted/selected option is Deep Forest Green, never the
+  vendor theme's default blue.** `lib/select2-bootstrap-theme`'s
+  `.select2-results__option--highlighted[aria-selected]` hard-codes Bootstrap
+  3's classic `#337ab7` — a color with no place in this palette (One Green
+  Rule). Fixed once, globally, in `custom.css`; do not re-patch this per page
+  with an id-scoped selector the way `Projecten/AddContract.cshtml`'s
+  `#select2-ddlCompany-results` override once did before the global rule
+  existed.
 - **Wrapper — two patterns, one per form idiom:** in a `gl-form-shell` form the
   field sits in `.gl-field` with the **label above** the control (600, 0.8125rem);
   in a `card-big-info` form it sits in `.form-group.row` with the label
@@ -493,6 +513,35 @@ or repurpose that class itself, add the icon variant alongside it instead.
   glance-able "done" mark in an otherwise all-outline column, which is the
   point — but it's a table-specific embellishment, not a new app-wide
   status-icon rule.
+- **Write the status out as visible text too when the row has room for it —
+  don't rely on the icon (+ its hidden label) alone.** `.gl-mijlpaal-status`
+  already does this as a solid badge; `.gl-um-status-text` /
+  `.gl-um-mobile-status-text` (`traject.css`, `ProjectDossiers/Index.cshtml`)
+  is the lighter variant for a dense grid: plain colored text under/beside the
+  icon, reusing the icon's own `s-0`…`s-4` color tokens (never a second parallel
+  palette). Added after a direct user request for the per-unit nuts matrix,
+  where the status previously lived in the icon's color + a `title` tooltip
+  only — fine for the badge/icon-alone convention elsewhere, but this grid
+  repeats the same status dozens of times per screen and reading color alone
+  across that many cells is exactly the kind of meaning-by-color-only pattern
+  Sam (screen reader / low vision) can't rely on.
+- **When the item has its own checklist (`ProjectDossierSubstap` or similar),
+  show the name + date of the furthest-completed step instead of the coarse
+  status bucket.** `DossierStatus` (Nieuw/Aangevraagd/InBehandeling/…) is a
+  5-state bucket shared across every dossier kind; a kind with a real
+  checklist (Nutsaansluiting, Omgevingsvergunning) can have several genuinely
+  different states — "Offerte ontvangen" vs. "Uitvoeringsdatum doorgegeven" —
+  that all flatten to the same "In behandeling" bucket. `ProjectDossiers/Index.cshtml`'s
+  `LaatsteOpvolgstap()` picks the highest-`Volgorde` substep with
+  `Status == Afgerond` and shows *that* step's own name + date (both in the
+  per-unit matrix and the "Alle dossiers" table), falling back to the coarse
+  status label only when nothing's completed yet or the item has no checklist
+  at all (other dossier kinds, or Geannuleerd — cancellation isn't a checklist
+  step). The status icon's color still carries the coarse bucket for
+  at-a-glance scanning; the text now carries the precise step. This is a
+  general principle, not a Nuts-only rule: any status enum sitting on top of a
+  real per-item checklist should surface the checklist's own step, not just
+  the bucket it rolls up into.
 - **Never reuse a status icon's glyph as an action icon in the same row.**
   `bx-check-circle` was tried as the generic "change status" action button —
   it's *also* the Bereikt status icon, so a completed row showed the same
@@ -1015,6 +1064,16 @@ supplier/contract forms. Never start a new form on bare `card-modern` +
   `gl-form-section` head (icon badge + hint text) inside a modal — that's
   sized for a page, not a dialog; the plain title + divider is the modal-scale
   equivalent.
+  - **`.gl-mp-modal-section-title` is modal-scale only — don't reuse it on a
+    page body.** `ProjectDossiers/Index.cshtml` originally borrowed this exact
+    class for its "Algemene aansluitingen" / "Per eenheid" headings (caught by
+    `/impeccable critique` as a component used outside its documented
+    contract). The page-body sibling is `.gl-dossier-section-head` +
+    `.gl-dossier-section-title` (`traject.css`) — same instinct, a plain label
+    over a hairline, but sized for a page (`.92rem`/700, `--ink`) instead of a
+    dialog, and the head wraps the whole row (title + any inline action, e.g.
+    the "Meerdere selecteren" toggle) so the hairline spans the full section
+    width, not just under the text.
 
 ### Navigation (sidebar)
 - **Rail:** solid Deep Forest Green (`#0a5a3b`), fixed full height, 300px /
@@ -1405,6 +1464,63 @@ kleur/toestand behoudt.
 `CoachmarkRegistry.cs` (PageKey `Projects.Detail`, gezet via
 `ViewData["CoachmarkPageKey"]`): 4 stappen — topbar-acties (verplaatst),
 klikbare KPI-strip, "Voortgang & budget"-kaart, "Aandacht vereist".
+
+### Dossieroverzicht-componentbibliotheek (`ProjectDossiers/Index`)
+CSS in `traject.css` (gedeeld met `ProjectTraject`, zie de `.gl-um-*`-hergebruik
+hieronder). Nutsaanvragen-tab: **Operate** mode — een dichte statustabel/-matrix
+die dagelijks bekeken wordt, geen showcase.
+
+**Sectiekop op paginaniveau (`gl-dossier-section-head` / `-title`)** — zie
+Modals hierboven voor de volledige toelichting waaróm dit een eigen klasse is
+i.p.v. `.gl-mp-modal-section-title` hergebruikt: `.92rem`/700/`--ink` boven een
+volle-breedte hairline, de head wrapt titel + eventuele inline-actie
+(bv. de "Meerdere selecteren"-toggle) op één rij.
+
+**Eenheden-matrix (`gl-unit-matrix`, hergebruikt van `ProjectTraject`) — hairline-rijen, geen rasterlijnen**
+- **Geen `table-bordered`.** Bootstrap's volle rasterlijnen rond elke cel lazen
+  als een spreadsheet, niet als hetzelfde rustige oppervlak als de
+  "Algemene aansluitingen"-lijst erboven (zelfde hairline-rijtaal als
+  `gl-doc-item`). Enkel horizontale rijlijnen via
+  `--bs-table-border-color: var(--border)` op de tabel — Bootstrap's kale
+  `.table` geeft die al gratis zodra `table-bordered` weg is, geen extra
+  border-CSS per cel nodig.
+- **Eén hairline-kader + `--radius` rond het geheel** (`.gl-unit-matrix-wrap`)
+  geeft de matrix dezelfde "één samenhangend blok"-uitstraling als de rest van
+  de kaart, i.p.v. los te zweven onder de lijst erboven. Werkt samen met de
+  bestaande sticky header/eerste kolom: `overflow:auto` clipt de sticky
+  achtergrond netjes tegen de afgeronde hoek.
+- **Rijritme:** 10–12px padding op elke rij-variant (lijstitem, matrixcel,
+  mobiele rij) — voordien liep dit uiteen (10px/4px vs. Bootstraps `table-sm`
+  4.8px), wat als toevallig i.p.v. bedoeld oogde.
+- **Tikdoelen 32px** (`gl-um-cell-add`, `gl-um-cell-check`), niet 28px — een
+  comfortabeler doel zonder de cel te domineren op de huidige rijhoogte.
+
+**Bulk-selectiebalk (`bulk-bar` / `count-pill`)** — **hergebruik de bestaande
+klassen**, verzin geen nieuwe visuele taal voor "N geselecteerd + acties".
+Origineel gedefinieerd in `admin/document-center.css`
+(`DocumentenCentrum/Index.cshtml`: effen `--primary`-balk, witte
+`count-pill`-badge, `btn-outline-light`-acties); `traject.css` herhaalt dezelfde
+twee regels lokaal omdat `ProjectDossiers/Index.cshtml` dat stylesheet niet
+laadt — geen nieuwe pagina mag hiervan afwijken qua vorm, enkel de host-CSS kan
+verschillen.
+
+**Matrixcellen selecteren voor bulk aanmaken (`is-selecting`, `js-nuts-cell-select`)**
+- Een expliciete "Meerdere selecteren"-toggle (niet standaard aan) schakelt
+  lege cellen om van hun losse "+"-actieknop naar een checkbox
+  (`#nuts-um-matrix-region.is-selecting` stuurt de zichtbaarheidswissel,
+  `dossiers.js`) — dezelfde matrix, twee modi, i.p.v. een permanent zichtbare
+  checkbox naast elke actieknop.
+- **Wanneer de bulk-actie server-side maar één waarde tegelijk aankan** (hier:
+  één `NutsType` per `NutsAansluitingBulkCreateBO`-aanroep), sluit de UI de
+  overige kolommen tijdelijk af zodra de eerste cel van een ander type
+  geselecteerd is (`.is-type-locked`, gedimd + `disabled`) i.p.v. stilzwijgend
+  een gemengde selectie toe te laten die de server toch niet kan verwerken.
+  Maak de beperking zichtbaar op het moment van kiezen, niet pas na een
+  mislukte submit.
+- De matrix kent zijn eigen lege cellen al — geef de bulk-modal die selectie
+  direct mee (voorgevinkte eenheden + voorgeselecteerd type) i.p.v. de
+  gebruiker dezelfde informatie een tweede keer in een losse checkboxlijst te
+  laten opzoeken.
 
 ## Do's and Don'ts
 

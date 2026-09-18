@@ -223,12 +223,21 @@
 .gl-mps-trigger-label { color: var(--text, #26313a); }
 
 /* dossiers */
-.gl-dossier-kind-nav { flex-wrap: wrap; gap: .35rem; }
-.gl-dossier-kind-nav .nav-link {
-    padding: .3rem .75rem; border-radius: 999px; font-size: .82rem;
-    background: #f1f3f7; color: #4a5566;
+.gl-doss-kind-filter { max-width: 280px; }
+
+/* Bulk-actiebalk boven de eenheid-matrix — zelfde klassen/stijl als het gevestigde .bulk-bar-
+   patroon in admin/document-center.css (niet geladen op deze pagina, dus hier herhaald i.p.v. een
+   ongerelateerd stylesheet mee te laden voor twee regels). */
+.bulk-bar {
+    background: #0a5a3b; color: #fff; border-radius: .5rem; padding: .5rem 1rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
 }
-.gl-dossier-kind-nav .nav-link.active { background: #0a5a3b; color: #fff; }
+.count-pill {
+    font-size: .82rem; font-weight: 600; background: rgba(255,255,255,.2);
+    border-radius: 999px; padding: .2em .8em; white-space: nowrap;
+}
+.bulk-bar .btn-outline-light { border-color: rgba(255,255,255,.5); color: #fff; }
+.bulk-bar .btn-outline-light:hover { background: rgba(255,255,255,.15); }
 
 .gl-dossier-tijdlijn { display: flex; flex-direction: column; gap: .6rem; }
 .gl-dossier-tijdlijn li { display: grid; grid-template-columns: 150px 1fr; gap: .75rem; border-top: 1px dashed #eef0f4; padding-top: .5rem; }
@@ -241,10 +250,21 @@
    .gl-um-*) — zelfde vorm (rijen=eenheid, kolommen=een tweede as, cel=status), enig verschil is
    dat een dossier te veel eigen velden heeft voor een klik-om-te-wisselen statusknop zoals bij een
    mijlpaal: een cel is hier een link naar Details (bestaat) of een "+"-knop (bestaat nog niet). */
+/* Paginabreed sectielabel voor de Nutsaanvragen-kaart (Algemene aansluitingen/Per eenheid) —
+   eigen klasse i.p.v. het hergebruikte .gl-mp-modal-section-title (dat component is bewust
+   modal-schaal, DESIGN.md: "sized for a page, not a dialog"; hier ís het de pagina zelf, dus krijgt
+   het meer gewicht + een lijn die de twee subsecties van deze kaart duidelijk van elkaar scheidt
+   i.p.v. enkel witruimte — /impeccable layout Projects/Dossiers "twee losse widgets" diagnose). */
+.gl-dossier-section-head {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+    margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border, #e7e7e7);
+}
+.gl-dossier-section-title { font-size: .92rem; font-weight: 700; color: var(--ink, #1f2a37); margin: 0; }
+
 .gl-nuts-algemeen-list { list-style: none; margin: 0; padding: 0; }
 .gl-nuts-algemeen-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 4px; border-top: 1px solid var(--border, #e7e7e7);
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 6px; border-top: 1px solid var(--border, #e7e7e7);
     text-decoration: none; color: inherit; border-radius: var(--radius, 7px);
 }
 .gl-nuts-algemeen-item:first-child { border-top: 0; }
@@ -255,22 +275,51 @@
     display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem;
 }
 .gl-nuts-algemeen-body { flex: 1 1 auto; min-width: 0; }
-.gl-nuts-algemeen-titel { font-weight: 600; }
-.gl-nuts-algemeen-meta { font-size: .8rem; color: var(--text-muted, #8590a5); }
+/* Zelfde recept als het gevestigde .gl-doc-title/.gl-doc-sub (projecten-custom.css, de
+   Documentrij "hele-rij-is-link"-familie dit patroon rechtstreeks navolgt) i.p.v. een eigen,
+   los ingeschat gewicht/maat — /impeccable typeset Projects/Dossiers. */
+.gl-nuts-algemeen-titel {
+    display: block; font-size: .8rem; font-weight: 600; color: var(--ink, #1f2a37);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gl-nuts-algemeen-meta { display: block; font-size: .68rem; color: var(--gl-detail-text-aa, #5f6b7a); }
 .gl-nuts-algemeen-meta span + span::before { content: "·"; margin: 0 .35rem; }
 
 .gl-um-cell-link {
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     text-decoration: none; color: inherit; padding: .25rem; border-radius: var(--radius, 7px);
 }
-.gl-um-cell-link:hover { background: rgba(255,255,255,.6); }
+/* Groene tint i.p.v. een witte was: een witte overlay is onzichtbaar op de meest voorkomende
+   cel (gewoon wit, geen status-tint) — deze subtiele groene wordt zichtbaar op elke achtergrond
+   (wit, m-status-2's Mist-Green, is-overdue's rood), consistent met de groene hover-taal elders
+   (One Green Rule) i.p.v. een kleurloze wissel (/impeccable polish Projects/Dossiers). */
+.gl-um-cell-link:hover { background: rgba(10,90,59,.08); }
 .gl-um-cell-add {
-    width: 28px; height: 28px; border-radius: 50%; border: 1px dashed var(--border, #cbd2dc);
+    /* var(--radius,7px), niet 50%: DESIGN.md's Named Rule beperkt volle cirkels tot avatars en
+       statusdots (/impeccable polish Projects/Dossiers) — dit is een actieknop, content-chrome.
+       32px i.p.v. 28px: comfortabeler tikdoel zonder de cel te domineren (/impeccable layout). */
+    width: 32px; height: 32px; border-radius: var(--radius, 7px); border: 1px dashed var(--border, #cbd2dc);
     background: transparent; color: var(--text-muted, #8590a5);
     display: inline-flex; align-items: center; justify-content: center;
 }
 .gl-um-cell-add:hover { background: var(--lightgreen, #e8f0eb); border-color: #bcd6c7; border-style: solid; color: var(--primary, #0a5a3b); }
 .gl-um-cell.m-status-3 { opacity: .55; }
+
+/* Bulk-select modus ("Per eenheid"): een checkbox vervangt de "+"-knop op lege cellen zodra
+   #nuts-um-matrix-region.is-selecting actief is, zodat je meerdere lege cellen kan aanduiden en in
+   één keer naar de bulk-aanmaakmodal sturen i.p.v. de eenheden daar nog eens los op te zoeken
+   (/impeccable critique projects/dossiers/index — matrix en bulk-aanmaken waren twee losstaande
+   tools voor hetzelfde probleem). Bulk aanmaken werkt server-side per één NutsType tegelijk
+   (NutsAansluitingBulkCreateBO), dus een selectie in een ander type dan de lopende sluit de overige
+   kolommen tijdelijk af (.is-type-locked) i.p.v. stil een tweede type te negeren. */
+.gl-um-cell-check { display: none; align-items: center; justify-content: center; width: 32px; height: 32px; }
+#nuts-um-matrix-region.is-selecting .js-nuts-matrix-add { display: none; }
+#nuts-um-matrix-region.is-selecting .gl-um-cell-check { display: inline-flex; }
+.gl-um-cell-check input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary, #0a5a3b); margin: 0; cursor: pointer; }
+.gl-um-cell-empty.is-selected, .gl-um-mobile-row.is-empty.is-selected { background: var(--lightgreen, #e8f0eb); }
+.gl-um-cell-empty.is-type-locked, .gl-um-mobile-row.is-empty.is-type-locked { opacity: .4; }
+.gl-um-cell-empty.is-type-locked .js-nuts-cell-select, .gl-um-mobile-row.is-empty.is-type-locked .js-nuts-cell-select { cursor: not-allowed; }
+.gl-um-mobile-row.is-empty { border-radius: var(--radius, 7px); transition: background .1s ease; }
 
 .gl-nuts-bulk-units {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .35rem .75rem;
@@ -710,13 +759,47 @@
    Zelfde opbouw als TrajectSjabloonAdmin/Index's .gl-tsa-list-empty: gecentreerde
    icoon + titel + hint + call-to-action, i.p.v. de eerdere linkse <h4>-met-icoontje
    (die niet bij de rest van deze pagina — of bij de sjabloon-lijst één klik verderop
-   in hetzelfde menu — paste). */
-.gl-traject-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4rem 2rem; }
-.gl-traject-empty i { font-size: 2.4rem; color: #ced4da; margin-bottom: .75rem; }
-.gl-traject-empty-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 .35rem; }
-.gl-traject-empty-hint { font-size: .85rem; color: var(--tsa-muted-aa, #5b6472); max-width: 460px; margin: 0 0 1.5rem; line-height: 1.5; }
-.gl-traject-empty-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: center; max-width: 620px; width: 100%; text-align: left; }
-.gl-traject-empty-form .gl-field { flex: 1 1 220px; margin-bottom: 0; }
+   in hetzelfde menu — paste).
+   Twee gebruikers van dezelfde .gl-traject-empty-klasse delen deze CSS maar niet hun
+   omkadering: Index.cshtml ("nog geen traject voor dit project") is de ENIGE inhoud
+   van de pagina en verdient daarom een eigen, verticaal gecentreerde kaart
+   (.gl-traject-empty-wrap hieronder); _UnitMatrix.cshtml ("nog geen per-eenheid
+   mijlpalen") zit al binnen de gedeelde tab-kaart naast de andere tabs en krijgt dus
+   geen eigen omkadering — enkel Index.cshtml wrapt de kaart, _UnitMatrix niet. */
+.gl-traject-empty-wrap { display: flex; align-items: center; justify-content: center; min-height: 55vh; }
+.gl-traject-empty-card { width: 100%; max-width: 620px; }
+.gl-traject-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 3rem 2.5rem; }
+/* Icoon als rustige, gedempte tegel i.p.v. een los zwevend glyph — zelfde schaallogica
+   als de 40-42px Mist-Green iconchips elders (topbar-page-icon, form-section-icon),
+   hier gedempt in plaats van groen: een lege staat is geen actie/bevestiging, dus geen
+   groen accent (One Green Rule) — zelfde gedempte taal als .gl-mc-empty's "muted
+   check-circle". De browser tekent het glyph zelf via het icoonfont-lettertype op dit
+   element (::before uit het fonts eigen stylesheet); flex+afmetingen hieronder volstaan
+   dus om er een tegel van te maken, geen extra wrapper-element nodig.
+   ">" i.p.v. de eerdere afstammeling-selector (.gl-traject-empty i): die laatste raakte
+   ook het ph-check-icoontje ín de "Traject aanmaken"-knop (een kleinkind, geen kind) —
+   dat werd zo zelf een losse 64px grijze tegel, zwevend over de knoptekst heen. Enkel
+   het icoon dat rechtstreeks kind is van .gl-traject-empty (de titelicoon zelf, zowel
+   hier als in _UnitMatrix.cshtml) mag de tegel-styling krijgen. */
+.gl-traject-empty > i {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px; margin-bottom: 1.1rem;
+    border-radius: 16px; background: var(--page-grey, #f5f5f8);
+    border: 1px solid var(--border, #e7e7e7);
+    font-size: 1.6rem; color: var(--tsa-muted-aa, #5b6472);
+}
+.gl-traject-empty-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 .4rem; }
+.gl-traject-empty-hint { font-size: .85rem; color: var(--tsa-muted-aa, #5b6472); max-width: 400px; margin: 0 0 1.75rem; line-height: 1.5; }
+.gl-traject-empty-form { display: flex; flex-direction: column; gap: 14px; max-width: 460px; width: 100%; text-align: left; }
+/* Kolom i.p.v. naast elkaar: een sjabloonnaam als "Standaardtraject Woonproject
+   (standaard)" verdronk in een ~220px-brede helft van het rijtje en sneed af. Elk veld
+   krijgt nu de volle 460px van het formulier. */
+.gl-traject-empty-fields { display: flex; flex-direction: column; gap: 14px; }
+.gl-traject-empty-fields .gl-field { margin-bottom: 0; }
+.gl-traject-empty-submit { height: 46px; width: 100%; }
+@media (max-width: 480px) {
+    .gl-traject-empty { padding: 2.5rem 1.25rem; }
+}
 
 /* sjabloon-editor */
 .gl-sm-caption {
@@ -748,18 +831,40 @@
 .gl-sm-anchor { flex: 1 1 260px; min-width: 200px; }
 .gl-sm-offset { width: 72px; flex: 0 0 72px; }
 
-/* eenheden-matrix */
-.gl-unit-matrix-wrap { max-height: 70vh; overflow: auto; }
-.gl-unit-matrix { min-width: 640px; }
+/* eenheden-matrix — geen table-bordered meer (harde rasterlijnen rondom elke cel voelden als een
+   spreadsheet, niet als hetzelfde "rustige, hairline-rijen"-oppervlak als de Algemene-
+   aansluitingenlijst erboven): enkel horizontale rijlijnen via --bs-table-border-color, een
+   hairline-kader rond het geheel geeft de matrix dezelfde "één samenhangend blok"-uitstraling
+   i.p.v. los te zweven onder de lijst (/impeccable layout Projects/Dossiers). */
+.gl-unit-matrix-wrap {
+    max-height: 70vh; overflow: auto;
+    border: 1px solid var(--border, #e7e7e7); border-radius: var(--radius, 7px);
+}
+.gl-unit-matrix { min-width: 640px; margin-bottom: 0; --bs-table-border-color: var(--border, #e7e7e7); }
 .gl-unit-matrix th.gl-um-unit-col {
     position: sticky; left: 0; background: #fff; z-index: 2; text-align: left; white-space: nowrap;
+    vertical-align: middle; padding: 12px 14px;
 }
-.gl-unit-matrix thead th { position: sticky; top: 0; background: #f7f9fc; z-index: 1; font-size: .8rem; }
-.gl-um-cell { text-align: center; vertical-align: middle; min-width: 110px; }
+.gl-unit-matrix thead th {
+    position: sticky; top: 0; background: #f7f9fc; z-index: 1; font-size: .78rem;
+    font-weight: 600; color: var(--tsa-muted-aa, #5b6472); padding: 12px 10px;
+}
+.gl-um-type-col { text-align: center; white-space: nowrap; }
+.gl-um-cell { text-align: center; vertical-align: middle; min-width: 110px; padding: 10px; }
 .gl-um-cell .btn { border: 0; background: transparent; padding: .15rem; }
 .gl-um-datum { font-size: .72rem; margin-top: .1rem; }
 .gl-um-cell.is-overdue { background: var(--danger-tint, #f7ece8); }
 .gl-um-cell.m-status-2 { background: var(--lightgreen, #e8f0eb); }
+
+/* Statustekst per cel, geschreven i.p.v. enkel het icoon — zelfde kleurcodering als
+   .gl-mijlpaal-status-icon.s-* hierboven, in tekstvorm zodat de status ook zonder de
+   icoonbetekenis te kennen leesbaar is (expliciete gebruikerswens, /impeccable layout). */
+.gl-um-status-text { display: block; font-size: .72rem; font-weight: 600; line-height: 1.2; }
+.gl-um-status-text.s-0 { color: var(--kal2-nogtedoen); }
+.gl-um-status-text.s-1 { color: var(--warning, #c17d1f); }
+.gl-um-status-text.s-2 { color: var(--kal2-bereikt); }
+.gl-um-status-text.s-3 { color: var(--kal2-nogtedoen); opacity: .6; }
+.gl-um-status-text.s-4 { color: var(--danger, #b3452f); }
 
 /* Eenheden-tab, mobiel (< 768px, d-md-none in _UnitMatrix.cshtml): één eenheid per keer als
    verticale kaart i.p.v. de matrix-tabel — /impeccable adapt. Hergebruikt de kaart-loze
@@ -769,12 +874,20 @@
 .gl-um-mobile-list { list-style: none; margin: 0; padding: 0; }
 .gl-um-mobile-row {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 0; border-top: 1px solid var(--border, #e7e7e7);
+    padding: 12px 4px; border-top: 1px solid var(--border, #e7e7e7);
 }
 .gl-um-mobile-row:first-child { border-top: 0; }
 .gl-um-mobile-naam { flex: 1 1 auto; min-width: 0; font-weight: 500; }
 .gl-um-mobile-datum { flex: 0 0 auto; font-size: .82rem; }
 .gl-um-mobile-row.is-empty { color: var(--tsa-muted-aa, #5b6472); }
+/* Zelfde geschreven statustekst als de desktopmatrix (.gl-um-status-text), hier onder de
+   typenaam i.p.v. gecentreerd onder het icoon. */
+.gl-um-mobile-status-text { display: block; font-size: .74rem; font-weight: 600; margin-top: 1px; }
+.gl-um-mobile-status-text.s-0 { color: var(--kal2-nogtedoen); }
+.gl-um-mobile-status-text.s-1 { color: var(--warning, #c17d1f); }
+.gl-um-mobile-status-text.s-2 { color: var(--kal2-bereikt); }
+.gl-um-mobile-status-text.s-3 { color: var(--kal2-nogtedoen); opacity: .6; }
+.gl-um-mobile-status-text.s-4 { color: var(--danger, #b3452f); }
 .gl-um-mobile-dash {
     flex: 0 0 auto; width: 30px; height: 30px; display: inline-flex; align-items: center;
     justify-content: center; color: var(--tsa-muted-aa, #5b6472);

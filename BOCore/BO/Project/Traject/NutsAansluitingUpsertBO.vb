@@ -21,7 +21,11 @@ Public Class NutsAansluitingUpsertBO
     <StringLength(100)>
     Public Property Referentie As String
 
-    Public Property Status As Integer
+    ''' <summary>Enige handmatige status-invoer die overblijft: de overige DossierStatus-waarden
+    ''' (Nieuw/Aangevraagd/InBehandeling/Afgehandeld) leidt NutsAansluitingService af uit de
+    ''' werkstroomdatums hieronder — een datum kan niet "afgeblazen" uitdrukken, dus dat blijft de
+    ''' enige stand die de gebruiker zelf zet.</summary>
+    Public Property Geannuleerd As Boolean
 
     <StringLength(150)>
     Public Property ExterneContactNaam As String
@@ -34,9 +38,6 @@ Public Class NutsAansluitingUpsertBO
 
     <DataType(DataType.Date)>
     Public Property VerwachteAfhandelingDatum As DateOnly?
-
-    <DataType(DataType.Date)>
-    Public Property AfgehandeldDatum As DateOnly?
 
     Public Property Bedrag As Decimal?
 
@@ -60,6 +61,26 @@ Public Class NutsAansluitingUpsertBO
 
     <DataType(DataType.Date)>
     Public Property AanvraagVerstuurdOp As DateOnly?
+
+    ''' <summary>Streefdatum — louter planning, stuurt geen checklist-stap aan.</summary>
+    <DataType(DataType.Date)>
+    Public Property VerwachteOfferteDatum As DateOnly?
+
+    ''' <summary>Spiegelt naar ProjectDossierSubstap "OFFERTE_ONTVANGEN" — zie NutsAansluitingService.</summary>
+    <DataType(DataType.Date)>
+    Public Property OfferteOntvangenOp As DateOnly?
+
+    ''' <summary>Spiegelt naar ProjectDossierSubstap "OFFERTE_GOEDGEKEURD".</summary>
+    <DataType(DataType.Date)>
+    Public Property OfferteGoedgekeurdOp As DateOnly?
+
+    ''' <summary>Spiegelt naar ProjectDossierSubstap "UITVOERINGSDATUM_DOORGEGEVEN".</summary>
+    <DataType(DataType.Date)>
+    Public Property UitvoeringGevraagdOp As DateOnly?
+
+    ''' <summary>Spiegelt naar ProjectDossierSubstap "UITGEVOERD".</summary>
+    <DataType(DataType.Date)>
+    Public Property UitgevoerdOp As DateOnly?
 
     Public Property AansluitkostRaming As Decimal?
 

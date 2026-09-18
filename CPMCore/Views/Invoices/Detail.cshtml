@@ -23,7 +23,7 @@
 
 string DocumentType(InvoiceStatus status, bool isCreditNote)
         => status == InvoiceStatus.Draft
-            ? "Proforma factuur"
+            ? (isCreditNote ? "Proforma creditnota" : "Proforma factuur")
             : isCreditNote
                 ? "Creditnota"
                 : "Factuur";
