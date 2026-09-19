@@ -43,6 +43,7 @@ public class ProjectTaakService : IProjectTaakService
     {
         if (f == null) return q;
         if (f.Status.HasValue) q = q.Where(t => t.Status == f.Status.Value);
+        else q = q.Where(t => t.Status != StatusAfgerond && t.Status != StatusGeannuleerd);
         if (f.Prioriteit.HasValue) q = q.Where(t => t.Prioriteit == f.Prioriteit.Value);
         if (f.ProjectId.HasValue) q = q.Where(t => t.ProjectId == f.ProjectId.Value);
         if (!string.IsNullOrWhiteSpace(f.ToegewezenAanUserId)) q = q.Where(t => t.ToegewezenAanUserId == f.ToegewezenAanUserId);

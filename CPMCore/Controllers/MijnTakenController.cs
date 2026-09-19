@@ -30,7 +30,7 @@ public class MijnTakenController : BaseController
     [HttpGet("")]
     public async Task<IActionResult> Index([FromQuery] TaakFilterBO filters)
     {
-        SetPageHeader("bx bx-task", "Mijn taken");
+        SetPageHeader("ph ph-list-checks", "Mijn taken");
         var userId = UserId;
         if (string.IsNullOrEmpty(userId)) return Forbid();
 
@@ -80,6 +80,14 @@ public class MijnTakenController : BaseController
     [CPMCore.Filters.PermissionWrite(PermissionCodes.MijnTaken)]
     public async Task<IActionResult> Opslaan([FromForm] TaakUpsertBO dto, string? returnUrl = null)
     {
+        if (!ModelState.IsValid)
+        {
+            AddMessage("error", "De taak kon niet opgeslagen worden. Controleer de ingevulde velden.", "Fout");
+            return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? Redirect(returnUrl)
+                : RedirectToAction(nameof(Index));
+        }
+
         if (dto.Id is int id and > 0)
             await _taken.Update(id, dto, UserId);
         else

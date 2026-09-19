@@ -11,11 +11,11 @@
     // geen enkel icoon/kleursignaal, enkel platte tekst in de select).
     string TaakStatusIcon(int status) => (TaakStatus)status switch
     {
-        TaakStatus.Open => "bx-circle",
-        TaakStatus.Wachtend => "bx-pause-circle",
-        TaakStatus.Afgerond => "bx-check-circle",
-        TaakStatus.Geannuleerd => "bx-minus-circle",
-        _ => "bx-time-five"
+        TaakStatus.Open => "ph-circle",
+        TaakStatus.Wachtend => "ph-pause-circle",
+        TaakStatus.Afgerond => "ph-check-circle",
+        TaakStatus.Geannuleerd => "ph-minus-circle",
+        _ => "ph-clock"
     };
     int TaakStatusVisual(int status) => (TaakStatus)status switch
     {
@@ -37,7 +37,7 @@
 
 @section PageActions {
     <button type="button" class="btn btn-primary btn-sm js-mt-new" data-bs-toggle="modal" data-bs-target="#modalTaakUpsert">
-        <i class="bx bx-plus"></i> Nieuwe taak
+        <i class="ph ph-plus"></i> Nieuwe taak
     </button>
 }
 
@@ -47,7 +47,7 @@
    verdwijnen < 768px) — /impeccable critique P1. *@
 <div class="d-flex d-md-none justify-content-end mb-3">
     <button type="button" class="btn btn-primary btn-sm js-mt-new" data-bs-toggle="modal" data-bs-target="#modalTaakUpsert">
-        <i class="bx bx-plus"></i> Nieuwe taak
+        <i class="ph ph-plus"></i> Nieuwe taak
     </button>
 </div>
 
@@ -59,7 +59,7 @@
 <div class="gl-kpi2-strip mt-1 mb-3">
     <div class="gl-kpi2-tile-col">
         <a class="gl-kpi2-tile" href="@Url.Action("Index")" style="--kpi-color: var(--primary);" aria-label="Open taken: @Model.AantalOpen">
-            <div class="gl-kpi2-icon"><i class="bx bx-task" aria-hidden="true"></i></div>
+            <div class="gl-kpi2-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></div>
             <div class="gl-kpi2-body">
                 <div class="gl-kpi2-label">Open</div>
                 <div class="gl-kpi2-value">@Model.AantalOpen</div>
@@ -70,7 +70,7 @@
         <a class="gl-kpi2-tile" href="@Url.Action("Index", new { AlleenAchterstallig = true })"
            style="--kpi-color: var(@(Model.AantalAchterstallig > 0 ? "--danger" : "--primary"));"
            aria-label="Achterstallige taken: @Model.AantalAchterstallig">
-            <div class="gl-kpi2-icon"><i class="bx bx-error" aria-hidden="true"></i></div>
+            <div class="gl-kpi2-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></div>
             <div class="gl-kpi2-body">
                 <div class="gl-kpi2-label">Achterstallig</div>
                 <div class="gl-kpi2-value @(Model.AantalAchterstallig > 0 ? "gl-kpi2-value-severe" : "")">@Model.AantalAchterstallig</div>
@@ -82,7 +82,7 @@
 <form method="get" class="row g-2 align-items-end mb-3">
     <div class="col-auto">
         <label class="form-label small mb-1">Status</label>
-        <select name="Status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <select name="Status" class="form-control form-control-modern form-control-sm" onchange="this.form.submit()">
             <option value="">Alle (behalve afgerond/geannuleerd)</option>
             @foreach (var s in statussen)
             {
@@ -92,7 +92,7 @@
     </div>
     <div class="col-auto">
         <label class="form-label small mb-1">Project</label>
-        <select name="ProjectId" class="form-select form-select-sm" onchange="this.form.submit()">
+        <select name="ProjectId" class="form-control form-control-modern form-control-sm" onchange="this.form.submit()">
             <option value="">Alle projecten</option>
             @foreach (var p in Model.Projecten)
             {
@@ -131,7 +131,7 @@
     <thead>
         <tr>
             <th style="width:32px"><input type="checkbox" class="form-check-input" id="mt-select-all" aria-label="Alles selecteren" /></th>
-            <th>Titel</th><th>Project</th><th>Toegewezen</th><th>Prioriteit</th><th>Vervaldatum</th><th>Status</th><th></th>
+            <th>Titel</th><th>Project</th><th>Toegewezen</th><th>Prioriteit</th><th>Vervaldatum</th><th>Status</th><th><span class="visually-hidden">Acties</span></th>
         </tr>
     </thead>
     <tbody>
@@ -202,7 +202,7 @@
                         @Html.AntiForgeryToken()
                         @{ var taakStatusLabel = ((TaakStatus)t.Status).GetDisplayName(); }
                         <span class="gl-mijlpaal-status-icon s-@TaakStatusVisual(t.Status)" title="@taakStatusLabel">
-                            <i class="bx @TaakStatusIcon(t.Status)" aria-hidden="true"></i>
+                            <i class="ph @TaakStatusIcon(t.Status)" aria-hidden="true"></i>
                             <span class="visually-hidden">@taakStatusLabel</span>
                         </span>
                         @* Auto-submit i.p.v. een aparte "Zet"-knop (gebruikerswens: een tweede klik
@@ -220,25 +220,30 @@
                     </form>
                 </td>
                 <td class="text-end">
-                    @* Zelfde gedeelde modal als "Nieuwe taak" (js-mt-edit vult 'm vooraf in i.p.v.
-                       een tweede, bijna-identieke bewerkmodal per rij te renderen)
-                       — /impeccable critique P1: Opslaan's update-branch was tot nu toe onbereikbaar
-                       vanuit deze view. *@
-                    <button type="button" class="btn btn-xs btn-outline-secondary js-mt-edit"
-                            data-id="@t.Id" data-titel="@t.Titel" data-omschrijving="@t.Omschrijving"
-                            data-project-id="@t.ProjectId" data-prioriteit="@t.Prioriteit"
-                            data-vervaldatum="@(t.Vervaldatum?.ToString("yyyy-MM-dd"))"
-                            data-toegewezen-aan-id="@t.ToegewezenAanUserId" data-toegewezen-aan-tekst="@toegewezenWeergave"
-                            data-bs-toggle="modal" data-bs-target="#modalTaakUpsert"
-                            title="Bewerken" aria-label="Taak bewerken: @t.Titel">
-                        <i class="bx bx-edit-alt" aria-hidden="true"></i>
-                    </button>
-                    @* window.confirmDialog (confirm-modal.js) i.p.v. de kale browser-confirm() —
-                       zelfde patroon als ProjectTraject/_TrajectActionButtons.cshtml. *@
-                    <form method="post" asp-action="Verwijderen" asp-route-id="@t.Id" class="gl-delete-taak-form d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-xs btn-outline-danger" title="Verwijderen" aria-label="Taak verwijderen: @t.Titel"><i class="bx bx-trash" aria-hidden="true"></i></button>
-                    </form>
+                    @* gl-row-action-btn (DESIGN.md "Table row actions") i.p.v. bare btn-xs — het app-brede
+                       patroon voor rij-acties, al elders in dit bestand gevolgd voor de status-selects
+                       (/impeccable critique P1). *@
+                    <span class="gl-row-actions">
+                        @* Zelfde gedeelde modal als "Nieuwe taak" (js-mt-edit vult 'm vooraf in i.p.v.
+                           een tweede, bijna-identieke bewerkmodal per rij te renderen)
+                           — /impeccable critique P1: Opslaan's update-branch was tot nu toe onbereikbaar
+                           vanuit deze view. *@
+                        <button type="button" class="gl-row-action-btn js-mt-edit"
+                                data-id="@t.Id" data-titel="@t.Titel" data-omschrijving="@t.Omschrijving"
+                                data-project-id="@t.ProjectId" data-prioriteit="@t.Prioriteit"
+                                data-vervaldatum="@(t.Vervaldatum?.ToString("yyyy-MM-dd"))"
+                                data-toegewezen-aan-id="@t.ToegewezenAanUserId" data-toegewezen-aan-tekst="@toegewezenWeergave"
+                                data-bs-toggle="modal" data-bs-target="#modalTaakUpsert"
+                                title="Bewerken" aria-label="Taak bewerken: @t.Titel">
+                            <i class="ph ph-note-pencil" aria-hidden="true"></i>
+                        </button>
+                        @* window.confirmDialog (confirm-modal.js) i.p.v. de kale browser-confirm() —
+                           zelfde patroon als ProjectTraject/_TrajectActionButtons.cshtml. *@
+                        <form method="post" asp-action="Verwijderen" asp-route-id="@t.Id" class="gl-delete-taak-form d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="gl-row-action-btn is-danger" title="Verwijderen" aria-label="Taak verwijderen: @t.Titel"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                        </form>
+                    </span>
                 </td>
             </tr>
         }
