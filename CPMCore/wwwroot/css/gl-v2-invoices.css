@@ -1,0 +1,835 @@
+/* gl-v2 layout-pilot — Facturen-BCO (design-handoff option 4a). Reskins the EXISTING table
+   markup/classes from Views/Invoices/Index.cshtml (gl-dt-invoice, gl-col-*, gl-status-col, actions)
+   — the table structure, DataTables init and all JS are shared byte-for-byte with the current
+   page (Views/Invoices/IndexV2.cshtml); only presentation changes here. Scoped under .gl-v2. */
+
+.gl-v2-toolbar-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+    flex: none;
+}
+
+/* Het zoekveld (optie 4i, .gl-v2-field) moet net als de oude .input-group de resterende breedte
+   naast de boekjaar-dropdown opeten, en mag onder een 210px-brede buur even goed krimpen op een
+   telefoonscherm — .gl-v2-field-input's flex-item-default min-width:auto zou anders weer de HELE
+   PAGINA breder duwen dan de viewport, precies het probleem dat hier al eerder speelde met de oude
+   .input-group. flex-wrap op de kaart zelf laat de dropdown desnoods naar een eigen regel vallen
+   i.p.v. enkel op deze fix te vertrouwen. */
+.gl-v2-toolbar-search {
+    flex: 1;
+    min-width: 0;
+}
+.gl-v2-toolbar-search .gl-v2-field-input {
+    min-width: 0;
+}
+
+.gl-v2-table-card {
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 18px 40px -28px rgba(44, 59, 42, .4);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Laadstaat (optie 4f "LADEN") ─────────────────────────────────────────────────────────────
+   Zichtbaar vanaf de eerste paint (geen JS nodig om 'm te TONEN), verdwijnt zodra gl-v2-invoices.js
+   .is-ready zet op .gl-v2-table-card (na DataTable-init + eerste syncTablePageLength()) — voorkomt
+   een flits van de rauwe, nog niet gepagineerde tabel (alle rijen, ongesorteerd) voor DataTables
+   heeft kunnen initialiseren. */
+.gl-v2-loading-skeleton { display: flex; flex-direction: column; }
+.gl-v2-table-card.is-ready .gl-v2-loading-skeleton { display: none; }
+.gl-v2-table-card:not(.is-ready) .datatables-header-footer-wrapper { display: none; }
+
+.gl-v2-skeleton-header {
+    display: grid;
+    grid-template-columns: 44px 70px 112px 96px minmax(0, 1fr) 90px 90px 66px 116px 92px 130px;
+    column-gap: 12px;
+    align-items: center;
+    padding: 0 14px;
+    height: 44px;
+    flex: none;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    font: 600 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    letter-spacing: .04em;
+}
+
+.gl-v2-skeleton-row {
+    display: grid;
+    grid-template-columns: 44px 70px 112px 96px minmax(0, 1fr) 90px 90px 66px 116px 92px 130px;
+    column-gap: 12px;
+    align-items: center;
+    padding: 0 14px;
+    height: 52px;
+    flex: none;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+
+.gl-v2-skeleton-box {
+    background: #EDEFEA;
+    border-radius: 5px;
+    animation: gl-v2-skeleton-pulse 1.4s ease-in-out infinite;
+}
+.gl-v2-skeleton-check { width: 18px; height: 18px; }
+.gl-v2-skeleton-text { height: 10px; }
+.gl-v2-skeleton-pill { height: 18px; border-radius: 9px; }
+
+@keyframes gl-v2-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+.gl-v2-skeleton-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    height: 46px;
+    flex: none;
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-skeleton-footer i { font-size: 15px; color: var(--gl-v2-primary); }
+
+/* ── Lege staat (optie 4f "LEGE STAAT") ───────────────────────────────────────────────────────
+   Twee plekken gebruiken dit: de server-side variant (IndexV2.cshtml, Model bevat écht nul
+   facturen) en de client-side variant (DataTable language.zeroRecords in gl-v2-invoices.js, wel
+   facturen maar nul na filteren/zoeken — die krijgt bovendien een "Filters wissen"-knop). */
+.gl-v2-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 44px 24px;
+    text-align: center;
+}
+
+.gl-v2-empty-state-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.gl-v2-empty-state-icon i { font-size: 28px; }
+
+.gl-v2-empty-state-title {
+    font: 500 17px var(--gl-v2-font-serif);
+    color: var(--gl-v2-ink);
+    margin: 0;
+}
+
+.gl-v2-empty-state-desc {
+    font: 450 12.5px/1.6 var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    max-width: 280px;
+    margin: 0;
+}
+
+.gl-v2-empty-state-actions { display: flex; gap: 9px; padding-top: 4px; }
+
+/* De client-side variant (in een DataTables-rij) heeft geen eigen kaart/schaduw nodig — zit al in
+   .gl-v2-table-card — en moet zelf de resterende ruimte vullen zoals .table-responsive-md dat
+   anders zou doen (zie de flex-keten hieronder bij .gl-v2-table-card .table-responsive-md). */
+.gl-v2-empty-state-inline { padding: 44px 24px; }
+
+/* .gl-v2-table-card is een flex-kolom, maar dat alleen laat .gl-v2-selection-toolbar nog niet
+   onderaan de kaart uitkomen: de tussenliggende wrappers (.datatables-header-footer-wrapper,
+   <form>) erfden de beschikbare hoogte niet door — zonder flex:1 op elke schakel is elke wrapper
+   gewoon zo hoog als z'n eigen inhoud, en bleef er witruimte over onder de groene rij. Nu propageert
+   flex:1/min-height:0 helemaal door tot .table-responsive-md, die als enige de resterende ruimte
+   opeet — de toolbar erna staat daardoor altijd exact tegen de kaartrand, ongeacht of
+   syncTablePageLength() (gl-v2-invoices.js) het aantal rijen millimeter-precies goed gokt: elke
+   afronding valt nu op als (onzichtbare) lucht ín het tabelgebied, nooit als een gat ONDER de
+   toolbar. */
+.gl-v2-table-card .datatables-header-footer-wrapper,
+.gl-v2-table-card #invoice-book-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.gl-v2-table-card .table-responsive-md { flex: 1; min-height: 0; }
+
+.gl-v2-selection-toolbar { flex: none; }
+
+.gl-v2 #datatable-invoice-list {
+    font-family: var(--gl-v2-font-sans);
+}
+
+/* padding-right:26px, niet 10px: het sorteericoontje (span.dt-column-order) staat
+   position:absolute;right:12px;width:12px, dus neemt de zone 12-24px vanaf de rand in — 26px is
+   het krapste dat dat nog volledig vrijmaakt (DataTables' eigen default is 30px, wat elke kolom
+   nodeloos breder maakte dan nodig). Met een #id-selector wint deze regel altijd van DataTables'
+   eigen (klasse-only) padding-regel, dus zonder dit hier zelf te zetten viel het icoontje over de
+   tekst — bij rechts-uitgelijnde kolommen (Totaal e.d.) las dat als "icoon vóór de titel". */
+.gl-v2 #datatable-invoice-list thead th {
+    padding-left: 10px;
+    padding-right: 26px;
+    font: 600 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    letter-spacing: .04em;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+
+.gl-v2 #datatable-invoice-list tbody td {
+    height: 54px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+
+/* Statuskolom: Phosphor i.p.v. Boxicons, eigen maat i.p.v. Bootstrap's fs-5 (20px, te groot
+   tussen 54px-rijen) — zie StatusIcon() in IndexV2.cshtml voor het icoon/kleur-per-status-palet. */
+.gl-v2 #datatable-invoice-list .status-icon { display: inline-flex; }
+.gl-v2 #datatable-invoice-list .status-icon i { font-size: 16px; }
+.gl-v2 #datatable-invoice-list .status-icon + .status-icon { margin-left: 6px; }
+
+/* Generating: Phosphor levert geen bx-spin-achtige utility-klasse mee, dus een eigen draai-
+   animatie op het icoon dat StatusIcon() ernaast meegeeft (.gl-v2-spin). */
+.gl-v2 #datatable-invoice-list .gl-v2-spin { animation: gl-v2-spin 1s linear infinite; }
+@keyframes gl-v2-spin { to { transform: rotate(360deg); } }
+
+/* Eerste kolom (Boeken-checkbox) op dezelfde inspring als de toolbar-kaart/tabelkaart (14px) —
+   laatste ZICHTBARE kolom is Acties (:nth-last-child(2): de echte laatste child is de verborgen
+   Boekjaar-kolom, :last-child zou dus de verkeerde kolom raken). Acties krijgt bewust meer dan de
+   andere kolommen: de rij-actieknoppen (26px + gap) voelden te dicht tegen de kolomtitel/rand aan. */
+.gl-v2 #datatable-invoice-list thead th:first-child,
+.gl-v2 #datatable-invoice-list tbody td:first-child {
+    padding-left: 14px;
+}
+.gl-v2 #datatable-invoice-list thead th:nth-last-child(2),
+.gl-v2 #datatable-invoice-list tbody td:nth-last-child(2) {
+    padding-right: 20px;
+}
+
+/* ── Rijstaten (design-handoff optie 4e "TABEL — RIJSTATEN EN ACTIES IN DE RIJ") ───────────── */
+.gl-v2 #datatable-invoice-list tbody tr:hover td { background: var(--gl-v2-hover-tint); }
+
+/* GESELECTEERD: gl-v2-invoices.js zet .is-selected op de <tr> zodra de boeken-checkbox aanstaat
+   (syncSelectedRows) — echte state, geen aparte demo-status: dit IS de bestaande boeken-selectie,
+   enkel nu ook zichtbaar op de rij zelf i.p.v. enkel op de checkbox. Inset-rand enkel op de eerste
+   cel (niet elke <td> apart), anders krijgt elke kolom zijn eigen streepje links. */
+.gl-v2 #datatable-invoice-list tbody tr.is-selected td { background: var(--gl-v2-primary-tint); }
+.gl-v2 #datatable-invoice-list tbody tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--gl-v2-primary); }
+
+/* VERGRENDELD — gedefinieerd voor pariteit met de referentiesheet, bewust NERGENS toegepast:
+   "checkbox disabled" (niet-boekbaar/al geboekt) is geen "factuur vergrendeld", de meeste facturen
+   zijn gewoon niet boekbaar via deze checkbox maar verder volledig normaal/bewerkbaar. Er bestaat
+   vandaag geen echt "vergrendelde factuur"-concept in deze tabel om dit aan te koppelen — zelfde
+   aanpak als de rail's badge/disabled-states (component klaar, niet fabriceren wat niet bestaat). */
+.gl-v2 #datatable-invoice-list tbody tr.gl-v2-row-locked td { background: #FBFBF9; color: #9AA898; }
+.gl-v2 #datatable-invoice-list tbody tr.gl-v2-row-locked .gl-v2-row-action { color: #C0CABE; pointer-events: none; }
+
+/* ── Rij-actieknoppen: drie families (neutraal/primair/danger), maar de rand/vulling van elke
+   familie is enkel de HOVER-STAAT UIT 4e — de DEFAULT toont kale iconen (geen rand, geen vulling,
+   gedempte kleur), exact zoals de referentiesheet dat onderscheid zelf maakt. Enkel/altijd per
+   icoon: :hover/:focus-visible op de knop ZELF, geen rij-brede reveal — hover over één icoon mag
+   de andere iconen in diezelfde rij niet mee laten oplichten. Rijen GESELECTEERD tonen bare
+   iconen al in Primary-groen (geen hover nodig, net als 4e). pointer-events:none op VERGRENDELD
+   (hieronder) volstaat om 'm inert te houden — geen aparte hover-override nodig zonder rij-brede
+   regel om te overstemmen. ──────────────────────────────────────────────────────────────────── */
+.gl-v2 #datatable-invoice-list .gl-v2-row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--gl-v2-muted);
+    text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+
+.gl-v2 #datatable-invoice-list .gl-v2-row-action i { font-size: 15px; }
+
+.gl-v2 #datatable-invoice-list tbody tr.is-selected .gl-v2-row-action { color: var(--gl-v2-primary); }
+
+.gl-v2 #datatable-invoice-list .gl-v2-row-action:hover,
+.gl-v2 #datatable-invoice-list .gl-v2-row-action:focus-visible {
+    border-color: var(--gl-v2-primary);
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    outline: none;
+}
+
+.gl-v2 #datatable-invoice-list .gl-v2-row-action-primary:hover,
+.gl-v2 #datatable-invoice-list .gl-v2-row-action-primary:focus-visible {
+    background: #006638;
+    border-color: #006638;
+    color: var(--gl-v2-surface);
+}
+
+.gl-v2 #datatable-invoice-list .gl-v2-row-action-danger:hover,
+.gl-v2 #datatable-invoice-list .gl-v2-row-action-danger:focus-visible {
+    background: #F8EBEB;
+    border-color: #8B2A2A;
+    color: #8B2A2A;
+}
+
+/* ── Checkboxes: _LayoutV2.cshtml laadt theme.css/custom.css NIET (enkel _Layout.cshtml, de oude
+   shell, doet dat) — .checkbox-custom's hele getekende box/vinkje (label:before/:after pseudo-
+   elementen) bestaat dus op gl-v2-pagina's helemaal niet, er was hier niets om te overschrijven.
+   Volledig zelfstandig opgebouwd i.p.v. op theme.css te bouwen. Zelfde Font Awesome-vinkje-truc
+   als theme.css gebruikte (content:'\f00c', FA is sowieso al geladen), enkel de kleuren/maat eigen
+   aan gl-v2. ──────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2 #datatable-invoice-list .checkbox-custom {
+    position: relative;
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+}
+
+.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"] {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    z-index: 2;
+    cursor: pointer;
+}
+
+.gl-v2 #datatable-invoice-list .checkbox-custom label {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.gl-v2 #datatable-invoice-list .checkbox-custom label:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-radius: 5px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+
+/* Niet-boekbaar (het courante geval voor de meeste facturen) — gedimd, geen streep. */
+.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:disabled + label:before {
+    background: var(--gl-v2-disabled-bg);
+    border-color: var(--gl-v2-hairline-soft);
+}
+
+/* Na :disabled hierboven gedeclareerd zodat aangevinkt-én-disabled (al geboekt) altijd groen wint
+   — informeert dat de factuur geboekt IS, ook al kan de checkbox zelf niet meer aangepast worden. */
+.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:checked + label:before {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+}
+
+.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:checked + label:after {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    inset: 0;
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+    color: var(--gl-v2-surface);
+}
+
+.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:disabled,
+.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:disabled + label {
+    cursor: not-allowed;
+}
+
+/* ── Selectie-toolbar (optie 4e) — laatste "rij" van de tabelkaart, verschijnt zodra er ≥1
+   factuur geselecteerd is. Zit binnen .gl-v2-table-card (overflow:hidden + radius), dus de
+   ondersteboek van de kaart knipt 'm vanzelf mooi af. ─────────────────────────────────────── */
+.gl-v2-selection-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+}
+
+.gl-v2-selection-toolbar[hidden] { display: none; }
+
+.gl-v2-selection-toolbar-count { font: 600 12px var(--gl-v2-font-sans); }
+.gl-v2-selection-toolbar-spacer { flex: 1; }
+
+.gl-v2-selection-toolbar-btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid rgba(255, 255, 255, .35);
+    background: rgba(255, 255, 255, .14);
+    color: var(--gl-v2-surface);
+    font: 600 11.5px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-selection-toolbar-btn:hover { background: rgba(255, 255, 255, .22); }
+.gl-v2-selection-toolbar-btn:disabled { opacity: .5; cursor: not-allowed; }
+.gl-v2-selection-toolbar-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+
+/* ── Footer/pagination (optie 4a) — info links, pagination rechts, ~48px balk met rand-boven.
+   Enkel de LAATSTE .dt-layout-row: de eerste (topStart/topEnd) draagt de export-knoppen (via
+   #btnExportExcel/Pdf, onzichtbaar zelf) en de verborgen ingebouwde zoekbalk. Vaste padding
+   boven/onder (10px, samen met de 28px-hoge paginaknoppen weer ~48px) i.p.v. een vaste height +
+   align-items:center — zo staat er gegarandeerd evenveel lucht onder de knoppen als erboven,
+   in plaats van dat te laten afhangen van hoe centering toevallig uitkomt. ────────────────────── */
+.gl-v2 .dt-container .dt-layout-row:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    flex: none;
+    border-top: 1px solid var(--gl-v2-hairline);
+}
+
+/* De EERSTE .dt-layout-row zelf droeg nooit eigen opmaak — enkel z'n kinderen (export-knoppen,
+   ingebouwde zoekbalk) werden apart onzichtbaar gemaakt (jQuery .hide(), zie gl-v2-invoices.js).
+   DataTables' eigen Bootstrap5-CSS geeft die rij desondanks een eigen margin/padding, dus bleef er
+   een lege balk staan boven de tabel — op de dichte desktoptabel amper op te merken, maar op
+   telefoon (waar de rij nu meteen boven de eerste kaart staat) een duidelijk gat. #btnExportExcel/
+   Pdf sturen sowieso `.trigger("click")` naar de echte (verborgen) DataTables-knoppen, wat ook op
+   een display:none-element werkt — de hele rij verbergen breekt dus niets. */
+.gl-v2 .dt-container .dt-layout-row:first-child { display: none; }
+
+/* Padding op dt-info/dt-paging zelf i.p.v. op de rij eromheen — dezelfde 14px-inspring als de
+   eerste/laatste tabelkolom, maar rechtstreeks op de twee elementen die 'm nodig hebben. */
+.gl-v2 .dt-info { padding-left: 14px; color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2 .dt-paging { padding-right: 14px; }
+
+.gl-v2 .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
+
+.gl-v2 .dt-paging .page-link {
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 600 12px var(--gl-v2-font-sans);
+}
+
+.gl-v2 .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2 .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2 .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+
+/* Eigen basisstijl i.p.v. Bootstrap's d-flex/align-items-center/justify-content-end/gap-1/
+   flex-nowrap (die eerst op dit element stonden): .d-flex{display:flex!important} zou de tablet-
+   override (.gl-v2-row-menu{display:none}, verderop) altijd blijven overstemmen ongeacht
+   specificiteit — dezelfde soort valkuil als .visually-hidden hieronder. Zelfde layout, gewoon
+   zonder !important, zodat de tablet-media-query 'm straks gewoon normaal kan overschrijven. */
+.gl-v2-row-menu {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+/* Eigen verberg-klasse i.p.v. Bootstrap's .visually-hidden: die zet elke property met !important,
+   dus zou hier niet meer terug zichtbaar te maken zijn zonder zelf ook !important te gebruiken.
+   Zelfde techniek (klein/geen afmeting, clip, nowrap), gewoon zonder die !important's. */
+.gl-v2-row-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.gl-v2-row-menu-trigger,
+.gl-v2-row-menu-divider { display: none; }
+
+/* Optie 4c: de mobiele-kaartenlijst (IndexV2.cshtml, na de tabel) bestaat enkel voor <768px —
+   hier verborgen op desktop/tablet, gevuld/getoond door gl-v2-invoices.js' renderMobileCards(). */
+.gl-v2-mobile-invoice-list { display: none; }
+
+/* Optie 4j type 3: scrim achter het "···"-paneel als bottom sheet — bestaat enkel <768px (zie het
+   mobiele blok verderop voor .is-open), hier op desktop/tablet altijd onzichtbaar/onbestaand net
+   als .gl-v2-select-backdrop elders in gl-v2. */
+.gl-v2-row-menu-backdrop { display: none; }
+
+/* ── "···"-rijmenu — gedeeld tussen tablet ÉN telefoon (optie 4f "TABLET — ···-MENU IN DE RIJ"),
+   want optie 4c's kaartweergave (hieronder) hergebruikt dit exacte paneel voor Acties i.p.v. de
+   wireframe's eigen 4 losse inline-icoontjes: de échte actieset loopt op tot 6-7 knoppen
+   afhankelijk van status/rechten, te veel om plat in een kaart te tonen zoals de mockup's
+   vereenvoudigde demodata dat doet — zelfde soort pragmatische afwijking als de laadstaat/
+   kolomset elders in dit bestand al maakt, en het bespaart een tweede trigger+paneel-
+   implementatie voor exact hetzelfde probleem. gl-v2-invoices.js' positionRowMenu/
+   closeAllRowMenus doen al niets anders op desktop (trigger is daar display:none, klikt dus
+   nooit). ─────────────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+    /* Optie 4f "···-MENU IN DE RIJ": rust = kaal "···", hover = groen gevuld vierkant, open
+       (.is-menu-open, gezet door gl-v2-invoices.js — zelfde .is-flyout-open-patroon als de rail-
+       flyouts in gl-v2-shell.js) blijft diezelfde gevulde staat behouden i.p.v. terug te vallen
+       naar rust zodra de muis van de knop af gaat terwijl het paneel nog open staat. */
+    .gl-v2-row-menu-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-left: auto;
+        border-radius: 8px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-muted);
+        cursor: pointer;
+        flex: none;
+    }
+    .gl-v2-row-menu-trigger i { font-size: 16px; }
+    .gl-v2-row-menu-trigger:hover,
+    .gl-v2-row-menu-trigger.is-menu-open,
+    .gl-v2-row-menu-trigger:focus-visible {
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        outline: none;
+    }
+
+    /* De rij-iconen zelf zijn hier geen inline rij meer — verborgen tenzij .is-open, en dan een
+       zwevend paneel (JS positioneert 'm via getBoundingClientRect, zie positionRowMenu in
+       gl-v2-invoices.js — zelfde aanpak als de rail-flyouts). */
+    .gl-v2-row-menu { display: none; }
+
+    .gl-v2-row-menu.is-open {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        position: fixed;
+        width: 212px;
+        padding: 6px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 99997;
+    }
+
+    .gl-v2-row-menu.is-open .gl-v2-row-action-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+    }
+
+    /* Menu-rij i.p.v. vierkante icoonknop: volle breedte, icoon+label naast elkaar, geen rand/
+       vulling behalve de gewone hover-highlight — ook voor de primair/danger-families, die in de
+       rest van de tabel wél een gevulde chip krijgen maar hier gewoon een gekleurde tekstregel
+       blijven (icoon+tekst rood voor Verwijderen, geen rode vlakvulling in een menu).
+       Alle selectors hier dragen #datatable-invoice-list mee, anders verliezen ze van de
+       basisregels (.gl-v2 #datatable-invoice-list .gl-v2-row-action{...}) die zelf ook een #id
+       hebben — zonder dat id wint een puur-klasse-selector hier nooit, ongeacht volgorde (bleek
+       hier concreet: justify-content:center van de basisregel bleef winnen i.p.v. flex-start, en
+       -danger's rode rand/witte achtergrond bleven gewoon staan). */
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 9px 8px;
+        border-radius: 9px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-ink);
+        font: 450 12.5px var(--gl-v2-font-sans);
+    }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action i { font-size: 15px; color: var(--gl-v2-primary); }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action:hover,
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible {
+        background: var(--gl-v2-hover-tint);
+        border: 0;
+        color: var(--gl-v2-ink);
+    }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action:hover i,
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
+
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-primary { background: transparent; border: 0; color: var(--gl-v2-ink); }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger { background: transparent; border: 0; color: #8B2A2A; font-weight: 600; }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    /* Hover moest apart blijven van de rest-regel hierboven — die zette background:transparent
+       voor ZOWEL rest als :hover in één keer, wat de hover-tint van Verwijderen mee wegnam. */
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
+        background: #F8EBEB;
+        border: 0;
+        color: #8B2A2A;
+    }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover i,
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible i { color: #8B2A2A; }
+
+    /* #datatable-invoice-list meegegeven voor dezelfde reden als hierboven — al leek de kale
+       .gl-v2-row-menu-divider-regel in theorie specifiek genoeg, dit sluit het verschil met de
+       base .gl-v2-row-menu-trigger,.gl-v2-row-menu-divider{display:none}-regel volledig uit i.p.v.
+       erop te vertrouwen dat 2 klassen > 1 klasse hier zonder twijfel wint. Iets steviger
+       zichtbaar (--gl-v2-hairline i.p.v. -soft, 8px marge i.p.v. 4px) — 1px op --hairline-soft
+       (~8% dekking) was op een wit paneel nauwelijks te onderscheiden van geen lijn. */
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-menu-divider {
+        display: block;
+        height: 1px;
+        background: var(--gl-v2-hairline);
+        margin: 8px 0;
+        flex: none;
+    }
+}
+
+/* ── Tablet (optie 4b): kerncolommen, tabelvorm blijft behouden ─────────────────────────────────
+   Zelfde breedte-range als de userbox-tablet-staat in gl-v2-shell.css (768–1023.98px) — geen
+   apart tablet-begrip voor deze pagina alleen. Kolomvolgorde (1-indexed nth-child, want CSS telt
+   vanaf 1): 1 Boeken, 2 Type, 3 Factuurnr, 4 Datum, 5 Klant, 6 Totaal, 7 Excl. BTW, 8 Status,
+   9 Project, 10 Verzendwijze, 11 Acties, 12 Boekjaar (toch al d-none). Verborgen: Type/Datum/
+   Excl. BTW/Project/Verzendwijze — exact de vijf die optie 4b zelf ook weglaat. Onder 768px
+   (telefoon) verdwijnt de tabelvorm zelf — zie de kaartweergave hieronder (optie 4c), die z'n
+   eigen kolomzichtbaarheid regelt (Datum blijft daar bv. wél zichtbaar, enkel anders geplaatst). */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2 #datatable-invoice-list thead th:nth-child(2),
+    .gl-v2 #datatable-invoice-list tbody td:nth-child(2),
+    .gl-v2 #datatable-invoice-list thead th:nth-child(4),
+    .gl-v2 #datatable-invoice-list tbody td:nth-child(4),
+    .gl-v2 #datatable-invoice-list thead th:nth-child(7),
+    .gl-v2 #datatable-invoice-list tbody td:nth-child(7),
+    .gl-v2 #datatable-invoice-list thead th:nth-child(9),
+    .gl-v2 #datatable-invoice-list tbody td:nth-child(9),
+    .gl-v2 #datatable-invoice-list thead th:nth-child(10),
+    .gl-v2 #datatable-invoice-list tbody td:nth-child(10) {
+        display: none;
+    }
+}
+
+/* ── Mobiel (optie 4c "Mobiel — facturen als kaarten") ───────────────────────────────────────────
+   Twee eerdere pogingen probeerden de bestaande tabelrijen zelf via CSS naar een kaart te reflowen
+   (grid-template-areas, dan flex+order op de <tr>'s) — allebei liepen ze vast op tabel-specifiek
+   gedrag dat bleef doorschijnen (CSS Grid-kolomberekening, Bootstrap's tabelrand/-achtergrond).
+   Dit is nu ECHT losse markup: `.gl-v2-mobile-invoice-list` (IndexV2.cshtml, na de tabel) is een
+   lege container die `renderMobileCards()` (gl-v2-invoices.js) vult op elke DataTable-"draw" (init,
+   zoeken, sorteren, pagineren) — telkens uitgelezen uit de dan zichtbare <tr>'s van de tabel
+   hierboven, dus automatisch in sync met filter/sortering/paginering zonder die logica hier te
+   moeten overdoen. Checkbox en "···"-acties blijven hun ÉÉN echte exemplaar (in de nu <768px
+   onzichtbare tabel): de kaart toont een PROXY-checkbox (stuurt een klik door, geen dubbele
+   name="invoiceIds") en een GEKLOONDE kopie van het bestaande "···"-paneel (gedeelde 1023.98px-
+   trigger/paneel-stijl hierboven) — gedelegeerde click-handlers op $(document) matchen op klasse,
+   niet op het originele element, dus werken ook op de kloon. De tabel zelf verdwijnt hier volledig
+   (`display:none`), geen poging meer om 'm te herschikken. ───────────────────────────────────── */
+@media (max-width: 767.98px) {
+    /* .gl-v2-table-card is verder overal een witte, geschaduwde kaart — op mobiel wordt het enkel
+       nog een transparante houder voor de kaartenlijst, zodat er geen kaart-in-een-kaart ontstaat
+       (de individuele factuurkaarten hieronder zijn al hun eigen witte, geschaduwde kaart) en geen
+       extra kleurlaag tussen de paginakleur en de kaarten in zit. overflow:visible i.p.v. de
+       standaard hidden: die diende enkel om de desktop-tabel/selectie-balk netjes af te ronden
+       binnen de kaartrand, en zou hier een kaartenlijst die (zelden) hoger uitvalt dan de eerder
+       voor de dichte desktoptabel berekende hoogte onzichtbaar afknippen. */
+    .gl-v2-table-card {
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+    .gl-v2-table-card .table-responsive-md { display: none; }
+
+    .gl-v2-mobile-invoice-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .gl-v2-invoice-card {
+        display: flex;
+        align-items: stretch;
+        gap: 10px;
+        min-height: 84px;
+        padding: 13px 14px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-invoice-card.is-selected { background: var(--gl-v2-primary-tint); }
+
+    /* Proxy-checkbox: geen echte <input>, enkel een knop die op klik de echte (verborgen)
+       checkbox aanstuurt — zelfde visuele taal als .checkbox-custom (18px, groen gevuld vinkje),
+       hier als een op-zichzelf-staand element i.p.v. de input+label-pseudo-elementen-truc, want er
+       zit geen echte checkbox meer achter om <label>'s :before/:after op te haken. */
+    .gl-v2-mc-checkbox {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        align-self: flex-start;
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+        padding: 0;
+        box-sizing: border-box;
+        border-radius: 5px;
+        border: 1px solid var(--gl-v2-hairline);
+        background: var(--gl-v2-surface);
+        cursor: pointer;
+    }
+    .gl-v2-mc-checkbox.is-checked {
+        border-color: var(--gl-v2-primary);
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        font-size: 10px;
+    }
+    .gl-v2-mc-checkbox.is-checked:before { content: "\f00c"; font-family: "Font Awesome 5 Free"; font-weight: 900; }
+    .gl-v2-mc-checkbox:disabled {
+        cursor: not-allowed;
+        background: var(--gl-v2-disabled-bg);
+        border-color: var(--gl-v2-hairline-soft);
+    }
+    .gl-v2-mc-checkbox.is-checked:disabled { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+
+    .gl-v2-mc-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex: 1;
+        min-width: 0;
+        gap: 9px;
+    }
+
+    .gl-v2-mc-row { display: flex; align-items: center; gap: 8px; }
+    .gl-v2-mc-row-date { padding-top: 9px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+
+    .gl-v2-mc-nr { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-mc-status { flex: none; margin-left: auto; display: inline-flex; }
+    .gl-v2-mc-client { flex: 1; min-width: 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-mc-total { flex: none; margin-left: auto; font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); white-space: nowrap; }
+    .gl-v2-mc-date { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+
+    /* De "···"-trigger zelf hergebruikt zijn bestaande stijl (gedeeld 1023.98px-blok hierboven) —
+       hier enkel de positie binnen de kaart: onderaan-rechts, naast de datumregel. */
+    .gl-v2-invoice-card > .gl-v2-row-menu-trigger { flex: none; align-self: flex-end; }
+
+    /* ── "···"-paneel als bottom sheet (design-handoff optie 4j, TYPE 3 "KEUZELIJST/ACTIES —
+       TABLET & MOBIEL · ACTIESHEET MET SCRIM") — enkel <768px; de tablet-brede zwevende variant
+       (768–1023.98px, gedeeld blok hierboven) blijft ongewijzigd. Zelfde bottom-sheet-recept als de
+       boekjaar-dropdown/quick-actions-sheet elders in gl-v2 (backdrop + paneel met handle, fixed
+       onderaan, safe-area-padding) — hier toegepast op het GEKLONEDE paneel van de mobiele kaart
+       (renderMobileCards() in gl-v2-invoices.js), dat verder geen enkele styling erft van de
+       #datatable-invoice-list-geschoolde regels hierboven (leeft nu in .gl-v2-invoice-card, niet
+       meer in de tabel) — vandaar de rij-opmaak hieronder helemaal opnieuw, zonder het
+       #id-specificiteitsgedoe dat de tabel-versie wel nodig had (hier is toch niets anders dat om
+       voorrang strijdt). */
+    .gl-v2-row-menu-backdrop.is-open {
+        display: block;
+        position: fixed;
+        inset: 0;
+        height: 100dvh;
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+
+    .gl-v2-row-menu.is-open {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: auto;
+        max-height: 70dvh;
+        border-radius: 18px 18px 0 0;
+        padding: 10px 10px calc(18px + env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        z-index: 99999;
+    }
+    .gl-v2-row-menu.is-open::before {
+        content: "";
+        width: 42px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-dashed);
+        align-self: center;
+        flex: none;
+        margin-bottom: 8px;
+    }
+
+    /* Titel — welke factuur deze acties raken (renderMobileCards() zet de tekst, "Factuur {nr}"),
+       serif per de Naming-Only Serif Rule: dit noemt het ding waar je naar kijkt. */
+    .gl-v2-row-menu-title {
+        padding: 2px 8px 6px;
+        font: 500 16px var(--gl-v2-font-serif);
+        color: var(--gl-v2-ink);
+    }
+
+    .gl-v2-row-menu.is-open .gl-v2-row-action {
+        width: 100%;
+        height: auto;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 11px;
+        padding: 13px 10px;
+        border-radius: 10px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-ink);
+        font: 450 13.5px var(--gl-v2-font-sans);
+        text-decoration: none;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action i { font-size: 17px; color: var(--gl-v2-primary); }
+    .gl-v2-row-menu.is-open .gl-v2-row-action:hover,
+    .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible {
+        background: var(--gl-v2-hover-tint);
+        color: var(--gl-v2-ink);
+        outline: none;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action:hover i,
+    .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
+
+    .gl-v2-row-menu.is-open .gl-v2-row-action-primary { color: var(--gl-v2-ink); }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: #8B2A2A; font-weight: 600; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
+        background: #F8EBEB;
+        color: #8B2A2A;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover i,
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible i { color: #8B2A2A; }
+
+    .gl-v2-row-menu.is-open .gl-v2-row-menu-divider {
+        display: block;
+        height: 1px;
+        background: var(--gl-v2-hairline);
+        margin: 8px 2px;
+        flex: none;
+    }
+}

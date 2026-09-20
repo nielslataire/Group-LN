@@ -17,6 +17,10 @@
     var pinnedInMyProjects  = myProjects.Where(p => Model.PinnedProjectIds.Contains(p.Id)).ToList();
     var werfProjects        = (activeProjects.Any() ? activeProjects : myProjects).Union(pinnedInMyProjects).ToList();
     var myProjectIds       = myProjects.Select(p => p.Id).ToHashSet();
+    // gl-v2 layout-pilot: de mobiele snelacties verhuizen naar de gl-v2-snelactiebalk
+    // (@@section MobileQuickActions in Home/Index.cshtml) — de oude .gl-mob-nav zou anders
+    // ernaast/eronder blijven staan als een tweede, botsende onderbalk.
+    var useGlV2Layout = ViewData["UseGlV2Layout"] as bool? == true;
 
     // Handmatige volgorde (Rangschikken) toepassen; projecten zonder opgeslagen
     // positie (bv. net toegewezen/vastgezet) sluiten stabiel aan achteraan.
@@ -500,21 +504,24 @@
 
 </div>
 
-<!-- ── MOBIELE BOTTOM NAV ───────────────────────────────────────────── -->
-<nav class="gl-mob-nav d-md-none" aria-label="Snelle acties">
-    <button class="gl-mob-nav-btn" id="mob-nav-punt" type="button" aria-label="Punt toevoegen">
-        <i class="bx bx-alert-circle"></i>
-        <span>Punt</span>
-    </button>
-    <button class="gl-mob-nav-btn" id="mob-nav-lev" type="button" aria-label="Leverancier zoeken">
-        <i class="bx bx-hard-hat"></i>
-        <span>Leverancier</span>
-    </button>
-    <button class="gl-mob-nav-btn" id="mob-nav-klant" type="button" aria-label="Klant zoeken">
-        <i class="bx bx-group"></i>
-        <span>Klant</span>
-    </button>
-</nav>
+@if (!useGlV2Layout)
+{
+    <!-- ── MOBIELE BOTTOM NAV ───────────────────────────────────────────── -->
+    <nav class="gl-mob-nav d-md-none" aria-label="Snelle acties">
+        <button class="gl-mob-nav-btn" id="mob-nav-punt" type="button" aria-label="Punt toevoegen">
+            <i class="bx bx-alert-circle"></i>
+            <span>Punt</span>
+        </button>
+        <button class="gl-mob-nav-btn" id="mob-nav-lev" type="button" aria-label="Leverancier zoeken">
+            <i class="bx bx-hard-hat"></i>
+            <span>Leverancier</span>
+        </button>
+        <button class="gl-mob-nav-btn" id="mob-nav-klant" type="button" aria-label="Klant zoeken">
+            <i class="bx bx-group"></i>
+            <span>Klant</span>
+        </button>
+    </nav>
+}
 
 <!-- ── PUNT PROJECTKEUZE SHEET ──────────────────────────────────────── -->
 <div id="gl-punt-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Punt toevoegen – kies project">
@@ -763,7 +770,10 @@ window.addEventListener('load', function () {
         $pMijn.removeClass('d-none'); $pMijnLbl.removeClass('d-none');
     }
 
-    $('#mob-nav-punt').on('click', openPuntSheet);
+    // Delegatie (i.p.v. directe binding) omdat de gl-v2-tegenhangers verderop in de DOM zitten
+    // (buiten <main>, in de layout's snelactiebalk) en dus nog niet bestaan op het moment dat dit
+    // script-blok hier boven in de pagina draait — een directe .on() zou ze missen.
+    $(document).on('click', '#mob-nav-punt, #gl-v2-qa-punt', openPuntSheet);
     $('#gl-punt-overlay, #gl-punt-close').on('click', closePuntSheet);
 
     $pSearch.on('input', function () {
@@ -834,7 +844,7 @@ window.addEventListener('load', function () {
     // ── Leverancier zoek sheet ─────────────────────────────────────────
     // #mob-nav-lev (mobiele bottom-nav) en #sa-lev-search (Snelacties,
     // desktop) delen hetzelfde paneel — enkel de trigger verschilt per context.
-    $('#mob-nav-lev, #sa-lev-search').on('click', function () {
+    $(document).on('click', '#mob-nav-lev, #sa-lev-search, #gl-v2-qa-lev-search', function () {
         openSheet('gl-lev-sheet');
         setTimeout(function () { $('#gl-lev-search').focus(); }, 250);
     });
@@ -869,7 +879,7 @@ window.addEventListener('load', function () {
     $('#gl-lev-search').on('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doLevSearch(); } });
 
     // ── Klant zoek sheet ───────────────────────────────────────────────
-    $('#mob-nav-klant, #sa-klant-search').on('click', function () {
+    $(document).on('click', '#mob-nav-klant, #sa-klant-search, #gl-v2-qa-klant-search', function () {
         openSheet('gl-klant-sheet');
         setTimeout(function () { $('#gl-klant-search').focus(); }, 250);
     });
@@ -915,7 +925,7 @@ window.addEventListener('load', function () {
         });
     }
 
-    $('#mw-add-project, #sa-pin-search').on('click', function () {
+    $(document).on('click', '#mw-add-project, #sa-pin-search, #gl-v2-qa-pin', function () {
         openSheet('gl-pin-sheet');
         setTimeout(function () { $('#gl-pin-search').focus(); }, 250);
     });

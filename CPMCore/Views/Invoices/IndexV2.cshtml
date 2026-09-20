@@ -1,0 +1,506 @@
+@model IReadOnlyList<CPMCore.Models.Invoicing.InvoiceListItemVM>
+@using System.Globalization
+@using CPMCore.Models.Invoicing
+@using BOCore
+@{
+    // gl-v2 layout-pilot (design-handoff/, optie 4a — "Facturen - BCO"). Zelfde model/data als
+    // Views/Invoices/Index.cshtml (InvoicesController.Index levert exact dezelfde vms aan beide
+    // views) — enkel de kop/toolbar-markup hieronder en de CSS-klassen op de tabel-kaart zijn
+    // nieuw. De tabel zelf, de 3 modals en heel @@section PageScripts zijn bewust ONGEWIJZIGD
+    // gekopieerd uit Index.cshtml: geen dubbele business-logica, enkel een tweede presentatielaag.
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var currentPath = Context.Request.Path.ToString();
+    var currentQuery = Context.Request.QueryString.ToString();
+    var returnUrl = string.Concat(currentPath, currentQuery);
+    var bookYears = Model.Select(r => r.BookyearLabel ?? r.InvoiceDate.Year.ToString())
+        .Distinct()
+        .OrderByDescending(y => y)
+        .ToList();
+    var defaultBookYear = ViewBag.DefaultBookyearLabel as string ?? bookYears.FirstOrDefault();
+    var canWriteInvoices = ViewBag.CanWriteInvoices as bool? ?? false;
+    var canDeleteInvoices = ViewBag.CanDeleteInvoices as bool? ?? false;
+    // @section MobileQuickActions blijft onvoorwaardelijk geregistreerd (Razor staat geen @if
+    // eromheen toe) maar rendert leeg zonder schrijfrechten — zie _LayoutV2.cshtml, deze vlag
+    // voorkomt dan een lege groene balk onderaan.
+    ViewData["HasMobileQuickActions"] = canWriteInvoices;
+}
+@functions {
+    // Optie 4e-palet i.p.v. de losse Bootstrap-kleuren die hier stonden: gedempt = neutraal/nog
+    // niets gebeurd, goud = onderweg/in behandeling, primary-groen = afgerond/gelukt, rood =
+    // vereist aandacht — dezelfde vier families als de knoppen/rij-acties elders op deze pagina.
+    // Generating krijgt zijn spin-animatie via .gl-v2-spin (gl-v2-invoices.css): Phosphor levert,
+    // anders dan Boxicons' bx-spin, geen ingebouwde spin-utility-klasse.
+    (string Icon, string Color) StatusIcon(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => ("ph ph-note-pencil", "var(--gl-v2-muted)"),
+        InvoiceStatus.Issued => ("ph ph-list-numbers", "var(--gl-v2-gold)"),
+        InvoiceStatus.Sent => ("ph ph-paper-plane-tilt", "var(--gl-v2-gold)"),
+        // Zelfde glyph als Paid, enkel in goud i.p.v. groen — "gedeeltelijk" leest zo als een
+        // tussenstap naar dezelfde eindstaat, niet als een compleet ander soort status.
+        InvoiceStatus.PartiallyPaid => ("ph ph-check-circle", "var(--gl-v2-gold)"),
+        InvoiceStatus.Paid => ("ph ph-check-circle", "var(--gl-v2-primary)"),
+        InvoiceStatus.Overdue => ("ph ph-warning-circle", "#8B2A2A"),
+        InvoiceStatus.Cancelled => ("ph ph-prohibit", "var(--gl-v2-muted)"),
+        InvoiceStatus.Booked => ("ph ph-book-open", "var(--gl-v2-primary)"),
+        InvoiceStatus.Generating => ("ph ph-spinner-gap gl-v2-spin", "var(--gl-v2-gold)"),
+        _ => ("ph ph-question", "var(--gl-v2-muted)")
+    };
+    string DocumentType(InvoiceStatus status, bool isCreditNote)
+        => status == InvoiceStatus.Draft
+            ? (isCreditNote ? "Proforma creditnota" : "Proforma factuur")
+            : isCreditNote
+                ? "Creditnota"
+                : "Factuur";
+    bool StatusIn(InvoiceStatus status, params InvoiceStatus[] codes)
+    {
+        foreach (var code in codes)
+        {
+            if (status == code)
+                return true;
+        }
+        return false;
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/invoices-custom.css" />
+    <link rel="stylesheet" href="~/css/gl-v2-invoices.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWriteInvoices)
+    {
+        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary js-book-invoices-btn" form="invoice-book-form" disabled>Boeken facturen</button>
+        <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-primary">+ Nieuwe Factuur</a>
+    }
+    @if (canWriteInvoices)
+    {
+        <button type="button" class="gl-v2-icon-btn" id="btnExportExcel" title="Exporteren naar Excel"><i class="ph ph-file-xls" aria-hidden="true"></i></button>
+    }
+    <button type="button" class="gl-v2-icon-btn" id="btnExportPdf" title="Exporteren naar PDF"><i class="ph ph-file-pdf" aria-hidden="true"></i></button>
+}
+@* Optie 3a "SNELACTIES OP DEZE PAGINA" — zelfde twee acties als @@section PageActions hierboven,
+   enkel anders gepresenteerd (grote tegel i.p.v. compacte topbar-knop) voor de mobiele
+   snelactiebalk (_LayoutV2.cshtml, enkel <768px zichtbaar). @@section moet onvoorwaardelijk op
+   het view-toplevel staan (Razor staat geen @@section binnen een @@if toe) — de canWriteInvoices-
+   check verhuisde daarom in de sectie-body zelf. De boek-knop deelt de klasse
+   .js-book-invoices-btn met zijn desktop-tegenhanger (niet hetzelfde id — twee elementen met
+   hetzelfde id is ongeldige HTML en zou de enable/disable-JS maar op één van de twee laten
+   werken); gl-v2-invoices.js schakelt beide via die klasse. *@
+@section MobileQuickActions
+{
+    @if (canWriteInvoices)
+    {
+        <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+            <i class="ph ph-plus" aria-hidden="true"></i>Nieuwe factuur
+        </a>
+        <button type="submit" class="gl-v2-mobile-quickaction js-book-invoices-btn" form="invoice-book-form" disabled>
+            <i class="ph ph-check-square" aria-hidden="true"></i>Boeken
+        </button>
+    }
+}
+
+@if (Model.Any())
+{
+    <div class="gl-v2-toolbar-card">
+        @* Optie 4i — eigen veld-shell i.p.v. Bootstrap's .input-group: zelfde trigger+icoon-taal
+           als de boekjaar-dropdown ernaast (gl-v2-select-trigger), nu voor een tekstveld. Geen
+           .gl-v2-field-label hier — dit is een toolbar-zoekveld, geen formulierveld, een label
+           erboven past niet bij die context. *@
+        <div class="gl-v2-field gl-v2-toolbar-search">
+            <div class="gl-v2-field-box">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoeken ...">
+                <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
+            </div>
+        </div>
+        @* Optie 4h — eigen trigger+paneel i.p.v. een gestyled <select>: een native <select> tekent
+           z'n open lijst buiten CSS-bereik, dus de referentiesheet se paneelstijl (kaart, radius,
+           schaduw, checkmark-rijen) kan daar nooit op landen. BASIS-paneelvariant (geen
+           zoekveld/"nieuw item", zie gl-v2-shell.css) — een korte, vaste jarenlijst heeft dat niet
+           nodig. Op mobiel wordt hetzelfde paneel via CSS (media query) een bottom sheet i.p.v. een
+           zwevend paneel; de sheet-header/backdrop hieronder bestaan enkel daarvoor. *@
+        <div class="gl-v2-select" style="width:210px;flex:none" id="bookyear-select">
+            <button type="button" class="gl-v2-select-trigger @(string.IsNullOrEmpty(defaultBookYear) ? "" : "is-filled")" id="bookyear-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="bookyear-select-panel">
+                <i class="ph ph-calendar" aria-hidden="true"></i>
+                <span class="gl-v2-select-trigger-label" id="bookyear-select-label">@(string.IsNullOrEmpty(defaultBookYear) ? "Alle boekjaren" : defaultBookYear)</span>
+                <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-select-backdrop" id="bookyear-select-backdrop"></div>
+            <div class="gl-v2-select-panel" id="bookyear-select-panel" role="listbox" aria-labelledby="bookyear-select-trigger">
+                <div class="gl-v2-select-sheet-header">
+                    <span class="gl-v2-select-sheet-title">Boekjaar</span>
+                    <button type="button" class="gl-v2-select-sheet-close" id="bookyear-select-close">Sluiten</button>
+                </div>
+                <div class="gl-v2-select-options">
+                    <button type="button" class="gl-v2-select-option @(string.IsNullOrEmpty(defaultBookYear) ? "is-selected" : "")" role="option" data-value="" data-label="Alle boekjaren">
+                        <i class="ph ph-check" aria-hidden="true"></i>
+                        <span>Alle boekjaren</span>
+                    </button>
+                    @foreach (var bookYear in bookYears)
+                    {
+                        <button type="button" class="gl-v2-select-option @(bookYear == defaultBookYear ? "is-selected" : "")" role="option" data-value="@bookYear" data-label="@bookYear">
+                            <i class="ph ph-check" aria-hidden="true"></i>
+                            <span>@bookYear</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-table-card">
+        @* Optie 4f "LADEN" — zichtbaar vanaf de allereerste paint (geen JS nodig om 'm te tonen,
+           enkel om 'm weer te verbergen via .is-ready op .gl-v2-table-card, zie gl-v2-invoices.js)
+           i.p.v. de rauwe, nog-niet-gepagineerde tabel (alle @Model.Count() rijen) heel even te
+           laten flitsen voor DataTables initialiseert. Vaste 6 placeholder-rijen, geen poging om
+           dit exact het straks-berekende aantal rijen te laten zijn — het staat toch maar een
+           fractie van een seconde. Kolommen zijn de ECHTE 11 kolommen van de tabel hieronder
+           (zelfde grid als optie 4a in het voorbeelddocument, dat exact deze kolomset beschrijft),
+           niet de wireframe's eigen vereenvoudigde 4-koloms LADEN-demo. *@
+        <div class="gl-v2-loading-skeleton" aria-hidden="true">
+            <div class="gl-v2-skeleton-header">
+                <span></span><span>Type</span><span>Factuurnr</span><span>Datum</span><span>Klant</span>
+                <span>Totaal</span><span>Excl. BTW</span><span>Status</span><span>Project</span><span>Verzendwijze</span><span>Acties</span>
+            </div>
+            @for (var i = 0; i < 6; i++)
+            {
+                <div class="gl-v2-skeleton-row">
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-check"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:80%"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:75%"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:@(55 + i * 6)%"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%;margin-left:auto"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%;margin-left:auto"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-pill" style="margin:0 auto"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:80%"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:65%"></span>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:60%;margin-left:auto"></span>
+                </div>
+            }
+            <div class="gl-v2-skeleton-footer"><i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i> Facturen laden…</div>
+        </div>
+        <div class="datatables-header-footer-wrapper">
+            <form asp-action="BookInvoices" method="post" id="invoice-book-form" class="js-invoice-processing-form" data-processing-message="Facturen worden geboekt...">
+                <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
+                <div class="table-responsive-md">
+                    <table class="table table-hover mb-0 w-100 gl-dt-invoice" id="datatable-invoice-list">
+                        <thead>
+                            <tr>
+                                <th class="gl-col-fit text-center">Boeken</th>
+                                <th class="gl-col-fit">Type</th>
+                                <th class="gl-col-fit">Factuurnr</th>
+                                <th class="gl-col-fit">Datum</th>
+                                <th class="gl-col-grow">Klant</th>
+                                <th class="gl-col-fit text-end">Totaal</th>
+                                <th class="gl-col-fit text-end">Excl.&nbsp;BTW</th>
+                                <th class="gl-col-fit">Status</th>
+                                <th class="gl-col-fit">Project</th>
+                                <th class="gl-col-fit">Verzendwijze</th>
+                                <th class="gl-col-fit text-end">Acties</th>
+                                <th class="d-none">Boekjaar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var r in Model)
+                        {
+                            var isDraft = StatusIn(r.Status, InvoiceStatus.Draft);
+                            var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
+                            var shownId = isDraft ? string.Empty : displayId;
+                            var typeLabel = DocumentType(r.Status, r.IsCreditNote);
+                            var statusDisplay = StatusIcon(r.Status);
+                            var isBooked = r.OctopusBookedAt.HasValue || r.Status == InvoiceStatus.Booked;
+                            var isBookable = r.OctopusDocumentSequenceNr.HasValue
+                                && r.OctopusBookyearId.HasValue
+                                && !string.IsNullOrWhiteSpace(r.OctopusJournalKey)
+                                && r.Status != InvoiceStatus.Generating;
+
+                            <tr>
+                                <td class="gl-col-fit text-center">
+                                    <div class="checkbox-custom checkbox-default">
+                                        <input type="checkbox"
+                                               id="cbBook_@r.Id"
+                                               class="form-check-input invoice-book-checkbox"
+                                               name="invoiceIds"
+                                               value="@r.Id"
+                                               data-seq="@r.OctopusDocumentSequenceNr"
+                                               data-booked="@(isBooked.ToString().ToLowerInvariant())"
+                                               data-bookable="@(isBookable.ToString().ToLowerInvariant())"
+                                               @((!canWriteInvoices || !isBookable || isBooked) ? "disabled" : null)
+                                               @(isBooked ? "checked" : null) />
+                                        <label for="cbBook_@r.Id"></label>
+                                    </div>
+                                </td>
+                                <td class="gl-col-fit">@typeLabel</td>
+
+                                <td class="gl-col-fit" data-order="@r.InvoiceSortValue">
+                                    @(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))
+                                </td>
+
+                                <td class="gl-col-fit text-nowrap">@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
+
+                                <td class="gl-col-grow gl-td-ellipsis" title="@r.ClientName">@r.ClientName</td>
+
+                                <td class="gl-col-fit text-end text-nowrap">
+                                    @(r.GrossTotal.HasValue ? r.GrossTotal.Value.ToString("C", culture) : "-")
+                                </td>
+
+                                <td class="gl-col-fit text-end text-nowrap">
+                                    @(r.NetTotal.HasValue ? r.NetTotal.Value.ToString("C", culture) : "-")
+                                </td>
+
+                                <td class="gl-col-fit gl-status-col" data-order="@r.StatusLabel">
+                                    <span class="status-icon gl-color-dynamic" style="--gl-status-color:@statusDisplay.Color" data-bs-toggle="tooltip" data-bs-placement="top" title="@r.StatusLabel">
+                                        <i class="@statusDisplay.Icon" aria-hidden="true"></i>
+                                    </span>
+                                    @if (r.DigitallySent)
+                                    {
+                                        <span class="status-icon gl-color-dynamic" style="--gl-status-color:var(--gl-v2-accent-sage)" data-bs-toggle="tooltip" data-bs-placement="top" title="Verzonden via peppol">
+                                            <i class="ph ph-planet" aria-hidden="true"></i>
+                                        </span>
+                                    }
+                                </td>
+
+                                <td class="gl-col-fit gl-td-ellipsis" title="@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)">
+                                    @(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)
+                                </td>
+
+                                <td class="gl-col-fit text-nowrap">@r.SendMethod</td>
+
+                                <td class="gl-col-fit actions">
+                                    @* Optie 4e "TABEL — RIJSTATEN EN ACTIES IN DE RIJ": drie families i.p.v. alle
+                                       iconen gelijk — bewerken (primair, gevuld) en verwijderen (danger, rood) zijn de
+                                       enige twee acties met écht gevolg (wijzigt/verwijdert de factuur), de rest blijft
+                                       neutraal.
+                                       Optie 4f "TABLET — ···-MENU IN DE RIJ": op tablet-breedte verdwijnt deze rij
+                                       iconen en wordt dezelfde div (id + .gl-v2-row-menu) een zwevend paneel achter een
+                                       "···"-knop — geen dubbele markup, enkel CSS/JS die 'm herbruikt/herpositioneert
+                                       (zie gl-v2-shell.js' rail-flyouts voor hetzelfde trigger+JS-gepositioneerd-paneel-
+                                       patroon). Elke link krijgt nu een label-span (gl-v2-row-action-label — eigen
+                                       verberg-klasse i.p.v. Bootstrap's !important-zware .visually-hidden, die had ik
+                                       anders niet meer kunnen overschrijven om 'm in het menu zichtbaar te maken) zodat
+                                       het menu overal een leesbare rij toont, niet enkel bij de acties die al een
+                                       screenreader-label hadden. *@
+                                    <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="row-menu-@r.Id" aria-label="Meer acties">
+                                        <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="gl-v2-row-menu" id="row-menu-@r.Id">
+                                    @if (canWriteInvoices)
+                                    {
+                                        <a class="gl-v2-row-action" data-placement="top" title="Dupliceren" data-original-title="Dupliceren"
+                                           asp-action="Create" asp-route-issuerId="@ViewBag.CompanyId" asp-route-duplicateInvoiceId="@r.Id">
+                                            <i class="ph ph-copy" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Dupliceren</span>
+                                        </a>
+                                    }
+                                    @if (StatusIn(r.Status, InvoiceStatus.Draft))
+                                    {
+                                        @if (canWriteInvoices)
+                                        {
+                                            <a class="gl-v2-row-action gl-v2-row-action-primary" data-placement="top" title="Bewerken" data-original-title="Bewerken"
+                                               asp-action="Edit" asp-route-id="@r.Id" asp-route-returnUrl="@returnUrl">
+                                                <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Bewerken</span>
+                                            </a>
+                                        }
+                                        <a class="gl-v2-row-action" data-placement="top" title="Details" data-original-title="Details"
+                                           asp-action="Detail" asp-route-id="@r.Id" asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                            <i class="ph ph-eye" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Details</span>
+                                        </a>
+                                        <a class="gl-v2-row-action" data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                           asp-action="Pdf" asp-route-id="@r.Id" target="_blank">
+                                            <i class="ph ph-file-pdf" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">PDF Export</span>
+                                        </a>
+                                        @if (r.ShowPrintButton)
+                                        {
+                                            <a class="gl-v2-row-action" data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                               asp-action="Pdf" asp-route-id="@r.Id" target="_blank">
+                                                <i class="ph ph-printer" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Afdrukken</span>
+                                            </a>
+                                        }
+                                        @if (canWriteInvoices)
+                                        {
+                                            <a class="gl-v2-row-action js-issue-invoice" data-placement="top" title="Nummeren" data-original-title="Nummeren"
+                                               asp-action="Issue" asp-route-id="@r.Id" asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                               data-processing-message="Factuur wordt genummerd...">
+                                                <i class="ph ph-lock" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Nummeren</span>
+                                            </a>
+                                        }
+                                        @if (canDeleteInvoices)
+                                        {
+                                            <div class="gl-v2-row-menu-divider" aria-hidden="true"></div>
+                                            <a href="#ModalDeleteInvoice" class="gl-v2-row-action gl-v2-row-action-danger deleteInvoice" data-id="@r.Id" data-issuer="@ViewBag.CompanyId"
+                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                <i class="ph ph-trash" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Verwijderen</span>
+                                            </a>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <a class="gl-v2-row-action" data-placement="top" title="Details" data-original-title="Details"
+                                           asp-action="Detail" asp-route-id="@r.Id" asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                            <i class="ph ph-eye" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Details</span>
+                                        </a>
+                                        <a class="gl-v2-row-action" data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                           asp-action="Pdf" asp-route-id="@r.Id" target="_blank">
+                                            <i class="ph ph-file-pdf" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">PDF Export</span>
+                                        </a>
+                                        @if (r.ShowPrintButton)
+                                        {
+                                            <a class="gl-v2-row-action" data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                               asp-action="Pdf" asp-route-id="@r.Id" target="_blank">
+                                                <i class="ph ph-printer" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Afdrukken</span>
+                                            </a>
+                                        }
+                                        @if (canWriteInvoices && StatusIn(r.Status, InvoiceStatus.Issued))
+                                        {
+                                            <a class="gl-v2-row-action gl-v2-row-action-primary" data-placement="top" title="Beperkt bewerken" data-original-title="Bewerken"
+                                               asp-action="Edit" asp-route-id="@r.Id" asp-route-issuerCompanyId="@ViewBag.CompanyId" asp-route-returnUrl="@returnUrl">
+                                                <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Bewerken</span>
+                                            </a>
+                                        }
+                                        @if (canWriteInvoices && !StatusIn(r.Status, InvoiceStatus.Generating))
+                                        {
+                                            <a class="gl-v2-row-action" data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                               asp-action="Send" asp-route-id="@r.Id" asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Verzenden</span>
+                                            </a>
+                                        }
+                                        @if (canDeleteInvoices)
+                                        {
+                                            <div class="gl-v2-row-menu-divider" aria-hidden="true"></div>
+                                            <a href="#ModalDeleteInvoice" class="gl-v2-row-action gl-v2-row-action-danger deleteInvoice" data-id="@r.Id" data-issuer="@ViewBag.CompanyId"
+                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                <i class="ph ph-trash" aria-hidden="true"></i>
+                                                <span class="gl-v2-row-action-label">Verwijderen</span>
+                                            </a>
+                                        }
+                                    }
+                                    </div>
+                                </td>
+
+                                <td class="d-none">@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                @* Optie 4c "Mobiel — facturen als kaarten": twee eerdere pogingen om de 11 kolommen
+                   hierboven via CSS (grid-template-areas, dan flex+order op de <tr>'s) naar een kaart te
+                   reflowen liepen alletwee vast op tabel-specifieke gedragingen (CSS Grid-kolomberekening,
+                   Bootstrap's tabelrand/-achtergrond die bleef doorschijnen). Dit is nu echt gescheiden
+                   markup — gevuld/actueel gehouden door gl-v2-invoices.js' renderMobileCards(), die op elke
+                   DataTable-"draw" (init, zoeken, sorteren, pagineren) de dan zichtbare <tr>'s van de tabel
+                   hierboven uitleest en er hier kaarten van bouwt. Checkbox en "···"-acties blijven zo hun
+                   ÉÉN echte exemplaar (in de nu <768px onzichtbare tabelrij): de kaart toont een PROXY-
+                   checkbox (stuurt een klik door naar de echte, geen dubbele name="invoiceIds") en een
+                   GEKLOONDE kopie van het bestaande acties-paneel (bestaande gedelegeerde click-handlers op
+                   $(document) — .deleteInvoice, .js-issue-invoice — matchen op klasse, niet op het
+                   originele element, dus werken ook op de kloon). Zie renderMobileCards() voor de opbouw. *@
+                <div class="gl-v2-mobile-invoice-list" id="gl-v2-mobile-invoice-list"></div>
+                @* Optie 4j type 3 — de acties-"···"-paneel wordt op mobiel (<768px) een sheet onderaan het
+                   scherm met een scrim erachter, i.p.v. het zwevende paneel op tablet/desktop. Eén gedeelde
+                   backdrop i.p.v. één per kaart: er is nooit meer dan één paneel tegelijk open. *@
+                <div class="gl-v2-row-menu-backdrop" id="gl-v2-row-menu-backdrop"></div>
+                @* Optie 4e "3 facturen geselecteerd / Boeken / Verzenden / Verwijderen" — hier enkel
+                   Boeken: dat is de enige van de drie die vandaag een echte bulk-actie is (de
+                   bestaande boeken-checkboxes/-form hierboven). Verzenden en verwijderen bestaan
+                   in deze app enkel als per-rij-actie, geen bulk-endpoint — die twee knoppen dus
+                   niet meenemen i.p.v. te doen alsof ze iets doen. Zelfde .js-book-invoices-btn-
+                   klasse als de topbar-knop/mobiele tegel: gl-v2-invoices.js schakelt alle drie
+                   samen in/uit, geen aparte JS nodig voor deze derde. *@
+                <div class="gl-v2-selection-toolbar" id="gl-v2-selection-toolbar" hidden>
+                    <span class="gl-v2-selection-toolbar-count" id="gl-v2-selection-toolbar-count"></span>
+                    <span class="gl-v2-selection-toolbar-spacer"></span>
+                    <button type="submit" class="gl-v2-selection-toolbar-btn js-book-invoices-btn" disabled>Boeken</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    @* Optie 4f "LEGE STAAT" — dit is de server-side variant (Model bevat écht nul facturen); de
+       client-side variant (filters/zoekterm laten nul resultaten zien terwijl er wél facturen
+       bestaan, met "Filters wissen") zit in DataTable.language.zeroRecords, zie gl-v2-invoices.js.
+       Geen "Filters wissen"-knop hier: er is niets gefilterd, dit bedrijf heeft gewoon nog geen
+       facturen. *@
+    <div class="gl-v2-table-card">
+        <div class="gl-v2-empty-state">
+            <span class="gl-v2-empty-state-icon"><i class="ph ph-file" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-empty-state-title">Geen facturen gevonden</h2>
+            <p class="gl-v2-empty-state-desc">Er zijn nog geen facturen aangemaakt voor dit bedrijf.</p>
+            @if (canWriteInvoices)
+            {
+                <div class="gl-v2-empty-state-actions">
+                    <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-primary">+ Nieuwe factuur</a>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<div id="ModalDeleteInvoice" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-invoice-container"></div>
+</div>
+
+<div class="modal fade" id="issueInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Factuur nummeren</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Ben je zeker dat je deze factuur wil nummeren? Nadien kunnen er geen wijzigingen meer aangebracht worden aan de factuur.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="confirmIssueInvoice">Nummeren</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="invoiceProcessingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                <p class="mb-0 fw-semibold" id="invoiceProcessingMessage">Factuur wordt verwerkt...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    @* Server-bepaalde waarden die het externe scriptbestand nodig heeft — een .js-bestand kan
+       geen @@Url.Action/Razor-variabelen bevatten, dus die twee waarden worden hier resolved en
+       als klein config-object meegegeven i.p.v. de hele scriptlogica inline te houden. *@
+    <script>
+        window.glV2InvoicesConfig = {
+            deleteUrl: '@Url.Action("ModalDelete", "Invoices")',
+            defaultBookyear: '@defaultBookYear',
+            createUrl: '@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })',
+            canWrite: @Html.Raw(canWriteInvoices ? "true" : "false")
+        };
+    </script>
+    <script src="~/js/gl-v2-invoices.js" asp-append-version="true"></script>
+}

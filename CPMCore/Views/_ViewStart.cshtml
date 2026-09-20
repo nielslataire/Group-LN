@@ -1,3 +1,7 @@
 ﻿@{
-    Layout = "_Layout";
+    // gl-v2 layout-pilot: per-sessie cookie-toggle (BaseController.OnActionExecuting zet
+    // ViewData["UseGlV2Layout"]) i.p.v. een tweede route/Area — zie design-handoff/. Onbezet
+    // (het overgrote merendeel van de requests) valt dit terug op exact de oude, onvoorwaardelijke
+    // toewijzing.
+    Layout = ViewData["UseGlV2Layout"] as bool? == true ? "_LayoutV2" : "_Layout";
 }

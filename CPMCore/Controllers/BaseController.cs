@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using SuperSimpleBreadcrumbs.Attributes;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,23 @@ namespace CPMCore.Controllers
     [BreadcrumbActionFilter]
     public class BaseController : Controller
     {
+        public const string GlV2PreviewCookie = "gl_v2_preview";
+
+        /// <summary>
+        /// gl-v2 layout-pilot (design-handoff/): zet ViewData["UseGlV2Layout"] wanneer de
+        /// preview-cookie aanwezig is, zodat Views/_ViewStart.cshtml naar _LayoutV2 schakelt.
+        /// Zonder cookie (elke gebruiker die de pilot niet expliciet aanzette via
+        /// LayoutPreviewController) is dit een no-op en blijft alles exact zoals vandaag.
+        /// </summary>
+        public override void OnActionExecuting(ActionExecutingContext context)
+        {
+            base.OnActionExecuting(context);
+            if (Request.Cookies[GlV2PreviewCookie] == "1")
+            {
+                ViewData["UseGlV2Layout"] = true;
+            }
+        }
+
         public void AddMessage(string messagetype, string message, string messagetitle)
         {
             TempData["Message"] = message;

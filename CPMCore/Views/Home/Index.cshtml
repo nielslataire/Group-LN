@@ -9,6 +9,12 @@
         or CPMCore.Models.DashboardType.Boekhouding
         or CPMCore.Models.DashboardType.Ontwikkelaar
         or CPMCore.Models.DashboardType.Verkoper;
+    var isProjectleiderDashboard = Model.DashboardType == CPMCore.Models.DashboardType.Projectleider;
+    // Enkel het Projectleider-dashboard heeft vandaag mobiele snelacties (geport van de bestaande
+    // .gl-mob-nav in _DashboardProjectleider.cshtml, zie daar) — @section moet onvoorwaardelijk op
+    // view-toplevel staan (geen @if eromheen), dus deze vlag voorkomt dat de andere dashboardtypes
+    // een lege groene balk krijgen (zie _LayoutV2.cshtml).
+    ViewData["HasMobileQuickActions"] = isProjectleiderDashboard;
 }
 
 @section PageStyle
@@ -56,6 +62,37 @@ else
         })();
     </script>
 }
+}
+@section MobileQuickActions
+{
+    @if (isProjectleiderDashboard)
+    {
+        @* Geport van de bestaande .gl-mob-nav in _DashboardProjectleider.cshtml (Punt/Leverancier
+           zoeken/Klant zoeken — de 3 die daar al stonden) + de 2 overige echte Snelacties-kaart-
+           acties zonder werf-context (Project vastzetten, Leverancier toevoegen). De 5 project-
+           gebonden Snelacties (Contract, Inkomende factuur, Wijzigingsopdracht, Nacalculatie,
+           Document uploaden) blijven bewust buiten deze balk: die hebben elk een eigen
+           project-kies-sheet nodig zoals "Punt" al heeft, en dat is nog niet gebouwd. Met 5 tegels
+           knipt gl-v2-shell.js dit automatisch af na 4 + een "Meer"-tegel (optie 6b) — de 5de
+           (Leverancier toevoegen) is dus de eerste die in de sheet belandt.
+           Dezelfde #gl-v2-qa-*-id's zijn met opzet toegevoegd aan de bestaande jQuery-selectors in
+           _DashboardProjectleider.cshtml (geen nieuwe JS hier) — zie de "Delegatie" comments daar. *@
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-punt">
+            <i class="ph ph-warning-circle" aria-hidden="true"></i>Punt
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-lev-search">
+            <i class="ph ph-hard-hat" aria-hidden="true"></i>Leverancier
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-klant-search">
+            <i class="ph ph-users" aria-hidden="true"></i>Klant
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-pin">
+            <i class="ph ph-push-pin" aria-hidden="true"></i>Vastzetten
+        </button>
+        <a href="@Url.Action("Create", "Leveranciers")" class="gl-v2-mobile-quickaction" data-subtitle="Nieuw contact aanmaken">
+            <i class="ph ph-user-plus" aria-hidden="true"></i>Nieuwe leverancier
+        </a>
+    }
 }
 @if (Model.DashboardType == CPMCore.Models.DashboardType.Projectleider)
 {

@@ -1,0 +1,407 @@
+@using CPMCore.Helpers
+@using FacadeCore
+@using BOCore;
+@using System.Collections.Generic
+@using System.Linq
+@inject IIssuerCompanyService IssuerCompanyService
+@inject IPermissionService PermissionService
+@{
+    // gl-v2 layout-pilot (design-handoff/, optie 2a/2b). Dupliceert bewust de top-level
+    // PermissionService.HasRead(...)-checks uit _LeftSidebarPartial.cshtml i.p.v. een gedeelde
+    // IMenuService te bouwen — dat bestaat vandaag niet, en een pilot voor één scherm is niet de
+    // plek om die service uit te vinden (zie de plan-notitie in design-handoff/). Bij adoptie:
+    // eerst een gedeelde service uittrekken zodat dit en _LeftSidebarPartial.cshtml niet meer
+    // los van elkaar kunnen uitzakken.
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var issuerCompanies = (await IssuerCompanyService.GetAllAsync())
+        .OrderBy(i => i.Name)
+        .ToList();
+    var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
+    await PermissionService.EnsureLoadedAsync();
+    var canSeeKlanten = PermissionService.HasRead(PermissionCodes.Customers);
+    var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.Suppliers);
+    var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.Invoicing);
+    var canSeeDocumentenCentrum = PermissionService.HasRead(PermissionCodes.DocumentCenter) ||
+                                  PermissionService.HasRead(PermissionCodes.DocumentCenterByBillingCompany);
+    var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
+    var settingsPrefix = PermissionCodes.Settings + ".";
+    var canSeeInstellingen = PermissionService.EffectivePermissions.Any(kv =>
+        kv.Key.StartsWith(settingsPrefix, StringComparison.OrdinalIgnoreCase) && kv.Value.Read);
+    var canSeeMarktanalyse = PermissionService.HasRead(PermissionCodes.Marktanalyse);
+
+    var customerIssuerCompanyIds = new HashSet<int>();
+    foreach (var entry in PermissionService.EffectivePermissions)
+    {
+        var code = entry.Key ?? string.Empty;
+        if (!code.StartsWith("Customers.Company.", StringComparison.OrdinalIgnoreCase)) continue;
+        if (!entry.Value.Read) continue;
+        if (int.TryParse(code["Customers.Company.".Length..], out var companyId)) customerIssuerCompanyIds.Add(companyId);
+    }
+    if (!canSeeKlanten && customerIssuerCompanyIds.Any()) canSeeKlanten = true;
+    if (canSeeKlanten && customerIssuerCompanyIds.Count == 0) customerIssuerCompanyIds = issuerCompanies.Select(i => i.Id).ToHashSet();
+    var customerIssuerCompanies = issuerCompanies.Where(i => customerIssuerCompanyIds.Contains(i.Id)).ToList();
+
+    var supplierIssuerCompanyIds = new HashSet<int>();
+    foreach (var entry in PermissionService.EffectivePermissions)
+    {
+        var code = entry.Key ?? string.Empty;
+        if (!code.StartsWith("Suppliers.Company.", StringComparison.OrdinalIgnoreCase)) continue;
+        if (!entry.Value.Read) continue;
+        if (int.TryParse(code["Suppliers.Company.".Length..], out var companyId)) supplierIssuerCompanyIds.Add(companyId);
+    }
+    if (!canSeeLeveranciers && supplierIssuerCompanyIds.Any()) canSeeLeveranciers = true;
+    if (canSeeLeveranciers && supplierIssuerCompanyIds.Count == 0) supplierIssuerCompanyIds = issuerCompanies.Select(i => i.Id).ToHashSet();
+    var supplierIssuerCompanies = issuerCompanies.Where(i => supplierIssuerCompanyIds.Contains(i.Id)).ToList();
+    canSeeLeveranciers = canSeeLeveranciers && supplierIssuerCompanies.Any();
+
+    var invoicingIssuerCompanyIds = new HashSet<int>();
+    foreach (var entry in PermissionService.EffectivePermissions)
+    {
+        var code = entry.Key ?? string.Empty;
+        if (!code.StartsWith("InvoicingByBillingCompany.Company.", StringComparison.OrdinalIgnoreCase)) continue;
+        if (!entry.Value.Read) continue;
+        if (int.TryParse(code["InvoicingByBillingCompany.Company.".Length..], out var companyId)) invoicingIssuerCompanyIds.Add(companyId);
+    }
+    if (!canSeeBoekhouding && invoicingIssuerCompanyIds.Any()) canSeeBoekhouding = true;
+    if (canSeeBoekhouding && invoicingIssuerCompanyIds.Count == 0) invoicingIssuerCompanyIds = issuerCompanies.Select(i => i.Id).ToHashSet();
+    var invoicingIssuerCompanies = issuerCompanies.Where(i => invoicingIssuerCompanyIds.Contains(i.Id) && !i.IsExternalCoordinationDefault).ToList();
+    canSeeBoekhouding = canSeeBoekhouding && invoicingIssuerCompanies.Any();
+
+    bool IsActive(params string[] controllers) => controllers.Any(c => string.Equals(currentController, c, StringComparison.OrdinalIgnoreCase));
+
+    // Voor het mobiele paneel-voetertje (optie 3b) — zelfde CpmDisplayName/-Email-helpers als
+    // _LayoutV2.cshtml; kleine duplicatie i.p.v. het via een parameter door te geven, zelfde
+    // "niet over-engineeren voor een pilot"-afweging als de permissiechecks hierboven.
+    var mobileUserDisplayName = User.GetCpmDisplayName() ?? string.Empty;
+    var mobileUserEmail = User.GetCpmEmail() ?? string.Empty;
+    var mobileUserInitials = string.Join(
+        string.Empty,
+        mobileUserDisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(p => char.ToUpperInvariant(p[0])).Take(2));
+    if (string.IsNullOrWhiteSpace(mobileUserInitials)) mobileUserInitials = "?";
+
+    // design-handoff 5b: de "BCO" die gemarkeerd staat in de open Facturen-flyout — welk
+    // issuerCompanyId er actief staat, wordt herbruikt om .is-current te zetten op Leveranciers/
+    // Klanten/Facturatie's eigen bedrijfslinks (elk van de drie gebruikt hetzelfde queryparameter-
+    // patroon, dus één waarde volstaat).
+    int? currentIssuerCompanyId = int.TryParse(Context.Request.Query["issuerCompanyId"], out var qid) ? qid : null;
+}
+@* Triggers en flyout-panels bewust in TWEE aparte boomstructuren (nav hierboven, .gl-v2-flyouts
+   erna) i.p.v. elke flyout binnen zijn eigen trigger-<li> te nesten — .gl-v2-rail staat op
+   position:sticky, en sticky creëert altijd een eigen stacking context. Een position:fixed
+   flyout die daar een NAKOMELING van is blijft in die stacking context gevangen: hij tekent
+   zich dan nog steeds bovenop de rest van .gl-v2-rail, maar niet meer noodzakelijk boven content
+   buiten die context (bv. de body-kaart/tabel) — precies het "komt niet altijd boven alles"
+   symptoom. Door de flyouts als sibling van .gl-v2-rail te renderen (beide rechtstreeks in
+   .gl-v2-app) ontsnappen ze aan die val; JS koppelt ze nog steeds puur op id/data-flyout. *@
+<nav class="gl-v2-rail" aria-label="Hoofdnavigatie">
+    <a class="gl-v2-rail-logo" href="@Url.Action("Index", "Home")" aria-label="CPM Dashboard">LN</a>
+    <div class="gl-v2-rail-divider"></div>
+
+    <a class="gl-v2-rail-item @(IsActive("Home") ? "is-active" : "")" href="@Url.Action("Index", "Home")" aria-label="Dashboard">
+        <i class="ph ph-house" aria-hidden="true"></i>
+        <span class="gl-v2-rail-tooltip">Dashboard</span>
+    </a>
+
+    @if (PermissionService.HasRead(PermissionCodes.MijnTaken))
+    {
+        <a class="gl-v2-rail-item @(IsActive("MijnTaken") ? "is-active" : "")" href="@Url.Action("Index", "MijnTaken")" aria-label="Mijn taken">
+            <i class="ph ph-list-checks" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Mijn taken</span>
+        </a>
+    }
+
+    @if (PermissionService.HasRead(PermissionCodes.PortfolioDeadlines))
+    {
+        <a class="gl-v2-rail-item @(IsActive("Deadlines") ? "is-active" : "")" href="@Url.Action("Index", "Deadlines")" aria-label="Deadlines">
+            <i class="ph ph-calendar-check" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Deadlines</span>
+        </a>
+    }
+
+    @if (canSeeLeveranciers)
+    {
+        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Leveranciers") ? "is-active" : "")"
+                aria-haspopup="true" aria-expanded="false" aria-label="Leveranciers" data-flyout="fly-leveranciers">
+            <i class="ph ph-hard-hat" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Leveranciers</span>
+        </button>
+    }
+
+    @if (canSeeKlanten)
+    {
+        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Klanten") ? "is-active" : "")"
+                aria-haspopup="true" aria-expanded="false" aria-label="Klanten" data-flyout="fly-klanten">
+            <i class="ph ph-users" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Klanten</span>
+        </button>
+    }
+
+    @if (canSeeProjects)
+    {
+        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Projecten" data-flyout="fly-projecten">
+            <i class="ph ph-buildings" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Projecten</span>
+        </button>
+    }
+
+    @if (canSeeBoekhouding)
+    {
+        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Invoices") ? "is-active" : "")"
+                aria-haspopup="true" aria-expanded="false" aria-label="Facturatie" data-flyout="fly-facturatie">
+            <i class="ph ph-receipt" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Facturatie</span>
+        </button>
+    }
+
+    @if (canSeeDocumentenCentrum)
+    {
+        <a class="gl-v2-rail-item @(IsActive("DocumentenCentrum") ? "is-active" : "")" href="@Url.Action("Index", "DocumentenCentrum")" aria-label="Documentencentrum">
+            <i class="ph ph-tray" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Documentencentrum</span>
+        </a>
+    }
+
+    @if (canSeeInstellingen)
+    {
+        <a class="gl-v2-rail-item @(IsActive("Instellingen", "IssueNotificationAdmin", "BlogBeheer", "HomeHeroProject", "VacatureBeheer", "CookieConsentStats") ? "is-active" : "")"
+           href="@Url.Action("Index", "Instellingen")" aria-label="Instellingen">
+            <i class="ph ph-gear" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Instellingen</span>
+        </a>
+    }
+
+    @if (canSeeMarktanalyse)
+    {
+        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Marktanalyse") ? "is-active" : "")"
+                aria-haspopup="true" aria-expanded="false" aria-label="Marktanalyse" data-flyout="fly-markt">
+            <i class="ph ph-chart-line" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Marktanalyse</span>
+        </button>
+    }
+
+    <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Links" data-flyout="fly-links">
+        <i class="ph ph-link" aria-hidden="true"></i>
+        <span class="gl-v2-rail-tooltip">Links</span>
+    </button>
+
+    <span class="gl-v2-rail-spacer"></span>
+</nav>
+
+<div class="gl-v2-flyouts">
+    @if (canSeeLeveranciers)
+    {
+        <div class="gl-v2-flyout" id="fly-leveranciers" role="menu">
+            <div class="gl-v2-flyout-title">Leveranciers</div>
+            <a class="gl-v2-flyout-link" href="@Url.Action("Index", "Leveranciers")" role="menuitem">Alle leveranciers</a>
+            @foreach (var issuer in supplierIssuerCompanies)
+            {
+                var isCurrent = IsActive("Leveranciers") && currentIssuerCompanyId == issuer.Id;
+                <a class="gl-v2-flyout-link @(isCurrent ? "is-current" : "")" href="@Url.Action("Index", "Leveranciers", new { issuerCompanyId = issuer.Id })" role="menuitem">@issuer.Name</a>
+            }
+        </div>
+    }
+
+    @if (canSeeKlanten)
+    {
+        <div class="gl-v2-flyout" id="fly-klanten" role="menu">
+            <div class="gl-v2-flyout-title">Klanten</div>
+            <a class="gl-v2-flyout-link" href="@Url.Action("Index", "Klanten")" role="menuitem">Alle klanten</a>
+            @foreach (var issuer in customerIssuerCompanies)
+            {
+                var isCurrent = IsActive("Klanten") && currentIssuerCompanyId == issuer.Id;
+                <a class="gl-v2-flyout-link @(isCurrent ? "is-current" : "")" href="@Url.Action("Index", "Klanten", new { issuerCompanyId = issuer.Id })" role="menuitem">@issuer.Name</a>
+            }
+        </div>
+    }
+
+    @if (canSeeProjects)
+    {
+        <div class="gl-v2-flyout" id="fly-projecten" role="menu">
+            <div class="gl-v2-flyout-title">Projecten</div>
+            <a class="gl-v2-flyout-link" href="@Url.Action("ProjectsByUserId", "Projecten", new { UserId = currentUserCode })" role="menuitem">Mijn Projecten</a>
+            <a class="gl-v2-flyout-link" href="@Url.Action("Index", "Projecten")" role="menuitem">Alle projecten</a>
+            <a class="gl-v2-flyout-link" href="@Url.Action("Weather", "Projecten")" role="menuitem">Weerverlet</a>
+        </div>
+    }
+
+    @if (canSeeBoekhouding)
+    {
+        <div class="gl-v2-flyout" id="fly-facturatie" role="menu">
+            <div class="gl-v2-flyout-title">Facturatie</div>
+            @foreach (var issuer in invoicingIssuerCompanies)
+            {
+                var isCurrent = IsActive("Invoices") && currentIssuerCompanyId == issuer.Id;
+                <a class="gl-v2-flyout-link @(isCurrent ? "is-current" : "")" href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuer.Id })" role="menuitem">@issuer.Name</a>
+            }
+        </div>
+    }
+
+    @if (canSeeMarktanalyse)
+    {
+        <div class="gl-v2-flyout" id="fly-markt" role="menu">
+            <div class="gl-v2-flyout-title">Marktanalyse</div>
+            <a class="gl-v2-flyout-link" href="@Url.Action("Gemeenteanalyse", "Marktanalyse")" role="menuitem">Gemeenteanalyse</a>
+            <a class="gl-v2-flyout-link" href="@Url.Action("VergelijkbarePanden", "Marktanalyse")" role="menuitem">Vergelijkbare panden</a>
+            <a class="gl-v2-flyout-link" href="@Url.Action("Projectdetail", "Marktanalyse")" role="menuitem">Projectdetail</a>
+        </div>
+    }
+
+    <div class="gl-v2-flyout" id="fly-links" role="menu">
+        <div class="gl-v2-flyout-title">Links</div>
+        <a class="gl-v2-flyout-link" href="https://www.groupln.be" target="_blank" rel="noopener" role="menuitem">Website Group LN</a>
+        <a class="gl-v2-flyout-link" href="https://www.bouwenconstructie.be" target="_blank" rel="noopener" role="menuitem">Website BCO</a>
+        <a class="gl-v2-flyout-link" href="https://www.home-estate.be" target="_blank" rel="noopener" role="menuitem">Website Home-Estate</a>
+    </div>
+</div>
+
+@* Mobiel hoofdmenu als volledig paneel (design-handoff optie 3b) — vervangt de icoonrail op
+   smalle schermen; op desktop blijft de rail (hierboven) de navigatie. Dezelfde permissie-
+   gegate items en submenu-links als de flyouts hierboven, enkel anders gerenderd (uitklapbare
+   lijst i.p.v. hover-paneel). De 5-slots bottom-navbar uit optie 3a/3e is bewust NIET gebouwd —
+   die vraagt om te kiezen welke ~4 items "primair" genoeg zijn voor een vaste balk, een
+   productkeuze die niet stilzwijgend hier gemaakt wordt. Dit volledige-paneel-patroon dekt alle
+   items gelijkwaardig, geen keuze nodig. De hamburger-trigger zelf staat in _LayoutV2.cshtml's
+   eigen topbar-markup (hoort daar visueel thuis); hier enkel het paneel + backdrop, als sibling
+   van .gl-v2-rail — zelfde stacking-context-voorzichtigheid als de flyouts hierboven. *@
+<div class="gl-v2-mobile-backdrop" id="gl-v2-mobile-backdrop" hidden></div>
+
+<div class="gl-v2-mobile-menu" id="gl-v2-mobile-menu" role="dialog" aria-modal="true" aria-label="Hoofdmenu" hidden>
+    <div class="gl-v2-mobile-menu-header">
+        <span class="gl-v2-mobile-menu-logo">LN</span>
+        <span class="gl-v2-mobile-menu-title">Menu</span>
+        <button type="button" class="gl-v2-mobile-menu-close" id="gl-v2-mobile-menu-close" aria-label="Menu sluiten">×</button>
+    </div>
+
+    <div class="gl-v2-mobile-menu-search">
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+        <input type="search" id="gl-v2-mobile-search" placeholder="Zoek in menu" aria-label="Zoek in menu" />
+    </div>
+
+    <nav class="gl-v2-mobile-menu-list" aria-label="Hoofdnavigatie (mobiel)">
+        <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "Home")">
+            <i class="ph ph-house" aria-hidden="true"></i><span>Dashboard</span>
+        </a>
+        @if (PermissionService.HasRead(PermissionCodes.MijnTaken))
+        {
+            <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "MijnTaken")">
+                <i class="ph ph-list-checks" aria-hidden="true"></i><span>Mijn taken</span>
+            </a>
+        }
+        @if (PermissionService.HasRead(PermissionCodes.PortfolioDeadlines))
+        {
+            <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "Deadlines")">
+                <i class="ph ph-calendar-check" aria-hidden="true"></i><span>Deadlines</span>
+            </a>
+        }
+
+        @if (canSeeLeveranciers)
+        {
+            <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-leveranciers">
+                <i class="ph ph-hard-hat" aria-hidden="true"></i><span>Leveranciers</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-mobile-group" id="gl-v2-mgroup-leveranciers" hidden>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Leveranciers")"><i class="ph ph-list-bullets" aria-hidden="true"></i>Alle leveranciers</a>
+                @foreach (var issuer in supplierIssuerCompanies)
+                {
+                    <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Leveranciers", new { issuerCompanyId = issuer.Id })"><i class="ph ph-buildings" aria-hidden="true"></i>@issuer.Name</a>
+                }
+            </div>
+        }
+
+        @if (canSeeKlanten)
+        {
+            <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-klanten">
+                <i class="ph ph-users" aria-hidden="true"></i><span>Klanten</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-mobile-group" id="gl-v2-mgroup-klanten" hidden>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Klanten")"><i class="ph ph-list-bullets" aria-hidden="true"></i>Alle klanten</a>
+                @foreach (var issuer in customerIssuerCompanies)
+                {
+                    <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Klanten", new { issuerCompanyId = issuer.Id })"><i class="ph ph-buildings" aria-hidden="true"></i>@issuer.Name</a>
+                }
+            </div>
+        }
+
+        @if (canSeeProjects)
+        {
+            <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-projecten">
+                <i class="ph ph-buildings" aria-hidden="true"></i><span>Projecten</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-mobile-group" id="gl-v2-mgroup-projecten" hidden>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("ProjectsByUserId", "Projecten", new { UserId = currentUserCode })"><i class="ph ph-user" aria-hidden="true"></i>Mijn Projecten</a>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Projecten")"><i class="ph ph-list-bullets" aria-hidden="true"></i>Alle projecten</a>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Weather", "Projecten")"><i class="ph ph-cloud-rain" aria-hidden="true"></i>Weerverlet</a>
+            </div>
+        }
+
+        @if (canSeeBoekhouding)
+        {
+            <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-facturatie">
+                <i class="ph ph-receipt" aria-hidden="true"></i><span>Facturatie</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-mobile-group" id="gl-v2-mgroup-facturatie" hidden>
+                @foreach (var issuer in invoicingIssuerCompanies)
+                {
+                    <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuer.Id })"><i class="ph ph-buildings" aria-hidden="true"></i>@issuer.Name</a>
+                }
+            </div>
+        }
+
+        @if (canSeeDocumentenCentrum)
+        {
+            <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "DocumentenCentrum")">
+                <i class="ph ph-tray" aria-hidden="true"></i><span>Documentencentrum</span>
+            </a>
+        }
+
+        @if (canSeeInstellingen)
+        {
+            <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "Instellingen")">
+                <i class="ph ph-gear" aria-hidden="true"></i><span>Instellingen</span>
+            </a>
+        }
+
+        @if (canSeeMarktanalyse)
+        {
+            <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-markt">
+                <i class="ph ph-chart-line" aria-hidden="true"></i><span>Marktanalyse</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-mobile-group" id="gl-v2-mgroup-markt" hidden>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Gemeenteanalyse", "Marktanalyse")"><i class="ph ph-map-pin" aria-hidden="true"></i>Gemeenteanalyse</a>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("VergelijkbarePanden", "Marktanalyse")"><i class="ph ph-buildings" aria-hidden="true"></i>Vergelijkbare panden</a>
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Projectdetail", "Marktanalyse")"><i class="ph ph-file-text" aria-hidden="true"></i>Projectdetail</a>
+            </div>
+        }
+
+        <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-links">
+            <i class="ph ph-link" aria-hidden="true"></i><span>Links</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="gl-v2-mobile-group" id="gl-v2-mgroup-links" hidden>
+            <a class="gl-v2-mobile-subitem" href="https://www.groupln.be" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Website Group LN</a>
+            <a class="gl-v2-mobile-subitem" href="https://www.bouwenconstructie.be" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Website BCO</a>
+            <a class="gl-v2-mobile-subitem" href="https://www.home-estate.be" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Website Home-Estate</a>
+        </div>
+    </nav>
+
+    @* Optie 3b (bijgewerkt): profielkaart + aparte knoppenrij, i.p.v. één enkele rij met een
+       tekstlink voor "afmelden". "Mijn profiel" wijst naar de dichtstbijzijnde bestaande pagina
+       (Mijn handtekening) — er is geen apart profielscherm in de app; geen nieuwe pagina verzinnen
+       voor een knop die het voorbeeld wel toont maar de echte app niet heeft. *@
+    <div class="gl-v2-mobile-menu-footer">
+        <a class="gl-v2-mobile-profile-card" href="@Url.Action("MijnHandtekening", "Account")">
+            <span class="gl-v2-avatar">@mobileUserInitials</span>
+            <span class="gl-v2-mobile-profile-info">
+                <span class="gl-v2-mobile-profile-name">@mobileUserDisplayName</span>
+                <span class="gl-v2-mobile-profile-email">@mobileUserEmail</span>
+            </span>
+            <i class="ph ph-caret-down" aria-hidden="true"></i>
+        </a>
+        <div class="gl-v2-mobile-profile-actions">
+            <a class="gl-v2-mobile-profile-btn" href="@Url.Action("MijnHandtekening", "Account")">Mijn profiel</a>
+            <a class="gl-v2-mobile-profile-btn" href="@Url.Action("SignOut", "Account")">Afmelden</a>
+        </div>
+    </div>
+</div>
+
+@* JS voor de rail-flyouts + mobiel menu staat in ~/js/gl-v2-shell.js (gedeeld, één keer geladen
+   vanuit _LayoutV2.cshtml — elke gl-v2-pagina heeft deze rail/topbar/mobiel-menu chrome nodig). *@

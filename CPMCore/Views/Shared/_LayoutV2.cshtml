@@ -1,0 +1,261 @@
+@using CPMCore.Helpers
+@using Microsoft.AspNetCore.Authorization
+@using System.Linq
+@{
+    // gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, opties 2a/4a) — parallelle
+    // shell, enkel actief achter de gl_v2_preview-cookie (LayoutPreviewController). _Layout.cshtml
+    // zelf is nergens gewijzigd; dit bestand deelt zijn vendor-CSS/JS-lijst zodat bestaande
+    // pagina-specifieke @@section PageStyle/PageScripts (Select2, DataTables, PNotify-toasts,
+    // AntiForgery) precies zo blijven werken als vandaag — enkel de chrome eromheen is nieuw.
+    var userDisplayName = User.GetCpmDisplayName() ?? string.Empty;
+    var userEmail = User.GetCpmEmail() ?? string.Empty;
+    var userNameParts = userDisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var userInitials = string.Join(string.Empty, userNameParts.Select(part => char.ToUpperInvariant(part[0])).Take(2));
+    if (string.IsNullOrWhiteSpace(userInitials)) userInitials = "?";
+    // Optie 5c: tablet-breedte toont een ingekorte naam ("N. Lataire") i.p.v. de volledige naam
+    // in te korten met CSS ellipsis — twee spans, CSS-breakpoint-geswitcht, zelfde patroon als
+    // gl-v2-mobile-logo/gl-v2-topbar-icon hierboven.
+    var userShortName = userNameParts.Length > 1
+        ? $"{char.ToUpperInvariant(userNameParts[0][0])}. {userNameParts[^1]}"
+        : userDisplayName;
+    var pageTitle = ViewData["Title"] as string ?? string.Empty;
+    var pageIcon = ViewData["PageIcon"] as string ?? "ph ph-file";
+}
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>@(string.IsNullOrWhiteSpace(pageTitle) ? "CPM - GROUP LN" : pageTitle + " · CPM - GROUP LN")</title>
+    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800&display=swap" rel="stylesheet" type="text/css">
+    @* gl-v2: enige nieuwe font-load t.o.v. _Layout.cshtml, enkel geladen op deze shell. *@
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/animate/animate.compat.css">
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
+    <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@phosphor-icons/web@@2.1.2/src/regular/style.css">
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css" />
+    <link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.css" />
+    <link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.theme.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css" />
+    <link rel="stylesheet" href="~/lib/morris/morris.css" />
+    <link rel="stylesheet" href="~/lib/pnotify/pnotify.custom.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+
+    @* Page specific css *@
+    @RenderSection("PageStyle", required: false)
+
+    @* gl-v2 tokens/shell — geladen NA de theme-CSS hierboven en enkel .gl-v2-gescoped, dus wint op
+       specificiteit zonder theme.css/custom.css zelf aan te raken of erbuiten te lekken. *@
+    <link rel="stylesheet" href="~/css/gl-v2-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-shell.css" asp-append-version="true" />
+
+    <script src="~/lib/modernizr/modernizr.js"></script>
+</head>
+<body>
+    <a class="gl-v2-skip-link" href="#gl-v2-main">Naar inhoud</a>
+    <div class="gl-v2">
+        <div class="gl-v2-app">
+            @await Html.PartialAsync("_RailPartialV2")
+
+            <div class="gl-v2-body">
+                <header class="gl-v2-topbar">
+                    @* Optie 3a: op mobiel toont de topbar het merk-logo links i.p.v. het paginaicoon
+                       (dat blijft desktop-only) — de rail/het menu-paneel dragen elders al hetzelfde
+                       gestippelde logo-vakje. *@
+                    <span class="gl-v2-mobile-logo" aria-hidden="true">LN</span>
+                    <span class="gl-v2-topbar-icon"><i class="@pageIcon" aria-hidden="true"></i></span>
+                    <div class="gl-v2-topbar-titles">
+                        <p class="gl-v2-topbar-title">@pageTitle</p>
+                        @await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
+                    </div>
+                    <span class="gl-v2-topbar-spacer"></span>
+                    @if (IsSectionDefined("PageActions"))
+                    {
+                        <div class="gl-v2-topbar-actions">
+                            @RenderSection("PageActions", required: false)
+                        </div>
+                    }
+                    @* Optie 3a: zoek-icoon, enkel <768px zichtbaar (gl-v2-shell.css). Nog niet aan
+                       echte zoekfunctionaliteit gekoppeld — zelfde eerlijke placeholder-status als
+                       de gestippelde velden in de wireframe zelf. *@
+                    <span class="gl-v2-mobile-search-stub" aria-hidden="true"><i class="ph ph-magnifying-glass"></i></span>
+                    @* Optie 3a/3b: geen userbox meer in de mobiele topbar — het profiel verhuisde
+                       volledig naar de voet van het hoofdmenu-paneel (_RailPartialV2.cshtml). Enkel
+                       op desktop/tablet zichtbaar; class gl-v2-desktop-userbox verbergt 'm expliciet
+                       op mobiel i.p.v. te vertrouwen op toevallige flex-volgorde.
+                       Optie 4d/5c: floating-card userbox — herbouwd op de referentiesheet i.p.v. een
+                       kale Bootstrap-dropdown. Menu-items blijven beperkt tot wat vandaag echt
+                       bestaat (Mijn handtekening, de pilot-toggle, Afmelden); de mockup's extra
+                       items (Mijn profiel, Voorkeuren & meldingen, Instellingen, Help & support,
+                       "wissel facturatiebedrijf") komen pas mee zodra die pagina's/data bestaan. *@
+                    <div class="dropdown gl-v2-desktop-userbox">
+                        <a href="#" class="gl-v2-topbar-userbox" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-label="Gebruikersmenu">
+                            <span class="gl-v2-avatar">@userInitials</span>
+                            <span class="name gl-v2-userbox-name-full">@userDisplayName</span>
+                            <span class="name gl-v2-userbox-name-short">@userShortName</span>
+                            <i class="ph ph-caret-down gl-v2-userbox-caret" aria-hidden="true"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end gl-v2-userbox-panel">
+                            <li class="gl-v2-userbox-panel-header">
+                                <span class="gl-v2-avatar">@userInitials</span>
+                                <span class="gl-v2-userbox-panel-identity">
+                                    <span class="gl-v2-userbox-panel-name">@userDisplayName</span>
+                                    <span class="gl-v2-userbox-panel-email">@userEmail</span>
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider gl-v2-userbox-divider"></li>
+                            <li>
+                                <a class="dropdown-item gl-v2-userbox-item" href="@Url.Action("MijnHandtekening", "Account")">
+                                    <i class="ph ph-envelope" aria-hidden="true"></i>
+                                    <span>Mijn handtekening</span>
+                                    <i class="ph ph-caret-right gl-v2-userbox-item-chevron" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item gl-v2-userbox-item gl-v2-toggle-link" href="@Url.Action("Off", "LayoutPreview")">
+                                    <i class="ph ph-arrow-u-down-left" aria-hidden="true"></i>
+                                    <span>Terug naar huidige lay-out</span>
+                                    <i class="ph ph-caret-right gl-v2-userbox-item-chevron" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider gl-v2-userbox-divider"></li>
+                            <li>
+                                <a class="dropdown-item gl-v2-userbox-item gl-v2-userbox-item-signout" href="@Url.Action("SignOut", "Account")">
+                                    <i class="ph ph-sign-out" aria-hidden="true"></i>
+                                    <span>Afmelden</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    @* Laatste kind, net als de sluitknop in het mobiele paneel — zelfde positie in
+                       beide headers, zodat hamburger↔× op exact dezelfde plek "morft". *@
+                    <button type="button" class="gl-v2-hamburger" id="gl-v2-hamburger-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-mobile-menu" aria-label="Menu openen">
+                        <i class="ph ph-list" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                @{
+                    // @@section moet onvoorwaardelijk op view-toplevel staan (geen @@if eromheen),
+                    // dus een view die de sectie altijd registreert maar het bepaalde tak/permissie
+                    // afhankelijk leeg laat (zie Home/Index.cshtml + IndexV2.cshtml) zou zonder deze
+                    // extra vlag hier alsnog een lege groene balk tonen — IsSectionDefined ziet enkel
+                    // "geregistreerd", niet "heeft ook echt inhoud". Pagina's zetten
+                    // ViewData["HasMobileQuickActions"] enkel wanneer dat kan afwijken van "altijd
+                    // gevuld"; onbezet (de meeste pagina's) blijft het oude gedrag exact hetzelfde.
+                    var hasMobileQuickActions = IsSectionDefined("MobileQuickActions")
+                        && (ViewData["HasMobileQuickActions"] as bool? ?? true);
+                }
+                <main id="gl-v2-main" class="gl-v2-content @(hasMobileQuickActions ? "has-mobile-quickactions" : "")" tabindex="-1">
+                    @RenderBody()
+                </main>
+                @if (hasMobileQuickActions)
+                {
+                    @* Optie 4c (bottom-bar) — enkel <768px zichtbaar (gl-v2-shell.css), vast aan de
+                       onderkant van het scherm i.p.v. onderaan de scrollende inhoud, dus buiten
+                       <main> als sibling ervan. Aparte sectie i.p.v. PageActions hergebruiken:
+                       Razor staat niet toe dezelfde @@section tweemaal te renderen (topbar-compact
+                       op desktop, actiebalk op mobiel zijn twee echt verschillende presentaties van
+                       dezelfde acties). Generiek: elke gl-v2-pagina die @@section
+                       MobileQuickActions vult krijgt deze balk, niets hier is Facturen-specifiek. *@
+                    <div class="gl-v2-mobile-quickactions" id="gl-v2-mobile-quickactions">
+                        @RenderSection("MobileQuickActions", required: false)
+                    </div>
+                    @* Optie 6b: zodra gl-v2-shell.js meer dan 4 tegels telt, verhuizen tegel 5+ hierin
+                       en komt er een "Meer"-tegel voor in de plaats — generiek, dezelfde sheet werkt
+                       voor elke pagina die toevallig meer dan 4 snelacties heeft. *@
+                    <div class="gl-v2-quickactions-backdrop" id="gl-v2-quickactions-backdrop" hidden></div>
+                    <div class="gl-v2-quickactions-sheet" id="gl-v2-quickactions-sheet" role="dialog" aria-modal="true" aria-labelledby="gl-v2-quickactions-sheet-title" hidden>
+                        <div class="gl-v2-quickactions-sheet-handle" aria-hidden="true"></div>
+                        <div class="gl-v2-quickactions-sheet-header">
+                            <h2 id="gl-v2-quickactions-sheet-title" class="gl-v2-quickactions-sheet-title">
+                                Snelacties <span class="gl-v2-quickactions-sheet-title-page">op @pageTitle</span>
+                            </h2>
+                            <button type="button" class="gl-v2-quickactions-sheet-close" id="gl-v2-quickactions-sheet-close" aria-label="Sluiten">
+                                <i class="ph ph-x" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="gl-v2-quickactions-sheet-list" id="gl-v2-quickactions-sheet-list"></div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <script>
+        if (!jQuery.browser) { jQuery.browser = {}; }
+    </script>
+    <script src="~/lib/jquery-ui/jquery-ui.js"></script>
+    <script src="~/lib/jqueryui-touch-punch/jquery.ui.touch-punch.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.min.js"></script>
+    <script src="~/lib/bootstrap-datepicker/locales/bootstrap-datepicker.nl-BE.min.js"></script>
+    <script src="~/lib/common/common.js"></script>
+    <script src="~/lib/magnific-popup/jquery.magnific-popup.min.js"></script>
+    <script src="~/lib/jquery-placeholder/jquery.placeholder.js"></script>
+    <script src="~/lib/select2/js/select2.min.js"></script>
+    <script src="/lib/select2/js/i18n/nl.js"></script>
+
+    @* gl-v2 "hoofd-js": chrome die op elke gl-v2-pagina nodig is (rail-flyouts, mobiel
+       hoofdmenu-paneel). Pagina-specifieke JS hoort in @@section PageScripts, in een eigen
+       ~/js/gl-v2-<pagina>.js (zie IndexV2.cshtml + gl-v2-invoices.js voor dat patroon). *@
+    <script src="~/js/gl-v2-shell.js" asp-append-version="true"></script>
+
+    @RenderSection("PageScripts", required: false)
+
+    <script src="~/lib/bootstrap-multiselect/js/bootstrap-multiselect.min.js"></script>
+    <script src="~/lib/pnotify/pnotify.custom.js"></script>
+
+    <script>
+        $(window).on('load', function () {
+        @if (TempData["Message"] != null)
+        {
+            <text>
+                    new PNotify({
+                        title:    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["MessageTitle"]?.ToString() ?? "")),
+                        text:     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Message"]?.ToString() ?? "")),
+                        type:     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["MessageType"]?.ToString() ?? "info")),
+                        addclass: 'stack-bottomright'
+                    });
+            </text>
+        }
+        });
+    </script>
+    <script>
+        @if (User?.Identity?.IsAuthenticated ?? false)
+        {
+            <text>
+                (function () {
+                    const keepAliveUrl = '@Url.Action("KeepAlive", "Account")';
+                    if (!keepAliveUrl) return;
+                    const intervalMs = 5 * 60 * 1000;
+                    let timeoutId = null;
+                    function queuePing() {
+                        if (timeoutId) window.clearTimeout(timeoutId);
+                        timeoutId = window.setTimeout(sendPing, intervalMs);
+                    }
+                    function sendPing() {
+                        fetch(keepAliveUrl, { method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .catch(function () { return null; })
+                            .then(queuePing);
+                    }
+                    document.addEventListener('visibilitychange', function () {
+                        if (document.visibilityState === 'visible') queuePing();
+                        else if (timeoutId) { window.clearTimeout(timeoutId); timeoutId = null; }
+                    });
+                    queuePing();
+                })();
+            </text>
+        }
+    </script>
+</body>
+</html>

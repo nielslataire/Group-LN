@@ -1,0 +1,1548 @@
+/* gl-v2 layout-pilot — shell chrome (rail + flyout + topbar + floating body card). Every selector
+   is scoped under .gl-v2; nothing here is a bare-element rule that could leak if this file were
+   ever accidentally linked from _Layout.cshtml. Structure mirrors design-handoff's option 2a/2b. */
+
+.gl-v2 * { box-sizing: border-box; }
+
+/* Skip-to-content link (a11y) — _LayoutV2 doesn't load custom.css (which normally styles
+   .skip-link), so it rendered fully visible/unstyled at the top of the page. Same
+   hidden-until-focus recipe as custom.css's .skip-link, re-expressed with gl-v2 tokens. */
+.gl-v2-skip-link {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    z-index: 2000;
+    padding: 10px 16px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(-150%);
+    transition: transform .15s ease;
+}
+
+.gl-v2-skip-link:focus {
+    transform: translateY(0);
+    outline: 2px solid var(--gl-v2-surface);
+    outline-offset: 2px;
+}
+
+.gl-v2-app {
+    display: flex;
+    min-height: 100vh;
+    gap: 12px;
+    padding: 12px;
+    align-items: stretch;
+}
+
+/* ── Rail ─────────────────────────────────────────────────────────────── */
+.gl-v2-rail {
+    width: 72px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 0;
+    gap: 6px;
+    position: sticky;
+    top: 12px;
+}
+
+.gl-v2-rail-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--gl-v2-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-v2-surface);
+    background: var(--gl-v2-primary);
+    font: 700 14px var(--gl-v2-font-sans);
+    flex: none;
+    text-decoration: none;
+}
+
+.gl-v2-rail-divider {
+    width: 36px;
+    height: 1.5px;
+    background: var(--gl-v2-hairline);
+    margin: 6px 0;
+    flex: none;
+}
+
+.gl-v2-rail-item {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    border: 0;
+    cursor: pointer;
+    transition: background-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+
+.gl-v2-rail-item i { font-size: 19px; line-height: 1; transition: font-size .1s ease; }
+
+/* 2. HOVER — tile tints (not just the icon), icon turns Primary. */
+.gl-v2-rail-item:hover {
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    outline: none;
+}
+
+/* 6. KEYBOARD FOCUS — gold ring, 2px offset, :focus-visible only so a mouse click never shows it,
+   just Tab. */
+.gl-v2-rail-item:focus-visible {
+    color: var(--gl-v2-primary);
+    outline: 2px solid var(--gl-v2-gold);
+    outline-offset: 2px;
+}
+
+/* 5. PRESSED — shadow flips inward, icon shrinks 1px. */
+.gl-v2-rail-item:active {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, .15);
+}
+.gl-v2-rail-item:active i { font-size: 18px; }
+
+/* 3. ACTIVE (current page) and the flyout-open state share the exact same treatment — per the
+   reference, a trigger tile stays "active" green for as long as its flyout is open, whether or
+   not that item is the actual current route. .is-active is server-rendered (real current page,
+   permanent); .is-flyout-open is JS-toggled by gl-v2-shell.js while its panel is open (see
+   openFlyout/closeAll) and never overwrites .is-active's own on/off state. */
+.gl-v2-rail-item.is-active,
+.gl-v2-rail-item.is-flyout-open {
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile-active);
+}
+
+/* 4. ACTIVE + HOVER — one tint darker than plain active. */
+.gl-v2-rail-item.is-active:hover,
+.gl-v2-rail-item.is-flyout-open:hover {
+    background: var(--gl-v2-primary-deep);
+    color: var(--gl-v2-surface);
+}
+
+/* Gold left-edge stripe — "where you are". Sits in the rail's own gutter, not on the tile itself,
+   so it reads as a rail-level indicator rather than a tile border. */
+.gl-v2-rail-item.is-active::before,
+.gl-v2-rail-item.is-flyout-open::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    border-radius: 2px;
+    background: var(--gl-v2-gold);
+}
+
+/* 8. DISABLED (no permission) — defined for completeness; the rail doesn't currently render
+   no-access items at all (_RailPartialV2.cshtml gates every item with PermissionService.HasRead),
+   so nothing uses this class yet. Ready if that gating philosophy ever changes to "show, but
+   grey out" instead of "hide". */
+.gl-v2-rail-item.is-disabled {
+    background: var(--gl-v2-disabled-bg);
+    color: var(--gl-v2-disabled-fg);
+    box-shadow: none;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* 7. BADGE (counter) — defined for completeness; not wired to a real count on any item yet (no
+   rail item currently has an obvious live count source). Ready to add a <span
+   class="gl-v2-rail-badge">N</span> inside a rail item when one does. */
+.gl-v2-rail-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--gl-v2-radius-pill);
+    background: #b3452f;
+    color: var(--gl-v2-surface);
+    font: 700 10px var(--gl-v2-font-sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.gl-v2-rail-spacer { flex: 1; }
+
+/* Hover/active tooltip — 150ms delay before it appears (transition-delay only applies opening;
+   closing is instant), small triangle connector into the tile per the reference. */
+.gl-v2-rail-tooltip {
+    /* top:0;bottom:0;margin:auto 0 instead of top:50%+transform: the transform-based centering
+       measured out correctly on paper but a real screenshot showed the pill dropping down far
+       enough to overlap the next rail tile — couldn't pin down why from the CSS alone, so
+       switching to this more defensive centering technique (auto margins on a 0-height box)
+       rather than keep guessing at the transform version. */
+    position: absolute;
+    left: 60px;
+    top: 0;
+    bottom: 0;
+    margin: auto 0;
+    height: fit-content;
+    display: flex;
+    align-items: center;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-sm);
+    padding: 7px 12px;
+    font: 600 12px var(--gl-v2-font-sans);
+    white-space: nowrap;
+    box-shadow: 0 10px 24px -12px rgba(44, 59, 42, .6);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .12s ease, visibility .12s ease;
+    z-index: 5;
+}
+
+.gl-v2-rail-tooltip::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 5px 5px 0;
+    border-style: solid;
+    border-color: transparent var(--gl-v2-primary) transparent transparent;
+}
+
+.gl-v2-rail-item:hover .gl-v2-rail-tooltip,
+.gl-v2-rail-item:focus-visible .gl-v2-rail-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: .15s;
+}
+
+/* ── Flyout submenu ───────────────────────────────────────────────────── */
+.gl-v2-flyout {
+    position: fixed;
+    width: 262px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    border-radius: var(--gl-v2-radius-lg);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    padding: 14px 12px;
+    /* Matches the mobile-menu/backdrop tier — see the comment there on why this went this high;
+       raised from 9999 as a defensive bump while the "still renders behind a table header
+       sometimes" report gets tracked down (not yet reproduced/confirmed root-caused). */
+    z-index: 99997;
+    display: none;
+}
+
+.gl-v2-flyout.is-open { display: block; }
+
+.gl-v2-flyout-title {
+    font: 500 18px var(--gl-v2-font-serif);
+    color: var(--gl-v2-ink);
+    padding: 0 6px 10px;
+}
+
+.gl-v2-flyout-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 9px;
+    border-radius: var(--gl-v2-radius-sm);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 500 13.5px var(--gl-v2-font-sans);
+}
+
+.gl-v2-flyout-link:hover,
+.gl-v2-flyout-link:focus-visible { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+
+.gl-v2-flyout-link.is-current {
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+}
+
+/* ── Body: floating card shell + topbar ──────────────────────────────── */
+.gl-v2-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-lg);
+    box-shadow: var(--gl-v2-shadow-card);
+    overflow: hidden;
+}
+
+.gl-v2-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    height: 62px;
+    flex: none;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+
+.gl-v2-topbar-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+
+.gl-v2-topbar-icon i { font-size: 18px; }
+
+.gl-v2-topbar-titles { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.gl-v2-topbar-title {
+    margin: 0;
+    font: 500 19px var(--gl-v2-font-serif);
+    color: var(--gl-v2-ink);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gl-v2-topbar .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 10.5px var(--gl-v2-font-sans);
+    line-height: 1;
+    color: var(--gl-v2-muted);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.gl-v2-topbar .breadcrumbs li:last-child span,
+.gl-v2-topbar .breadcrumbs li:last-child a { color: var(--gl-v2-primary); }
+
+.gl-v2-topbar .breadcrumbs a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
+.gl-v2-topbar .breadcrumbs li { display: flex; align-items: center; gap: 6px; line-height: 1; }
+/* .breadcrumbs' eigen gap (hierboven) geeft al de ruimte vóór dit scheidingsteken — geen
+   margin-left hier ook nog, anders telt de ruimte na het homeicoontje dubbel (was de "te veel
+   witruimte"-klacht). */
+.gl-v2-topbar .breadcrumbs li:not(:last-child)::after { content: "/"; color: var(--gl-v2-muted); }
+.gl-v2-topbar .breadcrumbs li:first-child i { font-size: 12px; line-height: 1; display: block; }
+
+.gl-v2-topbar-spacer { flex: 1; }
+
+.gl-v2-topbar-actions { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: nowrap; }
+
+/* ── Buttons (design-handoff optie 4e — "KNOPPEN: DEFAULT · HOVER · ACTIEF · FOCUS · DISABLED")
+   Vijf families, elk met dezelfde 5 states. .gl-v2-btn is de gedeelde basis (hoogte/radius/font);
+   elke familie (-primary/-secondary/-text/-danger) levert enkel de kleuren. .gl-v2-icon-btn is
+   z'n eigen (vierkante) ding, geen .gl-v2-btn-modifier. Gedeeld/herbruikbaar over elke gl-v2-
+   pagina — niet Facturen-specifiek, vandaar hier i.p.v. in gl-v2-invoices.css. ────────────────── */
+.gl-v2-btn {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font: 600 12px var(--gl-v2-font-sans);
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+/* Primair */
+.gl-v2-btn-primary { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-btn-primary:hover { background: #006638; border-color: #006638; box-shadow: 0 8px 18px -10px rgba(0, 83, 45, .75); }
+.gl-v2-btn-primary:active { background: #003d21; border-color: #003d21; box-shadow: none; }
+.gl-v2-btn-primary:disabled { background: #DCE4D7; border-color: #DCE4D7; color: #7C8C7A; }
+
+/* Secundair (outline) */
+.gl-v2-btn-secondary { background: var(--gl-v2-surface); border-color: var(--gl-v2-accent-sage); color: #2F6038; }
+.gl-v2-btn-secondary:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-btn-secondary:active { background: #2F6038; border-color: #2F6038; color: var(--gl-v2-surface); }
+.gl-v2-btn-secondary:disabled { background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline); color: #9AA898; }
+
+/* Tekstknop (ghost) */
+.gl-v2-btn-text { background: transparent; color: var(--gl-v2-primary); }
+.gl-v2-btn-text:hover { background: #E4EBDE; }
+.gl-v2-btn-text:active { background: var(--gl-v2-primary-tint); color: #003d21; }
+.gl-v2-btn-text:disabled { background: transparent; color: #9AA898; }
+
+/* Verwijderen (danger) */
+.gl-v2-btn-danger { background: var(--gl-v2-surface); border-color: rgba(139, 42, 42, .4); color: #8B2A2A; }
+.gl-v2-btn-danger:hover { background: #F8EBEB; border-color: #8B2A2A; }
+.gl-v2-btn-danger:active { background: #8B2A2A; border-color: #8B2A2A; color: var(--gl-v2-surface); }
+.gl-v2-btn-danger:disabled { background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline); color: #9AA898; }
+
+.gl-v2-btn:disabled { cursor: not-allowed; }
+
+/* Focus (alle families): zelfde goud-ring, staat na hover/active zodat die 'm niet verdringt.
+   :focus-visible enkel — een muisklik toont 'm dus nooit, alleen Tab. */
+.gl-v2-btn:focus-visible,
+.gl-v2-icon-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--gl-v2-gold);
+}
+
+/* Icoonknop — vierkant, eigen familie (geen .gl-v2-btn-modifier) */
+.gl-v2-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-v2-primary);
+    flex: none;
+    cursor: pointer;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+.gl-v2-icon-btn:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-icon-btn:active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-icon-btn:disabled { border-color: var(--gl-v2-hairline-soft); background: var(--gl-v2-surface); color: #B6C1B4; cursor: not-allowed; }
+
+.gl-v2-topbar-userbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border-radius: var(--gl-v2-radius-pill);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    text-decoration: none;
+    flex: none;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.gl-v2-topbar-userbox:hover { border-color: var(--gl-v2-primary); }
+.gl-v2-topbar-userbox:active { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+
+.gl-v2-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--gl-v2-primary-tint);
+    border: 1px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    flex: none;
+}
+
+/* Optie 4d: de userbox-trigger draagt een solid-green avatar i.p.v. de tint-bg versie die de
+   mobiele profielkaart gebruikt — zelfde context-override-patroon als
+   .gl-v2-mobile-profile-card .gl-v2-avatar hieronder, geen aparte modifier-class nodig. */
+.gl-v2-topbar-userbox .gl-v2-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    border: none;
+    transition: box-shadow .15s ease;
+}
+
+.gl-v2-topbar-userbox .name { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); transition: color .15s ease; }
+
+/* Optie 5c: volledige naam op desktop, ingekorte naam ("N. Lataire") op tablet-breedte — zie de
+   breakpoints verderop. Beide staan altijd in de DOM, CSS kiest welke zichtbaar is. */
+.gl-v2-userbox-name-short { display: none; }
+
+.gl-v2-userbox-caret {
+    font-size: 11px;
+    color: var(--gl-v2-muted);
+    flex: none;
+    transition: color .15s ease, transform .15s ease;
+}
+
+/* Bootstrap 5 zet .show op de toggle-trigger zelf (this._element in dropdown.js), niet op de
+   .dropdown-wrapper eromheen — geen eigen JS nodig om de "GEOPEND"-staat (4d) te stylen, wel op
+   het juiste element mikken. */
+.gl-v2-topbar-userbox.show {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-topbar-userbox.show .name { color: var(--gl-v2-surface); }
+.gl-v2-topbar-userbox.show .gl-v2-userbox-caret { color: var(--gl-v2-surface); transform: rotate(180deg); }
+/* Optie 4d GEOPEND: de avatar keert om (licht rond, groene letters) i.p.v. solid-groen te blijven
+   — anders verdwijnt de cirkel visueel in de nu even-groene pil eromheen. Zelfde
+   contrast-omkering-logica als het actieve rail-item (Primary fill + witte icon i.p.v. omgekeerd),
+   hier de andere kant op omdat de pil zelf al de donkere vlek is. */
+.gl-v2-topbar-userbox.show .gl-v2-avatar {
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
+}
+
+/* ── Userbox panel (opties 4d/5c) ─────────────────────────────────────────────────────── */
+/* data-bs-display="static" schakelt Popper's eigen inline-style-modifier uit, maar Bootstrap zet
+   nog altijd een data-bs-popper="static" attribuut op het menu — en .dropdown-menu[data-bs-popper]
+   (klasse + attribuut, specificiteit 0,0,2,0) wint daardoor altijd van een kale .gl-v2-userbox-panel
+   (0,0,1,0), ongeacht load-order: top:100%;margin-top:.125rem (2px) en left:0 bleven dus gewoon
+   staan. Zelfde attribuut-selector gebruiken om er weer boven te komen. */
+.gl-v2-userbox-panel[data-bs-popper] {
+    top: calc(100% + 12px);
+    right: 0;
+    left: auto;
+    margin-top: 0;
+}
+
+.gl-v2-userbox-panel {
+    width: 300px;
+    padding: 10px;
+    border: 0;
+    border-radius: var(--gl-v2-radius-lg);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    background: var(--gl-v2-surface);
+}
+
+.gl-v2-userbox-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 4px;
+    background: var(--gl-v2-bg);
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-md);
+}
+
+.gl-v2-userbox-panel-header .gl-v2-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    border: none;
+}
+
+.gl-v2-userbox-panel-identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-userbox-panel-name { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-userbox-panel-email {
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gl-v2-userbox-divider { margin: 6px 4px; border-color: var(--gl-v2-hairline-soft); opacity: 1; }
+
+.gl-v2-userbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--gl-v2-radius-sm);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 500 13.5px var(--gl-v2-font-sans);
+}
+
+.gl-v2-userbox-item > i:first-child { font-size: 16px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-userbox-item span { flex: 1; }
+
+/* Optie 4d: Afmelden is de enige rij met een goud icoon — een bewuste "let op, dit is anders"
+   accent op de exit-actie, niet het standaard groen van de andere items. */
+.gl-v2-userbox-item-signout > i:first-child { color: var(--gl-v2-gold); }
+
+.gl-v2-userbox-item-chevron {
+    font-size: 12px;
+    color: var(--gl-v2-muted);
+    opacity: 0;
+    flex: none;
+    transition: opacity .12s ease;
+}
+
+.gl-v2-userbox-item:hover,
+.gl-v2-userbox-item:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
+.gl-v2-userbox-item:hover .gl-v2-userbox-item-chevron,
+.gl-v2-userbox-item:focus-visible .gl-v2-userbox-item-chevron { opacity: 1; }
+
+.gl-v2-content { flex: 1; min-height: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; background: #F7F9F5; }
+
+/* Toggle link, shown in the userbox dropdown of the CURRENT shell only (_Layout.cshtml is
+   untouched otherwise) — not part of .gl-v2 scope since it renders outside it. */
+.gl-v2-toggle-link i { margin-right: 8px; }
+
+/* ── Hamburger (mobile-only trigger, lives in _LayoutV2.cshtml's topbar) ────────────────── */
+.gl-v2-hamburger {
+    display: none;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 0;
+    background: transparent;
+    color: var(--gl-v2-primary);
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    font-size: 20px;
+}
+
+/* Mobile-only search icon slot (see the phone breakpoint for its real styling) — hidden by
+   default so it has no effect above the phone breakpoint. */
+.gl-v2-mobile-search-stub { display: none; }
+
+/* Mobile-only brand logo box (optie 3a/3b topbar) — hidden by default. */
+.gl-v2-mobile-logo { display: none; }
+
+/* Mobile-only quick-actions bar (optie 3a "SNELACTIES OP DEZE PAGINA") — hidden by default. */
+.gl-v2-mobile-quickactions { display: none; }
+
+/* ── Mobile main-menu panel (design-handoff optie 3b) ───────────────────────────────────── */
+.gl-v2-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    /* height:100dvh backs up inset:0 on browsers that support the dynamic-viewport unit (most
+       current mobile browsers) — plain inset:0 sizes against the LARGE viewport (address bar
+       hidden) in some browsers/versions, taller than what's actually visible with the address bar
+       shown, which can push fixed content below the fold. Unsupported browsers just ignore this
+       line and keep the inset:0 sizing, so it's a pure progressive enhancement, no fallback logic
+       needed. */
+    height: 100dvh;
+    background: rgba(20, 26, 19, .45);
+    z-index: 99998;
+}
+
+.gl-v2-mobile-menu {
+    /* Full-bleed: inset:0 alone (no explicit width) sizes it to the viewport on all four sides —
+       it's only ever opened below the phone breakpoint (the hamburger that triggers it is hidden
+       above 768px), so there's no wider viewport it needs to cap itself against. max-width +
+       overflow-x is a hard backstop: inset:0 should already guarantee viewport width, but if any
+       child ever refuses to shrink (an <input>'s intrinsic min-width, a long unbreakable label),
+       this stops it from ever widening the panel itself instead of just clipping/scrolling that
+       one child. */
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    max-width: 100vw;
+    overflow-x: hidden;
+    background: var(--gl-v2-surface);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+}
+
+/* [hidden] and a plain class share specificity, and author rules win ties — so the display:flex
+   above silently beat the browser's [hidden]{display:none} default, leaving this panel always
+   present (not just when JS opens it). The attribute+class selector below is more specific and
+   wins for real. Same latent risk existed on .gl-v2-mobile-backdrop; it has no competing display
+   rule today, but guarded here too so neither can regress the same way. */
+.gl-v2-mobile-menu[hidden],
+.gl-v2-mobile-backdrop[hidden] {
+    display: none;
+}
+
+.gl-v2-mobile-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    background: var(--gl-v2-primary);
+    flex: none;
+}
+
+.gl-v2-mobile-menu-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px dashed rgba(255, 255, 255, .45);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 500 9px var(--gl-v2-font-sans);
+    flex: none;
+}
+
+.gl-v2-mobile-menu-title { font: 500 18px var(--gl-v2-font-serif); color: var(--gl-v2-surface); flex: 1; }
+
+.gl-v2-mobile-menu-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .35);
+    background: transparent;
+    color: var(--gl-v2-surface);
+    font-size: 18px;
+    line-height: 1;
+    flex: none;
+}
+
+.gl-v2-mobile-menu-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 14px;
+    padding: 0 14px;
+    height: 38px;
+    border-radius: var(--gl-v2-radius-pill);
+    border: 1px solid var(--gl-v2-hairline);
+    color: var(--gl-v2-muted);
+    flex: none;
+}
+
+.gl-v2-mobile-menu-search input {
+    border: 0;
+    outline: 0;
+    flex: 1;
+    /* An <input>'s flex default min-width:auto resolves to its own browser-intrinsic minimum
+       (often ~170-200px), which it won't shrink below — on a narrow phone that can force this
+       whole search box, and the panel around it, wider than the viewport. */
+    min-width: 0;
+    /* 16px, not 13px — iOS Safari auto-zooms the whole page on focus for any input under 16px,
+       which would explain "search box too big / close button and footer not visible": the zoom
+       itself, not a layout bug. Same rule this app's own DESIGN.md documents for the current
+       system's forms. */
+    font: 500 16px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    background: transparent;
+}
+
+.gl-v2-mobile-menu-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gl-v2-mobile-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 10px;
+    border-radius: 10px;
+    border: 0;
+    border-left: 3px solid transparent;
+    background: transparent;
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 500 15px var(--gl-v2-font-sans);
+    text-align: left;
+    width: 100%;
+}
+
+.gl-v2-mobile-item i:first-child { font-size: 19px; flex: none; }
+.gl-v2-mobile-chevron { margin-left: auto; font-size: 13px !important; color: var(--gl-v2-muted); transition: transform .15s ease; }
+
+/* Uitgeklapte groep krijgt dezelfde tint + linker accentrand + gekleurde, vetter tekst als het
+   voorbeeld (optie 3b, de open "Klanten"-rij) i.p.v. enkel de pijl te draaien. */
+.gl-v2-mobile-group-trigger[aria-expanded="true"] {
+    background: var(--gl-v2-primary-tint);
+    border-left-color: var(--gl-v2-primary);
+    color: var(--gl-v2-primary);
+    font-weight: 600;
+}
+.gl-v2-mobile-group-trigger[aria-expanded="true"] i:first-child { color: var(--gl-v2-primary); }
+.gl-v2-mobile-group-trigger[aria-expanded="true"] .gl-v2-mobile-chevron { color: var(--gl-v2-primary); transform: rotate(180deg); }
+
+.gl-v2-mobile-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0 6px 30px;
+}
+
+.gl-v2-mobile-subitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 10px;
+    border-radius: 9px;
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 450 14px var(--gl-v2-font-sans);
+}
+
+.gl-v2-mobile-subitem i { font-size: 15px; flex: none; color: var(--gl-v2-primary); }
+
+.gl-v2-mobile-subitem:hover,
+.gl-v2-mobile-item:hover { background: var(--gl-v2-primary-tint); }
+
+/* Optie 3b (bijgewerkt): profielkaart (tappable, chevron) + aparte knoppenrij eronder — twee
+   stukken, niet één enkele rij zoals de eerste versie van dit paneel had. */
+.gl-v2-mobile-menu-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    flex: none;
+}
+
+.gl-v2-mobile-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-md);
+    text-decoration: none;
+    color: inherit;
+}
+
+.gl-v2-mobile-profile-card .gl-v2-avatar {
+    width: 36px;
+    height: 36px;
+    border: 0;
+}
+
+.gl-v2-mobile-profile-card > i { margin-left: auto; font-size: 13px; color: var(--gl-v2-muted); flex: none; }
+
+.gl-v2-mobile-profile-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-mobile-profile-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-mobile-profile-email {
+    font: 500 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gl-v2-mobile-profile-actions { display: flex; gap: 8px; }
+
+.gl-v2-mobile-profile-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 9px;
+    border: 1px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+}
+
+.gl-v2-mobile-profile-btn:hover { background: var(--gl-v2-primary-tint); }
+
+/* ── Breakpoint: tablet (design-handoff optie 5c) ────────────────────────────────────────
+   Rail/flyouts/topbar blijven zoals op desktop (die leven pas achter de 767.98px-grens
+   hierboven) — enkel de userbox zelf krijgt grotere raakvlakken, een breder paneel en een
+   ingekorte naam. Geen aparte :hover-onderdrukking nodig: :hover vuurt sowieso niet op een
+   puur-touch tablet, dus dezelfde regels als desktop geven daar vanzelf de "geen hover, wel
+   pressed"-staat uit de referentiesheet. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-topbar-userbox { padding: 6px 14px 6px 6px; }
+    .gl-v2-topbar-userbox .gl-v2-avatar { width: 32px; height: 32px; }
+    .gl-v2-userbox-name-full { display: none; }
+    .gl-v2-userbox-name-short { display: inline; }
+
+    .gl-v2-userbox-panel { width: 360px; }
+    .gl-v2-userbox-item { padding: 12px 12px; font-size: 14px; }
+    /* Geen hover om de chevron te onthullen op touch, dus permanent (gedimd) zichtbaar. */
+    .gl-v2-userbox-item-chevron { opacity: .55; }
+}
+
+/* Smalle tablet / staand (optie 5c): naam valt helemaal weg, enkel de avatar blijft. */
+@media (min-width: 768px) and (max-width: 899.98px) {
+    .gl-v2-topbar-userbox { padding: 5px; gap: 0; }
+    .gl-v2-topbar-userbox .name,
+    .gl-v2-userbox-caret { display: none; }
+}
+
+/* ── Breakpoint: phone (design-handoff opties 3a/3b/3e) ─────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-app { padding: 0; gap: 0; min-height: 100vh; }
+    .gl-v2-rail,
+    .gl-v2-flyouts { display: none; }
+
+    .gl-v2-body { border-radius: 0; box-shadow: none; }
+
+    /* Optie 3a: search-icon and hamburger are both full circles (radius:17px on a 34px box), not
+       the rounded-square treatment used everywhere else — mobile-topbar icon buttons are their
+       own, distinct shape language in the mockup. */
+    .gl-v2-hamburger {
+        display: inline-flex;
+        color: var(--gl-v2-surface);
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 50%;
+    }
+
+    .gl-v2-mobile-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px dashed rgba(255, 255, 255, .45);
+        border-radius: var(--gl-v2-radius-sm);
+        color: var(--gl-v2-surface);
+        font: 500 9px var(--gl-v2-font-sans);
+        flex: none;
+    }
+
+    .gl-v2-topbar {
+        background: var(--gl-v2-primary);
+        padding: 0 14px;
+        border-bottom: 0;
+        gap: 10px;
+    }
+    .gl-v2-topbar-icon { display: none; }
+    .gl-v2-topbar-title { color: var(--gl-v2-surface); font-size: 18px; line-height: 1.2; }
+
+    /* Optie 3a/3e houden een compacte, eenregelige subtitel onder de titel (bv. "Home" of
+       "Klanten / LN Bouw") — niet volledig verbergen zoals eerst, enkel het bestaande
+       kruimelpad-uiterlijk vervangen door de witte/gedimde mobiele variant uit het voorbeeld. */
+    .gl-v2-topbar .breadcrumbs {
+        color: rgba(255, 255, 255, .75);
+        font-size: 10px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+    .gl-v2-topbar .breadcrumbs li:last-child span,
+    .gl-v2-topbar .breadcrumbs li:last-child a { color: rgba(255, 255, 255, .75); }
+    .gl-v2-topbar .breadcrumbs li:not(:last-child) { display: none; }
+
+    .gl-v2-topbar-actions { display: none; }
+
+    /* Zoek-icoontje uit optie 3a — visueel exact zoals het voorbeeld, maar nog niet gekoppeld
+       aan echte zoekfunctionaliteit (dezelfde honeste placeholder-status als de gestippelde
+       velden in de wireframe zelf). Globale mobiele zoekfunctie is een aparte, latere pas. */
+    .gl-v2-mobile-search-stub {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 50%;
+        color: var(--gl-v2-surface);
+        flex: none;
+    }
+
+    /* Optie 3a/3b: het profiel leeft nu enkel nog in de voet van het hoofdmenu-paneel — de
+       topbar-userbox (met naam/chevron) verdwijnt volledig op mobiel i.p.v. enkel gecomprimeerd
+       te worden. */
+    .gl-v2-desktop-userbox { display: none; }
+
+    .gl-v2-content { padding: 14px; }
+
+    /* Optie 4c (bottom-bar), met primary-achtergrond i.p.v. wit en zonder de "SNELACTIES"-titel —
+       de mobiele tegenhanger van @@section PageActions (die op mobiel verborgen blijft, zie
+       hierboven). Vast aan de onderkant van het scherm, niet langer onderaan de scrollende inhoud:
+       elke gl-v2-pagina die 'm wil krijgt 'm automatisch door @@section MobileQuickActions te
+       vullen (zie _LayoutV2.cshtml + Views/Invoices/IndexV2.cshtml voor het patroon) — niets
+       Facturen-specifieks zit hier, dus bruikbaar op elke pagina zonder aanpassing. */
+    /* Vaste hoogte i.p.v. aan icoon/label/padding laten afmeten: eenvoudiger, en drie andere
+       regels (content-padding, backdrop, sheet — verderop) moeten exact met deze balkhoogte in
+       sync blijven om 'm niet te overlappen. Eén var i.p.v. "64px" overal herhalen. Enkel de
+       icoon-rij zelf (safe-area komt er in elke calc() apart bij, niet hierin verrekend, anders
+       zou die het icoon-rij-budget op een notch-telefoon opeten i.p.v. eronder toe te voegen). */
+    .gl-v2 { --gl-v2-qa-bar-h: 64px; }
+
+    .gl-v2-mobile-quickactions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        padding: 0 14px;
+        background: var(--gl-v2-primary);
+        box-shadow: 0 -8px 20px -12px rgba(44, 59, 42, .35);
+    }
+
+    /* De vaste balk ligt over de laatste rij inhoud heen — main krijgt evenveel bodemruimte terug
+       als de balk zelf inneemt, enkel wanneer een pagina die balk ook echt vult. */
+    .gl-v2-content.has-mobile-quickactions { padding-bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+
+    /* Optie 4c: kaal icoon boven, label eronder — geen rand, geen vulling, net als de
+       bottomNav-tegels in de referentie (daar grijs-op-wit, hier wit-op-groen voor contrast met
+       de balk). Geen aparte "primary"-variant meer: 4c maakt zelf geen onderscheid tussen de
+       tegels, dus .gl-v2-mobile-quickaction-primary op een item verandert nu niets meer aan de
+       styling — de klasse blijft wel bruikbaar als hook mocht dat later weer nodig zijn. */
+    .gl-v2-mobile-quickaction {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 4px;
+        border-radius: 10px;
+        border: 0;
+        background: transparent;
+        text-decoration: none;
+        color: var(--gl-v2-surface);
+        font: 500 10px var(--gl-v2-font-sans);
+        white-space: nowrap;
+    }
+
+    .gl-v2-mobile-quickaction:hover,
+    .gl-v2-mobile-quickaction:focus-visible { background: rgba(255, 255, 255, .12); }
+
+    .gl-v2-mobile-quickaction i { font-size: 21px; }
+
+    /* [hidden] en een kale class delen specificiteit en author-regels winnen bij gelijkspel — zie
+       de identieke waarschuwing bij .gl-v2-mobile-menu hierboven. gl-v2-shell.js verbergt tegel 5+
+       met .hidden zodra een pagina meer dan 4 snelacties meegeeft; zonder deze regel zou
+       display:flex hierboven dat gewoon overstemmen. */
+    .gl-v2-mobile-quickaction[hidden] { display: none; }
+
+    /* Optie 6b: 5de+ tegel wordt altijd deze ene "Meer"-tegel (5de+, niet vervangend), toegevoegd
+       door gl-v2-shell.js — erft de basisstijl, enkel de states hieronder zijn eigen aan Meer. De
+       vier [data-role]-elementen (rest/open × icon/label) wisselen puur via JS die .hidden zet op
+       de elementen zelf, geen CSS nodig — er staat hier geen eigen display-regel op die met
+       [hidden] zou botsen zoals bij .gl-v2-mobile-menu/.gl-v2-mobile-quickaction hierboven. */
+
+    /* MEER AANGERAAKT: puur :active, geen JS nodig — zolang de vinger neerligt, verdwijnt zodra
+       die optilt (in tegenstelling tot MEER OPEN hieronder, die blijft staan). */
+    .gl-v2-mobile-quickaction-more:active { background: rgba(255, 255, 255, .18); }
+
+    /* MEER OPEN: blijft staan zolang het sheet open is (JS zet/verwijdert .is-open), en de overige
+       tegels dimmen mee. */
+    .gl-v2-mobile-quickaction-more.is-open { background: rgba(255, 255, 255, .18); }
+
+    .gl-v2-mobile-quickactions.has-open-sheet .gl-v2-mobile-quickaction:not(.gl-v2-mobile-quickaction-more) {
+        opacity: .45;
+    }
+
+    /* ── Snelacties-sheet (optie 6b "MEER OPEN") ─────────────────────────────────────────── */
+    /* Beide stoppen bewust boven de balk (dezelfde calc() als de balk zelf hierboven) i.p.v. tot
+       de fysieke onderrand door te lopen: de balk moet zelf zichtbaar/ongedimd blijven staan
+       terwijl het sheet open is (optie 6b "MEER OPEN"), niet verdwijnen onder de backdrop. */
+    .gl-v2-quickactions-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        background: rgba(20, 26, 19, .45);
+        z-index: 99998;
+    }
+
+    .gl-v2-quickactions-backdrop[hidden] { display: none; }
+
+    .gl-v2-quickactions-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        z-index: 99999;
+        max-height: 80dvh;
+        overflow-y: auto;
+        background: var(--gl-v2-surface);
+        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+        box-shadow: var(--gl-v2-shadow-flyout);
+        padding: 8px 16px 16px;
+    }
+
+    /* Zelfde [hidden]-vs-author-CSS-valkuil als hierboven — display:block op de sheet zou het
+       display:none van [hidden] anders overstemmen. */
+    .gl-v2-quickactions-sheet[hidden] { display: none; }
+
+    .gl-v2-quickactions-sheet-handle {
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-hairline);
+        margin: 6px auto 10px;
+    }
+
+    .gl-v2-quickactions-sheet-header {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 4px 2px 12px;
+    }
+
+    .gl-v2-quickactions-sheet-title {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font: 500 19px var(--gl-v2-font-serif);
+        color: var(--gl-v2-ink);
+        margin: 0;
+    }
+
+    .gl-v2-quickactions-sheet-title-page {
+        font: 500 13px var(--gl-v2-font-sans);
+        color: var(--gl-v2-muted);
+    }
+
+    .gl-v2-quickactions-sheet-close {
+        margin-left: auto;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 1px solid var(--gl-v2-hairline);
+        background: var(--gl-v2-surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gl-v2-muted-soft);
+        flex: none;
+    }
+
+    .gl-v2-quickactions-sheet-close:hover { background: var(--gl-v2-hover-tint); }
+
+    .gl-v2-quickactions-sheet-list { display: flex; flex-direction: column; }
+
+    .gl-v2-quickactions-sheet-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 2px;
+        border: 0;
+        border-bottom: 1px solid var(--gl-v2-hairline-soft);
+        background: transparent;
+        text-align: left;
+        text-decoration: none;
+    }
+
+    .gl-v2-quickactions-sheet-row:last-child { border-bottom: 0; }
+
+    .gl-v2-quickactions-sheet-row:hover,
+    .gl-v2-quickactions-sheet-row:focus-visible { background: var(--gl-v2-hover-tint); }
+
+    .gl-v2-quickactions-sheet-row-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        color: var(--gl-v2-primary);
+        flex: none;
+    }
+
+    .gl-v2-quickactions-sheet-row-icon i { font-size: 18px; }
+
+    .gl-v2-quickactions-sheet-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+    .gl-v2-quickactions-sheet-row-title { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+    .gl-v2-quickactions-sheet-row-subtitle { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+    .gl-v2-quickactions-sheet-row-chevron { font-size: 13px; color: var(--gl-v2-muted); flex: none; }
+}
+
+/* ── Select / dropdown (design-handoff optie 4h) ─────────────────────────────────────────────
+   Generiek, herbruikbaar component (niet Facturen-specifiek — vandaar hier i.p.v. in
+   gl-v2-invoices.css), gebouwd voor het boekjaarfilter op de Facturen-pagina (zie gl-v2-invoices.js
+   voor de echte wiring — dat is de enige plek die 'm vandaag gebruikt, met de BASIS-paneelvariant:
+   een korte, vaste boekjarenlijst heeft geen zoekveld/"nieuw item" nodig). De twee andere
+   paneelvarianten (MET ZOEKVELD, MET ZOEKVELD + NIEUW ITEM) staan hieronder wel volledig
+   uitgewerkt als klaar-maar-nog-nergens-toegepast component — zelfde aanpak als de rail's
+   badge/disabled-states: het component bestaat, niks fabriceert een gebruik ervoor dat er nog
+   niet is. Een native <select> kan geen van deze open-paneelstijlen tonen (de browser tekent de
+   open lijst zelf, buiten CSS-bereik) — vandaar een volledig eigen trigger+paneel i.p.v. een
+   gestyled <select>, net als de rail-flyouts qua trigger+JS-gepositioneerd-paneel-patroon. ────── */
+
+/* Trigger — "GESLOTEN VELD": vier states (leeg/ingevuld/hover-focus/fout-geblokkeerd), met een
+   optioneel icoon vooraan (16px, "icoon verwijst naar het soort gegeven, niet naar de actie"). */
+.gl-v2-select { position: relative; display: inline-flex; min-width: 0; }
+
+.gl-v2-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+    text-align: left;
+}
+
+.gl-v2-select-trigger > i:first-child { font-size: 16px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-select-trigger-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-select-trigger-caret { font-size: 13px; color: var(--gl-v2-muted); flex: none; transition: transform .15s ease; }
+
+/* Backdrop en sheet-header horen enkel bij de mobiele bottom-sheet-vorm (<768px, zie verderop) —
+   zonder deze basisregel zou een kale <div> op desktop/tablet gewoon als onopgemaakt blok
+   renderen i.p.v. onbestaand te lijken. */
+.gl-v2-select-backdrop,
+.gl-v2-select-sheet-header { display: none; }
+
+/* INGEVULD: een echte waarde gekozen (i.p.v. de placeholder) leest donkerder/zwaarder. */
+.gl-v2-select-trigger.is-filled {
+    font-weight: 500;
+    color: var(--gl-v2-ink);
+}
+.gl-v2-select-trigger.is-filled > i:first-child { color: var(--gl-v2-primary); }
+
+/* HOVER / FOCUS */
+.gl-v2-select-trigger:hover {
+    border-color: var(--gl-v2-primary);
+    background: #F7F9F5;
+}
+.gl-v2-select-trigger:focus-visible {
+    outline: 2.5px solid var(--gl-v2-gold);
+    outline-offset: 2px;
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-select-trigger.is-open {
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-select-trigger.is-open .gl-v2-select-trigger-caret { transform: rotate(180deg); }
+
+/* FOUT: een echte validatiefout (bv. verplicht veld leeg gelaten) — component klaar, nergens
+   toegepast vandaag (het boekjaarfilter kan nooit "fout" staan, het is een optioneel filter). */
+.gl-v2-select-trigger.is-error {
+    border-color: #8A3B2A;
+    background: #FBF4F2;
+    color: #8A3B2A;
+}
+.gl-v2-select-trigger.is-error > i:first-child,
+.gl-v2-select-trigger.is-error .gl-v2-select-trigger-caret { color: #8A3B2A; }
+
+/* GEBLOKKEERD */
+.gl-v2-select-trigger:disabled {
+    border-color: var(--gl-v2-hairline-soft);
+    background: #F2F2F0;
+    color: #A8B3A6;
+    cursor: not-allowed;
+}
+.gl-v2-select-trigger:disabled > i:first-child,
+.gl-v2-select-trigger:disabled .gl-v2-select-trigger-caret { color: #A8B3A6; }
+
+/* Paneel — "DESKTOP, 3 VARIANTEN". Basis = enkel de optielijst. JS-gepositioneerd
+   (getBoundingClientRect, zelfde aanpak als de rail-flyouts) — vandaar position:fixed hier en
+   geen top/left/right: die zet gl-v2-invoices.js per instantie. */
+.gl-v2-select-panel {
+    position: fixed;
+    width: 240px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 6px;
+    border-radius: var(--gl-v2-radius-lg);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    z-index: 99997;
+    display: none;
+}
+.gl-v2-select-panel.is-open { display: flex; flex-direction: column; gap: 1px; }
+
+/* [hidden] vs. author-display-regels: zelfde valkuil als eerder bij .gl-v2-mobile-menu/
+   .gl-v2-quickaction — hier voorkomen door display puur via .is-open te sturen i.p.v. ook nog
+   het hidden-attribuut erbij te zetten (zie gl-v2-invoices.js: enkel .is-open wordt getoggled). */
+
+.gl-v2-select-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 9px;
+    border: 0;
+    background: transparent;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    text-align: left;
+    cursor: pointer;
+}
+.gl-v2-select-option i { width: 15px; font-size: 15px; color: var(--gl-v2-primary); flex: none; visibility: hidden; }
+.gl-v2-select-option:hover,
+.gl-v2-select-option:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+
+.gl-v2-select-option.is-selected {
+    background: var(--gl-v2-primary-tint);
+    font-weight: 600;
+    color: var(--gl-v2-primary);
+}
+.gl-v2-select-option.is-selected i { visibility: visible; }
+
+/* MET ZOEKVELD — eigen zoekbalk boven de lijst + een "N RESULTATEN"-label; component klaar,
+   nergens toegepast (zie bovenaan). */
+.gl-v2-select-panel-search { width: 260px; padding: 0; overflow: hidden; }
+.gl-v2-select-panel-search .gl-v2-select-search {
+    padding: 10px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-select-panel-search .gl-v2-select-search-field {
+    height: 36px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+}
+.gl-v2-select-panel-search .gl-v2-select-search-field i:first-child { font-size: 15px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-select-panel-search .gl-v2-select-search-field input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    font: 500 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    background: transparent;
+}
+.gl-v2-select-panel-search .gl-v2-select-search-clear { font-size: 12px; color: var(--gl-v2-muted); cursor: pointer; flex: none; }
+.gl-v2-select-panel-search .gl-v2-select-results-label {
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    padding: 6px 10px 4px;
+}
+.gl-v2-select-panel-search .gl-v2-select-options { padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+
+/* MET NIEUW ITEM — vaste voetrij buiten de scroll, stippellijn-knop zodat 'm niet als gewone
+   optie gelezen wordt; component klaar, nergens toegepast. */
+.gl-v2-select-panel-newitem .gl-v2-select-options { max-height: 196px; overflow-y: auto; }
+.gl-v2-select-newitem-footer {
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    padding: 8px;
+    background: #F7F9F5;
+}
+.gl-v2-select-newitem-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    border: 1px dashed var(--gl-v2-accent-sage);
+    background: var(--gl-v2-surface);
+    font: 600 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+
+/* ── Tablet (optie 4h "COMPACTER, GROTERE RAAKVLAKKEN") — zelfde 768–1023.98px als de userbox
+   hierboven, geen apart tablet-begrip voor dit component. Ondanks de titel zijn de rijen/trigger
+   juist GROTER (44px), niet kleiner — "compacter" slaat op het paneel als geheel, niet de
+   raakvlakken zelf. ─────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-select-trigger { height: 44px; border-radius: 9px; font-size: 13.5px; }
+    .gl-v2-select-panel { width: 300px; }
+    .gl-v2-select-option { padding: 12px 10px; font-size: 13.5px; }
+    .gl-v2-select-panel-search .gl-v2-select-search-field { height: 42px; }
+}
+
+/* ── Mobiel (optie 4h "BOTTOM SHEET") — <768px wordt het paneel een bottom sheet i.p.v. een
+   zwevend paneel: zelfde soort opbouw (backdrop + paneel met handle) als de mobiele hoofdmenu/
+   snelacties-sheet hierboven, hier specifiek voor dit component. ──────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-select-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        height: 100dvh;
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+    .gl-v2-select-backdrop.is-open { display: block; }
+
+    .gl-v2-select-panel {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: auto;
+        max-height: 70dvh;
+        border-radius: 18px 18px 0 0;
+        padding: 10px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+        z-index: 99999;
+    }
+    .gl-v2-select-panel.is-open { display: flex; flex-direction: column; }
+
+    .gl-v2-select-panel::before {
+        content: "";
+        width: 42px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-dashed);
+        align-self: center;
+        flex: none;
+        margin-bottom: 10px;
+    }
+
+    .gl-v2-select-sheet-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 16px 10px;
+        flex: none;
+    }
+    .gl-v2-select-sheet-title { font: 500 18px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+    .gl-v2-select-sheet-close {
+        margin-left: auto;
+        border: 0;
+        background: transparent;
+        font: 600 12.5px var(--gl-v2-font-sans);
+        color: var(--gl-v2-primary);
+        cursor: pointer;
+    }
+
+    .gl-v2-select-option { padding: 13px 10px; font-size: 14px; }
+    .gl-v2-select-panel .gl-v2-select-options { padding: 2px 8px; }
+}
+
+/* ── Tekstvelden (design-handoff optie 4i) ────────────────────────────────────────────────────
+   Generiek, herbruikbaar component (niet pagina-specifiek — vandaar hier i.p.v. in
+   gl-v2-invoices.css), zelfde hoogte/radius-taal als de dropdown hierboven (40px/8px desktop,
+   44px/10px tablet+mobiel — hier wél in één media query, want anders dan de dropdown wordt een
+   tekstveld op telefoon geen bottom sheet). Eerste toepassing: het zoekveld op de Facturen-
+   toolbar (IndexV2.cshtml) — enkel de veld-shell (geen label/helptekst, dat past niet bij een
+   toolbar-zoekveld), de rest (label, foutmelding, meerregelig, groepen) staat klaar voor het
+   eerste echte formulier dat het nodig heeft, zelfde "bouw het hele systeem, gebruik het deel dat
+   al echt is"-aanpak als de dropdown. ─────────────────────────────────────────────────────────── */
+
+.gl-v2-field { display: flex; flex-direction: column; gap: 5px; }
+
+.gl-v2-field-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+.gl-v2-field-label-optional { color: #A8B3A6; font-weight: 450; text-transform: none; letter-spacing: normal; }
+
+/* FOCUS: :focus-within op de hele .gl-v2-field (niet enkel de box) zodat het label mee kleurt —
+   het label staat als sibling VÓÓR de box, dus een box-only :focus-within kan het label zelf niet
+   bereiken. Geen JS nodig voor deze staat. */
+.gl-v2-field:focus-within .gl-v2-field-label { color: var(--gl-v2-primary); }
+.gl-v2-field.is-error .gl-v2-field-label { color: #8A3B2A; }
+.gl-v2-field:has(.gl-v2-field-input:disabled) .gl-v2-field-label { color: #A8B3A6; }
+
+.gl-v2-field-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+.gl-v2-field-box > i:first-child { font-size: 16px; color: var(--gl-v2-muted); flex: none; }
+
+.gl-v2-field-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    padding: 0;
+    background: transparent;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-field-input::placeholder { color: var(--gl-v2-muted); font-weight: 450; opacity: 1; }
+
+/* INGEVULD: leest zwaarder/donkerder, icoon kleurt mee groen — gedreven door :placeholder-shown
+   i.p.v. een JS-gezette klasse, een tekstinput weet zelf al of 't leeg is. Vereist wel dat het veld
+   een placeholder-attribuut draagt (zonder placeholder matcht :placeholder-shown nooit, dus zou
+   :not() hier altijd waar zijn) — elk veld dat dit component gebruikt krijgt er daarom altijd een. */
+.gl-v2-field-input:not(:placeholder-shown) { font-weight: 500; color: var(--gl-v2-ink); }
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) > i:first-child { color: var(--gl-v2-primary); }
+
+.gl-v2-field-box:hover { border-color: var(--gl-v2-primary); background: #F7F9F5; }
+.gl-v2-field-box:focus-within {
+    border-color: var(--gl-v2-primary);
+    outline: 2.5px solid var(--gl-v2-gold);
+    outline-offset: 2px;
+    background: var(--gl-v2-surface);
+}
+.gl-v2-field-box:focus-within > i:first-child { color: var(--gl-v2-primary); }
+
+/* FOUT — component klaar, wordt echt zodra een formulier hier client-side validatie op wil. */
+.gl-v2-field.is-error .gl-v2-field-box { border-color: #8A3B2A; background: #FBF4F2; }
+.gl-v2-field.is-error .gl-v2-field-box > i:first-child,
+.gl-v2-field.is-error .gl-v2-field-input { color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-input::placeholder { color: #8A3B2A; opacity: .7; }
+
+/* GEBLOKKEERD — puur via het native disabled-attribuut op de <input>, geen aparte klasse op de
+   box nodig (zelfde :has()-truc als hierboven bij INGEVULD). */
+.gl-v2-field-box:has(.gl-v2-field-input:disabled) {
+    border-color: var(--gl-v2-hairline-soft);
+    background: #F2F2F0;
+}
+.gl-v2-field-box:has(.gl-v2-field-input:disabled) > i:first-child { color: #A8B3A6; }
+.gl-v2-field-input:disabled { color: #A8B3A6; cursor: not-allowed; }
+.gl-v2-field-input:disabled::placeholder { color: #A8B3A6; }
+
+.gl-v2-field-prefix { flex: none; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-field-suffix {
+    flex: none;
+    height: 32px;
+    padding: 0 12px;
+    margin-right: -10px;
+    border-radius: 6px;
+    background: var(--gl-v2-bg);
+    display: flex;
+    align-items: center;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+
+/* "×"-knop om het veld te wissen (bv. het zoekveld) — puur CSS-getoond zodra er inhoud is, zelfde
+   :placeholder-shown-truc, geen JS-klasse nodig om 'm te tonen/verbergen (enkel om de klik zelf af
+   te handelen). */
+.gl-v2-field-clear {
+    display: none;
+    flex: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+}
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-clear { display: inline-flex; }
+
+.gl-v2-field-help { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-field.is-error .gl-v2-field-help { color: #8A3B2A; }
+
+/* Meerregelig — zelfde label/helptekst-opbouw, enkel de box wordt hoger en top-uitgelijnd i.p.v.
+   gecentreerd. */
+.gl-v2-field-box.gl-v2-field-box-textarea { height: 104px; align-items: flex-start; padding: 11px 14px; }
+.gl-v2-field-box-textarea .gl-v2-field-input {
+    height: 100%;
+    resize: none;
+    font: 450 13px/1.6 var(--gl-v2-font-sans);
+}
+
+/* Groep van velden op één rij (bv. straat + nummer) — zelfde hoogte als de dropdown, dus lijnen ze
+   vanzelf mee uit op één rij ernaast. */
+.gl-v2-field-group { display: flex; gap: 8px; }
+.gl-v2-field-group .gl-v2-field { flex: 1; min-width: 0; }
+.gl-v2-field-group .gl-v2-field-narrow { flex: none; width: 92px; }
+
+/* ── Tablet & mobiel (optie 4i "44PX") — één media query voor beide, in tegenstelling tot de
+   dropdown hierboven wordt een tekstveld op telefoon geen bottom sheet, enkel groter. ──────────── */
+@media (max-width: 1023.98px) {
+    .gl-v2-field-box { height: 44px; border-radius: 10px; }
+    .gl-v2-field-box > i:first-child { font-size: 17px; }
+    .gl-v2-field-input { font-size: 13.5px; }
+    .gl-v2-field-box.gl-v2-field-box-textarea { height: auto; min-height: 104px; }
+}
