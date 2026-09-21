@@ -1,0 +1,62 @@
+@model CPMCore.Models.GlV2.GlV2SearchModalVm
+@* gl-v2 layout-pilot (design-handoff 7e, "Zoekmodal Klant zoeken") — herbruikbare, projectbrede
+   zoekmodal (derde type naast .gl-v2-modal-confirm/.gl-v2-modal-form, zelfde Bootstrap-structuur-
+   only-conventie). Draagt zelf geen zoeklogica — window.GlV2Dashboard.initSearchModal(...) in
+   gl-v2-dashboard.js leest data-lookup-url/data-detail-url-template van het modal-element en doet de
+   rest. Bewuste vereenvoudiging t.o.v. 7e: de bestaande Lookup-endpoints (Leveranciers/Klanten) geven
+   enkel { id, text } terug, geen tweede "meta"-regel (btw-nummer/adres) — de resultatenrij toont dus
+   enkel naam + initialenavatar, geen onderschrift, in plaats van een backend-uitbreiding te forceren
+   voor puur cosmetische winst. *@
+<div class="modal fade gl-v2-modal-search" id="@Model.Id" tabindex="-1" aria-hidden="true" aria-labelledby="@(Model.Id)-label"
+     data-lookup-url="@Model.LookupUrl" data-detail-url-template="@Model.DetailUrlTemplate">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="gl-v2-modal-search-header">
+                <h2 class="gl-v2-modal-search-title" id="@(Model.Id)-label">@Model.Title</h2>
+                <button type="button" class="gl-v2-modal-search-close" data-bs-dismiss="modal" aria-label="Sluiten">
+                    <i class="ph ph-x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="gl-v2-modal-search-field">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-modal-search-input" placeholder="@Model.Placeholder" autocomplete="off" />
+                    <button type="button" class="gl-v2-modal-search-clear" aria-label="Wissen" hidden>
+                        <i class="ph ph-x" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <button type="button" class="gl-v2-modal-search-btn">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>Zoeken
+                </button>
+
+                <div class="gl-v2-modal-search-empty" data-role="empty">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <span>Typ een naam en druk op Zoeken</span>
+                </div>
+                <div class="gl-v2-modal-search-loading" data-role="loading" hidden>Zoeken…</div>
+                <div class="gl-v2-modal-search-none" data-role="none" hidden>
+                    <span class="gl-v2-modal-search-none-title" data-role="none-title">Niets gevonden</span>
+                    <span class="gl-v2-modal-search-none-sub" data-role="none-sub">Controleer de schrijfwijze.</span>
+                    @if (!string.IsNullOrEmpty(Model.CreateUrl))
+                    {
+                        <a href="@Model.CreateUrl" class="gl-v2-modal-search-create is-dashed" data-role="none-create">
+                            <i class="ph ph-plus" aria-hidden="true"></i>@Model.CreateLabel
+                        </a>
+                    }
+                </div>
+                <div class="gl-v2-modal-search-results" data-role="results" hidden>
+                    <span class="gl-v2-modal-search-results-label" data-role="results-label"></span>
+                    <div class="gl-v2-modal-search-list" data-role="results-list"></div>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.CreateUrl))
+            {
+                <div class="gl-v2-modal-search-footer" data-role="footer" hidden>
+                    <a href="@Model.CreateUrl" class="gl-v2-modal-search-create">
+                        <i class="ph ph-plus" aria-hidden="true"></i>@Model.CreateLabel
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>

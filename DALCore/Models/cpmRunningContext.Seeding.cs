@@ -34,6 +34,7 @@ namespace DALCore.Models
             ConfigureTrajectEntities(modelBuilder);
             ConfigureDossierEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);
+            ConfigureMeldingSnoozeEntities(modelBuilder);
             ConfigureCookieConsentEventEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>

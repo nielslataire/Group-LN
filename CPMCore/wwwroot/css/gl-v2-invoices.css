@@ -29,15 +29,29 @@
     min-width: 0;
 }
 
+/* "Kaart krimpt mee" (iPad Pro 13-fix, 2026-09-21): de kaart neemt enkel de hoogte in die de
+   ECHTE rijen nodig hebben (flex:none, geen min-height:0 meer nodig — er is niets meer om in te
+   krimpen) i.p.v. altijd de volledig beschikbare kolomhoogte te reserveren. Vroeger (flex:1) bleef
+   er, zodra een bedrijf/boekjaar minder facturen had dan er op een groot scherm passen (bv. 18
+   facturen op een 1376px-hoge iPad Pro 13 — syncTablePageLength() in gl-v2-invoices.js berekende
+   daar ruimte voor ±20 rijen), zichtbaar lege ruimte onder de tabel binnen de kaart over — las als
+   "het scherm is niet gevuld". gl-v2-invoices.js' syncTablePageLength() vraagt nu ook nooit meer
+   rijen op dan er ECHT zijn (Math.min tegen recordsTotal), dus de kaart heeft sowieso nooit meer
+   lege ruimte te verbergen. Bij weinig data toont .gl-v2-content (De kolom eronder) gewoon zijn
+   eigen, iets koelere achtergrond (#F7F9F5) onder de kortere kaart — bestaand, gedocumenteerd
+   gedrag (zie DESIGN.md "content area... one shade cooler"), geen nieuwe visuele taal. */
 .gl-v2-table-card {
-    flex: 1;
-    min-height: 0;
+    flex: none;
     border-radius: var(--gl-v2-radius-md);
     background: var(--gl-v2-surface);
     box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 18px 40px -28px rgba(44, 59, 42, .4);
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    /* Gegarandeerde lucht onder de pagination-rij, ONAFHANKELIJK van wat DataTables' eigen CSS op
+       .dt-layout-row zelf doet (die rij bleek de padding-toevoeging daar hieronder niet consequent
+       te laten winnen, zelfs niet met !important — vermoedelijk nog specifiekere/latere vendor-CSS).
+       Dit is .gl-v2-table-card's EIGEN box, zuiver gl-v2, geen enkele vendor-stylesheet kan hier ooit
+       tegenin gaan — dus deze garantie staat vast ongeacht wat er verder met de rij zelf gebeurt. */
+    padding-bottom: 16px;
 }
 
 /* ── Laadstaat (optie 4f "LADEN") ─────────────────────────────────────────────────────────────
@@ -145,25 +159,12 @@
    anders zou doen (zie de flex-keten hieronder bij .gl-v2-table-card .table-responsive-md). */
 .gl-v2-empty-state-inline { padding: 44px 24px; }
 
-/* .gl-v2-table-card is een flex-kolom, maar dat alleen laat .gl-v2-selection-toolbar nog niet
-   onderaan de kaart uitkomen: de tussenliggende wrappers (.datatables-header-footer-wrapper,
-   <form>) erfden de beschikbare hoogte niet door — zonder flex:1 op elke schakel is elke wrapper
-   gewoon zo hoog als z'n eigen inhoud, en bleef er witruimte over onder de groene rij. Nu propageert
-   flex:1/min-height:0 helemaal door tot .table-responsive-md, die als enige de resterende ruimte
-   opeet — de toolbar erna staat daardoor altijd exact tegen de kaartrand, ongeacht of
-   syncTablePageLength() (gl-v2-invoices.js) het aantal rijen millimeter-precies goed gokt: elke
-   afronding valt nu op als (onzichtbare) lucht ín het tabelgebied, nooit als een gat ONDER de
-   toolbar. */
-.gl-v2-table-card .datatables-header-footer-wrapper,
-.gl-v2-table-card #invoice-book-form {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-}
-
-.gl-v2-table-card .table-responsive-md { flex: 1; min-height: 0; }
-
+/* Vroeger propageerde flex:1/min-height:0 hier helemaal door tot .table-responsive-md, zodat
+   .gl-v2-selection-toolbar altijd exact tegen de kaartrand stond ongeacht of syncTablePageLength()
+   (gl-v2-invoices.js) het aantal rijen millimeter-precies goed gokte — nodig zolang .gl-v2-table-
+   card zelf flex:1 was (de "kaart krimpt mee"-fix hierboven maakte die stretch-keten overbodig: een
+   kaart die al op haar eigen inhoud afmeet, heeft geen kunstmatige rek meer nodig om de toolbar naar
+   de rand te duwen — die staat er nu vanzelf, gewoon als eerstvolgend element in de normale flow). */
 .gl-v2-selection-toolbar { flex: none; }
 
 .gl-v2 #datatable-invoice-list {
@@ -386,18 +387,26 @@
 .gl-v2-selection-toolbar-btn:disabled { opacity: .5; cursor: not-allowed; }
 .gl-v2-selection-toolbar-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
 
-/* ── Footer/pagination (optie 4a) — info links, pagination rechts, ~48px balk met rand-boven.
-   Enkel de LAATSTE .dt-layout-row: de eerste (topStart/topEnd) draagt de export-knoppen (via
-   #btnExportExcel/Pdf, onzichtbaar zelf) en de verborgen ingebouwde zoekbalk. Vaste padding
-   boven/onder (10px, samen met de 28px-hoge paginaknoppen weer ~48px) i.p.v. een vaste height +
-   align-items:center — zo staat er gegarandeerd evenveel lucht onder de knoppen als erboven,
-   in plaats van dat te laten afhangen van hoe centering toevallig uitkomt. ────────────────────── */
+/* ── Footer/pagination (optie 4a) — info links, pagination rechts, rand-boven. Enkel de LAATSTE
+   .dt-layout-row: de eerste (topStart/topEnd) draagt de export-knoppen (via #btnExportExcel/Pdf,
+   onzichtbaar zelf) en de verborgen ingebouwde zoekbalk. 10px boven (t.o.v. de rand-boven-lijn,
+   samen met de 28px-hoge paginaknoppen ~48px) — zo staat er gegarandeerd evenveel lucht boven de
+   knoppen als er vroeger onder stond toen .gl-v2-table-card nog altijd de volle kolomhoogte innam.
+   Onder is sinds de "kaart krimpt mee"-fix bewust RUIMER (16px i.p.v. symmetrisch 10px): deze rij is
+   nu vaak ook effectief de laatste content vóór de kaart z'n eigen (afgeronde) onderrand, en 10px
+   oogde daar te krap/plakkerig tegen die rand aan — 16px geeft altijd zichtbare lucht, ongeacht
+   hoeveel rijen er zijn. `!important` op de padding: DataTables' eigen (CDN-geladen)
+   `datatables.min.css` (bs5-bundel) zet zelf ook padding op deze rij en laadt in `@@section
+   PageStyle` vóór `gl-v2-invoices.css`, dus zou normaal via cascade-volgorde alsnog verliezen — maar
+   won hier toch zichtbaar, vermoedelijk via een specifiekere of `!important`-eigen regel in die
+   bundel. Vendor-CSS overrulen met `!important` i.p.v. verder specificiteit-gokken tegen een
+   CDN-bundel die we niet zelf beheren/kunnen inzien. ─────────────────────────────────────────────── */
 .gl-v2 .dt-container .dt-layout-row:last-child {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 10px 0;
+    padding: 10px 0 16px !important;
     flex: none;
     border-top: 1px solid var(--gl-v2-hairline);
 }

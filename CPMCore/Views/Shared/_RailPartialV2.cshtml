@@ -94,7 +94,9 @@
    symptoom. Door de flyouts als sibling van .gl-v2-rail te renderen (beide rechtstreeks in
    .gl-v2-app) ontsnappen ze aan die val; JS koppelt ze nog steeds puur op id/data-flyout. *@
 <nav class="gl-v2-rail" aria-label="Hoofdnavigatie">
-    <a class="gl-v2-rail-logo" href="@Url.Action("Index", "Home")" aria-label="CPM Dashboard">LN</a>
+    <a class="gl-v2-rail-logo" href="@Url.Action("Index", "Home")" aria-label="CPM Dashboard">
+        <img src="~/img/groupln-logo.png" alt="" />
+    </a>
     <div class="gl-v2-rail-divider"></div>
 
     <a class="gl-v2-rail-item @(IsActive("Home") ? "is-active" : "")" href="@Url.Action("Index", "Home")" aria-label="Dashboard">
@@ -148,7 +150,7 @@
     {
         <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Invoices") ? "is-active" : "")"
                 aria-haspopup="true" aria-expanded="false" aria-label="Facturatie" data-flyout="fly-facturatie">
-            <i class="ph ph-receipt" aria-hidden="true"></i>
+            <i class="ph ph-invoice" aria-hidden="true"></i>
             <span class="gl-v2-rail-tooltip">Facturatie</span>
         </button>
     }
@@ -156,7 +158,7 @@
     @if (canSeeDocumentenCentrum)
     {
         <a class="gl-v2-rail-item @(IsActive("DocumentenCentrum") ? "is-active" : "")" href="@Url.Action("Index", "DocumentenCentrum")" aria-label="Documentencentrum">
-            <i class="ph ph-tray" aria-hidden="true"></i>
+            <i class="ph ph-files" aria-hidden="true"></i>
             <span class="gl-v2-rail-tooltip">Documentencentrum</span>
         </a>
     }
@@ -337,7 +339,7 @@
         @if (canSeeBoekhouding)
         {
             <button type="button" class="gl-v2-mobile-item gl-v2-mobile-group-trigger js-gl-v2-mobile-searchable" aria-expanded="false" aria-controls="gl-v2-mgroup-facturatie">
-                <i class="ph ph-receipt" aria-hidden="true"></i><span>Facturatie</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
+                <i class="ph ph-invoice" aria-hidden="true"></i><span>Facturatie</span><i class="ph ph-caret-down gl-v2-mobile-chevron" aria-hidden="true"></i>
             </button>
             <div class="gl-v2-mobile-group" id="gl-v2-mgroup-facturatie" hidden>
                 @foreach (var issuer in invoicingIssuerCompanies)
@@ -350,7 +352,7 @@
         @if (canSeeDocumentenCentrum)
         {
             <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "DocumentenCentrum")">
-                <i class="ph ph-tray" aria-hidden="true"></i><span>Documentencentrum</span>
+                <i class="ph ph-files" aria-hidden="true"></i><span>Documentencentrum</span>
             </a>
         }
 

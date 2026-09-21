@@ -8,6 +8,10 @@
     initRailFlyouts();
     initMobileMenu();
     initMobileQuickActions();
+    initModalButtonLoading();
+    initToasts();
+    initKpiToggle();
+    initContextMenus();
 
     function initRailFlyouts() {
         var closeTimer = null;
@@ -239,5 +243,270 @@
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape" && !sheet.hidden) setOpen(false);
         });
+    }
+
+    // Design-handoff 4j's "bezig"-knopstaat, generiek toegepast op elke Type 1/2-modal: een submit
+    // op een <form> binnen een `.gl-v2-modal-confirm`/`.gl-v2-modal-form` zet z'n eigen submit-knop
+    // automatisch op "bezig" (label + .is-loading + disabled), geen per-pagina JS nodig. Gedelegeerd
+    // op `document` i.p.v. bij het laden eenmalig querySelectorAll — TYPE 1's meest voorkomende
+    // gebruik (bv. de facturen-verwijdermodal) laadt zijn `<form>` pas via AJAX ná een klik, dus die
+    // bestaat nog niet wanneer dit script initieel draait; een gedelegeerde listener vangt 'm alsnog.
+    function initModalButtonLoading() {
+        document.addEventListener("submit", function (e) {
+            var form = e.target;
+            if (!(form.closest(".gl-v2-modal-confirm") || form.closest(".gl-v2-modal-form"))) return;
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) setButtonLoading(btn);
+        });
+    }
+
+    function setButtonLoading(btn, label) {
+        if (btn.dataset.glV2Loading === "1") return;
+        btn.dataset.glV2Loading = "1";
+        btn.dataset.glV2RestoreLabel = btn.textContent;
+        btn.textContent = label || "Bezig …";
+        btn.classList.add("is-loading");
+        btn.disabled = true;
+    }
+
+    function clearButtonLoading(btn) {
+        if (btn.dataset.glV2Loading !== "1") return;
+        btn.textContent = btn.dataset.glV2RestoreLabel || btn.textContent;
+        btn.classList.remove("is-loading");
+        btn.disabled = false;
+        delete btn.dataset.glV2Loading;
+    }
+
+    // Zelfde helper beschikbaar voor knop-getriggerde (niet-formulier) bevestigacties in een
+    // pagina-eigen script (zie gl-v2-invoices.js voor het patroon) — bv. #confirmIssueInvoice, dat
+    // via AJAX afhandelt i.p.v. een echte form-submit en dus niet door de listener hierboven gevangen
+    // wordt.
+    window.GlV2Modal = { setButtonLoading: setButtonLoading, clearButtonLoading: clearButtonLoading };
+
+    // Design-handoff 4g "MELDINGEN — TOASTS" — generiek, projectbreed meldingensysteem. Container
+    // (#gl-v2-toast-container) leeft eenmalig in _LayoutV2.cshtml; elke gl-v2-pagina (of _LayoutV2
+    // zelf, voor de bestaande TempData-meldingen) roept enkel window.GlV2Toast.show({...}) aan.
+    function initToasts() {
+        var MAX_VISIBLE = 3;
+        var AUTO_DISMISS_MS = 5000;
+        var container = document.getElementById("gl-v2-toast-container");
+        if (!container) return;
+
+        var TONE_ICONS = { success: "ph-check-circle", danger: "ph-warning-circle", warning: "ph-warning", info: "ph-info" };
+
+        function show(opts) {
+            opts = opts || {};
+            var tone = TONE_ICONS[opts.tone] ? opts.tone : "info";
+
+            var el = document.createElement("div");
+            el.className = "gl-v2-toast is-" + tone;
+            el.setAttribute("role", "status");
+
+            var icon = document.createElement("span");
+            icon.className = "gl-v2-toast-icon";
+            var iconGlyph = document.createElement("i");
+            iconGlyph.className = "ph " + (opts.icon || TONE_ICONS[tone]);
+            iconGlyph.setAttribute("aria-hidden", "true");
+            icon.appendChild(iconGlyph);
+            el.appendChild(icon);
+
+            var title = document.createElement("span");
+            title.className = "gl-v2-toast-title";
+            title.textContent = opts.title || "";
+            el.appendChild(title);
+
+            var body = document.createElement("span");
+            body.className = "gl-v2-toast-body";
+            body.textContent = opts.body || "";
+            el.appendChild(body);
+
+            if (opts.action) {
+                var action = document.createElement("button");
+                action.type = "button";
+                action.className = "gl-v2-toast-action";
+                action.textContent = opts.action;
+                action.addEventListener("click", function () {
+                    dismiss(el);
+                    if (typeof opts.onAction === "function") opts.onAction();
+                });
+                el.appendChild(action);
+            }
+
+            var close = document.createElement("button");
+            close.type = "button";
+            close.className = "gl-v2-toast-close";
+            close.setAttribute("aria-label", "Sluiten");
+            var closeGlyph = document.createElement("i");
+            closeGlyph.className = "ph ph-x";
+            closeGlyph.setAttribute("aria-hidden", "true");
+            close.appendChild(closeGlyph);
+            close.addEventListener("click", function () { dismiss(el); });
+            el.appendChild(close);
+
+            enableSwipeDismiss(el);
+
+            // column-reverse op de container: als laatste kind toegevoegd betekent hier "onderaan de
+            // stapel, dicht bij de hoek" — precies waar een nieuwe melding hoort te verschijnen.
+            container.appendChild(el);
+            enforceMax();
+
+            // Fouten blijven staan tot ze gesloten worden (4g's eigen regel); elke andere toon
+            // verdwijnt na 5 sec. vanzelf.
+            if (tone !== "danger" && !opts.sticky) {
+                el.dataset.glV2Timer = window.setTimeout(function () { dismiss(el); }, AUTO_DISMISS_MS);
+            }
+
+            return el;
+        }
+
+        function dismiss(el) {
+            if (!el || !el.isConnected) return;
+            window.clearTimeout(Number(el.dataset.glV2Timer));
+            el.remove();
+        }
+
+        function enforceMax() {
+            var toasts = container.querySelectorAll(".gl-v2-toast");
+            for (var idx = 0; idx < toasts.length - MAX_VISIBLE; idx++) {
+                dismiss(toasts[idx]);
+            }
+        }
+
+        // Tablet/mobiel tonen geen kruisje (gl-v2-shell.css) — "vegen naar rechts sluit" is op die
+        // formaten de enige manier om een melding (met name een blijvende foutmelding) handmatig weg
+        // te doen. Werkt via Pointer Events (muis én touch in één handler) — op desktop is dit een
+        // bonus naast het altijd-aanwezige kruisje, geen vervanging.
+        function enableSwipeDismiss(el) {
+            var startX = null;
+            var dx = 0;
+
+            el.addEventListener("pointerdown", function (e) {
+                startX = e.clientX;
+                dx = 0;
+                el.setPointerCapture(e.pointerId);
+                el.style.transition = "none";
+            });
+            el.addEventListener("pointermove", function (e) {
+                if (startX === null) return;
+                dx = e.clientX - startX;
+                if (dx > 0) el.style.transform = "translateX(" + dx + "px)";
+            });
+            function end() {
+                if (startX === null) return;
+                el.style.transition = "";
+                if (dx > 80) {
+                    el.style.transform = "translateX(120%)";
+                    el.style.opacity = "0";
+                    window.setTimeout(function () { dismiss(el); }, 150);
+                } else {
+                    el.style.transform = "";
+                }
+                startX = null;
+                dx = 0;
+            }
+            el.addEventListener("pointerup", end);
+            el.addEventListener("pointercancel", end);
+        }
+
+        window.GlV2Toast = { show: show, dismiss: dismiss };
+    }
+
+    // Design-handoff 7a's mobiele "Toon alles" — gedelegeerd op document, generiek voor elke
+    // .gl-v2-kpi-strip op elke gl-v2-pagina (niet dashboard-specifiek, dezelfde reden als de andere
+    // gedelegeerde listeners hierboven: werkt ook op een strip die pas later in de DOM verschijnt).
+    function initKpiToggle() {
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest(".js-gl-v2-kpi-toggle");
+            if (!btn) return;
+            var strip = btn.closest(".gl-v2-kpi-strip");
+            if (!strip) return;
+            var expanded = strip.classList.toggle("is-expanded");
+            btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+            var expandLabel = btn.querySelector('[data-role="expand-label"]');
+            var collapseLabel = btn.querySelector('[data-role="collapse-label"]');
+            if (expandLabel) expandLabel.hidden = expanded;
+            if (collapseLabel) collapseLabel.hidden = !expanded;
+        });
+    }
+
+    // Generiek contextmenu (extractie van Invoices' "···"-rijmenu-patroon, zie gl-v2-shell.css voor
+    // de volledige uitleg) — trigger: elk element met .js-gl-v2-menu-trigger + aria-controls="<menu-
+    // id>". Enkel open/positie/sluiten hoort hier; WAT er in het paneel staat (en of een klik op een
+    // item het meteen moet sluiten, bv. "Eigen datum kiezen" swapt liever van inhoud dan te sluiten)
+    // is aan de pagina-eigen JS — window.GlV2Menu.closeAll() staat daarvoor open.
+    function initContextMenus() {
+        var resizeTimer = null;
+        var backdrop = document.getElementById("gl-v2-menu-backdrop");
+
+        function closeAllMenus() {
+            document.querySelectorAll(".gl-v2-menu.is-open").forEach(function (menu) {
+                menu.classList.remove("is-open");
+                var trigger = document.querySelector('.js-gl-v2-menu-trigger[aria-controls="' + menu.id + '"]');
+                if (trigger) {
+                    trigger.classList.remove("is-menu-open");
+                    trigger.setAttribute("aria-expanded", "false");
+                }
+            });
+            if (backdrop) backdrop.classList.remove("is-open");
+        }
+
+        // <768px: CSS zet het paneel zelf vast als bottom sheet (geen !important nodig) — JS slaat
+        // positionering dan gewoon over, zelfde "sla het gewoon over" aanpak als overal elders in
+        // gl-v2 (boekjaar-paneel, rij-···-menu's) i.p.v. een inline top/left te zetten die de sheet-
+        // CSS zou moeten overstemmen. Moet de vorige keer se inline top/left WEL expliciet wissen
+        // (niet enkel geen nieuwe zetten): een venster dat op tablet-breedte al eens gepositioneerd
+        // werd en dan smaller wordt zonder herlaad (devtools-resize, geen page reload) hield anders
+        // die oude inline waarden vast — inline style wint altijd van de sheet-CSS, ongeacht
+        // specificiteit, dus de bottom-sheet-regels leken dan niets te doen terwijl de kaart in
+        // werkelijkheid nog op haar oude, te-smalle tablet-positie/-breedte vastzat.
+        function positionMenu(trigger, menu) {
+            if (window.innerWidth < 768) {
+                menu.style.top = "";
+                menu.style.left = "";
+                return;
+            }
+            var rect = trigger.getBoundingClientRect();
+            var menuWidth = menu.offsetWidth || 224;
+            var left = Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12);
+            menu.style.left = Math.max(12, left) + "px";
+            var top = rect.bottom + 6;
+            var maxTop = window.innerHeight - menu.offsetHeight - 12;
+            menu.style.top = Math.max(12, Math.min(top, maxTop)) + "px";
+        }
+
+        document.addEventListener("click", function (e) {
+            var trigger = e.target.closest(".js-gl-v2-menu-trigger");
+            if (!trigger) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var menu = document.getElementById(trigger.getAttribute("aria-controls"));
+            if (!menu) return;
+            var wasOpen = menu.classList.contains("is-open");
+            closeAllMenus();
+            if (wasOpen) return;
+            menu.classList.add("is-open");
+            trigger.classList.add("is-menu-open");
+            trigger.setAttribute("aria-expanded", "true");
+            if (backdrop) backdrop.classList.add("is-open");
+            positionMenu(trigger, menu);
+        });
+
+        document.addEventListener("click", function (e) {
+            if (e.target.closest(".gl-v2-menu") || e.target.closest(".js-gl-v2-menu-trigger")) return;
+            closeAllMenus();
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") closeAllMenus();
+        });
+        if (backdrop) backdrop.addEventListener("click", closeAllMenus);
+        window.addEventListener("resize", function () {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(closeAllMenus, 100);
+        });
+
+        // reposition: voor pagina-eigen JS dat de INHOUD van een al-open paneel verandert (bv.
+        // snooze-opties -> eigen-datum-kalender, andere hoogte/breedte) en de zwevende positie
+        // opnieuw wil laten berekenen zonder het paneel te moeten sluiten/heropenen.
+        window.GlV2Menu = { closeAll: closeAllMenus, reposition: positionMenu };
     }
 })();

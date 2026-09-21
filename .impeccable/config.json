@@ -32,6 +32,15 @@
         "value": "avenir-black",
         "createdAt": "2026-09-18T08:00:38.294Z",
         "reason": "Pre-existing, deliberate self-hosted @font-face for the unrelated AccessDenied page brand title; out of scope for the Account/Login overdrive task"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "CPMCore/wwwroot/css/gl-v2-shell.css"
+        ],
+        "createdAt": "2026-09-21T10:08:24.607Z",
+        "reason": "Literal reproduction of design-handoff 7a's own KPI-card spec (border-left:3px solid {{k.accent}} on every kpi in the reference wireframe) — a client-provided design decision, not an invented AI pattern."
       }
     ]
   }

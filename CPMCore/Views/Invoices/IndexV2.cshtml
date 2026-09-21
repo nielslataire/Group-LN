@@ -462,7 +462,7 @@ else
    geen magnific-popup/.modal-block meer, dat was de vorige (niet-gl-v2) manier om dit te tonen. *@
 <div class="modal fade gl-v2-modal-confirm" id="deleteInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" id="delete-invoice-container"></div>
+        <div class="modal-content is-danger" id="delete-invoice-container"></div>
     </div>
 </div>
 
@@ -470,7 +470,7 @@ else
    vandaar goud i.p.v. rood. *@
 <div class="modal fade gl-v2-modal-confirm" id="issueInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content is-warning">
             <div class="modal-body">
                 <span class="gl-v2-modal-icon is-warning"><i class="ph ph-lock" aria-hidden="true"></i></span>
                 <div class="gl-v2-modal-text">
@@ -480,7 +480,7 @@ else
             </div>
             <div class="modal-footer">
                 <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
-                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="confirmIssueInvoice">Nummeren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-warning" id="confirmIssueInvoice">Nummeren</button>
             </div>
         </div>
     </div>

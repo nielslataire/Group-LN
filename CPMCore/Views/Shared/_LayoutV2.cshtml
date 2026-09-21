@@ -71,7 +71,7 @@
                     @* Optie 3a: op mobiel toont de topbar het merk-logo links i.p.v. het paginaicoon
                        (dat blijft desktop-only) — de rail/het menu-paneel dragen elders al hetzelfde
                        gestippelde logo-vakje. *@
-                    <span class="gl-v2-mobile-logo" aria-hidden="true">LN</span>
+                    <span class="gl-v2-mobile-logo" aria-hidden="true"><img src="~/img/groupln-logo.png" alt="" /></span>
                     <span class="gl-v2-topbar-icon"><i class="@pageIcon" aria-hidden="true"></i></span>
                     <div class="gl-v2-topbar-titles">
                         <p class="gl-v2-topbar-title">@pageTitle</p>
@@ -83,6 +83,22 @@
                         <div class="gl-v2-topbar-actions">
                             @RenderSection("PageActions", required: false)
                         </div>
+                    }
+                    @* Design-handoff 7b — belletje, enkel <1024px zichtbaar (gl-v2-shell.css): op
+                       desktop zit het meldingenpaneel al vast in de dashboardkolom, geen trigger
+                       nodig. Optioneel, zelfde patroon als @@section MobileQuickActions —
+                       ViewData["HasNotificationsBell"] wordt enkel gezet door een pagina die ook
+                       echt een GlV2/_MeldingenPaneel rendert (vandaag enkel Home/Index). *@
+                    @if (ViewData["HasNotificationsBell"] as bool? == true)
+                    {
+                        var bellCount = ViewData["NotificationsBellCount"] as int? ?? 0;
+                        <button type="button" class="gl-v2-topbar-bell" id="gl-v2-notifications-bell" aria-haspopup="true" aria-expanded="false" aria-controls="glV2Meldingen" aria-label="Meldingen">
+                            <i class="ph ph-bell" aria-hidden="true"></i>
+                            @if (bellCount > 0)
+                            {
+                                <span class="gl-v2-topbar-bell-badge">@bellCount</span>
+                            }
+                        </button>
                     }
                     @* Optie 3a: zoek-icoon, enkel <768px zichtbaar (gl-v2-shell.css). Nog niet aan
                        echte zoekfunctionaliteit gekoppeld — zelfde eerlijke placeholder-status als
@@ -167,6 +183,16 @@
                        dezelfde acties). Generiek: elke gl-v2-pagina die @@section
                        MobileQuickActions vult krijgt deze balk, niets hier is Facturen-specifiek. *@
                     <div class="gl-v2-mobile-quickactions" id="gl-v2-mobile-quickactions">
+                        @* Enkel zichtbaar (CSS) in de tablet-liggend-railvorm van deze balk (design-
+                           handoff 7g, "het actieve project staat bovenaan als eerste tegel"). Puur
+                           tonend — geen klikactie in deze pas. Generiek/leeg hier: enkel een pagina
+                           die window.GlV2ActiveProject initialiseert (vooralsnog enkel het
+                           Projectleider-dashboard, gl-v2-dashboard.js) vult 'm; op elke andere
+                           gl-v2-pagina blijft dit element gewoon hidden. *@
+                        <div class="gl-v2-qa-rail-active" id="gl-v2-qa-rail-active" hidden>
+                            <i class="ph ph-buildings" aria-hidden="true"></i>
+                            <span data-role="rail-active-name"></span>
+                        </div>
                         @RenderSection("MobileQuickActions", required: false)
                     </div>
                     @* Optie 6b: zodra gl-v2-shell.js meer dan 4 tegels telt, verhuizen tegel 5+ hierin
@@ -188,6 +214,19 @@
                 }
             </div>
         </div>
+
+        @* Design-handoff 4g "MELDINGEN — TOASTS" — één gedeelde, projectbrede container (niet
+           Facturen-specifiek), gevuld via window.GlV2Toast (gl-v2-shell.js). Vervangt de PNotify-
+           via-TempData-melding hieronder op elke gl-v2-pagina; zie DESIGN.md-draft voor de volledige
+           uitleg. Sibling van .gl-v2-app, net als de andere top-level overlays (mobiel hoofdmenu/
+           backdrop in _RailPartialV2.cshtml) — position:fixed dus DOM-positie doet er verder niet toe. *@
+        <div class="gl-v2-toast-container" id="gl-v2-toast-container" aria-live="polite"></div>
+
+        @* Generiek contextmenu (extractie van Invoices' "···"-rijmenu-patroon) — één gedeelde
+           backdrop voor élk .gl-v2-menu-paneel op deze pagina, zie window.GlV2Menu in
+           gl-v2-shell.js. Enkel de backdrop leeft hier globaal; de panelen zelf renderen waar de
+           aanroepende pagina ze nodig heeft (bv. het meldingenscherm se snooze-menu). *@
+        <div class="gl-v2-menu-backdrop" id="gl-v2-menu-backdrop"></div>
     </div>
 
     <script src="~/lib/jquery/jquery.min.js"></script>
@@ -215,17 +254,34 @@
     <script src="~/lib/bootstrap-multiselect/js/bootstrap-multiselect.min.js"></script>
     <script src="~/lib/pnotify/pnotify.custom.js"></script>
 
+    @* gl-v2 (design-handoff 4g "MELDINGEN — TOASTS"): vervangt de PNotify-via-TempData-melding die
+       _Layout.cshtml nog gebruikt — zelfde TempData-contract (AddMessage in BaseController, gebruikt
+       app-breed door tientallen controllers, o.a. InvoicesController.Delete/Issue/BookInvoices), dus
+       élke bestaande @Html.RedirectToAction(...)-melding verschijnt hier automatisch als gl-v2-toast
+       i.p.v. een PNotify-popup, zonder dat er ergens anders iets hoefde te veranderen. Tone-mapping:
+       PNotify's "type" kende enkel success/error/notice/info; gl-v2 voegt warning niet toe aan deze
+       mapping (AddMessage-aanroepers gebruiken vandaag nergens "warning" als type) — "notice" mapt
+       op warning voor het geval dat ooit wel gebeurt, verder is het een 1-op-1 vertaling. *@
     <script>
         $(window).on('load', function () {
         @if (TempData["Message"] != null)
         {
+            var messageType = TempData["MessageType"]?.ToString() ?? "info";
+            var tone = messageType switch
+            {
+                "success" => "success",
+                "error" => "danger",
+                "notice" or "warning" => "warning",
+                _ => "info"
+            };
             <text>
-                    new PNotify({
-                        title:    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["MessageTitle"]?.ToString() ?? "")),
-                        text:     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Message"]?.ToString() ?? "")),
-                        type:     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["MessageType"]?.ToString() ?? "info")),
-                        addclass: 'stack-bottomright'
-                    });
+                    if (window.GlV2Toast) {
+                        window.GlV2Toast.show({
+                            tone: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tone)),
+                            title: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["MessageTitle"]?.ToString() ?? "")),
+                            body: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["Message"]?.ToString() ?? ""))
+                        });
+                    }
             </text>
         }
         });

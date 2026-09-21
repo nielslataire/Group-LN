@@ -1,0 +1,124 @@
+@model CPMCore.Models.GlV2.GlV2MeldingenPanelVm
+@* gl-v2 layout-pilot (design-handoff 7b, "Meldingenscherm") — herbruikbare, projectbrede
+   meldingenpaneel-inhoud. Zelfde markup/data voor alle drie de presentaties, CSS (gl-v2-shell.css)
+   herschikt enkel de OMHULLING per breedte: desktop een vast paneel in de dashboardkolom (altijd
+   zichtbaar, geen open/dicht-status), tablet dezelfde kaart als zwevende popover onder het belletje
+   in de topbar (positie via window.GlV2Menu.reposition, hetzelfde mechanisme als elk ander gl-v2-
+   contextmenu), mobiel als volledig scherm. Twee koppen worden allebei server-side gerenderd en CSS
+   toont er telkens maar één van (.gl-v2-mc-header voor desktop/tablet, .gl-v2-mc-mobile-header +
+   filterchips voor mobiel) — zelfde "twee varianten, CSS kiest" patroon als de desktop-/mobiele
+   userbox elders in gl-v2, i.p.v. de kop clientside op te bouwen. *@
+@{
+    var hasAny = Model.Groups.Any(g => g.Items.Any()) || Model.Snoozed.Any();
+}
+<div class="gl-v2-mc-panel" id="@Model.Id" role="dialog" aria-modal="true" aria-labelledby="@(Model.Id)-title">
+    <div class="gl-v2-mc-header">
+        <i class="ph ph-bell" aria-hidden="true"></i>
+        <span class="gl-v2-mc-title" id="@(Model.Id)-title">Meldingen</span>
+        @if (Model.BadgeCount > 0)
+        {
+            <span class="gl-v2-mc-badge">@Model.BadgeCount</span>
+        }
+        <span class="gl-v2-mc-spacer"></span>
+        <button type="button" class="gl-v2-mc-allread js-gl-v2-mc-allread">Alles gelezen</button>
+    </div>
+
+    <div class="gl-v2-mc-mobile-header">
+        <button type="button" class="gl-v2-mc-back js-gl-v2-mc-close" aria-label="Sluiten">
+            <i class="ph ph-arrow-left" aria-hidden="true"></i>
+        </button>
+        <span class="gl-v2-mc-mobile-title">Meldingen</span>
+        @if (Model.BadgeCount > 0)
+        {
+            <span class="gl-v2-mc-mobile-badge">@Model.BadgeCount</span>
+        }
+        <span class="gl-v2-mc-spacer"></span>
+        <button type="button" class="gl-v2-mc-mobile-allread js-gl-v2-mc-allread">Alles gelezen</button>
+    </div>
+    <div class="gl-v2-mc-chips" role="tablist">
+        <button type="button" class="gl-v2-mc-chip is-active" data-mc-filter="alle" role="tab" aria-selected="true">Alles</button>
+        <button type="button" class="gl-v2-mc-chip" data-mc-filter="actie" role="tab" aria-selected="false">Actie</button>
+        <button type="button" class="gl-v2-mc-chip" data-mc-filter="info" role="tab" aria-selected="false">Info</button>
+    </div>
+
+    <div class="gl-v2-mc-body">
+        @if (!hasAny)
+        {
+            @* Design-handoff 7b "LEEG" — zelfde lege staat ongeacht breedte, geen aparte mobiele
+               variant nodig (het is al gecentreerd/compact genoeg voor elk formaat). *@
+            <div class="gl-v2-mc-empty">
+                <span class="gl-v2-mc-empty-icon"><i class="ph ph-check" aria-hidden="true"></i></span>
+                <span class="gl-v2-mc-empty-title">Alles opgevolgd</span>
+                <span class="gl-v2-mc-empty-desc">Geen openstaande meldingen. Nieuwe punten verschijnen hier zodra ze binnenkomen.</span>
+            </div>
+        }
+        else
+        {
+            @for (var gi = 0; gi < Model.Groups.Count; gi++)
+            {
+                var group = Model.Groups[gi];
+                if (!group.Items.Any()) { continue; }
+                @* data-mc-filter-group: "actie" voor de eerste groep (Actie vereist), "info" voor de
+                   rest (Op te lossen + Ter info) — de mobiele filterchips kennen enkel Alles/Actie/
+                   Info, geen derde stand, zie design-handoff 7b's eigen chiprij. *@
+                var filterGroup = gi == 0 ? "actie" : "info";
+                <div class="gl-v2-mc-group" data-mc-filter-group="@filterGroup">
+                    <div class="gl-v2-mc-group-header" style="background:@group.Bg">
+                        <span class="gl-v2-mc-group-dot" style="background:@group.Accent"></span>
+                        <span class="gl-v2-mc-group-title" style="color:@group.Accent">@group.Title</span>
+                        <span class="gl-v2-mc-group-count" style="color:@group.Accent">@group.Items.Count</span>
+                    </div>
+                    @foreach (var item in group.Items)
+                    {
+                        var menuId = $"{Model.Id}-snooze-{gi}-{group.Items.IndexOf(item)}";
+                        <div class="gl-v2-mc-item" style="--gl-v2-mc-accent:@group.Accent"
+                             data-project-id="@item.ProjectId" data-category="@item.Category" data-text="@item.Text">
+                            <i class="ph @item.IconClass gl-v2-mc-item-icon" aria-hidden="true"></i>
+                            <div class="gl-v2-mc-item-text">
+                                <span class="gl-v2-mc-item-body">@item.Text</span>
+                                <span class="gl-v2-mc-item-meta">@item.Meta</span>
+                            </div>
+                            <div class="gl-v2-mc-item-actions">
+                                @if (item.CanSnooze)
+                                {
+                                    <button type="button" class="gl-v2-mc-snooze-trigger js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Snooze">
+                                        <i class="ph ph-clock" aria-hidden="true"></i>
+                                        <span class="gl-v2-mc-snooze-trigger-label">Snooze</span>
+                                    </button>
+                                }
+                                <a href="@item.BekijkUrl" class="gl-v2-mc-item-bekijk">Bekijk</a>
+                            </div>
+                        </div>
+                        @if (item.CanSnooze)
+                        {
+                            @await Html.PartialAsync("GlV2/_SnoozeMenu", menuId)
+                        }
+                    }
+                </div>
+            }
+
+            @if (Model.Snoozed.Any())
+            {
+                <div class="gl-v2-mc-group" data-mc-filter-group="info">
+                    @foreach (var snoozed in Model.Snoozed)
+                    {
+                        <div class="gl-v2-mc-item gl-v2-mc-item-snoozed" data-melding-key="@snoozed.MeldingKey">
+                            <i class="ph ph-clock" aria-hidden="true"></i>
+                            <div class="gl-v2-mc-item-text">
+                                <span class="gl-v2-mc-item-body">@snoozed.Text</span>
+                                <span class="gl-v2-mc-item-meta">Gesnoozed tot @snoozed.UntilLabel</span>
+                            </div>
+                            <div class="gl-v2-mc-item-actions">
+                                <button type="button" class="gl-v2-mc-item-bekijk js-gl-v2-mc-unsnooze">Nu tonen</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="gl-v2-mc-footer">
+                <button type="button" class="gl-v2-mc-showall">Alle meldingen tonen</button>
+            </div>
+        }
+    </div>
+</div>

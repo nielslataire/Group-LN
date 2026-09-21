@@ -1,0 +1,189 @@
+@model CPMCore.Models.Projecten.ProjectWerfCardVM
+@using BOCore
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 layout-pilot (design-handoff 7d, "Projectkaart") — nieuwe presentatielaag voor de
+    bestaande werf-kaart. Zelfde ProjectWerfCardVM/databron als Views/Shared/_ProjectWerfCard.cshtml
+    (geen nieuwe query's), en draagt bewust dezelfde functionele hook-klassen/attributen als die
+    legacy partial (.gl-werf-col, .gl-arrange-bar/.gl-drag-grip/.gl-arrange-up/.gl-arrange-down,
+    .gl-pin-toggle, data-project-id/-status/-search) zodat de bestaande inline JS in
+    _DashboardProjectleider.cshtml (jQuery UI Sortable + PinProject/UnpinProject/ReorderProjects-
+    AJAX) hier ongewijzigd tegen werkt — enkel de gl-v2-*-klassen zijn nieuw, puur visueel.
+
+    Footer-datumregel is BEWUST anders dan de legacy kaart: die forceerde bij een overschreden
+    opleverdatum stilzwijgend 100% voortgang + een groene "Opgeleverd op..."-melding (een aanname,
+    geen echte oplevering-registratie). Design-handoff 7d's eigen regel ("bij nadering wordt de
+    tekst goud, bij overschrijding rood") is expliciet en vervangt dat hier — de voortgangscijfers
+    tonen gewoon de echte Voortgang-waarden, nooit kunstmatig op 100% gezet.
+*@
+@{
+    var project = Model.Project;
+    var vg = Model.Voortgang;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    int? daysLeft = null;
+    if (project.DeliveryDate.HasValue)
+    {
+        daysLeft = (int)(project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
+    }
+    var isOverdue = daysLeft.HasValue && daysLeft.Value < 0;
+    var isNearing = daysLeft.HasValue && !isOverdue && daysLeft.Value < 14;
+    var footerTone = isOverdue ? "is-over" : isNearing ? "is-near" : "";
+
+    var (chipClass, chipLabel) = ProjectPhase.Chip(project, vg);
+
+    static bool IsImageName(string n)
+    {
+        if (string.IsNullOrWhiteSpace(n)) return false;
+        var ext = System.IO.Path.GetExtension(n).ToLowerInvariant();
+        return ext is ".jpg" or ".jpeg" or ".png" or ".webp" or ".gif" or ".bmp" or ".avif";
+    }
+
+    var defaultPicIsImage = project.DefaultPicture?.MediaType != 1 && IsImageName(project.DefaultPicture?.Name);
+    var fotoName = defaultPicIsImage ? project.DefaultPicture!.Name
+        : (IsImageName(project.StandardFotoName) ? project.StandardFotoName : null);
+    var fotoUrl = fotoName != null ? Model.ImageBaseUrl + "pictures/447/" + fotoName : string.Empty;
+
+    var searchText = string.Join(" ", new[] { project.Name, project.Postalcode?.Gemeente }
+        .Where(s => !string.IsNullOrWhiteSpace(s))).ToLowerInvariant();
+
+    var fysPct = vg?.FysiekeVoortgangPct ?? 0m;
+    var finPct = vg?.FinancieleVoortgangPct ?? 0m;
+
+    // design-handoff 7c "STATEN": Volledig (100%, donkerder groen + vinkje) / Over budget (>100%,
+    // rood, balk zelf klemt op 100%) / Achterstand t.o.v. planning (goud — enkel Fysiek, en enkel
+    // wanneer het merkbaar achterloopt op Financieel, niet bij een triviaal verschil).
+    GlV2ProgressTone ToneFor(decimal pct, bool isFysiek, decimal? comparePct)
+    {
+        if (pct > 100) return GlV2ProgressTone.Over;
+        if (pct >= 100) return GlV2ProgressTone.Complete;
+        if (isFysiek && comparePct.HasValue && pct < comparePct.Value - 5) return GlV2ProgressTone.Behind;
+        return GlV2ProgressTone.Primary;
+    }
+
+    GlV2ProgressBarVm BuildBar(string label, decimal pct, bool isFysiek, decimal? comparePct, bool showValue, GlV2ProgressSize size = GlV2ProgressSize.Fine, bool inlineLabel = false)
+        => new()
+        {
+            Label = label,
+            ValueLabel = pct.ToString("0.#", inv) + "%",
+            Pct = (double)pct,
+            Tone = ToneFor(pct, isFysiek, comparePct),
+            ShowValue = showValue,
+            Size = size,
+            InlineLabel = inlineLabel
+        };
+
+    var showBars = vg != null;
+    var fysBar = BuildBar("Fysiek", fysPct, true, finPct, showValue: true);
+    var finBar = BuildBar("Financieel", finPct, false, null, showValue: true);
+    // Mobiele rij: dikkere 8px-balk (design-handoff 7c "Standard") i.p.v. de 4px "Fine" van de
+    // desktopkaart, en een inline "Fysiek"/"Financieel"-label vóór de balk i.p.v. het cijfer — zo
+    // blijft duidelijk welke balk welke is zonder de compacte rij met cijfers te belasten.
+    var fysBarMobile = BuildBar("Fysiek", fysPct, true, finPct, showValue: false, size: GlV2ProgressSize.Standard, inlineLabel: true);
+    var finBarMobile = BuildBar("Financieel", finPct, false, null, showValue: false, size: GlV2ProgressSize.Standard, inlineLabel: true);
+}
+<div class="@Model.ColumnClasses gl-werf-col gl-v2-project-col" data-project-id="@project.Id"
+     data-status="@(project.Status?.Id ?? 0)" data-search="@searchText">
+    @if (Model.ShowArrangeBar)
+    {
+        <div class="gl-arrange-bar gl-v2-project-arrange-bar d-none">
+            <button type="button" class="gl-arrange-btn gl-arrange-up gl-v2-project-arrange-btn" aria-label="@(project.Name) naar boven verplaatsen" title="Naar boven">
+                <i class="ph ph-caret-up" aria-hidden="true"></i>
+            </button>
+            <span class="gl-drag-grip gl-v2-project-arrange-grip" aria-hidden="true" title="Sleep om te verplaatsen">
+                <i class="ph ph-dots-six-vertical" aria-hidden="true"></i> Sleep
+            </span>
+            <button type="button" class="gl-arrange-btn gl-arrange-down gl-v2-project-arrange-btn" aria-label="@(project.Name) naar onder verplaatsen" title="Naar onder">
+                <i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+        </div>
+    }
+    @* Pin + kaart samen in een eigen positioneringscontext (niet .gl-v2-project-col zelf, die ook de
+       rangschik-balk bevat): anders bleef de pin op zijn oorspronkelijke top:8px/left:8px hangen
+       t.o.v. de kolom zodra de balk in rangschik-modus verscheen, terwijl de foto eronder wél
+       meeschoof — de pin "gleed niet mee met de foto". Nu is de wrap zelf de positioneringscontext,
+       en die wrap schuift als geheel mee in de flex-kolom, dus de pin blijft altijd op de foto staan. *@
+    <div class="gl-v2-project-card-wrap">
+        @if (Model.IsPinned)
+        {
+            <button type="button" class="gl-pin-toggle gl-v2-project-pin" data-project-id="@project.Id" aria-label="Losmaken: @project.Name" title="Vastgezet — klik om los te maken">
+                <i class="ph ph-push-pin" aria-hidden="true"></i>
+            </button>
+        }
+        <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart gl-v2-project-card">
+        <div class="gl-v2-project-card-frame">
+            <div class="gl-v2-project-photo">
+                @if (!string.IsNullOrEmpty(fotoUrl))
+                {
+                    <img src="@fotoUrl" alt="Foto van @project.Name" loading="lazy" />
+                }
+                else
+                {
+                    <div class="gl-v2-project-photo-placeholder"><i class="ph ph-buildings" aria-hidden="true"></i></div>
+                }
+                <span class="gl-v2-project-status @chipClass">@chipLabel</span>
+                @if (vg != null && !string.IsNullOrEmpty(vg.Warnings))
+                {
+                    <span class="gl-v2-project-warn" title="@string.Join(", ", vg.WarningList)">
+                        <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                    </span>
+                }
+            </div>
+            <div class="gl-v2-project-body">
+                <span class="gl-v2-project-name">@project.Name</span>
+                @if (!string.IsNullOrWhiteSpace(project.Postalcode?.Gemeente))
+                {
+                    <span class="gl-v2-project-loc"><i class="ph ph-map-pin" aria-hidden="true"></i>@project.Postalcode.Gemeente.ToUpperInvariant()</span>
+                }
+                @if (showBars)
+                {
+                    <div class="gl-v2-project-progress">
+                        @await Html.PartialAsync("GlV2/_ProgressBar", fysBar)
+                        @await Html.PartialAsync("GlV2/_ProgressBar", finBar)
+                    </div>
+                }
+                <div class="gl-v2-project-footer @footerTone">
+                    <i class="ph ph-clock" aria-hidden="true"></i>
+                    @if (!daysLeft.HasValue)
+                    {
+                        <span>Geen opleverdatum</span>
+                    }
+                    else if (isOverdue)
+                    {
+                        <span>Opleverdatum overschreden (@project.DeliveryDate!.Value.ToString("dd/MM/yyyy"))</span>
+                    }
+                    else
+                    {
+                        <span>@daysLeft.Value d resterend</span>
+                    }
+                </div>
+
+                @* Mobiele compacte rij (<768px, gl-v2-shell.css) — zelfde project, herleide vorm:
+                   miniatuur + naam/plaats + twee balkjes zonder cijfers, geen badges/voet. *@
+                <div class="gl-v2-project-mobile-row">
+                    @if (!string.IsNullOrEmpty(fotoUrl))
+                    {
+                        <img class="gl-v2-project-mobile-thumb" src="@fotoUrl" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="gl-v2-project-mobile-thumb-placeholder"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                    }
+                    <div class="gl-v2-project-mobile-text">
+                        <span class="gl-v2-project-mobile-name">@project.Name</span>
+                        @if (!string.IsNullOrWhiteSpace(project.Postalcode?.Gemeente))
+                        {
+                            <span class="gl-v2-project-mobile-loc">@project.Postalcode.Gemeente.ToUpperInvariant()</span>
+                        }
+                        @if (showBars)
+                        {
+                            @await Html.PartialAsync("GlV2/_ProgressBar", fysBarMobile)
+                            @await Html.PartialAsync("GlV2/_ProgressBar", finBarMobile)
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a>
+    </div>
+</div>

@@ -140,7 +140,15 @@ paler `#f5f5f8` — the tint itself carries more of the "grounded" identity than
 ### Tertiary
 - **Gold** (`#C9A96E`): reserved for the active-tab underline pattern from the mockup's dashboard
   option (2a) — not yet built on any page in this pilot (no page with a tab strip has been
-  implemented). Do not use it for anything else until a tabbed screen actually needs it.
+  implemented). Do not use it for anything else until a tabbed screen actually needs it. It is
+  also, separately, the focus-ring color on every `.gl-v2-btn` (`:focus-visible`) — that usage
+  predates this pilot's tab strip and stays as-is.
+- **Warning** (`#8A6A32`, tint `#F6EEDC`): added in the 4j button-states refinement pass — the
+  modal-confirm "irreversible but not destructive" tone (`.is-warning`, `.gl-v2-btn-warning`).
+  Deliberately a separate token from Gold above: Gold is a decorative accent (tab underline, focus
+  ring) at a light, jewelry-like saturation, while Warning is a semantic status color at a much
+  darker, legible-as-text/legible-as-a-filled-button-background shade. Don't reach for Gold where
+  Warning is meant, even though both read as "gold" at a glance.
 
 ### Neutral
 - **Ink** (`#2C3B2A`): default text.
@@ -193,9 +201,12 @@ tone as the page behind the card).
 - **≥768px**: rail + flyouts, as above.
 - **<768px** (phone breakpoint — matches the current system's own ≤767px convention): rail and
   flyouts hidden entirely. Topbar switches to solid Primary-green, white text, and shows, left to
-  right: a dashed-border logo box (32px), title + single-line subtitle (last breadcrumb crumb
-  only, not the full trail), a spacer, a circular search-icon stub (34px, not wired to real
-  search yet), and a circular hamburger trigger (34px) — see Mobile Topbar under Components. The
+  right: the real `groupln-logo.png` mark (32px box, 26px image, no background/border needed — it
+  reads fine directly on the green topbar; was a dashed-border placeholder box before the real
+  asset was wired in, 2026-09-21, same swap on `.gl-v2-rail-logo`), title + single-line subtitle
+  (last breadcrumb crumb only, not the full trail), a spacer, a circular search-icon stub (34px,
+  not wired to real search yet), and a circular hamburger trigger (34px) — see Mobile Topbar under
+  Components. The
   userbox/avatar is **not** shown in the mobile topbar at all; the profile moved entirely into
   the mobile menu panel's footer (see Mobile Menu Panel). A page can also render a full-width
   "quick actions" bar pinned under the scrollable content, just above the safe-area — see Mobile
@@ -629,28 +640,72 @@ mirrors it directly rather than the mockup's own simplified 4-column LADEN demo.
   alone rather than two buttons that look real but do nothing. The toolbar's button shares the
   `.js-book-invoices-btn` class with the topbar button and the mobile quick-action tile (three
   elements, one class) — `gl-v2-invoices.js` already enables/disables all of them together;
-  adding this third instance needed zero new JS for that part. Reaching the *exact* bottom edge of
-  `.gl-v2-table-card` needed one more thing: `.gl-v2-table-card` is a flex column, but that alone
-  doesn't make its descendants stretch — `.datatables-header-footer-wrapper` and `<form>` were each
-  just as tall as their own content, so the toolbar could sit with visible white space beneath it.
-  `flex:1;min-height:0` now runs down that whole chain (wrapper → form → `.table-responsive-md`),
-  with `.table-responsive-md` the only one that actually grows to soak up the remainder — so the
-  toolbar (`flex:none`) is always flush against the card, and any imprecision in
-  `syncTablePageLength()`'s row-count math (below) shows up as slack *inside* the table area
-  instead of as a gap under the toolbar.
-- **Pagination/density (optie 4a):** the table always fills the available screen height — page size
-  is computed from real available space, not the other way around. `syncTablePageLength()` measures
-  `.gl-v2-table-card`'s rendered height minus the `<thead>` height, the DataTables footer row
-  height, and a constant reserved for the selection toolbar (reserved whether or not it's currently
-  visible — otherwise the row count would jump by one every time a checkbox is (un)checked), divides
-  by the fixed 54px row height, and calls `table.page.len(rows).draw(false)`. Runs once after init
-  and again on window resize (150ms debounce); guarded to only redraw when the computed count
-  actually changed. The manual page-length dropdown (10/25/50) is gone — `layout.topStart` was
-  already overridden to an empty button row, so there was nothing to additionally hide. Footer
-  copy is "N van TOTAAL facturen" (via `infoCallback`, not DataTables' default `_START_ tot _END_`
-  range string) and pagination buttons are 30×28/7px-radius squares with `‹`/`›` glyphs
-  (`language.paginate`) — both matching option 4a exactly rather than DataTables' Bootstrap
-  defaults.
+  adding this third instance needed zero new JS for that part. The toolbar (`flex:none`) sits as
+  the next element right after the table area in normal flow — since the "kaart krimpt mee" fix
+  below, there's no stretched empty space left for it to need pushing into anymore.
+- **Pagination/density (optie 4a), "kaart krimpt mee" fix (iPad Pro 13, 2026-09-21):** the table
+  tries to fill the available screen height — page size is computed from real available space, not
+  the other way around — **but never asks for more rows than actually exist.** Originally
+  `.gl-v2-table-card` was itself `flex:1` (always stretched to the full column height regardless of
+  content) and `syncTablePageLength()` set the page length to whatever fit that stretched height,
+  full stop. That combination broke visibly on a tall viewport with a small dataset: an issuer with
+  only 18 invoices on an iPad Pro 13 (1376px tall, portrait) computed room for ~20 rows, all 18
+  rendered, and the leftover capacity sat there as bare card underneath the last row — reading as
+  "the screen isn't filled" even though nothing was actually broken. Fixed two ways together:
+  `.gl-v2-table-card` is now `flex:none` (sizes to its real rows, header and footer — no more
+  min-height:0/flex:1 chain down through `.datatables-header-footer-wrapper`/`<form>`/
+  `.table-responsive-md`, since there's no stretched height left to propagate), and
+  `syncTablePageLength()` now clamps its computed row count with `Math.min(maxRows, recordsTotal)`
+  — `maxRows` is still measured the same way (now from `.gl-v2-content`, a stable `flex:1` ancestor
+  that doesn't collapse once the card itself stops stretching, minus the toolbar card and column
+  gap above it, the `<thead>`, the DataTables footer row, and the same always-reserved selection-
+  toolbar constant as before), divided by the fixed 54px row height. When a company/bookyear has
+  fewer invoices than fit the screen, the card now simply ends after the real data — `.gl-v2-
+  content`'s own, slightly cooler background (`#F7F9F5` vs. the page's `#F2F5EF`) shows underneath,
+  which is already-documented, existing visual language, not a new pattern introduced by this fix.
+
+  **"Kaart krimpt mee," part two — the gap moved, it didn't disappear.** The fix above only stopped
+  `.gl-v2-table-card` from over-reaching; it did nothing about the *column that card sits in*.
+  `.gl-v2-content` was still `flex:1` inside `.gl-v2-body` (itself always stretched to
+  `.gl-v2-app`'s full row height via `align-items:stretch`, the default, never overridden, forced
+  tall by `.gl-v2-app`'s own `min-height:100vh`) — so on the same short-dataset/tall-viewport case,
+  the *content column* kept filling that full stretched height regardless of what its children
+  actually needed, leaving the exact same amount of dead space one level up: no longer bare white
+  card underneath the table, now the content column's own `#F7F9F5` tint doing the same job, plainly
+  visible below a correctly-short table card with nothing to justify it. Confirmed via
+  `getBoundingClientRect()` on the real iPad Pro 13 case: `.gl-v2-content` measured taller than the
+  sum of its own children (toolbar card + gap + table card + its own padding) by over 100px — the
+  gap, precisely quantified. Fixed by letting the "shrink to real content" idea propagate one more
+  level: `.gl-v2-body` gets `align-self: flex-start` (desktop/tablet only, `≥768px` — opts out of
+  `.gl-v2-app`'s stretch, so the white card itself now sizes to its own content instead of the row's
+  forced height) and `.gl-v2-content` goes `flex: none` (same breakpoint) instead of `flex: 1`.
+  `.gl-v2-app` keeps `min-height: 100vh` throughout — the sage page background behind everything
+  still always reaches the full viewport height; only the *white card on top of it* is now allowed
+  to be shorter than that when its content doesn't need the space, exactly mirroring what the table
+  card fix already did one level down. **Deliberately not applied below 768px:** the mobile body
+  card is edge-to-edge/full-bleed by design (no radius/shadow there, see the phone breakpoint) and
+  renders a different thing entirely on that path (`.gl-v2-mobile-invoice-list`, a plain scrolling
+  card list at a fixed `MOBILE_PAGE_LENGTH`, no "available height" row-fitting math at all) — letting
+  the body card go short there would expose the page's sage color at the bottom of an otherwise
+  full-bleed phone screen, a worse-looking inconsistency than the one being fixed. `syncTablePageLength()`
+  (`gl-v2-invoices.js`) had to change again too: it previously read `.gl-v2-content`'s own
+  `clientHeight` as a "stable, still-stretched" reference for the *maximum* available row space —
+  now that `.gl-v2-content` no longer stretches either, that reference collapses to whatever height
+  its children currently need, which is circular (row count needs max-height needs row count). The
+  function now measures from `window.innerHeight` instead — the one figure in this chain that's
+  still genuinely independent of how much content exists — and explicitly subtracts every fixed
+  piece of chrome between the viewport and the table body (`.gl-v2-app`'s padding, the topbar, `.gl-v2-
+  content`'s own padding, the toolbar card and its gap, the `<thead>`, the DataTables footer row, and
+  the same always-reserved selection-toolbar constant as before) to arrive at the same "how many
+  54px rows actually fit" number the old, now-invalid measurement used to give.
+
+  Runs once after init and again on window resize (150ms debounce); guarded to only redraw when the
+  computed count actually changed. The manual page-length dropdown (10/25/50) is gone —
+  `layout.topStart` was already overridden to an empty button row, so there was nothing to
+  additionally hide. Footer copy is "N van TOTAAL facturen" (via `infoCallback`, not DataTables'
+  default `_START_ tot _END_` range string) and pagination buttons are 30×28/7px-radius squares with
+  `‹`/`›` glyphs (`language.paginate`) — both matching option 4a exactly rather than DataTables'
+  Bootstrap defaults.
 - **Icons:** row actions and the Status column both moved off Boxicons/Font Awesome onto Phosphor
   (see the Icons section below for why that's the rule everywhere in gl-v2) — `fs-5` (Bootstrap's
   20px utility) came off with them, sizing is this file's own now (15px row actions, 16px status).
@@ -813,18 +868,48 @@ that it doesn't read as a real inconsistency.
 **TYPE 1 — Bevestiging, three color variants.** Desktop 460px, centered, `border-radius:14px`,
 Flyout-strength shadow. Body is a flex row: a 38px icon circle (`.gl-v2-modal-icon`) + a text block
 (`.gl-v2-modal-title`, serif 500/18px; `.gl-v2-modal-desc`, muted 12.5px/1.6). Footer has a hairline
-top border, buttons right-aligned. The variant lives entirely on the icon —
+top border, buttons right-aligned. The variant lives on the icon —
 **`.is-danger`** (`--gl-v2-danger-tint` bg, `--gl-v2-danger` icon — destructive actions, e.g.
-deleting an invoice), **`.is-warning`** (`--gl-v2-gold-tint` bg, `--gl-v2-gold` icon — irreversible
-but not destructive, e.g. issuing/locking an invoice), **`.is-success`** (`--gl-v2-primary-tint` bg,
-`--gl-v2-primary` icon — confirms a positive outcome). The icon *glyph* itself (which Phosphor class)
-is the caller's choice; the variant class only ever touches color. `--gl-v2-danger`/`--gl-v2-danger-
-tint`/`--gl-v2-gold-tint` are new tokens (`gl-v2-tokens.css`) — danger red existed only as a repeated
-raw `#8B2A2A ` literal before this; tokenizing it here doesn't retrofit every existing usage
-elsewhere in the file, just gives new code a name to reach for. "Annuleren" reuses the existing
-`.gl-v2-btn-text` family rather than inventing a fourth, purely-modal-only bordered-neutral button
-just to match the reference pixel-for-pixel — same "reuse what exists" call the Do's/Don'ts section
-already makes for status colors.
+deleting an invoice), **`.is-warning`** (`--gl-v2-warning-tint` bg, `--gl-v2-warning` icon —
+irreversible but not destructive, e.g. issuing/locking an invoice), **`.is-success`**
+(`--gl-v2-primary-tint` bg, `--gl-v2-primary` icon — confirms a positive outcome) — **and, since the
+4j button-states refinement pass, also on `.modal-content` itself**: `.is-warning`/`.is-danger` add
+a 3px top accent stripe (`--gl-v2-warning`/`--gl-v2-danger`) matching the reference's "gouden streep
+boven"/"rode streep boven"; `.is-success` deliberately adds none (the reference's own primary
+example carries no stripe, just a green icon and a green button). The icon *glyph* itself (which
+Phosphor class) is the caller's choice; the variant classes only ever touch color, never layout.
+`--gl-v2-danger`/`--gl-v2-danger-tint`/`--gl-v2-warning`/`--gl-v2-warning-tint` are tokens
+(`gl-v2-tokens.css`) — danger red existed only as a repeated raw `#8B2A2A` literal before this;
+tokenizing it here doesn't retrofit every existing usage elsewhere in the file, just gives new code
+a name to reach for. Warning used to reuse the decorative `--gl-v2-gold`/`--gl-v2-gold-tint` tokens;
+the refinement pass split it into its own `--gl-v2-warning` (`#8A6A32`, darker/more legible than
+Gold's `#C9A96E`) once the reference's own button-states matrix made clear the two were never meant
+to be the same color — see the Colors section above.
+
+**Modal-footer button states (4j "KNOPSTATEN IN DE MODAL," refinement pass).** A modal confirmation
+is always the highest-emphasis action on screen, so its footer buttons go filled/high-emphasis with
+the reference's exact rust/hover/ingedrukt/uit hex per family — this **supersedes** the original
+"Annuleren reuses `.gl-v2-btn-text` as a plain reuse, no new look" note above: the class stays
+`.gl-v2-btn-text` (still true, no fourth button family invented), but scoped inside a modal footer
+(`.gl-v2-modal-confirm .modal-footer`, `.gl-v2-modal-form .modal-footer`) it now renders the
+matrix's neutral bordered "SECUNDAIR" look instead of a pure ghost button. `.gl-v2-btn-primary`/
+`.gl-v2-btn-danger` get the same scoped treatment — both already exist as lower-emphasis looks
+*outside* modals (row actions, toolbars) and that existing look is deliberately left alone; only
+their footer-context rendering changes. `.gl-v2-btn-warning` is new (first use is exactly this
+matrix) and needed no scoping — there was no prior outside-modal look to preserve, so its one
+definition in the Buttons section already matches the modal spec everywhere. The matrix's sixth
+state, "bezig" (loading), is a generic `.is-loading` utility on `.gl-v2-btn` (opacity `.75`,
+`cursor:wait`, not modal-scoped — any button may carry it) — `gl-v2-shell.js`'s
+`initModalButtonLoading()` applies/clears it automatically on a modal form's submit button, and
+exposes `window.GlV2Modal.setButtonLoading/clearButtonLoading` for a button-triggered (non-form)
+confirm action to call itself.
+
+**Reusable partial.** `Views/Shared/GlV2/_ModalConfirm.cshtml` + `Models/GlV2/GlV2ModalConfirmVm.cs`
+— the "one fixed confirm target per page" case (e.g. a detail page's own delete button) can now
+`@@await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm { ... })` instead of hand-
+rolling the dialog/content/icon/form/footer markup. A per-row confirmation with swappable content
+(the Facturen list's own delete modal) still doesn't fit a static partial and keeps the AJAX-loaded-
+partial pattern documented below.
 
 **TYPE 2 — Formulier.** Desktop 500px, header (serif 19px title + `.gl-v2-modal-close`, a from-
 scratch 30px circular icon button — not Bootstrap's own `.btn-close`, which draws itself from a
@@ -836,8 +921,11 @@ ready, unused, don't remove it for looking idle.
 
 **Tablet (768–1023.98px).** TYPE 1 narrows to 420px and its footer buttons go `flex:1;height:44px`
 each (full-width, side by side, replacing the desktop's right-aligned natural width). TYPE 2 narrows
-to 420px, drops to one field column, and its close button grows to 36px — same numbers/reasoning as
-every other tablet touch-target bump elsewhere in gl-v2 (Select, Field).
+to 380px (fixed during the 4j refinement pass — the reference's own card was already drawn at
+380px, its label just used to misname it "480px"; the code briefly matched neither number at 420px,
+now corrected to the reference's actual 380px), drops to one field column, and its close button
+grows to 36px — same numbers/reasoning as every other tablet touch-target bump elsewhere in gl-v2
+(Select, Field).
 
 **Mobile (<768px) — the two types deliberately diverge here.** TYPE 1 becomes a **bottom sheet**,
 same recipe as the row-actions sheet and the bookyear dropdown's own mobile panel: `.modal-dialog-
@@ -873,9 +961,378 @@ carried over from the old partial, no markup or class. The legacy `Index.cshtml`
 `ModalDelete` action/partial are untouched, so nothing about the old page's look or behavior moved.
 The **nummeren** (issue) confirmation (`.is-warning`) was already a plain Bootstrap modal; it's now
 skinned the same way, no controller/partial changes needed since its content was always static markup
-in the page itself. `#invoiceProcessingModal` (a transient "please wait" spinner, not a TYPE 1/2
-confirmation or form) is deliberately left as plain Bootstrap styling — it doesn't fit either type,
-and reskinning it wasn't asked for.
+in the page itself. Its confirm button was originally `.gl-v2-btn-primary` (green) despite the
+modal's own warning tone — a real mismatch the 4j refinement pass caught and fixed to
+`.gl-v2-btn-warning`, matching the reference's own warning-modal example (gold confirm button, not
+green). `#invoiceProcessingModal` (a transient "please wait" spinner, not a TYPE 1/2 confirmation or
+form) is deliberately left as plain Bootstrap styling — it doesn't fit either type, and reskinning it
+wasn't asked for.
+
+### Meldingen (toasts)
+Design-handoff optie 4g ("Mobiele filters, foutmelding, modals en meldingen (toasts)"), the
+"MELDINGEN — TOASTS" part specifically. Generic, reusable, project-wide component — one shared
+container (`#gl-v2-toast-container`, rendered once in `_LayoutV2.cshtml`) rather than a per-page
+element, filled/emptied through `window.GlV2Toast.show(opts)` / `.dismiss(el)` (`gl-v2-shell.js`).
+`opts`: `tone` (`success`/`danger`/`warning`/`info`, defaults to `info`), `title`, `body`, optional
+`icon` (a Phosphor class overriding the tone's default glyph), optional `action` (label — clicking
+it dismisses the toast and calls `onAction`), optional `sticky` (keep it even for a non-`danger`
+tone). Card: `.gl-v2-toast` (12px radius, white, the same flyout-strength shadow as the Type 1/2
+modals) — icon circle (`.gl-v2-toast-icon`, tone-tinted exactly like `.gl-v2-modal-icon`: success
+uses `--gl-v2-primary`/`-tint`, danger `--gl-v2-danger`/`-tint`, warning `--gl-v2-warning`/`-tint`
+(the same token the 4j refinement pass split off from decorative Gold), info a flat neutral
+`#EDEFEB`/`--gl-v2-muted`), title (sans 600/12.5px), body (muted, 11.5px/1.5), an optional action
+link, and — desktop/tablet only — a `ph-x` close button (the reference's own literal "×" glyph is
+replaced with a real Phosphor icon, per the existing Icons rule below: every gl-v2 icon is a
+confirmed Phosphor Regular glyph, not ad-hoc text).
+
+**CSS Grid, not flexbox, for the card.** Icon/title/body/action/close are five flat grid items
+(`grid-template-areas`), not title+body nested in their own wrapper div. The reason: mobile moves
+the action link from "beside the text, right-aligned" to "under the text, in the same column" —
+flexbox has no way to relocate a sibling into a different parent per breakpoint, but
+`grid-template-areas` can reposition any item anywhere, purely in CSS, off the exact same flat DOM
+`gl-v2-shell.js` always builds. No JS branching needed for the two layouts.
+
+**Two locations, by type — the reference's own rule, read carefully.** Toasts (any tone, including
+a *failed* async result like "Verzenden mislukt") live bottom-right on desktop/tablet. The
+reference's explanatory text names two exceptions to that single spot, and it's easy to misread the
+first one as a second *toast* location — it isn't: **a blocking validation error** (one that
+prevents an action from even starting, e.g. a required field) gets shown **inline**, next to the
+field or above the table, and is **not part of this component at all** — no inline-error component
+was built here, since nothing in this pass needed one (Facturen/IndexV2's table is server-rendered
+from the initial request, so it has no "table failed to load" ajax-failure case to wire one to). The
+second, real exception is breakpoint-based, not type-based: **mobile** moves the *whole* toast stack
+from bottom-right to **top, under the topbar** (`top: 72px` — the 62px topbar plus a 10px gap) so it
+never sits under the bottom quick-actions bar or a thumb. Tablet keeps the desktop corner, just
+narrower (380px, matching the reference's own "TABLET · RECHTSONDER, 380PX BREED" label) with a
+bigger icon/text and no × (see below).
+
+**Auto-dismiss, persistence, and the swipe gesture.** Any non-`danger` toast self-dismisses after 5
+seconds (`AUTO_DISMISS_MS`); a `danger` toast (or one passed `sticky: true`) stays until the user
+closes it — the reference's own rule ("fouten blijven staan tot ze gesloten worden"). At most 3
+toasts show at once (`MAX_VISIBLE`); a 4th push silently drops the oldest rather than growing the
+stack unbounded. Tablet and mobile show no × — "kruisje vervalt — vegen naar rechts sluit" — so
+`enableSwipeDismiss()` (Pointer Events, works for mouse and touch alike) lets a rightward drag past
+an 80px threshold dismiss the card; it's wired on every toast regardless of breakpoint (harmless
+extra affordance on desktop, where the × still does the same job), not conditionally on screen
+width, since there's no reason to withhold a working gesture just because a viewport happens to be
+wide.
+
+**Replaces the existing PNotify-via-TempData system, on gl-v2 pages only.** `_Layout.cshtml` (the
+current, shipped shell) still shows a PNotify popup for any `TempData["Message"]` a controller set
+via `BaseController.AddMessage(type, message, title)` — a pattern used by dozens of controllers app-
+wide, not just Invoices. `_LayoutV2.cshtml`'s own `$(window).on('load', ...)` block reads that exact
+same `TempData` contract but now calls `GlV2Toast.show(...)` instead of `new PNotify(...)`, with a
+small tone remap (PNotify's `type` was `success`/`error`/`notice`/`info` → `success`/`danger`/
+`warning`/`info`). **This means every existing `AddMessage(...)` call anywhere in the app already
+shows as a gl-v2 toast the moment a user is on a gl-v2 page and that redirect lands — no per-
+controller changes were needed or made.** `_Layout.cshtml` itself is untouched; PNotify's own
+CSS/JS includes stay in `_LayoutV2.cshtml` too (some page-level `@@section PageScripts` still call
+`new PNotify(...)` directly for their own reasons — out of scope to hunt those down and convert them
+in this pass) — only the one shared TempData-driven block changed.
+
+**Real example: Facturen.** `InvoicesController.Delete` already calls
+`AddMessage("success", "Factuur verwijderd.", "Factuur")` before redirecting back to `Index` (which
+dispatches to `IndexV2` on a gl-v2 session) — deleting any invoice from `Facturen - BCO` (or any
+other issuer) now shows a gl-v2 success toast on the reload instead of a PNotify popup, with zero
+Invoices-specific code written for it. `BookInvoices`/`Issue`'s own `AddMessage("error", ...)` calls
+(missing permissions, no linked Octopus dossier, etc.) show the same way, as danger toasts.
+
+### KPI-kaarten
+Design-handoff optie 7a ("KPI-kaarten — max 8 naast elkaar op desktop, herschikt op tablet en
+mobiel") — the first piece of the gl-v2 **Dashboard** pass (`Views/Home/*`), distinct from the
+Facturen work above. Generic, project-wide component (`Views/Shared/GlV2/_KpiStrip.cshtml` +
+`Models/GlV2/GlV2KpiItemVm.cs`), not dashboard-specific — any page can render a
+`List<GlV2KpiItemVm>` (`Label`, `Value`, `IconClass`, `Tone`: `Primary`/`Warning`/`Danger`) through
+it.
+
+**Two card shapes, one shared DOM — but *not* the toast card's flat-grid trick.** First attempt
+copied the toast card's approach directly: icon/label/value as three flat `grid-template-areas`
+items, no wrapper. That broke visibly — "ruim" needs the icon to span both the label row and the
+value row (`"icon label" "icon value"`), and CSS Grid's own spec requires the tracks a spanning item
+covers to grow enough to fit it; with label+value's own tiny content height nowhere near the icon's
+48px, the browser inflated the auto rows unevenly to compensate, showing up as a visible gap between
+title and value the toast card's icon-in-a-single-row case never has to deal with. The reference
+itself, read closely, was never a flat-DOM reflow to begin with: "ruim" is a flex row (icon + a
+*separate* flex column holding label+value snugly together); "compact" is a flex column (a row of
+icon+label, then value on its own line) — two genuinely different nestings, not one reordered via
+media query. Fixed by matching that: `.gl-v2-kpi-text` wraps label+value in the DOM; under compact
+it's `display: contents` (dissolves the wrapper, label/value go back to being two independent grid
+items — the icon only ever spans *one* row there, so the original inflation problem can't occur);
+under "ruim" (`:not(.is-compact)`, `≥1024px`) `.gl-v2-kpi-card` itself switches from `display: grid`
+to a plain flex row, and `.gl-v2-kpi-text` becomes a real `flex-direction: column` holding label and
+value tight together as their own block beside the icon — exactly the reference's own structure,
+reached from one shared markup via `display: contents` rather than two server-rendered variants.
+
+**Which shape, when — driven by item count, not breakpoint alone.** The reference shows "ruim" only
+at desktop width and only up to 4 cards; 5-8 cards at desktop, and tablet/phone regardless of count,
+always get "compact." The partial counts `Model.Count` and adds `.is-compact` to the strip from 5
+items up — the CSS never re-counts, it only ever reads that one class. Desktop column count
+(`--gl-v2-kpi-desktop-cols`, a CSS custom property set inline by the partial) is `Math.Min(count, 8)`,
+or `4` once there are more than 8 — "boven de acht: nooit een negende kolom maar een tweede rij van
+vier," so the grid wraps to a second row instead of ever going to 9 across. Tablet and phone ignore
+count entirely and always use their own fixed column count (4 / 2) — the reference's per-count
+distinction is drawn only for desktop.
+
+**One breakpoint axis, not two.** The reference separately notes tablet portrait shows 3 per row,
+landscape 4 ("de kaart zelf verandert niet") — an orientation-based split. Not built: gl-v2's
+breakpoints have been width-only everywhere else in this pilot (768px/1024px, never
+`orientation:`), and a landscape tablet's width mostly already crosses the 1024px desktop threshold
+in that same scheme anyway — adding a second, orientation-based axis just for this one component
+would be a real, un-asked-for precedent, not a faithful copy of the reference's own device-based
+thinking translated into gl-v2's already-established width-based one.
+
+**Mobile "Toon alles."** The reference's own rule — "de vier belangrijkste eerst; de rest achter
+'toon alles' zodat de werven zichtbaar blijven" — is phone-only: the partial renders a toggle
+button whenever there are more than 4 items, but the button (and the `:nth-child(n+5) { display:
+none }` rule hiding cards 5+) is itself only visible under 768px via CSS — at tablet/desktop widths
+the button exists in the DOM but stays hidden and every card shows. `initKpiToggle()`
+(`gl-v2-shell.js`, delegated on `document` like every other gl-v2 toggle) flips `.is-expanded` on
+the strip and swaps the button's expand/collapse label spans.
+
+**Real example: Projectleider dashboard.** `Views/Home/_DashboardProjectleider.cshtml`'s existing
+KPI strip (4 cards: Actieve projecten / Open punten / Urgent / Achterstallig — Bootstrap
+`.card-featured-left`/`.widget-summary` markup from the legacy Porto admin theme, not anything in
+`dashboard-projectleider.css` itself, which only ever supplied the severity border/icon-color
+overrides) is now branched on the existing `useGlV2Layout` flag: the `else` branch is the untouched
+legacy markup; the gl-v2 branch builds the exact same four values (`nietOpgeleverd.Count`,
+`Model.OpenIssuesCount`, `urgentMeldingen.Count`, `overdueCount`) into `GlV2KpiItemVm`s with the same
+tones (Primary/Primary/Danger/Warning) the legacy cards already used, and renders `_KpiStrip`. Icons
+moved Boxicons → Phosphor per the existing icon rule: `bx-buildings`→`ph-buildings`,
+`bx-alert-circle`→`ph-warning` (not `ph-warning-circle` — that glyph is already used for the "Punt"
+mobile quick-action elsewhere in gl-v2's own Home chrome, and reusing it for "Urgent" too would put
+two identical icons in the same KPI row), `bx-task`→`ph-warning-circle` (for "Open punten," matching
+that same "Punt" quick-action glyph on purpose — same underlying concept), `bx-timer`→`ph-timer`.
+The other 4 role dashboards (`_DashboardCeoCfo`/`Boekhouding`/`Ontwikkelaar`/`Verkoper`) each still
+have their own Bootstrap KPI strip, untouched — same component, same VM, ready for them whenever
+that pass happens; this round only converted the one with the most concrete, already-real data to
+verify against.
+
+### Contextmenu (generic)
+Extraction of Invoices' "···" row-actions menu recipe (`gl-v2-invoices.css`/`.js`,
+`.gl-v2-row-menu`) into the shared shell (`gl-v2-shell.css`/`.js`, `.gl-v2-menu` +
+`window.GlV2Menu`) — that recipe had been rebuilt ad hoc 3-4 times already (row menu, boekjaar
+select panel, rail flyouts, mobile quick-actions sheet), each its own trigger/position/backdrop
+code. This is the first shared version: a floating panel (`≥768px`, positioned via
+`getBoundingClientRect`, same math as `positionRowMenu`) and a bottom sheet with scrim (`<768px`,
+CSS-only — JS skips positioning below that width, same "just skip it" convention used everywhere
+else in gl-v2). Deliberately has no "always-visible inline row" third state the way Invoices'
+version does — every caller here opens from a real button, never an always-shown icon strip.
+Trigger appearance is intentionally left to the caller (the snooze clock icon looks nothing like a
+"···" button); only the panel/items are themeable. First consumer: the meldingenscherm's snooze
+menu below.
+
+### Meldingenscherm
+Design-handoff optie 7b ("Meldingenscherm — paneel op desktop, volledig scherm op mobiel"). Second
+piece of the gl-v2 **Dashboard** pass, after the KPI strip. Generic component
+(`Views/Shared/GlV2/_MeldingenPaneel.cshtml` + `_SnoozeMenu.cshtml` +
+`Models/GlV2/GlV2MeldingenPanelVm.cs`), wired into `Home/Index` for the Projectleider dashboard
+first (same "convert the one with concrete real data first" call as the KPI strip — the other 4
+role dashboards keep their own, simpler meldingen sections untouched for now).
+
+**One DOM, three presentations, same trick as the KPI strip's "shrink to fit" work.** `.gl-v2-mc-
+panel` is `display:none` by default; a `≥768px` override forces `display:flex` back on regardless
+of open/closed state (the desktop panel has no open/closed concept — it just always sits in the
+dashboard column); a `768–1023.98px` override instead makes `.is-open` a `position:fixed` popover
+(360px, max 420px tall then scrolls — the reference's own note); below `768px`, `.is-open` is a
+full-screen overlay. Two header variants render server-side every time (`.gl-v2-mc-header` for
+desktop/tablet, `.gl-v2-mc-mobile-header` + filter chips for phone) and CSS shows exactly one —
+same "two variants, CSS picks" pattern as the desktop/mobile userbox elsewhere in gl-v2, chosen
+over building the header client-side. The bell trigger itself (`.gl-v2-topbar-bell`, `_LayoutV2.
+cshtml`) is optional chrome, gated on `ViewData["HasNotificationsBell"]` (same pattern as
+`@@section MobileQuickActions`'s own `HasMobileQuickActions` flag) — no bell renders on a page
+that never gave the layout anything to open.
+
+**Why the badge count has to be computed in the controller, not the partial.** The obvious place
+to compute "how many meldingen" is right where the groups themselves get built —
+`_DashboardProjectleider.cshtml`. But that runs as part of `@@RenderBody()`, which executes
+*after* `_LayoutV2.cshtml`'s topbar has already rendered; `ViewData` set inside the partial simply
+can't reach back up into already-emitted markup. `HomeController.Index()` therefore re-derives
+just the count (same three sources, same project filter, same danger/warning-only rule as "de
+teller telt alleen de eerste twee") before returning the view, and sets `ViewData[
+"NotificationsBellCount"]` there. This is the one piece of this feature with real duplicated
+logic between controller and partial — accepted rather than restructuring `HomeModel` into a
+"dashboard sections know their own counts up front" shape, which is a bigger refactor than this
+pass earned.
+
+**Snooze needs a stable identity for something that doesn't have one.** The three melding sources
+(insurance warnings, project-info flags, contractor comments) are computed live on every page load
+from three unrelated queries — none of them is a real, persisted "Melding" row with its own Id.
+The *existing* (pre-gl-v2) meldingencentrum already solved this the same way this pass does:
+identify a melding by a hash of `projectId|category|tekst`. That old version hashed it client-side
+into a `localStorage` key (`gl-snz-{hash}`) with a hardcoded 7-day expiry and no server
+persistence — snoozing didn't survive a different browser, a cleared cache, or actually meaning
+what the reference's "Morgenochtend/Over 3 dagen/Volgende week/eigen datum" options imply. This
+pass replaces that with a real table (`MeldingSnooze`, migration `043`, `UserId` + `MeldingKey`
+(`CHAR(64)`, a SHA-256 hex digest) + `SnoozedUntil`, unique on `(UserId, MeldingKey)`) and a
+matching `MeldingKeyHelper.ComputeKey(projectId, MeldingType category, tekst)` in
+`CPMCore.Models` — deliberately typed to take the *enum*, not a raw string, because the three
+sources don't agree on category casing (`WarningBO.Category` arrives lowercase from one source,
+title-case from the VM elsewhere) and hashing the raw string would silently produce a different
+key for the same melding depending which code path touched it last. Every caller — the controller's
+badge count, the partial's group-vs-snoozed split, the `SnoozeMelding`/`UnsnoozeMelding` AJAX
+actions — normalizes through `MeldingTypeHelper.FromString` first so they all agree.
+
+**Snooze menu — two pages, one `.gl-v2-menu`.** `_SnoozeMenu.cshtml` renders both
+`.gl-v2-snooze-page-options` (Morgenochtend / Over 3 dagen / Volgende week / Eigen datum kiezen)
+and `.gl-v2-snooze-page-calendar` inside the same panel; `gl-v2-dashboard.js` toggles which one
+carries `.is-active` instead of closing and reopening a different menu — matters because "Terug"
+needs to return to the exact options list, not a fresh one. The three relative options' sub-labels
+("ma 22 sep · 08:00") are computed client-side *at open time*, not render time or page-load time —
+a dashboard tab left open overnight would otherwise show a stale "morgenochtend" by the time
+someone actually clicks it. The calendar itself (`gl-v2-dashboard.js`, `renderCalendar()`) is a
+plain from-scratch month grid — Monday-first per the reference's own `calHead` (M/D/W/D/V/Z/Z),
+past days disabled, today outlined, selection filled — rebuilt on month navigation; no calendar
+library, this is a small enough widget not to need one.
+
+**Toast confirms, "Ongedaan maken" undoes.** On a successful snooze, the row is removed from the
+DOM immediately (no reload) and `window.GlV2Toast.show(...)` fires with the exact "Gesnoozed tot …"
+label the server computed, an `action: "Ongedaan maken"` that calls `UnsnoozeMelding` and reloads
+on success — matching the reference's own line, "Toast bevestigt de keuze." An already-snoozed
+row's own "Nu tonen" button (in the panel's own snoozed-items footer) does the same unsnooze-then-
+reload; reloading rather than patching the item back into its live severity group client-side is a
+deliberate simplification — correct end state, just via a round-trip instead of rebuilding the
+group logic twice.
+
+**Known gaps, left for a later pass.** "Alles gelezen" renders (both header variants) but is
+disabled with reduced opacity and no click handler — read-state persistence is a separate feature
+this pass didn't build, and the Do's/Don'ts "honest disclosed placeholder" rule applies here rather
+than shipping a button that visibly does nothing. The badge count goes stale by however many items
+were snoozed in the current page view until the next reload (the controller-computed number isn't
+re-fetched after a client-side snooze). Tablet's own portrait/landscape distinction from the
+reference isn't built, same reasoning as the KPI strip's identical call. The other 4 role
+dashboards' meldingen sections stay on the legacy, client-side-snooze implementation until they get
+their own conversion pass.
+
+### Progress bar (7c) — global, reusable
+`GlV2ProgressBarVm` (`CPMCore.Models.GlV2`) + `Views/Shared/GlV2/_ProgressBar.cshtml`. Not tied to
+projects — any label/value/percentage triple can render through it. `Tone` (`Primary`/`Complete`/
+`Over`/`Behind`) picks the fill color and, on `Complete`, adds the reference's checkmark; the bar
+itself never compares numbers to decide its own tone — a caller passes the tone it already decided
+on. This split matters because the one caller built so far (the project card, see 7d below) has a
+genuinely business-specific rule for `Behind` (Fysiek noticeably behind Financieel, not any
+Fysiek-vs-Financieel gap at all) that has no business living inside a generic bar component. The
+fill width itself is always `Math.Clamp(Pct, 0, 100)` — an `Over` bar can show "134%" as its
+`ValueLabel` while the visual track still stops at 100%, matching the reference's own over-budget
+example. `ShowValue: false` drops the label/value row entirely for compact contexts (used by the
+project card's mobile row, see below) while keeping the same track/fill/tone markup.
+
+### Project card (7d)
+`Views/Shared/GlV2/_ProjectCardV2.cshtml`, wired into the Projectleider dashboard's "Mijn Werven"
+grid (`_DashboardProjectleider.cshtml`) behind the existing `useGlV2Layout` branch. Reuses
+`ProjectWerfCardVM` as-is — no new query, no new data plumbing — and deliberately keeps every
+functional hook class/id/attribute from the legacy card (`.gl-werf-col`, `.gl-arrange-bar`/
+`.gl-drag-grip`/`.gl-arrange-up`/`.gl-arrange-down`, `.gl-pin-toggle`, `data-project-id`/`-status`/
+`-search`) unchanged, so the dashboard's existing inline jQuery UI Sortable + Pin/Unpin/Reorder AJAX
+needed zero JS changes to work against the new markup — only new `gl-v2-project-*` classes were
+added alongside for presentation.
+
+**Deliberate behavior change from the legacy card.** The legacy `_ProjectWerfCard` silently forced
+progress to 100% and showed a green "Opgeleverd op …" message once the delivery date had passed —
+an assumption, not an actual delivery record. 7d's own stated rule ("bij nadering wordt de tekst
+goud, bij overschrijding rood") is explicit and replaces that guess: the card always shows the real
+Fysiek/Financieel percentages, and only the footer date row's *tone* changes — gold under
+`is-near` (`daysLeft < 14`, not yet overdue) or red under `is-over` (`daysLeft < 0`) — reusing
+`--gl-v2-warning`/an existing danger token rather than inventing a new status color.
+
+**Two DOM shapes, one card, CSS picks.** Same precedent as the Invoices table/mobile-card split:
+the full desktop card and a compact `.gl-v2-project-mobile-row` (58×58 thumbnail + name/location +
+two unlabeled bars) both render inside the same `<a>`, and CSS toggles which is visible per
+breakpoint. A single flexible DOM (the trick used for the KPI/toast cards) didn't fit here — the
+mobile row drops badges, the footer, and the full-size photo entirely rather than just reflowing,
+so it's a genuinely different shape, not a resize of the same one.
+
+**Layout.** Desktop: CSS Grid, `repeat(auto-fill, minmax(300px, 1fr))`. Tablet (768–1023.98px):
+forced to exactly 2 columns (`repeat(2, minmax(0, 1fr))`) per explicit requirement, not
+auto-fill's natural 2-or-3-depending-on-width. Mobile (<768px): single column, desktop-shaped
+elements hidden, `.gl-v2-project-mobile-row` shown instead.
+
+**Rearranging on mobile.** The pin/rearrange chrome (drag grip, up/down arrows) is visually
+restyled but functionally the same Sortable-plus-AJAX system as before. The one real fix: the drag
+grip (both the legacy `.gl-drag-grip` and the new gl-v2 one) now has `touch-action: none`. Without
+it, dragging on a phone was unreliable — the browser could claim a touchmove on the grip as a page
+scroll before `jquery.ui.touch-punch.js` (already loaded globally) got a chance to translate it
+into the synthetic mouse events Sortable needs. This was the actual root cause, not a missing
+library or a Sortable config gap.
+
+**"Mijn Werven" section header.** The vastzetten button (`#mw-add-project`) and the Rangschikken
+toggle (`#mw-arrange-toggle`) got gl-v2 companion classes (`.gl-v2-mw-add-btn`,
+`.gl-v2-mw-arrange-toggle`) added unconditionally rather than behind a markup branch — safe because
+`gl-v2-shell.css` only ever loads on gl-v2 pages, so the same classes are simply inert on the
+legacy dashboard. The toggle's active/inactive icon swap (previously hardcoded to Boxicons in the
+`enterArrangeMode()`/`exitArrangeMode()` JS) now uses Phosphor (`ph-arrows-down-up` / `ph-check`)
+to match the rest of the migration.
+
+### Snelacties-kaart (7f), zoekmodal (7e), tablet-rail/bar (7g)
+The old "Snelacties" card (six accordions, each expanding to a full project list) is gone for gl-v2,
+replaced by `Views/Shared/GlV2/_SnelactiesCard.cshtml`: one active project chosen at the top, after
+which every action is a single click instead of expand-then-pick. Desktop-only — the card renders in
+a `col-xxl-2 d-none d-xxl-block` wrapper, so it only exists at ≥1400px (Bootstrap `xxl`, the same
+breakpoint this dashboard already uses for `col-xxl-8`/`col-xxl-2`). Below that, the mobile
+quick-actions bar/rail (below) is the only place for these actions — never both at once.
+
+**Active project is client-side state, not a new backend column.** `window.GlV2ActiveProject`
+(`gl-v2-dashboard.js`) reads/writes `localStorage['gl-v2-active-project']` on this device, falling
+back to the first *pinned* project (`window.glV2SnelactiesConfig.pinnedProjects`, server-rendered in
+`_DashboardProjectleider.cshtml`) when storage is empty — a new device or cleared cache. Picking a
+project in the picker modal only sets this local state; "Dit project vastzetten" in that same modal
+is what makes the choice durable across devices/logins, by calling the *existing* `PinProject`
+endpoint — same mechanism as pinning a card in "Mijn Werven", not a new one. This is a deliberate
+simplification over a real "last active project" server column, disclosed rather than silently
+dropped: on a second device that never pinned anything, the card falls back to "Kies een project"
+until the user picks (or pins) one there too.
+
+**"OP DIT PROJECT" rows are URL templates, not six lists.** Each of the six project-scoped actions
+(Contract, Punt, Factuur, Wijziging, Nacalculatie, Document) carries a `data-url-template="{id}"`
+attribute built server-side from the *same* `Url.Action(...)` calls the old accordion used — a
+sentinel value (`"__ID__"`) is passed as the route parameter and swapped for the `{id}` placeholder
+afterward, so the real route shape (query string vs. segment) never has to be hand-duplicated in JS.
+`initActiveProject()` rewrites all six `href`s whenever the active project changes. With no project
+chosen, the rows dim and their first click opens the picker instead of navigating (matching 7f's own
+"GEEN PROJECT GEKOZEN" callout) rather than landing on a broken link.
+
+**Project picker is one modal, not a card-anchored popover.** 7f's own mockup draws it as a popover
+under the card's active-project row, but the same picker is also needed from the "Mijn Werven" `+`
+button and the mobile quick-actions bar's "Vastzetten" tile — three different trigger points that
+don't all live near the card. Building it as `#glV2ProjectPickerModal`
+(`Views/Shared/GlV2/_ProjectPickerModal.cshtml`), opened the same way everywhere via
+`data-bs-toggle="modal"`, avoided either duplicating the popover three times or inventing a
+positioning system for a popover triggered from arbitrary places. It reuses the Type-3 zoekmodal
+visual classes (`.gl-v2-modal-search-*`) rather than a fourth CSS family, plus two additions those
+don't have: a "Recent" group (`werfProjects`, client-filtered exactly like the legacy
+`#gl-punt-sheet`) and the "Dit project vastzetten" footer action.
+
+**Klant/Leverancier zoeken (7e) is a real modal now, not a bottom sheet.** New generic component:
+`GlV2SearchModalVm` + `Views/Shared/GlV2/_SearchModal.cshtml`, rendered twice (Klant, Leverancier)
+with the *existing* `Lookup` endpoints (`Leveranciers/Lookup`, `Klanten/Lookup`) — no backend change.
+Centered ~440px on desktop; full screen on mobile via Bootstrap's own `.modal-fullscreen-md-down`
+(same convention already used by the Type-2 form-modal, and for the same reason: a bottom sheet plus
+an on-screen keyboard would halve the usable window). One disclosed simplification: `Lookup` returns
+only `{ id, text }`, no secondary line (VAT number, address) — the result row shows name and an
+initials avatar only, rather than adding a backend field purely for a cosmetic second line.
+
+**Tablet rail/bar (7g) reuses the existing mobile quick-actions bar — no parallel implementation.**
+The bar (`#gl-v2-mobile-quickactions`, generic across every gl-v2 page via `@section
+MobileQuickActions`) previously only showed `<768px`. Its visibility now extends to `<1400px` in two
+tiers: `<1024px` (phone and tablet-portrait) keeps today's horizontal bottom bar unchanged; a new
+`1024–1399.98px` tier (tablet landscape) reshapes the *same* DOM into a vertical green rail on the
+right (`flex-direction:column`, fixed to the right edge), with the "Meer" overflow sheet (already
+generic, unchanged JS — `initMobileQuickActions()` in `gl-v2-shell.js`) docking beside the rail
+instead of at the bottom. No new overflow logic was written; only the container's CSS shape changes
+per breakpoint. An informational "active project" tile (`#gl-v2-qa-rail-active`, per 7g: "zo weet je
+waarop de acties werken") sits above the icons in the rail tier only — purely display, no click
+action in this pass, reading the same `GlV2ActiveProject` state as the desktop card.
+
+**Known gap, left for a later pass.** The mobile "Meer" sheet does not get 7f's mobile-mockup
+treatment (an active-project header with a "Wijzig" link inside the sheet itself) — it stays the
+existing generic icon/label row list. Doing so would mean teaching the shared, page-agnostic
+`initMobileQuickActions()` about a Projectleider-specific concept, which the rest of this component
+is deliberately kept clear of (see its own "generic chrome, not Facturen-specific" comment).
+
+**Removed for gl-v2 (legacy untouched).** The three old bottom panels this replaced —
+`#gl-lev-sheet`, `#gl-klant-sheet`, `#gl-pin-sheet` — now render only `@if (!useGlV2Layout)`; the
+legacy dashboard keeps them exactly as before. `#gl-punt-sheet`/`#gl-issues-modal` (the "Punt
+toevoegen" project-choice sheet + its iframe) were not in scope for this pass and are unchanged on
+both layouts.
 
 ### Icons
 Phosphor Regular (`ph ph-*`), not the mockup's hand-drawn custom SVG paths — the mockup's icon

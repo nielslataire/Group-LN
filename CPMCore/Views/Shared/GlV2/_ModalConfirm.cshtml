@@ -1,0 +1,46 @@
+@model CPMCore.Models.GlV2.GlV2ModalConfirmVm
+@* gl-v2 layout-pilot (design-handoff 4j, TYPE 1 "Bevestiging") — herbruikbare, projectbrede
+   confirm-modal. Draagt enkel de CSS-klassen die al in gl-v2-shell.css leven (.gl-v2-modal-confirm,
+   .gl-v2-modal-icon, .gl-v2-btn-*); dit bestand bestaat puur om dat opzetwerk (dialog/content/icon/
+   form/knoppen, drie keer dezelfde tooncode) niet op elke pagina opnieuw te laten typen. Voor een
+   per-rij bevestiging met wisselende inhoud (facturenlijst-stijl) blijft het AJAX-partial-patroon de
+   juiste keuze — zie Invoices/Modals/_ModalDeleteInvoiceV2.cshtml — dit component is voor het ene-
+   vaste-doel-per-pagina geval (bv. "dit dossier verwijderen" op een detailpagina). *@
+@{
+    var toneClass = Model.Tone switch
+    {
+        CPMCore.Models.GlV2.GlV2ModalTone.Warning => "is-warning",
+        CPMCore.Models.GlV2.GlV2ModalTone.Danger => "is-danger",
+        _ => "is-success"
+    };
+    var confirmBtnClass = Model.Tone switch
+    {
+        CPMCore.Models.GlV2.GlV2ModalTone.Warning => "gl-v2-btn-warning",
+        CPMCore.Models.GlV2.GlV2ModalTone.Danger => "gl-v2-btn-danger",
+        _ => "gl-v2-btn-primary"
+    };
+}
+<div class="modal fade gl-v2-modal-confirm" id="@Model.Id" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content @toneClass">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon @toneClass"><i class="ph @Model.IconClass" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title">@Model.Title</h2>
+                    <p class="gl-v2-modal-desc">@Model.Description</p>
+                </div>
+            </div>
+            <form action="@Model.FormAction" method="@Model.FormMethod">
+                @Html.AntiForgeryToken()
+                @foreach (var field in Model.HiddenFields)
+                {
+                    <input type="hidden" name="@field.Key" value="@field.Value" />
+                }
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">@Model.CancelLabel</button>
+                    <button type="submit" class="gl-v2-btn @confirmBtnClass">@Model.ConfirmLabel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

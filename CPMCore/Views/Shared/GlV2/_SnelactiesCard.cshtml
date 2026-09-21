@@ -1,0 +1,83 @@
+@*
+    gl-v2 layout-pilot (design-handoff 7f, "Snelacties-kaart herdacht") — vervangt de zes uitklap-
+    accordeons van de legacy kaart (Views/Home/_DashboardProjectleider.cshtml, "SNELACTIES: 1/4") door
+    één actief project bovenaan; daarna is elke actie één klik i.p.v. eerst een submenu openen en
+    daarin het project zoeken. Enkel op desktop (≥1400px, Bootstrap xxl — dezelfde grens die dit
+    dashboard al gebruikt voor col-xxl-8/col-xxl-2): op tablet/gsm vervalt deze kaart volledig
+    (design-handoff 7g), de balk/rail rechtsonder is daar de enige plek voor acties.
+
+    Het "actieve project" is BEWUST client-side state (window.GlV2ActiveProject, gl-v2-dashboard.js):
+    localStorage op dit toestel, met terugval op het eerst-vastgezette project wanneer dat leeg is
+    (nieuw toestel/browser). Geen nieuwe backend-kolom — "Dit project vastzetten" in de kiezer-modal
+    (GlV2/_ProjectPickerModal.cshtml) roept gewoon het bestaande PinProject-endpoint aan (zelfde als de
+    pin op een Mijn-Werven-kaart); de kiezer-keuze zelf hoeft niet gepind te worden om als actief te
+    gelden, enkel om te overleven op een ANDER toestel/bij een volgende aanmelding.
+
+    De projectkiezer zelf is EEN modal (#glV2ProjectPickerModal, GlV2/_ProjectPickerModal.cshtml),
+    gedeeld met #mw-add-project (Mijn Werven "+") en de mobiele balk se "Vastzetten"-tegel — dezelfde
+    trigger overal i.p.v. een popover hier plus een apart mechanisme elders.
+*@
+@{
+    // Elke "OP DIT PROJECT"-rij se URL is per-actief-project, dus client-side samengesteld: bouw de
+    // URL met een sentinelwaarde via de bestaande Url.Action-routes (zodat de echte routevorm — query
+    // string of segment — hier niet met de hand nagebootst moet worden) en vervang die sentinel door
+    // een {id}-plaatshouder vóórdat 'ie in de JS-config terechtkomt.
+    string T(string url) => url.Replace("__ID__", "{id}");
+    var opDitProjectActions = new[]
+    {
+        new { Key = "contract", Label = "Contract toevoegen", Icon = "ph-file-text", Url = T(Url.Action("AddContract", "Projecten", new { projectid = "__ID__" }) ?? "") },
+        new { Key = "punt", Label = "Punt toevoegen", Icon = "ph-warning-circle", Url = "/Projects/{id}/Issues/Create" },
+        new { Key = "factuur", Label = "Inkomende factuur toevoegen", Icon = "ph-receipt", Url = T(Url.Action("AddIncommingInvoice", "Projecten", new { projectid = "__ID__", type = 0 }) ?? "") },
+        new { Key = "wijziging", Label = "Wijzigingsopdracht opmaken", Icon = "ph-pencil-simple-line", Url = T(Url.Action("AddChangeOrder", "Projecten", new { projectid = "__ID__", type = 0 }) ?? "") },
+        new { Key = "nacalc", Label = "Nacalculatie bekijken", Icon = "ph-chart-bar", Url = T(Url.Action("Recalculation", "Projecten", new { projectid = "__ID__" }) ?? "") },
+        new { Key = "document", Label = "Document uploaden", Icon = "ph-upload-simple", Url = T(Url.Action("DetailDocs", "Projecten", new { projectid = "__ID__" }) ?? "") },
+    };
+}
+<section class="gl-v2-snelacties-card" id="gl-v2-snelacties-card">
+    <header class="gl-v2-snelacties-header">
+        <i class="ph ph-lightning" aria-hidden="true"></i>
+        <span>Snelacties</span>
+    </header>
+
+    <div class="gl-v2-snelacties-active">
+        <span class="gl-v2-snelacties-active-label">Actief project</span>
+        <button type="button" class="gl-v2-snelacties-active-picker" id="gl-v2-sa-active-picker" data-bs-toggle="modal" data-bs-target="#glV2ProjectPickerModal">
+            <i class="ph ph-buildings" aria-hidden="true"></i>
+            <span class="gl-v2-snelacties-active-text" id="gl-v2-sa-active-text">
+                <span class="gl-v2-snelacties-active-placeholder">Kies een project</span>
+            </span>
+            <i class="ph ph-caret-down gl-v2-snelacties-active-caret" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="gl-v2-snelacties-group">
+        <span class="gl-v2-snelacties-group-label">Op dit project</span>
+        @foreach (var a in opDitProjectActions)
+        {
+            <a href="#" class="gl-v2-snelactie-row is-dimmed js-gl-v2-sa-project-action" data-key="@a.Key" data-url-template="@a.Url">
+                <i class="ph @a.Icon" aria-hidden="true"></i>
+                <span>@a.Label</span>
+                <span class="gl-v2-snelactie-row-chevron">›</span>
+            </a>
+        }
+    </div>
+
+    <div class="gl-v2-snelacties-group is-bordered">
+        <span class="gl-v2-snelacties-group-label">Algemeen</span>
+        <a href="@Url.Action("Create", "Leveranciers")" class="gl-v2-snelactie-row">
+            <i class="ph ph-user-plus" aria-hidden="true"></i>
+            <span>Leverancier toevoegen</span>
+            <span class="gl-v2-snelactie-row-chevron">›</span>
+        </a>
+        <button type="button" class="gl-v2-snelactie-row" id="sa-lev-search" data-bs-toggle="modal" data-bs-target="#glV2LevSearchModal">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <span>Leverancier zoeken</span>
+            <span class="gl-v2-snelactie-row-chevron">›</span>
+        </button>
+        <button type="button" class="gl-v2-snelactie-row" id="sa-klant-search" data-bs-toggle="modal" data-bs-target="#glV2KlantSearchModal">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <span>Klant zoeken</span>
+            <span class="gl-v2-snelactie-row-chevron">›</span>
+        </button>
+    </div>
+</section>

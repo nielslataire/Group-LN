@@ -1,0 +1,60 @@
+@model List<BOCore.ProjectBO>
+@* gl-v2 layout-pilot (design-handoff 7f, "PROJECTKIEZER (POPOVER)") — als modal gebouwd i.p.v. een
+   bij-de-kaart-verankerde popover, zodat dezelfde ene component ook bruikbaar is vanaf de mobiele
+   balk ("Vastzetten"-tegel) en de Mijn-Werven "+"-knop, niet enkel vanuit de desktop-Snelacties-kaart
+   (GlV2/_SnelactiesCard.cshtml) — allemaal `data-bs-toggle="modal" data-bs-target="#glV2ProjectPickerModal"`.
+   Hergebruikt de Type-3-zoekmodal-klassen (.gl-v2-modal-search-*) voor het veld/de rijen — visueel
+   dezelfde taal, geen aparte CSS-familie voor dit ene scherm. Twee stukken die de generieke zoekmodal
+   niet heeft: een "RECENT"-groep (Model = werfProjects, client-gefilterd zoals het legacy
+   #gl-punt-sheet) en een "Dit project vastzetten"-footerknop die het bestaande PinProject-endpoint
+   aanroept op het project dat op dat moment als actief gekozen staat (window.GlV2ActiveProject). *@
+@{
+    var projects = Model ?? new List<BOCore.ProjectBO>();
+}
+<div class="modal fade gl-v2-modal-search gl-v2-modal-picker" id="glV2ProjectPickerModal" tabindex="-1" aria-hidden="true" aria-labelledby="glV2ProjectPickerModal-label"
+     data-quicksearch-url="@Url.Action("QuickSearch", "Projecten")" data-pin-url="@Url.Action("PinProject", "Home")">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="gl-v2-modal-search-header">
+                <h2 class="gl-v2-modal-search-title" id="glV2ProjectPickerModal-label">Project kiezen</h2>
+                <button type="button" class="gl-v2-modal-search-close" data-bs-dismiss="modal" aria-label="Sluiten">
+                    <i class="ph ph-x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="gl-v2-modal-search-field">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-modal-search-input" id="gl-v2-picker-input" placeholder="Zoek project…" autocomplete="off" />
+                </div>
+                <div class="gl-v2-modal-search-results">
+                    <span class="gl-v2-modal-search-results-label" id="gl-v2-picker-recent-label">Recent</span>
+                    <div class="gl-v2-modal-search-list" id="gl-v2-picker-recent-list">
+                        @if (!projects.Any())
+                        {
+                            <span class="gl-v2-modal-search-none-sub">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in projects)
+                            {
+                                <button type="button" class="gl-v2-modal-search-row js-gl-v2-picker-recent"
+                                        data-pid="@p.Id" data-pname="@p.Name" data-ploc="@(p.Postalcode?.Gemeente ?? "")" data-name="@p.Name.ToLowerInvariant()">
+                                    <span class="gl-v2-modal-search-row-avatar"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+                                    <span class="gl-v2-modal-search-row-name">@p.Name</span>
+                                    <i class="ph ph-caret-right gl-v2-modal-search-row-chevron" aria-hidden="true"></i>
+                                </button>
+                            }
+                        }
+                    </div>
+                    <span class="gl-v2-modal-search-results-label d-none" id="gl-v2-picker-extra-label">Andere projecten</span>
+                    <div class="gl-v2-modal-search-list" id="gl-v2-picker-extra-list"></div>
+                </div>
+            </div>
+            <div class="gl-v2-modal-search-footer">
+                <button type="button" class="gl-v2-modal-search-create" id="gl-v2-picker-pin-btn">
+                    <i class="ph ph-push-pin" aria-hidden="true"></i>Dit project vastzetten
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

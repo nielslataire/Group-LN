@@ -1,0 +1,66 @@
+@model string
+@* gl-v2 layout-pilot (design-handoff 7b, "SNOOZE — ALLEEN BIJ 'OP TE LOSSEN' EN 'TER INFO'").
+   @Model is de menu-id (aria-controls van de klok-trigger in _MeldingenPaneel.cshtml). Twee
+   "pagina's" in hetzelfde .gl-v2-menu-paneel — opties-lijst en eigen-datum-kalender — CSS toont er
+   telkens maar één (.is-active), gl-v2-dashboard.js wisselt tussen de twee i.p.v. het menu te
+   sluiten/heropenen (zie initSnoozeMenus daar). De opties zelf (Morgenochtend/Over 3 dagen/Volgende
+   week) tonen relatieve data die pas KLOPPEN op het moment van bekijken, niet op rendermoment — de
+   sub-labels ("ma 22 sep · 08:00") en de exacte tot-datum die verstuurd wordt wanneer je klikt,
+   worden dus allebei client-side berekend (zie computeSnoozeDate), niet hier server-side vastgezet. *@
+<div class="gl-v2-menu gl-v2-snooze-menu" id="@Model">
+    <div class="gl-v2-snooze-page gl-v2-snooze-page-options is-active">
+        <div class="gl-v2-menu-title">HERINNER ME</div>
+        <button type="button" class="gl-v2-menu-item js-gl-v2-snooze-option" data-snooze-offset="tomorrow-morning">
+            <i class="ph ph-clock" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Morgenochtend</span>
+                <span class="gl-v2-menu-item-sub" data-role="sub"></span>
+            </span>
+        </button>
+        <button type="button" class="gl-v2-menu-item js-gl-v2-snooze-option" data-snooze-offset="3-days">
+            <i class="ph ph-clock" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Over 3 dagen</span>
+                <span class="gl-v2-menu-item-sub" data-role="sub"></span>
+            </span>
+        </button>
+        <button type="button" class="gl-v2-menu-item js-gl-v2-snooze-option" data-snooze-offset="next-week">
+            <i class="ph ph-clock" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Volgende week</span>
+                <span class="gl-v2-menu-item-sub" data-role="sub"></span>
+            </span>
+        </button>
+        <button type="button" class="gl-v2-menu-item js-gl-v2-snooze-custom">
+            <i class="ph ph-calendar-blank" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Eigen datum kiezen</span>
+                <span class="gl-v2-menu-item-sub">kies dag en uur</span>
+            </span>
+        </button>
+    </div>
+
+    <div class="gl-v2-snooze-page gl-v2-snooze-page-calendar">
+        <div class="gl-v2-snooze-cal-nav">
+            <button type="button" class="gl-v2-snooze-cal-arrow js-gl-v2-snooze-cal-prev" aria-label="Vorige maand"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+            <span class="gl-v2-snooze-cal-label">EIGEN DATUM</span>
+            <span class="gl-v2-mc-spacer"></span>
+            <span class="gl-v2-snooze-cal-month" data-role="month"></span>
+            <button type="button" class="gl-v2-snooze-cal-arrow js-gl-v2-snooze-cal-next" aria-label="Volgende maand"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+        </div>
+        <div class="gl-v2-snooze-cal-head" data-role="head"></div>
+        <div class="gl-v2-snooze-cal-grid" data-role="grid"></div>
+        <div class="gl-v2-snooze-time">
+            <div class="gl-v2-menu-title">TIJDSTIP</div>
+            <div class="gl-v2-snooze-time-chips" data-role="time-chips">
+                <button type="button" class="gl-v2-snooze-time-chip is-active" data-snooze-time="08:00">08:00</button>
+                <button type="button" class="gl-v2-snooze-time-chip" data-snooze-time="13:00">13:00</button>
+                <button type="button" class="gl-v2-snooze-time-chip" data-snooze-time="17:00">17:00</button>
+            </div>
+        </div>
+        <div class="gl-v2-snooze-actions">
+            <button type="button" class="gl-v2-snooze-back js-gl-v2-snooze-back">Terug</button>
+            <button type="button" class="gl-v2-snooze-confirm js-gl-v2-snooze-confirm" data-role="confirm">Snooze</button>
+        </div>
+    </div>
+</div>

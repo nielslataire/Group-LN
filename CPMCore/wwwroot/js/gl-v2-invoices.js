@@ -366,10 +366,22 @@
             return;
         }
 
-        var cardEl = document.querySelector(".gl-v2-table-card");
+        // "Kaart krimpt mee", vervolgpas: .gl-v2-body/.gl-v2-content zijn zelf óók niet meer
+        // gestretched (gl-v2-shell.css — align-self:flex-start op .gl-v2-body, flex:none op
+        // .gl-v2-content) — er is dus geen stabiele voorouder meer BINNEN de kaart-keten om
+        // "maximaal beschikbare ruimte" van af te lezen: elke schakel meet nu af op z'n eigen
+        // inhoud, precies het punt van die fix (anders was dit weer circulair: hoogte hangt af van
+        // rijenaantal hangt af van hoogte). window.innerHeight is de enige nog écht stabiele
+        // referentie (onafhankelijk van hoeveel rijen er staan) — .gl-v2-app's eigen
+        // `min-height:100vh` is daar toch al 1-op-1 aan gekoppeld. Alle vaste chrome ertussen wordt
+        // hieronder expliciet afgetrokken i.p.v. van één voorouders-clientHeight te lezen.
+        var appEl = document.querySelector(".gl-v2-app");
+        var topbarEl = document.querySelector(".gl-v2-topbar");
+        var contentEl = document.querySelector(".gl-v2-content");
+        var toolbarEl = document.querySelector(".gl-v2-toolbar-card");
         var theadEl = document.querySelector("#datatable-invoice-list thead");
         var dtContainer = document.querySelector("#datatable-invoice-list")?.closest(".dt-container");
-        if (!cardEl || !theadEl || !dtContainer) return;
+        if (!appEl || !topbarEl || !contentEl || !theadEl || !dtContainer) return;
 
         var ROW_HEIGHT = 54; // moet in sync blijven met gl-v2-invoices.css tbody td { height }
         // Altijd gereserveerd, ook als de selectie-toolbar nu net niet zichtbaar is — anders
@@ -378,9 +390,28 @@
 
         var footerRow = dtContainer.querySelector(".dt-layout-row:last-child");
         var footerHeight = footerRow ? footerRow.offsetHeight : 48;
+        var appStyle = getComputedStyle(appEl);
+        var appVerticalPadding = (parseFloat(appStyle.paddingTop) || 0) + (parseFloat(appStyle.paddingBottom) || 0);
+        var contentStyle = getComputedStyle(contentEl);
+        var contentVerticalPadding = (parseFloat(contentStyle.paddingTop) || 0) + (parseFloat(contentStyle.paddingBottom) || 0);
+        var contentGap = parseFloat(contentStyle.rowGap) || 16;
+        var toolbarHeight = toolbarEl ? toolbarEl.offsetHeight : 0;
 
-        var available = cardEl.clientHeight - theadEl.offsetHeight - footerHeight - SELECTION_TOOLBAR_HEIGHT;
-        var rows = Math.max(Math.floor(available / ROW_HEIGHT), 3);
+        var available = window.innerHeight
+            - appVerticalPadding
+            - topbarEl.offsetHeight
+            - contentVerticalPadding
+            - toolbarHeight
+            - contentGap
+            - theadEl.offsetHeight
+            - footerHeight
+            - SELECTION_TOOLBAR_HEIGHT;
+        var maxRows = Math.max(Math.floor(available / ROW_HEIGHT), 3);
+        // Nooit meer rijen opvragen dan er ECHT zijn — anders vraagt DataTables een paginagrootte
+        // groter dan recordsTotal, blijft de tabel gewoon alle rijen tonen, en houdt de (sinds deze
+        // fix content-hoge) kaart alsnog lege ruimte over onder de laatste rij.
+        var recordsTotal = table.page.info().recordsTotal;
+        var rows = recordsTotal ? Math.min(maxRows, Math.max(recordsTotal, 3)) : maxRows;
 
         if (rows !== table.page.len()) {
             table.page.len(rows).draw(false);

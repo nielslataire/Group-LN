@@ -10,6 +10,7 @@
         or CPMCore.Models.DashboardType.Ontwikkelaar
         or CPMCore.Models.DashboardType.Verkoper;
     var isProjectleiderDashboard = Model.DashboardType == CPMCore.Models.DashboardType.Projectleider;
+    var useGlV2Layout = ViewData["UseGlV2Layout"] as bool? == true;
     // Enkel het Projectleider-dashboard heeft vandaag mobiele snelacties (geport van de bestaande
     // .gl-mob-nav in _DashboardProjectleider.cshtml, zie daar) — @section moet onvoorwaardelijk op
     // view-toplevel staan (geen @if eromheen), dus deze vlag voorkomt dat de andere dashboardtypes
@@ -33,6 +34,20 @@ else
 
 @section PageScripts
 {
+@if (useGlV2Layout && isProjectleiderDashboard)
+{
+    @* gl-v2 layout-pilot (design-handoff 7b, "Meldingenscherm") — belletje/snooze-menu/kalender/
+       AJAX-snooze-unsnooze, zie gl-v2-dashboard.js. Server-bepaalde URL's kunnen niet in het externe
+       scriptbestand zelf staan (geen Razor daar), vandaar dit kleine config-object, zelfde patroon
+       als window.glV2InvoicesConfig in IndexV2.cshtml. *@
+    <script>
+        window.glV2DashboardConfig = {
+            snoozeUrl: '@Url.Action("SnoozeMelding", "Home")',
+            unsnoozeUrl: '@Url.Action("UnsnoozeMelding", "Home")'
+        };
+    </script>
+    <script src="~/js/gl-v2-dashboard.js" asp-append-version="true"></script>
+}
 @if (!isRoleDashboard)
 {
     <script src="~/lib/isotope/isotope.js" asp-append-version="true"></script>
@@ -75,18 +90,22 @@ else
            project-kies-sheet nodig zoals "Punt" al heeft, en dat is nog niet gebouwd. Met 5 tegels
            knipt gl-v2-shell.js dit automatisch af na 4 + een "Meer"-tegel (optie 6b) — de 5de
            (Leverancier toevoegen) is dus de eerste die in de sheet belandt.
-           Dezelfde #gl-v2-qa-*-id's zijn met opzet toegevoegd aan de bestaande jQuery-selectors in
-           _DashboardProjectleider.cshtml (geen nieuwe JS hier) — zie de "Delegatie" comments daar. *@
+           #gl-v2-qa-punt blijft gedelegeerd naar de bestaande jQuery-handler in
+           _DashboardProjectleider.cshtml (openPuntSheet, ongewijzigd). Leverancier/Klant zoeken en
+           Vastzetten gebruiken sinds design-handoff 7e/7f geen eigen sheet meer — data-bs-toggle
+           opent rechtstreeks de nieuwe gl-v2-modal-search/_ProjectPickerModal-instanties
+           (GlV2/_SearchModal.cshtml, GlV2/_ProjectPickerModal.cshtml, beide gerenderd in
+           _DashboardProjectleider.cshtml), zelfde modals als de desktop-Snelacties-kaart gebruikt. *@
         <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-punt">
             <i class="ph ph-warning-circle" aria-hidden="true"></i>Punt
         </button>
-        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-lev-search">
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-lev-search" data-bs-toggle="modal" data-bs-target="#glV2LevSearchModal">
             <i class="ph ph-hard-hat" aria-hidden="true"></i>Leverancier
         </button>
-        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-klant-search">
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-klant-search" data-bs-toggle="modal" data-bs-target="#glV2KlantSearchModal">
             <i class="ph ph-users" aria-hidden="true"></i>Klant
         </button>
-        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-pin">
+        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-pin" data-bs-toggle="modal" data-bs-target="#glV2ProjectPickerModal">
             <i class="ph ph-push-pin" aria-hidden="true"></i>Vastzetten
         </button>
         <a href="@Url.Action("Create", "Leveranciers")" class="gl-v2-mobile-quickaction" data-subtitle="Nieuw contact aanmaken">

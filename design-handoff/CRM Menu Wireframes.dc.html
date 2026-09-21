@@ -8,6 +8,919 @@
 <body>
 <x-dc>
 <helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#E7EDE2;font-family:'Avenir','Open Sans',-apple-system,sans-serif}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 'Avenir','Open Sans',sans-serif;color:#00532D}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'Avenir','Open Sans',sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden}.dv-opt:target .dv-oid{background:#00532D;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 'Avenir','Open Sans',sans-serif;color:rgba(0,0,0,.5)}a{color:#00532D}a:hover{color:#B8935A}</style></helmet>
+<section class="dv-turn" id="t7">
+<div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">Dashboard-onderdelen — KPI-kaarten, meldingen, voortgangsbalk</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="7a">
+<div class="dv-olabel"><a class="dv-oid" href="#7a">7a</a>KPI-kaarten — max 8 naast elkaar op desktop, herschikt op tablet en mobiel</div>
+<div class="dv-card" style="width:1280px">
+<div style="display:flex;flex-direction:column;gap:24px;padding:22px;background:#F2F5EF;box-sizing:border-box">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">DESKTOP — 4 KAARTEN (RUIM), ZELFDE RIJ HOOGTE 84PX</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+<div style="height:84px;box-sizing:border-box;border-radius:12px;background:#fff;border-left:3px solid {{ k.accent }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -28px rgba(44,59,42,.4);display:flex;align-items:center;gap:14px;padding:0 18px">
+<div style="width:48px;height:48px;border-radius:24px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ k.tint }}">
+<svg viewBox="0 0 16 16" style="width:22px;height:22px;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;stroke:{{ k.ink }}"><path d="{{ k.d }}"></path></svg>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ k.label }}</span>
+<span style="font:700 20px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ k.value }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">tot vier KPI's: icoon 48px, cijfer 20px — de ruime variant</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">DESKTOP — 8 KAARTEN OP ÉÉN RIJ (COMPACT, ABSOLUUT MAXIMUM)</div>
+<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="8">
+<div style="height:78px;box-sizing:border-box;border-radius:12px;background:#fff;border-left:3px solid {{ k.accent }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -28px rgba(44,59,42,.4);display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 12px">
+<div style="display:flex;align-items:center;gap:8px;min-width:0">
+<div style="width:26px;height:26px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ k.tint }}">
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke:{{ k.ink }}"><path d="{{ k.d }}"></path></svg>
+</div>
+<span style="font:500 10px/1.25 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">{{ k.label }}</span>
+</div>
+<span style="font:700 19px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ k.value }}</span>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">boven de acht: nooit een negende kolom maar een tweede rij van vier — anders wordt het label onleesbaar</span>
+</div>
+
+<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="flex:1;min-width:420px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">TABLET — 4 PER RIJ, TWEE RIJEN</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="8">
+<div style="height:76px;box-sizing:border-box;border-radius:12px;background:#fff;border-left:3px solid {{ k.accent }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -28px rgba(44,59,42,.4);display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 12px">
+<div style="display:flex;align-items:center;gap:8px;min-width:0">
+<div style="width:28px;height:28px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ k.tint }}">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke:{{ k.ink }}"><path d="{{ k.d }}"></path></svg>
+</div>
+<span style="font:500 10.5px/1.25 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">{{ k.label }}</span>
+</div>
+<span style="font:700 19px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ k.value }}</span>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">staand 3 per rij, liggend 4 — de kaart zelf verandert niet</span>
+</div>
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MOBIEL — 2 PER RIJ</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="8">
+<div style="height:74px;box-sizing:border-box;border-radius:12px;background:#fff;border-left:3px solid {{ k.accent }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 14px 30px -24px rgba(44,59,42,.4);display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 11px">
+<div style="display:flex;align-items:center;gap:7px;min-width:0">
+<div style="width:24px;height:24px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ k.tint }}">
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;stroke:{{ k.ink }}"><path d="{{ k.d }}"></path></svg>
+</div>
+<span style="font:500 9.5px/1.25 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">{{ k.label }}</span>
+</div>
+<span style="font:700 18px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ k.value }}</span>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">de vier belangrijkste eerst; de rest achter<br>"toon alles" zodat de werven zichtbaar blijven</span>
+</div>
+
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7b">
+<div class="dv-olabel"><a class="dv-oid" href="#7b">7b</a>Meldingenscherm — paneel op desktop, volledig scherm op mobiel</div>
+<div class="dv-card" style="width:1080px">
+<div style="display:flex;gap:18px;padding:22px;background:#F2F5EF;box-sizing:border-box;align-items:flex-start;flex-wrap:wrap">
+
+<div style="width:360px;flex:none;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">DESKTOP — PANEEL IN DE DASHBOARDKOLOM</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:flex;align-items:center;gap:9px;padding:15px 16px;border-bottom:1px solid rgba(44,59,42,.08)">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.6a3.6 3.6 0 0 0-3.6 3.6c0 3-1.2 4-1.2 4h9.6s-1.2-1-1.2-4A3.6 3.6 0 0 0 8 2.6z M6.8 12.4a1.4 1.4 0 0 0 2.4 0"></path></svg>
+<span style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Meldingen</span>
+<span style="min-width:20px;height:20px;box-sizing:border-box;padding:0 6px;border-radius:10px;background:#B4331F;color:#fff;display:flex;align-items:center;justify-content:center;font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif">4</span>
+<span style="flex:1"></span>
+<span style="font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Alles gelezen</span>
+</div>
+<sc-for list="{{ meldGroups }}" as="g" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:{{ g.bg }}">
+<span style="width:7px;height:7px;border-radius:4px;flex:none;background:{{ g.accent }}"></span>
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.12em;color:{{ g.accent }}">{{ g.title }}</span>
+<span style="min-width:17px;height:17px;box-sizing:border-box;padding:0 5px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:{{ g.accent }}">{{ g.count }}</span>
+</div>
+<sc-for list="{{ g.items }}" as="m" hint-placeholder-count="2">
+<div style="display:flex;align-items:flex-start;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(44,59,42,.06)">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;margin-top:2px;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;stroke:{{ g.accent }}"><path d="{{ m.d }}"></path></svg>
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font:450 12.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ m.text }}</span>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ m.meta }}</span>
+</div>
+<span style="flex:1"></span>
+<div style="display:flex;align-items:center;gap:9px;flex:none">
+<sc-if value="{{ g.snooze }}" hint-placeholder-val="{{ true }}">
+<div style="width:26px;height:26px;border-radius:13px;border:1px solid rgba(44,59,42,.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#5a6b58;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2V8l2 1.3"></path></svg></div>
+</sc-if>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;white-space:nowrap">Bekijk</span>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<div style="display:flex;align-items:flex-start;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(44,59,42,.06);background:#F7F9F5">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;margin-top:2px;fill:none;stroke:#5a6b58;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2V8l2 1.3"></path></svg>
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font:450 12.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Keuringsverslag Opdorp Dries 10 opvragen.</span>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Gesnoozed tot ma 28 sep · 08:00</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;white-space:nowrap">Nu tonen</span>
+</div>
+<div style="padding:12px 16px;display:flex;align-items:center;justify-content:center">
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Alle meldingen tonen</span>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">gegroepeerd op dringendheid, niet op datum;<br>de groepsbalk draagt de kleur, de rijen blijven wit</span>
+
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em;padding-top:6px">SNOOZE — ALLEEN BIJ "OP TE LOSSEN" EN "TER INFO"</span>
+<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+<div style="width:224px;flex:none;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.5);padding:6px;display:flex;flex-direction:column;gap:1px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:7px 10px 5px">HERINNER ME</span>
+<sc-for list="{{ snoozeOptions }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2V8l2 1.3"></path></svg>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ s.label }}</span>
+<span style="font:450 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ s.sub }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="width:250px;flex:none;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.5);padding:12px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:8px">
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.2 5 8l4.6 4.8"></path></svg>
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em">EIGEN DATUM</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">september 2026</span>
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.4 3.2 11 8l-4.6 4.8"></path></svg>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+<sc-for list="{{ calHead }}" as="d" hint-placeholder-count="7">
+<span style="height:18px;display:flex;align-items:center;justify-content:center;font:600 8.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ d }}</span>
+</sc-for>
+<sc-for list="{{ calDays }}" as="c" hint-placeholder-count="35">
+<span style="height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;font:{{ c.font }};color:{{ c.ink }};background:{{ c.bg }};border:{{ c.bd }}">{{ c.n }}</span>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px;padding-top:9px;border-top:1px solid rgba(44,59,42,.08)">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em">TIJDSTIP</span>
+<div style="display:flex;gap:6px">
+<span style="flex:1;height:30px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif">08:00</span>
+<span style="flex:1;height:30px;border-radius:8px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;justify-content:center;font:500 11px 'Avenir','Open Sans',-apple-system,sans-serif">13:00</span>
+<span style="flex:1;height:30px;border-radius:8px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;justify-content:center;font:500 11px 'Avenir','Open Sans',-apple-system,sans-serif">17:00</span>
+</div>
+</div>
+<div style="display:flex;gap:7px">
+<span style="flex:1;height:34px;border-radius:8px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;justify-content:center;font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif">Terug</span>
+<span style="flex:1;height:34px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif">Snooze tot 30 sep</span>
+</div>
+</div>
+
+<div style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 20px 44px -26px rgba(44,59,42,.5)">
+<div style="width:28px;height:28px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:#EDEFEB"><svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2V8l2 1.3"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Gesnoozed tot ma 28 sep</span>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Toast bevestigt de keuze</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;white-space:nowrap">Ongedaan</span>
+</div>
+<span style="font:450 11px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Het klokje staat links van "Bekijk" en verschijnt alleen op die twee niveaus — meldingen die actie vereisen kun je niet uitstellen. Gesnoozede meldingen zakken naar onderaan de lijst in grijs, tellen niet mee in de badge, en komen op het gekozen moment terug op hun oorspronkelijke plaats.</span>
+</div>
+</div>
+</div>
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MOBIEL — VOLLEDIG SCHERM</span>
+<div style="width:300px;height:600px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#00532D;flex:none">
+<div style="width:30px;height:30px;border:1px solid rgba(255,255,255,.35);border-radius:15px;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.4 5 8l4.6 4.6"></path></svg></div>
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Meldingen</span>
+<span style="min-width:19px;height:19px;box-sizing:border-box;padding:0 6px;border-radius:10px;background:#fff;color:#00532D;display:flex;align-items:center;justify-content:center;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif">4</span>
+<span style="flex:1"></span>
+<span style="font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:rgba(255,255,255,.85)">Alles gelezen</span>
+</div>
+<div style="display:flex;gap:7px;padding:10px 12px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);flex:none">
+<span style="height:30px;padding:0 12px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif">Alles</span>
+<span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;font:500 11px 'Avenir','Open Sans',-apple-system,sans-serif">Actie</span>
+<span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;font:500 11px 'Avenir','Open Sans',-apple-system,sans-serif">Info</span>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;background:#fff;display:flex;flex-direction:column">
+<sc-for list="{{ meldGroups }}" as="g" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:{{ g.bg }}">
+<span style="width:7px;height:7px;border-radius:4px;flex:none;background:{{ g.accent }}"></span>
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.12em;color:{{ g.accent }}">{{ g.title }}</span>
+</div>
+<sc-for list="{{ g.items }}" as="m" hint-placeholder-count="2">
+<div style="display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border-bottom:1px solid rgba(44,59,42,.06)">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;margin-top:2px;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;stroke:{{ g.accent }}"><path d="{{ m.d }}"></path></svg>
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ m.text }}</span>
+<span style="font:450 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ m.meta }}</span>
+<div style="display:flex;align-items:center;gap:14px;padding-top:4px">
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Bekijk</span>
+<sc-if value="{{ g.snooze }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:6px">
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2V8l2 1.3"></path></svg>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Snooze</span>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">filterchips vervangen de groepskoppen zodra<br>er meer dan tien meldingen zijn</span>
+</div>
+
+<div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">LEEG, TABLET-POPOVER EN REGELS</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);padding:26px 18px;display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="width:46px;height:46px;border-radius:23px;background:#EDF3E8;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:21px;height:21px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></div>
+<span style="font:500 16px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Alles opgevolgd</span>
+<span style="font:450 11.5px/1.55 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;text-align:center;max-width:210px">Geen openstaande meldingen. Nieuwe punten verschijnen hier zodra ze binnenkomen.</span>
+</div>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);padding:12px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;gap:9px">
+<div style="position:relative;width:38px;height:38px;border-radius:19px;border:1px solid rgba(44,59,42,.12);display:flex;align-items:center;justify-content:center;flex:none">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.6a3.6 3.6 0 0 0-3.6 3.6c0 3-1.2 4-1.2 4h9.6s-1.2-1-1.2-4A3.6 3.6 0 0 0 8 2.6z M6.8 12.4a1.4 1.4 0 0 0 2.4 0"></path></svg>
+<span style="position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;box-sizing:border-box;padding:0 5px;border-radius:9px;background:#B4331F;border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif">4</span>
+</div>
+<span style="font:450 11.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Op tablet opent hetzelfde paneel als popover onder het belletje in de topbar — 360px breed, max 420px hoog, daarna scrollt het.</span>
+</div>
+</div>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);padding:14px;font:450 12px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.12em;padding-bottom:8px">REGELS</div>
+Een melding is blijvend en staat in dit scherm; een toast is vluchtig en verdwijnt. Drie niveaus: actie vereist (rood), op te lossen (goud), ter info (groen) — de teller telt alleen de eerste twee. Elke rij heeft één actie rechts, nooit meer; gelezen meldingen krijgen een witte achtergrond zonder gekleurde balk en zakken naar onderen.
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7g">
+<div class="dv-olabel"><a class="dv-oid" href="#7g">7g</a>Tablet — snelacties als groene rail rechts, in de stijl van de gsm-bar (<a href="#6a">6a</a>)</div>
+<div class="dv-card" style="width:1180px">
+<div style="display:flex;gap:18px;padding:22px;background:#F2F5EF;box-sizing:border-box;align-items:flex-start;flex-wrap:wrap">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">TABLET LIGGEND · 1194×834 — MENU LINKS, SNELACTIES RECHTS</span>
+<div style="width:760px;height:534px;border-radius:14px;overflow:hidden;display:flex;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+
+<div style="width:64px;flex:none;background:#fff;border-right:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:6px">
+<div style="width:36px;height:36px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:8px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48;flex:none">{{ logoLabel }}</div>
+<div style="width:30px;height:1.5px;background:rgba(44,59,42,.10);margin:4px 0"></div>
+<sc-for list="{{ railBeforeFact }}" as="m" hint-placeholder-count="6">
+<div style="width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:10px;padding:0 14px;height:56px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);flex:none">
+<div style="display:flex;flex-direction:column;gap:2px">
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Dashboard</span>
+<span style="font:500 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Home</span>
+</div>
+<span style="flex:1"></span>
+<div style="display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border-radius:22px;border:1px solid rgba(44,59,42,.10);height:44px;box-sizing:border-box;flex:none">
+<div style="width:32px;height:32px;border-radius:16px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif">NL</div>
+<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">N. Lataire</span>
+</div>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start">
+<sc-for list="{{ dashCards }}" as="c" hint-placeholder-count="4">
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06);padding:12px;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ c }}</span>
+<div style="height:7px;width:70%;border-radius:4px;background:rgba(44,59,42,.10)"></div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="width:92px;flex:none;background:#00532D;display:flex;flex-direction:column;align-items:center;padding:12px 0 14px;gap:2px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 6px 10px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M9 1.8 4 8.8h3.4L7 14.2l5-7.2H8.6z"></path></svg>
+<span style="font:600 8.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:rgba(255,255,255,.75);letter-spacing:.1em">SNELACTIES</span>
+</div>
+<div style="width:56px;height:1px;background:rgba(255,255,255,.22);margin-bottom:8px"></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;width:76px;border-radius:12px;background:rgba(255,255,255,.14)">
+<svg viewBox="0 0 16 16" style="width:20px;height:20px;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9.6V14 M5.2 2.4h5.6l-.8 4.4H6z M4.6 9.6h6.8"></path></svg>
+<span style="font:600 9px/1.2 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;text-align:center">Villa<br>Cauxyde</span>
+</div>
+<sc-for list="{{ qaRailTablet }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;width:76px;border-radius:12px">
+<svg viewBox="0 0 16 16" style="width:21px;height:21px;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ b.d }}"></path></svg>
+<span style="font:500 9.5px/1.2 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;text-align:center">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">rail 92px breed · zelfde icoon-boven-label als de gsm-bar, enkel verticaal · het actieve project staat bovenaan als eerste "tegel", zo weet je waarop de acties werken</span>
+</div>
+
+<div style="width:320px;flex:none;display:flex;flex-direction:column;gap:14px">
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">"MEER" GEOPEND — PANEEL SCHUIFT NAAST DE RAIL</span>
+<div style="border-radius:12px;overflow:hidden;display:flex;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45)">
+<div style="flex:1;min-width:0;background:#fff;display:flex;flex-direction:column;gap:2px;padding:10px 6px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:2px 10px 6px">ALLE SNELACTIES</span>
+<sc-for list="{{ qaGeneral }}" as="a" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:9px">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ a.d }}"></path></svg>
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ a.label }}</span>
+</div>
+</sc-for>
+</div>
+<div style="width:92px;flex:none;background:#00532D;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px">
+<sc-for list="{{ qaRailTablet }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;width:76px;border-radius:12px;opacity:.55">
+<svg viewBox="0 0 16 16" style="width:21px;height:21px;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ b.d }}"></path></svg>
+<span style="font:500 9.5px/1.2 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;text-align:center">{{ b.label }}</span>
+</div>
+</sc-for>
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;width:76px;border-radius:12px;background:rgba(255,255,255,.16)">
+<svg viewBox="0 0 16 16" style="width:21px;height:21px;fill:none;stroke:#fff;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 4.5l7 7 M11.5 4.5l-7 7"></path></svg>
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff">Sluiten</span>
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">de rail blijft staan en dimt, precies zoals de bar op de gsm</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">TABLET STAAND — RAIL WORDT EEN BAR ONDERAAN</span>
+<div style="border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45)">
+<div style="height:64px;background:#fff;display:flex;align-items:center;padding:0 12px">
+<span style="font:450 11.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Onder 900px verdwijnt de rail: te weinig breedte voor drie kolommen naast elkaar.</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#00532D">
+<sc-for list="{{ quickBar }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:52px;padding:4px">
+<svg viewBox="0 0 16 16" style="width:20px;height:20px;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ b.d }}"></path></svg>
+<span style="font:500 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;white-space:nowrap">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="border-radius:12px;background:#fff;padding:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);font:450 12px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.12em;padding-bottom:8px">AFWEGING</div>
+Ja, dit kan — en het werkt goed zolang de tablet liggend is: het menu blijft links, de acties rechts, en de duim van je rechterhand ligt er vlak bij. Op tablet en gsm vervalt de <a href="#7f">snelactiekaart</a> op het dashboard dan ook volledig — de rail (liggend) of de bar onderaan (staand en gsm) is daar de enige plaats voor de acties, zodat je ze niet twee keer naast elkaar hebt. De kaart blijft enkel op desktop bestaan, waar geen rail of bar staat. Voorwaarde blijft: maximaal zes tegels zichtbaar, de rest achter "Meer".
+</div>
+
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7f">
+<div class="dv-olabel"><a class="dv-oid" href="#7f">7f</a>Snelacties-kaart herdacht (alleen desktop) — project bovenaan kiezen i.p.v. per actie uitklappen</div>
+<div class="dv-card" style="width:1180px">
+<div style="display:flex;gap:18px;padding:22px;background:#F2F5EF;box-sizing:border-box;align-items:flex-start;flex-wrap:wrap">
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">DESKTOP · 300PX — PROJECT GEKOZEN</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:flex;align-items:center;gap:9px;padding:14px 16px;background:#00532D">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M9 1.8 4 8.8h3.4L7 14.2l5-7.2H8.6z"></path></svg>
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Snelacties</span>
+</div>
+<div style="padding:12px 12px 10px;border-bottom:1px solid rgba(44,59,42,.08)">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em">ACTIEF PROJECT</span>
+<div style="margin-top:6px;height:44px;box-sizing:border-box;border-radius:10px;border:1px solid #00532D;background:#F7F9F5;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9.6V14 M5.2 2.4h5.6l-.8 4.4H6z M4.6 9.6h6.8"></path></svg>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Villa Cauxyde</span>
+<span style="font:500 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.06em">KOKSIJDE</span>
+</div>
+<span style="flex:1"></span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;display:block;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+</div>
+<div style="padding:10px 6px 6px">
+<span style="display:block;font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:0 10px 6px">OP DIT PROJECT</span>
+<sc-for list="{{ qaProject }}" as="a" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:11px;padding:10px;border-radius:9px">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ a.d }}"></path></svg>
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ a.label }}</span>
+<span style="flex:1"></span>
+<span style="font:12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">›</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:8px 6px 12px;border-top:1px solid rgba(44,59,42,.08)">
+<span style="display:block;font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:4px 10px 6px">ALGEMEEN</span>
+<sc-for list="{{ qaGeneral }}" as="a" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:11px;padding:10px;border-radius:9px">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ a.d }}"></path></svg>
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ a.label }}</span>
+<span style="flex:1"></span>
+<span style="font:12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">›</span>
+</div>
+</sc-for>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">het project staat één keer bovenaan in plaats van<br>acht keer in zes accordeons — daarna is elke actie<br>één klik, zonder uitklappen</span>
+</div>
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">GEEN PROJECT GEKOZEN</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:flex;align-items:center;gap:9px;padding:14px 16px;background:#00532D">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M9 1.8 4 8.8h3.4L7 14.2l5-7.2H8.6z"></path></svg>
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Snelacties</span>
+</div>
+<div style="padding:12px 12px 10px;border-bottom:1px solid rgba(44,59,42,.08)">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em">ACTIEF PROJECT</span>
+<div style="margin-top:6px;height:44px;box-sizing:border-box;border-radius:10px;border:1px dashed #7A9E6E;display:flex;align-items:center;gap:9px;padding:0 12px;font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round"><path d="M8 3.4v9.2 M3.4 8h9.2"></path></svg>
+Kies een project<span style="flex:1"></span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;display:block;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+</div>
+<div style="padding:10px 6px 6px">
+<span style="display:block;font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:0 10px 6px">OP DIT PROJECT</span>
+<sc-for list="{{ qaProject }}" as="a" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:11px;padding:10px;border-radius:9px;opacity:.45">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ a.d }}"></path></svg>
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ a.label }}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:8px 6px 12px;border-top:1px solid rgba(44,59,42,.08)">
+<span style="display:block;font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:4px 10px 6px">ALGEMEEN — ALTIJD BESCHIKBAAR</span>
+<sc-for list="{{ qaGeneral }}" as="a" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:11px;padding:10px;border-radius:9px">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ a.d }}"></path></svg>
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ a.label }}</span>
+<span style="flex:1"></span>
+<span style="font:12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">›</span>
+</div>
+</sc-for>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">de zes projectacties staan gedimd en zonder pijl —<br>klikken erop opent eerst de projectkiezer</span>
+</div>
+
+<div style="width:270px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">PROJECTKIEZER (POPOVER)</span>
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.5);overflow:hidden">
+<div style="padding:10px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="height:36px;box-sizing:border-box;border-radius:8px;border:1px solid #00532D;display:flex;align-items:center;gap:9px;padding:0 12px;font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>
+Zoek project …</div>
+</div>
+<div style="padding:6px;display:flex;flex-direction:column;gap:1px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:5px 9px 5px">RECENT</span>
+<sc-for list="{{ qaProjects }}" as="p" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:9px">
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ p.name }}</span>
+<span style="font:450 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ p.meta }}</span>
+</div>
+<span style="flex:1"></span>
+<sc-if value="{{ p.pin }}" hint-placeholder-val="{{ true }}">
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9.6V14 M5.2 2.4h5.6l-.8 4.4H6z M4.6 9.6h6.8"></path></svg>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div style="border-top:1px solid rgba(44,59,42,.08);padding:9px 12px 12px;display:flex;align-items:center;gap:8px">
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9.6V14 M5.2 2.4h5.6l-.8 4.4H6z M4.6 9.6h6.8"></path></svg>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Dit project vastzetten</span>
+</div>
+</div>
+<span style="font:450 11px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">"Project vastzetten" verhuist hierheen: het is geen actie op zich maar de manier waarop je het actieve project onthoudt. Een vastgezet project staat bij de volgende aanmelding al klaar bovenaan de kaart.</span>
+</div>
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MOBIEL — GEEN KAART, ENKEL DE SHEET VIA "MEER"</span>
+<div style="width:300px;height:520px;border-radius:14px;overflow:hidden;position:relative;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="position:absolute;inset:0;background:rgba(18,28,18,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:center;padding:9px 0 4px"><div style="width:38px;height:4px;border-radius:2px;background:rgba(44,59,42,.18)"></div></div>
+<div style="padding:4px 14px 10px;display:flex;flex-direction:column;gap:9px">
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Snelacties</span>
+<div style="height:46px;box-sizing:border-box;border-radius:10px;border:1px solid #00532D;background:#F7F9F5;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9.6V14 M5.2 2.4h5.6l-.8 4.4H6z M4.6 9.6h6.8"></path></svg>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Villa Cauxyde</span>
+<span style="font:500 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.06em">KOKSIJDE</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Wijzig</span>
+</div>
+</div>
+<div style="padding:0 10px 4px;display:flex;flex-direction:column;gap:2px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:2px 8px 4px">OP DIT PROJECT</span>
+<sc-for list="{{ qaProject }}" as="a" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 8px;border-radius:10px">
+<svg viewBox="0 0 16 16" style="width:18px;height:18px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ a.d }}"></path></svg>
+<span style="font:450 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ a.label }}</span>
+<span style="flex:1"></span>
+<span style="font:13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">›</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:8px 14px 20px;border-top:1px solid rgba(44,59,42,.08);display:flex;align-items:center;justify-content:center">
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Algemene acties tonen</span>
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">rijen 44px · project bovenaan met "Wijzig"<br>algemene acties achter één regel zodat de sheet<br>op één schermhoogte past</span>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7e">
+<div class="dv-olabel"><a class="dv-oid" href="#7e">7e</a>Zoekmodal "Klant zoeken" — leeg, resultaten, niets gevonden, en de mobiele versie</div>
+<div class="dv-card" style="width:1140px">
+<div style="display:flex;gap:18px;padding:22px;background:#F2F5EF;box-sizing:border-box;align-items:flex-start;flex-wrap:wrap">
+
+<div style="width:440px;flex:none;display:flex;flex-direction:column;gap:14px">
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">DESKTOP · 440PX — BEGINSTAAT</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:16px 18px 12px">
+<span style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Klant zoeken</span>
+<span style="flex:1"></span>
+<div style="width:30px;height:30px;border-radius:15px;border:1px solid rgba(44,59,42,.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#2C3B2A;stroke-width:1.4;stroke-linecap:round"><path d="M4.5 4.5l7 7 M11.5 4.5l-7 7"></path></svg></div>
+</div>
+<div style="padding:0 18px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="height:44px;box-sizing:border-box;border-radius:8px;border:1px solid #00532D;background:#fff;display:flex;align-items:center;gap:10px;padding:0 14px;font:450 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>
+Naam, btw-nummer of e-mail</div>
+<div style="height:44px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font:600 13.5px 'Avenir','Open Sans',-apple-system,sans-serif">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>Zoeken</div>
+<div style="padding:22px 0 12px;display:flex;flex-direction:column;align-items:center;gap:7px">
+<svg viewBox="0 0 16 16" style="width:24px;height:24px;fill:none;stroke:#B3BDB1;stroke-width:1.1;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>
+<span style="font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Typ een naam en druk op Zoeken</span>
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">veld krijgt meteen focus · Enter = Zoeken · Esc sluit<br>zoekknop op volle breedte, hetzelfde 44px als het veld</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">NIETS GEVONDEN</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Klant zoeken</span>
+<span style="flex:1"></span>
+<div style="width:30px;height:30px;border-radius:15px;border:1px solid rgba(44,59,42,.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#2C3B2A;stroke-width:1.4;stroke-linecap:round"><path d="M4.5 4.5l7 7 M11.5 4.5l-7 7"></path></svg></div>
+</div>
+<div style="height:44px;box-sizing:border-box;border-radius:8px;border:1px solid #00532D;display:flex;align-items:center;gap:10px;padding:0 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>
+Vanlaere123<span style="flex:1"></span><span style="font:14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">×</span></div>
+<div style="padding:16px 0 4px;display:flex;flex-direction:column;align-items:center;gap:6px">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Geen klant gevonden</span>
+<span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;text-align:center;max-width:280px">Controleer de schrijfwijze of zoek op btw-nummer.</span>
+</div>
+<div style="height:40px;border-radius:8px;border:1px dashed #7A9E6E;display:flex;align-items:center;justify-content:center;gap:8px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round"><path d="M8 3.4v9.2 M3.4 8h9.2"></path></svg>Nieuwe klant aanmaken</div>
+</div>
+</div>
+
+</div>
+
+<div style="width:440px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MET RESULTATEN</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:16px 18px 12px">
+<span style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Klant zoeken</span>
+<span style="flex:1"></span>
+<div style="width:30px;height:30px;border-radius:15px;border:1px solid rgba(44,59,42,.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#2C3B2A;stroke-width:1.4;stroke-linecap:round"><path d="M4.5 4.5l7 7 M11.5 4.5l-7 7"></path></svg></div>
+</div>
+<div style="padding:0 18px 12px;display:flex;flex-direction:column;gap:10px">
+<div style="height:44px;box-sizing:border-box;border-radius:8px;border:1px solid #00532D;display:flex;align-items:center;gap:10px;padding:0 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>
+Van Laere<span style="flex:1"></span><span style="font:14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">×</span></div>
+<div style="height:44px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font:600 13.5px 'Avenir','Open Sans',-apple-system,sans-serif">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>Zoeken</div>
+</div>
+<div style="padding:0 10px 6px;display:flex;flex-direction:column;gap:2px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:2px 8px 6px">3 RESULTATEN</span>
+<sc-for list="{{ klantHits }}" as="k" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:11px;padding:10px 8px;border-radius:10px">
+<div style="width:34px;height:34px;border-radius:17px;background:#EDF3E8;color:#00532D;display:flex;align-items:center;justify-content:center;font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;flex:none">{{ k.init }}</div>
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ k.name }}</span>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ k.meta }}</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">›</span>
+</div>
+</sc-for>
+</div>
+<div style="border-top:1px solid rgba(44,59,42,.08);padding:10px 18px 14px;display:flex;align-items:center;gap:9px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round"><path d="M8 3.4v9.2 M3.4 8h9.2"></path></svg>
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Nieuwe klant aanmaken</span>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">rij 54px met initialen · pijltjes selecteren, Enter opent<br>de gezochte term blijft staan zodat je kan verfijnen</span>
+</div>
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MOBIEL · VOLLEDIG SCHERM</span>
+<div style="width:300px;height:600px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#00532D;flex:none">
+<div style="width:32px;height:32px;border:1px solid rgba(255,255,255,.35);border-radius:16px;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round"><path d="M4.5 4.5l7 7 M11.5 4.5l-7 7"></path></svg></div>
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Klant zoeken</span>
+</div>
+<div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="height:46px;box-sizing:border-box;border-radius:10px;border:1px solid #00532D;display:flex;align-items:center;gap:10px;padding:0 13px;font:500 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>
+Van Laere<span style="flex:1"></span><span style="font:15px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">×</span></div>
+<div style="height:46px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font:600 13.5px 'Avenir','Open Sans',-apple-system,sans-serif">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round"><path d="M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"></path></svg>Zoeken</div>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:8px 10px;display:flex;flex-direction:column;gap:2px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em;padding:4px 8px 6px">3 RESULTATEN</span>
+<sc-for list="{{ klantHits }}" as="k" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:11px;padding:11px 8px;border-radius:10px">
+<div style="width:36px;height:36px;border-radius:18px;background:#EDF3E8;color:#00532D;display:flex;align-items:center;justify-content:center;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;flex:none">{{ k.init }}</div>
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ k.name }}</span>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ k.meta }}</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">›</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:10px 14px 18px;border-top:1px solid rgba(44,59,42,.08);flex:none">
+<div style="height:46px;border-radius:10px;border:1px dashed #7A9E6E;display:flex;align-items:center;justify-content:center;gap:8px;font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round"><path d="M8 3.4v9.2 M3.4 8h9.2"></path></svg>Nieuwe klant aanmaken</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">geen sheet maar een volledig scherm: het toetsenbord<br>zou de halve modal opeten · kruisje links in de topbar<br>· "nieuwe klant" blijft onderaan vastgezet</span>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7d">
+<div class="dv-olabel"><a class="dv-oid" href="#7d">7d</a>Projectkaart — opmaak van één kaart, met maten en varianten</div>
+<div class="dv-card" style="width:1060px">
+<div style="display:flex;gap:22px;padding:22px;background:#F2F5EF;box-sizing:border-box;align-items:flex-start;flex-wrap:wrap">
+
+<div style="width:340px;flex:none;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">DE KAART · 340PX BREED</span>
+<div style="border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);overflow:hidden">
+<div style="position:relative;height:200px;background:#DDE5D8;display:flex;align-items:center;justify-content:center">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7C8B79;letter-spacing:.14em">PROJECTBEELD · 16:9</span>
+<span style="position:absolute;right:12px;top:12px;height:24px;padding:0 10px;border-radius:5px;background:#2C3B2A;color:#fff;display:flex;align-items:center;font:700 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.08em">AFGEWERKT</span>
+<span style="position:absolute;left:12px;bottom:12px;width:26px;height:26px;border-radius:13px;background:#B4331F;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2v3.4 M8 11.1h.01"></path></svg></span>
+</div>
+<div style="padding:14px 16px 4px;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 15px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Verkaveling Ketenhoekstraat</span>
+<div style="display:flex;align-items:center;gap:6px">
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 14s4.6-4.2 4.6-7.4A4.6 4.6 0 0 0 3.4 6.6C3.4 9.8 8 14 8 14z M8 8a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 8 8z"></path></svg>
+<span style="font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.08em">MERELBEKE</span>
+</div>
+</div>
+<div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;flex-direction:column;gap:6px;padding-top:11px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="display:flex;align-items:baseline">
+<span style="font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Fysiek</span>
+<span style="flex:1"></span>
+<span style="font:700 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">98%</span>
+</div>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:4px;border-radius:2px;width:98%;background:#00532D"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;padding-top:11px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="display:flex;align-items:baseline">
+<span style="font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Financieel</span>
+<span style="flex:1"></span>
+<span style="font:700 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">88,8%</span>
+</div>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:4px;border-radius:2px;width:88.8%;background:#4E8B4A"></div></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:7px;padding:13px 16px 15px;margin-top:12px;border-top:1px solid rgba(44,59,42,.08)">
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.2V8l2 1.3"></path></svg>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Geen opleverdatum</span>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">beeld 16:9 · titel 15px · plaats in hoofdletters 10,5px<br>balken 4px · voet met datum, altijd aanwezig</span>
+</div>
+
+<div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:16px">
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">OPBOUW VAN BOVEN NAAR ONDER</span>
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);padding:4px 14px;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(44,59,42,.06)"><span style="width:74px;flex:none;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.1em">BEELD</span><span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">16:9, vult de volle breedte. Zonder foto een egaal groen vlak met de contour van het project.</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(44,59,42,.06)"><span style="width:74px;flex:none;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.1em">BADGES</span><span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Status rechtsboven en waarschuwing linksonder — nooit meer dan deze twee.</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(44,59,42,.06)"><span style="width:74px;flex:none;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.1em">KOP</span><span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Projectnaam op één regel, afgekapt met …; plaats eronder met speldje.</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(44,59,42,.06)"><span style="width:74px;flex:none;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.1em">VOORTGANG</span><span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Fysiek boven financieel, elk met een dunne scheidingslijn erboven — zie <a href="#7c">7c</a> voor de staten.</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><span style="width:74px;flex:none;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.1em">VOET</span><span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Opleverdatum of "Geen opleverdatum"; bij nadering wordt de tekst goud, bij overschrijding rood.</span></div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">STATUSBADGES</span>
+<div style="display:flex;gap:9px;flex-wrap:wrap">
+<sc-for list="{{ cardBadges }}" as="b" hint-placeholder-count="4">
+<span style="height:24px;padding:0 10px;border-radius:5px;display:flex;align-items:center;font:700 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.08em;background:{{ b.bg }};color:{{ b.ink }};border:1px solid rgba(44,59,42,.12)">{{ b.label }}</span>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+<div style="width:190px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">ZONDER FOTO</span>
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="position:relative;height:108px;background:linear-gradient(160deg,#4E8B4A,#00401F)">
+<span style="position:absolute;right:10px;top:10px;height:22px;padding:0 9px;border-radius:5px;background:#C79320;color:#fff;display:flex;align-items:center;font:700 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.08em">OPSTART</span>
+</div>
+<div style="padding:11px 12px 12px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;flex-direction:column;gap:3px">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Aalter</span>
+<span style="font:500 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.08em">AALTER</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px;padding-top:8px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="display:flex;align-items:baseline"><span style="font:500 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Financieel</span><span style="flex:1"></span><span style="font:700 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#B4331F">110%</span></div>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:4px;border-radius:2px;width:100%;background:#B4331F"></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="width:170px;flex:none;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MOBIEL · VOLLE BREEDTE</span>
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;gap:10px;padding:10px">
+<div style="width:58px;height:58px;border-radius:9px;background:#DDE5D8;flex:none"></div>
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1">
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Villa Cauxyde</span>
+<span style="font:500 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.08em">KOKSIJDE</span>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden;margin-top:2px"><div style="height:4px;border-radius:2px;width:57.3%;background:#00532D"></div></div>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:4px;border-radius:2px;width:62.9%;background:#4E8B4A"></div></div>
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">op mobiel wordt de kaart een rij:<br>miniatuur links, twee balkjes zonder cijfers</span>
+</div>
+
+<div style="flex:1;min-width:170px;display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">HOVER OP DESKTOP</span>
+<div style="border-radius:12px;background:#fff;border:1px solid #00532D;box-shadow:0 4px 10px rgba(0,83,45,.10),0 26px 50px -26px rgba(44,59,42,.55);overflow:hidden">
+<div style="height:108px;background:#DDE5D8"></div>
+<div style="padding:11px 12px 12px;display:flex;flex-direction:column;gap:3px">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Verkaveling Keerstraat</span>
+<span style="font:500 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.08em">VLEKKEM</span>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">groene rand, diepere schaduw, titel groen;<br>de hele kaart is één link naar het project</span>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7c">
+<div class="dv-olabel"><a class="dv-oid" href="#7c">7c</a>Voortgangsbalk — fysiek en financieel, alle staten en formaten</div>
+<div class="dv-card" style="width:1080px">
+<div style="display:flex;gap:18px;padding:22px;background:#F2F5EF;box-sizing:border-box;align-items:flex-start;flex-wrap:wrap">
+
+<div style="width:320px;flex:none;display:flex;flex-direction:column;gap:8px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">IN DE PROJECTKAART (ONVERANDERD)</span>
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -30px rgba(44,59,42,.45);padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;flex-direction:column;gap:3px">
+<span style="font:600 14.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Villa Cauxyde</span>
+<span style="font:500 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.06em">KOKSIJDE</span>
+</div>
+<sc-for list="{{ progressRows }}" as="p" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:6px;padding-top:9px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="display:flex;align-items:baseline">
+<span style="font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ p.label }}</span>
+<span style="flex:1"></span>
+<span style="font:700 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ p.value }}</span>
+</div>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden">
+<div style="height:4px;border-radius:2px;width:{{ p.pct }};background:{{ p.color }}"></div>
+</div>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">spoor 4px, radius 2px, label links en cijfer rechts<br>boven de balk — zo blijft de kaart rustig</span>
+</div>
+
+<div style="flex:1;min-width:360px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">STATEN</span>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px">
+<sc-for list="{{ progressStates }}" as="p" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:baseline">
+<span style="font:500 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ p.label }}</span>
+<span style="flex:1"></span>
+<span style="font:700 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:{{ p.color }}">{{ p.value }}</span>
+</div>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden">
+<div style="height:4px;border-radius:2px;width:{{ p.pct }};background:{{ p.color }}"></div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ p.note }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+<div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">FORMATEN</span>
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Fijn · 4px — in kaarten en tabelrijen</span>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:4px;border-radius:2px;width:57.3%;background:#00532D"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Standaard · 8px — projectdetail en mobiel</span>
+<div style="height:8px;border-radius:4px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:8px;border-radius:4px;width:57.3%;background:#00532D"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Met tussenstand — planning t.o.v. realisatie</span>
+<div style="position:relative;height:8px;border-radius:4px;background:rgba(44,59,42,.10);overflow:hidden">
+<div style="position:absolute;left:0;top:0;height:8px;border-radius:4px;width:57.3%;background:#00532D"></div>
+<div style="position:absolute;left:70%;top:-3px;width:2px;height:14px;background:#C79320"></div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">gouden streep = waar het project zou moeten staan (70%)</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Onbepaald — bezig met laden</span>
+<div style="height:4px;border-radius:2px;background:rgba(44,59,42,.10);overflow:hidden"><div style="height:4px;border-radius:2px;width:38%;margin-left:22%;background:linear-gradient(90deg,rgba(0,83,45,0),#00532D,rgba(0,83,45,0))"></div></div>
+</div>
+</div>
+</div>
+
+<div style="width:230px;flex:none;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">MOBIEL · 8PX, CIJFER BOVEN</span>
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -28px rgba(44,59,42,.4);padding:14px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ progressRows }}" as="p" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:baseline">
+<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ p.label }}</span>
+<span style="flex:1"></span>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ p.value }}</span>
+</div>
+<div style="height:8px;border-radius:4px;background:rgba(44,59,42,.10);overflow:hidden">
+<div style="height:8px;border-radius:4px;width:{{ p.pct }};background:{{ p.color }}"></div>
+</div>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">op touch dikker zodat de balk leesbaar<br>blijft zonder in te zoomen</span>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
 <section class="dv-turn" id="t6">
 <div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Mobiel — "Meer" in de snelactiesbar</span></div>
 <div class="dv-opts">
@@ -952,8 +1865,82 @@ Facturen laden…
 <div style="display:flex;flex-direction:column;gap:26px;padding:22px;background:#F2F5EF;box-sizing:border-box">
 
 <div style="display:flex;flex-direction:column;gap:12px">
-<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">TYPE 1 — BEVESTIGING (KLEIN, GEEN INVOER)</div>
-<div style="display:flex;gap:18px;align-items:flex-start">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">TYPE 1 — BEVESTIGING: DRIE TOONAARDEN (DESKTOP 400PX)</div>
+<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">PRIMARY — GEWONE BEVESTIGING</span>
+<div style="width:400px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);overflow:hidden">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:18px">
+<div style="width:38px;height:38px;border-radius:19px;background:#D6E5CC;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:none;stroke:#00532D;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M2.6 4.4 8 8.6l5.4-4.2"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<span style="font:500 18px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Factuur versturen?</span>
+<span style="font:450 12.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Naar boekhouding@groupln.be — je krijgt een kopie.</span>
+</div>
+</div>
+<div style="display:flex;gap:9px;justify-content:flex-end;padding:12px 18px 16px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Annuleren</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Versturen</div>
+</div>
+</div>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">groen icoonvlak, primaire knop groen</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">WARNING — OMKEERBAAR, MAAR LET OP</span>
+<div style="width:400px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);overflow:hidden;border-top:3px solid #C9A96E">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:18px">
+<div style="width:38px;height:38px;border-radius:19px;background:#F6EEDC;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:none;stroke:#8A6A32;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.2 14.6 13.4H1.4z M8 6.2v3 M8 11.4h.01"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<span style="font:500 18px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Wijzigingen niet opgeslagen</span>
+<span style="font:450 12.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Je hebt drie velden aangepast. Sluiten zonder opslaan?</span>
+</div>
+</div>
+<div style="display:flex;gap:9px;justify-content:flex-end;padding:12px 18px 16px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Toch sluiten</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#8A6A32;color:#fff;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opslaan</div>
+</div>
+</div>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">gouden streep boven; veiligste keuze is primair</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">ERROR — ONOMKEERBAAR OF MISLUKT</span>
+<div style="width:400px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);overflow:hidden;border-top:3px solid #8B2A2A">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:18px">
+<div style="width:38px;height:38px;border-radius:19px;background:#F8EBEB;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:none;stroke:#8B2A2A;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<span style="font:500 18px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Synchronisatie mislukt</span>
+<span style="font:450 12.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">De boekhoudkoppeling antwoordt niet. Je wijzigingen blijven lokaal bewaard.</span>
+</div>
+</div>
+<div style="display:flex;gap:9px;justify-content:flex-end;padding:12px 18px 16px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid rgba(44,59,42,.14);color:#2C3B2A;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Later</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#8B2A2A;color:#fff;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opnieuw proberen</div>
+</div>
+</div>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">rode streep boven; alleen bij verlies of falen</span>
+</div>
+
+</div>
+
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em;padding-top:4px">KNOPSTATEN IN DE MODAL — RUST, HOVER, INGEDRUKT, FOCUS, BEZIG, UIT</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ modalBtnRows }}" as="r" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<span style="width:118px;flex:none;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">{{ r.title }}</span>
+<sc-for list="{{ r.items }}" as="b" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">
+<div style="height:38px;box-sizing:border-box;padding:0 18px;border-radius:8px;display:flex;align-items:center;gap:8px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;background:{{ b.bg }};color:{{ b.ink }};border:1px solid {{ b.bd }};outline:{{ b.ring }};outline-offset:2px;box-shadow:{{ b.sh }};opacity:{{ b.op }}">{{ b.label }}</div>
+<span style="font:450 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ b.state }}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em;padding-top:6px">BEVESTIGING PER SCHERMFORMAAT (ERROR ALS VOORBEELD)</div>
+<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
 
 <div style="display:flex;flex-direction:column;gap:7px;flex:none">
 <span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">DESKTOP · 460PX, GECENTREERD</span>
@@ -1048,7 +2035,7 @@ Facturen laden…
 </div>
 
 <div style="display:flex;flex-direction:column;gap:7px;flex:none">
-<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">TABLET · 480PX, ÉÉN KOLOM</span>
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">TABLET · 380PX, ÉÉN KOLOM</span>
 <div style="width:380px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 26px 54px -28px rgba(44,59,42,.55);overflow:hidden">
 <div style="display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid rgba(44,59,42,.08)">
 <span style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Nieuwe klant</span>
@@ -1145,17 +2132,21 @@ Facturen laden…
 
 <div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:12px">
 <div style="display:flex;flex-direction:column;gap:7px">
-<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">MELDING — DESKTOP RECHTSONDER, MOBIEL BOVENAAN</span>
-<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:12px;background:#2C3B2A;box-shadow:0 18px 40px -22px rgba(20,32,20,.7)">
-<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#C6E3B4;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>
-<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff">Factuur opgeslagen</span>
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">MELDING (TOAST) — ZELFDE MODEL ALS <a href="#4g" style="color:#00532D">4g</a></span>
+<sc-for list="{{ toastsShort }}" as="t" hint-placeholder-count="2">
+<div style="display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 20px 44px -26px rgba(44,59,42,.5)">
+<div style="width:30px;height:30px;border-radius:15px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ t.tint }}">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke:{{ t.accent }}"><path d="{{ t.d }}"></path></svg>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:1px">
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ t.title }}</span>
+<span style="font:450 11.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ t.body }}</span>
+</div>
 <span style="flex:1"></span>
-<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#C6E3B4">Ongedaan maken</span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;white-space:nowrap">{{ t.action }}</span>
+<span style="font:13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">×</span>
 </div>
-<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:12px;background:#F8EBEB;border:1px solid rgba(139,42,42,.22)">
-<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"></path></svg>
-<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Opslaan mislukt — probeer opnieuw</span>
-</div>
+</sc-for>
 </div>
 <div style="border-radius:12px;background:#fff;padding:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);font:450 12.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">
 <div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.12em;padding-bottom:8px">REGELS</div>
@@ -1298,9 +2289,11 @@ Bevestiging en melding zijn klein en vragen nooit om invoer; een formulier krijg
 
 <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
 <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="5">
-<div style="display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 20px 44px -26px rgba(44,59,42,.5);border-left:4px solid {{ t.accent }}">
-<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;margin-top:1px;fill:none;stroke:{{ t.accent }};stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="{{ t.d }}"></path></svg>
-<div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+<div style="display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 20px 44px -26px rgba(44,59,42,.5)">
+<div style="width:30px;height:30px;border-radius:15px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ t.tint }}">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke:{{ t.accent }}"><path d="{{ t.d }}"></path></svg>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:1px">
 <span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ t.title }}</span>
 <span style="font:450 11.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ t.body }}</span>
 </div>
@@ -1323,6 +2316,78 @@ Bevestiging en melding zijn klein en vragen nooit om invoer; een formulier krijg
 <div style="font:450 12px/1.65 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Rechtsonder klopt voor bevestigingen na een actie (verzonden, geboekt, gekopieerd) — dicht bij de plek waar de gebruiker net klikte en zonder de tabel te verdekken. Twee uitzonderingen: fouten die de actie blokkeren toon je <strong>inline bij het veld of boven de tabel</strong>, en op mobiel komt de toast <strong>bovenaan onder de topbar</strong> zodat hij niet onder de bottom nav of duim valt. Max 3 toasts tegelijk, 5 sec. zichtbaar, fouten blijven staan tot ze gesloten worden.</div>
 </div>
 </div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">ZELFDE TOAST OP TABLET EN MOBIEL</div>
+<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">TABLET · RECHTSONDER, 380PX BREED</span>
+<div style="width:380px;display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ toastsShort }}" as="t" hint-placeholder-count="2">
+<div style="display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 20px 44px -26px rgba(44,59,42,.5)">
+<div style="width:32px;height:32px;border-radius:16px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ t.tint }}">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke:{{ t.accent }}"><path d="{{ t.d }}"></path></svg>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:1px">
+<span style="font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ t.title }}</span>
+<span style="font:450 12px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ t.body }}</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;white-space:nowrap">{{ t.action }}</span>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">zelfde kaart, icoonvlak 32px, tekst één stap groter;<br>kruisje vervalt — vegen naar rechts sluit</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">MOBIEL · BOVENAAN ONDER DE TOPBAR</span>
+<div style="width:300px;height:420px;border-radius:14px;overflow:hidden;position:relative;display:flex;flex-direction:column;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="display:flex;align-items:center;gap:9px;padding:12px;background:#00532D;flex:none">
+<div style="width:28px;height:28px;border:1px dashed rgba(255,255,255,.45);border-radius:7px;display:flex;align-items:center;justify-content:center;font:8px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;flex:none">{{ logoLabel }}</div>
+<span style="font:500 16px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Facturen</span>
+<span style="flex:1"></span>
+<div style="width:30px;height:30px;border:1px solid rgba(255,255,255,.35);border-radius:15px;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round"><path d="M3 5h10 M3 8h10 M3 11h10"></path></svg></div>
+</div>
+<div style="padding:10px 12px 0;display:flex;flex-direction:column;gap:8px;flex:none">
+<sc-for list="{{ toastsShort }}" as="t" hint-placeholder-count="2">
+<div style="display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 38px -22px rgba(44,59,42,.55)">
+<div style="width:32px;height:32px;border-radius:16px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ t.tint }}">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke:{{ t.accent }}"><path d="{{ t.d }}"></path></svg>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0;padding-top:1px">
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ t.title }}</span>
+<span style="font:450 11.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">{{ t.body }}</span>
+<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;padding-top:2px">{{ t.action }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:8px;opacity:.55">
+<sc-for list="{{ mobileRows }}" as="r" hint-placeholder-count="3">
+<div style="border-radius:12px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:6px;flex:none">
+<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ r }}</span>
+<div style="height:7px;width:64%;border-radius:4px;background:rgba(44,59,42,.10)"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 16px;background:#00532D;flex:none">
+<sc-for list="{{ quickBar }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px;padding:4px">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ b.d }}"></path></svg>
+<span style="font:500 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;white-space:nowrap">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">actie onder de tekst i.p.v. rechts, zodat de<br>kaart smal mag blijven; nooit onderaan — daar<br>zit de snelactiesbar</span>
+</div>
+
+</div>
+</div>
+
 </div>
 </div>
 
@@ -2424,11 +3489,15 @@ class Component extends DCLogic {
         {nr:"0016.09.2026 · Van Laere", note:"geen project"}
       ],
       toasts: [
-        {accent:"#00532D", title:"Factuur verzonden", body:"0018.09.2026 is per e-mail verstuurd naar GROUP LN.", action:"Bekijken", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M5.4 8.2l1.9 1.9 3.6-4"},
-        {accent:"#8B2A2A", title:"Verzenden mislukt", body:"Het e-mailadres van HOME-ESTATE ontbreekt.", action:"Oplossen", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"},
-        {accent:"#8A6A32", title:"Deels geboekt", body:"2 van 3 facturen geboekt; 1 factuur mist een project.", action:"Bekijken", d:"M8 2.6 14.2 13H1.8z M8 6.6v3 M8 11.4h.01"},
-        {accent:"#3D7A4E", title:"Factuur verwijderd", body:"0009.03.2026 is verwijderd.", action:"Ongedaan maken", d:"M3 4.4h10 M6.2 4.4V2.8h3.6v1.6 M4.4 4.4v8.8h7.2V4.4"},
-        {accent:"#5a6b58", title:"Export wordt klaargezet", body:"42 facturen · dit duurt ongeveer 10 seconden.", action:"", d:"M8 2.2a5.8 5.8 0 1 0 5.8 5.8"}
+        {accent:"#00532D", tint:"#D6E5CC", title:"Factuur verzonden", body:"0018.09.2026 is per e-mail verstuurd naar GROUP LN.", action:"Bekijken", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M5.4 8.2l1.9 1.9 3.6-4"},
+        {accent:"#8B2A2A", tint:"#F8EBEB", title:"Verzenden mislukt", body:"Het e-mailadres van HOME-ESTATE ontbreekt.", action:"Oplossen", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"},
+        {accent:"#8A6A32", tint:"#F6EEDC", title:"Deels geboekt", body:"2 van 3 facturen geboekt; 1 factuur mist een project.", action:"Bekijken", d:"M8 2.6 14.2 13H1.8z M8 6.6v3 M8 11.4h.01"},
+        {accent:"#00532D", tint:"#D6E5CC", title:"Factuur verwijderd", body:"0009.03.2026 is verwijderd.", action:"Ongedaan maken", d:"M3 4.4h10 M6.2 4.4V2.8h3.6v1.6 M4.4 4.4v8.8h7.2V4.4"},
+        {accent:"#5a6b58", tint:"#EDEFEB", title:"Export wordt klaargezet", body:"42 facturen · dit duurt ongeveer 10 seconden.", action:"", d:"M8 2.2a5.8 5.8 0 1 0 5.8 5.8"}
+      ],
+      toastsShort: [
+        {accent:"#00532D", tint:"#D6E5CC", title:"Factuur opgeslagen", body:"0018.09.2026 is bijgewerkt.", action:"Ongedaan maken", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M5.4 8.2l1.9 1.9 3.6-4"},
+        {accent:"#8B2A2A", tint:"#F8EBEB", title:"Opslaan mislukt", body:"Geen verbinding met de boekhouding.", action:"Opnieuw", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"}
       ],
       filterFields: [
         {label:"STATUS", value:"Te boeken"},
@@ -2572,6 +3641,125 @@ class Component extends DCLogic {
         {label:"Dupliceren", d:"M5.4 5.4h7.2v7.2H5.4z M3.4 10.6V3.4h7.2"},
         {label:"Downloaden als pdf", d:"M8 3v7.4 M5 7.4 8 10.4l3-3 M3 12.6h10"},
         {label:"Doorsturen per e-mail", d:"M2.6 4h10.8v8H2.6z M2.6 4.4 8 8.6l5.4-4.2"}
+      ],
+      modalBtnRows: (() => {
+        const mk = (label, base, hoverBg, pressBg) => ([
+          {label, state:"rust", bg:base, ink:"#fff", bd:base, ring:"none", sh:"none", op:1},
+          {label, state:"hover", bg:hoverBg, ink:"#fff", bd:hoverBg, ring:"none", sh:"0 8px 18px -10px rgba(44,59,42,.6)", op:1},
+          {label, state:"ingedrukt", bg:pressBg, ink:"#fff", bd:pressBg, ring:"none", sh:"inset 0 1px 3px rgba(0,0,0,.28)", op:1},
+          {label, state:"focus", bg:base, ink:"#fff", bd:base, ring:"2.5px solid #C9A96E", sh:"none", op:1},
+          {label:"Bezig …", state:"bezig", bg:base, ink:"#fff", bd:base, ring:"none", sh:"none", op:.75},
+          {label, state:"uit", bg:"#E4E8E2", ink:"#A8B3A6", bd:"#E4E8E2", ring:"none", sh:"none", op:1}
+        ]);
+        return [
+          {title:"PRIMARY", items: mk("Versturen", "#00532D", "#00401F", "#00341A")},
+          {title:"WARNING", items: mk("Opslaan", "#8A6A32", "#755826", "#63491F")},
+          {title:"DESTRUCTIEF", items: mk("Verwijderen", "#8B2A2A", "#74201F", "#5F1919")},
+          {title:"SECUNDAIR", items:[
+            {label:"Annuleren", state:"rust", bg:"#fff", ink:"#2C3B2A", bd:"rgba(44,59,42,.14)", ring:"none", sh:"none", op:1},
+            {label:"Annuleren", state:"hover", bg:"#F2F5EF", ink:"#00532D", bd:"#00532D", ring:"none", sh:"none", op:1},
+            {label:"Annuleren", state:"ingedrukt", bg:"#E3EBDD", ink:"#00532D", bd:"#00532D", ring:"none", sh:"inset 0 1px 3px rgba(44,59,42,.2)", op:1},
+            {label:"Annuleren", state:"focus", bg:"#fff", ink:"#2C3B2A", bd:"#00532D", ring:"2.5px solid #C9A96E", sh:"none", op:1},
+            {label:"Annuleren", state:"tekstknop", bg:"transparent", ink:"#00532D", bd:"transparent", ring:"none", sh:"none", op:1},
+            {label:"Annuleren", state:"uit", bg:"#F2F2F0", ink:"#A8B3A6", bd:"rgba(44,59,42,.08)", ring:"none", sh:"none", op:1}
+          ]}
+        ];
+      })(),
+      kpis: [
+        {label:"Actieve projecten", value:"8", accent:"#00532D", tint:"#00532D", ink:"#fff", d:"M3 13.2V3.4h5.4v9.8 M8.4 6.8h4.6v6.4 M4.8 5.4h1.8 M4.8 7.6h1.8 M4.8 9.8h1.8"},
+        {label:"Open punten", value:"63", accent:"#00532D", tint:"#00532D", ink:"#fff", d:"M2.8 3.2h10.4v9.6H2.8z M5 6.2l1.2 1.2 2-2 M5 10h5"},
+        {label:"Urgent", value:"1", accent:"#B4331F", tint:"#B4331F", ink:"#fff", d:"M8 13.6A5.6 5.6 0 1 0 8 2.4a5.6 5.6 0 0 0 0 11.2z M8 5.2v3.6 M8 11.2h.01"},
+        {label:"Achterstallig", value:"0", accent:"#C79320", tint:"#C79320", ink:"#fff", d:"M8 13.4A5.4 5.4 0 1 0 2.8 6.4 M8 4.8V8l2.2 1.4 M2.6 3.2v3.2h3.2"},
+        {label:"Te factureren", value:"€ 184k", accent:"#00532D", tint:"#00532D", ink:"#fff", d:"M4 2.6h8v10.8H4z M6 5.4h4 M6 8h4 M6 10.6h2.5"},
+        {label:"Wijzigingsopdrachten", value:"12", accent:"#00532D", tint:"#00532D", ink:"#fff", d:"M9.6 3.2l3.2 3.2-6 6H3.6V9.2z M8.4 4.4l3.2 3.2"},
+        {label:"Deze week opgeleverd", value:"3", accent:"#00532D", tint:"#00532D", ink:"#fff", d:"M3.4 8.4l3 3 6.2-6.8"},
+        {label:"Marge YTD", value:"14,2%", accent:"#00532D", tint:"#00532D", ink:"#fff", d:"M2.8 12.6h10.4 M4.6 12.6V8 M7.4 12.6V5.2 M10.2 12.6V9.4"}
+      ],
+      meldGroups: [
+        {title:"ACTIE VEREIST", count:"1", accent:"#B4331F", bg:"#FBEDEA", items:[
+          {text:"De ABR polis van project Villa Cauxyde is vervallen, gelieve deze te verlengen!", meta:"Vandaag 08:12 · Verzekeringen", d:"M8 2.2 13.4 4.2v3.4c0 3-2.3 5.4-5.4 6.2-3.1-.8-5.4-3.2-5.4-6.2V4.2z"}
+        ]},
+        {title:"OP TE LOSSEN", count:"1", accent:"#C79320", bg:"#FCF5E6", snooze:true, items:[
+          {text:"Het project De Vos ontbreekt volgende documenten: rioolkeuring, brandkeuring, PID.", meta:"Gisteren 16:40 · Documenten", d:"M3.6 2.6h5.6l3.2 3.2v7.6H3.6z M9.2 2.6v3.2h3.2"}
+        ]},
+        {title:"TER INFO", count:"2", accent:"#00532D", bg:"#EDF3E8", snooze:true, items:[
+          {text:"Verkaveling Ketenhoekstraat is op 98% fysieke vooruitgang.", meta:"Gisteren 09:05 · Voortgang", d:"M2.8 12.6h10.4 M4.6 12.6V8 M7.4 12.6V5.2 M10.2 12.6V9.4"},
+          {text:"Nieuwe leverancier Devos Beton toegevoegd door Sarah.", meta:"18 sep · Leveranciers", d:"M6 7.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M2.5 13c0-2 1.6-3.2 3.5-3.2S9.5 11 9.5 13 M11.6 5.4v3.2 M13.2 7h-3.2"}
+        ]}
+      ],
+      snoozeOptions: [
+        {label:"Morgenochtend", sub:"ma 22 sep · 08:00"},
+        {label:"Over 3 dagen", sub:"wo 24 sep · 08:00"},
+        {label:"Volgende week", sub:"ma 28 sep · 08:00"},
+        {label:"Eigen datum kiezen", sub:"kies dag en uur"}
+      ],
+      cardBadges: [
+        {label:"OPSTART", bg:"#C79320", ink:"#fff"},
+        {label:"IN UITVOERING", bg:"#00532D", ink:"#fff"},
+        {label:"AFGEWERKT", bg:"#2C3B2A", ink:"#fff"},
+        {label:"ON HOLD", bg:"#fff", ink:"#8A6A32"}
+      ],
+      calHead: ["M","D","W","D","V","Z","Z"],
+      calDays: (() => {
+        const out = [];
+        for (let i = 0; i < 35; i++) {
+          const n = i;                           // 1 sep = dinsdag → één lege cel
+          const inMonth = n >= 1 && n <= 30;
+          const sel = n === 30, today = n === 21, past = inMonth && n < 21;
+          out.push({
+            n: inMonth ? String(n) : "",
+            font: sel || today ? "700 11px 'Avenir','Open Sans',-apple-system,sans-serif" : "450 11px 'Avenir','Open Sans',-apple-system,sans-serif",
+            ink: sel ? "#fff" : past || !inMonth ? "#B3BDB1" : "#2C3B2A",
+            bg: sel ? "#00532D" : "transparent",
+            bd: today ? "1px solid #00532D" : "1px solid transparent"
+          });
+        }
+        return out;
+      })(),
+      klantHits: [
+        {name:"Van Laere Bouw bvba", meta:"BE 0845.221.104 · Merelbeke", init:"VL"},
+        {name:"Van Laere Eline", meta:"Particulier · Koksijde", init:"VE"},
+        {name:"Vanlaerhoven Projects", meta:"BE 0712.884.019 · Gent", init:"VP"}
+      ],
+      qaProject: [
+        {label:"Contract toevoegen", d:"M4 2.6h8v10.8H4z M6 5.4h4 M6 8h4 M6 10.6h2.5"},
+        {label:"Punt toevoegen", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"},
+        {label:"Inkomende factuur toevoegen", d:"M2.8 3.4h10.4v9.2H2.8z M2.8 6.2h10.4 M5.4 9h5.2"},
+        {label:"Wijzigingsopdracht opmaken", d:"M9.6 3.2l3.2 3.2-6 6H3.6V9.2z M8.4 4.4l3.2 3.2"},
+        {label:"Nacalculatie bekijken", d:"M2.8 12.6h10.4 M4.6 12.6V8 M7.4 12.6V5.2 M10.2 12.6V9.4"},
+        {label:"Document uploaden", d:"M8 11V3.6 M5 6.6 8 3.6l3 3 M3 12.4h10"}
+      ],
+      qaGeneral: [
+        {label:"Leverancier toevoegen", d:"M6 7.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M2.5 13c0-2 1.6-3.2 3.5-3.2S9.5 11 9.5 13 M11.8 5.6v3.2 M13.4 7.2h-3.2"},
+        {label:"Leverancier zoeken", d:"M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"},
+        {label:"Klant zoeken", d:"M7.2 12.4a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4z M11 11l3 3"},
+        {label:"Project vastzetten", d:"M8 9.6V14 M5.2 2.4h5.6l-.8 4.4H6z M4.6 9.6h6.8"}
+      ],
+      qaRailTablet: [
+        {label:"Punt", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.4 M8 11.2h.01"},
+        {label:"Document", d:"M8 11V3.6 M5 6.6 8 3.6l3 3 M3 12.4h10"},
+        {label:"Factuur", d:"M4 2.6h8v10.8H4z M6 5.4h4 M6 8h4 M6 10.6h2.5"},
+        {label:"Wijziging", d:"M9.6 3.2l3.2 3.2-6 6H3.6V9.2z M8.4 4.4l3.2 3.2"},
+        {label:"Meer", d:"M3 8h.01 M8 8h.01 M13 8h.01"}
+      ],
+      qaProjects: [
+        {name:"Villa Cauxyde", meta:"KOKSIJDE · in uitvoering", pin:true},
+        {name:"Verkaveling Keerstraat", meta:"VLEKKEM · in uitvoering", pin:false},
+        {name:"Verkaveling Ketenhoekstraat", meta:"MERELBEKE · afgewerkt", pin:false},
+        {name:"Aalter", meta:"AALTER · opstart", pin:false},
+        {name:"Drongen Luchterenstraat", meta:"DRONGEN · opstart", pin:false}
+      ],
+      progressRows: [
+        {label:"Fysiek", value:"57,3%", pct:"57.3%", color:"#00532D"},
+        {label:"Financieel", value:"62,9%", pct:"62.9%", color:"#4E8B4A"}
+      ],
+      progressStates: [
+        {label:"Leeg · 0%", value:"0%", pct:"0%", color:"#00532D", note:"alleen het spoor is zichtbaar"},
+        {label:"Onderweg", value:"40%", pct:"40%", color:"#00532D", note:"standaard groen"},
+        {label:"Bijna klaar", value:"98%", pct:"98%", color:"#00532D", note:"geen aparte kleur nodig"},
+        {label:"Volledig", value:"100%", pct:"100%", color:"#2F7A3E", note:"vinkje naast het cijfer"},
+        {label:"Over budget", value:"110%", pct:"100%", color:"#B4331F", note:"balk stopt op 100%, cijfer wordt rood"},
+        {label:"Achterstand t.o.v. planning", value:"41,7%", pct:"41.7%", color:"#C79320", note:"goud wanneer fysiek achterloopt op financieel"}
       ],
       railBottom: main.slice(5),
       companies: ["Facturatiebedrijf LN", "Facturatiebedrijf BCO", "Facturatiebedrijf HE"],

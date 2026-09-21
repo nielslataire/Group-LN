@@ -166,6 +166,56 @@ public class HomeController : BaseController
             model.ContractorCommentMeldingen = await _issueService.GetContractorCommentMeldingen(projectIds);
         }
 
+        // gl-v2 dashboard-meldingenscherm (design-handoff 7b) — belletje-badge. Moet HIER al
+        // vaststaan (niet pas in _DashboardProjectleider.cshtml, waar de partial haar eigen volledige
+        // groepen-VM opbouwt): ViewData die tijdens het renderen van de body (@@RenderBody, dus ook
+        // elke partial erin) gezet wordt, bereikt _LayoutV2.cshtml's topbar niet meer — die is dan al
+        // gerenderd. Zelfde bron/filtering als de partial (InsuranceWarnings/ProjectInfo/
+        // ContractorCommentMeldingen op eigen projecten), maar enkel het AANTAL, niet de volledige
+        // groepen-opbouw. Teller = "actie vereist" (danger) + "op te lossen" (warning), min wie
+        // momenteel gesnoozed is — "ter info" telt sowieso nooit mee (design-handoff 7b: "de teller
+        // telt alleen de eerste twee").
+        if (model.DashboardType == Models.DashboardType.Projectleider)
+        {
+            var myProjectIds = model.Projects.Select(p => p.Id).ToHashSet();
+            var bellMeldingen = new List<(string Tekst, int ProjectId, string Severity, string Category)>();
+            if (model.InsuranceWarnings != null)
+                bellMeldingen.AddRange(model.InsuranceWarnings.Where(w => myProjectIds.Contains(w.ProjectId))
+                    .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "danger", w.Category ?? string.Empty)));
+            if (model.ProjectInfo != null)
+                bellMeldingen.AddRange(model.ProjectInfo.Where(w => myProjectIds.Contains(w.ProjectId))
+                    .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "warning", w.Category ?? string.Empty)));
+            if (model.ContractorCommentMeldingen != null)
+                bellMeldingen.AddRange(model.ContractorCommentMeldingen.Where(w => myProjectIds.Contains(w.ProjectId))
+                    .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "info", w.Category ?? string.Empty)));
+
+            var badgeMeldingen = bellMeldingen.Where(m => m.Severity == "danger" || m.Severity == "warning").ToList();
+            if (userId.HasValue && badgeMeldingen.Count > 0)
+            {
+                // MeldingTypeHelper.FromString eerst: WarningBO.Category komt als raw string binnen
+                // (per bron mogelijk andere casing) — ComputeKey neemt bewust het genormaliseerde
+                // enum, niet die raw string, zodat dit exact dezelfde sleutel oplevert als de partial
+                // en de Snooze/Unsnooze-AJAX-endpoints voor dezelfde melding.
+                var keys = badgeMeldingen
+                    .Select(m => MeldingKeyHelper.ComputeKey(m.ProjectId, MeldingTypeHelper.FromString(m.Category), m.Tekst))
+                    .ToHashSet();
+                var nowUtc = DateTime.UtcNow;
+                var snoozedSet = (await _db.MeldingSnooze
+                    .Where(s => s.UserId == userId.Value && s.SnoozedUntil > nowUtc && keys.Contains(s.MeldingKey))
+                    .Select(s => s.MeldingKey)
+                    .ToListAsync()).ToHashSet();
+                if (snoozedSet.Count > 0)
+                {
+                    badgeMeldingen = badgeMeldingen
+                        .Where(m => !snoozedSet.Contains(MeldingKeyHelper.ComputeKey(m.ProjectId, MeldingTypeHelper.FromString(m.Category), m.Tekst)))
+                        .ToList();
+                }
+            }
+
+            ViewData["HasNotificationsBell"] = true;
+            ViewData["NotificationsBellCount"] = badgeMeldingen.Count;
+        }
+
         // KPI "Open punten" voor projectleider-dashboard
         if (model.DashboardType == Models.DashboardType.Projectleider && model.Projects.Count > 0)
         {
@@ -257,6 +307,57 @@ public class HomeController : BaseController
         return Json(new { success = response.Success, message = response.Messages.LastOrDefault()?.Message });
     }
 
+    // gl-v2 dashboard-meldingenscherm (design-handoff 7b) — server-side snooze, vervangt de eerdere
+    // client-side (localStorage) implementatie in _DashboardProjectleider.cshtml voor gl-v2-
+    // pagina's. Sleutel = MeldingKeyHelper.ComputeKey(projectId, category, tekst): de drie melding-
+    // bronnen hebben zelf geen stabiele, uniforme Id (zie WarningBO), dit is dezelfde de-facto
+    // samengestelde sleutel die de legacy client-side versie al gebruikte.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SnoozeMelding(int projectId, string category, string tekst, DateTime until)
+    {
+        var userId = User.GetCpmUserId();
+        if (!userId.HasValue)
+            return Json(new { success = false, error = "Niet aangemeld." });
+
+        var key = MeldingKeyHelper.ComputeKey(projectId, MeldingTypeHelper.FromString(category), tekst ?? string.Empty);
+        var existing = await _db.MeldingSnooze.FirstOrDefaultAsync(s => s.UserId == userId.Value && s.MeldingKey == key);
+        if (existing != null)
+        {
+            existing.SnoozedUntil = until;
+        }
+        else
+        {
+            _db.MeldingSnooze.Add(new MeldingSnooze
+            {
+                UserId = userId.Value,
+                MeldingKey = key,
+                SnoozedUntil = until
+            });
+        }
+        await _db.SaveChangesAsync();
+
+        var culture = CultureInfo.GetCultureInfo("nl-BE");
+        var label = $"Gesnoozed tot {until.ToString("ddd d MMM", culture)} · {until:HH:mm}";
+        return Json(new { success = true, meldingKey = key, label });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UnsnoozeMelding(string meldingKey)
+    {
+        var userId = User.GetCpmUserId();
+        if (!userId.HasValue)
+            return Json(new { success = false, error = "Niet aangemeld." });
+
+        var existing = await _db.MeldingSnooze.FirstOrDefaultAsync(s => s.UserId == userId.Value && s.MeldingKey == meldingKey);
+        if (existing != null)
+        {
+            _db.MeldingSnooze.Remove(existing);
+            await _db.SaveChangesAsync();
+        }
+        return Json(new { success = true });
+    }
 
     [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

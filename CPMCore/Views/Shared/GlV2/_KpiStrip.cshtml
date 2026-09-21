@@ -1,0 +1,46 @@
+@model IReadOnlyList<CPMCore.Models.GlV2.GlV2KpiItemVm>
+@* gl-v2 layout-pilot (design-handoff 7a, "KPI-kaarten") — herbruikbare, projectbrede KPI-strip.
+   Twee kaartvormen, gekozen op basis van AANTAL items, niet per pagina hardcoded: "ruim" (icoon
+   links, tekst ernaast gestapeld — enkel desktop, ≤4 items) en "compact" (icoon+label als rij,
+   cijfer eronder — desktop met 5-8 items, en altijd op tablet/mobiel ongeacht aantal). Boven de 8
+   items: geen 9e kolom, de grid wrapt vanzelf naar een volgende rij van 4 (zie desktopColumns
+   hieronder + de CSS in gl-v2-shell.css). Bij meer dan 4 items komt er op mobiel een "Toon alles"-
+   knop (de vier eerste blijven zichtbaar, de rest verschijnt pas na een tik — design-handoff 7a's
+   eigen regel, "de werven zichtbaar houden"); op tablet/desktop tonen alle items altijd meteen. *@
+@{
+    var isCompact = Model.Count > 4;
+    var desktopColumns = Model.Count > 8 ? 4 : Math.Max(Model.Count, 1);
+}
+<div class="gl-v2-kpi-strip @(isCompact ? "is-compact" : "")">
+    <div class="gl-v2-kpi-grid" style="--gl-v2-kpi-desktop-cols:@desktopColumns">
+        @foreach (var kpi in Model)
+        {
+            var toneClass = kpi.Tone switch
+            {
+                CPMCore.Models.GlV2.GlV2KpiTone.Warning => "is-warning",
+                CPMCore.Models.GlV2.GlV2KpiTone.Danger => "is-danger",
+                _ => "is-primary"
+            };
+            @* .gl-v2-kpi-text bundelt label+value: bij de compacte vorm "verdwijnt" deze wrapper
+               (display:contents) en gedragen label/value zich weer als twee losse grid-items van de
+               kaart (icon+label als rij, value eronder); bij de ruime vorm (desktop, ≤4 items) wordt
+               dit een echte flex-kolom die label+value strak samenhoudt naast het icoon — zie
+               gl-v2-shell.css voor waarom dit als aparte elementen moet i.p.v. één grid-reflow-truc
+               met drie losse items (het icoon zou dan twee auto-rijen laten opblazen). *@
+            <div class="gl-v2-kpi-card @toneClass">
+                <span class="gl-v2-kpi-icon"><i class="ph @kpi.IconClass" aria-hidden="true"></i></span>
+                <span class="gl-v2-kpi-text">
+                    <span class="gl-v2-kpi-label">@kpi.Label</span>
+                    <span class="gl-v2-kpi-value">@kpi.Value</span>
+                </span>
+            </div>
+        }
+    </div>
+    @if (Model.Count > 4)
+    {
+        <button type="button" class="gl-v2-kpi-toggle js-gl-v2-kpi-toggle" aria-expanded="false">
+            <span data-role="expand-label">Toon alles</span>
+            <span data-role="collapse-label" hidden>Toon minder</span>
+        </button>
+    }
+</div>

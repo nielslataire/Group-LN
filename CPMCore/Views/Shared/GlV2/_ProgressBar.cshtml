@@ -1,0 +1,58 @@
+@model CPMCore.Models.GlV2.GlV2ProgressBarVm
+@* gl-v2 layout-pilot (design-handoff 7c, "Voortgangsbalk") — herbruikbare, projectbrede
+   voortgangsbalk. Spoor 4px ("Fijn") of 8px ("Standaard"), vier tonen (Primary/Complete/Over/
+   Behind — de aanroeper bepaalt WELKE, dit component vergelijkt zelf geen waarden), optionele
+   planning-streep ("met tussenstand") en een onbepaalde/bezig-laden-staat. *@
+@{
+    var toneClass = Model.Indeterminate ? "" : Model.Tone switch
+    {
+        CPMCore.Models.GlV2.GlV2ProgressTone.Complete => "is-complete",
+        CPMCore.Models.GlV2.GlV2ProgressTone.Over => "is-over",
+        CPMCore.Models.GlV2.GlV2ProgressTone.Behind => "is-behind",
+        _ => ""
+    };
+    var sizeClass = Model.Size == CPMCore.Models.GlV2.GlV2ProgressSize.Standard ? "is-standard" : "";
+    var fillPct = Model.Indeterminate ? 0 : Math.Clamp(Model.Pct, 0, 100);
+}
+@{
+    void RenderTrack()
+    {
+        <div class="gl-v2-progress-track @sizeClass @(Model.Indeterminate ? "is-indeterminate" : "")">
+            <div class="gl-v2-progress-fill @toneClass" style="width:@(fillPct.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></div>
+            @if (Model.PlanningMarkerPct.HasValue && !Model.Indeterminate)
+            {
+                <span class="gl-v2-progress-marker" style="left:@(Math.Clamp(Model.PlanningMarkerPct.Value, 0, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span>
+            }
+        </div>
+    }
+}
+@if (Model.InlineLabel && !string.IsNullOrEmpty(Model.Label))
+{
+    @* Label vóór de balk op één regel i.p.v. een aparte rij erboven — .gl-v2-progress-inline-label
+       krijgt een vaste kolombreedte (CSS) zodat "Fysiek" en "Financieel" (ongelijke lengte) de
+       balken er nog steeds op exact dezelfde verticale lijn laten starten. *@
+    <div class="gl-v2-progress is-inline">
+        <span class="gl-v2-progress-inline-label">@Model.Label</span>
+        @{ RenderTrack(); }
+    </div>
+}
+else
+{
+    <div class="gl-v2-progress">
+        @if (Model.ShowValue && !string.IsNullOrEmpty(Model.Label))
+        {
+            <div class="gl-v2-progress-row">
+                <span class="gl-v2-progress-label">@Model.Label</span>
+                <span class="gl-v2-progress-spacer"></span>
+                <span class="gl-v2-progress-value @toneClass">
+                    @Model.ValueLabel
+                    @if (toneClass == "is-complete")
+                    {
+                        <i class="ph ph-check-circle" aria-hidden="true"></i>
+                    }
+                </span>
+            </div>
+        }
+        @{ RenderTrack(); }
+    </div>
+}
