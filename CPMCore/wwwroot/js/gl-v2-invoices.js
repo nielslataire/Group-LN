@@ -1,13 +1,26 @@
 // gl-v2 layout-pilot — Facturen-BCO pagina-specifieke JS (design-handoff optie 4a). Enkel geladen
-// door Views/Invoices/IndexV2.cshtml, niet elders. Identieke logica aan de bestaande
-// Views/Invoices/Index.cshtml-pagina (DataTable-init, boeken-checkboxes, verwijder-/nummeren-
-// modals) — enkel verplaatst naar een los bestand; geen gedragswijziging. De twee server-bepaalde
-// waarden (delete-URL, standaard boekjaar) komen binnen via window.glV2InvoicesConfig, gezet in
-// een klein inline scriptje in IndexV2.cshtml vlak voor deze file geladen wordt.
+// door Views/Invoices/IndexV2.cshtml, niet elders. Grotendeels dezelfde logica als de bestaande
+// Views/Invoices/Index.cshtml-pagina (DataTable-init, boeken-checkboxes, nummeren-modal) — enkel
+// verplaatst naar een los bestand, geen gedragswijziging daar. De verwijder-modal is sinds optie
+// 4j wél bewust anders: gl-v2's eigen Type 1-bevestigingscomponent (Bootstrap-modal) i.p.v.
+// Index.cshtml's magnific-popup/.modal-block. De server-bepaalde waarden (delete-URL naar
+// ModalDeleteV2, standaard boekjaar) komen binnen via window.glV2InvoicesConfig, gezet in een
+// klein inline scriptje in IndexV2.cshtml vlak voor deze file geladen wordt.
 (function () {
     "use strict";
     var config = window.glV2InvoicesConfig || {};
     var entity = { singular: "factuur", plural: "facturen" };
+
+    // Optie 4j TYPE 1 (danger) — gewone Bootstrap-modalinstantie i.p.v. magnific-popup/.modal-block
+    // (zie Index.cshtml voor de oude, niet-gl-v2-versie): #delete-invoice-container IS hier de
+    // .modal-content zelf (IndexV2.cshtml), de AJAX-respons (Modals/_ModalDeleteInvoiceV2.cshtml)
+    // levert enkel .modal-body/.modal-footer als kinderen. Zelfde backdrop:"static",keyboard:false
+    // als issueModal hieronder — bewust geen klik-buiten/Esc-dismiss op een bevestigingsmodal,
+    // enkel de knoppen zelf.
+    var deleteModalElement = document.getElementById("deleteInvoiceConfirmModal");
+    var deleteModal = deleteModalElement
+        ? new bootstrap.Modal(deleteModalElement, { backdrop: "static", keyboard: false })
+        : null;
 
     $(document).on("click", ".deleteInvoice", function (ev) {
         ev.preventDefault();
@@ -18,7 +31,7 @@
             .done(function (html) { $("#delete-invoice-container").html(html); })
             .fail(function () { $("#delete-invoice-container").html('<div class="p-3 text-danger">Kon factuur niet laden.</div>'); });
 
-        $.magnificPopup.open({ items: { src: "#ModalDeleteInvoice", type: "inline" } });
+        if (deleteModal) deleteModal.show();
     });
 
     var processingModalElement = document.getElementById("invoiceProcessingModal");

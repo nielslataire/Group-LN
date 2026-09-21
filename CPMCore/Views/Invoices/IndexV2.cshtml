@@ -5,9 +5,13 @@
 @{
     // gl-v2 layout-pilot (design-handoff/, optie 4a — "Facturen - BCO"). Zelfde model/data als
     // Views/Invoices/Index.cshtml (InvoicesController.Index levert exact dezelfde vms aan beide
-    // views) — enkel de kop/toolbar-markup hieronder en de CSS-klassen op de tabel-kaart zijn
-    // nieuw. De tabel zelf, de 3 modals en heel @@section PageScripts zijn bewust ONGEWIJZIGD
-    // gekopieerd uit Index.cshtml: geen dubbele business-logica, enkel een tweede presentatielaag.
+    // views) — enkel de kop/toolbar-markup, de CSS-klassen op de tabel-kaart, en (sinds optie 4j)
+    // de 2 confirm-modals zijn nieuw t.o.v. Index.cshtml. De tabel zelf en heel @@section
+    // PageScripts blijven bewust ONGEWIJZIGD gekopieerd uit Index.cshtml: geen dubbele business-
+    // logica, enkel een tweede presentatielaag. De modals gebruiken nu gl-v2's eigen Type 1-
+    // bevestigingscomponent (gl-v2-shell.css) i.p.v. Index.cshtml's magnific-popup/.modal-block —
+    // zie Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml voor de eigen (niet met Index.cshtml
+    // gedeelde) partial die de nieuwe markup levert.
     var culture = CultureInfo.GetCultureInfo("nl-BE");
     var currentPath = Context.Request.Path.ToString();
     var currentQuery = Context.Request.QueryString.ToString();
@@ -63,7 +67,6 @@
 }
 @section PageStyle
 {
-    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/invoices-custom.css" />
     <link rel="stylesheet" href="~/css/gl-v2-invoices.css" asp-append-version="true" />
@@ -336,7 +339,7 @@
                                         @if (canDeleteInvoices)
                                         {
                                             <div class="gl-v2-row-menu-divider" aria-hidden="true"></div>
-                                            <a href="#ModalDeleteInvoice" class="gl-v2-row-action gl-v2-row-action-danger deleteInvoice" data-id="@r.Id" data-issuer="@ViewBag.CompanyId"
+                                            <a href="#deleteInvoiceConfirmModal" class="gl-v2-row-action gl-v2-row-action-danger deleteInvoice" data-id="@r.Id" data-issuer="@ViewBag.CompanyId"
                                                data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
                                                 <i class="ph ph-trash" aria-hidden="true"></i>
                                                 <span class="gl-v2-row-action-label">Verwijderen</span>
@@ -382,7 +385,7 @@
                                         @if (canDeleteInvoices)
                                         {
                                             <div class="gl-v2-row-menu-divider" aria-hidden="true"></div>
-                                            <a href="#ModalDeleteInvoice" class="gl-v2-row-action gl-v2-row-action-danger deleteInvoice" data-id="@r.Id" data-issuer="@ViewBag.CompanyId"
+                                            <a href="#deleteInvoiceConfirmModal" class="gl-v2-row-action gl-v2-row-action-danger deleteInvoice" data-id="@r.Id" data-issuer="@ViewBag.CompanyId"
                                                data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
                                                 <i class="ph ph-trash" aria-hidden="true"></i>
                                                 <span class="gl-v2-row-action-label">Verwijderen</span>
@@ -453,19 +456,27 @@ else
     </div>
 }
 
-<div id="ModalDeleteInvoice" class="modal-block modal-block-warning mfp-hide">
-    <div id="delete-invoice-container"></div>
+@* Optie 4j TYPE 1 (danger) — inhoud wordt via AJAX geladen (gl-v2-invoices.js,
+   Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml levert de .modal-body/.modal-footer-inhoud),
+   getoond met een gewone Bootstrap-modalinstantie (zie deleteModal in gl-v2-invoices.js) —
+   geen magnific-popup/.modal-block meer, dat was de vorige (niet-gl-v2) manier om dit te tonen. *@
+<div class="modal fade gl-v2-modal-confirm" id="deleteInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" id="delete-invoice-container"></div>
+    </div>
 </div>
 
-<div class="modal fade" id="issueInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
+@* Optie 4j TYPE 1 (warning) — onomkeerbaar (nadien niet meer te wijzigen) maar niet destructief,
+   vandaar goud i.p.v. rood. *@
+<div class="modal fade gl-v2-modal-confirm" id="issueInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Factuur nummeren</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
-            </div>
             <div class="modal-body">
-                <p class="mb-0">Ben je zeker dat je deze factuur wil nummeren? Nadien kunnen er geen wijzigingen meer aangebracht worden aan de factuur.</p>
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-lock" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title">Factuur nummeren</h2>
+                    <p class="gl-v2-modal-desc">Ben je zeker dat je deze factuur wil nummeren? Nadien kunnen er geen wijzigingen meer aangebracht worden aan de factuur.</p>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
@@ -496,7 +507,7 @@ else
        als klein config-object meegegeven i.p.v. de hele scriptlogica inline te houden. *@
     <script>
         window.glV2InvoicesConfig = {
-            deleteUrl: '@Url.Action("ModalDelete", "Invoices")',
+            deleteUrl: '@Url.Action("ModalDeleteV2", "Invoices")',
             defaultBookyear: '@defaultBookYear',
             createUrl: '@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })',
             canWrite: @Html.Raw(canWriteInvoices ? "true" : "false")

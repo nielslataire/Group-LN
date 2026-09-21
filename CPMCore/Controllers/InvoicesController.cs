@@ -845,18 +845,19 @@ namespace CPMCore.Controllers
             return RedirectToAction(nameof(Index), new { issuerCompanyId });
         }
 
-        [HttpGet]
-        [CPMCore.Filters.PermissionDelete(PermissionCodes.Invoicing)]
-        public async Task<IActionResult> ModalDelete(int id, int issuerCompanyId, CancellationToken ct = default)
+        // Gedeeld door ModalDelete (legacy Index.cshtml, magnific-popup) en ModalDeleteV2 (gl-v2
+        // layout-pilot, Bootstrap-modal — optie 4j TYPE 1) — enkel de view die de VM rendert
+        // verschilt tussen de twee, de rechten-/opzoeklogica is identiek.
+        private async Task<(InvoiceDeleteConfirmVM? Vm, IActionResult? Error)> ResolveInvoiceDeleteConfirmAsync(int id, int issuerCompanyId, CancellationToken ct)
         {
             var deleteScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Delete, ct);
             if (!deleteScope.HasAllIssuers && !deleteScope.AllowedIssuerIds.Contains(issuerCompanyId))
-                return Content("<div class='p-3 text-danger'>Je hebt geen rechten om facturen voor dit facturatiebedrijf te verwijderen.</div>", "text/html");
+                return (null, Content("<div class='p-3 text-danger'>Je hebt geen rechten om facturen voor dit facturatiebedrijf te verwijderen.</div>", "text/html"));
 
             var rows = await _invoices.GetByCompanyAsync(issuerCompanyId, ct);
             var row = rows.FirstOrDefault(r => r.Id == id);
             if (row == null)
-                return Content("<div class='p-3 text-danger'>Factuur niet gevonden.</div>", "text/html");
+                return (null, Content("<div class='p-3 text-danger'>Factuur niet gevonden.</div>", "text/html"));
 
             var vm = new InvoiceDeleteConfirmVM
             {
@@ -867,8 +868,28 @@ namespace CPMCore.Controllers
                 InvoiceDate = row.InvoiceDate,
                 Status = TranslateStatus(row.StatusId, row.StatusName)
             };
+            return (vm, null);
+        }
 
+        [HttpGet]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Invoicing)]
+        public async Task<IActionResult> ModalDelete(int id, int issuerCompanyId, CancellationToken ct = default)
+        {
+            var (vm, error) = await ResolveInvoiceDeleteConfirmAsync(id, issuerCompanyId, ct);
+            if (error != null) return error;
             return PartialView("Modals/_ModalDeleteInvoice", vm);
+        }
+
+        // gl-v2 layout-pilot (design-handoff optie 4j TYPE 1) — eigen partial/markup, niet gedeeld
+        // met Index.cshtml's magnific-popup/.modal-block-versie hierboven, zodat de legacy pagina
+        // ongemoeid blijft. Zie Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml.
+        [HttpGet]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Invoicing)]
+        public async Task<IActionResult> ModalDeleteV2(int id, int issuerCompanyId, CancellationToken ct = default)
+        {
+            var (vm, error) = await ResolveInvoiceDeleteConfirmAsync(id, issuerCompanyId, ct);
+            if (error != null) return error;
+            return PartialView("Modals/_ModalDeleteInvoiceV2", vm);
         }
 
         //VAN DRAFT NAAR DEFINITIEF

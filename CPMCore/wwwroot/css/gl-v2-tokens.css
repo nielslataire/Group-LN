@@ -14,11 +14,14 @@
     --gl-v2-hover-tint: #EDF3E8;
     --gl-v2-accent-sage: #7A9E6E;
     --gl-v2-gold: #C9A96E;
+    --gl-v2-gold-tint: #F5EDDD;
     --gl-v2-disabled-bg: #f1f3f0;
     --gl-v2-disabled-fg: #9aa59a;
     --gl-v2-hairline: rgba(44, 59, 42, .12);
     --gl-v2-hairline-soft: rgba(44, 59, 42, .08);
     --gl-v2-dashed: rgba(44, 59, 42, .18);
+    --gl-v2-danger: #8B2A2A;
+    --gl-v2-danger-tint: #F8EBEB;
 
     --gl-v2-radius-sm: 8px;
     --gl-v2-radius-md: 12px;

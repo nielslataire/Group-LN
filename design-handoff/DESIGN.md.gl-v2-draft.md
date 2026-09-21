@@ -786,6 +786,97 @@ system, apply the part that's real" approach used elsewhere in this pilot.
   bookyear dropdown and shrinks correctly on a phone-width screen — same min-width:0 fix the old
   `.input-group` needed before it.
 
+### Modals
+Design-handoff optie 4j ("Modals per type en per schermformaat — desktop, tablet, mobiel"). Generic,
+reusable component (`gl-v2-shell.css`, not page-specific) for two of the reference's four modal
+types — **TYPE 1 "Bevestiging"** (`.gl-v2-modal-confirm`, small, no input) and **TYPE 2 "Formulier"**
+(`.gl-v2-modal-form`, medium, with fields). TYPE 3 ("Keuzelijst/Acties") is the Facturen row-actions
+sheet, documented separately above under its own heading since it's specific to that one component
+rather than a general-purpose modal; TYPE 4 ("Melding", a toast) isn't built yet — no gl-v2 page has
+needed one so far, same "don't build ahead of a real need" call as the rail's badge/disabled states.
+
+**Foundation, not a rebuild.** Both types sit on top of Bootstrap's own `.modal`/`.modal-dialog`/
+`.modal-content` structure and its JS (`new bootstrap.Modal(el, {...})`, already loaded app-wide) —
+that engine already handles show/hide, focus trap, Esc, scroll-lock, and backdrop injection
+correctly, so there was no reason to reimplement any of it. What's entirely gl-v2's own is the
+*visual* layer: every rule here is scoped under `.gl-v2-modal-confirm`/`.gl-v2-modal-form`, and none
+of it assumes a single Bootstrap default (padding, radius, shadow, color) — border, radius, shadow,
+spacing, and typography are all set explicitly, nothing inherited from Bootstrap's own `.modal-*`
+look. The one piece left alone is Bootstrap's own `.modal-backdrop` (the scrim): Bootstrap's JS
+appends that element as a direct child of `<body>`, outside the `.gl-v2` wrapper div entirely — a
+`.gl-v2 .modal-backdrop` rule simply wouldn't match it, and restyling `.modal-backdrop` unscoped
+would leak onto every non-gl-v2 page in the app that also opens a Bootstrap modal, which the Do's/
+Don'ts rule below ("keep every new gl-v2 CSS selector scoped under `.gl-v2`") rules out. Bootstrap's
+own `rgba(0,0,0,.5)` scrim stays as-is — close enough to gl-v2's own `rgba(18,28,18,.45)` elsewhere
+that it doesn't read as a real inconsistency.
+
+**TYPE 1 — Bevestiging, three color variants.** Desktop 460px, centered, `border-radius:14px`,
+Flyout-strength shadow. Body is a flex row: a 38px icon circle (`.gl-v2-modal-icon`) + a text block
+(`.gl-v2-modal-title`, serif 500/18px; `.gl-v2-modal-desc`, muted 12.5px/1.6). Footer has a hairline
+top border, buttons right-aligned. The variant lives entirely on the icon —
+**`.is-danger`** (`--gl-v2-danger-tint` bg, `--gl-v2-danger` icon — destructive actions, e.g.
+deleting an invoice), **`.is-warning`** (`--gl-v2-gold-tint` bg, `--gl-v2-gold` icon — irreversible
+but not destructive, e.g. issuing/locking an invoice), **`.is-success`** (`--gl-v2-primary-tint` bg,
+`--gl-v2-primary` icon — confirms a positive outcome). The icon *glyph* itself (which Phosphor class)
+is the caller's choice; the variant class only ever touches color. `--gl-v2-danger`/`--gl-v2-danger-
+tint`/`--gl-v2-gold-tint` are new tokens (`gl-v2-tokens.css`) — danger red existed only as a repeated
+raw `#8B2A2A ` literal before this; tokenizing it here doesn't retrofit every existing usage
+elsewhere in the file, just gives new code a name to reach for. "Annuleren" reuses the existing
+`.gl-v2-btn-text` family rather than inventing a fourth, purely-modal-only bordered-neutral button
+just to match the reference pixel-for-pixel — same "reuse what exists" call the Do's/Don'ts section
+already makes for status colors.
+
+**TYPE 2 — Formulier.** Desktop 500px, header (serif 19px title + `.gl-v2-modal-close`, a from-
+scratch 30px circular icon button — not Bootstrap's own `.btn-close`, which draws itself from a
+background-image rather than an icon font and would need just as much overriding to reach the gl-v2
+look), body as a 2-column field grid (`gap:12px` — a `.gl-v2-field-group`/`.gl-v2-field-full` child
+spans both columns), footer matching TYPE 1's. Built in full per the reference; not wired to a real
+page yet, so treat it the same as the Select's search-panel variant or the Field's prefix/suffix —
+ready, unused, don't remove it for looking idle.
+
+**Tablet (768–1023.98px).** TYPE 1 narrows to 420px and its footer buttons go `flex:1;height:44px`
+each (full-width, side by side, replacing the desktop's right-aligned natural width). TYPE 2 narrows
+to 420px, drops to one field column, and its close button grows to 36px — same numbers/reasoning as
+every other tablet touch-target bump elsewhere in gl-v2 (Select, Field).
+
+**Mobile (<768px) — the two types deliberately diverge here.** TYPE 1 becomes a **bottom sheet**,
+same recipe as the row-actions sheet and the bookyear dropdown's own mobile panel: `.modal-dialog-
+centered` is already a flex container (`align-items:center`), so tipping just that one property to
+`flex-end` is enough — no `!important` needed to fight Bootstrap's own inline `display:block` on
+`.modal`, because that inline style lives on `.modal` itself, not on the alignment property being
+overridden. A drag-handle (`::before`, same dashed-grey token as every other gl-v2 sheet) marks the
+sheet's top edge, and the footer switches to `flex-direction:column-reverse` — the buttons' *DOM*
+order stays Annuleren-then-primary (keyboard/reading order untouched), the CSS reversal alone puts
+the primary action visually on top, matching the reference's own "primaire actie bovenaan" without
+needing the caller to reorder markup per breakpoint.
+
+TYPE 2 becomes **full screen**, not a sheet — a sheet would halve the available window the moment a
+field's on-screen keyboard opens, which is exactly the reason the reference itself gives ("geen
+sheet maar een volledige pagina"). Rather than hand-rolling "force `.modal-dialog` to 100vw/100dvh,"
+this reuses Bootstrap's own `.modal-fullscreen-md-down` utility class (added in markup, not CSS) —
+Bootstrap's own `md` breakpoint (768px) happens to land on gl-v2's own phone threshold exactly, so
+there's no reason to duplicate that behavior by hand. gl-v2's layer on top is purely visual: the
+header goes solid Primary-green with a white serif title (same language as the mobile topbar
+elsewhere in gl-v2) and `.gl-v2-modal-close` reorders to the front (`order:-1`) and recolors for the
+dark header; the footer again goes `column-reverse` for a stacked, primary-on-top button order, with
+`env(safe-area-inset-bottom)` padding added at both breakpoints' sheets/full-screens so content
+clears the home-indicator area on notched phones.
+
+**Real example: Facturen confirmation modals.** Both of `Views/Invoices/IndexV2.cshtml`'s modals are
+TYPE 1. The **delete** confirmation (`.is-danger`) used to load its content into a magnific-popup/
+`.modal-block` (`Views/Invoices/Index.cshtml`'s older, non-gl-v2 pattern) — it's now a Bootstrap
+modal (`#deleteInvoiceConfirmModal`) whose `.modal-content` is filled via the same AJAX call as
+before, just pointed at a new controller action (`InvoicesController.ModalDeleteV2`, sharing its
+row-lookup/permission logic with the original `ModalDelete` through one extracted private method) and
+a new, from-scratch partial (`Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml`) — only the wording
+carried over from the old partial, no markup or class. The legacy `Index.cshtml` page and its
+`ModalDelete` action/partial are untouched, so nothing about the old page's look or behavior moved.
+The **nummeren** (issue) confirmation (`.is-warning`) was already a plain Bootstrap modal; it's now
+skinned the same way, no controller/partial changes needed since its content was always static markup
+in the page itself. `#invoiceProcessingModal` (a transient "please wait" spinner, not a TYPE 1/2
+confirmation or form) is deliberately left as plain Bootstrap styling — it doesn't fit either type,
+and reskinning it wasn't asked for.
+
 ### Icons
 Phosphor Regular (`ph ph-*`), not the mockup's hand-drawn custom SVG paths — the mockup's icon
 path data isn't recoverable from the static export (live template bindings), and Phosphor is
