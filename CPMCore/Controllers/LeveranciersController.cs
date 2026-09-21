@@ -836,7 +836,7 @@ public class LeveranciersController : BaseController
                   : writeScope.AllowedIssuerIds.ToList()
         };
 
-        return View(vm);
+        return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", vm);
     }
 
 
@@ -1669,6 +1669,52 @@ public class LeveranciersController : BaseController
         }
 
         return PartialView("Modals/_ModalDeleteSupplier", supplier);
+    }
+
+    /// <summary>gl-v2 layout-pilot — zelfde opzoek-/rechtenlogica als <see cref="ModalDelete"/>
+    /// hierboven, enkel een andere view: gl-v2's Type 1-bevestigingscomponent (Bootstrap-modal,
+    /// Modals/_ModalDeleteSupplierV2.cshtml) i.p.v. het magnific-popup-fragment. Geen gedeelde
+    /// private helper nodig (de methode was al kort), zelfde patroon als
+    /// InvoicesController.ModalDeleteV2.</summary>
+    [HttpGet]
+    [CPMCore.Filters.PermissionDelete(PermissionCodes.Suppliers)]
+    public async Task<IActionResult> ModalDeleteV2(int id, CancellationToken ct)
+    {
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
+        if (!scope.HasAccess)
+        {
+            return StatusCode(403, new { redirectUrl = Url.Action("AccessDenied", "Account") });
+        }
+
+        var supplier = await _db.CompanyInfo
+            .AsNoTracking()
+            .Select(c => new SupplierDeleteViewModel
+            {
+                Id = c.CompanyId,
+                Name = c.BedrijfsNaam
+            })
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+
+        if (supplier == null)
+        {
+            return NotFound();
+        }
+
+        if (!scope.HasAllIssuers)
+        {
+            var supplierIssuerIds = await _db.CompanyIssuerCompany
+                .AsNoTracking()
+                .Where(ci => ci.CompanyId == id)
+                .Select(ci => ci.IssuerCompanyId)
+                .ToListAsync(ct);
+
+            if (!supplierIssuerIds.Any(scope.AllowedIssuerIds.Contains))
+            {
+                return StatusCode(403, new { redirectUrl = Url.Action("AccessDenied", "Account") });
+            }
+        }
+
+        return PartialView("Modals/_ModalDeleteSupplierV2", supplier);
     }
 
     [HttpPost]

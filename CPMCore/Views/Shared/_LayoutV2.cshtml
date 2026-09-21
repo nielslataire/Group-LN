@@ -20,6 +20,11 @@
         : userDisplayName;
     var pageTitle = ViewData["Title"] as string ?? string.Empty;
     var pageIcon = ViewData["PageIcon"] as string ?? "ph ph-file";
+    // Tablet-liggend (1024–1399.98px) herschikt de snelactiebalk normaal tot een rail rechts (design-
+    // handoff 7g). Home/Index wil dat niet: die breedte blijft er gewoon de balk onderaan, dezelfde
+    // vorm als telefoon/tablet-staand — enkel deze pagina zet de vlag, elke andere gl-v2-pagina houdt
+    // de rail ongewijzigd (zie het "Tablet rail" ViewData-patroon van HasMobileQuickActions hierboven).
+    var noTabletQuickActionsRail = ViewData["NoTabletQuickActionsRail"] as bool? ?? false;
 }
 <!doctype html>
 <html lang="nl">
@@ -62,7 +67,7 @@
 </head>
 <body>
     <a class="gl-v2-skip-link" href="#gl-v2-main">Naar inhoud</a>
-    <div class="gl-v2">
+    <div class="gl-v2 @(noTabletQuickActionsRail ? "gl-v2-qa-no-rail" : "")">
         <div class="gl-v2-app">
             @await Html.PartialAsync("_RailPartialV2")
 
@@ -102,8 +107,18 @@
                     }
                     @* Optie 3a: zoek-icoon, enkel <768px zichtbaar (gl-v2-shell.css). Nog niet aan
                        echte zoekfunctionaliteit gekoppeld — zelfde eerlijke placeholder-status als
-                       de gestippelde velden in de wireframe zelf. *@
-                    <span class="gl-v2-mobile-search-stub" aria-hidden="true"><i class="ph ph-magnifying-glass"></i></span>
+                       de gestippelde velden in de wireframe zelf. Een pagina met eigen filters (zie
+                       Leveranciers/IndexV2.cshtml) kan deze plek claimen via @@section
+                       MobileTopbarAction — zelfde optionele-topbar-slot-patroon als
+                       ViewData["HasNotificationsBell"]/@@section MobileQuickActions hierboven. *@
+                    @if (IsSectionDefined("MobileTopbarAction"))
+                    {
+                        @RenderSection("MobileTopbarAction", required: false)
+                    }
+                    else
+                    {
+                        <span class="gl-v2-mobile-search-stub" aria-hidden="true"><i class="ph ph-magnifying-glass"></i></span>
+                    }
                     @* Optie 3a/3b: geen userbox meer in de mobiele topbar — het profiel verhuisde
                        volledig naar de voet van het hoofdmenu-paneel (_RailPartialV2.cshtml). Enkel
                        op desktop/tablet zichtbaar; class gl-v2-desktop-userbox verbergt 'm expliciet

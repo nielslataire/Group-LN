@@ -1,0 +1,23 @@
+@model CPMCore.Models.Leveranciers.SupplierDeleteViewModel
+@* gl-v2 layout-pilot (design-handoff optie 4j, TYPE 1 "Bevestiging" — danger-variant), zelfde
+   aanpak als Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml: enkel de tekst hergebruikt uit
+   Modals/_ModalDeleteSupplier.cshtml, geen enkele klasse. Rendert rechtstreeks in
+   #delete-supplier-container (IndexV2.cshtml's Bootstrap-modal-schild), dus dit fragment IS de
+   .modal-content-inhoud (body + footer), geen eigen .modal/.modal-dialog wrapper nodig. *@
+<div class="modal-body">
+    <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+    <div class="gl-v2-modal-text">
+        <h2 class="gl-v2-modal-title">Leverancier verwijderen?</h2>
+        <p class="gl-v2-modal-desc">
+            U staat op het punt om <strong>@Model.Name</strong> te verwijderen. Bent u zeker dat u deze wilt verwijderen?
+        </p>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+    <form asp-action="Delete" asp-controller="Leveranciers" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
+    </form>
+</div>

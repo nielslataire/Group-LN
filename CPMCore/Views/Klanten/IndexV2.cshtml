@@ -1,0 +1,270 @@
+@using CPMCore.Helpers
+@using BOCore
+@model CPMCore.Models.Klanten.ClientIndexViewModel
+@* gl-v2 layout-pilot (design-handoff/DESIGN.md.gl-v2-draft.md — tabel/pagination/rij-actie/laad-
+   staat/lege-staat/filters/mobiele-kaart-taal van optie 4a/4e/4f/4j). Letterlijke aanpassing van
+   Views/Leveranciers/IndexV2.cshtml op expliciet verzoek ("volledig zoals Leveranciers/Index") —
+   zelfde model/data als Views/Klanten/Index.cshtml (KlantenController.Index levert exact dezelfde
+   vm aan beide views), enkel de kop/toolbar-markup en de gl-v2-CSS-klassen op de tabel-kaart zijn
+   nieuw. Titel/subtitel vallen hier bewust weg (SetPageHeader in de controller vult de topbar-titel
+   al) en "Klant toevoegen" verhuist van de paginakop naar @@section PageActions. Klanten heeft één
+   filterveld i.p.v. Leveranciers' drie (enkel Facturatiebedrijf, geen Status/Activiteit) en 6
+   tabelkolommen i.p.v. 7 (geen Bedrag-kolom). *@
+@{
+    ViewData["Title"] ??= "Klanten";
+    var canCreate = Model.WritableIssuerCompanyIds.Any() && Model.CanCreateClient;
+    // @@section MobileQuickActions moet onvoorwaardelijk op view-toplevel staan (geen @@if eromheen),
+    // dus deze vlag voorkomt een lege groene balk onderaan wanneer canCreate false is.
+    ViewData["HasMobileQuickActions"] = canCreate;
+}
+@section PageStyle
+{
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/gl-v2-klanten.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.WritableIssuerCompanyIds.Any())
+    {
+        <a id="add-client-button" href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="gl-v2-btn gl-v2-btn-primary @(Model.CanCreateClient ? string.Empty : "d-none")">+ Klant toevoegen</a>
+    }
+}
+@* Claimt de mobiele topbar-icoonplek (_LayoutV2.cshtml, normaal de nog-niet-aangesloten zoek-stub)
+   voor een filtericoon+tellertje i.p.v. zoeken — zelfde patroon als Leveranciers/IndexV2.cshtml. *@
+@section MobileTopbarAction
+{
+    <button type="button" class="gl-v2-topbar-filter-btn" id="mobile-filters-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="filters-panel">
+        <i class="ph ph-funnel" aria-hidden="true"></i>
+        <span class="gl-v2-topbar-filter-count" id="mobile-filters-toggle-count" hidden>0</span>
+    </button>
+}
+@section MobileQuickActions
+{
+    @if (canCreate)
+    {
+        <a href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+            <i class="ph ph-plus" aria-hidden="true"></i>Nieuwe klant
+        </a>
+    }
+}
+
+@* Optie 4f "FILTERS OPEN" — zoekveld + Filters-knop (met tellertje) op de eerste rij; de knop
+   klapt de twee rijen eronder open/dicht. Eén filterveld (Facturatiebedrijf), geen "Toepassen"-knop
+   (auto-apply, zelfde reden als Leveranciers/IndexV2.cshtml). *@
+<div class="gl-v2-toolbar-card gl-v2-filters-card">
+    <div class="gl-v2-filters-row">
+        <div class="gl-v2-field gl-v2-toolbar-search">
+            <div class="gl-v2-field-box">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoek klant…">
+                <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
+            </div>
+        </div>
+        <button type="button" class="gl-v2-filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters-panel">
+            <i class="ph ph-funnel" aria-hidden="true"></i>
+            Filters
+            <span class="gl-v2-filters-toggle-count" id="filters-toggle-count" hidden>0</span>
+        </button>
+    </div>
+
+    <div class="gl-v2-filters-panel" id="filters-panel" hidden>
+        @* Design-handoff 4f "MOBIEL — FILTERSHEET" — enkel <768px zichtbaar. *@
+        <div class="gl-v2-filters-sheet-header">
+            <div class="gl-v2-filters-sheet-handle" aria-hidden="true"></div>
+            <div class="gl-v2-filters-sheet-title-row">
+                <span class="gl-v2-filters-sheet-title">Filters</span>
+                <span class="gl-v2-filters-sheet-badge" id="filters-sheet-badge" hidden>0 actief</span>
+                <span class="gl-v2-filters-sheet-spacer"></span>
+                <button type="button" class="gl-v2-filters-clear gl-v2-filters-sheet-clear" id="filters-sheet-clear">Wissen</button>
+            </div>
+        </div>
+        <div class="gl-v2-filters-grid">
+            @* Optie 4h BASIS-variant — zelfde trigger+paneel-component als het boekjaarfilter op
+               Facturen/het Facturatiebedrijf-filter op Leveranciers. *@
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Facturatiebedrijf</span>
+                <div class="gl-v2-select gl-v2-filters-select" id="issuer-select">
+                    <input type="hidden" id="issuer-select-value" value="@Model.SelectedIssuerCompanyId" />
+                    <button type="button" class="gl-v2-select-trigger @(Model.SelectedIssuerCompanyId.HasValue ? "is-filled" : "")" id="issuer-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="issuer-select-panel">
+                        <span class="gl-v2-select-trigger-label" id="issuer-select-label">@(Model.IssuerCompanies.FirstOrDefault(i => i.Id == Model.SelectedIssuerCompanyId)?.Name ?? "Alle bedrijven")</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="gl-v2-select-backdrop" id="issuer-select-backdrop"></div>
+                    <div class="gl-v2-select-panel" id="issuer-select-panel" role="listbox" aria-labelledby="issuer-select-trigger">
+                        <div class="gl-v2-select-sheet-header">
+                            <span class="gl-v2-select-sheet-title">Facturatiebedrijf</span>
+                            <button type="button" class="gl-v2-select-sheet-close" id="issuer-select-close">Sluiten</button>
+                        </div>
+                        <div class="gl-v2-select-options">
+                            <button type="button" class="gl-v2-select-option @(Model.SelectedIssuerCompanyId.HasValue ? "" : "is-selected")" role="option" data-value="" data-label="Alle bedrijven">
+                                <i class="ph ph-check" aria-hidden="true"></i>
+                                <span>Alle bedrijven</span>
+                            </button>
+                            @foreach (var issuer in Model.IssuerCompanies)
+                            {
+                                <button type="button" class="gl-v2-select-option @(issuer.Id == Model.SelectedIssuerCompanyId ? "is-selected" : "")" role="option" data-value="@issuer.Id" data-label="@issuer.Name">
+                                    <i class="ph ph-check" aria-hidden="true"></i>
+                                    <span>@issuer.Name</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-filters-chips" id="filters-chips">
+            <div class="gl-v2-filters-chip-list" id="filters-chip-list"></div>
+            <button type="button" class="gl-v2-filters-clear" id="filters-clear">Wissen</button>
+        </div>
+
+        @* Enkel <768px zichtbaar — filters passen zichzelf al toe, dit is puur een "klaar"-knop om
+           het sheet te sluiten (design-handoff 4f "MOBIEL — FILTERSHEET"). *@
+        <button type="button" class="gl-v2-filters-show-btn" id="filters-show-btn">
+            <span>Toon</span>
+            <span id="filters-show-count">0</span>
+            <span>klanten</span>
+        </button>
+    </div>
+</div>
+@* Enkel zichtbaar/aanwezig <768px — #filters-panel wordt daar een bottom sheet, deze scrim erachter
+   zoals overal elders in gl-v2. *@
+<div class="gl-v2-filters-panel-backdrop" id="filters-panel-backdrop" hidden></div>
+
+<div class="gl-v2-table-card">
+    @* Optie 4f "LADEN" — zichtbaar vanaf de allereerste paint, verdwijnt zodra gl-v2-klanten.js
+       .is-ready zet. Kolommen zijn de 6 echte kolommen van de tabel hieronder. *@
+    <div class="gl-v2-loading-skeleton" aria-hidden="true">
+        <div class="gl-v2-skeleton-header">
+            <span>Naam</span><span>Ondernemingsnr.</span><span>Locatie</span><span>Contact</span>
+            <span>Facturatiebedrijf</span><span>Acties</span>
+        </div>
+        @for (var i = 0; i < 6; i++)
+        {
+            <div class="gl-v2-skeleton-row">
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:@(60 + i * 6)%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:75%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:80%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:60%;margin-left:auto"></span>
+            </div>
+        }
+        <div class="gl-v2-skeleton-footer"><i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i> Klanten laden…</div>
+
+        @* <768px: kaartvormige skeletons i.p.v. de tabelvorm hierboven. *@
+        <div class="gl-v2-skeleton-cards">
+            @for (var i = 0; i < 5; i++)
+            {
+                <div class="gl-v2-skeleton-card">
+                    <div class="gl-v2-skeleton-card-row">
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:@(50 + i * 6)%;height:13px"></span>
+                    </div>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:35%;height:8px"></span>
+                    <div class="gl-v2-skeleton-card-row gl-v2-skeleton-card-row-divided">
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:55%"></span>
+                    </div>
+                    <div class="gl-v2-skeleton-card-row gl-v2-skeleton-card-row-divided">
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:28%"></span>
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:40%"></span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="datatables-header-footer-wrapper">
+        <div class="table-responsive-md">
+            <table class="table table-hover mb-0 w-100" id="datatable-clients">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Ondernemingsnummer</th>
+                        <th>Locatie</th>
+                        <th>Contact</th>
+                        <th>Facturatiebedrijf</th>
+                        <th class="text-end noVis">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var client in Model.Clients)
+                    {
+                        var issuerIds = string.Join(",", client.IssuerCompanyIds);
+                        <tr data-id="@client.Id" data-issuers="@issuerIds">
+                            <td><a class="gl-v2-client-name-link" href="@Url.Action("Details", "Klanten", new { id = client.Id })">@client.DisplayName</a></td>
+                            <td>@(EnterpriseNumberFormatter.Format(client.EnterpriseNumber) ?? "-")</td>
+                            <td>@(string.IsNullOrWhiteSpace(client.City) ? "-" : client.City)</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(client.Email))
+                                {
+                                    <a href="mailto:@client.Email">@client.Email</a>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(client.Phone))
+                                {
+                                    @client.Phone
+                                }
+                                else
+                                {
+                                    @:-
+                                }
+                            </td>
+                            <td>@(client.IssuerCompanies.Any() ? string.Join(", ", client.IssuerCompanies) : "-")</td>
+                            <td class="text-end">
+                                <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="row-menu-@client.Id" aria-label="Meer acties">
+                                    <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                </button>
+                                <div class="gl-v2-row-menu" id="row-menu-@client.Id">
+                                    <a class="gl-v2-row-action" data-placement="top" title="Details" data-original-title="Details" href="@Url.Action("Details", "Klanten", new { id = client.Id })">
+                                        <i class="ph ph-eye" aria-hidden="true"></i>
+                                        <span class="gl-v2-row-action-label">Details</span>
+                                    </a>
+                                    @if (client.CanEdit)
+                                    {
+                                        <a class="gl-v2-row-action" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("Edit", "Klanten", new { id = client.Id })">
+                                            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Bewerken</span>
+                                        </a>
+                                    }
+                                    @if (client.CanDelete)
+                                    {
+                                        <div class="gl-v2-row-menu-divider" aria-hidden="true"></div>
+                                        <a href="#deleteClientConfirmModal" class="gl-v2-row-action gl-v2-row-action-danger deleteClient" data-id="@client.Id" data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                            <i class="ph ph-trash" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Verwijderen</span>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @* Optie 4c "Mobiel — als kaarten": echt gescheiden markup, gevuld door gl-v2-klanten.js'
+           renderMobileCards() op elke DataTable-"draw". *@
+        <div class="gl-v2-mobile-client-list" id="gl-v2-mobile-client-list"></div>
+        <div class="gl-v2-row-menu-backdrop" id="gl-v2-row-menu-backdrop"></div>
+    </div>
+</div>
+
+@* Optie 4j TYPE 1 (danger) — inhoud via AJAX geladen (gl-v2-klanten.js,
+   Modals/_DeleteClientModalV2.cshtml levert de .modal-body/.modal-footer-inhoud). *@
+<div class="modal fade gl-v2-modal-confirm" id="deleteClientConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger" id="delete-client-container"></div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        window.glV2KlantenConfig = {
+            deleteUrl: '@Url.Action("PartialDeleteClientModalV2", "Klanten")',
+            createUrl: '@Url.Action("Create", "Klanten")',
+            canCreate: @Html.Raw(Model.CanCreateClient ? "true" : "false"),
+            writableIssuerIds: [@string.Join(",", Model.WritableIssuerCompanyIds)]
+        };
+    </script>
+    <script src="~/js/gl-v2-klanten.js" asp-append-version="true"></script>
+}

@@ -226,7 +226,7 @@ namespace CPMCore.Controllers
             };
 
             SetPageHeader("bx bx-group", "Klanten");
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
         [HttpGet]
@@ -2036,6 +2036,25 @@ namespace CPMCore.Controllers
             }
             return PartialView("_DeleteClientModal", viewModel);
         }
+
+        /// <summary>gl-v2 layout-pilot — zelfde opzoeklogica als <see cref="PartialDeleteClientModal"/>
+        /// hierboven, enkel een andere view: gl-v2's Type 1-bevestigingscomponent (Bootstrap-modal,
+        /// Modals/_DeleteClientModalV2.cshtml) i.p.v. het magnific-popup-fragment. De knop erin blijft
+        /// dezelfde `DeleteClient` GET-actie aanroepen (ongewijzigd, geen nieuwe POST/antiforgery-
+        /// stap toegevoegd t.o.v. het bestaande gedrag).</summary>
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
+        public ActionResult PartialDeleteClientModalV2(int id)
+        {
+            var viewModel = new IdNameBO();
+            if (id != 0)
+            {
+                var dservice = _clientService;
+                viewModel.Display = dservice.GetClientAccountNameById(id);
+                viewModel.ID = id;
+            }
+            return PartialView("Modals/_DeleteClientModalV2", viewModel);
+        }
+
         [HttpGet]
         [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
         public ActionResult DeleteClient(int id)

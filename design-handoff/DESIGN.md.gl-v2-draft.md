@@ -357,6 +357,17 @@ full circle, white 1px border, same shape/size as the search stub). Both circula
 share one shape language distinct from the rest of the system's rounded-square icon buttons —
 mobile-topbar icon buttons are circles, everywhere else they're 8-16px-radius squares.
 
+**The search-icon stub's slot is claimable.** It stayed an honest, unclickable placeholder
+(`aria-hidden`, no handler) until a page actually had something to put there. `_LayoutV2.cshtml` now
+renders `@@section MobileTopbarAction` in that exact position when a page defines it, falling back
+to the plain stub otherwise — same optional-slot pattern as `PageActions`/`MobileQuickActions`, no
+`ViewData` empty-guard needed here since a page that claims the slot always has content for it.
+First (and so far only) consumer: `Views/Leveranciers/IndexV2.cshtml` puts its filter toggle there
+instead of a search icon — this page's search already lives in its own toolbar field, and on a
+phone the fastest-reachable action is "open filters," not "search," so the stub was worth
+repurposing rather than leaving dead. The pill shape (not a circle) is deliberate — see
+"Leveranciers" below for the reasoning and the rest of the filter system it belongs to.
+
 ### Mobile Quick-Actions Bar
 A page-specific, optional bar, only rendered <768px, `position:fixed` to the bottom of the
 viewport (option 4c) — Primary-green fill, no page-content-flow placement, no "SNELACTIES" label.
@@ -417,18 +428,29 @@ tiles, ported from the desktop "Snelacties" card + the pre-existing (now gl-v2-o
 `.gl-mob-nav`: **Punt**, **Leverancier** (zoeken), **Klant** (zoeken), **Vastzetten** (Project
 vastzetten) visible, **Nieuwe leverancier** (Leverancier toevoegen, `data-subtitle="Nieuw contact
 aanmaken"`) overflows into the Meer sheet — 5 tiles is the first real page to exercise the overflow
-path. No new click-handling JS: the gl-v2 tiles carry fresh ids (`gl-v2-qa-punt`,
-`gl-v2-qa-lev-search`, `gl-v2-qa-klant-search`, `gl-v2-qa-pin`) added onto the *existing* jQuery
-selectors in `_DashboardProjectleider.cshtml` that already open the right sheet/panel — converted
-from direct `$(selector).on(...)` binding to `$(document).on('click', selector, ...)` delegation in
-the same edit, because the gl-v2 tiles render outside `<main>` (in the layout's bar), after that
-inline `<script>` block has already run; a direct binding would've found nothing.
-Deliberately **not** ported: the 5 project-scoped Snelacties (Contract, Inkomende factuur,
-Wijzigingsopdracht, Nacalculatie, Document uploaden) — each needs a project-picker sheet first
-(same pattern "Punt" already has via `#gl-punt-sheet`), which doesn't exist yet for the other five.
+path. Leverancier/Klant zoeken and Vastzetten carry fresh ids (`gl-v2-qa-lev-search`,
+`gl-v2-qa-klant-search`, `gl-v2-qa-pin`) added onto the *existing* jQuery selectors in
+`_DashboardProjectleider.cshtml` that already open the right modal — converted from direct
+`$(selector).on(...)` binding to `$(document).on('click', selector, ...)` delegation in the same
+edit, because the gl-v2 tiles render outside `<main>` (in the layout's bar), after that inline
+`<script>` block has already run; a direct binding would've found nothing.
+**Punt was revised after the first pass**: it originally reused `openPuntSheet()` (the legacy
+project-choice sheet below), rendering unstyled on gl-v2 since that sheet's own CSS never got a
+gl-v2 treatment. It's now `<a>` markup carrying `.js-gl-v2-sa-project-action` and
+`data-url-template="/Projects/{id}/Issues/Create"` — the *same* class/attribute the desktop
+Snelacties-kaart's "Punt toevoegen" row already used (see `initActiveProject()` above) — so it gets
+identical behaviour for free: navigate straight there when a project is already active, otherwise
+open the project-picker modal first. Zero new JS for this tile.
+Still deliberately **not** ported: the 5 project-scoped Snelacties (Contract, Inkomende factuur,
+Wijzigingsopdracht, Nacalculatie, Document uploaden) — none of them has a project-picker wired up
+yet the way Punt now does.
 The old `.gl-mob-nav` bottom nav in `_DashboardProjectleider.cshtml` is now suppressed
 (`@@if (!useGlV2Layout)`) so it can't render underneath/alongside the new gl-v2 bar — same
 `ViewData["UseGlV2Layout"]` flag `_ViewStart.cshtml` reads to pick the layout in the first place.
+Two more legacy-only removals, on user request rather than from the outset: `_MijnKeypointsWidget`/
+`_MijnTakenWidget` ("Mijn mijlpalen"/"Mijn taken", unrestyled Porto cards) no longer render on the
+gl-v2 dashboard at all — they stay for the legacy layout, gl-v2 simply drops that `<div class="row">`
+rather than showing them ungl-v2-ified between styled cards.
 
 **Empty-bar guard.** Because `@@section` must stay unconditionally registered even when a page's
 condition makes it render nothing for the current request (the Projectleider-only tiles above; also
@@ -1299,7 +1321,15 @@ don't all live near the card. Building it as `#glV2ProjectPickerModal`
 positioning system for a popover triggered from arbitrary places. It reuses the Type-3 zoekmodal
 visual classes (`.gl-v2-modal-search-*`) rather than a fourth CSS family, plus two additions those
 don't have: a "Recent" group (`werfProjects`, client-filtered exactly like the legacy
-`#gl-punt-sheet`) and the "Dit project vastzetten" footer action.
+legacy `#gl-punt-sheet`, before that sheet itself was retired for gl-v2 — see below) and the "Dit
+project vastzetten" footer action. Two fixes on top of the first pass: each Recent row now shows a
+push-pin glyph next to a project that's already pinned (`Model.PinnedProjectIds`, passed in via a
+new `GlV2ProjectPickerVm` wrapper instead of the bare project list the partial originally took —
+7f's own mockup draws this pin, the first build of the modal had dropped it), and the footer button
+got its own `.gl-v2-modal-search-pin-btn` class instead of reusing `.gl-v2-modal-search-create` (the
+Type-3 "add a new record" button, dashed-border variant) — pinning an existing project isn't
+"create new", and borrowing that class meant any future restyling of the real create buttons would
+silently drag this one along too.
 
 **Klant/Leverancier zoeken (7e) is a real modal now, not a bottom sheet.** New generic component:
 `GlV2SearchModalVm` + `Views/Shared/GlV2/_SearchModal.cshtml`, rendered twice (Klant, Leverancier)
@@ -1322,17 +1352,129 @@ per breakpoint. An informational "active project" tile (`#gl-v2-qa-rail-active`,
 waarop de acties werken") sits above the icons in the rail tier only — purely display, no click
 action in this pass, reading the same `GlV2ActiveProject` state as the desktop card.
 
+**Dashboard opts out of the tablet rail.** `Views/Home/Index.cshtml` sets
+`ViewData["NoTabletQuickActionsRail"] = true`, which `_LayoutV2.cshtml` turns into a
+`.gl-v2-qa-no-rail` class on the outer `.gl-v2` wrapper. `gl-v2-shell.css` then re-declares the
+`<1024px` bottom-bar shape (position, `flex-direction:row`, height, padding — the same properties
+the rail media query overrides) under `.gl-v2-qa-no-rail .gl-v2-mobile-quickactions` inside the
+*same* `1024–1399.98px` media query, at two classes of specificity instead of the rail rule's one —
+that wins regardless of source order, so the rail rule itself needed no `:not()` guard and stays
+byte-for-byte what every other gl-v2 page still gets. Duplicating the bottom-bar declarations here
+(rather than sharing them with the `<1024px` block) was deliberate: the two breakpoints don't
+overlap, so there's no single existing rule to just re-scope. Reason: the dashboard's own desktop
+Snelacties-kaart only appears at `≥1400px` (`xxl`), so tablet-landscape had nothing better than the
+rail to fall back to when this pilot started — once the dashboard had accumulated enough of its own
+gl-v2 chrome, the rail there felt like a second, half-finished shell competing with the first;
+falling back to the familiar bottom bar reads as more finished than a rail nobody asked for on this
+one page. Every other `<1400px` gl-v2 page keeps the rail unchanged.
+
 **Known gap, left for a later pass.** The mobile "Meer" sheet does not get 7f's mobile-mockup
 treatment (an active-project header with a "Wijzig" link inside the sheet itself) — it stays the
 existing generic icon/label row list. Doing so would mean teaching the shared, page-agnostic
 `initMobileQuickActions()` about a Projectleider-specific concept, which the rest of this component
 is deliberately kept clear of (see its own "generic chrome, not Facturen-specific" comment).
 
-**Removed for gl-v2 (legacy untouched).** The three old bottom panels this replaced —
-`#gl-lev-sheet`, `#gl-klant-sheet`, `#gl-pin-sheet` — now render only `@if (!useGlV2Layout)`; the
-legacy dashboard keeps them exactly as before. `#gl-punt-sheet`/`#gl-issues-modal` (the "Punt
-toevoegen" project-choice sheet + its iframe) were not in scope for this pass and are unchanged on
-both layouts.
+**Removed for gl-v2 (legacy untouched).** The four old bottom panels this replaced —
+`#gl-lev-sheet`, `#gl-klant-sheet`, `#gl-pin-sheet`, and (once Punt moved to the project-picker
+modal, see above) `#gl-punt-sheet`/`#gl-issues-modal` (the "Punt toevoegen" project-choice sheet +
+its fullscreen iframe) — now all render only `@if (!useGlV2Layout)`; the legacy dashboard keeps them
+exactly as before, still driven by `#mob-nav-punt`/`openPuntSheet()`. Before this fix,
+`#gl-punt-sheet` was the one exception left unconditionally in the DOM regardless of layout — it
+rendered with none of its legacy CSS (that stylesheet isn't loaded on `_LayoutV2.cshtml`) whenever a
+gl-v2 user reached it, the plain-HTML "Kies een project" list that prompted this whole fix.
+
+### Leveranciers — second application of the Facturen table (design-handoff optie 4a/4e/4f/4j)
+`Views/Leveranciers/IndexV2.cshtml`, toggled from `LeveranciersController.Index` the same one-line
+way as Invoices (`ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index"`). Same
+`SupplierIndexViewModel`/query as `Index.cshtml` — this is presentation only, no new controller
+logic beyond the toggle itself and a `ModalDeleteV2` action mirroring `InvoicesController`'s. Title
+and subtitle are gone from the page body — `SetPageHeader("bx bx-hard-hat", "Leveranciers")` already
+puts the name in the topbar (`ViewData["Title"]`/`["PageIcon"]`), the same header block Invoices'
+`IndexV2` also leaves un-repeated inline — and "+ Leverancier toevoegen" moved out of the old
+title-row into `@@section PageActions`, the same topbar-button slot as "+ Nieuwe factuur".
+
+**Own CSS/JS files, not shared with Invoices.** `gl-v2-leveranciers.css`/`gl-v2-leveranciers.js`
+duplicate the reusable pieces of the Facturen build — table-card shell, loading skeleton, empty
+state, row-`···`-menu (its tablet floating-panel and mobile bottom-sheet forms), pagination/footer —
+rather than loading `gl-v2-invoices.css`/`.js` a second time. Those two files don't separate
+"generic table chrome" from "Facturen-only" (status icons, the boeken-checkbox, the boekjaar
+column) — nothing today does — so reusing them wholesale meant pulling in dead, invoice-shaped rules
+for a page with none of that data, or a bigger extraction refactor of a page that already works.
+Duplicating stayed inside this pass's actual scope; promoting the shared pieces into `gl-v2-
+shell.css` is the natural next step once a *third* page needs the same table language.
+Column widths: Bedrijfsnaam/Ondernemingsnummer/Contracten stay compact (20%/14%/10%), GSM/Email/
+Bedrag get more room (18%/20%/15%) — on request, the opposite of DataTables' own `autoWidth`
+instinct to shrink every column to its shortest visible content.
+Two removed, both duplicating something the page already had: the colvis ("kolommen tonen/
+verbergen") button — `layout.topStart` keeps its empty `{ buttons: [] }` shape (Invoices' own
+precedent for "no default page-length dropdown, no button row") rather than reintroducing it — and
+DataTables' own built-in search box (`.dt-search`, hidden via jQuery, same one-liner Invoices uses),
+which duplicated the page's own toolbar search field.
+
+**Filters redesigned to match 4f's "FILTERS OPEN" state, not the plain filter row `Index.cshtml`
+had.** A `.gl-v2-filters-toggle` button (funnel icon, badge count) next to the search field expands
+two rows beneath it: a 3-column field grid (Facturatiebedrijf/Status — the BASIS `.gl-v2-select`
+variant, relabelled above the trigger instead of icon-in-trigger, since 4f's own filter fields put
+the label outside the box; Activiteit stays Select2, the multi-select `.gl-v2-select` variant
+doesn't exist yet — see "Select / Dropdown" above) and a badge row. One deliberate divergence from
+4f's own mockup: **no "Toepassen" button.** Every filter here already applied itself immediately on
+change before this redesign (the issuer/status/activity handlers were never wired to a submit step),
+so a confirm button would do nothing a live filter doesn't already do — 4f's mockup mixes an
+auto-apply table beneath a filter panel that still draws a Toepassen button, which reads as the
+wireframe's own generic filter-panel template rather than a considered choice for *this* page's
+already-live filtering.
+**Badges are individually removable, one per non-default filter.** `updateFilterChips()` reads the
+three filter states and rebuilds `#filters-chip-list` (a wrapper dedicated to just the badges,
+kept separate from the "Wissen" button next to it — an earlier version rebuilt directly inside the
+shared container and needed a fragile `insertBefore` ordering; splitting them into two elements
+made a plain `.empty()`+append the whole rebuild, no ordering assumption left to get wrong). Status
+gets a badge only when it's off the default ("Enkel actief" is the page's normal baseline, not
+itself a filter worth flagging); issuer and each selected activity always do when set. Each badge's
+`×` calls back into the same `.gl-v2-select`'s exposed `select(value, fireOnChange)` — added so a
+badge click and a real dropdown click share one code path instead of the badge duplicating the
+select's label/`is-filled`/`aria-expanded` bookkeeping. "Wissen" resets all three at once
+(`fireOnChange:false` on the first two, letting the third's own change event fire the single
+resulting redraw, rather than three separate `table.draw()` calls for one click).
+
+**Mobile: the filters panel becomes a bottom sheet, reachable from the topbar.** Same
+`#filters-panel` element, no duplicated markup — at `<768px` it switches from "inline block below
+the toggle" to `position:fixed`, bottom-anchored above the mobile quick-actions bar (`bottom:
+calc(var(--gl-v2-qa-bar-h, 64px) + safe-area)`, the same offset math the row-menu sheet and the
+Facturen "Meer" sheet already use), with its own backdrop (`#filters-panel-backdrop`). It's opened
+by either the inline `.gl-v2-filters-toggle` (still present, all widths) or the new topbar filter
+button (`@@section MobileTopbarAction`, see "Mobile Topbar" above) — one `setFiltersPanelOpen()`
+keeps both triggers' `is-open`/`aria-expanded` state and the shared badge count in sync, so opening
+via one and closing via the other (or the backdrop, or Esc) never leaves a trigger showing the wrong
+state. The topbar button is a pill (icon + count side by side), not the topbar's usual circle —
+4f's own reference draws the "Filters [3]" trigger as one shape holding both, and a circular icon
+button has no room for a second glyph, so the pill is 4f's own shape carried into the topbar rather
+than a new invention.
+
+**Mobile row-menu (the "···"-actions sheet) also sits above the quick-actions bar.** Copied from
+Facturen's mobile sheet, its `bottom:0` was correct there because that page's mobile quick-actions
+bar and the row-menu sheet rarely needed to coexist stacked; Leveranciers always has a candidate
+quick-actions tile ("Nieuwe leverancier"), so `bottom:0` let the sheet cover the bar instead of
+sitting above it. Fixed the same way as the filters sheet: `bottom: calc(var(--gl-v2-qa-bar-h, 64px)
++ safe-area)` on both the sheet and its backdrop.
+
+**Mobile empty state builds a real card, not a garbled row-turned-card.** `renderMobileCards()`
+naively rebuilt one "card" per `<tr>` in the (hidden, `display:none` on mobile) table — with zero
+matching suppliers, DataTables replaces the whole `<tbody>` with a single cell holding the
+zero-records HTML, which doesn't have 7 real `<td>`s for `buildMobileCard()` to read from. It now
+checks `table.rows({ search: "applied" }).count() === 0` first and, when true, reuses the same
+`buildEmptyStateHtml()` the desktop empty state renders, wrapped in `.gl-v2-supplier-card` (padding
+zeroed) purely for the white/shadowed card shell — `.gl-v2-table-card` itself goes transparent on
+mobile (every real supplier card already carries its own background), so the empty state needs its
+own card here where it didn't on desktop/tablet. That shared HTML builder also lost the one `id` it
+used to set (`add-supplier-empty-button`) — harmless on desktop where only one zero-records row ever
+exists, but the mobile card and the table's own (still-present, just `display:none`) zero-records
+row would otherwise both carry it into the DOM at once.
+
+**Delete confirmation is gl-v2's Type-1 modal, not `Index.cshtml`'s magnific-popup fragment.**
+`ModalDeleteV2` (mirroring `InvoicesController.ModalDeleteV2`) returns
+`Modals/_ModalDeleteSupplierV2.cshtml` — text reused from `_ModalDeleteSupplier.cshtml`, no classes
+— into a Bootstrap modal shell already on the page, same AJAX-load-then-show pattern as the invoice
+delete modal.
 
 ### Icons
 Phosphor Regular (`ph ph-*`), not the mockup's hand-drawn custom SVG paths — the mockup's icon

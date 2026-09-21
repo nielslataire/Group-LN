@@ -1,0 +1,360 @@
+@using System.Globalization
+@using System.Linq
+@model CPMCore.Models.Leveranciers.SupplierIndexViewModel
+@* gl-v2 layout-pilot (design-handoff/DESIGN.md.gl-v2-draft.md — tabel/pagination/rij-actie/laad-
+   staat/lege-staat/mobiele-kaart-taal van optie 4a/4e/4f/4j, hier toegepast op de leverancierslijst).
+   Zelfde model/data als Views/Leveranciers/Index.cshtml (LeveranciersController.Index levert exact
+   dezelfde vm aan beide views) — enkel de kop/toolbar-markup en de gl-v2-CSS-klassen op de tabel-
+   kaart zijn nieuw. Titel/subtitel vallen hier bewust weg (SetPageHeader in de controller vult de
+   topbar-titel al, zie _LayoutV2.cshtml) en "Leverancier toevoegen" verhuist van de paginakop naar
+   @@section PageActions (topbar-knop) — zelfde plek/patroon als "+ Nieuwe factuur" op de Facturen-
+   pagina. *@
+@{
+    ViewData["Title"] ??= "Leveranciers";
+    var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
+    var groupedActivities = Model.Activities
+        .GroupBy(a => string.IsNullOrWhiteSpace(a.GroupName) ? "Overige" : a.GroupName!)
+        .OrderBy(g => g.Key)
+        .ToList();
+    var canCreate = Model.WritableIssuerCompanyIds.Any() && Model.CanCreateSupplier;
+    // @@section MobileQuickActions moet onvoorwaardelijk op view-toplevel staan (geen @@if eromheen),
+    // dus deze vlag voorkomt een lege groene balk onderaan wanneer canCreate false is — zie
+    // _LayoutV2.cshtml se eigen toelichting bij ViewData["HasMobileQuickActions"].
+    ViewData["HasMobileQuickActions"] = canCreate;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/gl-v2-leveranciers.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.WritableIssuerCompanyIds.Any())
+    {
+        <a id="add-supplier-button" href="@Url.Action("Create", "Leveranciers", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="gl-v2-btn gl-v2-btn-primary @(Model.CanCreateSupplier ? string.Empty : "d-none")">+ Leverancier toevoegen</a>
+    }
+}
+@* Claimt de mobiele topbar-icoonplek (_LayoutV2.cshtml, normaal de nog-niet-aangesloten zoek-stub)
+   voor een filtericoon+tellertje i.p.v. zoeken — deze pagina's eigen zoekveld zit al in de
+   toolbar-kaart hieronder, filters zijn hier de actie die op gsm-breedte het snelst bereikbaar
+   moet zijn. Stuurt dezelfde #filters-panel aan als de inline "Filters"-knop in de toolbar
+   (gl-v2-leveranciers.js) — enkel de knop verschilt, het paneel/de badges zijn identiek; op mobiel
+   wordt dat paneel via CSS een bottom sheet i.p.v. inline in de toolbar-kaart te blijven. *@
+@section MobileTopbarAction
+{
+    <button type="button" class="gl-v2-topbar-filter-btn" id="mobile-filters-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="filters-panel">
+        <i class="ph ph-funnel" aria-hidden="true"></i>
+        <span class="gl-v2-topbar-filter-count" id="mobile-filters-toggle-count" hidden>0</span>
+    </button>
+}
+@* Optie 3a "SNELACTIES OP DEZE PAGINA" — zelfde actie als @@section PageActions hierboven, enkel
+   anders gepresenteerd voor de mobiele snelactiebalk (_LayoutV2.cshtml, <1400px). @@section moet
+   onvoorwaardelijk op het view-toplevel staan, vandaar de canCreate-check in de sectie-body zelf. *@
+@section MobileQuickActions
+{
+    @if (canCreate)
+    {
+        <a href="@Url.Action("Create", "Leveranciers", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+            <i class="ph ph-plus" aria-hidden="true"></i>Nieuwe leverancier
+        </a>
+    }
+}
+
+@* Optie 4f "FILTERS OPEN" — zoekveld + Filters-knop (met tellertje) op de eerste rij; de knop
+   klapt de twee rijen eronder open/dicht (filtervelden-grid, dan de badges-rij). Geen "Toepassen"-
+   knop zoals het voorbeeld nog heeft: elk filter hier past zichzelf al meteen toe bij wijzigen
+   (zelfde auto-apply-gedrag als voorheen toen de drie selects los in de toolbar stonden), een
+   aparte bevestigingsstap zou dus niets meer doen. "Wissen" (alle filters) blijft wel, plus een
+   apart × per badge (gl-v2-leveranciers.js bouwt de badges op uit de actieve filterwaarden). *@
+<div class="gl-v2-toolbar-card gl-v2-filters-card">
+    <div class="gl-v2-filters-row">
+        <div class="gl-v2-field gl-v2-toolbar-search">
+            <div class="gl-v2-field-box">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoek leverancier…">
+                <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
+            </div>
+        </div>
+        <button type="button" class="gl-v2-filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters-panel">
+            <i class="ph ph-funnel" aria-hidden="true"></i>
+            Filters
+            <span class="gl-v2-filters-toggle-count" id="filters-toggle-count" hidden>0</span>
+        </button>
+    </div>
+
+    <div class="gl-v2-filters-panel" id="filters-panel" hidden>
+        @* Design-handoff 4f "MOBIEL — FILTERSHEET" — enkel <768px zichtbaar (gl-v2-leveranciers.css):
+           handvat + "Filters"-titel (serif, Naming-Only Serif Rule — dit noemt het paneel waar je
+           naar kijkt) + "N actief"-badge + "Wissen". Op desktop/tablet doet de inline
+           .gl-v2-filters-toggle-knop (met z'n eigen tellertje) datzelfde werk, dus deze kop blijft
+           daar ongebruikt/onzichtbaar i.p.v. het dubbel te tonen. Deelt zijn "Wissen"-gedrag met de
+           knop onderaan bij de badges (beide dragen .gl-v2-filters-clear, resetFilters() luistert op
+           die klasse, niet op een van de twee id's apart). *@
+        <div class="gl-v2-filters-sheet-header">
+            <div class="gl-v2-filters-sheet-handle" aria-hidden="true"></div>
+            <div class="gl-v2-filters-sheet-title-row">
+                <span class="gl-v2-filters-sheet-title">Filters</span>
+                <span class="gl-v2-filters-sheet-badge" id="filters-sheet-badge" hidden>0 actief</span>
+                <span class="gl-v2-filters-sheet-spacer"></span>
+                <button type="button" class="gl-v2-filters-clear gl-v2-filters-sheet-clear" id="filters-sheet-clear">Wissen</button>
+            </div>
+        </div>
+        <div class="gl-v2-filters-grid">
+            @* Optie 4h BASIS-variant — zelfde trigger+paneel-component als het boekjaarfilter op
+               Facturen, hier met een eigen label erboven i.p.v. een icoon in de trigger (4f's eigen
+               "FACTURATIEBEDRIJF"-labelstijl). *@
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Facturatiebedrijf</span>
+                <div class="gl-v2-select gl-v2-filters-select" id="issuer-select">
+                    <input type="hidden" id="issuer-select-value" value="@Model.SelectedIssuerCompanyId" />
+                    <button type="button" class="gl-v2-select-trigger @(Model.SelectedIssuerCompanyId.HasValue ? "is-filled" : "")" id="issuer-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="issuer-select-panel">
+                        <span class="gl-v2-select-trigger-label" id="issuer-select-label">@(Model.IssuerCompanies.FirstOrDefault(i => i.Id == Model.SelectedIssuerCompanyId)?.Name ?? "Alle bedrijven")</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="gl-v2-select-backdrop" id="issuer-select-backdrop"></div>
+                    <div class="gl-v2-select-panel" id="issuer-select-panel" role="listbox" aria-labelledby="issuer-select-trigger">
+                        <div class="gl-v2-select-sheet-header">
+                            <span class="gl-v2-select-sheet-title">Facturatiebedrijf</span>
+                            <button type="button" class="gl-v2-select-sheet-close" id="issuer-select-close">Sluiten</button>
+                        </div>
+                        <div class="gl-v2-select-options">
+                            <button type="button" class="gl-v2-select-option @(Model.SelectedIssuerCompanyId.HasValue ? "" : "is-selected")" role="option" data-value="" data-label="Alle bedrijven">
+                                <i class="ph ph-check" aria-hidden="true"></i>
+                                <span>Alle bedrijven</span>
+                            </button>
+                            @foreach (var issuer in Model.IssuerCompanies)
+                            {
+                                <button type="button" class="gl-v2-select-option @(issuer.Id == Model.SelectedIssuerCompanyId ? "is-selected" : "")" role="option" data-value="@issuer.Id" data-label="@issuer.Name">
+                                    <i class="ph ph-check" aria-hidden="true"></i>
+                                    <span>@issuer.Name</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Status</span>
+                <div class="gl-v2-select gl-v2-filters-select" id="status-select">
+                    <input type="hidden" id="status-select-value" value="active" />
+                    <button type="button" class="gl-v2-select-trigger is-filled" id="status-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="status-select-panel">
+                        <span class="gl-v2-select-trigger-label" id="status-select-label">Enkel actief</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="gl-v2-select-backdrop" id="status-select-backdrop"></div>
+                    <div class="gl-v2-select-panel" id="status-select-panel" role="listbox" aria-labelledby="status-select-trigger">
+                        <div class="gl-v2-select-sheet-header">
+                            <span class="gl-v2-select-sheet-title">Status</span>
+                            <button type="button" class="gl-v2-select-sheet-close" id="status-select-close">Sluiten</button>
+                        </div>
+                        <div class="gl-v2-select-options">
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="all" data-label="Alle leveranciers">
+                                <i class="ph ph-check" aria-hidden="true"></i>
+                                <span>Alle leveranciers</span>
+                            </button>
+                            <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="active" data-label="Enkel actief">
+                                <i class="ph ph-check" aria-hidden="true"></i>
+                                <span>Enkel actief</span>
+                            </button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="inactive" data-label="Enkel inactief">
+                                <i class="ph ph-check" aria-hidden="true"></i>
+                                <span>Enkel inactief</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Activiteit</span>
+                <div class="gl-v2-leveranciers-activity">
+                    <select id="activity-filter" multiple data-plugin-selectTwo data-placeholder="Alle activiteiten" class="form-control populate">
+                        <option value=""></option>
+                        @foreach (var group in groupedActivities)
+                        {
+                            <optgroup label="@group.Key">
+                                @foreach (var activity in group.OrderBy(a => a.Name))
+                                {
+                                    <option value="@activity.Id">@activity.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-filters-chips" id="filters-chips">
+            <div class="gl-v2-filters-chip-list" id="filters-chip-list"></div>
+            <button type="button" class="gl-v2-filters-clear" id="filters-clear">Wissen</button>
+        </div>
+
+        @* Enkel <768px zichtbaar (gl-v2-leveranciers.css) — filters passen zichzelf al toe, dit is
+           puur een "klaar"-knop om het sheet te sluiten (design-handoff 4f "MOBIEL — FILTERSHEET").
+           Telt live mee via gl-v2-leveranciers.js (updateFilterShowButton, na elke table.draw()). *@
+        @* Drie losse spans i.p.v. "Toon {N} leveranciers" als platte tekst — .gl-v2-filters-show-btn
+           is een flex-container (align-items:center;justify-content:center), en whitespace-only
+           tekstknopen tussen flex-items worden niet altijd betrouwbaar als zichtbare ruimte
+           gerenderd; de eigen `gap` van de knop garandeert dat wél, ongeacht browser. *@
+        <button type="button" class="gl-v2-filters-show-btn" id="filters-show-btn">
+            <span>Toon</span>
+            <span id="filters-show-count">0</span>
+            <span>leveranciers</span>
+        </button>
+    </div>
+</div>
+@* Enkel zichtbaar/aanwezig <768px (gl-v2-leveranciers.css) — #filters-panel wordt daar een bottom
+   sheet, deze scrim erachter zoals overal elders in gl-v2 (rij-···-menu, quickactions-"Meer"). *@
+<div class="gl-v2-filters-panel-backdrop" id="filters-panel-backdrop" hidden></div>
+
+<div class="gl-v2-table-card">
+    @* Optie 4f "LADEN" — zichtbaar vanaf de allereerste paint, verdwijnt zodra gl-v2-leveranciers.js
+       .is-ready zet (na DataTable-init + eerste syncTablePageLength()). Kolommen zijn de 7 echte
+       kolommen van de tabel hieronder. *@
+    <div class="gl-v2-loading-skeleton" aria-hidden="true">
+        <div class="gl-v2-skeleton-header">
+            <span>Bedrijfsnaam</span><span>Ondernemingsnr.</span><span>GSM</span><span>Email</span>
+            <span>Contracten</span><span>Bedrag</span><span>Acties</span>
+        </div>
+        @for (var i = 0; i < 6; i++)
+        {
+            <div class="gl-v2-skeleton-row">
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:@(60 + i * 6)%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:75%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:80%"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:40%;margin-left:auto"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:70%;margin-left:auto"></span>
+                <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:60%;margin-left:auto"></span>
+            </div>
+        }
+        <div class="gl-v2-skeleton-footer"><i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i> Leveranciers laden…</div>
+
+        @* <768px: kaartvormige skeletons i.p.v. de tabelvorm hierboven (gl-v2-leveranciers.css
+           schakelt tussen de twee per breedte) — de tabel wordt daar toch een kaartenlijst, dus een
+           tabel-skelet zou een verkeerde vorm beloven zolang de echte inhoud nog laadt. *@
+        <div class="gl-v2-skeleton-cards">
+            @for (var i = 0; i < 5; i++)
+            {
+                <div class="gl-v2-skeleton-card">
+                    <div class="gl-v2-skeleton-card-row">
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:@(50 + i * 6)%;height:13px"></span>
+                    </div>
+                    <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:35%;height:8px"></span>
+                    <div class="gl-v2-skeleton-card-row gl-v2-skeleton-card-row-divided">
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:55%"></span>
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:30%"></span>
+                    </div>
+                    <div class="gl-v2-skeleton-card-row gl-v2-skeleton-card-row-divided">
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:22%"></span>
+                        <span class="gl-v2-skeleton-box gl-v2-skeleton-text" style="width:22%"></span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="datatables-header-footer-wrapper">
+        <div class="table-responsive-md">
+            <table class="table table-hover mb-0 w-100" id="datatable-suppliers">
+                <thead>
+                    <tr>
+                        <th>Bedrijfsnaam</th>
+                        <th>Ondernemingsnummer</th>
+                        <th>GSM (indien niet telefoon)</th>
+                        <th>Email</th>
+                        <th>Contracten</th>
+                        <th>Bedrag</th>
+                        <th class="text-end noVis">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var supplier in Model.Suppliers)
+                    {
+                        var activityData = string.Join(",", supplier.ActivityIds);
+                        var issuerData = string.Join(",", supplier.IssuerCompanyIds);
+                        <tr data-id="@supplier.Id" data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()">
+                            <td>
+                                <a class="gl-v2-supplier-name-link" href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">@supplier.Name</a>
+                                @if (!supplier.IsActive)
+                                {
+                                    <span class="gl-v2-inactive-badge">INACTIEF</span>
+                                }
+                            </td>
+                            <td>@supplier.EnterpriseNumberDisplay</td>
+                            <td>@supplier.PrimaryPhoneDisplay</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(supplier.Email))
+                                {
+                                    <a href="mailto:@supplier.Email">@supplier.Email</a>
+                                }
+                                else
+                                {
+                                    @:-
+                                }
+                            </td>
+                            <td class="text-end">@supplier.ContractCount</td>
+                            <td class="text-end">@supplier.TotalContractAmount.ToString("C", currencyCulture)</td>
+                            <td class="text-end">
+                                <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="row-menu-@supplier.Id" aria-label="Meer acties">
+                                    <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                </button>
+                                <div class="gl-v2-row-menu" id="row-menu-@supplier.Id">
+                                    <a class="gl-v2-row-action" data-placement="top" title="Details" data-original-title="Details" href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">
+                                        <i class="ph ph-eye" aria-hidden="true"></i>
+                                        <span class="gl-v2-row-action-label">Details</span>
+                                    </a>
+                                    @if (supplier.CanEdit)
+                                    {
+                                        <a class="gl-v2-row-action" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("Edit", "Leveranciers", new { id = supplier.Id })">
+                                            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Bewerken</span>
+                                        </a>
+                                    }
+                                    @if (supplier.CanDelete)
+                                    {
+                                        <div class="gl-v2-row-menu-divider" aria-hidden="true"></div>
+                                        <a href="#deleteSupplierConfirmModal" class="gl-v2-row-action gl-v2-row-action-danger deleteSupplier" data-id="@supplier.Id" data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                            <i class="ph ph-trash" aria-hidden="true"></i>
+                                            <span class="gl-v2-row-action-label">Verwijderen</span>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @* Optie 4c "Mobiel — als kaarten": echt gescheiden markup, gevuld door gl-v2-leveranciers.js'
+           renderMobileCards() op elke DataTable-"draw" — zie die JS-file voor de opbouw. *@
+        <div class="gl-v2-mobile-supplier-list" id="gl-v2-mobile-supplier-list"></div>
+        <div class="gl-v2-row-menu-backdrop" id="gl-v2-row-menu-backdrop"></div>
+    </div>
+</div>
+
+@* Optie 4j TYPE 1 (danger) — inhoud via AJAX geladen (gl-v2-leveranciers.js,
+   Modals/_ModalDeleteSupplierV2.cshtml levert de .modal-body/.modal-footer-inhoud). *@
+<div class="modal fade gl-v2-modal-confirm" id="deleteSupplierConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger" id="delete-supplier-container"></div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        window.glV2LeveranciersConfig = {
+            deleteUrl: '@Url.Action("ModalDeleteV2", "Leveranciers")',
+            createUrl: '@Url.Action("Create", "Leveranciers")',
+            canCreate: @Html.Raw(Model.CanCreateSupplier ? "true" : "false"),
+            writableIssuerIds: [@string.Join(",", Model.WritableIssuerCompanyIds)]
+        };
+    </script>
+    <script src="~/js/gl-v2-leveranciers.js" asp-append-version="true"></script>
+}

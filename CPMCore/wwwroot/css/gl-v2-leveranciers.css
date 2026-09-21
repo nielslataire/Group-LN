@@ -1,0 +1,810 @@
+/* gl-v2 layout-pilot — Leveranciers (design-handoff/DESIGN.md.gl-v2-draft.md, optie 4a/4e/4f/4j —
+   dezelfde tabel/pagination/rij-actie/laadstaat/lege-staat/mobiele-kaart-taal als de Facturen-BCO-
+   pagina, hier toegepast op de leverancierslijst). Zelfde model/data als Views/Leveranciers/
+   Index.cshtml (LeveranciersController.Index levert exact dezelfde vm aan beide views) — enkel de
+   kop/toolbar-markup en de CSS-klassen op de tabel-kaart zijn nieuw t.o.v. Index.cshtml.
+
+   Bewust een EIGEN bestand i.p.v. gl-v2-invoices.css hergebruiken: de herbruikbare stukken (kaart-
+   schil, rij-···-menu, pagination/footer, laadstaat, lege staat) bestaan vandaag enkel binnen dat
+   ene Facturen-specifieke bestand, samen met facturen-eigen dingen (status-iconen, boeken-checkbox,
+   boekjaar-kolom) die hier niet van toepassing zijn. Een gedeeld bestand uitpuren was een grotere,
+   risicovollere ingreep op een al werkende pagina dan vandaag gevraagd — dus hier gekopieerd/
+   aangepast i.p.v. gedeeld, zelfde "twee genuine verschillende vormen, geen gedwongen hergebruik"-
+   aanpak als de rest van gl-v2 (zie DESIGN.md, mobiele kaart-varianten). */
+
+/* ── Topbar-filtericoon (optie 4f, mobiel) — claimt via @@section MobileTopbarAction
+   (_LayoutV2.cshtml) de plek van de nog-niet-aangesloten zoek-stub. Zelfde wit-op-donkergroen-
+   taal als .gl-v2-topbar-bell ernaast (border/hover/34px-hoogte, zelfde als de hamburger/bel
+   ernaast), maar een pil i.p.v. een cirkel: icoon + tellertje moeten naast elkaar in één vorm
+   passen, geen los hoek-badge. Enkel <768px zichtbaar — ≥768px heeft deze pagina de inline
+   "Filters"-knop in de toolbar al (.gl-v2-filters-toggle). ──────────────────────────────────── */
+.gl-v2-topbar-filter-btn { display: none; }
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        height: 34px;
+        padding: 0 12px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, .5);
+        background: transparent;
+        color: var(--gl-v2-surface);
+        flex: none;
+        cursor: pointer;
+    }
+    .gl-v2-topbar-filter-btn i { font-size: 15px; }
+    .gl-v2-topbar-filter-btn:hover,
+    .gl-v2-topbar-filter-btn:focus-visible,
+    .gl-v2-topbar-filter-btn.is-open,
+    .gl-v2-topbar-filter-btn.has-active {
+        background: rgba(255, 255, 255, .16);
+        border-color: var(--gl-v2-surface);
+        outline: none;
+    }
+    .gl-v2-topbar-filter-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        border-radius: 8px;
+        background: var(--gl-v2-surface);
+        color: var(--gl-v2-primary);
+        font: 700 9.5px var(--gl-v2-font-sans);
+    }
+    .gl-v2-topbar-filter-count[hidden] { display: none; }
+}
+
+.gl-v2-toolbar-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+    flex: none;
+}
+
+.gl-v2-toolbar-search {
+    flex: 1;
+    min-width: 180px;
+}
+.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
+
+/* ── Filters (design-handoff optie 4f "FILTERS OPEN") — zoekveld + Filters-knop op één rij, de
+   knop klapt de filtervelden-grid + badges-rij eronder open/dicht i.p.v. alle filters los in de
+   toolbar-rij te laten staan. .gl-v2-filters-card herschikt de generieke .gl-v2-toolbar-card
+   (hierboven, nog steeds gebruikt als kaart-schil) van een enkele rij naar kolom-gestapeld. ────── */
+.gl-v2-filters-card { flex-direction: column; align-items: stretch; gap: 0; }
+
+.gl-v2-filters-row { display: flex; gap: 10px; align-items: center; width: 100%; }
+
+.gl-v2-filters-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-ink);
+    font: 600 12.5px var(--gl-v2-font-sans);
+    flex: none;
+    cursor: pointer;
+}
+.gl-v2-filters-toggle i { font-size: 15px; }
+.gl-v2-filters-toggle:hover { background: var(--gl-v2-hover-tint); }
+/* Zelfde groen-op-lichtgroen als de badges eronder zodra er minstens 1 filter actief staat, of
+   zolang het paneel openstaat — matcht 4f's eigen "Filters [3]"-knopstaat. */
+.gl-v2-filters-toggle.is-open,
+.gl-v2-filters-toggle.has-active {
+    border-color: var(--gl-v2-primary);
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+}
+.gl-v2-filters-toggle-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    font: 600 10px var(--gl-v2-font-sans);
+}
+.gl-v2-filters-toggle-count[hidden] { display: none; }
+
+.gl-v2-filters-panel { padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-filters-panel[hidden] { display: none; }
+
+/* Sheet-header (design-handoff 4f "MOBIEL — FILTERSHEET") — enkel <768px, zie de mobiele
+   media query verderop voor de eigenlijke display:flex/block-omschakeling. Hier de vorm die
+   ongeacht breedte hetzelfde blijft; hidden by default zodat 'm op desktop/tablet niets kost. */
+.gl-v2-filters-sheet-header { display: none; }
+.gl-v2-filters-sheet-handle {
+    width: 42px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gl-v2-dashed);
+    align-self: center;
+    margin: 0 auto 10px;
+}
+.gl-v2-filters-sheet-title-row { display: flex; align-items: center; gap: 10px; }
+.gl-v2-filters-sheet-title { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-filters-sheet-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 9px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    font: 600 10px var(--gl-v2-font-sans);
+}
+.gl-v2-filters-sheet-badge[hidden] { display: none; }
+.gl-v2-filters-sheet-spacer { flex: 1; }
+.gl-v2-filters-sheet-clear { height: auto; padding: 0; margin-left: 0; }
+
+.gl-v2-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+@media (max-width: 767.98px) {
+    .gl-v2-filters-grid { grid-template-columns: 1fr; }
+
+    /* De inline "Filters"-knop naast het zoekveld is hier overbodig — de topbar-filtericoon
+       (@@section MobileTopbarAction) doet exact hetzelfde (zelfde #filters-panel, zelfde tellertje)
+       en is sowieso al zichtbaar zonder naar de toolbar-kaart te moeten scrollen. Enkel de knop zelf
+       verdwijnt; het zoekveld ernaast (flex:1) vult de vrijgekomen ruimte gewoon zelf op. */
+    .gl-v2-filters-toggle { display: none; }
+
+    /* #filters-panel wordt hier een bottom sheet (boven de snelactiebalk, zelfde offset-truc als
+       het rij-···-menu verderop) i.p.v. inline in de toolbar-kaart te blijven staan — bereikbaar
+       via de nieuwe topbar-filtericoon (@@section MobileTopbarAction) zonder eerst naar de toolbar
+       te moeten scrollen. `:not([hidden])`: de basis `[hidden]{display:none}`-regel hierboven blijft
+       zo de enige "verborgen"-waarheid, geen aparte show/hide-klasse nodig. */
+    .gl-v2-filters-panel-backdrop {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+    .gl-v2-filters-panel-backdrop[hidden] { display: none; }
+
+    .gl-v2-filters-panel:not([hidden]) {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
+        max-height: 75dvh;
+        overflow-y: auto;
+        margin: 0;
+        padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+        border-top: 0;
+        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 99999;
+    }
+
+    /* Sheet-header aan (handvat/titel/badge/Wissen) — dat "N actief"-badge + "Wissen" dekken de
+       badges-rij eronder qua functie al (wissen-alles, aantal-actief), dus die hele rij (chips MET
+       hun eigen ×'jes, niet enkel de bottom-"Wissen"-knop) verdwijnt hier — op deze breedte is
+       "Wissen" toch alles-of-niets zolang er geen aparte per-veld-reset in de header zit.
+       De regel zelf staat NIET hier (zie de latere mobiele @@media verderop in dit bestand) — de
+       onvoorwaardelijke basisregel .gl-v2-filters-chips{display:flex} (verderop, na deze @@media)
+       heeft dezelfde specificiteit en komt LATER in het bestand, dus zou een display:none hier
+       gewoon weer overschrijven ongeacht of deze media query actief is. */
+    .gl-v2-filters-sheet-header { display: block; margin-bottom: 4px; }
+
+    /* Design-handoff 4f "MOBIEL — FILTERSHEET" footer — enkel de "Toon N"-helft: geen los
+       "Annuleren" ernaast zoals het voorbeeld nog toont, om dezelfde reden er geen "Toepassen"-knop
+       is (filters passen zichzelf al toe; de backdrop/Esc/topbar-icoon dekken "annuleren" al). */
+    .gl-v2-filters-show-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+        height: 46px;
+        margin-top: 4px;
+        border: 0;
+        border-radius: var(--gl-v2-radius-sm);
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        font: 600 13px var(--gl-v2-font-sans);
+        cursor: pointer;
+    }
+    .gl-v2-filters-show-btn:hover,
+    .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
+}
+@media (min-width: 768px) {
+    .gl-v2-filters-show-btn { display: none; }
+}
+
+.gl-v2-filters-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gl-v2-filters-field-label {
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.gl-v2-filters-select { width: 100%; }
+.gl-v2-filters-select .gl-v2-select-trigger { width: 100%; height: 38px; }
+
+.gl-v2-filters-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+}
+/* Losse wrapper voor enkel de badges (JS leegt/hervult puur deze, nooit .gl-v2-filters-chips zelf)
+   — zodat een volledige .empty()+rebuild bij elke filterwijziging nooit per ongeluk de "Wissen"-
+   knop zelf kan raken/verwijderen, ongeacht invoegvolgorde. flex:1 laat "Wissen" via de ouder se
+   eigen justify-content vanzelf helemaal rechts staan, ook met nul badges. */
+.gl-v2-filters-chip-list {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.gl-v2-filters-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 28px;
+    padding: 0 6px 0 10px;
+    border-radius: 14px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    font: 600 11px var(--gl-v2-font-sans);
+    border: 0;
+    cursor: pointer;
+}
+.gl-v2-filters-chip i { font-size: 12px; }
+.gl-v2-filters-chip:hover { background: #C6DABA; }
+
+.gl-v2-filters-clear {
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: var(--gl-v2-primary);
+    font: 600 11.5px var(--gl-v2-font-sans);
+    cursor: pointer;
+    margin-left: auto;
+}
+.gl-v2-filters-clear:hover { text-decoration: underline; }
+.gl-v2-filters-clear[hidden] { display: none; }
+
+/* Activiteitenfilter (Select2, meerdere activiteiten): niet meegenomen in het gl-v2-select-
+   hertekenwerk hierboven — dat is vandaag enkel de BASIS-paneelvariant (één waarde), geen
+   meerdere-aanvinken-met-zoekveld-variant. Select2 blijft hier dus functioneel ongewijzigd, enkel
+   op dezelfde 38px-triggerhoogte als de twee andere filtervelden getrokken zodat de grid-rij
+   visueel één geheel blijft. */
+.gl-v2-leveranciers-activity { width: 100%; }
+.gl-v2-leveranciers-activity .select2-container { width: 100% !important; }
+/* `display:flex;align-items:center` hier zette Select2's eigen interne layout (de keuzelijst vult
+   normaal de volle breedte via block-layout, niet flex) buitenspel — de gerenderde inhoud
+   (placeholder/zoekveld) kromp dan terug tot content-breedte i.p.v. de volle 100%, en het
+   Select2-eigen `overflow:hidden` op die binnenste laag knipte "Alle activiteiten" daardoor af tot
+   "Alle ac". min-height i.p.v. een vaste height (multi-select moet nog kunnen groeien bij meerdere
+   getoonde tags) + padding voor de verticale centrering volstaat, geen flex nodig. */
+.gl-v2-leveranciers-activity .select2-selection {
+    min-height: 38px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-radius: var(--gl-v2-radius-sm) !important;
+    border-color: var(--gl-v2-hairline) !important;
+    box-sizing: border-box;
+}
+/* Still truncating after the fix above: Select2 sets the search `<input>`'s width as an INLINE
+   style, recalculated (small, content-hugging) on every keystroke — empty/placeholder state is no
+   exception, so the native placeholder attribute gets clipped by that narrow inline width rather
+   than by any overflow/layout rule. Only `!important` beats an inline style, so it has to land
+   here instead of on a parent. `select2-search--inline` (the <li> wrapper) also defaults to a
+   content-hugging width in the bootstrap theme — same fix needed one level up. */
+.gl-v2-leveranciers-activity .select2-search--inline,
+.gl-v2-leveranciers-activity .select2-search__field {
+    width: 100% !important;
+}
+
+.gl-v2-table-card {
+    flex: none;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 18px 40px -28px rgba(44, 59, 42, .4);
+    overflow: hidden;
+    padding-bottom: 16px;
+}
+
+/* ── Laadstaat (optie 4f "LADEN") ─────────────────────────────────────────────────────────────── */
+.gl-v2-loading-skeleton { display: flex; flex-direction: column; }
+.gl-v2-table-card.is-ready .gl-v2-loading-skeleton { display: none; }
+.gl-v2-table-card:not(.is-ready) .datatables-header-footer-wrapper { display: none; }
+
+.gl-v2-skeleton-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px 110px 170px 90px 110px 90px;
+    column-gap: 12px;
+    align-items: center;
+    padding: 0 14px;
+    height: 44px;
+    flex: none;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    font: 600 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    letter-spacing: .04em;
+}
+
+.gl-v2-skeleton-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px 110px 170px 90px 110px 90px;
+    column-gap: 12px;
+    align-items: center;
+    padding: 0 14px;
+    height: 52px;
+    flex: none;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+
+.gl-v2-skeleton-box {
+    background: #EDEFEA;
+    border-radius: 5px;
+    animation: gl-v2-skeleton-pulse 1.4s ease-in-out infinite;
+}
+.gl-v2-skeleton-text { height: 10px; }
+
+@keyframes gl-v2-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+.gl-v2-skeleton-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    height: 46px;
+    flex: none;
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-skeleton-footer i { font-size: 15px; color: var(--gl-v2-primary); }
+.gl-v2-skeleton-footer .gl-v2-spin { animation: gl-v2-spin 1s linear infinite; }
+@keyframes gl-v2-spin { to { transform: rotate(360deg); } }
+
+/* Kaartvormige skeletons (<768px) — hidden by default (desktop/tablet keep the table-shaped
+   skeleton above), swapped in per breakpoint below. Same card shell as the real
+   .gl-v2-supplier-card so the loading state doesn't promise a different layout than what actually
+   renders once the data arrives. */
+.gl-v2-skeleton-cards { display: none; }
+@media (max-width: 767.98px) {
+    .gl-v2-skeleton-header,
+    .gl-v2-skeleton-row,
+    .gl-v2-skeleton-footer {
+        display: none;
+    }
+    .gl-v2-skeleton-cards { display: flex; flex-direction: column; gap: 10px; }
+    .gl-v2-skeleton-card {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        padding: 13px 14px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-skeleton-card-row { display: flex; align-items: center; gap: 10px; }
+    .gl-v2-skeleton-card-row-divided { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+}
+
+/* ── Lege staat (optie 4f "LEGE STAAT") ───────────────────────────────────────────────────────── */
+.gl-v2-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 44px 24px;
+    text-align: center;
+}
+.gl-v2-empty-state-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.gl-v2-empty-state-icon i { font-size: 28px; }
+.gl-v2-empty-state-title { font: 500 17px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
+.gl-v2-empty-state-desc { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 280px; margin: 0; }
+.gl-v2-empty-state-actions { display: flex; gap: 9px; padding-top: 4px; }
+.gl-v2-empty-state-inline { padding: 44px 24px; }
+
+.gl-v2 #datatable-suppliers {
+    font-family: var(--gl-v2-font-sans);
+}
+
+.gl-v2 #datatable-suppliers thead th {
+    padding-left: 10px;
+    padding-right: 26px;
+    font: 600 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    letter-spacing: .04em;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+
+.gl-v2 #datatable-suppliers tbody td {
+    height: 54px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+
+.gl-v2 #datatable-suppliers thead th:first-child,
+.gl-v2 #datatable-suppliers tbody td:first-child {
+    padding-left: 14px;
+}
+.gl-v2 #datatable-suppliers thead th:last-child,
+.gl-v2 #datatable-suppliers tbody td:last-child {
+    padding-right: 20px;
+}
+
+.gl-v2 #datatable-suppliers tbody tr:hover td { background: var(--gl-v2-hover-tint); }
+
+.gl-v2 #datatable-suppliers .gl-v2-supplier-name-link {
+    color: var(--gl-v2-ink);
+    font-weight: 600;
+    text-decoration: none;
+}
+.gl-v2 #datatable-suppliers .gl-v2-supplier-name-link:hover,
+.gl-v2 #datatable-suppliers .gl-v2-supplier-name-link:focus-visible {
+    color: var(--gl-v2-primary);
+    text-decoration: underline;
+}
+
+.gl-v2 #datatable-suppliers .gl-v2-inactive-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    margin-left: 8px;
+    border-radius: 5px;
+    background: #FBEDEA;
+    color: #8B2A2A;
+    font: 700 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .06em;
+}
+
+/* ── Rij-actieknoppen: zelfde twee families als Facturen (neutraal/danger — geen "primair" hier,
+   Bewerken is geen bewerken-in-de-tabel-context zoals daar) ─────────────────────────────────── */
+.gl-v2 #datatable-suppliers .gl-v2-row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--gl-v2-muted);
+    text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.gl-v2 #datatable-suppliers .gl-v2-row-action i { font-size: 15px; }
+.gl-v2 #datatable-suppliers .gl-v2-row-action:hover,
+.gl-v2 #datatable-suppliers .gl-v2-row-action:focus-visible {
+    border-color: var(--gl-v2-primary);
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    outline: none;
+}
+.gl-v2 #datatable-suppliers .gl-v2-row-action-danger:hover,
+.gl-v2 #datatable-suppliers .gl-v2-row-action-danger:focus-visible {
+    background: #F8EBEB;
+    border-color: #8B2A2A;
+    color: #8B2A2A;
+}
+
+/* ── Footer/pagination (optie 4a) — identiek aan de Facturen-pagina, hier los omdat we
+   gl-v2-invoices.css niet meeladen. ──────────────────────────────────────────────────────────── */
+.gl-v2 .dt-container .dt-layout-row:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0 16px !important;
+    flex: none;
+    border-top: 1px solid var(--gl-v2-hairline);
+}
+/* Zelfde als Facturen: geen topStart-knoppen (colvis) en geen ingebouwde zoekbalk (topEnd, verborgen
+   via JS — zie gl-v2-leveranciers.js), dus de EERSTE .dt-layout-row draagt hier niets zichtbaars
+   meer — verbergen i.p.v. DataTables' eigen Bootstrap5-marge/padding een lege balk laten tonen. */
+.gl-v2 .dt-container .dt-layout-row:first-child { display: none; }
+.gl-v2 .dt-info { padding-left: 14px; color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2 .dt-paging { padding-right: 14px; }
+.gl-v2 .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
+.gl-v2 .dt-paging .page-link {
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 600 12px var(--gl-v2-font-sans);
+}
+.gl-v2 .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2 .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2 .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+
+/* ── "···"-rijmenu — zelfde trigger+paneel-component/gedrag als de Facturen-pagina (design-handoff
+   optie 4f "TABLET" / 4j type 3 "MOBIEL"), hier los gedefinieerd om dezelfde reden als hierboven. */
+.gl-v2-row-menu {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+.gl-v2-row-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+.gl-v2-row-menu-trigger,
+.gl-v2-row-menu-divider { display: none; }
+.gl-v2-mobile-supplier-list { display: none; }
+.gl-v2-row-menu-backdrop { display: none; }
+
+@media (max-width: 1023.98px) {
+    .gl-v2-row-menu-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-left: auto;
+        border-radius: 8px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-muted);
+        cursor: pointer;
+        flex: none;
+    }
+    .gl-v2-row-menu-trigger i { font-size: 16px; }
+    .gl-v2-row-menu-trigger:hover,
+    .gl-v2-row-menu-trigger.is-menu-open,
+    .gl-v2-row-menu-trigger:focus-visible {
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        outline: none;
+    }
+    .gl-v2-row-menu { display: none; }
+    .gl-v2-row-menu.is-open {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        position: fixed;
+        width: 200px;
+        padding: 6px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 99997;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+    }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 9px 8px;
+        border-radius: 9px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-ink);
+        font: 450 12.5px var(--gl-v2-font-sans);
+    }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action i { font-size: 15px; color: var(--gl-v2-primary); }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action:hover,
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible {
+        background: var(--gl-v2-hover-tint);
+        border: 0;
+        color: var(--gl-v2-ink);
+    }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action:hover i,
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: #8B2A2A; font-weight: 600; }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
+    .gl-v2 #datatable-suppliers .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
+        background: #F8EBEB;
+        border: 0;
+        color: #8B2A2A;
+    }
+}
+
+/* ── Tablet (768–1023.98px): verberg Ondernemingsnummer + GSM, tabelvorm blijft. Kolomvolgorde
+   (1-indexed): 1 Bedrijfsnaam, 2 Ondernemingsnummer, 3 GSM, 4 Email, 5 Contracten, 6 Bedrag,
+   7 Acties. ────────────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2 #datatable-suppliers thead th:nth-child(2),
+    .gl-v2 #datatable-suppliers tbody td:nth-child(2),
+    .gl-v2 #datatable-suppliers thead th:nth-child(3),
+    .gl-v2 #datatable-suppliers tbody td:nth-child(3) {
+        display: none;
+    }
+}
+
+/* ── Mobiel (<768px): leverancier als kaart, zelfde architectuur als de Facturen-mobiele-kaarten
+   (echt gescheiden markup, gevuld door renderMobileCards() in gl-v2-leveranciers.js) — enkel geen
+   proxy-checkbox nodig, leveranciers hebben geen bulkselectie. ─────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-table-card {
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+    .gl-v2-table-card .table-responsive-md { display: none; }
+
+    .gl-v2-mobile-supplier-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .gl-v2-supplier-card {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        padding: 13px 14px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
+    }
+    /* Lege staat (JS renderMobileCards()) hergebruikt .gl-v2-supplier-card enkel voor de witte/
+       geschaduwde kaartschil — .gl-v2-empty-state draagt zelf al de juiste padding (44px 24px), dus
+       de kaart se eigen 13px/14px zou dat gewoon optellen i.p.v. vervangen. */
+    .gl-v2-mobile-empty-card { padding: 0; }
+
+    .gl-v2-sc-row { display: flex; align-items: center; gap: 8px; }
+    .gl-v2-sc-name { flex: 1; min-width: 0; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-sc-row > .gl-v2-row-menu-trigger { flex: none; margin-left: 0; }
+    .gl-v2-sc-meta { font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .04em; }
+    .gl-v2-sc-contact { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+    .gl-v2-sc-contact-item { display: flex; align-items: center; gap: 6px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+    .gl-v2-sc-contact-item i { font-size: 13px; color: var(--gl-v2-muted); }
+    .gl-v2-sc-contact-item a { color: inherit; text-decoration: none; }
+    .gl-v2-sc-stats { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); justify-content: space-between; }
+    .gl-v2-sc-stat { display: flex; flex-direction: column; gap: 1px; }
+    .gl-v2-sc-stat-label { font: 500 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .06em; text-transform: uppercase; }
+    .gl-v2-sc-stat-value { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+
+    .gl-v2-supplier-card > .gl-v2-row-menu-trigger { flex: none; }
+
+    .gl-v2-row-menu-backdrop.is-open {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+    /* bottom: boven de mobiele snelactiebalk i.p.v. erover — deze pagina heeft (anders dan
+       Facturen) altijd een snelactiebalk-kandidaat ("Nieuwe leverancier"), dus zonder deze offset
+       zou het sheet de balk gewoon bedekken i.p.v. erboven te verschijnen. --gl-v2-qa-bar-h staat
+       sowieso al op .gl-v2 op deze breedte (gl-v2-shell.css); de calc() kost niets wanneer de balk
+       er voor deze gebruiker toevallig niet is (canCreate false) — het sheet komt dan gewoon een
+       balkhoogte hoger te staan dan strikt nodig, geen zichtbaar gebroken layout. */
+    .gl-v2-row-menu.is-open {
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
+        top: auto;
+        width: auto;
+        max-height: 70dvh;
+        border-radius: 18px 18px 0 0;
+        padding: 10px 10px 18px;
+        overflow-y: auto;
+        z-index: 99999;
+    }
+    .gl-v2-row-menu.is-open::before {
+        content: "";
+        width: 42px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-dashed);
+        align-self: center;
+        flex: none;
+        margin-bottom: 8px;
+    }
+    .gl-v2-row-menu-title {
+        padding: 2px 8px 6px;
+        font: 500 16px var(--gl-v2-font-serif);
+        color: var(--gl-v2-ink);
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action {
+        width: 100%;
+        height: auto;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 11px;
+        padding: 13px 10px;
+        border-radius: 10px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-ink);
+        font: 450 13.5px var(--gl-v2-font-sans);
+        text-decoration: none;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action i { font-size: 17px; color: var(--gl-v2-primary); }
+    .gl-v2-row-menu.is-open .gl-v2-row-action:hover,
+    .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible {
+        background: var(--gl-v2-hover-tint);
+        color: var(--gl-v2-ink);
+        outline: none;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: #8B2A2A; font-weight: 600; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
+        background: #F8EBEB;
+        color: #8B2A2A;
+    }
+}

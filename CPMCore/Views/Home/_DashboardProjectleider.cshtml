@@ -403,7 +403,20 @@ else
     <!-- /MELDINGSCENTRUM -->
 
     <!-- MIJN WERVEN: 2/4 -->
-    <div class="col-lg-6 col-xxl-8">
+    @* De buitenste kolomklasse hier is, anders dan de "gl-v2-* companion-klassen"-regel verderop,
+       wél voorwaardelijk: Meldingen ernaast is `col-auto` met een vaste 360px-CSS-breedte
+       (.gl-v2-mc-panel, gl-v2-shell.css), maar Bootstrap's grid-wiskunde weet daar niets van — een
+       col-auto-buur telt niet mee in de 12-koloms-verdeling van de ANDERE kolommen. Met Mijn Werven
+       hier vast op col-xxl-8 (66,67%) en Snelacties op col-xxl-2 (16,67%) tellen die twee al op tot
+       100% VOOR Meldingen's 360px er nog bij komt — gegarandeerde overflow, waardoor Snelacties (en
+       vroeger ook de Keypoints-kolom) naar een tweede regel wrapt, ver onder de (hoge) Mijn-Werven-
+       kaartengrid. `.col` (geen breedte-klasse, enkel flex-grow) i.p.v. een vaste col-xxl-8 lost dit
+       structureel op: Mijn Werven neemt dan gewoon wat er overblijft NA Meldingen's 360px en
+       Snelacties' 16,67%, in plaats van zelf ook nog eens een vaste 66,67% te claimen — geen
+       overflow meer mogelijk, ongeacht schermbreedte. Legacy (else) blijft ongewijzigd op col-lg-6
+       col-xxl-8, dezelfde wiskunde als altijd (daar is Meldingen ook een echte col-xxl-2, geen
+       col-auto, dus geen probleem om te fixen). *@
+    <div class="@(useGlV2Layout ? "col gl-v2-mw-col" : "col-lg-6 col-xxl-8")">
 
         @* gl-v2-* companion-klassen hieronder zijn bewust ONVOORWAARDELIJK toegevoegd (geen
            @if(useGlV2Layout)-vertakking nodig voor dit stukje): gl-v2-shell.css laadt sowieso enkel
@@ -669,14 +682,25 @@ else
     }
     <!-- /SNELACTIES -->
 
-    <div class="col-lg-3 col-xxl-2 mt-3 mt-lg-0">
-        <div class="mb-3">
-            @await Html.PartialAsync("_MijnKeypointsWidget")
+    @* Legacy: blijft in dezelfde .row als Meldingen/Mijn Werven/Snelacties — met Meldingen daar een
+       echte col-xxl-2 (geen col-auto) telt de rij al op tot 2+8+2+2=14/12, dus deze kolom wrapt daar
+       toch al altijd vanzelf naar een eigen regel; niets aan veranderd. *@
+    @if (!useGlV2Layout)
+    {
+        <div class="col-lg-3 col-xxl-2 mt-3 mt-lg-0">
+            <div class="mb-3">
+                @await Html.PartialAsync("_MijnKeypointsWidget")
+            </div>
+            @await Html.PartialAsync("_MijnTakenWidget")
         </div>
-        @await Html.PartialAsync("_MijnTakenWidget")
-    </div>
+    }
 
 </div>
+
+@* gl-v2: "Mijn mijlpalen"/"Mijn taken" (_MijnKeypointsWidget/_MijnTakenWidget) bewust verborgen op
+   dit dashboard — ongewijzigde Porto-thema-kaarten, nog niet naar gl-v2 herbouwd, en op gebruikers-
+   verzoek weggelaten i.p.v. ongestileerd tussen de gl-v2-kaarten te laten staan. Blijven wel bestaan
+   voor de legacy dashboard (zie `@@if (!useGlV2Layout)` hierboven). *@
 
 @if (!useGlV2Layout)
 {
@@ -695,55 +719,52 @@ else
             <span>Klant</span>
         </button>
     </nav>
-}
 
-<!-- ── PUNT PROJECTKEUZE SHEET ──────────────────────────────────────── -->
-<div id="gl-punt-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Punt toevoegen – kies project">
-    <div class="gl-mob-sheet-overlay" id="gl-punt-overlay"></div>
-    <div class="gl-mob-sheet-panel">
-        <div class="gl-mob-sheet-handle"></div>
-        <div class="gl-mob-sheet-header">
-            <span>Kies een project</span>
-            <button type="button" id="gl-punt-close" aria-label="Sluiten">&times;</button>
-        </div>
-        <div class="gl-mob-sheet-search">
-            <input type="text" id="gl-punt-search" placeholder="Zoek project…" autocomplete="off" />
-        </div>
-        <div class="gl-mob-sheet-list" id="gl-punt-list">
-            <div class="gl-mob-sheet-section-label" id="gl-punt-mijn-label">Mijn projecten</div>
-            @if (!werfProjects.Any())
-            {
-                <div class="gl-mob-sheet-empty">Geen actieve projecten</div>
-            }
-            else
-            {
-                @foreach (var p in werfProjects)
+    <!-- ── PUNT PROJECTKEUZE SHEET ──────────────────────────────────────── -->
+    <div id="gl-punt-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Punt toevoegen – kies project">
+        <div class="gl-mob-sheet-overlay" id="gl-punt-overlay"></div>
+        <div class="gl-mob-sheet-panel">
+            <div class="gl-mob-sheet-handle"></div>
+            <div class="gl-mob-sheet-header">
+                <span>Kies een project</span>
+                <button type="button" id="gl-punt-close" aria-label="Sluiten">&times;</button>
+            </div>
+            <div class="gl-mob-sheet-search">
+                <input type="text" id="gl-punt-search" placeholder="Zoek project…" autocomplete="off" />
+            </div>
+            <div class="gl-mob-sheet-list" id="gl-punt-list">
+                <div class="gl-mob-sheet-section-label" id="gl-punt-mijn-label">Mijn projecten</div>
+                @if (!werfProjects.Any())
                 {
-                    <button type="button" class="gl-mob-sheet-item gl-punt-mijn-item"
-                            data-pid="@p.Id"
-                            data-pname="@p.Name"
-                            data-name="@p.Name.ToLower()">
-                        <i class="bx bx-location-pin"></i>
-                        @p.Name
-                    </button>
+                    <div class="gl-mob-sheet-empty">Geen actieve projecten</div>
                 }
-            }
-            <div id="gl-punt-extra-label" class="gl-mob-sheet-section-label d-none">Andere projecten</div>
-            <div id="gl-punt-extra"></div>
+                else
+                {
+                    @foreach (var p in werfProjects)
+                    {
+                        <button type="button" class="gl-mob-sheet-item gl-punt-mijn-item"
+                                data-pid="@p.Id"
+                                data-pname="@p.Name"
+                                data-name="@p.Name.ToLower()">
+                            <i class="bx bx-location-pin"></i>
+                            @p.Name
+                        </button>
+                    }
+                }
+                <div id="gl-punt-extra-label" class="gl-mob-sheet-section-label d-none">Andere projecten</div>
+                <div id="gl-punt-extra"></div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- ── PUNT FULLSCREEN MODAL (iframe) ───────────────────────────────── -->
-<div id="gl-issues-modal" class="gl-fs-modal" role="dialog" aria-modal="true">
-    <div class="gl-fs-modal-loading" aria-hidden="true">
-        <span class="gl-fs-spinner"></span>
+    <!-- ── PUNT FULLSCREEN MODAL (iframe) ───────────────────────────────── -->
+    <div id="gl-issues-modal" class="gl-fs-modal" role="dialog" aria-modal="true">
+        <div class="gl-fs-modal-loading" aria-hidden="true">
+            <span class="gl-fs-spinner"></span>
+        </div>
+        <iframe id="gl-issues-frame" src="about:blank" title="Punt toevoegen"></iframe>
     </div>
-    <iframe id="gl-issues-frame" src="about:blank" title="Punt toevoegen"></iframe>
-</div>
 
-@if (!useGlV2Layout)
-{
     <!-- ── LEVERANCIER ZOEK SHEET ───────────────────────────────────────── -->
     <div id="gl-lev-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Leverancier zoeken">
         <div class="gl-mob-sheet-overlay" id="gl-lev-overlay"></div>
@@ -831,7 +852,11 @@ else
         CreateUrl = Url.Action("Create", "Klanten"),
         CreateLabel = "Nieuwe klant aanmaken"
     })
-    @await Html.PartialAsync("GlV2/_ProjectPickerModal", werfProjects)
+    @await Html.PartialAsync("GlV2/_ProjectPickerModal", new CPMCore.Models.GlV2.GlV2ProjectPickerVm
+    {
+        Projects = werfProjects,
+        PinnedProjectIds = Model.PinnedProjectIds
+    })
 }
 
 <!-- Onzichtbare live-regio voor screenreader-aankondigingen (bv. snooze) -->
@@ -976,10 +1001,11 @@ window.addEventListener('load', function () {
         $pMijn.removeClass('d-none'); $pMijnLbl.removeClass('d-none');
     }
 
-    // Delegatie (i.p.v. directe binding) omdat de gl-v2-tegenhangers verderop in de DOM zitten
-    // (buiten <main>, in de layout's snelactiebalk) en dus nog niet bestaan op het moment dat dit
-    // script-blok hier boven in de pagina draait — een directe .on() zou ze missen.
-    $(document).on('click', '#mob-nav-punt, #gl-v2-qa-punt', openPuntSheet);
+    // Enkel de legacy mobiele nav (.gl-mob-nav, @@if (!useGlV2Layout)) gebruikt dit sheet nog —
+    // #gl-v2-qa-punt (gl-v2 snelactiebalk/-rail) hergebruikt sinds kort de projectkiezer-modal via
+    // js-gl-v2-sa-project-action/initActiveProject() (Home/Index.cshtml + gl-v2-dashboard.js), net
+    // als de desktop-Snelacties-kaart se "Punt toevoegen"-rij, dus staat hier bewust niet meer bij.
+    $(document).on('click', '#mob-nav-punt', openPuntSheet);
     $('#gl-punt-overlay, #gl-punt-close').on('click', closePuntSheet);
 
     $pSearch.on('input', function () {

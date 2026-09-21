@@ -1,0 +1,21 @@
+@model BOCore.IdNameBO
+@* gl-v2 layout-pilot (design-handoff optie 4j, TYPE 1 "Bevestiging" — danger-variant), zelfde
+   aanpak als Views/Leveranciers/Modals/_ModalDeleteSupplierV2.cshtml: enkel de tekst hergebruikt uit
+   Modals/_DeleteClientModal.cshtml, geen enkele klasse. Rendert rechtstreeks in
+   #delete-client-container (IndexV2.cshtml's Bootstrap-modal-schild), dus dit fragment IS de
+   .modal-content-inhoud (body + footer), geen eigen .modal/.modal-dialog wrapper nodig. Verwijderen
+   blijft dezelfde `DeleteClient` GET-link als de legacy modal — geen nieuw POST/antiforgery-gedrag
+   hier geïntroduceerd. *@
+<div class="modal-body">
+    <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+    <div class="gl-v2-modal-text">
+        <h2 class="gl-v2-modal-title">Klant verwijderen?</h2>
+        <p class="gl-v2-modal-desc">
+            U staat op het punt om <strong>@Model.Display</strong> te verwijderen. Bent u zeker dat u deze wilt verwijderen?
+        </p>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+    <a href="@Url.Action("DeleteClient", "Klanten", new { id = Model.ID })" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</a>
+</div>
