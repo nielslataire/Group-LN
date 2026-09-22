@@ -1,0 +1,53 @@
+/* gl-v2 layout-pilot — Leveranciers/EditV2.cshtml ÉN CreateV2.cshtml (design-handoff 8b/8d), beide
+   hetzelfde formulier. Was gl-v2-leveranciers-edit.css, hernoemd toen CreateV2 bleek dit bestand
+   ongewijzigd te kunnen hergebruiken (geen Id-/staat-specifieke regels hierin). Pagina-eigen opmaak:
+   de verticale flex-kolomopbouw die de tabbar/actiebalk-positionering draagt (zie de eigen
+   toelichting bij .gl-v2-tabbar/.gl-v2-form-actionbar in gl-v2-shell.css — die twee horen als eerste/
+   laatste flex:none-kind van dezelfde kolom te staan waar de rest tussenin scrollt), plus de rij-
+   specifieke opmaak voor de herhaalbare Afdelingen-/Contacten-rijen. Alles generiek herbruikbaar
+   (velden, badges, tabbar, sectiekaart, actiebalk, schakelaar, meervoudige select) zit in
+   gl-v2-shell.css. */
+
+.gl-v2-supplier-edit-form {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.gl-v2-supplier-edit-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Altijd wat witruimte boven de actiebalk, ook helemaal onderaan gescrold — 4px liet de laatste
+       kaart bijna tegen de balk se eigen border-top/schaduw aan plakken. */
+    padding-bottom: 20px;
+}
+
+/* <768px: .gl-v2-form-actionbar wordt daar position:fixed (gl-v2-shell.css) en valt dus uit de
+   flow — zonder deze compenserende ruimte zou de vastgezette balk het laatste stuk scrollende
+   inhoud (en de foutstatus, wanneer die twee regels beslaat) verbergen. Ruim genoeg voor de langste
+   staat (statustekst + knoppenrij op aparte regels). */
+@media (max-width: 767.98px) {
+    .gl-v2-supplier-edit-scroll { padding-bottom: 140px; }
+}
+
+.gl-v2-tab-panel[hidden] { display: none; }
+/* Geen max-width hier — de kaarten zelf (.gl-v2-section-card) blijven vol breed, enkel het
+   veldraster erbinnen (.gl-v2-section-grid) is gecapt op 1420px (gl-v2-shell.css, design-handoff
+   8i/8b·B "KAART VOLLE BREEDTE, VELDBLOK GECAPT"). Een cap hier zou de kaart zelf versmallen, wat
+   niet de bedoeling was. */
+.gl-v2-tab-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.gl-v2-supplier-row-list-header { display: flex; justify-content: flex-end; }
+
+.gl-v2-supplier-row + .gl-v2-supplier-row { margin-top: 14px; }
+
+/* Btw-controleknop se busy/checked-attribuutjes op .gl-v2-field-attached sturen puur CSS-state die
+   al in gl-v2-shell.css leeft (is-busy/is-checked) — hier enkel de knop-tekstspinner-koppeling: de
+   spinner staat niet standaard in de EditorTemplate (die weet niet óf er een fetch loopt), JS
+   voegt 'm toe/verwijdert 'm in .gl-v2-field-attach-btn zelf. */
+.gl-v2-field-attach-btn .gl-v2-spinner { margin-right: 2px; }

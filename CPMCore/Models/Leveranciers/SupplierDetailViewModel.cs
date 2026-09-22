@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using CPMCore.Helpers;
 
 namespace CPMCore.Models.Leveranciers;
 
@@ -24,11 +26,21 @@ public class SupplierDetailViewModel
     public string? WebUrl { get; init; }
     public bool RequiresDigitalInvoice { get; init; }
     public bool AttachUblByDefault { get; init; }
+    public bool IsActive { get; init; }
+    public bool IsCustomer { get; init; }
     public IReadOnlyList<string> Activities { get; init; } = new List<string>();
+    public IReadOnlyList<string> IssuerCompanies { get; init; } = new List<string>();
     public IReadOnlyList<SupplierDepartmentDetailViewModel> Departments { get; init; } = new List<SupplierDepartmentDetailViewModel>();
     public IReadOnlyList<SupplierContactDetailViewModel> Contacts { get; init; } = new List<SupplierContactDetailViewModel>();
     public IReadOnlyList<SupplierContractDetailViewModel> Contracts { get; init; } = new List<SupplierContractDetailViewModel>();
     public IReadOnlyList<SupplierInvoiceDetailViewModel> Invoices { get; init; } = new List<SupplierInvoiceDetailViewModel>();
+
+    // gl-v2 DetailsV2 — computed weergavevelden zodat GlV2DetailField er rechtstreeks op kan
+    // binden (Html.DisplayFor verwacht een string-property, geen aparte formatteerstap in de view).
+    public string? EnterpriseNumberDisplay => EnterpriseNumberFormatter.Format(EnterpriseNumber, CountryCode);
+    public string? IssuerCompaniesDisplay => IssuerCompanies.Any() ? string.Join(", ", IssuerCompanies) : null;
+    public string? PhoneDisplay => PhoneNumberFormatter.Format(Phone);
+    public string? MobileDisplay => PhoneNumberFormatter.Format(Mobile);
 }
 
 public class SupplierDepartmentDetailViewModel
@@ -43,6 +55,9 @@ public class SupplierDepartmentDetailViewModel
     public string? Phone { get; init; }
     public string? Mobile { get; init; }
     public string? Email { get; init; }
+
+    public string? PhoneDisplay => PhoneNumberFormatter.Format(Phone);
+    public string? MobileDisplay => PhoneNumberFormatter.Format(Mobile);
 }
 
 public class SupplierContactDetailViewModel
@@ -61,6 +76,9 @@ public class SupplierContactDetailViewModel
     public bool    IsFullCompanyAdmin { get; init; }
     public int?    LinkedUserId { get; init; }
     public DateTime? LastLoginAt { get; init; }
+
+    public string? PhoneDisplay => PhoneNumberFormatter.Format(Phone);
+    public string? MobileDisplay => PhoneNumberFormatter.Format(Mobile);
 }
 
 public class SupplierContractDetailViewModel

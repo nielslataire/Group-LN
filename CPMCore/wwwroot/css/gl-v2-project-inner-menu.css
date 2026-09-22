@@ -1,0 +1,430 @@
+/* gl-v2 layout-pilot — projectdossier inner menu (design-handoff/CRM Menu Wireframes.dc.html, punt 9
+   "Inner menu van het projectdossier — 18 items in 6 groepen, op drie breedtes"). Scoped onder
+   .gl-v2-project-menu; deelt tokens met gl-v2-shell.css maar leeft in een eigen bestand omdat dit
+   component pagina-specifiek is (enkel Projecten/DetailV2 laadt dit vandaag), niet shell-breed.
+
+   Desktop/tablet (Outer-mode, zie GlV2ProjectMenuMode) renderen als EIGEN kaart NAAST .gl-v2-body —
+   design-handoff 9a/9b tonen letterlijk drie kaarten op één rij (rail | menu | inhoud), niet één
+   kaart met het menu erin. _LayoutV2.cshtml rendert de @section ProjectMenu-inhoud in
+   .gl-v2-project-menu-slot, als sibling van .gl-v2-rail en .gl-v2-body binnen .gl-v2-app — vandaar
+   dat dit bestand die slotklasse ook meestyled, niet enkel de partial se eigen klassen. Phone-mode
+   (9c) rendert de pagina zelf gewoon in <main>, dus die kaartlogica raakt gsm niet. */
+
+/* .gl-v2-app's align-items:stretch (default, gl-v2-shell.css) is bewust NIET overschreven hier —
+   zelfde recept als .gl-v2-rail (dat ook geen align-self:flex-start heeft): de kaart/kolom stretcht
+   mee tot .gl-v2-app's eigen min-height:100vh (project-wide — elke .gl-v2-body/rail-kaart is minstens
+   schermhoog, groeit mee als de rij hoger moet), position:sticky houdt 'm zichtbaar terwijl de pagina
+   scrolt. Enkel zichtbaar wanneer Outer-mode ook echt content heeft (IsSectionDefined-wachter in
+   _LayoutV2.cshtml). */
+.gl-v2-project-menu-slot {
+    flex: none;
+    position: sticky;
+    top: 12px;
+}
+
+/* Scoped to the Outer-mode instance (inside .gl-v2-project-menu-slot) only — Phone-mode's own
+   ".gl-v2-project-menu" wrapper renders inline in <main> on every breadth, not just phone, and a
+   bare "height:100%" there produced a full-height invisible box (all its children are display:none
+   above 767.98px) that pushed every real section below it down the page — the empty gap + the
+   "Vraagt actie"/"Foto's" cards rendering with no visible rows were both this one element's fallout,
+   not separate bugs in those cards' own CSS. */
+.gl-v2-project-menu-slot .gl-v2-project-menu { height: 100%; }
+
+/* ── Default (≥1400px, design-handoff 9a) — vast paneel van 244px, minstens schermhoog ──────── */
+.gl-v2-pm-desktop {
+    width: 244px;
+    flex: none;
+    height: 100%;
+    border-radius: var(--gl-v2-radius-lg);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-card);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.gl-v2-pm-tablet,
+.gl-v2-pm-phone,
+.gl-v2-pm-sheet,
+.gl-v2-pm-sheet-backdrop { display: none; }
+
+.gl-v2-pm-head {
+    flex: none;
+    padding: 14px 14px 12px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: #F7F9F5;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+
+.gl-v2-pm-head-icon {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 9px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+}
+
+.gl-v2-pm-head-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pm-name { font: 500 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pm-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gl-v2-pm-search {
+    flex: none;
+    margin: 10px 14px 0;
+    height: 34px;
+    box-sizing: border-box;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    color: var(--gl-v2-muted);
+}
+
+.gl-v2-pm-search i { font-size: 14px; flex: none; }
+
+.gl-v2-pm-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: 450 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+
+.gl-v2-pm-search input::placeholder { color: var(--gl-v2-muted-light); }
+
+.gl-v2-pm-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Design-handoff 9a §2: schaduwveeg van 14px boven-/onderaan de lijst bij scroll — een
+       sticky-achtige visuele grens zonder een tweede scrollcontainer nodig te hebben. */
+    background:
+        linear-gradient(#fff, #fff), linear-gradient(#fff, #fff),
+        linear-gradient(rgba(44, 59, 42, .08), rgba(44, 59, 42, 0)),
+        linear-gradient(rgba(44, 59, 42, 0), rgba(44, 59, 42, .08));
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+    background-position: top, bottom, top, bottom;
+    background-size: 100% 14px, 100% 14px, 100% 14px, 100% 14px;
+}
+
+.gl-v2-pm-group { display: flex; flex-direction: column; gap: 1px; }
+
+.gl-v2-pm-group-label {
+    font: 600 9px var(--gl-v2-font-sans);
+    letter-spacing: .14em;
+    color: var(--gl-v2-muted);
+    padding: 0 8px 5px;
+}
+
+/* Design-handoff 9a §5: de groepskop kleurt mee met de actieve ingang eronder. */
+.gl-v2-pm-group-label.is-active-group { color: var(--gl-v2-primary); }
+
+.gl-v2-pm-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 8px;
+    border-radius: var(--gl-v2-radius-sm);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 450 13px var(--gl-v2-font-sans);
+}
+
+.gl-v2-pm-item i { font-size: 15px; flex: none; color: var(--gl-v2-primary); }
+.gl-v2-pm-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Design-handoff 9d "DE ZEVEN STATEN — DESKTOP": normaal / hover / actief / actief+hover / focus. */
+.gl-v2-pm-item:hover { background: var(--gl-v2-bg); }
+
+.gl-v2-pm-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--gl-v2-primary);
+    background: transparent;
+}
+
+.gl-v2-pm-item.is-active {
+    background: var(--gl-v2-primary-tint);
+    border-left: 3px solid var(--gl-v2-primary);
+    padding-left: 5px;
+    font-weight: 600;
+    color: var(--gl-v2-primary);
+}
+
+.gl-v2-pm-item.is-active i { stroke-width: 1.4; }
+
+/* Iets dieper dan de gewone hover — blijft duidelijk "nog steeds actief", niet verward met hover. */
+.gl-v2-pm-item.is-active:hover { background: #C9DCBD; }
+
+.gl-v2-pm-empty {
+    padding: 16px 8px;
+    text-align: center;
+    font: 450 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+
+.gl-v2-pm-foot {
+    flex: none;
+    padding: 8px 10px 10px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+
+.gl-v2-pm-foot a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gl-v2-muted);
+    text-decoration: none;
+    font: 500 12px var(--gl-v2-font-sans);
+}
+
+.gl-v2-pm-foot a:hover { color: var(--gl-v2-primary); }
+.gl-v2-pm-foot i { font-size: 14px; }
+
+/* ── Tablet (768–1399.98px, design-handoff 9b) — icoonkolom van 52px, elk item al een eigen,
+   altijd-zichtbare icoon-link (tooltip voor het label i.p.v. een flyout — met 18 al-zichtbare
+   iconen is een paneel dat dezelfde items nog eens als tekst toont een overbodige extra stap). ── */
+@media (max-width: 1399.98px) {
+    .gl-v2-pm-desktop { display: none; }
+}
+
+@media (min-width: 768px) and (max-width: 1399.98px) {
+    .gl-v2-pm-tablet {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 52px;
+        flex: none;
+        height: 100%;
+        border-radius: var(--gl-v2-radius-lg);
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-card);
+        padding: 10px 0;
+        overflow-y: auto;
+        gap: 0;
+        /* Blijft scrollbaar (veel iconen kunnen op een lage/liggende tablet nog altijd hoger zijn dan
+           het scherm), maar zonder zichtbare scrollbar-baan — die oogt storend in een smal, afgerond
+           kaartje. Zelfde functioneel-maar-onzichtbaar recept in beide engines. */
+        scrollbar-width: none;
+    }
+
+    .gl-v2-pm-tablet::-webkit-scrollbar { display: none; }
+
+    .gl-v2-pm-rail-icon {
+        position: relative;
+        width: 38px;
+        height: 38px;
+        flex: none;
+        margin-bottom: 4px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--gl-v2-ink);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gl-v2-pm-rail-icon i { font-size: 17px; color: var(--gl-v2-primary); }
+
+    .gl-v2-pm-rail-project { color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); margin-bottom: 6px; }
+    .gl-v2-pm-rail-project i { color: var(--gl-v2-primary); }
+
+    .gl-v2-pm-rail-icon:hover { background: var(--gl-v2-bg); }
+    .gl-v2-pm-rail-icon:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gl-v2-primary); }
+
+    /* Design-handoff 9d §3: de actieve balk staat BUITEN het icoon (links, 3×20px), zodat hij ook
+       zichtbaar blijft wanneer twee actieve iconen na elkaar in dezelfde groep komen. */
+    .gl-v2-pm-rail-icon.is-active { background: var(--gl-v2-primary-tint); }
+
+    .gl-v2-pm-rail-icon.is-active::before {
+        content: "";
+        position: absolute;
+        left: -7px;
+        top: 9px;
+        width: 3px;
+        height: 20px;
+        border-radius: 2px;
+        background: var(--gl-v2-primary);
+    }
+
+    .gl-v2-pm-rail-divider {
+        width: 26px;
+        height: 1.5px;
+        background: var(--gl-v2-hairline);
+        margin: 5px 0;
+        flex: none;
+    }
+
+    /* Tooltip — design-handoff 9d §3 "na 400ms, altijd rechts": zuivere CSS via transition-delay,
+       zelfde soort mechanisme als .gl-v2-rail-tooltip verderop in gl-v2-shell.css. */
+    .gl-v2-pm-rail-tooltip {
+        position: absolute;
+        left: calc(100% + 10px);
+        top: 50%;
+        transform: translateY(-50%);
+        white-space: nowrap;
+        padding: 5px 10px;
+        border-radius: var(--gl-v2-radius-sm);
+        background: var(--gl-v2-ink);
+        color: var(--gl-v2-surface);
+        font: 500 11.5px var(--gl-v2-font-sans);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .12s ease;
+        transition-delay: 0s;
+        z-index: 21;
+    }
+
+    .gl-v2-pm-rail-icon:hover .gl-v2-pm-rail-tooltip,
+    .gl-v2-pm-rail-icon:focus-visible .gl-v2-pm-rail-tooltip {
+        opacity: 1;
+        transition-delay: .4s;
+    }
+}
+
+/* ── Gsm (<768px, design-handoff 9c) — groene "waar ben ik"-balk + volledig blad ─────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-pm-phone { display: block; }
+
+    .gl-v2-pm-phone-trigger {
+        width: 100%;
+        height: 48px;
+        box-sizing: border-box;
+        border: 0;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-primary-tint);
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 12px;
+        text-align: left;
+    }
+
+    .gl-v2-pm-phone-trigger > i:first-child { font-size: 17px; color: var(--gl-v2-primary); flex: none; }
+    .gl-v2-pm-phone-trigger > i:last-child { font-size: 15px; color: var(--gl-v2-primary); flex: none; }
+
+    .gl-v2-pm-phone-trigger-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .gl-v2-pm-phone-trigger-name { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gl-v2-pm-phone-trigger-sub { font: 450 10px var(--gl-v2-font-sans); color: #2F6038; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .gl-v2-pm-sheet-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(44, 59, 42, .35);
+        z-index: 99998;
+    }
+
+    .gl-v2-pm-sheet-backdrop[hidden] { display: none; }
+
+    .gl-v2-pm-sheet {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-height: 88dvh;
+        border-radius: 18px 18px 0 0;
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 99999;
+        overflow: hidden;
+    }
+
+    .gl-v2-pm-sheet[hidden] { display: none; }
+
+    .gl-v2-pm-sheet-handle {
+        flex: none;
+        width: 38px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-hairline);
+        margin: 10px auto 0;
+    }
+
+    .gl-v2-pm-sheet-header {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    }
+
+    .gl-v2-pm-sheet-title { flex: 1; min-width: 0; font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .gl-v2-pm-sheet-close {
+        width: 30px;
+        height: 30px;
+        flex: none;
+        border-radius: 8px;
+        border: 1px solid var(--gl-v2-hairline);
+        background: var(--gl-v2-surface);
+        color: var(--gl-v2-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gl-v2-pm-sheet .gl-v2-pm-search { margin: 12px 16px 0; height: 44px; border-radius: var(--gl-v2-radius-md); }
+    .gl-v2-pm-sheet .gl-v2-pm-search input { font-size: 13.5px; }
+
+    .gl-v2-pm-sheet-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 12px 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .gl-v2-pm-sheet .gl-v2-pm-group-label { padding: 0 10px 6px; }
+
+    .gl-v2-pm-sheet-item {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        height: 46px;
+        padding: 0 10px;
+        border-radius: var(--gl-v2-radius-md);
+        color: var(--gl-v2-ink);
+        text-decoration: none;
+        font: 450 14px var(--gl-v2-font-sans);
+    }
+
+    .gl-v2-pm-sheet-item i:first-child { font-size: 18px; flex: none; color: var(--gl-v2-primary); }
+    .gl-v2-pm-sheet-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gl-v2-pm-sheet-item i:last-child { font-size: 13px; flex: none; color: var(--gl-v2-muted-light); }
+
+    /* Ingedrukt i.p.v. hover — design-handoff 9d §3 "in plaats van hover is er ingedrukt". */
+    .gl-v2-pm-sheet-item:active { background: var(--gl-v2-neutral-tint); }
+
+    .gl-v2-pm-sheet-item.is-active {
+        background: var(--gl-v2-primary-tint);
+        border-left: 3px solid var(--gl-v2-primary);
+        padding-left: 7px;
+        font-weight: 600;
+        color: var(--gl-v2-primary);
+    }
+
+    .gl-v2-pm-sheet-item.is-active i:last-child { color: var(--gl-v2-primary); }
+}

@@ -1,0 +1,80 @@
+@model CPMCore.Models.Klanten.ClientFormViewModel
+@using System.Linq
+@*
+    gl-v2 (design-handoff Modals TYPE 2 "Formulier", .gl-v2-modal-form) — Klanten-variant van
+    Leveranciers/Modals/_VatLookupModalV2.cshtml, zelfde flow: na een geldige ValidateVat-respons
+    vult gl-v2-klanten-form.js dit formulier met de teruggevonden Naam/Straat/Nr/Postcode/Gemeente/
+    Land, "Gegevens overnemen" kopieert client-side naar CompanyName/Street/HouseNumber + de
+    hoofdadres-postcode/gemeente-zoeker (niet het facturatieadres — dat blijft een bewuste, aparte
+    keuze van de gebruiker). Staat altijd in de DOM, geen AJAX-load-per-klik nodig.
+*@
+@{
+    var vatCountryOptions = Model.Countries
+        .Where(c => !string.IsNullOrWhiteSpace(c.IsoCode))
+        .Select(c => new { Iso = c.IsoCode!.ToUpperInvariant(), Name = string.IsNullOrWhiteSpace(c.Name) ? c.IsoCode!.ToUpperInvariant() : c.Name! })
+        .GroupBy(c => c.Iso)
+        .Select(g => g.First())
+        .OrderBy(c => c.Name)
+        .ToList();
+}
+<div class="modal fade gl-v2-modal-form" id="gl-v2-vat-lookup-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-vat-lookup-modal-label">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-vat-lookup-modal-label">Gegevens van het btw-nummer</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten">
+                    <i class="ph ph-x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="gl-v2-field gl-v2-field-full">
+                    <label class="gl-v2-field-label" for="gl-v2-vat-lookup-name">Naam</label>
+                    <div class="gl-v2-field-box">
+                        <input type="text" id="gl-v2-vat-lookup-name" class="gl-v2-field-input" placeholder="Bedrijfsnaam" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="gl-v2-field-group gl-v2-field-full">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-vat-lookup-street">Straat</label>
+                        <div class="gl-v2-field-box">
+                            <input type="text" id="gl-v2-vat-lookup-street" class="gl-v2-field-input" placeholder="Straat" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-narrow">
+                        <label class="gl-v2-field-label" for="gl-v2-vat-lookup-nr">Nr</label>
+                        <div class="gl-v2-field-box">
+                            <input type="text" id="gl-v2-vat-lookup-nr" class="gl-v2-field-input" placeholder="Nr" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-vat-lookup-postal">Postcode</label>
+                    <div class="gl-v2-field-box">
+                        <input type="text" id="gl-v2-vat-lookup-postal" class="gl-v2-field-input" placeholder="Postcode" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-vat-lookup-city">Gemeente</label>
+                    <div class="gl-v2-field-box">
+                        <input type="text" id="gl-v2-vat-lookup-city" class="gl-v2-field-input" placeholder="Gemeente" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-vat-lookup-country">Land</label>
+                    <div class="gl-v2-field-box">
+                        <select id="gl-v2-vat-lookup-country" class="gl-v2-field-input">
+                            @foreach (var option in vatCountryOptions)
+                            {
+                                <option value="@option.Iso">@option.Name (@option.Iso)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-vat-lookup-apply">Gegevens overnemen</button>
+            </div>
+        </div>
+    </div>
+</div>

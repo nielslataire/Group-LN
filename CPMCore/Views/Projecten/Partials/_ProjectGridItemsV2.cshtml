@@ -1,0 +1,33 @@
+@model CPMCore.Models.Projecten.ProjectGridRenderModel
+@using CPMCore.Models.Projecten
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
+@*
+    gl-v2 layout-pilot variant van _ProjectGridItems.cshtml — rendert dezelfde projecten via
+    GlV2/_ProjectCardV2 (de projectkaart-presentatie die ook op het Projectleider-dashboard,
+    Home/_DashboardProjectleider.cshtml "Mijn Werven", gebruikt wordt) i.p.v. de legacy
+    _ProjectWerfCard. Zelfde ProjectGridRenderModel/databron als _ProjectGridItems, gebruikt voor
+    zowel de eerste lading (Projecten/IndexV2) als de "Laad meer"-AJAX (ProjectenController.
+    LoadMoreProjects wanneer UseGlV2Layout). Geen rangschik-balk/pin hier (dat is Mijn Werven-only).
+*@
+@{
+    var imgBase = Configuration["URL:ImageWebUrl"] ?? string.Empty;
+}
+@if (Model?.Projects != null)
+{
+    foreach (var project in Model.Projects)
+    {
+        BOCore.ProjectVoortgangBO vg = null;
+        Model.Voortgang?.TryGetValue(project.Id, out vg);
+
+        @await Html.PartialAsync("GlV2/_ProjectCardV2", new ProjectWerfCardVM
+        {
+            Project = project,
+            Voortgang = vg,
+            ImageBaseUrl = imgBase,
+            ColumnClasses = string.Empty,
+            ShowArrangeBar = false,
+            IsPinned = false
+        })
+    }
+}

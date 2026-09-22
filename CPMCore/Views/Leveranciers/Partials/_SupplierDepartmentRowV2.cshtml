@@ -1,0 +1,75 @@
+@model CPMCore.Models.Leveranciers.DepartmentInputViewModel
+@using HtmlHelpers.BeginCollectionItemCore
+@*
+    gl-v2-vertaling van Partials/_SupplierDepartmentRow.cshtml — zelfde Html.BeginCollectionItem
+    ("Departments")-wrapper (HtmlHelpers.BeginCollectionItemCore), dus binding/index-gedrag op de
+    POST blijft ongewijzigd. Enkel opmaak/klassen zijn nieuw: .gl-v2-card als rij-omhulsel,
+    .gl-v2-field-group voor gepaarde velden (Naam+Email, Straat+Nr+Bus, Telefoon+GSM), de nieuwe
+    GlV2Email/GlV2Telefoon/GlV2Gsm-EditorTemplates voor de contactvelden, en GlV2SearchSelect voor de
+    postcode-zoekveld (data-lookup-url/data-be-country-id komen van window.glV2SupplierFormConfig,
+    zie Edit/CreateV2.cshtml — departementen hebben geen eigen landkeuze, zoeken dus altijd binnen België,
+    zelfde impliciete aanname als de legacy rij).
+*@
+<div class="gl-v2-supplier-row" data-key="@Model.Key">
+@using (Html.BeginCollectionItem("Departments"))
+{
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.Key)
+    <div class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-title">Afdeling</span>
+            <span class="gl-v2-card-header-spacer"></span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-department-row" title="Afdeling verwijderen" aria-label="Afdeling verwijderen">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Name, new { @class = "gl-v2-field-input js-gl-v2-department-name", autocomplete = "off" })
+                    </div>
+                </div>
+                @Html.EditorFor(m => m.Email, "GlV2Email")
+            </div>
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Street)">Straat</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Street, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                @* .is-compact — Nr/Bus blijven bewust naast elkaar staan, ook op mobiel (<768px), i.t.t.
+                   de rest van deze kaart die daar wél volledig onder elkaar reflowt (zie de eigen
+                   toelichting bij .gl-v2-field-group.is-compact in gl-v2-shell.css). *@
+                <div class="gl-v2-field-group is-compact">
+                    <div class="gl-v2-field gl-v2-field-narrow">
+                        <label class="gl-v2-field-label" for="@Html.IdFor(m => m.HouseNumber)">Nr</label>
+                        <div class="gl-v2-field-box">
+                            @Html.TextBoxFor(m => m.HouseNumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        </div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-narrow">
+                        <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Bus)">Bus</label>
+                        <div class="gl-v2-field-box">
+                            @Html.TextBoxFor(m => m.Bus, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @Html.EditorFor(m => m.PostalCodeId, "GlV2SearchSelect", new
+            {
+                Label = "Gemeente / postcode",
+                DisplayText = Model.PostalCodeId.HasValue ? Model.PostalDisplay : null,
+                Placeholder = "Zoek een postcode of gemeente …",
+                Icon = "ph-map-pin"
+            })
+            <div class="gl-v2-field-group">
+                @Html.EditorFor(m => m.Phone, "GlV2Telefoon")
+                @Html.EditorFor(m => m.Mobile, "GlV2Gsm")
+            </div>
+        </div>
+    </div>
+}
+</div>

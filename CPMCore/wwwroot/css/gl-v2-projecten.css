@@ -1,0 +1,318 @@
+/* gl-v2 layout-pilot — Projecten (design-handoff/DESIGN.md.gl-v2-draft.md, optie 4a/4e/4f —
+   zelfde zoekveld/filters-toolbar-taal als Leveranciers/Klanten IndexV2, hier toegepast op de
+   projectenlijst met één filterveld (Status) i.p.v. Leveranciers' drie. Geen tabel/DataTable-CSS
+   hier: de projectkaarten (GlV2/_ProjectCardV2, ook gebruikt op het Projectleider-dashboard) zijn
+   zelf al de "kaartvorm" en al responsief (gl-v2-project-grid/-card in gl-v2-shell.css) — deze
+   file bevat enkel de toolbar/filters/lege-staat-chrome errond, letterlijk aangepast van
+   gl-v2-klanten.css se zelfde blok. */
+
+/* ── Topbar-filtericoon (optie 4f, mobiel) — claimt via @section MobileTopbarAction de plek van de
+   nog-niet-aangesloten zoek-stub. Zelfde taal als de hamburger/bel ernaast. Enkel <768px zichtbaar
+   — ≥768px heeft deze pagina de inline "Filters"-knop in de toolbar al. ──────────────────────── */
+.gl-v2-topbar-filter-btn { display: none; }
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        height: 34px;
+        padding: 0 12px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, .5);
+        background: transparent;
+        color: var(--gl-v2-surface);
+        flex: none;
+        cursor: pointer;
+    }
+    .gl-v2-topbar-filter-btn i { font-size: 15px; }
+    .gl-v2-topbar-filter-btn:hover,
+    .gl-v2-topbar-filter-btn:focus-visible,
+    .gl-v2-topbar-filter-btn.is-open,
+    .gl-v2-topbar-filter-btn.has-active {
+        background: rgba(255, 255, 255, .16);
+        border-color: var(--gl-v2-surface);
+        outline: none;
+    }
+    .gl-v2-topbar-filter-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        border-radius: 8px;
+        background: var(--gl-v2-surface);
+        color: var(--gl-v2-primary);
+        font: 700 9.5px var(--gl-v2-font-sans);
+    }
+    .gl-v2-topbar-filter-count[hidden] { display: none; }
+}
+
+.gl-v2-toolbar-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+    flex: none;
+    margin-bottom: 18px;
+}
+
+.gl-v2-toolbar-search {
+    flex: 1;
+    min-width: 180px;
+}
+.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
+
+/* ── Filters (design-handoff optie 4f "FILTERS OPEN") — zoekveld + Filters-knop op één rij, de knop
+   klapt het filterveld (Status) + badges-rij eronder open/dicht. Eén filterveld, dus de grid
+   hieronder gebruikt auto-fit i.p.v. een vast kolomaantal. ─────────────────────────────────────── */
+.gl-v2-filters-card { flex-direction: column; align-items: stretch; gap: 0; }
+
+.gl-v2-filters-row { display: flex; gap: 10px; align-items: center; width: 100%; }
+
+.gl-v2-filters-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-ink);
+    font: 600 12.5px var(--gl-v2-font-sans);
+    flex: none;
+    cursor: pointer;
+}
+.gl-v2-filters-toggle i { font-size: 15px; }
+.gl-v2-filters-toggle:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-filters-toggle.is-open,
+.gl-v2-filters-toggle.has-active {
+    border-color: var(--gl-v2-primary);
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+}
+.gl-v2-filters-toggle-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    font: 600 10px var(--gl-v2-font-sans);
+}
+.gl-v2-filters-toggle-count[hidden] { display: none; }
+
+.gl-v2-filters-panel { padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-filters-panel[hidden] { display: none; }
+
+/* Sheet-header (design-handoff 4f "MOBIEL — FILTERSHEET") — enkel <768px. */
+.gl-v2-filters-sheet-header { display: none; }
+.gl-v2-filters-sheet-handle {
+    width: 42px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gl-v2-dashed);
+    align-self: center;
+    margin: 0 auto 10px;
+}
+.gl-v2-filters-sheet-title-row { display: flex; align-items: center; gap: 10px; }
+.gl-v2-filters-sheet-title { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-filters-sheet-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 9px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    font: 600 10px var(--gl-v2-font-sans);
+}
+.gl-v2-filters-sheet-badge[hidden] { display: none; }
+.gl-v2-filters-sheet-spacer { flex: 1; }
+.gl-v2-filters-sheet-clear { height: auto; padding: 0; margin-left: 0; }
+
+.gl-v2-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+@media (max-width: 767.98px) {
+    .gl-v2-filters-grid { grid-template-columns: 1fr; }
+
+    .gl-v2-filters-toggle { display: none; }
+
+    .gl-v2-filters-panel-backdrop {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+    .gl-v2-filters-panel-backdrop[hidden] { display: none; }
+
+    .gl-v2-filters-panel:not([hidden]) {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
+        max-height: 75dvh;
+        overflow-y: auto;
+        margin: 0;
+        padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+        border-top: 0;
+        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 99999;
+    }
+
+    .gl-v2-filters-sheet-header { display: block; margin-bottom: 4px; }
+    .gl-v2-filters-chips { display: none; }
+
+    .gl-v2-filters-show-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+        height: 46px;
+        margin-top: 4px;
+        border: 0;
+        border-radius: var(--gl-v2-radius-sm);
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        font: 600 13px var(--gl-v2-font-sans);
+        cursor: pointer;
+    }
+    .gl-v2-filters-show-btn:hover,
+    .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
+}
+@media (min-width: 768px) {
+    .gl-v2-filters-show-btn { display: none; }
+}
+
+.gl-v2-filters-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gl-v2-filters-field-label {
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.gl-v2-filters-select { width: 100%; }
+.gl-v2-filters-select .gl-v2-select-trigger { width: 100%; height: 38px; }
+
+.gl-v2-filters-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+}
+.gl-v2-filters-chip-list {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.gl-v2-filters-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 28px;
+    padding: 0 6px 0 10px;
+    border-radius: 14px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    font: 600 11px var(--gl-v2-font-sans);
+    border: 0;
+    cursor: pointer;
+}
+.gl-v2-filters-chip i { font-size: 12px; }
+.gl-v2-filters-chip:hover { background: #C6DABA; }
+
+.gl-v2-filters-clear {
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: var(--gl-v2-primary);
+    font: 600 11.5px var(--gl-v2-font-sans);
+    cursor: pointer;
+    margin-left: auto;
+}
+.gl-v2-filters-clear:hover { text-decoration: underline; }
+.gl-v2-filters-clear[hidden] { display: none; }
+
+/* ── Kaartenraster-wrapper — geeft .gl-v2-project-grid (gl-v2-shell.css) een eigen container-query-
+   context om op te reageren, zelfde mechanisme als .gl-werven-section op het Projectleider-
+   dashboard, hier gewoon de volle paginabreedte i.p.v. een smallere dashboardkolom. ─────────────── */
+.gl-v2-projecten-section { container-type: inline-size; }
+
+/* ── Lege staat (optie 4f "LEGE STAAT") — zelfde recept als Leveranciers/Klanten IndexV2, hier
+   statisch (geen DataTable/JS-opbouw nodig, gewoon twee vooraf gerenderde blokken die getoggled
+   worden — zie gl-v2-projecten.js). ──────────────────────────────────────────────────────────── */
+.gl-v2-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 44px 24px;
+    text-align: center;
+}
+.gl-v2-empty-state-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.gl-v2-empty-state-icon i { font-size: 28px; }
+.gl-v2-empty-state-title { font: 500 17px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
+.gl-v2-empty-state-desc { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 320px; margin: 0; }
+.gl-v2-empty-state-actions { display: flex; gap: 9px; padding-top: 4px; }
+.gl-v2-empty-state-inline {
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 18px 40px -28px rgba(44, 59, 42, .4);
+}
+
+/* ── "Laad meer"-blok — eigen kleine spinner i.p.v. projecten-custom.css' .gl-spin (die enkel op de
+   legacy Index.cshtml-pagina geladen wordt). ─────────────────────────────────────────────────────── */
+.gl-v2-projecten-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0;
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-projecten-loader[hidden] { display: none; }
+.gl-v2-projecten-loader i { font-size: 15px; color: var(--gl-v2-primary); }
+.gl-v2-spin { animation: gl-v2-spin 1s linear infinite; }
+@keyframes gl-v2-spin { to { transform: rotate(360deg); } }
+.gl-v2-projecten-loaded-count {
+    margin-top: 8px;
+    font: 450 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}

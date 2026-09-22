@@ -462,7 +462,7 @@ namespace CPMCore.Controllers
             SetDetailBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
             SetPageHeader("bx bx-receipt", detailTitle);
 
-            return View(vm);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", vm);
         }
 
         //PDF EXPORT VAN FACTUUR

@@ -1,0 +1,546 @@
+@model CPMCore.Models.Leveranciers.SupplierDetailViewModel
+@using System.Globalization
+@using System.Linq
+@* gl-v2 layout-pilot (design-handoff 8a "Detailpagina — geen dubbele titel: topbar draagt de naam,
+   pagina begint met contextstrip en tabs") — de eerste gl-v2-detailpagina in de pilot, na de twee
+   formulierpagina's (Leveranciers/EditV2, Klanten/EditV2). Scope bewust beperkt tot exact wat de
+   legacy Details.cshtml vandaag al toont (gebruiker: "enkel wat nu al bij details zit") — vijf
+   secties (Algemene gegevens met twee kaarten, Afdelingen, Contacten, Contracten, Facturen), enkel
+   herbouwd in 8a se eigen stijl (tabbar, sectiekaarten, 4-koloms detail-grid, badges/⋯-menu in de
+   topbar). Twee kleine, goedkope uitzonderingen die wél toegevoegd zijn omdat ze al geladen data
+   hergebruiken (zie SupplierDetailViewModel/LeveranciersController): ACTIEF/OOK KLANT-topbarbadges
+   en het Facturatiebedrijf-veld. Server-/opslaglogica (InviteContact/RevokeContactAccess/
+   ModalDeleteV2) blijft ongewijzigd — enkel het view-pad vertakt. *@
+@{
+    ViewData["Title"] ??= Model.Name;
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Index", "Leveranciers");
+
+    var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
+    var editUrl = Url.Action("Edit", "Leveranciers", new { id = Model.Id });
+
+    (string tone, string label)? PortalStatusBadge(string? status) => status switch
+    {
+        "Draft" => ("is-neutral", "Draft"),
+        "Invited" => ("is-attention", "Uitgenodigd"),
+        "PendingAcceptance" => ("is-attention", "In afwachting"),
+        "Redeemed" => ("is-positive", "Ingewisseld"),
+        "Active" => ("is-positive", "Actief"),
+        "Failed" => ("is-blocked", "Mislukt"),
+        "Revoked" => ("is-inactive", "Ingetrokken"),
+        _ => null
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-leveranciers-details.css" asp-append-version="true" />
+}
+@section MobileTopbarAction
+{
+}
+@section PageTitleBadges
+{
+    @if (Model.IsActive)
+    {
+        <span class="gl-v2-badge is-positive">ACTIEF</span>
+    }
+    else
+    {
+        <span class="gl-v2-badge is-inactive">INACTIEF</span>
+    }
+    @if (Model.IsCustomer)
+    {
+        <span class="gl-v2-badge is-neutral">OOK KLANT</span>
+    }
+}
+@section PageActions
+{
+    @if (Model.CanEdit)
+    {
+        <a href="@editUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+    }
+    @if (Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-icon-btn is-danger js-gl-v2-delete-supplier" title="Verwijderen" aria-label="Leverancier verwijderen">
+            <i class="ph ph-trash" aria-hidden="true"></i>
+        </button>
+    }
+}
+
+<div class="gl-v2-tabbar" id="gl-v2-supplier-details-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" data-tab="algemeen" aria-selected="true">Algemene gegevens</button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="afdelingen" aria-selected="false">Afdelingen <span class="gl-v2-tabbar-count">@Model.Departments.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="contacten" aria-selected="false">Contacten <span class="gl-v2-tabbar-count">@Model.Contacts.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="contracten" aria-selected="false">Contracten <span class="gl-v2-tabbar-count">@Model.Contracts.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="facturen" aria-selected="false">Facturen <span class="gl-v2-tabbar-count">@Model.Invoices.Count</span></button>
+</div>
+
+<div class="gl-v2-supplier-details-scroll">
+
+    <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                <span class="gl-v2-section-card-title">Algemene info</span>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">De basisgegevens van de leverancier: identificatie, btw en adres.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.CanEdit)
+                {
+                    <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                @Html.DisplayFor(m => m.EnterpriseNumberDisplay, "GlV2DetailField", new { Label = "Ondernemingsnummer" })
+                @Html.DisplayFor(m => m.LegalForm, "GlV2DetailField", new { Label = "Bedrijfsvorm" })
+                <div class="gl-v2-detail-field is-wide">
+                    <span class="gl-v2-detail-label">Adres</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Street))
+                    {
+                        <span class="gl-v2-detail-value">
+                            @Model.Street @Model.HouseNumber@(string.IsNullOrWhiteSpace(Model.BusNumber) ? "" : $" bus {Model.BusNumber}")<br />
+                            @Model.PostalCode @Model.City
+                            @if (!string.IsNullOrWhiteSpace(Model.CountryName))
+                            {
+                                <text><br />@Model.CountryName</text>
+                            }
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+                @Html.DisplayFor(m => m.IssuerCompaniesDisplay, "GlV2DetailField", new { Label = "Facturatiebedrijf" })
+                <div class="gl-v2-detail-field is-full">
+                    <span class="gl-v2-detail-label">Activiteiten</span>
+                    @if (Model.Activities.Any())
+                    {
+                        <span class="gl-v2-detail-value">
+                            @foreach (var activity in Model.Activities)
+                            {
+                                <span class="gl-v2-badge is-neutral">@activity.ToUpperInvariant()</span>
+                            }
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                <span class="gl-v2-section-card-title">Contact &amp; facturatie</span>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Bereikbaarheid en hoe deze leverancier zijn facturen aanlevert.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.CanEdit)
+                {
+                    <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                @Html.DisplayFor(m => m.PhoneDisplay, "GlV2DetailField", new { Label = "Telefoon" })
+                @Html.DisplayFor(m => m.MobileDisplay, "GlV2DetailField", new { Label = "GSM" })
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">E-mail</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Email))
+                    {
+                        <span class="gl-v2-table-email" title="@Model.Email">
+                            <span class="gl-v2-table-email-text">@Model.Email</span>
+                            <span class="gl-v2-table-email-actions">
+                                <a class="gl-v2-table-email-action" href="mailto:@Model.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@Model.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                            </span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Facturatie-e-mail</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.InvoiceEmail))
+                    {
+                        <span class="gl-v2-table-email" title="@Model.InvoiceEmail">
+                            <span class="gl-v2-table-email-text">@Model.InvoiceEmail</span>
+                            <span class="gl-v2-table-email-actions">
+                                <a class="gl-v2-table-email-action" href="mailto:@Model.InvoiceEmail" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@Model.InvoiceEmail" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                            </span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Website</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.WebUrl))
+                    {
+                        <span class="gl-v2-detail-value"><a href="@Model.WebUrl" target="_blank" rel="noopener">@Model.WebUrl</a></span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Aanlevering</span>
+                    <span class="gl-v2-detail-value">
+                        <span class="gl-v2-badge @(Model.RequiresDigitalInvoice ? "is-positive" : "is-neutral")">DIGITAAL @(Model.RequiresDigitalInvoice ? "VEREIST" : "NIET VEREIST")</span>
+                        <span class="gl-v2-badge @(Model.AttachUblByDefault ? "is-positive" : "is-neutral")">UBL @(Model.AttachUblByDefault ? "AAN" : "UIT")</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-tab-panel" data-tab-panel="afdelingen" hidden>
+        @if (Model.Departments.Any())
+        {
+            <span class="gl-v2-tab-meta">@Model.Departments.Count afdeling@(Model.Departments.Count == 1 ? "" : "en")</span>
+            <div class="gl-v2-supplier-detail-row-list">
+                @foreach (var department in Model.Departments)
+                {
+                    <div class="gl-v2-card">
+                        <div class="gl-v2-card-header">
+                            <span class="gl-v2-card-header-icon"><i class="ph ph-git-branch" aria-hidden="true"></i></span>
+                            <span class="gl-v2-card-header-title">@(string.IsNullOrWhiteSpace(department.Name) ? "Onbenoemde afdeling" : department.Name)</span>
+                        </div>
+                        <div class="gl-v2-card-body">
+                            <div class="gl-v2-detail-grid">
+                                <div class="gl-v2-detail-field is-wide">
+                                    <span class="gl-v2-detail-label">Adres</span>
+                                    @if (!string.IsNullOrWhiteSpace(department.Street))
+                                    {
+                                        <span class="gl-v2-detail-value">
+                                            @department.Street @department.HouseNumber@(string.IsNullOrWhiteSpace(department.Bus) ? "" : $" bus {department.Bus}")<br />
+                                            @department.PostalCode @department.City
+                                            @if (!string.IsNullOrWhiteSpace(department.CountryName))
+                                            {
+                                                <text><br />@department.CountryName</text>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-detail-value is-empty">—</span>
+                                    }
+                                </div>
+                                @Html.DisplayFor(m => department.PhoneDisplay, "GlV2DetailField", new { Label = "Telefoon" })
+                                @Html.DisplayFor(m => department.MobileDisplay, "GlV2DetailField", new { Label = "GSM" })
+                                <div class="gl-v2-detail-field">
+                                    <span class="gl-v2-detail-label">E-mail</span>
+                                    @if (!string.IsNullOrWhiteSpace(department.Email))
+                                    {
+                                        <span class="gl-v2-table-email" title="@department.Email">
+                                            <span class="gl-v2-table-email-text">@department.Email</span>
+                                            <span class="gl-v2-table-email-actions">
+                                                <a class="gl-v2-table-email-action" href="mailto:@department.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@department.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                            </span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-detail-value is-empty">—</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-card gl-v2-card-empty">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-git-branch" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Afdelingen</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <span class="gl-v2-card-empty-msg">Er zijn nog geen afdelingen toegevoegd.</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-tab-panel" data-tab-panel="contacten" hidden>
+        @if (Model.Contacts.Any())
+        {
+            <span class="gl-v2-tab-meta">@Model.Contacts.Count contact@(Model.Contacts.Count == 1 ? "" : "en")</span>
+            <div class="gl-v2-supplier-detail-row-list">
+                @foreach (var contact in Model.Contacts)
+                {
+                    var statusBadge = PortalStatusBadge(contact.PortaalStatus);
+                    var contactName = (!string.IsNullOrWhiteSpace(contact.LastName) || !string.IsNullOrWhiteSpace(contact.FirstName))
+                        ? $"{contact.FirstName} {contact.LastName}".Trim()
+                        : "Onbekende contactpersoon";
+                    <div class="gl-v2-card">
+                        <div class="gl-v2-card-header">
+                            <span class="gl-v2-card-header-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                            <span class="gl-v2-card-header-title">@contactName</span>
+                            @if (!string.IsNullOrWhiteSpace(contact.Function))
+                            {
+                                <span class="gl-v2-card-header-count">@contact.Function</span>
+                            }
+                            <span class="gl-v2-card-header-spacer"></span>
+                            @if (statusBadge.HasValue)
+                            {
+                                <span class="gl-v2-badge @statusBadge.Value.tone">@statusBadge.Value.label.ToUpperInvariant()</span>
+                            }
+                        </div>
+                        <div class="gl-v2-card-body">
+                            <div class="gl-v2-detail-grid">
+                                @Html.DisplayFor(m => contact.PhoneDisplay, "GlV2DetailField", new { Label = "Telefoon" })
+                                @Html.DisplayFor(m => contact.MobileDisplay, "GlV2DetailField", new { Label = "GSM" })
+                                <div class="gl-v2-detail-field">
+                                    <span class="gl-v2-detail-label">E-mail</span>
+                                    @if (!string.IsNullOrWhiteSpace(contact.Email))
+                                    {
+                                        <span class="gl-v2-table-email" title="@contact.Email">
+                                            <span class="gl-v2-table-email-text">@contact.Email</span>
+                                            <span class="gl-v2-table-email-actions">
+                                                <a class="gl-v2-table-email-action" href="mailto:@contact.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@contact.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                            </span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-detail-value is-empty">—</span>
+                                    }
+                                </div>
+                                @Html.DisplayFor(m => contact.DepartmentName, "GlV2DetailField", new { Label = "Afdeling" })
+                                @if (contact.LastLoginAt.HasValue)
+                                {
+                                    <div class="gl-v2-detail-field">
+                                        <span class="gl-v2-detail-label">Laatste login</span>
+                                        <span class="gl-v2-detail-value">@contact.LastLoginAt.Value.ToLocalTime().ToString("dd/MM/yy HH:mm")</span>
+                                    </div>
+                                }
+                                @if (contact.LinkedUserId.HasValue && contact.PortaalStatus != null)
+                                {
+                                    <div class="gl-v2-detail-field">
+                                        <span class="gl-v2-detail-label">Toegang</span>
+                                        <span class="gl-v2-detail-value">@(contact.IsFullCompanyAdmin ? "Volledig bedrijf" : "Beperkt (eigen contracten als SiteManager)")</span>
+                                    </div>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(contact.Email) && Model.CanEdit)
+                            {
+                                <div class="gl-v2-supplier-detail-portal-actions">
+                                    @if (contact.PortaalStatus == null || contact.PortaalStatus is "Failed" or "Revoked")
+                                    {
+                                        using (Html.BeginForm("InviteContact", "Leveranciers", FormMethod.Post, new { @class = "d-inline" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.ContactId" />
+                                            <input type="hidden" name="isFullAdmin" value="false" />
+                                            <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-user-plus" aria-hidden="true"></i>Uitnodigen (beperkt)</button>
+                                        }
+                                        using (Html.BeginForm("InviteContact", "Leveranciers", FormMethod.Post, new { @class = "d-inline" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.ContactId" />
+                                            <input type="hidden" name="isFullAdmin" value="true" />
+                                            <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-buildings" aria-hidden="true"></i>Uitnodigen (volledig)</button>
+                                        }
+                                    }
+                                    else if (contact.LinkedUserId.HasValue)
+                                    {
+                                        using (Html.BeginForm("RevokeContactAccess", "Leveranciers", FormMethod.Post, new { @class = "d-inline", onsubmit = $"return confirm('Portaaltoegang intrekken voor {contactName}?')" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.ContactId" />
+                                            <button type="submit" class="gl-v2-btn gl-v2-btn-danger"><i class="ph ph-link-break" aria-hidden="true"></i>Toegang intrekken</button>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-card gl-v2-card-empty">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Contacten</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <span class="gl-v2-card-empty-msg">Er zijn nog geen contacten toegevoegd.</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-tab-panel" data-tab-panel="contracten" hidden>
+        @if (Model.Contracts.Any())
+        {
+            <div class="gl-v2-card gl-v2-detail-table-card">
+                <div class="gl-v2-card-body">
+                    <div class="table-responsive-md">
+                        <table class="table table-hover mb-0 gl-v2-detail-table w-100" id="gl-v2-supplier-contracts-table">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Contractnummer</th>
+                                    <th>Activiteiten</th>
+                                    <th class="text-end">Totale waarde</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var contract in Model.Contracts)
+                                {
+                                    var contractDetailUrl = Url.Action("DetailContract", "Projecten", new { projectid = contract.ProjectId, contractid = contract.Id });
+                                    var contractEditUrl = Url.Action("EditContract", "Projecten", new { projectid = contract.ProjectId, contractid = contract.Id });
+                                    <tr data-detail-url="@contractDetailUrl">
+                                        <td>@(string.IsNullOrWhiteSpace(contract.ProjectName) ? "—" : contract.ProjectName)</td>
+                                        <td>@contract.Id</td>
+                                        <td>@contract.ActivityCount</td>
+                                        <td class="text-end" data-order="@contract.TotalAmount.ToString(CultureInfo.InvariantCulture)">@contract.TotalAmount.ToString("C", currencyCulture)</td>
+                                        <td class="text-end">
+                                            <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-contract-menu-@contract.Id" aria-label="Meer acties">
+                                                <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="gl-v2-row-menu" id="gl-v2-contract-menu-@contract.Id">
+                                                <a class="gl-v2-row-action" href="@contractDetailUrl" title="Detail" aria-label="Detail">
+                                                    <i class="ph ph-eye" aria-hidden="true"></i>
+                                                    <span class="gl-v2-row-action-label">Detail</span>
+                                                </a>
+                                                <a class="gl-v2-row-action" href="@contractEditUrl" title="Bewerken" aria-label="Bewerken">
+                                                    <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                                                    <span class="gl-v2-row-action-label">Bewerken</span>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="gl-v2-detail-mobile-list" id="gl-v2-supplier-contracts-mobile-list"></div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-card gl-v2-card-empty">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Contracten</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <span class="gl-v2-card-empty-msg">Er zijn geen contracten gekoppeld.</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-tab-panel" data-tab-panel="facturen" hidden>
+        @if (Model.Invoices.Any())
+        {
+            <div class="gl-v2-card gl-v2-detail-table-card">
+                <div class="gl-v2-card-body">
+                    <div class="table-responsive-md">
+                        <table class="table table-hover mb-0 gl-v2-detail-table w-100" id="gl-v2-supplier-invoices-table">
+                            <thead>
+                                <tr>
+                                    <th>Factuurdatum</th>
+                                    <th>Externe referentie</th>
+                                    <th>Project</th>
+                                    <th class="text-end">Factuurbedrag</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var invoice in Model.Invoices)
+                                {
+                                    var invoiceDetailUrl = Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = invoice.ProjectId, invoiceid = invoice.Id });
+                                    var invoiceEditUrl = Url.Action("EditIncommingInvoice", "Projecten", new { projectid = invoice.ProjectId, invoiceid = invoice.Id });
+                                    <tr data-detail-url="@invoiceDetailUrl">
+                                        <td data-order="@invoice.InvoiceDate.ToString("yyyy-MM-dd")">@invoice.InvoiceDate.ToString("dd/MM/yyyy")</td>
+                                        <td>@(string.IsNullOrWhiteSpace(invoice.ExternalInvoiceId) ? "—" : invoice.ExternalInvoiceId)</td>
+                                        <td>@(string.IsNullOrWhiteSpace(invoice.ProjectName) ? "—" : invoice.ProjectName)</td>
+                                        <td class="text-end" data-order="@invoice.Amount.ToString(CultureInfo.InvariantCulture)">@invoice.Amount.ToString("C", currencyCulture)</td>
+                                        <td class="text-end">
+                                            <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-invoice-menu-@invoice.Id" aria-label="Meer acties">
+                                                <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="gl-v2-row-menu" id="gl-v2-invoice-menu-@invoice.Id">
+                                                <a class="gl-v2-row-action" href="@invoiceDetailUrl" title="Detail" aria-label="Detail">
+                                                    <i class="ph ph-eye" aria-hidden="true"></i>
+                                                    <span class="gl-v2-row-action-label">Detail</span>
+                                                </a>
+                                                <a class="gl-v2-row-action" href="@invoiceEditUrl" title="Bewerken" aria-label="Bewerken">
+                                                    <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+                                                    <span class="gl-v2-row-action-label">Bewerken</span>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="gl-v2-detail-mobile-list" id="gl-v2-supplier-invoices-mobile-list"></div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-card gl-v2-card-empty">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Facturen</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <span class="gl-v2-card-empty-msg">Er zijn nog geen facturen gekoppeld aan deze leverancier.</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@* Gedeeld door de rij-"···"-menu's van beide tabellen (Contracten/Facturen) — zelfde element/id als
+   Leveranciers/IndexV2 se eigen achtergrond-scrim, hier lokaal opnieuw gerenderd (los CSS-bestand,
+   zie gl-v2-leveranciers-details.css/.js). *@
+<div class="gl-v2-row-menu-backdrop" id="gl-v2-row-menu-backdrop"></div>
+
+@if (Model.CanDelete)
+{
+    <div class="modal fade gl-v2-modal-confirm" id="gl-v2-delete-supplier-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content is-danger" id="gl-v2-delete-supplier-container"></div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    @* Zelfde CDN-bundel als Leveranciers/IndexV2 se eigen #datatable-suppliers (gl-v2-leveranciers.js)
+       — enkel geladen wanneer er ook echt een Contracten- of Facturen-tabel op de pagina staat. *@
+    @if (Model.Contracts.Any() || Model.Invoices.Any())
+    {
+        <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    }
+    <script>
+        window.glV2SupplierDetailsConfig = {
+            deleteUrl: '@Url.Action("ModalDeleteV2", "Leveranciers")',
+            supplierId: @Model.Id
+        };
+    </script>
+    <script src="~/js/gl-v2-leveranciers-details.js" asp-append-version="true"></script>
+}

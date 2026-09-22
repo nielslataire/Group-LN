@@ -1,0 +1,26 @@
+/* gl-v2 layout-pilot — Klanten/DetailsV2.cshtml (design-handoff 8a), Klanten-variant van
+   gl-v2-leveranciers-details.css. Kleiner dan die pagina: geen Contracten/Facturen-tabellen (geen
+   analoge data voor Klanten), dus geen DataTables/rij-···-menu/mobiele-kaarten-machinerie nodig —
+   enkel de tabbar-kolomopbouw + rijkaartenlijst (Contacten). .gl-v2-detail-grid/.gl-v2-table-email/
+   .gl-v2-card-empty zijn al generiek in gl-v2-shell.css. */
+
+.gl-v2-client-details-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 4px;
+}
+
+.gl-v2-tab-panel[hidden] { display: none; }
+.gl-v2-tab-panel { display: flex; flex-direction: column; gap: 16px; }
+
+/* Zelfde hergebruik van .gl-v2-card-header-action als Leveranciers/DetailsV2 — niet aan één
+   kaartvariant gebonden, werkt ongewijzigd binnen .gl-v2-section-card-header. */
+.gl-v2-section-card-header .gl-v2-card-header-action { text-decoration: none; flex: none; }
+
+.gl-v2-client-detail-row-list { display: flex; flex-direction: column; gap: 14px; }
+
+.gl-v2-tab-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }

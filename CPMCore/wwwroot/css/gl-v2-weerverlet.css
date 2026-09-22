@@ -1,0 +1,247 @@
+/* gl-v2 layout-pilot — Weerverlet/jaarkalender (design-handoff optie 10a "Jaarkalender"). Enkel
+   geladen door Views/Projecten/WeatherV2.cshtml. De generieke tabbar/select-componenten komen uit
+   gl-v2-shell.css (.gl-v2-tabbar*, .gl-v2-select*) — hier enkel de pagina-eigen stukken: de
+   toolbar-rij (weerstationveld/schakelaar/jaarbalk), het 12-maanden-raster en de legende.
+
+   Kleuren zijn NIET gl-v2-tokens: regen (#2E5F7E op #D7E6EF) en wind (#8A5F12 op #F6E9CE) zijn
+   10a se eigen, bewuste keuze — twee tinten die naast het app-groen kunnen staan en ook voor
+   kleurenblinden in helderheid verschillen (10a punt 3). Verlof hergebruikt wél het bestaande
+   groene paar (--gl-v2-primary-tint/--gl-v2-primary): geen derde losse kleur voor een categorie
+   die de mockup zelf niet toont (zie WeatherV2.cshtml se eigen intro-comment). */
+
+.gl-v2-weer-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.gl-v2-weer-toolbar-spacer { flex: 1; }
+
+.gl-v2-weer-field { display: flex; flex-direction: column; gap: 5px; flex: none; }
+.gl-v2-weer-field-label {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+#weerstation-select { width: 300px; max-width: 100%; }
+#weerstation-select .gl-v2-select { width: 100%; }
+#weerstation-select .gl-v2-select-trigger { width: 100%; height: 40px; }
+
+/* ── "Wat zet je bij een klik" — segmented control (10a punt 4: één schakelaar i.p.v. twee losse
+   omlijnde knoppen, zodat het gewapende type altijd zichtbaar is). ─────────────────────────────── */
+.gl-v2-weer-segmented {
+    display: flex;
+    gap: 3px;
+    height: 40px;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--gl-v2-neutral-tint);
+}
+.gl-v2-weer-segmented-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+    font: 500 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-weer-segmented-option.is-active {
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(44, 59, 42, .12);
+    font-weight: 600;
+}
+.gl-v2-weer-segmented-option[data-type="rain"].is-active .gl-v2-weer-segmented-label,
+.gl-v2-weer-segmented-option[data-type="rain"].is-active .gl-v2-weer-segmented-count { color: #2E5F7E; }
+.gl-v2-weer-segmented-option[data-type="wind"].is-active .gl-v2-weer-segmented-label,
+.gl-v2-weer-segmented-option[data-type="wind"].is-active .gl-v2-weer-segmented-count { color: #8A5F12; }
+.gl-v2-weer-segmented-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; }
+.gl-v2-weer-segmented-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex: none;
+}
+.gl-v2-weer-segmented-swatch.is-rain { background: #D7E6EF; box-shadow: inset 0 0 0 1.5px #2E5F7E; }
+.gl-v2-weer-segmented-swatch.is-wind { background: #F6E9CE; box-shadow: inset 0 0 0 1.5px #8A5F12; }
+
+/* ── Jaarbalk (10a punt 5/6: totalen + jaarnavigatie op één plek, naast de totalen zelf). ────────── */
+.gl-v2-weer-year-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 4px 0 14px;
+    border-radius: 9px;
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile);
+    flex: none;
+}
+.gl-v2-weer-year-station { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+.gl-v2-weer-year-stat { font: 600 12px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-weer-year-stat.is-rain { color: #2E5F7E; }
+.gl-v2-weer-year-stat.is-wind { color: #8A5F12; }
+.gl-v2-weer-year-stat.is-total { color: var(--gl-v2-primary); }
+.gl-v2-weer-year-divider { width: 1px; height: 16px; background: var(--gl-v2-hairline); flex: none; }
+.gl-v2-weer-year-nav {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 7px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+    margin-left: 4px;
+}
+.gl-v2-weer-year-nav:hover,
+.gl-v2-weer-year-nav:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); outline: none; }
+.gl-v2-weer-year-nav:last-child { margin-left: 0; }
+.gl-v2-weer-year-value { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; padding: 0 2px; }
+
+/* ── 12-maanden-raster (10a punt 7: zes per rij op desktop, drie op tablet, één op gsm — de 1400px
+   uit de losstaande mockup-kaart is hier de volle inhoudsbreedte van de gl-v2-body-kaart, dus de
+   drempels zijn op onze eigen (smallere) breedtes herijkt i.p.v. 1400px letterlijk over te nemen). */
+.gl-v2-weer-months {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    position: relative;
+    min-height: 120px;
+}
+@media (min-width: 768px) {
+    .gl-v2-weer-months { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1200px) {
+    .gl-v2-weer-months { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+.gl-v2-weer-loading {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 0;
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-weer-loading i { font-size: 15px; color: var(--gl-v2-primary); }
+.gl-v2-spin { animation: gl-v2-spin 1s linear infinite; }
+@keyframes gl-v2-spin { to { transform: rotate(360deg); } }
+
+.gl-v2-weer-month-card {
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-tile);
+    padding: 12px 12px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+}
+.gl-v2-weer-month-head { display: flex; align-items: baseline; gap: 7px; }
+.gl-v2-weer-month-name { flex: 1; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-transform: capitalize; }
+.gl-v2-weer-month-count { font: 600 10px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+.gl-v2-weer-month-count.is-rain { color: #2E5F7E; }
+.gl-v2-weer-month-count.is-wind { color: #8A5F12; }
+
+.gl-v2-weer-day-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.gl-v2-weer-dow {
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.gl-v2-weer-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font: 600 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+}
+.gl-v2-weer-day.is-blank { visibility: hidden; }
+.gl-v2-weer-day.is-weekend { background: var(--gl-v2-bg); color: var(--gl-v2-muted-light); }
+.gl-v2-weer-day.is-rain { background: #D7E6EF; color: #2E5F7E; }
+.gl-v2-weer-day.is-wind { background: #F6E9CE; color: #8A5F12; }
+.gl-v2-weer-day.is-both { background: linear-gradient(135deg, #D7E6EF 0 50%, #F6E9CE 50% 100%); color: var(--gl-v2-ink); }
+.gl-v2-weer-day.is-vacation { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+
+.gl-v2-weer-months:not(.is-readonly) .gl-v2-weer-day:not(.is-blank):not(.is-weekend):not(.is-vacation) { cursor: pointer; }
+.gl-v2-weer-months:not(.is-readonly) .gl-v2-weer-day:not(.is-blank):not(.is-weekend):not(.is-vacation):hover,
+.gl-v2-weer-day.is-drag-preview {
+    box-shadow: inset 0 0 0 1.5px var(--weer-armed-color, #2E5F7E);
+}
+
+/* ── Legende (10a punt: eigen rij onderaan het raster). ──────────────────────────────────────────── */
+.gl-v2-weer-legend {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile);
+    margin-top: 12px;
+}
+.gl-v2-weer-legend-label {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gl-v2-weer-legend-item { display: flex; align-items: center; gap: 8px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-weer-legend-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 11.5px var(--gl-v2-font-sans);
+}
+.gl-v2-weer-legend-swatch.is-rain { background: #D7E6EF; color: #2E5F7E; }
+.gl-v2-weer-legend-swatch.is-wind { background: #F6E9CE; color: #8A5F12; }
+.gl-v2-weer-legend-swatch.is-both { background: linear-gradient(135deg, #D7E6EF 0 50%, #F6E9CE 50% 100%); color: var(--gl-v2-ink); }
+.gl-v2-weer-legend-swatch.is-vacation { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-weer-legend-swatch.is-weekend { background: var(--gl-v2-bg); color: var(--gl-v2-muted); font-weight: 450; }
+.gl-v2-weer-legend-swatch.is-hover-preview { background: var(--gl-v2-surface); box-shadow: inset 0 0 0 1.5px #2E5F7E; color: #2E5F7E; }
+.gl-v2-weer-legend-spacer { flex: 1; }
+.gl-v2-weer-legend-hint { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+@media (max-width: 767.98px) {
+    .gl-v2-weer-toolbar { align-items: stretch; }
+    .gl-v2-weer-field, #weerstation-select { width: 100%; }
+    .gl-v2-weer-toolbar-spacer { flex-basis: 100%; height: 0; }
+    .gl-v2-weer-year-bar { width: 100%; justify-content: space-between; }
+    /* De regen-/winddagtotalen laten de balk op een telefoonbreedte te lang worden — de ‹ jaar ›-
+       navigatie (het enige interactieve stuk hier) werd zo voorbij de rand van het scherm geduwd.
+       Beide teksten staan al elders (jaarbalk-linker helft komt terug in de schakelaar-tellertjes,
+       en in elke maandkop) — enkel de bijhorende divider ná "regendagen" verdwijnt mee (de
+       ::regen[divider]wind-scheiding), zodat de resterende divider tussen stationslabel en
+       "totaal" blijft staan i.p.v. twee dividers na elkaar zonder tekst ertussen. */
+    .gl-v2-weer-year-stat.is-rain,
+    .gl-v2-weer-year-stat.is-wind,
+    .gl-v2-weer-year-stat.is-rain + .gl-v2-weer-year-divider { display: none; }
+    .gl-v2-weer-legend-hint { flex-basis: 100%; }
+}

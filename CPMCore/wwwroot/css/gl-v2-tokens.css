@@ -8,6 +8,13 @@
     --gl-v2-ink: #2C3B2A;
     --gl-v2-muted: #5a6b58;
     --gl-v2-muted-soft: #4A5B48;
+    /* Lichtere muted-toon voor genuine "leeg"-staten (placeholder-tekst, tellers, hint-voetjes) —
+       optie 8f·2's eigen "GSM — LEEG"-voorbeeld gebruikt deze tint, niet --gl-v2-muted (die blijft
+       voor labels/helptekst/iconen die altijd aanwezig/leesbaar moeten zijn, geen "nog niks
+       ingevuld"-signaal). Bewust een apart token van --gl-v2-disabled-fg hieronder: die twee liggen
+       toevallig dicht bij elkaar in hex, maar staan voor een andere staat (disabled veld vs. een
+       gewoon, actief leeg veld) — samenvoegen zou dat onderscheid verdoezelen. */
+    --gl-v2-muted-light: #9aa898;
     --gl-v2-primary: #00532D;
     --gl-v2-primary-deep: #00401F;
     --gl-v2-primary-tint: #D6E5CC;
@@ -38,7 +45,13 @@
     --gl-v2-shadow-actionbar: 0 -10px 26px -22px rgba(44, 59, 42, .6);
 
     --gl-v2-font-serif: 'Playfair Display', 'Times New Roman', Georgia, serif;
-    --gl-v2-font-sans: 'Avenir', 'Open Sans', -apple-system, 'Segoe UI', Helvetica, sans-serif;
+    --gl-v2-font-sans: 'IBM Plex Sans', -apple-system, 'Segoe UI', Helvetica, sans-serif;
+
+    /* .gl-v2-content se eigen padding (gl-v2-shell.css) — als vars zodat een edge-to-edge kind
+       (.gl-v2-tabbar/.gl-v2-form-actionbar) 'm exact met een negatieve margin kan opheffen zonder
+       het getal op twee plekken te moeten laten kloppen. */
+    --gl-v2-content-pad-x: 22px;
+    --gl-v2-content-pad-y: 20px;
 
     background: var(--gl-v2-bg);
     color: var(--gl-v2-ink);

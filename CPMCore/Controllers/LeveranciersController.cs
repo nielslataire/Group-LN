@@ -712,7 +712,6 @@ public class LeveranciersController : BaseController
         }
         var writeScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
         var deleteScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
-        SetPageHeader("bx bx-hard-hat", "Leveranciers");
 
         var suppliersQuery = _db.CompanyInfo
             .Include(c => c.CompanyIssuerCompany)
@@ -836,6 +835,34 @@ public class LeveranciersController : BaseController
                   : writeScope.AllowedIssuerIds.ToList()
         };
 
+        // Facturatiebedrijf-filter actief? Titel/breadcrumb tonen dan dat bedrijf i.p.v. de generieke
+        // "Leveranciers" — zelfde MvcBreadcrumbNode-aanpak als Details hierboven (welke expliciet
+        // Home > Leveranciers > <naam> opbouwt i.p.v. het statische [Breadcrumb]-attribuut te
+        // hergebruiken, want dat kan geen route-afhankelijke waarde tonen).
+        var selectedIssuerName = issuerCompanyId.HasValue
+            ? issuers.FirstOrDefault(i => i.Id == issuerCompanyId.Value)?.Name
+            : null;
+
+        if (!string.IsNullOrWhiteSpace(selectedIssuerName))
+        {
+            SetPageHeader("bx bx-hard-hat", $"Leveranciers {selectedIssuerName}");
+
+            var homeNode = new MvcBreadcrumbNode(nameof(Index), "Home", "Dashboard");
+            var leveranciersNode = new MvcBreadcrumbNode(nameof(Index), "Leveranciers", "Leveranciers")
+            {
+                Parent = homeNode
+            };
+            ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Index), "Leveranciers", selectedIssuerName)
+            {
+                Parent = leveranciersNode,
+                RouteValues = new { issuerCompanyId = issuerCompanyId!.Value }
+            };
+        }
+        else
+        {
+            SetPageHeader("bx bx-hard-hat", "Leveranciers");
+        }
+
         return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", vm);
     }
 
@@ -855,6 +882,7 @@ public class LeveranciersController : BaseController
             .Include(c => c.PostCode)
                 .ThenInclude(p => p.Country)
                 .Include(c => c.CompanyIssuerCompany)
+                    .ThenInclude(l => l.IssuerCompany)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.CompanyId == id, ct);
 
@@ -1049,7 +1077,14 @@ public class LeveranciersController : BaseController
             WebUrl = supplier.Weburl,
             RequiresDigitalInvoice = supplier.RequiresDigitalInvoice,
             AttachUblByDefault = supplier.AttachUblByDefault,
+            IsActive = supplier.IsActive,
+            IsCustomer = supplier.IsCustomer,
             Activities = activities,
+            IssuerCompanies = supplier.CompanyIssuerCompany
+                .Where(l => l.IssuerCompany != null)
+                .Select(l => l.IssuerCompany!.Name)
+                .OrderBy(n => n)
+                .ToList(),
             Departments = departments,
             Contacts = contacts,
             Contracts = contracts,
@@ -1057,7 +1092,7 @@ public class LeveranciersController : BaseController
         };
 
         SetPageHeader("bx bx-hard-hat", detailModel.Name);
-        return View(detailModel);
+        return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailsV2" : "Details", detailModel);
     }
 
     // ── Portaal: contact uitnodigen ──────────────────────────────────────────
@@ -1288,6 +1323,10 @@ public class LeveranciersController : BaseController
             issuerCompanyId = null;
         }
 
+        // Zelfde Referrer-patroon als Edit: Annuleren en (bij succes) Opslaan gaan terug naar de
+        // pagina waar de gebruiker vandaan kwam i.p.v. altijd naar Index.
+        TempData["Referrer"] = Request.Headers["Referer"].ToString();
+
         var vm = await BuildFormAsync(new SupplierFormViewModel
         {
             SelectedIssuerCompanyIds = issuerCompanyId.HasValue
@@ -1297,7 +1336,7 @@ public class LeveranciersController : BaseController
 
         SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
         SetCreateBreadcrumb();
-        return View(vm);
+        return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", vm);
     }
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -1333,7 +1372,7 @@ public class LeveranciersController : BaseController
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
             SetCreateBreadcrumb();
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", model);
         }
 
         await EnsurePostalSelectionAsync(model, ct);
@@ -1359,7 +1398,8 @@ public class LeveranciersController : BaseController
         var departments = await PersistDepartmentsAsync(entity.CompanyId, model.Departments ?? Enumerable.Empty<DepartmentInputViewModel>(), ct);
         await PersistContactsAsync(entity.CompanyId, model.Contacts ?? Enumerable.Empty<ContactInputViewModel>(), departments, ct);
 
-        return RedirectToAction(nameof(Index));
+        var referrer = TempData["Referrer"] as string;
+        return !string.IsNullOrWhiteSpace(referrer) ? Redirect(referrer) : RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
@@ -1402,6 +1442,12 @@ public class LeveranciersController : BaseController
             AddMessage("error", "Je hebt geen rechten om leveranciers te bewerken.", "Geen toegang");
             return RedirectToAction("AccessDenied", "Account");
         }
+
+        // Zelfde Referrer-patroon als Klanten-/ProjectenController: Annuleren en (bij succes) Opslaan
+        // gaan terug naar de pagina waar de gebruiker vandaan kwam i.p.v. altijd naar Index/Details.
+        // TempData.Peek in de view (niet TempData[..]) zodat de waarde ook nog leeft bij een POST die
+        // faalt en de pagina herlaadt.
+        TempData["Referrer"] = Request.Headers["Referer"].ToString();
 
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
@@ -1520,7 +1566,7 @@ public class LeveranciersController : BaseController
 
         await BuildFormAsync(vm, ct, scope);
         SetPageHeader("bx bx-hard-hat", $"Leverancier bewerken — {entity.BedrijfsNaam}");
-        return View(vm);
+        return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", vm);
     }
 
     [HttpPost]
@@ -1552,8 +1598,14 @@ public class LeveranciersController : BaseController
         if (!ModelState.IsValid)
         {
             await BuildFormAsync(model, ct, scope);
-            SetPageHeader("bx bx-hard-hat", "Leverancier bewerken");
-            return View(model);
+            var invalidEntityName = await _db.CompanyInfo
+                .Where(c => c.CompanyId == id)
+                .Select(c => c.BedrijfsNaam)
+                .FirstOrDefaultAsync(ct);
+            SetPageHeader("bx bx-hard-hat", string.IsNullOrWhiteSpace(invalidEntityName)
+                ? "Leverancier bewerken"
+                : $"Leverancier bewerken — {invalidEntityName}");
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
         }
 
         var entity = await _db.CompanyInfo
@@ -1627,7 +1679,8 @@ public class LeveranciersController : BaseController
             await TrySyncSupplierRelationAsync(entity.CompanyId, ct);
         }
 
-        return RedirectToAction(nameof(Index));
+        var referrer = TempData["Referrer"] as string;
+        return !string.IsNullOrWhiteSpace(referrer) ? Redirect(referrer) : RedirectToAction(nameof(Index));
     }
 
     [HttpGet]
@@ -1760,13 +1813,19 @@ public class LeveranciersController : BaseController
     [HttpGet]
     public PartialViewResult BlankDepartmentRow()
     {
-        return PartialView("Partials/_SupplierDepartmentRow", new DepartmentInputViewModel());
+        var viewName = ViewData["UseGlV2Layout"] as bool? == true
+            ? "Partials/_SupplierDepartmentRowV2"
+            : "Partials/_SupplierDepartmentRow";
+        return PartialView(viewName, new DepartmentInputViewModel());
     }
 
     [HttpGet]
     public PartialViewResult BlankContactRow()
     {
-        return PartialView("Partials/_SupplierContactRow", new ContactInputViewModel());
+        var viewName = ViewData["UseGlV2Layout"] as bool? == true
+            ? "Partials/_SupplierContactRowV2"
+            : "Partials/_SupplierContactRow";
+        return PartialView(viewName, new ContactInputViewModel());
     }
     private async Task<SupplierIssuerScope> ResolveSupplierIssuerScopeAsync(PermissionAccessType accessType, CancellationToken ct)
     {

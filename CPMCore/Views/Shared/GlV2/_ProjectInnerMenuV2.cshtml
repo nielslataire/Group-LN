@@ -1,0 +1,223 @@
+@model CPMCore.Models.GlV2.GlV2ProjectMenuVm
+@using FacadeCore
+@using BOCore
+@using CPMCore.Models.GlV2
+@inject IPermissionService PermissionService
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 9 "Inner menu van het
+    projectdossier — 18 items in 6 groepen, op drie breedtes").
+
+    Groepen/items/rechten zijn een 1-op-1 overname van Views/Shared/DetailMenu.cshtml (de huidige
+    legacy sidebar) — zelfde PermissionCodes, zelfde href's, zelfde coördinatieproject-uitzondering
+    (foto's/nieuws/contacten verborgen). Dat is toevallig ook precies "18 items in 6 groepen" voor een
+    gebruiker met volle rechten, exact wat punt 9 als voorbeeld gebruikt. Enkel de labels/iconen zijn
+    hertekend naar de Phosphor-iconenset die de rest van gl-v2 gebruikt (legacy gebruikt Boxicons).
+    Tellers (bv. "3" op Punten in de mockup) zijn NIET aangesloten — de legacy sidebar toont die ook
+    niet; een live teller erbij halen is een aparte, latere pas.
+
+    Model.Mode kiest WELKE boom hieronder rendert — de partial wordt door de pagina twee keer
+    aangeroepen (zie Projecten/DetailV2.cshtml), niet omdat de data verschilt (dezelfde groepen/items
+    worden hieronder gewoon opnieuw opgebouwd, goedkope in-memory permissiechecks) maar omdat de TWEE
+    boomvormen in totaal verschillende ouders horen: Outer (desktop 9a + tablet 9b) is een EIGEN kaart
+    tussen de rail en de inhoudskaart (@section ProjectMenu in _LayoutV2.cshtml), Phone (9c) hoort ÍN
+    de paginakaart zelf, boven de inhoud — geen CSS-reflow kan één DOM tussen twee ouders herschikken.
+
+    Tablet (9b) is bewust GEEN icoonkolom-met-flyout: elk item heeft al zijn eigen zichtbare icoon in
+    de kolom (anders dan de wireframe se voorbeeld, dat één icoon per GROEP suggereert) — een flyout
+    die dezelfde items nog een keer als tekst toont is dan een overbodige extra stap. Tikken/klikken op
+    een icoon navigeert dus meteen, met enkel een tooltip (na 400ms) voor het label.
+*@
+@{
+    var projectId = Model.ProjectId;
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    await PermissionService.EnsureLoadedAsync();
+
+    bool IsHere(string controller, string? action = null) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+        && (action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase));
+
+    var canSeeDetail       = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
+    var canSeeClients      = PermissionService.HasRead(PermissionCodes.ProjectsCustomers);
+    var canSeeSuppliers    = PermissionService.HasRead(PermissionCodes.ProjectsSuppliers);
+    var canSeePhotos       = PermissionService.HasRead(PermissionCodes.ProjectsPhotos);
+    var canSeeNews         = PermissionService.HasRead(PermissionCodes.ProjectsNews);
+    var canSeeUnits        = PermissionService.HasRead(PermissionCodes.ProjectsUnits);
+    var canSeeTraject      = PermissionService.HasRead(PermissionCodes.ProjectsTraject);
+    var canSeeDossiers     = PermissionService.HasRead(PermissionCodes.ProjectsDossiers);
+    var canSeeIssues       = PermissionService.HasRead(PermissionCodes.ProjectsIssues);
+    var canSeeDocs         = PermissionService.HasRead(PermissionCodes.ProjectsDocuments);
+    var canSeeInsurances   = PermissionService.HasRead(PermissionCodes.ProjectsInsurances);
+    var canSeeInvoicing    = PermissionService.HasRead(PermissionCodes.ProjectsInvoicing);
+    var canSeePostCalc     = PermissionService.HasRead(PermissionCodes.ProjectsPostCalculation);
+    var canSeeChangeOrders = PermissionService.HasRead(PermissionCodes.ProjectsChangeOrders);
+    var canSeeForSale      = PermissionService.HasRead(PermissionCodes.ProjectsForSale);
+    var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
+
+    var showPhotos   = canSeePhotos   && !Model.IsCoordinationProject;
+    var showNews     = canSeeNews     && !Model.IsCoordinationProject;
+    var showContacts = canSeeContacts && !Model.IsCoordinationProject;
+
+    var groups = new List<(string Key, string Label, List<(string Text, string Icon, string Href, bool Active)> Items)>();
+
+    var algemeenItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    if (canSeeDetail) algemeenItems.Add(("Project", "ph-house", Url.Action("Detail", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Detail")));
+    if (canSeeClients) algemeenItems.Add(("Klanten", "ph-users", Url.Action("DetailClients", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailClients")));
+    if (canSeeSuppliers) algemeenItems.Add(("Leveranciers", "ph-hard-hat", Url.Action("DetailContracts", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailContracts")));
+    if (algemeenItems.Count > 0) groups.Add(("algemeen", "Algemeen", algemeenItems));
+
+    var detailsItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    if (showPhotos) detailsItems.Add(("Media", "ph-image", Url.Action("DetailPhotos", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailPhotos")));
+    if (showNews) detailsItems.Add(("Nieuws", "ph-newspaper", Url.Action("DetailNews", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailNews")));
+    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits")));
+    if (detailsItems.Count > 0) groups.Add(("details", "Details", detailsItems));
+
+    var opvolgingItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    if (canSeeTraject) opvolgingItems.Add(("Traject", "ph-flow-arrow", Url.Action("Index", "ProjectTraject", new { projectId = projectId }) ?? "#", IsHere("ProjectTraject")));
+    if (canSeeDossiers) opvolgingItems.Add(("Dossiers", "ph-folder-open", Url.Action("Index", "ProjectDossiers", new { projectId = projectId }) ?? "#", IsHere("ProjectDossiers")));
+    if (canSeeIssues) opvolgingItems.Add(("Punten", "ph-list-checks", Url.Action("Index", "ProjectsIssues", new { projectId = projectId }) ?? "#", IsHere("ProjectsIssues")));
+    if (canSeeDocs) opvolgingItems.Add(("Documenten", "ph-folder", Url.Action("DetailDocs", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailDocs")));
+    if (canSeeInsurances) opvolgingItems.Add(("Verzekeringen", "ph-shield-check", Url.Action("DetailInsurances", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailInsurances")));
+    opvolgingItems.Add(("Coördinatie", "ph-users-three", Url.Action("DetailCoordinatie", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailCoordinatie")));
+    if (opvolgingItems.Count > 0) groups.Add(("opvolging", "Opvolging", opvolgingItems));
+
+    var budgetItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    budgetItems.Add(("Budgetten", "ph-table", Url.Action("BudgetIndex", "Projecten", new { projectId = projectId }) ?? "#",
+        IsHere("Projecten", "BudgetIndex") || IsHere("Projecten", "BudgetGegevens") || IsHere("Projecten", "BudgetMasterAanmaken")));
+    if (canSeePostCalc) budgetItems.Add(("Nacalculatie", "ph-calculator", Url.Action("Recalculation", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Recalculation")));
+    if (budgetItems.Count > 0) groups.Add(("budget", "Budget", budgetItems));
+
+    var financieelItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    if (canSeeInvoicing)
+    {
+        financieelItems.Add(("Facturatie", "ph-invoice", Url.Action("Invoicing", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Invoicing")));
+        financieelItems.Add(("Betalingen", "ph-currency-eur", Url.Action("PaymentStages", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "PaymentStages")));
+    }
+    if (canSeeChangeOrders) financieelItems.Add(("Wijzigingsopdrachten", "ph-pencil-simple-line", Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder")));
+    if (financieelItems.Count > 0) groups.Add(("financieel", "Financieel", financieelItems));
+
+    var verkoopItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    if (canSeeForSale) verkoopItems.Add(("Te koop", "ph-tag", Url.Action("DetailSales", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailSales")));
+    if (showContacts) verkoopItems.Add(("Contacten", "ph-address-book", Url.Action("DetailContacts", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailContacts")));
+    if (verkoopItems.Count > 0) groups.Add(("verkoop", "Verkoop", verkoopItems));
+
+    var totalItemCount = groups.Sum(g => g.Items.Count);
+    // Design-handoff 9a "WAT ER MET 18 INGANGEN VERANDERT" §3: zoekveld pas vanaf ±12 ingangen.
+    var showSearch = totalItemCount >= 12;
+    var allItems = groups.SelectMany(g => g.Items.Select(it => (Group: g, Item: it))).ToList();
+    var active = allItems.Any(x => x.Item.Active) ? allItems.First(x => x.Item.Active) : allItems.FirstOrDefault();
+    var activeText = active.Item.Text ?? "Menu";
+    var activeIcon = active.Item.Icon ?? "ph-house";
+    var activeGroupLabel = active.Group.Label ?? "";
+}
+@if (Model.Mode == GlV2ProjectMenuMode.Outer)
+{
+    <div class="gl-v2-project-menu">
+
+        @* ── Desktop (≥1400px, design-handoff 9a): vast paneel, kop+zoek vast, groepen scrollen ── *@
+        <aside class="gl-v2-pm-desktop" aria-label="Projectmenu">
+            <div class="gl-v2-pm-head">
+                <span class="gl-v2-pm-head-icon"><i class="ph ph-house" aria-hidden="true"></i></span>
+                <span class="gl-v2-pm-head-text">
+                    <span class="gl-v2-pm-name">@Model.ProjectName</span>
+                    <span class="gl-v2-pm-sub">@Model.ProjectSubtitle</span>
+                </span>
+            </div>
+            @if (showSearch)
+            {
+                <div class="gl-v2-pm-search">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="search" class="js-gl-v2-pm-search" placeholder="Zoek in dit dossier …" aria-label="Zoek in dit dossier" />
+                </div>
+            }
+            <div class="gl-v2-pm-list">
+                @foreach (var group in groups)
+                {
+                    <div class="gl-v2-pm-group" data-pm-group>
+                        <div class="gl-v2-pm-group-label @(group.Items.Any(i => i.Active) ? "is-active-group" : "")">@group.Label.ToUpperInvariant()</div>
+                        @foreach (var item in group.Items)
+                        {
+                            <a class="gl-v2-pm-item @(item.Active ? "is-active" : "")" href="@item.Href" data-pm-item-text="@item.Text.ToLowerInvariant()">
+                                <i class="ph @item.Icon" aria-hidden="true"></i>
+                                <span>@item.Text</span>
+                            </a>
+                        }
+                    </div>
+                }
+                <div class="gl-v2-pm-empty" data-pm-empty hidden>Geen ingang gevonden.</div>
+            </div>
+            <div class="gl-v2-pm-foot">
+                <a href="@Url.Action("Index", "Projecten")"><i class="ph ph-caret-left" aria-hidden="true"></i>Alle projecten</a>
+            </div>
+        </aside>
+
+        @* ── Tablet (768–1399.98px, design-handoff 9b): icoonkolom 52px — elk item is al een eigen,
+           altijd zichtbare icoon-link (tooltip voor het label), geen flyout nodig. ──────────────── *@
+        <nav class="gl-v2-pm-tablet" aria-label="Projectmenu">
+            <div class="gl-v2-pm-rail-icon gl-v2-pm-rail-project" aria-label="@Model.ProjectName">
+                <i class="ph ph-house" aria-hidden="true"></i>
+                <span class="gl-v2-pm-rail-tooltip" aria-hidden="true">@Model.ProjectName</span>
+            </div>
+            @foreach (var group in groups)
+            {
+                <div class="gl-v2-pm-rail-divider"></div>
+                @foreach (var item in group.Items)
+                {
+                    <a class="gl-v2-pm-rail-icon @(item.Active ? "is-active" : "")" href="@item.Href" aria-label="@item.Text">
+                        <i class="ph @item.Icon" aria-hidden="true"></i>
+                        <span class="gl-v2-pm-rail-tooltip" aria-hidden="true">@item.Text</span>
+                    </a>
+                }
+            }
+        </nav>
+    </div>
+}
+else
+{
+    @* ── Gsm (<768px, design-handoff 9c): groene "waar ben ik"-balk, tikken opent een volledig blad ── *@
+    <div class="gl-v2-project-menu">
+        <div class="gl-v2-pm-phone">
+            <button type="button" class="gl-v2-pm-phone-trigger js-gl-v2-pm-open" aria-haspopup="dialog" aria-expanded="false" aria-controls="gl-v2-pm-sheet">
+                <i class="ph @activeIcon" aria-hidden="true"></i>
+                <span class="gl-v2-pm-phone-trigger-text">
+                    <span class="gl-v2-pm-phone-trigger-name">@activeText</span>
+                    <span class="gl-v2-pm-phone-trigger-sub">@activeGroupLabel · @totalItemCount ingangen</span>
+                </span>
+                <i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="gl-v2-pm-sheet-backdrop js-gl-v2-pm-close" id="gl-v2-pm-sheet-backdrop" hidden></div>
+        <div class="gl-v2-pm-sheet" id="gl-v2-pm-sheet" role="dialog" aria-modal="true" aria-label="Projectmenu" hidden>
+            <div class="gl-v2-pm-sheet-handle" aria-hidden="true"></div>
+            <div class="gl-v2-pm-sheet-header">
+                <span class="gl-v2-pm-sheet-title">@Model.ProjectName</span>
+                <button type="button" class="gl-v2-pm-sheet-close js-gl-v2-pm-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            @if (showSearch)
+            {
+                <div class="gl-v2-pm-search">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="search" class="js-gl-v2-pm-search" placeholder="Zoek in dit dossier …" aria-label="Zoek in dit dossier" />
+                </div>
+            }
+            <div class="gl-v2-pm-sheet-list">
+                @foreach (var group in groups)
+                {
+                    <div class="gl-v2-pm-group" data-pm-group>
+                        <div class="gl-v2-pm-group-label">@group.Label.ToUpperInvariant()</div>
+                        @foreach (var item in group.Items)
+                        {
+                            <a class="gl-v2-pm-sheet-item @(item.Active ? "is-active" : "")" href="@item.Href" data-pm-item-text="@item.Text.ToLowerInvariant()">
+                                <i class="ph @item.Icon" aria-hidden="true"></i>
+                                <span>@item.Text</span>
+                                <i class="ph @(item.Active ? "ph-check" : "ph-caret-right")" aria-hidden="true"></i>
+                            </a>
+                        }
+                    </div>
+                }
+                <div class="gl-v2-pm-empty" data-pm-empty hidden>Geen ingang gevonden.</div>
+            </div>
+        </div>
+    </div>
+}

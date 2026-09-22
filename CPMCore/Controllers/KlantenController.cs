@@ -225,7 +225,28 @@ namespace CPMCore.Controllers
                    : writeScope.AllowedIssuerIds.ToList()
             };
 
-            SetPageHeader("bx bx-group", "Klanten");
+            // Facturatiebedrijf-filter actief? Titel/breadcrumb tonen dan dat bedrijf i.p.v. de
+            // generieke "Klanten" — zelfde MvcBreadcrumbNode-aanpak als Details verderop (die
+            // expliciet Home > Klanten > <naam> opbouwt i.p.v. het statische [Breadcrumb]-attribuut
+            // te hergebruiken, want dat kan geen route-afhankelijke waarde tonen).
+            var selectedIssuerName = issuerCompanyId.HasValue
+                ? issuerCompanies.FirstOrDefault(i => i.Id == issuerCompanyId.Value)?.Name
+                : null;
+
+            if (!string.IsNullOrWhiteSpace(selectedIssuerName))
+            {
+                SetPageHeader("bx bx-group", $"Klanten {selectedIssuerName}");
+                ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Index), "Klanten", selectedIssuerName)
+                {
+                    Parent = KlantenIndex,
+                    RouteValues = new { issuerCompanyId = issuerCompanyId!.Value }
+                };
+            }
+            else
+            {
+                SetPageHeader("bx bx-group", "Klanten");
+            }
+
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
@@ -283,6 +304,9 @@ namespace CPMCore.Controllers
             var writeScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
             var canEdit = writeScope.HasAccess
                 && (writeScope.HasAllIssuers || client.ClientAccountIssuerCompany.Any(i => writeScope.AllowedIssuerIds.Contains(i.IssuerCompanyId)));
+            var deleteScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Delete, ct);
+            var canDelete = deleteScope.HasAccess
+                && (deleteScope.HasAllIssuers || client.ClientAccountIssuerCompany.Any(i => deleteScope.AllowedIssuerIds.Contains(i.IssuerCompanyId)));
 
             var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -349,13 +373,15 @@ namespace CPMCore.Controllers
                         RequiresDigitalInvoice = c.RequiresDigitalInvoice,
                         AttachUblByDefault = c.AttachUblByDefault
                     }).ToList(),
-                CanEdit = canEdit
+                CanEdit = canEdit,
+                CanDelete = canDelete
             };
 
             await BuildFormAsync(model, ct);
             ViewBag.ReadOnly = true;
+            ViewData["BackUrl"] = Url.Action("Index", "Klanten");
             SetPageHeader("bx bx-group", string.IsNullOrWhiteSpace(model.DisplayLabel) ? model.Title : model.DisplayLabel);
-            return View("Form", model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailsV2" : "Form", model);
         }
 
         [HttpGet]
@@ -374,6 +400,20 @@ namespace CPMCore.Controllers
                 issuerCompanyId = null;
             }
 
+            // Zelfde Referrer-patroon als Edit: Annuleren en (bij succes) Opslaan gaan terug naar de
+            // pagina waar de gebruiker vandaan kwam i.p.v. altijd naar Index.
+            TempData["Referrer"] = Request.Headers["Referer"].ToString();
+
+            var home = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var klantenIndex = new MvcBreadcrumbNode("Index", "Klanten", "Klanten")
+            {
+                Parent = home
+            };
+            ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Create), "Klanten", "Nieuw klant")
+            {
+                Parent = klantenIndex
+            };
+
             var model = new ClientFormViewModel
             {
                 SelectedIssuerCompanyIds = issuerCompanyId.HasValue
@@ -382,7 +422,7 @@ namespace CPMCore.Controllers
             };
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-group", model.Title);
-            return View("Create", model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", model);
         }
 
         [HttpPost]
@@ -412,7 +452,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 SetPageHeader("bx bx-group", model.Title);
-                return View("Create", model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", model);
             }
 
             var entity = new ClientAccount();
@@ -424,7 +464,8 @@ namespace CPMCore.Controllers
             await _db.SaveChangesAsync(ct);
 
             AddMessage("success", $"Klant {model.DisplayLabel} is toegevoegd", "Geslaagd!");
-            return RedirectToAction(nameof(Index));
+            var referrer = TempData["Referrer"] as string;
+            return !string.IsNullOrWhiteSpace(referrer) ? Redirect(referrer) : RedirectToAction(nameof(Index));
         }
 
         [HttpGet]
@@ -603,6 +644,7 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            TempData["Referrer"] = Request.Headers["Referer"].ToString();
 
             var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
             var klantenNode = new MvcBreadcrumbNode(nameof(Index), "Klanten", "Klanten")
@@ -674,7 +716,7 @@ namespace CPMCore.Controllers
 
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-group", model.Title);
-            return View("Edit", model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
         }
 
         [HttpPost]
@@ -724,7 +766,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 SetPageHeader("bx bx-group", model.Title);
-                return View("Edit", model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
             }
 
             var requiresOctopusSync = client.ClientAccountIssuerCompany.Any(l => (l.OctopusRelationId ?? 0) > 0)
@@ -742,7 +784,8 @@ namespace CPMCore.Controllers
             }
 
             AddMessage("success", $"Klant {model.DisplayLabel} is bijgewerkt", "Geslaagd!");
-            return RedirectToAction(nameof(Index));
+            var referrer = TempData["Referrer"] as string;
+            return !string.IsNullOrWhiteSpace(referrer) ? Redirect(referrer) : RedirectToAction(nameof(Index));
         }
 
 
@@ -1137,6 +1180,12 @@ namespace CPMCore.Controllers
                 ViewData = viewData
             };
         }
+        [HttpGet]
+        public PartialViewResult BlankClientContactRow()
+        {
+            return PartialView("Partials/_ClientContactRowV2", new ContactInputViewModel());
+        }
+
         public PartialViewResult BlankCoOwnerRow(string collectionName = "ClientAccount.CoOwners")
         {
             var countryService = _countryService;

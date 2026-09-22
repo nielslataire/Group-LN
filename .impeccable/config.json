@@ -41,6 +41,15 @@
         ],
         "createdAt": "2026-09-21T10:08:24.607Z",
         "reason": "Literal reproduction of design-handoff 7a's own KPI-card spec (border-left:3px solid {{k.accent}} on every kpi in the reference wireframe) — a client-provided design decision, not an invented AI pattern."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "CPMCore/wwwroot/css/gl-v2-project-inner-menu.css"
+        ],
+        "createdAt": "2026-09-22T13:51:33.316Z",
+        "reason": "design-handoff CRM Menu Wireframes.dc.html punt 9d specifies this exactly: active item state = tint bg + 3px accent bar left (#00532D), repeated for desktop list item, tablet rail icon, and phone sheet item. Implementing the signed-off spec, not an ad hoc AI choice."
       }
     ]
   }

@@ -1,0 +1,42 @@
+@model string
+@*
+    gl-v2 (design-handoff optie 8f·1, "ONDERNEMINGSNUMMER"). GlV2-prefixed i.p.v. gewoon "Ondernemingsnummer"
+    zodat dit nooit per ongeluk via impliciete DataType/UIHint-resolutie op een legacy-pagina
+    terechtkomt — enkel expliciete aanroep: @Html.EditorFor(m => m.X, "GlV2OndernemingsNummer").
+    Geen zichtbare standaard placeholder-tekst — het label + het BE-voorvoegsel zeggen al genoeg —
+    wel een spatie als placeholder-attribuut: de LEEG/INGEVULD-CSS
+    (.gl-v2-field-input:not(:placeholder-shown)) draait op :placeholder-shown, wat nooit matcht
+    zonder placeholder-attribuut, dus zonder dit zou dit veld altijd als "ingevuld" ogen (donkerder/
+    vetter) ook wanneer het leeg is. Een spatie voldoet aan de spec ("niet de lege string") en toont
+    niets zichtbaars. Optionele extra ViewData: Placeholder (overschrijft de spatie met echte tekst).
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var placeholder = ViewData["Placeholder"] as string ?? " ";
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@id">
+        @label
+        @if (ViewData.ModelMetadata.IsRequired)
+        {
+            <span style="color:#8B2A2A">*</span>
+        }
+    </label>
+    <div class="gl-v2-field-box">
+        <span class="gl-v2-field-prefix">BE</span>
+        <span class="gl-v2-field-divider"></span>
+        <input type="text" id="@id" name="@name" class="gl-v2-field-input is-tabular"
+               value="@Model" placeholder="@placeholder" autocomplete="off" maxlength="12" />
+        @if (hasError)
+        {
+            <i class="ph ph-warning-circle gl-v2-field-icon-trailing" aria-hidden="true"></i>
+        }
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

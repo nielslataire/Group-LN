@@ -276,7 +276,7 @@
                     {
                         var activityData = string.Join(",", supplier.ActivityIds);
                         var issuerData = string.Join(",", supplier.IssuerCompanyIds);
-                        <tr data-id="@supplier.Id" data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()">
+                        <tr data-id="@supplier.Id" data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()" data-detail-url="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">
                             <td>
                                 <a class="gl-v2-supplier-name-link" href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">@supplier.Name</a>
                                 @if (!supplier.IsActive)
@@ -289,11 +289,17 @@
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(supplier.Email))
                                 {
-                                    <a href="mailto:@supplier.Email">@supplier.Email</a>
+                                    <span class="gl-v2-table-email" title="@supplier.Email">
+                                        <span class="gl-v2-table-email-text">@supplier.Email</span>
+                                        <span class="gl-v2-table-email-actions">
+                                            <a class="gl-v2-table-email-action" href="mailto:@supplier.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                            <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@supplier.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                        </span>
+                                    </span>
                                 }
                                 else
                                 {
-                                    @:-
+                                    <span class="gl-v2-table-email-empty">—</span>
                                 }
                             </td>
                             <td class="text-end">@supplier.ContractCount</td>

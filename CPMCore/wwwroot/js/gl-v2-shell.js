@@ -12,6 +12,8 @@
     initToasts();
     initKpiToggle();
     initContextMenus();
+    initTableEmailActions();
+    initClickableRows();
 
     function initRailFlyouts() {
         var closeTimer = null;
@@ -508,5 +510,35 @@
         // snooze-opties -> eigen-datum-kalender, andere hoogte/breedte) en de zwevende positie
         // opnieuw wil laten berekenen zonder het paneel te moeten sluiten/heropenen.
         window.GlV2Menu = { closeAll: closeAllMenus, reposition: positionMenu };
+    }
+
+    // Tabel: e-mail-cel (design-handoff 8g) — de "kopiëren"-knop is de enige interactieve stap die
+    // geen native navigatie is (mailen is gewoon een mailto:-link), vandaar de enige echte handler
+    // hier. Gedelegeerd op document, werkt dus ook voor rijen die een DataTable later injecteert.
+    function initTableEmailActions() {
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest(".js-gl-v2-copy-email");
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var email = btn.getAttribute("data-email");
+            if (!email || !navigator.clipboard) return;
+            navigator.clipboard.writeText(email).then(function () {
+                if (window.GlV2Toast) window.GlV2Toast.show({ tone: "success", title: "Gekopieerd", body: email });
+            });
+        });
+    }
+
+    // Rij → detail, knoppen in de rij zijn de uitzondering. Opt-in via data-detail-url op de <tr>
+    // (Leveranciers/Klanten-tabellen vandaag) — elke klik die binnen een <a>/<button>/form-element
+    // van de rij gebeurt (naam-link, "···"-rijmenu en z'n items) doet gewoon haar eigen ding, de rij
+    // navigeert dan niet nog eens extra.
+    function initClickableRows() {
+        document.addEventListener("click", function (e) {
+            var row = e.target.closest("tr[data-detail-url]");
+            if (!row) return;
+            if (e.target.closest("a, button, input, select, textarea, label")) return;
+            window.location.href = row.getAttribute("data-detail-url");
+        });
     }
 })();

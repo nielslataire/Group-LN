@@ -1,0 +1,64 @@
+@model CPMCore.Models.Klanten.ContactInputViewModel
+@using HtmlHelpers.BeginCollectionItemCore
+@*
+    gl-v2-vertaling van het legacy <template id="contact-template">-clonegedrag in
+    Partials/_ClientFormScripts.cshtml — zelfde principe als Leveranciers/Partials/
+    _SupplierContactRowV2.cshtml (server-gerenderde partial i.p.v. client-side <template>-clone),
+    Html.BeginCollectionItem("Contacts") zorgt voor de juiste index/binding. Geen departement-kiezer
+    (Klanten heeft geen afdelingen-concept), wel de twee per-contact facturatieschakelaars die
+    Leveranciers' contactrij niet heeft — UBL hangt ook hier af van "Digitale factuur vereist"
+    (data-role="ubl-pair", zie initUblDependency in gl-v2-klanten-form.js).
+*@
+<div class="gl-v2-client-row">
+@using (Html.BeginCollectionItem("Contacts"))
+{
+    @Html.HiddenFor(m => m.Id)
+    <div class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-title">Contact</span>
+            <span class="gl-v2-card-header-spacer"></span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-contact-row" title="Contact verwijderen" aria-label="Contact verwijderen">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field" data-gl-v2-required="Naam is verplicht">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam <span style="color:#8B2A2A">*</span></label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Name, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Forename)">Voornaam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Forename, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group">
+                @Html.EditorFor(m => m.Email, "GlV2Email")
+                @Html.EditorFor(m => m.Phone, "GlV2Telefoon")
+                @Html.EditorFor(m => m.Mobile, "GlV2Gsm")
+            </div>
+            <div class="gl-v2-switch-group" data-role="ubl-pair">
+                <div class="gl-v2-switch-row">
+                    <label class="gl-v2-switch">
+                        @Html.CheckBoxFor(m => m.RequiresDigitalInvoice, new { @class = "gl-v2-client-switch-input", data_role = "digital-invoice-toggle" })
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">Digitale factuur vereist</span>
+                </div>
+                <div class="gl-v2-switch-row is-dependent">
+                    <label class="gl-v2-switch">
+                        @Html.CheckBoxFor(m => m.AttachUblByDefault, new { @class = "gl-v2-client-switch-input", data_role = "ubl-toggle" })
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">UBL standaard meesturen</span>
+                    <span class="gl-v2-switch-row-hint">hangt af van de vorige</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</div>

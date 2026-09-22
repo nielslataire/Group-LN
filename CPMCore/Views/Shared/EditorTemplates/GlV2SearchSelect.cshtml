@@ -1,0 +1,54 @@
+@model int?
+@*
+    gl-v2 (design-handoff optie 8f·3, "DROPDOWN MET ZOEKVELD, GROEPEN EN SUGGESTIES"). Bindt een
+    id-property zoals elk ander EditorTemplate (hidden input + de bestaande gl-v2-select-*
+    trigger/paneel-CSS voor het gesloten/open uiterlijk). Rendert enkel de GESLOTEN staat + een lege
+    paneel-container — het openen/zoeken/groeperen zelf is bewust ongewired JS, zelfde discipline als
+    de rest van .gl-v2-select-panel-search (component klaar, niks fabriceert een gebruik). Een
+    pagina die dit echt wil laten werken hydrateert data-lookup-url zelf.
+    Vereiste extra ViewData: LookupUrl. Optioneel: DisplayText (de huidige waarde als leesbare
+    tekst), Placeholder, Icon (bv. "ph-map-pin"), Label (overschrijft de DisplayName-afgeleide
+    labeltekst — bv. "Gemeente / postcode" i.p.v. het modelattribuut se eigen "Postcode Id").
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var displayText = ViewData["DisplayText"] as string;
+    var placeholder = ViewData["Placeholder"] as string ?? "Kies …";
+    var lookupUrl = ViewData["LookupUrl"] as string;
+    var icon = ViewData["Icon"] as string;
+    var isFilled = !string.IsNullOrWhiteSpace(displayText);
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@(id)_trigger">
+        @label
+        @if (ViewData.ModelMetadata.IsRequired)
+        {
+            <span style="color:#8B2A2A">*</span>
+        }
+    </label>
+    <div class="gl-v2-select" data-gl-v2-search-select data-lookup-url="@lookupUrl" data-search-placeholder="@placeholder">
+        <input type="hidden" id="@id" name="@name" value="@Model" />
+        @* role="button" i.p.v. een echte <button> — een <button> mag geen interactieve kinderen
+           bevatten, en de wis-knop hieronder is er zo een (zelfde reden .gl-v2-select-trigger-multi
+           hierboven al een <div> is i.p.v. een <button>). *@
+        <div id="@(id)_trigger" class="gl-v2-select-trigger@(isFilled ? " is-filled" : "")@(hasError ? " is-error" : "")" role="button" tabindex="0">
+            @if (!string.IsNullOrWhiteSpace(icon))
+            {
+                <i class="ph @icon" aria-hidden="true"></i>
+            }
+            <span class="gl-v2-select-trigger-label">@(isFilled ? displayText : placeholder)</span>
+            <button type="button" class="gl-v2-select-trigger-clear" data-role="clear-trigger" aria-label="Selectie wissen">
+                <i class="ph ph-x" aria-hidden="true"></i>
+            </button>
+            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-select-panel gl-v2-select-panel-search" data-role="panel"></div>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

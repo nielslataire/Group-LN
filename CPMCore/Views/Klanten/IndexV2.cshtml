@@ -190,14 +190,20 @@
                     @foreach (var client in Model.Clients)
                     {
                         var issuerIds = string.Join(",", client.IssuerCompanyIds);
-                        <tr data-id="@client.Id" data-issuers="@issuerIds">
+                        <tr data-id="@client.Id" data-issuers="@issuerIds" data-detail-url="@Url.Action("Details", "Klanten", new { id = client.Id })">
                             <td><a class="gl-v2-client-name-link" href="@Url.Action("Details", "Klanten", new { id = client.Id })">@client.DisplayName</a></td>
                             <td>@(EnterpriseNumberFormatter.Format(client.EnterpriseNumber) ?? "-")</td>
                             <td>@(string.IsNullOrWhiteSpace(client.City) ? "-" : client.City)</td>
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(client.Email))
                                 {
-                                    <a href="mailto:@client.Email">@client.Email</a>
+                                    <span class="gl-v2-table-email" title="@client.Email">
+                                        <span class="gl-v2-table-email-text">@client.Email</span>
+                                        <span class="gl-v2-table-email-actions">
+                                            <a class="gl-v2-table-email-action" href="mailto:@client.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                            <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@client.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                        </span>
+                                    </span>
                                 }
                                 else if (!string.IsNullOrWhiteSpace(client.Phone))
                                 {

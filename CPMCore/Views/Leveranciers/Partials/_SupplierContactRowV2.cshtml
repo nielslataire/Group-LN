@@ -1,0 +1,64 @@
+@model CPMCore.Models.Leveranciers.ContactInputViewModel
+@using HtmlHelpers.BeginCollectionItemCore
+@*
+    gl-v2-vertaling van Partials/_SupplierContactRow.cshtml — zelfde Html.BeginCollectionItem
+    ("Contacts")-wrapper, binding/index-gedrag ongewijzigd. De afdeling-kiezer blijft een kale
+    <select> (data-selected-key draagt de huidige DepartmentKey) — gl-v2-leveranciers-form.js se
+    refreshContactDepartmentOptions() vult 'm net als vandaag client-side met de actuele
+    Afdelingen-rijen (geen aparte gl-v2-select-CSS nodig voor dit ene interne kiesveld, het is geen
+    door de gebruiker doorzocht veld).
+*@
+<div class="gl-v2-supplier-row">
+@using (Html.BeginCollectionItem("Contacts"))
+{
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.Key)
+    <div class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-title">Contact</span>
+            <span class="gl-v2-card-header-spacer"></span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-contact-row" title="Contact verwijderen" aria-label="Contact verwijderen">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.LastName)">Naam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.LastName, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.FirstName)">Voornaam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.FirstName, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Function)">Functie</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Function, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.DepartmentKey)">Afdeling</label>
+                    <div class="gl-v2-field-box">
+                        <select name="@Html.NameFor(m => m.DepartmentKey)" id="@Html.IdFor(m => m.DepartmentKey)"
+                                class="gl-v2-field-input js-gl-v2-contact-department" data-selected-key="@Model.DepartmentKey">
+                            <option value="">Geen</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group">
+                @Html.EditorFor(m => m.Email, "GlV2Email")
+                @Html.EditorFor(m => m.Phone, "GlV2Telefoon")
+                @Html.EditorFor(m => m.Mobile, "GlV2Gsm")
+            </div>
+        </div>
+    </div>
+}
+</div>

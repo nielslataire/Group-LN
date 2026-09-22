@@ -200,7 +200,7 @@ namespace CPMCore.Controllers
                 model.Statuses = statusResponse.Values;
             }
 
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
         [HttpGet]
@@ -271,7 +271,7 @@ namespace CPMCore.Controllers
             ViewData["SubTitle"] = "Alle projecten";
             ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
 
-            return View("Index", model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
         [HttpGet]
@@ -333,7 +333,7 @@ namespace CPMCore.Controllers
                 Voortgang = voortgangAll
             };
 
-            return PartialView("_ProjectGridItems", model);
+            return PartialView(ViewData["UseGlV2Layout"] as bool? == true ? "_ProjectGridItemsV2" : "_ProjectGridItems", model);
         }
 
         /// <summary>
@@ -663,7 +663,7 @@ namespace CPMCore.Controllers
 
             SetPageHeader("bx bx-building-house", model.Project.Name);
 
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", model);
         }
         [HttpGet]
         public IActionResult ModalDeleteProject(int id)
@@ -4813,7 +4813,7 @@ namespace CPMCore.Controllers
             }
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectWeather = _ps.HasWrite(PermissionCodes.ProjectsWeatherDelay);
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "WeatherV2" : "Weather", model);
         }
         [HttpGet]
         public IActionResult GetCalendarBundle(int weatherstationid, int year)

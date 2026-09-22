@@ -1,0 +1,35 @@
+@model string
+@*
+    gl-v2 (design-handoff optie 8f·2, "TELEFOON"). Zelfde skelet als GSM/E-mail/Website hieronder —
+    icoon vooraan, +32-voorvoegsel achter een scheidingslijntje, actie ("Bellen") rechts die pas
+    verschijnt zodra er een waarde staat. Geen zichtbare standaard placeholder-tekst — icoon+label+
+    voorvoegsel zeggen al genoeg — maar wél een placeholder-attribuut met één spatie: de LEEG/
+    INGEVULD-CSS (.gl-v2-field-input:not(:placeholder-shown), en dus ook ".gl-v2-field-action pas
+    tonen zodra ingevuld") draait op :placeholder-shown, wat NOOIT matcht op een veld zonder
+    placeholder-attribuut — zonder dit zou "Bellen" altijd zichtbaar zijn, ook bij een leeg veld
+    (precies de regressie die de eerdere "geen placeholders"-opkuis hier veroorzaakte). Een spatie
+    voldoet aan de spec ("niet de lege string") en toont niets zichtbaars. Enkel expliciete aanroep.
+    Optionele extra ViewData: Placeholder (overschrijft de spatie met echte zichtbare tekst).
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var placeholder = ViewData["Placeholder"] as string ?? " ";
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@id">@label</label>
+    <div class="gl-v2-field-box">
+        <i class="ph ph-phone" aria-hidden="true"></i>
+        <span class="gl-v2-field-prefix">+32</span>
+        <span class="gl-v2-field-divider"></span>
+        <input type="tel" id="@id" name="@name" class="gl-v2-field-input"
+               value="@Model" placeholder="@placeholder" autocomplete="off" />
+        <a class="gl-v2-field-action" href="tel:@Model"><span>Bellen</span></a>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

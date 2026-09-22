@@ -1,0 +1,23 @@
+@model string
+@*
+    gl-v2 (design-handoff 8a, regel 4/5 "label klein en grijs boven de waarde... leeg = liggend
+    streepje, nooit een leeg vak"). Het read-only tegenhanger van de EditorTemplates in deze map:
+    dezelfde GlV2-prefix-conventie (enkel expliciete aanroep, nooit via impliciete DataType/UIHint-
+    resolutie), maar dan voor detailpagina's — enkel bindt op een string, geen input/name/id nodig,
+    dus geen formulierbinding-machinerie zoals bij de EditorTemplates hierboven.
+    Optionele ViewData: Label (overschrijft de DisplayName-afgeleide labeltekst), Wide
+    (grid-column:span 2, voor lange velden zoals Adres), Full (volle breedte van het detail-grid).
+    Velden die eigen opmaak nodig hebben (links, badges, meerdere regels) gebruiken dit template
+    niet — die schrijven de .gl-v2-detail-*-klassen rechtstreeks, zelfde discipline als EditV2 al
+    toepast voor velden die niet in een EditorTemplate passen.
+*@
+@{
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var isWide = ViewData["Wide"] as bool? ?? false;
+    var isFull = ViewData["Full"] as bool? ?? false;
+    var isEmpty = string.IsNullOrWhiteSpace(Model);
+}
+<div class="gl-v2-detail-field@(isWide ? " is-wide" : "")@(isFull ? " is-full" : "")">
+    <span class="gl-v2-detail-label">@label</span>
+    <span class="gl-v2-detail-value@(isEmpty ? " is-empty" : "")">@(isEmpty ? "—" : Model)</span>
+</div>

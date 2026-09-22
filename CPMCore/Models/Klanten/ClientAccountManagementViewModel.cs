@@ -129,6 +129,19 @@ public class ClientFormViewModel
     public string DisplayLabel => IsCompany
         ? CompanyName ?? string.Empty
         : string.Join(" ", new[] { Salutation?.GetDisplayName(), Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    // gl-v2 DetailsV2 — computed weergavevelden, zelfde reden als SupplierDetailViewModel se eigen
+    // EnterpriseNumberDisplay/IssuerCompaniesDisplay: GlV2DetailField bindt op een string-property,
+    // geen aparte formatteer-/join-stap in de view.
+    public string? EnterpriseNumberDisplay => CPMCore.Helpers.EnterpriseNumberFormatter.Format(EnterpriseNumber, EnterpriseNumberCountryCode);
+    public string? IssuerCompaniesDisplay
+    {
+        get
+        {
+            var names = IssuerCompanies.Where(i => SelectedIssuerCompanyIds.Contains(i.Id)).Select(i => i.Name).ToList();
+            return names.Any() ? string.Join(", ", names) : null;
+        }
+    }
 }
 
 public class ContactInputViewModel
@@ -157,6 +170,9 @@ public class ContactInputViewModel
 
     [Display(Name = "UBL standaard meesturen")]
     public bool AttachUblByDefault { get; set; }
+
+    public string? PhoneDisplay => CPMCore.Helpers.PhoneNumberFormatter.Format(Phone);
+    public string? MobileDisplay => CPMCore.Helpers.PhoneNumberFormatter.Format(Mobile);
 }
 
 public class CountryOptionViewModel

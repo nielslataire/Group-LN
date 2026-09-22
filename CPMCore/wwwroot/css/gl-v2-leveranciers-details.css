@@ -1,0 +1,278 @@
+/* gl-v2 layout-pilot — Leveranciers/DetailsV2.cshtml (design-handoff 8a). Pagina-eigen opmaak: de
+   verticale flex-kolomopbouw die de tabbar-positionering draagt (zelfde idee als
+   gl-v2-leveranciers-edit.css, hier zonder vaste actiebalk onderaan — geen formulier, dus geen
+   Annuleren/Opslaan om plaats voor te maken), plus de rij-kaartenlijst (Afdelingen/Contacten) en de
+   eenvoudige read-only tabellen (Contracten/Facturen). Alles generiek herbruikbaar (tabbar, kaart,
+   sectiekaart, badge, detail-grid) zit al in gl-v2-shell.css. */
+
+.gl-v2-supplier-details-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 4px;
+}
+
+.gl-v2-tab-panel[hidden] { display: none; }
+.gl-v2-tab-panel { display: flex; flex-direction: column; gap: 16px; }
+
+/* Elke sectiekaart se eigen "Bewerken"-link (8a-regel 4) hergebruikt .gl-v2-card-header-action se
+   eigen stijl (600 11.5px, primaire kleur) — die klasse is niet aan één kaartvariant gebonden, dus
+   werkt hier ongewijzigd binnen .gl-v2-section-card-header. */
+.gl-v2-section-card-header .gl-v2-card-header-action { text-decoration: none; flex: none; }
+
+.gl-v2-supplier-detail-row-list { display: flex; flex-direction: column; gap: 14px; }
+
+/* Portaal-acties onderaan een contactkaart (Uitnodigen/Toegang intrekken) — meerdere .gl-v2-btn's
+   (elk hun eigen kleine POST-formulier, .d-inline zodat ze niet als blokelementen onder elkaar
+   vallen) naast elkaar, met een dun lijntje erboven zoals de legacy pagina se eigen border-top. */
+.gl-v2-supplier-detail-portal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 14px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+
+/* Grijze metaregel boven een tab se eigen inhoud (8a-regel 3b, "mag per tab verschillen") — hier
+   enkel een eenvoudige telling, geen nieuwe data (zie DESIGN.md.gl-v2-draft.md voor de afweging). */
+.gl-v2-tab-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Contracten/Facturen — echte DataTables (net als Leveranciers/IndexV2 se eigen
+   #datatable-suppliers, dezelfde CDN-bundel/init-vorm, zie gl-v2-leveranciers-details.js), niet de
+   eerdere hand-gerolde platte tabel: gebruiker wees expliciet op de ontbrekende paginering en de
+   rij-acties die niet met IndexV2 overeenkwamen. .gl-v2-detail-table-card is enkel de witte kaartschil
+   eromheen (.gl-v2-card, geen DataTable-specifieke klasse zoals .gl-v2-table-card, want die laatste
+   verwacht een .is-ready-klasse die alleen IndexV2 se eigen laadstaat-JS zet).
+
+   Content-hoog (flex:none), exact zoals IndexV2 se eigen .gl-v2-table-card — GEEN flex:1-stretch
+   (die eerdere aanpak liet de kaart kunstmatig de volle taboogte innemen, ook met maar 1-2 rijen,
+   wat de gebruiker expliciet niet wou: "indien er minder rijen dan hoogte zijn moet de tabel niet
+   tot beneden getoond worden"). In plaats daarvan berekent syncTablePageLength()
+   (gl-v2-leveranciers-details.js) — zelfde recept als IndexV2 se eigen gelijknamige functie — hoeveel
+   rijen er in de beschikbare hoogte passen en zet die paginalengte; ís er minder data dan er ruimte
+   is, dan blijft de kaart gewoon zo kort als haar eigen rijen, geen CSS-truc nodig. */
+.gl-v2-detail-table-card { flex: none; padding-bottom: 16px; }
+/* IndexV2 se eigen .gl-v2-table-card is geen .gl-v2-card, dus draagt geen aparte "card-body"-laag —
+   hier wel (hergebruik van het generieke .gl-v2-card-component), dus die laag se eigen standaard
+   18px/20px-opvulling wordt hier herleid naar 0 boven/onder: geen kop (.gl-v2-card-header) om ruimte
+   voor te maken, en de onderkant krijgt haar ruimte al van de kaart (hierboven) + de voetregel zelf
+   (hieronder), niet nog een derde keer hier. */
+.gl-v2-detail-table-card .gl-v2-card-body { padding: 0 20px; }
+.gl-v2-detail-table thead th {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    padding: 12px 6px;
+}
+.gl-v2-detail-table td {
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    padding: 10px 6px;
+    vertical-align: middle;
+}
+
+/* ── Footer/paginering — 1-op-1 dezelfde regels als gl-v2-leveranciers.css se eigen
+   ".dt-container .dt-layout-row:last-child"-blok, hier los gedefinieerd om dezelfde reden als die
+   pagina zelf al documenteert: "identiek aan de Facturen-pagina, hier los omdat we
+   gl-v2-invoices.css niet meeladen" — DetailsV2 laadt op diezelfde manier bewust geen
+   gl-v2-leveranciers.css mee. */
+.gl-v2-detail-table-card .dt-container .dt-layout-row:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0 16px;
+    border-top: 1px solid var(--gl-v2-hairline);
+}
+.gl-v2-detail-table-card .dt-container .dt-layout-row:first-child { display: none; }
+.gl-v2-detail-table-card .dt-info { color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+/* Belt-and-braces bovenop het verbergen van de hele eerste .dt-layout-row hierboven — de
+   rijenaantal-keuzelijst (standaard-DataTables-gedrag zonder een eigen layout-override, i.p.v.
+   IndexV2 se eigen expliciete "layout: { topStart: { buttons: [] } }") mag hoe dan ook nooit zichtbaar
+   zijn, welke sleuf DataTables er ook voor kiest. */
+.gl-v2-detail-table-card .dt-length { display: none; }
+.gl-v2-detail-table-card .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
+.gl-v2-detail-table-card .dt-paging .page-link {
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 600 12px var(--gl-v2-font-sans);
+}
+.gl-v2-detail-table-card .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-detail-table-card .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-detail-table-card .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2-detail-table-card .dt-search { display: none; }
+
+/* ── Rij-actieknoppen — 1-op-1 dezelfde vorm/maten als Leveranciers/IndexV2 se eigen
+   .gl-v2-row-action/.gl-v2-row-menu/.gl-v2-row-menu-trigger (gl-v2-leveranciers.css), hier zonder de
+   danger-variant (geen verwijderen op deze twee tabjes). Desktop (≥1024px): .gl-v2-row-menu is een
+   gewone inline flex-rij van altijd-zichtbare icoonknoppen, GEEN "···"-menu — .gl-v2-row-menu-trigger
+   blijft daar dus verborgen. Pas ≤1023.98px wordt de rij-menu-div een verborgen paneel dat de
+   trigger opent (zelfde trigger+JS-gepositioneerd-paneel-patroon als de rest van gl-v2). */
+.gl-v2-row-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+/* Geen .gl-v2-detail-table-voorvoegsel op deze vier (in tegenstelling tot een eerdere versie) — de
+   rij-···-menu wordt op mobiel 1-op-1 gekloond in een .gl-v2-detail-mobile-card (geen <table> meer
+   daar), dus moet dezelfde .gl-v2-row-action-stijl ook buiten .gl-v2-detail-table gelden. Deze CSS-
+   file is uitsluitend voor DetailsV2, geen risico op botsing met IndexV2 se eigen (wél scoped)
+   .gl-v2-row-action in een ander bestand. */
+.gl-v2-row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--gl-v2-muted);
+    text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.gl-v2-row-action i { font-size: 15px; }
+.gl-v2-row-action:hover,
+.gl-v2-row-action:focus-visible {
+    border-color: var(--gl-v2-primary);
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    outline: none;
+}
+.gl-v2-row-menu { display: flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: nowrap; }
+.gl-v2-row-menu-trigger { display: none; }
+.gl-v2-row-menu-backdrop { display: none; }
+
+@media (max-width: 1023.98px) {
+    .gl-v2-row-menu-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-left: auto;
+        border-radius: 8px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-muted);
+        cursor: pointer;
+        flex: none;
+    }
+    .gl-v2-row-menu-trigger i { font-size: 16px; }
+    .gl-v2-row-menu-trigger:hover,
+    .gl-v2-row-menu-trigger.is-menu-open,
+    .gl-v2-row-menu-trigger:focus-visible {
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        outline: none;
+    }
+    .gl-v2-row-menu { display: none; }
+    .gl-v2-row-menu.is-open {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        position: fixed;
+        width: 200px;
+        padding: 6px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 99997;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        white-space: nowrap;
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 9px 8px;
+        border-radius: 9px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-ink);
+        font: 450 12.5px var(--gl-v2-font-sans);
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action i { font-size: 15px; color: var(--gl-v2-primary); }
+    .gl-v2-row-menu.is-open .gl-v2-row-action:hover,
+    .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible {
+        background: var(--gl-v2-hover-tint);
+        border: 0;
+        color: var(--gl-v2-ink);
+    }
+    .gl-v2-row-menu.is-open .gl-v2-row-action:hover i,
+    .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
+    .gl-v2-row-menu-backdrop.is-open {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(18, 28, 18, .35);
+        z-index: 99996;
+    }
+}
+
+/* ── Mobiel (<768px): tabel wordt een kaartenlijst, exact dezelfde architectuur als
+   Leveranciers/IndexV2 se eigen .gl-v2-mobile-supplier-list/renderMobileCards() — echt gescheiden
+   markup, gevuld door gl-v2-leveranciers-details.js bij elke DataTable-"draw" (dus automatisch in
+   sync met paginering/sortering). .gl-v2-detail-table-card wordt zelf transparant (elke kaart
+   draagt al haar eigen wit/schaduw), enkel de tabel/table-responsive-wrapper verdwijnt — de
+   paginering/voetregel (buiten die wrapper) blijft gewoon staan en stuurt de kaartenlijst aan. */
+.gl-v2-detail-mobile-list { display: none; }
+
+@media (max-width: 767.98px) {
+    .gl-v2-detail-table-card {
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+    .gl-v2-detail-table-card .table-responsive-md { display: none; }
+
+    .gl-v2-detail-mobile-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .gl-v2-detail-mobile-card {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        padding: 13px 14px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-dmc-row { display: flex; align-items: center; gap: 8px; }
+    .gl-v2-dmc-row > .gl-v2-row-menu-trigger { flex: none; margin-left: auto; }
+    .gl-v2-dmc-title { flex: 1; min-width: 0; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-dmc-meta { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .02em; }
+    .gl-v2-dmc-stats { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); justify-content: space-between; }
+    .gl-v2-dmc-stat { display: flex; flex-direction: column; gap: 1px; }
+    .gl-v2-dmc-stat-label { font: 500 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .06em; text-transform: uppercase; }
+    .gl-v2-dmc-stat-value { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+}

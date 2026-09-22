@@ -1,0 +1,10 @@
+@model string
+@*
+    gl-v2 (design-handoff optie 8e·1, "BADGES"). @Html.DisplayFor(m => m.StatusLabel, "GlV2Badge",
+    new { Tone = "positive" }) — Tone is een van positive/neutral/attention/blocked/inactive
+    (.gl-v2-badge.is-<tone> in gl-v2-shell.css), default "neutral".
+*@
+@{
+    var tone = ViewData["Tone"] as string ?? "neutral";
+}
+<span class="gl-v2-badge is-@tone">@Model</span>

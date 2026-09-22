@@ -37,8 +37,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800&display=swap" rel="stylesheet" type="text/css">
-    @* gl-v2: enige nieuwe font-load t.o.v. _Layout.cshtml, enkel geladen op deze shell. *@
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    @* gl-v2: enige nieuwe font-load t.o.v. _Layout.cshtml, enkel geladen op deze shell. IBM Plex Sans
+       i.p.v. Open Sans als schreefloos werkpaard (--gl-v2-font-sans, gl-v2-tokens.css). *@
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/animate/animate.compat.css">
@@ -71,17 +72,57 @@
         <div class="gl-v2-app">
             @await Html.PartialAsync("_RailPartialV2")
 
-            <div class="gl-v2-body">
+            @* Design-handoff 9a/9b: het projectdossier-inner-menu (desktop/tablet-vorm) is een EIGEN
+               kaart tussen de rail en de inhoudskaart, geen onderdeel van .gl-v2-body — drie kaarten
+               op één rij, net als de wireframe. Optionele sectie (net als PageActions hierboven):
+               enkel Projecten/DetailV2.cshtml vult 'm vandaag, elke andere gl-v2-pagina blijft
+               ongewijzigd. De gsm-vorm van hetzelfde menu (9c, groene balk + blad) hoort wél ÍN de
+               paginakaart — die rendert de pagina zelf in <main>, zie GlV2ProjectMenuMode. *@
+            @if (IsSectionDefined("ProjectMenu"))
+            {
+                <div class="gl-v2-project-menu-slot">
+                    @RenderSection("ProjectMenu", required: false)
+                </div>
+            }
+
+            @* Standaard krimpt de kaart mee met haar inhoud (align-self:flex-start, zie gl-v2-shell.css
+               se eigen "kaart krimpt mee"-toelichting bij .gl-v2-body — nodig voor korte tabelpagina's
+               zoals IndexV2). Een formulierpagina met vaste tabbar bovenaan + vaste actiebalk onderaan
+               (8d) heeft net het omgekeerde nodig: de kaart moet altijd de volle beschikbare hoogte
+               innemen zodat de actiebalk onderaan blijft "plakken" i.p.v. direct onder een korte tab
+               te zweven. Zo'n pagina zet ViewData["GlV2FullHeightBody"] = true; onbezet (de meeste
+               pagina's) blijft het bestaande krimp-gedrag exact hetzelfde. *@
+            <div class="gl-v2-body @(ViewData["GlV2FullHeightBody"] as bool? == true ? "is-full-height" : "")">
                 <header class="gl-v2-topbar">
                     @* Optie 3a: op mobiel toont de topbar het merk-logo links i.p.v. het paginaicoon
                        (dat blijft desktop-only) — de rail/het menu-paneel dragen elders al hetzelfde
                        gestippelde logo-vakje. *@
                     <span class="gl-v2-mobile-logo" aria-hidden="true"><img src="~/img/groupln-logo.png" alt="" /></span>
+                    @* Optionele terugknop, links van het paginaicoon — een pagina zet
+                       ViewData["BackUrl"] enkel wanneer "terug" hier echt zinvol is (bv. een
+                       formulierpagina die van een lijst-/detailpagina kwam); de meeste pagina's
+                       laten dit weg en tonen gewoon het paginaicoon zonder terugknop, zoals vandaag. *@
+                    @if (ViewData["BackUrl"] is string backUrl && !string.IsNullOrWhiteSpace(backUrl))
+                    {
+                        <a href="@backUrl" class="gl-v2-topbar-back" id="gl-v2-topbar-back-link" aria-label="Terug">
+                            <i class="ph ph-caret-left" aria-hidden="true"></i>
+                        </a>
+                    }
                     <span class="gl-v2-topbar-icon"><i class="@pageIcon" aria-hidden="true"></i></span>
                     <div class="gl-v2-topbar-titles">
                         <p class="gl-v2-topbar-title">@pageTitle</p>
                         @await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
                     </div>
+                    @* Optioneel — design-handoff 8a/8d: statusbadges direct naast de titel (bv.
+                       ACTIEF/OOK KLANT op Leveranciers/EditV2). Zelfde IsSectionDefined-wachter als
+                       PageActions hieronder, dus een pagina die 'm niet definieert (de meeste) krijgt
+                       gewoon geen extra element. *@
+                    @if (IsSectionDefined("PageTitleBadges"))
+                    {
+                        <div class="gl-v2-topbar-badges">
+                            @RenderSection("PageTitleBadges", required: false)
+                        </div>
+                    }
                     <span class="gl-v2-topbar-spacer"></span>
                     @if (IsSectionDefined("PageActions"))
                     {

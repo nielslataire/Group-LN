@@ -1,0 +1,144 @@
+@model CPMCore.Models.Projecten.BWDModel
+@* gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, optie 10a "Jaarkalender — één
+   klik zet een dag, weekends buiten spel, totalen in de maandkop"). Zelfde model/data/AJAX-
+   endpoints als Views/Projecten/Weather.cshtml (ProjectenController.Weather levert exact dezelfde
+   vm aan beide views; GetCalendarBundle/AddBadWeatherDay/DeleteBadWeatherDay ongewijzigd) — enkel
+   de FullCalendar-multiMonthYear-weergave is hier vervangen door een eigen 12-maanden-raster dat
+   10a's eigen regels volgt (weekends lichter, niet donkerder; volle gekleurde dagcel i.p.v.
+   letterpil; regen blauw/wind oker; één schakelaar i.p.v. twee losse knoppen; totalen op drie
+   plaatsen; jaarnavigatie bij de totalen).
+
+   Op expliciet verzoek NOG NIET afgewerkt in deze pas:
+   - Tabbar: enkel "Kalender" is echt (enabled/actief); "Weerstations"/"Aanvragen"/"Rapport" zijn
+     bewust @@("is-disabled") — geen pagina's achter die tabs bestaan nog.
+   - Topbar-acties (10a's "Exporteren"-knop + ⋯-icoonknop) zijn bewust nog niet toegevoegd — geen
+     @@section PageActions hier, dus _LayoutV2 toont daar simpelweg niets (IsSectionDefined-guard).
+*@
+@{
+    ViewData["Title"] ??= "Weerverlet";
+    ViewData["BackUrl"] = Url.Action("Index", "Projecten");
+    var canWrite = ViewBag.CanWriteProjectWeather as bool? ?? false;
+    var stations = Model.WeatherStations ?? new List<BOCore.IdNameBO>();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-weerverlet.css" asp-append-version="true" />
+}
+
+@* Design-handoff 10a se eigen tabstrip (optie 8e-stijl) — hier de eerste echte toepassing van
+   .gl-v2-tabbar-tab.is-disabled (component bestond al, nog nergens gebruikt): "niet verbergen maar
+   uitzetten" zodat de pagina er voor elke rol hetzelfde uitziet, i.p.v. tabs die naargelang rechten
+   verschijnen/verdwijnen. *@
+<div class="gl-v2-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="kalender">Kalender</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">
+        Weerstations <span class="gl-v2-tabbar-count">@stations.Count</span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Aanvragen</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Rapport</button>
+</div>
+
+<div class="gl-v2-weer-toolbar">
+    <div class="gl-v2-weer-field" id="weerstation-select">
+        <span class="gl-v2-weer-field-label">Weerstation</span>
+        <div class="gl-v2-select">
+            <input type="hidden" id="weerstation-select-value" value="@Model.SelectedWeatherStation" />
+            <button type="button" class="gl-v2-select-trigger" id="weerstation-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="weerstation-select-panel">
+                <i class="ph ph-map-pin" aria-hidden="true"></i>
+                <span class="gl-v2-select-trigger-label" id="weerstation-select-label">@(stations.FirstOrDefault(s => s.ID == Model.SelectedWeatherStation)?.Display ?? stations.FirstOrDefault()?.Display ?? "Geen weerstations")</span>
+                <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-select-backdrop" id="weerstation-select-backdrop"></div>
+            <div class="gl-v2-select-panel" id="weerstation-select-panel" role="listbox" aria-labelledby="weerstation-select-trigger">
+                <div class="gl-v2-select-sheet-header">
+                    <span class="gl-v2-select-sheet-title">Weerstation</span>
+                    <button type="button" class="gl-v2-select-sheet-close" id="weerstation-select-close">Sluiten</button>
+                </div>
+                <div class="gl-v2-select-options">
+                    @foreach (var station in stations)
+                    {
+                        <button type="button" class="gl-v2-select-option @(station.ID == Model.SelectedWeatherStation ? "is-selected" : "")" role="option" data-value="@station.ID" data-label="@station.Display">
+                            <i class="ph ph-check" aria-hidden="true"></i>
+                            <span>@station.Display</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (canWrite)
+    {
+        <div class="gl-v2-weer-field">
+            <span class="gl-v2-weer-field-label">Wat zet je bij een klik</span>
+            <div class="gl-v2-weer-segmented" id="weer-type-segmented" role="group" aria-label="Type weerverletdag">
+                <button type="button" class="gl-v2-weer-segmented-option is-active" data-type="rain" aria-pressed="true">
+                    <span class="gl-v2-weer-segmented-swatch is-rain" aria-hidden="true"></span>
+                    <span class="gl-v2-weer-segmented-label">Regendag</span>
+                    <span class="gl-v2-weer-segmented-count" id="weer-count-rain-btn">0</span>
+                </button>
+                <button type="button" class="gl-v2-weer-segmented-option" data-type="wind" aria-pressed="false">
+                    <span class="gl-v2-weer-segmented-swatch is-wind" aria-hidden="true"></span>
+                    <span class="gl-v2-weer-segmented-label">Winddag</span>
+                    <span class="gl-v2-weer-segmented-count" id="weer-count-wind-btn">0</span>
+                </button>
+            </div>
+        </div>
+    }
+
+    <span class="gl-v2-weer-toolbar-spacer"></span>
+
+    <div class="gl-v2-weer-year-bar">
+        <span class="gl-v2-weer-year-station" id="weer-year-station">—</span>
+        <span class="gl-v2-weer-year-stat is-rain"><span id="weer-year-rain">0</span> regendagen</span>
+        <span class="gl-v2-weer-year-divider" aria-hidden="true"></span>
+        <span class="gl-v2-weer-year-stat is-wind"><span id="weer-year-wind">0</span> winddagen</span>
+        <span class="gl-v2-weer-year-divider" aria-hidden="true"></span>
+        <span class="gl-v2-weer-year-stat is-total"><span id="weer-year-total">0</span> totaal</span>
+        <button type="button" class="gl-v2-weer-year-nav" id="weer-year-prev" aria-label="Vorig jaar">
+            <i class="ph ph-caret-left" aria-hidden="true"></i>
+        </button>
+        <span class="gl-v2-weer-year-value" id="weer-year-value">@DateTime.Today.Year</span>
+        <button type="button" class="gl-v2-weer-year-nav" id="weer-year-next" aria-label="Volgend jaar">
+            <i class="ph ph-caret-right" aria-hidden="true"></i>
+        </button>
+    </div>
+</div>
+
+<div class="gl-v2-weer-months @(canWrite ? "" : "is-readonly")" id="weer-months" data-armed-type="rain" aria-busy="true">
+    <div class="gl-v2-weer-loading" id="weer-months-loading">
+        <i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i> Kalender laden…
+    </div>
+</div>
+
+<div class="gl-v2-weer-legend">
+    <span class="gl-v2-weer-legend-label">Legende</span>
+    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-rain">14</span>regendag</span>
+    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-wind">15</span>winddag</span>
+    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-both">13</span>beide</span>
+    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-vacation">9</span>verlofdag</span>
+    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-weekend">17</span>weekend — telt niet mee</span>
+    @if (canWrite)
+    {
+        <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-hover-preview">18</span>hover in @("regenmodus")</span>
+        <span class="gl-v2-weer-legend-spacer"></span>
+        <span class="gl-v2-weer-legend-hint">klik zet · nog eens klikken wist · slepen over meerdere dagen zet een reeks</span>
+    }
+</div>
+
+@Html.AntiForgeryToken()
+
+@section PageScripts
+{
+    <script>
+        window.glV2WeerverletConfig = {
+            bundleUrl: '@Url.Action("GetCalendarBundle", "Projecten")',
+            addUrl: '@Url.Action("AddBadWeatherDay", "Projecten")',
+            deleteUrl: '@Url.Action("DeleteBadWeatherDay", "Projecten")',
+            canWrite: @Html.Raw(canWrite ? "true" : "false"),
+            initialStationId: @(Html.Raw((stations.FirstOrDefault(s => s.ID == Model.SelectedWeatherStation)?.ID ?? stations.FirstOrDefault()?.ID ?? 0).ToString())),
+            initialYear: @DateTime.Today.Year
+        };
+    </script>
+    <script src="~/js/gl-v2-weerverlet.js" asp-append-version="true"></script>
+}

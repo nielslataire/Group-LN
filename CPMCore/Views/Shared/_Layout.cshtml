@@ -22,6 +22,18 @@
 	var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
 	var isDashboard = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
 		&& string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+
+	// gl-v2 layout-pilot: een aantal views (Home/Index, Home/_DashboardProjectleider, en elke
+	// IndexV2/EditV2-pagina) definiëren @section MobileTopbarAction/MobileQuickActions
+	// onvoorwaardelijk op view-toplevel — Razor staat geen @if rond een @section toe, dus die
+	// secties bestaan sowieso, ook wanneer useGlV2Layout uit staat en deze legacy _Layout.cshtml
+	// (i.p.v. _LayoutV2.cshtml, waar ze wél gerenderd worden) de pagina tekent. Zonder deze regels
+	// gooit Razor een InvalidOperationException ("sections have been defined but have not been
+	// rendered") zodra de preview-cookie uit staat op zo'n pagina. Enkel deze twee — PageStyle/
+	// PageActions/PageScripts hierboven rendert deze layout zelf al, dus die hebben geen
+	// IgnoreSection nodig.
+	IgnoreSection("MobileTopbarAction");
+	IgnoreSection("MobileQuickActions");
 }
 <!doctype html>
 <html lang="nl" class="modern fixed sidebar-light @ViewBag.sidebarcollapsed">

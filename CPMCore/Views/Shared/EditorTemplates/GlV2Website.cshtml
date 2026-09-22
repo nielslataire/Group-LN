@@ -1,0 +1,33 @@
+@model string
+@*
+    gl-v2 (design-handoff optie 8f·2, "WEBSITE"). GlV2-prefixed i.p.v. de generieke DataType-naam
+    "Url", zelfde reden als GlV2Email.cshtml. "https://" is een vast voorvoegsel — geen aparte
+    protocol-dropdown, geen deel van de placeholder (zie 8f se eigen regel voor alle voorvoegsels).
+    Geen zichtbare standaard placeholder-tekst, wel een spatie als placeholder-attribuut — zie
+    GlV2Telefoon.cshtml se eigen toelichting voor waarom (:placeholder-shown-CSS matcht nooit zonder
+    een placeholder-attribuut, dus zonder dit zou het open-icoontje altijd zichtbaar zijn). Optionele
+    extra ViewData: Placeholder.
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var placeholder = ViewData["Placeholder"] as string ?? " ";
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+    var href = string.IsNullOrWhiteSpace(Model) ? "#" : "https://" + Model;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@id">@label</label>
+    <div class="gl-v2-field-box">
+        <i class="ph ph-globe" aria-hidden="true"></i>
+        <span class="gl-v2-field-prefix">https://</span>
+        <span class="gl-v2-field-divider"></span>
+        <input type="text" id="@id" name="@name" class="gl-v2-field-input"
+               value="@Model" placeholder="@placeholder" autocomplete="off" />
+        <a class="gl-v2-field-action" href="@href" target="_blank" rel="noopener" aria-label="Website openen"><i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

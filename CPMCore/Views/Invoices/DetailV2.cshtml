@@ -1,0 +1,482 @@
+@model CPMCore.Models.Invoicing.InvoiceDetailVM
+@using System.Globalization
+@using CPMCore.Models.Invoicing
+@using BOCore
+@* gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 11 "Factuurdetail — één
+   opbouw voor verkoop en aankoop"). Deze app se Facturen-module (InvoicesController) is uitsluitend
+   verkoopfacturen — aankoopfacturen leven volledig elders (Projecten/IncommingInvoice*), geen
+   onderdeel van deze controller — dus steeds naar 11a/11d/11e se VERKOOP-kant gekeken, nooit naar de
+   aankoop-varianten daarnaast. Zelfde model/data als Views/Invoices/Detail.cshtml
+   (InvoicesController.Detail levert exact dezelfde InvoiceDetailVM aan beide views).
+
+   Bewust NIET gebouwd deze pas (data bestaat niet/is niet tot hier doorgeplumbed — zie
+   DESIGN.md.gl-v2-draft.md voor de volledige lijst):
+   - "PROJECT"/"CONTRACT"-velden in Documentgegevens (BO heeft ProjectId/SupplierContractId, VM
+     mapt ze niet door, geen naam-resolutie beschikbaar in deze controller).
+   - "Open klantfiche"-link (ClientId zit niet op de VM).
+   - Een echte "Betalingen"-tab (geen betalingsledger in dit model, enkel de schaalwaarden
+     PaidAmount/Balance — die staan al in de totalen-blok van de Factuurlijnen-kaart).
+   - "Documenten"/"Historiek"-tabs, "Nummeren" (Issue) als topbar-actie.
+   Al deze tabs blijven zichtbaar maar @@("is-disabled") — zelfde "niet verbergen maar uitzetten"-
+   discipline als Projecten/WeatherV2's tabbar.
+*@
+@{
+    ViewData["BackUrl"] = Url.Action("Index", "Invoices", new { issuerCompanyId = ViewBag.CompanyId });
+    // Tabbar bovenaan + vaste actiebalk onderaan (tablet/gsm) — de kaart moet altijd de volle
+    // beschikbare hoogte innemen zodat die actiebalk onderaan blijft "plakken" i.p.v. direct onder
+    // een korte factuur te zweven (zelfde ViewData-vlag als elke andere gl-v2-pagina met een vaste
+    // onderbalk, zie _LayoutV2.cshtml se eigen toelichting bij .gl-v2-body.is-full-height).
+    ViewData["GlV2FullHeightBody"] = true;
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var canWriteInvoices = ViewBag.CanWriteInvoices as bool? ?? false;
+    var canDeleteInvoices = ViewBag.CanDeleteInvoices as bool? ?? false;
+    var isGenerating = Model.Status == InvoiceStatus.Generating;
+    var isDraft = Model.Status == InvoiceStatus.Draft;
+    var canEdit = canWriteInvoices && !isGenerating;
+    var canSend = canWriteInvoices && !isDraft && !isGenerating;
+    var docType = DocumentType(Model.Status, Model.IsCreditNote);
+    var docNumber = string.IsNullOrWhiteSpace(Model.PublicId) ? $"[{Model.Id}]" : Model.PublicId;
+
+    var outstanding = Model.Balance ?? (Model.TotalInclVat - (Model.PaidAmount ?? 0m));
+    var hasOutstanding = outstanding > 0.005m;
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    int? daysToExpire = Model.ExpirationDate.HasValue ? Model.ExpirationDate.Value.DayNumber - today.DayNumber : null;
+    var isOverdue = daysToExpire.HasValue && daysToExpire.Value < 0;
+    var isNearing = daysToExpire.HasValue && !isOverdue && daysToExpire.Value < 14;
+    var dueTone = isOverdue ? "is-over" : isNearing ? "is-near" : "";
+
+    var distinctRates = Model.Lines.Select(l => l.VatRate).Distinct().ToList();
+    var vatLabel = distinctRates.Count == 1
+        ? "Btw " + distinctRates[0].ToString("0.#", CultureInfo.InvariantCulture) + " %"
+        : "Btw";
+
+    var issuerName = Model.Issuer.LegalName ?? Model.Issuer.Name;
+    var issuerAddress = string.Join(", ", new[] { Model.Issuer.AddressLine1, Model.Issuer.AddressLine2 }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var issuerCity = string.Join(" ", new[] { Model.Issuer.PostalCode, Model.Issuer.City }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var clientAddress = string.Join(", ", new[] { Model.Client.AddressLine1, Model.Client.AddressLine2 }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var clientCity = string.Join(" ", new[] { Model.Client.PostalCode, Model.Client.City }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    var dagboek = !string.IsNullOrWhiteSpace(Model.OctopusJournalKey)
+        ? Model.OctopusJournalKey + (Model.OctopusDocumentSequenceNr.HasValue ? " · doc. " + Model.OctopusDocumentSequenceNr.Value : string.Empty)
+        : null;
+}
+@functions {
+    // Zelfde lokale @@functions-blok als Views/Invoices/IndexV2.cshtml — bewust gekopieerd i.p.v.
+    // gedeeld (zelfde discipline als IndexV2 dat destijds al overnam van de legacy Detail.cshtml).
+    (string Icon, string Color) StatusIcon(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => ("ph ph-note-pencil", "var(--gl-v2-muted)"),
+        InvoiceStatus.Issued => ("ph ph-list-numbers", "var(--gl-v2-gold)"),
+        InvoiceStatus.Sent => ("ph ph-paper-plane-tilt", "var(--gl-v2-gold)"),
+        InvoiceStatus.PartiallyPaid => ("ph ph-check-circle", "var(--gl-v2-gold)"),
+        InvoiceStatus.Paid => ("ph ph-check-circle", "var(--gl-v2-primary)"),
+        InvoiceStatus.Overdue => ("ph ph-warning-circle", "#8B2A2A"),
+        InvoiceStatus.Cancelled => ("ph ph-prohibit", "var(--gl-v2-muted)"),
+        InvoiceStatus.Booked => ("ph ph-book-open", "var(--gl-v2-primary)"),
+        InvoiceStatus.Generating => ("ph ph-spinner-gap gl-v2-spin", "var(--gl-v2-gold)"),
+        _ => ("ph ph-question", "var(--gl-v2-muted)")
+    };
+    // De 10 InvoiceStatus-waarden op de bestaande 5 generieke .gl-v2-badge-tonen (gl-v2-shell.css) —
+    // geen nieuwe kleurenfamilie voor deze ene pagina.
+    string StatusTone(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Paid => "is-positive",
+        InvoiceStatus.Booked => "is-positive",
+        InvoiceStatus.Overdue => "is-blocked",
+        InvoiceStatus.Cancelled => "is-inactive",
+        InvoiceStatus.Sent => "is-attention",
+        InvoiceStatus.PartiallyPaid => "is-attention",
+        InvoiceStatus.Generating => "is-attention",
+        _ => "is-neutral"
+    };
+    string DocumentType(InvoiceStatus status, bool isCreditNote)
+        => status == InvoiceStatus.Draft
+            ? (isCreditNote ? "Proforma creditnota" : "Proforma factuur")
+            : isCreditNote
+                ? "Creditnota"
+                : "Factuur";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-detail.css" asp-append-version="true" />
+}
+@* Design-handoff 11a: richting (VERKOOP), boekhoudstatus en openstaand-signaal naast de titel. De
+   "VERKOOP"-chip is hier bewust statisch (geen echte richting-toggle — deze module toont sowieso
+   nooit iets anders), enkel context/consistentie met het ontwerp. *@
+@section PageTitleBadges
+{
+    <span class="gl-v2-invoice-direction-badge">
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>Verkoop
+    </span>
+    <span class="gl-v2-badge @StatusTone(Model.Status)">@Model.StatusLabel.ToUpperInvariant()</span>
+    @if (hasOutstanding)
+    {
+        <span class="gl-v2-badge is-attention">OPENSTAAND</span>
+    }
+}
+@section PageActions
+{
+    <a href="@Url.Action("Pdf", "Invoices", new { id = Model.Id })" target="_blank" class="gl-v2-btn gl-v2-btn-secondary">
+        <i class="ph ph-file-pdf" aria-hidden="true"></i>Pdf
+    </a>
+    @if (canEdit)
+    {
+        <a href="@Url.Action("Edit", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-secondary">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken
+        </a>
+    }
+    @if (canSend)
+    {
+        <a href="@Url.Action("Send", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-primary">
+            <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>@(Model.LastEmailSentAt.HasValue ? "Opnieuw verzenden" : "Verzenden")
+        </a>
+    }
+    <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="invoice-detail-menu" aria-label="Meer acties">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>
+    </button>
+}
+
+<div class="gl-v2-menu" id="invoice-detail-menu">
+    <a class="gl-v2-menu-item" href="@Url.Action("Ubl", "Invoices", new { id = Model.Id })" target="_blank">
+        <i class="ph ph-file-code" aria-hidden="true"></i>
+        <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">UBL exporteren</span></span>
+    </a>
+    @if (canDeleteInvoices)
+    {
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+        <a href="#deleteInvoiceConfirmModal" class="gl-v2-menu-item is-danger deleteInvoice" data-id="@Model.Id" data-issuer="@ViewBag.CompanyId">
+            <i class="ph ph-trash" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span>
+        </a>
+    }
+</div>
+
+@* Design-handoff 11e: op gsm staan de chips (Verkoop/status/Openstaand) niet meer naast de titel
+   in de groene topbar (te weinig ruimte daar op smal scherm), maar op hun eigen witte rij eronder,
+   boven de tabbar. @@section PageTitleBadges hierboven blijft de bron voor desktop/tablet (verborgen
+   op gsm hieronder in gl-v2-invoices-detail.css); dit is dezelfde drie chips nogmaals, puur voor die
+   mobiele rij. *@
+<div class="gl-v2-invoice-mobile-badges">
+    <span class="gl-v2-invoice-direction-badge">
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>Verkoop
+    </span>
+    <span class="gl-v2-badge @StatusTone(Model.Status)">@Model.StatusLabel.ToUpperInvariant()</span>
+    @if (hasOutstanding)
+    {
+        <span class="gl-v2-badge is-attention">OPENSTAAND</span>
+    }
+</div>
+
+<div class="gl-v2-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="factuur">Factuur</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Betalingen</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">
+        Verzendgeschiedenis <span class="gl-v2-tabbar-count">@Model.EmailLogs.Count</span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Documenten</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Historiek</button>
+</div>
+
+<div class="gl-v2-invoice-detail-body">
+
+@* ── Richting-/bedragkaart — desktop/tablet: horizontale balk. Aparte, eigen markup voor gsm
+   hieronder (11e: bedrag eerst, groot, bovenaan) i.p.v. dezelfde balk via CSS te herschikken — zelfde
+   "twee echt aparte vormen, geen herschikkingstruc" discipline als _ProjectCardV2's mobiele rij. ── *@
+<div class="gl-v2-invoice-hero">
+    <div class="gl-v2-invoice-hero-accent"></div>
+    <div class="gl-v2-invoice-hero-body">
+        <div class="gl-v2-invoice-hero-row">
+            <div class="gl-v2-invoice-hero-party">
+                <span class="gl-v2-invoice-hero-label">Wij factureren</span>
+                <span class="gl-v2-invoice-hero-name">@issuerName</span>
+            </div>
+            <i class="ph ph-arrow-right gl-v2-invoice-hero-arrow" aria-hidden="true"></i>
+            <div class="gl-v2-invoice-hero-party">
+                <span class="gl-v2-invoice-hero-label">Aan</span>
+                <span class="gl-v2-invoice-hero-name">@Model.Client.Name</span>
+            </div>
+            @if (Model.ExpirationDate.HasValue)
+            {
+                <div class="gl-v2-invoice-hero-party">
+                    <span class="gl-v2-invoice-hero-label">Vervalt</span>
+                    <span class="gl-v2-invoice-hero-due @dueTone">
+                        @Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture)
+                        @if (daysToExpire.HasValue)
+                        {
+                            <span class="gl-v2-invoice-hero-due-rel">
+                                · @(isOverdue ? $"{Math.Abs(daysToExpire.Value)} dagen te laat" : daysToExpire.Value == 0 ? "vandaag" : $"over {daysToExpire.Value} dagen")
+                            </span>
+                        }
+                    </span>
+                </div>
+            }
+            <span class="gl-v2-invoice-hero-spacer"></span>
+            <div class="gl-v2-invoice-hero-amount">
+                <span class="gl-v2-invoice-hero-label">Nog te ontvangen</span>
+                <span class="gl-v2-invoice-hero-amount-value">@outstanding.ToString("C", culture)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="gl-v2-invoice-hero-mobile">
+    <div class="gl-v2-invoice-hero-mobile-accent"></div>
+    <div class="gl-v2-invoice-hero-mobile-body">
+        <span class="gl-v2-invoice-hero-label">Nog te ontvangen</span>
+        <span class="gl-v2-invoice-hero-mobile-amount">@outstanding.ToString("C", culture)</span>
+        <div class="gl-v2-invoice-hero-mobile-divider"></div>
+        <div class="gl-v2-invoice-hero-mobile-parties">
+            <span class="gl-v2-invoice-hero-name">@issuerName</span>
+            <i class="ph ph-arrow-right gl-v2-invoice-hero-arrow" aria-hidden="true"></i>
+            <span class="gl-v2-invoice-hero-name">@Model.Client.Name</span>
+        </div>
+        @if (Model.ExpirationDate.HasValue)
+        {
+            <span class="gl-v2-invoice-hero-due @dueTone">
+                Vervalt @Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture)
+                @if (daysToExpire.HasValue)
+                {
+                    <span class="gl-v2-invoice-hero-due-rel">
+                        · @(isOverdue ? $"{Math.Abs(daysToExpire.Value)} dagen te laat" : daysToExpire.Value == 0 ? "vandaag" : $"over {daysToExpire.Value} dagen")
+                    </span>
+                }
+            </span>
+        }
+    </div>
+</div>
+
+<div class="gl-v2-invoice-cards">
+    @* Op gsm: eigen volgorde (Factuurlijnen vóór deze drie kaarten, zie .gl-v2-invoice-*-order
+       hieronder) + Onze onderneming/Klant worden inklapbaar (.is-collapsible — het CSS-mechanisme
+       bestond al project-breed maar had nog geen enkele echte aanroeper, "de klik-toggle is ongewired
+       JS" per gl-v2-shell.css se eigen toelichting; gl-v2-invoices-detail.js is de eerste). Klant
+       staat standaard open (de partij waar het om gaat), Onze onderneming standaard dicht (je eigen
+       bedrijfsgegevens, minst nodig op het eerste gezicht). Enkel <768px effectief — zie
+       gl-v2-invoices-detail.css. *@
+    <div class="gl-v2-section-card is-collapsible gl-v2-invoice-card-issuer">
+        <div class="gl-v2-section-card-header" role="button" tabindex="0" aria-expanded="false" aria-controls="invoice-card-issuer-body">
+            <span class="gl-v2-section-card-icon is-neutral"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+            <span class="gl-v2-section-card-title" style="color:var(--gl-v2-muted)">Onze onderneming</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <span class="gl-v2-badge is-neutral">VERSTREKKER</span>
+            <i class="ph ph-caret-down gl-v2-section-card-chevron" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-invoice-collapsible-body" id="invoice-card-issuer-body">
+            <span class="gl-v2-invoice-party-name">@issuerName</span>
+            <div class="gl-v2-detail-grid">
+                @{ var issuerAddressFull = string.Join("\n", new[] { issuerAddress, issuerCity }.Where(s => !string.IsNullOrWhiteSpace(s))); }
+                @Html.DisplayFor(m => issuerAddressFull, "GlV2DetailField", new { Label = "Adres", Wide = true })
+                @Html.DisplayFor(m => Model.Issuer.VatNumber, "GlV2DetailField", new { Label = "Btw" })
+                @Html.DisplayFor(m => Model.BankAccount, "GlV2DetailField", new { Label = "Rekening" })
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-section-card is-collapsible gl-v2-invoice-card-client">
+        <div class="gl-v2-section-card-header" role="button" tabindex="0" aria-expanded="true" aria-controls="invoice-card-client-body">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+            <span class="gl-v2-section-card-title">Klant</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <i class="ph ph-caret-down gl-v2-section-card-chevron" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-invoice-collapsible-body" id="invoice-card-client-body">
+            <span class="gl-v2-invoice-party-name">@Model.Client.Name</span>
+            <div class="gl-v2-detail-grid">
+                @{ var clientAddressFull = string.Join("\n", new[] { clientAddress, clientCity }.Where(s => !string.IsNullOrWhiteSpace(s))); }
+                @Html.DisplayFor(m => clientAddressFull, "GlV2DetailField", new { Label = "Adres", Wide = true })
+                @Html.DisplayFor(m => Model.Client.VatNumber, "GlV2DetailField", new { Label = "Btw" })
+                @Html.DisplayFor(m => Model.Client.Email, "GlV2DetailField", new { Label = "Facturatie-e-mail" })
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-section-card gl-v2-invoice-card-doc">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+            <span class="gl-v2-section-card-title">Documentgegevens</span>
+        </div>
+        <div class="gl-v2-detail-grid">
+            @{ var docNumberLocal = docType + " " + docNumber; }
+            @Html.DisplayFor(m => docNumberLocal, "GlV2DetailField", new { Label = "Nummer" })
+            @{ var invoiceDateStr = Model.InvoiceDate.ToString("dd/MM/yyyy", culture); }
+            @Html.DisplayFor(m => invoiceDateStr, "GlV2DetailField", new { Label = "Factuurdatum" })
+            @{ var expirationDateStr = Model.ExpirationDate?.ToString("dd/MM/yyyy", culture); }
+            @Html.DisplayFor(m => expirationDateStr, "GlV2DetailField", new { Label = "Vervaldatum" })
+            @Html.DisplayFor(m => Model.PaymentTermDisplayText, "GlV2DetailField", new { Label = "Betaaltermijn" })
+            @Html.DisplayFor(m => dagboek, "GlV2DetailField", new { Label = "Dagboek" })
+            <div class="gl-v2-detail-field is-full">
+                <span class="gl-v2-detail-label">Verzending</span>
+                @if (Model.LastEmailSentAt.HasValue)
+                {
+                    <div class="gl-v2-invoice-send-summary">
+                        <span class="gl-v2-badge is-positive">VERZONDEN PER E-MAIL</span>
+                        <span class="gl-v2-invoice-send-summary-date">@Model.LastEmailSentAt.Value.ToString("dd/MM/yyyy HH:mm", culture)</span>
+                    </div>
+                }
+                else
+                {
+                    <span class="gl-v2-detail-value is-empty">Nog niet verzonden</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="gl-v2-card gl-v2-invoice-lines-card">
+    <div class="gl-v2-card-header">
+        <span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+        <span class="gl-v2-card-header-title">Factuurlijnen</span>
+        @if (!string.IsNullOrWhiteSpace(Model.HeaderText))
+        {
+            <span class="gl-v2-field-divider" aria-hidden="true"></span>
+            <span class="gl-v2-invoice-lines-desc">@Model.HeaderText</span>
+        }
+        <span class="gl-v2-card-header-spacer"></span>
+        <span class="gl-v2-card-header-count">@Model.Lines.Count @(Model.Lines.Count == 1 ? "lijn" : "lijnen")</span>
+    </div>
+    <div class="gl-v2-card-body">
+        <div class="gl-v2-invoice-lines-table-wrap">
+            <table class="gl-v2-invoice-lines-table">
+                <thead>
+                    <tr>
+                        <th>Omschrijving</th>
+                        <th>Groep</th>
+                        <th class="text-end">Excl. btw</th>
+                        <th class="text-end">Btw %</th>
+                        <th class="text-end">Btw</th>
+                        <th class="text-end">Totaal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Model.Lines)
+                    {
+                        <tr>
+                            <td>@line.Text</td>
+                            <td>@(string.IsNullOrWhiteSpace(line.GroupName) ? "—" : line.GroupName)</td>
+                            <td class="text-end">@line.NetAmount.ToString("N2", culture)</td>
+                            <td class="text-end">@line.VatRate.ToString("0.#", culture) %</td>
+                            <td class="text-end">@line.VatAmount.ToString("N2", culture)</td>
+                            <td class="text-end gl-v2-invoice-lines-total">@line.GrossAmount.ToString("N2", culture)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @* Op gsm: omschrijving en btw-bedrag vallen weg (op verzoek — enkel wat je in één oogopslag
+           nodig hebt: waarvoor/welke groep, het excl.-bedrag+percentage, en het totaal). GroepNaam
+           wordt dan het label van de rij i.p.v. de omschrijving; "Factuurlijn" als terugval wanneer
+           er geen groep is, nooit een lege rijkop. *@
+        <div class="gl-v2-invoice-lines-mobile">
+            @foreach (var line in Model.Lines)
+            {
+                <div class="gl-v2-invoice-line-card">
+                    <div class="gl-v2-invoice-line-card-row">
+                        <span class="gl-v2-invoice-line-card-text">@(string.IsNullOrWhiteSpace(line.GroupName) ? "Factuurlijn" : line.GroupName)</span>
+                        <span class="gl-v2-invoice-line-card-total">@line.GrossAmount.ToString("N2", culture)</span>
+                    </div>
+                    <span class="gl-v2-invoice-line-card-meta">@line.NetAmount.ToString("N2", culture) excl. · btw @line.VatRate.ToString("0.#", culture) %</span>
+                </div>
+            }
+        </div>
+
+        <div class="gl-v2-invoice-totals-wrap">
+            <div class="gl-v2-invoice-totals">
+                <div class="gl-v2-invoice-totals-row"><span>Totaal excl. btw</span><span>@Model.TotalExclVat.ToString("C", culture)</span></div>
+                <div class="gl-v2-invoice-totals-row"><span>@vatLabel</span><span>@Model.TotalVat.ToString("C", culture)</span></div>
+                <div class="gl-v2-invoice-totals-divider"></div>
+                <div class="gl-v2-invoice-totals-row is-strong"><span>Totaal incl. btw</span><span>@Model.TotalInclVat.ToString("C", culture)</span></div>
+                @if (Model.PaidAmount.HasValue && Model.PaidAmount.Value > 0)
+                {
+                    <div class="gl-v2-invoice-totals-row is-muted"><span>Reeds ontvangen</span><span>@Model.PaidAmount.Value.ToString("C", culture)</span></div>
+                }
+                <div class="gl-v2-invoice-totals-highlight"><span>Nog te ontvangen</span><span>@outstanding.ToString("C", culture)</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="gl-v2-card gl-v2-invoice-sends-card">
+    <div class="gl-v2-card-header">
+        <span class="gl-v2-card-header-icon"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
+        <span class="gl-v2-card-header-title">Verzendgeschiedenis</span>
+        <span class="gl-v2-field-divider" aria-hidden="true"></span>
+        <span class="gl-v2-invoice-lines-desc">Alleen bij verkoop — een aankoopfactuur verzenden we niet, die keuren we goed.</span>
+        <span class="gl-v2-card-header-spacer"></span>
+        @if (Model.LastEmailSentAt.HasValue)
+        {
+            <span class="gl-v2-card-header-count">laatst @Model.LastEmailSentAt.Value.ToString("dd/MM/yyyy HH:mm", culture)</span>
+        }
+    </div>
+    <div class="gl-v2-card-body">
+        @if (Model.EmailLogs.Any())
+        {
+            <div class="gl-v2-invoice-lines-table-wrap">
+                <table class="gl-v2-invoice-lines-table gl-v2-invoice-sends-table">
+                    <thead>
+                        <tr>
+                            <th>Moment</th>
+                            <th>Ontvanger</th>
+                            <th>Onderwerp</th>
+                            <th class="text-end">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.EmailLogs)
+                        {
+                            <tr>
+                                <td class="gl-v2-invoice-sends-moment">@log.SentAt.ToString("dd/MM/yyyy HH:mm", culture)</td>
+                                <td>@log.To</td>
+                                <td class="gl-v2-invoice-sends-subject" title="@log.Subject">@log.Subject</td>
+                                <td class="text-end"><span class="gl-v2-badge is-neutral">@log.Status.ToUpperInvariant()</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="gl-v2-card-empty-msg">Deze factuur is nog niet per e-mail verzonden.</p>
+        }
+    </div>
+</div>
+
+</div>
+
+@* Design-handoff 11d/11e: een vaste actiebalk onderaan zodra desktop-breedte niet meer geldt, zodat
+   de hoofdacties bereikbaar blijven zonder terug naar de topbar te scrollen. Hergebruikt het
+   bestaande .gl-v2-form-actionbar-component (EditV2-pagina's) — dat wordt al vanzelf position:fixed
+   onder 768px; de 768–1199.98px-tablet-drempel is hier de enige pagina-eigen toevoeging
+   (gl-v2-invoices-detail.css). *@
+<div class="gl-v2-form-actionbar gl-v2-invoice-actionbar">
+    @if (canEdit)
+    {
+        <a href="@Url.Action("Edit", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-secondary">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken
+        </a>
+    }
+    <span class="gl-v2-form-actionbar-spacer"></span>
+    @if (canSend)
+    {
+        <a href="@Url.Action("Send", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-primary">
+            <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>@(Model.LastEmailSentAt.HasValue ? "Opnieuw verzenden" : "Verzenden")
+        </a>
+    }
+</div>
+
+<div class="modal fade gl-v2-modal-confirm" id="deleteInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger" id="delete-invoice-container"></div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        window.glV2InvoiceDetailConfig = {
+            deleteUrl: '@Url.Action("ModalDeleteV2", "Invoices")'
+        };
+    </script>
+    <script src="~/js/gl-v2-invoices-detail.js" asp-append-version="true"></script>
+}

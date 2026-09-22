@@ -1,0 +1,190 @@
+@using System.Linq
+@model CPMCore.Models.Projecten.ShowProjectsModel
+@* gl-v2 layout-pilot (design-handoff/DESIGN.md.gl-v2-draft.md — zoekveld/filters van optie 4f,
+   zelfde recept als Views/Leveranciers/IndexV2.cshtml/Views/Klanten/IndexV2.cshtml, hier met één
+   filterveld (Status) i.p.v. Leveranciers' drie). Zelfde model/data als Views/Projecten/Index.cshtml
+   (ProjectenController.Index levert exact dezelfde vm aan beide views) — enkel de kop/toolbar-markup
+   is nieuw. Geen tabel/DataTable hier: de projectkaarten (GlV2/_ProjectCardV2, ook gebruikt op het
+   Projectleider-dashboard se "Mijn Werven") zijn zelf al responsief, dus geen aparte mobiele-
+   kaartenlijst nodig zoals bij Leveranciers/Klanten. Titel/subtitel vallen weg (SetPageHeader in de
+   controller vult de topbar-titel al) en "Project toevoegen" verhuist van de paginakop naar
+   @@section PageActions. *@
+@{
+    ViewData["Title"] ??= "Projecten";
+}
+@section PageStyle
+{
+    @* dashboard-projectleider.css levert de gedeelde werf-kaart-basis (gl-werf-*) waar
+       GlV2/_ProjectCardV2 bovenop bouwt/overschrijft — zelfde PageStyle-combinatie als Home/Index. *@
+    <link rel="stylesheet" href="~/css/dashboard-projectleider.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Toevoegen", "Projecten")" class="gl-v2-btn gl-v2-btn-primary">+ Project toevoegen</a>
+}
+@* Claimt de mobiele topbar-icoonplek (_LayoutV2.cshtml, normaal de nog-niet-aangesloten zoek-stub)
+   voor een filtericoon+tellertje — zelfde patroon als Leveranciers/Klanten IndexV2.cshtml. *@
+@section MobileTopbarAction
+{
+    <button type="button" class="gl-v2-topbar-filter-btn" id="mobile-filters-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="filters-panel">
+        <i class="ph ph-funnel" aria-hidden="true"></i>
+        <span class="gl-v2-topbar-filter-count" id="mobile-filters-toggle-count" hidden>0</span>
+    </button>
+}
+@section MobileQuickActions
+{
+    <a href="@Url.Action("Toevoegen", "Projecten")" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+        <i class="ph ph-plus" aria-hidden="true"></i>Nieuw project
+    </a>
+}
+
+@* Optie 4f "FILTERS OPEN" — zoekveld + Filters-knop (met tellertje) op de eerste rij; de knop klapt
+   het filterveld (Status) + badges-rij eronder open/dicht. Auto-apply, geen "Toepassen"-knop —
+   zelfde reden als Leveranciers/Klanten IndexV2.cshtml. *@
+<div class="gl-v2-toolbar-card gl-v2-filters-card">
+    <div class="gl-v2-filters-row">
+        <div class="gl-v2-field gl-v2-toolbar-search">
+            <div class="gl-v2-field-box">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoek op projectnaam of gemeente…">
+                <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
+            </div>
+        </div>
+        <button type="button" class="gl-v2-filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters-panel">
+            <i class="ph ph-funnel" aria-hidden="true"></i>
+            Filters
+            <span class="gl-v2-filters-toggle-count" id="filters-toggle-count" hidden>0</span>
+        </button>
+    </div>
+
+    <div class="gl-v2-filters-panel" id="filters-panel" hidden>
+        <div class="gl-v2-filters-sheet-header">
+            <div class="gl-v2-filters-sheet-handle" aria-hidden="true"></div>
+            <div class="gl-v2-filters-sheet-title-row">
+                <span class="gl-v2-filters-sheet-title">Filters</span>
+                <span class="gl-v2-filters-sheet-badge" id="filters-sheet-badge" hidden>0 actief</span>
+                <span class="gl-v2-filters-sheet-spacer"></span>
+                <button type="button" class="gl-v2-filters-clear gl-v2-filters-sheet-clear" id="filters-sheet-clear">Wissen</button>
+            </div>
+        </div>
+        <div class="gl-v2-filters-grid">
+            @* Optie 4h BASIS-variant — zelfde trigger+paneel-component als het Facturatiebedrijf-filter
+               op Leveranciers/Klanten, hier voor projectstatus. *@
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Status</span>
+                <div class="gl-v2-select gl-v2-filters-select" id="status-select">
+                    <input type="hidden" id="status-select-value" value="" />
+                    <button type="button" class="gl-v2-select-trigger" id="status-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="status-select-panel">
+                        <span class="gl-v2-select-trigger-label" id="status-select-label">Alle projecten</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="gl-v2-select-backdrop" id="status-select-backdrop"></div>
+                    <div class="gl-v2-select-panel" id="status-select-panel" role="listbox" aria-labelledby="status-select-trigger">
+                        <div class="gl-v2-select-sheet-header">
+                            <span class="gl-v2-select-sheet-title">Status</span>
+                            <button type="button" class="gl-v2-select-sheet-close" id="status-select-close">Sluiten</button>
+                        </div>
+                        <div class="gl-v2-select-options">
+                            <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="" data-label="Alle projecten">
+                                <i class="ph ph-check" aria-hidden="true"></i>
+                                <span>Alle projecten</span>
+                            </button>
+                            @if (Model.Statuses != null)
+                            {
+                                foreach (var status in Model.Statuses)
+                                {
+                                    <button type="button" class="gl-v2-select-option" role="option" data-value="@status.Id" data-label="@status.Name">
+                                        <i class="ph ph-check" aria-hidden="true"></i>
+                                        <span>@status.Name</span>
+                                    </button>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-filters-chips" id="filters-chips">
+            <div class="gl-v2-filters-chip-list" id="filters-chip-list"></div>
+            <button type="button" class="gl-v2-filters-clear" id="filters-clear" hidden>Wissen</button>
+        </div>
+
+        @* Enkel <768px zichtbaar (gl-v2-projecten.css) — filters passen zichzelf al toe, dit is puur
+           een "klaar"-knop om het sheet te sluiten. *@
+        <button type="button" class="gl-v2-filters-show-btn" id="filters-show-btn">
+            <span>Toon</span>
+            <span id="filters-show-count">0</span>
+            <span>projecten</span>
+        </button>
+    </div>
+</div>
+@* Enkel zichtbaar/aanwezig <768px — #filters-panel wordt daar een bottom sheet, deze scrim erachter
+   zoals overal elders in gl-v2. *@
+<div class="gl-v2-filters-panel-backdrop" id="filters-panel-backdrop" hidden></div>
+
+<div id="project-filter-status" class="visually-hidden" aria-live="polite"></div>
+
+@* Wrapper met container-type: de kaartkolomtelling van .gl-v2-project-grid (gl-v2-shell.css) reageert
+   op de breedte van deze wrapper, niet op de viewport — zelfde mechanisme als .gl-werven-section op
+   het Projectleider-dashboard, hier gewoon de volle paginabreedte i.p.v. een dashboardkolom. *@
+<div class="gl-v2-projecten-section">
+    <div class="gl-v2-project-grid" id="project-grid"
+         data-total-count="@Model.TotalProjectCount"
+         data-loaded-count="@Model.VisibleProjectCount"
+         data-batch-size="@Model.BatchSize">
+        @if (Model.Projects != null && Model.Projects.Any())
+        {
+            @await Html.PartialAsync("_ProjectGridItemsV2", new CPMCore.Models.Projecten.ProjectGridRenderModel
+            {
+                Projects  = Model.Projects,
+                Statuses  = Model.Statuses  ?? new List<BOCore.ProjectStatusBO>(),
+                SalesData = Model.SalesData ?? new Dictionary<int, BOCore.ProjectSalesDataBO>(),
+                Voortgang = Model.Voortgang ?? new Dictionary<int, BOCore.ProjectVoortgangBO>()
+            })
+        }
+    </div>
+</div>
+
+@* Geen projecten in het systeem. *@
+<div class="gl-v2-empty-state gl-v2-empty-state-inline @(Model.Projects != null && Model.Projects.Any() ? "d-none" : "")" id="projecten-empty-all">
+    <span class="gl-v2-empty-state-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+    <h2 class="gl-v2-empty-state-title">Nog geen projecten</h2>
+    <p class="gl-v2-empty-state-desc">Er zijn nog geen projecten aangemaakt.</p>
+    <div class="gl-v2-empty-state-actions">
+        <a href="@Url.Action("Toevoegen", "Projecten")" class="gl-v2-btn gl-v2-btn-primary">+ Eerste project toevoegen</a>
+    </div>
+</div>
+
+@* Filter/zoekterm levert geen resultaten op. *@
+<div class="gl-v2-empty-state gl-v2-empty-state-inline d-none" id="projecten-empty-filtered">
+    <span class="gl-v2-empty-state-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+    <h2 class="gl-v2-empty-state-title">Geen projecten gevonden</h2>
+    <p class="gl-v2-empty-state-desc">Geen projecten gevonden voor <strong id="projecten-empty-query"></strong>.</p>
+    <div class="gl-v2-empty-state-actions">
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="projecten-clear-filter">Filters wissen</button>
+    </div>
+</div>
+
+<div class="mt-4 @(Model.HasMoreProjects && Model.BatchSize > 0 ? string.Empty : "d-none")" id="load-more-container">
+    @* Verschijnt terwijl een volgende batch binnenkomt (auto bij verder scrollen). *@
+    <div class="gl-v2-projecten-loader" id="projecten-loader" hidden>
+        <i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i>
+        <span>Meer projecten laden…</span>
+    </div>
+    @* Handmatige terugvalknop — auto-laden neemt het over zodra JS actief is. *@
+    <div class="text-center">
+        <button type="button" id="load-more-projects" class="gl-v2-btn gl-v2-btn-secondary" data-url="@Url.Action("LoadMoreProjects", "Projecten")">
+            Laad meer
+        </button>
+        <div class="gl-v2-projecten-loaded-count" aria-live="polite">
+            <span id="loaded-count">@Model.VisibleProjectCount</span> van <span id="total-count">@Model.TotalProjectCount</span> projecten geladen.
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-projecten.js" asp-append-version="true"></script>
+}

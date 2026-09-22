@@ -1,0 +1,249 @@
+/* gl-v2 layout-pilot — Facturen (verkoop) detailpagina (design-handoff punt 11, optie 11a/11d/11e).
+   Enkel geladen door Views/Invoices/DetailV2.cshtml. Hergebruikt overal waar mogelijk gedeelde
+   componenten uit gl-v2-shell.css (.gl-v2-section-card, .gl-v2-detail-grid/-field, .gl-v2-card,
+   .gl-v2-badge, .gl-v2-form-actionbar, .gl-v2-menu) — hier enkel de pagina-eigen stukken: de
+   richting-badge, de richting-/bedragkaart (desktop én de aparte mobiele vorm), de factuurlijnen-/
+   verzendgeschiedenis-tabellen en de totalenkaart. */
+
+/* ── Richting-badge (VERKOOP) — enige plek in deze pagina die geen van de 5 generieke
+   .gl-v2-badge-tonen gebruikt: dit is een gevuld, niet getint chipje (zelfde taal als de mockup se
+   eigen VERKOOP/AANKOOP-chip), bewust apart gehouden van de 5-tonen-status/openstaand-badges
+   ernaast. */
+.gl-v2-invoice-direction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 11px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    font: 600 10px var(--gl-v2-font-sans);
+    letter-spacing: .04em;
+}
+.gl-v2-invoice-direction-badge i { font-size: 11px; }
+
+.gl-v2-invoice-detail-body { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Richting-/bedragkaart (desktop/tablet) ───────────────────────────────────────────────────── */
+.gl-v2-invoice-hero {
+    display: flex;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-card);
+    overflow: hidden;
+}
+.gl-v2-invoice-hero-accent { flex: none; width: 6px; align-self: stretch; background: var(--gl-v2-primary); }
+.gl-v2-invoice-hero-body { flex: 1; min-width: 0; padding: 14px 18px; }
+.gl-v2-invoice-hero-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.gl-v2-invoice-hero-party { display: flex; flex-direction: column; gap: 2px; flex: none; min-width: 0; }
+.gl-v2-invoice-hero-label {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gl-v2-invoice-hero-name {
+    font: 600 14px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+.gl-v2-invoice-hero-arrow { flex: none; font-size: 18px; color: var(--gl-v2-primary); }
+.gl-v2-invoice-hero-due { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-invoice-hero-due-rel { font-weight: 600; color: var(--gl-v2-warning); }
+.gl-v2-invoice-hero-due.is-near .gl-v2-invoice-hero-due-rel { color: var(--gl-v2-warning); }
+.gl-v2-invoice-hero-due.is-over .gl-v2-invoice-hero-due-rel { color: var(--gl-v2-danger); }
+.gl-v2-invoice-hero-spacer { flex: 1; min-width: 12px; }
+.gl-v2-invoice-hero-amount { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; flex: none; }
+.gl-v2-invoice-hero-amount-value {
+    font: 600 22px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+/* ── Richting-/bedragkaart (gsm) — eigen markup, niet dezelfde balk herschikt (design-handoff 11e:
+   bedrag eerst, groot, bovenaan; partijen/vervaldatum daaronder op één regel elk). Enkel zichtbaar
+   <768px, de desktop/tablet-versie hierboven is dan verborgen. ─────────────────────────────────── */
+.gl-v2-invoice-hero-mobile {
+    display: none;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile);
+    overflow: hidden;
+}
+.gl-v2-invoice-hero-mobile-accent { height: 5px; background: var(--gl-v2-primary); }
+.gl-v2-invoice-hero-mobile-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-invoice-hero-mobile-amount {
+    font: 600 26px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.gl-v2-invoice-hero-mobile-divider { height: 1px; background: var(--gl-v2-hairline-soft); }
+.gl-v2-invoice-hero-mobile-parties { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gl-v2-invoice-hero-mobile-parties .gl-v2-invoice-hero-name { max-width: none; font-size: 12.5px; }
+
+/* ── 3 infokaarten (Onze onderneming / Klant / Documentgegevens) ─────────────────────────────────
+   12-koloms desktopraster (3 gelijke kolommen) → 2 → 1, ruwweg dezelfde 3-stap-vorm als 11d/11e
+   beschrijven (exacte 2+1-herschikking van 11d zelf niet 1-op-1 nagebouwd — een gelijke-breedte-
+   grid geeft dezelfde leesbaarheid met veel minder eigen CSS). */
+.gl-v2-invoice-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-invoice-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 639.98px) {
+    .gl-v2-invoice-cards { grid-template-columns: 1fr; }
+}
+
+/* Neutrale (grijze) sectiekop-variant voor "Onze onderneming" — 11a se eigen onderscheid: de
+   verstrekker (wij) krijgt de gedempte behandeling, de klant/documentgegevens de normale groene. */
+.gl-v2-section-card-icon.is-neutral { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); }
+
+/* Prominente naam boven het veldraster (Onze onderneming/Klant) — 11a se eigen "de naam staat op
+   zichzelf, niet als een gelabeld veld" (zie de mockup: een losse 600-14px-regel vóór de
+   Adres/Btw/Rekening-lijst). Ook wat de resterende velden precies 2 kolommen laat vullen: Adres
+   (is-wide) + Btw + Rekening/e-mail is 1 brede + 2 smalle = geen lege cel, in tegenstelling tot
+   Naam+Adres+Btw+Rekening (3 smalle velden naast één brede laat er altijd één over). */
+.gl-v2-invoice-party-name {
+    display: block;
+    padding: 14px 18px 0;
+    font: 600 14px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-invoice-party-name + .gl-v2-detail-grid { padding-top: 10px; }
+.gl-v2-detail-grid .gl-v2-detail-value { white-space: pre-line; }
+
+/* Maximum twee kolommen voor de velden in elke infokaart hier (Onze onderneming/Klant/
+   Documentgegevens) — .gl-v2-detail-grid se eigen standaard-breakpoints (4 kolommen tot 1023.98px,
+   dan pas 2) zijn getuned voor een volle-breedte-kaart, niet voor een kaart die hier al op desktop
+   maar 1/3 van de inhoudsbreedte is. Forceert dezelfde 2-koloms indeling als 11a se eigen
+   Documentgegevens-kaart voor alle drie de kaarten, ongeacht viewport — de kaarten zijn smal zodra
+   ze in dit 3-koloms raster staan, niet pas onder een algemene tablet-drempel. */
+.gl-v2-invoice-cards .gl-v2-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px 18px;
+    gap: 11px 16px;
+}
+@media (max-width: 479.98px) {
+    .gl-v2-invoice-cards .gl-v2-detail-grid { grid-template-columns: 1fr; }
+}
+
+.gl-v2-invoice-send-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gl-v2-invoice-send-summary-date { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+
+/* ── Factuurlijnen / Verzendgeschiedenis — tabellen op .gl-v2-card (niet .gl-v2-table-card, die
+   klasse is aan DataTables' .is-ready-levenscyclus gekoppeld en er draait hier geen DataTable). ─── */
+.gl-v2-invoice-lines-desc {
+    font: 450 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gl-v2-invoice-lines-table-wrap { overflow-x: auto; }
+.gl-v2-invoice-lines-table { width: 100%; border-collapse: collapse; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+/* th en td delen precies dezelfde horizontale padding (enkel rechts, als kolomtussenruimte) — de
+   vorige versie zette die padding enkel op td (via een "td + td"-selector), dus de kop had geen
+   linkerinspringing terwijl de rijen eronder wel 14px inschoven: kolomkop en waarde stonden dan niet
+   op dezelfde x-positie ook al deelden ze dezelfde kolombreedte. Nu identiek op beide, dus lijnen ze
+   altijd uit, ongeacht kolominhoud/-breedte. */
+.gl-v2-invoice-lines-table th,
+.gl-v2-invoice-lines-table td { padding: 0 14px 0 0; text-align: left; }
+.gl-v2-invoice-lines-table th:last-child,
+.gl-v2-invoice-lines-table td:last-child { padding-right: 0; }
+.gl-v2-invoice-lines-table thead th {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    white-space: nowrap;
+}
+.gl-v2-invoice-lines-table thead th.text-end { text-align: right; }
+.gl-v2-invoice-lines-table tbody td { height: 44px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font-variant-numeric: tabular-nums; }
+.gl-v2-invoice-lines-table tbody td.text-end { text-align: right; }
+.gl-v2-invoice-lines-table tbody tr:last-child td { border-bottom: 0; }
+.gl-v2-invoice-lines-total { font-weight: 500; }
+.gl-v2-invoice-sends-moment { color: var(--gl-v2-muted-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gl-v2-invoice-sends-subject { color: var(--gl-v2-muted-soft); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gl-v2-invoice-lines-mobile { display: none; flex-direction: column; gap: 8px; }
+.gl-v2-invoice-line-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px 12px;
+    border-radius: 9px;
+    background: var(--gl-v2-bg);
+}
+.gl-v2-invoice-line-card-row { display: flex; align-items: flex-start; gap: 10px; }
+.gl-v2-invoice-line-card-text { flex: 1; min-width: 0; font: 500 12.5px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-invoice-line-card-total { flex: none; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-invoice-line-card-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+
+/* ── Totalenkaart — rechts uitgelijnd op desktop, volle breedte op mobiel (design-handoff 11d se
+   eigen "totalenblok niet meer rechts maar volle breedte" — hier bereikt via dezelfde
+   max-width+margin-left:auto-truc die vanzelf 100% wordt zodra er geen ruimte meer over is, geen
+   aparte breakpoint-regel nodig). ───────────────────────────────────────────────────────────────── */
+.gl-v2-invoice-totals-wrap { display: flex; justify-content: flex-end; padding-top: 14px; }
+.gl-v2-invoice-totals { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 7px; }
+.gl-v2-invoice-totals-row { display: flex; justify-content: space-between; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-invoice-totals-row span:last-child { color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-invoice-totals-row.is-strong { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-invoice-totals-row.is-strong span:last-child { font-size: 15px; }
+.gl-v2-invoice-totals-row.is-muted span:last-child { color: var(--gl-v2-muted-light); }
+.gl-v2-invoice-totals-divider { height: 1px; background: var(--gl-v2-hairline); }
+.gl-v2-invoice-totals-highlight {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    margin-top: 2px;
+    border-radius: 9px;
+    background: var(--gl-v2-primary-tint);
+    font: 600 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+}
+.gl-v2-invoice-totals-highlight span:last-child { font-size: 16px; font-variant-numeric: tabular-nums; }
+
+/* ── Vaste actiebalk (design-handoff 11d/11e) — hergebruikt .gl-v2-form-actionbar (EditV2-pagina's),
+   dat vanzelf al position:fixed wordt <768px. Hier extra: verborgen ≥1200px (topbar-acties volstaan
+   op desktop) en zelf ook al position:fixed in de tussenliggende tabletrange, niet enkel <768px. ─── */
+@media (min-width: 1200px) {
+    .gl-v2-invoice-actionbar { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .gl-v2-invoice-actionbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        z-index: 40;
+    }
+    /* .gl-v2-content zelf blijft dan onderaan te veel/te weinig padding geven t.o.v. de nu losse
+       balk — dezelfde 64px + safe-area als de balk se eigen hoogte compenseert dat, net als de
+       <768px-regel in gl-v2-shell.css al voor die breedte doet. */
+    .gl-v2-invoice-detail-body { padding-bottom: 64px; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-invoice-hero { display: none; }
+    .gl-v2-invoice-hero-mobile { display: block; }
+    .gl-v2-invoice-detail-body { padding-bottom: 68px; }
+
+    .gl-v2-invoice-lines-table-wrap { display: none; }
+    .gl-v2-invoice-lines-mobile { display: flex; }
+    .gl-v2-invoice-sends-subject { max-width: 160px; }
+}

@@ -26,8 +26,13 @@
     {
         daysLeft = (int)(project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
     }
-    var isOverdue = daysLeft.HasValue && daysLeft.Value < 0;
-    var isNearing = daysLeft.HasValue && !isOverdue && daysLeft.Value < 14;
+    // Enkel de echte, geregistreerde status (project.Status, via ProjectPhase.Resolve) telt als
+    // "opgeleverd" — niet zomaar een overschreden opleverdatum (dat is een planningsdatum, geen
+    // opleverregistratie). Zo'n écht opgeleverd project toont de datum neutraal i.p.v. als
+    // "overschreden" te waarschuwen.
+    var isDelivered = ProjectPhase.Resolve(project, vg) == ProjectPhaseBucket.Opgeleverd;
+    var isOverdue = !isDelivered && daysLeft.HasValue && daysLeft.Value < 0;
+    var isNearing = !isDelivered && daysLeft.HasValue && !isOverdue && daysLeft.Value < 14;
     var footerTone = isOverdue ? "is-over" : isNearing ? "is-near" : "";
 
     var (chipClass, chipLabel) = ProjectPhase.Chip(project, vg);
@@ -147,6 +152,10 @@
                     @if (!daysLeft.HasValue)
                     {
                         <span>Geen opleverdatum</span>
+                    }
+                    else if (isDelivered)
+                    {
+                        <span>Opleverdatum: @project.DeliveryDate!.Value.ToString("dd/MM/yyyy")</span>
                     }
                     else if (isOverdue)
                     {

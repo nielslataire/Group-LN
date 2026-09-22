@@ -1,0 +1,303 @@
+@model CPMCore.Models.Klanten.ClientFormViewModel
+@using System.Linq
+@using BOCore
+@* gl-v2 layout-pilot (design-handoff 8a) — Klanten-variant van Leveranciers/DetailsV2.cshtml (de
+   eerste gl-v2-detailpagina in de pilot), zelfde principes hertoegepast op wat de legacy Klanten-
+   "Details" vandaag al toont. Klanten/Details is vandaag geen eigen read-only view — het is
+   letterlijk hetzelfde formulier (Views/Klanten/Partials/_ClientForm.cshtml) met ViewBag.ReadOnly=
+   true, dus GEEN Afdelingen/Contracten/Facturen-secties zoals bij Leveranciers (die bestaan simpelweg
+   niet voor Klanten). Scope hier dus, zelfde discipline als bij Leveranciers/DetailsV2 ("enkel wat nu
+   al bij details zit"): twee tabs — Algemene gegevens (dezelfde vier kaarten als Klanten/EditV2, nu
+   read-only via GlV2DetailField/.gl-v2-detail-grid) en Contacten (rijkaarten, geen portaal-acties —
+   ContactInputViewModel heeft die velden niet, in tegenstelling tot Leveranciers' contacten). Geen
+   DataTables/mobiele-kaarten-machinerie nodig — die hoorde bij Leveranciers' Contracten/Facturen-
+   tabellen, waar hier niets overeenkomstigs voor bestaat. *@
+@{
+    ViewData["Title"] ??= string.IsNullOrWhiteSpace(Model.DisplayLabel) ? Model.Title : Model.DisplayLabel;
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Index", "Klanten");
+
+    var editUrl = Url.Action("Edit", "Klanten", new { id = Model.Id });
+    var selectedCountryName = Model.Countries.FirstOrDefault(c => c.Id == Model.SelectedCountryId)?.Name;
+    var selectedInvoiceCountryName = Model.Countries.FirstOrDefault(c => c.Id == Model.SelectedInvoiceCountryId)?.Name;
+    // Salutation is een enum (geen string) — GlV2DetailField bindt op string, dus hier al naar
+    // weergavetekst omgezet i.p.v. Html.DisplayFor rechtstreeks op het enum-veld aan te roepen.
+    var salutationDisplay = Model.Salutation?.GetDisplayName();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-klanten-details.css" asp-append-version="true" />
+}
+@section MobileTopbarAction
+{
+}
+@section PageTitleBadges
+{
+    @if (Model.IsCompany)
+    {
+        <span class="gl-v2-badge is-neutral">ONDERNEMING</span>
+    }
+    else
+    {
+        <span class="gl-v2-badge is-neutral">PARTICULIER</span>
+    }
+}
+@section PageActions
+{
+    @if (Model.CanEdit)
+    {
+        <a href="@editUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+    }
+    @if (Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-icon-btn is-danger js-gl-v2-delete-client" title="Verwijderen" aria-label="Klant verwijderen">
+            <i class="ph ph-trash" aria-hidden="true"></i>
+        </button>
+    }
+}
+
+<div class="gl-v2-tabbar" id="gl-v2-client-details-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" data-tab="algemeen" aria-selected="true">Algemene gegevens</button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="contacten" aria-selected="false">Contacten <span class="gl-v2-tabbar-count">@Model.Contacts.Count</span></button>
+</div>
+
+<div class="gl-v2-client-details-scroll">
+
+    <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                <span class="gl-v2-section-card-title">Identificatie</span>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Is dit een onderneming of een particulier, en onder welk nummer/naam factureren we?</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.CanEdit)
+                {
+                    <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                @Html.DisplayFor(m => m.IssuerCompaniesDisplay, "GlV2DetailField", new { Label = "Facturatiebedrijven" })
+                @if (Model.IsCompany)
+                {
+                    @Html.DisplayFor(m => m.CompanyName, "GlV2DetailField", new { Label = "Bedrijfsnaam" })
+                    @Html.DisplayFor(m => m.EnterpriseNumberDisplay, "GlV2DetailField", new { Label = "Ondernemingsnummer" })
+                }
+                else
+                {
+                    @Html.DisplayFor(m => salutationDisplay, "GlV2DetailField", new { Label = "Aanspreking" })
+                    @Html.DisplayFor(m => m.Name, "GlV2DetailField", new { Label = "Naam" })
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+                <span class="gl-v2-section-card-title">Adres</span>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Contactadres — en het facturatieadres indien dat afwijkt.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.CanEdit)
+                {
+                    <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                <div class="gl-v2-detail-field is-wide">
+                    <span class="gl-v2-detail-label">Adres</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Street))
+                    {
+                        <span class="gl-v2-detail-value">
+                            @Model.Street @Model.HouseNumber@(string.IsNullOrWhiteSpace(Model.BusNumber) ? "" : $" bus {Model.BusNumber}")<br />
+                            @Model.PostalCode @Model.City
+                            @if (!string.IsNullOrWhiteSpace(selectedCountryName))
+                            {
+                                <text><br />@selectedCountryName</text>
+                            }
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+                @if (Model.UseInvoiceAddress)
+                {
+                    <div class="gl-v2-detail-field is-wide">
+                        <span class="gl-v2-detail-label">Adres (facturatie)</span>
+                        @if (!string.IsNullOrWhiteSpace(Model.InvoiceStreet))
+                        {
+                            <span class="gl-v2-detail-value">
+                                @Model.InvoiceStreet @Model.InvoiceHouseNumber@(string.IsNullOrWhiteSpace(Model.InvoiceBusNumber) ? "" : $" bus {Model.InvoiceBusNumber}")<br />
+                                @Model.InvoicePostalCode @Model.InvoiceCity
+                                @if (!string.IsNullOrWhiteSpace(selectedInvoiceCountryName))
+                                {
+                                    <text><br />@selectedInvoiceCountryName</text>
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-detail-value is-empty">—</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                <span class="gl-v2-section-card-title">Bereikbaarheid</span>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Algemene en facturatie-e-mail — persoonlijke gegevens staan bij de contacten.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.CanEdit)
+                {
+                    <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">E-mail</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Email))
+                    {
+                        <span class="gl-v2-table-email" title="@Model.Email">
+                            <span class="gl-v2-table-email-text">@Model.Email</span>
+                            <span class="gl-v2-table-email-actions">
+                                <a class="gl-v2-table-email-action" href="mailto:@Model.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@Model.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                            </span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Facturatie-e-mail</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.InvoiceEmail))
+                    {
+                        <span class="gl-v2-table-email" title="@Model.InvoiceEmail">
+                            <span class="gl-v2-table-email-text">@Model.InvoiceEmail</span>
+                            <span class="gl-v2-table-email-actions">
+                                <a class="gl-v2-table-email-action" href="mailto:@Model.InvoiceEmail" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@Model.InvoiceEmail" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                            </span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">—</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                <span class="gl-v2-section-card-title">Facturatievoorkeuren</span>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Hoe deze klant zijn facturen wil ontvangen.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.CanEdit)
+                {
+                    <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                <div class="gl-v2-detail-field is-full">
+                    <span class="gl-v2-detail-label">Aanlevering</span>
+                    <span class="gl-v2-detail-value">
+                        <span class="gl-v2-badge @(Model.RequiresDigitalInvoice ? "is-positive" : "is-neutral")">DIGITAAL @(Model.RequiresDigitalInvoice ? "VEREIST" : "NIET VEREIST")</span>
+                        <span class="gl-v2-badge @(Model.AttachUblByDefault ? "is-positive" : "is-neutral")">UBL @(Model.AttachUblByDefault ? "AAN" : "UIT")</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-tab-panel" data-tab-panel="contacten" hidden>
+        @if (Model.Contacts.Any())
+        {
+            <span class="gl-v2-tab-meta">@Model.Contacts.Count contact@(Model.Contacts.Count == 1 ? "" : "en")</span>
+            <div class="gl-v2-client-detail-row-list">
+                @foreach (var contact in Model.Contacts)
+                {
+                    var contactName = $"{contact.Forename} {contact.Name}".Trim();
+                    <div class="gl-v2-card">
+                        <div class="gl-v2-card-header">
+                            <span class="gl-v2-card-header-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                            <span class="gl-v2-card-header-title">@(string.IsNullOrWhiteSpace(contactName) ? "Onbekende contactpersoon" : contactName)</span>
+                        </div>
+                        <div class="gl-v2-card-body">
+                            <div class="gl-v2-detail-grid">
+                                @Html.DisplayFor(m => contact.PhoneDisplay, "GlV2DetailField", new { Label = "Telefoon" })
+                                @Html.DisplayFor(m => contact.MobileDisplay, "GlV2DetailField", new { Label = "GSM" })
+                                <div class="gl-v2-detail-field">
+                                    <span class="gl-v2-detail-label">E-mail</span>
+                                    @if (!string.IsNullOrWhiteSpace(contact.Email))
+                                    {
+                                        <span class="gl-v2-table-email" title="@contact.Email">
+                                            <span class="gl-v2-table-email-text">@contact.Email</span>
+                                            <span class="gl-v2-table-email-actions">
+                                                <a class="gl-v2-table-email-action" href="mailto:@contact.Email" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@contact.Email" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                            </span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-detail-value is-empty">—</span>
+                                    }
+                                </div>
+                                <div class="gl-v2-detail-field">
+                                    <span class="gl-v2-detail-label">Aanlevering</span>
+                                    <span class="gl-v2-detail-value">
+                                        <span class="gl-v2-badge @(contact.RequiresDigitalInvoice ? "is-positive" : "is-neutral")">DIGITAAL @(contact.RequiresDigitalInvoice ? "VEREIST" : "NIET VEREIST")</span>
+                                        <span class="gl-v2-badge @(contact.AttachUblByDefault ? "is-positive" : "is-neutral")">UBL @(contact.AttachUblByDefault ? "AAN" : "UIT")</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-card gl-v2-card-empty">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Contacten</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <span class="gl-v2-card-empty-msg">Er zijn nog geen contacten toegevoegd.</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.CanDelete)
+{
+    <div class="modal fade gl-v2-modal-confirm" id="gl-v2-delete-client-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content is-danger" id="gl-v2-delete-client-container"></div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script>
+        window.glV2ClientDetailsConfig = {
+            deleteUrl: '@Url.Action("PartialDeleteClientModalV2", "Klanten")',
+            clientId: @Model.Id
+        };
+    </script>
+    <script src="~/js/gl-v2-klanten-details.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,52 @@
+/* gl-v2 layout-pilot — Klanten/EditV2.cshtml ÉN CreateV2.cshtml (design-handoff 8b/8d), zelfde opzet
+   als gl-v2-leveranciers-form.css (Leveranciers/EditV2.cshtml was de eerste gl-v2-formulierpagina —
+   dit is de directe hertoepassing ervan op Klanten). Was gl-v2-klanten-edit.css, hernoemd toen
+   CreateV2 bleek dit bestand ongewijzigd te kunnen hergebruiken. Pagina-eigen opmaak: de verticale
+   flex-kolomopbouw die de tabbar/actiebalk-positionering draagt, plus de rij-specifieke opmaak voor
+   de herhaalbare Contacten-rijen. Alles generiek herbruikbaar (velden, badges, tabbar, sectiekaart,
+   actiebalk, schakelaar, meervoudige select) zit al in gl-v2-shell.css. */
+
+.gl-v2-client-edit-form {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.gl-v2-client-edit-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Altijd wat witruimte boven de actiebalk, ook helemaal onderaan gescrold — 4px liet de laatste
+       kaart bijna tegen de balk se eigen border-top/schaduw aan plakken. */
+    padding-bottom: 20px;
+}
+
+/* <768px: .gl-v2-form-actionbar wordt daar position:fixed (gl-v2-shell.css) en valt dus uit de
+   flow — zonder deze compenserende ruimte zou de vastgezette balk het laatste stuk scrollende
+   inhoud (en de foutstatus, wanneer die twee regels beslaat) verbergen. */
+@media (max-width: 767.98px) {
+    .gl-v2-client-edit-scroll { padding-bottom: 140px; }
+}
+
+.gl-v2-tab-panel[hidden] { display: none; }
+/* Geen max-width hier — de kaarten zelf (.gl-v2-section-card) blijven vol breed, enkel het
+   veldraster erbinnen (.gl-v2-section-grid) is gecapt op 1420px (gl-v2-shell.css, design-handoff
+   8i/8b·B "KAART VOLLE BREEDTE, VELDBLOK GECAPT"). */
+.gl-v2-tab-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.gl-v2-client-row-list-header { display: flex; justify-content: flex-end; }
+
+.gl-v2-client-row + .gl-v2-client-row { margin-top: 14px; }
+
+/* Btw-controleknop se busy/checked-attribuutjes op .gl-v2-field-attached sturen puur CSS-state die
+   al in gl-v2-shell.css leeft (is-busy/is-checked) — hier enkel de knop-tekstspinner-koppeling. */
+.gl-v2-field-attach-btn .gl-v2-spinner { margin-right: 2px; }
+
+/* Compacte schakelaarrij binnen een contactkaart (Digitale factuur/UBL per contact) — dezelfde
+   .gl-v2-switch-group/-row als het hoofdformulier, enkel iets minder verticale ruimte omdat hij in
+   een rij-kaart zit i.p.v. een eigen sectiekaart. */
+.gl-v2-client-row .gl-v2-switch-group { padding-top: 2px; }

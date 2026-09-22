@@ -1,0 +1,364 @@
+/* gl-v2 layout-pilot — Projecten/DetailV2 content area (design-handoff/CRM Menu Wireframes.dc.html,
+   punt 12a "Projectdetail — de ingang 'Project' uit 9a, in onze kaartstandaard", + the commentary
+   below it, "WAT ER ANDERS IS DAN IN JOUW HUIDIGE SCHERM"). Scoped to this one page — reuses the
+   shell's generic card/grid/badge vocabulary (.gl-v2-section-card, .gl-v2-detail-grid, .gl-v2-badge)
+   wherever the shape already matches; only genuinely new pieces (stat tiles with bars, the "Vraagt
+   actie" card + category chips, the traject/voortgang bars, the media grid) get their own rules here. */
+
+.gl-v2-pd-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* .gl-v2-detail-grid's own shell default is 4 columns on desktop (Leveranciers/DetailsV2's original
+   use case) — Algemene gegevens here has fewer, longer-labelled fields (Ontwikkelaar/Aannemer/
+   Projectleider/…), so it stays readable capped at 2 columns even on a wide screen. Scoped to
+   ≥1024px only: the shell's own ≤1023.98/≤767.98 rules already bring it down to 2/1 columns there,
+   and this rule's higher specificity (two classes) would otherwise beat those narrower overrides too. */
+@media (min-width: 1024px) {
+    .gl-v2-detail-grid.gl-v2-pd-2col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── Statistiekenrij (12a: 6 kaarten, elke kaart altijd een waarde, percentages als balkje) ──── */
+.gl-v2-pd-stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.gl-v2-pd-stat {
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.gl-v2-pd-stat-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .11em; color: var(--gl-v2-muted); }
+.gl-v2-pd-stat-value { font: 600 19px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pd-stat-value.is-danger { color: var(--gl-v2-danger); }
+.gl-v2-pd-stat-value.is-muted { color: var(--gl-v2-muted-light); }
+.gl-v2-pd-stat-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gl-v2-pd-stat-track { height: 4px; border-radius: 2px; background: var(--gl-v2-neutral-tint); overflow: hidden; display: block; }
+.gl-v2-pd-stat-fill { display: block; height: 4px; background: var(--gl-v2-primary); }
+.gl-v2-pd-stat-fill.is-finance { background: #2E5F7E; }
+
+/* ── "Vraagt actie" — volle breedte, filterbaar op categorie ─────────────────────────────────── */
+.gl-v2-pd-attention-head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.gl-v2-pd-attention-icon {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: 8px;
+    background: var(--gl-v2-warning-tint);
+    color: var(--gl-v2-warning);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+
+.gl-v2-pd-attention-title { font: 700 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); flex: none; }
+.gl-v2-pd-attention-desc { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 0; }
+.gl-v2-pd-attention-spacer { flex: 1; }
+
+.gl-v2-pd-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
+
+.gl-v2-pd-chip {
+    padding: 4px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: transparent;
+    font: 500 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+}
+
+.gl-v2-pd-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+
+.gl-v2-pd-attention-body { display: flex; flex-direction: column; }
+
+.gl-v2-pd-attention-group-hdr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px 6px;
+    font: 600 10px var(--gl-v2-font-sans);
+    letter-spacing: .08em;
+    color: var(--gl-v2-muted);
+}
+
+.gl-v2-pd-attention-group-hdr.is-urgent { color: var(--gl-v2-danger); }
+.gl-v2-pd-attention-group-hdr i { font-size: 13px; }
+.gl-v2-pd-attention-group-cnt { font-variant-numeric: tabular-nums; }
+
+.gl-v2-pd-attention-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    height: 46px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    text-decoration: none;
+    color: inherit;
+}
+
+.gl-v2-pd-attention-body > a:last-child,
+.gl-v2-pd-attention-group:last-child .gl-v2-pd-attention-item:last-child { border-bottom: 0; }
+
+.gl-v2-pd-attention-item i.gl-v2-pd-attention-item-icon { font-size: 15px; flex: none; color: var(--gl-v2-danger); }
+.gl-v2-pd-attention-item.is-normal i.gl-v2-pd-attention-item-icon { color: var(--gl-v2-warning); }
+
+.gl-v2-pd-attention-item-text { flex: 1; min-width: 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pd-attention-item-text b { font-weight: 600; color: var(--gl-v2-ink); }
+
+.gl-v2-pd-attention-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: none; white-space: nowrap; }
+.gl-v2-pd-attention-view { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; display: flex; align-items: center; gap: 2px; }
+
+.gl-v2-pd-attention-empty {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 18px;
+    color: var(--gl-v2-primary);
+    font: 500 13px var(--gl-v2-font-sans);
+}
+
+/* Klikwissel op de chips — korte fade i.p.v. een harde herschikking. */
+.gl-v2-pd-attention-body.is-refiltering { opacity: .5; transition: opacity .12s ease; }
+
+/* ── 12-koloms secundaire grid (Traject/Eenheden, Algemeen/Voortgang/rechterkolom) ──────────── */
+/* align-items:stretch (grid default, kept explicit) — alle kaarten op één rij worden even hoog,
+   bepaald door de hoogste kaart in die rij (Traject/Eenheden §1, Algemeen/Voortgang/rechterkolom §2). */
+.gl-v2-pd-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.gl-v2-pd-col-3 { grid-column: span 3; }
+.gl-v2-pd-col-4 { grid-column: span 4; }
+.gl-v2-pd-col-5 { grid-column: span 5; }
+.gl-v2-pd-col-7 { grid-column: span 7; }
+
+/* Facturatie/Documenten nemen elk gewoon hun eigen inhoud-hoogte (kop + max 4 rijen + voet) — geen
+   50/50-dwang en geen interne scroll meer: die kaarten samen zijn vaak de langste van de rij, dus
+   Algemene gegevens/Voortgang & budget zijn wat hier naar de rijhoogte moet MEEGROEIEN (align-items:
+   stretch hierboven doet dat vanzelf zodra zij zelf korter zijn dan wat deze kolom nodig heeft). */
+.gl-v2-pd-col-stack { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Traject-kaart ────────────────────────────────────────────────────────────────────────── */
+.gl-v2-pd-traject-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 16px 18px 0; }
+.gl-v2-pd-traject-stat-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); display: block; margin-bottom: 3px; }
+.gl-v2-pd-traject-stat-value { font: 500 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-pd-traject-stat-value.is-danger { color: var(--gl-v2-danger); font-weight: 600; }
+
+.gl-v2-pd-traject-bar { display: flex; gap: 3px; padding: 14px 18px 0; }
+.gl-v2-pd-traject-bar span { height: 6px; border-radius: 3px; }
+.gl-v2-pd-traject-bar .is-done { background: var(--gl-v2-primary); }
+.gl-v2-pd-traject-bar .is-overdue { background: var(--gl-v2-danger-tint); }
+
+.gl-v2-pd-traject-next { padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-pd-traject-next-row { display: flex; align-items: baseline; gap: 10px; }
+.gl-v2-pd-traject-next-name { flex: 1; min-width: 0; font: 500 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pd-traject-next-date { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; flex: none; }
+.gl-v2-pd-traject-next-date.is-danger { color: var(--gl-v2-danger); }
+.gl-v2-pd-traject-next-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pd-traject-empty { padding: 16px 18px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Eenheden & verkoopstatus ─────────────────────────────────────────────────────────────── */
+.gl-v2-pd-units-search {
+    margin: 12px 18px 0;
+    height: 34px;
+    box-sizing: border-box;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    color: var(--gl-v2-muted);
+}
+
+.gl-v2-pd-units-search i { font-size: 14px; flex: none; }
+.gl-v2-pd-units-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pd-units-search input::placeholder { color: var(--gl-v2-muted-light); }
+
+.gl-v2-pd-units-scroll { max-height: 320px; overflow-y: auto; margin-top: 8px; }
+
+.gl-v2-pd-units-table { width: 100%; border-collapse: collapse; }
+.gl-v2-pd-units-table th {
+    position: sticky;
+    top: 0;
+    background: var(--gl-v2-surface);
+    text-align: left;
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    color: var(--gl-v2-muted);
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    white-space: nowrap;
+}
+.gl-v2-pd-units-table th.text-end,
+.gl-v2-pd-units-table td.text-end { text-align: right; }
+
+.gl-v2-pd-units-table td { padding: 10px 18px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); vertical-align: top; }
+.gl-v2-pd-units-table tr:last-child td { border-bottom: 0; }
+.gl-v2-pd-units-table a { color: var(--gl-v2-primary); text-decoration: none; font-weight: 500; }
+.gl-v2-pd-units-table a:hover { text-decoration: underline; }
+.gl-v2-pd-units-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pd-units-empty { padding: 18px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Voortgang & budget ───────────────────────────────────────────────────────────────────── */
+.gl-v2-pd-vb-bars { padding: 16px 18px 0; display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-pd-vb-bar-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
+.gl-v2-pd-vb-bar-label { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pd-vb-bar-pct { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-pd-vb-track { height: 6px; border-radius: 3px; background: var(--gl-v2-neutral-tint); overflow: hidden; display: block; }
+.gl-v2-pd-vb-fill { display: block; height: 6px; border-radius: 3px; background: var(--gl-v2-primary); }
+.gl-v2-pd-vb-fill.is-finance { background: #2E5F7E; }
+
+/* Eén kolom (vol breed) i.p.v. naast elkaar — Algemene gegevens ernaast is nu altijd max. 2 kolommen
+   (dus vaak hoger dan de twee balkjes + tegels hierboven nodig hebben); twee volle-breedte tegels
+   vullen die extra hoogte zinvoller dan twee smalle tegels naast elkaar met lege ruimte eronder. */
+.gl-v2-pd-vb-stats { padding: 14px 18px 16px; display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 10px; }
+.gl-v2-pd-vb-stat { padding: 11px 12px; border-radius: 9px; background: #F7F9F5; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-pd-vb-stat-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .11em; color: var(--gl-v2-muted); }
+.gl-v2-pd-vb-stat-value { font: 600 16px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pd-vb-stat-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Facturatie / Documenten — compacte rijenlijst, gedeeld tussen beide kaarten ─────────────── */
+.gl-v2-pd-rows { display: flex; flex-direction: column; padding: 4px 18px 12px; }
+.gl-v2-pd-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-pd-rows > :last-child { border-bottom: 0; }
+
+.gl-v2-pd-row-badge {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 6px;
+    background: var(--gl-v2-danger-tint);
+    color: var(--gl-v2-danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 8px var(--gl-v2-font-sans);
+}
+
+.gl-v2-pd-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-pd-row-title { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pd-row-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pd-row-value { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; flex: none; }
+
+.gl-v2-pd-rows-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 10px 18px 14px;
+    margin-top: -2px;
+    border-top: 1px solid var(--gl-v2-hairline);
+}
+.gl-v2-pd-rows-total-label { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pd-rows-total-value { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+
+.gl-v2-pd-rows-empty { padding: 8px 18px 16px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-pd-add-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 18px 14px;
+    color: var(--gl-v2-primary);
+    text-decoration: none;
+    font: 600 12px var(--gl-v2-font-sans);
+}
+
+/* ── Foto's & media ───────────────────────────────────────────────────────────────────────── */
+.gl-v2-pd-media-grid { padding: 14px 18px 16px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+
+.gl-v2-pd-media-thumb {
+    position: relative;
+    height: 120px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--gl-v2-neutral-tint);
+    display: block;
+}
+
+.gl-v2-pd-media-thumb img,
+.gl-v2-pd-media-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.gl-v2-pd-media-main-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: var(--gl-v2-primary);
+    font: 600 9px var(--gl-v2-font-sans);
+    letter-spacing: .06em;
+    color: var(--gl-v2-surface);
+}
+
+.gl-v2-pd-media-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 28px;
+    background: rgba(20, 26, 19, .18);
+}
+
+.gl-v2-pd-media-empty {
+    height: 120px;
+    border-radius: 10px;
+    background: #F7F9F5;
+    border: 1px dashed var(--gl-v2-dashed);
+}
+
+.gl-v2-pd-media-add {
+    height: 120px;
+    border-radius: 10px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    font: 600 10.5px var(--gl-v2-font-sans);
+}
+
+.gl-v2-pd-media-add i { font-size: 20px; }
+
+/* ── Responsive: tablet 3-koloms stats, gestapelde 12-koloms grid; gsm 2-koloms stats, alles 1 kolom ── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .gl-v2-pd-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .gl-v2-pd-col-3, .gl-v2-pd-col-4, .gl-v2-pd-col-5, .gl-v2-pd-col-7 { grid-column: span 12; }
+    .gl-v2-pd-media-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767.98px) {
+    .gl-v2-pd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-pd-col-3, .gl-v2-pd-col-4, .gl-v2-pd-col-5, .gl-v2-pd-col-7 { grid-column: span 12; }
+    .gl-v2-pd-traject-stats { grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 10px; }
+    .gl-v2-pd-vb-stats { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .gl-v2-pd-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-pd-attention-desc { display: none; }
+}

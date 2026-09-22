@@ -1,0 +1,30 @@
+@model string
+@*
+    gl-v2 (design-handoff optie 8f·2, "E-MAIL"). GlV2-prefixed i.p.v. de generieke DataType-naam
+    "EmailAddress" — een legacy pagina met [DataType(DataType.EmailAddress)] mag hierdoor nooit per
+    ongeluk deze styling krijgen; enkel expliciete aanroep:
+    @Html.EditorFor(m => m.X, "GlV2Email"). Geen zichtbare standaard placeholder-tekst, wel een
+    spatie als placeholder-attribuut — zie GlV2Telefoon.cshtml se eigen toelichting voor waarom
+    (:placeholder-shown-CSS matcht nooit zonder een placeholder-attribuut, dus zonder dit zou
+    "Mailen" altijd zichtbaar zijn). Optionele extra ViewData: Placeholder.
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var placeholder = ViewData["Placeholder"] as string ?? " ";
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@id">@label</label>
+    <div class="gl-v2-field-box">
+        <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+        <input type="email" id="@id" name="@name" class="gl-v2-field-input"
+               value="@Model" placeholder="@placeholder" autocomplete="off" />
+        <a class="gl-v2-field-action" href="mailto:@Model"><span>Mailen</span></a>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>
