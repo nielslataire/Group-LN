@@ -8,6 +8,1022 @@
 <body>
 <x-dc>
 <helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#E7EDE2;font-family:'Avenir','Open Sans',-apple-system,sans-serif}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 'Avenir','Open Sans',sans-serif;color:#00532D}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'Avenir','Open Sans',sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden}.dv-opt:target .dv-oid{background:#00532D;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 'Avenir','Open Sans',sans-serif;color:rgba(0,0,0,.5)}a{color:#00532D}a:hover{color:#B8935A}</style></helmet>
+<section class="dv-turn" id="t8">
+<div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">Detail- en formulierstandaard — in dezelfde shell als <a class="dv-oid" href="#4a">4a</a>, naam alleen in de topbar</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="8a">
+<div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a>Detailpagina — geen dubbele titel: topbar draagt de naam, pagina begint met contextstrip en tabs</div>
+<div class="dv-card" style="width:1400px">
+<div style="display:flex;height:1080px;background:#F2F5EF;gap:12px;padding:12px;box-sizing:border-box">
+
+<div style="width:72px;flex:none;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:6px">
+<div style="width:40px;height:40px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48;flex:none">{{ logoLabel }}</div>
+<div style="width:36px;height:1.5px;background:rgba(44,59,42,.10);margin:6px 0"></div>
+<sc-for list="{{ railBeforeSupp }}" as="m" hint-placeholder-count="3">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#00532D;box-shadow:0 2px 6px rgba(44,59,42,.22),0 12px 26px -12px rgba(44,59,42,.5)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M1.8 4.6h7.4v6H1.8z M9.2 6.8h2.4l2.6 2.2v1.6H9.2z M4.6 12.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z M11.4 12.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z"></path></svg>
+</div>
+<sc-for list="{{ railAfterSupp }}" as="m" hint-placeholder-count="7">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38);overflow:hidden">
+
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="width:34px;height:34px;border-radius:9px;background:#D6E5CC;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M1.8 4.6h7.4v6H1.8z M9.2 6.8h2.4l2.6 2.2v1.6H9.2z"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<div style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A;line-height:1.25">2BY2</div>
+<div style="display:flex;gap:6px;font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58"><span>Home</span><span>/</span><span>Leveranciers</span><span>/</span><span style="color:#00532D">2BY2</span></div>
+</div>
+<div style="display:flex;gap:6px;flex:none;margin-left:4px">
+<span style="padding:4px 10px;border-radius:11px;background:#D6E5CC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#00532D">ACTIEF</span>
+<span style="padding:4px 10px;border-radius:11px;background:#EDEFEB;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#4A5B48">OOK KLANT</span>
+<span style="padding:4px 10px;border-radius:11px;background:#F6EEDC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#8A6A32">BTW TE CONTROLEREN</span>
+</div>
+<span style="flex:1"></span>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<div style="height:36px;padding:0 14px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Contact toevoegen</div>
+<div style="height:36px;padding:0 16px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M3 11.2 10.7 3.5l1.8 1.8L4.8 13l-2 .4z"></path></svg>Bewerken</div>
+<div style="width:38px;height:36px;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#5a6b58;stroke-width:1.7;stroke-linecap:round"><path d="M3.4 8h.01 M8 8h.01 M12.6 8h.01"></path></svg></div>
+</div>
+<div style="width:1px;height:32px;background:rgba(44,59,42,.12)"></div>
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:20px;border:1px solid rgba(44,59,42,.10);flex:none">
+<div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif">NL</div>
+<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Hallo, Niels Lataire</span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;display:block;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+</div>
+
+<div style="display:flex;align-items:flex-end;gap:2px;padding:10px 18px 0;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);flex:none">
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#2C3B2A;border-bottom:2.5px solid #C9A96E;margin-bottom:-1.5px">Algemene gegevens</div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Afdelingen <span style="color:#9aa898">3</span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Contacten <span style="color:#9aa898">7</span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Contracten <span style="color:#9aa898">0</span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Facturen <span style="color:#9aa898">24</span></div>
+<span style="flex:1"></span>
+<div style="padding:6px 10px;margin-bottom:4px;border:1px solid rgba(44,59,42,.14);border-radius:14px;font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">meer ▾</div>
+</div>
+
+<div style="flex:1;min-height:0;padding:14px 22px 16px;display:flex;flex-direction:column;gap:12px;background:#F7F9F5;overflow:hidden">
+
+<span style="flex:none;font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Facturatiebedrijf BCO · 24 facturen · laatst gewijzigd 12/09/2026 door Niels Lataire</span>
+
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M5.2 7h2 M5.2 9.4h5.4"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Algemene info</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">De basisgegevens van de leverancier: identificatie, btw en adres.</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Bewerken</span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 26px;align-content:start">
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">ONDERNEMINGSNUMMER</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">0453.139.854</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">BEDRIJFSVORM</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">—</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">BTW-STATUS</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Btw-plichtige onderneming</span></div>
+<div style="display:flex;flex-direction:column;gap:3px;grid-column:span 2"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">ADRES</span><span style="font:500 14px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Elsenstraat 2b<br>2170 Merksem (Antwerpen), België</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">FACTURATIEBEDRIJF</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">BCO</span></div>
+</div>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Contact &amp; facturatie</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Bereikbaarheid en hoe deze leverancier zijn facturen aanlevert.</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Bewerken</span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 26px;align-content:start">
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">TELEFOON</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">03 646 21 40</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">GSM</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">—</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">E-MAIL</span><a href="#8a" style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;text-decoration:none">info@2by2.be</a></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">FACTURATIE-E-MAIL</span><a href="#8a" style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;text-decoration:none">facturen@2by2.be</a></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">WEBSITE</span><span style="font:500 14px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">—</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">AANLEVERING</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="padding:3px 9px;border-radius:11px;background:#D6E5CC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">DIGITAAL VEREIST</span><span style="padding:3px 9px;border-radius:11px;background:#EDEFEB;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">UBL</span></div></div>
+<div style="display:flex;flex-direction:column;gap:3px;grid-column:span 4"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">ACTIVITEITEN</span><span style="font:450 13.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Ruwbouw en betonwerken · kleinere afbraakwerken · huur van kraanmateriaal met bediening.</span></div>
+</div>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.2 14 5.5 8 8.8 2 5.5z M2 9l6 3.3L14 9"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Afdelingen</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Maximaal vijf rijen in de sectie, de rest achter de tab.</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Alles beheren</span>
+</div>
+<div style="padding:14px 20px 16px;display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:1.4fr 1.2fr 1fr 90px;gap:14px;padding:0 4px 8px;border-bottom:1px solid rgba(44,59,42,.10)">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">AFDELING</span>
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">CONTACT</span>
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">TELEFOON</span>
+<span></span>
+</div>
+<sc-for list="{{ suppDepts }}" as="d" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:1.4fr 1.2fr 1fr 90px;gap:14px;align-items:center;padding:10px 4px;border-bottom:1px solid rgba(44,59,42,.06)">
+<span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ d.naam }}</span>
+<span style="font:450 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">{{ d.contact }}</span>
+<span style="font:450 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">{{ d.tel }}</span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;text-align:right">Bekijken</span>
+</div>
+</sc-for>
+<span style="margin-top:10px;font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">3 van 3 afdelingen · beheren in de tab Afdelingen</span>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+<div style="max-width:1120px;display:flex;flex-direction:column;gap:6px;margin-top:10px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">REGELS — GELDIG VOOR ELKE DETAILPAGINA, GROOT OF KLEIN</span>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">1 · De naam staat één keer: in de topbar, met terugpijl links van het module-icoon. Geen tweede H1 in de pagina.<br>2 · Topbar draagt de statuschips (naast het kruimelpad) en de acties: secundair links, primair rechts, verwijderen in het ⋯-menu. Chips horen bij het record, dus ze staan bij de naam — niet in de inhoud.<br>3 · De tabbar staat altijd op dezelfde plaats: direct onder de topbar, in het wit, gouden onderstreping — precies de tabbar van <a href="#2c">2c</a>. Aantallen grijs achter het label, overloop achter "meer ▾". Zo springt hij nooit met de lengte van de chips of meta.<br>3b · Eén grijze metaregel opent de inhoud onder de tabs; die mag per tab verschillen.<br>4 · Elke sectie is één kaart met een kop van één regel: icoon, titel, scheidingsstreepje en één regel uitleg. Daaronder de gegevens in vier kolommen over de volle breedte; label klein en grijs boven de waarde, lange velden overspannen kolommen.<br>5 · Leeg = liggend streepje, nooit een leeg vak. Tablet twee kolommen, mobiel één — er verhuist niets, de kaartkop wordt daar de inklapbare balk.<br>6 · Groeit de pagina? Meer tabs, niet meer lengte — maximaal vijf secties per tab.</span>
+</div>
+</div>
+
+<div class="dv-opt" id="8b">
+<div class="dv-olabel"><a class="dv-oid" href="#8b">8b</a>Formulierpagina (bewerken én nieuw) — 12-koloms veldraster, sectienavigatie, vaste actiebalk</div>
+<div class="dv-card" style="width:1400px">
+<div style="display:flex;height:1260px;background:#F2F5EF;gap:12px;padding:12px;box-sizing:border-box">
+
+<div style="width:72px;flex:none;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:6px">
+<div style="width:40px;height:40px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48;flex:none">{{ logoLabel }}</div>
+<div style="width:36px;height:1.5px;background:rgba(44,59,42,.10);margin:6px 0"></div>
+<sc-for list="{{ railBeforeSupp }}" as="m" hint-placeholder-count="3">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#00532D;box-shadow:0 2px 6px rgba(44,59,42,.22),0 12px 26px -12px rgba(44,59,42,.5)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M1.8 4.6h7.4v6H1.8z M9.2 6.8h2.4l2.6 2.2v1.6H9.2z M4.6 12.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z M11.4 12.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z"></path></svg>
+</div>
+<sc-for list="{{ railAfterSupp }}" as="m" hint-placeholder-count="7">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38);overflow:hidden">
+
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="width:34px;height:34px;border-radius:9px;background:#D6E5CC;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M3 11.2 10.7 3.5l1.8 1.8L4.8 13l-2 .4z"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<div style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A;line-height:1.25">Leverancier bewerken — 2BY2</div>
+<div style="display:flex;gap:6px;font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58"><span>Home</span><span>/</span><span>Leveranciers</span><span>/</span><span>2BY2</span><span>/</span><span style="color:#00532D">Bewerken</span></div>
+</div>
+<span style="flex:1"></span>
+<span style="padding:5px 11px;border-radius:11px;background:#F6EEDC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#8A6A32;flex:none">NIET-OPGESLAGEN WIJZIGINGEN</span>
+<div style="width:1px;height:32px;background:rgba(44,59,42,.12)"></div>
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:20px;border:1px solid rgba(44,59,42,.10);flex:none">
+<div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif">NL</div>
+<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Hallo, Niels Lataire</span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;display:block;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+</div>
+
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#F7F9F5;overflow:hidden">
+
+<div style="flex:1;min-height:0;padding:16px 22px;display:flex;gap:18px;overflow:hidden">
+
+<div style="width:216px;flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.05),0 14px 30px -26px rgba(44,59,42,.4);padding:14px;display:flex;flex-direction:column;gap:9px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.12em;color:#7a8a78">SECTIES</span>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:3px;background:#00532D"></span><span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Algemene info</span></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:3px;background:rgba(44,59,42,.2)"></span><span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Contact &amp; facturatie</span></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:3px;background:rgba(44,59,42,.2)"></span><span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Afdelingen <span style="color:#9aa898">3</span></span></div>
+<div style="height:1px;background:rgba(44,59,42,.08);margin:2px 0"></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:3px;background:#8B2A2A"></span><span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">1 fout te herstellen</span></div>
+</div>
+<span style="font:450 10.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">vanaf drie secties blijft dit lijstje links meescrollen; onder 1100px verdwijnt het en worden de secties inklapbaar</span>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+
+<div style="display:flex;align-items:center;gap:10px;flex:none;flex-wrap:wrap">
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Velden met <span style="color:#8B2A2A">*</span> zijn verplicht · zelfde pagina voor "nieuw", dan zonder naam in de topbar en met lege velden</span>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M5.2 7h2 M5.2 9.4h5.4"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Algemene info</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Vul de basisgegevens in. Het btw-nummer wordt gecontroleerd bij de KBO.</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px;align-content:start">
+
+<div style="grid-column:span 12;display:flex;align-items:center;gap:11px">
+<span style="width:40px;height:22px;flex:none;border-radius:11px;background:#00532D;display:flex;align-items:center;justify-content:flex-end;padding:0 3px;box-sizing:border-box"><span style="width:16px;height:16px;border-radius:8px;background:#fff"></span></span>
+<span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Onderneming is actief</span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">inactief blijft zichtbaar in de historiek, maar niet selecteerbaar</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">FACTURATIEBEDRIJF <span style="color:#8B2A2A">*</span></span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">BCO</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+</div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BEDRIJFSVORM</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Kies …</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+</div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BEDRIJFSNAAM <span style="color:#8B2A2A">*</span></span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #00532D;border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px;box-shadow:0 0 0 3px rgba(0,83,45,.10)"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">2BY2</span></div>
+</div>
+
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">LAND</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">België (BE)</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+</div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">ONDERNEMINGSNUMMER <span style="color:#8B2A2A">*</span></span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">0453139854</span></div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">landcode + nummer, bv. BE 0123456789</span>
+</div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BTW-NUMMER</span>
+<div style="display:flex">
+<div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-right:none;border-radius:8px 0 0 8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">0453139854</span></div>
+<div style="height:40px;flex:none;padding:0 14px;border-radius:0 8px 8px 0;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Controleren</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">voor Belgische ondernemingen gelijk aan het ondernemingsnummer</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BTW-STATUS</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Btw-plichtige onderneming</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+</div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">STRAAT <span style="color:#8B2A2A">*</span></span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Elsenstraat</span></div>
+</div>
+<div style="grid-column:span 1;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">NR</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 10px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">2b</span></div>
+</div>
+<div style="grid-column:span 2;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BUS</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 10px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Bus</span></div>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">PLAATS <span style="color:#8B2A2A">*</span></span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #8B2A2A;border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Kies een gemeente …</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+<span style="font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Verplicht veld — kies een gemeente</span>
+</div>
+<div style="grid-column:span 8;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">ACTIVITEITEN</span>
+<div style="height:76px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;padding:10px 12px"><span style="font:450 13px/1.55 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Ruwbouw en betonwerken · kleinere afbraakwerken · huur van kraanmateriaal met bediening.</span></div>
+</div>
+
+</div>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Contact &amp; facturatie</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Contactgegevens en hoe facturen aangeleverd moeten worden.</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px;align-content:start">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">TELEFOON</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.2 3h3l1.2 3-1.6 1.2a7 7 0 0 0 3 3L10 8.6l3 1.2v3h-.8A9.4 9.4 0 0 1 3 3.8z"></path></svg><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">03 646 21 40</span></div>
+</div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M5.4 2.2h5.2v11.6H5.4z M7.4 11.9h1.2"></path></svg><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">GSM</span></div>
+</div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 4h11.2v8H2.4z M2.4 4.6 8 8.6l5.6-4"></path></svg><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2.be</span></div>
+</div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">FACTURATIE-E-MAIL</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M4.2 2.6h4.8l3 3v7.8H4.2z M9 2.6v3h3"></path></svg><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">facturen@2by2.be</span></div>
+</div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">WEBSITE</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M2.8 8h10.4 M8 2.6a9 9 0 0 1 0 10.8 M8 2.6a9 9 0 0 0 0 10.8"></path></svg><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Website</span></div>
+</div>
+<div style="grid-column:span 8;display:flex;flex-direction:column;gap:9px;padding-top:18px">
+<div style="display:flex;align-items:center;gap:9px"><span style="width:17px;height:17px;border-radius:5px;background:#00532D;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></span><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Digitale facturatie vereist</span></div>
+<div style="display:flex;align-items:center;gap:9px"><span style="width:17px;height:17px;box-sizing:border-box;border-radius:5px;border:1px solid rgba(44,59,42,.28)"></span><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">UBL standaard meesturen</span></div>
+<div style="display:flex;align-items:center;gap:9px"><span style="width:17px;height:17px;box-sizing:border-box;border-radius:5px;border:1px solid rgba(44,59,42,.28)"></span><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Deze leverancier is ook klant</span></div>
+</div>
+</div>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.2 14 5.5 8 8.8 2 5.5z M2 9l6 3.3L14 9"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Afdelingen</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Herhaalbare rijen: elke rij één regel, toevoegen onderaan links.</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:16px 20px 18px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ suppDepts }}" as="d" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) 34px;gap:10px;align-items:center">
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ d.naam }}</span></div>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ d.contact }}</span></div>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ d.tel }}</span></div>
+<div style="width:34px;height:34px;border-radius:8px;border:1px solid rgba(44,59,42,.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#8B2A2A;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M3 4.4h10 M6.2 4.4V2.8h3.6v1.6 M4.4 4.4v8.8h7.2V4.4"></path></svg></div>
+</div>
+</sc-for>
+<div style="height:38px;align-self:flex-start;padding:0 14px;border-radius:8px;border:1px dashed #7A9E6E;color:#2F6038;display:flex;align-items:center;gap:7px;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif">+ Afdeling toevoegen</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div style="flex:none;display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-top:1px solid rgba(44,59,42,.10);box-shadow:0 -10px 26px -22px rgba(44,59,42,.6)">
+<span style="display:flex;align-items:center;gap:7px;font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8A6A32"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#8A6A32;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.6 14.2 13H1.8z M8 6.6v3 M8 11.4h.01"></path></svg>1 verplicht veld ontbreekt · concept automatisch bewaard om 14:32</span>
+<span style="flex:1"></span>
+<div style="height:38px;padding:0 14px;border-radius:8px;color:#5a6b58;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Annuleren</div>
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opslaan en verder bewerken</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Opslaan</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+<div style="max-width:1120px;display:flex;flex-direction:column;gap:6px;margin-top:10px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.14em;color:#00532D">REGELS — GELDIG VOOR ELK FORMULIER, KLEIN OF GROOT</span>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">1 · Topbar draagt "‹ Module bewerken — naam" en het kruimelpad; bij nieuw enkel "Nieuwe leverancier". Geen tweede titel in de pagina.<br>2 · Elke sectie heeft dezelfde kop van één regel als op de detailpagina. Velden staan in een 12-koloms raster over de volle kaartbreedte: hoogte 40px, label klein en grijs boven het veld, helptekst eronder. Een veld is 3 (kort), 4 (normaal), 5 (lang) of 12 (volle breedte) kolommen breed — nooit ertussen.<br>3 · Label boven het veld, niet ernaast: zo blijft dezelfde markup werken op tablet (6 kolommen) en mobiel (volle breedte).<br>4 · Actiebalk staat vast onderaan: links de staat (fouten, autobewaren), rechts Annuleren — Opslaan en verder — Opslaan. Nooit bovenaan én onderaan.<br>5 · Fouten worden rood op het veld gezet met één regel eronder, plus een teller links in de actiebalk en een stip in de sectienavigatie.<br>6 · Herhaalbare rijen (afdelingen, contacten, lijnen) zijn één regel per rij met een verwijderknop rechts en "+ toevoegen" onderaan links.</span>
+</div>
+</div>
+
+<div class="dv-opt" id="8d">
+<div class="dv-olabel"><a class="dv-oid" href="#8d">8d</a>Bewerken mét tabbar — zelfde tabs als het detail, secties binnen de tab</div>
+<div class="dv-card" style="width:1400px">
+<div style="display:flex;height:1080px;background:#F2F5EF;gap:12px;padding:12px;box-sizing:border-box">
+
+<div style="width:72px;flex:none;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:6px">
+<div style="width:40px;height:40px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48;flex:none">{{ logoLabel }}</div>
+<div style="width:36px;height:1.5px;background:rgba(44,59,42,.10);margin:6px 0"></div>
+<sc-for list="{{ railBeforeSupp }}" as="m" hint-placeholder-count="3">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#00532D;box-shadow:0 2px 6px rgba(44,59,42,.22),0 12px 26px -12px rgba(44,59,42,.5)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M1.8 4.6h7.4v6H1.8z M9.2 6.8h2.4l2.6 2.2v1.6H9.2z M4.6 12.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z M11.4 12.4a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6z"></path></svg>
+</div>
+<sc-for list="{{ railAfterSupp }}" as="m" hint-placeholder-count="7">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;flex:none;fill:none;stroke:#2C3B2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+</div>
+</sc-for>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38);overflow:hidden">
+
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="width:34px;height:34px;border-radius:9px;background:#D6E5CC;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M3 11.2 10.7 3.5l1.8 1.8L4.8 13l-2 .4z"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<div style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A;line-height:1.25">Leverancier bewerken — 2BY2</div>
+<div style="display:flex;gap:6px;font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58"><span>Home</span><span>/</span><span>Leveranciers</span><span>/</span><span>2BY2</span><span>/</span><span style="color:#00532D">Bewerken</span></div>
+</div>
+<div style="display:flex;gap:6px;flex:none;margin-left:4px">
+<span style="padding:4px 10px;border-radius:11px;background:#D6E5CC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#00532D">ACTIEF</span>
+<span style="padding:4px 10px;border-radius:11px;background:#F6EEDC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#8A6A32">NIET-OPGESLAGEN WIJZIGINGEN</span>
+</div>
+<span style="flex:1"></span>
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:20px;border:1px solid rgba(44,59,42,.10);flex:none">
+<div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif">NL</div>
+<span style="font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Hallo, Niels Lataire</span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;display:block;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+</div>
+
+<div style="display:flex;align-items:flex-end;gap:2px;padding:10px 18px 0;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);flex:none">
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#2C3B2A;border-bottom:2.5px solid #C9A96E;margin-bottom:-1.5px">Algemene gegevens</div>
+<div style="padding:8px 14px;display:flex;align-items:center;gap:6px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Afdelingen <span style="color:#9aa898">3</span><span style="width:6px;height:6px;border-radius:3px;background:#8B2A2A"></span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Contacten <span style="color:#9aa898">7</span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#9aa898">Contracten <span style="color:#c3ccc0">0</span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#9aa898">Facturen <span style="color:#c3ccc0">24</span></div>
+<span style="flex:1"></span>
+<span style="margin-bottom:8px;font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">grijze tabs zijn alleen-lezen tijdens bewerken</span>
+</div>
+
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#F7F9F5;overflow:hidden">
+<div style="flex:1;min-height:0;padding:14px 22px 16px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+
+<span style="flex:none;font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Velden met <span style="color:#8B2A2A">*</span> zijn verplicht · alleen de velden van deze tab worden bewaard</span>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M5.2 7h2 M5.2 9.4h5.4"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Algemene info</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Vul de basisgegevens in. Het btw-nummer wordt gecontroleerd bij de KBO.</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px;align-content:start">
+<div style="grid-column:span 12;display:flex;align-items:center;gap:11px">
+<span style="width:40px;height:22px;flex:none;border-radius:11px;background:#00532D;display:flex;align-items:center;justify-content:flex-end;padding:0 3px;box-sizing:border-box"><span style="width:16px;height:16px;border-radius:8px;background:#fff"></span></span>
+<span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Onderneming is actief</span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">inactief blijft zichtbaar in de historiek, maar niet selecteerbaar</span>
+</div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">FACTURATIEBEDRIJF <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">BCO</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BEDRIJFSVORM</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Kies …</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div></div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BEDRIJFSNAAM <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1.5px solid #00532D;border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px;box-shadow:0 0 0 3px rgba(0,83,45,.10)"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">2BY2</span></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">LAND</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">België (BE)</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">ONDERNEMINGSNUMMER <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">0453139854</span></div></div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BTW-NUMMER</span><div style="display:flex"><div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-right:none;border-radius:8px 0 0 8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">0453139854</span></div><div style="height:40px;flex:none;padding:0 14px;border-radius:0 8px 8px 0;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Controleren</div></div></div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">STRAAT <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Elsenstraat</span></div></div>
+<div style="grid-column:span 1;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">NR</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 10px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">2b</span></div></div>
+<div style="grid-column:span 2;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BUS</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 10px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Bus</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">PLAATS <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1.5px solid #8B2A2A;border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Kies een gemeente …</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div><span style="font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Verplicht veld — kies een gemeente</span></div>
+</div>
+</div>
+
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden;flex:none">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Contact &amp; facturatie</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Contactgegevens en hoe facturen aangeleverd moeten worden.</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px;align-content:start">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">TELEFOON</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">03 646 21 40</span></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">GSM</span></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2.be</span></div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">FACTURATIE-E-MAIL</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">facturen@2by2.be</span></div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">WEBSITE</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Website</span></div></div>
+<div style="grid-column:span 8;display:flex;gap:26px;align-items:center;padding-top:18px">
+<div style="display:flex;align-items:center;gap:9px"><span style="width:17px;height:17px;border-radius:5px;background:#00532D;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></span><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Digitale facturatie vereist</span></div>
+<div style="display:flex;align-items:center;gap:9px"><span style="width:17px;height:17px;box-sizing:border-box;border-radius:5px;border:1px solid rgba(44,59,42,.28)"></span><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">UBL meesturen</span></div>
+</div>
+</div>
+</div>
+
+</div>
+
+<div style="flex:none;display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-top:1px solid rgba(44,59,42,.10);box-shadow:0 -10px 26px -22px rgba(44,59,42,.6)">
+<span style="display:flex;align-items:center;gap:7px;font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8A6A32"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#8A6A32;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.6 14.2 13H1.8z M8 6.6v3 M8 11.4h.01"></path></svg>1 verplicht veld ontbreekt op deze tab · 1 fout op tab Afdelingen</span>
+<span style="flex:1"></span>
+<div style="height:38px;padding:0 14px;border-radius:8px;color:#5a6b58;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Annuleren</div>
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opslaan en verder bewerken</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Opslaan</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+<div style="max-width:1120px;display:flex;flex-direction:column;gap:6px;margin-top:10px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.14em;color:#00532D">TABS OF SECTIES — WANNEER WAT</span>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Tabs verdelen het <b>record</b> in delen die los bestaan: eigen lijst, eigen rechten, eigen opslag (contacten, contracten, facturen). Secties verdelen <b>één formulier</b> in leesblokken die samen bewaard worden.<br>Voordeel van sectiekaarten: alles wat samen hoort staat samen op één scherm, één keer Opslaan, geen verlies bij wegklikken, en je ziet in één blik welke velden nog leeg zijn. Voordeel van tabs: korte pagina's, en de gebruiker vindt bewerken op exact dezelfde plaats als in het detail.<br>Regel: <b>tot ±25 velden blijven het sectiekaarten op één pagina</b> (zoals <a href="#8b">8b</a>). Daarboven, of wanneer delen een eigen levensloop hebben, gebruik je dezelfde tabbar als het detail (zoals 8d) — dan geldt: de tabbar staat op dezelfde y als in het detail, alleen de actieve tab is bewerkbaar, de andere tabs krijgen een rode stip bij fouten, en de actiebalk bewaart alleen de actieve tab en meldt fouten elders.</span>
+</div>
+</div>
+
+<div class="dv-opt" id="8f">
+<div class="dv-olabel"><a class="dv-oid" href="#8f">8f</a>Veldtypes — genummerde velden, e-mail, web, en de zoekende dropdown</div>
+<div class="dv-card" style="width:1400px">
+<div style="display:flex;flex-direction:column;gap:26px;padding:24px;background:#F2F5EF;box-sizing:border-box">
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">1 · GENUMMERDE VELDEN — ONDERNEMINGS- EN BTW-NUMMER</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">hoogte 40px · tabelcijfers · masker bij verlaten van het veld, niet tijdens het tikken</span></div>
+<div style="background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px 16px">
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">ONDERNEMINGSNUMMER <span style="color:#8B2A2A">*</span></span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">BE</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums;letter-spacing:.02em">0453.139.854</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">10 cijfers · punten komen automatisch</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">ONDERNEMINGSNUMMER — TIJDENS TIKKEN</span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #00532D;border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;box-shadow:0 0 0 3px rgba(0,83,45,.10)">
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">BE</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums;letter-spacing:.02em">04531398</span>
+<span style="width:1.5px;height:17px;background:#00532D"></span>
+<span style="flex:1"></span>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898;flex:none;font-variant-numeric:tabular-nums">8/10</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">geen gemaskerde invoer onderweg — alleen een teller</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">ONDERNEMINGSNUMMER — FOUT</span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #8B2A2A;border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">BE</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums;letter-spacing:.02em">0453.139.855</span>
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5.4v3.6 M8 11.1h.01"></path></svg>
+</div>
+<span style="font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Controlegetal klopt niet — controleer het nummer</span>
+</div>
+
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BTW-NUMMER — MET KNOP, NOG NIET GECONTROLEERD</span>
+<div style="display:flex">
+<div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-right:none;border-radius:8px 0 0 8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">BE</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums;letter-spacing:.02em">0453.139.854</span>
+</div>
+<div style="height:40px;flex:none;padding:0 14px;border-radius:0 8px 8px 0;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Controleren</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">knop plakt aan het veld: één blok, radius alleen buitenom</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BTW-NUMMER — BEZIG</span>
+<div style="display:flex">
+<div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-right:none;border-radius:8px 0 0 8px;background:#F7F9F5;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898;flex:none">BE</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;font-variant-numeric:tabular-nums;letter-spacing:.02em">0453.139.854</span>
+</div>
+<div style="height:40px;flex:none;padding:0 14px;border-radius:0 8px 8px 0;background:rgba(0,83,45,.45);color:#fff;display:flex;align-items:center;gap:8px;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif"><span style="width:12px;height:12px;border-radius:6px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff"></span>Controleren</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">veld vergrijst mee, zodat niemand ondertussen tikt</span>
+</div>
+
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">BTW-NUMMER — GECONTROLEERD</span>
+<div style="display:flex">
+<div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid #7A9E6E;border-right:none;border-radius:8px 0 0 8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums;letter-spacing:.02em">BE 0453.139.854</span>
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#2F6038;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>
+</div>
+<div style="height:40px;flex:none;padding:0 12px;border:1px solid #7A9E6E;border-left:none;border-radius:0 8px 8px 0;color:#2F6038;display:flex;align-items:center;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif">Opnieuw</div>
+</div>
+<span style="font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2F6038">2BY2 BVBA · geldig bij de KBO</span>
+</div>
+
+</div>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Vaste voorvoegsels (BE, https://, +32) staan links ín het veld achter een scheidingslijntje — nooit als aparte dropdown en nooit in de placeholder. Cijferwaarden krijgen tabelcijfers zodat kolommen uitlijnen. Een controleknop hoort tegen het veld: één blok, dezelfde hoogte, radius alleen aan de buitenkant. Na succes verkleurt de rand groen en vertelt de helptekst wát er gevonden is — de knop wordt "Opnieuw", niet onzichtbaar.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">2 · TELEFOON, GSM, E-MAIL EN WEBSITE</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">icoon 15px links, grijs · voorvoegsel waar het helpt · actie rechts pas als de waarde geldig is</span></div>
+<div style="background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px 16px">
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">TELEFOON</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.2 3h3l1.2 3-1.6 1.2a7 7 0 0 0 3 3L10 8.6l3 1.2v3h-.8A9.4 9.4 0 0 1 3 3.8z"></path></svg>
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">+32</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums">3 646 21 40</span>
+<span style="font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Bellen</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">vast nummer · groepering per land, "0" valt weg na +32</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M5.4 2.2h5.2v11.6H5.4z M7.4 11.9h1.2"></path></svg>
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">+32</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums">475 82 19 44</span>
+<span style="font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Sms</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">zelfde veld als telefoon, ander icoon en andere actie</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM — LEEG</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#9aa898;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M5.4 2.2h5.2v11.6H5.4z M7.4 11.9h1.2"></path></svg>
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898;flex:none">+32</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:450 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">475 00 00 00</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">placeholder toont de vorm, nooit het woord "GSM"</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 4h11.2v8H2.4z M2.4 4.6 8 8.6l5.6-4"></path></svg>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2.be</span>
+<span style="font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Mailen</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">nooit automatisch hoofdletters · geen spaties toegelaten</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL — FOUT</span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #8B2A2A;border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 4h11.2v8H2.4z M2.4 4.6 8 8.6l5.6-4"></path></svg>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2</span>
+</div>
+<span style="font:600 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Ontbrekend domein — bedoelde je info@2by2.be?</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">WEBSITE</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M2.8 8h10.4 M8 2.6a9 9 0 0 1 0 10.8 M8 2.6a9 9 0 0 0 0 10.8"></path></svg>
+<span style="font:500 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;flex:none">https://</span>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">www.2by2.be</span>
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.4 3.6h6v6 M12.4 3.6 6.8 9.2 M9.6 12.4H3.6V6.4"></path></svg>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">https:// is vast · getikte "http://" of "www." wordt opgeruimd</span>
+</div>
+
+</div>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Elk contactveld heeft hetzelfde skelet: icoon · eventueel voorvoegsel · waarde · actie rechts. De actie (Bellen, Sms, Mailen, openen) verschijnt pas als de waarde geldig is en is altijd tekst of één icoon — nooit een gevulde knop, want dan concurreert ze met Opslaan. Foutteksten benoemen de oplossing, niet de regel.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">3 · DROPDOWN MET ZOEKVELD, GROEPEN EN SUGGESTIES</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">paneel 8px onder het veld · radius 10px · rijen 36px · groepskop 9.5px in hoofdletters · max 8 rijen, dan scrollen</span></div>
+<div style="background:#fff;border-radius:12px;padding:18px 20px 24px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px 20px">
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GESLOTEN — GEKOZEN</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Merksem (2170)</span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">gesloten ziet het uit als elk ander veld</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GESLOTEN — LEEG</span>
+<div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px">
+<span style="flex:1;font:450 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Kies een gemeente …</span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">placeholder zegt wát je kiest</span>
+</div>
+
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">MEERVOUDIG — ALS CHIPS IN HET VELD</span>
+<div style="min-height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:6px;padding:6px 12px;flex-wrap:wrap">
+<span style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:7px;background:#EDEFEB;font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Ruwbouw <svg viewBox="0 0 16 16" style="width:10px;height:10px;fill:none;stroke:#5a6b58;stroke-width:2;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></span>
+<span style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:7px;background:#EDEFEB;font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Kraanhuur <svg viewBox="0 0 16 16" style="width:10px;height:10px;fill:none;stroke:#5a6b58;stroke-width:2;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></span>
+<span style="flex:1;min-width:40px;font:450 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Zoek …</span>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">veld groeit mee · gekozen items blijven in het paneel aangevinkt</span>
+</div>
+
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">OPEN — NOG NIETS GETIKT</span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #00532D;border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px;box-shadow:0 0 0 3px rgba(0,83,45,.10)">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg>
+<span style="flex:1;font:450 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Zoek een gemeente of postcode …</span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 9.75 8 6.25l3.5 3.5"></path></svg>
+</div>
+<div style="margin-top:8px;border-radius:10px;background:#fff;box-shadow:0 2px 6px rgba(44,59,42,.10),0 22px 44px -22px rgba(44,59,42,.5);border:1px solid rgba(44,59,42,.08);overflow:hidden;display:flex;flex-direction:column">
+<div style="padding:10px 14px 6px;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">RECENT GEBRUIKT</div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px;background:#F2F5EF"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Merksem</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">2170</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Antwerpen</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">2000</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Deurne</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">2100</span></div>
+<div style="height:1px;background:rgba(44,59,42,.08)"></div>
+<div style="padding:10px 14px;font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">Tik om te zoeken in 2 892 gemeenten</div>
+</div>
+<span style="margin-top:6px;font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">nooit een lege lijst bij openen: eerst recent, dan de belofte</span>
+</div>
+
+<div style="grid-column:span 7;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">OPEN — TIJDENS TIKKEN, MET GROEPEN EN TREFFERMARKERING</span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #00532D;border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px;box-shadow:0 0 0 3px rgba(0,83,45,.10)">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg>
+<span style="font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">mer</span>
+<span style="width:1.5px;height:17px;background:#00532D"></span>
+<span style="flex:1"></span>
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.8;stroke-linecap:round"><path d="M4.4 4.4l7.2 7.2 M11.6 4.4l-7.2 7.2"></path></svg>
+<span style="width:1px;height:18px;background:rgba(44,59,42,.12);flex:none"></span>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 9.75 8 6.25l3.5 3.5"></path></svg>
+</div>
+<div style="margin-top:8px;border-radius:10px;background:#fff;box-shadow:0 2px 6px rgba(44,59,42,.10),0 22px 44px -22px rgba(44,59,42,.5);border:1px solid rgba(44,59,42,.08);overflow:hidden;display:flex;flex-direction:column">
+<div style="padding:10px 14px 6px;display:flex;align-items:center;gap:8px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">ANTWERPEN</span><span style="flex:1;height:1px;background:rgba(44,59,42,.08)"></span><span style="font:450 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">4</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px;background:#F2F5EF;border-left:2.5px solid #C9A96E"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A"><b style="font-weight:700;color:#00532D">Mer</b>ksem</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">2170</span><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A"><b style="font-weight:700;color:#00532D">Mer</b>xplas</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">2330</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Ant<b style="font-weight:700;color:#00532D">wer</b>pen</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">2000</span></div>
+<div style="padding:10px 14px 6px;display:flex;align-items:center;gap:8px;border-top:1px solid rgba(44,59,42,.06)"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">LIMBURG</span><span style="flex:1;height:1px;background:rgba(44,59,42,.08)"></span><span style="font:450 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">1</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Lom<b style="font-weight:700;color:#00532D">mer</b>l</span><span style="font:450 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;font-variant-numeric:tabular-nums">3920</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:9px;opacity:.55"><span style="flex:1;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Lom<b style="font-weight:700">mer</b>sweiler</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">niet actief</span></div>
+<div style="height:1px;background:rgba(44,59,42,.08)"></div>
+<div style="padding:9px 14px;display:flex;align-items:center;justify-content:space-between"><span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">+ "mer" toevoegen als nieuwe gemeente</span><span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">↑↓ kiezen · ⏎ bevestigen · esc sluiten</span></div>
+</div>
+<span style="margin-top:6px;font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">treffer vet en groen — waar hij ook in het woord zit · groepskop met aantal · gouden streep op de rij onder de pijl</span>
+</div>
+
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">OPEN — GEEN RESULTAAT</span>
+<div style="height:40px;box-sizing:border-box;border:1.5px solid #00532D;border-radius:8px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px;box-shadow:0 0 0 3px rgba(0,83,45,.10)">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg>
+<span style="flex:1;font:500 13px/1 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">merxem</span>
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.8;stroke-linecap:round"><path d="M4.4 4.4l7.2 7.2 M11.6 4.4l-7.2 7.2"></path></svg>
+</div>
+<div style="margin-top:8px;border-radius:10px;background:#fff;box-shadow:0 2px 6px rgba(44,59,42,.10),0 22px 44px -22px rgba(44,59,42,.5);border:1px solid rgba(44,59,42,.08);padding:16px 14px;display:flex;flex-direction:column;gap:9px;align-items:flex-start">
+<span style="font:500 12.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Niets gevonden voor "merxem".</span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Bedoelde je <span style="font-weight:700;color:#00532D">Merksem (2170)</span>?</span>
+<span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">+ "merxem" toevoegen als nieuwe gemeente</span>
+</div>
+<span style="margin-top:6px;font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">altijd een suggestie of een uitweg — nooit alleen "geen resultaten"</span>
+</div>
+
+<div style="grid-column:span 7;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">RIJEN MET TWEE REGELS — VOOR RECORDS IN PLAATS VAN WAARDEN</span>
+<div style="border-radius:10px;background:#fff;box-shadow:0 2px 6px rgba(44,59,42,.10),0 22px 44px -22px rgba(44,59,42,.5);border:1px solid rgba(44,59,42,.08);overflow:hidden;display:flex;flex-direction:column">
+<div style="padding:10px 14px 6px;display:flex;align-items:center;gap:8px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#7a8a78">LEVERANCIERS</span><span style="flex:1;height:1px;background:rgba(44,59,42,.08)"></span><span style="font:450 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">2</span></div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:11px;background:#F2F5EF;border-left:2.5px solid #C9A96E">
+<div style="width:28px;height:28px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center;font:700 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">2B</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A"><b style="font-weight:700;color:#00532D">2BY</b>2</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">0453.139.854 · Merksem</span></div>
+<span style="padding:3px 8px;border-radius:10px;background:#D6E5CC;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#00532D;flex:none">ACTIEF</span>
+</div>
+<div style="padding:9px 14px;display:flex;align-items:center;gap:11px">
+<div style="width:28px;height:28px;flex:none;border-radius:8px;background:#EDEFEB;display:flex;align-items:center;justify-content:center;font:700 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">2B</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A"><b style="font-weight:700;color:#00532D">2BY</b>2 Logistics</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">0644.201.118 · Deurne</span></div>
+<span style="padding:3px 8px;border-radius:10px;background:#EDEFEB;font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#9aa898;flex:none;text-decoration:line-through">INACTIEF</span>
+</div>
+<div style="height:1px;background:rgba(44,59,42,.08)"></div>
+<div style="padding:9px 14px;display:flex;align-items:center;justify-content:space-between"><span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">2 van 148 · tik verder om te filteren</span><span style="font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">+ Nieuwe leverancier</span></div>
+</div>
+<span style="margin-top:6px;font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">twee regels + kenletters links + status rechts · zelfde paneel, andere rijhoogte (44px)</span>
+</div>
+
+</div>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Één component voor alle keuzelijsten: gesloten ziet hij uit als een gewoon veld met een chevron; open wordt het veld zelf het zoekveld (chevron klapt om, kruisje wist). Het paneel hangt 8px onder het veld, is even breed en toont maximaal acht rijen. Groepen zijn koppen met een aantal — geen inspringing, geen kleur. De treffer wordt vet en groen waar hij ook in het woord valt, ook in de tweede regel. Onderaan staat altijd één uitweg: toevoegen, of de hint met het totaal. Toetsenbord: ↑↓ kiezen, ⏎ bevestigen, esc sluiten — de rij onder de pijl krijgt dezelfde gouden streep als de actieve tab.</span>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="8e">
+<div class="dv-olabel"><a class="dv-oid" href="#8e">8e</a>Onderdelen uitgewerkt — badges, tabbar, kaart, sectiekaart, actiebalk</div>
+<div class="dv-card" style="width:1400px">
+<div style="display:flex;flex-direction:column;gap:26px;padding:24px;background:#F2F5EF;box-sizing:border-box">
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">1 · BADGES IN DE TOPBAR</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">hoogte 22px · radius 11px · padding 4/10 · 10px/600 · letterspacing .06em · HOOFDLETTERS · max 3 naast elkaar</span></div>
+<div style="background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">
+<div style="display:flex;flex-direction:column;gap:7px"><span style="padding:4px 10px;border-radius:11px;background:#D6E5CC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#00532D;align-self:flex-start">ACTIEF</span><span style="font:450 10.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Positief — record is in gebruik. Groen 20%.</span></div>
+<div style="display:flex;flex-direction:column;gap:7px"><span style="padding:4px 10px;border-radius:11px;background:#EDEFEB;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#4A5B48;align-self:flex-start">OOK KLANT</span><span style="font:450 10.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Neutraal — een feit, geen waarschuwing. Standaardkeuze.</span></div>
+<div style="display:flex;flex-direction:column;gap:7px"><span style="padding:4px 10px;border-radius:11px;background:#F6EEDC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#8A6A32;align-self:flex-start">BTW TE CONTROLEREN</span><span style="font:450 10.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Aandacht — vraagt actie, blokkeert niet.</span></div>
+<div style="display:flex;flex-direction:column;gap:7px"><span style="padding:4px 10px;border-radius:11px;background:#F4E3E1;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#8B2A2A;align-self:flex-start">GEBLOKKEERD</span><span style="font:450 10.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Fout — blokkeert verder werken. Zeldzaam.</span></div>
+<div style="display:flex;flex-direction:column;gap:7px"><span style="padding:4px 10px;border-radius:11px;background:#EDEFEB;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#9aa898;align-self:flex-start;text-decoration:line-through">INACTIEF</span><span style="font:450 10.5px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Uit dienst — grijze tekst, doorhaling.</span></div>
+</div>
+<div style="height:1px;background:rgba(44,59,42,.08)"></div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px dashed rgba(44,59,42,.18);border-radius:10px">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="width:34px;height:34px;flex:none;border-radius:9px;background:#D6E5CC"></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:500 19px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A;line-height:1.2">2BY2</span><span style="font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Home / Leveranciers / <span style="color:#00532D">2BY2</span></span></div>
+<div style="display:flex;gap:6px;margin-left:4px">
+<span style="padding:4px 10px;border-radius:11px;background:#D6E5CC;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#00532D">ACTIEF</span>
+<span style="padding:4px 10px;border-radius:11px;background:#EDEFEB;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#4A5B48">OOK KLANT</span>
+<span style="padding:4px 10px;border-radius:11px;background:#EDEFEB;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.06em;color:#4A5B48">+2</span>
+</div>
+<span style="flex:1"></span>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">plaats: direct rechts van het kruimelpad · meer dan 3 → "+n" met tooltip</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">2 · TABBAR</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">13.5px/500 · padding 8/14 · actief 2.5px goud #C9A96E · altijd direct onder de topbar, in het wit</span></div>
+<div style="background:#fff;border-radius:12px;padding:0 0 18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);display:flex;flex-direction:column;gap:16px;overflow:hidden">
+<div style="display:flex;align-items:flex-end;gap:2px;padding:12px 18px 0;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#2C3B2A;border-bottom:2.5px solid #C9A96E;margin-bottom:-1.5px">Actief</div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#2C3B2A;background:#F2F5EF;border-radius:8px 8px 0 0">Hover</div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Met aantal <span style="color:#9aa898">7</span></div>
+<div style="padding:8px 14px;display:flex;align-items:center;gap:6px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#5a6b58">Met fout <span style="color:#9aa898">3</span><span style="width:6px;height:6px;border-radius:3px;background:#8B2A2A"></span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#9aa898">Leeg <span style="color:#c3ccc0">0</span></div>
+<div style="padding:8px 14px;font:500 13.5px 'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,sans-serif;color:#c3ccc0">Geen rechten</div>
+<span style="flex:1"></span>
+<div style="padding:6px 10px;margin-bottom:4px;border:1px solid rgba(44,59,42,.14);border-radius:14px;font:500 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">meer ▾</div>
+</div>
+<div style="padding:0 20px;display:flex;flex-direction:column;gap:9px">
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Aantal staat grijs achter het label, nooit in een gekleurde bol. Nul blijft staan maar vergrijst het hele label — zo zie je dat er niets te halen is zonder te klikken. Geen rechten: niet verbergen maar uitzetten, anders lijkt de pagina bij elke rol anders.<br>Maximaal 6 tabs zichtbaar; de rest achter "meer ▾" (rechts uitgelijnd). Onder 900px schuift de rij horizontaal, met de actieve tab altijd in beeld.</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">3 · KAART — BASIS EN VARIANTEN</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">radius 12px · wit · 1px 2px + 18px 40px -28px schaduw · geen border · kop 14/20, inhoud 18/20</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M5.2 7h2 M5.2 9.4h5.4"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Basiskaart</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:18px 20px;font:450 12.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Kop van één regel, dan de inhoud. Dit is de enige kaartvorm die overal terugkomt.</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">icoon 30px · titel 13px/700 groen</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.2 14 5.5 8 8.8 2 5.5z M2 9l6 3.3L14 9"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Met actie</span>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">3</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">+ Toevoegen</span>
+</div>
+<div style="padding:12px 20px;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(44,59,42,.06);font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A"><span>Werfopvolging</span><span style="color:#4A5B48">Kris Maes</span></div>
+<div style="display:flex;justify-content:space-between;padding:9px 0;font:500 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A"><span>Boekhouding</span><span style="color:#4A5B48">Eline Cools</span></div>
+</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">één tekstactie rechts in de kop — nooit een gevulde knop</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#EDEFEB;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#9aa898;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Lege staat</span>
+<span style="flex:1"></span>
+</div>
+<div style="padding:22px 20px;display:flex;flex-direction:column;align-items:flex-start;gap:9px">
+<span style="font:450 12.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Nog geen contracten voor deze leverancier.</span>
+<div style="height:34px;padding:0 13px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12px 'Avenir','Open Sans',-apple-system,sans-serif">Contract toevoegen</div>
+</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">kop vergrijst, één regel uitleg, één uitweg — nooit een lege kaart</span>
+</div>
+
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">4 · SECTIEKAART — DE KOP VAN DICHTBIJ</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">variant B, standaard voor detail én formulier</span></div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Contact &amp; facturatie</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Eén regel uitleg — langer hoort bij het veld, niet in de kop.</span>
+<span style="flex:1"></span>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">3 van 6 ingevuld</span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 16px">
+<div style="grid-column:span 3;height:52px;border-radius:8px;background:#F7F9F5;border:1px dashed rgba(44,59,42,.16);display:flex;align-items:center;justify-content:center;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;letter-spacing:.08em">3 KOL — KORT</div>
+<div style="grid-column:span 4;height:52px;border-radius:8px;background:#F7F9F5;border:1px dashed rgba(44,59,42,.16);display:flex;align-items:center;justify-content:center;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;letter-spacing:.08em">4 KOL — NORMAAL</div>
+<div style="grid-column:span 5;height:52px;border-radius:8px;background:#F7F9F5;border:1px dashed rgba(44,59,42,.16);display:flex;align-items:center;justify-content:center;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;letter-spacing:.08em">5 KOL — LANG</div>
+<div style="grid-column:span 12;height:52px;border-radius:8px;background:#F7F9F5;border:1px dashed rgba(44,59,42,.16);display:flex;align-items:center;justify-content:center;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78;letter-spacing:.08em">12 KOL — VOLLE BREEDTE (SCHAKELAAR, TEKSTVAK, RIJENLIJST)</div>
+</div>
+</div>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Kop: 30px icoon · titel · 1px scheiding · uitleg · rechts optioneel één meta of één tekstactie. Detailweergave gebruikt hetzelfde raster maar met 4 gelijke kolommen in plaats van 12. Tablet: 6 kolommen (3→6, 4→6, 5→6). Mobiel: alles 12, kop wordt inklapbaar.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">5 · ACTIEBALK ONDERAAN HET FORMULIER</span><span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#7a8a78">hoogte 64px · wit · 1px bovenlijn + opwaartse schaduw · knoppen 38px · links staat, rechts acties</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-radius:12px;border-top:1px solid rgba(44,59,42,.10);box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4)">
+<span style="font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Concept automatisch bewaard om 14:32</span>
+<span style="flex:1"></span>
+<div style="height:38px;padding:0 14px;border-radius:8px;color:#5a6b58;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Annuleren</div>
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opslaan en verder bewerken</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Opslaan</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">rust — alles in orde</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-radius:12px;border-top:1px solid rgba(44,59,42,.10);box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4)">
+<span style="display:flex;align-items:center;gap:7px;font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#8B2A2A;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.6 14.2 13H1.8z M8 6.6v3 M8 11.4h.01"></path></svg>2 verplichte velden ontbreken</span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Ga naar de eerste fout</span>
+<span style="flex:1"></span>
+<div style="height:38px;padding:0 14px;border-radius:8px;color:#5a6b58;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Annuleren</div>
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opslaan en verder bewerken</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>Opslaan</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">fouten — Opslaan blijft klikbaar en zet de focus op het eerste foute veld; nooit een doodgezette knop zonder uitleg</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-radius:12px;border-top:1px solid rgba(44,59,42,.10);box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4)">
+<span style="font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Nieuwe leverancier · nog niets bewaard</span>
+<span style="flex:1"></span>
+<div style="height:38px;padding:0 14px;border-radius:8px;color:#5a6b58;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Annuleren</div>
+<div style="height:38px;padding:0 16px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif">Opslaan en nieuwe toevoegen</div>
+<div style="height:38px;padding:0 18px;border-radius:8px;background:rgba(0,83,45,.45);color:#fff;display:flex;align-items:center;gap:8px;font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif"><span style="width:13px;height:13px;border-radius:7px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff"></span>Opslaan …</div>
+</div>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">nieuw + bezig met opslaan — bij "nieuw" vervangt "Opslaan en nieuwe toevoegen" de variant "verder bewerken"</span>
+</div>
+
+</div>
+<span style="font:450 11.5px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Volgorde is altijd dezelfde: Annuleren (tekst) — secundair (omlijnd) — primair (gevuld groen), rechts uitgelijnd. Verwijderen staat nooit in deze balk, wel in het ⋯-menu van de topbar. De balk plakt onderaan het scherm, ook bij lange formulieren.</span>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="8c">
+<div class="dv-olabel"><a class="dv-oid" href="#8c">8c</a>Sectiekaart — drie manieren om icoon, titel en uitleg te plaatsen (zelfde inhoud)</div>
+<div class="dv-card" style="width:1180px">
+<div style="display:flex;flex-direction:column;gap:22px;padding:22px;background:#F2F5EF;box-sizing:border-box">
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">A · ZIJKOLOM 260PX (WAT WE NU HEBBEN)</span>
+<div style="display:grid;grid-template-columns:260px minmax(0,1fr);background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="padding:18px 20px;border-right:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column;gap:9px">
+<div style="width:34px;height:34px;border-radius:9px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Contact &amp; facturatie</span>
+<span style="font:450 11.5px/1.55 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Bereikbaarheid en hoe deze leverancier zijn facturen aanlevert.</span>
+</div>
+<div style="padding:18px 22px;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:14px 16px">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">TELEFOON</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">03 646 21 40</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">GSM</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2.be</div></div>
+</div>
+</div>
+<span style="font:450 11.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Sterk: de sectienamen vormen één leeslijn links en de uitleg staat waar je ze nodig hebt. Zwak: 260px weg op élke sectie, meestal half leeg, en het veldraster houdt maar 9 van de 12 kolommen over. Op tablet moet de kolom alsnog naar boven klappen.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">B · KAARTKOP — ICOON EN TITEL OP ÉÉN REGEL, UITLEG ERNAAST</span>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Contact &amp; facturatie</span>
+<span style="width:1px;height:16px;background:rgba(44,59,42,.14);flex:none"></span>
+<span style="font:450 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;min-width:0">Bereikbaarheid en hoe deze leverancier zijn facturen aanlevert.</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;flex:none">Bewerken</span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">TELEFOON</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">03 646 21 40</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">GSM</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2.be</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">FACTURATIE-E-MAIL</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">facturen@2by2.be</div></div>
+</div>
+</div>
+<span style="font:450 11.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Volle 12 kolommen voor de velden: vier velden naast elkaar in plaats van drie. Dezelfde markup werkt op tablet en gsm zonder dat er iets moet verhuizen, en de sectiekop wordt daar de inklapbare balk. De uitleg is beperkt tot één regel — langere uitleg hoort dan bij het veld zelf.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">C · KAARTKOP ZONDER UITLEG — HELP ACHTER EEN ⓘ</span>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 3.6h9.2v8.8H3.4z M6 6.4h4 M6 9.2h2.6"></path></svg></div>
+<span style="font:700 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Contact &amp; facturatie</span>
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 7.2v3.4 M8 5.2h.01"></path></svg>
+<span style="flex:1"></span>
+<span style="font:450 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">3 van 6 velden ingevuld</span>
+</div>
+<div style="padding:18px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">TELEFOON</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">03 646 21 40</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">GSM</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">GSM</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">E-MAIL</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">info@2by2.be</div></div>
+<div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'Avenir','Open Sans',-apple-system,sans-serif;letter-spacing:.1em;color:#5a6b58">WEBSITE</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#9aa898">Website</div></div>
+</div>
+</div>
+<span style="font:450 11.5px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">De strakste kop, maar de uitleg is één klik weg — alleen bruikbaar als de sectietitels voor zichzelf spreken. Bij btw-status en facturatiebedrijf is dat niet zo.</span>
+</div>
+
+<div style="border-radius:12px;background:#fff;padding:16px 18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);display:flex;flex-direction:column;gap:7px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.12em">MIJN VOORSTEL</span>
+<span style="font:450 12px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">Gekozen: B als standaard, nu toegepast in 8a en 8b — de kop is één regel hoog, het veldraster houdt alle 12 kolommen, en er verhuist niets bij het versmallen — de kop wordt op tablet en gsm gewoon de inklapbare balk. A houden we voor het uitzonderingsgeval: een sectie met échte procesuitleg van meerdere regels (bv. Peppol-aanlevering of btw-controle), want daar is de zijkolom wél vol. C gebruiken we niet: verstopte uitleg wordt niet gelezen.</span>
+<span style="font:450 12px/1.7 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">Wil je dat ik <a href="#8a">8a</a> en <a href="#8b">8b</a> omzet naar B?</span>
+</div>
+
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
 <section class="dv-turn" id="t7">
 <div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">Dashboard-onderdelen — KPI-kaarten, meldingen, voortgangsbalk</span></div>
 <div class="dv-opts">
@@ -1744,7 +2760,7 @@ Van Laere<span style="flex:1"></span><span style="font:15px 'Avenir','Open Sans'
 </div>
 
 <div class="dv-opt" id="4f">
-<div class="dv-olabel"><a class="dv-oid" href="#4f">4f</a>Lege staat, laden, filters open en het ···-menu op tablet</div>
+<div class="dv-olabel"><a class="dv-oid" href="#4f">4f</a>Lege staat, laden, filters open en het ···-menu op tablet — en dezelfde vier op gsm</div>
 <div class="dv-card" style="width:1020px">
 <div style="display:flex;flex-direction:column;gap:22px;padding:22px;background:#F2F5EF;box-sizing:border-box">
 
@@ -1852,6 +2868,138 @@ Facturen laden…
 <span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Verwijderen</span>
 </div>
 </div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D;letter-spacing:.14em">GSM — DEZELFDE VIER STATEN</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap">
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">FILTERS — SHEET I.P.V. PANEEL</span>
+<div style="width:280px;height:500px;border-radius:14px;overflow:hidden;position:relative;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="position:absolute;inset:0;background:rgba(18,28,18,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:center;padding:9px 0 4px"><div style="width:38px;height:4px;border-radius:2px;background:rgba(44,59,42,.18)"></div></div>
+<div style="display:flex;align-items:center;gap:9px;padding:4px 14px 10px">
+<span style="font:500 17px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Filters</span>
+<span style="min-width:19px;height:19px;box-sizing:border-box;padding:0 6px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif">3</span>
+<span style="flex:1"></span>
+<span style="font:600 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#00532D">Wissen</span>
+</div>
+<div style="padding:0 14px 12px;display:flex;flex-direction:column;gap:11px">
+<sc-for list="{{ filterFields }}" as="f" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.12em">{{ f.label }}</span>
+<div style="height:44px;border-radius:10px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;gap:9px;padding:0 13px;font:500 13px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ f.value }}<span style="flex:1"></span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;display:block;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+</div>
+</sc-for>
+</div>
+<div style="padding:10px 14px 20px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="height:48px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13.5px 'Avenir','Open Sans',-apple-system,sans-serif">Toon 12 facturen</div>
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">de knop telt het resultaat i.p.v. "Toepassen"</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">LADEN — KAARTEN I.P.V. RIJEN</span>
+<div style="width:280px;height:500px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="display:flex;align-items:center;gap:9px;padding:12px 14px;background:#00532D;flex:none">
+<span style="font:500 16px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Facturen</span>
+<span style="flex:1"></span>
+<div style="height:30px;padding:0 11px;border-radius:15px;border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;gap:6px;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff">
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 3.4h11.2L9.4 8.4v4.2l-2.8 1.2V8.4z"></path></svg>3</div>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ skeletonRows }}" as="w" hint-placeholder-count="5">
+<div style="border-radius:12px;background:#fff;padding:13px;display:flex;flex-direction:column;gap:9px;flex:none">
+<div style="display:flex;align-items:center;gap:9px">
+<div style="height:11px;border-radius:6px;background:#EDEFEA;width:{{ w }}"></div>
+<span style="flex:1"></span>
+<div style="width:56px;height:18px;border-radius:9px;background:#EDEFEA"></div>
+</div>
+<div style="height:9px;width:58%;border-radius:5px;background:#EDEFEA"></div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:6px 0;font:500 11.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round"><path d="M8 2.2a5.8 5.8 0 1 0 5.8 5.8"></path></svg>Facturen laden…
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">skeletkaarten in dezelfde vorm als de echte kaarten</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">LEGE STAAT — KNOPPEN GESTAPELD</span>
+<div style="width:280px;height:500px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="display:flex;align-items:center;gap:9px;padding:12px 14px;background:#00532D;flex:none">
+<span style="font:500 16px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Facturen</span>
+<span style="flex:1"></span>
+<div style="height:30px;padding:0 11px;border-radius:15px;border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;gap:6px;font:600 11px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff">
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 3.4h11.2L9.4 8.4v4.2l-2.8 1.2V8.4z"></path></svg>3</div>
+</div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;padding:24px 20px;text-align:center">
+<div style="width:58px;height:58px;border-radius:29px;background:#EDF3E8;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:26px;height:26px;fill:none;stroke:#00532D;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round"><path d="M4 2.6h8v10.8H4z M9.9 6.3a2.2 2.2 0 1 0 0 3.6 M6.2 7.4h3.2 M6.2 8.9h3.2"></path></svg></div>
+<span style="font:500 16px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">Geen facturen gevonden</span>
+<span style="font:450 12px/1.6 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">Geen facturen voor BCO in 2026 met deze filters.</span>
+<div style="display:flex;flex-direction:column;gap:9px;width:100%;padding-top:4px">
+<div style="height:46px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif">+ Nieuwe factuur</div>
+<div style="height:44px;border-radius:10px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;justify-content:center;font:600 13px 'Avenir','Open Sans',-apple-system,sans-serif">Filters wissen</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 16px;background:#00532D;flex:none">
+<sc-for list="{{ quickBar }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:46px;padding:4px">
+<svg viewBox="0 0 16 16" style="width:19px;height:19px;fill:none;stroke:#fff;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ b.d }}"></path></svg>
+<span style="font:500 9px 'Avenir','Open Sans',-apple-system,sans-serif;color:#fff;white-space:nowrap">{{ b.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">primaire actie bovenaan, snelactiesbar blijft staan</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:7px;flex:none">
+<span style="font:600 10px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58;letter-spacing:.1em">··· — ACTIESHEET I.P.V. ZWEVEND MENU</span>
+<div style="width:280px;height:500px;border-radius:14px;overflow:hidden;position:relative;background:#F2F5EF;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38)">
+<div style="display:flex;flex-direction:column;height:100%">
+<div style="display:flex;align-items:center;gap:9px;padding:12px 14px;background:#00532D;flex:none">
+<span style="font:500 16px 'Playfair Display','Times New Roman',Georgia,serif;color:#fff">Facturen</span>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ mobileRows }}" as="r" hint-placeholder-count="3">
+<div style="border-radius:12px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:6px;flex:none">
+<span style="font:600 12.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ r }}</span>
+<div style="height:7px;width:62%;border-radius:4px;background:rgba(44,59,42,.10)"></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="position:absolute;inset:0;background:rgba(18,28,18,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:10px 10px 18px;display:flex;flex-direction:column;gap:7px">
+<div style="width:38px;height:4px;border-radius:2px;background:rgba(44,59,42,.18);align-self:center"></div>
+<div style="padding:2px 8px 2px;display:flex;flex-direction:column;gap:2px">
+<span style="font:500 15px 'Playfair Display','Times New Roman',Georgia,serif;color:#2C3B2A">0017.09.2026</span>
+<span style="font:450 10.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#5a6b58">HOME-ESTATE · € 1.779,37</span>
+</div>
+<sc-for list="{{ rowMenu }}" as="m" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 8px;border-radius:10px">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg>
+<span style="font:450 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#2C3B2A">{{ m.label }}</span>
+</div>
+</sc-for>
+<div style="height:1px;background:rgba(44,59,42,.08);margin:2px 8px"></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 8px;border-radius:10px">
+<svg viewBox="0 0 16 16" style="width:17px;height:17px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M3 4.4h10 M6.2 4.4V2.8h3.6v1.6 M4.4 4.4v8.8h7.2V4.4"></path></svg>
+<span style="font:600 13.5px 'Avenir','Open Sans',-apple-system,sans-serif;color:#8B2A2A">Verwijderen</span>
+</div>
+</div>
+</div>
+<span style="font:450 11px/1.5 'Avenir','Open Sans',-apple-system,sans-serif;color:#4A5B48">de sheet noemt bovenaan de factuur waarop hij slaat</span>
+</div>
+
 </div>
 </div>
 
@@ -3533,6 +4681,13 @@ class Component extends DCLogic {
         {label:"Help & support", d:"M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M6.4 6.4a1.7 1.7 0 0 1 3.3.6c0 1.2-1.7 1.4-1.7 2.6 M8 11.6h.01"}
       ],
       railBeforeFact: main.slice(0, 6),
+      railBeforeSupp: main.slice(0, 3),
+      railAfterSupp: main.slice(4),
+      suppDepts: [
+        {naam:"Werfopvolging", contact:"Kris Maes", tel:"03 646 21 42"},
+        {naam:"Boekhouding", contact:"Eline Cools", tel:"03 646 21 47"},
+        {naam:"Magazijn Merksem", contact:"—", tel:"03 646 21 55"}
+      ],
       railAfterFact: main.slice(7),
       mobileActions: [
         {d:"M1.6 8S3.9 4.2 8 4.2 14.4 8 14.4 8 12.1 11.8 8 11.8 1.6 8 1.6 8z M8 9.6a1.6 1.6 0 1 0 0-3.2 1.6 1.6 0 0 0 0 3.2z"},
