@@ -1274,6 +1274,53 @@
     }
 }
 
+/* Dashboard-only uitzondering: Home/Index zet ViewData["NoTabletQuickActionsRail"]/.gl-v2-qa-no-rail
+   (_LayoutV2.cshtml) om de rail hierboven op tablet-liggend over te slaan — bewust géén product/
+   design-beslissing voor de rail als generiek component (Facturen en elke andere gl-v2-pagina
+   behouden 'm ongewijzigd), dus een pagina-specifieke override i.p.v. de rail-media-query zelf aan
+   te passen. Elke selector krijgt hier één klasse extra t.o.v. de rail-regels hierboven — dat wint op
+   specificiteit ongeacht bronvolgorde, dus de rail-regels zelf blijven onaangeroerd. Herhaalt bewust
+   de balk-vorm-declaraties uit het </1024px-blok verderop in dit bestand i.p.v. ze te delen: die twee
+   blokken overlappen elkaar niet in breedte, dus er is geen bestaande regel om hier simpelweg opnieuw
+   van toepassing te maken. */
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickactions {
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        height: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        box-shadow: 0 -8px 20px -12px rgba(44, 59, 42, .35);
+        overflow-y: visible;
+    }
+    .gl-v2-qa-no-rail .gl-v2-qa-rail-active { display: none; }
+    .gl-v2-qa-no-rail .gl-v2-content.has-mobile-quickactions { padding-right: 0; padding-bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction {
+        flex: 1;
+        width: auto;
+        flex-direction: column;
+        gap: 5px;
+        padding: 6px 4px;
+        font-size: 10px;
+    }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction i { font-size: 21px; }
+    .gl-v2-qa-no-rail .gl-v2-quickactions-backdrop { bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+    .gl-v2-qa-no-rail .gl-v2-quickactions-sheet {
+        top: auto;
+        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        left: 0;
+        right: 0;
+        width: auto;
+        max-height: 80dvh;
+        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+    }
+}
+
 /* ── Select / dropdown (design-handoff optie 4h) ─────────────────────────────────────────────
    Generiek, herbruikbaar component (niet Facturen-specifiek — vandaar hier i.p.v. in
    gl-v2-invoices.css), gebouwd voor het boekjaarfilter op de Facturen-pagina (zie gl-v2-invoices.js
@@ -2140,9 +2187,31 @@
 .gl-v2-modal-search-row-avatar i { font-size: 15px; }
 .gl-v2-modal-search-row-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-modal-search-row-chevron { font-size: 12px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-modal-search-row-pin { font-size: 14px; color: var(--gl-v2-primary); flex: none; }
 
 .gl-v2-modal-search-footer { border-top: 1px solid var(--gl-v2-hairline-soft); padding: 10px 18px 14px; }
 .gl-v2-modal-search-footer .gl-v2-modal-search-create { width: auto; justify-content: flex-start; margin-top: 0; }
+
+/* Projectkiezer (7f) footer — "Dit project vastzetten": een speldje + tekst, geen knop-doos zoals
+   .gl-v2-modal-search-create (die staat voor "nieuw record aanmaken", een andere actie) — eigen,
+   kleinere klasse i.p.v. de create-knop hergebruiken. */
+.gl-v2-modal-search-pin-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin: -6px -8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+.gl-v2-modal-search-pin-btn i { font-size: 14px; }
+.gl-v2-modal-search-pin-btn:hover,
+.gl-v2-modal-search-pin-btn:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+.gl-v2-modal-search-pin-btn:disabled { color: var(--gl-v2-muted); cursor: default; }
 
 @media (min-width: 768px) and (max-width: 1023.98px) {
     .gl-v2-modal-search .modal-dialog { width: 400px; }
@@ -3251,6 +3320,14 @@
    dan bij 1 kolom hangen terwijl er zichtbaar plaats is voor 2. Een container query meet de kolom
    zélf, niet de viewport, en lost dat structureel op (ook voor toekomstige layout-wijzigingen). */
 .gl-werven-section { container-type: inline-size; }
+
+/* `.col` (_DashboardProjectleider.cshtml, "Mijn Werven"-kolom) is een flex-item met flex-basis:0% —
+   zonder min-width:0 weigert zo'n item standaard te krimpen voorbij de intrinsieke inhoudsbreedte
+   van z'n kind (hier: de CSS-grid hierboven), wat exact hetzelfde "min-width:auto"-euvel is als
+   eerder bij de mobiele factuur-kaarten (gl-v2-invoices.css) — zonder deze regel zou de kolom alsnog
+   breder proberen te blijven dan er ruimte is, en zou de rij (Meldingen/Mijn Werven/Snelacties)
+   alsnog kunnen overlopen/wrappen ondanks de flex-grow-fix zelf. */
+.gl-v2-mw-col { min-width: 0; }
 
 .gl-v2-project-grid {
     display: grid;

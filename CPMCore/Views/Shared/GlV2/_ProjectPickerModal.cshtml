@@ -1,15 +1,18 @@
-@model List<BOCore.ProjectBO>
+@model CPMCore.Models.GlV2.GlV2ProjectPickerVm
 @* gl-v2 layout-pilot (design-handoff 7f, "PROJECTKIEZER (POPOVER)") — als modal gebouwd i.p.v. een
    bij-de-kaart-verankerde popover, zodat dezelfde ene component ook bruikbaar is vanaf de mobiele
    balk ("Vastzetten"-tegel) en de Mijn-Werven "+"-knop, niet enkel vanuit de desktop-Snelacties-kaart
    (GlV2/_SnelactiesCard.cshtml) — allemaal `data-bs-toggle="modal" data-bs-target="#glV2ProjectPickerModal"`.
    Hergebruikt de Type-3-zoekmodal-klassen (.gl-v2-modal-search-*) voor het veld/de rijen — visueel
-   dezelfde taal, geen aparte CSS-familie voor dit ene scherm. Twee stukken die de generieke zoekmodal
-   niet heeft: een "RECENT"-groep (Model = werfProjects, client-gefilterd zoals het legacy
-   #gl-punt-sheet) en een "Dit project vastzetten"-footerknop die het bestaande PinProject-endpoint
-   aanroept op het project dat op dat moment als actief gekozen staat (window.GlV2ActiveProject). *@
+   dezelfde taal, geen aparte CSS-familie voor dit ene scherm. Drie stukken die de generieke zoekmodal
+   niet heeft: een "RECENT"-groep (Model.Projects = werfProjects, client-gefilterd zoals het legacy
+   #gl-punt-sheet) met een speldje naast elk al-vastgezet project (Model.PinnedProjectIds, 7f's eigen
+   `sc-if value="{{ p.pin }}"`) en een "Dit project vastzetten"-footerknop die het bestaande
+   PinProject-endpoint aanroept op het project dat op dat moment als actief gekozen staat
+   (window.GlV2ActiveProject). *@
 @{
-    var projects = Model ?? new List<BOCore.ProjectBO>();
+    var projects = Model?.Projects ?? new List<BOCore.ProjectBO>();
+    var pinnedIds = Model?.PinnedProjectIds ?? new HashSet<int>();
 }
 <div class="modal fade gl-v2-modal-search gl-v2-modal-picker" id="glV2ProjectPickerModal" tabindex="-1" aria-hidden="true" aria-labelledby="glV2ProjectPickerModal-label"
      data-quicksearch-url="@Url.Action("QuickSearch", "Projecten")" data-pin-url="@Url.Action("PinProject", "Home")">
@@ -41,6 +44,10 @@
                                         data-pid="@p.Id" data-pname="@p.Name" data-ploc="@(p.Postalcode?.Gemeente ?? "")" data-name="@p.Name.ToLowerInvariant()">
                                     <span class="gl-v2-modal-search-row-avatar"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
                                     <span class="gl-v2-modal-search-row-name">@p.Name</span>
+                                    @if (pinnedIds.Contains(p.Id))
+                                    {
+                                        <i class="ph ph-push-pin gl-v2-modal-search-row-pin" aria-hidden="true" title="Vastgezet"></i>
+                                    }
                                     <i class="ph ph-caret-right gl-v2-modal-search-row-chevron" aria-hidden="true"></i>
                                 </button>
                             }
@@ -51,7 +58,7 @@
                 </div>
             </div>
             <div class="gl-v2-modal-search-footer">
-                <button type="button" class="gl-v2-modal-search-create" id="gl-v2-picker-pin-btn">
+                <button type="button" class="gl-v2-modal-search-pin-btn" id="gl-v2-picker-pin-btn">
                     <i class="ph ph-push-pin" aria-hidden="true"></i>Dit project vastzetten
                 </button>
             </div>

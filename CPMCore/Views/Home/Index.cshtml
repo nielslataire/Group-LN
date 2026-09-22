@@ -16,6 +16,10 @@
     // view-toplevel staan (geen @if eromheen), dus deze vlag voorkomt dat de andere dashboardtypes
     // een lege groene balk krijgen (zie _LayoutV2.cshtml).
     ViewData["HasMobileQuickActions"] = isProjectleiderDashboard;
+    // Tablet-liggend (1024–1399.98px) herschikt de snelactiebalk elders tot een rail rechts (design-
+    // handoff 7g) — op het Dashboard willen we dat niet: die breedte valt hier terug op dezelfde balk
+    // onderaan als telefoon/tablet-staand (zie _LayoutV2.cshtml + gl-v2-shell.css .gl-v2-qa-no-rail).
+    ViewData["NoTabletQuickActionsRail"] = true;
 }
 
 @section PageStyle
@@ -87,18 +91,22 @@ else
            acties zonder werf-context (Project vastzetten, Leverancier toevoegen). De 5 project-
            gebonden Snelacties (Contract, Inkomende factuur, Wijzigingsopdracht, Nacalculatie,
            Document uploaden) blijven bewust buiten deze balk: die hebben elk een eigen
-           project-kies-sheet nodig zoals "Punt" al heeft, en dat is nog niet gebouwd. Met 5 tegels
-           knipt gl-v2-shell.js dit automatisch af na 4 + een "Meer"-tegel (optie 6b) — de 5de
+           projectkeuze nodig zoals "Punt" hieronder, en die andere vijf zijn nog niet gebouwd. Met 5
+           tegels knipt gl-v2-shell.js dit automatisch af na 4 + een "Meer"-tegel (optie 6b) — de 5de
            (Leverancier toevoegen) is dus de eerste die in de sheet belandt.
-           #gl-v2-qa-punt blijft gedelegeerd naar de bestaande jQuery-handler in
-           _DashboardProjectleider.cshtml (openPuntSheet, ongewijzigd). Leverancier/Klant zoeken en
-           Vastzetten gebruiken sinds design-handoff 7e/7f geen eigen sheet meer — data-bs-toggle
-           opent rechtstreeks de nieuwe gl-v2-modal-search/_ProjectPickerModal-instanties
-           (GlV2/_SearchModal.cshtml, GlV2/_ProjectPickerModal.cshtml, beide gerenderd in
-           _DashboardProjectleider.cshtml), zelfde modals als de desktop-Snelacties-kaart gebruikt. *@
-        <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-punt">
+           Leverancier/Klant zoeken en Vastzetten gebruiken sinds design-handoff 7e/7f geen eigen
+           sheet meer — data-bs-toggle opent rechtstreeks de nieuwe gl-v2-modal-search/
+           _ProjectPickerModal-instanties (GlV2/_SearchModal.cshtml, GlV2/_ProjectPickerModal.cshtml,
+           beide gerenderd in _DashboardProjectleider.cshtml), zelfde modals als de desktop-
+           Snelacties-kaart gebruikt. "Punt" hergebruikt sinds kort datzelfde systeem
+           (js-gl-v2-sa-project-action, initActiveProject() in gl-v2-dashboard.js): dezelfde
+           klasse/data-url-template als de desktop-kaart se "Punt toevoegen"-rij — al een actief
+           project? dan navigeert de link rechtstreeks; anders opent 'ie eerst de projectkiezer-modal,
+           geen apart gl-punt-sheet meer nodig hier. Dat sheet blijft enkel nog bestaan voor de legacy
+           #mob-nav-punt (zie _DashboardProjectleider.cshtml). *@
+        <a href="#" class="gl-v2-mobile-quickaction js-gl-v2-sa-project-action" id="gl-v2-qa-punt" data-url-template="/Projects/{id}/Issues/Create">
             <i class="ph ph-warning-circle" aria-hidden="true"></i>Punt
-        </button>
+        </a>
         <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-lev-search" data-bs-toggle="modal" data-bs-target="#glV2LevSearchModal">
             <i class="ph ph-hard-hat" aria-hidden="true"></i>Leverancier
         </button>
