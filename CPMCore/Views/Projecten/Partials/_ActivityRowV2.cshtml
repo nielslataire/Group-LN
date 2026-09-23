@@ -1,0 +1,61 @@
+@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@model ContractActivityBO
+@*
+    gl-v2 (design-handoff punt 14c "Loten & bijbestellingen in één sectie — bijbestellingen hangen
+    ingesprongen onder hun lot"). V2-sibling van Partials/_ActivityRow.cshtml, gebruikt door
+    Projecten/EditContractV2.cshtml (server-side foreach) EN door de ProjectenController.
+    AddSelectedActivities-AJAX-aanroep (nieuw lot via #btnAddActivities) — zelfde tweeledig gebruik
+    als het origineel, hier enkel de markup herbouwd. Model-binding (Html.BeginCollectionItem
+    ("activities") + dezelfde vier hidden fields) en de prijs-editor (EditorFor(...,
+    "CurrencyWithActions", ...) — de gedeelde template, bewust ongewijzigd, zie EditContractV2's
+    eigen scope-toelichting) blijven functioneel identiek: button.deleterow met data-id werkt hier
+    exact zoals in het origineel.
+
+    Bijbestellingen zelf renderen HIER mee (Model.AdditionalOrders), niet meer in een aparte kaart —
+    zo staat de hele "Loten & bijbestellingen"-lijst als één doorlopende reeks, exact zoals 14c
+    tekent, i.p.v. dezelfde loten twee keer te tonen (eens als invoerrij, eens als bijbestelling-
+    kaart, de eerdere versie van deze pagina).
+*@
+<div class="gl-v2-ec-lot-row">
+    @using (Html.BeginCollectionItem("activities"))
+    {
+        @Html.HiddenFor(m => m.ContractActivityId)
+        @Html.HiddenFor(m => m.ContractId)
+        @Html.HiddenFor(m => m.Activity.ID)
+        @Html.HiddenFor(m => m.Activity.Name)
+        <div class="gl-v2-ec-lot-row-name"><i class="ph ph-stack" aria-hidden="true"></i><span>@Model.Activity.Name</span></div>
+        <div class="gl-v2-ec-lot-row-price">
+            @Html.EditorFor(m => m.Price, "CurrencyWithActions", null, new { ShowDelete = ViewData["mode"]?.ToString() != "view", DeleteId = Model.Activity.ID })
+        </div>
+    }
+</div>
+@if (Model.ContractActivityId > 0)
+{
+    @foreach (var order in Model.AdditionalOrders)
+    {
+        <div class="gl-v2-ec-lot-order-row">
+            <span><i class="ph ph-arrow-elbow-down-right gl-v2-ec-lot-order-icon" aria-hidden="true"></i>@(string.IsNullOrWhiteSpace(order.Description) ? "(geen omschrijving)" : order.Description)</span>
+            <span class="gl-v2-ec-lot-order-price">@order.Price.ToString("C")</span>
+            <span class="gl-v2-ec-lot-order-actions">
+                <button type="button" class="gl-v2-icon-btn js-edit-bijbestelling" data-id="@order.Id" data-lotname="@Model.Activity?.Name" data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" title="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                <button type="button" class="gl-v2-icon-btn is-warning js-delete-bijbestelling" data-id="@order.Id" data-lotname="@Model.Activity?.Name" data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+            </span>
+        </div>
+    }
+    <div class="gl-v2-ec-lot-add-row js-add-bijbestelling" data-contractactivityid="@Model.ContractActivityId" data-lotname="@Model.Activity?.Name">
+        <i class="ph ph-plus" aria-hidden="true"></i>Bijbestelling op @Model.Activity?.Name
+    </div>
+}
+else if (ViewData["mode"]?.ToString() != "view")
+{
+    @* Een lot dat via #btnAddActivities net via AJAX is toegevoegd heeft nog geen echte
+       ContractActivityId (die bestaat pas na een save) — AddContractAdditionalOrder heeft er
+       zelf wél één nodig (het hangt de bijbestelling aan een bestaand ContractActivity-record).
+       Zonder deze regel viel hier gewoon niets te zien, alsof bijbestellingen toevoegen kapot
+       was; de legacy pagina had exact dezelfde beperking maar zei dat er ook bij (op
+       contractniveau i.p.v. per lot) — dit is diezelfde uitleg, nu op het lot zelf. *@
+    <div class="gl-v2-ec-lot-unsaved-hint">
+        <i class="ph ph-info" aria-hidden="true"></i>Sla het contract eerst op (Opslaan en verder) om hier een bijbestelling toe te voegen.
+    </div>
+}

@@ -231,6 +231,20 @@
             presetContacts.forEach((c, idx) => contactContainer.appendChild(buildContactRow(idx, c)));
         }
 
+        if (contactContainer && !isReadOnly) {
+            contactContainer.addEventListener('change', function (event) {
+                const target = event.target;
+                if (!target.classList || !target.classList.contains('is-primary-contact-input') || !target.checked) {
+                    return;
+                }
+                contactContainer.querySelectorAll('.is-primary-contact-input').forEach(input => {
+                    if (input !== target) {
+                        input.checked = false;
+                    }
+                });
+            });
+        }
+
           function fillVatModal(data) {
             if (!vatModalElement || !data) {
                 return;

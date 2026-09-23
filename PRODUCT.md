@@ -112,10 +112,21 @@ New UI is expected to stay Bootstrap-compatible and avoid global CSS conflicts.
 **Schema changes** ship as hand-run SQL scripts in `_migrations/` and
 `DALCore/Migrations/`, not EF migrations.
 
-**Open decision (resolve in new-work, not here):** whether the admin shell
-(`CPMCore/Views/Shared/_Layout.cshtml` and the left sidebar) stays as the current
-third-party theme or is reshaped to the Group LN identity was explicitly left
-open by the user.
+**Admin shell direction (resolved):** the admin shell is being replaced, not kept
+as-is. The current third-party ("Porto") theme shell
+(`CPMCore/Views/Shared/_Layout.cshtml` and its left sidebar) is superseded by a
+new Group LN-identity shell, code-named **gl-v2** — a floating-card icon-rail
+redesign ("The Elevated Rail": distinct floating white cards on a warm
+sage-tinted page, deep green primary, serif display type for titles only)
+piloted on the `layout-experiment` branch. Rollout is incremental and
+per-session-toggled (`gl_v2_preview` cookie, `LayoutPreviewController`) while
+pages are migrated one at a time; only pages built for gl-v2 render the new
+shell, everything else stays on the current layout until migrated. gl-v2's own
+visual-world decisions live in `design-handoff/DESIGN.md.gl-v2-draft.md`, which
+becomes the real root `DESIGN.md` on adoption day — that draft, not the current
+shipped `DESIGN.md`, is the design authority for any gl-v2 (`*V2.cshtml`,
+`gl-v2-*` prefixed) surface. This entry only records that the direction question
+itself is settled; gl-v2's design specifics belong in new-work/document, not here.
 
 ## Brand Commitments
 

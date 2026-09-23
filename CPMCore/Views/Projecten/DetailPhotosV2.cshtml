@@ -1,0 +1,632 @@
+@model CPMCore.Models.Projecten.DetailPhotosModel
+@using CPMCore.Models.GlV2
+@using BOCore
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 15 "Media in een project —
+    foto's en video's, secties als tabs, één detailpaneel"). Same project shell as
+    Projecten/DetailContractsV2 (punt 14) — same inner menu/topbar/tabbar conventions — reusing the
+    project's existing media backend (Photos/Sections/Units, the same Controllers/ProjectenController
+    AJAX endpoints the legacy DetailPhotos.cshtml already calls: MoveMediaToSection,
+    UpdateMediaVisibility, BulkDeleteMedia, SetHoofdMedia, UploadImage, CreateMediaSection/
+    UpdateMediaSection/DeleteMediaSection). Only UpdateMediaDetails (the 15b detail-panel Opslaan
+    action) and the AltText/Subtitle/UnitId/AutoPlayMuted/PosterTimestampSeconds columns are new
+    (migration 045).
+
+    15a's own "wat is anders" list, applied literally:
+    1. Hoofdbeeld is a 200px strip (.gl-v2-dp-hero), not a half-page card — vervangen/bewerken/
+       downloaden zit in het detailpaneel, de strook houdt enkel posterbeeld/ander-hoofdbeeld.
+    2. "Plaatsing op de publieke website" + de filterbalk worden tabs (.gl-v2-tabbar, hergebruikt van
+       DetailContractsV2's statusfilter, incl. de gouden onderstreep die al in gl-v2-shell.css zit).
+    3. Foto/video in één oogopslag via de badge (donker+afspeelknop+duur voor video, wit voor foto).
+    4. Publiek/intern is een klein rond icoon linksonder op het beeld, geen tweede chip bovenaan.
+    5. Geen sectie-dropdown per kaart — verplaatsen via de selectie-actiebalk ("Verplaatsen naar …").
+    6. Selecteren opent een donkere actiebalk (.gl-v2-dp-selectionbar), Verwijderen apart rechts.
+    7. Lege secties zijn één lage sleepzone (.gl-v2-dp-empty-section-row), geen lege kaart.
+    8. De toevoegtegel zegt "Sleep hierheen" en accepteert zowel foto als video.
+
+    15b's "één paneel, twee smaken": één client-side geconstrueerd zijpaneel (.gl-v2-dp-panel, JS-
+    gerenderd vanuit één ingebedde JSON-array — @@Html.Raw hieronder — zodat ‹ › bladeren geen
+    round-trip nodig heeft) i.p.v. een aparte pagina/modal per item. "Bijsnijden" is bewust NIET
+    gebouwd (buiten scope van deze pas, zie de detailphotos.js-kop) — geen dode knop, dus weggelaten
+    i.p.v. disabled getoond (zelfde "Do" als de rest van gl-v2: een niet-gewired control ofwel
+    duidelijk als stippellijn-placeholder tonen, ofwel gewoon niet renderen).
+*@
+@{
+    // Design-handoff "One-Line Topbar Rule": titel = "wát" ("Media"), de breadcrumb (laatste kruimel
+    // = projectnaam op gsm) = "wáár" — zie de aanpassing in ProjectenController.DetailPhotos, die de
+    // breadcrumb nu bij de projectnaam laat stoppen i.p.v. een "Media"-blad toe te voegen (dat zou
+    // hetzelfde herhalen als deze titel, exact wat de breadcrumb-regel 2-sweep elders al aanpakte).
+    ViewData["Title"] = "Media";
+    // gl-v2: "Publieke pagina bekijken" staat sowieso altijd in @@section MobileQuickActions
+    // hieronder, dus de balk is nooit leeg — geen conditie nodig (vgl. Invoices/IndexV2, waar
+    // canWriteInvoices die vlag WEL kan laten variëren).
+    ViewData["HasMobileQuickActions"] = true;
+    ViewData["PageIcon"] = "ph ph-image";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var canWrite  = ViewBag.CanWriteProjectPhotos  as bool? ?? false;
+    var canDelete = ViewBag.CanDeleteProjectPhotos as bool? ?? false;
+    var imgBase   = ((string)ViewBag.ImageWebURL ?? "").TrimEnd('/');
+    var vidBase   = ((string)ViewBag.VideoWebURL ?? imgBase).TrimEnd('/');
+
+    var allPhotos   = Model.Photos.Where(p => p.Type != PictureType.Nieuws).ToList();
+    var hoofdMedia  = allPhotos.FirstOrDefault(p => p.Type == PictureType.Hoofdfoto);
+    var totalPhotos = allPhotos.Count(p => p.MediaType == 0);
+    var totalVideos = allPhotos.Count(p => p.MediaType == 1);
+    var totalPublic = allPhotos.Count(p => p.IsPublic);
+    var noSection   = allPhotos.Where(p => p.SectionId == null).ToList();
+
+    string ThumbUrl(ProjectPictureBO m) => m.MediaType == 1 ? $"{vidBase}/videos/{m.Name}" : $"{imgBase}/pictures/{m.Name}";
+    string HeroUrl(ProjectPictureBO m)  => m.MediaType == 1 ? $"{vidBase}/videos/{m.Name}"  : $"{imgBase}/pictures/800/{m.Name}";
+    string Ext(ProjectPictureBO m)      => System.IO.Path.GetExtension(m.Name ?? "").TrimStart('.').ToUpperInvariant();
+    string FmtSize(long? b) => b is null ? "—" : b >= 1_048_576 ? $"{b / 1_048_576.0:F1} MB" : b >= 1_024 ? $"{b / 1_024.0:F0} KB" : $"{b} B";
+    string FmtDur(double? sec)
+    {
+        if (!sec.HasValue) return "—";
+        var ts = TimeSpan.FromSeconds(sec.Value);
+        return ts.Hours > 0 ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}" : $"{ts.Minutes}:{ts.Seconds:D2}";
+    }
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = $"project · {allPhotos.Count} media",
+        IsCoordinationProject = Model.IsCoordinationProject,
+        ItemCounts = new Dictionary<string, int> { ["Media"] = allPhotos.Count }
+    };
+
+    // 15b: één JSON-payload met alle velden die het detailpaneel nodig heeft, zodat ‹ ›/pijltjes-
+    // navigatie en Opslaan client-side kunnen zonder round-trip per item. Sectie-/eenheidsnamen komen
+    // uit Model.Sections/Model.Units (BO.SectionName/UnitName zijn niet ge-eager-load, zelfde
+    // bestaande beperking als de legacy pagina — vandaar hier client-side gejoined, niet via de BO).
+    var sectionNameById = Model.Sections.ToDictionary(s => s.Id, s => s.Name);
+    var unitNameById = Model.Units.ToDictionary(u => u.ID, u => u.Display);
+    var mediaJson = allPhotos.Select(m => new
+    {
+        id = m.Id,
+        mediaType = m.MediaType,
+        isHoofdbeeld = m.Type == PictureType.Hoofdfoto,
+        title = m.Caption ?? m.Name,
+        fileName = m.Name,
+        thumbUrl = ThumbUrl(m),
+        heroUrl = HeroUrl(m),
+        ext = Ext(m),
+        sizeLabel = FmtSize(m.FileSizeBytes),
+        widthPx = m.WidthPx,
+        heightPx = m.HeightPx,
+        durationLabel = FmtDur(m.DurationSeconds),
+        durationSeconds = m.DurationSeconds,
+        uploadedLabel = m.DateTimeUploaded?.ToString("dd/MM/yyyy") ?? "—",
+        isPublic = m.IsPublic,
+        sectionId = m.SectionId,
+        sectionName = m.SectionId.HasValue && sectionNameById.ContainsKey(m.SectionId.Value) ? sectionNameById[m.SectionId.Value] : null,
+        unitId = m.UnitId,
+        unitName = m.UnitId.HasValue && unitNameById.ContainsKey(m.UnitId.Value) ? unitNameById[m.UnitId.Value] : null,
+        altText = m.AltText,
+        subtitle = m.Subtitle,
+        autoPlayMuted = m.AutoPlayMuted,
+        posterTimestampSeconds = m.PosterTimestampSeconds
+    }).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detailphotos.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@allPhotos.Count MEDIA</span>
+}
+@section PageActions
+{
+    <div class="gl-v2-dp-topbar-actions">
+        <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })" target="_blank" class="gl-v2-btn gl-v2-btn-secondary">
+            <i class="ph ph-globe" aria-hidden="true"></i>Publieke pagina bekijken
+        </a>
+        @if (canWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-dp-upload-open"><i class="ph ph-upload-simple" aria-hidden="true"></i>Media uploaden</button>
+        }
+    </div>
+}
+@section MobileQuickActions
+{
+    <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })" target="_blank" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-globe" aria-hidden="true"></i>Publieke pagina
+    </a>
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-gl-v2-dp-upload-open"><i class="ph ph-upload-simple" aria-hidden="true"></i>Uploaden</button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (zelfde regel als
+   DetailContractsV2/Klanten-DetailV2) — de Phone-modus van het inner menu moet er daarom NA komen. *@
+<div class="gl-v2-tabbar" id="gl-v2-dp-section-tabs" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-section="all">Alles <span class="gl-v2-tabbar-count">@allPhotos.Count</span></button>
+    @foreach (var sect in Model.Sections)
+    {
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-section="@sect.Id">@sect.Name <span class="gl-v2-tabbar-count">@sect.MediaCount</span></button>
+    }
+    @if (noSection.Any())
+    {
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-section="none">Geen sectie <span class="gl-v2-tabbar-count">@noSection.Count</span></button>
+    }
+    <span class="gl-v2-tabbar-spacer"></span>
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-tabbar-more js-gl-v2-dp-sections-open"><i class="ph ph-gear-six" aria-hidden="true"></i> Secties beheren</button>
+    }
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (hoofdMedia != null)
+{
+    <div class="gl-v2-dp-hero" data-id="@hoofdMedia.Id">
+        <div class="gl-v2-dp-hero-media">
+            @if (hoofdMedia.MediaType == 1)
+            {
+                <video src="@HeroUrl(hoofdMedia)" muted loop autoplay playsinline></video>
+            }
+            else
+            {
+                <img src="@HeroUrl(hoofdMedia)" alt="@(hoofdMedia.AltText ?? hoofdMedia.Caption)" />
+            }
+            <span class="gl-v2-badge is-positive gl-v2-dp-hero-badge"><i class="ph ph-star" aria-hidden="true"></i>HOOFDBEELD</span>
+            @if (hoofdMedia.MediaType == 1 && hoofdMedia.DurationSeconds.HasValue)
+            {
+                <span class="gl-v2-dp-hero-duration">@FmtDur(hoofdMedia.DurationSeconds)</span>
+            }
+        </div>
+        <div class="gl-v2-dp-hero-body">
+            <div class="gl-v2-dp-hero-label"><i class="ph ph-image" aria-hidden="true"></i>Toont bovenaan op de publieke projectpagina</div>
+            <div class="gl-v2-dp-hero-title js-gl-v2-dp-hero-open" role="button" tabindex="0">@(hoofdMedia.Caption ?? hoofdMedia.Name)</div>
+            <div class="gl-v2-dp-hero-meta">
+                <div class="gl-v2-dp-hero-meta-item"><span>TYPE</span><b>@(hoofdMedia.MediaType == 1 ? "Video" : "Foto") · @Ext(hoofdMedia)</b></div>
+                @if (hoofdMedia.MediaType == 1)
+                {
+                    <div class="gl-v2-dp-hero-meta-item"><span>DUUR</span><b>@FmtDur(hoofdMedia.DurationSeconds)</b></div>
+                    <div class="gl-v2-dp-hero-meta-item"><span>RESOLUTIE</span><b>@(hoofdMedia.WidthPx.HasValue ? $"{hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : "—")</b></div>
+                }
+                else
+                {
+                    <div class="gl-v2-dp-hero-meta-item"><span>AFMETING</span><b>@(hoofdMedia.WidthPx.HasValue ? $"{hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : "—")</b></div>
+                }
+                <div class="gl-v2-dp-hero-meta-item"><span>GROOTTE</span><b>@FmtSize(hoofdMedia.FileSizeBytes)</b></div>
+                <div class="gl-v2-dp-hero-meta-item"><span>OP DE WEBSITE</span><span class="gl-v2-badge @(hoofdMedia.IsPublic ? "is-positive" : "is-attention")">@(hoofdMedia.IsPublic ? "PUBLIEK" : "INTERN")</span></div>
+            </div>
+            @if (canWrite)
+            {
+                <div class="gl-v2-dp-hero-actions">
+                    <span class="gl-v2-dp-hero-hint">Bewerken, downloaden en vervangen doe je in het detailpaneel.</span>
+                    @if (hoofdMedia.MediaType == 1)
+                    {
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-dp-hero-open"><i class="ph ph-image-square" aria-hidden="true"></i>Posterbeeld kiezen</button>
+                    }
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-dp-picking-start"><i class="ph ph-arrows-left-right" aria-hidden="true"></i>Ander hoofdbeeld</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<div class="gl-v2-dp-picking-banner" id="gl-v2-dp-picking-banner" hidden>
+    <i class="ph ph-star" aria-hidden="true"></i>
+    <span>Kies een foto of video hieronder als nieuw hoofdbeeld.</span>
+    <button type="button" class="gl-v2-btn gl-v2-btn-text js-gl-v2-dp-picking-cancel">Annuleren</button>
+</div>
+
+<div class="gl-v2-toolbar-card gl-v2-dp-toolbar" id="gl-v2-dp-toolbar">
+    <div class="gl-v2-field gl-v2-toolbar-search">
+        <div class="gl-v2-field-box">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" class="gl-v2-field-input" id="gl-v2-dp-search" placeholder="Zoek op titel, tag of bestandsnaam …">
+            <button type="button" class="gl-v2-field-clear" id="gl-v2-dp-search-clear" aria-label="Zoekterm wissen">&times;</button>
+        </div>
+    </div>
+    <div class="gl-v2-dp-segmented" data-segmented="type">
+        <button type="button" class="gl-v2-dp-segment is-active" data-value="all">Alles <b>@allPhotos.Count</b></button>
+        <button type="button" class="gl-v2-dp-segment" data-value="photo"><i class="ph ph-image" aria-hidden="true"></i>Foto's <b>@totalPhotos</b></button>
+        <button type="button" class="gl-v2-dp-segment" data-value="video"><i class="ph ph-video-camera" aria-hidden="true"></i>Video's <b>@totalVideos</b></button>
+    </div>
+    <div class="gl-v2-dp-segmented" data-segmented="visibility">
+        <button type="button" class="gl-v2-dp-segment is-active" data-value="all">Publiek &amp; intern</button>
+        <button type="button" class="gl-v2-dp-segment" data-value="public"><i class="ph ph-globe" aria-hidden="true"></i>Publiek</button>
+        <button type="button" class="gl-v2-dp-segment" data-value="private"><i class="ph ph-lock-simple" aria-hidden="true"></i>Intern</button>
+    </div>
+    <div class="gl-v2-select gl-v2-dp-sort" data-gl-v2-select>
+        <input type="hidden" id="gl-v2-dp-sort-value" value="default" />
+        <div id="gl-v2-dp-sort-trigger" class="gl-v2-select-trigger is-filled" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+            <span class="gl-v2-select-trigger-label">Eigen volgorde</span>
+            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-select-panel" role="listbox">
+            <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="default"><i class="ph ph-check" aria-hidden="true"></i><span>Eigen volgorde</span></button>
+            <button type="button" class="gl-v2-select-option" role="option" data-value="newest"><i class="ph ph-check" aria-hidden="true"></i><span>Nieuwste eerst</span></button>
+            <button type="button" class="gl-v2-select-option" role="option" data-value="oldest"><i class="ph ph-check" aria-hidden="true"></i><span>Oudste eerst</span></button>
+            <button type="button" class="gl-v2-select-option" role="option" data-value="name"><i class="ph ph-check" aria-hidden="true"></i><span>Naam A–Z</span></button>
+        </div>
+    </div>
+</div>
+
+<div class="gl-v2-dp-selectionbar" id="gl-v2-dp-selectionbar" hidden>
+    <span class="gl-v2-dp-selectionbar-close-icon"><i class="ph ph-check" aria-hidden="true"></i></span>
+    <span class="gl-v2-dp-selectionbar-count"><span id="gl-v2-dp-selectionbar-n">0</span> geselecteerd</span>
+    <span class="gl-v2-dp-selectionbar-sub" id="gl-v2-dp-selectionbar-sub"></span>
+    <span class="gl-v2-dp-selectionbar-spacer"></span>
+    @if (canWrite)
+    {
+        <div class="gl-v2-select gl-v2-dp-move-select" data-gl-v2-select>
+            <input type="hidden" id="gl-v2-dp-move-value" value="" />
+            <button type="button" id="gl-v2-dp-move-trigger" class="gl-v2-select-trigger gl-v2-dp-selectionbar-action" aria-haspopup="listbox" aria-expanded="false">
+                <i class="ph ph-arrows-out" aria-hidden="true"></i>Verplaatsen naar …
+            </button>
+            <div class="gl-v2-select-panel" role="listbox">
+                <button type="button" class="gl-v2-select-option" role="option" data-value=""><i class="ph ph-check" aria-hidden="true"></i><span>— Geen sectie —</span></button>
+                @foreach (var sect in Model.Sections)
+                {
+                    <button type="button" class="gl-v2-select-option" role="option" data-value="@sect.Id"><i class="ph ph-check" aria-hidden="true"></i><span>@sect.Name</span></button>
+                }
+            </div>
+        </div>
+        <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-public"><i class="ph ph-globe" aria-hidden="true"></i>Publiek maken</button>
+        <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-private"><i class="ph ph-lock-simple" aria-hidden="true"></i>Intern maken</button>
+    }
+    <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-download"><i class="ph ph-download-simple" aria-hidden="true"></i>Downloaden</button>
+    <span class="gl-v2-dp-selectionbar-divider"></span>
+    @if (canDelete)
+    {
+        <button type="button" class="gl-v2-dp-selectionbar-action is-danger" id="gl-v2-dp-selectionbar-delete"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+    }
+    <button type="button" class="gl-v2-dp-selectionbar-close" id="gl-v2-dp-selectionbar-clear" aria-label="Selectie wissen"><i class="ph ph-x" aria-hidden="true"></i></button>
+</div>
+
+@* Design-handoff/DESIGN.md se eigen regel (zie DetailContractV2 se "twee echte layout-bugs"): geen
+   extra wrapper-div om de secties — .gl-v2-content is zelf al een flex-kolom met 16px gap tussen
+   DIRECTE kinderen; een omhullende div hierbuiten zou die ritmiek breken (kaarten plakken tegen
+   elkaar, geen 16px meer). *@
+@{
+    if (!allPhotos.Any())
+    {
+        <div class="gl-v2-empty-state">
+            <span class="gl-v2-empty-state-icon"><i class="ph ph-images" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-empty-state-title">Nog geen media</h2>
+            <p class="gl-v2-empty-state-desc">Er is nog geen foto of video geüpload voor dit project.</p>
+            @if (canWrite)
+            {
+                <div class="gl-v2-empty-state-actions">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-dp-upload-open">Eerste media uploaden</button>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var sect in Model.Sections)
+        {
+            var sectionMedia = allPhotos.Where(p => p.SectionId == sect.Id).ToList();
+            if (!sectionMedia.Any()) { continue; }
+            <div class="gl-v2-card gl-v2-dp-section" data-section-group="@sect.Id">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-squares-four" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">@sect.Name</span>
+                    <span class="gl-v2-card-header-count">@sectionMedia.Count</span>
+                    @if (!string.IsNullOrWhiteSpace(sect.Description))
+                    {
+                        <span class="gl-v2-dp-section-desc">@sect.Description</span>
+                    }
+                    <span class="gl-v2-card-header-spacer"></span>
+                    <span class="gl-v2-badge @(sect.IsPublic ? "is-positive" : "is-attention")">@(sect.IsPublic ? "PUBLIEK" : "INTERN")</span>
+                    @if (canWrite)
+                    {
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-dp-section-add" data-section-id="@sect.Id"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                        <button type="button" class="gl-v2-icon-btn js-gl-v2-dp-sections-open" title="Sectie bewerken" aria-label="Sectie bewerken"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                    }
+                </div>
+                <div class="gl-v2-card-body gl-v2-dp-grid" data-section-grid="@sect.Id">
+                    @foreach (var item in sectionMedia)
+                    {
+                        @await Html.PartialAsync("Partials/_MediaCardV2", item, new ViewDataDictionary(ViewData) { { "ThumbUrl", ThumbUrl(item) }, { "CanWrite", canWrite }, { "CanDelete", canDelete } })
+                    }
+                    @if (canWrite)
+                    {
+                        <div class="gl-v2-dp-dropzone js-gl-v2-dp-dropzone" data-section-id="@sect.Id">
+                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-desktop-text">Sleep hierheen</span>
+                            <span class="gl-v2-dp-dropzone-sub gl-v2-dp-desktop-text">of klik — foto of video<br />naar @sect.Name</span>
+                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-touch-text">Klik om te uploaden</span>
+                            <span class="gl-v2-dp-dropzone-sub gl-v2-dp-touch-text">foto of video naar @sect.Name</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (noSection.Any())
+        {
+            <div class="gl-v2-card gl-v2-dp-section" data-section-group="none">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-folder-simple" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Geen sectie</span>
+                    <span class="gl-v2-card-header-count">@noSection.Count</span>
+                </div>
+                <div class="gl-v2-card-body gl-v2-dp-grid" data-section-grid="none">
+                    @foreach (var item in noSection)
+                    {
+                        @await Html.PartialAsync("Partials/_MediaCardV2", item, new ViewDataDictionary(ViewData) { { "ThumbUrl", ThumbUrl(item) }, { "CanWrite", canWrite }, { "CanDelete", canDelete } })
+                    }
+                </div>
+            </div>
+        }
+
+        var emptySections = Model.Sections.Where(s => !allPhotos.Any(p => p.SectionId == s.Id)).ToList();
+        if (emptySections.Any() && canWrite)
+        {
+            <div class="gl-v2-dp-empty-sections">
+                <span class="gl-v2-dp-empty-sections-label">LEGE SECTIES</span>
+                @foreach (var sect in emptySections)
+                {
+                    <div class="gl-v2-dp-empty-section-row js-gl-v2-dp-dropzone" data-section-id="@sect.Id">
+                        <i class="ph ph-squares-four" aria-hidden="true"></i>
+                        <span class="gl-v2-dp-empty-section-name">@sect.Name</span>
+                        <span class="gl-v2-dp-empty-section-count">0</span>
+                        @if (!string.IsNullOrWhiteSpace(sect.Description))
+                        {
+                            <span class="gl-v2-dp-empty-section-desc">@sect.Description</span>
+                        }
+                        <span class="gl-v2-dp-empty-section-spacer"></span>
+                        <span class="gl-v2-badge @(sect.IsPublic ? "is-positive" : "is-attention")">@(sect.IsPublic ? "PUBLIEK" : "INTERN")</span>
+                        <span class="gl-v2-dp-empty-section-cta"><i class="ph ph-upload-simple" aria-hidden="true"></i><span class="gl-v2-dp-desktop-text">Sleep bestanden hierheen of klik</span><span class="gl-v2-dp-touch-text">Klik om te uploaden</span></span>
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+
+@* ── 15b: het detailpaneel — één keer gerenderd, JS vult de inhoud vanuit window.glV2DetailPhotos.media ── *@
+<div class="gl-v2-dp-panel-backdrop js-gl-v2-dp-panel-close" id="gl-v2-dp-panel-backdrop" hidden></div>
+<aside class="gl-v2-dp-panel" id="gl-v2-dp-panel" role="dialog" aria-modal="true" aria-label="Mediadetail" hidden>
+    <div class="gl-v2-dp-panel-header">
+        <span class="gl-v2-badge is-neutral" id="gl-v2-dp-panel-type"></span>
+        <span class="gl-v2-dp-panel-title" id="gl-v2-dp-panel-title"></span>
+        <span class="gl-v2-dp-panel-index" id="gl-v2-dp-panel-index"></span>
+        <button type="button" class="gl-v2-icon-btn" id="gl-v2-dp-panel-prev" aria-label="Vorige"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+        <button type="button" class="gl-v2-icon-btn" id="gl-v2-dp-panel-next" aria-label="Volgende"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+        <span class="gl-v2-dp-panel-header-divider"></span>
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-dp-panel-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="gl-v2-dp-panel-media" id="gl-v2-dp-panel-media"></div>
+    <div class="gl-v2-dp-panel-body">
+        <div class="gl-v2-dp-panel-meta" id="gl-v2-dp-panel-meta"></div>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="gl-v2-dp-panel-title-input">TITEL</label>
+            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dp-panel-title-input" placeholder="Titel …" /></div>
+        </div>
+        <div class="gl-v2-dp-panel-fields-row">
+            <div class="gl-v2-field" id="gl-v2-dp-panel-section-field">
+                <label class="gl-v2-field-label">SECTIE</label>
+                <div class="gl-v2-select" data-gl-v2-select>
+                    <input type="hidden" id="gl-v2-dp-panel-section-value" value="" />
+                    <div class="gl-v2-select-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" id="gl-v2-dp-panel-section-trigger">
+                        <span class="gl-v2-select-trigger-label">— Geen sectie —</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </div>
+                    <div class="gl-v2-select-panel" role="listbox">
+                        <button type="button" class="gl-v2-select-option is-selected" role="option" data-value=""><i class="ph ph-check" aria-hidden="true"></i><span>— Geen sectie —</span></button>
+                        @foreach (var sect in Model.Sections)
+                        {
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="@sect.Id"><i class="ph ph-check" aria-hidden="true"></i><span>@sect.Name</span></button>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field" id="gl-v2-dp-panel-unit-field">
+                <label class="gl-v2-field-label">EENHEID</label>
+                <div class="gl-v2-select" data-gl-v2-select>
+                    <input type="hidden" id="gl-v2-dp-panel-unit-value" value="" />
+                    <div class="gl-v2-select-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" id="gl-v2-dp-panel-unit-trigger">
+                        <span class="gl-v2-select-trigger-label">— Geen eenheid —</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </div>
+                    <div class="gl-v2-select-panel" role="listbox">
+                        <button type="button" class="gl-v2-select-option is-selected" role="option" data-value=""><i class="ph ph-check" aria-hidden="true"></i><span>— Geen eenheid —</span></button>
+                        @foreach (var unit in Model.Units)
+                        {
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="@unit.ID"><i class="ph ph-check" aria-hidden="true"></i><span>@unit.Display</span></button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="gl-v2-field" id="gl-v2-dp-panel-text-field">
+            <label class="gl-v2-field-label" for="gl-v2-dp-panel-text-input" id="gl-v2-dp-panel-text-label">ALT-TEKST</label>
+            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-dp-panel-text-input" placeholder="…"></textarea></div>
+            <span class="gl-v2-field-help" id="gl-v2-dp-panel-text-help"></span>
+        </div>
+        <div class="gl-v2-toggle-grid">
+            <label class="gl-v2-toggle-row">
+                <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-dp-panel-public" />
+                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Publiek zichtbaar</span><span class="gl-v2-toggle-hint">staat op de publieke projectpagina</span></span>
+            </label>
+            <label class="gl-v2-toggle-row" id="gl-v2-dp-panel-autoplay-row" hidden>
+                <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-dp-panel-autoplay" />
+                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Automatisch afspelen, zonder geluid</span><span class="gl-v2-toggle-hint">alleen op desktop — op mobiel toont de website het posterbeeld</span></span>
+            </label>
+            <label class="gl-v2-toggle-row">
+                <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-dp-panel-hoofdbeeld" />
+                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Hoofdbeeld</span><span class="gl-v2-toggle-hint">bovenaan de publieke pagina</span></span>
+            </label>
+        </div>
+    </div>
+    <div class="gl-v2-dp-panel-footer">
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dp-panel-menu" aria-label="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+        <span class="gl-v2-dp-panel-footer-hint">@(canWrite ? "vervangen · downloaden" + (canDelete ? " · verwijderen" : "") : "downloaden")</span>
+        <span class="gl-v2-dp-panel-footer-spacer"></span>
+        @if (canWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-dp-panel-poster" hidden><i class="ph ph-image-square" aria-hidden="true"></i>Posterbeeld = huidig frame</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dp-panel-save"><i class="ph ph-check" aria-hidden="true"></i>Opslaan</button>
+        }
+    </div>
+</aside>
+@* .gl-v2-menu is position:fixed en verwacht getBoundingClientRect-positionering t.o.v. de viewport
+   — bewust GEEN kind van .gl-v2-dp-panel (dat schuift binnen via `right`, maar mocht dat ooit een
+   transform worden dan zou een geneste position:fixed daarin gevangen zitten, zelfde valkuil als
+   de Do's/Don'ts-regel over position:sticky hierboven). *@
+<div class="gl-v2-menu" id="gl-v2-dp-panel-menu">
+    @if (canWrite)
+    {
+        <a href="#" class="gl-v2-menu-item" id="gl-v2-dp-panel-replace"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Vervangen</a>
+    }
+    <a href="#" class="gl-v2-menu-item" id="gl-v2-dp-panel-download" download><i class="ph ph-download-simple" aria-hidden="true"></i>Downloaden</a>
+    @if (canDelete)
+    {
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+        <a href="#" class="gl-v2-menu-item is-danger" id="gl-v2-dp-panel-delete"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+    }
+</div>
+@if (canWrite)
+{
+    <input type="file" id="gl-v2-dp-panel-replace-file" accept="image/*,video/mp4,video/webm" hidden />
+}
+
+@if (canWrite)
+{
+    @* ── Upload modal (TYPE 2 "Formulier") ── *@
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-dp-upload-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Media uploaden</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <form asp-action="UploadImage" asp-controller="Projecten" method="post" enctype="multipart/form-data" id="gl-v2-dp-upload-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="UploadedBO.ProjectId" value="@Model.ProjectId" />
+                    <input type="hidden" name="UploadedBO.Type" value="1" />
+                    <input type="hidden" name="UploadedBO.IsPublic" value="true" />
+                    <div class="modal-body">
+                        <div class="gl-v2-dp-dropzone gl-v2-dp-dropzone-modal gl-v2-field-full" id="gl-v2-dp-upload-dropzone">
+                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-desktop-text" id="gl-v2-dp-upload-placeholder-desktop">Sleep bestanden hierheen of klik om te selecteren</span>
+                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-touch-text" id="gl-v2-dp-upload-placeholder-touch">Klik om te selecteren</span>
+                            <span class="gl-v2-dp-dropzone-title" id="gl-v2-dp-upload-filename" hidden></span>
+                            <span class="gl-v2-dp-dropzone-sub" id="gl-v2-dp-upload-hint">JPG, PNG, WebP, GIF, MP4, WebM · Max 500MB</span>
+                            <input type="file" name="file" id="gl-v2-dp-upload-file" accept="image/*,video/mp4,video/webm" hidden />
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label">CAPTION (optioneel)</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="UploadedBO.Caption" placeholder="Beschrijf het beeld …" /></div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label">SECTIE</label>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" name="UploadedBO.SectionId" id="gl-v2-dp-upload-section-select">
+                                    <option value="">— Geen sectie —</option>
+                                    @foreach (var s in Model.Sections)
+                                    {
+                                        <option value="@s.Id">@s.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label">ZICHTBAARHEID</label>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" name="UploadedBO.IsPublic">
+                                    <option value="true">Publiek</option>
+                                    <option value="false">Intern</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dp-upload-submit" disabled><i class="ph ph-upload-simple" aria-hidden="true"></i>Uploaden</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* ── Secties beheren modal (TYPE 2 "Formulier") ── *@
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-dp-sections-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Secties beheren</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div id="gl-v2-dp-sections-list" class="gl-v2-dp-sections-list gl-v2-field-full"></div>
+                    <div class="gl-v2-dp-sections-new gl-v2-field-full">
+                        <span class="gl-v2-field-label">NIEUWE SECTIE</span>
+                        <div class="gl-v2-dp-panel-fields-row">
+                            <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dp-newsection-name" placeholder="Naam *" /></div></div>
+                            <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dp-newsection-desc" placeholder="Beschrijving (optioneel)" /></div></div>
+                        </div>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-dp-newsection-add"><i class="ph ph-plus" aria-hidden="true"></i>Sectie toevoegen</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Verwijderen — TYPE 1 "Bevestiging", statisch, doel via JS voor open ingesteld. Los van
+   canWrite: delete-rechten (canDelete) zijn een apart permissiepaar, en het paneel se Verwijderen-
+   item (canDelete-gated) mag deze modal ook zonder canWrite kunnen openen. ── *@
+@if (canDelete)
+{
+    @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+    {
+        Id = "gl-v2-dp-delete-modal",
+        Tone = GlV2ModalTone.Danger,
+        IconClass = "ph-trash",
+        Title = "Media verwijderen",
+        Description = "Weet u zeker dat u dit bestand wil verwijderen? Dit kan niet ongedaan worden gemaakt.",
+        ConfirmLabel = "Verwijderen",
+        FormAction = Url.Action("DeletePhoto", "Projecten") ?? "",
+        HiddenFields = new Dictionary<string, string> { ["id"] = "0", ["projectid"] = Model.ProjectId.ToString(), ["type"] = ((int)PictureType.Nevenfoto).ToString() }
+    })
+}
+
+@section PageScripts
+{
+    <script>
+        window.glV2DetailPhotos = {
+            projectId: @Model.ProjectId,
+            canWrite: @(canWrite ? "true" : "false"),
+            canDelete: @(canDelete ? "true" : "false"),
+            media: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mediaJson)),
+            sections: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sections.Select(s => new { id = s.Id, name = s.Name, description = s.Description ?? "", isPublic = s.IsPublic }))),
+            urls: {
+                moveToSection: '@Url.Action("MoveMediaToSection", "Projecten")',
+                updateVisibility: '@Url.Action("UpdateMediaVisibility", "Projecten")',
+                bulkDelete: '@Url.Action("BulkDeleteMedia", "Projecten")',
+                setHoofdMedia: '@Url.Action("SetHoofdMedia", "Projecten")',
+                updateDetails: '@Url.Action("UpdateMediaDetails", "Projecten")',
+                createSection: '@Url.Action("CreateMediaSection", "Projecten")',
+                updateSection: '@Url.Action("UpdateMediaSection", "Projecten")',
+                deleteSection: '@Url.Action("DeleteMediaSection", "Projecten")',
+                deletePhoto: '@Url.Action("DeletePhoto", "Projecten")',
+                uploadImage: '@Url.Action("UploadImage", "Projecten")'
+            }
+        };
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-detailphotos.js" asp-append-version="true"></script>
+}

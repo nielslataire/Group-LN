@@ -2615,6 +2615,9 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
+            entity.Property(e => e.AltText).HasMaxLength(300);
+            entity.Property(e => e.Subtitle).HasMaxLength(500);
+            entity.Property(e => e.AutoPlayMuted).HasDefaultValue(true);
 
             entity.HasOne(d => d.ProjectNavigation).WithMany(p => p.ProjectPictures)
                 .HasForeignKey(d => d.ProjectId)
@@ -2624,6 +2627,11 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.SectionId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_ProjectPictures_Section");
+
+            entity.HasOne(d => d.Unit).WithMany(p => p.ProjectPictures)
+                .HasForeignKey(d => d.UnitId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ProjectPictures_Unit");
         });
 
         modelBuilder.Entity<ProjectRegieUur>(entity =>

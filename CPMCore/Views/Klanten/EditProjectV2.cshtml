@@ -1,0 +1,552 @@
+@model CPMCore.Models.Klanten.EditClientModel
+@using System.Linq
+@using BOCore
+@using CPMCore.Models.GlV2
+@using Microsoft.AspNetCore.Mvc.Rendering
+@* gl-v2 layout-pilot (design-handoff 8b "Formulierpagina" + 8d "Bewerken mét tabbar") — Klanten/
+   EditProject-variant. Groter/ouder dan Klanten/EditV2: bindt EditClientModel (BOCore ClientAccountBO/
+   ClientContactBO rechtstreeks, niet het nieuwere ClientFormViewModel) en heeft drie tabs die
+   Klanten/EditV2 niet heeft — Eenheden (grond-/constructiewaarden per verkochte eenheid),
+   Mede-eigenaars (tweede contactpersoon met eigen bedrijf-/facturatieadres-schakelaars, hier
+   PER RIJ i.p.v. de singuliere schakelaars van Klanten/EditV2), Toegiften/Aandachtspunten
+   (omschrijving + activiteiten). Server-/opslag-/synclogica blijft ongewijzigd in
+   KlantenController.EditProject — enkel het view-pad + de vier BlankXRow-partials vertakken. *@
+@{
+    ViewData["Title"] ??= "Klant bewerken";
+    ViewData["GlV2FullHeightBody"] = true;
+    var backUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("DetailClients", "Projecten", new { projectid = Model.ProjectId });
+    ViewData["BackUrl"] = backUrl;
+
+    var countryItems = Model.SelectedPostalcode.Countries
+        .Select(c => new SelectListItem { Value = c.ID.ToString(), Text = c.Display })
+        .ToList();
+    ViewData["Countries"] = countryItems;
+    ViewData["OwnerTypes"] = Model.OwnerTypes
+        .Where(o => o.ID != 1)
+        .Select(o => new SelectListItem { Value = o.ID.ToString(), Text = o.Display })
+        .ToList();
+    ViewData["Listactivities"] = Model.ListActivities;
+
+    bool KeyHasError(string prefix) => ViewContext.ModelState.Any(kvp => kvp.Value.Errors.Count > 0 && (kvp.Key == prefix || kvp.Key.StartsWith(prefix + ".", StringComparison.Ordinal) || kvp.Key.StartsWith(prefix + "[", StringComparison.Ordinal)));
+    var algemeenHasError = ViewContext.ModelState.Any(kvp => kvp.Value.Errors.Count > 0
+        && !kvp.Key.StartsWith("Client.Contacts", StringComparison.Ordinal)
+        && !kvp.Key.StartsWith("Client.CoOwners", StringComparison.Ordinal)
+        && !kvp.Key.StartsWith("Units", StringComparison.Ordinal)
+        && !kvp.Key.StartsWith("Gifts", StringComparison.Ordinal)
+        && !kvp.Key.StartsWith("Poas", StringComparison.Ordinal));
+    var eenhedenHasError = KeyHasError("Units");
+    var contactenHasError = KeyHasError("Client.Contacts");
+    var medeEigenaarsHasError = KeyHasError("Client.CoOwners");
+    var toegiftenHasError = KeyHasError("Gifts");
+    var aandachtspuntenHasError = KeyHasError("Poas");
+    // ?activetab=N (KlantenController.EditProject, altijd meegegeven — de bestaande "Bewerken"-links
+    // sturen allemaal activetab=0) koos tot nu toe nooit een tab: ViewData["activetab"] werd wel
+    // gezet maar nergens gelezen, dus elke link kwam altijd op "Algemeen" uit. Hier alsnog verwerkt
+    // (0-5 = dezelfde volgorde als de tabbar hieronder) zodat Klanten/DetailV2's "+ Toevoegen" bij
+    // Contactpersonen (activetab=2) meteen op het Contacten-tabblad opent i.p.v. Algemeen. Een
+    // validatiefout op een ander tabblad wint nog steeds — die moet altijd zichtbaar zijn.
+    var requestedTab = (ViewData["activetab"] as int?) switch
+    {
+        1 => "eenheden",
+        2 => "contacten",
+        3 => "medeeigenaars",
+        4 => "toegiften",
+        5 => "aandachtspunten",
+        _ => "algemeen"
+    };
+    var forceTab = algemeenHasError ? "algemeen"
+        : eenhedenHasError ? "eenheden"
+        : contactenHasError ? "contacten"
+        : medeEigenaarsHasError ? "medeeigenaars"
+        : toegiftenHasError ? "toegiften"
+        : aandachtspuntenHasError ? "aandachtspunten"
+        : requestedTab;
+    var totalErrorCount = ViewContext.ModelState.Sum(kvp => kvp.Value.Errors.Count);
+    var isCompany = Model.IsCompany;
+
+    // gl-v2: we zitten nog altijd in het project (net als Klanten/DetailV2 en Projecten/
+    // DetailClientsV2) — zelfde inner-menu shell, zelfde "Klanten"-teller.
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = "klant · " + (Model.Client?.DisplayName ?? ""),
+        IsCoordinationProject = Model.IsCoordinationProject,
+        ItemCounts = new Dictionary<string, int> { ["Klanten"] = Model.ProjectClientCount }
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-klanten-editproject.css" asp-append-version="true" />
+}
+@section MobileTopbarAction
+{
+}
+@section PageTitleBadges
+{
+    @if (isCompany)
+    {
+        <span class="gl-v2-badge is-neutral">ONDERNEMING</span>
+    }
+    else
+    {
+        <span class="gl-v2-badge is-neutral">PARTICULIER</span>
+    }
+}
+@section PageActions
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* Tabbar blijft het letterlijke eerste kind van .gl-v2-content — zelfde "vlak tegen de topbar"-regel
+   als Klanten/DetailV2 (zie de toelichting daar): de Phone-modus van het inner menu hieronder moet
+   er daarom NA komen, niet ervoor. *@
+<div class="gl-v2-tabbar" id="gl-v2-editproject-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" data-tab="algemeen" aria-selected="true">
+        Algemeen
+        <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!algemeenHasError)"></span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="eenheden" aria-selected="false">
+        Eenheden <span class="gl-v2-tabbar-count">@Model.Units.Count</span>
+        <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!eenhedenHasError)"></span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="contacten" aria-selected="false">
+        Contacten <span class="gl-v2-tabbar-count">@Model.Client.Contacts.Count</span>
+        <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!contactenHasError)"></span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="medeeigenaars" aria-selected="false" id="gl-v2-tab-medeeigenaars">
+        Mede-eigenaars <span class="gl-v2-tabbar-count">@Model.Client.CoOwners.Count</span>
+        <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!medeEigenaarsHasError)"></span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="toegiften" aria-selected="false">
+        Toegiften <span class="gl-v2-tabbar-count">@Model.Gifts.Count</span>
+        <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!toegiftenHasError)"></span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="aandachtspunten" aria-selected="false">
+        Aandachtspunten <span class="gl-v2-tabbar-count">@Model.Poas.Count</span>
+        <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!aandachtspuntenHasError)"></span>
+    </button>
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@using (Html.BeginForm("EditProject", "Klanten", FormMethod.Post, new { @class = "gl-v2-client-edit-form", id = "gl-v2-client-form" }))
+{
+    @Html.HiddenFor(m => m.Client.Id)
+    @Html.HiddenFor(m => m.Client.OwnerPercentage)
+    @Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
+
+    <div class="gl-v2-client-edit-scroll">
+
+        <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Identificatie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Naam, type eigenaar en (indien van toepassing) bedrijfsgegevens.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-3">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Salutation)">Aanspreking</label>
+                            <div class="gl-v2-field-box">
+                                @Html.DropDownListFor(m => m.Client.Salutation, Html.GetEnumSelectList<Salutation>(), new { @class = "gl-v2-field-input" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-5">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Name)">Naam</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.Name, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-4">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.OwnerType.Id)">Type eigenaar</label>
+                            <div class="gl-v2-field-box">
+                                <select id="@Html.IdFor(m => m.Client.OwnerType.Id)" name="@Html.NameFor(m => m.Client.OwnerType.Id)" class="gl-v2-field-input">
+                                    @foreach (var ownerType in Model.OwnerTypes)
+                                    {
+                                        <option value="@ownerType.ID" selected="@(ownerType.ID == Model.Client.OwnerType.Id ? "selected" : null)">@ownerType.Display</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-switch-group">
+                            <div class="gl-v2-switch-row">
+                                <label class="gl-v2-switch">
+                                    @Html.CheckBoxFor(m => m.IsCompany, new { @class = "gl-v2-client-switch-input", id = "gl-v2-is-company", data_role = "client-type-toggle" })
+                                    <span class="gl-v2-switch-track"></span>
+                                </label>
+                                <span class="gl-v2-switch-row-label">Dit is een bedrijf</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-5" data-role="company-fields" hidden="@(!isCompany)">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.CompanyName)">Bedrijfsnaam</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.CompanyName, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", disabled = "disabled" })
+                            </div>
+                            <span class="gl-v2-field-help">Bedrijfsgegevens worden elders beheerd, hier enkel zichtbaar.</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-4" data-role="company-fields" hidden="@(!isCompany)">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.VATnumber)">Ondernemingsnummer</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.VATnumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", disabled = "disabled" })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Adres</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Contactadres — schakel "Afwijkend facturatieadres" in als de factuur elders naartoe moet.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-5">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Street)">Straat</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.Street, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-1">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Housenumber)">Nr</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.Housenumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-1">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Busnumber)">Bus</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.Busnumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field-group gl-v2-col-5" data-gl-v2-address-block>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Postalcode.Country.CountryId)">Land</label>
+                            <div class="gl-v2-field-box">
+                                <select id="@Html.IdFor(m => m.Client.Postalcode.Country.CountryId)" name="@Html.NameFor(m => m.Client.Postalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
+                                    @foreach (var country in countryItems)
+                                    {
+                                        <option value="@country.Value" selected="@(country.Value == Model.Client.Postalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        @Html.EditorFor(m => m.SelectedPostalcodeId, "GlV2SearchSelect", new
+                        {
+                            Label = "Gemeente / postcode",
+                            DisplayText = (Model.Client.Postalcode?.PostcodeId > 0 && !string.IsNullOrWhiteSpace(Model.Client.Postalcode.Postcode)) ? $"{Model.Client.Postalcode.Postcode} - {Model.Client.Postalcode.Gemeente}" : null,
+                            Placeholder = "Zoek een postcode of gemeente …",
+                            Icon = "ph-map-pin"
+                        })
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-switch-group">
+                            <div class="gl-v2-switch-row">
+                                <label class="gl-v2-switch">
+                                    @Html.CheckBoxFor(m => m.Client.InvoiceAddress, new { @class = "gl-v2-client-switch-input", id = "gl-v2-use-invoice-address", data_role = "invoice-address-toggle" })
+                                    <span class="gl-v2-switch-track"></span>
+                                </label>
+                                <span class="gl-v2-switch-row-label">Afwijkend facturatieadres</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12" data-role="invoice-address-wrapper" hidden="@(Model.Client.InvoiceAddress != true)">
+                        <div class="gl-v2-section-grid" style="margin-top:4px">
+                            <div class="gl-v2-col-5">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.InvoiceStreet)">Straat (facturatie)</label>
+                                    <div class="gl-v2-field-box">
+                                        @Html.TextBoxFor(m => m.Client.InvoiceStreet, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gl-v2-col-1">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.InvoiceHousenumber)">Nr</label>
+                                    <div class="gl-v2-field-box">
+                                        @Html.TextBoxFor(m => m.Client.InvoiceHousenumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gl-v2-col-1">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.InvoiceBusnumber)">Bus</label>
+                                    <div class="gl-v2-field-box">
+                                        @Html.TextBoxFor(m => m.Client.InvoiceBusnumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gl-v2-field-group gl-v2-col-5" data-gl-v2-address-block>
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.InvoicePostalcode.Country.CountryId)">Land (facturatie)</label>
+                                    <div class="gl-v2-field-box">
+                                        <select id="@Html.IdFor(m => m.Client.InvoicePostalcode.Country.CountryId)" name="@Html.NameFor(m => m.Client.InvoicePostalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
+                                            @foreach (var country in countryItems)
+                                            {
+                                                <option value="@country.Value" selected="@(country.Value == Model.Client.InvoicePostalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                @Html.EditorFor(m => m.SelectedInvoicePostalcodeId, "GlV2SearchSelect", new
+                                {
+                                    Label = "Gemeente / postcode (facturatie)",
+                                    DisplayText = (Model.Client.InvoicePostalcode?.PostcodeId > 0 && !string.IsNullOrWhiteSpace(Model.Client.InvoicePostalcode.Postcode)) ? $"{Model.Client.InvoicePostalcode.Postcode} - {Model.Client.InvoicePostalcode.Gemeente}" : null,
+                                    Placeholder = "Zoek een postcode of gemeente …",
+                                    Icon = "ph-map-pin"
+                                })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.InvoiceExtra)">Extra factuurinfo</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea">
+                                @Html.TextAreaFor(m => m.Client.InvoiceExtra, new { @class = "gl-v2-field-input", rows = 3, placeholder = " " })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-4 gl-v2-kep-col-full-tablet">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.BankAccountNumber)">Rekeningnummer</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.BankAccountNumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Bereikbaarheid</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">E-mail en facturatievoorkeuren.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Client.Email, "GlV2Email")</div>
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Client.InvoiceEmail, "GlV2Email")</div>
+                    <div class="gl-v2-col-4 gl-v2-kep-col-full-tablet">
+                        <div class="gl-v2-switch-group">
+                            <div class="gl-v2-switch-row">
+                                <label class="gl-v2-switch">
+                                    @Html.CheckBoxFor(m => m.Client.RequiresDigitalInvoice, new { @class = "gl-v2-client-switch-input" })
+                                    <span class="gl-v2-switch-track"></span>
+                                </label>
+                                <span class="gl-v2-switch-row-label">Digitale factuur</span>
+                            </div>
+                            <div class="gl-v2-switch-row">
+                                <label class="gl-v2-switch">
+                                    @Html.CheckBoxFor(m => m.Client.AttachUblByDefault, new { @class = "gl-v2-client-switch-input" })
+                                    <span class="gl-v2-switch-track"></span>
+                                </label>
+                                <span class="gl-v2-switch-row-label">UBL standaard meesturen</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-calendar" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Project &amp; uitvoering</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Verkoop-/aktedatum en de uitvoeringstermijn van de werf.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-3">@Html.EditorFor(m => m.Client.DateSalesAgreement, "GlV2Date")</div>
+                    <div class="gl-v2-col-3">@Html.EditorFor(m => m.Client.DateDeedOfSale, "GlV2Date")</div>
+                    <div class="gl-v2-col-3">@Html.EditorFor(m => m.Client.StartDateConstruction, "GlV2Date")</div>
+                    <div class="gl-v2-col-3">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.ExecutionDays)">Werkdagen</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.ExecutionDays, new { @class = "gl-v2-field-input", placeholder = " ", type = "number", autocomplete = "off" })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="eenheden" hidden>
+            @if (Model.Units.Any())
+            {
+                <div class="gl-v2-client-row-list">
+                    @for (var i = 0; i < Model.Units.Count; i++)
+                    {
+                        @Html.HiddenFor(m => m.Units[i].Id)
+                        <div class="gl-v2-card">
+                            <div class="gl-v2-card-header">
+                                <span class="gl-v2-card-header-title">@Model.Units[i].Type.Name @Model.Units[i].Name</span>
+                            </div>
+                            <div class="gl-v2-card-body">
+                                <div class="gl-v2-field-group">
+                                    @{ var unitIndex = i; }
+                                    @Html.EditorFor(m => m.Units[unitIndex].LandValueSold, "GlV2Currency", new { Label = "Grondwaarde" })
+                                    @if (Model.Units[i].ConstructionValues is { Count: > 0 })
+                                    {
+                                        for (var j = 0; j < Model.Units[i].ConstructionValues.Count; j++)
+                                        {
+                                            @Html.HiddenFor(m => m.Units[unitIndex].ConstructionValues[j].Id)
+                                            @Html.EditorFor(m => m.Units[unitIndex].ConstructionValues[j].ValueSold, "GlV2Currency", new { Label = Model.Units[i].ConstructionValues[j].Description })
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="gl-v2-card gl-v2-card-empty">
+                    <div class="gl-v2-card-header">
+                        <span class="gl-v2-card-header-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                        <span class="gl-v2-card-header-title">Eenheden</span>
+                    </div>
+                    <div class="gl-v2-card-body">
+                        <span class="gl-v2-card-empty-msg">Er zijn geen eenheden gekoppeld aan deze klant.</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="contacten" hidden>
+            <div class="gl-v2-client-row-list-header">
+                <a href="@Url.Action("BlankContactRow", "Klanten", new { collectionName = "Client.Contacts" })" class="gl-v2-select-newitem-btn" id="gl-v2-add-contact">
+                    <i class="ph ph-plus" aria-hidden="true"></i>Contact toevoegen
+                </a>
+            </div>
+            <div id="gl-v2-contact-rows">
+                @foreach (var contact in Model.Client.Contacts)
+                {
+                    @Html.Partial("Partials/_ProjectContactRowV2", contact)
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="medeeigenaars" hidden>
+            <div class="gl-v2-client-row-list-header">
+                <a href="@Url.Action("BlankCoOwnerRow", "Klanten", new { collectionName = "Client.CoOwners" })" class="gl-v2-select-newitem-btn" id="gl-v2-add-coowner">
+                    <i class="ph ph-plus" aria-hidden="true"></i>Mede-eigenaar toevoegen
+                </a>
+            </div>
+            <div id="gl-v2-coowner-rows">
+                @foreach (var coOwner in Model.Client.CoOwners)
+                {
+                    @Html.Partial("Partials/_CoOwnerRowV2", coOwner)
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="toegiften" hidden>
+            <div class="gl-v2-client-row-list-header">
+                <a href="@Url.Action("BlankGiftRow", "Klanten")" class="gl-v2-select-newitem-btn" id="gl-v2-add-gift">
+                    <i class="ph ph-plus" aria-hidden="true"></i>Toegift toevoegen
+                </a>
+            </div>
+            <div id="gl-v2-gift-rows">
+                @foreach (var gift in Model.Gifts)
+                {
+                    @Html.Partial("Partials/_GiftRowV2", gift)
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="aandachtspunten" hidden>
+            <div class="gl-v2-client-row-list-header">
+                <a href="@Url.Action("BlankPoaRow", "Klanten")" class="gl-v2-select-newitem-btn" id="gl-v2-add-poa">
+                    <i class="ph ph-plus" aria-hidden="true"></i>Aandachtspunt toevoegen
+                </a>
+            </div>
+            <div id="gl-v2-poa-rows">
+                @foreach (var poa in Model.Poas)
+                {
+                    @Html.Partial("Partials/_PoaRowV2", poa)
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        @if (totalErrorCount > 0)
+        {
+            <span class="gl-v2-form-actionbar-status is-error">
+                <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                @(totalErrorCount == 1 ? "1 fout in het formulier" : $"{totalErrorCount} fouten in het formulier")
+            </span>
+            <button type="button" class="gl-v2-form-actionbar-link" id="gl-v2-goto-first-error">Ga naar de eerste fout</button>
+        }
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@backUrl" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-cancel-link">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-client-submit">Klant opslaan</button>
+        </div>
+    </div>
+}
+
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-discard-changes-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder uw wijzigingen op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.5/dist/autoNumeric.min.js"></script>
+    <script src="~/js/currency.js"></script>
+    <script>
+        window.glV2EditProjectConfig = {
+            postalLookupUrl: '@Url.Action("GetPostcodesByCountry", "Shared")',
+            addContactUrl: '@Url.Action("BlankContactRow", "Klanten", new { collectionName = "Client.Contacts" })',
+            addCoOwnerUrl: '@Url.Action("BlankCoOwnerRow", "Klanten", new { collectionName = "Client.CoOwners" })',
+            addGiftUrl: '@Url.Action("BlankGiftRow", "Klanten")',
+            addPoaUrl: '@Url.Action("BlankPoaRow", "Klanten")',
+            forceTab: '@forceTab'
+        };
+    </script>
+    <script src="~/js/gl-v2-klanten-editproject.js" asp-append-version="true"></script>
+}

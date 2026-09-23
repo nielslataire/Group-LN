@@ -1,0 +1,177 @@
+/* gl-v2 layout-pilot — Klanten/DetailV2 content area (design-handoff/CRM Menu Wireframes.dc.html,
+   punt 12c "Klantdetail binnen een project — zelfde shell, zelfde kaartstandaard als 12a"). Scoped
+   to this one page, same discipline as gl-v2-projecten-detail.css: reuses the shell's generic
+   card/grid/badge vocabulary wherever the shape already matches, and mirrors that page's own
+   .gl-v2-pd-* stat/row/grid pattern under a .gl-v2-kd- prefix rather than reaching into its
+   page-scoped stylesheet — same visual language, independent files, same as every other page pair
+   built this session (Invoices/DetailV2 vs Projecten/IncommingInvoiceDetailV2). */
+
+.gl-v2-kd-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* .gl-v2-detail-grid's shell default is 4 columns on desktop — Algemene gegevens here is a narrower
+   (5/12) card with longer-labelled fields (Facturatieadres/Eigendom/Opleverdatum/…), so it stays
+   readable capped at 2 columns even on a wide screen. Scoped ≥1024px only, same reasoning as
+   gl-v2-projecten-detail.css's identical rule: the shell's own ≤1023.98/≤767.98 rules already bring
+   it down further there. */
+@media (min-width: 1024px) {
+    .gl-v2-detail-grid.gl-v2-kd-2col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── KPI-rij (12c §3: verkoopprijs/gefactureerd/openstaand/wijzigingsopdrachten) ─────────────── */
+.gl-v2-kd-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.gl-v2-kd-stat {
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.gl-v2-kd-stat-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .11em; color: var(--gl-v2-muted); }
+.gl-v2-kd-stat-value { font: 600 19px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-stat-value.is-primary { color: var(--gl-v2-primary); }
+.gl-v2-kd-stat-value.is-warning { color: #8A6A32; }
+.gl-v2-kd-stat-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-stat-track { height: 4px; border-radius: 2px; background: var(--gl-v2-neutral-tint); overflow: hidden; display: block; }
+.gl-v2-kd-stat-fill { display: block; height: 4px; background: var(--gl-v2-primary); }
+
+/* ── 12-koloms secundaire grid ────────────────────────────────────────────────────────────────── */
+.gl-v2-kd-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.gl-v2-kd-col-3 { grid-column: span 3; }
+.gl-v2-kd-col-4 { grid-column: span 4; }
+.gl-v2-kd-col-5 { grid-column: span 5; }
+.gl-v2-kd-col-7 { grid-column: span 7; }
+
+/* ── Contactpersonen ──────────────────────────────────────────────────────────────────────────── */
+.gl-v2-kd-contacts { display: flex; flex-direction: column; padding: 14px 18px 16px; gap: 12px; }
+.gl-v2-kd-contact { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-kd-contact:last-child { padding-bottom: 0; border-bottom: 0; }
+.gl-v2-kd-contact-avatar {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 13px var(--gl-v2-font-sans);
+}
+.gl-v2-kd-contact-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.gl-v2-kd-contact-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-kd-contact-row { display: flex; align-items: center; gap: 9px; }
+.gl-v2-kd-contact-row i { font-size: 14px; flex: none; color: var(--gl-v2-muted); }
+.gl-v2-kd-contact-value { flex: 1; min-width: 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-contact-value:hover { text-decoration: underline; }
+.gl-v2-kd-contact-action { flex: none; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-kd-contact-action:hover { text-decoration: underline; }
+
+/* ── Eenheid ──────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-kd-unit-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-kd-unit-head { display: flex; align-items: center; gap: 11px; }
+.gl-v2-kd-unit-thumb {
+    width: 56px;
+    height: 46px;
+    flex: none;
+    border-radius: 8px;
+    background: var(--gl-v2-neutral-tint);
+    color: var(--gl-v2-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+.gl-v2-kd-unit-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-kd-unit-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-unit-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-unit-more { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Wijzigingsopdrachten-tabel ───────────────────────────────────────────────────────────────── */
+.gl-v2-kd-wo-table { padding: 0 18px 14px; }
+.gl-v2-kd-wo-row {
+    display: grid;
+    grid-template-columns: 74px minmax(0, 1fr) 96px 110px 110px;
+    gap: 14px;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    text-decoration: none;
+    color: inherit;
+}
+a.gl-v2-kd-wo-row:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-kd-wo-head {
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    padding: 11px 0 8px;
+    min-height: 0;
+}
+.gl-v2-kd-wo-head span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-kd-wo-num { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-kd-wo-desc { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-wo-date { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+.gl-v2-kd-wo-amount { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-kd-wo-row .text-end { text-align: right; }
+
+.gl-v2-kd-rows-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-top: 10px;
+    margin-top: 4px;
+    border-top: 1px solid var(--gl-v2-hairline);
+}
+.gl-v2-kd-rows-total-label { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-kd-rows-total-value { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Documenten — compacte rijenlijst (zelfde vorm als gl-v2-projecten-detail.css's .gl-v2-pd-rows,
+   eigen kopie i.p.v. gedeeld, zie de bestandskop hierboven) ─────────────────────────────────────── */
+.gl-v2-kd-rows { display: flex; flex-direction: column; padding: 4px 18px 12px; }
+.gl-v2-kd-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-kd-rows > :last-child { border-bottom: 0; }
+.gl-v2-kd-row:hover,
+.gl-v2-kd-row:focus-visible { background: var(--gl-v2-hover-tint); }
+.gl-v2-kd-row-badge {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 6px;
+    background: var(--gl-v2-danger-tint);
+    color: var(--gl-v2-danger);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+.gl-v2-kd-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-kd-row-title { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-kd-row-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Responsive: tablet 2-koloms KPI's + gestapelde 12-koloms grid; gsm 1-koloms alles ──────────── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .gl-v2-kd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-kd-col-3, .gl-v2-kd-col-4, .gl-v2-kd-col-5, .gl-v2-kd-col-7 { grid-column: span 12; }
+}
+
+@media (max-width: 767.98px) {
+    .gl-v2-kd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-kd-col-3, .gl-v2-kd-col-4, .gl-v2-kd-col-5, .gl-v2-kd-col-7 { grid-column: span 12; }
+    .gl-v2-kd-wo-row { grid-template-columns: minmax(0, 1fr) 90px; grid-template-areas: "desc status" "num date" "amount amount"; row-gap: 4px; }
+    .gl-v2-kd-wo-head { display: none; }
+    .gl-v2-kd-wo-num { grid-area: num; }
+    .gl-v2-kd-wo-desc { grid-area: desc; font-weight: 500; }
+    .gl-v2-kd-wo-date { grid-area: date; }
+    .gl-v2-kd-wo-amount { grid-area: amount; text-align: left; }
+    .gl-v2-kd-wo-row .gl-v2-badge { grid-area: status; justify-self: end; align-self: start; }
+}

@@ -149,6 +149,17 @@
 .gl-v2-pm-item i { font-size: 15px; flex: none; color: var(--gl-v2-primary); }
 .gl-v2-pm-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Teller náást het label, enkel op het actieve item (design-handoff 12a/12d: "Klanten … 2") — kleur
+   is de mockup se eigen letterlijke #2F6038 (gedempt groen, leesbaar op de #D6E5CC actief-tint), geen
+   bestaand token dus hier als eigen waarde i.p.v. een bestaand token oneigenlijk te hergebruiken.
+   Twee klassen i.p.v. één: wint specificiteit van de algemene ".gl-v2-pm-item span" hierboven, anders
+   zou de teller ook flex:1 proberen te nemen i.p.v. haar eigen, kleine breedte. */
+.gl-v2-pm-item .gl-v2-pm-item-count {
+    flex: none;
+    font: 450 11px var(--gl-v2-font-sans);
+    color: #2F6038;
+}
+
 /* Design-handoff 9d "DE ZEVEN STATEN — DESKTOP": normaal / hover / actief / actief+hover / focus. */
 .gl-v2-pm-item:hover { background: var(--gl-v2-bg); }
 
@@ -297,6 +308,16 @@
         opacity: 1;
         transition-delay: .4s;
     }
+
+    /* Touch has no hover state — gl-v2-project-inner-menu.js arms a tapped icon with this class
+       instead of navigating on the first tap, so the label is readable before the second tap commits
+       to leaving the page. No .4s delay here: an explicit tap should reveal its own label instantly. */
+    .gl-v2-pm-rail-icon.is-peeking .gl-v2-pm-rail-tooltip {
+        opacity: 1;
+        transition-delay: 0s;
+    }
+
+    .gl-v2-pm-rail-icon.is-peeking { background: var(--gl-v2-bg); }
 }
 
 /* ── Gsm (<768px, design-handoff 9c) — groene "waar ben ik"-balk + volledig blad ─────────────── */
@@ -414,6 +435,9 @@
     .gl-v2-pm-sheet-item i:first-child { font-size: 18px; flex: none; color: var(--gl-v2-primary); }
     .gl-v2-pm-sheet-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .gl-v2-pm-sheet-item i:last-child { font-size: 13px; flex: none; color: var(--gl-v2-muted-light); }
+
+    /* Zelfde teller-conventie als de desktop-lijst (.gl-v2-pm-item-count) — enkel op het actieve item. */
+    .gl-v2-pm-sheet-item .gl-v2-pm-item-count { flex: none; font: 450 12px var(--gl-v2-font-sans); color: #2F6038; }
 
     /* Ingedrukt i.p.v. hover — design-handoff 9d §3 "in plaats van hover is er ingedrukt". */
     .gl-v2-pm-sheet-item:active { background: var(--gl-v2-neutral-tint); }

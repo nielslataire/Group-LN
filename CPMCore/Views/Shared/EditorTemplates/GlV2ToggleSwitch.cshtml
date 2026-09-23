@@ -1,0 +1,31 @@
+@model bool
+@*
+    gl-v2 (design-handoff punt 14d "5 · SCHAKELAAR MET UITLEG") — 40×22px, de hele rij is klikbaar
+    (een echte <label> om schakelaar + tekst, geen los element met een aparte click-handler), voor
+    ja/nee-FEITEN ("Werfmelding ingediend") — niet voor acties die meteen iets doen, die blijven een
+    knop. Herbouwt zelf de checkbox+hidden-fallback die Html.CheckBoxFor ook genereert (nodig om
+    dezelfde markup/klassen als de rest van dit template te dragen) — model-binding gedraagt zich
+    identiek: onaangevinkt post nog steeds "false" via de hidden input. Enkel expliciete aanroep.
+
+    Optioneel: Label (override), Hint (uitlegtekst onder het label, bv. "ingediend"/"ondertekend"),
+    Disabled (bool — 14d se "UITGESCHAKELD"-staat, bv. Contract getekend "kan pas als het contract
+    verstuurd is").
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var hint = ViewData["Hint"] as string;
+    var disabled = ViewData["Disabled"] as bool? ?? false;
+}
+<label class="gl-v2-toggle-row" for="@id">
+    <input type="checkbox" id="@id" name="@name" class="gl-v2-toggle-switch" value="true" checked="@(Model ? "checked" : null)" disabled="@(disabled ? "disabled" : null)" />
+    <input type="hidden" name="@name" value="false" />
+    <span class="gl-v2-toggle-text">
+        <span class="gl-v2-toggle-label">@label</span>
+        @if (!string.IsNullOrWhiteSpace(hint))
+        {
+            <span class="gl-v2-toggle-hint">@hint</span>
+        }
+    </span>
+</label>

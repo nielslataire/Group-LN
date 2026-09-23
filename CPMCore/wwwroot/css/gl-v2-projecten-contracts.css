@@ -1,0 +1,199 @@
+/* gl-v2 layout-pilot — Projecten/DetailContractsV2 (design-handoff punt 14a "Leverancierslijst in
+   het project — contractstatus als chip, uitklapbare contracten"). Page-specific, same copy-and-
+   adapt discipline as gl-v2-projecten-detailclients.css (its own header comment explains why): the
+   .gl-v2-toolbar-card/.gl-v2-detail-table-card family has no shared definition in gl-v2-shell.css,
+   so this is a fresh copy under a .gl-v2-pc- prefix rather than a cross-page reference. */
+
+/* ── Topbar-acties (export/print/toevoegen) ──────────────────────────────────────────────────── */
+.gl-v2-pc-toolbar-actions { display: flex; align-items: center; gap: 8px; }
+
+.gl-v2-pc-print-menu-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
+.gl-v2-pc-print-menu-label { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin: 0 0 2px; }
+.gl-v2-pc-print-check { display: flex; align-items: center; gap: 8px; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
+.gl-v2-pc-print-btn { width: 100%; justify-content: center; margin-top: 4px; }
+
+/* ── Zoekbalk ─────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-toolbar-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+    flex: none;
+}
+.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
+.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
+
+/* ── Leverancierstabel ────────────────────────────────────────────────────────────────────────── */
+.gl-v2-detail-table-card { flex: none; padding-bottom: 8px; }
+.gl-v2-detail-table-card .gl-v2-card-body { padding: 0 20px; }
+
+.gl-v2-detail-table thead th {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    padding: 12px 10px;
+    white-space: nowrap;
+}
+.gl-v2-detail-table td {
+    padding: 10px;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+.gl-v2-detail-table tbody tr:last-child td { border-bottom: 0; }
+.gl-v2-detail-table tbody tr[data-detail-url] { cursor: pointer; }
+.gl-v2-detail-table tbody tr[data-detail-url]:hover td { background: var(--gl-v2-bg); }
+.gl-v2-detail-table .text-end { text-align: right; }
+
+.gl-v2-pc-supplier { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.gl-v2-pc-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.gl-v2-pc-dot.is-signed { background: var(--gl-v2-primary); }
+.gl-v2-pc-dot.is-unsigned { background: var(--gl-v2-warning); }
+.gl-v2-pc-dot.is-none { background: var(--gl-v2-muted-light); }
+.gl-v2-pc-supplier-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-pc-supplier-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pc-supplier-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pc-empty { color: var(--gl-v2-muted-light); }
+
+.gl-v2-pc-invoiced { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.gl-v2-pc-invoiced-track { width: 72px; height: 4px; border-radius: 2px; background: var(--gl-v2-neutral-tint); display: block; overflow: hidden; }
+.gl-v2-pc-invoiced-fill { display: block; height: 4px; background: var(--gl-v2-primary); }
+
+.gl-v2-pc-payment { display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-pc-payment-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-pc-warning-icon { color: var(--gl-v2-warning); margin-left: 5px; font-size: 15px; vertical-align: -2px; }
+
+/* ── Opvolging (14a) — helm = werfmelding, schild = VGM-charter. "In orde" is een gevuld getint
+   vakje (zelfde taal als de GETEKEND-chip), "ontbreekt" een gestippeld leeg vakje — bewust geen
+   tweede grijstint, dat was punt 3 van de eigen kritiek op de vorige versie van deze kolom. ────── */
+.gl-v2-pc-follow { display: flex; gap: 5px; }
+.gl-v2-pc-follow-icon {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+.gl-v2-pc-follow-icon.is-ok { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-pc-follow-icon.is-missing { background: var(--gl-v2-surface); border: 1px dashed var(--gl-v2-hairline); color: var(--gl-v2-muted-light); }
+
+.gl-v2-pc-totals-row th { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); border-top: 1px solid var(--gl-v2-hairline); padding-top: 12px; }
+.gl-v2-pc-totals-row th.text-end { color: var(--gl-v2-primary); }
+
+/* ── Uitklapbare contracten (design-handoff 14a) ─────────────────────────────────────────────── */
+.gl-v2-pc-chevron {
+    width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; color: var(--gl-v2-muted); cursor: pointer; border-radius: 6px;
+}
+.gl-v2-pc-chevron:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
+.gl-v2-pc-chevron i { transition: transform .12s ease; font-size: 13px; }
+.gl-v2-pc-chevron[aria-expanded="true"] i { transform: rotate(90deg); }
+tr.is-expanded > td { background: var(--gl-v2-bg); }
+
+/* De child-row zelf krijgt geen eigen <td>'s — table.row().child() plaatst 'm in ÉÉN volle-breedte
+   cel, dus de indentatierijen bouwen hun eigen kolomraster na i.p.v. de echte <table>-kolommen te
+   delen (hun breedtes zouden toch nooit exact overeenkomen zodra de browser kolombreedtes herschat). */
+.gl-v2-pc-subrows { padding: 4px 10px 8px 40px; display: flex; flex-direction: column; }
+.gl-v2-pc-subrow {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 110px 110px 90px 130px 90px 64px;
+    gap: 12px;
+    align-items: center;
+    min-height: 40px;
+    padding: 6px 10px;
+    border-left: 2px solid var(--gl-v2-primary-tint);
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    cursor: pointer;
+}
+.gl-v2-pc-subrow:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pc-subrow-name { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pc-subrow .text-end { text-align: right; }
+
+.gl-v2-detail-table-card .dt-container .dt-layout-row:last-child {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0 16px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    margin-top: 4px;
+}
+.gl-v2-detail-table-card .dt-info { color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2-detail-table-card .dt-length { display: none; }
+.gl-v2-detail-table-card .dt-paging { margin-left: auto; }
+.gl-v2-detail-table-card .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
+.gl-v2-detail-table-card .dt-paging .page-link {
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border-radius: 7px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans);
+}
+.gl-v2-detail-table-card .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-detail-table-card .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-detail-table-card .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2-detail-table-card .dt-search { display: none; }
+
+/* ── Tablet (768–1023.98px): enkel Leverancier/Contractprijs/Acties blijven over — Contract/
+   Gefactureerd/Betaling/Waarborg/Verstuurd/Opvolging vervallen als losse kolommen (zelfde "te veel
+   kolommen voor de breedte"-afweging als Projecten/DetailClientsV2, .gl-v2-dc-col-collapsible), en de
+   drie topbar-knoppen (Exporteren/Afdrukken/Leverancier toevoegen) verhuizen naar het ⋯-menu — zelfde
+   recept als Projecten/DetailClientsV2's eigen gl-v2-dc-topbar-btn/-topbar-menu-trigger. ──────────── */
+@media (min-width: 1024px) {
+    .gl-v2-pc-topbar-menu-trigger { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-pc-topbar-btn { display: none; }
+    .gl-v2-pc-col-collapsible { display: none; }
+
+    /* Zelfde table-layout:fixed-herverdeling als Projecten/DetailClientsV2 — DataTables' eigen
+       autoWidth zet vaste pixelbreedtes berekend op de volledige 10-koloms desktoplayout, die na het
+       verbergen van de 6 kolommen hierboven blijven staan tenzij hier expliciet overschreven
+       (!important, een inline style wint anders altijd). */
+    .gl-v2-detail-table { table-layout: fixed; width: 100% !important; }
+    .gl-v2-detail-table thead th:nth-child(1),
+    .gl-v2-detail-table tbody td:nth-child(1) { width: 32px !important; }
+    .gl-v2-detail-table thead th:nth-child(2),
+    .gl-v2-detail-table tbody td:nth-child(2) { width: 56% !important; }
+    .gl-v2-detail-table thead th:nth-child(4),
+    .gl-v2-detail-table tbody td:nth-child(4) { width: 32% !important; }
+    .gl-v2-detail-table thead th:nth-child(10),
+    .gl-v2-detail-table tbody td:nth-child(10) { width: 56px !important; }
+}
+
+/* ── Mobiel (<768px) — kaarten i.p.v. tabel, zelfde recept als gl-v2-projecten-detailclients.css ── */
+@media (max-width: 767.98px) {
+    .gl-v2-detail-table-card .table-responsive-md { display: none; }
+
+    .gl-v2-pc-mobile-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .gl-v2-pc-card {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        padding: 13px 14px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-pc-card-row { display: flex; align-items: center; gap: 8px; }
+    .gl-v2-pc-card-row > .js-gl-v2-menu-trigger { flex: none; }
+    .gl-v2-pc-card .gl-v2-pc-supplier { flex: 1; min-width: 0; }
+
+    .gl-v2-pc-card-meta { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); display: flex; flex-wrap: wrap; gap: 8px 14px; }
+    .gl-v2-pc-card-stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .gl-v2-pc-card-stat-label { font: 500 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .06em; text-transform: uppercase; }
+    .gl-v2-pc-card-stat-value { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; }
+}
+@media (min-width: 768px) {
+    .gl-v2-pc-mobile-list { display: none; }
+}

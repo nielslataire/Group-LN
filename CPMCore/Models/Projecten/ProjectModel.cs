@@ -719,8 +719,15 @@ namespace CPMCore.Models.Projecten
 
         public List<ProjectPictureBO>    Photos   { get; set; }
         public List<ProjectMediaSectionVM> Sections { get; set; }
+        public List<IdNameBO> Units { get; set; } = new List<IdNameBO>();
         public int    ProjectId   { get; set; }
         public string ProjectName { get; set; }
+
+        // gl-v2: enkel voor GlV2ProjectMenuVm.IsCoordinationProject (zelfde vlag/reden als
+        // DetailClientsModel/ClientModel.IsCoordinationProject) — _ProjectInnerMenuV2 verbergt
+        // Media/Nieuws/Contacten al op basis hiervan, maar de andere items (Nieuws/Contacten)
+        // moeten dezelfde vlag krijgen zodra ze via dit menu meegerenderd worden.
+        public bool IsCoordinationProject { get; set; }
     }
 
     public class DetailNewsModel
@@ -2885,6 +2892,11 @@ namespace CPMCore.Models.Projecten
             _insurance = new InsuranceBO();
             _siteManagers = new List<IdNameBO>();
         }
+
+        /// <summary>Aantal leveranciers in dit project — voor het inner-menu "Leveranciers"-teller,
+        /// zelfde telling als DetailContracts' SupplierRows.</summary>
+        public int SupplierCount { get; set; }
+
         private int _projectid;
         public int ProjectId
         {
@@ -4012,6 +4024,10 @@ namespace CPMCore.Models.Projecten
 
         public List<ContractBO> Contracts { get; set; }
         public bool HasContract { get; set; }
+
+        /// <summary>Aantal leveranciers in dit project (contract of enkel factuur) — voor het
+        /// inner-menu "Leveranciers"-teller, zelfde telling als DetailContracts' SupplierRows.</summary>
+        public int SupplierCount { get; set; }
 
         private int _projectid;
         public int ProjectId

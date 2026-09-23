@@ -23,6 +23,7 @@ namespace ServiceCore.Translators
             bo.Email = entity.Email;
             bo.InvoiceEmail = entity.InvoiceEmail;
             bo.IsCoOwner = entity.IsCoOwner;
+            bo.IsPrimaryContact = entity.IsPrimaryContact;
             bo.Phone = entity.Phone;
             bo.Cellphone = entity.Cellphone;
             bo.Firstname = entity.Forename;
@@ -113,6 +114,7 @@ namespace ServiceCore.Translators
             entity.Email = bo.Email;
             entity.InvoiceEmail = string.IsNullOrWhiteSpace(bo.InvoiceEmail) ? null : bo.InvoiceEmail.Trim();
             entity.IsCoOwner = bo.IsCoOwner;
+            entity.IsPrimaryContact = bo.IsPrimaryContact;
 
             if (!string.IsNullOrEmpty(bo.Cellphone))
                 entity.Cellphone = Regex.Replace(bo.Cellphone, "[^0-9]", "");

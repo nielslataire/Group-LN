@@ -37,6 +37,11 @@
         string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
         && (action is null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase));
 
+    // Projectwijd herbruikbaar voor élk item (design-handoff 12a/12d) — zie GlV2ProjectMenuVm.
+    // ItemCounts. Gewoon "geen sleutel" voor de overgrote meerderheid van items/pagina's, die tonen
+    // dan simpelweg geen teller.
+    int? CountFor(string label) => Model.ItemCounts.TryGetValue(label, out var count) ? count : null;
+
     var canSeeDetail       = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
     var canSeeClients      = PermissionService.HasRead(PermissionCodes.ProjectsCustomers);
     var canSeeSuppliers    = PermissionService.HasRead(PermissionCodes.ProjectsSuppliers);
@@ -58,47 +63,55 @@
     var showNews     = canSeeNews     && !Model.IsCoordinationProject;
     var showContacts = canSeeContacts && !Model.IsCoordinationProject;
 
-    var groups = new List<(string Key, string Label, List<(string Text, string Icon, string Href, bool Active)> Items)>();
+    var groups = new List<(string Key, string Label, List<(string Text, string Icon, string Href, bool Active, int? Count)> Items)>();
 
-    var algemeenItems = new List<(string Text, string Icon, string Href, bool Active)>();
-    if (canSeeDetail) algemeenItems.Add(("Project", "ph-house", Url.Action("Detail", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Detail")));
-    if (canSeeClients) algemeenItems.Add(("Klanten", "ph-users", Url.Action("DetailClients", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailClients")));
-    if (canSeeSuppliers) algemeenItems.Add(("Leveranciers", "ph-hard-hat", Url.Action("DetailContracts", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailContracts")));
+    var algemeenItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
+    if (canSeeDetail) algemeenItems.Add(("Project", "ph-house", Url.Action("Detail", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Detail"), CountFor("Project")));
+    // "Klanten" blijft actief zowel op de klantenlijst (Projecten/DetailClients) als op een
+    // individuele klantfiche (Klanten/Detail) én het klant-bewerken-scherm (Klanten/EditProject)
+    // binnen dit project, gl-v2 — anders dooft de actieve-menu-indicator uit zodra je één klant
+    // opent of bewerkt.
+    if (canSeeClients) algemeenItems.Add(("Klanten", "ph-users", Url.Action("DetailClients", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailClients") || IsHere("Klanten", "Detail") || IsHere("Klanten", "EditProject"), CountFor("Klanten")));
+    // "Leveranciers" blijft actief op de lijst (Projecten/DetailContracts) én op een individueel
+    // contract/leverancier (DetailContract/DetailSupplier) en het contract-bewerken-scherm
+    // (EditContract) binnen dit project — zelfde reden als de "Klanten"-uitzondering hierboven.
+    if (canSeeSuppliers) algemeenItems.Add(("Leveranciers", "ph-hard-hat", Url.Action("DetailContracts", "Projecten", new { projectid = projectId }) ?? "#",
+        IsHere("Projecten", "DetailContracts") || IsHere("Projecten", "DetailContract") || IsHere("Projecten", "DetailSupplier") || IsHere("Projecten", "EditContract"), CountFor("Leveranciers")));
     if (algemeenItems.Count > 0) groups.Add(("algemeen", "Algemeen", algemeenItems));
 
-    var detailsItems = new List<(string Text, string Icon, string Href, bool Active)>();
-    if (showPhotos) detailsItems.Add(("Media", "ph-image", Url.Action("DetailPhotos", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailPhotos")));
-    if (showNews) detailsItems.Add(("Nieuws", "ph-newspaper", Url.Action("DetailNews", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailNews")));
-    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits")));
+    var detailsItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
+    if (showPhotos) detailsItems.Add(("Media", "ph-image", Url.Action("DetailPhotos", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailPhotos"), CountFor("Media")));
+    if (showNews) detailsItems.Add(("Nieuws", "ph-newspaper", Url.Action("DetailNews", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailNews"), CountFor("Nieuws")));
+    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits"), CountFor("Eenheden")));
     if (detailsItems.Count > 0) groups.Add(("details", "Details", detailsItems));
 
-    var opvolgingItems = new List<(string Text, string Icon, string Href, bool Active)>();
-    if (canSeeTraject) opvolgingItems.Add(("Traject", "ph-flow-arrow", Url.Action("Index", "ProjectTraject", new { projectId = projectId }) ?? "#", IsHere("ProjectTraject")));
-    if (canSeeDossiers) opvolgingItems.Add(("Dossiers", "ph-folder-open", Url.Action("Index", "ProjectDossiers", new { projectId = projectId }) ?? "#", IsHere("ProjectDossiers")));
-    if (canSeeIssues) opvolgingItems.Add(("Punten", "ph-list-checks", Url.Action("Index", "ProjectsIssues", new { projectId = projectId }) ?? "#", IsHere("ProjectsIssues")));
-    if (canSeeDocs) opvolgingItems.Add(("Documenten", "ph-folder", Url.Action("DetailDocs", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailDocs")));
-    if (canSeeInsurances) opvolgingItems.Add(("Verzekeringen", "ph-shield-check", Url.Action("DetailInsurances", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailInsurances")));
-    opvolgingItems.Add(("Coördinatie", "ph-users-three", Url.Action("DetailCoordinatie", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailCoordinatie")));
+    var opvolgingItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
+    if (canSeeTraject) opvolgingItems.Add(("Traject", "ph-flow-arrow", Url.Action("Index", "ProjectTraject", new { projectId = projectId }) ?? "#", IsHere("ProjectTraject"), CountFor("Traject")));
+    if (canSeeDossiers) opvolgingItems.Add(("Dossiers", "ph-folder-open", Url.Action("Index", "ProjectDossiers", new { projectId = projectId }) ?? "#", IsHere("ProjectDossiers"), CountFor("Dossiers")));
+    if (canSeeIssues) opvolgingItems.Add(("Punten", "ph-list-checks", Url.Action("Index", "ProjectsIssues", new { projectId = projectId }) ?? "#", IsHere("ProjectsIssues"), CountFor("Punten")));
+    if (canSeeDocs) opvolgingItems.Add(("Documenten", "ph-folder", Url.Action("DetailDocs", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailDocs"), CountFor("Documenten")));
+    if (canSeeInsurances) opvolgingItems.Add(("Verzekeringen", "ph-shield-check", Url.Action("DetailInsurances", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailInsurances"), CountFor("Verzekeringen")));
+    opvolgingItems.Add(("Coördinatie", "ph-users-three", Url.Action("DetailCoordinatie", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailCoordinatie"), CountFor("Coördinatie")));
     if (opvolgingItems.Count > 0) groups.Add(("opvolging", "Opvolging", opvolgingItems));
 
-    var budgetItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    var budgetItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     budgetItems.Add(("Budgetten", "ph-table", Url.Action("BudgetIndex", "Projecten", new { projectId = projectId }) ?? "#",
-        IsHere("Projecten", "BudgetIndex") || IsHere("Projecten", "BudgetGegevens") || IsHere("Projecten", "BudgetMasterAanmaken")));
-    if (canSeePostCalc) budgetItems.Add(("Nacalculatie", "ph-calculator", Url.Action("Recalculation", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Recalculation")));
+        IsHere("Projecten", "BudgetIndex") || IsHere("Projecten", "BudgetGegevens") || IsHere("Projecten", "BudgetMasterAanmaken"), CountFor("Budgetten")));
+    if (canSeePostCalc) budgetItems.Add(("Nacalculatie", "ph-calculator", Url.Action("Recalculation", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Recalculation"), CountFor("Nacalculatie")));
     if (budgetItems.Count > 0) groups.Add(("budget", "Budget", budgetItems));
 
-    var financieelItems = new List<(string Text, string Icon, string Href, bool Active)>();
+    var financieelItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (canSeeInvoicing)
     {
-        financieelItems.Add(("Facturatie", "ph-invoice", Url.Action("Invoicing", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Invoicing")));
-        financieelItems.Add(("Betalingen", "ph-currency-eur", Url.Action("PaymentStages", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "PaymentStages")));
+        financieelItems.Add(("Facturatie", "ph-invoice", Url.Action("Invoicing", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Invoicing"), CountFor("Facturatie")));
+        financieelItems.Add(("Betalingen", "ph-currency-eur", Url.Action("PaymentStages", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "PaymentStages"), CountFor("Betalingen")));
     }
-    if (canSeeChangeOrders) financieelItems.Add(("Wijzigingsopdrachten", "ph-pencil-simple-line", Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder")));
+    if (canSeeChangeOrders) financieelItems.Add(("Wijzigingsopdrachten", "ph-pencil-simple-line", Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder"), CountFor("Wijzigingsopdrachten")));
     if (financieelItems.Count > 0) groups.Add(("financieel", "Financieel", financieelItems));
 
-    var verkoopItems = new List<(string Text, string Icon, string Href, bool Active)>();
-    if (canSeeForSale) verkoopItems.Add(("Te koop", "ph-tag", Url.Action("DetailSales", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailSales")));
-    if (showContacts) verkoopItems.Add(("Contacten", "ph-address-book", Url.Action("DetailContacts", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailContacts")));
+    var verkoopItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
+    if (canSeeForSale) verkoopItems.Add(("Te koop", "ph-tag", Url.Action("DetailSales", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailSales"), CountFor("Te koop")));
+    if (showContacts) verkoopItems.Add(("Contacten", "ph-address-book", Url.Action("DetailContacts", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailContacts"), CountFor("Contacten")));
     if (verkoopItems.Count > 0) groups.Add(("verkoop", "Verkoop", verkoopItems));
 
     var totalItemCount = groups.Sum(g => g.Items.Count);
@@ -140,6 +153,10 @@
                             <a class="gl-v2-pm-item @(item.Active ? "is-active" : "")" href="@item.Href" data-pm-item-text="@item.Text.ToLowerInvariant()">
                                 <i class="ph @item.Icon" aria-hidden="true"></i>
                                 <span>@item.Text</span>
+                                @if (item.Active && item.Count.HasValue)
+                                {
+                                    <span class="gl-v2-pm-item-count">@item.Count</span>
+                                }
                             </a>
                         }
                     </div>
@@ -211,6 +228,10 @@ else
                             <a class="gl-v2-pm-sheet-item @(item.Active ? "is-active" : "")" href="@item.Href" data-pm-item-text="@item.Text.ToLowerInvariant()">
                                 <i class="ph @item.Icon" aria-hidden="true"></i>
                                 <span>@item.Text</span>
+                                @if (item.Active && item.Count.HasValue)
+                                {
+                                    <span class="gl-v2-pm-item-count">@item.Count</span>
+                                }
                                 <i class="ph @(item.Active ? "ph-check" : "ph-caret-right")" aria-hidden="true"></i>
                             </a>
                         }

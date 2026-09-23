@@ -4,52 +4,13 @@
     "ignoreFiles": [],
     "ignoreValues": [
       {
-        "rule": "design-system-font",
-        "value": "font awesome 6 free",
-        "createdAt": "2026-09-05T12:55:09.958Z",
-        "reason": "pre-existing icon-font ligature for a chevron glyph (colvis dropdown), not a body/display text font choice — false positive"
-      },
-      {
-        "rule": "side-tab",
-        "value": "*",
-        "files": [
-          "CPMCore/wwwroot/css/custom.css"
-        ],
-        "createdAt": "2026-09-05T13:18:19.082Z",
-        "reason": "Agent: .tabs-modern .nav-link.active is a functional active-state indicator on EditUnit.cshtml's vertical tab list, not a decorative card border (the pattern this rule targets); pre-existing code, unrelated to this session's edits"
-      },
-      {
-        "rule": "border-accent-on-rounded",
-        "value": "*",
-        "files": [
-          "CPMCore/wwwroot/css/budget-wizard.css"
-        ],
-        "createdAt": "2026-09-08T09:25:14.410Z",
-        "reason": "impeccable: .bw-subtabs .nav-link border-bottom:3px transparent is a tab-underline indicator (border-radius:0, not a card), mirroring the documented gl-form-shell__tab pattern in DESIGN.md"
-      },
-      {
-        "rule": "design-system-font",
-        "value": "avenir-black",
-        "createdAt": "2026-09-18T08:00:38.294Z",
-        "reason": "Pre-existing, deliberate self-hosted @font-face for the unrelated AccessDenied page brand title; out of scope for the Account/Login overdrive task"
-      },
-      {
-        "rule": "side-tab",
-        "value": "*",
-        "files": [
-          "CPMCore/wwwroot/css/gl-v2-shell.css"
-        ],
-        "createdAt": "2026-09-21T10:08:24.607Z",
-        "reason": "Literal reproduction of design-handoff 7a's own KPI-card spec (border-left:3px solid {{k.accent}} on every kpi in the reference wireframe) — a client-provided design decision, not an invented AI pattern."
-      },
-      {
         "rule": "side-tab",
         "value": "*",
         "files": [
           "CPMCore/wwwroot/css/gl-v2-project-inner-menu.css"
         ],
-        "createdAt": "2026-09-22T13:51:33.316Z",
-        "reason": "design-handoff CRM Menu Wireframes.dc.html punt 9d specifies this exactly: active item state = tint bg + 3px accent bar left (#00532D), repeated for desktop list item, tablet rail icon, and phone sheet item. Implementing the signed-off spec, not an ad hoc AI choice."
+        "createdAt": "2026-09-23T08:11:36.144Z",
+        "reason": "Agent: pre-existing .is-active border-left is the system's documented active/selected-state indicator (DESIGN.md: same 3px primary left-border language on mobile-menu-item-expanded and the units-table selected-row stripe), not a decorative AI-slop border"
       }
     ]
   }

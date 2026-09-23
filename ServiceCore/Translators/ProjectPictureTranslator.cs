@@ -32,6 +32,12 @@ namespace ServiceCore.Translators
             bo.WidthPx         = _entity.WidthPx;
             bo.HeightPx        = _entity.HeightPx;
             bo.DurationSeconds = _entity.DurationSeconds;
+            bo.AltText         = _entity.AltText;
+            bo.Subtitle        = _entity.Subtitle;
+            bo.UnitId          = _entity.UnitId;
+            bo.UnitName        = _entity.Unit?.Name;
+            bo.AutoPlayMuted   = _entity.AutoPlayMuted;
+            bo.PosterTimestampSeconds = _entity.PosterTimestampSeconds;
             return ErrorCode.Success;
         }
         internal static ErrorCode TranslateBOToEntity(ProjectPictures _entity, ProjectPictureBO bo, UnitOfWorkCore uow)
@@ -54,6 +60,11 @@ namespace ServiceCore.Translators
             _entity.WidthPx        = bo.WidthPx;
             _entity.HeightPx       = bo.HeightPx;
             _entity.DurationSeconds = bo.DurationSeconds;
+            _entity.AltText        = bo.AltText;
+            _entity.Subtitle       = bo.Subtitle;
+            _entity.UnitId         = bo.UnitId;
+            _entity.AutoPlayMuted  = bo.AutoPlayMuted;
+            _entity.PosterTimestampSeconds = bo.PosterTimestampSeconds;
             return ErrorCode.Success;
         }
     }

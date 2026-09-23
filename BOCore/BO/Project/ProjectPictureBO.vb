@@ -161,4 +161,69 @@ Public Class ProjectPictureBO
         End Set
     End Property
 
+    ''' <summary>Alt-tekst — enkel getoond/bewerkt bij foto's (design-handoff punt 15b).</summary>
+    Private _altText As String
+    Public Property AltText() As String
+        Get
+            Return _altText
+        End Get
+        Set(ByVal value As String)
+            _altText = value
+        End Set
+    End Property
+
+    ''' <summary>Ondertitel/beschrijving onder de speler — enkel bij video's (design-handoff punt 15b).</summary>
+    Private _subtitle As String
+    Public Property Subtitle() As String
+        Get
+            Return _subtitle
+        End Get
+        Set(ByVal value As String)
+            _subtitle = value
+        End Set
+    End Property
+
+    Private _unitId As Integer?
+    Public Property UnitId() As Integer?
+        Get
+            Return _unitId
+        End Get
+        Set(ByVal value As Integer?)
+            _unitId = value
+        End Set
+    End Property
+
+    ''' <summary>Denormaliseerde naam van de gekoppelde eenheid, enkel gevuld op lezen (zelfde patroon als SectionName).</summary>
+    Private _unitName As String
+    Public Property UnitName() As String
+        Get
+            Return _unitName
+        End Get
+        Set(ByVal value As String)
+            _unitName = value
+        End Set
+    End Property
+
+    ''' <summary>Automatisch afspelen zonder geluid — enkel relevant bij video's (design-handoff punt 15b).</summary>
+    Private _autoPlayMuted As Boolean = True
+    Public Property AutoPlayMuted() As Boolean
+        Get
+            Return _autoPlayMuted
+        End Get
+        Set(ByVal value As Boolean)
+            _autoPlayMuted = value
+        End Set
+    End Property
+
+    ''' <summary>Tijdstip (seconden) van "Posterbeeld = huidig frame" — enkel bij video's.</summary>
+    Private _posterTimestampSeconds As Double?
+    Public Property PosterTimestampSeconds() As Double?
+        Get
+            Return _posterTimestampSeconds
+        End Get
+        Set(ByVal value As Double?)
+            _posterTimestampSeconds = value
+        End Set
+    End Property
+
 End Class

@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-08T00:00:00Z",
+  "title": "Design System: CPM — Group LN",
+  "extensions": {
+    "colorMeta": {
+      "forest-green": {
+        "role": "primary",
+        "displayName": "Deep Forest Green",
+        "canonical": "#0a5a3b",
+        "tonalRamp": ["#05271a", "#073d29", "#0a5a3b", "#0f7a52", "#2f9a72", "#6bbf9c", "#a9dcc8", "#dcf1e8"]
+      },
+      "forest-green-deep": {
+        "role": "primary",
+        "displayName": "Forest Green Deep",
+        "canonical": "#0f4b40",
+        "tonalRamp": ["#04211c", "#0a352d", "#0f4b40", "#166b5b", "#2f8f7c", "#6bb6a4", "#a6d6cb", "#dcefe9"]
+      },
+      "forest-green-bright": {
+        "role": "primary",
+        "displayName": "Forest Green Bright",
+        "canonical": "#0f7a52",
+        "tonalRamp": ["#052a1c", "#0a4732", "#0f7a52", "#159a69", "#3fb886", "#7fd2ab", "#b6e6cf", "#e2f6ec"]
+      },
+      "mist-green": {
+        "role": "primary",
+        "displayName": "Mist Green",
+        "canonical": "#e8f0eb",
+        "tonalRamp": ["#20302a", "#33473f", "#4e6a5f", "#6f9184", "#97b6ab", "#bdd5cc", "#d9e7e0", "#eef5f1"]
+      },
+      "mint-ice": {
+        "role": "primary",
+        "displayName": "Mint Ice",
+        "canonical": "#e7fff1",
+        "tonalRamp": ["#123024", "#1d4a37", "#2c6d51", "#3f9270", "#63b593", "#96d3ba", "#c2e8d7", "#e7fff1"]
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "Sage",
+        "canonical": "#7A8450",
+        "tonalRamp": ["#2f3420", "#4a5233", "#63713f", "#7a8450", "#97a074", "#b7bd9e", "#d6d9c8", "#eff0e8"]
+      },
+      "timber": {
+        "role": "tertiary",
+        "displayName": "Timber",
+        "canonical": "#8B6B4A",
+        "tonalRamp": ["#33261a", "#4d3a28", "#6b5236", "#8b6b4a", "#a98a68", "#c6ac92", "#ded0c1", "#f2ebe3"]
+      },
+      "taupe-grey": {
+        "role": "tertiary",
+        "displayName": "Taupe Grey",
+        "canonical": "#8A7967",
+        "tonalRamp": ["#332c25", "#4d4237", "#6a5c4d", "#8a7967", "#a89a8b", "#c5bbb0", "#ddd6cf", "#f1ede9"]
+      },
+      "rust": {
+        "role": "semantic-danger",
+        "displayName": "Rust",
+        "canonical": "#b3452f",
+        "tonalRamp": ["#3d170f", "#5c2216", "#7c2e1d", "#b3452f", "#c96f52", "#dc9d85", "#eac3b4", "#f7ece8"]
+      },
+      "rust-tint": {
+        "role": "semantic-danger",
+        "displayName": "Rust Tint",
+        "canonical": "#f7ece8",
+        "tonalRamp": ["#3d170f", "#7c2e1d", "#b3452f", "#c96f52", "#dc9d85", "#eac3b4", "#f2ddd5", "#f7ece8"]
+      },
+      "rust-text": {
+        "role": "semantic-danger",
+        "displayName": "Rust Text",
+        "canonical": "#8a3420",
+        "tonalRamp": ["#2b0f08", "#431709", "#62210d", "#8a3420", "#a8503a", "#c47862", "#dda690", "#f0d4c5"]
+      },
+      "ochre": {
+        "role": "semantic-warning",
+        "displayName": "Ochre",
+        "canonical": "#c17d1f",
+        "tonalRamp": ["#3f2809", "#5e3b0d", "#7f5010", "#c17d1f", "#d29c4c", "#e0ba7e", "#ecd6b0", "#f8f0dc"]
+      },
+      "ochre-tint": {
+        "role": "semantic-warning",
+        "displayName": "Ochre Tint",
+        "canonical": "#faf1df",
+        "tonalRamp": ["#3f2809", "#7f5010", "#c17d1f", "#d29c4c", "#e0ba7e", "#ecd6b0", "#f4e6cc", "#faf1df"]
+      },
+      "ochre-text": {
+        "role": "semantic-warning",
+        "displayName": "Ochre Text",
+        "canonical": "#7a5210",
+        "tonalRamp": ["#241800", "#3a2600", "#573a08", "#7a5210", "#9c7330", "#bd9860", "#dcc194", "#f3e6cf"]
+      },
+      "taupe-tint": {
+        "role": "semantic-info",
+        "displayName": "Taupe Tint",
+        "canonical": "#efe9e3",
+        "tonalRamp": ["#332c25", "#6a5c4d", "#8a7967", "#a89a8b", "#c5bbb0", "#ddd6cf", "#e7e1da", "#efe9e3"]
+      },
+      "taupe-text": {
+        "role": "semantic-info",
+        "displayName": "Taupe Text",
+        "canonical": "#5f5245",
+        "tonalRamp": ["#1c1712", "#2e2620", "#443a30", "#5f5245", "#7d6f60", "#9c8f81", "#bcb2a7", "#ded8d1"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#222222",
+        "tonalRamp": ["#000000", "#101010", "#1a1a1a", "#222222", "#3d3d3d", "#6b6b6b", "#a3a3a3", "#d6d6d6"]
+      },
+      "page-grey": {
+        "role": "neutral",
+        "displayName": "Page Grey",
+        "canonical": "#f5f5f8",
+        "tonalRamp": ["#22232a", "#363843", "#4e5160", "#6b6f82", "#9195a6", "#bcbfcb", "#dedfe6", "#f5f5f8"]
+      },
+      "cloud-grey": {
+        "role": "neutral",
+        "displayName": "Cloud Grey",
+        "canonical": "#f8f9fc",
+        "tonalRamp": ["#23242c", "#373945", "#4f5263", "#6c7085", "#9296a8", "#bdc0cd", "#dee0e8", "#f8f9fc"]
+      },
+      "surface-white": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#2b2b2b", "#454545", "#666666", "#8a8a8a", "#b0b0b0", "#d2d2d2", "#ececec", "#ffffff"]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e7e7e7",
+        "tonalRamp": ["#242424", "#3a3a3a", "#565656", "#7a7a7a", "#a0a0a0", "#c4c4c4", "#dcdcdc", "#e7e7e7"]
+      },
+      "divider-cool": {
+        "role": "neutral",
+        "displayName": "Divider Cool",
+        "canonical": "#e3e7ee",
+        "tonalRamp": ["#20242c", "#343a45", "#4c5361", "#6a7280", "#9098a6", "#bcc2cd", "#d8dce4", "#e3e7ee"]
+      },
+      "slate-900": {
+        "role": "neutral",
+        "displayName": "Slate 900",
+        "canonical": "#1e293b",
+        "tonalRamp": ["#0b0f16", "#141b27", "#1e293b", "#334155", "#4b5b73", "#7d8ba3", "#b3bccb", "#e2e6ee"]
+      },
+      "slate-500": {
+        "role": "neutral",
+        "displayName": "Slate 500",
+        "canonical": "#94a3b8",
+        "tonalRamp": ["#1f2733", "#33404f", "#4b5b6e", "#6b7d92", "#94a3b8", "#b4bfcd", "#d3dae2", "#eef1f5"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "canonical": "#8590a5",
+        "tonalRamp": ["#20242c", "#333844", "#4b5261", "#6a7285", "#8590a5", "#a9b1c1", "#ccd1db", "#eef0f4"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Topbar page title when there is no breadcrumb (e.g. Dashboard). Largest type most screens show." },
+      "headline": { "displayName": "Headline", "purpose": "Section headings inside content; card titles on overview pages." },
+      "title": { "displayName": "Title", "purpose": "Topbar page title with a breadcrumb; sub-section headers; emphasised card headers." },
+      "body": { "displayName": "Body", "purpose": "Default text, form values, table cells." },
+      "label": { "displayName": "Label", "purpose": "Breadcrumbs, meta, form labels, sidebar nav labels, table column heads. Not uppercased, not tracked." }
+    },
+    "shadows": [
+      { "name": "card-rest", "value": "0 1px 4px rgba(0,0,0,0.08)", "purpose": "Default soft lift for primary content cards and widgets; pair with a Hairline border." },
+      { "name": "whisper", "value": "0px 0px 37px -36px rgba(0,0,0,0.4)", "purpose": "The --card-shadow token: an almost-invisible haze for secondary cards where card-rest is too much." },
+      { "name": "overlay-flyout", "value": "0 16px 35px rgba(0,0,0,0.24)", "purpose": "Structural depth for the sidebar flyout submenu panels." },
+      { "name": "overlay-menu", "value": "0 12px 32px rgba(15,23,42,0.12)", "purpose": "Structural depth for dropdown / userbox menus." },
+      { "name": "focus-ring", "value": "0 0 0 0.2rem rgba(10,90,59,0.25)", "purpose": "Green focus ring on buttons and inputs." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "0.15s ease", "purpose": "Background/color transitions on buttons, tabs, userbox toggle, dropdown items." },
+      { "name": "state-standard", "value": "0.2s ease", "purpose": "Navigation tile background/color transitions." },
+      { "name": "feedback", "value": "0.12s–0.16s ease", "purpose": "Hover/press acknowledgment on interactive elements (KPI tiles, card-header pills, list rows, photo-card buttons). ≤150ms; longer reads as latency on an Operate surface." },
+      { "name": "reveal", "value": "0.6s cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "One-time mount reveal for the Projecten/Detail voortgang bars (scaleX 0→1) and KPI donut rings (--pct 0→value). No page-load choreography beyond this single authored moment." },
+      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce", "purpose": "Every animation ships an alternative path: transforms and the mount reveals are dropped, colour/state transitions are kept so feedback stays legible." }
+    ],
+    "breakpoints": [
+      { "name": "mobile-bar", "value": "767px" },
+      { "name": "tablet", "value": "768px" },
+      { "name": "flyout", "value": "992px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid Deep Forest Green action button; the single strong call to action per cluster.",
+      "html": "<button class=\"ds-btn-primary\">Opslaan</button>",
+      "css": ".ds-btn-primary { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-weight: 600; font-size: 0.95rem; color: #ffffff; background: #0a5a3b; border: 1px solid #0a5a3b; border-radius: 7px; padding: 10px 18px; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-primary:hover { background: #0f4b40; border-color: #0f4b40; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 0.2rem rgba(10,90,59,0.25); } .ds-btn-primary:active { background: #0f7a52; border-color: #0f7a52; }"
+    },
+    {
+      "name": "Outline Primary Button",
+      "kind": "button",
+      "refersTo": "button-outline-primary",
+      "description": "Secondary action: green text and border on white, inverts to green fill on hover.",
+      "html": "<button class=\"ds-btn-outline\">Annuleren</button>",
+      "css": ".ds-btn-outline { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-weight: 600; font-size: 0.95rem; color: #0a5a3b; background: #ffffff; border: 1px solid #0a5a3b; border-radius: 7px; padding: 10px 18px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; } .ds-btn-outline:hover { background: #0a5a3b; color: #ffffff; } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 0.2rem rgba(10,90,59,0.25); }"
+    },
+    {
+      "name": "Soft Danger Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Restrained destructive action (btn-gl-remove pattern): tinted, not a loud solid fill.",
+      "html": "<button class=\"ds-btn-remove\">Verwijderen</button>",
+      "css": ".ds-btn-remove { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-weight: 600; font-size: 0.95rem; color: #dc3545; background: #fdeaea; border: 1px solid #f4c4c4; border-radius: 7px; padding: 10px 18px; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; } .ds-btn-remove:hover { background: #fbd0d0; border-color: #f0a8a8; }"
+    },
+    {
+      "name": "Sidebar Nav Tile",
+      "kind": "nav",
+      "refersTo": "nav-tile",
+      "description": "Icon-over-label navigation tile in the solid green rail; active state is a lighter green block.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-nav-tile\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"28\" height=\"28\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 11l9-8 9 8\"/><path d=\"M5 10v10h14V10\"/></svg><span class=\"ds-nav-label\">Projecten</span></a><a class=\"ds-nav-tile ds-nav-tile--active\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"28\" height=\"28\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18\"/></svg><span class=\"ds-nav-label\">Facturatie</span></a></nav>",
+      "css": ".ds-rail { display: flex; flex-direction: column; gap: 6px; background: #0a5a3b; padding: 12px; width: 132px; border-radius: 12px; } .ds-nav-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; text-decoration: none; color: #e7fff1; border-radius: 14px; padding: 14px 10px; transition: background 0.2s ease, color 0.2s ease; } .ds-nav-tile svg { width: 28px; height: 28px; } .ds-nav-label { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 12px; font-weight: 600; line-height: 1.25; } .ds-nav-tile:hover { background: rgba(231,255,241,0.10); } .ds-nav-tile--active, .ds-nav-tile--active:hover { background: #0f7a52; color: #f1fff8; }"
+    },
+    {
+      "name": "Topbar Page Icon",
+      "kind": "custom",
+      "refersTo": "topbar-page-icon",
+      "description": "40px Mist-Green rounded chip with a Deep Forest Green glyph, sits left of the page title in the white topbar.",
+      "html": "<span class=\"ds-page-icon\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 21h18\"/><path d=\"M5 21V7l8-4v18\"/><path d=\"M19 21V11l-6-4\"/></svg></span>",
+      "css": ".ds-page-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #e8f0eb; color: #0a5a3b; }"
+    },
+    {
+      "name": "Modern Input",
+      "kind": "input",
+      "refersTo": "input-modern",
+      "description": "46px white text field; Select2/datepicker enhanced controls are matched to this exact height and padding.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Projectnaam</span><input class=\"ds-input\" type=\"text\" placeholder=\"bv. Residentie Lindehof\"></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; } .ds-field-label { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 0.78rem; font-weight: 600; color: #1e293b; } .ds-input { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 1rem; color: #222222; background: #ffffff; border: 1px solid #e7e7e7; border-radius: 7px; height: 46px; padding: 6px 17px; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-input::placeholder { color: #8590a5; } .ds-input:focus-visible { outline: none; border-color: #0a5a3b; box-shadow: 0 0 0 0.2rem rgba(10,90,59,0.25); }"
+    },
+    {
+      "name": "Form Shell Tabstrip (gl-form-shell__tabs)",
+      "kind": "nav",
+      "refersTo": "form-tab-active",
+      "description": "Primary in-page navigation for a long gl-form-shell form. Sits outside the card, flush under the topbar. Active tab = Deep Forest Green text + a 3px Ochre underline; a Rust pill (__tab-badge) counts validation errors on that tab. All fields stay in the DOM on every tab; one Save submits everything.",
+      "html": "<div class=\"ds-ftabs\" role=\"tablist\" aria-label=\"Projectgegevens\"><button class=\"ds-ftab\" role=\"tab\" aria-selected=\"true\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 8h.01M11 12h1v4h1\"/></svg><span>Algemeen</span><span class=\"ds-ftab-badge\">2</span></button><button class=\"ds-ftab\" role=\"tab\" aria-selected=\"false\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 10h18M8 3v4M16 3v4\"/></svg><span>Planning</span></button></div>",
+      "css": ".ds-ftabs { display: flex; gap: 2px; padding: 0 8px; background: #ffffff; border-bottom: 2px solid #e7e7e7; overflow-x: auto; } .ds-ftab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 15px; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1; color: #5f6b7a; white-space: nowrap; cursor: pointer; transition: color 0.12s ease, border-color 0.12s ease; } .ds-ftab:hover { color: #26313a; } .ds-ftab[aria-selected=\"true\"] { color: #0a5a3b; border-bottom-color: #c17d1f; } .ds-ftab:focus-visible { outline: 2px solid #0a5a3b; outline-offset: -3px; border-radius: 4px; } .ds-ftab-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #b3452f; color: #fff; font-size: 0.6875rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }"
+    },
+    {
+      "name": "Form Section Head + Field Grid (gl-form-section / gl-field-grid / gl-field)",
+      "kind": "custom",
+      "refersTo": "form-section-icon",
+      "description": "The gl-form-shell content block: a 42px Mist-Green rounded icon badge + 700 title + muted hint over a Hairline, then an auto-fit field grid (minmax(320px,1fr)) whose gl-field items carry the label ABOVE the control. gl-req is the Rust asterisk on a required label; gl-field--full spans the row.",
+      "html": "<section class=\"ds-fsec\"><div class=\"ds-fsec-head\"><span class=\"ds-fsec-ic\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 8h.01M11 12h1v4h1\"/></svg></span><div><h3 class=\"ds-fsec-title\">Algemene info</h3><p class=\"ds-fsec-hint\">Naam, code, adres en de betrokken bedrijven.</p></div></div><div class=\"ds-fgrid\"><label class=\"ds-fgfield\"><span class=\"ds-fglabel\">Naam <span class=\"ds-fgreq\">*</span></span><input class=\"ds-fginput\" type=\"text\" value=\"Residentie Lindehof\"></label><label class=\"ds-fgfield\"><span class=\"ds-fglabel\">Projectcode</span><input class=\"ds-fginput\" type=\"text\" placeholder=\"bv. P-2024-118\"></label></div></section>",
+      "css": ".ds-fsec { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; } .ds-fsec-head { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid #e7e7e7; } .ds-fsec-ic { flex: none; width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; background: #e8f0eb; color: #0a5a3b; } .ds-fsec-title { margin: 0; font-size: 1.0625rem; font-weight: 700; line-height: 1.2; color: #26313a; } .ds-fsec-hint { margin: 2px 0 0; font-size: 0.8125rem; line-height: 1.35; color: #5f6b7a; } .ds-fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 24px; align-items: start; } .ds-fgfield { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; min-width: 0; } .ds-fglabel { font-weight: 600; font-size: 0.8125rem; color: #26313a; } .ds-fgreq { color: #b3452f; font-weight: 700; } .ds-fginput { font-family: inherit; font-size: 0.95rem; color: #212529; background: #fff; border: 1px solid #e7e7e7; border-radius: 7px; height: 46px; padding: 0 17px; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-fginput::placeholder { color: #9aa2ab; } .ds-fginput:focus-visible { outline: none; border-color: #0a5a3b; box-shadow: 0 0 0 0.2rem rgba(10,90,59,0.22); }"
+    },
+    {
+      "name": "iOS Switch Row (gl-switch-row)",
+      "kind": "input",
+      "refersTo": "input-modern",
+      "description": "Preferred boolean control in a form: an iOS-style switch beside its label. On = Deep Forest Green track. Use over .checkbox-custom for a true/false setting.",
+      "html": "<div class=\"ds-swrow\"><span class=\"ds-sw\"><input type=\"checkbox\" checked><span class=\"ds-sw-track\"></span><span class=\"ds-sw-knob\"></span></span><label>Gepubliceerd <small>— zichtbaar op de publieke website</small></label></div>",
+      "css": ".ds-swrow { display: flex; align-items: center; gap: 12px; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; } .ds-sw { position: relative; width: 46px; height: 26px; flex: none; } .ds-sw input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; } .ds-sw-track { position: absolute; inset: 0; border-radius: 999px; background: #cfd3cb; transition: background 0.18s ease; } .ds-sw-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.18s ease; } .ds-sw input:checked ~ .ds-sw-track { background: #0a5a3b; } .ds-sw input:checked ~ .ds-sw-knob { transform: translateX(20px); } .ds-sw input:focus-visible ~ .ds-sw-track { box-shadow: 0 0 0 3px rgba(10,90,59,0.30); } .ds-swrow label { font-weight: 600; font-size: 0.8125rem; color: #26313a; } .ds-swrow label small { font-weight: 400; color: #8590a5; } @media (prefers-reduced-motion: reduce) { .ds-sw-track, .ds-sw-knob { transition: none; } }"
+    },
+    {
+      "name": "card-big-info",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Older two-zone form card (superseded by gl-form-shell for new forms): a narrow left rail with a Mist-Green icon box, green title and muted description; content on the right with right-aligned labels. Stacks below 768px.",
+      "html": "<article class=\"ds-cbi\"><div class=\"ds-cbi-rail\"><span class=\"ds-cbi-icon\"><svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6L9 17l-5-5\"/></svg></span><h3 class=\"ds-cbi-title\">Contactgegevens</h3><p class=\"ds-cbi-desc\">Vul de officiële gegevens van de leverancier in zoals ze op facturen verschijnen.</p></div><div class=\"ds-cbi-body\">Formuliervelden…</div></article>",
+      "css": ".ds-cbi { display: grid; grid-template-columns: 230px minmax(0,1fr); background: #ffffff; border: 1px solid #e7e7e7; border-radius: 7px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; } .ds-cbi-rail { background: #ffffff; border-right: 1px solid #e7e7e7; padding: 24px 20px; } .ds-cbi-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #e8f0eb; color: #0a5a3b; margin-bottom: 10px; } .ds-cbi-title { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 13px; font-weight: 700; color: #0a5a3b; margin: 0 0 5px; line-height: 1.3; } .ds-cbi-desc { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 11.5px; color: #8590a5; line-height: 1.6; margin: 0; } .ds-cbi-body { padding: 24px 26px; min-width: 0; } @media (max-width: 768px) { .ds-cbi { grid-template-columns: 1fr; } .ds-cbi-rail { border-right: none; border-bottom: 1px solid #e7e7e7; padding: 16px; } .ds-cbi-body { padding: 16px; } }"
+    },
+    {
+      "name": "Progress Bar (gl-pg-bar)",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "4px bar whose fixed grey→mid-green→forest-green gradient is clipped by width, so it shows both progress and health at once.",
+      "html": "<div class=\"ds-pg\"><div class=\"ds-pg-row\"><span class=\"ds-pg-label\">Ruwbouw</span><span class=\"ds-pg-pct\">68%</span></div><div class=\"ds-pg-track\"><div class=\"ds-pg-fill\" style=\"width:68%\"></div></div></div>",
+      "css": ".ds-pg { font-family: Poppins, 'Segoe UI', system-ui, sans-serif; } .ds-pg-row { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #777777; margin-bottom: 3px; } .ds-pg-label { flex: 1; } .ds-pg-pct { font-weight: 700; white-space: nowrap; margin-left: 6px; } .ds-pg-track { height: 4px; border-radius: 2px; background: #e9ecef; overflow: hidden; } .ds-pg-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #d1d5db 0%, #6b8f80 50%, #0a5a3b 100%); }"
+    },
+    {
+      "name": "Primary Badge",
+      "kind": "chip",
+      "refersTo": "badge-primary",
+      "description": "Solid token-mapped status/category pill; white text on Deep Forest Green.",
+      "html": "<span class=\"ds-badge\">Actief</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 0.72rem; font-weight: 600; line-height: 1; color: #ffffff; background: #0a5a3b; border-radius: 999px; padding: 4px 9px; }"
+    },
+    {
+      "name": "Hub Card Header + Action Pill (gl-detail-card-header)",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Every Projecten/Detail hub card uses this header: a clickable title on the left, a bx-icon + label pill on the right (≥40px hit area, Mist-Green hover) linking to the full sub-page. New hub cards follow this, never an ad-hoc text-muted link.",
+      "html": "<header class=\"ds-hub-cardhdr\"><h2 class=\"ds-hub-cardtitle\"><a href=\"#\">Documenten</a></h2><a class=\"ds-hub-cardaction\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7h5l2-2h4l2 2h5v12H3z\"/></svg><span>Alle documenten</span></a></header>",
+      "css": ".ds-hub-cardhdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid #e7e7e7; } .ds-hub-cardtitle { margin: 0; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 1.05rem; font-weight: 700; } .ds-hub-cardtitle a { color: inherit; text-decoration: none; } .ds-hub-cardtitle a:hover { color: #0a5a3b; } .ds-hub-cardaction { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; min-height: 40px; padding: 8px 10px; border-radius: 7px; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; font-size: 0.8rem; font-weight: 600; color: #0a5a3b; text-decoration: none; transition: background-color 0.14s ease; } .ds-hub-cardaction:hover { background: #e8f0eb; } .ds-hub-cardaction:focus-visible { outline: 2px solid #0a5a3b; outline-offset: 2px; }"
+    },
+    {
+      "name": "KPI Metric Tile (gl-kpi2-tile)",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Projecten/Detail KPI-strip tile. A separate variant from the dashboard gl-kpi-strip: each tile is an <a> to its sub-page. Hairline border; the icon carries the colour (Primary, or Danger when the tile flags a problem). 1px lift on hover.",
+      "html": "<a class=\"ds-kpi2\" href=\"#\" aria-label=\"Open punten: 12 (3 over datum)\"><span class=\"ds-kpi2-icon\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 3\"/></svg></span><span class=\"ds-kpi2-body\"><span class=\"ds-kpi2-label\">Open punten</span><span class=\"ds-kpi2-value\">12</span><span class=\"ds-kpi2-sub\">3 over datum</span></span></a>",
+      "css": ".ds-kpi2 { display: flex; align-items: center; gap: 10px; height: 100%; padding: 12px 14px; background: #ffffff; border: 1px solid #e7e7e7; border-radius: 7px; color: inherit; text-decoration: none; transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease; } .ds-kpi2:hover { border-color: #0a5a3b; transform: translateY(-1px); box-shadow: 0 2px 10px rgba(0,0,0,0.06); } .ds-kpi2:focus-visible { outline: 2px solid #0a5a3b; outline-offset: 2px; } .ds-kpi2-icon { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #0a5a3b; color: #ffffff; } .ds-kpi2-body { min-width: 0; display: flex; flex-direction: column; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; } .ds-kpi2-label { font-size: 0.64rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #5f6b7a; } .ds-kpi2-value { font-size: 1rem; font-weight: 700; line-height: 1.25; } .ds-kpi2-sub { font-size: 0.66rem; color: #5f6b7a; }"
+    },
+    {
+      "name": "Voortgang & Budget Bars (gl-vb)",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Four labelled progress bars in one Projecten/Detail card. Distinct from the gl-pg-bar gradient: one system-token colour per metric (Fysiek=Primary, Financieel=Timber, Verkocht=Sage, Budget besteed=Taupe; >100% switches to Ochre as a semantic signal). Fills sweep in left→right once on mount.",
+      "html": "<div class=\"ds-vb\"><div class=\"ds-vb-item ds-vb-fys\"><div class=\"ds-vb-head\"><span class=\"ds-vb-label\">Fysieke voortgang</span><span class=\"ds-vb-pct\">62%</span></div><div class=\"ds-vb-track\"><div class=\"ds-vb-fill\" style=\"width:62%\"></div></div></div><div class=\"ds-vb-item ds-vb-fin\"><div class=\"ds-vb-head\"><span class=\"ds-vb-label\">Financiële voortgang</span><span class=\"ds-vb-pct\">48%</span></div><div class=\"ds-vb-track\"><div class=\"ds-vb-fill\" style=\"width:48%\"></div></div></div></div>",
+      "css": ".ds-vb { display: flex; flex-direction: column; gap: 12px; font-family: Poppins, 'Segoe UI', system-ui, sans-serif; } .ds-vb-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; } .ds-vb-label { color: #5f6b7a; font-weight: 500; } .ds-vb-pct { font-weight: 700; color: var(--ds-vb-color, #0a5a3b); } .ds-vb-track { height: 7px; border-radius: 999px; background: rgba(0,0,0,0.07); overflow: hidden; } .ds-vb-fill { height: 100%; border-radius: 999px; background: var(--ds-vb-color, #0a5a3b); transform-origin: left center; animation: ds-vb-in 0.6s cubic-bezier(0.16,1,0.3,1) both; } .ds-vb-fys { --ds-vb-color: #0a5a3b; } .ds-vb-fin { --ds-vb-color: #8B6B4A; } @keyframes ds-vb-in { from { transform: scaleX(0); } to { transform: scaleX(1); } } @media (prefers-reduced-motion: reduce) { .ds-vb-fill { animation: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Grounded & Cultivated",
+    "overview": "CPM is the internal operations platform for a Belgian residential property developer, and its interface is built to feel rooted — Flemish land and building rendered as a deep forest green sitting on warm, low-saturation neutrals. The identity is carried almost entirely by one colour: a solid dark-green sidebar and a single green accent that marks what is primary, active, or selected. Everything else is quiet. The tone is warm and approachable rather than corporate-crisp: an icon-first navigation with generously rounded tiles, soft green tint surfaces (#e8f0eb) behind icons and hovers, and a white topbar that greets rather than looms. This is a tool a mixed, non-technical back-office team (project managers, sales administration, accounting) reaches for all day and — because project managers and contractors also open it on a phone on-site — it stays legible and touch-friendly at every width.\n\nComponents are refined and restrained. The base radius is a modest 7px, state is shown through subtle green tints rather than motion or heavy depth, and borders are hairline. Cards are softly lifted — they read as distinct objects resting a millimetre above the pale grey page, never as boxed-in panels with loud drop shadows. Structural shadow is reserved for things that genuinely float: the sidebar flyout menus, dropdowns, and modals.\n\nThe implementation is a heavily-customised Porto admin theme (theme.css → modern.css → skins/* → custom.css). A formal Group LN brand identity is expected from the client and may refine or replace parts of this system; until then this file documents what is actually shipped and the direction confirmed with the team.",
+    "keyCharacteristics": [
+      "One-colour identity: deep forest green does the work; secondary/accent/info appear rarely and only for categorisation.",
+      "Warm neutral ground: greys carry a faint warmth; the page is #f5f5f8, not pure white or cool grey.",
+      "Icon-first, rounded navigation with a solid dark-green rail and darker-green two-column flyout submenus.",
+      "Near-flat surfaces: hairline #e7e7e7 dividers, soft ambient card lift, structural shadow only for overlays.",
+      "Poppins throughout, rem-based scale, weights 300–800.",
+      "Responsive down to a 60px solid-green mobile bar; dense tables that stay usable on small screens."
+    ],
+    "rules": [
+      { "name": "The One Green Rule", "body": "Deep Forest Green is the only brand colour on a content screen. If a second saturated colour appears, it is a Semantic Status signal (Rust / Ochre / Taupe Grey) or a deliberate category (Sage / Timber / Taupe), never decoration. In custom.css the primary is referenced ~29× and every other brand token once — keep that ratio.", "section": "colors" },
+      { "name": "The Warm-Grey Rule", "body": "Neutrals lean warm, never cool-blue. Reach for Page Grey and Hairline before any #f1f5f9-family cool grey; the cool Slate tones are permitted only for topbar/menu chrome text where they already live.", "section": "colors" },
+      { "name": "The Warm-Signal Rule", "body": "Danger/warning/info use Rust / Ochre / Taupe Grey (each with a pale tint + darker text form), never stock Bootstrap red/amber/blue. A severity signal should still read as part of this palette, not a bolted-on alert library.", "section": "colors" },
+      { "name": "The Status-Is-Not-Severity Rule", "body": "Semantic Status colours (Rust / Ochre / Taupe) mean something needs attention, not a state exists. A lifecycle status that happens to be a good or neutral outcome must not borrow an alert hue: a sold unit is bg-primary (green — the outcome you want), never bg-danger. Map lifecycle states to Primary / Sage / Ochre / Ink / Dark and keep Rust for genuine problems. Two greens on one screen (e.g. \"Verkocht\" and a green brand mark) is acceptable; an alarm-red \"everything is fine\" is not.", "section": "colors" },
+      { "name": "The Weight-Not-Size Rule", "body": "Build hierarchy by moving between 400 / 600 / 700 Poppins at a small set of sizes. Do not introduce new font sizes, a second family, uppercase tracking, or italic for emphasis — bump the weight or use Deep Forest Green.", "section": "typography" },
+      { "name": "The Field-Width Rule", "body": "Every screen must stay usable and legible at 360px. Tables collapse or scroll, controls stay ≥40px tall, the green mobile bar is the only chrome. On-site phone use is a first-class case, not a fallback.", "section": "layout" },
+      { "name": "The Float-Only Rule", "body": "A visible (Overlay-strength) shadow means the element is literally floating above the page — a menu, a dropdown, a dialog. Resting content gets Card rest or Whisper or nothing. Never use an Overlay shadow to make a static card look important; use the Hairline border and, if needed, a Mist Green header.", "section": "elevation" },
+      { "name": "The 7-14-16 Rule", "body": "Content chrome (cards, buttons, fields) = 7px. Navigation chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is still 7px, a nav tile in content is still 14px.", "section": "elevation" },
+      { "name": "The Form-Shell Rule", "body": "A new data-entry form is a gl-form-shell with gl-form-section heads and a gl-field-grid of gl-field items (label above the control), and its Save / Cancel come from _FormShellActions. card-big-info (labels right of the control) is kept only for the existing two-zone explanatory supplier/contract forms. Never start a new form on bare card-modern + row g-3 + form-label + form-control (the AddContact / EditContact legacy pattern). Never mix label placement within one form.", "section": "components" }
+    ],
+    "dos": [
+      "Do make Deep Forest Green (#0a5a3b) the only brand colour on a content screen; keep it to ~one mark per control cluster (The One Green Rule).",
+      "Do build type hierarchy by weight (400 / 600 / 700 Poppins) at the existing sizes, not by new sizes or a second family.",
+      "Do separate surfaces with the 1px Hairline (#e7e7e7) border and the Card-rest shadow (0 1px 4px rgba(0,0,0,.08)); reserve Overlay shadows for menus, dropdowns, and modals (The Float-Only Rule).",
+      "Do use 7px radius for content chrome and 14–16px for navigation chrome (The 7-14-16 Rule).",
+      "Do back \"green-related\" affordances — icon chips, tab-active rows, hovers — with Mist Green (#e8f0eb), and use Mint Ice (#e7fff1) as the only text colour on the green rail.",
+      "Do keep every screen usable at 360px with ≥40px touch targets; on-site phone use is first-class (The Field-Width Rule).",
+      "Do prefer soft tinted state colours (e.g. btn-gl-remove) over solid loud fills, in keeping with the restrained tone.",
+      "Do use Rust / Ochre / Taupe Grey for danger / warning / info severity — never stock Bootstrap red, amber, or blue.",
+      "Do build a new data-entry form as a gl-form-shell with gl-form-section heads and a gl-field-grid of gl-field items (label above the control); render Save / Cancel with _FormShellActions (The Form-Shell Rule)."
+    ],
+    "donts": [
+      "Don't introduce cool blue-greys for neutrals; keep them warm — Page Grey and Hairline before any #f1f5f9-family grey (The Warm-Grey Rule).",
+      "Don't start a new form on a bare card-modern + row g-3 + col-md-6 + form-label + plain form-control (the AddContact / EditContact legacy pattern); use gl-form-shell.",
+      "Don't mix label placement in one form — labels are above the control in a gl-form-shell form, right-aligned in a card-big-info form, never both.",
+      "Don't put a visible drop shadow on a resting card to signal importance; use the border and, if needed, a Mist-Green header.",
+      "Don't add a second brand accent, gradient wash, uppercase tracking, or italic for emphasis — reach for weight or green.",
+      "Don't give navigation a left active-bar or caret; the Forest-Green-Bright tile block is the indicator.",
+      "Don't let radius drift — no pill buttons by default, no sharp 0px corners, no 4px/12px one-offs outside the documented scale.",
+      "Don't restyle Select2 / datepicker / multiselect controls away from the 46px form-control-modern height; native and enhanced fields must stay aligned."
+    ]
+  }
+}

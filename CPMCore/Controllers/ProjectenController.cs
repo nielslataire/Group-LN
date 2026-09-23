@@ -646,20 +646,22 @@ namespace CPMCore.Controllers
             model.ProjectInvoiceSummary = await _invoiceQueryService.GetDashboardSummaryForProjectAsync(projectid);
 
             //BREADCRUMBS
+            // Kruimelpad stopt bij "Projecten" (wáár dit zit) i.p.v. nog een "Detail"-knoop toe te
+            // voegen die letterlijk model.Project.Name herhaalt — exact wat SetPageHeader hieronder al
+            // als paginatitel zet. Design-handoff punt 13 "Topbar met lange namen", regel 2: het
+            // laatste kruimelitem is nooit de titel zelf. Dit is de projecthub-pagina zelf: er is geen
+            // aparte "wát"-identiteit onder de projectnaam (in tegenstelling tot bv. een factuur met
+            // een eigen nummer) — de titel IS al "waar je naar kijkt", het pad hoeft dat niet nog eens
+            // te zeggen. Gevonden bij een projectbrede sweep na dezelfde fix op Invoices/DetailV2 en
+            // Projecten/IncommingInvoiceDetailV2 — dit was de eerste en meest gebruikte pagina die de
+            // regel nog schond.
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
             {
                 Parent = Index,
             };
 
-            // leaf: Detail met dynamische titel + id in de link
-            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.Project.Name)
-            {
-                Parent = projectenIndex,
-                RouteValues = new { projectid = projectid }               // ← zorgt voor /Projecten/Detail/{id}
-            };
-
-            ViewData["BreadcrumbNode"] = projectDetail;
+            ViewData["BreadcrumbNode"] = projectenIndex;
 
             SetPageHeader("bx bx-building-house", model.Project.Name);
 
@@ -997,7 +999,30 @@ namespace CPMCore.Controllers
                 model.ClientAccounts = model.ClientAccounts.OrderBy(m => m.Units.Where(a => a.Type.GroupId == 1).Count() > 0 ? m.Units.Where(a => a.Type.GroupId == 1).FirstOrDefault().Name : "", new ServiceCore.Helpers.AlphanumComparator()).ToList();
             model.ProjectId = projectid;
             model.ProjectName = service2.GetProjectNameById(projectid);
+            // gl-v2 (DetailClientsV2, design-handoff 12d): wooneenheden/commerciële ruimtes zonder klant
+            // ("Nog geen klant"-rij) — GetClientAccountsByProjectIdWithUnits hierboven geeft er per
+            // definitie geen terug, dus apart opgehaald via dezelfde dienst als Projecten/DetailV2's
+            // eigen Eenheden-tabel.
+            var unitsResp = _unitService.GetUnitsWithAttachedByProjectId(projectid);
+            if (unitsResp.Success && unitsResp.Values is not null)
+            {
+                model.AvailableUnits = unitsResp.Values
+                    .Select(u => u.Unit)
+                    .Where(u => (u.Type.GroupId == 1 || u.Type.GroupId == 4) && u.ClientAccountId == null)
+                    .OrderBy(u => u.Name, new ServiceCore.Helpers.AlphanumComparator())
+                    .ToList();
+            }
+            // gl-v2: enkel voor GlV2ProjectMenuVm.IsCoordinationProject (zelfde vlag als Detail's eigen
+            // model.Project.IsOnlyCoordinationProject) — het inner menu op deze pagina heeft dezelfde
+            // "geen foto's/nieuws/contacten"-uitzondering nodig als op Projecten/DetailV2.
+            var projectResponse = service2.GetProjectByID(projectid);
+            model.IsCoordinationProject = projectResponse.Success && projectResponse.Value?.IsOnlyCoordinationProject == true;
             //BREADCRUMBS
+            // Kruimelpad stopt bij de projectnaam (wáár dit zit) i.p.v. nog een "Klanten"-knoop toe te
+            // voegen die de paginatitel herhaalt — zelfde design-handoff punt 13, regel 2-fix als
+            // Projecten/Detail hierboven (en Invoices/DetailV2, Projecten/IncommingInvoiceDetailV2):
+            // het laatste kruimelitem is nooit de titel zelf. "Klanten" staat dus enkel nog als titel
+            // (DetailClientsV2.cshtml zet ViewData["Title"]), niet meer ook als laatste kruimelknoop.
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
             {
@@ -1006,16 +1031,11 @@ namespace CPMCore.Controllers
             var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
             {
                 Parent = projectenIndex,
-                RouteValues = new { projectid = projectid }              
+                RouteValues = new { projectid = projectid }
             };
-            var projectKlanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
-            {
-                Parent = projectDetail,
-                RouteValues = new { projectid = projectid }            
-            };
-            ViewData["BreadcrumbNode"] = projectKlanten;
+            ViewData["BreadcrumbNode"] = projectDetail;
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Klanten");
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailClientsV2" : "DetailClients", model);
         }
 
         // ========== PROJECT DETAIL EENHEDEN ==========
@@ -2313,17 +2333,17 @@ namespace CPMCore.Controllers
                 Parent = projectenIndex,
                 RouteValues = new { projectid = projectid }
             };
-            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
-            {
-                Parent = projectDetail,
-                RouteValues = new { projectid = projectid }
-            };
-            ViewData["BreadcrumbNode"] = projectContracts;
+            // DESIGN.md regel 2: het kruimelpad mag deze pagina zelf nooit als laatste item vermelden
+            // (dat zou de titel dupliceren) — stopt daarom bij het project, niet bij een "Leveranciers"-
+            // blad. Diepere pagina's (DetailContract/DetailSupplier/EditContract) bouwen intern nog wel
+            // hun eigen "Leveranciers"-tussenknoop (met deze Action/RouteValues) als ECHTE voorouder —
+            // dat is geen fout, enkel deze actie s' eigen blad mag het niet meer zijn.
+            ViewData["BreadcrumbNode"] = projectDetail;
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectSuppliers = _ps.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _ps.HasDelete(PermissionCodes.ProjectsSuppliers);
             SetPageHeader("ph ph-hard-hat", $"{model.ProjectName} - Leveranciers");
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractsV2" : "DetailContracts", model);
         }
 
         [HttpGet]
@@ -2349,6 +2369,12 @@ namespace CPMCore.Controllers
                 model.Contract = null;
             }
 
+            // Alle contracten van dit project — nodig voor zowel deze leverancier se eigen
+            // contractenlijst als de inner-menu "Leveranciers"-teller (GetProjectSupplierCount), zodat
+            // dat laatste geen tweede round-trip naar dezelfde data vraagt.
+            var allContractsResponse = projectService.GetProjectContracts(projectid);
+            var allContracts = allContractsResponse.Success ? allContractsResponse.Values : new List<ContractBO>();
+
             var companyId = model.Contract?.Company?.ID ?? 0;
             if (companyId > 0)
             {
@@ -2367,16 +2393,13 @@ namespace CPMCore.Controllers
                 }
 
                 // Laad alle contracten van deze leverancier voor dit project
-                var allContractsResponse = projectService.GetProjectContracts(projectid);
-                if (allContractsResponse.Success)
-                {
-                    model.Contracts = allContractsResponse.Values
-                        .Where(c => c.Company?.ID == companyId)
-                        .ToList();
-                }
+                model.Contracts = allContracts
+                    .Where(c => c.Company?.ID == companyId)
+                    .ToList();
             }
 
             model.HasContract = model.Contracts.Any();
+            model.SupplierCount = GetProjectSupplierCount(projectid, allContracts);
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -2393,15 +2416,20 @@ namespace CPMCore.Controllers
                 Parent = projectDetail,
                 RouteValues = new { projectid = projectid }
             };
-            var contractDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContract", "Projecten", model.Contract?.Company?.Display ?? "Contract detail")
-            {
-                Parent = projectContracts,
-                RouteValues = new { projectid = projectid, contractid = contractid }
-            };
-            ViewData["BreadcrumbNode"] = contractDetail;
+            // DESIGN.md regel 2: geen eigen blad hier — de titel (companyName) zou anders letterlijk
+            // herhaald worden als laatste kruimel. Stopt bij "Leveranciers", een echte voorouder.
+            ViewData["BreadcrumbNode"] = projectContracts;
+
+            // gl-v2 (DetailContractV2): DetailContracts is de enige actie in deze groep die deze
+            // permissievlaggen al zette — het legacy DetailContract.cshtml gebruikt ze wel (Bewerken/
+            // Verwijderen-knoppen) maar kreeg ze hier nooit gevuld, dus die knoppen renderden op deze
+            // pagina altijd als verborgen. Zelfde berekening als DetailContracts, nu ook hier.
+            var _psDetail = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectSuppliers = _psDetail.HasWrite(PermissionCodes.ProjectsSuppliers);
+            ViewBag.CanDeleteProjectSuppliers = _psDetail.HasDelete(PermissionCodes.ProjectsSuppliers);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractV2" : "DetailContract", model);
         }
 
         [HttpGet]
@@ -2432,15 +2460,15 @@ namespace CPMCore.Controllers
                     .ToList();
             }
 
-            // Laad alle contracten van deze leverancier voor dit project
+            // Laad alle contracten van dit project — voor deze leverancier se eigen contractenlijst
+            // én (ongefilterd) voor de inner-menu "Leveranciers"-teller hieronder.
             var allContractsResponse = projectService.GetProjectContracts(projectid);
-            if (allContractsResponse.Success)
-            {
-                model.Contracts = allContractsResponse.Values
-                    .Where(c => c.Company?.ID == companyid)
-                    .ToList();
-            }
+            var allContracts = allContractsResponse.Success ? allContractsResponse.Values : new List<ContractBO>();
+            model.Contracts = allContracts
+                .Where(c => c.Company?.ID == companyid)
+                .ToList();
             model.HasContract = model.Contracts.Any();
+            model.SupplierCount = GetProjectSupplierCount(projectid, allContracts);
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -2457,15 +2485,18 @@ namespace CPMCore.Controllers
                 Parent = projectDetail,
                 RouteValues = new { projectid = projectid }
             };
-            var supplierDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailSupplier", "Projecten", model.Company?.Bedrijfsnaam ?? "Leverancier detail")
-            {
-                Parent = projectContracts,
-                RouteValues = new { projectid = projectid, companyid = companyid }
-            };
-            ViewData["BreadcrumbNode"] = supplierDetail;
+            // DESIGN.md regel 2: zelfde reden als DetailContract hierboven — geen eigen blad, dat zou
+            // de titel (companyName) herhalen. Stopt bij "Leveranciers".
+            ViewData["BreadcrumbNode"] = projectContracts;
+
+            // gl-v2: zelfde ontbrekende-vlaggen-fix als DetailContract hierboven — deze actie deelt
+            // exact dezelfde view (met of zonder een specifiek contractid binnengekomen).
+            var _psSupplier = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectSuppliers = _psSupplier.HasWrite(PermissionCodes.ProjectsSuppliers);
+            ViewBag.CanDeleteProjectSuppliers = _psSupplier.HasDelete(PermissionCodes.ProjectsSuppliers);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
-            return View("DetailContract", model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractV2" : "DetailContract", model);
         }
 
         [HttpGet]
@@ -3313,6 +3344,11 @@ namespace CPMCore.Controllers
             var countriesResponse = _countryService.GetVisibleCountriesForSelect();
             if (countriesResponse.Success)
                 model.Countries = countriesResponse.Values;
+
+            // Inner-menu "Leveranciers"-teller — op elk redisplay-pad opnieuw gevuld (zelfde
+            // discipline als Klanten/EditProject se ProjectClientCount via FillInAddSelectListsEdit).
+            var contractsResponse = _projectService.GetProjectContracts(model.ProjectId);
+            model.SupplierCount = GetProjectSupplierCount(model.ProjectId, contractsResponse.Success ? contractsResponse.Values : new List<ContractBO>());
         }
         [HttpGet]
         //[Breadcrumb("Contract bewerken")]
@@ -3366,6 +3402,10 @@ namespace CPMCore.Controllers
             if (response.Success)
                 model.InsuranceCompanies = response.Values;
 
+            // Inner-menu "Leveranciers"-teller — zelfde telling als DetailContracts/DetailContractV2.
+            var allContractsResponse = service.GetProjectContracts(projectid);
+            model.SupplierCount = GetProjectSupplierCount(projectid, allContractsResponse.Success ? allContractsResponse.Values : new List<ContractBO>());
+
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -3388,14 +3428,12 @@ namespace CPMCore.Controllers
                 Parent = projectContracts,
                 RouteValues = new { projectid = projectid, contractid = contractid }
             };
-            var projectContractsEdit = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditContract", "Projecten", "Contract bewerken")
-            {
-                Parent = supplierDetail
-            };
-            ViewData["BreadcrumbNode"] = projectContractsEdit;
+            // DESIGN.md regel 2: geen eigen "Contract bewerken"-blad — dat zou de titel
+            // ("Contract bewerken — " + companyName) herhalen. Stopt bij de leverancier zelf.
+            ViewData["BreadcrumbNode"] = supplierDetail;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
         }
         [HttpPost]
         public async Task<ActionResult> EditContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders, IFormFile? guaranteeDoc)
@@ -3417,7 +3455,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract bewerken");
                 PopulateAddContractLookups(model);
-                return View(model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
             }
 
             // Bestaande waarborgdoc-gegevens (staan niet in het formulier) — nodig om te
@@ -3442,7 +3480,7 @@ namespace CPMCore.Controllers
                     AddMessage("error", "Het waarborgdocument kon niet naar de storage geüpload worden.", "Fout!");
                     SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
                     PopulateAddContractLookups(model);
-                    return View(model);
+                    return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
                 }
                 model.Contract.GuaranteeDocFilename = storedName;
                 model.Contract.GuaranteeDocUploadedAt = DateTime.Now;
@@ -3479,7 +3517,7 @@ namespace CPMCore.Controllers
             AddMessage("error", "Het contract is NIET bijgewerkt voor project " + model.ProjectName, "Fout!");
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
             PopulateAddContractLookups(model);
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
         }
         [HttpGet]
         public ActionResult ModalDeleteContract(int id)
@@ -3500,6 +3538,26 @@ namespace CPMCore.Controllers
 
             ViewBag.CanDelete = id == 0 || !_projectService.ContractHasLinkedData(id);
             return PartialView("_ModalDeleteContract", viewModel);
+        }
+        [HttpGet]
+        public ActionResult ModalDeleteContractV2(int id)
+        {
+            var viewModel = new ContractBO();
+
+            if (id != 0)
+            {
+                var dservice = _projectService;
+                var response = dservice.GetContract(id);
+
+                if (response.Success && response.Values.Any())
+                {
+                    viewModel = response.Values.First();
+                    ViewBag.CompanyName = GetCompanyName(viewModel.Company.ID);
+                }
+            }
+
+            ViewBag.CanDelete = id == 0 || !_projectService.ContractHasLinkedData(id);
+            return PartialView("Modals/_ModalDeleteContractV2", viewModel);
         }
         [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsSuppliers)]
         public ActionResult DeleteContract(int id, int projectid)
@@ -3606,7 +3664,7 @@ namespace CPMCore.Controllers
             nContractActivity.Activity = nActivity;
 
             ViewData["mode"] = "add";
-            return PartialView("_ActivityRow", nContractActivity);
+            return PartialView(ViewData["UseGlV2Layout"] as bool? == true ? "_ActivityRowV2" : "_ActivityRow", nContractActivity);
         }
         [HttpPost]
         public PartialViewResult AddAdditionalOrders(int contractActivityId, string activityName)
@@ -4230,6 +4288,11 @@ namespace CPMCore.Controllers
             }
 
             //BREADCRUMBS
+            // Kruimelpad stopt bij "Nacalculatie" (wáár dit zit) i.p.v. nog een vierde "Inkomende
+            // factuur"-knoop toe te voegen die letterlijk de titel herhaalt — design-handoff punt 13
+            // "Topbar met lange namen": titel = wát het is, kruimelpad = wáár het zit, en het laatste
+            // kruimelitem is nooit de titel zelf. Zelfde reden waarom de titel hieronder niet meer
+            // begint met de projectnaam (die staat al in het pad).
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
             {
@@ -4245,17 +4308,46 @@ namespace CPMCore.Controllers
                 Parent = projectDetail,
                 RouteValues = new { projectid = projectid }
             };
-            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddIncommingInvoice", "Projecten", "Inkomende factuur")
-            {
-                Parent = projectContracts
-            };
-            ViewData["BreadcrumbNode"] = lastnode;
+            ViewData["BreadcrumbNode"] = projectContracts;
             var _psInv = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectSuppliers = _psInv.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _psInv.HasDelete(PermissionCodes.ProjectsSuppliers);
 
-            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Inkomende factuur");
-            return View(model);
+            SetPageHeader("bx bx-building-house", BuildIncommingInvoiceDisplayTitle(model.IncommingInvoice.InvoiceExternalId, invoiceid));
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "IncommingInvoiceDetailV2" : "IncommingInvoiceDetail", model);
+        }
+
+        // Titel = wát het is (design-handoff punt 13): type + de leveranciersreferentie, nooit de
+        // projectnaam (die staat al in het kruimelpad). Zelfde "#id"-terugval als
+        // InvoicesController.BuildInvoiceDisplayTitle voor een factuur zonder referentie.
+        private static string BuildIncommingInvoiceDisplayTitle(string externalId, int invoiceId)
+        {
+            var reference = string.IsNullOrWhiteSpace(externalId) ? $"#{invoiceId}" : externalId.Trim();
+            return $"Inkomende factuur {reference}";
+        }
+
+        // gl-v2 layout-pilot — eigen partial/markup, niet gedeeld met de legacy magnific-popup-versie
+        // (ModalDeleteIncommingInvoice hierboven), zelfde patroon als InvoicesController.ModalDeleteV2.
+        // GET-link i.p.v. POST+antiforgery: DeleteIncommingInvoice zelf is (bewust ongewijzigd hier)
+        // ook al een GET-actie, geen nieuw contract verzonnen voor deze knop alleen.
+        [HttpGet]
+        public ActionResult ModalDeleteIncommingInvoiceV2(int id, string companyname)
+        {
+            var viewModel = new IncommingInvoiceBO();
+
+            if (id != 0)
+            {
+                var dservice = _projectService;
+                var response = dservice.GetIncommingInvoice(id);
+
+                if (response.Success && response.Values.Any())
+                {
+                    viewModel = response.Values.First();
+                    ViewBag.CompanyName = companyname;
+                }
+            }
+
+            return PartialView("Modals/_ModalDeleteIncommingInvoiceV2", viewModel);
         }
 
         // ========== WIJZIGINGSOPDRACHTEN KLANTEN/PROJECTEN ==========
@@ -5006,20 +5098,35 @@ namespace CPMCore.Controllers
             model.ProjectId   = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
 
+            model.Units = _db.Set<DALCore.Models.Units>()
+                .Where(u => u.ProjectId == projectid)
+                .OrderBy(u => u.Name)
+                .Select(u => new IdNameBO { ID = u.Id, Display = u.Name })
+                .ToList();
+
+            // gl-v2: zelfde vlag/reden als DetailClientsModel/ClientModel.IsCoordinationProject —
+            // _ProjectInnerMenuV2 heeft dit nodig om Nieuws/Contacten correct te verbergen.
+            var projectResponse = service.GetProjectByID(projectid);
+            model.IsCoordinationProject = projectResponse.Success && projectResponse.Value?.IsOnlyCoordinationProject == true;
+
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
             var projectDetail  = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
                 { Parent = projectenIndex, RouteValues = new { projectid } };
-            var projectRecalc  = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailPhotos", "Projecten", "Media")
-                { Parent = projectDetail, RouteValues = new { projectid } };
-            ViewData["BreadcrumbNode"] = projectRecalc;
+            // gl-v2: stopt bewust bij de projectnaam i.p.v. een "Media"-blad toe te voegen — dat zou
+            // dezelfde tekst herhalen als de topbar-titel ("Media"), exact wat de breadcrumb-regel-2-
+            // sweep elders al aanpakte (zie Klanten/DetailV2 e.a.). Op gsm/tablet toont de topbar enkel
+            // de laatste kruimel als subtitel, die wordt zo de projectnaam i.p.v. "Media" nog eens.
+            ViewData["BreadcrumbNode"] = projectDetail;
 
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectPhotos  = _ps.HasWrite(PermissionCodes.ProjectsPhotos);
             ViewBag.CanDeleteProjectPhotos = _ps.HasDelete(PermissionCodes.ProjectsPhotos);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Media");
-            return View(model);
+            // gl-v2 layout-pilot: zelfde data/query hierboven, enkel de view wisselt (design-handoff/
+            // punt 15 "Media in een project").
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailPhotosV2" : "DetailPhotos", model);
         }
         [HttpGet]
         public ActionResult ModalAddPhoto(int id)
@@ -8516,6 +8623,23 @@ namespace CPMCore.Controllers
         }
 
         /// <summary>
+        /// Aantal leveranciers voor het inner-menu "Leveranciers"-teller: zelfde telling als
+        /// DetailContracts' eigen SupplierRows-opbouw (één rij per bedrijf met een contract, plus
+        /// bedrijven die enkel facturen hebben zonder contract) — hier hertelt zonder de rijen zelf
+        /// op te bouwen, enkel het aantal.
+        /// </summary>
+        private int GetProjectSupplierCount(int projectid, List<ContractBO> allContracts)
+        {
+            var invoiceSummaryResponse = _projectService.GetProjectIncommingInvoiceCompanySummaries(projectid);
+            var invoiceSummaries = invoiceSummaryResponse.Success ? invoiceSummaryResponse.Values : new List<CompanyInvoiceSummaryBO>();
+            var contractCompanyIds = (allContracts ?? new List<ContractBO>())
+                .Where(c => c.Company != null)
+                .Select(c => c.Company.ID)
+                .ToHashSet();
+            return contractCompanyIds.Count + invoiceSummaries.Count(s => s.Company != null && !contractCompanyIds.Contains(s.Company.ID));
+        }
+
+        /// <summary>
         /// Koppelt de leverancier van een contract aan het juiste facturatiebedrijf (IssuerCompany).
         /// Doelbedrijf = het facturatiebedrijf-bouwheer van het project (<see cref="Project.IssuerCompanyIdBuilder"/>),
         /// of bij coördinatieprojecten <see cref="Project.CoordinationIssuerCompanyId"/>. Is er geen,
@@ -9170,6 +9294,59 @@ namespace CPMCore.Controllers
             return Ok(new { success = true });
         }
 
+        // gl-v2 (design-handoff punt 15b "Detailpaneel"): één Opslaan-actie voor het hele
+        // detailpaneel — titel/sectie/eenheid/zichtbaarheid + de foto/video-specifieke velden
+        // (alt-tekst resp. ondertitel + automatisch afspelen), i.p.v. losse toggle-per-toggle
+        // AJAX-calls zoals de rest van deze controller. "Hoofdbeeld" loopt via dezelfde
+        // SetHoofdMedia-logica als de bestaande sterknop (enkel aanzetten heeft effect — een
+        // hoofdbeeld kan niet losstaand uitgezet worden zonder een ander aan te wijzen).
+        public record UpdateMediaDetailsRequest(
+            int MediaId, int ProjectId, string? Title, string? AltText, string? Subtitle,
+            int? SectionId, int? UnitId, bool IsPublic, bool AutoPlayMuted, bool IsHoofdbeeld,
+            double? PosterTimestampSeconds);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateMediaDetails([FromBody] UpdateMediaDetailsRequest req)
+        {
+            if (req == null || req.MediaId <= 0) return BadRequest();
+            var pic = _db.Set<DALCore.Models.ProjectPictures>().FirstOrDefault(p => p.Id == req.MediaId);
+            if (pic == null) return NotFound();
+
+            pic.Caption     = req.Title?.Trim();
+            pic.SectionId   = req.SectionId;
+            pic.UnitId      = req.UnitId;
+            pic.IsPublic    = req.IsPublic;
+            if (pic.MediaType == 0)
+            {
+                pic.AltText = req.AltText?.Trim();
+            }
+            else
+            {
+                pic.Subtitle               = req.Subtitle?.Trim();
+                pic.AutoPlayMuted          = req.AutoPlayMuted;
+                if (req.PosterTimestampSeconds.HasValue)
+                {
+                    pic.PosterTimestampSeconds = req.PosterTimestampSeconds;
+                }
+            }
+
+            if (req.IsHoofdbeeld && pic.Type != (int)BOCore.PictureType.Hoofdfoto)
+            {
+                _db.Set<DALCore.Models.ProjectPictures>()
+                    .Where(p => p.ProjectId == req.ProjectId && p.Type == (int)BOCore.PictureType.Hoofdfoto)
+                    .ToList()
+                    .ForEach(p => p.Type = (int)BOCore.PictureType.Nevenfoto);
+                pic.Type = (int)BOCore.PictureType.Hoofdfoto;
+
+                var project = _db.Project.FirstOrDefault(p => p.ProjectId == req.ProjectId);
+                if (project != null) project.DefaultPictureId = req.MediaId;
+            }
+
+            _db.SaveChanges();
+            return Ok(new { success = true });
+        }
+
         public record SortOrderItem(int Id, int Order, int? SectionId);
         public record SortOrderRequest(List<SortOrderItem> Items);
 
@@ -9578,8 +9755,13 @@ namespace CPMCore.Controllers
             double ratioY = (double)maxHeight / image.Height;
             double ratio  = Math.Max(ratioX, ratioY);
 
-            int newWidth  = (int)(image.Width  * ratio);
-            int newHeight = (int)(image.Height * ratio);
+            // Ceiling i.p.v. een afkappende cast: bij een afkappende (int) cast kan het herschaalde
+            // beeld door drijvendekomma-afronding 1px SMALLER uitkomen dan maxWidth/maxHeight (bv.
+            // 799 i.p.v. 800), waardoor het crop-rechthoek hieronder buiten de nieuwe beeldgrenzen valt
+            // en ImageSharp een ArgumentException gooit ("Crop rectangle should be smaller than the
+            // source bounds"). Ceiling garandeert newWidth/newHeight altijd >= maxWidth/maxHeight.
+            int newWidth  = (int)Math.Ceiling(image.Width  * ratio);
+            int newHeight = (int)Math.Ceiling(image.Height * ratio);
             image.Mutate(x => x.Resize(newWidth, newHeight));
 
             var cropX = (newWidth  - maxWidth)  / 2;

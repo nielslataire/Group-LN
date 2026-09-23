@@ -111,53 +111,12 @@
 }
 .gl-v2-skeleton-footer i { font-size: 15px; color: var(--gl-v2-primary); }
 
-/* ── Lege staat (optie 4f "LEGE STAAT") ───────────────────────────────────────────────────────
-   Twee plekken gebruiken dit: de server-side variant (IndexV2.cshtml, Model bevat écht nul
+/* Lege staat (optie 4f) — .gl-v2-empty-state* is nu de project-brede default in gl-v2-shell.css.
+   Twee plekken gebruiken dit hier: de server-side variant (IndexV2.cshtml, Model bevat écht nul
    facturen) en de client-side variant (DataTable language.zeroRecords in gl-v2-invoices.js, wel
-   facturen maar nul na filteren/zoeken — die krijgt bovendien een "Filters wissen"-knop). */
-.gl-v2-empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 44px 24px;
-    text-align: center;
-}
-
-.gl-v2-empty-state-icon {
-    width: 62px;
-    height: 62px;
-    border-radius: 50%;
-    background: var(--gl-v2-hover-tint);
-    color: var(--gl-v2-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-}
-.gl-v2-empty-state-icon i { font-size: 28px; }
-
-.gl-v2-empty-state-title {
-    font: 500 17px var(--gl-v2-font-serif);
-    color: var(--gl-v2-ink);
-    margin: 0;
-}
-
-.gl-v2-empty-state-desc {
-    font: 450 12.5px/1.6 var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted);
-    max-width: 280px;
-    margin: 0;
-}
-
-.gl-v2-empty-state-actions { display: flex; gap: 9px; padding-top: 4px; }
-
-/* De client-side variant (in een DataTables-rij) heeft geen eigen kaart/schaduw nodig — zit al in
-   .gl-v2-table-card — en moet zelf de resterende ruimte vullen zoals .table-responsive-md dat
-   anders zou doen (zie de flex-keten hieronder bij .gl-v2-table-card .table-responsive-md). */
-.gl-v2-empty-state-inline { padding: 44px 24px; }
+   facturen maar nul na filteren/zoeken — die krijgt bovendien een "Filters wissen"-knop). Beide
+   gebruiken de gedeelde -inline-variant ongewijzigd: in een DataTables-rij is er al een omringende
+   .gl-v2-table-card, dus geen eigen kaart/schaduw nodig. */
 
 /* Vroeger propageerde flex:1/min-height:0 hier helemaal door tot .table-responsive-md, zodat
    .gl-v2-selection-toolbar altijd exact tegen de kaartrand stond ongeacht of syncTablePageLength()

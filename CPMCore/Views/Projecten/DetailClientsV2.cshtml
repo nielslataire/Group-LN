@@ -1,0 +1,372 @@
+@model CPMCore.Models.Klanten.DetailClientsModel
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 12d "Klantenlijst in het
+    project — tabel met echte kolommen, acties op de rij"). Shell reused wholesale from Projecten/
+    DetailV2.cshtml — same inner menu (GlV2/_ProjectInnerMenuV2, Outer+Phone modes via @section
+    ProjectMenu) and same topbar conventions (PageTitleBadges/PageActions/BackUrl) — only the content
+    below the topbar is 12d's own body. Search+filters follow Leveranciers/IndexV2's established
+    pattern (gl-v2-toolbar-card/.gl-v2-filters-*, DataTables + custom ext.search filters, same
+    .gl-v2-select trigger/panel component) rather than 12d's own literal mockup fields, per explicit
+    instruction — Status/Eenheidstype here (real, derivable data) instead of 12d's Status/Eenheid pair.
+
+    Scope trims from 12d, disclosed rather than silently dropped:
+    - No tabs ("Met openstaand"/"Opgeleverd"/"Kandidaten"). DetailClientsModel/ClientAccountBO carry
+      no per-client outstanding-balance or "kandidaat" (prospective, not-yet-owning client) concept
+      anywhere — GetClientAccountsByProjectIdWithUnits only ever returns accounts that already own a
+      unit. Building either tab would mean inventing a new data source, not restyling an existing one.
+      "Opgeleverd" would have been derivable (DeliveryDate) but a single real tab alongside three fake
+      ones felt worse than none.
+    - No VERKOOPPRIJS/OPENSTAAND columns — same reason (no outstanding-amount data at all; UnitBO does
+      carry TotalValue/TotalValueSold but ConstructionValues isn't in this query's .Include() chain,
+      so showing a price here risked a silently-wrong number rather than an honest one).
+    - Topbar badge shows "N klanten" rather than 12d's "N VAN N EENHEDEN" — this model has no cheap
+      total-project-unit-count, only the units actually tied to a client.
+    - Export (Excel) button dropped — the print/"Klantenlijst" and "Klant toevoegen" actions are real,
+      already-existing endpoints; wiring the DataTables Buttons/JSZip export extension for one icon
+      button felt like scope beyond "reuse Leveranciers/Index's search bar."
+*@
+@using System.Globalization
+@using BOCore
+@{
+    ViewData["Title"] = "Klanten";
+    ViewData["PageIcon"] = "ph ph-users";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var canWrite = ViewBag.CanWriteProjectCustomers as bool? ?? false;
+    var canDelete = ViewBag.CanDeleteProjectCustomers as bool? ?? false;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+
+    var menuVm = new CPMCore.Models.GlV2.GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = $"project · {Model.ClientAccounts.Count} kla" + (Model.ClientAccounts.Count == 1 ? "nt" : "nten"),
+        IsCoordinationProject = Model.IsCoordinationProject,
+        ItemCounts = new Dictionary<string, int> { ["Klanten"] = Model.ClientAccounts.Count }
+    };
+
+    // Groepslabels exact zoals de legacy Clients.cshtml (GroupId 1/4/3/2) — hier gebruikt als
+    // filter-waarden (Eenheidstype) én als kolomlabel binnen de samengevoegde "Eenheden"-cel.
+    string GroupLabel(int groupId) => groupId switch
+    {
+        1 => "Wooneenheid",
+        4 => "Commerciële ruimte",
+        3 => "Parkeergelegenheid",
+        2 => "Berging",
+        _ => "Eenheid"
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detailclients.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@Model.ClientAccounts.Count KLANT@(Model.ClientAccounts.Count == 1 ? "" : "EN")</span>
+}
+@* Op tablet (768–1023.98px) verhuizen deze twee knoppen naar een ⋯-menu — zelfde recept als
+   Invoices/DetailV2 se gl-v2-invoice-topbar-btn/⋯-trigger: .gl-v2-dc-topbar-btn verdwijnt op dat
+   bereik (gl-v2-projecten-detailclients.css), de trigger errond blijft enkel dáár zichtbaar. Op
+   gsm (<768px) verdwijnt @@section PageActions sowieso volledig (shell-standaard); die breedte
+   krijgt dezelfde twee acties terug via @@section MobileQuickActions hieronder. *@
+@section PageActions
+{
+    <a href="@Url.Action("PrintClientList", "Projecten", new { projectid = Model.ProjectId })" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary gl-v2-dc-topbar-btn">
+        <i class="ph ph-printer" aria-hidden="true"></i>Klantenlijst
+    </a>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary gl-v2-dc-topbar-btn">
+            <i class="ph ph-plus" aria-hidden="true"></i>Klant toevoegen
+        </a>
+    }
+    <button type="button" class="gl-v2-icon-btn gl-v2-dc-topbar-menu-trigger js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dc-topbar-menu" aria-label="Meer acties">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>
+    </button>
+}
+@section MobileQuickActions
+{
+    <a href="@Url.Action("PrintClientList", "Projecten", new { projectid = Model.ProjectId })" target="_blank" rel="noopener" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-printer" aria-hidden="true"></i>Klantenlijst
+    </a>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="gl-v2-mobile-quickaction">
+            <i class="ph ph-plus" aria-hidden="true"></i>Klant toevoegen
+        </a>
+    }
+}
+
+<div class="gl-v2-menu" id="gl-v2-dc-topbar-menu">
+    <a href="@Url.Action("PrintClientList", "Projecten", new { projectid = Model.ProjectId })" target="_blank" rel="noopener" class="gl-v2-menu-item">
+        <i class="ph ph-printer" aria-hidden="true"></i>Klantenlijst
+    </a>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="gl-v2-menu-item">
+            <i class="ph ph-plus" aria-hidden="true"></i>Klant toevoegen
+        </a>
+    }
+</div>
+@section ProjectMenu
+{
+    @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div class="gl-v2-toolbar-card gl-v2-filters-card">
+    <div class="gl-v2-filters-row">
+        <div class="gl-v2-field gl-v2-toolbar-search">
+            <div class="gl-v2-field-box">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoek op naam, eenheid of e-mail …">
+                <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
+            </div>
+        </div>
+        <button type="button" class="gl-v2-filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters-panel">
+            <i class="ph ph-funnel" aria-hidden="true"></i>
+            Filters
+            <span class="gl-v2-filters-toggle-count" id="filters-toggle-count" hidden>0</span>
+        </button>
+    </div>
+
+    <div class="gl-v2-filters-panel" id="filters-panel" hidden>
+        <div class="gl-v2-filters-sheet-header">
+            <div class="gl-v2-filters-sheet-handle" aria-hidden="true"></div>
+            <div class="gl-v2-filters-sheet-title-row">
+                <span class="gl-v2-filters-sheet-title">Filters</span>
+                <span class="gl-v2-filters-sheet-badge" id="filters-sheet-badge" hidden>0 actief</span>
+                <span class="gl-v2-filters-sheet-spacer"></span>
+                <button type="button" class="gl-v2-filters-clear gl-v2-filters-sheet-clear" id="filters-sheet-clear">Wissen</button>
+            </div>
+        </div>
+        <div class="gl-v2-filters-grid">
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Status</span>
+                <div class="gl-v2-select gl-v2-filters-select" id="status-select">
+                    <input type="hidden" id="status-select-value" value="" />
+                    <button type="button" class="gl-v2-select-trigger" id="status-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="status-select-panel">
+                        <span class="gl-v2-select-trigger-label" id="status-select-label">Alle</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="gl-v2-select-backdrop" id="status-select-backdrop"></div>
+                    <div class="gl-v2-select-panel" id="status-select-panel" role="listbox" aria-labelledby="status-select-trigger">
+                        <div class="gl-v2-select-sheet-header">
+                            <span class="gl-v2-select-sheet-title">Status</span>
+                            <button type="button" class="gl-v2-select-sheet-close" id="status-select-close">Sluiten</button>
+                        </div>
+                        <div class="gl-v2-select-options">
+                            <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="" data-label="Alle"><i class="ph ph-check" aria-hidden="true"></i><span>Alle</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="verkocht" data-label="Verkocht"><i class="ph ph-check" aria-hidden="true"></i><span>Verkocht</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="optie" data-label="In optie"><i class="ph ph-check" aria-hidden="true"></i><span>In optie</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="akte" data-label="Akte verleden"><i class="ph ph-check" aria-hidden="true"></i><span>Akte verleden</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="beschikbaar" data-label="Beschikbaar"><i class="ph ph-check" aria-hidden="true"></i><span>Beschikbaar</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-filters-field">
+                <span class="gl-v2-filters-field-label">Eenheidstype</span>
+                <div class="gl-v2-select gl-v2-filters-select" id="type-select">
+                    <input type="hidden" id="type-select-value" value="" />
+                    <button type="button" class="gl-v2-select-trigger" id="type-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="type-select-panel">
+                        <span class="gl-v2-select-trigger-label" id="type-select-label">Alle</span>
+                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                    </button>
+                    <div class="gl-v2-select-backdrop" id="type-select-backdrop"></div>
+                    <div class="gl-v2-select-panel" id="type-select-panel" role="listbox" aria-labelledby="type-select-trigger">
+                        <div class="gl-v2-select-sheet-header">
+                            <span class="gl-v2-select-sheet-title">Eenheidstype</span>
+                            <button type="button" class="gl-v2-select-sheet-close" id="type-select-close">Sluiten</button>
+                        </div>
+                        <div class="gl-v2-select-options">
+                            <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="" data-label="Alle"><i class="ph ph-check" aria-hidden="true"></i><span>Alle</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="1" data-label="Wooneenheid"><i class="ph ph-check" aria-hidden="true"></i><span>Wooneenheid</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="4" data-label="Commerciële ruimte"><i class="ph ph-check" aria-hidden="true"></i><span>Commerciële ruimte</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="3" data-label="Parkeergelegenheid"><i class="ph ph-check" aria-hidden="true"></i><span>Parkeergelegenheid</span></button>
+                            <button type="button" class="gl-v2-select-option" role="option" data-value="2" data-label="Berging"><i class="ph ph-check" aria-hidden="true"></i><span>Berging</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-filters-chips" id="filters-chips">
+            <div class="gl-v2-filters-chip-list" id="filters-chip-list"></div>
+            <button type="button" class="gl-v2-filters-clear" id="filters-clear" hidden>Wissen</button>
+        </div>
+        <button type="button" class="gl-v2-filters-show-btn" id="filters-show-btn">Toon resultaten</button>
+    </div>
+</div>
+<div class="gl-v2-filters-panel-backdrop" id="filters-panel-backdrop" hidden></div>
+
+<div class="gl-v2-card gl-v2-detail-table-card">
+    <div class="gl-v2-card-body">
+        @if (Model.ClientAccounts.Any() || Model.AvailableUnits.Any())
+        {
+            <div class="table-responsive-md">
+                <table class="table table-hover mb-0 w-100 gl-v2-detail-table" id="datatable-clients">
+                    <thead>
+                        <tr>
+                            <th>Klant</th>
+                            <th>Eenheden</th>
+                            <th class="gl-v2-dc-col-collapsible">Contact</th>
+                            <th class="gl-v2-dc-col-collapsible">Verkoopdatum</th>
+                            <th class="gl-v2-dc-col-collapsible">Aktedatum</th>
+                            <th class="gl-v2-dc-col-collapsible">Opleverdatum</th>
+                            <th class="text-end noVis" data-orderable="false"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.ClientAccounts)
+                        {
+                            var client = item.Client;
+                            var displayName = client.Name is not null ? $"{client.Salutation.GetDisplayName()} {client.DisplayName}" : client.DisplayName;
+                            var initials = string.Join("", (displayName ?? "?").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(p => char.ToUpperInvariant(p[0])).Take(2));
+                            if (string.IsNullOrWhiteSpace(initials)) initials = "?";
+
+                            var statuses = new HashSet<string>();
+                            var types = item.Units.Select(u => u.Type.GroupId).Distinct().Select(g => g.ToString());
+                            foreach (var unit in item.Units)
+                            {
+                                if (client.DateDeedOfSale.HasValue) statuses.Add("akte");
+                                else if (unit.IsOption) statuses.Add("optie");
+                                else statuses.Add("verkocht");
+                            }
+                            var detailUrl = Url.Action("Detail", "Klanten", new { clientid = client.Id, projectid = Model.ProjectId });
+                            // E-mail is nu optioneel op het klantaccount zelf — zelfde terugval-
+                            // volgorde als KlantenController.Index: eigen e-mail, anders het
+                            // aangeduide primair contact, anders het eerste contact (bestaande
+                            // terugval, hier voor het eerst ook op deze pagina toegepast — vroeger
+                            // helemaal geen terugval).
+                            var effectiveEmail = !string.IsNullOrWhiteSpace(client.Email)
+                                ? client.Email
+                                : client.Contacts
+                                    .OrderByDescending(cc => cc.IsPrimaryContact)
+                                    .ThenBy(cc => cc.Id)
+                                    .Select(cc => cc.Email)
+                                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+                            <tr data-detail-url="@detailUrl" data-search="@($"{displayName} {effectiveEmail} {string.Join(' ', item.Units.Select(u => u.Name))}".ToLowerInvariant())" data-statuses="@string.Join(",", statuses)" data-types="@string.Join(",", types)">
+                                <td>
+                                    <div class="gl-v2-dc-client">
+                                        <span class="gl-v2-avatar">@initials</span>
+                                        <span class="gl-v2-dc-client-name">@displayName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="gl-v2-dc-units">
+                                        @foreach (var group in item.Units.GroupBy(u => u.Type.GroupId))
+                                        {
+                                            <span class="gl-v2-dc-unit-line"><b>@GroupLabel(group.Key)</b> @string.Join(", ", group.Select(u => u.Name.ToUpperInvariant()))</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="gl-v2-dc-col-collapsible">
+                                    @if (!string.IsNullOrWhiteSpace(effectiveEmail))
+                                    {
+                                        <span class="gl-v2-table-email" title="@effectiveEmail">
+                                            <span class="gl-v2-table-email-text">@effectiveEmail</span>
+                                            <span class="gl-v2-table-email-actions">
+                                                <a class="gl-v2-table-email-action" href="mailto:@effectiveEmail" title="Mailen" aria-label="Mailen"><i class="ph ph-envelope-simple" aria-hidden="true"></i></a>
+                                                <button type="button" class="gl-v2-table-email-action is-copy js-gl-v2-copy-email" data-email="@effectiveEmail" title="Kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                            </span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-dc-empty-cell">—</span>
+                                    }
+                                </td>
+                                <td class="gl-v2-dc-col-collapsible">@(client.DateSalesAgreement?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td class="gl-v2-dc-col-collapsible">@(client.DateDeedOfSale?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td class="gl-v2-dc-col-collapsible">@(client.DeliveryDate?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td class="text-end">
+                                    <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dc-menu-@client.Id" aria-label="Meer acties">
+                                        <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="gl-v2-menu" id="gl-v2-dc-menu-@client.Id">
+                                        <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-eye" aria-hidden="true"></i>Detail</a>
+                                        @if (canDelete)
+                                        {
+                                            <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-dc-delete" data-id="@client.Id"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @* Wooneenheden/commerciële ruimtes zonder klant (design-handoff 12d) — dezelfde
+                           kolommen, "Nog geen klant" i.p.v. een naam, geen rijmenu (er is geen klant om
+                           te bekijken/verwijderen). Eigen status "beschikbaar" voor de filter. *@
+                        @foreach (var unit in Model.AvailableUnits)
+                        {
+                            <tr data-search="@($"nog geen klant {unit.Name}".ToLowerInvariant())" data-statuses="beschikbaar" data-types="@unit.Type.GroupId">
+                                <td>
+                                    <div class="gl-v2-dc-client">
+                                        <span class="gl-v2-avatar is-empty"><i class="ph ph-user" aria-hidden="true"></i></span>
+                                        <span class="gl-v2-dc-client-name gl-v2-dc-empty-cell">Nog geen klant</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="gl-v2-dc-units">
+                                        <span class="gl-v2-dc-unit-line"><b>@GroupLabel(unit.Type.GroupId)</b> @unit.Name.ToUpperInvariant()</span>
+                                    </div>
+                                </td>
+                                <td class="gl-v2-dc-col-collapsible"><span class="gl-v2-dc-empty-cell">—</span></td>
+                                <td class="gl-v2-dc-col-collapsible">—</td>
+                                <td class="gl-v2-dc-col-collapsible">—</td>
+                                <td class="gl-v2-dc-col-collapsible">—</td>
+                                <td class="text-end"></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @* Optie 4c "Mobiel — als kaarten" (zelfde recept als Klanten/IndexV2's gl-v2-klanten.js
+               renderMobileCards()) — echt gescheiden markup, gevuld uit de tabelrijen op elke
+               DataTable-"draw" i.p.v. de tabel zelf smaller te knijpen. *@
+            <div class="gl-v2-dc-mobile-list" id="gl-v2-dc-mobile-list"></div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen klanten</h2>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen klanten toegevoegd aan dit project.</p>
+                @if (canWrite)
+                {
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">Klant toevoegen</a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* z-index-fix (gl-v2-shell.css) — zie DetailContractV2's eigen toelichting bij dezelfde klasse:
+   zonder .gl-v2-modal-confirm stond deze modal onder zijn eigen (ongescoped, altijd op 100000
+   getilde) .modal-backdrop. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-dc-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" id="gl-v2-dc-delete-container"></div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        window.glV2DetailClientsConfig = {
+            deleteUrl: '@Url.Action("PartialDeleteClientModalV2", "Klanten")'
+        };
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/js/gl-v2-projecten-detailclients.js" asp-append-version="true"></script>
+}

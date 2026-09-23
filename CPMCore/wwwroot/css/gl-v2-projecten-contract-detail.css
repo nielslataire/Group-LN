@@ -1,0 +1,170 @@
+/* gl-v2 layout-pilot — Projecten/DetailContractV2 (design-handoff punt 14b "Contractdetail — wat
+   ontbreekt bovenaan, voorwaarden en attesten naast elkaar"). Page-specific, mirrors the
+   .gl-v2-pd-*/.gl-v2-kd-* stat-tile/grid/checklist visual language already established on Projecten/
+   DetailV2 and Klanten/DetailV2, under its own prefix rather than reusing their page-scoped
+   stylesheets — same "shared pattern, independent file" discipline as every list/detail pair built
+   this session. */
+
+.gl-v2-pcd-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Contracten-lijst bij >1 contract (design-handoff 14e, "lijst met uitklapbaar contract") ─────
+   Elk contract is een collapsible paneel binnen de gedeelde "Contracten"-kaart: het eerste (niet-
+   getekende, oudst-verstuurde — zie de view se eigen sortering) staat open, de rest dicht. Bij
+   precies 1 contract wordt geen van deze klassen gebruikt — de pagina rendert dan exact 14b. */
+.gl-v2-pcd-contracts-card > .gl-v2-pcd-contract-panel:not(:last-child) { border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pcd-contract-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 13px 20px;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+.gl-v2-pcd-contract-panel-header:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pcd-contract-panel-chevron { flex: none; font-size: 13px; color: var(--gl-v2-muted); transition: transform .15s ease; }
+.gl-v2-pcd-contract-panel-header[aria-expanded="true"] .gl-v2-pcd-contract-panel-chevron { transform: rotate(90deg); }
+.gl-v2-pcd-contract-panel-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.gl-v2-pcd-contract-panel-badge { flex: none; }
+.gl-v2-pcd-contract-panel-spacer { flex: 1; }
+.gl-v2-pcd-contract-panel-price { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; flex: none; }
+.gl-v2-pcd-contract-panel-attests { display: flex; gap: 5px; flex: none; }
+.gl-v2-pcd-contract-panel-attest-icon {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.gl-v2-pcd-contract-panel-attest-icon.is-ok { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-pcd-contract-panel-attest-icon.is-missing { background: var(--gl-v2-surface); border: 1px dashed var(--gl-v2-hairline); color: var(--gl-v2-muted-light); }
+.gl-v2-pcd-contract-panel-body { display: none; padding: 4px 20px 20px; background: var(--gl-v2-bg); flex-direction: column; gap: 16px; }
+.gl-v2-pcd-contract-panel.is-expanded .gl-v2-pcd-contract-panel-body { display: flex; }
+@media (max-width: 767.98px) {
+    .gl-v2-pcd-contract-panel-name { max-width: 130px; }
+    .gl-v2-pcd-contract-panel-price { font-size: 12px; }
+}
+
+/* ── KPI-rij (14b §3: contractprijs/betaaltermijn/waarborg/open sinds) ───────────────────────────── */
+.gl-v2-pcd-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.gl-v2-pcd-stat {
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.gl-v2-pcd-stat-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .11em; color: var(--gl-v2-muted); }
+.gl-v2-pcd-stat-value { font: 600 19px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pcd-stat-value.is-warning { color: #8A6A32; }
+.gl-v2-pcd-stat-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── "Vraagt actie" ───────────────────────────────────────────────────────────────────────────── */
+.gl-v2-pcd-attention-card { border-top: 3px solid var(--gl-v2-warning); }
+.gl-v2-pcd-attention-body { padding: 4px 18px 12px; }
+.gl-v2-pcd-attention-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-height: 46px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-pcd-attention-item:last-child { border-bottom: 0; }
+.gl-v2-pcd-attention-icon { color: var(--gl-v2-danger); font-size: 16px; flex: none; }
+.gl-v2-pcd-attention-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; }
+.gl-v2-pcd-attention-meta { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pcd-attention-spacer { flex: 1; }
+.gl-v2-pcd-attention-action { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; flex: none; }
+.gl-v2-pcd-attention-action:hover { text-decoration: underline; }
+
+/* ── Voorwaarden + Veiligheid & attesten ──────────────────────────────────────────────────────── */
+.gl-v2-pcd-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.gl-v2-pcd-col-5 { grid-column: span 5; }
+.gl-v2-pcd-col-7 { grid-column: span 7; }
+
+@media (min-width: 1024px) {
+    .gl-v2-detail-grid.gl-v2-pcd-3col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.gl-v2-pcd-checklist { display: flex; flex-direction: column; padding: 4px 18px 6px; }
+.gl-v2-pcd-check { display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pcd-check:last-child { border-bottom: 0; }
+.gl-v2-pcd-check-icon {
+    width: 22px; height: 22px; flex: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.gl-v2-pcd-check.is-ok .gl-v2-pcd-check-icon { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-pcd-check.is-missing .gl-v2-pcd-check-icon { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-pcd-check-label { flex: 1; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pcd-check-value { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pcd-check.is-missing .gl-v2-pcd-check-value { font-weight: 600; color: var(--gl-v2-danger); }
+
+.gl-v2-pcd-doc-row { padding: 4px 18px 16px; }
+.gl-v2-pcd-doc-link { display: inline-flex; align-items: center; gap: 7px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-pcd-doc-link:hover { text-decoration: underline; }
+
+/* ── Loten & bijbestellingen ──────────────────────────────────────────────────────────────────── */
+.gl-v2-pcd-lots-table { padding: 0 18px 14px; }
+.gl-v2-pcd-lots-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px 150px 130px;
+    gap: 14px;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-pcd-lots-head { border-bottom: 1px solid var(--gl-v2-hairline); padding: 11px 0 8px; min-height: 0; }
+.gl-v2-pcd-lots-head span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-pcd-lots-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pcd-lots-row .text-end { text-align: right; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); font-variant-numeric: tabular-nums; }
+.gl-v2-pcd-lots-total { font-weight: 500; color: var(--gl-v2-ink) !important; }
+.gl-v2-pcd-lots-suborder {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0 6px 18px; margin-left: 6px; border-left: 2px solid var(--gl-v2-primary-tint);
+    font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft);
+}
+.gl-v2-pcd-lots-suborder i { color: var(--gl-v2-muted); font-size: 13px; }
+.gl-v2-pcd-lots-suborder span:first-of-type { flex: 1; }
+.gl-v2-pcd-lots-suborder-price { font-variant-numeric: tabular-nums; }
+.gl-v2-pcd-lots-totalrow {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--gl-v2-hairline);
+    font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink);
+}
+.gl-v2-pcd-lots-totalrow span:last-child { color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Topbar-acties: knoppen op desktop, ...-trigger enkel op tablet, actiebalk enkel op gsm.
+   Two-class overrules op elke regel — anders wint gl-v2-shell.css se eigen .gl-v2-btn/.gl-v2-icon-
+   btn/.gl-v2-form-actionbar-regel altijd (@@section PageStyle laadt VOOR gl-v2-shell.css, zie
+   DESIGN.md "een load-order specificiteitsval"). ────────────────────────────────────────────────── */
+.gl-v2-icon-btn.gl-v2-pcd-menu-trigger { display: none; }
+.gl-v2-form-actionbar.gl-v2-pcd-actionbar { display: none; }
+@media (max-width: 1023.98px) {
+    .gl-v2-btn.gl-v2-pcd-topbar-btn,
+    .gl-v2-icon-btn.gl-v2-pcd-topbar-btn { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-icon-btn.gl-v2-pcd-menu-trigger { display: inline-flex; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-form-actionbar.gl-v2-pcd-actionbar { display: flex; gap: 10px; justify-content: flex-end; }
+}
+
+@media (max-width: 1199.98px) {
+    .gl-v2-pcd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-pcd-col-5, .gl-v2-pcd-col-7 { grid-column: span 12; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-pcd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-pcd-col-5, .gl-v2-pcd-col-7 { grid-column: span 12; }
+    .gl-v2-pcd-lots-row { grid-template-columns: minmax(0, 1fr) 90px; grid-template-areas: "name total" "base extra"; row-gap: 2px; }
+    .gl-v2-pcd-lots-head { display: none; }
+    .gl-v2-pcd-lots-name { grid-area: name; }
+    .gl-v2-pcd-lots-total { grid-area: total; }
+    .gl-v2-pcd-lots-row > span:nth-child(2) { grid-area: base; text-align: left; font-size: 11px; }
+    .gl-v2-pcd-lots-row > span:nth-child(3) { grid-area: extra; font-size: 11px; }
+}

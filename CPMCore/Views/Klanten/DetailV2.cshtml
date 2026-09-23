@@ -1,0 +1,471 @@
+@model CPMCore.Models.Klanten.ClientModel
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 12c "Klantdetail binnen een
+    project — zelfde shell, zelfde kaartstandaard als 12a"). Zelfde projectdossier-shell als
+    Projecten/DetailV2 (inner menu, tabbar, .gl-v2-pd-achtige kaartstijl) maar dan voor de klantfiche
+    die je bereikt via Projecten/DetailClients → een klant. Enkel het tabblad "Overzicht" is vandaag
+    gebouwd; Wijzigingsopdrachten/Facturen/Documenten/Historiek staan als .is-disabled klaar, net als
+    Weerverlet destijds enkel "Kalender" had.
+
+    Data die 12c toont maar die deze pagina (nog) niet heeft, bewust weggelaten i.p.v. nagemaakt:
+    - Geen klant-/eenheidfoto in de topbar/Eenheid-kaart — ClientAccountBO/UnitBO hebben geen
+      fotoveld. Zelfde bewuste keuze als Projecten/DetailV2's "Deliberately NOT ported"-noot over de
+      topbar-thumbnail: een cross-page fotovoorziening is een eigen pas, geen invented placeholder.
+    - Geen initialen-avatar in de topbar — de gedeelde shell-topbar heeft alleen een vierkant
+      .gl-v2-topbar-icon-slot (ViewData["PageIcon"]), geen los avatar-slot; een tweede, page-specifieke
+      chrome-uitbreiding is precies het soort shell-brede wijziging die hier NIET hoort (zie dezelfde
+      motivatie op Projecten/DetailV2). ph-user in het bestaande icoonvak in de plaats.
+    - "Opvolging {persoon}" in de meta-regel — dat is Project.SalesResponsibleUserID, project-niveau
+      data die deze actie niet laadt (Model.Users bestaat hier niet); al zichtbaar op Projecten/
+      DetailV2 zelf, dus geen duplicaat hier opgebouwd voor één extra service-call.
+    - NOTARIS in Algemene gegevens — geen notarisveld op ClientAccountBO. AKTEDATUM (DateDeedOfSale,
+      wél echt beschikbaar en al door de legacy pagina getoond) staat in de plaats.
+    - FYSIEKE VOORTGANG per eenheid in de Eenheid-kaart — enkel projectbreed berekenbaar
+      (IProjectVoortgangService), niet per eenheid; VOORZIENE OPLEVERING (Model.FinalConstructionDate,
+      exact dezelfde berekening als de legacy pagina) blijft wel staan.
+    - "Vervalt {datum}" bij OPENSTAAND — InvoiceListItemBO (IInvoiceQueryService.GetByProjectAsync)
+      heeft geen vervaldatum, enkel Balance/GrossTotal/StatusName; het aantal openstaande facturen
+      wordt getoond, geen verzonnen datum.
+    - HOOFDCONTACT-chip bij Contactpersonen — ClientContactBO heeft geen "primair contact"-vlag
+      (enkel IsCoOwner, dat iets anders betekent); alle contacten worden gelijk getoond.
+*@
+@{
+    var client = Model.Client;
+    ViewData["Title"] = $"{client.Salutation.GetDisplayName()} {client.DisplayName}".Trim();
+    ViewData["PageIcon"] = "ph ph-user";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailClients", "Projecten", new { projectid = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var canWrite = ViewBag.CanWriteProjectCustomers as bool? ?? false;
+    var editUrl = Url.Action("EditProject", "Klanten", new { projectid = Model.ProjectId, clientid = client.Id, activetab = 0 });
+    // activetab=2 = het Contacten-tabblad (zelfde volgorde als EditProjectV2's eigen tabbar) —
+    // "+ Toevoegen" bij Contactpersonen moet daar meteen op openen, niet op Algemeen.
+    var addContactUrl = Url.Action("EditProject", "Klanten", new { projectid = Model.ProjectId, clientid = client.Id, activetab = 2 });
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.UnitsWithStages?.FirstOrDefault(u => u.Unit.ProjectId == Model.ProjectId)?.Unit.ProjectName ?? "Project",
+        ProjectSubtitle = "klant · " + client.DisplayName,
+        IsCoordinationProject = Model.IsCoordinationProject,
+        // Zelfde teller-conventie als Projecten/DetailClientsV2 — "Klanten" blijft hier de actieve
+        // ingang (zie _ProjectInnerMenuV2's IsHere-uitzondering), dus moet 'm exact dezelfde teller
+        // tonen als op de klantenlijst zelf, niet "1" (deze ene klantfiche).
+        ItemCounts = new Dictionary<string, int> { ["Klanten"] = Model.ProjectClientCount }
+    };
+
+    // ── Eenheden van deze klant binnen dit project (Model.UnitsWithStages is project-overkoepelend
+    // sinds jaar en dag — hier scopen we 'm zoals 12c dat wil: één klantfiche, één project). ────────
+    var projectUnits = (Model.UnitsWithStages ?? new List<UnitWithStagesBO>())
+        .Where(u => u.Unit.ProjectId == Model.ProjectId)
+        .Select(u => u.Unit)
+        .ToList();
+    var primaryUnit = projectUnits.FirstOrDefault();
+    // Zelfde regel als ProjectenController.Detail's UnitRows-opbouw (regel ~620): een akte doet er
+    // toe, "in optie"/"beschikbaar" kunnen hier niet voorkomen — deze klant bezit de eenheid al.
+    var hasDeed = client.DateDeedOfSale.HasValue;
+    var unitStatusLabel = hasDeed ? "AKTE VERLEDEN" : "VERKOCHT";
+    var unitStatusTone = hasDeed ? "is-neutral" : "is-positive";
+
+    // ── KPI's (12c §3: verkoopprijs/gefactureerd/openstaand/wijzigingsopdrachten) ─────────────────
+    var verkoopprijs = projectUnits.Sum(u => u.TotalValueSold);
+    var gefactureerd = Model.ClientInvoices.Sum(i => i.GrossTotal ?? 0m);
+    var openstaandInvoices = Model.ClientInvoices.Where(i => (i.Balance ?? 0m) > 0m).ToList();
+    var openstaand = openstaandInvoices.Sum(i => i.Balance ?? 0m);
+    var wijzigingGoedgekeurd = Model.ClientChangeOrders.Count(c => c.DateAgreement.HasValue);
+    var wijzigingAanvraag = Model.ClientChangeOrders.Count - wijzigingGoedgekeurd;
+    var wijzigingTotaal = Model.ClientChangeOrders.Sum(c => c.Totaal);
+    string BarW(decimal pct) => Math.Clamp(pct, 0m, 100m).ToString("0.##", CultureInfo.InvariantCulture);
+    var gefactPct = verkoopprijs > 0 ? Math.Min(100m, gefactureerd / verkoopprijs * 100m) : 0m;
+
+    var ownerPct = 100m - (client.CoOwners?.Sum(c => c.CoOwnerPercentage ?? 0m) ?? 0m);
+    var lotLabel = projectUnits.Count == 1 ? "LOT " + projectUnits[0].Name
+        : projectUnits.Count > 1 ? projectUnits.Count + " EENHEDEN" : null;
+
+    string Initials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(parts.Select(p => char.ToUpperInvariant(p[0])).Take(2));
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-klanten-detail.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (client.OwnerType is not null && !string.IsNullOrWhiteSpace(client.OwnerType.Name))
+    {
+        <span class="gl-v2-badge is-positive">@client.OwnerType.Name.ToUpperInvariant()</span>
+    }
+    @if (lotLabel is not null)
+    {
+        <span class="gl-v2-badge is-neutral">@lotLabel</span>
+    }
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <a href="@editUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+    }
+    <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="klant-detail-menu" aria-label="Meer acties">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>
+    </button>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-menu" id="klant-detail-menu">
+    @* 12c se eigen commentaar (regel 2): vanaf drie chips duwt de rij de gebruikersnaam uit de balk —
+       "nog niet opgeleverd" gaat daarom hier, niet als derde topbar-badge. *@
+    @if (!client.DeliveryDate.HasValue)
+    {
+        <span class="gl-v2-menu-item" style="cursor:default;color:var(--gl-v2-muted-light)">
+            <i class="ph ph-key" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Nog niet opgeleverd</span></span>
+        </span>
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+    }
+    <a class="gl-v2-menu-item" href="@Url.Action("CalendarToPdf", "Klanten", new { id = client.Id, projectid = Model.ProjectId })" target="_blank" rel="noopener">
+        <i class="ph ph-file-pdf" aria-hidden="true"></i>
+        <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Kalender afdrukken</span></span>
+    </a>
+</div>
+
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn — gl-v2-shell.css se eigen
+   negative-margin-truc (".gl-v2-tabbar { margin: calc(-1 * ...padding) ... }") gaat er vanuit dat ze
+   vlak tegen de bovenkant van .gl-v2-content plakt en zo vlak tegen de topbar oogt. Stond die truc op
+   een eerder kind (hier: de Phone-modus van het inner menu hieronder), dan trekt de negative margin
+   enkel het gat tussen de tabbar en DIE widget dicht, niet het gat tussen topbar en tabbar — precies
+   de bug die hier gemeld werd. Fix: Phone-widget na de tabbar, niet ervoor (.gl-v2-menu hierboven
+   hindert niet, die is altijd display:none/position:fixed en telt dus niet mee als "eerste kind"). *@
+<div class="gl-v2-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="overzicht">Overzicht</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Wijzigingsopdrachten <span class="gl-v2-tabbar-count">@Model.ClientChangeOrders.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Facturen <span class="gl-v2-tabbar-count">@Model.ClientInvoices.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Documenten <span class="gl-v2-tabbar-count">@Model.LatestDocs.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Historiek</button>
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<span class="gl-v2-kd-meta">
+    @if (client.DateSalesAgreement.HasValue)
+    {
+        <text>Klant sinds @client.DateSalesAgreement.Value.ToString("dd/MM/yyyy")</text>
+    }
+    @if (lotLabel is not null)
+    {
+        <text> · verkoopdossier @lotLabel.ToLowerInvariant()</text>
+    }
+</span>
+
+@* ── KPI's (12c §3) ────────────────────────────────────────────────────────────────────────── *@
+<div class="gl-v2-kd-stats">
+    <div class="gl-v2-kd-stat">
+        <span class="gl-v2-kd-stat-label">VERKOOPPRIJS</span>
+        <span class="gl-v2-kd-stat-value">@verkoopprijs.ToString("C0", be)</span>
+        <span class="gl-v2-kd-stat-sub">@(primaryUnit is not null ? $"{primaryUnit.Type?.Name?.ToLowerInvariant()} {primaryUnit.Name}" + (projectUnits.Count > 1 ? $" +{projectUnits.Count - 1}" : "") : "geen eenheid gekoppeld")</span>
+    </div>
+    <div class="gl-v2-kd-stat">
+        <span class="gl-v2-kd-stat-label">GEFACTUREERD</span>
+        <span class="gl-v2-kd-stat-value is-primary">@gefactureerd.ToString("C0", be)</span>
+        <span class="gl-v2-kd-stat-track"><span class="gl-v2-kd-stat-fill" style="width:@(BarW(gefactPct))%"></span></span>
+    </div>
+    <div class="gl-v2-kd-stat">
+        <span class="gl-v2-kd-stat-label">OPENSTAAND</span>
+        <span class="gl-v2-kd-stat-value @(openstaand > 0 ? "is-warning" : "")">@openstaand.ToString("C0", be)</span>
+        <span class="gl-v2-kd-stat-sub">@(openstaandInvoices.Count > 0 ? $"{openstaandInvoices.Count} factu" + (openstaandInvoices.Count == 1 ? "ur" : "ren") + " openstaand" : "alles betaald")</span>
+    </div>
+    <div class="gl-v2-kd-stat">
+        <span class="gl-v2-kd-stat-label">WIJZIGINGSOPDRACHTEN</span>
+        <span class="gl-v2-kd-stat-value">+ @wijzigingTotaal.ToString("C0", be)</span>
+        <span class="gl-v2-kd-stat-sub">@wijzigingGoedgekeurd goedgekeurd · @wijzigingAanvraag in aanvraag</span>
+    </div>
+</div>
+
+@* ── Algemene gegevens + Contactpersonen + Eenheid (12c §4) ───────────────────────────────────── *@
+<div class="gl-v2-kd-grid">
+    <div class="gl-v2-kd-col-5 gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-identification-card" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Algemene gegevens</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Facturatieadres is gelijk — anders staat het hier als tweede blok.</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            @if (canWrite)
+            {
+                <a href="@editUrl" class="gl-v2-card-header-action">Bewerken</a>
+            }
+        </div>
+        <div class="gl-v2-detail-grid gl-v2-kd-2col" style="padding:16px 18px">
+            <div class="gl-v2-detail-field is-wide">
+                <span class="gl-v2-detail-label">Naam</span>
+                <span class="gl-v2-detail-value">@client.Salutation.GetDisplayName() @client.DisplayName</span>
+            </div>
+            <div class="gl-v2-detail-field is-wide">
+                <span class="gl-v2-detail-label">Adres</span>
+                <span class="gl-v2-detail-value">
+                    @client.Street @client.Housenumber@(string.IsNullOrWhiteSpace(client.Busnumber) ? "" : " / " + client.Busnumber)<br />
+                    @client.Postalcode?.Postcode @client.Postalcode?.Gemeente?.ToUpperInvariant()@(client.Postalcode?.Country?.Name is { } cn ? ", " + cn : "")
+                </span>
+            </div>
+            @if (client.InvoiceAddress)
+            {
+                <div class="gl-v2-detail-field is-wide">
+                    <span class="gl-v2-detail-label">Facturatieadres</span>
+                    <span class="gl-v2-detail-value">
+                        @client.InvoiceStreet @client.InvoiceHousenumber@(string.IsNullOrWhiteSpace(client.InvoiceBusnumber) ? "" : " / " + client.InvoiceBusnumber)<br />
+                        @client.InvoicePostalcode?.Postcode @client.InvoicePostalcode?.Gemeente?.ToUpperInvariant()
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Facturatieadres</span>
+                    <span class="gl-v2-detail-value is-empty">gelijk aan het adres</span>
+                </div>
+            }
+            <div class="gl-v2-detail-field">
+                <span class="gl-v2-detail-label">Eigendom</span>
+                <span class="gl-v2-detail-value">@client.OwnerType?.Name · @ownerPct.ToString("0.#", be) %</span>
+            </div>
+            <div class="gl-v2-detail-field">
+                <span class="gl-v2-detail-label">Opleverdatum</span>
+                <span class="gl-v2-detail-value@(client.DeliveryDate.HasValue ? "" : " is-empty")">@(client.DeliveryDate.HasValue ? client.DeliveryDate.Value.ToString("dd/MM/yyyy") : "— nog niet opgeleverd")</span>
+            </div>
+            @if (client.DateSalesAgreement.HasValue)
+            {
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Ondertekend</span>
+                    <span class="gl-v2-detail-value">@client.DateSalesAgreement.Value.ToString("dd/MM/yyyy")</span>
+                </div>
+            }
+            @if (client.DateDeedOfSale.HasValue)
+            {
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Aktedatum</span>
+                    <span class="gl-v2-detail-value">@client.DateDeedOfSale.Value.ToString("dd/MM/yyyy")</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-kd-col-4 gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Contactpersonen</h2>
+            <span class="gl-v2-section-card-meta">@client.Contacts.Count</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            @if (canWrite)
+            {
+                <a href="@addContactUrl" class="gl-v2-card-header-action">+ Toevoegen</a>
+            }
+        </div>
+        @if (client.Contacts.Any())
+        {
+            <div class="gl-v2-kd-contacts">
+                @foreach (var contact in client.Contacts)
+                {
+                    var fullName = $"{contact.Name} {contact.Firstname}".Trim();
+                    <div class="gl-v2-kd-contact">
+                        <span class="gl-v2-kd-contact-avatar">@Initials(fullName)</span>
+                        <div class="gl-v2-kd-contact-body">
+                            <span class="gl-v2-kd-contact-name">@contact.Salutation.GetDisplayName() @fullName</span>
+                            @{
+                                var hasCell = !string.IsNullOrWhiteSpace(contact.Cellphone);
+                                var hasPhone = !string.IsNullOrWhiteSpace(contact.Phone);
+                            }
+                            @if (hasCell || hasPhone)
+                            {
+                                <div class="gl-v2-kd-contact-row">
+                                    <i class="ph ph-phone" aria-hidden="true"></i>
+                                    <a class="gl-v2-kd-contact-value" href="tel:@(hasCell ? contact.Cellphone : contact.Phone)">@(hasCell ? contact.FormattedGSM : contact.FormattedTelefoon)</a>
+                                    @if (hasCell)
+                                    {
+                                        <a class="gl-v2-kd-contact-action" href="sms:@contact.Cellphone">Sms</a>
+                                    }
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(contact.Email))
+                            {
+                                <div class="gl-v2-kd-contact-row">
+                                    <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+                                    <a class="gl-v2-kd-contact-value" href="mailto:@contact.Email">@contact.Email</a>
+                                    <a class="gl-v2-kd-contact-action" href="mailto:@contact.Email">Mailen</a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Nog geen contactpersonen</h3>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen contactpersonen gekoppeld aan deze klant.</p>
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-kd-col-3 gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-house" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Eenheid</h2>
+            <span class="gl-v2-section-card-spacer"></span>
+            @if (primaryUnit is not null)
+            {
+                <a href="@Url.Action("EditUnit", "Projecten", new { projectid = Model.ProjectId, unitid = primaryUnit.Id })" class="gl-v2-card-header-action">Openen</a>
+            }
+        </div>
+        @if (primaryUnit is not null)
+        {
+            <div class="gl-v2-kd-unit-body">
+                <div class="gl-v2-kd-unit-head">
+                    <span class="gl-v2-kd-unit-thumb"><i class="ph ph-house" aria-hidden="true"></i></span>
+                    <div class="gl-v2-kd-unit-title">
+                        <span class="gl-v2-kd-unit-name">@primaryUnit.Type?.Name @primaryUnit.Name</span>
+                        <span class="gl-v2-kd-unit-sub">@primaryUnit.Street@(primaryUnit.Surface.HasValue ? " · " + primaryUnit.Surface.Value.ToString("0") + " m²" : "")</span>
+                    </div>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Status</span>
+                    <span class="gl-v2-badge @unitStatusTone" style="align-self:flex-start">@unitStatusLabel</span>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Voorziene oplevering</span>
+                    @if (Model.FinalConstructionDate != DateOnly.MinValue)
+                    {
+                        <span class="gl-v2-detail-value">@Model.FinalConstructionDate.ToString("MM/yyyy")</span>
+                    }
+                    else
+                    {
+                        <span class="gl-v2-detail-value is-empty">geen startdatum ingegeven — werkdagen nog niet te berekenen</span>
+                    }
+                </div>
+                @if (projectUnits.Count > 1)
+                {
+                    <span class="gl-v2-kd-unit-more">+ @(projectUnits.Count - 1) andere eenhe@(projectUnits.Count - 1 == 1 ? "id" : "den")</span>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-house" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Geen eenheid</h3>
+                <p class="gl-v2-empty-state-desc">Er is nog geen eenheid van dit project aan deze klant gekoppeld.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@* ── Wijzigingsopdrachten + Documenten (12c §5) ────────────────────────────────────────────────── *@
+<div class="gl-v2-kd-grid">
+    <div class="gl-v2-kd-col-7 gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-pen-nib" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Wijzigingsopdrachten</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Elke wijziging met haar bedrag.</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <a href="@Url.Action("DetailsChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientid = client.Id })" class="gl-v2-card-header-action">Alle opdrachten</a>
+        </div>
+        @if (Model.ClientChangeOrders.Any())
+        {
+            <div class="gl-v2-kd-wo-table">
+                <div class="gl-v2-kd-wo-row gl-v2-kd-wo-head">
+                    <span>Nummer</span><span>Omschrijving</span><span>Datum</span><span class="text-end">Bedrag</span><span>Status</span>
+                </div>
+                @foreach (var order in Model.ClientChangeOrders.Take(5))
+                {
+                    <a class="gl-v2-kd-wo-row" href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = order.Id })" target="_blank" rel="noopener">
+                        <span class="gl-v2-kd-wo-num">WO-@(order.Id.ToString("000"))</span>
+                        <span class="gl-v2-kd-wo-desc">@order.Description</span>
+                        <span class="gl-v2-kd-wo-date">@order.ChangeOrderDate.ToString("dd/MM/yyyy")</span>
+                        <span class="gl-v2-kd-wo-amount text-end">+ @order.Totaal.ToString("C0", be)</span>
+                        @if (order.DateAgreement.HasValue)
+                        {
+                            <span class="gl-v2-badge is-positive">GOEDGEKEURD</span>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-badge is-attention">IN AANVRAAG</span>
+                        }
+                    </a>
+                }
+                <div class="gl-v2-kd-rows-total">
+                    <span class="gl-v2-kd-rows-total-label">Totaal wijzigingen</span>
+                    <span class="gl-v2-kd-rows-total-value">+ @wijzigingTotaal.ToString("C0", be)</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-pen-nib" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Nog geen wijzigingsopdrachten</h3>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen wijzigingsopdrachten voor deze klant.</p>
+                <div class="gl-v2-empty-state-actions">
+                    <a href="@Url.Action("ChangeOrderAddUpdate", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">Wijziging toevoegen</a>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-kd-col-5 gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-folder" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Documenten</h2>
+            <span class="gl-v2-section-card-meta">@Model.LatestDocs.Count</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, clientaccountid = client.Id })" class="gl-v2-card-header-action">Alle documenten</a>
+        </div>
+        @if (Model.LatestDocs.Any())
+        {
+            <div class="gl-v2-kd-rows">
+                @foreach (var doc in Model.LatestDocs)
+                {
+                    var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? doc.Type.GetDisplayName() : doc.Name;
+                    <a class="gl-v2-kd-row" href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank" rel="noopener">
+                        <span class="gl-v2-kd-row-badge"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                        <div class="gl-v2-kd-row-main">
+                            <span class="gl-v2-kd-row-title">@docTitle</span>
+                            <span class="gl-v2-kd-row-sub">@doc.Type.GetDisplayName()@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-folder" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Nog geen documenten</h3>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen documenten voor deze klant.</p>
+                <div class="gl-v2-empty-state-actions">
+                    <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, clientaccountid = client.Id })" class="gl-v2-btn gl-v2-btn-primary">Document toevoegen</a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+}

@@ -37,7 +37,11 @@
 .gl-v2-pd-stat-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .11em; color: var(--gl-v2-muted); }
 .gl-v2-pd-stat-value { font: 600 19px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-pd-stat-value.is-danger { color: var(--gl-v2-danger); }
-.gl-v2-pd-stat-value.is-muted { color: var(--gl-v2-muted-light); }
+/* --gl-v2-muted (niet -light): 0 open punten is een echte, betekenisvolle waarde — geen "nog niet
+   ingevuld"-placeholder. -light is gl-v2-tokens.css's eigen token voor genuine lege staten
+   (hint-tekst, tellers) en faalt WCAG AA (~2.6:1) op wit; hier stond het op een echt cijfer dat een
+   PM ook effectief moet kunnen lezen (PRODUCT.md: "contrast dat standhoudt buiten"). */
+.gl-v2-pd-stat-value.is-muted { color: var(--gl-v2-muted); }
 .gl-v2-pd-stat-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .gl-v2-pd-stat-track { height: 4px; border-radius: 2px; background: var(--gl-v2-neutral-tint); overflow: hidden; display: block; }
@@ -45,6 +49,13 @@
 .gl-v2-pd-stat-fill.is-finance { background: #2E5F7E; }
 
 /* ── "Vraagt actie" — volle breedte, filterbaar op categorie ─────────────────────────────────── */
+/* Geeft deze kaart een eigen randbehandeling zodra ze effectief iets bevat — zonder dit deelt ze
+   hetzelfde neutrale kaartregister (schaduw + 30px icoon-chip) als elke andere sectie op de pagina,
+   terwijl dit net de kaart is die het eerst moet opvallen. Warning-kleur wanneer er enkel
+   "OP TE LOSSEN"-items zijn, danger zodra er minstens één "ACTIE VEREIST"-item bij zit. */
+.gl-v2-pd-attention-card.has-items { border-top: 3px solid var(--gl-v2-warning); }
+.gl-v2-pd-attention-card.has-urgent { border-top: 3px solid var(--gl-v2-danger); }
+
 .gl-v2-pd-attention-head {
     display: flex;
     align-items: center;
@@ -75,7 +86,7 @@
 .gl-v2-pd-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
 
 .gl-v2-pd-chip {
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 14px;
     border: 1px solid var(--gl-v2-hairline);
     background: transparent;
@@ -85,7 +96,31 @@
 
 .gl-v2-pd-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
 
-.gl-v2-pd-attention-body { display: flex; flex-direction: column; }
+/* Begrensde hoogte + scroll i.p.v. de kaart onbeperkt laten meegroeien met het aantal punten — een
+   project met veel openstaande contracten/bankwaarborgen (ACTIE VEREIST alleen al kan tientallen
+   rijen hebben) nam anders makkelijk het grootste deel van de pagina in, ongeacht welke van de twee
+   groepen lang was. Zelfde patroon als .gl-v2-pd-units-scroll verderop op deze pagina.
+   Schaduwveeg (critique fix, zelfde CSS-only truc als .gl-v2-pm-list in gl-v2-project-inner-menu.css):
+   twee ondoorzichtige "witte" lagen scrollen MEE met de inhoud (background-attachment:local) en
+   bedekken een gekleurde fade-laag die WEL vast blijft t.o.v. de container (background-attachment:
+   scroll) — bovenaan/onderaan, zolang er niets te scrollen valt daar, dekt de witte laag de fade
+   volledig af; zodra er verder gescrold kan worden schuift de witte laag mee weg en wordt de fade
+   zichtbaar. Zo ziet een gebruiker zonder JS al dat de lijst meer bevat dan wat past, i.p.v. enkel op
+   de (makkelijk te missen) browser-scrollbar te moeten vertrouwen. */
+.gl-v2-pd-attention-body {
+    display: flex;
+    flex-direction: column;
+    max-height: 400px;
+    overflow-y: auto;
+    background:
+        linear-gradient(#fff, #fff), linear-gradient(#fff, #fff),
+        linear-gradient(rgba(44, 59, 42, .1), rgba(44, 59, 42, 0)),
+        linear-gradient(rgba(44, 59, 42, 0), rgba(44, 59, 42, .1));
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+    background-position: top, bottom, top, bottom;
+    background-size: 100% 16px, 100% 16px, 100% 16px, 100% 16px;
+}
 
 .gl-v2-pd-attention-group-hdr {
     display: flex;
@@ -115,6 +150,18 @@
 .gl-v2-pd-attention-body > a:last-child,
 .gl-v2-pd-attention-group:last-child .gl-v2-pd-attention-item:last-child { border-bottom: 0; }
 
+/* [href]-gated: an item with no real destination (BekijkUrl null, see DetailV2.cshtml — Razor omits
+   the attribute entirely) is deliberately not an <a>-with-href and must stay looking inert. Without
+   this guard every item, actionable or not, would light up on hover — reopening exactly the "looks
+   clickable, does nothing" problem the href-omission fix solved. Same gold-ring/tint recipe as
+   .gl-v2-flyout-link elsewhere in gl-v2. */
+.gl-v2-pd-attention-item[href]:hover,
+.gl-v2-pd-attention-item[href]:focus-visible { background: var(--gl-v2-hover-tint); }
+.gl-v2-pd-attention-item[href]:focus-visible {
+    outline: 2px solid var(--gl-v2-gold);
+    outline-offset: -2px;
+}
+
 .gl-v2-pd-attention-item i.gl-v2-pd-attention-item-icon { font-size: 15px; flex: none; color: var(--gl-v2-danger); }
 .gl-v2-pd-attention-item.is-normal i.gl-v2-pd-attention-item-icon { color: var(--gl-v2-warning); }
 
@@ -123,15 +170,6 @@
 
 .gl-v2-pd-attention-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: none; white-space: nowrap; }
 .gl-v2-pd-attention-view { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; display: flex; align-items: center; gap: 2px; }
-
-.gl-v2-pd-attention-empty {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 18px;
-    color: var(--gl-v2-primary);
-    font: 500 13px var(--gl-v2-font-sans);
-}
 
 /* Klikwissel op de chips — korte fade i.p.v. een harde herschikking. */
 .gl-v2-pd-attention-body.is-refiltering { opacity: .5; transition: opacity .12s ease; }
@@ -168,7 +206,6 @@
 .gl-v2-pd-traject-next-date { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; flex: none; }
 .gl-v2-pd-traject-next-date.is-danger { color: var(--gl-v2-danger); }
 .gl-v2-pd-traject-next-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-pd-traject-empty { padding: 16px 18px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 
 /* ── Eenheden & verkoopstatus ─────────────────────────────────────────────────────────────── */
 .gl-v2-pd-units-search {
@@ -188,7 +225,19 @@
 .gl-v2-pd-units-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-pd-units-search input::placeholder { color: var(--gl-v2-muted-light); }
 
-.gl-v2-pd-units-scroll { max-height: 320px; overflow-y: auto; margin-top: 8px; }
+/* Enkel een onder-fade (critique fix, zelfde truc als .gl-v2-pd-attention-body hierboven) — een
+   boven-fade zou hier toch nooit zichtbaar zijn: de sticky, ondoorzichtige tabelkop (hieronder)
+   bedekt die hoek altijd, met of zonder schaduw eronder. */
+.gl-v2-pd-units-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 8px;
+    background: linear-gradient(#fff, #fff), linear-gradient(rgba(44, 59, 42, 0), rgba(44, 59, 42, .1));
+    background-repeat: no-repeat;
+    background-attachment: local, scroll;
+    background-position: bottom, bottom;
+    background-size: 100% 16px, 100% 16px;
+}
 
 .gl-v2-pd-units-table { width: 100%; border-collapse: collapse; }
 .gl-v2-pd-units-table th {
@@ -212,6 +261,16 @@
 .gl-v2-pd-units-table a:hover { text-decoration: underline; }
 .gl-v2-pd-units-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-pd-units-empty { padding: 18px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Repeats Type/Opp./Klant under the unit name — hidden except on phone, where those three columns
+   collapse (see the 767.98px block below). Keeps the info instead of losing it to a 6-column table
+   squeezed onto a 360px screen. */
+.gl-v2-pd-units-meta {
+    display: none;
+    margin-top: 2px;
+    font: 450 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
 
 /* ── Voortgang & budget ───────────────────────────────────────────────────────────────────── */
 .gl-v2-pd-vb-bars { padding: 16px 18px 0; display: flex; flex-direction: column; gap: 12px; }
@@ -245,6 +304,15 @@
 }
 .gl-v2-pd-rows > :last-child { border-bottom: 0; }
 
+/* Same hover-tint/gold-ring recipe as .gl-v2-pd-attention-item above — always safe here (every
+   .gl-v2-pd-row already carries a real Url.Action href, no [href]-guard needed). */
+.gl-v2-pd-row:hover,
+.gl-v2-pd-row:focus-visible { background: var(--gl-v2-hover-tint); }
+.gl-v2-pd-row:focus-visible {
+    outline: 2px solid var(--gl-v2-gold);
+    outline-offset: -2px;
+}
+
 .gl-v2-pd-row-badge {
     width: 26px;
     height: 26px;
@@ -273,8 +341,6 @@
 }
 .gl-v2-pd-rows-total-label { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-pd-rows-total-value { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
-
-.gl-v2-pd-rows-empty { padding: 8px 18px 16px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 
 .gl-v2-pd-add-row {
     display: flex;
@@ -361,4 +427,21 @@
     .gl-v2-pd-vb-stats { grid-template-columns: repeat(1, minmax(0, 1fr)); }
     .gl-v2-pd-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gl-v2-pd-attention-desc { display: none; }
+
+    /* Eenheden-tabel: Type/Opp./Klant vervallen als losse kolommen (net als Invoices op dit
+       breakpoint een eigen kaartweergave kreeg i.p.v. 11 kolommen te persen) — hun info leeft verder
+       in .gl-v2-pd-units-meta, direct onder de eenheidsnaam. Prijs en Status blijven de twee dingen
+       die een PM op een telefoon eerst wil zien naast de naam zelf. */
+    .gl-v2-pd-units-col-collapsible { display: none; }
+    .gl-v2-pd-units-meta { display: block; }
+    .gl-v2-pd-units-table td { padding: 10px 12px; }
+}
+
+/* Tikdoelen op echte touch-toestellen naar de 44px-veldminimum (PRODUCT.md: PM's/aannemers gebruiken
+   dit scherm op locatie, met een handschoen of natte vingers) — enkel op (hover:none)/(pointer:coarse)
+   zodat een muisgebruiker op desktop de compactere chips/zoekveld behoudt; die hebben geen 44px nodig
+   om precies te klikken. Zelfde detectie als gl-v2-project-inner-menu.js's initTabletRailPeek. */
+@media (hover: none) and (pointer: coarse) {
+    .gl-v2-pd-chip { min-height: 44px; padding: 6px 14px; }
+    .gl-v2-pd-units-search { min-height: 44px; }
 }

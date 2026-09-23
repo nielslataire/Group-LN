@@ -1,0 +1,52 @@
+@model string
+@*
+    gl-v2 (design-handoff optie 4i "Tekstvelden — label, placeholder, met en zonder icoon, zelfde
+    40px als de dropdown", zie DESIGN.md "### Tekstvelden"). The plain, generic single-line text
+    field — every other GlV2 text template (GlV2Email/GlV2Website/GlV2Telefoon/GlV2Gsm/
+    GlV2BtwNummer/GlV2OndernemingsNummer) is a *specialised* version of exactly this same
+    .gl-v2-field/.gl-v2-field-box/.gl-v2-field-input skeleton (icon slot, optional prefix, clear-on-
+    :not(:placeholder-shown)); this is the one with none of those extras, for an ordinary free-text
+    field like Contractnaam or Opmerking verzending — DESIGN.md's own "Tekstvelden" section had
+    already specified this component in full but its only real caller so far was a page-local
+    toolbar search box (Invoices/IndexV2), not a bound form field. Enkel expliciete aanroep, zelfde
+    GlV2-prefix-conventie als de rest van deze map.
+
+    Optioneel: Label (override), Placeholder, Icon (Phosphor-klasse, bv. "ph-tag" — weglaten = geen
+    icoonslot, zelfde "met en zonder icoon" die 4i zelf noemt), MaxLength.
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var placeholder = ViewData["Placeholder"] as string ?? " ";
+    var icon = ViewData["Icon"] as string;
+    var maxLength = ViewData["MaxLength"] as int?;
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@id">
+        @label
+        @if (ViewData.ModelMetadata.IsRequired)
+        {
+            <span style="color:#8B2A2A">*</span>
+        }
+    </label>
+    <div class="gl-v2-field-box">
+        @if (!string.IsNullOrWhiteSpace(icon))
+        {
+            <i class="ph @icon" aria-hidden="true"></i>
+        }
+        @if (maxLength.HasValue)
+        {
+            <input type="text" id="@id" name="@name" class="gl-v2-field-input" value="@Model" placeholder="@placeholder" autocomplete="off" maxlength="@maxLength" />
+        }
+        else
+        {
+            <input type="text" id="@id" name="@name" class="gl-v2-field-input" value="@Model" placeholder="@placeholder" autocomplete="off" />
+        }
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

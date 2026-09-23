@@ -1,0 +1,517 @@
+@model CPMCore.Models.Projecten.ProjectContractDetailModel
+@using System.Globalization
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 14b "Contractdetail — wat
+    ontbreekt bovenaan, voorwaarden en attesten naast elkaar"). Shared by TWO controller actions —
+    exactly like the legacy DetailContract.cshtml it replaces: ProjectenController.DetailContract
+    (entered via a specific contractid) and .DetailSupplier (entered via a companyid, no contract
+    pre-selected — e.g. the "geen contract" rows on DetailContractsV2). Both already loaded the same
+    ProjectContractDetailModel and rendered the same legacy view, so the gl-v2 replacement follows
+    suit rather than forking into two pages the controller never actually forked.
+
+    14b's own layout assumes exactly one contract; the real data can have zero (no contract yet) or
+    several (e.g. "Fluvius System Operator — 3 contracten" on 14a). Extended faithfully: zero renders
+    an empty state with a real "Contract toevoegen" action, more than one renders design-handoff 14e's
+    own variant — a collapsible panel per contract instead of a repeated card stack, see the 14e note
+    further down — not a fabricated "pick one" UI 14b never designed for.
+
+    Scope trims from 14b, disclosed rather than silently built as dead ends:
+    - Facturen/Leverancier/Portaaltoegang stay .is-disabled tabs (counts only) — same discipline as
+      every other gl-v2 detail page this session (Invoices/DetailV2, Klanten/DetailV2, …): only the
+      page's primary tab gets built this pass. The legacy page's Facturen/Leverancier tabs already
+      have real, working content (an invoice table, a company-info card) — a natural next tab to
+      build, just not in this pass.
+    - "Bijbestelling toevoegen" (14b's own "+ Bijbestelling" action on Loten & bijbestellingen) isn't
+      wired here — that's the shared Partials/_BijbestellingModal + its AJAX endpoints
+      (AddContractAdditionalOrder), left legacy-styled for a future pass rather than getting a one-off
+      gl-v2 reskin on a page whose own primary action is EditContractV2 (which DOES need full
+      lot/bijbestelling editing, and gets it — see that page's own notes).
+    - "Herinnering sturen" (14b's secondary topbar action + its "Vraagt actie" row) has no dedicated
+      backend action anywhere in this codebase — no reminder-email endpoint exists to call. Rather
+      than invent one or silently drop the action, it's a real mailto: to the company's own e-mail
+      address (same "real data, no invented backend" choice already used for Klanten/DetailV2's
+      contact actions), shown only when that address is actually on file.
+    - "Opvragen" (PID-attesten ontbrekende) — same reasoning, same mailto: treatment.
+    - "Leveranciers"-teller (ItemCounts) op het inner menu: DetailContract/DetailSupplier/EditContract
+      berekenen nu zelf hetzelfde aantal als DetailContractsV2's SupplierRows.Count
+      (ProjectenController.GetProjectSupplierCount, hergebruikt de contractenlijst die deze actie toch
+      al ophaalt) via een nieuwe Model.SupplierCount — geen tweede round-trip nodig.
+
+    Bij meerdere contracten (design-handoff 14e, "Variant van 14b — één leverancier, meerdere
+    contracten, lijst met uitklapbaar contract"): elk contract is nu een collapsible paneel i.p.v. een
+    kaartenstapel die gewoon herhaalt. Sortering per 14e regel 6: niet-getekend eerst (oudst verstuurd
+    boven), dan getekend — een "afgerond"-status bestaat niet in ContractBO, dus die derde 14e-groep
+    is hier niet gebouwd (geen verzonnen veld). Het eerste contract in die volgorde staat open, de rest
+    dicht (14e's eigen "één open, twee gesloten" voorbeeld) — bij precies één contract blijft de pagina
+    exact 14b (geen paneel, meteen open), per 14e regel 7.
+*@
+@{
+    var company = Model.Company;
+    var companyName = !string.IsNullOrWhiteSpace(company?.Bedrijfsnaam) ? company.Bedrijfsnaam : (Model.Contract?.Company?.Display ?? "Leverancier");
+    ViewData["Title"] = companyName;
+    ViewData["PageIcon"] = "ph ph-hard-hat";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var canWrite = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
+    var canDelete = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
+    var invoiceCount = Model.IncommingInvoices?.Count ?? 0;
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = "leverancier · " + companyName,
+        ItemCounts = new Dictionary<string, int> { ["Leveranciers"] = Model.SupplierCount }
+    };
+
+    var allSigned = Model.Contracts.Any() && Model.Contracts.All(c => c.ContractSigned);
+
+    // 14e regel 6: niet-getekend eerst (oudst verstuurd boven), dan getekend. "Afgerond" bestaat niet
+    // als apart veld op ContractBO, dus die derde 14e-groep wordt hier niet nagebouwd.
+    var sortedContracts = Model.Contracts
+        .OrderBy(c => c.ContractSigned)
+        .ThenBy(c => c.ContractSentDate ?? DateTime.MinValue)
+        .ToList();
+    var isMultiContract = sortedContracts.Count > 1;
+
+    string FmtPaymentTerm(ContractBO c) => c.PaymentTerm is null ? "—" : $"{c.PaymentTerm:0} dagen";
+    string FmtCashDiscount(ContractBO c) => c.CashDiscount
+        ? $"{c.CashDiscountPercentage?.ToString("N2", be)} % binnen {c.CashDiscountPaymentTerm:0} dagen"
+        : "—";
+    string FmtGuarantee(ContractBO c) => c.GuaranteeType == ContractGuaranteeType.FinancialGuarantee
+        ? $"{c.GuaranteePercentage?.ToString("N2", be)} % {c.GuaranteeType.GetDisplayName()}"
+        : c.GuaranteeType.GetDisplayName();
+    string ReminderMailto(ContractBO c, string subject) => !string.IsNullOrWhiteSpace(company?.Email)
+        ? $"mailto:{company.Email}?subject={Uri.EscapeDataString(subject)}"
+        : null;
+
+    // 14b's kaartenstapel voor één contract (KPI-rij, Vraagt actie, Voorwaarden, Veiligheid &
+    // attesten, Loten & bijbestellingen) — een lokale functie zodat exact dezelfde markup zowel
+    // los (1 contract, 14e regel 7) als binnen een collapsible paneel (>1 contract) gerenderd kan
+    // worden, zonder de inhoud te dupliceren of tags over losse @@if-blokken heen te splitsen.
+    void RenderContractBody(ContractBO contract)
+    {
+        var sentDaysOpen = contract.ContractSentDate.HasValue && !contract.ContractSigned
+            ? (int)(DateTime.Today - contract.ContractSentDate.Value).TotalDays
+            : (int?)null;
+        var contractPrice = contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m;
+        var missingSiteManager = !contract.SiteManagerContactId.HasValue || contract.SiteManagerContactId == 0;
+        var lotCount = contract.Activities?.Count ?? 0;
+
+        var attentionItems = new List<(string Title, string Meta, string ActionText, string ActionHref)>();
+        if (!contract.ContractSigned)
+        {
+            attentionItems.Add(("Contract niet getekend", contract.ContractSentDate.HasValue ? "verstuurd op " + contract.ContractSentDate.Value.ToString("dd/MM/yyyy", be) : "nog niet verstuurd",
+                "Herinnering sturen", ReminderMailto(contract, $"Herinnering: contract {companyName} — {Model.ProjectName}")));
+        }
+        if (!contract.PidAttest)
+        {
+            attentionItems.Add(("PID-attesten ontbreken", "nodig vóór oplevering", "Opvragen", ReminderMailto(contract, $"PID-attesten opvragen — {companyName}, {Model.ProjectName}")));
+        }
+        if (missingSiteManager && canWrite)
+        {
+            attentionItems.Add(("Geen verantwoordelijke werfleider", null, "Toewijzen", Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })));
+        }
+        if (contract.GuaranteeDocumentMissing && canWrite)
+        {
+            attentionItems.Add(("Bankwaarborg-document ontbreekt", "nog niet ontvangen", "Toevoegen", Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })));
+        }
+
+        <span class="gl-v2-pcd-meta">
+            Leverancier @companyName
+            · @lotCount lot@(lotCount == 1 ? "" : "en")
+            @if (contract.ContractSentDate.HasValue)
+            {
+                <text> · verstuurd @contract.ContractSentDate.Value.ToString("dd/MM/yyyy", be)</text>
+            }
+            · werfleider @(missingSiteManager ? "nog niet toegewezen" : "toegewezen")
+        </span>
+
+        <div class="gl-v2-pcd-stats">
+            <div class="gl-v2-pcd-stat">
+                <span class="gl-v2-pcd-stat-label">CONTRACTPRIJS</span>
+                <span class="gl-v2-pcd-stat-value">@contractPrice.ToString("C0", be)</span>
+                <span class="gl-v2-pcd-stat-sub">@lotCount lot@(lotCount == 1 ? "" : "en")@(contract.Activities?.Any(a => a.AdditionalOrders.Any()) == true ? " · bijbestellingen" : " · geen bijbestellingen")</span>
+            </div>
+            <div class="gl-v2-pcd-stat">
+                <span class="gl-v2-pcd-stat-label">BETAALTERMIJN</span>
+                <span class="gl-v2-pcd-stat-value">@FmtPaymentTerm(contract)</span>
+                <span class="gl-v2-pcd-stat-sub">@(contract.CashDiscount ? "korting " + FmtCashDiscount(contract) : "geen korting contant")</span>
+            </div>
+            <div class="gl-v2-pcd-stat">
+                <span class="gl-v2-pcd-stat-label">WAARBORG</span>
+                <span class="gl-v2-pcd-stat-value">@(contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee ? contract.GuaranteePercentage?.ToString("N0", be) + " %" : contract.GuaranteeType.GetDisplayName())</span>
+                <span class="gl-v2-pcd-stat-sub">@contract.GuaranteeType.GetDisplayName()</span>
+            </div>
+            <div class="gl-v2-pcd-stat">
+                <span class="gl-v2-pcd-stat-label">@(contract.ContractSigned ? "GETEKEND" : "OPEN SINDS")</span>
+                @if (contract.ContractSigned)
+                {
+                    <span class="gl-v2-pcd-stat-value">@(contract.ContractSentDate?.ToString("dd/MM/yyyy", be) ?? "—")</span>
+                    <span class="gl-v2-pcd-stat-sub">contract getekend</span>
+                }
+                else
+                {
+                    <span class="gl-v2-pcd-stat-value @(sentDaysOpen.HasValue ? "is-warning" : "")">@(sentDaysOpen.HasValue ? sentDaysOpen + " dagen" : "—")</span>
+                    <span class="gl-v2-pcd-stat-sub">@(contract.ContractSentDate.HasValue ? "verstuurd, nog niet getekend" : "nog niet verstuurd")</span>
+                }
+            </div>
+        </div>
+
+        @if (attentionItems.Any())
+        {
+            <div class="gl-v2-section-card gl-v2-pcd-attention-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Vraagt actie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Wat dit contract tegenhoudt.</span>
+                </div>
+                <div class="gl-v2-pcd-attention-body">
+                    @foreach (var item in attentionItems)
+                    {
+                        <div class="gl-v2-pcd-attention-item">
+                            <i class="ph ph-warning-circle gl-v2-pcd-attention-icon" aria-hidden="true"></i>
+                            <span class="gl-v2-pcd-attention-title">@item.Title</span>
+                            @if (item.Meta is not null)
+                            {
+                                <span class="gl-v2-pcd-attention-meta">@item.Meta</span>
+                            }
+                            <span class="gl-v2-pcd-attention-spacer"></span>
+                            @if (item.ActionHref is not null)
+                            {
+                                <a href="@item.ActionHref" class="gl-v2-pcd-attention-action">@item.ActionText</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="gl-v2-pcd-grid">
+            <div class="gl-v2-pcd-col-7 gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-scales" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Voorwaarden</h2>
+                </div>
+                <div class="gl-v2-detail-grid gl-v2-pcd-3col" style="padding:16px 18px">
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">BTW</span>
+                        <span class="gl-v2-detail-value">@(contract.VatPercentage?.ToString("N2", be) ?? "0,00") %</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Betaaltermijn</span>
+                        <span class="gl-v2-detail-value">@FmtPaymentTerm(contract)</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Korting contant</span>
+                        <span class="gl-v2-detail-value@(contract.CashDiscount ? "" : " is-empty")">@FmtCashDiscount(contract)</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Waarborg</span>
+                        <span class="gl-v2-detail-value">@FmtGuarantee(contract)</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Werfleider</span>
+                        <span class="gl-v2-detail-value@(missingSiteManager ? " is-empty" : "")">@(missingSiteManager ? "— niet toegewezen" : "toegewezen")</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Contract verstuurd</span>
+                        <span class="gl-v2-detail-value@(contract.ContractSentDate.HasValue ? "" : " is-empty")">@(contract.ContractSentDate?.ToString("dd/MM/yyyy", be) ?? "—")</span>
+                    </div>
+                    <div class="gl-v2-detail-field is-full">
+                        <span class="gl-v2-detail-label">Opmerking verzending</span>
+                        <span class="gl-v2-detail-value@(string.IsNullOrWhiteSpace(contract.ContractSentNote) ? " is-empty" : "")">@(string.IsNullOrWhiteSpace(contract.ContractSentNote) ? "—" : contract.ContractSentNote)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-pcd-col-5 gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Veiligheid &amp; attesten</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    @if (canWrite)
+                    {
+                        <a href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })" class="gl-v2-card-header-action">Bewerken</a>
+                    }
+                </div>
+                <div class="gl-v2-pcd-checklist">
+                    <div class="gl-v2-pcd-check @(contract.SiteNotification ? "is-ok" : "is-missing")">
+                        <span class="gl-v2-pcd-check-icon"><i class="ph @(contract.SiteNotification ? "ph-check" : "ph-x")" aria-hidden="true"></i></span>
+                        <span class="gl-v2-pcd-check-label">Werfmelding</span>
+                        <span class="gl-v2-pcd-check-value">@(contract.SiteNotification ? "in orde" : "ontbreekt")</span>
+                    </div>
+                    <div class="gl-v2-pcd-check @(contract.VgmCharter ? "is-ok" : "is-missing")">
+                        <span class="gl-v2-pcd-check-icon"><i class="ph @(contract.VgmCharter ? "ph-check" : "ph-x")" aria-hidden="true"></i></span>
+                        <span class="gl-v2-pcd-check-label">VGM-charter</span>
+                        <span class="gl-v2-pcd-check-value">@(contract.VgmCharter ? "ondertekend" : "ontbreekt")</span>
+                    </div>
+                    <div class="gl-v2-pcd-check @(contract.PidAttest ? "is-ok" : "is-missing")">
+                        <span class="gl-v2-pcd-check-icon"><i class="ph @(contract.PidAttest ? "ph-check" : "ph-x")" aria-hidden="true"></i></span>
+                        <span class="gl-v2-pcd-check-label">PID-attesten</span>
+                        <span class="gl-v2-pcd-check-value">@(contract.PidAttest ? "ontvangen" : "ontbreekt")</span>
+                    </div>
+                </div>
+                @if (contract.GuaranteeType == ContractGuaranteeType.BankGuarantee)
+                {
+                    <div class="gl-v2-pcd-doc-row">
+                        @if (!string.IsNullOrWhiteSpace(contract.GuaranteeDocFilename))
+                        {
+                            <a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = contract.Id })" target="_blank" rel="noopener" class="gl-v2-pcd-doc-link"><i class="ph ph-file-text" aria-hidden="true"></i>Waarborgdocument bekijken</a>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-badge is-attention">WAARBORG NOG TE ONTVANGEN</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Loten &amp; bijbestellingen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Bijbestellingen verhogen de contractprijs.</span>
+            </div>
+            @if (contract.Activities?.Any() == true)
+            {
+                <div class="gl-v2-pcd-lots-table">
+                    <div class="gl-v2-pcd-lots-row gl-v2-pcd-lots-head">
+                        <span>Lot</span><span class="text-end">Basisprijs</span><span class="text-end">Bijbestellingen</span><span class="text-end">Totaal</span>
+                    </div>
+                    @foreach (var lot in contract.Activities)
+                    {
+                        <div class="gl-v2-pcd-lots-row">
+                            <span class="gl-v2-pcd-lots-name">@lot.Activity?.Name</span>
+                            <span class="text-end">@((lot.Price ?? 0m).ToString("C0", be))</span>
+                            <span class="text-end">@(lot.AdditionalOrdersTotal > 0 ? lot.AdditionalOrdersTotal.ToString("C0", be) : "—")</span>
+                            <span class="text-end gl-v2-pcd-lots-total">@lot.EffectivePrice.ToString("C0", be)</span>
+                        </div>
+                        @foreach (var order in lot.AdditionalOrders)
+                        {
+                            <div class="gl-v2-pcd-lots-suborder">
+                                <i class="ph ph-arrow-elbow-down-right" aria-hidden="true"></i>
+                                <span>@(string.IsNullOrWhiteSpace(order.Description) ? "Bijbestelling" : order.Description)</span>
+                                <span class="gl-v2-pcd-lots-suborder-price">@order.Price.ToString("C0", be)</span>
+                            </div>
+                        }
+                    }
+                    <div class="gl-v2-pcd-lots-totalrow">
+                        <span>Contractprijs</span>
+                        <span>@contractPrice.ToString("C0", be)</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                    <h3 class="gl-v2-empty-state-title">Geen loten gekoppeld</h3>
+                </div>
+            }
+        </div>
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-contract-detail.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (Model.HasContract)
+    {
+        @if (Model.Contracts.Count > 1)
+        {
+            <span class="gl-v2-badge @(allSigned ? "is-positive" : "is-attention")">@(Model.Contracts.Count(c => c.ContractSigned)) / @Model.Contracts.Count GETEKEND</span>
+        }
+        else if (Model.Contracts[0].ContractSigned)
+        {
+            <span class="gl-v2-badge is-positive">GETEKEND</span>
+        }
+        else
+        {
+            <span class="gl-v2-badge is-attention">NIET GETEKEND</span>
+        }
+    }
+    else
+    {
+        <span class="gl-v2-badge is-neutral">GEEN CONTRACT</span>
+    }
+}
+@{
+    var canEditSingle = Model.Contracts.Count == 1 && canWrite;
+    var canDeleteSingle = Model.Contracts.Count == 1 && canDelete;
+    var editUrl = canEditSingle ? Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = Model.Contracts[0].Id }) : null;
+    var addUrl = canWrite ? Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = company?.CompanyId ?? 0 }) : null;
+}
+@section PageActions
+{
+    @* Desktop (>=1024px): losse knoppen, altijd zichtbaar. Tablet (768-1023.98px): dezelfde drie
+       acties verdwijnen achter de ...-trigger (die zelf enkel op dat ene tussenformaat verschijnt).
+       Gsm (<768px): geen van beide — de acties staan als iconen in de vaste actiebalk onderaan
+       (.gl-v2-pcd-actionbar hieronder in de body). Zelfde two-class-overrule-discipline als de
+       invoice-detailpagina's eigen -topbar-btn-klasse (DESIGN.md, load-order specificity trap). *@
+    @if (canEditSingle)
+    {
+        <a href="@editUrl" class="gl-v2-btn gl-v2-btn-primary gl-v2-pcd-topbar-btn"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+    }
+    @if (addUrl is not null)
+    {
+        <a href="@addUrl" class="gl-v2-icon-btn gl-v2-pcd-topbar-btn" title="Contract toevoegen" aria-label="Contract toevoegen"><i class="ph ph-plus" aria-hidden="true"></i></a>
+    }
+    @if (canDeleteSingle)
+    {
+        <a href="#" class="gl-v2-icon-btn is-danger gl-v2-pcd-topbar-btn js-gl-v2-pcd-delete" data-id="@Model.Contracts[0].Id" title="Contract verwijderen" aria-label="Contract verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></a>
+    }
+    <button type="button" class="gl-v2-icon-btn gl-v2-pcd-menu-trigger js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-pcd-menu" aria-label="Meer acties">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>
+    </button>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* Zelfde drie acties als de topbar-knoppen hierboven — dit paneel is wat er op tablet (768-
+   1023.98px) overblijft zodra .gl-v2-pcd-topbar-btn daar verdwijnt, dus moet het ze alle drie
+   bevatten, niet enkel Verwijderen. *@
+<div class="gl-v2-menu" id="gl-v2-pcd-menu">
+    @if (canEditSingle)
+    {
+        <a href="@editUrl" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+    }
+    @if (addUrl is not null)
+    {
+        <a href="@addUrl" class="gl-v2-menu-item"><i class="ph ph-plus" aria-hidden="true"></i>Contract toevoegen</a>
+    }
+    @if (canDeleteSingle)
+    {
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+        <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-pcd-delete" data-id="@Model.Contracts[0].Id"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+    }
+    @if (!canEditSingle && addUrl is null && !canDeleteSingle)
+    {
+        <span class="gl-v2-menu-item" style="cursor:default;color:var(--gl-v2-muted-light)">
+            <i class="ph ph-info" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">@(Model.Contracts.Count > 1 ? "Verwijder per contract via Bewerken" : "Geen andere acties")</span></span>
+        </span>
+    }
+</div>
+
+<div class="gl-v2-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="contract">Contract</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Facturen <span class="gl-v2-tabbar-count">@invoiceCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Leverancier</button>
+    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Portaaltoegang</button>
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (!Model.HasContract)
+{
+    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+        <span class="gl-v2-empty-state-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-empty-state-title">Nog geen contract</h2>
+        <p class="gl-v2-empty-state-desc">Er is nog geen contract gekoppeld aan @companyName voor dit project.</p>
+        @if (canWrite)
+        {
+            <div class="gl-v2-empty-state-actions">
+                <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = company?.CompanyId ?? 0 })" class="gl-v2-btn gl-v2-btn-primary">Contract toevoegen</a>
+            </div>
+        }
+    </div>
+}
+else if (isMultiContract)
+{
+    <div class="gl-v2-section-card gl-v2-pcd-contracts-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Contracten</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Klik op een contract om het uit te klappen.</span>
+        </div>
+        @{ var contractIndex = 0; }
+        @foreach (var contract in sortedContracts)
+        {
+            var isExpanded = contractIndex == 0;
+            var contractLabel = string.IsNullOrWhiteSpace(contract.ContractName) ? "Contract" : contract.ContractName;
+            var headerPrice = contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m;
+            <div class="gl-v2-pcd-contract-panel@(isExpanded ? " is-expanded" : "")">
+                <button type="button" class="gl-v2-pcd-contract-panel-header js-gl-v2-pcd-contract-toggle" aria-expanded="@(isExpanded ? "true" : "false")" aria-controls="gl-v2-pcd-contract-body-@contract.Id">
+                    <i class="ph ph-caret-right gl-v2-pcd-contract-panel-chevron" aria-hidden="true"></i>
+                    <span class="gl-v2-pcd-contract-panel-name">@contractLabel</span>
+                    <span class="gl-v2-badge @(contract.ContractSigned ? "is-positive" : "is-attention") gl-v2-pcd-contract-panel-badge">@(contract.ContractSigned ? "GETEKEND" : "NIET GETEKEND")</span>
+                    <span class="gl-v2-pcd-contract-panel-spacer"></span>
+                    <span class="gl-v2-pcd-contract-panel-price">@headerPrice.ToString("C0", be)</span>
+                    <span class="gl-v2-pcd-contract-panel-attests">
+                        <i class="ph ph-hard-hat gl-v2-pcd-contract-panel-attest-icon @(contract.SiteNotification ? "is-ok" : "is-missing")" title="Werfmelding — @(contract.SiteNotification ? "in orde" : "ontbreekt")" aria-hidden="true"></i>
+                        <i class="ph ph-shield-check gl-v2-pcd-contract-panel-attest-icon @(contract.VgmCharter ? "is-ok" : "is-missing")" title="VGM-charter — @(contract.VgmCharter ? "ondertekend" : "ontbreekt")" aria-hidden="true"></i>
+                    </span>
+                </button>
+                <div class="gl-v2-pcd-contract-panel-body" id="gl-v2-pcd-contract-body-@contract.Id">
+                    @{ RenderContractBody(contract); }
+                </div>
+            </div>
+            contractIndex++;
+        }
+    </div>
+}
+else
+{
+    RenderContractBody(sortedContracts[0]);
+}
+
+@* Gsm (<768px) enige: dezelfde drie acties als icoonknoppen in een vaste actiebalk onderaan — de
+   topbar heeft daar geen ruimte voor knoppen NÓCH voor een ...-trigger (die blijft desktop/tablet).
+   .gl-v2-form-actionbar is shell-breed en wordt pas <768px position:fixed; het tweede-klasse-
+   overrule-patroon (gl-v2-pcd-actionbar) verbergt 'm expliciet op tablet/desktop, zelfde
+   load-order-specificiteitsregel als de factuurpagina's eigen -actionbar-klasse (DESIGN.md). *@
+@if (canEditSingle || addUrl is not null || canDeleteSingle)
+{
+    <div class="gl-v2-form-actionbar gl-v2-pcd-actionbar">
+        @if (canEditSingle)
+        {
+            <a href="@editUrl" class="gl-v2-icon-btn" title="Bewerken" aria-label="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+        }
+        @if (addUrl is not null)
+        {
+            <a href="@addUrl" class="gl-v2-icon-btn" title="Contract toevoegen" aria-label="Contract toevoegen"><i class="ph ph-plus" aria-hidden="true"></i></a>
+        }
+        @if (canDeleteSingle)
+        {
+            <a href="#" class="gl-v2-icon-btn is-danger js-gl-v2-pcd-delete" data-id="@Model.Contracts[0].Id" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></a>
+        }
+    </div>
+}
+
+@* z-index-fix (gl-v2-shell.css, "de echte oorzaak van 'de modal rendert plat tussen de pagina-
+   inhoud'"): --bs-modal-zindex wordt enkel opgetild boven de rail/topbar (z-index 99996-99999) voor
+   modals met .gl-v2-modal-confirm/-form/-search — deze verwijder-modal miste die klasse, dus zijn
+   .modal-backdrop (wél altijd op 100000, ongescoped) stond boven de modal zelf i.p.v. erachter. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-pcd-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" id="gl-v2-pcd-delete-container"></div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        window.glV2ProjectenContractDetailConfig = {
+            deleteUrl: '@Url.Action("ModalDeleteContractV2", "Projecten")'
+        };
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-contract-detail.js" asp-append-version="true"></script>
+}

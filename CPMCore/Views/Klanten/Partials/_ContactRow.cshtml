@@ -74,6 +74,18 @@
                         </div>
                     </div>
                 </div>
+                <div class="row align-items-center mt-2">
+                    <div class="col-lg-4 col-xl-4">
+                        <div class="form-check">
+                            @* Geen client-side exclusiviteit hier (legacy pagina laadt gl-v2-klanten-
+                               form.js niet) — de server normaliseert defensief bij het opslaan als
+                               er toch meerdere aangevinkt binnenkomen (zie ClientAccountTranslator/
+                               KlantenController.NormalizePrimaryContact). *@
+                            @Html.CheckBoxFor(m => m.IsPrimaryContact, new { @class = "form-check-input" })
+                            <label class="form-check-label" for="@Html.IdFor(m => m.IsPrimaryContact)">Primair contact</label>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
         </section>

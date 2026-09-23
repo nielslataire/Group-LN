@@ -56,6 +56,7 @@ public class MarketListingService : IMarketListingService
         if (existing is not null)
         {
             var oldPrice = existing.AskingPrice;
+            var listingWasInactive = !existing.IsActive;
 
             if (!string.IsNullOrEmpty(dto.Title) && existing.Title != dto.Title && !dto.IsProjectListing)
                 existing.Title = dto.Title;
@@ -69,6 +70,7 @@ public class MarketListingService : IMarketListingService
             var oldLat = existing.Asset.Latitude;
             var oldLng = existing.Asset.Longitude;
             UpdateAssetFromDto(existing.Asset, dto, now);
+            ReactivateAssetOnReappearance(existing.Asset, listingWasInactive, dto.ExternalId, now);
             var latLngChanged = existing.Asset.Latitude != oldLat || existing.Asset.Longitude != oldLng;
             await TryResolveLocationAsync(existing.Asset, cancellationToken,
                 forceResolve: latLngChanged || !existing.Asset.GeoMunicipalSectionId.HasValue);
@@ -328,6 +330,7 @@ public class MarketListingService : IMarketListingService
             if (existing is not null)
             {
                 var oldStatus = existing.Asset.SaleStatus;
+                var unitListingWasInactive = !existing.IsActive;
 
                 existing.AskingPrice = unit.Price ?? existing.AskingPrice;
                 existing.LastSeenAt = now;
@@ -335,6 +338,16 @@ public class MarketListingService : IMarketListingService
                 existing.RemovedAt = null;
                 existing.MissingCrawlCount = 0;
                 existing.UpdatedAt = now;
+
+                // Unit staat opnieuw in de projectinventaris: asset terug actief. De lifecycle
+                // wordt hieronder sowieso opnieuw afgeleid uit de bronstatus (ApplyUnitLifecycleFromSaleStatus).
+                if (unitListingWasInactive || !existing.Asset.IsActive)
+                {
+                    existing.Asset.IsActive = true;
+                    _logger.LogInformation(
+                        "UnitReappeared | ParentProjectId={ParentId} | UnitExternalId={UnitId} | PreviousLifecycle={Lifecycle} | Status={Status}",
+                        parentAssetId, unit.UnitId, existing.Asset.LifecycleStatus, unit.SaleStatus);
+                }
 
                 var newUnitTitle = BuildUnitTitle(unit);
                 if (!string.IsNullOrEmpty(newUnitTitle) && existing.Title != newUnitTitle)
@@ -689,6 +702,43 @@ public class MarketListingService : IMarketListingService
     }
 
     // ── Lifecycle helpers ─────────────────────────────────────────────────────
+
+    // Een listing die eerder verdwenen was (en het asset dus op LikelySold / IsActive=false zette)
+    // is opnieuw gezien. Zet het asset terug actief en draai de *afgeleide* verkocht-status terug.
+    // Bronbevestigde statussen (SoldConfirmed/Reserved/Available) blijven ongemoeid: die worden
+    // elders uit de bronstatus zelf afgeleid. Projectgroepen krijgen enkel IsActive terug.
+    private void ReactivateAssetOnReappearance(MarketAsset asset, bool listingWasInactive, string externalId, DateTime now)
+    {
+        var needsReactivation = listingWasInactive
+            || !asset.IsActive
+            || asset.LifecycleStatus is AssetLifecycleStatus.LikelySold or AssetLifecycleStatus.Withdrawn;
+
+        if (!needsReactivation) return;
+
+        var previousLifecycle = asset.LifecycleStatus;
+        var lifecycleReset = false;
+
+        if (!asset.IsProjectGroup
+            && asset.LifecycleStatus is AssetLifecycleStatus.LikelySold or AssetLifecycleStatus.Withdrawn)
+        {
+            asset.LifecycleStatus = AssetLifecycleStatus.Available;
+            asset.LifecycleConfidence = 80;
+            asset.LifecycleSource = "ListingReappeared";
+            asset.LifecycleStatusReason = $"Listing seen again after {previousLifecycle}";
+            asset.LifecycleStatusUpdatedAt = now;
+            asset.StatusChangedAt = now;
+            lifecycleReset = true;
+        }
+
+        if (!asset.IsActive)
+            asset.IsActive = true;
+
+        asset.UpdatedAt = now;
+
+        _logger.LogInformation(
+            "ListingReappeared | ExternalId={ExternalId} | AssetId={AssetId} | IsProjectGroup={IsGroup} | PreviousLifecycle={Prev} | LifecycleReset={Reset}",
+            externalId, asset.Id, asset.IsProjectGroup, previousLifecycle, lifecycleReset);
+    }
 
     // Stelt lifecycle in op een los pand (niet-projectgroep, geen parent) als geen actieve listings meer bestaan.
     // Doet niets als het asset een projectgroep is, een child-unit is, of al een hogere zekerheid heeft.

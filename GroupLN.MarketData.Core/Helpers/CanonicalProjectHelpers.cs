@@ -29,8 +29,8 @@ public static class CanonicalProjectHelpers
                 g => g.Key,
                 g => (
                     Total    : g.Count(),
-                    Available: g.Count(u => u.SaleStatus == SaleStatus.Available),
-                    Sold     : g.Count(u => u.SaleStatus == SaleStatus.Sold)
+                    Available: g.Count(SaleStateHelpers.IsAvailable),
+                    Sold     : g.Count(SaleStateHelpers.IsSold)
                 ));
     }
 }

@@ -262,34 +262,13 @@
    dashboard, hier gewoon de volle paginabreedte i.p.v. een smallere dashboardkolom. ─────────────── */
 .gl-v2-projecten-section { container-type: inline-size; }
 
-/* ── Lege staat (optie 4f "LEGE STAAT") — zelfde recept als Leveranciers/Klanten IndexV2, hier
-   statisch (geen DataTable/JS-opbouw nodig, gewoon twee vooraf gerenderde blokken die getoggled
-   worden — zie gl-v2-projecten.js). ──────────────────────────────────────────────────────────── */
-.gl-v2-empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 44px 24px;
-    text-align: center;
-}
-.gl-v2-empty-state-icon {
-    width: 62px;
-    height: 62px;
-    border-radius: 50%;
-    background: var(--gl-v2-hover-tint);
-    color: var(--gl-v2-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-}
-.gl-v2-empty-state-icon i { font-size: 28px; }
-.gl-v2-empty-state-title { font: 500 17px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
-.gl-v2-empty-state-desc { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 320px; margin: 0; }
-.gl-v2-empty-state-actions { display: flex; gap: 9px; padding-top: 4px; }
+/* ── Lege staat (optie 4f "LEGE STAAT") — basis (.gl-v2-empty-state/-icon/-title/-actions) leeft nu
+   project-breed in gl-v2-shell.css. Hier blijven enkel de twee dingen die op déze pagina echt anders
+   zijn: de lege staat rendert los op de pagina, niet genest in een omringende kaart zoals bij
+   Invoices/Leveranciers/Klanten (vandaar een eigen kaart-look voor -inline i.p.v. de gedeelde kale
+   padding-only versie), en de beschrijving mag hier iets breder (320px, volle paginabreedte i.p.v.
+   een smalle kaartkolom). ────────────────────────────────────────────────────────────────────── */
+.gl-v2-empty-state-desc { max-width: 320px; }
 .gl-v2-empty-state-inline {
     border-radius: var(--gl-v2-radius-md);
     background: var(--gl-v2-surface);

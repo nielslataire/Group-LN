@@ -1,0 +1,67 @@
+@model Enum
+@*
+    gl-v2 (design-handoff optie 4h "Dropdowns — gesloten veld, basis" — zie DESIGN.md "Select /
+    Dropdown"). De Basis-variant (geen zoekveld — 4h se eigen regel: dat komt pas bij een langere
+    lijst) voor een korte, vaste keuzelijst zoals een enum — een native <select> kan deze look niet
+    tekenen (de browser tekent zijn eigen open-lijst buiten CSS-bereik, DESIGN.md's eigen reden).
+    Generiek voor ELK enum-type (@model Enum, niet één specifiek enum): leest de opties via
+    Enum.GetValues + elke waarde se eigen [Display(Name=...)]-attribuut (dezelfde conventie als de
+    rest van de admin, valt terug op ToString() zonder attribuut).
+
+    In tegenstelling tot GlV2SearchSelect hiernaast (dat zijn open/zoek-JS bewust ongewired laat)
+    WERKT dit veld meteen — window.GlV2Shell's initGlV2Select() (gl-v2-shell.js) initialiseert elke
+    [data-gl-v2-select] shell-breed, zelfde "component + gedrag samen" als initContextMenus()/
+    initClickableRows(). Een keuze dispatcht een echte "change"-event op de onderliggende hidden
+    input, dus bestaande $('#id').on('change', …)-logica (bv. een afhankelijk veld in-/uitschakelen)
+    blijft werken zonder wijziging — zelfde contract als een native <select>.
+
+    Optioneel: Label (override), Icon (Phosphor-klasse).
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var icon = ViewData["Icon"] as string;
+    var enumType = Model.GetType();
+    var currentValue = Convert.ToInt32(Model);
+
+    string DisplayNameFor(Enum value)
+    {
+        var member = enumType.GetMember(value.ToString()).FirstOrDefault();
+        var display = member?.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), false)
+            .FirstOrDefault() as System.ComponentModel.DataAnnotations.DisplayAttribute;
+        return display?.Name ?? value.ToString();
+    }
+
+    var options = Enum.GetValues(enumType).Cast<Enum>()
+        .Select(v => new { Value = Convert.ToInt32(v), Text = DisplayNameFor(v) })
+        .ToList();
+    var selectedText = options.FirstOrDefault(o => o.Value == currentValue)?.Text ?? Model.ToString();
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@(id)_trigger">@label</label>
+    <div class="gl-v2-select" data-gl-v2-select>
+        <input type="hidden" id="@id" name="@name" value="@currentValue" />
+        <div id="@(id)_trigger" class="gl-v2-select-trigger is-filled@(hasError ? " is-error" : "")" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+            @if (!string.IsNullOrWhiteSpace(icon))
+            {
+                <i class="ph @icon" aria-hidden="true"></i>
+            }
+            <span class="gl-v2-select-trigger-label">@selectedText</span>
+            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-select-panel" role="listbox">
+            @foreach (var opt in options)
+            {
+                <button type="button" class="gl-v2-select-option@(opt.Value == currentValue ? " is-selected" : "")" role="option" data-value="@opt.Value">
+                    <i class="ph ph-check" aria-hidden="true"></i><span>@opt.Text</span>
+                </button>
+            }
+        </div>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

@@ -13,6 +13,7 @@
     // eerst een gedeelde service uittrekken zodat dit en _LeftSidebarPartial.cshtml niet meer
     // los van elkaar kunnen uitzakken.
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
     var issuerCompanies = (await IssuerCompanyService.GetAllAsync())
         .OrderBy(i => i.Name)
         .ToList();
@@ -140,7 +141,18 @@
 
     @if (canSeeProjects)
     {
-        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Projecten" data-flyout="fly-projecten">
+        @* IsActive("Projecten") alleen dekt niet alles: de meeste projectsubpagina's (Detail, Budget,
+           Recalculation, Invoicing, Coördinatie, …) zijn wel allemaal acties op ProjectenController
+           zelf, maar Traject/Dossiers/Punten leven elk op hun eigen controller (zie
+           GlV2/_ProjectInnerMenuV2.cshtml se eigen Url.Action-aanroepen) — zonder die drie hier ook
+           mee te geven doofde het rail-item uit zodra je op één van die drie tabbladen zat, ook al zit
+           je nog steeds "in een project". Was hier de enige van alle rail-items zonder is-active-check.
+           Klanten/Detail en Klanten/EditProject horen er ook bij — dat zijn de individuele klantfiche
+           en het klant-bewerken-scherm BINNEN een project (beide dragen een projectid en tonen het
+           projectdossier-inner-menu), in tegenstelling tot de rest van KlantenController (Index/Edit/
+           Create), dat het losstaande Klanten-onderdeel is en hier terecht geen "Projecten" toont —
+           vandaar de actie-specifieke check i.p.v. heel "Klanten" toe te voegen aan IsActive(...). *@
+        <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Projecten", "ProjectTraject", "ProjectDossiers", "ProjectsIssues") || (IsActive("Klanten") && (currentAction == "Detail" || currentAction == "EditProject")) ? "is-active" : "")" aria-haspopup="true" aria-expanded="false" aria-label="Projecten" data-flyout="fly-projecten">
             <i class="ph ph-buildings" aria-hidden="true"></i>
             <span class="gl-v2-rail-tooltip">Projecten</span>
         </button>

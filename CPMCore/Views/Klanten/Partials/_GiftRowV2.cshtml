@@ -1,0 +1,64 @@
+@model BOCore.ClientGiftBO
+@using HtmlHelpers.BeginCollectionItemCore
+@using BOCore
+@*
+    gl-v2-vertaling van Partials/_GiftRow.cshtml — zelfde Html.BeginCollectionItem("Gifts")-wrapper.
+    Activiteiten-kiezer hergebruikt de ZOEKENDE meervoudige-selectvariant (niet de nieuwe dropdown-
+    variant van Facturatiebedrijven) — zelfde reden als Leveranciers' eigen Activiteiten-veld: de
+    lijst kan lang zijn, tikken-om-te-filteren helpt hier wél. ViewData["Listactivities"] komt van
+    EditProjectV2.cshtml (zelfde ViewData-conventie als de legacy pagina).
+*@
+@{
+    var listActivities = ViewData["Listactivities"] as List<IdNameBO> ?? new List<IdNameBO>();
+    var activityFieldName = Html.NameFor(m => m.SelectedActivityIds).ToString();
+}
+<div class="gl-v2-client-row">
+@using (Html.BeginCollectionItem("Gifts"))
+{
+    @Html.HiddenFor(m => m.AccountId)
+    @Html.HiddenFor(m => m.Id)
+    <div class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-title">Toegift</span>
+            <span class="gl-v2-card-header-spacer"></span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-gift-row" title="Toegift verwijderen" aria-label="Toegift verwijderen">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Description)">Omschrijving</label>
+                <div class="gl-v2-field-box">
+                    @Html.TextBoxFor(m => m.Description, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                </div>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label">Activiteiten</label>
+                <div class="gl-v2-select" data-gl-v2-multiselect data-field-name="@activityFieldName">
+                    <div class="gl-v2-select-trigger gl-v2-select-trigger-multi" tabindex="0" role="button" aria-haspopup="listbox">
+                        <div class="gl-v2-select-chips" data-role="chips"></div>
+                        <input type="text" class="gl-v2-select-trigger-multi-input" placeholder="Zoek …" data-role="filter" autocomplete="off" />
+                    </div>
+                    <div class="gl-v2-select-panel gl-v2-select-panel-search">
+                        <div class="gl-v2-select-options" data-role="options">
+                            @foreach (var activity in listActivities.OrderBy(a => a.Display))
+                            {
+                                <button type="button" class="gl-v2-select-option is-multi" data-id="@activity.ID" data-text="@activity.Display">
+                                    <span class="gl-v2-select-option-check"><i class="ph ph-check" aria-hidden="true"></i></span>
+                                    <span>@activity.Display</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div data-role="hidden-inputs">
+                        @foreach (var id in Model.SelectedActivityIds ?? new List<int>())
+                        {
+                            <input type="hidden" name="@activityFieldName" value="@id" data-role="hidden-input" />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</div>

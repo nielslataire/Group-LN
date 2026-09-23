@@ -20,4 +20,14 @@ public class GlV2ProjectMenuVm
     public string ProjectSubtitle { get; set; } = "";
     public bool IsCoordinationProject { get; set; }
     public GlV2ProjectMenuMode Mode { get; set; } = GlV2ProjectMenuMode.Outer;
+
+    // Design-handoff 12a/12d: een item toont een teller (bv. "Klanten … 2") ná het label, maar enkel
+    // wanneer dat item ook de ACTIEVE ingang is — de mockup's eigen conventie, elders in het menu komt
+    // geen enkele teller voor (zie de partial se eigen "geen live tellers"-toelichting). Projectwijd
+    // herbruikbaar voor élk item, niet enkel "Klanten": gekeyed op het item se exacte label (zelfde
+    // Nederlandse tekst als in de partial, bv. "Klanten", "Punten") i.p.v. een aparte property per
+    // item — een volgende pagina die bv. een "Punten"-teller wil, vult gewoon
+    // ItemCounts["Punten"] = 3 zonder dat deze klasse of de partial ooit opnieuw moet veranderen. Een
+    // pagina die geen tellers heeft (de meeste) laat dit gewoon leeg.
+    public Dictionary<string, int> ItemCounts { get; set; } = new();
 }

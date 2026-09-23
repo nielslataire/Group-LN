@@ -1,0 +1,76 @@
+@model BOCore.ClientContactBO
+@using HtmlHelpers.BeginCollectionItemCore
+@*
+    gl-v2-vertaling van Partials/_ContactRow.cshtml — zelfde Html.BeginCollectionItem("Client.
+    Contacts")-wrapper, binding/index-gedrag ongewijzigd. Eigen partial (niet _ClientContactRowV2.
+    cshtml hergebruikt) omdat dit een ander model is: ClientContactBO (BOCore, gebruikt in
+    EditProjectV2) i.p.v. ContactInputViewModel (gebruikt in Klanten/Edit/CreateV2) — andere
+    veldnamen (Firstname i.p.v. Forename) en dit model heeft ook een Salutation-veld.
+*@
+<div class="gl-v2-client-row">
+@using (Html.BeginCollectionItem("Client.Contacts"))
+{
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.IsCoOwner)
+    <div class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-title">Contact</span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-primary-contact-toggle @(Model.IsPrimaryContact ? "is-primary" : "")" aria-pressed="@(Model.IsPrimaryContact ? "true" : "false")" title="Als primair contact instellen" aria-label="Als primair contact instellen">
+                <i class="ph ph-star" aria-hidden="true"></i>
+            </button>
+            @Html.CheckBoxFor(m => m.IsPrimaryContact, new { @class = "js-gl-v2-primary-contact-input", hidden = "hidden" })
+            <span class="gl-v2-card-header-spacer"></span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-contact-row" title="Contact verwijderen" aria-label="Contact verwijderen">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Salutation)">Aanspreking</label>
+                    <div class="gl-v2-field-box">
+                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<BOCore.Salutation>(), new { @class = "gl-v2-field-input" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Name, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Firstname)">Voornaam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Firstname, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group">
+                @Html.EditorFor(m => m.Email, "GlV2Email")
+                @Html.EditorFor(m => m.Phone, "GlV2Telefoon")
+                @Html.EditorFor(m => m.Cellphone, "GlV2Gsm")
+            </div>
+            <div class="gl-v2-field-group">
+                @Html.EditorFor(m => m.InvoiceEmail, "GlV2Email")
+            </div>
+            <div class="gl-v2-switch-group" data-role="ubl-pair">
+                <div class="gl-v2-switch-row">
+                    <label class="gl-v2-switch">
+                        @Html.CheckBoxFor(m => m.RequiresDigitalInvoice, new { @class = "gl-v2-client-switch-input", data_role = "digital-invoice-toggle" })
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">Digitale factuur vereist</span>
+                </div>
+                <div class="gl-v2-switch-row is-dependent">
+                    <label class="gl-v2-switch">
+                        @Html.CheckBoxFor(m => m.AttachUblByDefault, new { @class = "gl-v2-client-switch-input", data_role = "ubl-toggle" })
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">UBL standaard meesturen</span>
+                    <span class="gl-v2-switch-row-hint">hangt af van de vorige</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</div>

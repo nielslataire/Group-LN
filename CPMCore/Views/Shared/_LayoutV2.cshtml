@@ -110,7 +110,13 @@
                     }
                     <span class="gl-v2-topbar-icon"><i class="@pageIcon" aria-hidden="true"></i></span>
                     <div class="gl-v2-topbar-titles">
-                        <p class="gl-v2-topbar-title">@pageTitle</p>
+                        @* <h1> (was <p>, critique fix): the one real page heading, rendered once per page
+                           by the shared shell — every content card underneath uses <h2> (see
+                           .gl-v2-section-card-title), so this is the top of a real heading tree instead of
+                           a page with no heading-1 anywhere. title-attribuut = volledige tekst als tooltip
+                           zodra de ellipsis (gl-v2-shell.css) effectief afkapt — design-handoff punt 13
+                           "Topbar met lange namen", regel 3. *@
+                        <h1 class="gl-v2-topbar-title" title="@pageTitle">@pageTitle</h1>
                         @await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
                     </div>
                     @* Optioneel — design-handoff 8a/8d: statusbadges direct naast de titel (bv.

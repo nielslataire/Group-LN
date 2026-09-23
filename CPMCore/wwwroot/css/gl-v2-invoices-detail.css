@@ -25,6 +25,14 @@
 
 .gl-v2-invoice-detail-body { display: flex; flex-direction: column; gap: 14px; }
 
+/* Op gsm blijven de VERKOOP/status/OPENSTAAND-chips helemaal weg — eerst naar een eigen rij onder
+   de topbar verplaatst (11e), maar op verzoek weer geschrapt zonder vervanging (de mobiele
+   bedragkaart draagt daar al genoeg richtingssignaal: de groene accentbalk + "Wij factureren"/"Aan"
+   op één regel). @@section PageTitleBadges blijft de bron voor desktop/tablet. */
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-badges { display: none; }
+}
+
 /* ── Richting-/bedragkaart (desktop/tablet) ───────────────────────────────────────────────────── */
 .gl-v2-invoice-hero {
     display: flex;
@@ -89,9 +97,12 @@
 .gl-v2-invoice-hero-mobile-parties .gl-v2-invoice-hero-name { max-width: none; font-size: 12.5px; }
 
 /* ── 3 infokaarten (Onze onderneming / Klant / Documentgegevens) ─────────────────────────────────
-   12-koloms desktopraster (3 gelijke kolommen) → 2 → 1, ruwweg dezelfde 3-stap-vorm als 11d/11e
-   beschrijven (exacte 2+1-herschikking van 11d zelf niet 1-op-1 nagebouwd — een gelijke-breedte-
-   grid geeft dezelfde leesbaarheid met veel minder eigen CSS). */
+   Desktop: 3 gelijke kolommen. Tablet (768–1023.98px, design-handoff 11d): Klant/Onze onderneming
+   elk de helft naast elkaar, Documentgegevens neemt de volle breedte op de rij eronder — een 2-koloms
+   grid geeft dat vanzelf voor de eerste twee kaarten (auto-plaatsing), Documentgegevens krijgt zijn
+   eigen grid-column:1/-1 om over de volle breedte te spannen i.p.v. auto-geplaatst als een derde,
+   half-brede kolom met een lege cel ernaast te eindigen. <768px: .gl-v2-invoice-cards wordt daar
+   sowieso display:contents (zie de mobiele sectie onderaan), grid-column doet er dan niets meer toe. */
 .gl-v2-invoice-cards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -100,9 +111,7 @@
 }
 @media (max-width: 1023.98px) {
     .gl-v2-invoice-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 639.98px) {
-    .gl-v2-invoice-cards { grid-template-columns: 1fr; }
+    .gl-v2-invoice-card-doc { grid-column: 1 / -1; }
 }
 
 /* Neutrale (grijze) sectiekop-variant voor "Onze onderneming" — 11a se eigen onderscheid: de
@@ -122,6 +131,17 @@
 }
 .gl-v2-invoice-party-name + .gl-v2-detail-grid { padding-top: 10px; }
 .gl-v2-detail-grid .gl-v2-detail-value { white-space: pre-line; }
+
+/* Inklap-lichaam (Onze onderneming/Klant) — .gl-v2-section-card-header[aria-expanded]/.is-
+   collapsible/.gl-v2-section-card-chevron zijn al generiek (gl-v2-shell.css), maar de bijhorende
+   hide-regel target daar specifiek ".gl-v2-section-grid" (12-koloms variant) als sibling, niet de
+   ".gl-v2-detail-grid" die deze twee kaarten gebruiken — vandaar een eigen wrapper i.p.v. rechtstreeks
+   op .gl-v2-detail-grid te targeten (die kaarten hebben ook nog .gl-v2-invoice-party-name ervoor,
+   die moet mee dichtklappen). Enkel <768px effectief: op desktop/tablet blijft alles gewoon open,
+   ongeacht de aria-expanded-beginstand in de markup (die bepaalt daar dus niets zichtbaars). */
+@media (max-width: 767.98px) {
+    .gl-v2-section-card-header[aria-expanded="false"] + .gl-v2-invoice-collapsible-body { display: none; }
+}
 
 /* Maximum twee kolommen voor de velden in elke infokaart hier (Onze onderneming/Klant/
    Documentgegevens) — .gl-v2-detail-grid se eigen standaard-breakpoints (4 kolommen tot 1023.98px,
@@ -218,32 +238,54 @@
 }
 .gl-v2-invoice-totals-highlight span:last-child { font-size: 16px; font-variant-numeric: tabular-nums; }
 
-/* ── Vaste actiebalk (design-handoff 11d/11e) — hergebruikt .gl-v2-form-actionbar (EditV2-pagina's),
-   dat vanzelf al position:fixed wordt <768px. Hier extra: verborgen ≥1200px (topbar-acties volstaan
-   op desktop) en zelf ook al position:fixed in de tussenliggende tabletrange, niet enkel <768px. ─── */
-@media (min-width: 1200px) {
-    .gl-v2-invoice-actionbar { display: none; }
+/* ── Vaste actiebalk (design-handoff 11d/11e) — hergebruikt .gl-v2-form-actionbar (EditV2-pagina's).
+   Belangrijk: _LayoutV2.cshtml laadt @@section PageStyle (dit bestand) VÓÓR gl-v2-shell.css, dus een
+   losse-klasse override hier (".gl-v2-invoice-actionbar{display:none}") verliest bij gelijke
+   specificiteit van shell.css se latere ".gl-v2-form-actionbar{display:flex}" — de brontekst-volgorde
+   wint dan, niet de "logische" verwachting dat de pagina-eigen regel het laatste woord heeft. Elke
+   override hieronder is daarom altijd MINSTENS twee klassen samen (".gl-v2-form-actionbar.gl-v2-
+   invoice-actionbar", ".gl-v2-btn.gl-v2-invoice-topbar-btn") om gegarandeerd te winnen, ongeacht
+   laadvolgorde — hetzelfde gold voor .gl-v2-invoice-topbar-btn hieronder, dat om identiek dezelfde
+   reden eerst niets deed (de knoppen bleven gewoon zichtbaar op tablet). */
+@media (min-width: 1024px) {
+    .gl-v2-form-actionbar.gl-v2-invoice-actionbar { display: none; }
 }
-@media (min-width: 768px) and (max-width: 1199.98px) {
-    .gl-v2-invoice-actionbar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        margin: 0;
-        z-index: 40;
-    }
-    /* .gl-v2-content zelf blijft dan onderaan te veel/te weinig padding geven t.o.v. de nu losse
-       balk — dezelfde 64px + safe-area als de balk se eigen hoogte compenseert dat, net als de
-       <768px-regel in gl-v2-shell.css al voor die breedte doet. */
-    .gl-v2-invoice-detail-body { padding-bottom: 64px; }
+/* 768–1023.98px = tablet (design-handoff 11d): topbar houdt enkel de ⋯-trigger over —
+   Pdf/Bewerken/Verzenden verhuizen naar dezelfde onderbalk als gsm. GEEN position:fixed hier (dat
+   was de vorige, kapotte poging): <768px werkt fixed omdat de rail daar volledig verdwijnt
+   (.gl-v2-app krijgt padding:0, .gl-v2-rail display:none) — een fixed balk met left:0/right:0 kan
+   dan probleemloos de volle viewportbreedte gebruiken. Op tablet blijft de rail wél staan, dus
+   diezelfde left:0/right:0 liep gewoon dóór de rail heen (te breed) en werd deels door de kaart se
+   eigen overflow/kader aan het zicht onttrokken (half verborgen). In-flow (het gedeelde component
+   se eigen standaardgedrag, ongewijzigd) blijft dan gewoon correct onderaan de kaart plakken via
+   de bestaande negative-margin-truc, zonder de viewport-breedte-aanname die enkel <768px klopt. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-btn.gl-v2-invoice-topbar-btn { display: none; }
 }
 @media (max-width: 767.98px) {
     .gl-v2-invoice-hero { display: none; }
-    .gl-v2-invoice-hero-mobile { display: block; }
+    .gl-v2-invoice-hero-mobile { display: block; order: 1; }
     .gl-v2-invoice-detail-body { padding-bottom: 68px; }
 
     .gl-v2-invoice-lines-table-wrap { display: none; }
     .gl-v2-invoice-lines-mobile { display: flex; }
     .gl-v2-invoice-sends-subject { max-width: 160px; }
+
+    /* Op verzoek herschikt/ingekort op gsm: Factuurlijnen komt vlak na het bedrag, vóór de drie
+       infokaarten; Klant/Onze onderneming worden ingeklapt beschikbaar (zie hierboven), Document-
+       gegevens en Verzendgeschiedenis vallen helemaal weg (geen tabs/plek voor op dit formaat).
+       .gl-v2-invoice-cards wordt hier "onzichtbaar" voor de lay-out (display:contents) zodat de drie
+       kaarten erin gewoon meedoen aan de flex-order van .gl-v2-invoice-detail-body, i.p.v. als groep
+       vastgeklonken te blijven aan hun plek in de DOM. */
+    .gl-v2-invoice-cards { display: contents; }
+    .gl-v2-invoice-lines-card { order: 2; }
+    .gl-v2-invoice-card-client { order: 3; }
+    .gl-v2-invoice-card-issuer { order: 4; }
+    .gl-v2-invoice-card-doc,
+    .gl-v2-invoice-sends-card { display: none; }
+
+    /* Factuurlijnen: geen omschrijving-ondertitel in de kaartkop, geen omschrijving/btw-bedrag per
+       lijn (zie de aparte .gl-v2-invoice-lines-mobile-markup in DetailV2.cshtml voor wat daar wél
+       nog staat). */
+    .gl-v2-invoice-lines-desc { display: none; }
 }

@@ -7,9 +7,11 @@
 // in <main>) — beide staan dus altijd in de DOM, CSS toont enkel de ene of de andere per breedte. Om
 // die reden itereert dit bestand over ALLE ".gl-v2-project-menu"-wortels i.p.v. er één te pakken.
 //
-// Tablet (9b) heeft geen eigen JS meer nodig: de icoonkolom bestaat enkel nog uit gewone <a>-links
-// (navigatie + CSS-only tooltip via transition-delay), geen flyout-paneel meer om open/dicht te
-// houden.
+// Tablet (9b): de icoonkolom is gewone <a>-links met een CSS-only hover/focus-tooltip
+// (transition-delay). Touch heeft geen hover-status, dus initTabletRailPeek hieronder wapent de
+// eerste tik op een echt touch-toestel i.p.v. meteen te navigeren — pas de tweede tik op dezelfde
+// icoon laat de link zijn ding doen. Toetsenbord/muis-gebruikers (waar :focus-visible/:hover al
+// werken) raken dit pad niet, de check is (hover: none) and (pointer: coarse).
 (function () {
     "use strict";
 
@@ -19,7 +21,41 @@
     roots.forEach(function (root) {
         initSearch(root);
         initPhoneSheet(root);
+        initTabletRailPeek(root);
     });
+
+    // ── Tablet iconenkolom (9b) — eerste tik toont het label, tweede tik navigeert. ──
+    function initTabletRailPeek(root) {
+        var rail = root.querySelector(".gl-v2-pm-tablet");
+        if (!rail) return;
+        var isTouch = window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+        if (!isTouch) return;
+
+        var armed = null;
+
+        function disarm() {
+            if (armed) armed.classList.remove("is-peeking");
+            armed = null;
+        }
+
+        rail.querySelectorAll(".gl-v2-pm-rail-icon").forEach(function (icon) {
+            icon.addEventListener("click", function (e) {
+                if (armed === icon) {
+                    // Tweede tik op dezelfde icoon: laat de <a> gewoon navigeren.
+                    armed = null;
+                    return;
+                }
+                e.preventDefault();
+                disarm();
+                icon.classList.add("is-peeking");
+                armed = icon;
+            });
+        });
+
+        document.addEventListener("click", function (e) {
+            if (armed && !armed.contains(e.target)) disarm();
+        });
+    }
 
     // ── Zoekfilter — design-handoff 9a §3: filtert de groepen, lege groepen verdwijnen. ──
     function initSearch(root) {

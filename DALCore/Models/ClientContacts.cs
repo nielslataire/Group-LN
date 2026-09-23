@@ -27,6 +27,8 @@ public partial class ClientContacts
 
     public bool IsCoOwner { get; set; }
 
+    public bool IsPrimaryContact { get; set; }
+
     public decimal? CoOwnerPercentage { get; set; }
 
     public int? CoOwnerTypeId { get; set; }

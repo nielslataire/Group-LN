@@ -182,6 +182,29 @@ namespace CPMCore.Models.Klanten
                 _changeorders = value;
             }
         }
+
+        // gl-v2 (Klanten/DetailV2, design-handoff 12c): ongecapte, per-klant gefilterde lijsten voor
+        // de Wijzigingsopdrachten-kaart/-KPI en de Gefactureerd/Openstaand-KPI's — ChangeOrders
+        // hierboven blijft de gecapte (4) lijst die de legacy Detail.cshtml gebruikt, ongewijzigd.
+        private List<ChangeOrderBO> _clientchangeorders = new List<ChangeOrderBO>();
+        public List<ChangeOrderBO> ClientChangeOrders
+        {
+            get { return _clientchangeorders; }
+            set { _clientchangeorders = value; }
+        }
+        private List<InvoiceListItemBO> _clientinvoices = new List<InvoiceListItemBO>();
+        public List<InvoiceListItemBO> ClientInvoices
+        {
+            get { return _clientinvoices; }
+            set { _clientinvoices = value; }
+        }
+        // gl-v2: zelfde vlag/reden als DetailClientsModel.IsCoordinationProject — _ProjectInnerMenuV2
+        // heeft 'm nodig op elke pagina die het meerendert.
+        public bool IsCoordinationProject { get; set; }
+        // gl-v2: zelfde teller-conventie als Projecten/DetailClientsV2 (GlV2ProjectMenuVm.ItemCounts
+        // ["Klanten"]) — het aantal klanten van het PROJECT, niet van deze ene klantfiche, zodat de
+        // "Klanten"-ingang in het inner menu hier exact dezelfde teller toont als op de klantenlijst.
+        public int ProjectClientCount { get; set; }
     }
 
     public class EditClientModel
@@ -198,6 +221,14 @@ namespace CPMCore.Models.Klanten
             _countries = new List<IdNameBO>();
             _listactivities = new List<IdNameBO>();
         }
+        // gl-v2 (Klanten/EditProjectV2): we zitten nog altijd in het project, dus toont deze pagina
+        // ook het projectdossier-inner menu — zelfde drie velden/reden als ClientModel hierboven
+        // (ProjectName/ProjectClientCount/IsCoordinationProject), enkel op dit model herhaald omdat
+        // EditClientModel een apart type is. Gevuld in FillInAddSelectListsEdit, dus op elk
+        // redisplay-pad (GET én elke POST-validatiefout) opnieuw correct.
+        public string ProjectName { get; set; } = "";
+        public int ProjectClientCount { get; set; }
+        public bool IsCoordinationProject { get; set; }
         private int _projectid;
         public int ProjectId
         {
@@ -914,6 +945,18 @@ namespace CPMCore.Models.Klanten
                 _clientaccounts = value;
             }
         }
+
+        // gl-v2: zelfde vlag als ShowProjectDetail.Project.IsOnlyCoordinationProject — het
+        // projectdossier-inner-menu (GlV2/_ProjectInnerMenuV2) heeft die nodig op elke pagina die het
+        // meerendert, niet enkel op Projecten/DetailV2.
+        public bool IsCoordinationProject { get; set; }
+
+        // gl-v2 (DetailClientsV2, design-handoff 12d): wooneenheden/commerciële ruimtes (Type.GroupId
+        // 1/4) zonder klant — ClientAccounts hierboven komt enkel via GetClientAccountsByProjectIdWith
+        // Units, dat per definitie GEEN eenheden zonder klant teruggeeft. 12d toont die eenheden zelf
+        // wél als "Nog geen klant"-rij (het is een verkoopoverzicht van het project, geen kaal
+        // klantenregister) — vandaar deze aparte lijst, gevuld uit IUnitService.
+        public List<BOCore.UnitBO> AvailableUnits { get; set; } = new();
     }
 
     public class ClientCalendarModel

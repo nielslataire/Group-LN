@@ -91,6 +91,8 @@ public partial class Units
 
     public virtual ICollection<ProjectConnectionKey> ProjectConnectionKey { get; set; } = new List<ProjectConnectionKey>();
 
+    public virtual ICollection<ProjectPictures> ProjectPictures { get; set; } = new List<ProjectPictures>();
+
     public virtual UnitTypes Type { get; set; }
 
     public virtual ICollection<UnitConstructionValue> UnitConstructionValue { get; set; } = new List<UnitConstructionValue>();

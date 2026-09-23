@@ -1,0 +1,30 @@
+@model string
+@*
+    gl-v2 (design-handoff punt 14d "2 · ALLEEN-LEZEN VERSUS UITGESCHAKELD" — de alleen-lezen helft).
+    Geen invoerveld: de waarde ligt vast en wordt nooit getikt (bv. Leverancier op EditContractV2,
+    eens een contract een vaste leverancier heeft) — anders dan UITGESCHAKELD, waar hetzelfde veld
+    gewoon met [disabled] rendert (elk ander GlV2-EditorTemplate doet dat al via de bestaande
+    .gl-v2-field-box:has(.gl-v2-field-input:disabled)-regels, geen apart template nodig). Twee
+    verschillende betekenissen, twee verschillende looks — 14d se eigen punt. In DisplayTemplates/,
+    niet EditorTemplates/ — dit veld toont enkel, het bindt niets terug (geen <input>, dus geen
+    naam/id nodig) — zelfde indeling als GlV2DetailField.cshtml hiernaast. Enkel expliciete aanroep
+    via Html.DisplayFor(..., "GlV2ReadOnlyValue", ...), zelfde GlV2-prefix-conventie als de rest van
+    deze map.
+
+    Optioneel: Label (override), Icon (Phosphor-klasse, bv. "ph-hard-hat").
+*@
+@{
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var icon = ViewData["Icon"] as string;
+    var isEmpty = string.IsNullOrWhiteSpace(Model);
+}
+<div class="gl-v2-field">
+    <span class="gl-v2-field-label">@label</span>
+    <div class="gl-v2-field-readonly">
+        @if (!string.IsNullOrWhiteSpace(icon))
+        {
+            <i class="ph @icon" aria-hidden="true"></i>
+        }
+        <span>@(isEmpty ? "—" : Model)</span>
+    </div>
+</div>

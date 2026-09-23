@@ -188,6 +188,7 @@ namespace ServiceCore.Translators
                 entity.InvoicePostalCodeId = null;
 
             // 4) Contacts & Co-owners
+            NormalizePrimaryContact(bo.Contacts);
             var err = HandleContacts(entity, bo.Contacts, bo.CoOwners, uow);
             if (err != ErrorCode.Success) return err;
 
@@ -195,6 +196,20 @@ namespace ServiceCore.Translators
             if (err != ErrorCode.Success) return err;
 
             return ErrorCode.Success;
+        }
+
+        // Defensief, niet enkel cosmetisch: de UI (elke gl-v2-contactrij) laat visueel maar één rij
+        // tegelijk "Primair contact" aanvinken, maar dat is bypasbaar — normaliseert hier vóór het
+        // opslaan (Klanten/EditProject, ClientAccountBO-pad): enkel de EERSTE aangevinkte blijft
+        // primair. Stack A (Klanten/Edit, Create — ClientFormViewModel-pad) heeft zijn eigen,
+        // identieke normalisatie in KlantenController.NormalizePrimaryContact, want dat pad loopt
+        // hier nooit doorheen.
+        private static void NormalizePrimaryContact(List<ClientContactBO> contacts)
+        {
+            if (contacts == null) return;
+            var keepPrimary = contacts.FirstOrDefault(c => c.IsPrimaryContact);
+            foreach (var contact in contacts)
+                contact.IsPrimaryContact = contact == keepPrimary;
         }
 
         private static ErrorCode HandleContacts(

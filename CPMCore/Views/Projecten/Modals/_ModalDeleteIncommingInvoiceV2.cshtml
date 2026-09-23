@@ -1,0 +1,21 @@
+@model BOCore.IncommingInvoiceBO
+@* gl-v2 layout-pilot (design-handoff optie 4j, TYPE 1 "Bevestiging" — danger-variant). Zelfde
+   patroon als Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml: dit fragment IS de
+   .modal-content-inhoud (body + footer), geladen in de al aanwezige #delete-invoice-container
+   (IncommingInvoiceDetailV2.cshtml). Verwijderknop blijft een GET-link naar DeleteIncommingInvoice
+   (bewust ongewijzigd — dezelfde actie/contract als de legacy modal gebruikte, geen POST+
+   antiforgery-upgrade verzonnen voor deze ene knop). *@
+<div class="modal-body">
+    <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+    <div class="gl-v2-modal-text">
+        <h2 class="gl-v2-modal-title">Factuur verwijderen?</h2>
+        <p class="gl-v2-modal-desc">
+            U staat op het punt om de factuur <strong>@Model.InvoiceExternalId</strong> van <strong>@ViewBag.CompanyName</strong> te verwijderen.
+            Weet je zeker dat je deze factuur wilt verwijderen?
+        </p>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+    <a href="@Url.Action("DeleteIncommingInvoice", "Projecten", new { id = Model.Id, projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</a>
+</div>

@@ -1,0 +1,119 @@
+@*
+    gl-v2 (design-handoff Modals TYPE 2 "Formulier", .gl-v2-modal-form — zelfde recept als
+    Klanten/Modals/_VatLookupModalV2.cshtml). Gedeelde "nieuwe werfleider"-modal + JS voor
+    Projecten/EditContractV2 (en, indien later gl-v2'd, AddContract). Verwacht op de pagina:
+    #txtCompanyID (hidden, leverancier-id), #txtCompanyDisplay (naam, optioneel), #ddlSiteManager
+    (de dropdown), #btnNewSiteManager (de "+"-knop) en een antiforgery-token in het formulier —
+    zelfde contract als de legacy _SiteManagerNewModal.cshtml, enkel de markup is herbouwd; de JS
+    hieronder is functioneel ongewijzigd (zelfde ids, zelfde AddCompanyContactQuick-aanroep).
+*@
+<div class="modal fade gl-v2-modal-form" id="modalNewSiteManager" tabindex="-1" aria-hidden="true" aria-labelledby="modalNewSiteManagerLabel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalNewSiteManagerLabel">Nieuwe werfleider</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="gl-v2-field-full gl-v2-nwm-for" id="nwmForLabel">Voor: </p>
+                <div class="gl-v2-field-full gl-v2-nwm-error d-none" id="nwmErrors" role="alert"></div>
+                <div class="gl-v2-field gl-v2-field-full">
+                    <label class="gl-v2-field-label" for="nwmName">Naam <span class="gl-v2-ec-required-star" aria-hidden="true">*</span></label>
+                    <div class="gl-v2-field-box">
+                        <input type="text" id="nwmName" class="gl-v2-field-input" placeholder="Voor- en achternaam…" required aria-required="true" autocomplete="name" />
+                    </div>
+                </div>
+                <div class="gl-v2-field gl-v2-field-full">
+                    <label class="gl-v2-field-label" for="nwmEmail">E-mailadres</label>
+                    <div class="gl-v2-field-box">
+                        <input type="email" id="nwmEmail" class="gl-v2-field-input" placeholder="naam@bedrijf.be" inputmode="email" spellcheck="false" autocomplete="email" />
+                    </div>
+                </div>
+                <div class="gl-v2-field gl-v2-field-full">
+                    <label class="gl-v2-field-label" for="nwmPhone">Telefoon</label>
+                    <div class="gl-v2-field-box">
+                        <input type="tel" id="nwmPhone" class="gl-v2-field-input" placeholder="+32 …" inputmode="tel" autocomplete="tel" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="btnCreateSiteManager">Werfleider aanmaken &amp; selecteren</button>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    /* Page-local — dit ene formulier heeft geen andere caller, geen gedeelde .gl-v2-* naam nodig. */
+    .gl-v2-nwm-for { margin: 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+    .gl-v2-nwm-error { padding: 10px 12px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); font: 500 12.5px var(--gl-v2-font-sans); }
+</style>
+
+<script>
+    (function () {
+        function smToken() {
+            const el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        var siteManagerModalElement = document.getElementById('modalNewSiteManager');
+        function getSiteManagerModal() {
+            return (siteManagerModalElement && window.bootstrap)
+                ? bootstrap.Modal.getOrCreateInstance(siteManagerModalElement)
+                : null;
+        }
+
+        $('#btnNewSiteManager').on('click', function () {
+            const companyId = $('#txtCompanyID').val();
+            if (!companyId || companyId === "0") return;
+            $('#nwmForLabel').text('Voor: ' + ($('#txtCompanyDisplay').val() || ''));
+            $('#nwmErrors').addClass('d-none').empty();
+            var m = getSiteManagerModal();
+            if (m) { m.show(); } else { window.alert('Kan het venster niet openen.'); }
+        });
+
+        $('#btnCreateSiteManager').on('click', function () {
+            const companyId = $('#txtCompanyID').val();
+            const name = $('#nwmName').val();
+            const $errors = $('#nwmErrors').addClass('d-none').empty();
+
+            if (!name || !name.trim()) {
+                $errors.removeClass('d-none').text('Naam is verplicht.');
+                return;
+            }
+
+            const button = $(this);
+            button.prop('disabled', true);
+
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("AddCompanyContactQuick", "Projecten")',
+                data: {
+                    companyId: companyId,
+                    name: name,
+                    email: $('#nwmEmail').val(),
+                    phone: $('#nwmPhone').val(),
+                    __RequestVerificationToken: smToken()
+                },
+                dataType: 'json'
+            }).done(function (data) {
+                if (!data || !data.success) {
+                    $errors.removeClass('d-none').text((data && data.error) || 'De werfleider kon niet worden aangemaakt.');
+                    return;
+                }
+
+                const $select = $('#ddlSiteManager');
+                $select.append(new Option(data.text, data.id, false, false));
+                $select.val(data.id);
+
+                var m = getSiteManagerModal();
+                if (m) { m.hide(); }
+                siteManagerModalElement.querySelectorAll('input').forEach(i => i.value = '');
+            }).fail(function (xhr) {
+                $errors.removeClass('d-none').text((xhr.responseJSON && xhr.responseJSON.error) || 'De werfleider kon niet worden aangemaakt.');
+            }).always(function () {
+                button.prop('disabled', false);
+            });
+        });
+    })();
+</script>

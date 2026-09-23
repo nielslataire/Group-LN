@@ -1,0 +1,46 @@
+@model BOCore.ContractBO
+@* gl-v2 layout-pilot (design-handoff punt 14, "⋯ op hover bevat bewerken, contract toevoegen en
+   verwijderen"). Zelfde patroon als Projecten/Modals/_ModalDeleteIncommingInvoiceV2.cshtml: dit
+   fragment IS de .modal-content-inhoud (body + footer), geladen in de al aanwezige
+   #delete-contract-container (DetailContractV2.cshtml/DetailContractsV2.cshtml). Verwijderknop
+   blijft een GET-link naar DeleteContract (bewust ongewijzigd — dezelfde actie/contract als de
+   legacy modal gebruikte). CanDelete/CompanyName komen van ModalDeleteContractV2 net als de legacy
+   actie al deed (ContractHasLinkedData). *@
+@{
+    var canDelete = ViewBag.CanDelete as bool? ?? true;
+}
+<div class="modal-body">
+    @if (canDelete)
+    {
+        <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+        <div class="gl-v2-modal-text">
+            <h2 class="gl-v2-modal-title">Contract verwijderen?</h2>
+            <p class="gl-v2-modal-desc">
+                U staat op het punt om het contract van leverancier <strong>@ViewBag.CompanyName</strong> te verwijderen.
+                Weet je zeker dat je dit contract wilt verwijderen?
+            </p>
+        </div>
+    }
+    else
+    {
+        <span class="gl-v2-modal-icon is-blocked"><i class="ph ph-prohibit" aria-hidden="true"></i></span>
+        <div class="gl-v2-modal-text">
+            <h2 class="gl-v2-modal-title">Contract kan niet verwijderd worden</h2>
+            <p class="gl-v2-modal-desc">
+                Het contract van <strong>@ViewBag.CompanyName</strong> heeft gekoppelde facturen of wijzigingsopdrachten.
+                Verwijder die eerst voordat je dit contract verwijdert.
+            </p>
+        </div>
+    }
+</div>
+<div class="modal-footer">
+    @if (canDelete)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+        <a href="@Url.Action("DeleteContract", "Projecten", new { id = Model.Id, projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</a>
+    }
+    else
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bs-dismiss="modal">Sluiten</button>
+    }
+</div>

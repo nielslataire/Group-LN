@@ -1,0 +1,98 @@
+/* gl-v2 layout-pilot — Klanten/EditProjectV2.cshtml ("klant bewerken vanuit een project"). Eigen
+   bestand (niet gl-v2-klanten-form.css hergebruikt) omdat deze pagina een ander model bindt
+   (EditClientModel/BOCore i.p.v. ClientFormViewModel) en drie tabs extra heeft (Eenheden/
+   Mede-eigenaars/Toegiften+Aandachtspunten) — de basisstramien (verticale flex-kolom, rij-kaarten)
+   is wel rechtstreeks overgenomen uit gl-v2-klanten-form.css, vandaar dezelfde klassenamen
+   (.gl-v2-client-edit-form/-scroll/-row/-switch-input zijn generieke "klant-formulier"-concepten,
+   geen Edit/CreateV2-specifieke). Alles generiek herbruikbaar (velden, badges, tabbar, sectiekaart,
+   actiebalk, schakelaar, meervoudige/zoekende select) zit al in gl-v2-shell.css. */
+
+.gl-v2-client-edit-form {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.gl-v2-client-edit-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Altijd wat witruimte boven de actiebalk, ook helemaal onderaan gescrold. */
+    padding-bottom: 20px;
+}
+
+@media (max-width: 767.98px) {
+    .gl-v2-client-edit-scroll { padding-bottom: 140px; }
+}
+
+.gl-v2-tab-panel[hidden] { display: none; }
+.gl-v2-tab-panel { display: flex; flex-direction: column; gap: 16px; }
+
+/* .gl-v2-tabbar-tab zet zelf al display:flex (gl-v2-shell.css) — dat wint anders van het [hidden]-
+   attribuut se eigen UA-standaardregel (zelfde specificiteit, later in de cascade). De
+   Mede-eigenaars-tab wordt zo verborgen/getoond op basis van het gekozen eigenaarstype. */
+.gl-v2-tabbar-tab[hidden] { display: none; }
+
+.gl-v2-client-row-list-header { display: flex; justify-content: flex-end; }
+.gl-v2-client-row + .gl-v2-client-row { margin-top: 14px; }
+
+/* Eenheden-tab: één kaart per eenheid, grond-/constructiewaarden als een golvend veldenraster
+   (kan een variabel aantal constructiewaarden per eenheid zijn). */
+.gl-v2-tab-panel[data-tab-panel="eenheden"] .gl-v2-field-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+.gl-v2-tab-panel[data-tab-panel="eenheden"] .gl-v2-field {
+    flex: 1 1 200px;
+    min-width: 160px;
+}
+
+/* Adresblok (hoofd + facturatie, telkens land + zoekende postcode) — iets meer verticale ruimte
+   tussen het landveld en het postcodeveld dan de standaard .gl-v2-field-group-tussenruimte, zodat
+   het duidelijk als één samenhangend blok leest binnen de rij-kaart. */
+.gl-v2-field-group[data-gl-v2-address-block] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+.gl-v2-field-group[data-gl-v2-address-block] > .gl-v2-field { flex: 1 1 160px; }
+.gl-v2-field-group[data-gl-v2-address-block] > [data-gl-v2-search-select] { flex: 2 1 240px; }
+
+/* <768px: gl-v2-shell.css zet .gl-v2-field-group op flex-direction:column (velden onder elkaar) —
+   de 160px/240px hierboven zijn dan geen BREEDTE-basis meer maar een HOOGTE-basis (flex-basis volgt
+   de hoofdas, en die is nu verticaal), dus Land werd een leeg ~160px-hoog vak en de Gemeente-select
+   een leeg ~240px-hoog vak i.p.v. hun normale ~40-44px — exact de "veel ruimte tussen land/gemeente
+   en tussen gemeente/afwijkend facturatieadres" die gemeld werd. flex:none op dit bereik laat beide
+   gewoon hun eigen inhoudshoogte behouden, zoals elk ander gestapeld veld. */
+@media (max-width: 767.98px) {
+    .gl-v2-field-group[data-gl-v2-address-block] > .gl-v2-field,
+    .gl-v2-field-group[data-gl-v2-address-block] > [data-gl-v2-search-select] { flex: none; }
+}
+
+/* Tablet (768–1023.98px): dit blok draagt ook .gl-v2-col-5 (EditProjectV2's hoofd-/facturatie-
+   adresrij) — daar wordt .gl-v2-col-5 op dat bereik grid-column:span 6 (gl-v2-shell.css), de helft
+   van de rij. Land (min 160px) + de zoekende Gemeente-select (min 240px) passen dan niet meer naast
+   elkaar (416px+gap in ~<400px), dus wrapt de zoekende select — met .flex-wrap:wrap hierboven — naar
+   een eigen regel. Straat/Nr/Bus erboven vullen de rij daar toch al volledig (6+3+3), dus dit blok
+   krijgt op tablet gewoon de volle breedte in plaats van de gehalveerde: twee attributen-selectors
+   (0,2,0) wint hier zonder !important, ongeacht laadvolgorde t.o.v. gl-v2-shell.css se .gl-v2-col-5. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-field-group[data-gl-v2-address-block] { grid-column: span 12; }
+}
+
+/* Rekeningnummer en de "Digitale factuur"-schakelkaart: op tablet anders dan hun .gl-v2-col-4-
+   buren (Straat/Extra factuurinfo resp. Email/Facturatie-e-mail vullen de rij daarboven al volledig),
+   deze twee landen bij span:6 in een halfvolle rij met een lege helft ernaast. Twee klassen samen
+   (i.p.v. enkel deze eigen klasse) om zeker te winnen van gl-v2-shell.css se ".gl-v2-col-4{grid-
+   column:span 6}" op hetzelfde bereik — dit bestand laadt via @@section PageStyle vóór shell.css,
+   dus bij gelijke specificiteit (één klasse tegen één klasse) zou de latere shell-regel winnen. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-col-4.gl-v2-kep-col-full-tablet { grid-column: span 12; }
+}
+
+.gl-v2-client-row .gl-v2-switch-group { padding-top: 2px; }

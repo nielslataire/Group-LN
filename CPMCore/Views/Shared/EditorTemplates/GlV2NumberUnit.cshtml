@@ -1,0 +1,62 @@
+@model decimal?
+@*
+    gl-v2 (design-handoff punt 14d "1 · GETAL MET EENHEID — %, DAGEN, €"). Eén generiek getalveld
+    met een vast eenheid-blok RECHTS in de box, nooit in de placeholder — 14d groepeert %/dagen/€
+    zelf al als één veldtype, dus één template i.p.v. drie bijna-identieke. Tabelcijfers (14d: "geen
+    springende cijfers"), komma als decimaalteken via de bestaande CurrencyMask-JS. Enkel expliciete
+    aanroep, zelfde GlV2-prefix-conventie als de rest van deze map — geen impliciete UIHint-resolutie
+    (de oudere, niet-GlV2 Percentage.cshtml/Currency.cshtml blijven daar de standaard voor).
+
+    Vereist ViewData: Unit (bv. "%", "dagen", "€").
+    Optioneel: Label (override), Placeholder (default "0,00"), Id (override — enkel nodig wanneer
+    bestaande JS een vaste id verwacht die niet met het modelpad overeenkomt), Masked (bool, default
+    true — voegt de .Currencymask-klasse toe voor de CurrencyMask-JS; een dagen-teller zoals
+    Betaaltermijn zet dit uit, zelfde ongemaskeerde tekstveld als de legacy pagina al gebruikte —
+    "8" i.p.v. altijd "8,00"), Max (optionele hint-tekst onder het veld, bv. "Maximaal 100 %" —
+    puur informatief, de echte validatie blijft server-/ModelState-gedreven), Required (bool — forceert
+    de rode "*", voor velden die visueel verplicht zijn zonder een [Required]-attribuut op het model,
+    bv. Betaaltermijn), Bare (bool — laat het eigen label/.gl-v2-field-wrapper weg en rendert enkel
+    .gl-v2-field-box; voor een veld dat al binnen een ANDER samengesteld veld staat, bv. de %/dagen-
+    inputs binnen "Korting contant" op EditContractV2 — 14d se "4 · SAMENGESTELD VELD", dat geen twee
+    keer een eigen label wil).
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = ViewData["Id"] as string ?? name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var unit = ViewData["Unit"] as string ?? "";
+    var placeholder = ViewData["Placeholder"] as string ?? "0,00";
+    var masked = ViewData["Masked"] as bool? ?? true;
+    var maxHint = ViewData["Max"] as string;
+    var required = ViewData["Required"] as bool? ?? ViewData.ModelMetadata.IsRequired;
+    var bare = ViewData["Bare"] as bool? ?? false;
+    var value = Model.HasValue
+        ? (masked ? Model.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : Model.Value.ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture))
+        : "";
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")@(bare ? " gl-v2-field-bare" : "")">
+    @if (!bare)
+    {
+        <label class="gl-v2-field-label" for="@id">
+            @label
+            @if (required)
+            {
+                <span style="color:#8B2A2A">*</span>
+            }
+        </label>
+    }
+    <div class="gl-v2-field-box">
+        <input type="text" id="@id" name="@name" value="@value" placeholder="@placeholder" autocomplete="off"
+               inputmode="decimal" class="gl-v2-field-input is-tabular@(masked ? " Currencymask" : "")" />
+        <span class="gl-v2-field-unit">@unit</span>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(maxHint))
+    {
+        <span class="gl-v2-field-help">@maxHint</span>
+    }
+</div>

@@ -1,0 +1,573 @@
+/* gl-v2 (design-handoff/CRM Menu Wireframes.dc.html, punt 15 "Media in een project"). Page-scoped —
+   only Projecten/DetailPhotosV2.cshtml loads this. Reuses gl-v2-shell.css primitives (.gl-v2-card,
+   .gl-v2-card-header, .gl-v2-tabbar, .gl-v2-badge, .gl-v2-btn*, .gl-v2-field*, .gl-v2-select*,
+   .gl-v2-toggle*, .gl-v2-menu*, .gl-v2-empty-state) wherever the mockup's own component already
+   matches one; only what's genuinely new to this page (hero strip, media cards, selection bar,
+   dropzones, side-panel) gets its own gl-v2-dp- prefix here. */
+
+/* ── Topbar actions ─────────────────────────────────────────────────────────────────────────── */
+.gl-v2-dp-topbar-actions { display: flex; align-items: center; gap: 8px; }
+/* Onder 1024px (tablet + gsm) verhuizen "Publieke pagina bekijken"/"Media uploaden" naar de
+   MobileQuickActions-balk onderaan (zelfde balk-bereik als .gl-v2-mobile-quickactions zelf,
+   gl-v2-shell.css) — het shell-brede .gl-v2-topbar-actions{display:none} geldt vandaag enkel
+   <768px, dus hier expliciet ook voor het 768–1023.98px-tablet-bereik van DEZE pagina, zonder de
+   generieke regel voor elke andere gl-v2-pagina te verbreden. */
+@media (max-width: 1023.98px) {
+    .gl-v2-dp-topbar-actions { display: none; }
+}
+
+/* .gl-v2-toolbar-card/.gl-v2-toolbar-search have no shared definition in gl-v2-shell.css — same
+   "each page keeps its own copy" discipline as DetailContractsV2/DetailClientsV2/Invoices/Leveranciers/
+   Klanten/Projecten's own gl-v2-*.css files. */
+.gl-v2-toolbar-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+    flex: none;
+}
+.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
+.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
+
+/* Elementen die met de kale `hidden`-property getoggled worden (JS) maar ook een klasse dragen die
+   zelf een expliciete `display` zet — zonder deze guard wint de auteursklasse van de browser se eigen
+   `[hidden]{display:none}` (Do's/Don'ts, "steun niet op [hidden] alleen"). */
+.gl-v2-dp-toolbar[hidden],
+.gl-v2-dp-selectionbar[hidden],
+.gl-v2-dp-picking-banner[hidden],
+#gl-v2-dp-panel-autoplay-row[hidden],
+#gl-v2-dp-panel-poster[hidden] { display: none; }
+
+/* ── Section tabbar: "Secties beheren" trailing link ───────────────────────────────────────────
+   .gl-v2-tabbar-more already exists (pill, bordered) — this page wants a plainer text link instead,
+   closer to .gl-v2-card-header-action's look, so it reads as "manage", not another filter chip. */
+.gl-v2-tabbar .js-gl-v2-dp-sections-open {
+    flex: none;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+.gl-v2-tabbar .js-gl-v2-dp-sections-open:hover { color: var(--gl-v2-primary-deep); }
+.gl-v2-tabbar .js-gl-v2-dp-sections-open i { font-size: 13px; }
+
+/* ── "Ander hoofdbeeld" picking-mode banner ─────────────────────────────────────────────────── */
+.gl-v2-dp-picking-banner {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    font: 500 12.5px var(--gl-v2-font-sans);
+}
+.gl-v2-dp-picking-banner i { font-size: 16px; }
+.gl-v2-dp-picking-banner span { flex: 1; }
+body.gl-v2-dp-is-picking .gl-v2-dp-card { cursor: crosshair; }
+body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v2-primary); }
+
+/* ── Toolbar row: search + two segmented filters + sort ─────────────────────────────────────── */
+.gl-v2-dp-toolbar { flex-wrap: wrap; gap: 10px 12px; }
+.gl-v2-dp-toolbar .gl-v2-toolbar-search { flex: 1; min-width: 200px; }
+
+.gl-v2-dp-segmented {
+    flex: none;
+    display: flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-neutral-tint);
+}
+.gl-v2-dp-segment {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.gl-v2-dp-segment i { font-size: 13px; }
+.gl-v2-dp-segment b { font-weight: 600; }
+.gl-v2-dp-segment:hover { color: var(--gl-v2-ink); }
+.gl-v2-dp-segment.is-active { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .12); }
+
+.gl-v2-dp-sort { flex: none; width: 176px; }
+
+/* ── Selection bar (design-handoff 15a "Selecteren opent een donkere actiebalk") ─────────────── */
+.gl-v2-dp-selectionbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    padding: 0 8px 0 16px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-ink);
+}
+.gl-v2-dp-selectionbar-close-icon {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    border-radius: 6px;
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+}
+.gl-v2-dp-selectionbar-count { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-surface); white-space: nowrap; }
+.gl-v2-dp-selectionbar-sub { font: 450 11.5px var(--gl-v2-font-sans); color: rgba(255, 255, 255, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-dp-selectionbar-spacer { flex: 1; }
+.gl-v2-dp-selectionbar-action {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-surface);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.gl-v2-dp-selectionbar-action i { font-size: 14px; }
+.gl-v2-dp-selectionbar-action:hover { background: rgba(255, 255, 255, .12); }
+.gl-v2-dp-selectionbar-action.is-danger { color: #F2B8B0; }
+.gl-v2-dp-selectionbar-action.is-danger:hover { background: rgba(139, 42, 42, .35); }
+.gl-v2-dp-selectionbar-divider { flex: none; width: 1px; height: 20px; background: rgba(255, 255, 255, .2); }
+.gl-v2-dp-selectionbar-close {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, .7);
+    cursor: pointer;
+}
+.gl-v2-dp-selectionbar-close:hover { color: var(--gl-v2-surface); }
+.gl-v2-dp-move-select .gl-v2-select-panel { width: 220px; }
+/* De "Verplaatsen naar …"-trigger IS een .gl-v2-select-trigger (nodig zodat gl-v2-shell.js se
+   generieke initGlV2Select() 'm herkent en opent/sluit), maar moet er als donkere actiebalk-knop
+   uitzien, niet als het gebruikelijke witte, omrande veld — overschrijft hier expliciet, incl. de
+   .is-filled-staat die een keuze er automatisch bijzet. */
+.gl-v2-dp-move-select .gl-v2-select-trigger.gl-v2-dp-selectionbar-action,
+.gl-v2-dp-move-select .gl-v2-select-trigger.gl-v2-dp-selectionbar-action.is-filled,
+.gl-v2-dp-move-select .gl-v2-select-trigger.gl-v2-dp-selectionbar-action.is-open {
+    height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-surface);
+    width: auto;
+}
+.gl-v2-dp-move-select .gl-v2-select-trigger.gl-v2-dp-selectionbar-action:hover { background: rgba(255, 255, 255, .12); }
+.gl-v2-dp-move-select .gl-v2-select-trigger.gl-v2-dp-selectionbar-action i:first-child { color: var(--gl-v2-surface); font-size: 14px; }
+.gl-v2-dp-move-select .gl-v2-select-trigger-caret { display: none; }
+
+/* ── Hero strip (design-handoff 15a punt 1: "een strook van 200px, geen halve pagina") ──────── */
+.gl-v2-dp-hero {
+    flex: none;
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+    overflow: hidden;
+}
+.gl-v2-dp-hero-media {
+    position: relative;
+    height: 202px;
+    background: linear-gradient(160deg, #DCE6D6 0%, #C4D3BC 55%, #AFC2A6 100%);
+    overflow: hidden;
+}
+.gl-v2-dp-hero-media img,
+.gl-v2-dp-hero-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gl-v2-dp-hero-badge { position: absolute; top: 10px; left: 10px; }
+.gl-v2-dp-hero-duration {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: rgba(20, 32, 20, .72);
+    font: 600 10.5px var(--gl-v2-font-sans);
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.gl-v2-dp-hero-body { padding: 14px 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gl-v2-dp-hero-label { display: flex; align-items: center; gap: 6px; font: 600 10px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); }
+.gl-v2-dp-hero-label i { font-size: 14px; }
+.gl-v2-dp-hero-title { font: 500 17px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
+.gl-v2-dp-hero-title:hover { color: var(--gl-v2-primary); }
+.gl-v2-dp-hero-meta { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 14px; }
+.gl-v2-dp-hero-meta-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-dp-hero-meta-item span:first-child { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted); }
+.gl-v2-dp-hero-meta-item b { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-dp-hero-meta-item .gl-v2-badge { align-self: flex-start; }
+.gl-v2-dp-hero-actions { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; flex-wrap: wrap; }
+.gl-v2-dp-hero-hint { flex: 1; min-width: 140px; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Section card (extends .gl-v2-card / .gl-v2-card-header) ────────────────────────────────── */
+.gl-v2-dp-section-desc { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-card-header .gl-v2-dp-section-add { height: 32px; padding: 0 12px; font-size: 12px; }
+
+/* Samengesteld met .gl-v2-card-body op dezelfde div (de sectiekaart se grid ís de kaartbody) — een
+   samengestelde selector i.p.v. .gl-v2-dp-grid alleen, zodat dit altijd wint van .gl-v2-card-body se
+   eigen `display:flex;flex-direction:column` ongeacht laadvolgorde van de stylesheets (anders
+   stapelen de kaarten voluit-breed onder elkaar in plaats van in een responsief raster). */
+.gl-v2-card-body.gl-v2-dp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+
+/* ── Media card ───────────────────────────────────────────────────────────────────────────────
+   15a punt 3/4/5: badge maakt foto/video meteen duidelijk, publiek/intern is een klein rond icoon
+   linksonder (geen tweede chip bovenaan), geen sectie-dropdown per kaart meer. */
+.gl-v2-dp-card {
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-tile);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: box-shadow .15s ease;
+    position: relative;
+}
+.gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v2-accent-sage), var(--gl-v2-shadow-tile-active); }
+.gl-v2-dp-card.is-selected { box-shadow: 0 0 0 2px var(--gl-v2-primary), var(--gl-v2-shadow-tile-active); }
+
+.gl-v2-dp-card-thumb {
+    position: relative;
+    height: 150px;
+    flex: none;
+    background: linear-gradient(160deg, #DCE6D6 0%, #C4D3BC 55%, #AFC2A6 100%);
+    overflow: hidden;
+}
+.gl-v2-dp-card-thumb img,
+.gl-v2-dp-card-thumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gl-v2-dp-card-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.gl-v2-dp-card-play i {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: rgba(20, 32, 20, .55);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+}
+.gl-v2-dp-card-duration {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: rgba(20, 32, 20, .72);
+    font: 600 10.5px var(--gl-v2-font-sans);
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.gl-v2-dp-card-badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 5px; }
+.gl-v2-dp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .06em;
+    white-space: nowrap;
+}
+.gl-v2-dp-badge.is-photo { background: rgba(255, 255, 255, .92); color: var(--gl-v2-ink); }
+.gl-v2-dp-badge.is-video { background: var(--gl-v2-ink); color: #fff; }
+.gl-v2-dp-badge.is-hoofdbeeld { background: var(--gl-v2-primary); color: #fff; }
+.gl-v2-dp-badge.is-hoofdbeeld i { font-size: 10px; }
+
+.gl-v2-dp-card-visibility {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-v2-primary);
+}
+.gl-v2-dp-card-visibility i { font-size: 13px; }
+.gl-v2-dp-card[data-ispublic="false"] .gl-v2-dp-card-visibility { color: var(--gl-v2-warning); }
+
+.gl-v2-dp-card-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, .92);
+    border: 1px solid rgba(44, 59, 42, .25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .1s ease;
+}
+.gl-v2-dp-card:hover .gl-v2-dp-card-check,
+.gl-v2-dp-card.is-selected .gl-v2-dp-card-check { opacity: 1; }
+.gl-v2-dp-card-check input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.gl-v2-dp-card.is-selected .gl-v2-dp-card-check {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-dp-card.is-selected .gl-v2-dp-card-check::after {
+    content: "";
+    width: 10px;
+    height: 6px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.gl-v2-dp-card-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-dp-card-title { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-dp-card-meta { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.gl-v2-dp-card[hidden] { display: none; }
+
+/* ── Dropzones (15a punt 8: "Sleep hierheen", geldt voor foto én video) ─────────────────────── */
+.gl-v2-dp-dropzone {
+    border-radius: var(--gl-v2-radius-md);
+    border: 1.5px dashed var(--gl-v2-accent-sage);
+    background: var(--gl-v2-surface);
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+.gl-v2-dp-dropzone:hover,
+.gl-v2-dp-dropzone.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-dp-dropzone i { font-size: 20px; color: var(--gl-v2-primary); }
+.gl-v2-dp-dropzone-title { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-dp-dropzone-sub { font: 450 10.5px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-dp-dropzone-modal { min-height: 120px; margin-bottom: 2px; }
+
+/* Slepen bestaat niet op een touchscreen — tablet en gsm (<1024px, zelfde drempel als de
+   MobileQuickActions-balk) tonen daarom de "klik"-tekst i.p.v. de "sleep"-tekst; desktop andersom.
+   Geen JS/user-agent-sniffing nodig, puur viewport-breedte, zelfde aanpak als de rest van gl-v2. */
+.gl-v2-dp-touch-text { display: none; }
+@media (max-width: 1023.98px) {
+    .gl-v2-dp-desktop-text { display: none; }
+    .gl-v2-dp-touch-text { display: inline; }
+}
+/* De uploadmodal se placeholder-spans worden ook los met JS in/uit geschakeld zodra een bestand
+   gekozen is (zie gl-v2-projecten-detailphotos.js, resetUploadFilename/setUploadFile) — zonder deze
+   guard zou .gl-v2-dp-touch-text{display:inline} hierboven een [hidden]-placeholder op tablet/gsm
+   alsnog tonen (Do's/Don'ts, "steun niet op [hidden] alleen"). */
+.gl-v2-dp-desktop-text[hidden],
+.gl-v2-dp-touch-text[hidden] { display: none; }
+
+/* ── Lege secties (15a punt 7: één lage sleepzone i.p.v. een lege kaart per sectie) ──────────── */
+.gl-v2-dp-empty-sections { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-dp-empty-sections-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; color: var(--gl-v2-muted); }
+.gl-v2-dp-empty-section-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 52px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-md);
+    border: 1.5px dashed rgba(122, 158, 110, .6);
+    background: var(--gl-v2-surface);
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+.gl-v2-dp-empty-section-row:hover,
+.gl-v2-dp-empty-section-row.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-dp-empty-section-row > i:first-child { font-size: 14px; color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-dp-empty-section-name { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; }
+.gl-v2-dp-empty-section-count { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-dp-empty-section-desc { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-dp-empty-section-spacer { flex: 1; }
+.gl-v2-dp-empty-section-cta { flex: none; display: flex; align-items: center; gap: 6px; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-dp-empty-section-cta i { font-size: 14px; }
+
+/* ── Detail panel (design-handoff 15b) ───────────────────────────────────────────────────────
+   Schuift van rechts in "over de lijst" — position:fixed (geen transform op de root, zodat een
+   .gl-v2-menu-descendant hierbinnen gewoon t.o.v. de viewport blijft positioneren, zie de view se
+   eigen commentaar bij #gl-v2-dp-panel-menu) en animeert via `right`, niet via translateX. */
+.gl-v2-dp-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    background: rgba(18, 28, 18, .45);
+    z-index: 1045;
+}
+.gl-v2-dp-panel-backdrop[hidden] { display: none; }
+
+.gl-v2-dp-panel {
+    position: fixed;
+    top: 12px;
+    bottom: 12px;
+    right: -560px;
+    width: 520px;
+    max-width: calc(100vw - 24px);
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-lg);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    z-index: 1046;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: right .22s ease;
+}
+.gl-v2-dp-panel[hidden] { display: none; }
+.gl-v2-dp-panel.is-open { right: 12px; }
+
+.gl-v2-dp-panel-header {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    height: 56px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-dp-panel-title { flex: 1; min-width: 0; font: 500 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-dp-panel-index { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; flex: none; }
+.gl-v2-dp-panel-header-divider { flex: none; width: 1px; height: 20px; background: var(--gl-v2-hairline); }
+
+.gl-v2-dp-panel-media {
+    flex: none;
+    position: relative;
+    height: 280px;
+    background: #1F2A1E;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.gl-v2-dp-panel-media img,
+.gl-v2-dp-panel-media video { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; background: #1F2A1E; }
+.gl-v2-dp-panel-media .gl-v2-dp-panel-poster-chip {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--gl-v2-gold);
+    font: 600 10px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+
+.gl-v2-dp-panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-dp-panel-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 12px 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: #F7F9F5;
+}
+.gl-v2-dp-panel-meta-item { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-dp-panel-meta-item span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-dp-panel-meta-item b { font: 500 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-dp-panel-fields-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+.gl-v2-dp-panel-footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    flex-wrap: wrap;
+}
+.gl-v2-dp-panel-footer-hint { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-dp-panel-footer-spacer { flex: 1; }
+
+/* ── Secties beheren — rijenlijst (JS-gerenderd, zelfde look als een compacte tabellijst) ──── */
+.gl-v2-dp-sections-list { display: flex; flex-direction: column; }
+.gl-v2-dp-sections-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-dp-sections-row:last-child { border-bottom: 0; }
+.gl-v2-dp-sections-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-dp-sections-row-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-dp-sections-row-desc { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-dp-sections-row-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); white-space: nowrap; }
+.gl-v2-dp-sections-edit { display: flex; flex-direction: column; gap: 8px; padding: 10px 2px; background: #F7F9F5; border-radius: var(--gl-v2-radius-sm); }
+.gl-v2-dp-sections-edit-actions { display: flex; gap: 8px; }
+.gl-v2-dp-sections-new { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+
+/* ── Mobiel (<768px) — detailpaneel wordt volledig scherm, zelfde reden als Modals TYPE 2 (een
+   sheet zou de helft van het venster innemen zodra een veld het toetsenbord opent). ──────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-dp-panel { top: 0; bottom: 0; right: -100vw; left: 0; width: auto; max-width: none; border-radius: 0; }
+    .gl-v2-dp-panel.is-open { right: 0; }
+    .gl-v2-dp-hero { grid-template-columns: 1fr; }
+    .gl-v2-dp-hero-media { height: 160px; }
+    .gl-v2-dp-hero-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-dp-panel-fields-row { grid-template-columns: 1fr; }
+    .gl-v2-dp-toolbar { flex-direction: column; align-items: stretch; }
+    .gl-v2-dp-sort { width: 100%; }
+    .gl-v2-dp-selectionbar { flex-wrap: wrap; height: auto; padding: 8px 8px 8px 12px; }
+
+    /* "vervangen · downloaden · verwijderen" is enkel een uitleg-hint naast de ⋯-knop — op een
+       smal scherm is er geen ruimte voor en de knop zelf blijft de echte, werkende ingang. */
+    .gl-v2-dp-panel-footer-hint { display: none; }
+    .gl-v2-dp-panel-footer-spacer { flex: none; width: 0; }
+    /* De resterende knoppen (Posterbeeld/Opslaan) vullen de vrijgekomen ruimte samen, naast elkaar
+       i.p.v. dat Opslaan alleen rechts blijft hangen met veel lege ruimte ernaast. */
+    #gl-v2-dp-panel-poster,
+    #gl-v2-dp-panel-save { flex: 1; justify-content: center; }
+}

@@ -681,10 +681,43 @@
 
             contactRows.addEventListener("click", function (e) {
                 var deleteBtn = e.target.closest(".js-gl-v2-delete-contact-row");
-                if (!deleteBtn) return;
-                deleteBtn.closest(".gl-v2-client-row").remove();
-                updateCount();
-                markDirty();
+                if (deleteBtn) {
+                    deleteBtn.closest(".gl-v2-client-row").remove();
+                    updateCount();
+                    markDirty();
+                    return;
+                }
+
+                var primaryBtn = e.target.closest(".js-gl-v2-primary-contact-toggle");
+                if (primaryBtn) {
+                    e.preventDefault();
+                    setPrimaryContact(primaryBtn.closest(".gl-v2-client-row"));
+                    markDirty();
+                }
+            });
+        }
+
+        // Slechts één contact mag primair zijn — bij een klik wordt de eigen rij aan/uit gezet
+        // en worden alle andere rijen defensief uitgezet (zelfde exclusiviteit als de server-side
+        // normalisatie in KlantenController/ClientAccountTranslator.NormalizePrimaryContact).
+        function setPrimaryContact(row) {
+            if (!row || !contactRows) return;
+            var input = row.querySelector(".js-gl-v2-primary-contact-input");
+            var btn = row.querySelector(".js-gl-v2-primary-contact-toggle");
+            if (!input || !btn) return;
+            var makePrimary = !input.checked;
+
+            contactRows.querySelectorAll(".gl-v2-client-row").forEach(function (otherRow) {
+                var otherInput = otherRow.querySelector(".js-gl-v2-primary-contact-input");
+                var otherBtn = otherRow.querySelector(".js-gl-v2-primary-contact-toggle");
+                if (!otherInput || !otherBtn) return;
+                var isThisRow = otherRow === row;
+                var checked = isThisRow && makePrimary;
+                otherInput.checked = checked;
+                otherBtn.classList.toggle("is-primary", checked);
+                otherBtn.setAttribute("aria-pressed", checked ? "true" : "false");
+                var icon = otherBtn.querySelector("i");
+                if (icon) icon.className = "ph ph-star";
             });
         }
     }

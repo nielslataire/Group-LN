@@ -1,0 +1,188 @@
+/* gl-v2 layout-pilot — Inkomende (aankoop)factuur detailpagina (design-handoff punt 11, de
+   AANKOOP-kant van 11b/11d/11e). Enkel geladen door Views/Projecten/IncommingInvoiceDetailV2.cshtml.
+   Zelfde componenten/structuur als Invoices/DetailV2.cshtml se eigen gl-v2-invoices-detail.css
+   (niet gedeeld — zelfde "geen gedwongen hergebruik tussen twee genuine, aparte pagina's"-
+   redenering als overal elders in gl-v2), hertint naar het blauwe AANKOOP-palet
+   (#2E5F7E op #D7E6EF, i.p.v. groen).
+
+   Belangrijk, geleerd bij de verkoopfactuur-pagina (zie DESIGN.md se eigen "load-order
+   specificity trap"-sectie): _LayoutV2.cshtml laadt @section PageStyle VÓÓR gl-v2-shell.css, dus
+   een page-override van een gedeelde shell-klasse (.gl-v2-btn, .gl-v2-form-actionbar, …) moet
+   ALTIJD minstens twee klassen samen zijn om gegarandeerd te winnen ongeacht laadvolgorde — hier
+   dus meteen goed toegepast, niet achteraf gepatcht zoals bij de verkoopfactuur-pagina. */
+
+.gl-v2-incominginvoice-direction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 11px;
+    background: #2E5F7E;
+    color: var(--gl-v2-surface);
+    font: 600 10px var(--gl-v2-font-sans);
+    letter-spacing: .04em;
+}
+.gl-v2-incominginvoice-direction-badge i { font-size: 11px; }
+
+/* Blauwe paginaicoon-chip i.p.v. de standaard groene (--gl-v2-primary-tint/-primary) — enkel op
+   deze pagina, matcht de AANKOOP-chip/heldenkaart-accent ernaast. */
+.gl-v2-topbar-icon { background: #D7E6EF; color: #2E5F7E; }
+
+.gl-v2-incominginvoice-detail-body { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Richting-/bedragkaart (desktop/tablet) — geen "AAN ONS"-tegenpartij, geen vervaldatum: geen
+   van beide bestaat in dit model (zie DetailV2.cshtml se eigen intro-comment). ────────────────── */
+.gl-v2-incominginvoice-hero {
+    display: flex;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-card);
+    overflow: hidden;
+}
+.gl-v2-incominginvoice-hero-accent { flex: none; width: 6px; align-self: stretch; background: #2E5F7E; }
+.gl-v2-incominginvoice-hero-body { flex: 1; min-width: 0; padding: 14px 18px; }
+.gl-v2-incominginvoice-hero-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.gl-v2-incominginvoice-hero-party { display: flex; flex-direction: column; gap: 2px; flex: none; min-width: 0; }
+.gl-v2-incominginvoice-hero-label {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gl-v2-incominginvoice-hero-name {
+    font: 600 14px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gl-v2-incominginvoice-hero-spacer { flex: 1; min-width: 12px; }
+.gl-v2-incominginvoice-hero-amount { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; flex: none; }
+.gl-v2-incominginvoice-hero-amount-value {
+    font: 600 22px var(--gl-v2-font-sans);
+    color: #2E5F7E;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+/* ── Richting-/bedragkaart (gsm) — eigen markup, niet dezelfde balk herschikt. ────────────────── */
+.gl-v2-incominginvoice-hero-mobile {
+    display: none;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile);
+    overflow: hidden;
+}
+.gl-v2-incominginvoice-hero-mobile-accent { height: 5px; background: #2E5F7E; }
+.gl-v2-incominginvoice-hero-mobile-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-incominginvoice-hero-mobile-amount {
+    font: 600 26px var(--gl-v2-font-sans);
+    color: #2E5F7E;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.gl-v2-incominginvoice-hero-mobile-divider { height: 1px; background: var(--gl-v2-hairline-soft); }
+
+/* ── 2 infokaarten (Leverancier / Documentgegevens) — gelijke breedte, geen 3e/4e kaart zoals bij
+   verkoopfacturen (geen "onze onderneming"-concept hier). ───────────────────────────────────────── */
+.gl-v2-incominginvoice-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+@media (max-width: 639.98px) {
+    .gl-v2-incominginvoice-cards { grid-template-columns: 1fr; }
+}
+
+.gl-v2-incominginvoice-party-name {
+    display: block;
+    padding: 14px 18px 0;
+    font: 600 14px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-incominginvoice-party-name + .gl-v2-detail-grid { padding-top: 10px; }
+.gl-v2-detail-grid .gl-v2-detail-value { white-space: pre-line; }
+
+/* Inklap-lichaam (Leverancier/Documentgegevens) — zelfde recept/reden als Invoices/DetailV2:
+   .gl-v2-section-card-header[aria-expanded]/.is-collapsible/chevron zijn generiek, maar de
+   bijhorende hide-regel target ".gl-v2-section-grid" (12-koloms variant), niet ".gl-v2-detail-grid"
+   — vandaar een eigen wrapper. Enkel <768px effectief. */
+@media (max-width: 767.98px) {
+    .gl-v2-section-card-header[aria-expanded="false"] + .gl-v2-invoice-collapsible-body { display: none; }
+}
+
+/* ── Factuurlijnen — tabel op .gl-v2-card (geen DataTable, dus niet .gl-v2-table-card). ─────────── */
+.gl-v2-incominginvoice-lines-table-wrap { overflow-x: auto; }
+.gl-v2-incominginvoice-lines-table { width: 100%; border-collapse: collapse; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-incominginvoice-lines-table th,
+.gl-v2-incominginvoice-lines-table td { padding: 0 14px 0 0; text-align: left; }
+.gl-v2-incominginvoice-lines-table th:last-child,
+.gl-v2-incominginvoice-lines-table td:last-child { padding-right: 0; }
+.gl-v2-incominginvoice-lines-table thead th {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    white-space: nowrap;
+}
+.gl-v2-incominginvoice-lines-table thead th.text-end { text-align: right; }
+.gl-v2-incominginvoice-lines-table tbody td { height: 44px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font-variant-numeric: tabular-nums; }
+.gl-v2-incominginvoice-lines-table tbody td.text-end { text-align: right; }
+.gl-v2-incominginvoice-lines-table tbody tr:last-child td { border-bottom: 0; }
+.gl-v2-incominginvoice-lines-total { font-weight: 500; }
+
+.gl-v2-incominginvoice-lines-mobile { display: none; flex-direction: column; gap: 8px; }
+.gl-v2-incominginvoice-line-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px 12px;
+    border-radius: 9px;
+    background: var(--gl-v2-bg);
+}
+.gl-v2-incominginvoice-line-card-row { display: flex; align-items: flex-start; gap: 10px; }
+.gl-v2-incominginvoice-line-card-text { flex: 1; min-width: 0; font: 500 12.5px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-incominginvoice-line-card-total { flex: none; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-incominginvoice-line-card-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Totalenkaart — zelfde vorm als Invoices/DetailV2, eigen kopie i.p.v. gedeeld. ────────────────── */
+.gl-v2-incominginvoice-totals-wrap { display: flex; justify-content: flex-end; padding-top: 14px; }
+.gl-v2-incominginvoice-totals { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 7px; }
+.gl-v2-incominginvoice-totals-row { display: flex; justify-content: space-between; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-incominginvoice-totals-row span:last-child { color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-incominginvoice-totals-row.is-strong { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-incominginvoice-totals-row.is-strong span:last-child { font-size: 15px; }
+.gl-v2-incominginvoice-totals-divider { height: 1px; background: var(--gl-v2-hairline); }
+
+/* ── Topbar/actiebalk-breedtes — zelfde 1024px/768px-drempels als Invoices/DetailV2 (consistentie
+   over beide factuurdetailpagina's). Tablet: GEEN position:fixed op de onderbalk — bleek daar op
+   Invoices/DetailV2 kapot te lopen tegen de zichtbare rail (te breed/half verborgen), hier meteen
+   goed: in-flow, het gedeelde .gl-v2-form-actionbar se eigen standaardgedrag. ────────────────────── */
+@media (min-width: 1024px) {
+    .gl-v2-form-actionbar.gl-v2-incominginvoice-actionbar { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-btn.gl-v2-incominginvoice-topbar-btn { display: none; }
+}
+
+@media (max-width: 767.98px) {
+    .gl-v2-incominginvoice-hero { display: none; }
+    .gl-v2-incominginvoice-hero-mobile { display: block; order: 1; }
+    .gl-v2-incominginvoice-detail-body { padding-bottom: 68px; }
+
+    .gl-v2-incominginvoice-lines-table-wrap { display: none; }
+    .gl-v2-incominginvoice-lines-mobile { display: flex; }
+
+    /* Factuurlijnen vóór de twee infokaarten, zelfde "meest nuttige inhoud eerst"-volgorde als
+       Invoices/DetailV2. .gl-v2-incominginvoice-cards wordt hier display:contents zodat de twee
+       kaarten erin gewoon meedoen aan de flex-order van .gl-v2-incominginvoice-detail-body. */
+    .gl-v2-incominginvoice-cards { display: contents; }
+    .gl-v2-incominginvoice-lines-card { order: 2; }
+    .gl-v2-incominginvoice-card-supplier { order: 3; }
+    .gl-v2-incominginvoice-card-doc { order: 4; }
+}

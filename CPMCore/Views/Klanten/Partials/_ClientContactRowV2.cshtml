@@ -16,6 +16,10 @@
     <div class="gl-v2-card">
         <div class="gl-v2-card-header">
             <span class="gl-v2-card-header-title">Contact</span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-primary-contact-toggle @(Model.IsPrimaryContact ? "is-primary" : "")" aria-pressed="@(Model.IsPrimaryContact ? "true" : "false")" title="Als primair contact instellen" aria-label="Als primair contact instellen">
+                <i class="ph ph-star" aria-hidden="true"></i>
+            </button>
+            @Html.CheckBoxFor(m => m.IsPrimaryContact, new { @class = "js-gl-v2-primary-contact-input", hidden = "hidden" })
             <span class="gl-v2-card-header-spacer"></span>
             <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-contact-row" title="Contact verwijderen" aria-label="Contact verwijderen">
                 <i class="ph ph-trash" aria-hidden="true"></i>

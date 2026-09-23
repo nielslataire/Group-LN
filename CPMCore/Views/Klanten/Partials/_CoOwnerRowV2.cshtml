@@ -1,0 +1,215 @@
+@model BOCore.ClientContactBO
+@using HtmlHelpers.BeginCollectionItemCore
+@*
+    gl-v2-vertaling van Partials/_CoOwnerRow.cshtml — zelfde Html.BeginCollectionItem("Client.
+    CoOwners")-wrapper, binding/index-gedrag ongewijzigd. Rijkste rij van de hele pilot: naam/
+    aanspreking, eigenaarstype+percentage, twee facturatie-schakelaars, een bedrijf-schakelaar (puur
+    UI — geen gebonden modelveld, toont/verbergt enkel Bedrijfsnaam/BTW-nummer, zelfde als de legacy
+    rij) en een afwijkend-facturatieadres-schakelaar (wél gebonden, InvoiceAddress) die een volledig
+    tweede adresblok toont. Beide schakelaars zijn hier — in tegenstelling tot Klanten/EditV2's ene
+    singuliere IsCompany/UseInvoiceAddress — per-rij onafhankelijk: initUblDependency-achtige
+    data-role-scoping i.p.v. een vast element-id, zie gl-v2-klanten-editproject.js.
+    Elk adresblok (hoofd + facturatie) draagt data-gl-v2-address-block zodat het bijhorende
+    GlV2SearchSelect-postcodeveld weet binnen welk land te zoeken: de dichtstbijzijnde
+    [data-role="country-select"] BINNEN datzelfde blok — geen vaste BE-aanname zoals elders in de
+    pilot, deze rij zoekt gewoon binnen het land dat op dat moment gekozen staat (zelfde gedrag als
+    de legacy select2-versie).
+*@
+<div class="gl-v2-client-row">
+@using (Html.BeginCollectionItem("Client.CoOwners"))
+{
+    @Html.HiddenFor(m => m.Id)
+    @Html.HiddenFor(m => m.IsCoOwner)
+    var hasCompanyInfo = !string.IsNullOrWhiteSpace(Model.CompanyName) || !string.IsNullOrWhiteSpace(Model.VATnumber);
+    <div class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-title">Mede-eigenaar</span>
+            <span class="gl-v2-card-header-spacer"></span>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-delete-coowner-row" title="Mede-eigenaar verwijderen" aria-label="Mede-eigenaar verwijderen">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Salutation)">Aanspreking</label>
+                    <div class="gl-v2-field-box">
+                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<BOCore.Salutation>(), new { @class = "gl-v2-field-input" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Name, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Firstname)">Voornaam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Firstname, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.CoOwnerType.Id)">Type eigenaar</label>
+                    <div class="gl-v2-field-box">
+                        <select id="@Html.IdFor(m => m.CoOwnerType.Id)" name="@Html.NameFor(m => m.CoOwnerType.Id)" class="gl-v2-field-input">
+                            @foreach (var ownerType in (ViewData["OwnerTypes"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                            {
+                                <option value="@ownerType.Value" selected="@(ownerType.Value == Model.CoOwnerType.Id.ToString() ? "selected" : null)">@ownerType.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.CoOwnerPercentage)">Percentage</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.CoOwnerPercentage, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", inputmode = "decimal" })
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-switch-group">
+                <div class="gl-v2-switch-row">
+                    <label class="gl-v2-switch">
+                        @Html.CheckBoxFor(m => m.RequiresDigitalInvoice, new { @class = "gl-v2-client-switch-input" })
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">Digitale factuur vereist</span>
+                </div>
+                <div class="gl-v2-switch-row">
+                    <label class="gl-v2-switch">
+                        @Html.CheckBoxFor(m => m.AttachUblByDefault, new { @class = "gl-v2-client-switch-input" })
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">UBL standaard meesturen</span>
+                </div>
+                <div class="gl-v2-switch-group-divider"></div>
+                <div class="gl-v2-switch-row">
+                    <label class="gl-v2-switch">
+                        <input type="checkbox" class="gl-v2-client-switch-input" data-role="coowner-company-toggle" checked="@(hasCompanyInfo ? "checked" : null)" />
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">Dit is een bedrijf</span>
+                </div>
+            </div>
+            <div class="gl-v2-field-group" data-role="coowner-company-fields" hidden="@(!hasCompanyInfo)">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.CompanyName)">Bedrijfsnaam</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.CompanyName, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.VATnumber)">Btw-nummer</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.VATnumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group">
+                @Html.EditorFor(m => m.Email, "GlV2Email")
+                @Html.EditorFor(m => m.Phone, "GlV2Telefoon")
+                @Html.EditorFor(m => m.Cellphone, "GlV2Gsm")
+            </div>
+            <div class="gl-v2-field-group">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Street)">Straat</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.Street, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field-group is-compact">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Housenumber)">Nr</label>
+                        <div class="gl-v2-field-box">
+                            @Html.TextBoxFor(m => m.Housenumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Busnumber)">Bus</label>
+                        <div class="gl-v2-field-box">
+                            @Html.TextBoxFor(m => m.Busnumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group" data-gl-v2-address-block>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Postalcode.Country.CountryId)">Land</label>
+                    <div class="gl-v2-field-box">
+                        <select id="@Html.IdFor(m => m.Postalcode.Country.CountryId)" name="@Html.NameFor(m => m.Postalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
+                            @foreach (var country in (ViewData["Countries"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                            {
+                                <option value="@country.Value" selected="@(country.Value == Model.Postalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                @Html.EditorFor(m => m.Postalcode.PostcodeId, "GlV2SearchSelect", new
+                {
+                    Label = "Gemeente / postcode",
+                    DisplayText = (Model.Postalcode?.PostcodeId > 0 && !string.IsNullOrWhiteSpace(Model.Postalcode.Postcode)) ? $"{Model.Postalcode.Postcode} - {Model.Postalcode.Gemeente}" : null,
+                    Placeholder = "Zoek een postcode of gemeente …",
+                    Icon = "ph-map-pin"
+                })
+            </div>
+            <div class="gl-v2-switch-group">
+                <div class="gl-v2-switch-row">
+                    <label class="gl-v2-switch">
+                        @* ClientContactBO.InvoiceAddress is Boolean? (i.t.t. ClientAccountBO's Boolean) — Html.
+                           CheckBoxFor ondersteunt geen nullable bool, vandaar hier handmatig hetzelfde
+                           checkbox+hidden-fallback-patroon dat CheckBoxFor zelf ook genereert. *@
+                        <input type="checkbox" class="gl-v2-client-switch-input" id="@Html.IdFor(m => m.InvoiceAddress)" name="@Html.NameFor(m => m.InvoiceAddress)" value="true" checked="@(Model.InvoiceAddress == true ? "checked" : null)" data-role="coowner-invoice-address-toggle" />
+                        <input type="hidden" name="@Html.NameFor(m => m.InvoiceAddress)" value="false" />
+                        <span class="gl-v2-switch-track"></span>
+                    </label>
+                    <span class="gl-v2-switch-row-label">Afwijkend facturatieadres</span>
+                </div>
+            </div>
+            <div class="gl-v2-field-group" data-role="coowner-invoice-address-fields" hidden="@(Model.InvoiceAddress != true)">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.InvoiceStreet)">Straat (facturatie)</label>
+                    <div class="gl-v2-field-box">
+                        @Html.TextBoxFor(m => m.InvoiceStreet, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="gl-v2-field-group is-compact">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="@Html.IdFor(m => m.InvoiceHousenumber)">Nr</label>
+                        <div class="gl-v2-field-box">
+                            @Html.TextBoxFor(m => m.InvoiceHousenumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="@Html.IdFor(m => m.InvoiceBusnumber)">Bus</label>
+                        <div class="gl-v2-field-box">
+                            @Html.TextBoxFor(m => m.InvoiceBusnumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-field-group" data-role="coowner-invoice-address-fields" data-gl-v2-address-block hidden="@(Model.InvoiceAddress != true)">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.InvoicePostalcode.Country.CountryId)">Land (facturatie)</label>
+                    <div class="gl-v2-field-box">
+                        <select id="@Html.IdFor(m => m.InvoicePostalcode.Country.CountryId)" name="@Html.NameFor(m => m.InvoicePostalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
+                            @foreach (var country in (ViewData["Countries"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                            {
+                                <option value="@country.Value" selected="@(country.Value == Model.InvoicePostalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                @Html.EditorFor(m => m.InvoicePostalcode.PostcodeId, "GlV2SearchSelect", new
+                {
+                    Label = "Gemeente / postcode (facturatie)",
+                    DisplayText = (Model.InvoicePostalcode?.PostcodeId > 0 && !string.IsNullOrWhiteSpace(Model.InvoicePostalcode.Postcode)) ? $"{Model.InvoicePostalcode.Postcode} - {Model.InvoicePostalcode.Gemeente}" : null,
+                    Placeholder = "Zoek een postcode of gemeente …",
+                    Icon = "ph-map-pin"
+                })
+            </div>
+        </div>
+    </div>
+}
+</div>

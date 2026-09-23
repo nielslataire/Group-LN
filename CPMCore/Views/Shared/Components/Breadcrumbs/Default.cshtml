@@ -59,16 +59,20 @@
             var isLast = i == nodes.Count - 1;
             var url = ResolveUrl(node);
 
+            @* title-attribuut = volledige tekst als tooltip zodra gl-v2-shell.css's ellipsis een
+               middelste of laatste kruimelitem afkapt (design-handoff punt 13, regel 3). Op de
+               legacy (niet-gl-v2) topbar heeft dit geen effect — daar wrapt/knipt niets af, dus een
+               tooltip op ongekapte tekst is onschadelijk. *@
             if (!isLast && !string.IsNullOrWhiteSpace(url))
             {
                 <li>
-                    <a href="@url">@node.Title</a>
+                    <a href="@url" title="@node.Title">@node.Title</a>
                 </li>
             }
             else
             {
                 <li>
-                    <span>@node.Title</span>
+                    <span title="@node.Title">@node.Title</span>
                 </li>
             }
         }

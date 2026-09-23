@@ -62,10 +62,11 @@ namespace CPMCore.Controllers
         private readonly ICountryService _countryService;
         private readonly IActivityService _activityService;
         private readonly IContactService _contactService;
+        private readonly IInvoiceQueryService _invoiceQueryService;
         private readonly DALCore.UnitOfWorkCore _uow;
         private const string CustomerCompanyPermissionPrefix = "Customers.Company.";
 
-        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IClientService clientService, IUnitService unitService, IProjectService projectService, ICountryService countryService, IActivityService activityService, IContactService contactService, DALCore.UnitOfWorkCore uow)
+        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IClientService clientService, IUnitService unitService, IProjectService projectService, ICountryService countryService, IActivityService activityService, IContactService contactService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow)
         {
             _logger = logger;
             Configuration = configuration;
@@ -78,6 +79,7 @@ namespace CPMCore.Controllers
             _countryService = countryService;
             _activityService = activityService;
             _contactService = contactService;
+            _invoiceQueryService = invoiceQueryService;
             _uow = uow;
         }
 
@@ -151,10 +153,14 @@ namespace CPMCore.Controllers
                         ? c.PostalCode.Postcode + " " + c.PostalCode.Gemeente
                         : null,
 
+                    // Primair contact (indien aangeduid) wint van de bestaande "eerste bij Id"-
+                    // terugval — OrderByDescending(IsPrimaryContact) zet 'm vooraan ongeacht Id,
+                    // zonder de bestaande volgorde/uitkomst te wijzigen wanneer niemand primair is.
                     Email = !string.IsNullOrWhiteSpace(c.Email)
                         ? c.Email
                         : c.ClientContacts
-                            .OrderBy(cc => cc.Id)
+                            .OrderByDescending(cc => cc.IsPrimaryContact)
+                            .ThenBy(cc => cc.Id)
                             .Select(cc => cc.Email)
                             .FirstOrDefault(),
 
@@ -792,13 +798,18 @@ namespace CPMCore.Controllers
 
         // KLANTEN - PROJECT
         [Breadcrumb("Klanten", FromController = typeof(ProjectenController), FromAction = nameof(ProjectenController.Detail))]
-        public ActionResult Detail(int clientId, int projectId = 0)
+        public async Task<ActionResult> Detail(int clientId, int projectId = 0, CancellationToken ct = default)
         {
             var referrer = Request.Headers["Referer"].ToString();
             var model = new ClientModel();
             var clientService = _clientService;
             var unitService = _unitService;
             var projectService = _projectService;
+
+            // gl-v2 (Klanten/DetailV2): zelfde permissie/vlag als Projecten.DetailClients — de
+            // "Bewerken"-knop in de topbar hoort achter dezelfde ProjectsCustomers-schrijfrechten.
+            var permissionService = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectCustomers = permissionService.HasWrite(PermissionCodes.ProjectsCustomers);
 
             // 1. Get Client
             var clientResponse = clientService.GetClientAccountById(clientId);
@@ -867,8 +878,38 @@ namespace CPMCore.Controllers
                 model.ChangeOrders = changeOrderResponse.Values;
             }
 
+            // gl-v2 (Klanten/DetailV2, design-handoff 12c): "Wijzigingsopdrachten"-kaart en de
+            // WIJZIGINGSOPDRACHTEN-KPI hebben de VOLLEDIGE (ongecapte) lijst voor deze klant nodig — de
+            // hierboven al opgehaalde model.ChangeOrders capt op 4 en is dat sinds jaar en dag voor de
+            // legacy Detail.cshtml, dus die laten we ongemoeid en filteren hier apart, projectbreed,
+            // op ClientAccountID. GetProjectChangeOrders is dezelfde methode als Projecten/DetailV2 al
+            // gebruikt voor het hele project — dit is gewoon diezelfde lijst geherbruikt maar dan per klant.
             if (model.ProjectId > 0)
             {
+                var projectChangeOrdersResponse = projectService.GetProjectChangeOrders(model.ProjectId);
+                if (projectChangeOrdersResponse.Success)
+                {
+                    model.ClientChangeOrders = projectChangeOrdersResponse.Values
+                        .Where(co => co.ClientAccountID == clientId)
+                        .OrderByDescending(co => co.ChangeOrderDate)
+                        .ToList();
+                }
+
+                // gl-v2: GEFACTUREERD/OPENSTAAND-KPI's op deze klant, binnen dit project — dezelfde
+                // service/methode als Invoices/DetailV2 en Projecten/DetailV2 (RecentInvoices), hier
+                // client-side gefilterd op ClientId omdat er geen per-klant variant van
+                // GetByProjectAsync bestaat.
+                var projectInvoices = await _invoiceQueryService.GetByProjectAsync(model.ProjectId, ct);
+                model.ClientInvoices = projectInvoices.Where(i => i.ClientId == clientId).ToList();
+
+                var projectResponse = projectService.GetProjectByID(model.ProjectId);
+                model.IsCoordinationProject = projectResponse.Success && projectResponse.Value?.IsOnlyCoordinationProject == true;
+
+                // gl-v2: zelfde teller als Projecten/DetailClientsV2's ItemCounts["Klanten"] — het
+                // inner menu moet hier exact hetzelfde aantal tonen als op de klantenlijst zelf.
+                var projectClientsResponse = clientService.GetClientAccountsByProjectId(model.ProjectId);
+                model.ProjectClientCount = projectClientsResponse.Success ? projectClientsResponse.Values.Count : 0;
+
                 var projectName = projectService.GetProjectNameById(model.ProjectId);
                 var clientName = model.Client?.DisplayName ?? clientService.GetClientAccountNameById(clientId);
 
@@ -887,18 +928,17 @@ namespace CPMCore.Controllers
                     Parent = projectDetail,
                     RouteValues = new { projectid = model.ProjectId }
                 };
-                var klantDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Klanten", clientName)
-                {
-                    Parent = klanten,
-                    RouteValues = new { clientid = clientId, projectid = model.ProjectId }
-                };
-                ViewData["BreadcrumbNode"] = klantDetail;
+                // Kruimelpad stopt bij "Klanten" (wáár dit zit) i.p.v. nog een knoop met clientName toe
+                // te voegen — DetailV2.cshtml zet de klantnaam al als paginatitel (regel 30 verderop),
+                // dus een laatste kruimelitem met (vrijwel) dezelfde naam zou 'm herhalen. Design-
+                // handoff punt 13, regel 2 — zelfde fix als Projecten/Detail en Projecten/DetailClients.
+                ViewData["BreadcrumbNode"] = klanten;
             }
 
 
 
             SetPageHeader("bx bx-group", "Klant - " + model.Client?.DisplayName);
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", model);
         }
 
         // KLANT TOEVOEGEN
@@ -1176,7 +1216,7 @@ namespace CPMCore.Controllers
 
             return new PartialViewResult
             {
-                ViewName = "_ContactRow",
+                ViewName = ViewData["UseGlV2Layout"] as bool? == true ? "Partials/_ProjectContactRowV2" : "_ContactRow",
                 ViewData = viewData
             };
         }
@@ -1222,7 +1262,7 @@ namespace CPMCore.Controllers
 
             return new PartialViewResult
             {
-                ViewName = "Partials/_CoOwnerRow",
+                ViewName = ViewData["UseGlV2Layout"] as bool? == true ? "Partials/_CoOwnerRowV2" : "Partials/_CoOwnerRow",
                 ViewData = viewData
             };
         }
@@ -1240,7 +1280,7 @@ namespace CPMCore.Controllers
 
             return new PartialViewResult
             {
-                ViewName = "_GiftRow",
+                ViewName = ViewData["UseGlV2Layout"] as bool? == true ? "Partials/_GiftRowV2" : "_GiftRow",
                 ViewData = viewData
             };
         }
@@ -1458,8 +1498,20 @@ namespace CPMCore.Controllers
             AttachIssuerCompany(model, entity);
         }
 
+        // Defensief, niet enkel cosmetisch: de JS laat visueel maar één rij tegelijk "Primair
+        // contact" aanvinken (uncheckt de andere bij een klik), maar dat is bypasbaar (JS uit,
+        // bewerkte request, …) — dus hier hetzelfde normaliseren vóór het opslaan: enkel de EERSTE
+        // aangevinkte rij (in postvolgorde) blijft primair, de rest wordt hier expliciet false.
+        private static void NormalizePrimaryContact(List<ContactInputViewModel> contacts)
+        {
+            var keepPrimary = contacts.FirstOrDefault(c => c.IsPrimaryContact);
+            foreach (var contact in contacts)
+                contact.IsPrimaryContact = contact == keepPrimary;
+        }
+
         private static void AttachContacts(ClientFormViewModel model, ClientAccount entity)
         {
+            NormalizePrimaryContact(model.Contacts);
             foreach (var contact in model.Contacts.Where(c => !string.IsNullOrWhiteSpace(c.Name)))
             {
                 entity.ClientContacts.Add(new ClientContacts
@@ -1470,13 +1522,15 @@ namespace CPMCore.Controllers
                     Phone = contact.Phone,
                     Cellphone = contact.Mobile,
                     RequiresDigitalInvoice = contact.RequiresDigitalInvoice,
-                    AttachUblByDefault = contact.AttachUblByDefault
+                    AttachUblByDefault = contact.AttachUblByDefault,
+                    IsPrimaryContact = contact.IsPrimaryContact
                 });
             }
         }
 
         private static void UpdateContacts(ClientFormViewModel model, ClientAccount entity)
         {
+            NormalizePrimaryContact(model.Contacts);
             var incomingIds = model.Contacts.Where(c => c.Id.HasValue).Select(c => c.Id!.Value).ToList();
             var toRemove = entity.ClientContacts.Where(c => !incomingIds.Contains(c.Id)).ToList();
 
@@ -1499,6 +1553,7 @@ namespace CPMCore.Controllers
                         existing.Cellphone = contactModel.Mobile;
                         existing.RequiresDigitalInvoice = contactModel.RequiresDigitalInvoice;
                         existing.AttachUblByDefault = contactModel.AttachUblByDefault;
+                        existing.IsPrimaryContact = contactModel.IsPrimaryContact;
                         continue;
                     }
                 }
@@ -1511,7 +1566,8 @@ namespace CPMCore.Controllers
                     Phone = contactModel.Phone,
                     Cellphone = contactModel.Mobile,
                     RequiresDigitalInvoice = contactModel.RequiresDigitalInvoice,
-                    AttachUblByDefault = contactModel.AttachUblByDefault
+                    AttachUblByDefault = contactModel.AttachUblByDefault,
+                    IsPrimaryContact = contactModel.IsPrimaryContact
                 });
             }
         }
@@ -1697,7 +1753,7 @@ namespace CPMCore.Controllers
 
             return new PartialViewResult
             {
-                ViewName = "_PoaRow",
+                ViewName = ViewData["UseGlV2Layout"] as bool? == true ? "Partials/_PoaRowV2" : "_PoaRow",
                 ViewData = viewData
             };
         }
@@ -1783,11 +1839,15 @@ namespace CPMCore.Controllers
                     ViewData["PostcodeDisplayName"] = $"{client.Postalcode.Postcode} - {client.Postalcode.Gemeente}";
                     ViewData["activetab"] = activetab;
 
-                    string title = "Klant bewerken";
-                    title += client.CompanyName == null
-                        ? $" - {client.Salutation.GetDisplayName()} {client.DisplayName}"
-                        : $" - {client.DisplayName}";
-                    SetPageHeader("bx bx-group", title);
+                    // Titel = wát het is (DESIGN.md, "Topbar title & breadcrumb — long names") —
+                    // hier is dat de klant zelf, niet de actie: zelfde "Klant - {naam}"-titel als
+                    // Klanten/Detail (regel ~940 hierboven), dat blijft leesbaar tijdens een
+                    // formulier waar de gebruiker een tijd op kan blijven, i.p.v. enkel het generieke
+                    // "Klant bewerken". Het kruimelpad laat daarom, net als Klanten/Detail se eigen
+                    // fix, de klantnaam-knoop vallen (zie hieronder) i.p.v. 'm daar een tweede keer
+                    // te tonen — de "Klant bewerken"-leaf zelf blijft wél staan, dat is de actie/
+                    // locatie, geen herhaling van de titel-tekst.
+                    SetPageHeader("bx bx-group", "Klant - " + client.DisplayName);
 
                     // Eenheden
                     var unitsResponse = unitService.GetUnitsByAccountId(clientid);
@@ -1829,7 +1889,6 @@ namespace CPMCore.Controllers
             if (model.ProjectId > 0)
             {
                 var projectName = _projectService.GetProjectNameById(model.ProjectId);
-                var clientName = model.Client?.DisplayName ?? _clientService.GetClientAccountNameById(clientid);
 
                 var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Home");
                 var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -1846,30 +1905,34 @@ namespace CPMCore.Controllers
                     Parent = projectDetail,
                     RouteValues = new { projectid = model.ProjectId }
                 };
-                var klantDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Klanten", clientName)
-                {
-                    Parent = klanten,
-                    RouteValues = new { clientid = clientid, projectid = model.ProjectId }
-                };
+                // Kruimelpad stopt bij "Klanten" i.p.v. nog een knoop met de klantnaam toe te voegen —
+                // de titel hierboven ("Klant - {naam}") zet die naam al neer, dus een middenitem met
+                // (vrijwel) dezelfde naam zou 'm herhalen. Zelfde fix als Klanten/Detail (regel ~931
+                // hierboven) en Projecten/Detail — design-handoff punt 13, regel 2. De "Klant
+                // bewerken"-leaf zelf is geen herhaling (andere tekst dan de titel) en blijft staan.
                 ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditProject", "Klanten", "Klant bewerken")
                 {
-                    Parent = klantDetail,
+                    Parent = klanten,
                     RouteValues = new { projectid = model.ProjectId, clientid = clientid, activetab = activetab }
                 };
             }
 
-            return View("EditProject", model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditProjectV2" : "EditProject", model);
         }
 
         [HttpPost]
         public async Task<IActionResult> EditProject(EditClientModel viewmodel)
         {
-            SetPageHeader("bx bx-group", viewmodel.Client?.DisplayName ?? "Klant bewerken");
+            SetPageHeader("bx bx-group", viewmodel.Client?.DisplayName is { } n ? "Klant - " + n : "Klant bewerken");
             var Referrer = TempData["Referrer"];
+            // Elke redisplay in deze actie (validatie- of rollback-pad) moet hetzelfde view-pad
+            // vertakken als de GET — anders zou een mislukte opslag onder gl-v2-preview alsnog stil
+            // terugvallen op de legacy EditProject-view.
+            var viewName = ViewData["UseGlV2Layout"] as bool? == true ? "EditProjectV2" : "EditProject";
             if (!ModelState.IsValid || viewmodel.Client.Id == 0)
             {
                 FillInAddSelectListsEdit(ref viewmodel);
-                return View("EditProject", viewmodel);
+                return View(viewName, viewmodel);
             }
 
             // Alle geïnjecteerde services delen dezelfde scoped UoW — transactie werkt over alle services
@@ -1900,7 +1963,7 @@ namespace CPMCore.Controllers
                     await tx.RollbackAsync();
                     AddMessage("error", $"Klant {viewmodel.Client.DisplayName} is niet bijgewerkt", "Fout!");
                     FillInAddSelectListsEdit(ref viewmodel);
-                    return View(viewmodel);
+                    return View(viewName, viewmodel);
                 }
 
                 //Eenheden updaten
@@ -1912,7 +1975,7 @@ namespace CPMCore.Controllers
                         await tx.RollbackAsync();
                         AddMessage("error", $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
                         FillInAddSelectListsEdit(ref viewmodel);
-                        return View(viewmodel);
+                        return View(viewName, viewmodel);
                     }
                     foreach (var constructionvalue in unit.ConstructionValues)
                     {
@@ -1922,7 +1985,7 @@ namespace CPMCore.Controllers
                             await tx.RollbackAsync();
                             AddMessage("error", $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
                             FillInAddSelectListsEdit(ref viewmodel);
-                            return View(viewmodel);
+                            return View(viewName, viewmodel);
                         }
                     }
                 }
@@ -1949,7 +2012,7 @@ namespace CPMCore.Controllers
                         await tx.RollbackAsync();
                         AddMessage("error", $"Gifts zijn niet verwijderd", "Fout!");
                         FillInAddSelectListsEdit(ref viewmodel);
-                        return View(viewmodel);
+                        return View(viewName, viewmodel);
                     }
                 }
                 foreach (var gift in viewmodel.Gifts)
@@ -1965,7 +2028,7 @@ namespace CPMCore.Controllers
                         await tx.RollbackAsync();
                         AddMessage("error", $"Gift {gift.Description} is niet bijgewerkt", "Fout!");
                         FillInAddSelectListsEdit(ref viewmodel);
-                        return View(viewmodel);
+                        return View(viewName, viewmodel);
                     }
                 }
 
@@ -1993,7 +2056,7 @@ namespace CPMCore.Controllers
                         await tx.RollbackAsync();
                         AddMessage("error", $"Poa's zijn niet verwijderd", "Fout!");
                         FillInAddSelectListsEdit(ref viewmodel);
-                        return View(viewmodel);
+                        return View(viewName, viewmodel);
                     }
                 }
                 foreach (var poa in viewmodel.Poas)
@@ -2009,7 +2072,7 @@ namespace CPMCore.Controllers
                         await tx.RollbackAsync();
                         AddMessage("error", $"Poa {poa.Description} is niet bijgewerkt", "Fout!");
                         FillInAddSelectListsEdit(ref viewmodel);
-                        return View(viewmodel);
+                        return View(viewName, viewmodel);
                     }
                 }
 
@@ -2032,7 +2095,7 @@ namespace CPMCore.Controllers
                 await tx.RollbackAsync();
                 AddMessage("error", "Er is een onverwachte fout opgetreden.", "Fout!");
                 FillInAddSelectListsEdit(ref viewmodel);
-                return View(viewmodel);
+                return View(viewName, viewmodel);
             }
 
         }
@@ -2068,6 +2131,19 @@ namespace CPMCore.Controllers
             if (ownerTypeResponse.Success)
             {
                 model.OwnerTypes = ownerTypeResponse.Values;
+            }
+
+            // gl-v2 (Klanten/EditProjectV2): projectdossier-inner menu — zelfde velden/reden als
+            // Klanten/DetailV2 (ClientModel.ProjectClientCount/IsCoordinationProject). Deze helper
+            // wordt op ELK redisplay-pad aangeroepen (initiële GET én elke POST-validatiefout), dus
+            // blijft het inner menu correct ook wanneer opslaan mislukt.
+            if (model.ProjectId > 0)
+            {
+                model.ProjectName = _projectService.GetProjectNameById(model.ProjectId);
+                var projectClientsResponse = _clientService.GetClientAccountsByProjectId(model.ProjectId);
+                model.ProjectClientCount = projectClientsResponse.Success ? projectClientsResponse.Values.Count : 0;
+                var projectResponse = _projectService.GetProjectByID(model.ProjectId);
+                model.IsCoordinationProject = projectResponse.Success && projectResponse.Value?.IsOnlyCoordinationProject == true;
             }
         }
 

@@ -458,8 +458,8 @@ namespace CPMCore.Controllers
                 ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
             }
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.Issuer.LegalName ?? vm.Issuer.Name;
-            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
-            SetDetailBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
+            var detailTitle = BuildInvoiceDetailBreadcrumbTitle(detail);
+            SetDetailBreadcrumb(issuerId, companyDisplay);
             SetPageHeader("bx bx-receipt", detailTitle);
 
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", vm);
@@ -600,7 +600,7 @@ namespace CPMCore.Controllers
                 await SetIssuerViewBagsAsync(issuerId, ct);
             }
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
-            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            var detailTitle = BuildInvoiceDetailBreadcrumbTitle(detail);
             SetSendBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
             SetPageHeader("bx bx-receipt", "Factuur verzenden");
             return View(vm);
@@ -662,7 +662,7 @@ namespace CPMCore.Controllers
 
             await SetIssuerViewBagsAsync(vm.IssuerCompanyId, ct);
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
-            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            var detailTitle = BuildInvoiceDetailBreadcrumbTitle(detail);
             SetSendBreadcrumb(vm.IssuerCompanyId, companyDisplay, vm.InvoiceId, detailTitle);
             SetPageHeader("bx bx-receipt", "Factuur verzenden");
 
@@ -2356,6 +2356,11 @@ namespace CPMCore.Controllers
             };
         }
 
+        // Titel = wát het is (design-handoff punt 13 "Topbar met lange namen"): type + factuurnummer,
+        // nooit de bedrijfsnaam — die staat al in het kruimelpad ("Facturen - {bedrijf}"). Was tot nu
+        // toe enkel Edit se eigen titel/kruimelsegment; Detail en Send gebruikten een aparte, minder
+        // complete `BuildInvoiceDisplayTitle` die de bedrijfsnaam wél herhaalde (en Draft/Creditnota
+        // niet onderscheidde) — die helper is verwijderd, alle drie delen nu deze ene.
         private static string BuildInvoiceDetailBreadcrumbTitle(InvoiceDetailBO detail)
         {
             var typeLabel = IsDraftStatus(detail.StatusName)
@@ -4713,18 +4718,6 @@ END";
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
         }
 
-        private static string BuildInvoiceDisplayTitle(string? issuerName, string? publicId, int invoiceId)
-        {
-            var displayId = string.IsNullOrWhiteSpace(publicId)
-                ? $"Factuur #{invoiceId}"
-                : publicId.Trim();
-            var issuerDisplay = string.IsNullOrWhiteSpace(issuerName) ? null : issuerName.Trim();
-
-            return issuerDisplay is null
-                ? displayId
-                : $"{issuerDisplay} - {displayId}";
-        }
-
         private static MvcBreadcrumbNode CreateHomeNode()
         {
             return new MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -4747,16 +4740,15 @@ END";
             ViewData["BreadcrumbNode"] = CreateIndexNode(issuerId, companyName);
         }
 
-        private void SetDetailBreadcrumb(int issuerId, string? companyName, int invoiceId, string detailTitle)
+        // Kruimelpad stopt bij "Facturen - {bedrijf}" (wáár dit zit) i.p.v. nog een knoop toe te voegen
+        // die letterlijk de paginatitel herhaalt (design-handoff punt 13: het laatste kruimelitem is
+        // nooit de titel zelf — de Detail-pagina se eigen ViewData["Title"] is die "wát"-knoop al).
+        // Send/Edit blijven wél hun eigen "Factuur X"-tussenstap gebruiken (SetSendBreadcrumb/
+        // SetEditBreadcrumb hieronder) — daar ís het geen dubbel, want de paginatitel daar is
+        // "Verzenden"/"Bewerken", niet de factuur zelf.
+        private void SetDetailBreadcrumb(int issuerId, string? companyName)
         {
-            var index = CreateIndexNode(issuerId, companyName);
-            var title = string.IsNullOrWhiteSpace(detailTitle) ? "Factuur detail" : detailTitle;
-            var detail = new MvcBreadcrumbNode(nameof(Detail), ControllerName, title)
-            {
-                Parent = index,
-                RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
-            };
-            ViewData["BreadcrumbNode"] = detail;
+            ViewData["BreadcrumbNode"] = CreateIndexNode(issuerId, companyName);
         }
 
         private void SetSendBreadcrumb(int issuerId, string? companyName, int invoiceId, string detailTitle)

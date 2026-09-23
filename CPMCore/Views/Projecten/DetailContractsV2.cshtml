@@ -1,0 +1,393 @@
+@model CPMCore.Models.Projecten.DetailContractsModel
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 14a "Leverancierslijst in
+    het project — contractstatus als chip, uitklapbare contracten"). Same project shell as
+    Projecten/DetailClientsV2 (12d) — same inner menu/topbar conventions — and the exact same
+    DataTables + gl-v2-select filter recipe that page already established (gl-v2-projecten-
+    detailclients.js/.css), copied and adapted here rather than shared, same discipline as every
+    other gl-v2 list page's own toolbar/filters copy.
+
+    Scope trims from 14a, disclosed rather than silently dropped:
+    - No inline expand/collapse for a company with multiple contracts (14a's "Fluvius System
+      Operator, 3 contracten" row). DataTables' child-row API doesn't compose cleanly with this
+      table's own column-per-field layout, and only one company in the real dataset typically has
+      more than one contract. That row instead shows "N contracten" as plain text — its totals
+      (CONTRACTPRIJS/GEFACTUREERD columns) are still the real sum across all its contracts — and
+      the per-contract breakdown is one click away on DetailContractV2, which already loops over
+      every contract for that company (14b's own layout, unchanged).
+    - The WAARBORG dropdown filter isn't built — only the CONTRACT status filter, as the tabbar-
+      styled chips 14a itself shows (Alle/Met contract/Niet getekend/Zonder contract). A second
+      .gl-v2-filters-card dropdown for one extra dimension didn't earn its weight against the
+      chips already covering the primary real question ("welke leveranciers vragen nog actie").
+    - "Bijbestelling toevoegen" as a quick row action isn't wired — that's the shared
+      Partials/_BijbestellingModal + its AJAX endpoints (AddContractAdditionalOrder), which stays
+      legacy-styled for this pass (see DetailContractV2/EditContractV2's own notes on the same
+      trim) rather than getting a one-off gl-v2 reskin here.
+*@
+@{
+    // DESIGN.md regel 2: titel = wát het is (deze pagina), het kruimelpad (ná de rule-2-fix in
+    // ProjectenController.DetailContracts) draagt al wáár het zit (het project) — dus niet nog eens
+    // hier herhalen. Op gsm is dit tegelijk regel 5's "titel is de korte naam": het kruimelpad se
+    // laatste (en op die breedte enige zichtbare) segment toont dan het projectnaam-blad als
+    // subtitel, zonder dat de titel zelf ooit die naam moet dragen.
+    ViewData["Title"] = "Leveranciers";
+    ViewData["PageIcon"] = "ph ph-hard-hat";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var canWrite = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
+    var canDelete = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = $"project · {Model.SupplierRows.Count} lever" + (Model.SupplierRows.Count == 1 ? "ancier" : "anciers"),
+        ItemCounts = new Dictionary<string, int> { ["Leveranciers"] = Model.SupplierRows.Count }
+    };
+
+    string FmtVat(ContractBO c) => c.VatPercentage is null ? "—" : c.VatPercentage.Value.ToString("N2", be) + " %";
+    string FmtPaymentTerm(ContractBO c) => c.PaymentTerm is null ? "—" : $"{c.PaymentTerm:0} dagen";
+    string FmtCashDiscount(ContractBO c) => c.CashDiscount
+        ? $"{c.CashDiscountPercentage?.ToString("N2", be)} % binnen {c.CashDiscountPaymentTerm:0} dagen"
+        : null;
+    string FmtGuarantee(ContractBO c) => c.GuaranteeType == ContractGuaranteeType.FinancialGuarantee
+        ? $"{c.GuaranteePercentage?.ToString("N2", be)} % {c.GuaranteeType.GetDisplayName()}"
+        : c.GuaranteeType.GetDisplayName();
+    string FmtSent(ContractBO c) => c.ContractSentDate?.ToString("dd/MM/yyyy", be) ?? "—";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-contracts.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@Model.SupplierRows.Count LEVERANCIER@(Model.SupplierRows.Count == 1 ? "" : "S")</span>
+}
+@* Op tablet (768–1023.98px) verhuizen deze drie acties naar een ⋯-menu — zelfde recept als
+   Projecten/DetailClientsV2 se gl-v2-dc-topbar-btn/-topbar-menu-trigger: .gl-v2-pc-topbar-btn
+   verdwijnt op dat bereik (gl-v2-projecten-contracts.css), de trigger errond blijft enkel dáár
+   zichtbaar. De "Aannemerslijst afdrukken"-item in dat ⋯-menu is zelf ook een js-gl-v2-menu-trigger
+   naar #gl-v2-pc-print-menu — de generieke initContextMenus() sluit het ene paneel en opent het
+   andere, geen aparte "geketende menu's"-logica nodig. *@
+@section PageActions
+{
+    <div class="gl-v2-pc-toolbar-actions">
+        <a href="#" id="gl-v2-pc-export-excel" class="gl-v2-icon-btn gl-v2-pc-topbar-btn" title="Exporteren naar Excel" aria-label="Exporteren naar Excel"><i class="ph ph-file-xls" aria-hidden="true"></i></a>
+        <button type="button" class="gl-v2-icon-btn gl-v2-pc-topbar-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-pc-print-menu" aria-label="Aannemerslijst afdrukken" title="Aannemerslijst afdrukken">
+            <i class="ph ph-printer" aria-hidden="true"></i>
+        </button>
+        @if (canWrite)
+        {
+            <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary gl-v2-pc-topbar-btn"><i class="ph ph-plus" aria-hidden="true"></i>Leverancier toevoegen</a>
+        }
+        <button type="button" class="gl-v2-icon-btn gl-v2-pc-topbar-menu-trigger js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-pc-topbar-menu" aria-label="Meer acties">
+            <i class="ph ph-dots-three" aria-hidden="true"></i>
+        </button>
+    </div>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-menu" id="gl-v2-pc-topbar-menu">
+    <a href="#" class="gl-v2-menu-item"><i class="ph ph-file-xls" aria-hidden="true"></i>Exporteren naar Excel</a>
+    <button type="button" class="gl-v2-menu-item js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-pc-print-menu">
+        <i class="ph ph-printer" aria-hidden="true"></i>Aannemerslijst afdrukken
+    </button>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-menu-item"><i class="ph ph-plus" aria-hidden="true"></i>Leverancier toevoegen</a>
+    }
+</div>
+
+<div class="gl-v2-menu" id="gl-v2-pc-print-menu">
+    <div class="gl-v2-pc-print-menu-body">
+        <p class="gl-v2-pc-print-menu-label">Kolommen op de aannemerslijst</p>
+        <label class="gl-v2-pc-print-check"><input type="checkbox" id="chkSupplierListSent" checked>Contract verstuurd</label>
+        <label class="gl-v2-pc-print-check"><input type="checkbox" id="chkSupplierListSigned" checked>Getekend</label>
+        <label class="gl-v2-pc-print-check"><input type="checkbox" id="chkSupplierListVgm" checked>VGM charter</label>
+        <label class="gl-v2-pc-print-check"><input type="checkbox" id="chkSupplierListNotification" checked>Werfmelding</label>
+        <label class="gl-v2-pc-print-check"><input type="checkbox" id="chkSupplierListPid" checked>PID attesten</label>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary gl-v2-pc-print-btn" id="btnPrintSupplierList"><i class="ph ph-download" aria-hidden="true"></i>PDF afdrukken</button>
+    </div>
+</div>
+
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (zelfde "vlak tegen de
+   topbar"-regel als Klanten/DetailV2, zie de toelichting daar) — de Phone-modus van het inner menu
+   moet er daarom NA komen, niet ervoor. *@
+<div class="gl-v2-tabbar" id="gl-v2-pc-status-tabs" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-status="">Alle <span class="gl-v2-tabbar-count">@Model.SupplierRows.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-status="met-contract">Met contract <span class="gl-v2-tabbar-count">@Model.SupplierRows.Count(r => r.HasContract)</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-status="niet-getekend">Niet getekend <span class="gl-v2-tabbar-count">@Model.SupplierRows.Count(r => r.HasContract && !r.AllContractsSigned)</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-status="zonder-contract">Zonder contract <span class="gl-v2-tabbar-count">@Model.SupplierRows.Count(r => !r.HasContract)</span></button>
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div class="gl-v2-toolbar-card">
+    <div class="gl-v2-field gl-v2-toolbar-search">
+        <div class="gl-v2-field-box">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoek op leverancier of contract …">
+            <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
+        </div>
+    </div>
+</div>
+
+<div class="gl-v2-card gl-v2-detail-table-card">
+    <div class="gl-v2-card-body">
+        @if (Model.SupplierRows.Any())
+        {
+            <div class="table-responsive-md">
+                <table class="table table-hover mb-0 w-100 gl-v2-detail-table" id="datatable-contracts">
+                    <thead>
+                        <tr>
+                            <th data-orderable="false" style="width:2rem"></th>
+                            <th>Leverancier</th>
+                            <th class="gl-v2-pc-col-collapsible">Contract</th>
+                            <th class="text-end">Contractprijs</th>
+                            <th class="text-end gl-v2-pc-col-collapsible">Gefactureerd</th>
+                            <th class="gl-v2-pc-col-collapsible">Betaling</th>
+                            <th class="gl-v2-pc-col-collapsible">Waarborg</th>
+                            <th class="gl-v2-pc-col-collapsible">Verstuurd</th>
+                            <th class="gl-v2-pc-col-collapsible">Opvolging</th>
+                            <th class="text-end noVis" data-orderable="false"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.SupplierRows)
+                        {
+                            var hasSingle = row.HasContract && row.Contracts.Count == 1;
+                            var hasMultiple = row.HasContract && row.Contracts.Count > 1;
+                            var statusFlags = new List<string>();
+                            if (row.HasContract) statusFlags.Add("met-contract");
+                            if (row.HasContract && !row.AllContractsSigned) statusFlags.Add("niet-getekend");
+                            if (!row.HasContract) statusFlags.Add("zonder-contract");
+                            var detailUrl = row.Contracts.Count == 1
+                                ? Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contracts[0].Id })
+                                : Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company?.ID });
+                            var pct = row.TotalContractPrice > 0 ? Math.Min(100m, row.TotalInvoiced / row.TotalContractPrice * 100m) : 0m;
+                            var menuId = "gl-v2-pc-menu-" + (row.Company?.ID ?? 0);
+                            // Opvolging (14a): "in orde" enkel als ELK contract van deze leverancier
+                            // het vinkje heeft — zelfde alles-of-niets-logica als de GETEKEND-telling
+                            // hierboven, geen apart "gedeeltelijk"-icoon voorzien in het ontwerp.
+                            var siteNotificationOk = row.HasContract && row.Contracts.All(c => c.SiteNotification);
+                            var vgmCharterOk = row.HasContract && row.Contracts.All(c => c.VgmCharter);
+
+                            // gl-v2 (design-handoff 14a "uitklapbare contracten", Fluvius System
+                            // Operator-voorbeeld): elk contract van deze leverancier als JSON op de
+                            // rij zelf, zodat de chevron-toggle hieronder (gl-v2-projecten-
+                            // contracts.js) de indentatierijen client-side kan opbouwen zonder een
+                            // extra round-trip — zelfde databron als de rij zelf, enkel geserialiseerd.
+                            string contractsJson = hasMultiple
+                                ? System.Text.Json.JsonSerializer.Serialize(row.Contracts.Select(c => new
+                                {
+                                    id = c.Id,
+                                    name = string.IsNullOrWhiteSpace(c.ContractName) ? "Contract" : c.ContractName,
+                                    price = (c.Activities?.Sum(a => a.EffectivePrice) ?? 0m).ToString("C0", be),
+                                    signed = c.ContractSigned,
+                                    paymentTerm = FmtPaymentTerm(c),
+                                    guarantee = FmtGuarantee(c),
+                                    guaranteeDocMissing = c.GuaranteeDocumentMissing,
+                                    sent = FmtSent(c),
+                                    siteNotification = c.SiteNotification,
+                                    vgmCharter = c.VgmCharter,
+                                    editUrl = Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = c.Id })
+                                }))
+                                : null;
+
+                            <tr data-detail-url="@detailUrl" data-search="@($"{row.Company?.Display}".ToLowerInvariant())" data-status="@string.Join(",", statusFlags)" data-contracts="@contractsJson">
+                                <td class="text-center">
+                                    @if (hasMultiple)
+                                    {
+                                        <button type="button" class="gl-v2-pc-chevron js-gl-v2-pc-toggle" aria-expanded="false" aria-label="Toon @row.Contracts.Count contracten van @row.Company?.Display">
+                                            <i class="ph ph-caret-right" aria-hidden="true"></i>
+                                        </button>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="gl-v2-pc-supplier">
+                                        @if (!row.HasContract)
+                                        {
+                                            <span class="gl-v2-pc-dot is-none" title="Geen contract"></span>
+                                        }
+                                        else if (row.AllContractsSigned)
+                                        {
+                                            <span class="gl-v2-pc-dot is-signed" title="Getekend"></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gl-v2-pc-dot is-unsigned" title="Niet getekend"></span>
+                                        }
+                                        <div class="gl-v2-pc-supplier-text">
+                                            <span class="gl-v2-pc-supplier-name">@row.Company?.Display</span>
+                                            @if (hasMultiple)
+                                            {
+                                                <span class="gl-v2-pc-supplier-sub">@row.Contracts.Count contracten</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="gl-v2-pc-col-collapsible">
+                                    @if (!row.HasContract)
+                                    {
+                                        <span class="gl-v2-pc-empty">geen contract</span>
+                                    }
+                                    else if (hasMultiple)
+                                    {
+                                        var signedCount = row.Contracts.Count(c => c.ContractSigned);
+                                        <span class="gl-v2-badge @(signedCount == row.Contracts.Count ? "is-positive" : "is-attention")">@signedCount / @row.Contracts.Count GETEKEND</span>
+                                    }
+                                    else if (row.Contract.ContractSigned)
+                                    {
+                                        <span class="gl-v2-badge is-positive">GETEKEND</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-badge is-attention">NIET GETEKEND</span>
+                                    }
+                                </td>
+                                <td class="text-end">@(row.HasContract ? row.TotalContractPrice.ToString("C0", be) : "—")</td>
+                                <td class="text-end gl-v2-pc-col-collapsible">
+                                    @if (row.HasContract)
+                                    {
+                                        <div class="gl-v2-pc-invoiced">
+                                            <span>@row.TotalInvoiced.ToString("C0", be)</span>
+                                            <span class="gl-v2-pc-invoiced-track"><span class="gl-v2-pc-invoiced-fill" style="width:@(pct.ToString("0.##", CultureInfo.InvariantCulture))%"></span></span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @row.TotalInvoiced.ToString("C0", be)
+                                    }
+                                </td>
+                                <td class="gl-v2-pc-col-collapsible">
+                                    @if (hasSingle)
+                                    {
+                                        <div class="gl-v2-pc-payment">
+                                            <span>@FmtPaymentTerm(row.Contract)</span>
+                                            @{ var cd = FmtCashDiscount(row.Contract); }
+                                            @if (cd is not null)
+                                            {
+                                                <span class="gl-v2-pc-payment-sub">@cd</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-pc-empty">—</span>
+                                    }
+                                </td>
+                                <td class="gl-v2-pc-col-collapsible">
+                                    @if (hasSingle)
+                                    {
+                                        @FmtGuarantee(row.Contract)
+                                        @if (row.Contract.GuaranteeDocumentMissing)
+                                        {
+                                            <i class="ph ph-warning-circle gl-v2-pc-warning-icon" title="Waarborgdocument nog te ontvangen" aria-hidden="true"></i>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-pc-empty">—</span>
+                                    }
+                                </td>
+                                <td class="gl-v2-pc-col-collapsible">@(hasSingle ? FmtSent(row.Contract) : "—")</td>
+                                <td class="gl-v2-pc-col-collapsible">
+                                    <span class="gl-v2-pc-follow">
+                                        <span class="gl-v2-pc-follow-icon @(siteNotificationOk ? "is-ok" : "is-missing")" title="Werfmelding — @(siteNotificationOk ? "in orde" : "ontbreekt")">
+                                            <i class="ph ph-hard-hat" aria-hidden="true"></i>
+                                        </span>
+                                        <span class="gl-v2-pc-follow-icon @(vgmCharterOk ? "is-ok" : "is-missing")" title="VGM-charter — @(vgmCharterOk ? "in orde" : "ontbreekt")">
+                                            <i class="ph ph-shield-check" aria-hidden="true"></i>
+                                        </span>
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    @if (row.Company is not null)
+                                    {
+                                        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties">
+                                            <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="gl-v2-menu" id="@menuId">
+                                            <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-eye" aria-hidden="true"></i>Detail</a>
+                                            @if (hasSingle && canWrite)
+                                            {
+                                                <a href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                            }
+                                            @if (canWrite)
+                                            {
+                                                <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })" class="gl-v2-menu-item"><i class="ph ph-plus" aria-hidden="true"></i>Contract toevoegen</a>
+                                            }
+                                            @if (hasSingle && canDelete)
+                                            {
+                                                <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+                                                <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-pc-delete" data-id="@row.Contract.Id"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="gl-v2-pc-totals-row">
+                            <th colspan="3">Totaal</th>
+                            <th class="text-end">@Model.SupplierRows.Sum(r => r.TotalContractPrice).ToString("C0", be)</th>
+                            <th class="text-end gl-v2-pc-col-collapsible">@Model.SupplierRows.Sum(r => r.TotalInvoiced).ToString("C0", be)</th>
+                            <th class="gl-v2-pc-col-collapsible"></th><th class="gl-v2-pc-col-collapsible"></th><th class="gl-v2-pc-col-collapsible"></th><th class="gl-v2-pc-col-collapsible"></th><th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="gl-v2-pc-mobile-list" id="gl-v2-pc-mobile-list"></div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen leveranciers</h2>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen leveranciers toegevoegd aan dit project.</p>
+                @if (canWrite)
+                {
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">Een eerste leverancier toevoegen</a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* z-index-fix (gl-v2-shell.css) — zie DetailContractV2's eigen toelichting bij dezelfde klasse:
+   zonder .gl-v2-modal-confirm stond deze modal onder zijn eigen (ongescoped, altijd op 100000
+   getilde) .modal-backdrop. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-pc-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" id="gl-v2-pc-delete-container"></div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        window.glV2ProjectenContractsConfig = {
+            deleteUrl: '@Url.Action("ModalDeleteContractV2", "Projecten")',
+            printUrl: '@Url.Action("PrintSupplierList", "Projecten")',
+            projectId: @Model.ProjectId
+        };
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/js/gl-v2-projecten-contracts.js" asp-append-version="true"></script>
+}

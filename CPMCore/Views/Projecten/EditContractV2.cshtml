@@ -1,0 +1,342 @@
+@model CPMCore.Models.Projecten.ProjectAddContractModel
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using Microsoft.AspNetCore.Mvc.Rendering
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 14c "Contract bewerken —
+    labels boven het veld, gegroepeerd per onderwerp, vaste actiebalk", velden zelf volgens punt 14d
+    "Veldtypes uit 14c — elke staat"). Same project shell/card conventions as every other gl-v2 form
+    page (Klanten/EditProjectV2, Leveranciers/EditV2) — new gl-v2 chrome (topbar/inner menu/section
+    cards/fixed bottom actionbar), 14c's four-group layout (Algemeen/Voorwaarden/Verzending &
+    status/Veiligheid & attesten) plus Loten & bijbestellingen.
+
+    Fields use 14d's own reusable field-type EditorTemplates (Views/Shared/EditorTemplates/
+    GlV2NumberUnit·GlV2Select·GlV2Text·GlV2ToggleSwitch·GlV2DateTime, Views/Shared/DisplayTemplates/
+    GlV2ReadOnlyValue — full contract in DESIGN.md, "Punt 14d — reusable field types"): BTW/
+    Betaaltermijn/Korting-contant/Waarborg % → GlV2NumberUnit, Waarborg (type) → GlV2Select,
+    Contractnaam/Opmerking verzending → GlV2Text, Leverancier (once set) → GlV2ReadOnlyValue,
+    Contract getekend/Werfmelding/VGM-charter/PID-attesten → GlV2ToggleSwitch, Verstuurd op →
+    GlV2DateTime. Still deliberately NOT converted: Werfleider stays the existing select2 search-and-
+    pick dropdown (14d's "3 · KEUZELIJST MET KNOP" component, GlV2SearchSelect, exists but ships its
+    open/search panel unwired — being the first page to wire it live is a bigger, separate piece of
+    work than documenting field *types*, and swapping a working picker for an unwired one risked
+    breaking werfleider-selection outright); Lot/bijbestelling price inputs stay CurrencyWithActions
+    (the shared, non-GlV2 template — it carries the row's delete button inside the same input-group,
+    which GlV2NumberUnit doesn't provide, though that delete button IS reskinned to the
+    .gl-v2-icon-btn.is-warning look, page-scoped CSS only, see DESIGN.md); Waarborgdocument-upload
+    has no 14d field type at all (file inputs aren't in 14d's catalogue). Every id/name the page's
+    own inline script depends on (#ddlCompany, #ddlSiteManager, #chkCashDiscount, #lstActivities/
+    #ActivityRows, button.deleterow, …) is preserved — GlV2NumberUnit/GlV2Select/GlV2ToggleSwitch/
+    GlV2DateTime fall back to the same auto-generated `Contract_PropertyName` id ASP.NET's own
+    EditorFor already produces, so the script below only needed updating where it pointed at an
+    explicit legacy id instead of that auto-id (see DESIGN.md for exactly which ones). GlV2Select
+    dispatches a real "change" event on its hidden input when a new option is picked (initGlV2Select(),
+    gl-v2-shell.js) so the existing `$('#Contract_GuaranteeType').on('change', …)` handler — toggling
+    Waarborg %/the document-upload row — needed no logic changes, only its selector updated from the
+    old `<select>`'s id to the new hidden input's.
+
+    Company (LEVERANCIER) stays the legacy page's own read-only-vs-select2 branch, but in practice
+    always reads read-only here: every real caller of EditContract (Detail.cshtml's contract list,
+    DetailContractV2's "Bewerken", DetailContractsV2's row menu) passes an existing contractid, whose
+    Company is already set — AddContract (a separate action, out of this pass's scope, see
+    DetailContractsV2's own note) is the only flow that ever creates a contract with no company yet.
+    14c's own mockup shows exactly this locked state.
+
+    "+ Bijbestelling" per lot IS wired here (js-add-bijbestelling → the shared _BijbestellingModal),
+    unlike DetailContractV2/DetailContractsV2 where it was deliberately left out — this page's whole
+    purpose is editing a contract's lots, so leaving that one action unbuilt here would defeat 14c's
+    own stated purpose ("Loten en bijbestellingen in één sectie").
+*@
+@{
+    var companyName = Model.Contract.Company?.Display ?? "Leverancier";
+    ViewData["Title"] = "Contract bewerken — " + companyName;
+    ViewData["PageIcon"] = "ph ph-hard-hat";
+    ViewData["GlV2FullHeightBody"] = true;
+    var backUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId });
+    ViewData["BackUrl"] = backUrl;
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = "leverancier · " + companyName,
+        ItemCounts = new Dictionary<string, int> { ["Leveranciers"] = Model.SupplierCount }
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
+    <link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
+    <link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css">
+    <link rel="stylesheet" href="~/lib/dropzone/basic.css" />
+    <link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-editcontract.css" asp-append-version="true" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
+}
+@section PageActions
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-ec-dirty-badge" hidden>NIET-OPGESLAGEN</span>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<span class="gl-v2-ec-required-note">Velden met <span class="gl-v2-ec-required-star">*</span> zijn verplicht · zelfde formulier voor een nieuw contract, dan met lege velden</span>
+
+@using (Html.BeginForm("EditContract", "Projecten", FormMethod.Post, new { @class = "gl-v2-ec-form", id = "gl-v2-ec-form", enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
+    @Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
+    @Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
+    @Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
+    <input type="hidden" id="txtCompanyDisplay" value="@Model.Contract.Company.Display" />
+
+    <div class="gl-v2-ec-scroll">
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-identification-card" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Algemeen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Leverancier en verantwoordelijke op de werf.</span>
+            </div>
+            <div class="gl-v2-ec-fields">
+                <div class="gl-v2-ec-col-5">
+                    @Html.EditorFor(m => m.Contract.ContractName, "GlV2Text", new { Placeholder = "Optionele naam, bv. “Ruwbouw fase 1”" })
+                    <span class="gl-v2-ec-field-hint">leeg = de naam van het eerste lot</span>
+                </div>
+                <div class="gl-v2-ec-col-3">
+                    @if (Model.Contract.Company.ID > 0)
+                    {
+                        @Html.DisplayFor(m => m.Contract.Company.Display, "GlV2ReadOnlyValue", new { Label = Html.DisplayNameFor(m => m.Companies).ToString(), Icon = "ph-hard-hat" })
+                        @Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID" })
+                    }
+                    else
+                    {
+                        <div class="gl-v2-field">
+                            @Html.LabelFor(m => m.Companies, new { @class = "gl-v2-field-label" })
+                            <select id="ddlCompany" class="form-control w-100"></select>
+                        </div>
+                        @Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID" })
+                    }
+                </div>
+                <div class="gl-v2-field gl-v2-ec-col-4">
+                    @Html.LabelFor(m => m.Contract.SiteManagerContactId, new { @class = "gl-v2-field-label" })
+                    <div class="gl-v2-ec-inline-group">
+                        @Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
+                        <button type="button" class="gl-v2-icon-btn" id="btnNewSiteManager" title="Nieuwe werfleider toevoegen" aria-label="Nieuwe werfleider toevoegen"><i class="ph ph-user-plus" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-ec-grid">
+            <div class="gl-v2-ec-col-7 gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-scales" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Voorwaarden</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Betaling, korting en waarborg.</span>
+                </div>
+                <div class="gl-v2-ec-fields">
+                    <div class="gl-v2-ec-col-3">
+                        @Html.EditorFor(m => m.Contract.VatPercentage, "GlV2NumberUnit", new { Unit = "%", Max = "0 % = btw verlegd" })
+                    </div>
+                    <div class="gl-v2-ec-col-3">
+                        @Html.EditorFor(m => m.Contract.PaymentTerm, "GlV2NumberUnit", new { Unit = "dagen", Placeholder = "Aantal dagen", Masked = false, Required = true })
+                    </div>
+                    <div class="gl-v2-field gl-v2-ec-col-6">
+                        <span class="gl-v2-field-label">@Html.DisplayNameFor(m => m.Contract.CashDiscountPaymentTerm)</span>
+                        <div class="gl-v2-ec-inline-group">
+                            @Html.CheckBoxFor(m => m.Contract.CashDiscount, new { id = "chkCashDiscount", @class = "gl-v2-toggle-switch" })
+                            <div class="gl-v2-ec-inline-field">@Html.EditorFor(m => m.Contract.CashDiscountPercentage, "GlV2NumberUnit", new { Unit = "%", Bare = true })</div>
+                            <span class="gl-v2-ec-inline-label">binnen</span>
+                            <div class="gl-v2-ec-inline-field">@Html.EditorFor(m => m.Contract.CashDiscountPaymentTerm, "GlV2NumberUnit", new { Unit = "dagen", Placeholder = "dagen", Masked = false, Bare = true })</div>
+                        </div>
+                        <span class="gl-v2-ec-field-hint">leest als één zin: korting % bij betaling binnen N dagen — waarden blijven bewaard als je de schakelaar weer aanzet</span>
+                    </div>
+                    <div class="gl-v2-ec-col-6">
+                        @Html.EditorFor(m => m.Contract.GuaranteeType, "GlV2Select")
+                    </div>
+                    <div class="gl-v2-ec-col-3">
+                        @Html.EditorFor(m => m.Contract.GuaranteePercentage, "GlV2NumberUnit", new { Unit = "%", Max = "Maximaal 100 %" })
+                    </div>
+                    <div class="gl-v2-field gl-v2-ec-col-12" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
+                        <span class="gl-v2-field-label">Waarborgdocument <span class="gl-v2-ec-field-hint">(pdf/jpg)</span></span>
+                        @if (string.IsNullOrWhiteSpace(Model.Contract.GuaranteeDocFilename))
+                        {
+                            <input type="file" name="guaranteeDoc" id="fileGuaranteeDoc" class="form-control form-control-modern" accept=".pdf,.jpg,.jpeg,image/jpeg,application/pdf" />
+                        }
+                        else
+                        {
+                            var gext = System.IO.Path.GetExtension(Model.Contract.GuaranteeDocFilename)?.ToLowerInvariant();
+                            var gicon = gext == ".pdf" ? "ph-file-text" : (gext is ".jpg" or ".jpeg" or ".png" ? "ph-image" : "ph-file");
+                            <div class="gl-v2-ec-doc-tile">
+                                <a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id })" target="_blank" rel="noopener" class="gl-v2-ec-doc-tile-open" title="Waarborgdocument bekijken">
+                                    <i class="ph @gicon" aria-hidden="true"></i>
+                                    <span>@(gext?.TrimStart('.').ToUpperInvariant())</span>
+                                </a>
+                                <button type="submit" formnovalidate formaction="@Url.Action("RemoveGuaranteeDoc", "Projecten", new { contractid = Model.Contract.Id, projectid = Model.ProjectId })" class="gl-v2-ec-doc-tile-remove" title="Waarborgdocument verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                            </div>
+                            @if (Model.Contract.GuaranteeDocUploadedAt.HasValue)
+                            {
+                                <span class="gl-v2-ec-field-hint">toegevoegd op @Model.Contract.GuaranteeDocUploadedAt.Value.ToString("dd/MM/yyyy")</span>
+                            }
+                        }
+                    </div>
+                    <div class="gl-v2-field gl-v2-ec-col-12" id="guaranteeDocWarningRow" style="@(Model.Contract.GuaranteeDocumentMissing ? "" : "display:none")">
+                        <div class="gl-v2-ec-warning"><i class="ph ph-warning-circle" aria-hidden="true"></i>De bankwaarborg is nog niet ontvangen — voeg het document toe (pdf of jpg).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-ec-col-5 gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verzending &amp; status</h2>
+                </div>
+                <div class="gl-v2-ec-fields">
+                    <div class="gl-v2-ec-col-12">
+                        @Html.EditorFor(m => m.Contract.ContractSigned, "GlV2ToggleSwitch", new { Hint = "zet de status in de lijst op “getekend”" })
+                    </div>
+                    <div class="gl-v2-ec-col-6">
+                        @Html.EditorFor(m => m.Contract.ContractSentDate, "GlV2DateTime")
+                    </div>
+                    <div class="gl-v2-ec-col-6">
+                        @Html.EditorFor(m => m.Contract.ContractSentNote, "GlV2Text", new { Placeholder = "bv. bestelbon, per e-mail", MaxLength = 200 })
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Veiligheid &amp; attesten</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Drie afspraken — elk één schakelaar.</span>
+            </div>
+            <div class="gl-v2-toggle-grid" style="padding:12px 18px 14px">
+                @Html.EditorFor(m => m.Contract.SiteNotification, "GlV2ToggleSwitch", new { Hint = "ingediend" })
+                @Html.EditorFor(m => m.Contract.VgmCharter, "GlV2ToggleSwitch", new { Hint = "ondertekend" })
+                @Html.EditorFor(m => m.Contract.PidAttest, "GlV2ToggleSwitch", new { Hint = "nog niet ontvangen" })
+            </div>
+        </div>
+
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Loten &amp; bijbestellingen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Per lot een bedrag; bijbestellingen hangen onder hun lot.</span>
+            </div>
+            <div class="gl-v2-ec-lots-body">
+                @* gl-v2 (design-handoff 14c): één doorlopende lijst — elk lot, direct gevolgd door
+                   zijn eigen bijbestellingen en zijn eigen "+ Bijbestelling op X"-rij (allemaal
+                   binnen _ActivityRowV2 zelf, zie die partial se eigen toelichting) — daaronder pas
+                   het "Lot toevoegen"-zoekveld, exact de volgorde die 14c tekent (niet bovenaan). *@
+                <div id="ActivityRows" class="gl-v2-ec-activity-rows">
+                    @foreach (var item in Model.Contract.Activities)
+                    {
+                        @await Html.PartialAsync("_ActivityRowV2", item, new ViewDataDictionary(ViewData) { { "mode", "add" } })
+                    }
+                </div>
+
+                @if (Model.Contract.Id == 0)
+                {
+                    <p class="gl-v2-ec-field-hint">Sla het contract eerst op; daarna kan je bijbestellingen op de loten toevoegen.</p>
+                }
+
+                <div class="gl-v2-field gl-v2-ec-lot-add-field">
+                    <span class="gl-v2-field-label">Lot toevoegen</span>
+                    <div class="gl-v2-ec-inline-group">
+                        @* gl-v2-multiselect (design-handoff optie 4h) i.p.v. select2 — zelfde "volledig
+                           juist" component als Leveranciers/EditV2's Activiteiten-veld, zie DESIGN.md.
+                           Bewust niet form-bound (geen name/hidden-inputs die meesturen): dit veld is een
+                           klaarzetvak, "Toevoegen" stuurt élk gekozen lot meteen via AJAX naar
+                           AddSelectedActivities (gl-v2-projecten-editcontract.js), zelfde flow als
+                           voorheen met select2('data'). Al-op-het-contract-staande loten renderen hier
+                           mee maar hidden, zodat button.deleterow ze via lotPicker.restore() terug kan
+                           tonen (zie die JS se eigen toelichting). *@
+                        <div class="gl-v2-select" data-gl-v2-multiselect id="gl-v2-ec-lot-multiselect">
+                            <div class="gl-v2-select-trigger gl-v2-select-trigger-multi" tabindex="0" role="button" aria-haspopup="listbox">
+                                <div class="gl-v2-select-chips" data-role="chips"></div>
+                                <input type="text" class="gl-v2-select-trigger-multi-input" placeholder="Zoek een lot…" data-role="filter" autocomplete="off" />
+                            </div>
+                            <div class="gl-v2-select-panel gl-v2-select-panel-search">
+                                <div class="gl-v2-select-options" data-role="options">
+                                    @foreach (var activity in Model.Activities)
+                                    {
+                                        var isAdded = Model.Contract.Activities.Any(ca => ca.Activity.ID == activity.ID);
+                                        if (isAdded)
+                                        {
+                                            <button type="button" class="gl-v2-select-option is-multi is-added" data-id="@activity.ID" data-text="@activity.Display" hidden>
+                                                <span class="gl-v2-select-option-check"><i class="ph ph-check" aria-hidden="true"></i></span>
+                                                <span>@activity.Display</span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="gl-v2-select-option is-multi" data-id="@activity.ID" data-text="@activity.Display">
+                                                <span class="gl-v2-select-option-check"><i class="ph ph-check" aria-hidden="true"></i></span>
+                                                <span>@activity.Display</span>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                            <div data-role="hidden-inputs"></div>
+                        </div>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="btnAddActivities"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                    </div>
+                </div>
+
+                <div class="gl-v2-ec-lots-total">
+                    <span>Contractprijs</span>
+                    <span>@((Model.Contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m).ToString("C"))</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-ec-actionbar-status"><i class="ph ph-check-circle" aria-hidden="true"></i>Alle verplichte velden ingevuld</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <a href="@backUrl" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-ec-cancel-link">Annuleren</a>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-ec-save-continue">Opslaan en verder</button>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Contract opslaan</button>
+    </div>
+}
+
+@await Html.PartialAsync("Partials/_BijbestellingModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/js/theme.admin.extension.js"></script>
+    <script src="~/lib/select2/js/i18n/nl.js"></script>
+    <script src="~/lib/dropzone/dropzone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+    <script src="~/js/currency.js"></script>
+    <script>
+        window.glV2EditContractConfig = {
+            getCompanysUrl: '@Url.Action("GetCompanys", "Projecten")',
+            getCompanyContactsUrl: '@Url.Action("GetCompanyContacts", "Projecten")',
+            addSelectedActivitiesUrl: '@Url.Action("AddSelectedActivities", "Projecten")'
+        };
+    </script>
+    <script src="~/js/gl-v2-projecten-editcontract.js" asp-append-version="true"></script>
+    @await Html.PartialAsync("Partials/_SiteManagerNewModalV2")
+}

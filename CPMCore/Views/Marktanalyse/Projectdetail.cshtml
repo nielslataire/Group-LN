@@ -801,10 +801,11 @@
                 {
                     var cuStatusClass = cu.Status.ToLowerInvariant() switch
                     {
-                        "verkocht"    => "status-verkocht",
-                        "gereserveerd"=> "status-gereserveerd",
-                        "optie"       => "status-optie",
-                        _             => "status-beschikbaar"
+                        "verkocht"              => "status-verkocht",
+                        "vermoedelijk verkocht" => "status-likelysold",
+                        "gereserveerd"          => "status-gereserveerd",
+                        "optie"                 => "status-optie",
+                        _                       => "status-beschikbaar"
                     };
                     var cuTypeClass = cu.TypeLabel == "Woning" ? "type-house" : "type-apartment";
                     var cuRowId = $"cu-detail-{cu.Id}";

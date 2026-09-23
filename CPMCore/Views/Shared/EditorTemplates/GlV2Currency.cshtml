@@ -1,0 +1,30 @@
+@model decimal?
+@*
+    gl-v2 (design-handoff 8f-stijl "veldtype") — reskin van het bestaande, werkende
+    EditorTemplates/Currency.cshtml (legacy): zelfde Currencymask-klasse + waardeformattering, dus
+    currency.js se eigen CurrencyMask.init('.Currencymask') blijft dit veld ongewijzigd
+    parsen/opslaan — enkel de opmaak is hier .gl-v2-field-box/-input i.p.v. Bootstrap's
+    .input-group/.form-control. Eerste toepassing: Klanten/EditProjectV2.cshtml (Eenheden-tab, grond-/
+    constructiewaarden). Optionele extra ViewData: Label.
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var value = Model.HasValue ? Model.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "";
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    @if (!string.IsNullOrWhiteSpace(label))
+    {
+        <label class="gl-v2-field-label" for="@id">@label</label>
+    }
+    <div class="gl-v2-field-box">
+        <input type="text" id="@id" name="@name" class="gl-v2-field-input Currencymask" value="@value" autocomplete="off" data-val="" />
+        <span class="gl-v2-field-suffix">€</span>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>

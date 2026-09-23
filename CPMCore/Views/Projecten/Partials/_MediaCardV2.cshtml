@@ -1,0 +1,71 @@
+@using BOCore
+@model ProjectPictureBO
+@*
+    gl-v2 (design-handoff punt 15a) — mediakaart. Badge/checkbox/zichtbaarheid-plaatsing en de foto-
+    vs.-videometaregel volgen 15a se eigen "wat is anders"-lijst (zie DetailPhotosV2.cshtml se
+    kopcommentaar, punten 3/4/5). Klikken op de kaart zelf opent het detailpaneel (15b) —
+    Views/Projecten/gl-v2-projecten-detailphotos.js zoekt het item op via data-id in
+    window.glV2DetailPhotos.media, geen server-round-trip nodig.
+*@
+@{
+    var thumbUrl  = ViewData["ThumbUrl"] as string ?? "";
+    var canWrite  = ViewData["CanWrite"] as bool? ?? false;
+    var canDelete = ViewData["CanDelete"] as bool? ?? false;
+    var isVideo   = Model.MediaType == 1;
+    var isHoofd   = Model.Type == PictureType.Hoofdfoto;
+
+    string FmtSize(long? b) => b is null ? "" : b >= 1_048_576 ? $"{b / 1_048_576.0:F1} MB" : b >= 1_024 ? $"{b / 1_024.0:F0} KB" : $"{b} B";
+    string FmtDur(double? sec)
+    {
+        if (!sec.HasValue) return "";
+        var ts = TimeSpan.FromSeconds(sec.Value);
+        return ts.Hours > 0 ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}" : $"{ts.Minutes}:{ts.Seconds:D2}";
+    }
+    var ext = System.IO.Path.GetExtension(Model.Name ?? "").TrimStart('.').ToUpperInvariant();
+    var metaLine = isVideo
+        ? string.Join(" · ", new[] { ext, FmtSize(Model.FileSizeBytes), FmtDur(Model.DurationSeconds) }.Where(s => !string.IsNullOrWhiteSpace(s)))
+        : string.Join(" · ", new[] { ext, FmtSize(Model.FileSizeBytes), Model.WidthPx.HasValue ? $"{Model.WidthPx}×{Model.HeightPx}" : null }.Where(s => !string.IsNullOrWhiteSpace(s)));
+}
+<div class="gl-v2-dp-card js-gl-v2-dp-card"
+     data-id="@Model.Id"
+     data-mediatype="@Model.MediaType"
+     data-ispublic="@Model.IsPublic.ToString().ToLowerInvariant()"
+     data-caption="@((Model.Caption ?? "").ToLowerInvariant())"
+     data-filename="@(Model.Name ?? "")"
+     data-uploaded="@(Model.DateTimeUploaded?.Ticks ?? 0)">
+    @if (canWrite || canDelete)
+    {
+        <label class="gl-v2-dp-card-check" onclick="event.stopPropagation()">
+            <input type="checkbox" class="js-gl-v2-dp-check" value="@Model.Id" />
+        </label>
+    }
+    <div class="gl-v2-dp-card-thumb">
+        @if (isVideo)
+        {
+            <video src="@thumbUrl" preload="metadata" muted playsinline></video>
+            <span class="gl-v2-dp-card-play"><i class="ph ph-play" aria-hidden="true"></i></span>
+            @if (Model.DurationSeconds.HasValue)
+            {
+                <span class="gl-v2-dp-card-duration">@FmtDur(Model.DurationSeconds)</span>
+            }
+        }
+        else
+        {
+            <img src="@thumbUrl" alt="@(Model.AltText ?? Model.Caption)" loading="lazy" />
+        }
+        <span class="gl-v2-dp-card-badges">
+            <span class="gl-v2-dp-badge @(isVideo ? "is-video" : "is-photo")">@(isVideo ? "VIDEO" : "FOTO")</span>
+            @if (isHoofd)
+            {
+                <span class="gl-v2-dp-badge is-hoofdbeeld"><i class="ph ph-star" aria-hidden="true"></i>HOOFDBEELD</span>
+            }
+        </span>
+        <span class="gl-v2-dp-card-visibility" title="@(Model.IsPublic ? "Publiek" : "Intern")">
+            <i class="ph @(Model.IsPublic ? "ph-globe" : "ph-lock-simple")" aria-hidden="true"></i>
+        </span>
+    </div>
+    <div class="gl-v2-dp-card-body">
+        <span class="gl-v2-dp-card-title">@(string.IsNullOrWhiteSpace(Model.Caption) ? Model.Name : Model.Caption)</span>
+        <span class="gl-v2-dp-card-meta">@metaLine</span>
+    </div>
+</div>

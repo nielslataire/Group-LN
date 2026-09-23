@@ -37,6 +37,16 @@ public partial class ProjectPictures
 
     public double? DurationSeconds { get; set; }
 
+    public string AltText { get; set; }
+
+    public string Subtitle { get; set; }
+
+    public int? UnitId { get; set; }
+
+    public bool AutoPlayMuted { get; set; }
+
+    public double? PosterTimestampSeconds { get; set; }
+
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
 
     public virtual Project ProjectNavigation { get; set; }
@@ -44,4 +54,6 @@ public partial class ProjectPictures
     public virtual ICollection<ProjectNews> ProjectNews { get; set; } = new List<ProjectNews>();
 
     public virtual ProjectMediaSection Section { get; set; }
+
+    public virtual Units Unit { get; set; }
 }

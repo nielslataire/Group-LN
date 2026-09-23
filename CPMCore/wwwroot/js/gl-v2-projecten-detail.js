@@ -20,9 +20,17 @@
                 if (body) {
                     body.classList.add("is-refiltering");
                     window.setTimeout(function () { body.classList.remove("is-refiltering"); }, 140);
+                    // Categoriewissel begint weer bovenaan de (mogelijk scrollende) lijst i.p.v. de
+                    // gebruiker op een scrollpositie te laten die met de nieuwe, kortere set niets
+                    // meer te maken heeft.
+                    body.scrollTop = 0;
                 }
 
-                chips.forEach(function (c) { c.classList.toggle("is-active", c === chip); });
+                chips.forEach(function (c) {
+                    var active = c === chip;
+                    c.classList.toggle("is-active", active);
+                    c.setAttribute("aria-pressed", active ? "true" : "false");
+                });
 
                 var items = document.querySelectorAll(".js-gl-v2-pd-attention-item");
                 items.forEach(function (item) {
@@ -55,17 +63,24 @@
         if (!tbody) return;
         var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr[data-unit-row]"));
         var noResults = document.getElementById("gl-v2-pd-units-empty");
+        var status = document.getElementById("gl-v2-pd-units-filter-status");
 
         input.addEventListener("input", function () {
             var q = input.value.trim().toLowerCase();
             var anyVisible = false;
+            var shown = 0;
             rows.forEach(function (row) {
                 var hay = (row.getAttribute("data-search") || "").toLowerCase();
                 var match = q === "" || hay.indexOf(q) !== -1;
                 row.hidden = !match;
-                if (match) anyVisible = true;
+                if (match) { anyVisible = true; shown++; }
             });
             if (noResults) noResults.hidden = anyVisible || q === "";
+            if (status) {
+                status.textContent = q === ""
+                    ? "Alle eenheden getoond."
+                    : shown + (shown === 1 ? " eenheid" : " eenheden") + " gevonden voor \"" + input.value.trim() + "\".";
+            }
         });
     }
 })();

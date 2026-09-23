@@ -115,20 +115,25 @@
         <span class="gl-v2-badge is-attention">OPENSTAAND</span>
     }
 }
+@* Design-handoff 11d: op tablet staat enkel het ⋯-icoon in de topbar — "de rest zit in het
+   ⋯-menu" (11d se eigen commentaar) — Pdf/Bewerken/Verzenden verhuizen dan naar de vaste
+   actiebalk onderaan (dezelfde als op gsm, zie .gl-v2-invoice-actionbar). .gl-v2-invoice-topbar-btn
+   markeert de drie knoppen die op tablet-breedte verdwijnen; enkel de ⋯-trigger (geen eigen klasse
+   nodig, blijft gewoon altijd staan) resteert daar. *@
 @section PageActions
 {
-    <a href="@Url.Action("Pdf", "Invoices", new { id = Model.Id })" target="_blank" class="gl-v2-btn gl-v2-btn-secondary">
+    <a href="@Url.Action("Pdf", "Invoices", new { id = Model.Id })" target="_blank" class="gl-v2-btn gl-v2-btn-secondary gl-v2-invoice-topbar-btn">
         <i class="ph ph-file-pdf" aria-hidden="true"></i>Pdf
     </a>
     @if (canEdit)
     {
-        <a href="@Url.Action("Edit", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-secondary">
+        <a href="@Url.Action("Edit", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-secondary gl-v2-invoice-topbar-btn">
             <i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken
         </a>
     }
     @if (canSend)
     {
-        <a href="@Url.Action("Send", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-primary">
+        <a href="@Url.Action("Send", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-primary gl-v2-invoice-topbar-btn">
             <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>@(Model.LastEmailSentAt.HasValue ? "Opnieuw verzenden" : "Verzenden")
         </a>
     }
@@ -152,21 +157,11 @@
     }
 </div>
 
-@* Design-handoff 11e: op gsm staan de chips (Verkoop/status/Openstaand) niet meer naast de titel
-   in de groene topbar (te weinig ruimte daar op smal scherm), maar op hun eigen witte rij eronder,
-   boven de tabbar. @@section PageTitleBadges hierboven blijft de bron voor desktop/tablet (verborgen
-   op gsm hieronder in gl-v2-invoices-detail.css); dit is dezelfde drie chips nogmaals, puur voor die
-   mobiele rij. *@
-<div class="gl-v2-invoice-mobile-badges">
-    <span class="gl-v2-invoice-direction-badge">
-        <i class="ph ph-arrow-right" aria-hidden="true"></i>Verkoop
-    </span>
-    <span class="gl-v2-badge @StatusTone(Model.Status)">@Model.StatusLabel.ToUpperInvariant()</span>
-    @if (hasOutstanding)
-    {
-        <span class="gl-v2-badge is-attention">OPENSTAAND</span>
-    }
-</div>
+@* Op gsm tonen we deze drie chips (Verkoop/status/Openstaand) helemaal niet meer — eerst verplaatst
+   naar een eigen rij onder de topbar (11e), maar dat oogde overbodig naast de al-aanwezige chip in
+   de mobiele bedragkaart eronder; op verzoek weer weg, geen vervangende rij. @@section
+   PageTitleBadges blijft de bron voor desktop/tablet, gewoon verborgen op gsm (zie
+   gl-v2-invoices-detail.css). *@
 
 <div class="gl-v2-tabbar" role="tablist">
     <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="factuur">Factuur</button>
@@ -257,7 +252,7 @@
     <div class="gl-v2-section-card is-collapsible gl-v2-invoice-card-issuer">
         <div class="gl-v2-section-card-header" role="button" tabindex="0" aria-expanded="false" aria-controls="invoice-card-issuer-body">
             <span class="gl-v2-section-card-icon is-neutral"><i class="ph ph-buildings" aria-hidden="true"></i></span>
-            <span class="gl-v2-section-card-title" style="color:var(--gl-v2-muted)">Onze onderneming</span>
+            <h2 class="gl-v2-section-card-title" style="color:var(--gl-v2-muted)">Onze onderneming</h2>
             <span class="gl-v2-section-card-spacer"></span>
             <span class="gl-v2-badge is-neutral">VERSTREKKER</span>
             <i class="ph ph-caret-down gl-v2-section-card-chevron" aria-hidden="true"></i>
@@ -276,7 +271,7 @@
     <div class="gl-v2-section-card is-collapsible gl-v2-invoice-card-client">
         <div class="gl-v2-section-card-header" role="button" tabindex="0" aria-expanded="true" aria-controls="invoice-card-client-body">
             <span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
-            <span class="gl-v2-section-card-title">Klant</span>
+            <h2 class="gl-v2-section-card-title">Klant</h2>
             <span class="gl-v2-section-card-spacer"></span>
             <i class="ph ph-caret-down gl-v2-section-card-chevron" aria-hidden="true"></i>
         </div>
@@ -294,7 +289,7 @@
     <div class="gl-v2-section-card gl-v2-invoice-card-doc">
         <div class="gl-v2-section-card-header">
             <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-            <span class="gl-v2-section-card-title">Documentgegevens</span>
+            <h2 class="gl-v2-section-card-title">Documentgegevens</h2>
         </div>
         <div class="gl-v2-detail-grid">
             @{ var docNumberLocal = docType + " " + docNumber; }
@@ -444,16 +439,22 @@
 
 </div>
 
-@* Design-handoff 11d/11e: een vaste actiebalk onderaan zodra desktop-breedte niet meer geldt, zodat
-   de hoofdacties bereikbaar blijven zonder terug naar de topbar te scrollen. Hergebruikt het
-   bestaande .gl-v2-form-actionbar-component (EditV2-pagina's) — dat wordt al vanzelf position:fixed
-   onder 768px; de 768–1199.98px-tablet-drempel is hier de enige pagina-eigen toevoeging
-   (gl-v2-invoices-detail.css). *@
+@* Design-handoff 11d/11e: een vaste actiebalk onderaan zodra desktop-breedte niet meer geldt (zelfde
+   balk op tablet én gsm), zodat de hoofdacties bereikbaar blijven zonder terug naar de topbar te
+   scrollen — die verliest daar op zijn beurt Pdf/Bewerken/Verzenden aan enkel nog de ⋯-trigger (zie
+   @@section PageActions hierboven). Hergebruikt het bestaande .gl-v2-form-actionbar-component
+   (EditV2-pagina's) — dat wordt al vanzelf position:fixed onder 768px; de 768–1023.98px-tablet-
+   drempel is hier de enige pagina-eigen toevoeging (gl-v2-invoices-detail.css). Pdf/Bewerken zijn
+   hier icoon-only (11d/11e tonen ze allebei als kale 40/46px-vierkantjes) — enkel Verzenden
+   behoudt zijn tekstlabel, dat is de ene actie die de volle resterende breedte krijgt. *@
 <div class="gl-v2-form-actionbar gl-v2-invoice-actionbar">
+    <a href="@Url.Action("Pdf", "Invoices", new { id = Model.Id })" target="_blank" class="gl-v2-icon-btn" title="Pdf downloaden" aria-label="Pdf downloaden">
+        <i class="ph ph-download-simple" aria-hidden="true"></i>
+    </a>
     @if (canEdit)
     {
-        <a href="@Url.Action("Edit", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-btn gl-v2-btn-secondary">
-            <i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken
+        <a href="@Url.Action("Edit", "Invoices", new { id = Model.Id, issuerCompanyId = ViewBag.CompanyId })" class="gl-v2-icon-btn" title="Bewerken" aria-label="Bewerken">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
         </a>
     }
     <span class="gl-v2-form-actionbar-spacer"></span>

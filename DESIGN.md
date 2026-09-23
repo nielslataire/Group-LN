@@ -1,1567 +1,4043 @@
+<!-- Promoted from design-handoff/DESIGN.md.gl-v2-draft.md on 2026-09-23: gl-v2 is the confirmed
+     admin-shell direction (see PRODUCT.md, Capabilities and Constraints). Rollout is still
+     incremental — pages not yet ported to gl-v2 (`*V2.cshtml`, `useGlV2Layout`) still render the
+     legacy Porto-theme shell described in git history / the old design system, until migrated.
+     This file is the design authority for any gl-v2 surface and for all new work going forward;
+     the draft file remains at design-handoff/DESIGN.md.gl-v2-draft.md as the live editing copy
+     kept in sync with this one during rollout. -->
+
 ---
-name: CPM — Group LN
-description: Grounded, warm-neutral admin system for a Belgian residential property developer
+name: CPM — Group LN (gl-v2)
+description: Floating-card icon-rail admin shell for CPM — the confirmed direction, rolling out one page at a time
 colors:
-  forest-green: "#0a5a3b"
-  forest-green-deep: "#0f4b40"
-  forest-green-bright: "#0f7a52"
-  mist-green: "#e8f0eb"
-  mint-ice: "#e7fff1"
-  sage: "#7A8450"
-  timber: "#8B6B4A"
-  taupe-grey: "#8A7967"
-  ink: "#222222"
-  page-grey: "#f5f5f8"
-  cloud-grey: "#f8f9fc"
-  surface-white: "#ffffff"
-  hairline: "#e7e7e7"
-  divider-cool: "#e3e7ee"
-  slate-900: "#1e293b"
-  slate-500: "#94a3b8"
-  text-muted: "#8590a5"
-  rust: "#b3452f"
-  rust-tint: "#f7ece8"
-  rust-text: "#8a3420"
-  ochre: "#c17d1f"
-  ochre-tint: "#faf1df"
-  ochre-text: "#7a5210"
-  taupe-tint: "#efe9e3"
-  taupe-text: "#5f5245"
+  bg: "#F2F5EF"
+  surface: "#ffffff"
+  ink: "#2C3B2A"
+  muted: "#5a6b58"
+  muted-soft: "#4A5B48"
+  primary: "#00532D"
+  primary-tint: "#D6E5CC"
+  accent-sage: "#7A9E6E"
+  gold: "#C9A96E"
 typography:
   display:
-    fontFamily: "Poppins, 'Segoe UI', system-ui, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 700
-    lineHeight: 1.3
-    letterSpacing: "normal"
-  headline:
-    fontFamily: "Poppins, 'Segoe UI', system-ui, sans-serif"
-    fontSize: "1.4rem"
-    fontWeight: 700
-    lineHeight: 1.3
-    letterSpacing: "normal"
-  title:
-    fontFamily: "Poppins, 'Segoe UI', system-ui, sans-serif"
-    fontSize: "1.1rem"
-    fontWeight: 700
-    lineHeight: 1.3
+    fontFamily: "Playfair Display, 'Times New Roman', Georgia, serif"
+    fontSize: "19px"
+    fontWeight: 500
+    lineHeight: 1.25
     letterSpacing: "normal"
   body:
-    fontFamily: "Poppins, 'Segoe UI', system-ui, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.5
+    fontFamily: "'IBM Plex Sans', -apple-system, 'Segoe UI', Helvetica, sans-serif"
+    fontSize: "15px"
+    fontWeight: 500
+    lineHeight: "normal"
     letterSpacing: "normal"
   label:
-    fontFamily: "Poppins, 'Segoe UI', system-ui, sans-serif"
-    fontSize: "0.78rem"
-    fontWeight: 600
-    lineHeight: 1.4
+    fontFamily: "'IBM Plex Sans', -apple-system, 'Segoe UI', Helvetica, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 500
+    lineHeight: 1
     letterSpacing: "normal"
 rounded:
-  xs: "2px"
-  sm: "7px"
-  md: "10px"
-  lg: "14px"
-  xl: "16px"
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
   pill: "999px"
 spacing:
   xs: "6px"
   sm: "10px"
-  md: "16px"
-  lg: "24px"
-  xl: "32px"
+  md: "14px"
+  lg: "18px"
+  xl: "22px"
 components:
+  rail-item:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    size: "48px"
+  rail-item-active:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.md}"
+    size: "48px"
   button-primary:
-    backgroundColor: "{colors.forest-green}"
-    textColor: "{colors.surface-white}"
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.surface}"
     rounded: "{rounded.sm}"
-    padding: "10px 18px"
-  button-primary-hover:
-    backgroundColor: "{colors.forest-green-deep}"
-    textColor: "{colors.surface-white}"
+    height: "36px"
+    padding: "0 16px"
+  button-sage:
+    backgroundColor: "{colors.accent-sage}"
+    textColor: "{colors.surface}"
     rounded: "{rounded.sm}"
-    padding: "10px 18px"
-  button-outline-primary:
-    backgroundColor: "{colors.surface-white}"
-    textColor: "{colors.forest-green}"
-    rounded: "{rounded.sm}"
-    padding: "10px 18px"
-  nav-tile:
-    backgroundColor: "transparent"
-    textColor: "{colors.mint-ice}"
-    rounded: "{rounded.lg}"
-    padding: "14px 10px"
-  nav-tile-active:
-    backgroundColor: "{colors.forest-green-bright}"
-    textColor: "{colors.surface-white}"
-    rounded: "{rounded.lg}"
-    padding: "14px 10px"
-  card:
-    backgroundColor: "{colors.surface-white}"
+    height: "36px"
+    padding: "0 16px"
+  flyout-panel:
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-    padding: "24px"
-  topbar-page-icon:
-    backgroundColor: "{colors.mist-green}"
-    textColor: "{colors.forest-green}"
-    rounded: "{rounded.md}"
-    size: "40px"
-  input-modern:
-    backgroundColor: "{colors.surface-white}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-    height: "46px"
-    padding: "6px 17px"
-  form-section-icon:
-    backgroundColor: "{colors.mist-green}"
-    textColor: "{colors.forest-green}"
-    rounded: "{rounded.md}"
-    size: "42px"
-  form-tab-active:
+    rounded: "{rounded.lg}"
+    width: "262px"
+  mobile-menu-item:
     backgroundColor: "transparent"
-    textColor: "{colors.forest-green}"
-    rounded: "{rounded.xs}"
-    padding: "15px"
-  badge-primary:
-    backgroundColor: "{colors.forest-green}"
-    textColor: "{colors.surface-white}"
-    rounded: "{rounded.pill}"
-    padding: "4px 9px"
+    textColor: "{colors.ink}"
+    rounded: "10px"
+    padding: "13px 10px"
+  mobile-menu-item-expanded:
+    backgroundColor: "{colors.primary-tint}"
+    textColor: "{colors.primary}"
+    rounded: "10px"
+    padding: "13px 10px"
 ---
 
-# Design System: CPM — Group LN
+# Design System: CPM — Group LN (gl-v2)
 
 ## Overview
 
-**Creative North Star: "Grounded & Cultivated"**
+**Creative North Star: "The Elevated Rail"**
 
-CPM is the internal operations platform for a Belgian residential property
-developer, and its interface is built to feel *rooted* — Flemish land and building
-rendered as a deep forest green sitting on warm, low-saturation neutrals. The
-identity is carried almost entirely by one colour: a solid dark-green sidebar and
-a single green accent that marks what is primary, active, or selected. Everything
-else is quiet. The tone is warm and approachable rather than corporate-crisp: an
-icon-first navigation with generously rounded tiles, soft green tint surfaces
-(`#e8f0eb`) behind icons and hovers, and a white topbar that greets rather than
-looms. This is a tool a mixed, non-technical back-office team (project managers,
-sales administration, accounting) reaches for all day and — because project
-managers and contractors also open it on a phone on-site — it stays legible and
-touch-friendly at every width.
+The confirmed direction for the CPM admin shell, sourced from a Claude Design wireframe
+exploration (`design-handoff/CRM Menu Wireframes.dc.html`, options 2a/2b/2c/3a/3b/3e/4a) and
+now replacing the prior near-flat, solid full-height green sidebar system page by page. gl-v2 is
+composed of distinct floating white cards — an icon-only rail, a body card, hover/click flyout
+panels — all resting on a warm sage-tinted page (`#F2F5EF`), each with its own soft ambient
+shadow. A serif display face (Playfair Display) marks page titles and panel headers, breaking
+from the prior system's Poppins-only rule; body and label text stay a humanist sans (IBM Plex
+Sans). This pairing is drawn from the public groupln.be site's own brand voice, brought into the
+admin tool for the first time.
 
-Components are **refined and restrained**. The base radius is a modest 7px, state
-is shown through subtle green tints rather than motion or heavy depth, and borders
-are hairline. Cards are *softly lifted* — they read as distinct objects resting a
-millimetre above the pale grey page, never as boxed-in panels with loud drop
-shadows. Structural shadow is reserved for things that genuinely float: the
-sidebar flyout menus, dropdowns, and modals.
+Rollout is **incremental, one page at a time**, not a big-bang switch — see
+`layout-experiment` branch history for scope and sequencing. A per-session
+`gl_v2_preview` cookie (`LayoutPreviewController`) still gates preview access while migration is
+in progress; only pages ported to gl-v2 (`*V2.cshtml`, `_LayoutV2.cshtml`, `useGlV2Layout`)
+render this system — everything else keeps rendering the prior shell until it is migrated. Any
+**new** screen or component should be built in gl-v2 from the outset; this file, not the prior
+shell's conventions, is the design authority for new work. Deliberately still out of scope:
+flyout pin-to-push, tablet inner-menu variants.
 
-The implementation is a heavily-customised Porto admin theme (`theme.css` →
-`modern.css` → `skins/*` → `custom.css`). A formal Group LN brand identity is
-expected from the client and may refine or replace parts of this system; until
-then this file documents what is actually shipped and the direction confirmed with
-the team.
+**Decided against:** the mockup's bottom-nav pattern (options 3a/3b's phone-width bottom bar) will
+not be built. The topbar's quick-actions slot (see `_LayoutV2.cshtml`, filled per-page — e.g.
+`IndexV2.cshtml` for Facturen) already surfaces page-level actions, and on phone width those stay
+reachable through the hamburger menu. A separate bottom-nav would duplicate that path, so it's out
+of scope permanently, not just deferred.
 
 **Key Characteristics:**
-- One-colour identity: deep forest green does the work; secondary/accent/info
-  appear rarely and only for categorisation.
-- Warm neutral ground: greys carry a faint warmth; the page is `#f5f5f8`, not
-  pure white or cool grey.
-- Icon-first, rounded navigation with a solid dark-green rail and darker-green
-  two-column flyout submenus.
-- Near-flat surfaces: hairline `#e7e7e7` dividers, soft ambient card lift,
-  structural shadow only for overlays.
-- Poppins throughout, rem-based scale, weights 300–800.
-- Responsive down to a 60px solid-green mobile bar; dense tables that stay usable
-  on small screens.
+- Floating-card identity: every distinct surface (rail, body, flyout, mobile menu) is its own
+  white card with a soft shadow on a tinted page, never a flush/edge-to-edge panel.
+- Icon-only rail (72px), no persistent text labels — labels surface via tooltip-on-hover and the
+  flyout panel's own heading.
+- Serif display type for anything that names a page or panel ("Dashboard", "Facturen - BCO",
+  "Menu"); everything else stays the humanist sans.
+- 8 / 12 / 16px radius scale, one step up from the current system's 7 / 14 / 16px scale.
 
 ## Colors
 
-A single deep green over warm, desaturated earth neutrals — green signals action
-and place, everything else recedes.
+A single deep green (`#00532D`) over a warm sage-tinted page, distinct from the current system's
+paler `#f5f5f8` — the tint itself carries more of the "grounded" identity than any one accent does.
 
 ### Primary
-- **Deep Forest Green** (`#0a5a3b`): the identity colour. Fills the full-height
-  sidebar rail, primary buttons, active/selected states, links, focus rings
-  (`rgba(10,90,59,.25)`), badges, the topbar page-icon glyph, and the mobile
-  topbar. Used on a large surface (the rail) but as an *accent* everywhere in
-  content — roughly one green mark per control cluster.
-- **Forest Green Deep** (`#0f4b40`): primary-button hover/active and the
-  background of the sidebar flyout submenu panels. One step darker, never used
-  for text.
-- **Forest Green Bright** (`#0f7a52`): the active navigation tile in the sidebar —
-  a lighter green block that lifts the current section out of the rail.
-- **Mist Green** (`#e8f0eb`): tint surface. Backs the 40px topbar page-icon chip,
-  `card-big-info` icon boxes, tab hover/active fills, dropdown-item hover, and
-  vertical-tab active rows. The "this relates to the green" wash.
-- **Mint Ice** (`#e7fff1`): the only text/icon colour used *on* the green rail —
-  a near-white with a green cast for sidebar labels, icons, and the header toggle.
+- **Deep Green** (`#00532D`): rail-item active state, primary buttons, flyout "current" link,
+  expanded mobile-menu-item background text color, mobile topbar background.
 
 ### Secondary
-- **Sage** (`#7A8450`): moss green. A categorisation colour for non-primary
-  emphasis (`.badge.bg-secondary`, occasional status). Muted enough to never
-  compete with the primary.
+- **Sage** (`#7A9E6E`): the "Boeken facturen"-class secondary action button — a muted, lower-
+  emphasis green sibling to Primary, never used for a destructive or negative action.
 
 ### Tertiary
-- **Timber** (`#8B6B4A`): warm brown, the "accent" token (`--custom-accent`,
-  `.badge.bg-accent`). Building-material warmth; used sparingly to distinguish a
-  third category.
-- **Taupe Grey** (`#8A7967`): the `info` colour — a warm grey-brown for
-  informational badges, deliberately not a blue.
+- **Gold** (`#C9A96E`): reserved for the active-tab underline pattern from the mockup's dashboard
+  option (2a) — not yet built on any page in this pilot (no page with a tab strip has been
+  implemented). Do not use it for anything else until a tabbed screen actually needs it. It is
+  also, separately, the focus-ring color on every `.gl-v2-btn` (`:focus-visible`) — that usage
+  predates this pilot's tab strip and stays as-is.
+- **Warning** (`#8A6A32`, tint `#F6EEDC`): added in the 4j button-states refinement pass — the
+  modal-confirm "irreversible but not destructive" tone (`.is-warning`, `.gl-v2-btn-warning`).
+  Deliberately a separate token from Gold above: Gold is a decorative accent (tab underline, focus
+  ring) at a light, jewelry-like saturation, while Warning is a semantic status color at a much
+  darker, legible-as-text/legible-as-a-filled-button-background shade. Don't reach for Gold where
+  Warning is meant, even though both read as "gold" at a glance.
 
 ### Neutral
-- **Ink** (`#222222`): darkest text and `.badge.bg-dark`.
-- **Slate 900** (`#1e293b`): topbar page title and userbox header name.
-- **Text Muted** (`#8590a5`) / **Slate 500** (`#94a3b8`): secondary text,
-  breadcrumb links, meta, captions, muted table cells.
-- **Page Grey** (`#f5f5f8`): the application background behind all content.
-- **Cloud Grey** (`#f8f9fc`): faint hover fill (userbox toggle) and zebra rows.
-- **Surface White** (`#ffffff`): every card, the topbar, menus, inputs.
-- **Hairline** (`#e7e7e7`): the default divider/border on cards and sections.
-- **Divider Cool** (`#e3e7ee`): the slightly cooler 1px border under the topbar
-  and around dropdown menus.
-
-### Semantic Status
-Danger/warning/info as warm, earth-family hues — never stock Bootstrap
-red/amber/blue — so a severity signal still reads as part of this palette, not
-a bolted-on alert library. Each has a solid form (icon, count badge, chip) and
-a pale tint + matching darker text form (banner/row backgrounds).
-- **Rust** (`#b3452f`) / tint `#f7ece8` / text `#8a3420`: danger — "ACTIE
-  VEREIST" meldingen, the melding count badge, the werf-card warning badge.
-  A warm brick-red in the same family as Timber, not a cool crimson.
-- **Ochre** (`#c17d1f`) / tint `#faf1df` / text `#7a5210`: warning — "OP TE
-  LOSSEN" meldingen. Close to the existing amber werf-status chip.
-- **Taupe Grey** (`#8A7967`, see Tertiary) / tint `#efe9e3` / text `#5f5245`:
-  info — "TER INFO" meldingen. Reuses the info role rather than introducing a
-  fourth hue; this replaced a cool blue that had drifted into the
-  meldingencentrum outside the documented system.
+- **Ink** (`#2C3B2A`): default text.
+- **Muted** (`#5a6b58`) / **Muted Soft** (`#4A5B48`): secondary text, breadcrumb, icon-muted state.
+- **Page Background** (`#F2F5EF`): the sage-tinted page behind every card.
+- **Surface** (`#ffffff`): every card, flyout, and panel.
+- **Primary Tint** (`#D6E5CC`): hover/active fill for flyout links, expanded mobile-menu items,
+  topbar-icon chip background, avatar background.
+- **Hairline** (`rgba(44,59,42,.12)`) / **Hairline Soft** (`rgba(44,59,42,.08)`): dividers.
+- **Dashed** (`rgba(44,59,42,.18)`): the wireframe-placeholder dashed-border treatment, carried
+  into real UI for genuinely-unresolved slots (e.g. the mobile topbar's search-icon stub, which
+  is intentionally not wired to real search yet).
 
 ### Named Rules
-**The One Green Rule.** Deep Forest Green is the only brand colour on a content
-screen. If a second saturated colour appears, it is a Semantic Status signal
-(Rust / Ochre / Taupe Grey) or a deliberate category (Sage / Timber / Taupe),
-never decoration. In `custom.css` the primary is referenced ~29× and every
-other brand token once — keep that ratio.
-
-**The Warm-Grey Rule.** Neutrals lean warm, never cool-blue. Reach for Page Grey
-and Hairline before any `#f1f5f9`-family cool grey; the cool Slate tones are
-permitted only for topbar/menu chrome text where they already live.
-
-**The Status-Is-Not-Severity Rule.** Semantic Status colours (Rust / Ochre /
-Taupe) mean *something needs attention*, not *a state exists*. A lifecycle
-status that happens to be a good or neutral outcome must not borrow an alert
-hue: a **sold** unit is `bg-primary` (green — the outcome you want), never
-`bg-danger`. Map lifecycle states to Primary / Sage / Ochre / Ink / Dark and
-keep Rust for genuine problems. Two greens on one screen (e.g. "Verkocht" and a
-green brand mark) is acceptable; an alarm-red "everything is fine" is not.
+**The Floating-Card Rule.** Every distinct navigational surface (rail, body, flyout, mobile menu
+panel) is its own white, shadowed card — never a flush panel sharing an edge with the page
+background. If two things visually touch with no gap and no shadow break between them, they are
+the same card, not two.
 
 ## Typography
 
-**Display / Body / Label Font:** Poppins (with `'Segoe UI', system-ui, sans-serif`)
+**Display Font:** Playfair Display (with 'Times New Roman', Georgia, serif fallback)
+**Body/Label Font:** IBM Plex Sans (with -apple-system, 'Segoe UI', Helvetica, sans-serif fallback)
 
-**Character:** Poppins is the single voice — geometric, friendly, a little
-rounded, which is what keeps the dense admin content feeling approachable rather
-than clinical. Weight, not family, creates hierarchy: 700 for anything that is a
-heading or a number that matters, 600 for labels and nav, 400 for body. Weights
-300 and 800 exist in the loaded face but are rarely used.
+**Character:** The serif is reserved for naming something at the *page/panel* tier — a page title,
+a flyout/mobile-menu panel heading, a company name inside a flyout title. It never appears on a
+control (button, chip, nav item, form field), and it does not reach down into the *dense label*
+tier either — see `.gl-v2-section-card-title` below. Everything that isn't a page/panel name stays
+in the sans.
 
 ### Hierarchy
-- **Display** (700, 1.5rem, 1.3): the topbar page title when there is no
-  breadcrumb (e.g. Dashboard) — the largest type most screens show.
-- **Headline** (700, 1.4rem, 1.3): section headings inside content, card titles
-  on landing/overview pages.
-- **Title** (700, 1.05–1.1rem, 1.3): the topbar page title with a breadcrumb;
-  sub-section headers; emphasised card headers.
-- **Body** (400, 1rem / 16px, 1.5): default text, form values, table cells.
-- **Label** (600, 0.78rem, 1.4): breadcrumbs, meta text, form labels, the
-  12px/600 sidebar nav labels, table column heads. Not uppercased, not tracked.
+- **Display** (500, 19px, 1.25): topbar page title, mobile-menu panel title, flyout panel title
+  (18px there — see Named Rule below).
+- **Body** (500, 15px): mobile-menu item labels, primary button labels (600 weight there).
+- **Label** (500, 10.5px, line-height 1): breadcrumb/subtitle text, rail tooltips (600, 12px).
+- **Dense label** (700, 13px, sans): `.gl-v2-section-card-title` — a content card's own name
+  ("Traject," "Klant," "Documentgegevens") *inside* a page that already has its own serif topbar
+  title naming the page as a whole. Deliberately sans, not a drift — see Named Rule below.
 
 ### Named Rules
-**The Weight-Not-Size Rule.** Build hierarchy by moving between 400 / 600 / 700
-Poppins at a small set of sizes. Do not introduce new font sizes, a second
-family, uppercase tracking, or italic for emphasis — bump the weight or use Deep
-Forest Green.
+**The Naming-Only Serif Rule.** Playfair Display marks the name of the thing you're looking at —
+a page, a panel, a person's company. It never appears on a control (button, chip, nav item, form
+field). Reach for weight in the sans face for everything else.
+
+**The One-Name-Per-Page Rule.** A page gets exactly one serif name: its own topbar title. Every
+`<h2>` naming a content card *inside* that page (`.gl-v2-section-card-title`) stays sans/dense —
+promoting it to serif would put 6-8 serif names on one screen (see Projecten/DetailV2's Traject/
+Eenheden/Algemene gegevens/Voortgang/Facturatie/Documenten/Foto's cards), diluting "serif = the name
+of the thing you're looking at" into "serif = any heading," which is exactly the genericization the
+Naming-Only Serif Rule exists to prevent. `.gl-v2-empty-state-title` *is* serif despite sitting one
+level down from a section card — that's a different situation, not a contradiction: an empty state
+is its own small, self-contained announcement ("Nog geen traject") shown *instead of* the card's
+content, closer in spirit to a panel's own naming moment than to a dense list of card labels a user
+scans past on a populated page.
 
 ## Layout
 
-Fixed left sidebar + fixed topbar shell. The sidebar rail is **300px** on desktop
-(collapses to **73px** icon-only ≥768px via `sidebar-left-collapsed`); the topbar
-is **72px** (`--topbar-height`), white, holding the logo, a 40px rounded
-page-icon chip, the page title, a slash-separated breadcrumb, and a right-aligned
-userbox. Content sits on a `#f5f5f8` canvas with Bootstrap's grid and container
-rhythm.
+Rail (72px, sticky) + gap (12px) + floating body card, all on a 12px page inset — every edge of
+the composition sits 12px off the viewport, unlike the current system's edge-to-edge sidebar.
 
-Spacing rhythm is roughly a 6 / 10 / 16 / 24 / 32 px progression — card interiors
-are 24px (`card-big-info` uses 24–26px), topbar element gaps 12–18px, nav tiles
-14px vertical. Tables run full-width and dense; `datatable-actions` cells pack
-icon buttons with small gaps.
+Body card: topbar (62px, hairline-bottom) + content area (20-22px padding, `#F7F9F5` background,
+one shade cooler/lighter than the page's own `#F2F5EF` — a card's content area is not the same
+tone as the page behind the card).
 
 **Responsive:**
-- ≥992px: flyout submenus open to the side of the rail as absolutely-positioned
-  panels (min 360–430px, up to two columns).
-- ≤991px: flyout submenus fall inline beneath their parent, single column.
-- ≤767px: topbar becomes a fixed **60px solid Deep Forest Green** bar — hamburger,
-  vertically-centred title (icon + breadcrumb hidden), profile photo only.
-  Dashboard KPI strip (`.gl-kpi-strip`) is hidden.
+- **≥768px**: rail + flyouts, as above.
+- **<768px** (phone breakpoint — matches the current system's own ≤767px convention): rail and
+  flyouts hidden entirely. Topbar switches to solid Primary-green, white text, and shows, left to
+  right: the real `groupln-logo.png` mark (32px box, 26px image, no background/border needed — it
+  reads fine directly on the green topbar; was a dashed-border placeholder box before the real
+  asset was wired in, 2026-09-21, same swap on `.gl-v2-rail-logo`), title + single-line subtitle
+  (last breadcrumb crumb only, not the full trail), a spacer, a circular search-icon stub (34px,
+  not wired to real search yet), and a circular hamburger trigger (34px) — see Mobile Topbar under
+  Components. The
+  userbox/avatar is **not** shown in the mobile topbar at all; the profile moved entirely into
+  the mobile menu panel's footer (see Mobile Menu Panel). A page can also render a full-width
+  "quick actions" bar pinned under the scrollable content, just above the safe-area — see Mobile
+  Quick-Actions Bar under Components.
 
 ### Named Rules
-**The Field-Width Rule.** Every screen must stay usable and legible at 360px.
-Tables collapse or scroll, controls stay ≥40px tall, the green mobile bar is the
-only chrome. On-site phone use is a first-class case, not a fallback.
+**The 12px Inset Rule.** The whole rail+body composition sits 12px off every viewport edge at
+desktop width. Nothing in gl-v2 is edge-to-edge except the phone breakpoint's body card, which
+intentionally loses its radius/shadow and goes flush (see Elevation).
 
-**`.content-with-menu`'s mobile top-clearance is razor-thin — treat it as
-fragile, not fixed.** On any project sub-page with the `DetailMenu` sidebar
-(`ProjectTraject`, `DetailClients`, etc.), the vertical budget above
-`Shared/DetailMenu.cshtml`'s mobile "Toon Menu" toggle stacks three
-unconditional numbers that were never designed together: `.inner-wrapper`'s
-`72px` `padding-top` (`custom.css`) + `.content-body`'s own `10px`
-`margin-top` (`theme.css`, `html.modern.fixed .content-body`) − `.content-with-menu`'s
-own `-20px` `margin-top` (`theme.css`, unconditional) = `62px` of clearance
-against a `60px` mobile topbar — **2px of slack, app-wide, on every page
-using this shell.** `ProjectTraject/Index.cshtml`'s `ViewBag.ContentBodyClass
-= "gl-traject-flush"` (see the Tabstrip breakout-margin bullet above)
-zeroed that `10px` unconditionally when it was first added, which ate the
-2px and then some — the toggle rendered visibly clipped behind the mobile
-topbar, a real regression caught only by testing the phone view directly.
-Fixed two ways: `gl-traject-flush`'s cancellation is now scoped to
-`≥768px` only (`traject.css`), and `custom.css` independently widens the
-shared budget for every page on this shell via
-`@media (max-width:767.98px) { .content-with-menu { margin-top: -10px
-!important; } }` (`!important` because it has the same specificity as
-theme.css's own unconditional rule and source order alone wasn't reliably
-winning). **Before touching any of `.inner-wrapper`/`.content-body`/
-`.content-with-menu`'s vertical spacing again, re-add up this chain first**
-— it is not a coincidence-proof margin, it is a coincidence.
+**The One-Line Topbar Rule.** A page's title and breadcrumb never wrap, never repeat the same
+name/word twice between them, and the breadcrumb's last item is never the title itself — the title
+answers "wát," the breadcrumb answers "wáár." Only the title, then the breadcrumb's middle segment,
+truncate with an ellipsis and a tooltip; chips, actions, and the avatar never do. See "Topbar title &
+breadcrumb — long names" under Components for the full rule set and its two applied examples.
 
 ## Elevation & Depth
 
-The system is **near-flat with a soft lift**. Surfaces are separated primarily by
-the 1px Hairline border and by the tonal step between white cards and the
-`#f5f5f8` page. Primary content cards carry a soft ambient shadow so they read as
-resting just above the page — never a hard drop shadow, never a boxed panel.
-Structural, obvious shadow is reserved for elements that truly float above the
-content plane.
+Floating, not flat. Every card carries a real ambient shadow — the opposite of the current
+system's near-flat, hairline-bordered philosophy. Depth communicates hierarchy: flyouts (which
+float highest, over the body) get the strongest shadow; the body card itself gets a lighter one;
+rail items get the lightest (`shadow-tile`).
 
 ### Shadow Vocabulary
-- **Card rest** (`box-shadow: 0 1px 4px rgba(0,0,0,0.08)`): the default soft lift
-  for primary content cards and widgets. Pair with a Hairline border.
-- **Whisper** (`box-shadow: 0px 0px 37px -36px rgba(0,0,0,0.4)` — the
-  `--card-shadow` token): an almost-invisible haze for secondary cards where even
-  Card rest is too much.
-- **Overlay** (`box-shadow: 0 16px 35px rgba(0,0,0,0.24)` for the sidebar flyout;
-  `0 12px 32px rgba(15,23,42,0.12)` for dropdown/userbox menus): structural depth
-  for things that float — flyouts, dropdowns, popovers, modals.
+- **Tile** (`0 1px 2px rgba(0,83,45,.06), 0 8px 18px -10px rgba(44,59,42,.28)`): rail items at
+  rest.
+- **Tile Active** (`0 2px 6px rgba(44,59,42,.22), 0 12px 26px -12px rgba(44,59,42,.5)`): the
+  active rail item — a visibly heavier lift than the resting tile shadow.
+- **Card** (`0 1px 2px rgba(0,83,45,.06), 0 22px 46px -26px rgba(44,59,42,.38)`): the body card,
+  and any content card inside it (toolbar card, table card).
+- **Flyout** (`0 1px 2px rgba(0,83,45,.06), 0 30px 60px -28px rgba(44,59,42,.45)`): flyout panels
+  and the mobile menu — the strongest shadow in the system, reserved for things that float above
+  the body card itself.
 
 ### Named Rules
-**The Float-Only Rule.** A visible (Overlay-strength) shadow means the element is
-literally floating above the page — a menu, a dropdown, a dialog. Resting content
-gets Card rest or Whisper or nothing. Never use an Overlay shadow to make a
-static card look important; use the Hairline border and, if needed, a Mist Green
-header.
+**The Shadow-Ranks-Depth Rule.** Shadow strength is not decorative — it's a literal z-order cue.
+Flyout > Card > Tile Active > Tile. Never give a resting element a stronger shadow than something
+that's meant to visually float above it.
 
 ## Shapes
 
-Softly rounded, consistent, never sharp and never pill-by-default. The base
-radius is **7px** (`--radius`) for cards, buttons, inputs, and menu items.
-Navigation is rounder — **14px** tiles in the rail, **16px** flyout panels,
-**10px** for the topbar page-icon chip and userbox controls. Tiny elements
-(progress bars) use **2px**. Full circles (`pill` / 50%) are only for avatars and
-the round icon dots. Borders are 1px Hairline; the sidebar's inner flyout border
-is `rgba(231,255,241,0.08)` — a barely-there light line on dark green.
-
-### Named Rules
-**The 7-14-16 Rule.** Content chrome (cards, buttons, fields) = 7px. Navigation
-chrome (tiles, flyouts) = 14–16px. Don't mix: a button inside the rail is still
-7px, a nav tile in content is still 14px.
+8 / 12 / 16px radius scale — one notch up from the current system's 7 / 14 / 16px. Rail items and
+mobile-menu items use 10-12px (rounder than a plain content-chrome radius, since they're
+navigation, matching the current system's own "navigation is rounder" instinct). Flyouts and the
+mobile menu panel use the largest radius (16px) or, at phone width, none at all (the body card
+goes flush/edge-to-edge below 768px — see Layout).
 
 ## Components
 
-**The Shared-CSS-By-Default Rule.** When a pattern documented anywhere in
-this file is genuinely a *component* — something another page could
-plausibly reuse (a button variant, a row-action pattern, a status icon, a
-card shape) rather than something specific to one page's own layout — its
-CSS belongs in `custom.css` (loaded on every page) by default, not in a
-page- or feature-scoped file (`traject.css`, `projecten-custom.css`,
-`budget-wizard.css`, …). This isn't a style preference; it's already caused a
-real bug: `gl-row-action-btn` was written straight into `traject.css` when
-first built, and DESIGN.md documented it as "the current pattern for new
-tables" without noticing that claim was only true on `ProjectTraject` — any
-other page reaching for it got nothing, silently, no error. Moved to
-`custom.css` once discovered (see Table row actions). Before adding a new
-component's CSS, ask: would a page other than this one ever want this? If
-the honest answer is "maybe" as much as "no," default to `custom.css`. Only
-keep something page-scoped when it's genuinely bound to that page's own
-markup/data shape (e.g. `#mp-search-term`-specific selectors, a Kalender-only
-layout grid) — a *reusable* shape wrapped around page-specific *content* is
-still shared CSS with page-specific markup, not the other way around.
+### Rail item
+Eight defined states (design-handoff reference sheet, 48px tile, real size):
+1. **Rest:** white fill, Tile shadow, Ink icon, no label.
+2. **Hover:** fill → Hover Tint (`#EDF3E8` — distinct from Primary Tint `#D6E5CC`, a lighter mint
+   reserved for hover only), icon → Primary. Tooltip appears after a 150ms delay, with a small
+   triangle connector into the tile, not just a floating bubble.
+3. **Active (current page):** Primary fill, white icon, Tile Active shadow, **plus a 3px gold
+   stripe in the rail's own gutter** just left of the tile (`left:-8px`, 24px tall) — the "where
+   you are" indicator. Not a tile border; it reads as a rail-level marker.
+4. **Active + hover:** one step darker (`--gl-v2-primary-deep`, `#00401F`).
+5. **Pressed:** shadow flips inward (`inset 0 2px 4px rgba(0,0,0,.15)`), icon shrinks 1px (19→18px).
+6. **Keyboard focus:** gold outline, 2px offset — `:focus-visible` only, so a mouse click never
+   shows it, only Tab.
+7. **Badge (counter):** top-right circular badge, small red pill, "9+" past nine — component
+   defined (`.gl-v2-rail-badge`) but not wired to a real count on any item yet.
+8. **Disabled (no access):** grey fill/icon, no shadow, no hover — component defined
+   (`.gl-v2-rail-item.is-disabled`) but not used yet; the rail currently hides no-access items
+   entirely rather than showing them greyed out (see Do's and Don'ts).
+
+### Named Rules
+**The Flyout-Open-Is-Active Rule.** A trigger tile gets the exact same visual treatment (state 3
+above, gold stripe included) for as long as its flyout is open — regardless of whether that item
+is the actual current-page route. Two separate classes drive this: `.is-active` (server-rendered,
+permanent, the real current page) and `.is-flyout-open` (JS-toggled on open/close, temporary).
+Closing a flyout only ever removes `.is-flyout-open`; it must never touch `.is-active`.
+
+### Flyout panel
+- **Shape:** 262px wide, 16px radius, Flyout shadow.
+- **Trigger:** hover (with a 250ms close-delay on leave) or click — click always ensures open,
+  never toggles closed (a real mouse fires hover-then-click on the same interaction, and a
+  toggle-on-click would immediately re-close what hover just opened).
+- **Close:** outside click, Esc, or the 250ms mouseleave delay.
+- **Position:** `position:fixed`, JS-positioned via the trigger's bounding rect — must render as a
+  sibling of the rail in the DOM, never a descendant. The rail uses `position:sticky`, which
+  creates its own stacking context; a fixed-position descendant of it gets trapped inside that
+  context and can render behind unrelated content elsewhere on the page despite its own z-index.
+  **Follow-up, real report ("flyout/tooltip renders under a project card"):** rendering the flyout
+  as a sibling isn't the whole fix — `.gl-v2-rail-tooltip` (the hover label on each rail icon) is a
+  genuine *descendant* of `.gl-v2-rail`, not a sibling, so it stayed exposed to the exact same trap.
+  Root cause, precisely: `.gl-v2-rail`'s own `z-index` was `auto`, so its whole stacking context
+  (tooltip included, however high the tooltip's own z-index) only won paint order against other
+  page content by DOM position — any later-in-DOM `position:relative` element (a project/supplier
+  card, a table row) tied and then beat it. Fixed at the source instead of per-descendant: `.gl-v2-
+  rail` now carries an explicit `z-index: 20`, which promotes its whole subtree into CSS's
+  numerically-ranked stacking tier — reliably above ordinary page content, still comfortably below
+  real overlays (modals/toasts/quick-actions sheet, z-index 500+). This also retroactively covers
+  any future rail descendant, not just the flyout/tooltip pairing that prompted it.
+- **Current-selection highlight:** when a flyout lists per-company links (Leveranciers, Klanten,
+  Facturatie) and one of them matches the page you're actually on (`issuerCompanyId` query value),
+  that link gets `.is-current` (Primary fill, white text) — e.g. opening the Facturatie flyout
+  while on the BCO invoices page highlights "BCO" in the list.
 
 ### Buttons
-- **Shape:** gently rounded (7px), 1px border matching fill.
-- **Primary:** Deep Forest Green fill, white text, ~`10px 18px` padding.
-- **Hover / Focus:** fill shifts to Forest Green Deep (`#0f4b40`), or
-  `#0f7a52` in some contexts; focus ring `0 0 0 0.2rem rgba(10,90,59,0.25)`.
-  Transition ~0.15s on background/color.
-- **Outline Primary:** transparent fill, Deep Forest Green text and border;
-  inverts to green fill + white text on hover/active.
-- **Semantic (`.btn-gl-*`):** e.g. `btn-gl-remove` — soft tinted danger buttons
-  (`#fbd0d0` bg, `#dc3545` text) rather than solid fills, matching the restrained
-  tone.
-- **Disabled:** reduced-opacity look with `cursor: not-allowed` explicitly
-  restored on `.btn:disabled` (Bootstrap's `pointer-events:none` is overridden so
-  the state reads).
+Design-handoff optie 4e ("KNOPPEN — DEFAULT · HOVER · ACTIEF · FOCUS · DISABLED"). Five families,
+all sharing the same shape (`.gl-v2-btn`: 38px height, 8px radius, `0 16px` padding, 600 12px
+sans) — only colors differ per family and per state. `:focus-visible` is identical across every
+family: a 3px gold ring (`box-shadow: 0 0 0 3px var(--gl-v2-gold)`), placed after hover/active in
+the stylesheet so it wins if both could apply; `:focus-visible` only, so a mouse click never shows
+it, only Tab.
 
-### Cards / Containers
-- **Corner Style:** 7px (`--radius`).
-- **Background:** Surface White on the Page Grey canvas.
-- **Shadow Strategy:** Card rest (`0 1px 4px rgba(0,0,0,.08)`) for primary
-  content; Whisper (`--card-shadow`) for secondary; see Elevation.
-- **Border:** 1px Hairline (`#e7e7e7`).
-- **Internal Padding:** 24px (`card-big-info` 24–26px).
-- **`card-big-info` (signature):** a two-zone card — a ~230px left rail (white,
-  1px Hairline divider, 24px padding) holding a 40px Mist-Green rounded icon box,
-  a 13px/700 green title and 11.5px muted description; the right zone holds the
-  form/content, one `form-group row` per field with the label right-aligned
-  (`col-*-4 control-label text-md-end`) beside it. Non-standard Bootstrap column
-  breakpoints `col-lg-2-5 col-xl-1-5` (rail) / `col-lg-3-5 col-xl-4-5` (content),
-  from `theme.css`. Collapses to stacked single-column ≤768px. This is the
-  **older** of the two form idioms — see *Formulieren (`gl-form-shell`)* below;
-  new forms use the shell, `card-big-info` stays for the existing two-zone
-  explanatory supplier/contract forms (`Projecten/AddContract`, `AddUnit`).
+- **Primair** (`.gl-v2-btn-primary`) — the one emphasized action on a page (e.g. "+ Nieuwe
+  Factuur"). Rest: Primary-green fill. Hover: one step lighter (`#006638`) + a soft green glow
+  (`0 8px 18px -10px rgba(0,83,45,.75)`). Active: one step darker (`#003d21`), glow removed.
+  Disabled: `#DCE4D7` fill, `#7C8C7A` text — not just a lower-opacity primary green.
+- **Secundair** (`.gl-v2-btn-secondary`) — a real but lower-emphasis action sitting next to a
+  Primary one (e.g. "Boeken facturen" beside "+ Nieuwe Factuur"), never destructive. Rest: white
+  fill, Sage border, `#2F6038` text. Hover: Hover-tint fill, Primary border/text. Active: solid
+  `#2F6038` fill and border, white text — the only family whose active state is a *different* fill
+  color from its hover, not just a darker version of it. Disabled: white fill, hairline border,
+  `#9AA898` text.
+- **Tekstknop** (`.gl-v2-btn-text`) — lowest emphasis, e.g. "Annuleren" in a modal footer. Rest:
+  transparent, Primary-green text, no border. Hover: `#E4EBDE` fill. Active: Primary-tint fill,
+  `#003d21` text. Disabled: transparent, `#9AA898` text.
+- **Icoonknop** (`.gl-v2-icon-btn`) — its own square family (38×38, not a `.gl-v2-btn` modifier),
+  used for the topbar's Excel/PDF export triggers. Rest: white fill, hairline border, Primary-green
+  icon. Hover: Hover-tint fill, Primary border (icon color unchanged — only the container reacts).
+  Active: solid Primary fill, white icon — the only state where the icon itself inverts. Disabled:
+  hairline-soft border, white fill, `#B6C1B4` icon. Previously used a *dashed* border as an
+  intentional "not fully designed yet" marker (same convention as the mobile search stub) — that's
+  gone now that this family has a real state set; a dashed border elsewhere in gl-v2 still means
+  "acknowledged placeholder," just not here anymore.
+- **Verwijderen** (`.gl-v2-btn-danger`) — destructive actions only. Rest: white fill,
+  `rgba(139,42,42,.4)` border, `#8B2A2A` text. Hover: `#F8EBEB` fill, solid `#8B2A2A` border. Active:
+  solid `#8B2A2A` fill, white text. Disabled: white fill, hairline border, `#9AA898` text — same
+  disabled treatment as Secundair/Tekstknop, deliberately not a "greyed-out red" that could still
+  read as dangerous.
 
-### Inputs / Fields
-- **Style:** Surface White, 1px Hairline border, 7px radius. Every text field
-  carries `form-control form-control-modern`: the modern variant is **46px** tall
-  with `6px 17px` padding. Select2 single/multi controls and the
-  bootstrap-datepicker are matched to the same height and padding so native and
-  enhanced fields align — never restyle them looser.
-- **Native `<select>` elements use `form-control form-control-modern`, never
-  Bootstrap 5's `form-select`.** `form-control-modern` (`theme.css`) is written
-  as the compound selector `.form-control.form-control-modern` — a `<select
-  class="form-select form-control-modern">` doesn't match it and silently falls
-  back to Bootstrap's default (larger, un-aligned) select sizing. This isn't
-  hypothetical: `traject.css` carries its own `.form-select.form-control-modern`
-  patch precisely because a page shipped with `form-select` and needed a
-  supplemental fix to look right — a patch that only helps on pages that happen
-  to load `traject.css`, not the app as a whole. `Projecten/AddContract.cshtml`'s
-  `<select id="ddlCompany" class="form-control form-control-modern w-100">` is
-  the reference: `form-control` on every `<select>`, same as text inputs, no
-  exceptions and no per-page patch needed.
-- **Focus:** green-tinted focus ring consistent with buttons
-  (`0 0 0 0.2rem rgba(10,90,59,.25)`).
-- **Select2's highlighted/selected option is Deep Forest Green, never the
-  vendor theme's default blue.** `lib/select2-bootstrap-theme`'s
-  `.select2-results__option--highlighted[aria-selected]` hard-codes Bootstrap
-  3's classic `#337ab7` — a color with no place in this palette (One Green
-  Rule). Fixed once, globally, in `custom.css`; do not re-patch this per page
-  with an id-scoped selector the way `Projecten/AddContract.cshtml`'s
-  `#select2-ddlCompany-results` override once did before the global rule
-  existed.
-- **Wrapper — two patterns, one per form idiom:** in a `gl-form-shell` form the
-  field sits in `.gl-field` with the **label above** the control (600, 0.8125rem);
-  in a `card-big-info` form it sits in `.form-group.row` with the label
-  **right-aligned** (`control-label text-md-end`) beside it. Do not mix the two
-  within one form.
-- **Prefix / suffix:** money, %, date and similar use an `input-group` with a
-  `input-group-text` chip (`€`, `%`, calendar glyph). Shared EditorTemplates in
-  `Views/Shared/EditorTemplates/` — `Currency`, `CurrencyWithActions`,
-  `Percentage`, `Surface`, `Postalcode`, `Date`, `Phone`, `Cellphone` — render
-  these; `.Currencymask` inputs are initialised via `CurrencyMask.init(...)`,
-  re-run on ajax-added rows.
-- **Toggle:** prefer the iOS switch (`.switch.switch-sm.switch-primary` +
-  `data-plugin-ios-switch`, init `new ios7Switch(el)`) over `.checkbox-custom`
-  for a boolean.
-- **Error:** `input.input-validation-error` gets a Rust (`#b3452f`) border + a
-  `0 0 0 2px` Rust-tint glow; `<span asp-validation-for>` renders `.text-danger`
-  directly under the field.
+### Mobile menu panel
+- **Header:** Primary-green fill, the real `groupln-logo.png` mark (32px box, 26px image, no
+  border/background needed — reads fine directly on the green header) + serif panel title, circular
+  close button (34px) — positioned as the header's last child, deliberately the same on-screen spot
+  as the topbar's hamburger trigger (see Mobile Topbar) so open/close reads as one control morphing
+  in place, not two unrelated buttons in different corners. Was a dashed-border "LN" text
+  placeholder box (the same "nog niet ingevuld" convention `.gl-v2-rail-logo`/`.gl-v2-mobile-logo`
+  used before the real asset was wired in on 2026-09-21) — that earlier swap covered the rail and
+  the mobile topbar but missed this panel header, only caught and fixed in a later pass.
+- **Search:** pill-shaped input, hairline border — visually present per the mockup but not yet
+  wired to real search (client-side label-filter over the visible menu only).
+- **Item:** 13px/10px padding, 10px radius, icon + label + chevron.
+- **Item, expanded (has an open sub-group):** Primary-tint background, 3px Primary-green left
+  border, Primary-green icon/text, 600 weight — not just a rotated chevron; the whole row commits
+  to the "this is open" state.
+- **Sub-item:** indented 30px, 9px radius, its own leading icon (every sub-item gets one, not just
+  the top-level items — this was a real gap in an earlier pass, since fixed).
+- **Footer — profile card:** the whole profile is one tappable card (avatar 36px + name + email,
+  ellipsis-truncated + trailing chevron), hairline border, 12px radius, 8px padding — not a bare
+  row of text like the first version of this panel had.
+- **Footer — actions:** two equal-width buttons below the profile card, "Mijn profiel" and
+  "Afmelden", 36px height, 9px radius, hairline border. "Mijn profiel" links to the closest real
+  existing page (Mijn handtekening/Account) — the app has no dedicated profile screen, and this
+  pilot doesn't invent one just because the mockup's label implies it exists.
+- **Footer, overall:** `env(safe-area-inset-bottom)` padding so it clears the home-indicator area
+  on notched phones.
 
-### Table status indicators (`gl-mijlpaal-status-icon`)
-A colored icon replacing a text status badge — same 5-state color mapping,
-smaller footprint, and it's the *leading* signal on the row instead of one
-more thing to read at the end. New for `ProjectTraject`; the older text-badge
-class (`.gl-mijlpaal-status`, see below) is **shared app-wide** (Deadlines,
-the Home role dashboards, ProjectDossiers all use it directly) — never rename
-or repurpose that class itself, add the icon variant alongside it instead.
-- **Markup:** `<span class="gl-mijlpaal-status-icon s-{status}" title="{label}">
-  <i class="bx {icon}" aria-hidden="true"></i></span>` plus a
-  `<span class="visually-hidden">{label}</span>` sibling — the icon alone has
-  no accessible name, and in a DataTable the hidden text is also what keeps
-  the column searchable/sortable (pair with `<td data-order="{status}">` for
-  correct numeric sort once there's no visible text left to sort by).
-  Reference: `ProjectTraject/Index.cshtml`, `_Timeline.cshtml`,
-  `_UnitMatrix.cshtml` (there the icon *is* the clickable status-change
-  button — see Table row actions below).
-- **Icon-per-status mapping** (`MijlpaalStatus`, but the principle — one
-  unambiguous glyph per state, colored by the same 5-token system as the
-  badge — applies to any status enum): Open `bx-circle`, Bezig `bx-time-five`,
-  Bereikt `bx-check-circle`, Niet van toepassing `bx-minus-circle` (dimmed),
-  Geblokkeerd `bx-block`. Color from the same tokens as the badge (`--primary`
-  bereikt, `--warning` bezig, `--danger` geblokkeerd, muted neutral for the
-  rest) — never a second parallel palette for the icon form.
-- **A terminal "reached/complete" state can invert instead of just recoloring
-  — solid fill, white glyph, and a plainer icon than the other states.**
-  `ProjectTraject/Index.cshtml`'s Mijlpalen-tabel specifically (not
-  `_Timeline`/`_UnitMatrix`, which keep the outline form) renders Bereikt
-  (`s-2`) as a small filled circle (`20px`, down from the shared `30px` —
-  a badge reads as a heavier accent than an outline icon at the same size,
-  so it's deliberately smaller) in `--kal2-bereikt` with a plain white
-  `bx-check`, not `bx-check-circle` — the outline glyph draws its own ring,
-  which doubled up visibly against the new solid background. Scope this to
-  the specific table via `#datatable-mijlpalen .gl-mijlpaal-status-icon.s-2`
-  (never the bare shared rule — `_UnitMatrix`'s icon is *also* its
-  click-to-change-status button and needs to stay recognizable as a button,
-  not read as "already done and inert"). The completed row becomes the one
-  glance-able "done" mark in an otherwise all-outline column, which is the
-  point — but it's a table-specific embellishment, not a new app-wide
-  status-icon rule.
-- **Write the status out as visible text too when the row has room for it —
-  don't rely on the icon (+ its hidden label) alone.** `.gl-mijlpaal-status`
-  already does this as a solid badge; `.gl-um-status-text` /
-  `.gl-um-mobile-status-text` (`traject.css`, `ProjectDossiers/Index.cshtml`)
-  is the lighter variant for a dense grid: plain colored text under/beside the
-  icon, reusing the icon's own `s-0`…`s-4` color tokens (never a second parallel
-  palette). Added after a direct user request for the per-unit nuts matrix,
-  where the status previously lived in the icon's color + a `title` tooltip
-  only — fine for the badge/icon-alone convention elsewhere, but this grid
-  repeats the same status dozens of times per screen and reading color alone
-  across that many cells is exactly the kind of meaning-by-color-only pattern
-  Sam (screen reader / low vision) can't rely on.
-- **When the item has its own checklist (`ProjectDossierSubstap` or similar),
-  show the name + date of the furthest-completed step instead of the coarse
-  status bucket.** `DossierStatus` (Nieuw/Aangevraagd/InBehandeling/…) is a
-  5-state bucket shared across every dossier kind; a kind with a real
-  checklist (Nutsaansluiting, Omgevingsvergunning) can have several genuinely
-  different states — "Offerte ontvangen" vs. "Uitvoeringsdatum doorgegeven" —
-  that all flatten to the same "In behandeling" bucket. `ProjectDossiers/Index.cshtml`'s
-  `LaatsteOpvolgstap()` picks the highest-`Volgorde` substep with
-  `Status == Afgerond` and shows *that* step's own name + date (both in the
-  per-unit matrix and the "Alle dossiers" table), falling back to the coarse
-  status label only when nothing's completed yet or the item has no checklist
-  at all (other dossier kinds, or Geannuleerd — cancellation isn't a checklist
-  step). The status icon's color still carries the coarse bucket for
-  at-a-glance scanning; the text now carries the precise step. This is a
-  general principle, not a Nuts-only rule: any status enum sitting on top of a
-  real per-item checklist should surface the checklist's own step, not just
-  the bucket it rolls up into.
-- **Never reuse a status icon's glyph as an action icon in the same row.**
-  `bx-check-circle` was tried as the generic "change status" action button —
-  it's *also* the Bereikt status icon, so a completed row showed the same
-  glyph twice with two different meanings a few columns apart. Pick an action
-  icon with no overlap with the status set it sits next to.
-- **Verify the icon actually renders in this app before committing to it.**
-  Boxicons is loaded from a CDN "basic" font subset
-  (`cdn.boxicons.com/…/basic/boxicons.min.css`, see `_Layout.cshtml`), not the
-  full library, and the locally vendored `wwwroot/lib/boxicons` copy is a
-  different, incomplete version too — neither is a reliable yes/no oracle.
-  `bx-transfer` looked valid (it's referenced in `Projecten/DetailPhotos.cshtml`)
-  but didn't render here. The one real signal is: grep for the exact class
-  already in live, working use elsewhere in *this* app
-  (`grep -rn "bx-{name}\b" CPMCore/Views`) — ideally more than one call site —
-  before using a `bx-` icon you haven't seen rendered yourself.
+### Mobile Topbar
+Left to right: brand logo (32px box, real `groupln-logo.png`, 26px image — was a dashed-border
+placeholder box, see Layout above) → title/subtitle block → spacer → search-icon slot (34px, full
+circle, white 1px border — see "search-icon stub" below, now suppressed by default) → hamburger
+trigger (34px, full circle, white 1px border, same shape/size). Both circular icon buttons share
+one shape language distinct from the rest of the system's rounded-square icon buttons — mobile-
+topbar icon buttons are circles, everywhere else they're 8-16px-radius squares.
 
-### Table row actions (`gl-row-action-btn`)
-Two competing patterns exist for the small icon actions at the end of a table
-row (edit, change status, delete). **`gl-row-action-btn` is the current one for
-new tables**; `theme.css`'s older `.table .actions a` (bare `<a>` + icon,
-`color:#666` → `#333` on hover, no background, no explicit touch size) is the
-pre-existing app-wide convention and stays where it already is
-(`Projecten/DetailContracts.cshtml` and others) — migrate a table to the new
-pattern when you touch it, not in a bulk sweep. Definition lives in
-`custom.css` (shared, always loaded) — it was originally written into
-`traject.css` only, which made it unusable on any page outside
-`ProjectTraject` despite this doc already calling it "the current pattern for
-new tables"; moved once discovered, `traject.css` keeps an identical (now
-redundant, harmless) copy rather than risk touching that page to remove it.
-- **Markup:** `<span class="gl-row-actions">` wrapping one
-  `<button type="button" class="gl-row-action-btn" aria-label="…">` per action,
-  each holding one icon (`aria-hidden="true"`) at 16px — `bx-*` on
-  not-yet-migrated pages, `ph-*` on Phosphor-migrated ones (see Icons); the
-  component itself doesn't care which icon font, only that there's exactly
-  one glyph inside. Reference: `ProjectTraject/Index.cshtml` (Mijlpalen-tabel,
-  Boxicons), `Projecten/Partials/Clients.cshtml` (Phosphor).
-- **Size & rest state:** 30×30px, 7px radius (`--radius`), transparent, icon
-  in muted gray (`--tsa-muted-aa`) — quiet by design, not the row's focal
-  point at rest.
-- **Hover/focus:** Mist-Green background, a `#bcd6c7` hairline border, and the
-  icon switches to Forest Green Deep (`#0f4b40`) — the extra border matters:
-  a background tint alone on a near-white table row read as too small a
-  change to register as "hover" (the actual complaint that led to adding it).
-  Same "quiet icon, green on interaction" language as `gl-page-header__back`
-  and `gl-detail-card-edit`, just the compact 30px table-row variant, not a
-  third style. A destructive action adds `.is-danger` for a Rust-tint hover
-  instead of green.
-- **Inside a `<td class="datatable-actions">` (or a `<th>` reading exactly
-  "Acties" — `custom.js`'s `applyActionColumnStyles()` auto-tags that column
-  on *every* table, globally, no opt-in), the hover above silently doesn't
-  fire — a specificity bug, not a hover-state bug.** That auto-applied
-  styling was written for the older bare-`<a>` convention above
-  (`.table td.datatable-actions a { background:transparent; color:inherit;
-  … }`, plus `i { font-size:1.25rem !important; color:inherit !important; }`)
-  and outranks `gl-row-action-btn`'s own rules by pure specificity
-  (`.table`+`td`+`.datatable-actions`+`a` beats a bare `.gl-row-action-btn`
-  class every time, hover or not — background and icon size stay frozen at
-  the non-hover value regardless of what `.gl-row-action-btn:hover` says).
-  Fixed with matching-or-higher-specificity re-assertions scoped to
-  `.table td.datatable-actions .gl-row-action-btn` (rest, hover,
-  `:focus-visible`, `.is-danger:hover`, and an `!important` icon `font-size`
-  to beat the other `!important`) in `custom.css`, right after the base
-  component rules. **Whenever a `gl-row-action-btn` sits inside a table with
-  an "Acties" header, verify its hover state after building it** — this is
-  exactly the kind of silent, no-error failure that's easy to ship without
-  noticing.
-- **Always visible, not hidden until the row is interacted with.** An earlier
-  version of this rule hid `.gl-row-actions .gl-row-action-btn` /
-  `.gl-traject-mijlpaal .gl-row-action-btn` at `opacity:0` at rest, revealing
-  only on `tr:hover`/`tr:focus-within`/`:focus-visible` (plus a
-  `@media (hover: none)` touch fallback) — reasoning being that two muted
-  icons on every row of a long table was more noise than signal. **Reversed
-  by explicit user feedback**: action icons should stay visible so the
-  affordance itself is scannable, not just discoverable on approach. Both the
-  `custom.css` (canonical, see above) and `traject.css` (redundant, kept in
-  sync) copies now simply omit the `opacity:0`/reveal-on-hover rules —
-  `gl-row-action-btn` renders at its normal rest state (muted icon,
-  transparent background) all the time, hover/focus only changes its color
-  per the Hover/focus bullet above. Applies to `Partials/Clients.cshtml`,
-  `Partials/Contracts.cshtml` (+ `DetailContracts.cshtml`'s JS-built child
-  rows), and `ProjectTraject/Index.cshtml` (Mijlpalen-tabel) /
-  `_Timeline.cshtml`.
-- `_UnitMatrix.cshtml` reuses `gl-row-action-btn` for its status-change
-  button, where the icon *is* the cell's main content (the status itself) —
-  always-visible there too, so this exception no longer needs its own scoping
-  now that the general rule matches it.
-- **Gap between actions:** `.gl-row-actions` uses `gap: 0` (not a few px) —
-  with icons always visible (see above), any gap read as too loose for a
-  cluster of same-row actions; adjacent 30×30px buttons with 0 gap still read
-  as separate targets because each only paints a background on hover.
-- **An icon-only `.btn-link` (e.g. `Partials/Contracts.cshtml`'s
-  `.supplier-toggle` row-expand caret) needs an explicit
-  `text-decoration: none`.** Bootstrap's `.btn-link` defaults to
-  `text-decoration: underline`, meant for text links — on an icon-only button
-  it rendered as a visible underline beneath the caret glyph. Fixed in
-  `projecten-custom.css`'s existing `.supplier-toggle` override (already
-  there to swap the stock link-blue for `--primary`). Check any other
-  icon-only `.btn-link` usage for the same silent underline.
-- **A `.dropdown-toggle` button that gets an explicit Phosphor caret icon
-  (`ph-caret-down`) for consistency shows TWO carets** —
-  Bootstrap's own `.dropdown-toggle::after` (a border-triangle) still renders
-  alongside it, since adding a manual icon doesn't remove Bootstrap's default
-  one. Explicitly kill it with `.{scope}::after { display:none !important;
-  content:none !important; }` and rotate the manual icon on open via
-  `.{scope}[aria-expanded="true"] .{icon-class} { transform: rotate(180deg);
-  }` — Bootstrap's dropdown JS manages `aria-expanded` on the toggle
-  automatically, no extra JS needed. Fixed on `DetailContracts.cshtml`'s
-  "Aannemerslijst afdrukken" button (`.gl-supplier-list-toggle` /
-  `.gl-supplier-list-caret` in `projecten-custom.css`); check any other
-  `dropdown-toggle` button that carries its own icon for the same doubled
-  caret before shipping it.
-- **Vertical alignment:** give the table (or its cells) `vertical-align:middle`.
-  A status icon/badge and a 30px action button have different intrinsic
-  heights; without middle-alignment a row with both looks visibly uneven even
-  though neither element itself is wrong.
-- **Status badges in the same row (only relevant where the older text badge
-  is still used, not the icon form above):** `.badge` is em-relative by
-  default (sizes off the surrounding text), which renders noticeably shorter
-  than a 30px action button next to it. Give a status badge fixed (non-`em`)
-  `font-size` / `padding` — see `.badge.gl-mijlpaal-status` in `traject.css`
-  — rather than leaving it to inherit.
-- **Row dividers use the Hairline token, never an ad-hoc lighter gray.**
-  `#f1f3f7`/`#eef1f4`-style near-white grays read as *no border at all* next to
-  white row backgrounds and make a table or list feel like an undifferentiated
-  block of text — the opposite of scannable. Every structural row/cell
-  separator is `1px solid var(--border, #e7e7e7)` (Hairline), full stop; reach
-  for a paler value only for a genuine *fill* (a muted badge/pill background),
-  never for a line meant to be seen.
+**The logo yields to a back button, project-wide.** A page that sets `ViewData["BackUrl"]` (see
+Topbar back-button below) gets that button *in the logo's own spot*, not next to it — two "where am
+I / where does this go" icons side by side on an already-narrow bar was one too many. One CSS rule
+does it everywhere, no page opts in itself: `.gl-v2-mobile-logo:has(+ .gl-v2-topbar-back) { display:
+none; }` (the back button is always the logo's immediate next sibling in `_LayoutV2.cshtml`'s
+markup, present or not, so `:has(+ …)` is enough — no extra `ViewData` flag needed). The back
+button's own desktop styling (light card, hairline border, muted icon) is unreadable on the
+now-solid-green mobile topbar, so it gets the same white-circle-on-green treatment as the search
+slot/hamburger next to it at this breakpoint, rather than looking like a stray light chip.
 
-### Table column order & alignment
-- **A status indicator leads the row**, as the first column, not buried
-  mid-row or at the end — it's the fastest thing a user scans a table for.
-  When adding one to an existing table, move it, don't just insert it wherever
-  is easiest (`ProjectTraject/Index.cshtml`'s Mijlpalen-tabel puts Status
-  first; the DataTable's default-sort column index has to move with it).
-- **Date, currency, and other numeric columns are right-aligned** — header
-  and cells both (`class="text-end"` on the `<th>` and every `<td>`).
-  Right-aligned numbers/dates line up on their ones place and scan as a
-  column; left-aligned, they don't align with anything and read as prose.
-- **No decorative icon riding along inside a date/number cell** (e.g. a
-  calculator glyph marking "this date was computed, not entered manually").
-  It breaks the column's scannability for a distinction most users don't need
-  moment-to-moment; if that distinction matters, say it in the row's detail
-  view/tooltip instead of every cell in the column.
-- **An icon-only column keeps an accessible header, not a visible one.**
-  The Mijlpalen-tabel's status column has no visible `<th>` text (the leading
-  icon already says what the column is) — `<th class="text-center"><span
-  class="visually-hidden">Status</span></th>`, cells also `text-center` so
-  the icon centers under nothing rather than hugging the left edge. Empty a
-  header visually only when the column's own content is already
-  self-explanatory (an icon, a single glyph) — never to save space on a
-  column whose content needs a label to be understood.
-- **A DataTable's default `pageLength` can size itself to the viewport
-  instead of a fixed guess.** The Mijlpalen-tabel's `pageLength` used to be a
-  flat `25`; `traject.index.js`'s `fitMijlpalenPageLength()` instead measures
-  a real rendered row's height and the wrapper's own chrome (toolbar + head +
-  info/paging, via `wrapper`'s bounding rect minus `tbody`'s — robust to
-  DataTables' exact internal markup) to compute how many rows fit between the
-  table and the bottom of the viewport, then sets `page.len()` to that —
-  recomputed on resize and on every tab switch (the tab-activation script
-  already dispatches `resize` on show/hide, so no extra wiring needed to
-  catch the panel becoming visible). Guarded with a `MP_MIN_ROWS` floor and,
-  because the estimate can't account for every stray padding elsewhere on the
-  page, a self-correcting fallback: if the page still ends up with a vertical
-  scrollbar after the computed fit, drop rows one at a time
-  (`document.documentElement.scrollHeight > window.innerHeight`) until it's
-  gone, capped at a few iterations. Prefer this self-correction over trying
-  to hand-derive one more precise gap constant — this session repeatedly
-  found that guessing this legacy shell's exact stacked padding/margin by
-  hand produces confidently-wrong numbers; measuring and correcting against
-  reality is the more reliable default here.
+**The search-icon stub is suppressed everywhere, not shown as a disclosed placeholder.** Earlier
+iteration: it stayed an honest, unclickable placeholder (`aria-hidden`, no handler) — "wireframe-
+dashed" language carried into real UI for a genuinely-unresolved slot, same idea as a dashed-border
+icon button. Revised on request: a dead icon reads as more of a mistake than a deliberate "not
+built yet" signal once it's not visually dashed/marked as such, so `.gl-v2-mobile-search-stub` is
+now `display:none` unconditionally (no mobile-breakpoint override re-enabling it). **The slot itself
+is still claimable** — unchanged, this only affects the fallback stub. `_LayoutV2.cshtml` renders
+`@@section MobileTopbarAction` in that exact position when a page defines it (same optional-slot
+pattern as `PageActions`/`MobileQuickActions`); `Views/Leveranciers/IndexV2.cshtml` puts its filter
+toggle there instead of a search icon — this page's search already lives in its own toolbar field,
+and on a phone the fastest-reachable action is "open filters," not "search." The pill shape (not a
+circle) is deliberate there — see "Leveranciers" below for the reasoning and the rest of the filter
+system it belongs to.
 
-### Table pagination controls
-DataTables v2's `bs5` styling integration renders plain Bootstrap
-`.pagination`/`.page-item`/`.page-link` markup (`.dt-paging` is only the
-outer wrapper) — neither the CDN combined bundle nor the locally-vendored
-`dataTables.bootstrap5.css` sets any color on `.page-link`, so it inherits
-Bootstrap's own link-blue (`--bs-pagination-color`) untouched. Fixed on the
-Mijlpalen-tabel first (`#datatable-mijlpalen_wrapper` in `traject.css`) and
-the Klanten-tabel second (`#datatable-clients-list_wrapper` in
-`projecten-custom.css`) — same recipe both times, and the same one
-`.issue-table-footer` in `custom.css` already used, so it's one language
-reused three times, not three inventions:
-- **Colors:** default `.page-link` — hairline border, muted gray text (no
-  blue anywhere). Hover/focus — Mist-Green background + `#bcd6c7` border +
-  Forest-Green-Deep text, the same "quiet control, green on interaction"
-  language as `gl-row-action-btn`. Active page — solid Deep Forest Green
-  fill, white text. Disabled (prev/next at the ends) — faded muted, no hover.
-- **First/Previous/Next/Last as icons, not text — `ph-caret-left`/
-  `ph-caret-right` for previous/next, the real `ph-caret-double-left`/
-  `ph-caret-double-right` for first/last, both tables now (Klanten-tabel and
-  Mijlpalen-tabel).** Boxicons never had a verified-rendering double-chevron
-  glyph, so the Mijlpalen-tabel's *original* Boxicons version faked one —
-  `bx-chevron-left`/`bx-chevron-right` reused twice each, pulled tight via a
-  negative `margin-left` on the second `<i>`. Dropped entirely once that
-  table migrated to Phosphor; if you ever see the doubled-icon trick again
-  on a not-yet-migrated page, that's what it's standing in for, not a
-  considered look — replace it with the real glyph, don't carry the trick
-  forward. `language.paginate` accepts HTML either way, so each value pairs
-  the icon with a `visually-hidden` span carrying the original word
-  ("Vorige", "Volgende", …) — screen readers get real text, sighted users
-  get the icon only.
-- **Every pagination button gets an explicit `height`, not just padding.** A
-  digit ("1") and an icon glyph don't share an intrinsic line-height, so
-  sizing purely off Bootstrap's text padding rendered the arrow/first/last
-  buttons visibly shorter than the numbered ones next to them. Fixed with a
-  flat `height: 36px` + `display:inline-flex; align-items:center;
-  justify-content:center;` on every `.page-link` regardless of content type.
+### Mobile Quick-Actions Bar
+A page-specific, optional bar, only rendered <768px, `position:fixed` to the bottom of the
+viewport (option 4c) — Primary-green fill, no page-content-flow placement, no "SNELACTIES" label.
+Tiles are bare icon-over-label, no border, no fill (Phosphor icon 21px, label 10px, white on the
+green bar); `:hover`/`:focus-visible` get a faint white tint, nothing else distinguishes one tile
+from another — 4c itself makes no primary/secondary distinction, so gl-v2 doesn't invent one
+either. This is the mobile equivalent of a page's `PageActions` — the two present different-enough
+markup (compact topbar button vs. a full tile) that a page defines both, once each, rather than
+one shared partial trying to serve both shapes. See `Views/Invoices/IndexV2.cshtml` (2 actions,
+canWriteInvoices-gated) and `Views/Home/Index.cshtml` (5 actions, Projectleider-only — see "Real
+example" below) for the reference pairing (`@@section PageActions` + `@@section
+MobileQuickActions`).
 
-### Table search + column filter
-A DataTable with a custom search box and a column-visibility ("colvis") button
-— the search input replaces DataTables' own `.dt-search` (hidden via CSS), the
-colvis button is moved out of the default toolbar into a page-chosen container.
-Origin and current reference: `Projecten/DetailClients.cshtml` (`Clients.cshtml`).
-- **Layout: colvis sits *inside* the search `.input-group`, right after the
-  field, but with a small `8px` gap before it — not Bootstrap's default
-  seamless input-group join.** An earlier version of this rule split them
-  into a `d-flex gap-2` row (search `.input-group` + colvis in its own
-  `flex-shrink-0` container beside it) reasoning that a fully fused look
-  "read as unfinished" — briefly the Mijlpalen-tabel's own layout too, since
-  it was built from that version of the rule. Overruled on which *box* they
-  share (colvis moved back inside the same `.input-group` as the icon span
-  and `<input>`, confirmed), but the gap complaint was legitimate too, so
-  it's a hybrid: `#search-term + #colvis-container { margin-left: 8px; }`
-  (`#mp-search-term + #mp-colvis-container` on the Mijlpalen-tabel) — one
-  shared control cluster, not two separate floating boxes, but with
-  breathing room between the field and the button. Bootstrap's input-group
-  CSS otherwise strips the left border-radius off a `:last-child` button (it
-  assumes a seamless join); since there's now a visible gap, that button
-  gets its OWN right-side radius back — `border-radius: 0 var(--radius)
-  var(--radius) 0` — while the *left* edge stays intentionally square (not
-  fully rounded on all four corners): it still reads as "belongs to this
-  row" despite the gap, not as a free-floating pill. Reference:
-  `#colvis-container` rules in `projecten-custom.css`,
-  `#mp-colvis-container` rules in `traject.css`.
-- **DataTable init:** `layout: { topStart: { buttons: [{ extend: "colvis",
-  text: '<i class="ph ph-columns me-2"></i><span>Kolommen</span>', columns:
-  ":not(.noVis)", init: (api, node) => $(node).removeClass("btn-secondary")
-  .addClass("btn btn-default") }] } }`, then
-  `table.buttons(0, null).containers().appendTo("#<id>-colvis-container")` and
-  hide `.dt-search` inside the panel. A column that must never be hideable
-  (typically the actions column) gets class `noVis` on its `<th>`.
-- **Assets:** the combined DataTables bundle (core + Buttons + ColVis), not
-  the bare core build — `https://cdn.datatables.net/v/bs5/…/datatables.min.{js,css}`
-  (see the `<script>`/`<link>` tags in `ProjectTraject/Index.cshtml` for the
-  exact pinned URL) — the plain `dataTables.min.js` + `dataTables.bootstrap5.js`
-  pair used elsewhere has no Buttons/ColVis support at all.
+**Fixed height, not measured.** The bar's height is one CSS custom property,
+`--gl-v2-qa-bar-h: 64px` (set on `.gl-v2`, covers the icon row only — `env(safe-area-inset-bottom)`
+is added separately in every `calc()` that uses it, never baked into the 64px itself, so it doesn't
+eat into the icon row's budget on a notched phone). The bar's own `height` and every other rule
+that needs to know where the bar ends (content `padding-bottom`, the quick-actions-sheet backdrop,
+the sheet itself) all reference this one variable via the same `calc(var(--gl-v2-qa-bar-h) +
+env(safe-area-inset-bottom, 0px))`. Earlier attempts guessed a pixel number for the bar's *auto*
+height (content-driven, no explicit `height`) and then reused that guess elsewhere — the guess
+didn't match the real rendered height, so the sheet/backdrop landed a few px inside the bar instead
+of flush above it. Also tried: measuring the real height in JS (`bar.offsetHeight`) and writing it
+to the CSS variable at runtime — works, but is strictly more moving parts than just declaring the
+height explicitly and letting content clip/center within it (`align-items:center` on the bar; tiles
+never come close to 64px of content, so there's nothing to clip in practice).
 
-### Mobile adaptation patterns
-Three reusable techniques from adapting `ProjectTraject` for phone width
-(`/impeccable adapt` — see The Field-Width Rule above; these are the *how*,
-that's the *why*).
-- **A DataTable that might overflow its column width wraps in
-  `.table-responsive`, not the whole page.** The Mijlpalen-tabel (7 columns +
-  actions) had no responsive strategy at all — at phone width it would
-  either force the entire page to scroll horizontally or get illegibly
-  cramped. Fixed by wrapping only the `<table>` element itself in
-  `<div class="table-responsive">` *before* `new DataTable(...)` runs —
-  DataTables nests its own `#..._wrapper` around whatever currently sits
-  where the table is, so the search/colvis row above and the pagination
-  below stay full-width and only the data grid scrolls sideways. Same
-  contained-horizontal-scroll idea already proven in this codebase by
-  `.gl-unit-matrix-wrap` and the Kalender Gantt timeline — don't invent a
-  fourth pattern (card-per-row, column-hiding) when this one already fits.
-- **Hide a button's label text at a breakpoint with `font-size: 0` on the
-  button, not `display:none`/`aria-hidden` on the text.** Kalender 2.0's
-  4-button view-switch (Maand/Kwartaal/Jaar/Agenda, icon + bare text, no
-  wrapping `<span>` around the label) had no mobile treatment at all — at
-  360–400px the buttons simply clipped past the container's `overflow:
-  hidden` edge, making "Agenda" physically unreachable. Fixed at ≤767.98px
-  by giving the button `font-size: 0` (collapses the bare text node to zero
-  visual size without touching the DOM or adding a wrapper element) while
-  its `<i>` icon keeps its own explicit `font-size` and stays fully visible
-  — unlike `display:none`/`aria-hidden`, the text is still in the
-  accessible-name computation, so a screen reader still hears "Maand", just
-  nothing is drawn for it. Pair with explicit `order` on the toolbar's flex
-  children instead of trusting `flex-wrap` to split nav/title/view-switch
-  predictably, and bump touch targets to the `44px` minimum this session's
-  `adapt.md` reference calls for (was `34px`, fine for a mouse, tight for a
-  thumb).
-- **A matrix table (rows × columns, not a simple list) transposes to
-  "pick one row, see its columns as a card" on mobile — not to
-  cards-per-row.** `_UnitMatrix.cshtml`'s Eenheden-tab is a real matrix
-  (eenheid × mijlpaal-kolom); adapt.md's usual "table → cards" advice
-  (one card per row, columns become labelled fields inside it) doesn't fit
-  a matrix, because the unit a user actually wants to see stays buried
-  behind whichever mijlpaal-columns happen to be visible. Instead: a
-  `<select>` (mobile-only, `d-md-none`) lists the units, and every unit gets
-  its own server-rendered card (`hidden` except the selected one) listing
-  *its* mijlpalen as a vertical list — the same clickable
-  status-icon-as-button cell markup as the desktop matrix, so status-changing
-  stays identical between viewports. The desktop matrix itself just gets
-  `d-none d-md-block`; nothing is removed, the two views are alternate
-  renders of the same data. A plain `change` listener toggles `hidden` on
-  the matching card — no fetch, all units are already in the DOM.
+**Overflow (option 6b).** Generic shell behaviour, not per-page logic: `gl-v2-shell.js` counts the
+tiles a page provided and, past 4, hides tile 5+ (`hidden` attribute) and appends one more tile —
+"Meer" (`ph-dots-three`) — so the bar never shows more than 4 real actions + this one. Three
+states: **rest** (identical to any other tile), **pressed** (pure `:active`, a faint white fill
+that disappears the instant the finger/pointer lifts — no JS), **open** (JS-toggled `.is-open`:
+the same white fill persists, icon/label swap to `ph-x`/"Sluiten" via two extra
+`hidden`-attribute-toggled elements each, and every other tile in the bar drops to `opacity:.45`
+via `.gl-v2-mobile-quickactions.has-open-sheet`). Tapping it opens the **quick-actions sheet**: a
+bottom sheet (`.gl-v2-quickactions-sheet`, 16px top corners, Flyout shadow, drag handle) titled
+"Snelacties op {pageTitle}" with a list of rows built from the hidden overflow tiles — icon, title
+(the tile's own label text), an optional subtitle (`data-subtitle` attribute on the source tile,
+entirely opt-in — nothing fabricates one), and a trailing chevron. Each row delegates to the
+original (hidden) tile via `.click()` rather than re-implementing its `href`/form-submit, so a
+disabled source button's row is correctly inert without any extra state-sync code. Esc, backdrop
+click, or the sheet's own × close it.
 
-### Formulieren (`gl-form-shell`)
-The current pattern for a data-entry form. CSS in `custom.css` ("Formulierschil")
-+ `projecten-custom.css` ("Projecten/Toevoegen + Bewerken — formulier"). Reference
-views: `CPMCore/Views/Projecten/Toevoegen.cshtml` (short, no tabs) and
-`Edit.cshtml` (long, tabbed). The single skeleton doc is
-`CPMCore/Views/Projecten/FORMULIER-STRAMIEN.md`.
+**The bar stays visible while the sheet is open.** The `.gl-v2-quickactions-backdrop` and the sheet
+itself both stop their `bottom` edge at the bar (the same `calc(var(--gl-v2-qa-bar-h) + safe-area)`
+as the bar's own height) instead of running to the true bottom of the viewport — the backdrop must
+NOT cover the bar, or the bar reads as "disappeared" under the dimming layer even though it's still
+there in the DOM. Tried raising the bar's own `z-index` above the backdrop's instead: works for
+this case but then the bar would also float above the full-screen hamburger menu (`z-index:99999`)
+if that ever opened at the same time, which is a worse bug — geometry (stop short of the bar) beats
+stacking order (out-z-index the backdrop) here.
 
-- **Shell (`gl-form-shell`):** one full-width `card card-modern` whose height is
-  `calc(100vh − topbar − …)` so the page body never scrolls — only the active
-  panel does. The form is wrapped in
-  `Html.BeginForm(… @class = "ecommerce-form gl-project-form", enctype = "multipart/form-data")`.
-- **Tabstrip (`gl-form-shell__tabs` / `__tab` / `__tab-badge`):** always sits
-  *outside* the card — it is the screen's primary in-page navigation, not a
-  widget that happens to live in one — flush under the topbar with **no
-  visible gap**, full page width. `role="tablist"`; each `__tab` is `role="tab"`
-  with an icon + label. Active tab = Deep Forest Green text + a 3px Ochre
-  bottom border (the active-tab marker). `__tab-badge` is a Rust pill counting
-  validation errors on that tab. All fields stay in the DOM on every tab — one
-  Save submits everything; the show/hide + keyboard script is
-  `_ProjectFormTabs.cshtml`, and on a failed POST the server sets
-  `data-force-tab` to the first tab carrying an error.
-  - **The breakout margin depends on which layout shell the page uses** — the
-    two ancestor chains have different vertical chrome, so **never copy one
-    page's numbers onto the other shell**:
-    - **`.content-body`** (a plain top-level page, no project-detail sidebar —
-      `Projecten/Edit.cshtml`, `TrajectSjabloonAdmin/Edit.cshtml`):
-      `margin: -50px -40px 24px; padding: 0 40px; height: 54px;` — cancels
-      `.content-body`'s own 40px padding-top plus the separate
-      `html.modern.fixed .content-body{margin-top:10px}` rule (`theme.css`).
-      Mobile: `margin: -10px -15px 16px; padding: 0 15px; height: auto;`.
-    - **`.content-with-menu`** (a project sub-page with the `DetailMenu`
-      sidebar — `ProjectTraject/Index.cshtml`, the reference implementation;
-      `ProjectDossiers/Index.cshtml` reuses the identical markup/CSS, see
-      below):
-      `margin: -43px -40px 20px; padding: 0 40px; min-height: 54px;` (≥768px
-      only — below that `.inner-body` falls back to a third, non-fixed padding
-      recipe and the tabs scroll horizontally in-flow instead). This shell
-      nests `.content-with-menu` *inside* `.content-body` (`_Layout.cshtml`
-      wraps `@RenderBody()` in `<main class="content-body">` unconditionally),
-      so the page must *also* neutralize `.content-body`'s own 10px
-      margin-top via `html.modern.fixed .content-body.<flush-class>{margin-
-      top:0}` scoped through `ViewBag.ContentBodyClass` (set in the
-      controller action, consumed by `<main class="content-body
-      @ViewBag.ContentBodyClass">` in `_Layout.cshtml`) — never edit the
-      shared `.content-body` rule directly, it would shift every other page.
-      The remaining -43px cancels `groupln.css`'s `html.modern.fixed
-      [.inner-body]{border-top:113px solid transparent;margin-top:-110px}`
-      stacked on its ordinary (non-fixed) 40px padding: -110 + 113 + 40 = 43.
-      **Any new page reusing `.gl-traject-tabrow` must set
-      `ViewBag.ContentBodyClass = "gl-traject-flush"` in its own controller
-      action** — it's per-page, not inherited from the CSS class alone.
-      `ProjectDossiersController.Index` originally shipped without it: the
-      tabrow rendered ~10px lower than `ProjectTraject`'s (the uncancelled
-      `.content-body{margin-top:10px}`), which read as "the tabbar isn't
-      10px higher, like on the Traject page" — fixed by adding the same
-      `ViewBag.ContentBodyClass = "gl-traject-flush"` line there too.
-  - **Stays visible while scrolling — via JS, never `position: sticky`.**
-    Project-wide requirement: the tabstrip pins under the topbar once the page
-    scrolls past it. `position: sticky` was tried twice on both shells
-    (`.content-body` *and* `.content-with-menu`) — correct-looking `top` math
-    included — and in both cases it silently failed to stick at all, with a
-    visible gap between the topbar and the tabstrip at rest that no amount of
-    recalculating the breakout margin closed. Treat sticky as **not usable**
-    on either shell; the durable fix is a small JS "affix" instead, both
-    halves living in `custom.js` (project-wide, runs on every page): one IIFE
-    for the bare `.gl-form-shell__tabs` used on `Projecten/Edit.cshtml` and
-    `TrajectSjabloonAdmin/Edit.cshtml`, and a second, separate IIFE for the
-    `.gl-traject-tabrow` wrapper (`.gl-form-shell__tabs.gl-traject-tabs`
-    inside it), which additionally has the `DetailMenu` inner-menu column to
-    account for — see below. **This second IIFE originally lived only in
-    `traject.index.js` as `initTabrowPin()`, scoped to `ProjectTraject/
-    Index.cshtml` specifically** — moved to `custom.js` and generalized to
-    `document.querySelectorAll(".gl-traject-tabrow").forEach(...)` when
-    `ProjectDossiers/Index.cshtml` shipped the same `.gl-traject-tabrow`
-    markup without loading `traject.index.js` (it loads its own `dossiers.js`
-    instead, which only handles tab click/keyboard activation, not the
-    affix), silently getting no pin/flush-correction behavior at all. Any new
-    page using this markup now gets the behavior automatically instead of
-    needing its own copy — check `custom.js` first before writing a new one.
-    Both IIFEs follow the same recipe: measure the tabstrip's real rendered position with
-    `getBoundingClientRect()` and nudge it flush under the topbar via
-    `transform` (self-correcting — no need to re-derive the breakout margin by
-    hand), then swap to `position: fixed` (class `gl-is-pinned`) the instant a
-    **synchronous** `scroll` listener (`requestAnimationFrame`-throttled) says
-    the rest position would scroll past the topbar, with a same-sized spacer
-    inserted so the page doesn't jump. **Never use `IntersectionObserver`
-    for this** — it was tried first and fires asynchronously (~1 frame after
-    the real threshold), which read as a visible "flash" before snapping to
-    the correct pinned position; the synchronous scroll+rAF version has no
-    such delay.
-  - **`left`/width of the pinned bar:** `.gl-form-shell__tabs.gl-is-pinned`
-    (bare `.content-body` pages) can hardcode `left: 300px` / `73px`
-    (`html.sidebar-left-collapsed`), matching `.gl-form-shell__actions`
-    exactly — no complication there. `.gl-traject-tabrow.gl-is-pinned`
-    (`ProjectTraject`) **cannot** hardcode this: the page has an extra fixed
-    `.inner-menu` (DetailMenu) column whose own width/offset shifts across
-    `sidebar-left-sm`/`-xs` variants and the collapsed state, too many
-    combinations to hardcode reliably. Its `custom.js` IIFE instead reads
-    `.inner-body`'s live `getBoundingClientRect()` on every pin and on an
-    `html`-class `MutationObserver` (sidebar collapse/inner-menu toggle),
-    so it's always correct regardless of sidebar state.
-  - **The flush-under-topbar `transform` correction is desktop-only — guard it
-    explicitly, don't assume the pin logic's own `mq.matches` check covers
-    it.** Both affix scripts read `--topbar-height` to compute the nudge, but
-    that variable has no mobile counterpart (the mobile topbar is a separate,
-    shorter 60px bar — see Layout below) and the tabstrip has no desktop-style
-    breakout margin at that width either. The first version of this fix
-    applied `measureRest()`'s transform unconditionally; on
-    `ProjectTraject/Index.cshtml` specifically that yanked the tabstrip
-    sharply upward on phones, landing it on top of the topbar-actions row
-    rendered above it (a real, screenshotted regression, not a hypothetical).
-    Fixed by returning out of the transform step before it runs whenever
-    `!mq.matches` — the pin/unpin logic already had this guard, the
-    measurement step didn't, and that mismatch was enough to break it.
-  - **Compact stats sharing the tabstrip row don't fully hide on narrow
-    screens — they thin out.** `ProjectTraject/Index.cshtml` puts a small KPI
-    strip (`.gl-traject-stats`, e.g. "8/38 bereikt · 1 achterstallig") beside
-    the tabs on the same row. Below 992px, only the *secondary* stats
-    (`.gl-traject-stat--sec`) disappear; the count that actually drives a
-    decision (here: achterstallig) always stays visible, even on a phone.
-    Hiding the whole strip was tried first and hid exactly the number a PM on
-    a jobsite tablet opens the page to check — a direct conflict with The
-    Field-Width Rule ("on-site phone use is a first-class case"). When adding
-    stats to a tabstrip row, mark the merely-nice-to-have ones `--sec` and
-    keep the one number someone would actually act on.
-- **Panels (`gl-form-shell__panel`):** `overflow-y:auto`, 24px padding;
-  non-active panels carry `hidden`.
-- **Actions (`gl-form-shell__actions`):** a third, always-visible zone rendered
-  by `_FormShellActions.cshtml`
-  (`FormShellActionsModel { SubmitLabel, SubmitIcon = "bx-save", CancelUrl, CancelLabel = "Annuleren" }`).
-  `position: fixed` to the viewport bottom, left-aligned next to the sidebar
-  (`left: 300px` / `73px` collapsed / `0` ≤767px), respecting
-  `env(safe-area-inset-bottom)`. Buttons use the large app size
-  (`btn-px-4 py-3`, `submit-button` / `cancel-button`), not the topbar size.
-- **`gl-form-shell__actions` outside a `gl-form-shell` (`.gl-fixed-actions-offset`):**
-  `Projecten/AddContract.cshtml` / `EditContract.cshtml` want the same fixed
-  Save/Cancel bar but have no tab shell to sit inside — a plain long
-  `<form>` instead. `gl-form-shell` normally reserves room for the 84px bar
-  itself (see above); without that shell, the page's own content would
-  scroll the last fields *behind* the fixed bar. Add class
-  `.gl-fixed-actions-offset` directly to the `<form>` — it adds
-  `padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px))`, matching
-  the bar's own height/safe-area so the last field always clears it. Below
-  992px the bar itself stops being fixed (mirrors the phone action-buttons
-  pattern: full-width stacked buttons, `position: static`), so
-  `.gl-fixed-actions-offset` cancels its own padding-bottom there too — the
-  bar no longer needs the reservation once it's back in normal flow.
-- **Section (`gl-form-section` + `__body`):** a block inside a panel.
-  `gl-form-section__head` is a flex row — a **42px** Mist-Green rounded (≈`md`,
-  11px) icon badge + `__title` (700, 1.0625rem) + `__hint` (0.8125rem, muted),
-  Hairline under it. Reference: `Projecten/Edit.cshtml`'s "Status &
-  publicatie" / "Website-presentatie" / "SEO" sections. **The badge icon
-  names the section's own subject** (`bx-flag` for status, `bx-edit-alt` for
-  the website-presentation section, `bx-search-alt` for SEO) — same
-  matches-the-subject convention as the topbar icon (see "Topbar" above) and
-  the tab icons on the same page, not a generic "form section" glyph reused
-  everywhere.
-- **Field grid (`gl-field-grid`):**
-  `display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2px 24px`
-  — resolves to 1 / 2 / 3 columns by width on its own.
-- **Field (`gl-field`):** flex column, label above the control, 6px gap, 18px
-  bottom margin. `gl-field--full` spans the whole grid row (control capped at
-  560px); add `gl-field--wide` to let a textarea / rich-text control fill 100%.
-  `gl-req` is the Rust `*` after a required label. `gl-field-address` puts street
-  (`flex:1`) + number (`gl-nr`, 96px fixed) on one line. `gl-switch-row` lays an
-  iOS switch beside its label; `gl-form-note` is a Mist-Green hint box inside a
-  section.
-- **Shared partials:** `_ProjectFormCoreFields.cshtml` renders Naam / Projectcode
-  / Land / Gemeente / Verantwoordelijke as loose `.gl-field`s for callers to drop
-  into their own grid; `_ProjectFormStyles.cshtml` is the fixed `<link>` set.
-- **Legacy / anti-reference:** `Projecten/AddContact.cshtml` +
-  `EditContact.cshtml` still use a bare `card card-modern` + `row g-3` +
-  `col-md-6` + `form-label` + plain `form-control`. That is the pattern to
-  *replace*, not copy — migrate those views to this section when touched.
+**Real example: Projectleider dashboard.** `Views/Home/Index.cshtml` defines
+`@@section MobileQuickActions` unconditionally (Razor forbids `@@section` inside `@@if`) but only
+emits tiles when `Model.DashboardType == Projectleider`, gated behind
+`ViewData["HasMobileQuickActions"]` — see "Empty-bar guard" below for why that flag exists. Five
+tiles, ported from the desktop "Snelacties" card + the pre-existing (now gl-v2-only, see below)
+`.gl-mob-nav`: **Punt**, **Leverancier** (zoeken), **Klant** (zoeken), **Vastzetten** (Project
+vastzetten) visible, **Nieuwe leverancier** (Leverancier toevoegen, `data-subtitle="Nieuw contact
+aanmaken"`) overflows into the Meer sheet — 5 tiles is the first real page to exercise the overflow
+path. Leverancier/Klant zoeken and Vastzetten carry fresh ids (`gl-v2-qa-lev-search`,
+`gl-v2-qa-klant-search`, `gl-v2-qa-pin`) added onto the *existing* jQuery selectors in
+`_DashboardProjectleider.cshtml` that already open the right modal — converted from direct
+`$(selector).on(...)` binding to `$(document).on('click', selector, ...)` delegation in the same
+edit, because the gl-v2 tiles render outside `<main>` (in the layout's bar), after that inline
+`<script>` block has already run; a direct binding would've found nothing.
+**Punt was revised after the first pass**: it originally reused `openPuntSheet()` (the legacy
+project-choice sheet below), rendering unstyled on gl-v2 since that sheet's own CSS never got a
+gl-v2 treatment. It's now `<a>` markup carrying `.js-gl-v2-sa-project-action` and
+`data-url-template="/Projects/{id}/Issues/Create"` — the *same* class/attribute the desktop
+Snelacties-kaart's "Punt toevoegen" row already used (see `initActiveProject()` above) — so it gets
+identical behaviour for free: navigate straight there when a project is already active, otherwise
+open the project-picker modal first. Zero new JS for this tile.
+Still deliberately **not** ported: the 5 project-scoped Snelacties (Contract, Inkomende factuur,
+Wijzigingsopdracht, Nacalculatie, Document uploaden) — none of them has a project-picker wired up
+yet the way Punt now does.
+The old `.gl-mob-nav` bottom nav in `_DashboardProjectleider.cshtml` is now suppressed
+(`@@if (!useGlV2Layout)`) so it can't render underneath/alongside the new gl-v2 bar — same
+`ViewData["UseGlV2Layout"]` flag `_ViewStart.cshtml` reads to pick the layout in the first place.
+Two more legacy-only removals, on user request rather than from the outset: `_MijnKeypointsWidget`/
+`_MijnTakenWidget` ("Mijn mijlpalen"/"Mijn taken", unrestyled Porto cards) no longer render on the
+gl-v2 dashboard at all — they stay for the legacy layout, gl-v2 simply drops that `<div class="row">`
+rather than showing them ungl-v2-ified between styled cards.
 
-**The Form-Shell Rule.** A new data-entry form is a `gl-form-shell` with
-`gl-form-section` heads and a `gl-field-grid` of `gl-field`s (label above the
-control), and its Save / Cancel come from `_FormShellActions`. `card-big-info`
-(labels right of the control) is kept only for the existing two-zone explanatory
-supplier/contract forms. Never start a new form on bare `card-modern` +
-`row g-3` + `form-label` + `form-control`.
+**Empty-bar guard.** Because `@@section` must stay unconditionally registered even when a page's
+condition makes it render nothing for the current request (the Projectleider-only tiles above; also
+`IndexV2.cshtml`'s two tiles behind `canWriteInvoices`), `IsSectionDefined` alone would make
+`_LayoutV2.cshtml` show an empty green strip on every dashboard type and for read-only invoice
+users. Pages that can go either way set `ViewData["HasMobileQuickActions"]` to the same boolean that
+guards their section's content; the layout only renders the bar when both `IsSectionDefined` AND
+that flag (defaulting to `true` when a page never sets it, so every other/simpler page keeps working
+unchanged) agree there's really something to show.
+
+### Table (Facturen)
+Design-handoff optie 4e ("TABEL — RIJSTATEN EN ACTIES IN DE RIJ") + optie 4a (layout/pagination) +
+optie 4f (laad-/lege staat + "TABLET — ···-MENU IN DE RIJ"). Reskins the **existing**
+`<table>`/DataTables markup in `Views/Invoices/IndexV2.cshtml` — no CSS-grid rewrite; the mockup
+renders rows as `display:grid` divs, but that would mean re-implementing DataTables'
+sort/search/paging from scratch, so this stays a real `<table>` throughout, styled to look like
+the mockup's grid rows (`gl-v2-invoices.css`).
+
+**Tablet (768–1023.98px, optie 4b/4f).** Same range as the userbox's own tablet state in
+`gl-v2-shell.css` — one tablet concept for the page, not a Facturen-specific breakpoint. Five
+columns hide outright (Type, Datum, Excl. BTW, Project, Verzendwijze — the same five 4b itself
+drops), leaving Boeken/Factuurnr/Klant/Totaal/Status/Acties. The Acties column becomes a single
+"···" trigger (`.gl-v2-row-menu-trigger`, states: bare/muted at rest, filled Primary-green on
+hover, same filled look held via a JS-toggled `.is-menu-open` class while the panel is open — same
+`.is-flyout-open` idea the rail flyouts already use) that opens a floating menu
+(`.gl-v2-row-menu.is-open`, positioned with `getBoundingClientRect()` exactly like
+`gl-v2-shell.js`'s rail-flyout `positionFlyout()`) listing the same actions the desktop/mobile
+icon row already has — same `<a>`/`<button>` elements, no duplicated markup, just restyled from
+26×26 icon squares into full-width icon+label rows for this one breakpoint. Two things that made
+this possible without new markup per action:
+  - Every row action now carries a `.gl-v2-row-action-label` span (previously only some did, and
+    inconsistently as `visually-hidden`) — a menu row needs visible text for actions like PDF
+    Export or Verzenden that were icon-only everywhere else. This is a from-scratch class, not
+    Bootstrap's `.visually-hidden`: that utility sets every property with `!important`, which would
+    have to be fought with more `!important` to reveal the label inside the open menu — simpler to
+    own the hide-technique here and just not fight it.
+  - A `.gl-v2-row-menu-divider` div (hidden everywhere except inside an open tablet menu) sits
+    right before the Verwijderen link in markup, giving the reference's divider-before-delete
+    treatment without needing separate desktop/tablet action lists.
+  - Inside the open menu, the Primair/Danger family colors drop their button-chip fill (solid
+    green / light-red background) and become plain colored text+icon rows instead — a filled chip
+    reads as a button in a horizontal icon row, but as a stray colored box in a vertical menu list;
+    the reference's own tablet Verwijderen row is red text+icon on a transparent row, not a red
+    button.
+
+**Mobiel (<768px, optie 4c "Mobiel — facturen als kaarten") — genuinely separate markup, not a
+reskin.** Unlike the tablet range above, this is **not** the same `<tr>`/`<td>` elements rearranged
+with CSS. Two earlier attempts tried exactly that (`grid-template-areas`, then `display:flex` with
+`order` on the `<tr>` itself) and both ran into real problems: CSS Grid's `auto`/`1fr` track sizing
+either let unbreakable text push the card wider than the viewport, or squeezed the flexible column
+down to almost nothing depending on which items shared which track — and even once that was tamed,
+table-specific chrome (Bootstrap's row borders/background, DataTables' own layout rows) kept
+bleeding through a card that was never really anything but a table row in a costume. The `<table>`
+now goes `display:none` entirely below 768px, full stop — no reflow attempt. In its place,
+`Views/Invoices/IndexV2.cshtml` has one empty `<div id="gl-v2-mobile-invoice-list">` after the
+table, and `renderMobileCards()` (`gl-v2-invoices.js`) builds real `<div class="gl-v2-invoice-card">`
+elements into it from the table's own current `<tr>`s — called on every DataTable `"draw"` (init,
+search, sort, page), so the card list always mirrors whatever the (hidden) table currently shows
+without re-implementing any of that filtering/sorting/paging logic here.
+
+**Checkbox and actions stay single, real elements — the card reaches them, it doesn't duplicate
+them.** A second `name="invoiceIds"` checkbox per invoice, or a second copy of the action list,
+would be invalid HTML and would double-count a selection (`syncBookButton()`'s `:checked` count).
+Instead each card gets a **proxy checkbox** (`.gl-v2-mc-checkbox`, a plain `<button>` — deliberately
+*not* carrying the `.invoice-book-checkbox` class, so it never enters `getBookingCheckboxes()`'s own
+count) that forwards a click to the real, hidden checkbox and mirrors its checked/disabled state
+back (`syncMobileCardCheckboxStates()`, called from `applyBookingRules()` so a cascading "select
+everything up to this one" click updates every visible card, not just the one tapped). The "···"
+trigger's panel is a **clone** of the real `.gl-v2-row-menu` (`.clone()`, given a fresh id) rather
+than a reference to the original — cloning works because every handler that acts on it
+(`.deleteInvoice`, `.js-issue-invoice`, the row-menu-open logic itself) is delegated on `$(document)`
+by CSS class, not bound to the specific DOM node, so it fires identically on the clone with no new
+JS per action.
+
+**No card-in-a-card.** `.gl-v2-table-card` is normally its own white, shadowed card (same as the
+toolbar card) — nested white cards inside it would have no contrast. Below 767.98px it goes
+transparent/flat instead (`background:transparent; box-shadow:none; border-radius:0`), so the
+individual invoice cards sit directly on `.gl-v2-content`'s own `#F7F9F5`, the same depth
+relationship every other floating card in gl-v2 has to its background.
+
+**Pagination.** `syncTablePageLength()` (optie 4a, above) assumes a fixed 54px row — cards are
+taller and variable, so below 768px it skips that math and sets a flat `MOBILE_PAGE_LENGTH` (15).
+No internal scroll container is needed here (an earlier version gave `.table-responsive-md` its own
+`overflow-y:auto`, back when the *table* was still the thing rendering on phone) — the page just
+scrolls over the card list like an ordinary list, since nothing downstream of it still depends on
+the table's own flex-height chain.
+
+### Rij-acties als bottom sheet op telefoon (optie 4j, TYPE 3 "KEUZELIJST/ACTIES")
+The "···" panel itself (built above) is a **clone** of the same `.gl-v2-row-menu` the tablet range
+already uses as a floating panel — below 768px its *positioning* changes from "floating, JS-placed
+near the trigger" to "bottom sheet, pinned by CSS," matching the reference's own split between
+"DESKTOP · acties als zwevend menu" and "TABLET & MOBIEL · actiesheet met scrim." This app only
+applies the sheet variant at phone width, not tablet — tablet already has a working floating panel
+(optie 4f) and nothing asked for it to change.
+
+- **Scrim** — one shared `.gl-v2-row-menu-backdrop` (`rgba(18,28,18,.45)`, `position:fixed;inset:0`),
+  not one per card: only one panel is ever open at a time, so a single backdrop element toggled by
+  `.is-open` is enough, same economy as the bookyear-select/quick-actions backdrops elsewhere in
+  gl-v2. `closeAllRowMenus()` removes `.is-open` from it alongside the panel itself; the existing
+  "click outside closes" `document` listener already closes on a backdrop click too, since the
+  backdrop matches neither `.gl-v2-row-menu` nor `.gl-v2-row-menu-trigger`.
+- **Sheet** — `.gl-v2-row-menu.is-open` gets `left:0;right:0;bottom:0`, `border-radius:18px 18px 0
+  0`, a 42×4px drag-handle (`::before`, same dashed-grey token every other sheet in gl-v2 uses), and
+  `env(safe-area-inset-bottom)` padding. `positionRowMenu()` (the tablet range's JS positioner)
+  explicitly skips itself below 768px — same "just don't reposition, let CSS pin it" pattern
+  `positionBookyearPanel()` already uses for the bookyear filter's own mobile sheet — otherwise a
+  JS-set inline `top`/`left` would win over the CSS position (inline styles beat stylesheet rules
+  without `!important`).
+- **Title** — "Factuur {nr}" (serif, per the Naming-Only Serif Rule — this names the specific
+  invoice the sheet's actions apply to), added only for the mobile sheet: the tablet floating panel
+  has no room/need for one. `renderMobileCards()` prepends it to the cloned panel via `.text()`, not
+  string concatenation, so it can't be misread as HTML.
+- **Rows** — 44px per the reference ("rijen 44px"), icon 17px, label 13.5px, `padding:13px 10px`,
+  `border-radius:10px`. Styled from scratch for this breakpoint (`.gl-v2-row-menu.is-open
+  .gl-v2-row-action` with no `#datatable-invoice-list` prefix) rather than reusing the tablet
+  block's own menu-row rules: those are deliberately `#id`-scoped to out-specificity the desktop
+  bare-icon rule they share an ancestor table with, but the mobile clone lives inside
+  `.gl-v2-invoice-card` now, outside the table entirely — nothing else styles `.gl-v2-row-action`
+  there, so no specificity fight, no need to carry the id.
+- **Not done:** Bootstrap tooltips on the row-action links/status icons inside a cloned or
+  `.html()`-copied element don't fire (Bootstrap only wires up elements that exist at page load) —
+  accepted as-is, a touch sheet has no hover state for a tooltip to serve anyway.
+
+**Column layout (standard).** The 11 visible columns, in order, are the same set option 4a's own
+`display:grid` mockup describes (`grid-template-columns:52px 70px 112px 96px minmax(0,1fr) 112px
+106px 66px 116px 92px 158px`): **Boeken** (checkbox) · **Type** · **Factuurnr** · **Datum** ·
+**Klant** (the one `grow` column — every other column is `width:"1%"`/content-fit via
+`columnDefs`) · **Totaal** (`text-end`) · **Excl. BTW** (`text-end`) · **Status** (centered) ·
+**Project** · **Verzendwijze** · **Acties** (`text-end`, not orderable). A 12th column
+(**Boekjaar**) exists but is `d-none` — it only feeds the bookyear filter's `column().search()`,
+never rendered. This exact column set/order is the reference point for anything else that needs to
+represent "the Facturen table" without being the real, live table — see Loading state below, which
+mirrors it directly rather than the mockup's own simplified 4-column LADEN demo.
+- Row height 54px (`tbody td { height: 54px }`), header row 44px content height. Cell padding:
+  10px left/right generally, first column 14px left (matches the toolbar-card/table-card's own
+  14px edge inset), Acties 20px right (its icon row needs more breathing room than plain text), and
+  **every orderable header** 26px right — not a design choice, a correction: DataTables' own CSS
+  reserves `padding-right:30px` on orderable `<th>` cells for its absolutely-positioned sort icon
+  (`span.dt-column-order{position:absolute;right:12px;width:12px}`, so it occupies the 12-24px
+  zone from the cell's right edge); this file's `thead th` rule carries an `#id` selector, which
+  beats DataTables' class-only rule regardless of load order, so without restating that padding
+  here it collapsed to this file's own 10px and the icon rendered on top of the text — on
+  `text-end` columns (Totaal, Excl. BTW) that reads as "icon before the title" since the
+  right-aligned text reaches into the icon's zone. 26px (not DataTables' own 30px) is the
+  tightest value that still fully clears the icon without padding every column wider than it
+  needs to be.
+- Footer/pagination row: padding lives on `.dt-info` (14px left) and `.dt-paging` (14px right)
+  directly — matching the table's own edge insets — rather than on the row wrapper around them (an
+  earlier attempt put `padding: 0 20px 0 14px` on `.dt-layout-row:last-child`, but that didn't
+  visibly move anything, so the padding moved onto the two elements that actually needed it).
+  Top/bottom uses `padding: 10px 0` on the row itself rather than a fixed `height: 48px` +
+  `align-items: center` — the fixed-height approach left the vertical space above and below the
+  pagination buttons at the mercy of how centering happened to round, not guaranteed equal; equal
+  padding on both sides is equal by construction.
+
+- **Row, rest:** 54px, hairline-soft bottom border.
+- **Row, hover:** Hover-tint background (whole row, `tbody tr:hover td`).
+- **Row, geselecteerd:** Primary-tint background + a 3px Primary-green inset stripe on the row's
+  first cell only (`tr.is-selected td:first-child` — an inset box-shadow on *every* `td` would give
+  every column its own left stripe, not one clean one at the row's edge). This is **not** a separate
+  demo state: it's the existing "Boeken"-checkbox selection, now also reflected on the row itself.
+  `gl-v2-invoices.js`'s `syncSelectedRows()` toggles `.is-selected` on a row's `<tr>` whenever its
+  checkbox's checked state changes (checkbox change handler, table draw, and init all already ran
+  `applyBookingRules()` — `syncSelectedRows()` hooks into that same call, no new event wiring).
+- **Row, vergrendeld** (`.gl-v2-row-locked`) — defined for parity with the reference (`#FBFBF9`
+  background, `#9AA898` text, muted+inert row actions) but **applied nowhere**. The reference's
+  "DISABLED" row is a locked invoice; the closest real signal, a checkbox being
+  `disabled` (not bookable / already booked), does not mean the invoice itself is locked — most
+  invoices aren't bookable via this checkbox yet are completely normal, editable rows. Applying the
+  muted treatment there would mislabel ordinary invoices as inaccessible. Same call as the rail's
+  badge/disabled states: build the component, don't wire it to a condition that doesn't actually
+  mean what the visual implies.
+- **Row action buttons** (`.gl-v2-row-action`, 26×26, 7px radius) — bare by default (no border, no
+  fill, muted icon, 15px) exactly like the reference's DEFAULT row; the bordered/filled "chip" look
+  is the reference's HOVER row, gated per-icon here — `:hover`/`:focus-visible` on the button
+  itself only, deliberately **not** a row-wide reveal (hovering one icon must not light up its
+  neighbours in the same row; tried row-hover first, wrong reading of the reference). Three
+  families, indistinguishable at rest, diverging only once hovered/focused — reflecting the real
+  hierarchy of what each action does, not one uniform icon treatment:
+  - **Neutral** (default family) — duplicate, details, PDF, print, nummeren/issue, verzenden:
+    Hover-tint fill, Primary border/icon on hover.
+  - **Primair** (`.gl-v2-row-action-primary`) — bewerken (edit) only: solid Primary fill (one step
+    darker, `#006638`, than the standalone Primary button's hover — same idea, this is *already*
+    the hover state), white icon. The one action in the row that changes the invoice, so it's the
+    one visually promoted.
+  - **Danger** (`.gl-v2-row-action-danger`) — verwijderen only: `#F8EBEB` fill, solid `#8B2A2A`
+    border/icon — same red vocabulary as `.gl-v2-btn-danger`.
+  - **GESELECTEERD rows** get the muted default treatment promoted straight to Primary-colored bare
+    icons (no chip) even without hovering — matches the reference's selected-row icons, which are
+    green-stroke but still borderless.
+  - **VERGRENDELD** (unused, see below) rows stay inert via `pointer-events:none` alone — no extra
+    override needed now that there's no row-wide reveal rule to fight.
+- **Checkboxes:** built fully self-contained under `.gl-v2`, not as an override of the site-wide
+  `.checkbox-custom` component — `_LayoutV2.cshtml` never loads `theme.css`/`custom.css` (only the
+  old `_Layout.cshtml` does), so that component's box/checkmark (`label:before`/`:after`
+  pseudo-elements) simply doesn't exist on gl-v2 pages; the markup (`.checkbox-custom` div +
+  hidden input + empty `<label>`) is unchanged from `Views/Invoices/Index.cshtml`, but every pixel
+  of its visual is gl-v2's own (18px, 5px radius, filled Primary-green checked state, white
+  Font-Awesome checkmark glyph — same `\f00c` trick `theme.css` uses, just redirected). Checked
+  always wins over disabled (declared after it in the stylesheet) — an already-booked invoice's
+  checkbox stays visibly green even though it's inert, rather than looking unchecked/muted.
+- **Selectie-toolbar** (`.gl-v2-selection-toolbar`) — appears as the table card's own bottom edge
+  (inside the card's `overflow:hidden`, so its corners get clipped by the card's own radius for
+  free) once ≥1 row is selected: Primary-green fill, white "N facturen geselecteerd" count,
+  spacer, action button(s). The reference shows three buttons (Boeken/Verzenden/Verwijderen) as if
+  a generic multi-select existed for all three — this table only has **one** real bulk action
+  (Boeken, the existing checkbox → `invoice-book-form` flow); Verzenden and Verwijderen are
+  per-row-only actions with no bulk endpoint in this app today, so the toolbar ships with Boeken
+  alone rather than two buttons that look real but do nothing. The toolbar's button shares the
+  `.js-book-invoices-btn` class with the topbar button and the mobile quick-action tile (three
+  elements, one class) — `gl-v2-invoices.js` already enables/disables all of them together;
+  adding this third instance needed zero new JS for that part. The toolbar (`flex:none`) sits as
+  the next element right after the table area in normal flow — since the "kaart krimpt mee" fix
+  below, there's no stretched empty space left for it to need pushing into anymore.
+- **Pagination/density (optie 4a), "kaart krimpt mee" fix (iPad Pro 13, 2026-09-21):** the table
+  tries to fill the available screen height — page size is computed from real available space, not
+  the other way around — **but never asks for more rows than actually exist.** Originally
+  `.gl-v2-table-card` was itself `flex:1` (always stretched to the full column height regardless of
+  content) and `syncTablePageLength()` set the page length to whatever fit that stretched height,
+  full stop. That combination broke visibly on a tall viewport with a small dataset: an issuer with
+  only 18 invoices on an iPad Pro 13 (1376px tall, portrait) computed room for ~20 rows, all 18
+  rendered, and the leftover capacity sat there as bare card underneath the last row — reading as
+  "the screen isn't filled" even though nothing was actually broken. Fixed two ways together:
+  `.gl-v2-table-card` is now `flex:none` (sizes to its real rows, header and footer — no more
+  min-height:0/flex:1 chain down through `.datatables-header-footer-wrapper`/`<form>`/
+  `.table-responsive-md`, since there's no stretched height left to propagate), and
+  `syncTablePageLength()` now clamps its computed row count with `Math.min(maxRows, recordsTotal)`
+  — `maxRows` is still measured the same way (now from `.gl-v2-content`, a stable `flex:1` ancestor
+  that doesn't collapse once the card itself stops stretching, minus the toolbar card and column
+  gap above it, the `<thead>`, the DataTables footer row, and the same always-reserved selection-
+  toolbar constant as before), divided by the fixed 54px row height. When a company/bookyear has
+  fewer invoices than fit the screen, the card now simply ends after the real data — `.gl-v2-
+  content`'s own, slightly cooler background (`#F7F9F5` vs. the page's `#F2F5EF`) shows underneath,
+  which is already-documented, existing visual language, not a new pattern introduced by this fix.
+
+  **"Kaart krimpt mee," part two — the gap moved, it didn't disappear.** The fix above only stopped
+  `.gl-v2-table-card` from over-reaching; it did nothing about the *column that card sits in*.
+  `.gl-v2-content` was still `flex:1` inside `.gl-v2-body` (itself always stretched to
+  `.gl-v2-app`'s full row height via `align-items:stretch`, the default, never overridden, forced
+  tall by `.gl-v2-app`'s own `min-height:100vh`) — so on the same short-dataset/tall-viewport case,
+  the *content column* kept filling that full stretched height regardless of what its children
+  actually needed, leaving the exact same amount of dead space one level up: no longer bare white
+  card underneath the table, now the content column's own `#F7F9F5` tint doing the same job, plainly
+  visible below a correctly-short table card with nothing to justify it. Confirmed via
+  `getBoundingClientRect()` on the real iPad Pro 13 case: `.gl-v2-content` measured taller than the
+  sum of its own children (toolbar card + gap + table card + its own padding) by over 100px — the
+  gap, precisely quantified. Fixed by letting the "shrink to real content" idea propagate one more
+  level: `.gl-v2-body` gets `align-self: flex-start` (desktop/tablet only, `≥768px` — opts out of
+  `.gl-v2-app`'s stretch, so the white card itself now sizes to its own content instead of the row's
+  forced height) and `.gl-v2-content` goes `flex: none` (same breakpoint) instead of `flex: 1`.
+  `.gl-v2-app` keeps `min-height: 100vh` throughout — the sage page background behind everything
+  still always reaches the full viewport height; only the *white card on top of it* is now allowed
+  to be shorter than that when its content doesn't need the space, exactly mirroring what the table
+  card fix already did one level down. **Deliberately not applied below 768px:** the mobile body
+  card is edge-to-edge/full-bleed by design (no radius/shadow there, see the phone breakpoint) and
+  renders a different thing entirely on that path (`.gl-v2-mobile-invoice-list`, a plain scrolling
+  card list at a fixed `MOBILE_PAGE_LENGTH`, no "available height" row-fitting math at all) — letting
+  the body card go short there would expose the page's sage color at the bottom of an otherwise
+  full-bleed phone screen, a worse-looking inconsistency than the one being fixed. `syncTablePageLength()`
+  (`gl-v2-invoices.js`) had to change again too: it previously read `.gl-v2-content`'s own
+  `clientHeight` as a "stable, still-stretched" reference for the *maximum* available row space —
+  now that `.gl-v2-content` no longer stretches either, that reference collapses to whatever height
+  its children currently need, which is circular (row count needs max-height needs row count). The
+  function now measures from `window.innerHeight` instead — the one figure in this chain that's
+  still genuinely independent of how much content exists — and explicitly subtracts every fixed
+  piece of chrome between the viewport and the table body (`.gl-v2-app`'s padding, the topbar, `.gl-v2-
+  content`'s own padding, the toolbar card and its gap, the `<thead>`, the DataTables footer row, and
+  the same always-reserved selection-toolbar constant as before) to arrive at the same "how many
+  54px rows actually fit" number the old, now-invalid measurement used to give.
+
+  Runs once after init and again on window resize (150ms debounce); guarded to only redraw when the
+  computed count actually changed. The manual page-length dropdown (10/25/50) is gone —
+  `layout.topStart` was already overridden to an empty button row, so there was nothing to
+  additionally hide. Footer copy is "N van TOTAAL facturen" (via `infoCallback`, not DataTables'
+  default `_START_ tot _END_` range string) and pagination buttons are 30×28/7px-radius squares with
+  `‹`/`›` glyphs (`language.paginate`) — both matching option 4a exactly rather than DataTables'
+  Bootstrap defaults.
+- **Icons:** row actions and the Status column both moved off Boxicons/Font Awesome onto Phosphor
+  (see the Icons section below for why that's the rule everywhere in gl-v2) — `fs-5` (Bootstrap's
+  20px utility) came off with them, sizing is this file's own now (15px row actions, 16px status).
+  Status icon/color is a 4-family palette reused from the buttons/row-actions above rather than the
+  page's old per-status Bootstrap colors (`#0dcaf0`, `#ffc107`, `#fd7e14`, `#dc3545`, `#6f42c1`,
+  `#0d6efd`, …): **muted** (`--gl-v2-muted`) = nothing's happened yet (Draft, Cancelled), **gold**
+  (`--gl-v2-gold`) = in progress (Issued, Sent, PartiallyPaid, Generating), **Primary-green** =
+  done/succeeded (Paid, Booked), **`#8B2A2A`** (the danger red) = needs attention (Overdue).
+  PartiallyPaid reuses Paid's own glyph (`ph-check-circle`) in gold rather than a different icon —
+  reads as a step toward the same end state, not an unrelated status. `Generating`'s spinner has no
+  Phosphor/Boxicons equivalent of Boxicons' `bx-spin` utility class, so it's `ph-spinner-gap` plus
+  a small `.gl-v2-spin` `@@keyframes` rotation defined here. Every status icon (and the separate
+  "verzonden via peppol" `ph-planet` indicator next to it) carries a real Bootstrap tooltip
+  (`data-bs-toggle="tooltip"`, initialized globally by `common.js` for anything with that attribute
+  present at page load) — `r.StatusLabel` (already existed, used for the column's `data-order`) is
+  the tooltip text, so no new label had to be invented.
+- **Loading state (optie 4f "LADEN"):** visible from first paint with no JS required to *show* it —
+  only `gl-v2-invoices.js` adding `.is-ready` to `.gl-v2-table-card` (right after DataTable init +
+  the first `syncTablePageLength()`) hides it again. This isn't decorative: without it, the raw,
+  un-paginated `<table>` (every row the server sent, unsorted) would flash on screen for however
+  long jQuery/DataTables takes to parse and initialize before shrinking down to the real page size.
+  Column layout mirrors the real table's 11 columns exactly (see "Column layout" above) rather than
+  the mockup's own simplified 4-column LADEN demo — a skeleton that doesn't share the real table's
+  column count/order would visibly reflow the instant it's replaced. Fixed 6 placeholder rows (not
+  the computed real count) since it's on screen for a fraction of a second at most.
+- **Empty states (optie 4f "LEGE STAAT"):** two, for two different real conditions, sharing one
+  `.gl-v2-empty-state` treatment (62px tinted icon badge, serif heading, muted description,
+  action buttons) — **not** the same message, because they're not the same situation:
+  - *Server-side* (`IndexV2.cshtml`'s own `else` branch, `Model` has zero invoices at all): "Geen
+    facturen gevonden" / "Er zijn nog geen facturen aangemaakt voor dit bedrijf.", one button
+    (+ Nieuwe factuur, `canWriteInvoices`-gated). No "Filters wissen" button — nothing is filtered,
+    this company just has no invoices yet.
+  - *Client-side* (`DataTable.language.zeroRecords` in `gl-v2-invoices.js`, invoices exist but the
+    current search/bookyear filter matches none): same visual shell, but built as an HTML string
+    (DataTables renders `zeroRecords` unescaped) with the reference's own copy ("Er zijn geen
+    facturen die aan deze filters voldoen. Pas de filters aan of maak een nieuwe factuur.") and
+    **two** buttons — Filters wissen (real: clears `#search-term` + resets the bookyear select to
+    its default, then redraws) plus + Nieuwe factuur. `config.createUrl`/`config.canWrite` (new
+    entries in `window.glV2InvoicesConfig`) carry the Create-URL and write-permission into the
+    plain-.js file, same pattern already used for `deleteUrl`/`defaultBookyear`.
+
+### Select / Dropdown
+Design-handoff optie 4h ("Dropdowns — gesloten veld, basis, met zoekveld, met 'nieuw item',
+telkens ook met icoon"). A generic, reusable component (`gl-v2-shell.css`, not page-specific) built
+for the Facturen bookyear filter — the only real instance today — but specified in full per the
+reference, same "build the whole system, apply the part that's real" approach used elsewhere in
+this pilot. A native `<select>` can't render any of this: the browser draws its own open listbox,
+entirely outside CSS reach, so this is a from-scratch trigger + JS-positioned panel
+(`gl-v2-invoices.js`) — same shape as the rail flyouts and the table's own tablet ···-menu
+(`getBoundingClientRect`-based positioning, outside-click/Esc closes).
+
+- **Trigger** (`.gl-v2-select-trigger`) — four states: **leeg** (placeholder text, muted),
+  **ingevuld** (real value, darker/600-weight, icon turns Primary), **hover/focus** (hover: Primary
+  border + `#F7F9F5` tint; `:focus-visible`: Primary border + 2.5px gold outline, 2px offset —
+  same gold-ring language as buttons, just an outline instead of a box-shadow since this element
+  already has a real border to keep), **fout/geblokkeerd** — two distinct disabled-ish states, not
+  one: `.is-error` (`#8A3B2A` border/text, `#FBF4F2` fill — a real validation failure) vs `:disabled`
+  (hairline border, `#F2F2F0` fill, `#A8B3A6` text — inert, not invalid). Bookyear only ever uses
+  leeg/ingevuld/hover/focus — it's an optional filter, never actually invalid or disabled, so
+  `.is-error` ships unused (component ready, nothing to wire it to, same call as the rail's
+  badge/disabled states).
+- **Icon slot** — optional leading icon, "refers to the kind of data, not the action" (the
+  reference's own phrase) — bookyear's is `ph-calendar`. Recolors with the trigger's state (muted
+  at rest, Primary once filled/open, error/disabled red-ish or muted-light).
+- **Panel — three variants**, only the first wired to anything real:
+  - **Basis** (`.gl-v2-select-panel`, used by bookyear) — plain option list, no header. Each row
+    (`.gl-v2-select-option`) reserves a 15px leading icon slot for a checkmark that's
+    `visibility:hidden` unless `.is-selected` (keeps every row's text aligned regardless of which
+    one is currently picked, rather than the selected row alone shifting over). Bookyear's list is
+    short and fixed (a handful of years) — exactly what this variant is for.
+  - **Met zoekveld** (`.gl-v2-select-panel-search`) — adds a bordered search input header + a
+    "N RESULTATEN" label above the list. Defined, unused: nothing on this page needs to search a
+    dropdown's own options today.
+  - **Met zoekveld + nieuw item** (`.gl-v2-select-panel-newitem`) — the search variant plus a fixed
+    footer (outside the scrollable option list, `max-height:196px` on the list itself) holding a
+    dashed-border "+ Nieuw item toevoegen" button — the reference's own reasoning for the dashed
+    border applies here too (a real but placeholder-flavored affordance, same dashed-border
+    vocabulary used elsewhere in gl-v2 for "acknowledged, not fully wired yet"). Also unused today.
+- **Tablet (768–1023.98px)** — same range as the userbox/table's own tablet states, not a
+  component-specific breakpoint. Despite the reference's own "COMPACTER" heading, the actual
+  numbers grow (44px trigger/rows, up from 40px/9px×10px) — "compacter" describes the panel as a
+  whole next to its surroundings, not the touch targets themselves.
+- **Mobiel (<768px) — bottom sheet.** The same panel becomes a `position:fixed` bottom sheet
+  (rounded top corners, drag-handle `::before`, a title + "Sluiten" header that only exists for
+  this form factor) with a dimming backdrop — `gl-v2-invoices.js`'s `positionBookyearPanel()`
+  explicitly skips its `getBoundingClientRect()` math below 768px and lets this CSS pin the panel
+  instead. `.gl-v2-select-backdrop`/`.gl-v2-select-sheet-header` are `display:none` outside this
+  breakpoint by default — without that base rule they'd render as bare unstyled `<div>`s at
+  desktop/tablet widths instead of not existing at all.
+
+### Tekstvelden
+Design-handoff optie 4i ("Tekstvelden — label, placeholder, met en zonder icoon, zelfde 40px als
+de dropdown"). Generic, reusable component (`gl-v2-shell.css`, not page-specific), same height/
+radius language as the Select/Dropdown component above (40px/8px desktop, 44px/10px tablet+phone
+— unlike the dropdown, one shared media query, since a text field never becomes a bottom sheet on
+phone). Built for the Facturen search field — the only real instance today — same "build the whole
+system, apply the part that's real" approach used elsewhere in this pilot.
+
+- **Structure** (`.gl-v2-field`) — an optional `.gl-v2-field-label` (uppercase, 9px), the
+  `.gl-v2-field-box` shell (border, icon slot, `.gl-v2-field-input`), and an optional
+  `.gl-v2-field-help` line below. All three stack in one `flex-direction:column;gap:5px` wrapper.
+- **State without JS.** Most states are pure CSS, no state class needed from the caller: **leeg vs.
+  ingevuld** (`:not(:placeholder-shown)` on the input — darker/600 text, icon turns Primary; this
+  means every field using this component must always carry a real `placeholder` attribute, or the
+  pseudo-class never matches and the field reads as permanently "empty"), **focus**
+  (`:focus-within` on the *whole* `.gl-v2-field`, not just the box — the label sits as the box's
+  sibling, so a box-only `:focus-within` can never reach it; same gold-ring language as the
+  dropdown/buttons, `outline: 2.5px solid gold, offset 2px`), **geblokkeerd**
+  (`:has(.gl-v2-field-input:disabled)` on the box — the native `disabled` attribute alone drives
+  the whole visual, no companion class to remember). **Fout** stays an explicit `.gl-v2-field.is-
+  error` class — there's no native pseudo-class for "this value failed validation", so this one
+  state still needs the caller (or a future form's JS) to set it.
+- **Icon slot** — same "refers to the kind of data, not the action" rule as the dropdown's icon,
+  16px desktop / 17px touch, muted at rest, Primary once filled/focused, error/disabled red-ish or
+  muted-light (mirrors the icon-recoloring rules already established for the dropdown/buttons).
+- **Clear ("×") button** (`.gl-v2-field-clear`) — shown only once the field has content, via the
+  same `:not(:placeholder-shown)` trick (no JS-toggled class to show/hide it, only the click itself
+  needs a handler). Used by the Facturen search field: clicking it empties `#search-term`, re-runs
+  `table.search("").draw()`, and returns focus to the field (`gl-v2-invoices.js`).
+- **Prefix/suffix slots** (`.gl-v2-field-prefix` — plain inline text like `€`; `.gl-v2-field-suffix`
+  — a small pill-chip like a currency-code badge) and the **meerregelig** variant
+  (`.gl-v2-field-box-textarea`, 104px, top-aligned content, 1.6 line-height) are built per the
+  reference but unused today — no field on any gl-v2 page needs a suffix or multiple lines yet.
+- **Field group** (`.gl-v2-field-group`) — two `.gl-v2-field`s in a row (e.g. street + number),
+  sharing the same 40/44px height as the dropdown so a row mixing a field and a dropdown still
+  lines up. `.gl-v2-field-narrow` fixes one member to 92px instead of splitting the row evenly.
+  Defined, not applied on any real form yet.
+- **Real example: Facturen search field.** `Views/Invoices/IndexV2.cshtml`'s toolbar search
+  replaced Bootstrap's `.input-group`/`bx-search` markup with `.gl-v2-field` + `.gl-v2-field-box`
+  (icon + input + clear button) — no `.gl-v2-field-label` here, a label above a toolbar search box
+  doesn't fit that context the way it would in an actual form. `.gl-v2-toolbar-search` (page CSS,
+  `gl-v2-invoices.css`) gives it `flex:1;min-width:0` so it still shares the toolbar row with the
+  bookyear dropdown and shrinks correctly on a phone-width screen — same min-width:0 fix the old
+  `.input-group` needed before it.
 
 ### Modals
-- **Always vertically centered.** Every `.modal-dialog` carries
-  `modal-dialog-centered` — never Bootstrap's default top-anchored dialog,
-  which floats near the top of the viewport and reads off-balance on a tall
-  screen. `Views/Shared/_ConfirmModal.cshtml` already does this; several older
-  modals across the app still don't. Add it the next time one of those is
-  touched, not as a bulk sweep.
-- **Confirm dialogs never use the bare browser `confirm()`.** Use
-  `Views/Shared/_ConfirmModal.cshtml` (`@await Html.PartialAsync("_ConfirmModal")`,
-  once per page, already `modal-dialog-centered`) with `~/js/confirm-modal.js`'s
-  `window.confirmDialog(title, bodyHtml, confirmLabel)` → `Promise<boolean>`.
-  `bodyHtml` may hold small inline markup (`<b>`) but never unescaped user
-  input. Wire the calling form/button with a `data-confirmed` guard so the
-  real submit passes through once the promise resolves `true` — see
-  `ProjectTraject/_TrajectActionButtons.cshtml` (`gl-delete-traject-form`) or
-  `TrajectSjabloonAdmin/Index.cshtml` (`gl-delete-sjabloon-form`) for the exact
-  pattern, including how it stays safe when the same form is rendered twice
-  (topbar + mobile fallback).
-- **A commit modal that triggers side effects discloses them before submit,
-  not just in a read-only view elsewhere.** `ProjectTraject`'s mijlpaal
-  status-change modal can, depending on which status is picked, silently
-  cascade into automation (create a dossier, flip the project status, unlock
-  the next fase) configured on that mijlpaal — the modal itself only showed
-  Status/Datum/Opmerking, and the trigger list was visible only in the
-  *read-only* Kalender detail panel, a path most status changes never go
-  through. Fixed via `.gl-mps-triggers` (`Modals/_ModalMijlpaalStatus.cshtml`
-  + `traject.index.js`'s `renderMpsTriggers()`): a small Mist-Green panel
-  inside the modal body, populated from the same trigger data the Kalender
-  already computes, labelled per trigger event ("Bij bereiken", "Bij
-  statuswijziging", …). Hidden entirely when the mijlpaal has no configured
-  triggers. The general rule: if committing a form can do something beyond
-  what the form's own fields describe, say so inside that form, not only in
-  a preview screen the user may never open.
-- **A modal with more than ~6 fields gets chunked into labelled sections, the
-  same instinct as `gl-form-section` on a full page — just compressed for a
-  modal's footprint.** `Modals/_ModalMijlpaalUpsert.cshtml`'s 11 fields used
-  to sit in one flat `row g-3` with no grouping; split into three
-  `.gl-mp-modal-section`s (Mijlpaal / Planning / Verantwoordelijkheid &
-  notities — `traject.css`), each just a muted 600/.78rem title
-  (`.gl-mp-modal-section-title`, same label typography as everywhere else)
-  over a hairline divider between sections. Don't reach for a full
-  `gl-form-section` head (icon badge + hint text) inside a modal — that's
-  sized for a page, not a dialog; the plain title + divider is the modal-scale
-  equivalent.
-  - **`.gl-mp-modal-section-title` is modal-scale only — don't reuse it on a
-    page body.** `ProjectDossiers/Index.cshtml` originally borrowed this exact
-    class for its "Algemene aansluitingen" / "Per eenheid" headings (caught by
-    `/impeccable critique` as a component used outside its documented
-    contract). The page-body sibling is `.gl-dossier-section-head` +
-    `.gl-dossier-section-title` (`traject.css`) — same instinct, a plain label
-    over a hairline, but sized for a page (`.92rem`/700, `--ink`) instead of a
-    dialog, and the head wraps the whole row (title + any inline action, e.g.
-    the "Meerdere selecteren" toggle) so the hairline spans the full section
-    width, not just under the text.
+Design-handoff optie 4j ("Modals per type en per schermformaat — desktop, tablet, mobiel"). Generic,
+reusable component (`gl-v2-shell.css`, not page-specific) for two of the reference's four modal
+types — **TYPE 1 "Bevestiging"** (`.gl-v2-modal-confirm`, small, no input) and **TYPE 2 "Formulier"**
+(`.gl-v2-modal-form`, medium, with fields). TYPE 3 ("Keuzelijst/Acties") is the Facturen row-actions
+sheet, documented separately above under its own heading since it's specific to that one component
+rather than a general-purpose modal; TYPE 4 ("Melding", a toast) isn't built yet — no gl-v2 page has
+needed one so far, same "don't build ahead of a real need" call as the rail's badge/disabled states.
 
-### Navigation (sidebar)
-- **Rail:** solid Deep Forest Green (`#0a5a3b`), fixed full height, 300px /
-  73px collapsed.
-- **Tiles:** column layout (icon over label), centred, 14px radius, `14px 10px`
-  padding, 30px icon, 12px/600 Mint-Ice label, `6px` gap between tiles.
-- **Default / hover:** transparent tile, Mint-Ice icon + label, no underline.
-- **Active:** Forest Green Bright (`#0f7a52`) fill, near-white text, no left bar,
-  no caret — the block itself is the indicator.
-- **Flyout submenu:** absolutely positioned to the right of the rail (≥992px),
-  Forest Green Deep (`#0f4b40`) panel, 16px radius, Overlay shadow, 1–2 columns,
-  min 360–430px; child links 14px/500 Mint-Ice, 8px radius, hover
-  `rgba(231,255,241,0.14)`. Falls inline single-column ≤991px.
+**Foundation, not a rebuild.** Both types sit on top of Bootstrap's own `.modal`/`.modal-dialog`/
+`.modal-content` structure and its JS (`new bootstrap.Modal(el, {...})`, already loaded app-wide) —
+that engine already handles show/hide, focus trap, Esc, scroll-lock, and backdrop injection
+correctly, so there was no reason to reimplement any of it. What's entirely gl-v2's own is the
+*visual* layer: every rule here is scoped under `.gl-v2-modal-confirm`/`.gl-v2-modal-form`, and none
+of it assumes a single Bootstrap default (padding, radius, shadow, color) — border, radius, shadow,
+spacing, and typography are all set explicitly, nothing inherited from Bootstrap's own `.modal-*`
+look. The one piece left alone is Bootstrap's own `.modal-backdrop` (the scrim): Bootstrap's JS
+appends that element as a direct child of `<body>`, outside the `.gl-v2` wrapper div entirely — a
+`.gl-v2 .modal-backdrop` rule simply wouldn't match it, and restyling `.modal-backdrop` unscoped
+would leak onto every non-gl-v2 page in the app that also opens a Bootstrap modal, which the Do's/
+Don'ts rule below ("keep every new gl-v2 CSS selector scoped under `.gl-v2`") rules out. Bootstrap's
+own `rgba(0,0,0,.5)` scrim stays as-is — close enough to gl-v2's own `rgba(18,28,18,.45)` elsewhere
+that it doesn't read as a real inconsistency.
 
-### Topbar
-- **Bar:** 72px, Surface White, 1px Divider-Cool bottom border, no shadow.
-- **Page icon:** 40px Mist-Green rounded (10px) chip with a Deep Forest Green
-  glyph, left of the title.
-- **Title:** Slate-900, 700; 1.05rem with a breadcrumb, 1.5rem (line-height 40px)
-  without one.
-- **Breadcrumb:** Slate-500, 0.78rem, ` / ` separators (`#cbd5e1`), links hover
-  to Deep Forest Green.
-- **Userbox:** right-aligned; 10px-radius toggle (hover Cloud Grey), 36px round
-  avatar (Deep Forest Green fill, white initials, or photo); dropdown is a
-  230px-min white menu, 10px radius, Divider-Cool border, Overlay shadow, items
-  7px radius with Mist-Green hover + green text/icon.
-- **Mobile (≤767px):** whole bar becomes 60px solid Deep Forest Green; only
-  hamburger, centred title, avatar.
-- **Page actions (`@section PageActions` → `.topbar-page-actions`):**
-  page-specific buttons rendered inside the topbar itself — right-aligned
-  (`margin-left:auto`), `gap:10px`, right of the breadcrumb. Distinct from
-  `gl-page-header__actions` below, which sits in the content body, not the bar.
-  **Always `btn-sm`** — the bar is only 72px tall and the app's default/`btn-md`
-  sizing reads oversized against it (reference: `ProjectTraject/Index.cshtml` +
-  `_TrajectActionButtons.cshtml`, `TrajectSjabloonAdmin/Edit.cshtml` +
-  `_TrajectSjabloonActions.cshtml`). `.topbar-page-actions` is hidden entirely
-  below 768px; the calling page repeats the *same* buttons — via the same
-  partial, never duplicated markup — in a `d-flex d-md-none justify-content-end
-  gap-2 mb-3` fallback row at the top of its own content body.
-  `Projecten/DetailContracts.cshtml` used to be the standing example of a page
-  that still hadn't migrated to `btn-sm` here — fixed when that page was
-  brought in line with DESIGN.md; if you find another one, migrate it the
-  same way when you touch it, not in a bulk sweep.
+**TYPE 1 — Bevestiging, three color variants.** Desktop 460px, centered, `border-radius:14px`,
+Flyout-strength shadow. Body is a flex row: a 38px icon circle (`.gl-v2-modal-icon`) + a text block
+(`.gl-v2-modal-title`, serif 500/18px; `.gl-v2-modal-desc`, muted 12.5px/1.6). Footer has a hairline
+top border, buttons right-aligned. The variant lives on the icon —
+**`.is-danger`** (`--gl-v2-danger-tint` bg, `--gl-v2-danger` icon — destructive actions, e.g.
+deleting an invoice), **`.is-warning`** (`--gl-v2-warning-tint` bg, `--gl-v2-warning` icon —
+irreversible but not destructive, e.g. issuing/locking an invoice), **`.is-success`**
+(`--gl-v2-primary-tint` bg, `--gl-v2-primary` icon — confirms a positive outcome) — **and, since the
+4j button-states refinement pass, also on `.modal-content` itself**: `.is-warning`/`.is-danger` add
+a 3px top accent stripe (`--gl-v2-warning`/`--gl-v2-danger`) matching the reference's "gouden streep
+boven"/"rode streep boven"; `.is-success` deliberately adds none (the reference's own primary
+example carries no stripe, just a green icon and a green button). The icon *glyph* itself (which
+Phosphor class) is the caller's choice; the variant classes only ever touch color, never layout.
+`--gl-v2-danger`/`--gl-v2-danger-tint`/`--gl-v2-warning`/`--gl-v2-warning-tint` are tokens
+(`gl-v2-tokens.css`) — danger red existed only as a repeated raw `#8B2A2A` literal before this;
+tokenizing it here doesn't retrofit every existing usage elsewhere in the file, just gives new code
+a name to reach for. Warning used to reuse the decorative `--gl-v2-gold`/`--gl-v2-gold-tint` tokens;
+the refinement pass split it into its own `--gl-v2-warning` (`#8A6A32`, darker/more legible than
+Gold's `#C9A96E`) once the reference's own button-states matrix made clear the two were never meant
+to be the same color — see the Colors section above.
 
-**The Content Body Has No Page Chrome Rule.** A page's title and its
-page-level actions never live in the content body — full stop, no exceptions
-for "just this once, it fits better here." Where they go depends on what kind
-of page it is:
-- **An ordinary content page** (a list, a detail view, anything that isn't a
-  data-entry form): title + icon come from `SetPageHeader(icon, title)`
-  (`BaseController`, sets `ViewData["PageIcon"]`/`["Title"]`, which the topbar
-  in `_Layout.cshtml` renders) — never a local `<h1>`. Actions come from
-  `@section PageActions` → `.topbar-page-actions` (see above), with the same
-  `d-md-none` fallback-row duplication for `<768px`.
-- **A form** (`gl-form-shell`): title lives in the `gl-form-section__head`,
-  actions in the sticky `gl-form-shell__actions` bottom bar — already the
-  established pattern, unchanged by this rule.
-- **A subtitle has nowhere to go and is simply dropped, not relocated.** The
-  topbar has no subtitle slot (title + breadcrumb only). A subtitle in the
-  content body underneath a topbar title would just restate context the
-  breadcrumb already gives — see `ProjectTraject/Index.cshtml`'s own comment
-  on this exact point, which predates this rule and already got it right by
-  instinct: *"de topbar toont icoon + titel al; een lokale h1/h5 zou dat
-  woordelijk herhalen."*
-- **Reference migration:** `Projecten/DetailClients.cshtml` — was a
-  content-body `<h1>`/`<h5>` + `btn-group`; now `SetPageHeader("ph ph-users",
-  "Klanten")` in `ProjectenController.DetailClients` + `@section PageActions`
-  rendering the shared `Partials/_ClientsActionButtons.cshtml` (also reused
-  for the `d-md-none` mobile fallback row) — subtitle ("Beheer de klanten van
-  het project") dropped per the rule above, not relocated.
+**Modal-footer button states (4j "KNOPSTATEN IN DE MODAL," refinement pass).** A modal confirmation
+is always the highest-emphasis action on screen, so its footer buttons go filled/high-emphasis with
+the reference's exact rust/hover/ingedrukt/uit hex per family — this **supersedes** the original
+"Annuleren reuses `.gl-v2-btn-text` as a plain reuse, no new look" note above: the class stays
+`.gl-v2-btn-text` (still true, no fourth button family invented), but scoped inside a modal footer
+(`.gl-v2-modal-confirm .modal-footer`, `.gl-v2-modal-form .modal-footer`) it now renders the
+matrix's neutral bordered "SECUNDAIR" look instead of a pure ghost button. `.gl-v2-btn-primary`/
+`.gl-v2-btn-danger` get the same scoped treatment — both already exist as lower-emphasis looks
+*outside* modals (row actions, toolbars) and that existing look is deliberately left alone; only
+their footer-context rendering changes. `.gl-v2-btn-warning` is new (first use is exactly this
+matrix) and needed no scoping — there was no prior outside-modal look to preserve, so its one
+definition in the Buttons section already matches the modal spec everywhere. The matrix's sixth
+state, "bezig" (loading), is a generic `.is-loading` utility on `.gl-v2-btn` (opacity `.75`,
+`cursor:wait`, not modal-scoped — any button may carry it) — `gl-v2-shell.js`'s
+`initModalButtonLoading()` applies/clears it automatically on a modal form's submit button, and
+exposes `window.GlV2Modal.setButtonLoading/clearButtonLoading` for a button-triggered (non-form)
+confirm action to call itself.
 
-### Paginakop (`gl-page-header`) — superseded, legacy only
-**Do not use this for a new page or when migrating one you touch.** It
-predates The Content Body Has No Page Chrome Rule above and put title +
-subtitle + actions in the content body, which is exactly what that rule now
-forbids — `gl-page-header__actions` in particular duplicated
-`.topbar-page-actions` badly (default/`btn-md` sizing instead of `btn-sm`,
-a second place page actions could live). Still in real use on a handful of
-pages (`Projecten/AddContract.cshtml`, `Projecten/Detail.cshtml`,
-`Projecten/BudgetIndex.cshtml`, `TrajectSjabloonAdmin/Index.cshtml` — kept
-here only so those remain documented, not as guidance to extend), so the
-shape is recorded for reference, not as a pattern to reach for:
-- **Structure:** one flex row (`gl-page-header`, `justify-content: space-between`,
-  wraps below 576px) with two zones — `gl-page-header__left` (back button +
-  title + subtitle, rendered by the shared partial `Views/Shared/_PageHeader.cshtml`
-  with `Models.PageHeaderModel { Title, Subtitle?, BackUrl?, BackAriaLabel? }`)
-  and `gl-page-header__actions` (page-specific buttons, default/`btn-md` size).
-- **Back button:** 40×40px icon button (`gl-page-header__back`, The Field-Width
-  Rule), `bx-chevron-left` at 1.5rem, Muted by default, Mist-Green background +
-  Deep Forest Green icon on hover/focus — same interaction language as the
-  dashboard icon buttons.
-- **Migrate a page off this when you touch it** (not a bulk sweep, same as
-  every other legacy-pattern migration in this doc): move the title to
-  `SetPageHeader`, drop the subtitle, move the actions into
-  `@section PageActions` (resized to `btn-sm`) + the `d-md-none` mobile
-  fallback. `Projecten/DetailClients.cshtml` is the worked example.
+**Reusable partial.** `Views/Shared/GlV2/_ModalConfirm.cshtml` + `Models/GlV2/GlV2ModalConfirmVm.cs`
+— the "one fixed confirm target per page" case (e.g. a detail page's own delete button) can now
+`@@await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm { ... })` instead of hand-
+rolling the dialog/content/icon/form/footer markup. A per-row confirmation with swappable content
+(the Facturen list's own delete modal) still doesn't fit a static partial and keeps the AJAX-loaded-
+partial pattern documented below.
 
-### Badges
-- Solid fills mapped to tokens: `bg-primary` → Deep Forest Green,
-  `bg-secondary` → Sage, `bg-info` → Taupe Grey, `bg-accent` → Timber, plus
-  standard success/warning/danger/dark/light. White text except warning/light
-  (black). Pill radius.
+**TYPE 2 — Formulier.** Desktop 500px, header (serif 19px title + `.gl-v2-modal-close`, a from-
+scratch 30px circular icon button — not Bootstrap's own `.btn-close`, which draws itself from a
+background-image rather than an icon font and would need just as much overriding to reach the gl-v2
+look), body as a 2-column field grid (`gap:12px` — a `.gl-v2-field-group`/`.gl-v2-field-full` child
+spans both columns), footer matching TYPE 1's. Built in full per the reference; not wired to a real
+page yet, so treat it the same as the Select's search-panel variant or the Field's prefix/suffix —
+ready, unused, don't remove it for looking idle.
 
-### Icons — migrating Boxicons → Phosphor (in progress, page by page)
-The app is mid-migration from Boxicons to [Phosphor](https://phosphoricons.com/)
-— **not a bulk sweep**: a page's icons convert to Phosphor the next time that
-page is touched, same discipline as every other legacy-pattern migration in
-this doc. Both icon fonts stay loaded (`_Layout.cshtml`) until the migration
-is complete, so an unconverted page's `bx-*` classes keep working untouched.
-Converted so far: `Projecten/DetailClients.cshtml` + `Partials/Clients.cshtml`
-(the first page, treat as the reference) and the whole `ProjectTraject`
-feature (`Index.cshtml`, `_Timeline.cshtml`, `_UnitMatrix.cshtml`,
-`_Kalender.cshtml`, `_TrajectActionButtons.cshtml`,
-`Modals/_ModalMijlpaalStatus.cshtml`, `traject.index.js`,
-`ProjectTrajectController.cs`'s `SetPageHeader` call) — the second full page,
-and the one that added most of the dictionary entries below. Third:
-`Projecten/DetailContracts.cshtml` + `Partials/Contracts.cshtml` (plus its
-`ProjectenController.cs`'s `SetPageHeader` call) — the richest table of the
-three (up to 5 row actions, expandable child rows built client-side), see
-its own callout below for what that surfaced. Shared partials
-a migrated page merely *calls* (e.g. `Views/Shared/_ModalTaakQuickAdd.cshtml`,
-used by `ProjectTraject` among others) are **not** part of that page's
-migration — they stay on Boxicons until a page migration specifically
-touches them, same "not a bulk sweep" discipline, just one level removed.
-- **Weight: Regular, not Thin.** Phosphor ships six weights (Thin, Light,
-  Regular, Bold, Fill, Duotone). Thin's hairline stroke is drawn for large
-  display use; most of this app's icons render at 14–18px (row-action
-  buttons, table cells, small toolbar buttons), where a hairline stroke loses
-  legibility and reads as washed-out next to Poppins 600/700, the weight this
-  app's type leans on throughout (The Weight-Not-Size Rule). Regular is the
-  closest match to Boxicons' existing stroke weight, so the icon-set swap
-  doesn't also silently shift the app's visual weight. Reach for Bold only if
-  a specific icon needs more presence than Regular gives it at its actual
-  render size — not as a blanket choice.
-- **Loading:** the full official web-font bundle via jsDelivr
-  (`https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css`,
-  pin the version), **not a subset build.** This app already got burned once
-  by Boxicons' CDN "basic" subset silently missing glyphs (see the
-  `bx-transfer` incident under Table status indicators below) — Phosphor's
-  jsDelivr bundle ships the complete regular-weight set (1,500+ icons,
-  verified directly against the downloaded CSS+font before adopting it), so
-  that specific failure mode doesn't recur. Markup is two classes:
-  `<i class="ph ph-{icon-name}"></i>` (`ph` = weight class for Regular,
-  `ph-{name}` = the glyph) — a different weight needs its own additional
-  stylesheet link plus its own weight class (`ph-bold`, `ph-thin`, …); this
-  app only loads Regular.
-- **One glyph per meaning, everywhere — a semantic dictionary, not a
-  per-page choice.** The whole point of migrating is that "edit" is always
-  the same icon; picking a different reasonable-looking pencil on each page
-  defeats it. Confirmed mapping so far (extend this table as new pages
-  migrate, don't invent a second glyph for a meaning already listed here):
+**Tablet (768–1023.98px).** TYPE 1 narrows to 420px and its footer buttons go `flex:1;height:44px`
+each (full-width, side by side, replacing the desktop's right-aligned natural width). TYPE 2 narrows
+to 380px (fixed during the 4j refinement pass — the reference's own card was already drawn at
+380px, its label just used to misname it "480px"; the code briefly matched neither number at 420px,
+now corrected to the reference's actual 380px), drops to one field column, and its close button
+grows to 36px — same numbers/reasoning as every other tablet touch-target bump elsewhere in gl-v2
+(Select, Field).
 
-  | Meaning | Class |
-  |---|---|
-  | Search | `ph-magnifying-glass` |
-  | Edit | `ph-note-pencil` |
-  | Delete | `ph-trash` |
-  | Add / create | `ph-plus` |
-  | Columns (colvis) | `ph-columns` |
-  | Print | `ph-printer` |
-  | Excel / spreadsheet export | `ph-file-xls` |
-  | Pagination previous / next | `ph-caret-left` / `ph-caret-right` |
-  | Pagination first / last | `ph-caret-double-left` / `ph-caret-double-right` — a real icon, unlike Boxicons (see Table pagination controls) |
-  | People / clients | `ph-users` |
-  | Confirm / check | `ph-check` |
-  | Status: Open | `ph-circle` |
-  | Status: Bezig / in progress | `ph-clock` |
-  | Status: Bereikt / done (outline form) | `ph-check-circle` — the filled-circle *table* exception still uses bare `ph-check`, see Table status indicators |
-  | Status: Niet van toepassing | `ph-minus-circle` |
-  | Status: Geblokkeerd | `ph-prohibit` |
-  | Warning / linked-items badge | `ph-warning-circle` |
-  | Change status (action, distinct from any status glyph above) | `ph-repeat` |
-  | Sync / refresh from source | `ph-arrows-clockwise` — deliberately not `ph-repeat`, which already means "change status" in this feature; don't reuse one action glyph for two different actions in the same feature |
-  | Automation trigger indicator | `ph-lightning` |
-  | Jump to today | `ph-target` |
-  | Filter / options | `ph-funnel` |
-  | Task / checklist | `ph-list-checks` |
-  | Grid / matrix view | `ph-grid-four` |
-  | Timeline / sequence of steps | `ph-flow-arrow` |
-  | Flag / milestone | `ph-flag` |
-  | List view | `ph-list` |
-  | Branch / process start | `ph-git-branch` |
-  | Suppliers / contractors (topbar) | `ph-hard-hat` |
-- **The topbar page-icon (`SetPageHeader`'s first argument) matches the page's
-  own subject, not a generic folder/file glyph — and the empty-state icon on
-  that same page matches the topbar icon too, not a separate choice.**
-  `ph-users` for Klanten, `ph-hard-hat` for Leveranciers (construction
-  subcontractors — deliberately not the more generic `ph-buildings`, since
-  this app's own domain is construction, see PRODUCT.md). Established on
-  `DetailClients`/`DetailContracts`; carry the same discipline into the next
-  page migrated — check `SetPageHeader`'s icon argument for a subject-specific
-  choice, don't default to whatever the old `bx-*` mapped to literally.
-- **Migrating `DetailContracts` surfaced two real, pre-existing bugs unrelated
-  to icons — fix them when you find them mid-migration, they're not optional
-  polish.** (1) The Leveranciers-tabel's DataTable `language` object never
-  overrode `paginate` at all, so it showed DataTables' hardcoded default
-  *English* words ("First"/"Previous"/…) — not stale Dutch, no Dutch ever
-  existed there. Added the same icon-based `paginate` block the other two
-  tables use. (2) `.js-add-bijbestelling` was a bare `<a href="#">` on this
-  page specifically, while its two other usages
-  (`Projecten/DetailContract.cshtml`, `EditContract.cshtml`) already use
-  `<button type="button">` — the shared click handler
-  (`_BijbestellingModal.cshtml`) doesn't care which, so this was a silent
-  inconsistency with no functional symptom. Made it a `<button>` here too,
-  matching its own established convention elsewhere. Also cleaned up a
-  leftover dead CSS rule (`#datatable-clients-list_wrapper .page-link i + i`)
-  from before the Klanten-tabel had real double-caret icons — a reminder to
-  actually delete a workaround's CSS when removing the workaround, not just
-  the markup that used it.
-- **A hidden legacy script rewrites icons inside any table's "Acties" column
-  — it needs to recognize `ph-*` too, or it silently destroys them.**
-  `custom.js` (global, every page) finds every table with a header cell
-  reading exactly "Acties" and runs each icon in that column through
-  `replaceWithBoxIcon()`: if the icon doesn't already start with `bx`, it
-  looks for an `fa-` class to remap to a `bx-*` equivalent, and — critically
-  — **falls back to a generic `bx-dots-horizontal-rounded` (three dots) icon
-  with no warning if it finds neither.** A freshly-migrated `ph-note-pencil`/
-  `ph-trash` matches neither condition, so every Acties-column icon on
-  `Projecten/DetailClients.cshtml` silently became three dots the first time
-  this was tested live — not a CSS problem, a JS one, and easy to miss
-  because nothing errors. Fixed by teaching `replaceWithBoxIcon` that
-  `ph`/`ph-*` also counts as "already a real icon, leave it alone" (same
-  treatment `bx-*` already got). **Whenever migrating a page whose table has
-  an "Acties" column header, verify the row-action icons after
-  migrating — this script runs globally and its default assumption (`bx-*`
-  is a real icon, other icon fonts aren't) is now half wrong.**
+**Mobile (<768px) — the two types deliberately diverge here.** TYPE 1 becomes a **bottom sheet**,
+same recipe as the row-actions sheet and the bookyear dropdown's own mobile panel: `.modal-dialog-
+centered` is already a flex container (`align-items:center`), so tipping just that one property to
+`flex-end` is enough — no `!important` needed to fight Bootstrap's own inline `display:block` on
+`.modal`, because that inline style lives on `.modal` itself, not on the alignment property being
+overridden. A drag-handle (`::before`, same dashed-grey token as every other gl-v2 sheet) marks the
+sheet's top edge, and the footer switches to `flex-direction:column-reverse` — the buttons' *DOM*
+order stays Annuleren-then-primary (keyboard/reading order untouched), the CSS reversal alone puts
+the primary action visually on top, matching the reference's own "primaire actie bovenaan" without
+needing the caller to reorder markup per breakpoint.
 
-### Progress bars (signature — `gl-pg-bar`)
-- 4px tall, 2px radius, `#e9ecef` track. Fill is a fixed left-to-right gradient
-  `#d1d5db → #6b8f80 → #0a5a3b` (low → mid → high) clipped by width, so the same
-  bar communicates *how far along* and *how good* at once. Standalone
-  `gl-pg-bar-laag/midden/hoog` classes give the three solid stops.
+TYPE 2 becomes **full screen**, not a sheet — a sheet would halve the available window the moment a
+field's on-screen keyboard opens, which is exactly the reason the reference itself gives ("geen
+sheet maar een volledige pagina"). Rather than hand-rolling "force `.modal-dialog` to 100vw/100dvh,"
+this reuses Bootstrap's own `.modal-fullscreen-md-down` utility class (added in markup, not CSS) —
+Bootstrap's own `md` breakpoint (768px) happens to land on gl-v2's own phone threshold exactly, so
+there's no reason to duplicate that behavior by hand. gl-v2's layer on top is purely visual: the
+header goes solid Primary-green with a white serif title (same language as the mobile topbar
+elsewhere in gl-v2) and `.gl-v2-modal-close` reorders to the front (`order:-1`) and recolors for the
+dark header; the footer again goes `column-reverse` for a stacked, primary-on-top button order, with
+`env(safe-area-inset-bottom)` padding added at both breakpoints' sheets/full-screens so content
+clears the home-indicator area on notched phones.
 
-### Rol-dashboard componentbibliotheek
-All CSS below lives in `CPMCore/wwwroot/css/dashboard-projectleider.css` —
-the filename is a historical accident (first built for the Projectleider
-dashboard) but every class in it is generic and shared by all three role
-dashboards (Projectleider, CeoCfo, Boekhouding) rendered from `Home/Index`.
-Treat the file as the dashboard component library, not a Projectleider-only
-stylesheet; extend it there rather than forking a per-role copy.
+**Real example: Facturen confirmation modals.** Both of `Views/Invoices/IndexV2.cshtml`'s modals are
+TYPE 1. The **delete** confirmation (`.is-danger`) used to load its content into a magnific-popup/
+`.modal-block` (`Views/Invoices/Index.cshtml`'s older, non-gl-v2 pattern) — it's now a Bootstrap
+modal (`#deleteInvoiceConfirmModal`) whose `.modal-content` is filled via the same AJAX call as
+before, just pointed at a new controller action (`InvoicesController.ModalDeleteV2`, sharing its
+row-lookup/permission logic with the original `ModalDelete` through one extracted private method) and
+a new, from-scratch partial (`Views/Invoices/Modals/_ModalDeleteInvoiceV2.cshtml`) — only the wording
+carried over from the old partial, no markup or class. The legacy `Index.cshtml` page and its
+`ModalDelete` action/partial are untouched, so nothing about the old page's look or behavior moved.
+The **nummeren** (issue) confirmation (`.is-warning`) was already a plain Bootstrap modal; it's now
+skinned the same way, no controller/partial changes needed since its content was always static markup
+in the page itself. Its confirm button was originally `.gl-v2-btn-primary` (green) despite the
+modal's own warning tone — a real mismatch the 4j refinement pass caught and fixed to
+`.gl-v2-btn-warning`, matching the reference's own warning-modal example (gold confirm button, not
+green). `#invoiceProcessingModal` (a transient "please wait" spinner, not a TYPE 1/2 confirmation or
+form) is deliberately left as plain Bootstrap styling — it doesn't fit either type, and reskinning it
+wasn't asked for.
 
-**KPI-strip (`gl-kpi-strip`)**
-- Row of `card-featured-left` cards (Bootstrap admin-theme component), one
-  icon + number per tile via `widget-summary`/`summary-icon`.
-- Established ratio across all three dashboards: 2 neutral tiles
-  (`card-featured-primary`, `bg-primary` icon — portfolio-scale counts) + 2
-  severity tiles (`card-featured-danger`/`card-featured-warning` border,
-  `gl-kpi-icon-danger`/`gl-kpi-icon-warning` icon fill,
-  `gl-kpi-amount-danger`/`gl-kpi-amount-warning` text colour). Not a hard
-  rule, but breaking it on a new dashboard should be a deliberate choice, not
-  an accident.
-- Hidden entirely below 768px (`custom.css`, `.gl-kpi-strip { display:none }`
-  under `max-width:767.98px`) — mobile keeps the dashboard chrome minimal.
+### Meldingen (toasts)
+Design-handoff optie 4g ("Mobiele filters, foutmelding, modals en meldingen (toasts)"), the
+"MELDINGEN — TOASTS" part specifically. Generic, reusable, project-wide component — one shared
+container (`#gl-v2-toast-container`, rendered once in `_LayoutV2.cshtml`) rather than a per-page
+element, filled/emptied through `window.GlV2Toast.show(opts)` / `.dismiss(el)` (`gl-v2-shell.js`).
+`opts`: `tone` (`success`/`danger`/`warning`/`info`, defaults to `info`), `title`, `body`, optional
+`icon` (a Phosphor class overriding the tone's default glyph), optional `action` (label — clicking
+it dismisses the toast and calls `onAction`), optional `sticky` (keep it even for a non-`danger`
+tone). Card: `.gl-v2-toast` (12px radius, white, the same flyout-strength shadow as the Type 1/2
+modals) — icon circle (`.gl-v2-toast-icon`, tone-tinted exactly like `.gl-v2-modal-icon`: success
+uses `--gl-v2-primary`/`-tint`, danger `--gl-v2-danger`/`-tint`, warning `--gl-v2-warning`/`-tint`
+(the same token the 4j refinement pass split off from decorative Gold), info a flat neutral
+`#EDEFEB`/`--gl-v2-muted`), title (sans 600/12.5px), body (muted, 11.5px/1.5), an optional action
+link, and — desktop/tablet only — a `ph-x` close button (the reference's own literal "×" glyph is
+replaced with a real Phosphor icon, per the existing Icons rule below: every gl-v2 icon is a
+confirmed Phosphor Regular glyph, not ad-hoc text).
 
-**Aandachtspaneel / meldingencentrum (`gl-mc-*`)**
-- Card with three severity-named groups, always in this order: `gl-mc-urgent`
-  ("ACTIE VEREIST", `--danger-tint`/`--danger-text`), `gl-mc-normal` ("OP TE
-  LOSSEN"/"TE VERWERKEN", `--warning-tint`/`--warning-text`), `gl-mc-info`
-  (collapsible, `--info-tint`/`--info-text` — Taupe Grey, deliberately never
-  blue). Each `gl-mc-item` is icon + text + a `gl-mc-btn-bekijk` deep link;
-  Projectleider's construction-meldingen additionally get a snooze button
-  (`gl-mc-btn-snooze`).
-- Sticky on desktop (`gl-mc-col`, ≥992px, offset `var(--topbar-height) + 10px`)
-  when the panel sits beside a tall scrolling grid (Projectleider, CeoCfo).
-  Boekhouding has no grid beside it, so it opts out via the `gl-mc-body-static`
-  modifier (removes the artificial `max-height`/scroll and lets the card grow
-  with its content instead).
-- Empty state: `gl-mc-empty`, a muted check-circle + "niets dat aandacht
-  vraagt"-style copy — always show this rather than an empty card body.
+**CSS Grid, not flexbox, for the card.** Icon/title/body/action/close are five flat grid items
+(`grid-template-areas`), not title+body nested in their own wrapper div. The reason: mobile moves
+the action link from "beside the text, right-aligned" to "under the text, in the same column" —
+flexbox has no way to relocate a sibling into a different parent per breakpoint, but
+`grid-template-areas` can reposition any item anywhere, purely in CSS, off the exact same flat DOM
+`gl-v2-shell.js` always builds. No JS branching needed for the two layouts.
 
-**Werf-kaart grid (`gl-werf-*`)**
-- Card: fixed 250px photo (`gl-werf-foto`) with a bottom-gradient overlay
-  (`gl-werf-overlay`), a status chip top-right (`gl-status-chip` +
-  `sc-groen`/`sc-geel`/`sc-rood`/`sc-donker`), an optional warning badge
-  bottom-left (`gl-warn-badge`, shown when voortgang flags a warning) and,
-  CeoCfo-only, a company badge top-left (`gl-company-chip`, since that grid
-  spans every issuer company). Body: name, gemeente, the two
-  fysiek/financieel `gl-pg-bar` rows, and a footer with delivery countdown or
-  "Opgeleverd op …".
-- `.gl-werf-col` is a flex column (not `height:100%` on the card) specifically
-  so an optional fixed-height header — the drag/arrange bar below — and the
-  card can split a `align-items:stretch`-assigned row height correctly; see
-  the comment at the top of that rule before changing either.
-- **Rangschikken (drag-to-reorder)** — Projectleider's "Mijn Werven" only.
-  `gl-arrange-toggle` switches the grid into arrange mode; each card gets a
-  `gl-arrange-bar` (drag grip `gl-drag-grip` + `gl-arrange-btn` up/down
-  buttons, both real keyboard-operable controls, not drag-only). Dragging
-  uses jQuery UI Sortable with a **cloned** helper appended to `<body>`
-  (`.gl-werf-col.ui-sortable-helper`, `z-index:3000`) rather than the
-  original node — the original's width comes from Bootstrap column
-  percentages and this dashboard's sticky/relative ancestors, which fights a
-  naive `position:absolute` drag. `gl-werf-placeholder` marks the drop slot.
-  Pin toggle (`gl-pin-toggle`, "vastgezet" projects outside a PM's own
-  assignment) is a sibling of the card, not nested inside its `<a>`.
+**Two locations, by type — the reference's own rule, read carefully.** Toasts (any tone, including
+a *failed* async result like "Verzenden mislukt") live bottom-right on desktop/tablet. The
+reference's explanatory text names two exceptions to that single spot, and it's easy to misread the
+first one as a second *toast* location — it isn't: **a blocking validation error** (one that
+prevents an action from even starting, e.g. a required field) gets shown **inline**, next to the
+field or above the table, and is **not part of this component at all** — no inline-error component
+was built here, since nothing in this pass needed one (Facturen/IndexV2's table is server-rendered
+from the initial request, so it has no "table failed to load" ajax-failure case to wire one to). The
+second, real exception is breakpoint-based, not type-based: **mobile** moves the *whole* toast stack
+from bottom-right to **top, under the topbar** (`top: 72px` — the 62px topbar plus a 10px gap) so it
+never sits under the bottom quick-actions bar or a thumb. Tablet keeps the desktop corner, just
+narrower (380px, matching the reference's own "TABLET · RECHTSONDER, 380PX BREED" label) with a
+bigger icon/text and no × (see below).
 
-**Snelacties (`gl-snelactie*`, `gl-sa-*`)**
-- Two item shapes: `gl-snelactie` (accordion trigger, expands a
-  `gl-sa-submenu` of `gl-sa-subitem` deep links — used when the action needs
-  a project picked first) and `gl-snelactie-direct` (a plain link/button for
-  an action needing no per-project context).
-- Projectleider additionally ships a phone-only bottom nav
-  (`custom.css`, `.gl-mob-nav`, `d-md-none`) as a thumb-reachable subset of
-  the same actions; CeoCfo/Boekhouding rely on the Snelacties card alone
-  (`d-none d-md-block` — hidden only below 768px, not below 992px, so tablets
-  keep the full action set).
+**Auto-dismiss, persistence, and the swipe gesture.** Any non-`danger` toast self-dismisses after 5
+seconds (`AUTO_DISMISS_MS`); a `danger` toast (or one passed `sticky: true`) stays until the user
+closes it — the reference's own rule ("fouten blijven staan tot ze gesloten worden"). At most 3
+toasts show at once (`MAX_VISIBLE`); a 4th push silently drops the oldest rather than growing the
+stack unbounded. Tablet and mobile show no × — "kruisje vervalt — vegen naar rechts sluit" — so
+`enableSwipeDismiss()` (Pointer Events, works for mouse and touch alike) lets a rightward drag past
+an 80px threshold dismiss the card; it's wired on every toast regardless of breakpoint (harmless
+extra affordance on desktop, where the × still does the same job), not conditionally on screen
+width, since there's no reason to withhold a working gesture just because a viewport happens to be
+wide.
 
-### Projecthub-componentbibliotheek (`Projecten/Detail`)
-All CSS lives in `CPMCore/wwwroot/css/projecten-custom.css` (the page also
-links `dashboard-projectleider.css` to reuse `gl-mc-*`). The detail page is a
-single-project hub: **Operate** mode — scan project state, then jump into a
-sub-area. Motion here serves feedback/state only; no page-load choreography.
+**Replaces the existing PNotify-via-TempData system, on gl-v2 pages only.** `_Layout.cshtml` (the
+current, shipped shell) still shows a PNotify popup for any `TempData["Message"]` a controller set
+via `BaseController.AddMessage(type, message, title)` — a pattern used by dozens of controllers app-
+wide, not just Invoices. `_LayoutV2.cshtml`'s own `$(window).on('load', ...)` block reads that exact
+same `TempData` contract but now calls `GlV2Toast.show(...)` instead of `new PNotify(...)`, with a
+small tone remap (PNotify's `type` was `success`/`error`/`notice`/`info` → `success`/`danger`/
+`warning`/`info`). **This means every existing `AddMessage(...)` call anywhere in the app already
+shows as a gl-v2 toast the moment a user is on a gl-v2 page and that redirect lands — no per-
+controller changes were needed or made.** `_Layout.cshtml` itself is untouched; PNotify's own
+CSS/JS includes stay in `_LayoutV2.cshtml` too (some page-level `@@section PageScripts` still call
+`new PNotify(...)` directly for their own reasons — out of scope to hunt those down and convert them
+in this pass) — only the one shared TempData-driven block changed.
 
-**Hero-blok — twee rijen van twee kaarten (`gl-detail-hero-row-1/-2`, `gl-detail-hero-cell`)**
-- Rij 1: projectfoto (`col-xl-4`) + "Aandacht vereist" (`col-xl-8`). Rij 2:
-  "Algemene gegevens" (`col-xl-4`) + "Eenheden & verkoopstatus" (`col-xl-8`).
-- **Gelijke hoogte per rij, puur CSS, geen JS-meting.** Rij 1 heeft ≥xl een
-  *vaste* hoogte (420px) omdat de foto geen eigen inhoudshoogte heeft en de
-  meldingenlijst anders wegrent. Rij 2 laat **"Algemene gegevens" de hoogte
-  bepalen** (toont altijd al haar rijen, scrollt nooit); de eenheden-tabel
-  staat in een `gl-detail-units-scroll`-wrapper met de scrollzone
-  `position:absolute; inset:0`, zodat de tabel géén hoogte aan de flow
-  toevoegt en de kaart nooit hoger wordt dan de buurkaart. Bootstrap's
-  `align-items:stretch` trekt hem dan naar diezelfde hoogte; de tabel scrollt.
-  Dezelfde absolute-uit-de-flow-truc als de projectfoto (`gl-detail-photo`
-  `position:absolute; inset:0` met de edit/verwijder-knoppen erbovenop).
-- Onder xl stapelen de kaarten op natuurlijke hoogte; de scrollzones vallen
-  terug op een gewone `max-height`.
-- Een eerdere JS-hoogtesynchronisatie (`syncHeroColumnHeight`) is bewust
-  verwijderd — die veroorzaakte telkens "grote witruimte onder een kaart".
+**Real example: Facturen.** `InvoicesController.Delete` already calls
+`AddMessage("success", "Factuur verwijderd.", "Factuur")` before redirecting back to `Index` (which
+dispatches to `IndexV2` on a gl-v2 session) — deleting any invoice from `Facturen - BCO` (or any
+other issuer) now shows a gl-v2 success toast on the reload instead of a PNotify popup, with zero
+Invoices-specific code written for it. `BookInvoices`/`Issue`'s own `AddMessage("error", ...)` calls
+(missing permissions, no linked Octopus dossier, etc.) show the same way, as danger toasts.
 
-**KPI-strip (`gl-kpi2-*`)** — een *aparte* variant van het dashboard
-`gl-kpi-strip`, niet dezelfde component.
-- 7 tegels (op uitdrukkelijke gebruikerskeuze), flex-wrap met `flex:1 1 150px`.
-  Elke tegel is een `<a>` naar het bijhorende onderdeel met een echte
-  `aria-label`. De 3 minst dringende tegels krijgen `gl-kpi2-tile-col--sec` en
-  vallen weg onder 576px zodat de kern zichtbaar blijft.
-- Rand = hairline (`--border`); het *icoon* draagt de kleur — `--primary`
-  standaard, `--danger` alleen wanneer de tegel een probleem meldt (Werkdagen
-  te laat, Open punten > 0). Geen andere accentkleuren (One Green Rule).
-- `gl-kpi2-ring` = donut-icoon via `conic-gradient(var(--kpi-color) calc(var(--pct)*1%), …)`.
-  `--pct` is als `@property <number>` geregistreerd zodat de ring bij het
-  eerste zien naar zijn waarde veegt (JS zet 'm even op 0 en terug).
+### KPI-kaarten
+Design-handoff optie 7a ("KPI-kaarten — max 8 naast elkaar op desktop, herschikt op tablet en
+mobiel") — the first piece of the gl-v2 **Dashboard** pass (`Views/Home/*`), distinct from the
+Facturen work above. Generic, project-wide component (`Views/Shared/GlV2/_KpiStrip.cshtml` +
+`Models/GlV2/GlV2KpiItemVm.cs`), not dashboard-specific — any page can render a
+`List<GlV2KpiItemVm>` (`Label`, `Value`, `IconClass`, `Tone`: `Primary`/`Warning`/`Danger`) through
+it.
 
-**Voortgang & budget-balken (`gl-vb-*`)** — dashboard-`gl-pg-bar` is een
-gradient-in-één-balk; dit is een aparte set van vier gelabelde balken in één
-kaart. Eén kleur per maatstaf, allemaal **systeemtokens**:
-Fysiek = `--primary`, Financieel = `--custom-accent`, Verkocht = `--secondary`,
-Budget besteed = `--info`; `gl-vb-over` (budget > 100%) wisselt naar `--warning`
-als semantisch signaal. Track `rgba(0,0,0,.07)`, fill `border-radius:999px`.
-Bij mount vullen de vier balken links→rechts (`@keyframes` `scaleX(0→1)`,
-0,6s ease-out, eenmalig).
+**Two card shapes, one shared DOM — but *not* the toast card's flat-grid trick.** First attempt
+copied the toast card's approach directly: icon/label/value as three flat `grid-template-areas`
+items, no wrapper. That broke visibly — "ruim" needs the icon to span both the label row and the
+value row (`"icon label" "icon value"`), and CSS Grid's own spec requires the tracks a spanning item
+covers to grow enough to fit it; with label+value's own tiny content height nowhere near the icon's
+48px, the browser inflated the auto rows unevenly to compensate, showing up as a visible gap between
+title and value the toast card's icon-in-a-single-row case never has to deal with. The reference
+itself, read closely, was never a flat-DOM reflow to begin with: "ruim" is a flex row (icon + a
+*separate* flex column holding label+value snugly together); "compact" is a flex column (a row of
+icon+label, then value on its own line) — two genuinely different nestings, not one reordered via
+media query. Fixed by matching that: `.gl-v2-kpi-text` wraps label+value in the DOM; under compact
+it's `display: contents` (dissolves the wrapper, label/value go back to being two independent grid
+items — the icon only ever spans *one* row there, so the original inflation problem can't occur);
+under "ruim" (`:not(.is-compact)`, `≥1024px`) `.gl-v2-kpi-card` itself switches from `display: grid`
+to a plain flex row, and `.gl-v2-kpi-text` becomes a real `flex-direction: column` holding label and
+value tight together as their own block beside the icon — exactly the reference's own structure,
+reached from one shared markup via `display: contents` rather than two server-rendered variants.
 
-**Sleutel/waarde-lijst "Algemene gegevens" (`gl-detail-kv`)**
-- `gl-detail-kv-row` = grid `20px 116px 1fr` (icoon | label | waarde), hairline
-  tussen de rijen. Icoon `--primary`, label `--gl-detail-text-aa`, waarde
-  `--ink`/700. Onder 420px valt de labelkolom weg (`grid-template-columns: 20px 1fr`).
+**Which shape, when — driven by item count, not breakpoint alone.** The reference shows "ruim" only
+at desktop width and only up to 4 cards; 5-8 cards at desktop, and tablet/phone regardless of count,
+always get "compact." The partial counts `Model.Count` and adds `.is-compact` to the strip from 5
+items up — the CSS never re-counts, it only ever reads that one class. Desktop column count
+(`--gl-v2-kpi-desktop-cols`, a CSS custom property set inline by the partial) is `Math.Min(count, 8)`,
+or `4` once there are more than 8 — "boven de acht: nooit een negende kolom maar een tweede rij van
+vier," so the grid wraps to a second row instead of ever going to 9 across. Tablet and phone ignore
+count entirely and always use their own fixed column count (4 / 2) — the reference's per-count
+distinction is drawn only for desktop.
 
-**Kaart-header actielink (`gl-detail-card-header` + `gl-detail-card-edit`)**
-- Elke hub-kaart heeft dezelfde header: titel links (klikbaar naar de
-  volledige pagina), rechts een pill `gl-detail-card-edit` (bx-icoon + label,
-  ≥40px tikgebied, hover = `--lightgreen`). Gebruikt op alle zes de kaarten —
-  Bewerken / Facturatieblad / Nacalculatie / Alle documenten / Alle foto's /
-  Alle eenheden. Nieuwe kaarten volgen dit, geen ad-hoc `text-muted small`-link.
+**One breakpoint axis, not two.** The reference separately notes tablet portrait shows 3 per row,
+landscape 4 ("de kaart zelf verandert niet") — an orientation-based split. Not built: gl-v2's
+breakpoints have been width-only everywhere else in this pilot (768px/1024px, never
+`orientation:`), and a landscape tablet's width mostly already crosses the 1024px desktop threshold
+in that same scheme anyway — adding a second, orientation-based axis just for this one component
+would be a real, un-asked-for precedent, not a faithful copy of the reference's own device-based
+thinking translated into gl-v2's already-established width-based one.
 
-**Documentrij (`gl-doc-item`) & meldingsrij (`gl-mc-item` op deze pagina)**
-- **De hele rij is de link.** `gl-doc-item` en (detail-scoped) `gl-mc-item`
-  zijn een `<a href>` i.p.v. een `<div>` met een geneste link; de "Open" / de
-  "Bekijk ›" is nog enkel een visueel label (`<span>`). Zo werkt middenklik /
-  openen-in-nieuw-tabblad en is de rij toetsenbord-focusbaar (focusring
-  `outline-offset:-2px`). Hover: lichte achtergrond (`--lightgreen`) resp.
-  `filter:brightness(.97)` op de getinte meldingsrij.
-- Bestandstype-badge `gl-doc-badge` (34px, `--radius`): PDF `--danger`,
-  Word `--custom-accent`, Excel `--primary`, CAD `--warning`, beeld `--info`.
+**Mobile "Toon alles."** The reference's own rule — "de vier belangrijkste eerst; de rest achter
+'toon alles' zodat de werven zichtbaar blijven" — is phone-only: the partial renders a toggle
+button whenever there are more than 4 items, but the button (and the `:nth-child(n+5) { display:
+none }` rule hiding cards 5+) is itself only visible under 768px via CSS — at tablet/desktop widths
+the button exists in the DOM but stays hidden and every card shows. `initKpiToggle()`
+(`gl-v2-shell.js`, delegated on `document` like every other gl-v2 toggle) flips `.is-expanded` on
+the strip and swaps the button's expand/collapse label spans.
 
-**Deelpagina-chiprij (`gl-detail-subnav`)** — een quiet wrappende rij pill-links
-naar alle deelpagina's, **enkel < 768px** zichtbaar (`@media (min-width:768px){display:none}`),
-waar het `DetailMenu` (inner-menu) ingeklapt zit. Samen met `gl-detail-mobile-title`
-(projectnaam in de body, ook enkel < 768px) de oriëntatie op de telefoon.
+**Real example: Projectleider dashboard.** `Views/Home/_DashboardProjectleider.cshtml`'s existing
+KPI strip (4 cards: Actieve projecten / Open punten / Urgent / Achterstallig — Bootstrap
+`.card-featured-left`/`.widget-summary` markup from the legacy Porto admin theme, not anything in
+`dashboard-projectleider.css` itself, which only ever supplied the severity border/icon-color
+overrides) is now branched on the existing `useGlV2Layout` flag: the `else` branch is the untouched
+legacy markup; the gl-v2 branch builds the exact same four values (`nietOpgeleverd.Count`,
+`Model.OpenIssuesCount`, `urgentMeldingen.Count`, `overdueCount`) into `GlV2KpiItemVm`s with the same
+tones (Primary/Primary/Danger/Warning) the legacy cards already used, and renders `_KpiStrip`. Icons
+moved Boxicons → Phosphor per the existing icon rule: `bx-buildings`→`ph-buildings`,
+`bx-alert-circle`→`ph-warning` (not `ph-warning-circle` — that glyph is already used for the "Punt"
+mobile quick-action elsewhere in gl-v2's own Home chrome, and reusing it for "Urgent" too would put
+two identical icons in the same KPI row), `bx-task`→`ph-warning-circle` (for "Open punten," matching
+that same "Punt" quick-action glyph on purpose — same underlying concept), `bx-timer`→`ph-timer`.
+The other 4 role dashboards (`_DashboardCeoCfo`/`Boekhouding`/`Ontwikkelaar`/`Verkoper`) each still
+have their own Bootstrap KPI strip, untouched — same component, same VM, ready for them whenever
+that pass happens; this round only converted the one with the most concrete, already-real data to
+verify against.
 
-**Beweging** — één geauthoreerd moment (de vier `gl-vb`-balken + de twee
-`gl-kpi2`-ringen die bij mount naar hun waarde bewegen); de rest is
-≤150ms hover/press-bevestiging op wat aanklikbaar is (KPI-tegels 1px lift,
-`gl-detail-thumb-*` foto-knoppen scale 1.09/0.93 + icoon 1.12, mediaminiaturen
-1.04). Alles heeft een `prefers-reduced-motion`-pad dat de beweging weglaat maar
-kleur/toestand behoudt.
+### Contextmenu (generic)
+Extraction of Invoices' "···" row-actions menu recipe (`gl-v2-invoices.css`/`.js`,
+`.gl-v2-row-menu`) into the shared shell (`gl-v2-shell.css`/`.js`, `.gl-v2-menu` +
+`window.GlV2Menu`) — that recipe had been rebuilt ad hoc 3-4 times already (row menu, boekjaar
+select panel, rail flyouts, mobile quick-actions sheet), each its own trigger/position/backdrop
+code. This is the first shared version: a floating panel (`≥768px`, positioned via
+`getBoundingClientRect`, same math as `positionRowMenu`) and a bottom sheet with scrim (`<768px`,
+CSS-only — JS skips positioning below that width, same "just skip it" convention used everywhere
+else in gl-v2). Deliberately has no "always-visible inline row" third state the way Invoices'
+version does — every caller here opens from a real button, never an always-shown icon strip.
+Trigger appearance is intentionally left to the caller (the snooze clock icon looks nothing like a
+"···" button); only the panel/items are themeable. First consumer: the meldingenscherm's snooze
+menu below.
 
-**Coachmark-tour** — `SequenceKey = "Projects.Detail.Redesign.Tour"` in
-`CoachmarkRegistry.cs` (PageKey `Projects.Detail`, gezet via
-`ViewData["CoachmarkPageKey"]`): 4 stappen — topbar-acties (verplaatst),
-klikbare KPI-strip, "Voortgang & budget"-kaart, "Aandacht vereist".
+### Meldingenscherm
+Design-handoff optie 7b ("Meldingenscherm — paneel op desktop, volledig scherm op mobiel"). Second
+piece of the gl-v2 **Dashboard** pass, after the KPI strip. Generic component
+(`Views/Shared/GlV2/_MeldingenPaneel.cshtml` + `_SnoozeMenu.cshtml` +
+`Models/GlV2/GlV2MeldingenPanelVm.cs`), wired into `Home/Index` for the Projectleider dashboard
+first (same "convert the one with concrete real data first" call as the KPI strip — the other 4
+role dashboards keep their own, simpler meldingen sections untouched for now).
 
-### Dossieroverzicht-componentbibliotheek (`ProjectDossiers/Index`)
-CSS in `traject.css` (gedeeld met `ProjectTraject`, zie de `.gl-um-*`-hergebruik
-hieronder). Nutsaanvragen-tab: **Operate** mode — een dichte statustabel/-matrix
-die dagelijks bekeken wordt, geen showcase.
+**One DOM, three presentations, same trick as the KPI strip's "shrink to fit" work.** `.gl-v2-mc-
+panel` is `display:none` by default; a `≥768px` override forces `display:flex` back on regardless
+of open/closed state (the desktop panel has no open/closed concept — it just always sits in the
+dashboard column); a `768–1023.98px` override instead makes `.is-open` a `position:fixed` popover
+(360px, max 420px tall then scrolls — the reference's own note); below `768px`, `.is-open` is a
+full-screen overlay. Two header variants render server-side every time (`.gl-v2-mc-header` for
+desktop/tablet, `.gl-v2-mc-mobile-header` + filter chips for phone) and CSS shows exactly one —
+same "two variants, CSS picks" pattern as the desktop/mobile userbox elsewhere in gl-v2, chosen
+over building the header client-side. The bell trigger itself (`.gl-v2-topbar-bell`, `_LayoutV2.
+cshtml`) is optional chrome, gated on `ViewData["HasNotificationsBell"]` (same pattern as
+`@@section MobileQuickActions`'s own `HasMobileQuickActions` flag) — no bell renders on a page
+that never gave the layout anything to open.
 
-**Sectiekop op paginaniveau (`gl-dossier-section-head` / `-title`)** — zie
-Modals hierboven voor de volledige toelichting waaróm dit een eigen klasse is
-i.p.v. `.gl-mp-modal-section-title` hergebruikt: `.92rem`/700/`--ink` boven een
-volle-breedte hairline, de head wrapt titel + eventuele inline-actie
-(bv. de "Meerdere selecteren"-toggle) op één rij.
+**Why the badge count has to be computed in the controller, not the partial.** The obvious place
+to compute "how many meldingen" is right where the groups themselves get built —
+`_DashboardProjectleider.cshtml`. But that runs as part of `@@RenderBody()`, which executes
+*after* `_LayoutV2.cshtml`'s topbar has already rendered; `ViewData` set inside the partial simply
+can't reach back up into already-emitted markup. `HomeController.Index()` therefore re-derives
+just the count (same three sources, same project filter, same danger/warning-only rule as "de
+teller telt alleen de eerste twee") before returning the view, and sets `ViewData[
+"NotificationsBellCount"]` there. This is the one piece of this feature with real duplicated
+logic between controller and partial — accepted rather than restructuring `HomeModel` into a
+"dashboard sections know their own counts up front" shape, which is a bigger refactor than this
+pass earned.
 
-**Eenheden-matrix (`gl-unit-matrix`, hergebruikt van `ProjectTraject`) — hairline-rijen, geen rasterlijnen**
-- **Geen `table-bordered`.** Bootstrap's volle rasterlijnen rond elke cel lazen
-  als een spreadsheet, niet als hetzelfde rustige oppervlak als de
-  "Algemene aansluitingen"-lijst erboven (zelfde hairline-rijtaal als
-  `gl-doc-item`). Enkel horizontale rijlijnen via
-  `--bs-table-border-color: var(--border)` op de tabel — Bootstrap's kale
-  `.table` geeft die al gratis zodra `table-bordered` weg is, geen extra
-  border-CSS per cel nodig.
-- **Eén hairline-kader + `--radius` rond het geheel** (`.gl-unit-matrix-wrap`)
-  geeft de matrix dezelfde "één samenhangend blok"-uitstraling als de rest van
-  de kaart, i.p.v. los te zweven onder de lijst erboven. Werkt samen met de
-  bestaande sticky header/eerste kolom: `overflow:auto` clipt de sticky
-  achtergrond netjes tegen de afgeronde hoek.
-- **Rijritme:** 10–12px padding op elke rij-variant (lijstitem, matrixcel,
-  mobiele rij) — voordien liep dit uiteen (10px/4px vs. Bootstraps `table-sm`
-  4.8px), wat als toevallig i.p.v. bedoeld oogde.
-- **Tikdoelen 32px** (`gl-um-cell-add`, `gl-um-cell-check`), niet 28px — een
-  comfortabeler doel zonder de cel te domineren op de huidige rijhoogte.
+**Snooze needs a stable identity for something that doesn't have one.** The three melding sources
+(insurance warnings, project-info flags, contractor comments) are computed live on every page load
+from three unrelated queries — none of them is a real, persisted "Melding" row with its own Id.
+The *existing* (pre-gl-v2) meldingencentrum already solved this the same way this pass does:
+identify a melding by a hash of `projectId|category|tekst`. That old version hashed it client-side
+into a `localStorage` key (`gl-snz-{hash}`) with a hardcoded 7-day expiry and no server
+persistence — snoozing didn't survive a different browser, a cleared cache, or actually meaning
+what the reference's "Morgenochtend/Over 3 dagen/Volgende week/eigen datum" options imply. This
+pass replaces that with a real table (`MeldingSnooze`, migration `043`, `UserId` + `MeldingKey`
+(`CHAR(64)`, a SHA-256 hex digest) + `SnoozedUntil`, unique on `(UserId, MeldingKey)`) and a
+matching `MeldingKeyHelper.ComputeKey(projectId, MeldingType category, tekst)` in
+`CPMCore.Models` — deliberately typed to take the *enum*, not a raw string, because the three
+sources don't agree on category casing (`WarningBO.Category` arrives lowercase from one source,
+title-case from the VM elsewhere) and hashing the raw string would silently produce a different
+key for the same melding depending which code path touched it last. Every caller — the controller's
+badge count, the partial's group-vs-snoozed split, the `SnoozeMelding`/`UnsnoozeMelding` AJAX
+actions — normalizes through `MeldingTypeHelper.FromString` first so they all agree.
 
-**Bulk-selectiebalk (`bulk-bar` / `count-pill`)** — **hergebruik de bestaande
-klassen**, verzin geen nieuwe visuele taal voor "N geselecteerd + acties".
-Origineel gedefinieerd in `admin/document-center.css`
-(`DocumentenCentrum/Index.cshtml`: effen `--primary`-balk, witte
-`count-pill`-badge, `btn-outline-light`-acties); `traject.css` herhaalt dezelfde
-twee regels lokaal omdat `ProjectDossiers/Index.cshtml` dat stylesheet niet
-laadt — geen nieuwe pagina mag hiervan afwijken qua vorm, enkel de host-CSS kan
-verschillen.
+**Snooze menu — two pages, one `.gl-v2-menu`.** `_SnoozeMenu.cshtml` renders both
+`.gl-v2-snooze-page-options` (Morgenochtend / Over 3 dagen / Volgende week / Eigen datum kiezen)
+and `.gl-v2-snooze-page-calendar` inside the same panel; `gl-v2-dashboard.js` toggles which one
+carries `.is-active` instead of closing and reopening a different menu — matters because "Terug"
+needs to return to the exact options list, not a fresh one. The three relative options' sub-labels
+("ma 22 sep · 08:00") are computed client-side *at open time*, not render time or page-load time —
+a dashboard tab left open overnight would otherwise show a stale "morgenochtend" by the time
+someone actually clicks it. The calendar itself (`gl-v2-dashboard.js`, `renderCalendar()`) is a
+plain from-scratch month grid — Monday-first per the reference's own `calHead` (M/D/W/D/V/Z/Z),
+past days disabled, today outlined, selection filled — rebuilt on month navigation; no calendar
+library, this is a small enough widget not to need one.
 
-**Matrixcellen selecteren voor bulk aanmaken (`is-selecting`, `js-nuts-cell-select`)**
-- Een expliciete "Meerdere selecteren"-toggle (niet standaard aan) schakelt
-  lege cellen om van hun losse "+"-actieknop naar een checkbox
-  (`#nuts-um-matrix-region.is-selecting` stuurt de zichtbaarheidswissel,
-  `dossiers.js`) — dezelfde matrix, twee modi, i.p.v. een permanent zichtbare
-  checkbox naast elke actieknop.
-- **Wanneer de bulk-actie server-side maar één waarde tegelijk aankan** (hier:
-  één `NutsType` per `NutsAansluitingBulkCreateBO`-aanroep), sluit de UI de
-  overige kolommen tijdelijk af zodra de eerste cel van een ander type
-  geselecteerd is (`.is-type-locked`, gedimd + `disabled`) i.p.v. stilzwijgend
-  een gemengde selectie toe te laten die de server toch niet kan verwerken.
-  Maak de beperking zichtbaar op het moment van kiezen, niet pas na een
-  mislukte submit.
-- De matrix kent zijn eigen lege cellen al — geef de bulk-modal die selectie
-  direct mee (voorgevinkte eenheden + voorgeselecteerd type) i.p.v. de
-  gebruiker dezelfde informatie een tweede keer in een losse checkboxlijst te
-  laten opzoeken.
+**Toast confirms, "Ongedaan maken" undoes.** On a successful snooze, the row is removed from the
+DOM immediately (no reload) and `window.GlV2Toast.show(...)` fires with the exact "Gesnoozed tot …"
+label the server computed, an `action: "Ongedaan maken"` that calls `UnsnoozeMelding` and reloads
+on success — matching the reference's own line, "Toast bevestigt de keuze." An already-snoozed
+row's own "Nu tonen" button (in the panel's own snoozed-items footer) does the same unsnooze-then-
+reload; reloading rather than patching the item back into its live severity group client-side is a
+deliberate simplification — correct end state, just via a round-trip instead of rebuilding the
+group logic twice.
+
+**Known gaps, left for a later pass.** "Alles gelezen" renders (both header variants) but is
+disabled with reduced opacity and no click handler — read-state persistence is a separate feature
+this pass didn't build, and the Do's/Don'ts "honest disclosed placeholder" rule applies here rather
+than shipping a button that visibly does nothing. The badge count goes stale by however many items
+were snoozed in the current page view until the next reload (the controller-computed number isn't
+re-fetched after a client-side snooze). Tablet's own portrait/landscape distinction from the
+reference isn't built, same reasoning as the KPI strip's identical call. The other 4 role
+dashboards' meldingen sections stay on the legacy, client-side-snooze implementation until they get
+their own conversion pass.
+
+### Progress bar (7c) — global, reusable
+`GlV2ProgressBarVm` (`CPMCore.Models.GlV2`) + `Views/Shared/GlV2/_ProgressBar.cshtml`. Not tied to
+projects — any label/value/percentage triple can render through it. `Tone` (`Primary`/`Complete`/
+`Over`/`Behind`) picks the fill color and, on `Complete`, adds the reference's checkmark; the bar
+itself never compares numbers to decide its own tone — a caller passes the tone it already decided
+on. This split matters because the one caller built so far (the project card, see 7d below) has a
+genuinely business-specific rule for `Behind` (Fysiek noticeably behind Financieel, not any
+Fysiek-vs-Financieel gap at all) that has no business living inside a generic bar component. The
+fill width itself is always `Math.Clamp(Pct, 0, 100)` — an `Over` bar can show "134%" as its
+`ValueLabel` while the visual track still stops at 100%, matching the reference's own over-budget
+example. `ShowValue: false` drops the label/value row entirely for compact contexts (used by the
+project card's mobile row, see below) while keeping the same track/fill/tone markup.
+
+### Project card (7d)
+`Views/Shared/GlV2/_ProjectCardV2.cshtml`, wired into the Projectleider dashboard's "Mijn Werven"
+grid (`_DashboardProjectleider.cshtml`) behind the existing `useGlV2Layout` branch. Reuses
+`ProjectWerfCardVM` as-is — no new query, no new data plumbing — and deliberately keeps every
+functional hook class/id/attribute from the legacy card (`.gl-werf-col`, `.gl-arrange-bar`/
+`.gl-drag-grip`/`.gl-arrange-up`/`.gl-arrange-down`, `.gl-pin-toggle`, `data-project-id`/`-status`/
+`-search`) unchanged, so the dashboard's existing inline jQuery UI Sortable + Pin/Unpin/Reorder AJAX
+needed zero JS changes to work against the new markup — only new `gl-v2-project-*` classes were
+added alongside for presentation.
+
+**Deliberate behavior change from the legacy card.** The legacy `_ProjectWerfCard` silently forced
+progress to 100% and showed a green "Opgeleverd op …" message once the delivery date had passed —
+an assumption, not an actual delivery record. 7d's own stated rule ("bij nadering wordt de tekst
+goud, bij overschrijding rood") is explicit and replaces that guess: the card always shows the real
+Fysiek/Financieel percentages, and only the footer date row's *tone* changes — gold under
+`is-near` (`daysLeft < 14`, not yet overdue) or red under `is-over` (`daysLeft < 0`) — reusing
+`--gl-v2-warning`/an existing danger token rather than inventing a new status color.
+
+**Two DOM shapes, one card, CSS picks.** Same precedent as the Invoices table/mobile-card split:
+the full desktop card and a compact `.gl-v2-project-mobile-row` (58×58 thumbnail + name/location +
+two unlabeled bars) both render inside the same `<a>`, and CSS toggles which is visible per
+breakpoint. A single flexible DOM (the trick used for the KPI/toast cards) didn't fit here — the
+mobile row drops badges, the footer, and the full-size photo entirely rather than just reflowing,
+so it's a genuinely different shape, not a resize of the same one.
+
+**Layout.** Desktop: CSS Grid, `repeat(auto-fill, minmax(300px, 1fr))`. Tablet (768–1023.98px):
+forced to exactly 2 columns (`repeat(2, minmax(0, 1fr))`) per explicit requirement, not
+auto-fill's natural 2-or-3-depending-on-width. Mobile (<768px): single column, desktop-shaped
+elements hidden, `.gl-v2-project-mobile-row` shown instead.
+
+**Rearranging on mobile.** The pin/rearrange chrome (drag grip, up/down arrows) is visually
+restyled but functionally the same Sortable-plus-AJAX system as before. The one real fix: the drag
+grip (both the legacy `.gl-drag-grip` and the new gl-v2 one) now has `touch-action: none`. Without
+it, dragging on a phone was unreliable — the browser could claim a touchmove on the grip as a page
+scroll before `jquery.ui.touch-punch.js` (already loaded globally) got a chance to translate it
+into the synthetic mouse events Sortable needs. This was the actual root cause, not a missing
+library or a Sortable config gap.
+
+**"Mijn Werven" section header.** The vastzetten button (`#mw-add-project`) and the Rangschikken
+toggle (`#mw-arrange-toggle`) got gl-v2 companion classes (`.gl-v2-mw-add-btn`,
+`.gl-v2-mw-arrange-toggle`) added unconditionally rather than behind a markup branch — safe because
+`gl-v2-shell.css` only ever loads on gl-v2 pages, so the same classes are simply inert on the
+legacy dashboard. The toggle's active/inactive icon swap (previously hardcoded to Boxicons in the
+`enterArrangeMode()`/`exitArrangeMode()` JS) now uses Phosphor (`ph-arrows-down-up` / `ph-check`)
+to match the rest of the migration.
+
+### Snelacties-kaart (7f), zoekmodal (7e), tablet-rail/bar (7g)
+The old "Snelacties" card (six accordions, each expanding to a full project list) is gone for gl-v2,
+replaced by `Views/Shared/GlV2/_SnelactiesCard.cshtml`: one active project chosen at the top, after
+which every action is a single click instead of expand-then-pick. Desktop-only — the card renders in
+a `col-xxl-2 d-none d-xxl-block` wrapper, so it only exists at ≥1400px (Bootstrap `xxl`, the same
+breakpoint this dashboard already uses for `col-xxl-8`/`col-xxl-2`). Below that, the mobile
+quick-actions bar/rail (below) is the only place for these actions — never both at once.
+
+**Active project is client-side state, not a new backend column.** `window.GlV2ActiveProject`
+(`gl-v2-dashboard.js`) reads/writes `localStorage['gl-v2-active-project']` on this device, falling
+back to the first *pinned* project (`window.glV2SnelactiesConfig.pinnedProjects`, server-rendered in
+`_DashboardProjectleider.cshtml`) when storage is empty — a new device or cleared cache. Picking a
+project in the picker modal only sets this local state; "Dit project vastzetten" in that same modal
+is what makes the choice durable across devices/logins, by calling the *existing* `PinProject`
+endpoint — same mechanism as pinning a card in "Mijn Werven", not a new one. This is a deliberate
+simplification over a real "last active project" server column, disclosed rather than silently
+dropped: on a second device that never pinned anything, the card falls back to "Kies een project"
+until the user picks (or pins) one there too.
+
+**"OP DIT PROJECT" rows are URL templates, not six lists.** Each of the six project-scoped actions
+(Contract, Punt, Factuur, Wijziging, Nacalculatie, Document) carries a `data-url-template="{id}"`
+attribute built server-side from the *same* `Url.Action(...)` calls the old accordion used — a
+sentinel value (`"__ID__"`) is passed as the route parameter and swapped for the `{id}` placeholder
+afterward, so the real route shape (query string vs. segment) never has to be hand-duplicated in JS.
+`initActiveProject()` rewrites all six `href`s whenever the active project changes. With no project
+chosen, the rows dim and their first click opens the picker instead of navigating (matching 7f's own
+"GEEN PROJECT GEKOZEN" callout) rather than landing on a broken link.
+
+**Project picker is one modal, not a card-anchored popover.** 7f's own mockup draws it as a popover
+under the card's active-project row, but the same picker is also needed from the "Mijn Werven" `+`
+button and the mobile quick-actions bar's "Vastzetten" tile — three different trigger points that
+don't all live near the card. Building it as `#glV2ProjectPickerModal`
+(`Views/Shared/GlV2/_ProjectPickerModal.cshtml`), opened the same way everywhere via
+`data-bs-toggle="modal"`, avoided either duplicating the popover three times or inventing a
+positioning system for a popover triggered from arbitrary places. It reuses the Type-3 zoekmodal
+visual classes (`.gl-v2-modal-search-*`) rather than a fourth CSS family, plus two additions those
+don't have: a "Recent" group (`werfProjects`, client-filtered exactly like the legacy
+legacy `#gl-punt-sheet`, before that sheet itself was retired for gl-v2 — see below) and the "Dit
+project vastzetten" footer action. Two fixes on top of the first pass: each Recent row now shows a
+push-pin glyph next to a project that's already pinned (`Model.PinnedProjectIds`, passed in via a
+new `GlV2ProjectPickerVm` wrapper instead of the bare project list the partial originally took —
+7f's own mockup draws this pin, the first build of the modal had dropped it), and the footer button
+got its own `.gl-v2-modal-search-pin-btn` class instead of reusing `.gl-v2-modal-search-create` (the
+Type-3 "add a new record" button, dashed-border variant) — pinning an existing project isn't
+"create new", and borrowing that class meant any future restyling of the real create buttons would
+silently drag this one along too.
+
+**Klant/Leverancier zoeken (7e) is a real modal now, not a bottom sheet.** New generic component:
+`GlV2SearchModalVm` + `Views/Shared/GlV2/_SearchModal.cshtml`, rendered twice (Klant, Leverancier)
+with the *existing* `Lookup` endpoints (`Leveranciers/Lookup`, `Klanten/Lookup`) — no backend change.
+Centered ~440px on desktop; full screen on mobile via Bootstrap's own `.modal-fullscreen-md-down`
+(same convention already used by the Type-2 form-modal, and for the same reason: a bottom sheet plus
+an on-screen keyboard would halve the usable window). One disclosed simplification: `Lookup` returns
+only `{ id, text }`, no secondary line (VAT number, address) — the result row shows name and an
+initials avatar only, rather than adding a backend field purely for a cosmetic second line.
+
+**Tablet rail/bar (7g) reuses the existing mobile quick-actions bar — no parallel implementation.**
+The bar (`#gl-v2-mobile-quickactions`, generic across every gl-v2 page via `@section
+MobileQuickActions`) previously only showed `<768px`. Its visibility now extends to `<1400px` in two
+tiers: `<1024px` (phone and tablet-portrait) keeps today's horizontal bottom bar unchanged; a new
+`1024–1399.98px` tier (tablet landscape) reshapes the *same* DOM into a vertical green rail on the
+right (`flex-direction:column`, fixed to the right edge), with the "Meer" overflow sheet (already
+generic, unchanged JS — `initMobileQuickActions()` in `gl-v2-shell.js`) docking beside the rail
+instead of at the bottom. No new overflow logic was written; only the container's CSS shape changes
+per breakpoint. An informational "active project" tile (`#gl-v2-qa-rail-active`, per 7g: "zo weet je
+waarop de acties werken") sits above the icons in the rail tier only — purely display, no click
+action in this pass, reading the same `GlV2ActiveProject` state as the desktop card.
+
+**Dashboard opts out of the tablet rail.** `Views/Home/Index.cshtml` sets
+`ViewData["NoTabletQuickActionsRail"] = true`, which `_LayoutV2.cshtml` turns into a
+`.gl-v2-qa-no-rail` class on the outer `.gl-v2` wrapper. `gl-v2-shell.css` then re-declares the
+`<1024px` bottom-bar shape (position, `flex-direction:row`, height, padding — the same properties
+the rail media query overrides) under `.gl-v2-qa-no-rail .gl-v2-mobile-quickactions` inside the
+*same* `1024–1399.98px` media query, at two classes of specificity instead of the rail rule's one —
+that wins regardless of source order, so the rail rule itself needed no `:not()` guard and stays
+byte-for-byte what every other gl-v2 page still gets. Duplicating the bottom-bar declarations here
+(rather than sharing them with the `<1024px` block) was deliberate: the two breakpoints don't
+overlap, so there's no single existing rule to just re-scope. Reason: the dashboard's own desktop
+Snelacties-kaart only appears at `≥1400px` (`xxl`), so tablet-landscape had nothing better than the
+rail to fall back to when this pilot started — once the dashboard had accumulated enough of its own
+gl-v2 chrome, the rail there felt like a second, half-finished shell competing with the first;
+falling back to the familiar bottom bar reads as more finished than a rail nobody asked for on this
+one page. Every other `<1400px` gl-v2 page keeps the rail unchanged.
+
+**Known gap, left for a later pass.** The mobile "Meer" sheet does not get 7f's mobile-mockup
+treatment (an active-project header with a "Wijzig" link inside the sheet itself) — it stays the
+existing generic icon/label row list. Doing so would mean teaching the shared, page-agnostic
+`initMobileQuickActions()` about a Projectleider-specific concept, which the rest of this component
+is deliberately kept clear of (see its own "generic chrome, not Facturen-specific" comment).
+
+**Removed for gl-v2 (legacy untouched).** The four old bottom panels this replaced —
+`#gl-lev-sheet`, `#gl-klant-sheet`, `#gl-pin-sheet`, and (once Punt moved to the project-picker
+modal, see above) `#gl-punt-sheet`/`#gl-issues-modal` (the "Punt toevoegen" project-choice sheet +
+its fullscreen iframe) — now all render only `@if (!useGlV2Layout)`; the legacy dashboard keeps them
+exactly as before, still driven by `#mob-nav-punt`/`openPuntSheet()`. Before this fix,
+`#gl-punt-sheet` was the one exception left unconditionally in the DOM regardless of layout — it
+rendered with none of its legacy CSS (that stylesheet isn't loaded on `_LayoutV2.cshtml`) whenever a
+gl-v2 user reached it, the plain-HTML "Kies een project" list that prompted this whole fix.
+
+### Leveranciers — second application of the Facturen table (design-handoff optie 4a/4e/4f/4j)
+`Views/Leveranciers/IndexV2.cshtml`, toggled from `LeveranciersController.Index` the same one-line
+way as Invoices (`ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index"`). Same
+`SupplierIndexViewModel`/query as `Index.cshtml` — this is presentation only, no new controller
+logic beyond the toggle itself and a `ModalDeleteV2` action mirroring `InvoicesController`'s. Title
+and subtitle are gone from the page body — `SetPageHeader("bx bx-hard-hat", "Leveranciers")` already
+puts the name in the topbar (`ViewData["Title"]`/`["PageIcon"]`), the same header block Invoices'
+`IndexV2` also leaves un-repeated inline — and "+ Leverancier toevoegen" moved out of the old
+title-row into `@@section PageActions`, the same topbar-button slot as "+ Nieuwe factuur".
+
+**Own CSS/JS files, not shared with Invoices.** `gl-v2-leveranciers.css`/`gl-v2-leveranciers.js`
+duplicate the reusable pieces of the Facturen build — table-card shell, loading skeleton, empty
+state, row-`···`-menu (its tablet floating-panel and mobile bottom-sheet forms), pagination/footer —
+rather than loading `gl-v2-invoices.css`/`.js` a second time. Those two files don't separate
+"generic table chrome" from "Facturen-only" (status icons, the boeken-checkbox, the boekjaar
+column) — nothing today does — so reusing them wholesale meant pulling in dead, invoice-shaped rules
+for a page with none of that data, or a bigger extraction refactor of a page that already works.
+Duplicating stayed inside this pass's actual scope; promoting the shared pieces into `gl-v2-
+shell.css` is the natural next step once a *third* page needs the same table language.
+Column widths: Bedrijfsnaam/Ondernemingsnummer/Contracten stay compact (20%/14%/10%), GSM/Email/
+Bedrag get more room (18%/20%/15%) — on request, the opposite of DataTables' own `autoWidth`
+instinct to shrink every column to its shortest visible content.
+Two removed, both duplicating something the page already had: the colvis ("kolommen tonen/
+verbergen") button — `layout.topStart` keeps its empty `{ buttons: [] }` shape (Invoices' own
+precedent for "no default page-length dropdown, no button row") rather than reintroducing it — and
+DataTables' own built-in search box (`.dt-search`, hidden via jQuery, same one-liner Invoices uses),
+which duplicated the page's own toolbar search field.
+
+**Filters redesigned to match 4f's "FILTERS OPEN" state, not the plain filter row `Index.cshtml`
+had.** A `.gl-v2-filters-toggle` button (funnel icon, badge count) next to the search field expands
+two rows beneath it: a 3-column field grid (Facturatiebedrijf/Status — the BASIS `.gl-v2-select`
+variant, relabelled above the trigger instead of icon-in-trigger, since 4f's own filter fields put
+the label outside the box; Activiteit stays Select2, the multi-select `.gl-v2-select` variant
+doesn't exist yet — see "Select / Dropdown" above) and a badge row. One deliberate divergence from
+4f's own mockup: **no "Toepassen" button.** Every filter here already applied itself immediately on
+change before this redesign (the issuer/status/activity handlers were never wired to a submit step),
+so a confirm button would do nothing a live filter doesn't already do — 4f's mockup mixes an
+auto-apply table beneath a filter panel that still draws a Toepassen button, which reads as the
+wireframe's own generic filter-panel template rather than a considered choice for *this* page's
+already-live filtering.
+**Badges are individually removable, one per non-default filter.** `updateFilterChips()` reads the
+three filter states and rebuilds `#filters-chip-list` (a wrapper dedicated to just the badges,
+kept separate from the "Wissen" button next to it — an earlier version rebuilt directly inside the
+shared container and needed a fragile `insertBefore` ordering; splitting them into two elements
+made a plain `.empty()`+append the whole rebuild, no ordering assumption left to get wrong). Status
+gets a badge only when it's off the default ("Enkel actief" is the page's normal baseline, not
+itself a filter worth flagging); issuer and each selected activity always do when set. Each badge's
+`×` calls back into the same `.gl-v2-select`'s exposed `select(value, fireOnChange)` — added so a
+badge click and a real dropdown click share one code path instead of the badge duplicating the
+select's label/`is-filled`/`aria-expanded` bookkeeping. "Wissen" resets all three at once
+(`fireOnChange:false` on the first two, letting the third's own change event fire the single
+resulting redraw, rather than three separate `table.draw()` calls for one click).
+
+**Mobile: the filters panel becomes a bottom sheet, reachable from the topbar.** Same
+`#filters-panel` element, no duplicated markup — at `<768px` it switches from "inline block below
+the toggle" to `position:fixed`, bottom-anchored above the mobile quick-actions bar (`bottom:
+calc(var(--gl-v2-qa-bar-h, 64px) + safe-area)`, the same offset math the row-menu sheet and the
+Facturen "Meer" sheet already use), with its own backdrop (`#filters-panel-backdrop`). It's opened
+by either the inline `.gl-v2-filters-toggle` (still present, all widths) or the new topbar filter
+button (`@@section MobileTopbarAction`, see "Mobile Topbar" above) — one `setFiltersPanelOpen()`
+keeps both triggers' `is-open`/`aria-expanded` state and the shared badge count in sync, so opening
+via one and closing via the other (or the backdrop, or Esc) never leaves a trigger showing the wrong
+state. The topbar button is a pill (icon + count side by side), not the topbar's usual circle —
+4f's own reference draws the "Filters [3]" trigger as one shape holding both, and a circular icon
+button has no room for a second glyph, so the pill is 4f's own shape carried into the topbar rather
+than a new invention.
+
+**Mobile row-menu (the "···"-actions sheet) also sits above the quick-actions bar.** Copied from
+Facturen's mobile sheet, its `bottom:0` was correct there because that page's mobile quick-actions
+bar and the row-menu sheet rarely needed to coexist stacked; Leveranciers always has a candidate
+quick-actions tile ("Nieuwe leverancier"), so `bottom:0` let the sheet cover the bar instead of
+sitting above it. Fixed the same way as the filters sheet: `bottom: calc(var(--gl-v2-qa-bar-h, 64px)
++ safe-area)` on both the sheet and its backdrop.
+
+**Mobile empty state builds a real card, not a garbled row-turned-card.** `renderMobileCards()`
+naively rebuilt one "card" per `<tr>` in the (hidden, `display:none` on mobile) table — with zero
+matching suppliers, DataTables replaces the whole `<tbody>` with a single cell holding the
+zero-records HTML, which doesn't have 7 real `<td>`s for `buildMobileCard()` to read from. It now
+checks `table.rows({ search: "applied" }).count() === 0` first and, when true, reuses the same
+`buildEmptyStateHtml()` the desktop empty state renders, wrapped in `.gl-v2-supplier-card` (padding
+zeroed) purely for the white/shadowed card shell — `.gl-v2-table-card` itself goes transparent on
+mobile (every real supplier card already carries its own background), so the empty state needs its
+own card here where it didn't on desktop/tablet. That shared HTML builder also lost the one `id` it
+used to set (`add-supplier-empty-button`) — harmless on desktop where only one zero-records row ever
+exists, but the mobile card and the table's own (still-present, just `display:none`) zero-records
+row would otherwise both carry it into the DOM at once.
+
+**Delete confirmation is gl-v2's Type-1 modal, not `Index.cshtml`'s magnific-popup fragment.**
+`ModalDeleteV2` (mirroring `InvoicesController.ModalDeleteV2`) returns
+`Modals/_ModalDeleteSupplierV2.cshtml` — text reused from `_ModalDeleteSupplier.cshtml`, no classes
+— into a Bootstrap modal shell already on the page, same AJAX-load-then-show pattern as the invoice
+delete modal.
+
+### Leveranciers/Klanten-tabellen — e-mail (8g), klikbare rij, dynamische titel/breadcrumb
+Three small, related fixes applied to both `Views/Leveranciers/IndexV2.cshtml` and
+`Views/Klanten/IndexV2.cshtml` in the same pass, all generic/shell-level (`gl-v2-shell.css`/
+`gl-v2-shell.js`, not page-specific) since both tables needed the identical behavior.
+
+**E-mail in a table cell (design-handoff optie 8g).** Both pages rendered e-mail as a raw
+`<a href="mailto:...">` — exactly the mockup's own "NIET · BLAUWE ONDERLIJNDE LINK" anti-pattern
+(every row is already clickable, so the link adds nothing and a whole underlined-blue column reads
+as a stripe pattern). Replaced with the mockup's own "AANBEVOLEN" treatment via a new generic
+`.gl-v2-table-email` component: plain 13px/450 ink-colored text, `min-width:0` +
+`text-overflow:ellipsis` so it never wraps (full address in a `title` tooltip), and a `mailto:` +
+"copy" action pair that only appears via `.gl-v2-table-email:hover`/`:focus-within` — never a
+separate actions column. `.gl-v2-table-email-empty` renders the em dash for "no email". The "copy"
+button's click handler (`initTableEmailActions()`, `gl-v2-shell.js`, delegated on `document`) uses
+`navigator.clipboard.writeText` + the existing `window.GlV2Toast` for confirmation — no new toast
+plumbing. **Deliberately not built:** the mockup's fourth state (bounced/invalid address → amber
+warning triangle after the text) has no backing data — neither `SupplierListItemViewModel` nor
+`ClientListItemViewModel` carries a bounce/validity flag — so this pass only ships the three states
+that have real data (filled, empty, and the two "don't do this" examples were simply not built at
+all, they're anti-patterns). Klanten's "Contact" column shows phone as a fallback when there's no
+email (pre-existing behavior, untouched) — only the email branch itself was restyled.
+
+**Row click → detail, buttons are the exception.** New opt-in, generic behavior: a `<tr
+data-detail-url="...">` becomes `cursor:pointer` and clicking anywhere in it navigates to that URL,
+via a new `initClickableRows()` delegated handler (`gl-v2-shell.js`). It explicitly ignores clicks
+that land inside `a`, `button`, `input`, `select`, `textarea`, or `label` — so the name link and the
+"···" row-menu (and everything inside it) keep doing their own thing, exactly the "buttons in the row
+are the exception" rule this was built for. Both tables' `<tr>`s now carry `data-detail-url` pointing
+at their own `Details` action. Nothing else on the page needed to change — the row-menu's own click
+handling already lives inside a `<button>`, so it was already implicitly excluded once the tag-based
+exclusion was in place.
+
+**Dynamic title/breadcrumb when a facturatiebedrijf filter is active.** Both `Index` actions accept
+an optional `issuerCompanyId` query parameter (an existing filter, pre-dating this pass). Previously
+the page title/breadcrumb stayed the generic "Leveranciers"/"Klanten" regardless of that filter. Now,
+once the selected issuer company's name is resolved from the already-loaded `issuers`/
+`issuerCompanies` list (falls back to the generic title if the id is invalid/not visible to the
+user — same list the filter dropdown itself is built from, so "not in the list" already means "don't
+show it"), `SetPageHeader` gets `"Leveranciers {naam}"` / `"Klanten {naam}"` and `ViewData
+["BreadcrumbNode"]` is overridden with a manual `SmartBreadcrumbs.Nodes.MvcBreadcrumbNode` chain
+(Home → Leveranciers/Klanten → `{naam}`, `RouteValues = new { issuerCompanyId }`) — the exact same
+pattern each controller's own `Details` action already uses to show a record's name in the
+breadcrumb, since the static `[Breadcrumb("Leveranciers")]`/`[Breadcrumb("Klanten")]` attribute can't
+express a route-dependent label. Falls back to the plain static title/breadcrumb when no filter (or
+an invalid one) is active.
+
+### Projectwijde componenten (opties 8f "Veldtypes" en 8e "Onderdelen uitgewerkt")
+First pass that builds components *before* a concrete consuming page exists — the user explicitly
+asked to "define reusable pieces first, apply them later." Generic, `gl-v2-shell.css`-only additions
+(plus two new tokens in `gl-v2-tokens.css`), same "component ready, nothing manufactures a use for it
+yet" discipline `.gl-v2-select-panel-search`/`-newitem` already established. Nothing below is wired
+to a real *page* today — the field types (8f) did later gain a Razor-template layer (see the last
+subsection here), but that's still just a reusable building block, not a consuming form.
+
+New tokens: `--gl-v2-neutral-tint` (`#EDEFEB`, a neutral grey-green distinct from the existing
+green-tinted `--gl-v2-hover-tint` — recurs across badges, multi-select chips, and the dropdown's
+inactive-record avatar background) and `--gl-v2-shadow-actionbar` (the only *upward* shadow in the
+token set, for the form action bar below). Everywhere else reuses existing tokens even where the
+mockup's own hex values differ slightly (e.g. its card shadow vs. the existing `--gl-v2-shadow-card`)
+— same near-duplicate-avoidance judgment call made earlier for other components.
+
+**Numbered fields — ondernemingsnummer & btw-nummer (8f·1).** Builds on `.gl-v2-field`/
+`.gl-v2-field-box` (optie 4i) above, not a new field component. New primitives: `.gl-v2-field-divider`
+(1px vertical hairline for a fixed prefix like "BE", "+32", "https://" — the mockup's own rule is
+that these prefixes always sit inside the box behind a divider, never as a separate dropdown or in
+the placeholder), `.gl-v2-field-input.is-tabular` (tabular-nums for the masked value),
+`.gl-v2-field-counter` (the "8/10" typing counter — structurally ready, unwired, a form's own JS
+would update it; no fake blinking caret is built, the native text cursor already does that job in a
+real `<input>`). `.gl-v2-field-icon-trailing` is new too — `.gl-v2-field-box` only ever had a leading
+icon slot before this; the error state's warning triangle is the first trailing icon. Btw-nummer's
+attached "Controleren" button is a new `.gl-v2-field-attached` wrapper (not `.gl-v2-btn` — that
+family is 38px/free-standing, this needs 40px flush against the field box, outer-radius-only) with
+`.gl-v2-field-attach-btn`, three states (rust, `.is-busy` with a new `.gl-v2-spinner`, `.is-checked`
+swapping to an outline "Opnieuw" via `.gl-v2-field-attach-btn.is-outline`). `.gl-v2-spinner` itself is
+a new, generic CSS-ring primitive — the existing `.gl-v2-btn.is-loading` (`gl-v2-shell.js`) stays
+opacity-only, unchanged; this is a new opt-in sibling, not a retrofit of that existing behavior.
+
+**Telefoon, gsm, e-mail, website (8f·2).** Same field-box skeleton + a new `.gl-v2-field-action`
+(right-aligned text or icon action — "Bellen"/"Sms"/"Mailen", or website's arrow icon — shown only
+once the value is valid, via the same `:has(...:not(:placeholder-shown))` trick `.gl-v2-field-clear`
+already uses, no JS needed to show/hide it). E-mail's error state reuses plain `.gl-v2-field.is-error`.
+
+**Dropdown met zoekveld, groepen en suggesties (8f·3).** An extension of `.gl-v2-select-panel-search`
+above (optie 4h), not a new parallel component — "one component for every picklist" is the mockup's
+own closing line for this section. New sub-parts: `.gl-v2-select-group-header` (group label + rule +
+count, reusing the existing `.gl-v2-select-results-label` look), `<mark class="gl-v2-select-match">`
+(bold/primary-green highlighted substring), `.gl-v2-select-option.is-active` (keyboard-active row,
+gold left-stripe — same gold language as the active tab), `.gl-v2-select-option-2line` +
+`.gl-v2-select-option-avatar`/`-body`/`-title`/`-meta` (28px-avatar "record" rows, optionally pairing
+with a `.gl-v2-badge` on the right), `.gl-v2-select-empty-suggestion` (no-results panel: message +
+"did you mean" + add-new link — never a bare "nothing found"), `.gl-v2-select-addnew-row` (the
+inline "+ … toevoegen" suggestion row that appears conditionally among the results — deliberately a
+different class from `.gl-v2-select-panel-newitem`'s fixed footer button, since this one is
+conditional and inline, not a permanent footer), `.gl-v2-select-hint-footer` (either the
+"N of M · tap to filter further" line or the keyboard-shortcuts hint). Multi-select: a new
+`.gl-v2-select-trigger-multi` trigger variant (becomes a wrapping chip container) +
+`.gl-v2-select-chip`/`-remove`. No highlight/group/keyboard-nav JS in this pass — same "component
+ready, nothing consumes it yet" discipline as the rest of this component.
+
+**Badges (8e·1).** New `.gl-v2-badge` base + five tone modifiers, almost entirely existing tokens:
+`.is-positive` (primary-tint/primary), `.is-neutral` (new neutral-tint/muted-soft), `.is-attention`
+(warning-tint/warning), `.is-blocked` (danger-tint/danger), `.is-inactive` (neutral-tint/muted +
+strikethrough). Max-3-then-"+n" placement is a markup convention (multiple `.gl-v2-badge` spans),
+no container class needed. **Known pre-existing divergence, not touched by this pass:**
+`gl-v2-leveranciers.css`'s `.gl-v2-inactive-badge` (Leveranciers table) already shipped its own
+slightly different ad hoc badge (20px/radius 5px/`#FBEDEA`) before this generic component existed —
+left as-is per this pass's CSS-only scope; a future pass could migrate it to `.gl-v2-badge.is-inactive`.
+
+**Tabbar (8e·2), always positioned like 8d.** New `.gl-v2-tabbar` — meant to sit as the
+`flex:none` sibling directly after the topbar and before the scrolling content block, in whatever
+vertical flex column a future detail/form page uses (no `position:sticky` needed, exactly how 8d
+itself builds it — no layout change in this pass, since no gl-v2 detail page exists yet).
+`.gl-v2-tabbar-tab` states: `.is-active` (2.5px gold underline), hover, `.gl-v2-tabbar-count`,
+`.gl-v2-tabbar-error-dot`, `.is-disabled` ("no rights": not hidden, disabled — "don't hide it, turn
+it off" is the mockup's own rule, so every role sees the same tab set). `.gl-v2-tabbar-more` pill for
+overflow. `overflow-x:auto` handles the <900px horizontal-scroll requirement; keeping the active tab
+in view on open would need `scrollIntoView` JS — not built, noted as a known next step like the
+component's other unwired pieces.
+
+**Basiskaart + varianten (8e·3).** New `.gl-v2-card` (white, `--gl-v2-radius-md`,
+`--gl-v2-shadow-card`, icon+title header, body). `.gl-v2-card-header-action` reuses `.gl-v2-btn-text`
+for the header's trailing text action, no new button CSS. `.gl-v2-card-empty` variant for the
+never-a-bare-empty-card rule (dimmed header + centered message + `.gl-v2-btn-secondary`).
+
+**Sectiekaart (8e·4).** `.gl-v2-section-card` builds on the same header language as `.gl-v2-card`,
+plus `.gl-v2-section-card-desc` (one-line explanation) and a trailing meta ("3 of 6 filled in").
+Body is `.gl-v2-section-grid` (12-column CSS grid) + `.gl-v2-col-1/-3/-4/-5/-6/-12` helpers — kept
+`.gl-v2`-scoped rather than mixing Bootstrap's `col-*` into a gl-v2 page. Tablet (768–1023.98px)
+reflows 3/4/5→6 (1→3, 6 stays 6); mobile (<768px) reflows everything to 12. A consuming page that
+wants the mobile collapsible-header behavior opts in with `.is-collapsible` + `[aria-expanded]` — the
+CSS state is ready, the click-to-toggle itself is unwired JS, left to whichever real form needs it
+first.
+
+**Standing rule, not just a Leveranciers/EditV2 choice: `.gl-v2-section-grid` always caps at
+`max-width: 1420px`, the card itself never does.** Settled via design-handoff 8i/8b·B ("KAART VOLLE
+BREEDTE, VELDBLOK GECAPT OP 1420PX") after a first attempt capped the whole tab panel and shrank the
+card's white background/header along with the fields — wrong, per the user's own correction. The rule,
+explicitly confirmed as the default for **every** gl-v2 form going forward (deviations will be called
+out individually if/when they're needed): the card (`.gl-v2-card`/`.gl-v2-section-card`, background +
+header) always fills its column; only the field grid inside is capped and left-aligned (no
+`margin:auto`) — "wit is geen verspilde ruimte, het is wat de velden links leesbaar houdt." The
+reclaimed margin is reserved for a future fixed section-nav (8b) or a help panel — never another
+column of fields, which would defeat the cap. Because the cap lives on `.gl-v2-section-grid` itself
+(`gl-v2-shell.css`, not page CSS), this already applies automatically to any future gl-v2 form without
+needing to be re-added per page.
+
+**Actiebalk voor formulieren (8e·5), always at the bottom like 8d.** New `.gl-v2-form-actionbar` —
+the last `flex:none` child in the same vertical flex column as the tabbar above, "stuck" to the
+bottom purely by flex layout, no `position:fixed`, exactly how 8d builds it. Buttons reuse the
+existing `.gl-v2-btn-text`/`-secondary`/`-primary` families (optie 4e) — no new button CSS; the busy
+"Opslaan …" state reuses `.is-loading` plus the new `.gl-v2-spinner` from 8f·1.
+**Judgment call, flagged for correction if wrong:** the mockup's own 8d example colors its error
+status text with `--gl-v2-warning`, while this section's dedicated 8e·5 component spec colors the
+same kind of message with `--gl-v2-danger`. Treated as inconsistency between two separately-drawn
+mockup instances, not a deliberate two-tier rule — this component follows 8e·5's own color (danger)
+as canonical.
+
+**Razor layer for the field types — EditorTemplates/DisplayTemplate (follow-up to 8f).** The CSS
+above only becomes reusable-with-little-code the way the user wanted once it's wrapped the same way
+this codebase already wraps its *legacy* field types: `Views/Shared/EditorTemplates/*.cshtml` +
+`@Html.EditorFor(m => m.X, "TemplateName", new {...})`, documented for the legacy system in
+`Views/Projecten/FORMULIER-STRAMIEN.md` §5f/§7 (`Phone`, `Cellphone`, `Currency`,
+`CurrencyWithActions`, …). Six new EditorTemplates mirror that exact idiom for 8f·1/8f·2/8f·3 —
+`GlV2OndernemingsNummer`, `GlV2BtwNummer`, `GlV2Telefoon`, `GlV2Gsm`, `GlV2Email`, `GlV2Website`,
+`GlV2SearchSelect` — plus one DisplayTemplate, `GlV2Badge`, for 8e·1. Each reads
+`ViewData.TemplateInfo.GetFullHtmlFieldName("")` for the real, binding-correct field name (same
+technique `CurrencyWithActions.cshtml` already uses for its raw `<input>`) and
+`ViewContext.ModelState` for the per-field error state/message — extra per-instance config (a
+lookup URL, a placeholder, an already-verified flag, a badge tone, …) comes through the same
+`additionalViewData`/`ViewData["…"]` mechanism `CurrencyWithActions`'s `ShowDelete`/`DeleteId`
+already established, not a bespoke ViewModel per field.
+
+**Deliberately `GlV2`-prefixed names, never the bare DataType/UIHint name a legacy page might
+already rely on.** ASP.NET Core resolves an EditorTemplate by an explicit template-name string *or*
+implicitly from `[DataType(...)]`/`[UIHint(...)]` — e.g. any property tagged
+`[DataType(DataType.EmailAddress)]` anywhere in the app would silently start rendering through a
+file literally named `EmailAddress.cshtml` in `Views/Shared/EditorTemplates/`. Naming these
+`GlV2Email`/`GlV2Website`/… instead of `EmailAddress`/`Url`/… means a legacy page can never
+accidentally inherit gl-v2 styling just because it happens to carry that attribute — the same
+"scoped so it can't leak onto a page that hasn't opted in" discipline the CSS side already follows
+via the `.gl-v2` class, just applied to template-name resolution instead. Every one of these is
+invoked *only* by its explicit string name; none of the new model properties in this codebase (there
+aren't any yet — still nothing wired to a real form) carry a matching `[UIHint]`.
+
+**`GlV2SearchSelect` binds a real id, same as every other EditorTemplate — the rich open-panel
+behavior (8f·3's groups/highlighting/suggestions) stays unwired.** It renders a `<input
+type="hidden">` for the bound value plus the closed `.gl-v2-select-trigger` and an empty
+`data-role="panel"` container carrying `data-lookup-url` — round-trips correctly on a normal form
+POST like any other bound field, but a consuming page still has to write its own small JS (same as
+the base `.gl-v2-select-panel-search` component already requires for Facturen's bookyear filter) to
+actually open/search/populate the panel. Building a full generic version of that JS was out of scope
+here — the point of this EditorTemplate is the markup/binding contract, not the interaction.
+
+### Leveranciers/EditV2 — the first gl-v2 form page (optie 8b/8d, herzien via 8i)
+First real consumer of every 8f/8e component above. `Controllers/LeveranciersController.cs`'s `Edit`
+GET/POST and `BlankDepartmentRow`/`BlankContactRow` branch to gl-v2 views the same one-line
+`ViewData["UseGlV2Layout"]`-ternary `Index` already used; validation/save/VAT/postal-resolution logic
+is untouched — only the view path and the two blank-row partials vertakken.
+
+**Tab content comes from what `_SupplierForm.cshtml` already edits, not from 8a.** The user explicitly
+ruled 8a (detail-page layout, 5 tabs incl. read-only Contracten/Facturen) out of scope for this pass —
+those two tabs have no fields in `SupplierFormViewModel` and a one-Opslaan form shouldn't carry a tab
+that saves nothing. Three tabs instead: **Algemene gegevens** (identification/address/contact/
+switches — see the 8i rework below), **Afdelingen**, **Contacten** — the latter two get their own tab
+because they're repeatable rows with their own lifecycle, matching FORMULIER-STRAMIEN.md's own
+"sectiekaarten tot ±25 velden, daarboven of bij een eigen levensloop → tabbar" rule. Per-tab error
+state (`.gl-v2-tabbar-error-dot`, `.gl-v2-tabbar-count`) is computed server-side from `ModelState` by
+prefix (`Departments`/`Contacts` vs. "everything else") so it doesn't need to enumerate every
+top-level field by name.
+
+**Card layout was reworked mid-build per design-handoff 8i ("Jouw formulier heringericht").** 8i is a
+direct, itemized critique of the first pass's two wide sectiekaarten (fields stretching to fill the
+window, no reading-width cap, Nr/Bus columns as wide as Straat, ondernemingsnummer/btw-nummer stacked
+instead of paired, four switches scattered across two cards, address buried inside "Algemene info").
+The rebuild follows 8i's own four-card regrouping exactly:
+- **Identificatie** — Bedrijfsnaam/Bedrijfsvorm/Facturatiebedrijven on one row, Ondernemingsnummer/
+  Btw-nummer/Btw-status on the next (paired specifically because "meestal hetzelfde nummer" — a new
+  `HelpText` ViewData param on `GlV2BtwNummer` renders that as a neutral hint below the field,
+  suppressed whenever a real validation error is present).
+- **Adres** — its own card now (was folded into "Algemene info"); Straat/Nr/Bus/Gemeente-postcode on
+  one row, **Land moved after Gemeente/postcode** (8i: "bepaalt diens vorm" — the country determines
+  which postal-input variant applies, so it reads more sensibly second).
+- **Bereikbaarheid** — Telefoon/GSM/E-mail/Facturatie-e-mail/Website, contact-only, no switches.
+- **Samenwerking & facturatie** — all four boolean switches grouped in one shaded block
+  (`.gl-v2-switch-group`, new generic component) instead of scattered: Actief, Digitale facturatie
+  vereist, UBL standaard meesturen (indented — `.gl-v2-switch-row.is-dependent` — and only enabled
+  while digital-invoice is on, see below), a divider, then Ook klant; Activiteiten sits alongside as
+  the card's other half.
+
+**New generic pieces this reorg needed**, all in `gl-v2-shell.css` (not page CSS, since none of them
+are specific to Leveranciers): `.gl-v2-col-1`/`.gl-v2-col-6` (8i genuinely needs narrower-than-3 and
+half-width columns — Nr/Bus at span 3 would be exactly the "field as wide as Straat" bug 8i is
+pointing at, so the earlier "only 3/4/5/12" rule is refined here, not replaced: 1 and 6 are additive,
+not a license to use arbitrary spans), `.gl-v2-switch-group`/`-divider`/`.gl-v2-switch-row.is-dependent`
+(the grouped-switches block), and a `max-width: 1420px` cap moved onto `.gl-v2-section-grid` itself
+(`gl-v2-shell.css`, generic — not `.gl-v2-tab-panel`, a first attempt that also shrank the card's own
+white background/header, which a follow-up mockup (8b·B, "KAART VOLLE BREEDTE, VELDBLOK GECAPT")
+explicitly corrects: the *card* stays full width — its header explicitly "mag wél de volle breedte
+gebruiken" — only the field grid inside it is capped, left-aligned, no `margin:auto`. The reclaimed
+margin is reserved for a future fixed section-nav or help panel, never another column of fields.).
+
+**UBL depends on Digitale facturatie vereist, enforced both visually and on save.** New
+`initUblDependency()` (`gl-v2-leveranciers-edit.js`) disables the UBL checkbox whenever "Digitale
+facturatie vereist" is off. No new save-side logic needed for this: `Html.CheckBoxFor`'s own hidden
+`false`-shadow input keeps submitting regardless of the visible checkbox's `disabled` state, while a
+*disabled* checkbox is excluded from the POST entirely — so disabling UBL when its dependency is off
+already forces it to save as `false`, exactly the intended behavior, for free.
+
+**Components used for real for the first time here:** `GlV2OndernemingsNummer`/`GlV2BtwNummer`/
+`GlV2Telefoon`/`GlV2Gsm`/`GlV2Email`/`GlV2Website`, `.gl-v2-badge` (ACTIEF/INACTIEF/OOK KLANT next to
+the title), `.gl-v2-tabbar`, `.gl-v2-section-card`, `.gl-v2-form-actionbar`, and `GlV2SearchSelect`
+(the postcode/gemeente picker — `data-lookup-url` wired to the existing `Shared/GetPostcodesByCountry`
+POST endpoint, not `Leveranciers/FindPostalMatch`, which turned out to be a single-best-match resolver
+used only as the *second* step after the VAT-modal "Gegevens overnemen" flow, not a search endpoint).
+
+**Placeholders were deliberately stripped from every field except the postcode/gemeente search field**
+(explicit user correction) — `GlV2OndernemingsNummer`/`GlV2BtwNummer`/`GlV2Telefoon`/`GlV2Gsm`/
+`GlV2Email`/`GlV2Website` no longer ship a default placeholder (still overridable via `Placeholder`
+ViewData for a future caller that genuinely needs one); the hand-written Naam/Straat/Nr/Bus fields
+across `EditV2.cshtml` and the two row partials never got one back. A label repeating itself as a
+placeholder was already against this component family's own stated rule ("placeholder toont de vorm,
+nooit het woord [veldnaam]") — the first pass had drifted from that rule in several places, this
+corrected it project-wide rather than just on this page.
+
+**`--gl-v2-muted-light` (`#9aa898`) is a new token**, separate from `--gl-v2-muted` — placeholder text
+and any other genuine "leeg"-state text (tab counts, hint footers, disabled-adjacent-but-not-disabled
+text) use it now; `--gl-v2-muted` stays for labels/help text/icons that are always meant to be legible,
+not signal emptiness. `.gl-v2-field-box:has(...:placeholder-shown)` also dims the leading icon/prefix
+to this same token when the field is empty, matching design-handoff 8f·2's own "GSM — LEEG" example —
+deliberately *not* touched: the existing "icon turns primary green once filled" rule inherited from
+optie 4i, since 8f·2's own filled-state icon color differs from that rule too and changing it would
+ripple into the already-shipped Facturen search field.
+
+**`GlV2SearchSelect`'s trigger is a `<div role="button">`, not a `<button>`** — a real `<button>`
+cannot contain interactive children, and the trigger now nests a "×" clear control (shown instead of
+the chevron once a value is picked, replacing "reopen the picker just to empty it") the same way
+`.gl-v2-select-trigger-multi` already had to be a `<div>` for its per-chip remove buttons. Keyboard
+activation (Enter/Space) is wired by hand in `wireSearchSelect()` since a plain div doesn't get that
+for free. Its results list also now marks the currently-selected row with the existing
+`.gl-v2-select-option.is-selected` checkmark treatment (compares each result's id against the bound
+hidden value) — the multi-select variant already had this via its checkbox-style `.is-multi` rows;
+this was the single-select gap.
+
+**The search-select panel bug: rewrote the panel content model.** The first version rebuilt the
+entire panel's `innerHTML` on every keystroke, which also destroyed the `<input>` the user was
+actively typing into (typing one character replaced the whole panel — including the input — with a
+"type 2+ characters" message). Fixed by building the search-header + results-container skeleton once
+(`.gl-v2-select-search`/`.gl-v2-select-options`, the same sub-parts `.gl-v2-select-panel-search`
+already names) and only ever replacing the results container afterward.
+
+**Closing an open picker on outside click needed a new, generic listener.** `.gl-v2-select-backdrop`
+(the shared component from optie 4h) is only ever visible below 768px by design — desktop/tablet keep
+it permanently `display:none`, so there was never an outside-click-closes mechanism there for any
+`.gl-v2-select` instance, gl-v2-invoices.js's bookyear filter included. `gl-v2-leveranciers-edit.js`
+now runs one document-level click listener that closes every open panel unless the click landed inside
+some `.gl-v2-select`/`.gl-v2-select-panel` — page-local for now since it's the first page to need it,
+but a natural future candidate for `gl-v2-shell.js` if a second page needs the same fix.
+
+**Required-field feedback runs twice: on blur (live) and on submit (authoritative).** Only the fields
+genuinely `[Required]` on `SupplierFormViewModel` (Bedrijfsnaam/Straat/Nr/Gemeente-postcode — Bus,
+contact fields, and every `Departments`/`Contacts` field are optional in the model, so nothing to
+flag there) carry `data-gl-v2-required`. A `focusout` listener delegated on the form validates whichever
+field was just left and refreshes that tab's error dot; submit re-validates everything, blocks the
+POST and jumps to the first invalid tab/field if anything's still empty. The server remains the real
+source of truth (email format, duplicate ondernemingsnummer, VAT-service validation) — this only
+catches "forgot to fill it in" before a round trip.
+
+**"Niet-opgeslagen wijzigingen" badge (8b/8d) is purely client-side** — no dirty-tracking or autosave
+exists server-side, and none was built. `markDirty()` fires on any `input`/`change` bubbling through
+the form, plus is called explicitly from the few places that change state without a native DOM event
+(chip toggle, row add/remove, "Gegevens overnemen"). Placed in `@section PageActions` — right-aligned,
+before the notifications bell/userbox — not `@section PageTitleBadges` (left, next to the title, where
+ACTIEF/INACTIEF/OOK KLANT stay): the user asked for it specifically at the far right, "vóór de userbox
+of de eventuele knoppen", which is exactly where `PageActions` already renders in `_LayoutV2.cshtml`.
+`.gl-v2-badge[hidden] { display:none }` had to be added explicitly — `.gl-v2-badge`'s own
+`display:inline-flex` otherwise beats the browser's `[hidden]` default at equal specificity, the same
+trap this draft's own Do/Don't section already warns about.
+
+**Layout: tabbar/actionbar are edge-to-edge, the card fills the viewport height — both deviate from
+`.gl-v2-content`'s normal padding model, by request.** `.gl-v2-tabbar`/`.gl-v2-form-actionbar` now
+carry a negative margin (`calc(-1 * var(--gl-v2-content-pad-x/y))`, two new tokens replacing the
+hardcoded `20px 22px` `.gl-v2-content` padding used to carry) that cancels `.gl-v2-content`'s own
+padding on the relevant sides, so their background/border spans the full card width and the tabbar
+sits flush against the topbar — matching how 8d's own mockup draws that band, full-bleed, with only
+the scrolling body between them padded. `.gl-v2-tabbar` also needed an explicit `overflow-y: hidden`
+— `overflow-x: auto` alone implicitly makes the other axis `auto` too per the CSS spec, which was
+producing a stray vertical scrollbar on the bar itself. Separately, `.gl-v2-body` normally shrinks to
+its content's height (`align-self: flex-start`, a deliberate earlier fix so short table pages like
+IndexV2 don't show a tall dangling white card) — a tabbar+pinned-actionbar page needs the opposite, so
+a new opt-in `ViewData["GlV2FullHeightBody"]` (→ `.gl-v2-body.is-full-height`) restores
+`align-self: stretch` and re-enables `.gl-v2-content`'s `flex:1;min-height:0` specifically for pages
+that set it, leaving every other page's shrink-to-content behavior untouched. 8i's own mockup shows
+the field-block (not the chrome) capped at `max-width:1420px` instead — that cap was applied to
+`.gl-v2-tab-panel` (see above), not to the now-edge-to-edge tabbar/actionbar, since those two are a
+separate, earlier, explicit instruction from the user about the actual page chrome.
+
+**Font: IBM Plex Sans replaces Open Sans as `--gl-v2-font-sans`'s primary face** (`Avenir` — never
+actually loadable as a web font — dropped from the stack entirely). `_LayoutV2.cshtml`'s Google Fonts
+link swapped `Open+Sans` for `IBM+Plex+Sans` (same weights: 400/500/600/700); every gl-v2 page picks
+this up for free through the one shared token, no other file needed a change.
+
+**Pre-existing bug found and fixed, unrelated to this page specifically:** `_Layout.cshtml` (legacy)
+threw `InvalidOperationException: ... sections have been defined but have not been rendered` the
+moment the gl-v2 preview cookie was turned off on *any* page that defines `@section
+MobileTopbarAction`/`MobileQuickActions` (`Home/Index`, `Home/_DashboardProjectleider`, every
+`IndexV2`) — Razor doesn't allow conditionally registering a section, so those pages always define
+them, but `_Layout.cshtml` (unlike `_LayoutV2.cshtml`) never renders them. Fixed with two
+`IgnoreSection(...)` calls in `_Layout.cshtml` — the standard, documented way to acknowledge "this
+section may exist, I'm not using it" instead of erroring.
+
+**Regression, found and fixed: stripping default placeholders broke every `:placeholder-shown`-driven
+CSS state.** The Tekstvelden component's own documentation already flagged this exact trap: "zonder
+placeholder-attribuut matcht `:placeholder-shown` nooit, dus zou `:not()` hier altijd waar zijn — elk
+veld dat dit component gebruikt krijgt er daarom altijd een." Removing the *visible* default
+placeholder text (an earlier, correct fix for label-repeating placeholders) also removed the
+placeholder *attribute* entirely, which silently broke every "leeg vs. ingevuld"-driven style on
+those fields — most visibly, `GlV2Telefoon`/`GlV2Gsm`/`GlV2Email`/`GlV2Website`'s trailing action
+(Bellen/Sms/Mailen/the external-link icon) stayed permanently visible even on an empty field, since
+`.gl-v2-field-box:has(...:not(:placeholder-shown)) .gl-v2-field-action` could never tell empty from
+filled without a placeholder to key off. Fixed the same way everywhere it applies (all six
+EditorTemplates plus every hand-written `Html.TextBoxFor`/`<input>` across `EditV2.cshtml` and the two
+row partials): default to a **single-space placeholder** (`placeholder = ViewData["Placeholder"] as
+string ?? " "`) instead of `null`. A lone space satisfies the spec's "placeholder attribute present
+and not the empty string" requirement (so `:placeholder-shown`/`:not(:placeholder-shown)` work
+correctly again) while rendering nothing visible — the no-label-repeating-text goal stays intact, only
+the invisible attribute comes back.
+
+**Bug, found and fixed: client-side required-field errors didn't visually match server-rendered
+ones on `GlV2SearchSelect` fields.** The `data-gl-v2-required` marker for the postcode/gemeente
+picker sits on the *wrapper* div around the `GlV2SearchSelect` output (`data-role="be-address-
+wrapper"`), not on the template's own `.gl-v2-field` root rendered inside it — a plain text field's
+marker sits directly on its `.gl-v2-field`. The blur/submit validation JS was toggling `.is-error` on
+whatever element `data-gl-v2-required` happened to be on, which for the search-select landed on the
+wrong element: none of the `.gl-v2-field.is-error` CSS (red border/background/text) or the separate
+`.gl-v2-select-trigger.is-error` rule (a standalone rule, not a `.gl-v2-field.is-error` descendant)
+ever matched, so the field silently failed to show any error styling at all while a plain text field
+right next to it did. Fixed with a small `resolveFieldTarget()` helper — if the marked element isn't
+itself `.gl-v2-field`, it finds the real `.gl-v2-field` nested inside it — used everywhere `.is-error`
+gets toggled, and also explicitly re-applies `.is-error` to a nested `.gl-v2-select-trigger` when
+present, since that rule doesn't cascade from an ancestor `.gl-v2-field.is-error` the way the plain
+field-box rules do.
+
+**Annuleren and a successful Opslaan both return to wherever the user came from, not to a hardcoded
+Details/Index.** Same `Referrer` convention already used elsewhere in this app (`Klanten`-/
+`ProjectenController`): `Edit` GET captures `Request.Headers["Referer"]` into `TempData["Referrer"]`;
+the Annuleren link reads it via `TempData.Peek(...)` (peek, not a real read — has to survive into a
+POST that fails validation and redisplays the same page, which a real read would have already
+cleared); the POST's final success redirect does a real `TempData["Referrer"]` read and `Redirect(...)`
+to it, falling back to `Details`/`Index` respectively only when no referrer was captured (e.g. the URL
+was opened directly).
+
+**Belgian ondernemings-/btw-nummer fields format themselves live to `0000.000.000`.** New
+`formatBeNumber()`/`initBeNumberFormatting()` in `gl-v2-leveranciers-edit.js`, targeting the existing
+`.gl-v2-field-input.is-tabular` class both `GlV2OndernemingsNummer` and `GlV2BtwNummer` already carry
+— digits only, dots inserted after the 4th and 7th digit, capped at 10 digits, applied on load (in
+case the stored value wasn't already dotted) and on every keystroke with a simple distance-from-end
+caret preservation. Purely a display convenience: the server already strips every non-digit character
+(`SanitizeDigits`) before using the value for anything (saving, the VAT-check call), so this changes
+nothing about what gets validated or stored — it just guarantees the value handed to "Controleren"
+reads the way 8f·1's own example shows it, matching the user's explicit ask.
+
+**Annuleren asks first if the form is dirty.** A new self-contained `.gl-v2-modal-confirm` (Type 1,
+`.is-warning`, same family as the delete-confirmation modals — this one just isn't AJAX-loaded, since
+there's no server round trip needed to decide whether to show it) intercepts the Annuleren link's
+click only when the "niet-opgeslagen wijzigingen" badge is currently visible; "Wijzigingen niet
+opslaan" navigates to the same referrer-aware href the link already carried, "Terug naar het
+formulier" just dismisses. An unchanged form still navigates away immediately, no modal.
+
+**Mobile (<768px): tabbar and actionbar are now pinned explicitly, not just via flex order.**
+`.gl-v2-tabbar` gets `position: sticky; top: 0` and `.gl-v2-form-actionbar` gets `position: fixed`
+(bottom, full-width, `env(safe-area-inset-bottom)`-aware) below 768px specifically — belt-and-braces
+on top of the flex-column placement that already keeps them out of the scrolling middle on desktop,
+since a full-bleed mobile card with a potentially long, scrolling tab body is a less predictable
+container to reason about than the fixed-height desktop shell. `.gl-v2-supplier-edit-scroll` gets a
+generous `padding-bottom: 140px` at the same breakpoint so the now out-of-flow fixed actionbar never
+covers the tail end of the scrolling content (sized for its tallest state: status text + button row
+on separate lines). Also removed the default mobile topbar search-icon stub on this page specifically
+— `@section MobileTopbarAction { }`, claimed empty, since `_LayoutV2.cshtml` only falls back to that
+non-functional placeholder icon when a page doesn't claim the slot at all, and this page has no
+search feature for it to represent.
+
+**Mobile: `.gl-v2-field-group` stacks its fields one per row, except deliberately-paired short
+fields.** A generic addition to `.gl-v2-field-group` itself (`gl-v2-shell.css`, not page CSS — any
+future gl-v2 form reusing this component gets it for free): below 768px it becomes
+`flex-direction: column` by default, so a row like Naam+Email or Telefoon+GSM in the Afdelingen/
+Contacten row cards no longer squeezes both fields onto one cramped line. The one deliberate
+exception — Nr and Bus, which read as a single "house number" unit and shouldn't separate — opts back
+into a row via a new `.gl-v2-field-group.is-compact` modifier on a small *nested* field-group;
+`_SupplierDepartmentRowV2.cshtml`'s Straat/Nr/Bus row was restructured from one flat three-field group
+into Straat + a nested `.is-compact` group holding just Nr/Bus, so the exception is expressed once in
+markup rather than as a one-off CSS override.
+
+### Topbar back-button (`.gl-v2-topbar-back`)
+Generic addition to the shared shell, not page-specific: a secondary/outline icon-button (34px,
+same height as `.gl-v2-topbar-icon` so the two sit flush together) rendered immediately to the
+*left* of the topbar icon, a plain chevron-left (`ph ph-caret-left`). Opt-in per page via
+`ViewData["BackUrl"]` — `_LayoutV2.cshtml` only renders the `<a>` when that ViewData key is a
+non-empty string, so pages that don't set it (most of the app, still) see no change at all. Both
+`Leveranciers/EditV2.cshtml` and `Klanten/EditV2.cshtml` set it to the exact same value already
+computed for the Annuleren link (`TempData.Peek("Referrer") ?? Url.Action("Details", ...)`) — one
+`backUrl` variable feeds both the button and the link, not two independent "where did the user come
+from" calculations.
+
+### Topbar title & breadcrumb — long names (design-handoff punt 13 "Topbar met lange namen")
+The mockup's own diagnosis (`design-handoff/CRM Menu Wireframes.dc.html#13a`): a detail page whose
+title repeats a word already in its breadcrumb ("Verkaveling Ketenhoekstraat - Inkomende factuur"
+over a "Projecten / Verkaveling Ketenhoekstraat / Nacalculatie / Inkomende factuur" path) grows past
+one line and drags a second, redundant "← Aankoop"-style back button along with it. The mockup's own
+"REGELS VOOR ELKE TOPBAR" (rules for every topbar), transcribed as the system rule below — this is a
+shell-wide contract every gl-v2 page's title/breadcrumb should follow, not a one-page fix:
+
+1. **The topbar never wraps to a second line.** Grid: `[terug] [icoon] [titel 1fr, min-width:0]
+   [acties auto] [gebruiker auto]`. Only the title column shrinks; every button-shaped thing has a
+   fixed width.
+2. **Titel = wát het is, kruimelpad = wáár het zit — op ELKE breedte, geen uitzondering.** The page's
+   `ViewData["Title"]` is always just the current page's own name/type (e.g. "Leveranciers",
+   "Contract bewerken", "Van Hoecke") — never the project/company/parent name glued in front of it.
+   The breadcrumb node chain (`ViewData["BreadcrumbNode"]`) is always the chain of ANCESTORS only —
+   it must stop at the current page's PARENT, and must never itself add a leaf node whose text is (or
+   restates) the current page. **Concrete test before shipping any new/changed page: read the title
+   out loud, then read the breadcrumb's last visible segment out loud — if they say the same thing,
+   or the breadcrumb segment is the page you're already on, it's wrong.** This has gone wrong on
+   *every* punt-14 page built so far (`DetailContracts`/`DetailContract`/`DetailSupplier`/
+   `EditContract` in `ProjectenController` all built themselves a self-referencing breadcrumb leaf
+   before the 2026-09-23 fix) — do not assume a controller action copied from a working sibling got
+   this right; verify it explicitly, on every breakpoint (see rule 4/5: only desktop shows the *full*
+   ancestor chain unabridged — tablet/phone still never show the current page in it, they just also
+   truncate/hide some of the ancestors).
+3. **Truncate with … in this order:** the middle breadcrumb item first, then the title. Chips,
+   actions, and the avatar never truncate. Truncated text gets the full text as a tooltip.
+4. **Per width something drops, nothing reflows:** <1200px — username drops, avatar stays. <1024px —
+   first breadcrumb segment becomes "…", the primary action moves to the fixed bottom actionbar.
+   <768px — solid-green phone bar: back, title + one context line, ⋯, hamburger.
+5. **On phone the title is the type or the short name** ("Inkomende factuur"); number, kind, and
+   project move to the context line underneath.
+6. **One back button.** The topbar chevron (`ViewData["BackUrl"]`, see above) is the only one — a
+   page-level "← Aankoop" row is replaced by a type chip next to the title (`@@section
+   PageTitleBadges`, already a generic slot every gl-v2 page can use).
+
+**What's actually shared/implemented vs. page-specific:** Rules 1, 4, 5, 6 were already true
+project-wide before this pass — `.gl-v2-topbar-title` already had
+`white-space:nowrap;overflow:hidden;text-overflow:ellipsis` (rule 1/3 for the title), the
+`ViewData["BackUrl"]`/`PageTitleBadges` mechanisms already gave every page a single back button and
+an optional title-chip slot (rule 6), and the tablet/phone actionbar-move + phone-bar collapse (rule
+4/5) were already built per-page (see Invoices/DetailV2 and its tablet actionbar note below). Two
+things were genuinely missing and are now shared, project-wide, in `gl-v2-shell.css`/
+`Components/Breadcrumbs/Default.cshtml` — not scoped to the two pages below:
+- **Breadcrumb truncation (rule 3) didn't exist at all.** `.gl-v2-topbar .breadcrumbs` had no
+  `overflow`/`min-width:0`, so a long segment would simply overflow the topbar rather than ellipsis.
+  Fixed generically: every `<li>` defaults to `flex:none` (nothing shrinks by accident), only
+  `li:not(:first-child):not(:last-child)` (a genuine middle segment) gets `flex:0 1 auto` +
+  `max-width:160px` + ellipsis, and `li:last-child` gets its own `max-width:260px` + ellipsis too —
+  needed because a 2-segment breadcrumb (Home + one node, see Invoices/DetailV2 below) has no middle
+  item at all, so the *only* real segment must still be able to shrink on its own.
+- **No tooltip on truncated text (rule 3's last sentence).** Added `title="@@pageTitle"` on
+  `.gl-v2-topbar-title` (`_LayoutV2.cshtml`) and `title="@@node.Title"` on every breadcrumb `<a>`/
+  `<span>` (`Components/Breadcrumbs/Default.cshtml`) — harmless on the legacy (non-gl-v2) topbar too,
+  since nothing there truncates, so a tooltip on already-full text is a no-op.
+
+**Rule 2 (title/breadcrumb redundancy) is a per-controller fix, not a shell one** — the shell only
+renders whatever title/breadcrumb text a controller hands it, so this is where the two target pages
+actually changed:
+- **`InvoicesController`**: `Detail`'s own title builder (`BuildInvoiceDisplayTitle`, `"{bedrijf} -
+  {factuurnummer}"`) duplicated the issuer name that `SetDetailBreadcrumb`'s breadcrumb chain
+  ("Facturen - {bedrijf}") already carried, *and* `SetDetailBreadcrumb` then appended a further
+  breadcrumb leaf repeating that same string a third time. Both removed: the Detail page now reuses
+  `BuildInvoiceDetailBreadcrumbTitle` (`"Factuur/Creditnota/Draft {nummer}"`, no bedrijfsnaam —
+  already correct and already used by Edit, just not by Detail/Send until now) as its title, and
+  `SetDetailBreadcrumb` stops the chain at the index node instead of adding a same-text leaf.
+  Send/Edit's own breadcrumb middle segment ("Facturen - BCO / Factuur X / Verzenden") is untouched —
+  that's not the redundant case, since the page's own title there is "Verzenden"/"Bewerken", not the
+  invoice identity.
+- **`ProjectenController.IncommingInvoiceDetail`**: title was literally `"{ProjectName} - Inkomende
+  factuur"` — the exact shape the mockup diagnosed, down to the same words, repeating the project
+  name that the breadcrumb's "Projecten / {ProjectName} / Nacalculatie" already carries. A fourth
+  breadcrumb node ("Inkomende factuur", parented to "Nacalculatie") also repeated the new title text.
+  New title: `BuildIncommingInvoiceDisplayTitle` → `"Inkomende factuur {leveranciersreferentie}"`
+  (`InvoiceExternalId`, the "Referentie" field already shown in Documentgegevens; falls back to
+  `#{id}`). Breadcrumb now stops at "Nacalculatie" — no fourth node. The AANKOOP type chip next to
+  the title (`@@section PageTitleBadges`, blue, reversed arrow) already existed before this pass; it
+  was already correctly implementing rule 6, just paired with a title that broke rule 2.
+
+Both fixes apply to the legacy (non-`V2`) views too, since title/breadcrumb are built once in the
+controller and shared by both the gl-v2 and legacy `View()` branches — a strict improvement there as
+well (a shorter, non-repeating title/breadcrumb), not a gl-v2-only change riding along.
+
+**Not done this pass**: no other gl-v2 detail page was audited for the same title/breadcrumb
+redundancy (rule 2) — Invoices/DetailV2 and Projecten/IncommingInvoiceDetailV2 were the two the user
+named. Worth a project-wide sweep later rather than assuming these were the only two offenders.
+
+### Klanten/EditV2 — Leveranciers/EditV2's pattern re-applied to `ClientFormViewModel`
+Direct re-application of everything documented above under "Leveranciers/EditV2" to the Klanten
+edit form — same tabbar/actionbar shell, same 8i-style sectiekaart split, same required-field/dirty-
+badge/discard-modal/mobile-pinning machinery, own page files (`gl-v2-klanten-edit.css`/`.js`) rather
+than sharing Leveranciers' — the two entities' field sets diverge enough (no Afdelingen concept at
+all; a bedrijf/particulier toggle; a second, independent facturatieadres block; per-contact UBL
+switches) that a shared JS/CSS file would need as much branching as just writing two files. Notable
+differences from the Leveranciers version:
+
+- **Two tabs, not three** — "Algemene gegevens" + "Contacten". No Afdelingen-equivalent exists on
+  `ClientFormViewModel`, so there was nothing to give a third tab to.
+- **Bedrijf/particulier is a `.gl-v2-switch`, not the legacy `<select>`.** `IsCompany` is already a
+  plain `bool` on the view model, so `Html.CheckBoxFor` binds it directly (same "disabled checkbox
+  still posts false" mechanism the other switches rely on) — no need for the legacy dropdown-with-
+  two-string-values hack. Toggling it shows/hides a `data-role="company-fields"` block
+  (Bedrijfsnaam + Ondernemingsnummer, via `GlV2BtwNummer` again — Klanten has only the one number
+  field, doing double duty as identification *and* VAT-check input, unlike Leveranciers' separate
+  Ondernemingsnummer/VatNumber fields) or a `data-role="person-fields"` block (Aanspreking + Naam).
+  Required-field validation needs nothing special for this: `validateField()` already skips any
+  field inside a `[hidden]` ancestor, so whichever block is currently hidden is automatically
+  exempt, and required fields are simply marked on both blocks unconditionally.
+- **A second, independent BE/non-BE address toggle for the facturatieadres.** Leveranciers only
+  ever has one address; Klanten's `UseInvoiceAddress` switch reveals a whole second address block
+  (own Straat/Nr/Bus, own `GlV2SearchSelect` postcode/gemeente, own Land) that needs its own
+  Belgian/non-Belgian branching, independent of the main address's country. `initAddressToggle()`
+  from the Leveranciers JS was generalized into `wireAddressToggle(refs)` (takes a refs object
+  instead of five hardcoded `querySelector` calls) and is now called twice — once per address block.
+- **Fixed a latent gap while generalizing that toggle.** The Leveranciers version declares
+  `otherPostalInput`/`otherCityInput` (the manual, non-BE postcode/gemeente `<input>`s) but never
+  actually wires an input listener to them — they're dead variables today. The manual fields
+  themselves can't carry `name="PostalCode"`/`name="City"` directly without colliding with the
+  always-present (but `hidden`-attribute-only, still-submitted) BE-branch hidden fields of the same
+  name — so without a sync listener, typing a non-BE postcode/city silently never reaches the model
+  on submit. `wireAddressToggle()` in `gl-v2-klanten-edit.js` adds the missing `input` listener
+  (manual field → the shared hidden field), so this works correctly for Klanten from the start. Not
+  back-ported to the Leveranciers file in this pass — flagged here rather than changed silently,
+  since that page's JS wasn't part of this request.
+- **"Gegevens overnemen" fills `CompanyName`, not `Name`** (Klanten's `Name` is the particulier
+  field, a different property than Leveranciers' single company-name field), and only ever resolves
+  into the *main* address, never the facturatieadres — a VAT lookup describes the entity's legal
+  seat, not a separately-chosen invoice address, so extending it into that block would be filling in
+  a value the user deliberately chose to diverge from.
+- **UBL-dependency is wired per-pair, not by two hardcoded element ids.** Klanten has the
+  digitale-facturatie/UBL switch pair in two places — once on the main form ("Facturatievoorkeuren"
+  card) and once per contact row (`ContactInputViewModel` carries its own
+  `RequiresDigitalInvoice`/`AttachUblByDefault`, which Leveranciers' contact rows don't have at all).
+  Both pairs share a `data-role="ubl-pair"` wrapper; a `wireUblPair()` helper is called once at init
+  for every existing pair and again for each newly-added contact row, instead of Leveranciers'
+  single `initUblDependency()` hardcoded to two specific ids.
+- **Fixed the multiselect required-validation false-positive before it could ship.** Leveranciers
+  never marked its multiselect fields (Facturatiebedrijven/Activiteiten) `data-gl-v2-required`, so an
+  existing bug in `isFieldElementEmpty()` never surfaced: with zero chips selected there is no hidden
+  input at all (not one with an empty value), so the old fallback logic — "find an input or select
+  and check its value" — would instead read the *filter textbox's* typed text, giving a false
+  "not empty" reading the moment the user typed a search term with nothing actually selected. Klanten
+  *does* require `SelectedIssuerCompanyIds` (`[Required]` on the view model), so this needed fixing:
+  `isFieldElementEmpty()` in `gl-v2-klanten-edit.js` now checks for a `data-role="hidden-inputs"`
+  host first and counts its `hidden-input` children, before falling back to the single-hidden-input/
+  plain-input-or-select checks.
+- **New controller action `BlankClientContactRow`** (`KlantenController.cs`) returns
+  `Partials/_ClientContactRowV2` bound to a blank `ContactInputViewModel`. Deliberately a new name,
+  not a reuse of the existing `BlankContactRow` action — that one already exists for an unrelated
+  legacy flow (`ClientContactBO`/co-owner quick-add), a different model entirely.
+- **`Edit` GET now captures `TempData["Referrer"]`** the same way Leveranciers' does, and both the
+  invalid-`ModelState` POST branch and the GET branch on `ViewData["UseGlV2Layout"]` the same way;
+  the POST's success path now redirects to that referrer (falling back to `Index`) instead of always
+  hardcoding `Index`, matching the "Annuleren and a successful Opslaan return to wherever the user
+  came from" rule already established for Leveranciers.
+
+### Leveranciers/DetailsV2 — the first gl-v2 detail page (optie 8a)
+First gl-v2 page in the read-only "detail" family, after the two form pages (Leveranciers/EditV2,
+Klanten/EditV2). Scope explicitly narrowed by the user to *exactly* what the legacy `Details.cshtml`
+already shows — same five sections (Algemene gegevens as two cards, Afdelingen, Contacten,
+Contracten, Facturen) restyled per 8a's own six rules (topbar carries the name/chips/actions, tabbar
+directly under it, one card per section with icon+title+divider+one line of explanation, 4-column
+label/value grid, empty = em dash never an empty box, tablet 2 columns/mobile 1). Deliberately *not*
+built: the Afdelingen-preview-inside-the-Algemeen-tab 8a's own mockup shows, a "Contact toevoegen"
+topbar button, a "last modified by" meta line, a BTW-status field, a tab-overflow "meer ▾" mechanism,
+or query-param deep-linking from a card's own "Bewerken" link into a specific EditV2 tab — every one
+of those would need new data plumbing or new EditV2 machinery that isn't part of "what Details
+already shows today."
+
+**New generic component: `GlV2DetailField` (`Views/Shared/DisplayTemplates/`) + `.gl-v2-detail-grid`
+family (`gl-v2-shell.css`).** The read-only counterpart to the EditorTemplates: small grey uppercase
+label above a value, em dash when empty, `.is-wide`/`.is-full` modifiers for fields that span columns
+(Adres, Activiteiten) — 4 columns down to 2 (≤1023px) down to 1 (≤767px), exact 8a spacing (18/20px
+padding, 16/26px gap). Bound via `Html.DisplayFor` for plain string properties (including on a
+`foreach`-loop variable like `department.Phone` — the expression's `Body.Member` is what
+`ExpressionMetadataProvider` actually reflects on, so this works correctly even though the lambda
+ignores its own `m` parameter and closes over the loop variable instead); two computed display-only
+properties were added to `SupplierDetailViewModel` itself (`EnterpriseNumberDisplay`,
+`IssuerCompaniesDisplay`) so the existing `EnterpriseNumberFormatter`/join logic stays in the model,
+not the view. Fields needing their own markup (multi-line Adres, mailto/https links, the two
+Aanlevering badges) are hand-written with the same CSS classes directly, same discipline EditV2
+already uses for fields a template doesn't fit.
+
+**Topbar ⋯-menu reuses an existing, already-wired, more-generic component than expected.** Went
+looking for IndexV2's own `.gl-v2-row-menu` (the rij-⋯-menu on the suppliers table) to copy for
+"verwijderen in het ⋯-menu" (8a rule 2), and found something better already sitting in
+`gl-v2-shell.css`/`gl-v2-shell.js`: `.gl-v2-menu`/`.gl-v2-menu-backdrop`/`.gl-v2-menu-item` +
+`initContextMenus()` — a generic contextmenu extracted earlier from that same row-menu pattern
+specifically so future callers wouldn't have to reimplement open/close/position/backdrop/Escape
+themselves (its own comment: "elke aanroeper heeft een eigen icoon/knopstijl — enkel het paneel/de
+items vastgelegd"). `#gl-v2-menu-backdrop` is already rendered once, globally, in `_LayoutV2.cshtml`.
+Net result: the topbar's ⋯-trigger needed zero page JS — just `.js-gl-v2-menu-trigger` +
+`aria-controls` on a `.gl-v2-icon-btn`, and a `.gl-v2-menu` with one `.gl-v2-menu-item.is-danger`
+inside. Added one small generic follow-on to `gl-v2-shell.css`: `.gl-v2-icon-btn.is-menu-open` (the
+same hover tint, applied while `initContextMenus()` has the panel open) — the trigger contract left
+that state's *look* up to each caller, and no caller had opted in yet.
+
+**Delete confirmation reuses the existing `Modals/_ModalDeleteSupplierV2.cshtml` + `ModalDeleteV2`
+action untouched** — same AJAX-fragment-into-an-empty-`.modal-content`-shell recipe as IndexV2's own
+row-delete, just with the page's own container id and a small, self-contained
+`gl-v2-leveranciers-details.js` (tabs + this fetch-and-show, nothing else) rather than pulling in the
+heavier, IndexV2-specific `gl-v2-leveranciers.js` (DataTable init, mobile-card rendering, etc.) that
+this page has no use for and that regression risk wasn't worth avoiding for one small fetch handler.
+
+**Tab meta line (8a rule 3b, "mag per tab verschillen") kept honest, not decorative.** 8a's own
+mockup shows "Facturatiebedrijf BCO · 24 facturen · laatst gewijzigd 12/09/2026 door Niels Lataire" —
+none of that (issuer name in the meta line specifically, or any modified-by/modified-at data) is
+available without new queries beyond the small already-loaded `IssuerCompanies` list, so the meta
+line here is limited to a plain, already-known count ("3 afdelingen", "7 contacten"). Kept only on
+Afdelingen/Contacten (card-list tabs); dropped again from Contracten/Facturen once those became real
+tables in the follow-up pass below — a count sitting above a table repeats what its own tabbar-count
+already says right above it, in a way it didn't for a card list. Omitted entirely on Algemeen.
+
+**Per-card "Bewerken" link (8a rule 4) reuses `.gl-v2-card-header-action`'s own styling even though
+it lives in a `.gl-v2-section-card-header`** — that class turned out not to be scoped to the other
+card variant it was first used in (`.gl-v2-card-header`, the Afdelingen/Contacten row-card family in
+EditV2); its rule is just `border:0;background:transparent;font:600 11.5px;color:primary`, which
+applies identically wherever it's placed. No new CSS needed for this link.
+
+#### Follow-up pass — topbar delete button, phone formatting, copyable e-mail, real tables for Contracten/Facturen
+Same-day refinements after first review of the page above.
+
+**Topbar "Verwijderen" is now a standalone red icon-button, not tucked in a menu.** User feedback:
+a single danger action doesn't need a menu to hide behind — 8a rule 2 ("verwijderen in het
+⋯-menu") was written with more actions in mind than this page turned out to need. Dropped the
+`.gl-v2-menu` wrapper entirely for this one button; new generic `.gl-v2-icon-btn.is-danger`
+modifier in `gl-v2-shell.css` (same palette as `.gl-v2-btn-danger` — bordered, red text/icon,
+filled red on `:active`) so any future icon-only danger action can reuse it without repeating the
+color rules.
+
+**Phone numbers now format the same way the Leveranciers/IndexV2 table already does.** That
+formatting (Belgian national-number grouping, `+32`-prefix handling, generic digit-grouping
+fallback) lived as three `private static` methods directly on `SupplierListItemViewModel` — good
+enough when only that one view model needed it, not once a second one did. Extracted to
+`Helpers/PhoneNumberFormatter.cs` (same shape/namespace as the existing `EnterpriseNumberFormatter`
+there), `SupplierListItemViewModel.PrimaryPhoneDisplay` now calls the shared helper instead of its
+own now-deleted copy, and `SupplierDetailViewModel`/`SupplierDepartmentDetailViewModel`/
+`SupplierContactDetailViewModel` each gained `PhoneDisplay`/`MobileDisplay` computed properties
+built on it. Also fixed a labeling miss caught in the same pass: the main "Contact & facturatie"
+card's `Html.DisplayFor(m => m.Phone, "GlV2DetailField")` call had no `Label` override, so it fell
+back to the bare property name "Phone" instead of "Telefoon" — every other Phone/Mobile field on the
+page already had the override, this was the one that got missed the first time round.
+
+**E-mail fields reuse `.gl-v2-table-email` verbatim** (design-handoff 8g, the same component
+`Leveranciers`/`Klanten` `IndexV2` tables already use) — mail icon + copy-to-clipboard, actions
+revealed on hover, wherever an e-mail is shown as a detail-grid value (main Contact & facturatie
+card, each Afdelingen-rijkaart, each Contacten-rijkaart). No new JS: `initTableEmailActions()`
+(`gl-v2-shell.js`) is already global and delegates on `.js-gl-v2-copy-email`/`data-email`, so this
+markup just works the moment it's on the page.
+
+**Contracten/Facturen became real tables** — first pass (superseded below, kept here only for the
+"what changed and why" trail) used the generic `.gl-v2-menu` context-menu for row actions and a
+plain hand-rolled table with no pagination. User feedback made clear that wasn't the ask: "dezelfde
+styling als leveranciers index" meant literal parity, not a spiritually-similar-but-lighter
+substitute — see the corrected version directly below.
+
+Detail/Bewerken destinations (unchanged by the correction): Contracten → `Projecten/DetailContract`
+and `Projecten/EditContract` (both already exist, keyed on `projectid`+`contractid`); Facturen →
+`Projecten/IncommingInvoiceDetail` and `Projecten/EditIncommingInvoice` (keyed on `projectid`+
+`invoiceid`) — none of these are new, just newly linked from here.
+
+#### Second correction — Contracten/Facturen now real DataTables, matching IndexV2 exactly
+User pushback after the first pass: no pagination, wrong row buttons, and a "···" context menu
+showing even on desktop where IndexV2 never shows one there. Traced the actual desktop/tablet split
+in `gl-v2-leveranciers.css`: `.gl-v2-row-menu-trigger, .gl-v2-row-menu-divider { display: none; }`
+is the *base* (desktop) rule — `.gl-v2-row-menu` itself has no `display:none` at the base, it's a
+plain `display:flex` row of always-visible `.gl-v2-row-action` icon buttons sitting inline in the
+cell. Only inside `@media (max-width: 1023.98px)` does the trigger appear and `.gl-v2-row-menu` flip
+to `display:none` / `.is-open{position:fixed;…}` — i.e. tablet and mobile share one "···"-opens-a-
+floating-panel behavior, desktop never has a menu at all. One div, same children, pure CSS
+media-query switches its rendering mode — no separate "desktop markup" vs "mobile markup".
+
+Replaced the generic `.gl-v2-menu` row actions with this exact `.gl-v2-row-menu`/
+`.gl-v2-row-menu-trigger`/`.gl-v2-row-action`/`.gl-v2-row-action-label` markup and CSS (copied from
+`gl-v2-leveranciers.css`, re-scoped from `.gl-v2 #datatable-suppliers` to `.gl-v2-detail-table` since
+this page doesn't load that file), including the visually-hidden `.gl-v2-row-action-label` that
+becomes real, visible text once the tablet/mobile panel is open. The JS (open/position/close/
+Escape/backdrop/outside-click) is the same ~40-line recipe `gl-v2-leveranciers.js` uses for its own
+row menu, reimplemented in vanilla JS in `gl-v2-leveranciers-details.js` rather than pulled in from
+that file (same reasoning as the delete-modal fetch: this page doesn't need the rest of that file's
+DataTable-filter/mobile-card machinery).
+
+**Real `DataTable` instances now, one per table, same CDN bundle as IndexV2's
+`#datatable-suppliers`** — gives genuine client-side pagination/sorting/the same footer chrome
+(`.dt-info`/`.dt-paging .pagination`), CSS for that footer copied from `gl-v2-leveranciers.css`'s
+own `.dt-container .dt-layout-row:last-child` block for the same "this page doesn't load that file"
+reason already established for the pagination CSS elsewhere in this draft. Two things this needed
+that a plain HTML table didn't:
+- **Lazy, first-open initialization.** A DataTable initialized while its `.gl-v2-tab-panel` still
+  carries `[hidden]` measures a 0px-wide container and ends up with broken column widths — a well-
+  known DataTables pitfall. `initTabs()` now initializes each table the first time its own tab is
+  actually activated (guarded so it only happens once), not on page load.
+- **Explicit `data-order` on formatted cells.** Factuurdatum renders as `dd/MM/yyyy` text — sorted
+  as a plain string that's alphabetically wrong (`"05/01/2026"` would sort before `"12/12/2025"`
+  despite being chronologically later). Same issue for the currency-formatted amount columns
+  (`"€ 1.234,56"` doesn't parse as a sortable number). Both now carry a `data-order` attribute
+  (ISO date / invariant-culture decimal) so DataTables sorts on the real value, not the display text
+  — the visible cell content is unchanged.
+- Still not `.gl-v2-table-card` for the wrapper, even with a real `DataTable` now in play: that
+  class also expects a loading-skeleton and a `.datatables-header-footer-wrapper` that only
+  IndexV2's own page JS ever manages/toggles. The wrapper stays a plain `.gl-v2-card` with the
+  page's own `.gl-v2-detail-table-card` (footer/row styling only, no lifecycle coupling).
+
+#### Third correction — full-height card, no gap below pagination, length-selector hidden, mobile cards
+Same session, immediate follow-up. Four more gaps between the "real DataTable" pass above and actual
+IndexV2 parity:
+
+- **No breathing room below the pagination footer.** A copy/paste of the footer CSS dropped
+  IndexV2's own `.gl-v2-table-card{padding-bottom:16px}` along the way. Restored, on
+  `.gl-v2-detail-table-card .gl-v2-card-body` (`padding:0 20px 16px`).
+- **Card didn't fill the tab's available height** (*superseded by the fourth correction below — the
+  flex-stretch fix tried here turned out to be the wrong shape of fix entirely; kept this paragraph
+  only for the "what was tried and why it didn't hold up" trail*). First attempt: plain CSS flex
+  instead of replicating IndexV2's own `syncTablePageLength()` (which recomputes how many rows fit
+  the viewport, judged too fragile to duplicate for a secondary tab) — `flex:1` down the whole chain
+  from `.gl-v2-tab-panel` through `.gl-v2-detail-table-card`/`.gl-v2-card-body`/`.dt-container`, with
+  `margin-top:auto` pinning the footer to the bottom. This *looked* right but stretched a 1-2-row
+  table to fill the tab regardless of how little data it had — exactly what the user's next message
+  said not to do.
+- **Page-length `<select>` was still there.** The `:first-child{display:none}` on the whole top
+  `.dt-layout-row` *should* already cover it (that row is where DataTables' default `topStart:
+  'pageLength'` lives when no `layout` override says otherwise, same slot IndexV2 explicitly
+  replaces with `{buttons:[]}`), but added an explicit `.dt-length{display:none}` as a second,
+  structure-independent guarantee rather than debug the exact DOM nesting blind.
+- **Mobile now genuinely becomes a card list, not a scrollable table.** Rebuilt IndexV2's
+  `renderMobileCards()` architecture for both tables: each `<table>` sits in a `.table-responsive-md`
+  wrapper (hidden <768px, matching IndexV2's own markup — this wrapper class is server-rendered, not
+  DataTables-generated), a sibling `.gl-v2-detail-mobile-list` container is populated from the
+  current `tbody` rows on every DataTable `"draw"` event (so it stays in sync with sorting/paging for
+  free) plus once on init and on debounced resize (breakpoint crossing without a redraw otherwise
+  wouldn't trigger a rebuild). Each row's `.gl-v2-row-menu`/`.gl-v2-row-menu-trigger` is cloned
+  wholesale into its card (id suffixed `-mobile` to stay unique) rather than rebuilt — the existing
+  delegated `.gl-v2-row-menu-trigger` click handler picks up the clone automatically, no new wiring
+  needed. `.gl-v2-row-action`/`.gl-v2-row-action-label` lost the `.gl-v2-detail-table` scoping prefix
+  they had in the previous pass for this reason: a card's cloned menu lives outside any `<table>`, so
+  a table-scoped selector would silently stop matching there.
+
+Net effect: this page's CSS/JS footprint grew by a full mobile-card system on top of the previous
+DataTable pass — worth noting because a much smaller, "good enough" version was tried twice before
+landing here. The lesson for any future gl-v2 in-page-tab table: if it's going to be compared against
+an existing primary list page, budget for matching that full page's responsive story up front (real
+DataTable + desktop row-icons + tablet/mobile "···" + mobile card rebuild), not just its desktop look.
+
+#### Fourth correction — the flex-stretch "full height" fix above was itself wrong
+User, immediately after the third pass: "het aantal items getoond in de tabellen moet afhangen van
+de beschikbare hoogte, indien er minder rijen dan hoogte zijn moet de tabel niet tot beneden getoond
+worden" — the *number of rows shown* should depend on available height, and a short table must NOT
+be stretched to fill the space when it doesn't have enough data. That's exactly the opposite of what
+the "full height" bullet in the third correction shipped (`flex:1` all the way down so the card
+always fills the tab, padding out with dead white space below a 1-2-row table). The two symptoms
+looked similar ("card doesn't reach the bottom") but the actual IndexV2 behavior everyone was
+pointing at the whole time was `syncTablePageLength()` — not a stretched card, but a card that shows
+*more rows* when there's more room and stays exactly as tall as its real data when there isn't.
+
+Reverted the flex chain back to `.gl-v2-detail-table-card { flex: none; padding-bottom: 16px }` —
+content-hugging again, byte-for-byte matching IndexV2's own `.gl-v2-table-card` this time (its
+footer row also carries its own `padding: 10px 0 16px`, so both paddings stack exactly as IndexV2's
+do — not a mistake, checked against the source). Implemented `syncTablePageLength()` for both tables:
+same measurement idea as `gl-v2-leveranciers.js`'s own version (available viewport height minus
+`.gl-v2-app`/`.gl-v2-topbar`/`.gl-v2-content` chrome, minus thead/footer, divided by row height,
+`Math.max(…, 3)`, capped at `recordsTotal`) but with one deliberate improvement: row height is
+*measured live* off the first rendered `<tr>` (`offsetHeight`) instead of a hardcoded `ROW_HEIGHT`
+constant that has to be kept in sync with the CSS by hand — this page's own table row padding never
+has to be duplicated as a magic number anywhere. Mobile keeps a flat `MOBILE_PAGE_LENGTH = 15` (same
+as IndexV2) rather than a height calculation — cards vary in height themselves, there's no fixed row
+height to measure against there. Runs once right after each DataTable's init and again on debounced
+resize, alongside the existing `renderMobileCards()` call (same timer, so a resize does one
+recompute pass, not two).
+
+### Klanten/DetailsV2 — Leveranciers/DetailsV2's pattern re-applied to `ClientFormViewModel`
+"Pas alles van leveranciers/details toe op klanten/details" — same relationship as Klanten/EditV2 to
+Leveranciers/EditV2 earlier: same shell (topbar badges/Bewerken/red delete icon-button, tabbar,
+`.gl-v2-section-card`+`.gl-v2-detail-grid`, copyable e-mail, formatted phone numbers), re-applied to
+whatever Klanten's own "Details" already shows today rather than Leveranciers' exact section set.
+
+**Klanten's legacy Details isn't a separate read-only page at all — it's the Edit/Create form with
+`ViewBag.ReadOnly = true`.** `KlantenController.Details()` builds the same `ClientFormViewModel` and
+renders `Partials/_ClientForm.cshtml`/`_ClientFormFields.cshtml` with every input disabled, no
+separate `ClientDetailViewModel`. Consequence for scope: no Afdelingen tab (doesn't exist for
+Klanten), no Contracten/Facturen tabs (nothing analogous is shown on Klanten's Details today) — so
+none of the Leveranciers/DetailsV2 DataTable/row-menu/mobile-card machinery was needed here at all.
+`DetailsV2.cshtml` binds directly to `ClientFormViewModel` (no new view model), two tabs:
+- **Algemene gegevens** — the same four cards as Klanten/EditV2 (Identificatie/Adres/Bereikbaarheid/
+  Facturatievoorkeuren), read-only via `GlV2DetailField`/`.gl-v2-detail-grid` instead of the edit
+  form's inputs/switches. Identificatie shows CompanyName+Ondernemingsnummer *or*
+  Salutation+Naam depending on `IsCompany` (a plain server-side `@@if`, no client-side toggle needed
+  since nothing here is editable). Adres's facturatieadres block only renders at all when
+  `UseInvoiceAddress` is true — no need for the edit page's show/hide toggle machinery either.
+- **Contacten** — row cards per contact, phone formatted + e-mail copyable + a small Aanlevering
+  badge pair per contact (`RequiresDigitalInvoice`/`AttachUblByDefault` — `ContactInputViewModel`
+  carries both). No portal invite/revoke actions: Klanten's contacts have no `PortaalStatus`/
+  `LinkedUserId`/`LastLoginAt` fields at all, that whole feature is Leveranciers-only.
+
+**Two new computed display properties on `ClientFormViewModel`** (`EnterpriseNumberDisplay` via the
+shared `EnterpriseNumberFormatter`, `IssuerCompaniesDisplay` joining the selected issuer names) —
+same reasoning as `SupplierDetailViewModel`'s equivalents, and safe to add to a model shared by
+Create/Edit/Details since those two views never read them. `ContactInputViewModel` gained
+`PhoneDisplay`/`MobileDisplay` using the same shared `PhoneNumberFormatter` Leveranciers/DetailsV2
+already extracted — no new formatting logic written for this page at all, purely reuse.
+
+**`Salutation` needed converting to text before it could reach `GlV2DetailField`** — it's a `Salutation?`
+enum, not a string, so `Html.DisplayFor(m => m.Salutation, "GlV2DetailField")` would hand the
+template a value of the wrong type. Resolved in the `@{ }` block instead
+(`Model.Salutation?.GetDisplayName()`, the same extension already used by
+`ClientFormViewModel.DisplayLabel`) and passed that local variable to `DisplayFor` — the same
+closure-over-a-local-variable pattern already relied on elsewhere on Leveranciers/DetailsV2
+(`department.Phone` inside a `foreach`), confirmed there to work correctly because
+`ExpressionMetadataProvider` reflects on the expression's `MemberExpression`, not on whether the
+lambda's own parameter was used.
+
+**`CanDelete` didn't exist on this action's model before** — `ClientFormViewModel.CanDelete` is
+declared on the shared model but `Details()` never set it, so the legacy read-only form never had a
+delete affordance at all. Added a `deleteScope`/`canDelete` computation mirroring the `canEdit` one
+two lines above it (same `ResolveCustomerIssuerScopeAsync(PermissionAccessType.Delete, …)` pattern
+already used identically in `Index()`), wired to the same existing `PartialDeleteClientModalV2`/
+`DeleteClient` endpoints IndexV2 already uses — no new delete infrastructure, just a first caller
+for it from this page.
+
+### Projecten/Index — reused project cards, one-filter toolbar (design-handoff optie 4f)
+Same model/data as the legacy `Index.cshtml` (`ProjectenController.Index`/`LoadMoreProjects`/
+`ProjectsByUserId` all return the `IndexV2`/`_ProjectGridItemsV2` pair when `UseGlV2Layout`, exact
+same `ShowProjectsModel`/`ProjectGridRenderModel`) — only the toolbar chrome and the card partial
+are new. "Project toevoegen" moves from the page header into `@@section PageActions`, same pattern
+as every other `IndexV2`.
+
+**The cards aren't new — they're the Projectleider dashboard's own cards, first pulled out for a
+second caller.** `GlV2/_ProjectCardV2.cshtml` already existed for `_DashboardProjectleider.cshtml`'s
+"Mijn Werven" section (same `ProjectWerfCardVM`, same functional hook classes — `.gl-werf-col`,
+`data-status`, `data-search` — as the legacy `_ProjectWerfCard` it restyles). `Partials/
+_ProjectGridItemsV2.cshtml` is the only new file here, and it's a near-literal copy of the legacy
+`_ProjectGridItems.cshtml` with `GlV2/_ProjectCardV2` swapped in for `_ProjectWerfCard` and
+`ShowArrangeBar`/`IsPinned` forced `false` (rangschikken/vastzetten stay Mijn-Werven-only). This is
+also why the filter/infinite-scroll JS below needed almost no changes: the card already carries the
+`.gl-werf-col`/`data-status`/`data-search` hooks the *legacy* Index page's own inline script used.
+
+**Filters toolbar is the Leveranciers/Klanten `IndexV2` recipe, one filter field (Status) instead of
+three.** Same `gl-v2-toolbar-card`/`gl-v2-filters-*`/`gl-v2-select` component family, copied and
+trimmed into `gl-v2-projecten.css` rather than shared — same "no forced reuse between genuinely
+separate pages" reasoning `gl-v2-klanten.css`'s own intro already documents. No `DataTable` here
+(the grid is server-rendered cards, not a table), so none of the skeleton-loading/mobile-card-
+cloning machinery those two pages need — `gl-v2-projecten.js` is filtering + the pre-existing
+infinite-scroll ported over, not a rebuild.
+
+**`.gl-v2-project-grid`'s container-query column count needed its own container, not the dashboard's
+own `.gl-werven-section`.** That class (`container-type: inline-size`) already existed for the
+dashboard's narrower "Mijn Werven" column; `IndexV2` wraps its grid in its own
+`.gl-v2-projecten-section` with the same `container-type` declaration so the same grid CSS reacts to
+this page's own (much wider, full-body) available width instead of reusing a class name that implies
+a dashboard-column context it isn't in.
+
+**`ProjectsByUserId` ("Eigen projecten") needed a one-line change, not a new view.** It already
+rendered `View("Index", model)` — same `ShowProjectsModel`, `BatchSize = 0` (shows everything at
+once, no pagination) instead of the default 30-then-batches. Swapped to the same `UseGlV2Layout ?
+"IndexV2" : "Index"` ternary every other action here uses; `IndexV2` already hides its "load
+more"/infinite-scroll block whenever `Model.HasMoreProjects` is false, which it always is here
+(`TotalProjectCount == VisibleProjectCount` by construction), so nothing else needed to change.
+
+**Project-card footer date, corrected on request: "opgeleverd + datum ingevuld" must say the date,
+not "overschreden."** `GlV2/_ProjectCardV2.cshtml` previously treated *any* project past its
+`DeliveryDate` as overdue (red "Opleverdatum overschreden") — including ones whose real, registered
+status (`project.Status`, via the existing `ProjectPhase.Resolve`) is already `Opgeleverd`. A
+delivery date is a planning target, not a delivery record; a project that's genuinely done shouldn't
+read as "late" forever after. Added `isDelivered = ProjectPhase.Resolve(project, vg) ==
+ProjectPhaseBucket.Opgeleverd`, checked before the overdue/nearing logic — a delivered project with
+a date shows a plain, neutral "Opleverdatum: dd/MM/yyyy" instead. Shared partial, so this reads
+correctly both here and on the Projectleider dashboard without touching that page at all.
+
+### Leveranciers/CreateV2 en Klanten/CreateV2 — the Edit pages' Create counterparts
+"Pak nu de formulieren klanten/create en leveranciers/create aan zoals je gedaan hebt met klanten/
+edit en leveranciers/edit" — turned out to be the smallest of the form-page ports so far, because
+both legacy `Create` actions already build and validate the exact same view model as `Edit`
+(`SupplierFormViewModel`/`ClientFormViewModel`, including Departments/Contacts persistence on
+Create) and the legacy shared partials (`_SupplierForm.cshtml`/`_ClientForm.cshtml`) already serve
+both actions from one file, switching only the form's target action on `Model.Id.HasValue`. The
+gl-v2 versions hadn't been built that way (separate `EditV2.cshtml` per entity, not a shared
+partial), so `CreateV2.cshtml` is a new, separate file too — but checking `gl-v2-leveranciers-edit.js`/
+`.css` and their Klanten equivalents turned up **zero Id-dependent logic anywhere in either file**:
+every URL, every DOM id, every piece of state is driven by `window.glV2Supplier(Client)EditConfig`
+or plain element ids, none of it keyed on which supplier/client is being edited. That meant Create
+could reuse them completely unchanged rather than duplicating ~700 lines of JS and ~50 lines of CSS
+a second time each.
+
+**Renamed the four shared files to drop "-edit"** (`gl-v2-leveranciers-edit.css/.js` →
+`gl-v2-leveranciers-form.css/.js`, same for Klanten) since "edit" was no longer accurate — a page
+named `-edit.js` being `<script src>`'d from `CreateV2.cshtml` would read as a mistake to the next
+person touching this. Renamed the two JS config globals to match
+(`glV2SupplierEditConfig`→`glV2SupplierFormConfig`, `glV2ClientEditConfig`→`glV2ClientFormConfig`);
+left the CSS/JS *content* untouched beyond that — no new selectors, no new functions, just updated
+`<link>`/`<script src>` references in both `EditV2.cshtml` files and the two new `CreateV2.cshtml`
+files, plus the handful of prose comments elsewhere that named the old filenames.
+
+**What actually differs between EditV2 and CreateV2** (the only genuinely new content in either
+`CreateV2.cshtml`):
+- The `<form>` posts to `Create` instead of `Edit`, with no `id` route value (`Html.BeginForm(
+  "Create", "Leveranciers"/"Klanten", FormMethod.Post, htmlAttributes)` — the 4-argument overload,
+  no `routeValues` parameter needed since Create doesn't take one).
+- `backUrl` has no `Details`/entity-specific fallback to fall back to (there's no entity yet) —
+  falls back to `Index` instead when there's no `Referrer`.
+- Everything else — the four/three section-cards, the tab structure, the row partials, the VAT-
+  lookup modal, the discard-changes modal, the dirty badge, every `data-gl-v2-required`/validation
+  hook — is identical markup to `EditV2.cshtml`, because it's the same model with the same
+  validation rules rendering into the same DOM shape; `Model.Id` being `null` on Create needs no
+  special-casing anywhere (`SupplierFormViewModel.Title`/`ClientFormViewModel.Title` already branch
+  on `Id.HasValue`, `@Html.HiddenFor(m => m.Id)` already renders correctly empty).
+
+**Controller changes, both entities, mirroring `Edit`'s existing pattern exactly**: `Create` GET now
+captures `TempData["Referrer"]` before building the view model (same "why" as `Edit`: Annuleren and a
+successful Opslaan should return to wherever the user opened Create from, not always `Index`);
+`return View(...)` in both GET and the invalid-`ModelState` POST branch now ternary on
+`ViewData["UseGlV2Layout"]` to `"CreateV2"` vs `"Create"`; the success path's
+`RedirectToAction(nameof(Index))` became `!string.IsNullOrWhiteSpace(referrer) ? Redirect(referrer) :
+RedirectToAction(nameof(Index))` — same referrer-first, Index-fallback shape as `Edit`'s success path
+in both controllers.
+
+#### Follow-up pass — Facturatiebedrijven as a plain dropdown, actionbar whitespace, an Activiteiten open bug, Create's breadcrumb
+Four small, separately-requested fixes across the four form pages.
+
+**Facturatiebedrijven is now a plain click-and-choose dropdown, not a search list — on all four
+form pages** (`Leveranciers`/`Klanten` × `Edit`/`Create`V2). First asked for Klanten/CreateV2 alone,
+then explicitly extended to the other three. New `.is-dropdown` modifier on
+`.gl-v2-select-trigger-multi` (`gl-v2-shell.css`, generic): drops the "Zoek …" `<input
+data-role="filter">` entirely and replaces it with a static `<span data-role="placeholder">Kies …
+</span>` + a `.gl-v2-select-trigger-caret` chevron (reusing the caret's existing open/close rotation,
+already generic on `.gl-v2-select-trigger.is-open`). `initMultiSelects()` in both
+`gl-v2-leveranciers-form.js`/`gl-v2-klanten-form.js` needed one small, backward-compatible addition —
+`renderChips()` now hides that placeholder once at least one chip exists — gated behind `if
+(placeholder)`, so it's a no-op wherever the element doesn't exist. Activiteiten (Leveranciers only)
+deliberately kept the search form — it has many grouped options where typing-to-filter genuinely
+helps, unlike Facturatiebedrijven's short, flat list.
+
+**Fixed while touching that code: Activiteiten "gaat niet consistent open als ik er iets in tik."**
+Root cause, found by reading `initMultiSelects()` closely: the "Zoek …" input's own click handler
+was `e.stopPropagation()` and *nothing else* — meaning a click landing directly on the input (rather
+than the surrounding chips area of the same trigger box) never reached the trigger's own open/close
+toggle at all. Which part of one visually-uniform trigger box you happened to click decided whether
+anything happened — exactly "inconsistent." Fixed by giving the filter input its own `focus`/`input`
+listeners that open the panel directly (idempotent — only when not already open), so clicking or
+Tab-focusing into it now opens it reliably regardless of exactly where in the trigger the click
+landed, for both mouse and keyboard use. Applied to both files' `initMultiSelects()` — Klanten has no
+search-mode multiselect left after the dropdown change above, but the two files' copies of this
+function are meant to mirror each other, so fixing only one would've been a silent, easy-to-forget
+divergence the next time either file is touched.
+
+**Every form page now keeps visible whitespace above the action bar, even scrolled to the bottom.**
+`.gl-v2-supplier-edit-scroll`/`.gl-v2-client-edit-scroll` had `padding-bottom: 4px` at desktop/tablet
+— the mobile `padding-bottom: 140px` right below it exists purely to clear the `position: fixed`
+action bar there, not for visual breathing room, so the desktop value never got a real design pass.
+Raised to `20px` in both files, unrelated to the mobile fixed-bar rule.
+
+**Klanten/CreateV2's breadcrumb was simply never set.** Unlike `Leveranciers.Create` (which already
+had a `SetCreateBreadcrumb()` helper), `KlantenController.Create` GET set no
+`ViewData["BreadcrumbNode"]` at all — the breadcrumb component presumably fell back to whatever the
+previous page's breadcrumb happened to be, or rendered empty. Added the same three-node chain
+Leveranciers already uses (`Home → Klanten → "Nieuw klant"`), inline in the GET action rather than a
+new private helper — `Leveranciers.SetCreateBreadcrumb()` exists because Leveranciers' `Create` POST
+also needs to re-set it on a failed-validation redisplay; Klanten's POST re-displays the same view
+without re-deriving the breadcrumb server-side in the same way, so a second call site wasn't needed
+here (confirmed the POST failure path doesn't clear `ViewData` between GET and the redisplay it
+triggers).
+
+*Unrelated to any of the above*: a `dotnet build` mid-session briefly reported three real
+(non-DLL-lock) errors, all in `Projecten/DetailV2.cshtml` (RZ1010 + two CS1501s) — a file untouched
+by any work in this thread. An attempted one-line fix reproduced the identical error, so it was
+reverted byte-for-byte back to its original state rather than risk a wrong fix to unfamiliar code; a
+subsequent build came back clean with no changes on that file at all, suggesting the failure was a
+transient artifact (mid-write from another process touching that untracked file) rather than a real
+standing defect. Flagged here rather than silently dropped — worth a second look if it recurs.
+
+### Projecten/Weather — year calendar (design-handoff optie 10a "Jaarkalender")
+First real use of two components that existed on paper but had no caller yet: `.gl-v2-tabbar-tab.
+is-disabled` and the topbar back-button (`ViewData["BackUrl"]`, documented above under Leveranciers/
+EditV2). Same model/data/AJAX endpoints as the legacy `Weather.cshtml` (`ProjectenController.
+Weather` returns `WeatherV2` when `UseGlV2Layout`; `GetCalendarBundle`/`AddBadWeatherDay`/
+`DeleteBadWeatherDay` untouched) — only the FullCalendar `multiMonthYear` view is replaced with a
+from-scratch 12-month grid that follows 10a's own explicit rules (weekends lighter not darker, a
+day's whole cell fills with color instead of a letter-pill, rain is blue/wind is oker, one segmented
+control instead of two loose outline buttons, totals shown three places, year nav sits next to the
+totals it drives).
+
+**Scoped down on explicit request — two things deliberately not built in this pass:**
+- **Tabbar:** only "Kalender" is real/enabled. "Weerstations"/"Aanvragen"/"Rapport" render
+  `.is-disabled` (uses the pre-existing-but-unused component, first real caller) rather than being
+  hidden — same "don't hide, turn off" reasoning the component's own CSS comment already states,
+  now actually exercised. "Weerstations" shows an honest count (`Model.WeatherStations.Count`);
+  "Aanvragen"/"Rapport" show none — the mockup's "12" is a placeholder for a feature this app has no
+  data model for yet, and fabricating a number there would misrepresent it as real.
+- **Topbar actions:** 10a's own "Exporteren" button + ⋯ icon button are not built — no `@@section
+  PageActions` at all on this page, so `_LayoutV2`'s `IsSectionDefined` guard renders nothing rather
+  than an empty slot.
+
+**Vacation days — a real app concept the mockup's legend doesn't show.** The legacy calendar also
+renders company-wide vacation days (green "V" pills, non-editable, blocking clicks) via the same
+`GetCalendarBundle` response's third array. 10a's legend only documents regendag/winddag/beide/
+weekend/hover — dropping vacation silently would have been a real feature regression, not just a
+visual simplification, so a `.is-vacation` day state (reusing the app's existing green pair,
+`--gl-v2-primary-tint`/`--gl-v2-primary`, rather than inventing a third hue the mockup never
+specified) and a matching legend swatch were added beyond the pixel reference. Vacation cells are
+non-interactive (excluded from click/drag and from the "eligible cell" set) exactly like weekends.
+
+**Year navigation never re-fetches.** `GetCalendarBundle` accepts a `year` query parameter but its
+server-side implementation ignores it — `service.GetBadWeatherDays(weatherstationid, type)` always
+returns every year for the station. Rather than "fix" that (out of scope, other callers may depend
+on the current shape) or fetch-and-discard per year, the client fetches the bundle once per station
+switch and keeps the full multi-year `Map`/`Set` in memory; `‹`/`›` only changes `state.year` and
+re-renders the 12 month cards from what's already loaded. Cheaper, and it happens to match what the
+endpoint actually does rather than pretending it's year-scoped.
+
+**Grid breakpoints re-derived, not copied from the mockup's 1400px.** 10a's own note says "six per
+row at 1400px, three on tablet, one on phone" — but 1400px there is the width of the standalone
+mockup card, not this app's real `.gl-v2-body` content width (rail + gaps + insets already take a
+bite out of the viewport). Kept the same three-step shape (1 → 3 → 6 columns) but moved the
+thresholds to 768px/1200px so six columns only ever appear once there's genuinely enough width per
+card to stay legible, rather than at the mockup's specific pixel value.
+
+**Single click vs. drag, one shared `pointerdown`/`pointermove`/`pointerup` handler pair.** 10a's
+legend is explicit: "klik zet · nog eens klikken wist · slepen over meerdere dagen zet een reeks" —
+a single day toggles (add ↔ remove), a drag across several days only ever *adds* (never removes an
+already-armed day mid-drag). Pointer Events drag path gated to `pointerType !== "touch"` — dragging
+is a mouse/pen affordance only, so touch scrolling over the year grid is never hijacked by an
+accidental multi-day selection; touch stays on the plain `click` listener below.
+
+**First shipped version silently broke plain clicks — real report: "aanklikken lukt niet."** The
+drag path calls `e.preventDefault()` in `pointerdown` (needed so text selection doesn't fight the
+drag). That also suppresses the browser's trailing synthetic `click` event for mouse/pen input —
+a documented Pointer Events interaction, not a bug in this code, but one that's easy to not know
+about. The first version only handled the *multi-cell* drag case directly in `pointerup` and still
+relied on that (now-suppressed) `click` for the plain single-cell case — so with a mouse, the
+single most common interaction on the page did nothing at all. Fixed by moving the single-cell
+toggle into `pointerup`/`endDrag` too, so neither path depends on `click` firing for mouse/pen;
+`click` now only really does anything for touch taps (`suppressNextClick` stays as a defensive
+guard in case a browser fires it anyway).
+
+**`AddBadWeatherDay` doesn't reliably return a usable id — a second real report: "het is wel
+aangepast, maar ik zie het pas na een refresh."** Pre-existing server quirk, not new to this page —
+`AddBadWeatherDay` can return `0` even when the insert succeeded (the legacy FullCalendar view had
+its own `probeId()` fallback for exactly this). The id is only needed later, to delete that same day
+again; the day itself was already saved. First fix treated a `0` id as failure and called the full
+`loadBundle()` to resync — correct, but visibly re-flashed the whole 12-month grid on what should be
+an instant click, which read as "the whole calendar reloads" (also a real complaint). Final shape:
+`addDay()` updates local state and re-renders immediately regardless of the returned id (optimistic,
+matching `deleteDay()`'s existing instant feel) — a day with an unresolved id is marked with the
+sentinel value `true` instead of a number. A small `resolveRealId()` then fetches just the bundle
+(one in-flight fetch per weather type, shared via `pendingResyncs` so a fast run of clicks doesn't
+each start their own) and fills in the real id **without calling `renderAll()`** — nothing visually
+changes, since the color was already correct, this purely repairs the bookkeeping a later delete
+needs. `toggleDay()` only has to wait on that lookup in the rare case someone clicks the same day
+again before it resolved.
+
+**Hover preview reads the armed color from one CSS custom property, not two duplicated rule sets.**
+`#weer-months` carries `--weer-armed-color`, written by JS whenever the segmented control's
+selection changes; both the `:hover` ring on an eligible day and the `.is-drag-preview` class JS
+adds mid-drag reference the same `box-shadow: inset 0 0 0 1.5px var(--weer-armed-color)` — one color
+swap point instead of `[data-armed-type="rain"]`/`[data-armed-type="wind"]` attribute-selector pairs
+repeated for every place the armed color shows up.
+
+**Segmented control gated behind the existing write permission, not shown-then-disabled.** Same
+`ViewBag.CanWriteProjectWeather` (`PermissionCodes.ProjectsWeatherDelay`) the legacy page already
+checked before rendering its two toggle buttons — a read-only visitor sees the tabbar, the toolbar's
+station field, the year totals, and the colored grid, but no segmented control and no click/drag
+wiring on the grid at all (`.gl-v2-weer-months.is-readonly`, cursor stays default, no hover ring).
+
+**Mobile year bar: the rain/wind totals get dropped, not wrapped.** `‹ jaar ›` is the bar's only
+interactive piece, and at phone width the full "Station 2026 · N regendagen · N winddagen · N
+totaal · ‹ 2026 ›" line pushed the nav buttons clean off the edge of the screen (real report). Below
+768px, `.gl-v2-weer-year-stat.is-rain`/`.is-wind` and the divider directly after `.is-rain` go
+`display:none` (`.is-rain + .gl-v2-weer-year-divider`, so the remaining divider — between the
+station label and "totaal" — doesn't end up stranded next to nothing). Both counts stay visible
+elsewhere on the same screen (the segmented control's own tallies, each month card's header), so
+nothing is actually lost, just not repeated a third time in a bar that has no room for it on a
+phone.
+
+### Projecten/DetailV2 — the projectdossier inner menu (design-handoff punt 9)
+First gl-v2 pass over Projecten/Detail, scope deliberately narrowed by the user to exactly the inner
+menu itself (punt 9, "18 items in 6 groepen, op drie breedtes") plus enough page to actually try it
+in a browser — the existing KPI strip, ported through the already-generic `GlV2/_KpiStrip` component
+rather than the page's own `gl-kpi2-*` cards. Everything else the legacy hub shows (attention panel,
+recent clients/news/photos, mijlpalen, invoicing summary) is out of scope for this pass and still
+lives only on the legacy `Detail.cshtml`; the new page's content area says so plainly instead of
+silently dropping those sections. Groups/items/permission checks are a 1:1 port of the existing
+`Views/Shared/DetailMenu.cshtml` sidebar (same `PermissionCodes`, same hrefs, same coordination-
+project exception hiding Media/Nieuws/Contacten) — which turns out to already be "18 items in 6
+groepen" for a full-rights user, exactly punt 9's own example count. Every menu item still points at
+the existing legacy sub-pages (`DetailClients`, `DetailUnits`, `ProjectsIssues`, …) — those get their
+own V2 pass later, same one-page-at-a-time adoption as Leveranciers/Klanten. Live counts (the mockup's
+"3" badge on Punten) are not wired up — the legacy sidebar doesn't have one either, so there's nothing
+to port; a real counter is a separate, later addition.
+
+**New component: `GlV2ProjectMenuVm`/`GlV2ProjectMenuMode` (`Models/GlV2/`) +
+`GlV2/_ProjectInnerMenuV2.cshtml`.** The partial builds its groups/items once (cheap, in-memory
+`IPermissionService` checks) and is then called *twice* from the page with a different `Mode` —
+`Outer` (desktop 9a + tablet 9b) and `Phone` (9c) — because the two shapes belong to genuinely
+different parents, not just different CSS: Outer renders into a new `@section ProjectMenu` sibling
+of `.gl-v2-body` (see next note), Phone renders inline in the page's own `<main>`, above its content.
+No CSS reflow can move one DOM subtree between two different ancestors, so — same reasoning
+`_RailPartialV2.cshtml` already uses for rail-vs-mobile-menu — the choice was call-twice-from-shared-
+data rather than one giant conditional tree.
+
+**Corrected mid-build: the menu is its own card beside `.gl-v2-body`, not content inside it.** First
+version nested the whole component inside `<main>` next to a `.gl-v2-project-main` content div (one
+`.gl-v2-body` card containing both). The user caught this against 9a/9b's own markup, which is
+explicit: rail (72px) | menu panel (244px, its own white rounded card) | content card (its own white
+rounded card) — three siblings on one flex row with a shared 12px gap, not a menu-plus-content card
+pair inside the existing body shell. Fixed by adding an optional `@RenderSection("ProjectMenu",
+required: false)` in `_LayoutV2.cshtml`, rendered inside `.gl-v2-project-menu-slot` right after
+`_RailPartialV2` and before `.gl-v2-body` — same `IsSectionDefined`-guarded optional-slot pattern as
+`PageActions`/`MobileQuickActions`, so every other gl-v2 page is untouched. Phone-mode stayed inline
+in `<main>` throughout — 9c's trigger bar genuinely belongs inside the page's own content, below the
+topbar, not as a sibling card floating outside it.
+
+**Tablet (9b) has no flyout — every item already has its own visible icon.** First version mirrored
+the outer rail's hover/click flyout pattern literally: one icon per *group*, opening a 252px panel
+listing that group's items as text. But this component gives every *item* its own icon in the 52px
+column (18 icons, not 6) — so hovering an item's own already-visible, already-labeled (tooltip) icon
+to reveal a panel that lists the same items again as text is a redundant extra step the user called
+out directly. Removed entirely: tablet icons are now plain `<a>` links that navigate immediately, with
+only a CSS-only tooltip (`transition-delay: .4s`, no JS) showing the label on hover/focus — same
+"na 400ms, altijd rechts" spec as 9d, just without a JS-driven flyout to open/close/position. Tablet
+search (which only existed as a flyout panel) was dropped along with it rather than inventing a new
+home for it — desktop (own search field in the panel) and phone (search in the sheet) both still have
+it; punt 9's own "vanaf 12 ingangen" threshold still gates whether it renders at all.
+
+**Both cards are always at least screen-tall, project-wide.** `.gl-v2-app` already carries
+`min-height: 100vh` and defaults every flex child to `align-items: stretch`; `.gl-v2-body` normally
+opts *out* of that (`align-self: flex-start`, the earlier "kaart krimpt mee" fix) unless a page sets
+`ViewData["GlV2FullHeightBody"]`. First version of this page left that flag unset and gave
+`.gl-v2-project-menu-slot` its own `align-self: flex-start` + `max-height` cap — both cards ended up
+shorter than the viewport. Fix was to stop fighting the shell's own default rather than add anything
+new: `GlV2FullHeightBody` back on for the page (so `.gl-v2-body` stretches like everything else), and
+the slot's `align-self`/`max-height` overrides removed so it inherits the same default stretch
+`.gl-v2-rail` already relies on — `position: sticky; top: 12px` still keeps the visible card pinned
+while the page scrolls, exactly like the rail.
+
+**Tablet spacing tightened shell-wide, one number instead of four.** User feedback: the whitespace
+felt heavier than desktop needed, and the gap right of `.gl-v2-body` should match the gap left of the
+rail and the gap between rail and menu — i.e. one value driving all four positions rather than values
+that could drift apart. Added `@media (min-width: 768px) and (max-width: 1399.98px) { .gl-v2-app {
+padding: 8px; gap: 8px; } }` to `gl-v2-shell.css` itself (down from the base 12px) — both properties
+set together on the same selector so they can't go out of sync again, and shell-wide (not
+page-scoped) since every gl-v2 page shares `.gl-v2-app`. The tablet icon rail's own scrollbar (visible
+when 18+ icons exceed a short/landscape tablet's height) is hidden with `scrollbar-width: none` +
+`::-webkit-scrollbar { display: none }` — still scrolls on touch/wheel, just without an OS scrollbar
+track inside a narrow rounded card.
+
+**Design-hook exception: the 3px left accent bar on active items is punt 9d's own spec, not an AI
+default.** The `side-tab` design-quality hook flags a thick colored left border as a generic-AI tell;
+here it's `design-handoff/CRM Menu Wireframes.dc.html`'s literal "actief — #D6E5CC · 3px balk #00532D
+links" state, repeated by design for the desktop item, the tablet rail icon, and the phone sheet row.
+Suppressed with a narrow `ignore-value side-tab "*"` scoped to `gl-v2-project-inner-menu.css` rather
+than removed.
+
+#### Follow-up pass — the "Project" entry's own content (design-handoff punt 12a)
+Same page, next request: build out what the inner menu's "Project" entry actually shows, pointed at
+punt 12a ("Projectdetail — de ingang 'Project' uit 9a, in onze kaartstandaard") and its own
+commentary block ("WAT ER ANDERS IS DAN IN JOUW HUIDIGE SCHERM"). Replaced the placeholder
+"Dossieroverzicht" card with 12a's full layout: a meta line, a 6-tile stat row, a filterable "Vraagt
+actie" card, a Traject/Eenheden row, an Algemene gegevens/Voortgang & budget/Facturatie+Documenten
+row, and a Foto's & media grid.
+
+**Every section's data already existed — none of it needed a new query.** The legacy `Detail.cshtml`
+turned out to already build or load everything punt 12a asks for, just presented differently: the
+attention panel's `urgentItems`/`normalItems`/`attentionCategories` tuple-building (ported verbatim,
+only the Boxicons→Phosphor icon names changed), `_TrajectSummaryCard.cshtml`'s exact
+`IProjecttrajectService.GetByProject` query (re-injected directly on this page instead of calling the
+partial, since 12a's bar-with-overdue-segment and single-next-milestone shape don't match that
+partial's own list-of-three markup), `Model.Voortgang` for the budget bars/stats, `Model.RecentInvoices`/
+`Model.LatestDocs`/`Model.LatestPictures` for the three right-hand cards. Reused existing generic gl-v2
+components wherever the shape already matched rather than inventing parallel ones: `.gl-v2-section-card`
+family for every card shell, `.gl-v2-detail-grid`/`GlV2DetailField` for Algemene gegevens (2-column
+label/value, exactly what that template already does), `.gl-v2-badge` for the unit status pills. Only
+the pieces with no existing gl-v2 equivalent — the 6-tile stat row with bars, the attention card's
+category chips, the traject/voortgang bar shapes, the media grid — got new CSS in a new page-only file
+(`gl-v2-projecten-detail.css`), plus a small `gl-v2-projecten-detail.js` porting the legacy inline
+`<script>`'s two filters (attention category chips, units-table search) to gl-v2 markup 1:1.
+
+**Two knowing, disclosed deviations from 12a, not silently dropped:**
+- **Kept "Werkdagen" instead of swapping to "Weerverlet."** 12a's commentary explicitly asks for this
+  swap ("In de plaats staat weerverlet, wat bij dit project wel meetelt"), but there's no project-scoped
+  bad-weather-day count sitting on a field anywhere — `IProjectService.GetBadWeatherDays` returns a
+  whole weather station's full history, and turning that into "days for this project" is the same
+  date-range/type-filtering logic Projecten/Weather owns, not a one-line read. Rather than fabricate a
+  number or half-build that logic as a side effect of a KPI tile, kept the already-correct "Werkdagen"
+  this controller action already computes.
+- **Project-photo-as-thumbnail (12b option A) not carried into the topbar or inner-menu header.** 12a's
+  own commentary treats this as settled ("optie A uit 12b"), but "consequent doorgevoerd" there
+  explicitly means topbar *and* inner-menu header *and* project list *and* search results all showing
+  the same crop — a shell-level, cross-page change (a new `_LayoutV2.cshtml` topbar-thumbnail slot, at
+  minimum), not something to fold into one page's content pass. The Foto's & media card at the bottom
+  still shows the real photos; the topbar/inner-menu still show the plain icon.
+
+**Facturatie's new total is labeled "Getoond," not "Gefactureerd."** 12a's mockup sums the two
+invoice rows it shows into a footer total (commentary §6, "twee losse lijnen zonder som dwongen je tot
+hoofdrekenen"). `Model.RecentInvoices` is capped at 5 (`Take(5)` in the controller), so on a project
+with more invoices that sum would understate the true total — labeling it "Gefactureerd" would claim a
+completeness the number doesn't have. Kept the sum (still answers the commentary's actual complaint,
+mental math), renamed the label so it only claims what it is.
+
+**Unit price column uses `GrossTotal`, not `Balance`, for per-row/total amounts** (Facturatie card and
+the row-level invoice amount) — `Balance` is what's still outstanding, `GrossTotal` is the invoiced
+amount; 12a's own mockup numbers (two rows summing exactly to the shown total) only make sense read as
+gross amounts, not remaining balances. The legacy card showed `Balance` per row; this is a deliberate,
+small semantic correction, not a copy of the old field choice.
+
+### Invoices/DetailV2 — sales-invoice detail (design-handoff punt 11 "Factuurdetail")
+Punt 11's own mockup covers one shared layout for both directions (11a/11b desktop, 11c the
+direction-signal explainer, 11d tablet, 11e phone) — but this app's `InvoicesController` is sales-
+invoices only; purchase/incoming invoices are a wholly separate feature (`Projecten/
+IncommingInvoice*`, a different controller, different data shape) that this page never touches. So
+every reference point here is 11a/11d/11e's **verkoop** side specifically, on explicit instruction —
+the aankoop halves of those three options were read for contrast only, nothing from them was built.
+
+**A real, unglamorous first constraint: several of 11a's fields don't exist in this data model yet.**
+`InvoiceDetailVM` (built by `InvoicesController.MapDetail`) does not carry a project name, a contract
+link, or a client id — the underlying `InvoiceDetailBO` *does* have `ProjectId`/`SupplierContractId`,
+but `MapDetail` never reads them, and nothing in this controller resolves an id to a display name
+either way. Rather than fabricate a "PROJECT" field pointing nowhere, or spend this pass adding a new
+lookup query, the Documentgegevens card simply omits it (and the "Open klantfiche" link 11a shows on
+the Klant card) — same discipline as Leveranciers/DetailsV2's own "needs new data plumbing, not part
+of what this page already shows" list. `OctopusJournalKey`/`OctopusDocumentSequenceNr` *are* mapped
+through, so "Dagboek" is real, not omitted.
+
+**"Betalingen 0" in the tabbar has no feature behind it at all.** `PaidAmount`/`Balance` (both single
+scalar fields, no per-payment ledger) are the *entire* extent of payment tracking this app exposes —
+confirmed by grepping the whole controller for "Payment"/"Betaling" and finding only payment-*term*
+config and project payment-*stage* ids, nothing resembling a received-payments history. So unlike
+Weerverlet's "Weerstations" tab (real count, no page yet), this tab has no data to even honestly
+count — it's `.is-disabled` with no count badge at all, not a fabricated "0".
+
+**Verzendgeschiedenis is real (`EmailLogs`/`LastEmailSentAt`), but doesn't get its own tab-panel this
+pass — it's a card on the one real tab, exactly like 11a's own desktop layout already draws it.**
+11a's tabbar lists "Verzendgeschiedenis 2" as a tab *and* separately renders a full Verzendgeschiedenis
+card inside whatever the current tab's body is — reading that literally rather than as a contradiction:
+the tabbar is wayfinding for tabs that don't exist yet (same `.is-disabled` treatment as Betalingen/
+Documenten/Historiek), and the card is simply part of "Factuur" tab's content, not a second working
+tab-panel. One real tab this pass, matching the Weerverlet precedent, while still surfacing real data
+rather than hiding it because the tab itself isn't built.
+
+**Two direction "badges" (GEBOEKT + OPENSTAAND) don't map onto one `InvoiceStatus` enum, so they're
+derived from two different real signals instead of invented as parallel status dimensions.** The
+primary status chip is `Model.StatusLabel` (`InvoiceStatus`'s own 10-value Dutch vocabulary — Concept/
+Genummerd/Verzonden/Deels betaald/Betaald/Vervallen/Geannuleerd/Geboekt/Bezig met genereren), mapped
+onto the 5 existing generic `.gl-v2-badge` tones (same `IndexV2.cshtml`-local `StatusTone` function
+style as its sibling `StatusIcon`/`DocumentType`, duplicated per that page's own established
+precedent, not shared). The separate "OPENSTAAND" chip is not a status value at all — it's shown
+whenever `Balance ?? (TotalInclVat - PaidAmount)` is meaningfully greater than zero, which is exactly
+what the mockup's tan chip communicates, just derived rather than declared. A third, always-static
+"Verkoop" chip (solid Primary fill, own `.gl-v2-invoice-direction-badge` class — none of the 5 tint-
+background generic tones read as a *direction* marker) covers 11's whole "richting altijd zichtbaar"
+idea for a page that, in this app, never has any other direction to show.
+
+**Two markup blocks for the hero card, not one reflowed by CSS.** 11e's phone layout promotes the
+amount to the top, large, before the parties/due-date line that leads on desktop/tablet — a genuine
+content reorder, not a restyle, so `.gl-v2-invoice-hero` (desktop/tablet) and `.gl-v2-invoice-hero-
+mobile` (phone, amount-first) are two separate elements, CSS-toggled by breakpoint exactly like
+`GlV2/_ProjectCardV2.cshtml`'s own desktop-frame/mobile-row split already does for the same reason.
+Same reasoning extended to the factuurlijnen table: below 768px it's `display:none`, replaced by
+server-rendered `.gl-v2-invoice-line-card` blocks (not a JS `renderMobileCards()` pass like
+Leveranciers/Klanten `IndexV2`/`DetailsV2` use) — those two pages need JS because their tables are
+DataTable-driven and can re-sort/re-page after load; this table is a small, static, already-fully-
+rendered list, so building the mobile cards server-side alongside the desktop `<table>` needed zero
+JavaScript.
+
+**Tried, then reverted: a second ⋯ trigger in the mobile topbar slot.** 11e's own commentary is
+explicit — "rechts staat het ⋯-menu naast altijd het hamburgermenu" — so a first pass put a second
+`.js-gl-v2-menu-trigger` button (same shared `#invoice-detail-menu` panel, `gl-v2-shell.js`'s generic
+`initContextMenus()` already supports one panel with several triggers) in `@@section
+MobileTopbarAction`, styled with the class `.gl-v2-topbar-filter-btn` on the assumption that class was
+a shared, generic "circular white-on-green mobile topbar icon" component like `.gl-v2-hamburger`. It
+is not — `.gl-v2-topbar-filter-btn` does not exist anywhere in `gl-v2-shell.css`; every page that uses
+it (Leveranciers/Klanten/Projecten `IndexV2`) defines its own copy, `display:none`-by-default-then-
+shown-under-768px included, in that page's own CSS file (same "no forced reuse between genuinely
+separate pages" discipline documented elsewhere in this file). `gl-v2-invoices-detail.css` never
+defined it, so the class carried no rules at all here — the button rendered as a bare, unstyled,
+**always-visible** element, showing up right next to the real desktop-only ⋯ button at every
+viewport width instead of only appearing under 768px. Real report: "het ⋯ menu staat tweemaal in de
+topbar." Fixed by removing the second trigger/section entirely rather than adding the missing
+per-page CSS — one ⋯ trigger (`@@section PageActions`, hidden below 768px like every other page's
+actions), matching the generic rule instead of carving out a page-specific exception for it. On
+phone, `Bewerken`/`Verzenden` stay reachable via the fixed bottom action bar; UBL export and
+Verwijderen do not currently have a phone-width entry point on this page.
+
+**Fixed bottom action bar reuses `.gl-v2-form-actionbar` (built for EditV2 forms), extended one
+breakpoint further than its original job.** That component already becomes `position:fixed` below
+768px; 11d wants the same fixed bar at tablet width too (768–1199.98px), which the shared component
+doesn't do on its own (EditV2 forms are fine leaving it in-flow at tablet width — a detail page with
+its main actions otherwise stuck in a topbar the user has scrolled away from is not). The extra
+breakpoint lives entirely in this page's own CSS (`.gl-v2-invoice-actionbar`), not in `gl-v2-shell.css`
+— doesn't change the component's behavior for its original callers. Hidden entirely ≥1200px, where
+the topbar actions are already reachable without scrolling.
+
+**Not a literal rebuild of 11d's "2+1" tablet card rearrangement.** The three info cards (Onze
+onderneming/Klant/Documentgegevens) go 3 → 2 → 1 columns via plain breakpoints rather than 11d's
+specific "tegenpartij+wij side by side, documentgegevens full-width below" arrangement — a same-width
+grid reads just as clearly at this card size and needed far less page-specific CSS than reproducing
+the exact asymmetric layout. Similarly, 11d's tablet "meer ▾" tab-overflow control was not built —
+the tabbar's existing horizontal-scroll behavior (`overflow-x: auto`, already generic) covers five
+tabs at tablet width well enough without a new dropdown component.
+
+#### Follow-up pass — row height, field columns, table alignment, full-height body
+Real feedback after first review of the three-card row and the two tables.
+
+**Cards now stretch to the row's height, and every field-grid inside them is capped at 2 columns.**
+`.gl-v2-invoice-cards` used `align-items: start`, so each of the three cards sized to its own content
+— Documentgegevens (6 fields) ended up visibly taller than Onze onderneming/Klant sitting right next
+to it. Switched to `align-items: stretch` (grid's own default; `start` was overriding it) so all three
+always match the tallest one. Separately, Onze onderneming/Klant originally used a single always-
+stacked column (`display:flex;flex-direction:column`, "beid gelijk aan het smalle 1400px-mockup-
+voorbeeld") — but at this card width (⅓ of the content row, not the mockup's own ~440px-in-isolation
+card) that read as unnecessarily tall next to Documentgegevens' 2-column layout. Reworked both cards
+to match: the company/client name moved out of the field grid into its own prominent line
+(`.gl-v2-invoice-party-name`, 14px above the grid — this is also literally how 11a's own mockup draws
+it, a bare 600-weight name line before the Adres/Btw/Rekening list, not a fourth labeled field), and
+the remaining three fields are Adres (`Wide = true`, spans both columns — the one field long enough to
+need it) + Btw + Rekening/e-mail, which fills a 2-column grid with zero empty cells. (Naam + Adres +
+Btw + Rekening as four peer fields, one wide, would always leave one gap — three narrow fields split
+across two columns can't come out even once one of them doubles up.) Documentgegevens keeps its
+existing 2-column override, now shared by all three cards under one selector instead of a `:not(...)`
+exclusion that only the removed single-column card needed.
+
+**Table header cells weren't lining up with the values under them — a real, reproducible bug, not a
+rendering quirk.** `thead th` had `padding: 0 0 8px` (no horizontal padding at all) while `tbody td`
+got its inter-column gap from a `td + td { padding-left: 14px }` sibling rule — headers sat flush at
+each column's left edge, values sat 14px inset from it, so "Ontvanger"/"Onderwerp"/"Groep" never
+aligned with the text below them despite occupying the correct table column (standard table layout
+sizes a column to its widest cell across every row, header included — the columns themselves were
+never actually misaligned, only the text position *within* each cell was, since the padding differed
+between the row that draws the label and the rows that draw the values). Fixed by giving `th` and `td`
+identical padding (`padding: 0 14px 0 0`, last column gets `0`) instead of asymmetric sibling rules —
+same box model for every cell in a column regardless of which row it's in.
+
+**`ViewData["GlV2FullHeightBody"]` was never set on this page.** Without it, `.gl-v2-body` shrinks to
+its content's height (`align-self: flex-start`, the *default* — meant for short table pages like
+`Invoices/IndexV2`) rather than filling the viewport, which reads wrong on a page built with a
+sticky-feeling tabbar-at-top-plus-fixed-actionbar-at-bottom shape: a short invoice left a visibly
+short card next to the full-height rail, and the tablet/phone fixed action bar could float right
+under a short tab body instead of pinning to the true bottom of the screen. Same flag every other
+gl-v2 page with a bottom-pinned bar already sets (documented under Layout/`.gl-v2-body` above) —
+simply missed when this page was first built.
+
+**Deliberately not built, on top of the above:** the "Nummeren" (Issue draft → numbered) action —
+`IndexV2.cshtml`'s row-menu invokes it through a specific form/processing-modal combination
+(`.js-issue-invoice`, `#issueInvoiceConfirmModal`, `.js-invoice-processing-form`) not confirmed closely
+enough this pass to replicate correctly; safer to omit than guess at the wrong wiring for a real,
+working action.
+
+#### Follow-up pass — tablet topbar collapses to ⋯, mobile reorders/trims content
+Real feedback after seeing the page at tablet and phone widths.
+
+**Tablet (768–1023.98px) now matches 11d's own topbar exactly: only the ⋯ trigger remains.** 11d's
+commentary is explicit — "de rest zit in het ⋯-menu" — so `Pdf`/`Bewerken`/`Verzenden` (each now
+carrying `.gl-v2-invoice-topbar-btn`) are hidden in this range, leaving only the `.js-gl-v2-menu-
+trigger` icon button. Those three actions don't disappear — they move to the fixed bottom action bar,
+which now spans the *same* 768–1023.98px tablet range as phone, not just phone. Re-derived the
+"desktop" boundary to 1024px while here (was an arbitrary 1200px before) to match the app's own
+existing tablet convention used elsewhere (e.g. the userbox's tablet breakpoint in `gl-v2-shell.css`)
+rather than a number invented for this page alone.
+
+**Bottom action bar: `Pdf` and `Bewerken` are icon-only now, matching 11e's own bottom bar exactly**
+(two bare square icon buttons, then the one primary action gets the full remaining width) — added a
+`Pdf` download button there too (`.gl-v2-icon-btn`, `ph-download-simple`), which the first pass of
+this bar didn't have at all. 11d's own tablet bottom bar keeps `Bewerken`'s text label (only 11e drops
+it) — not reproduced as a third variant; this page's shared `.gl-v2-invoice-actionbar` treats tablet
+and phone identically (icon-only) rather than building a distinct tablet-only shape for one button
+label, a deliberate simplification over literal 11d fidelity here.
+
+**Phone: badges move below the topbar, onto their own row.** 11e draws the direction/status/
+outstanding chips on a separate white bar under the green topbar, not squeezed in next to the title.
+`@@section PageTitleBadges` still feeds the topbar version (desktop/tablet); a second, literal copy of
+the same three chips renders as plain page markup (`.gl-v2-invoice-mobile-badges`) right before the
+tabbar, shown only <768px while the topbar's own badge slot (`.gl-v2-topbar-badges`) is hidden at that
+width. Duplicated markup rather than one reflowed element — same reasoning as the hero card's own
+two-versions split, and here forced anyway since the topbar version lives inside `_LayoutV2.cshtml`'s
+shared chrome, outside this page's own DOM subtree, so CSS alone can't relocate it across that
+boundary.
+
+**Phone: card order/visibility changed on request — Factuurlijnen moves up, Onze onderneming/Klant
+become collapsible, Documentgegevens/Verzendgeschiedenis disappear entirely.** Implemented via CSS
+alone, no markup duplication needed this time: `.gl-v2-invoice-cards` (the 3-card grid wrapping Onze
+onderneming/Klant/Documentgegevens) gets `display: contents` at this width, which un-wraps it for
+layout purposes — its three children then participate directly in `.gl-v2-invoice-detail-body`'s own
+flex order alongside the hero, Factuurlijnen, and Verzendgeschiedenis cards, instead of staying
+grouped as one grid block. Explicit `order` values then place them: hero-mobile (1) → Factuurlijnen
+(2) → Klant (3) → Onze onderneming (4); Documentgegevens and Verzendgeschiedenis get `display: none`
+outright rather than an order value, since they were asked to disappear, not just move.
+
+**First real caller for `.gl-v2-section-card.is-collapsible`.** The CSS state already existed
+project-wide (chevron, `[aria-expanded]` rotation, `.is-collapsible` cursor) but — per its own
+comment in `gl-v2-shell.css` — "de klik-toggle is ongewired JS," and the shared hide-on-collapse rule
+targets `.gl-v2-section-grid` (the 12-column variant) as the header's next sibling, not the
+`.gl-v2-detail-grid` these two cards use. Added both pieces here, scoped to this page: a
+`.gl-v2-invoice-collapsible-body` wrapper (covers the party-name line *and* the field grid as one
+collapsing unit — the shared rule only ever expected one sibling) with its own hide rule, and a small
+generic click/keyboard (Enter/Space) toggle in `gl-v2-invoices-detail.js` that just flips
+`aria-expanded`. The hide rule itself is wrapped in the phone media query, so the same markup/JS is
+inert at desktop/tablet width — cards always render fully open there regardless of the `aria-expanded`
+value baked into the markup (`false` for Onze onderneming, `true` for Klant — the party being invoiced
+matters more at a glance than your own company's own details, which you already know).
+
+**Factuurlijnen on phone: no description subtitle, no line description, no per-line vat amount.** All
+three removed on request, phone-only (`.gl-v2-invoice-lines-desc { display: none }`, and the mobile
+line-card markup itself — separate from the desktop `<table>`, so this needed no CSS trick — simply
+omits `line.Text`/`line.VatAmount`). `line.GroupName` becomes the card's own title in their place
+("Factuurlijn" as a fallback label when a line carries no group), so a line still reads as *something*
+identifiable, not just a bare number.
+
+#### Follow-up pass — a load-order specificity trap, a broken fixed bar, and two more real reports
+Real bugs, screenshot-confirmed, after the tablet/phone pass above shipped.
+
+**Root cause of two separate-looking bugs: `_LayoutV2.cshtml` loads `@section PageStyle` *before*
+`gl-v2-shell.css`.** Both `.gl-v2-invoice-topbar-btn { display: none }` (meant to hide Pdf/Bewerken/
+Verzenden on tablet) and `.gl-v2-invoice-actionbar { display: none }` (meant to hide the bottom bar on
+real desktop) silently did nothing — screenshots showed all three topbar buttons still visible at
+tablet width, and the bottom bar still showing up somewhere it shouldn't. Both selectors are a single
+class, same specificity (0,0,1,0) as the shell's own `.gl-v2-btn { display: … }` / `.gl-v2-form-
+actionbar { display: flex }` — and per the CSS cascade, equal specificity is broken by *source order*,
+not by "the page's own CSS should win." Since shell.css loads second, its rule always won regardless
+of which one a reader would expect to take precedence from just reading the two files. Fixed by
+raising both overrides to two-class selectors (`.gl-v2-btn.gl-v2-invoice-topbar-btn`, `.gl-v2-form-
+actionbar.gl-v2-invoice-actionbar`) — reliably wins now regardless of load order, the standard fix for
+this exact trap. Worth remembering for any future page-CSS override of a shared shell.css class:
+a single-class selector is not guaranteed to win just because it's "more specific to this page."
+
+**The tablet `position: fixed` attempt from the previous pass was simply wrong, not just under-tested
+— reverted to the shared component's own in-flow default.** Real report: "op tablet staat de actiebalk
+niet goed (half verborgen en te breed)." Root cause: `left: 0; right: 0` on a fixed element spans the
+literal viewport edge to edge — correct at phone width, where `.gl-v2-rail` is `display: none` and
+`.gl-v2-app` drops to `padding: 0`, so the body card is *already* edge-to-edge and a fixed bar matching
+it needs no offset. At tablet width the rail is still visible (72px + `.gl-v2-app`'s own 8px padding +
+8px gap either side), so the same `left: 0; right: 0` ran the bar underneath/behind the rail instead of
+aligned with the card above it ("te breed"), while the card's own shadow/overflow partly overlapped it
+("half verborgen"). Computing a rail-aware `left` offset in CSS was considered and rejected — it would
+hardcode the rail's 72px width as a magic number here, breaking silently if that ever changes upstream.
+Simplest robust fix: drop the tablet-only `position: fixed` override entirely and let `.gl-v2-invoice-
+actionbar` fall back to `.gl-v2-form-actionbar`'s own unmodified default (in-flow, flush to the bottom
+of the scrollable card via its existing negative-margin trick) — the same shape `Leveranciers/EditV2`
+etc. already rely on safely. Trade-off, stated plainly: this is no longer a *pinned-while-scrolling*
+bar at tablet width the way 11d's own mockup draws it, only genuinely fixed at phone width where the
+rail's absence makes that safe. Reachable at the bottom of the (typically short) invoice card either
+way, just not glued to the viewport while scrolling past a very long one.
+
+**Tablet: Documentgegevens now spans the full row, Onze onderneming/Klant sit at 50% each — real
+report, matches 11d's own arrangement.** The 2-column tablet grid (auto-placement, 3 cards) previously
+left Documentgegevens as a half-width third card with an empty cell beside it. Given it its own
+`grid-column: 1 / -1` at this breakpoint so it deliberately spans both tracks instead of being
+auto-placed into just one.
+
+**The "badges under the topbar" phone row, added a few messages earlier this same session, was
+removed again on request — no replacement.** It read as redundant next to the mobile hero card's own
+direction cues (green accent bar, "Wij factureren"/"Aan" on one line). `@section PageTitleBadges`
+(topbar) stays hidden at phone width as before; nothing replaces it there now — kept as a documented
+dead end rather than silently reverting the "hide on phone" half of that earlier change without a
+record of why the second row it fed is gone.
+
+### Klanten/EditProjectV2 — "klant bewerken vanuit een project", a bigger/older cousin of Klanten/EditV2
+"Pas mijn klanten/editproject nu ook aan zoals klanten/edit" turned out to be a materially larger job
+than every earlier form-page port: `EditProject` (reached from a project's client list, not the plain
+Klanten-index) binds `EditClientModel` (`Models/Klanten/ClientModel.cs`), an older view model wrapping
+`ClientAccountBO`/`ClientContactBO`/`ClientGiftBO`/`ClientPoaBO`/`UnitBO` (BOCore) directly — not the
+`ClientFormViewModel` that `Klanten/Edit`/`CreateV2` already use. Three sub-collections exist here that
+Klanten/EditV2 has no equivalent for at all: **Eenheden** (units + their sold land/construction
+values), **Mede-eigenaars** (co-owners — a full second contact-like person with their own company/
+invoice-address toggles), and **Toegiften**/**Aandachtspunten** (gifts/attention-points, each a
+description + Activiteiten tags). Legacy `EditProject.cshtml` was one ~710-line Bootstrap-tabs/jQuery/
+select2 view with 6 tabs; `EditProjectV2.cshtml` keeps the same 6 tabs 1:1 (Algemeen, Eenheden,
+Contacten, Mede-eigenaars, Toegiften, Aandachtspunten) but rebuilds every one in gl-v2 terms, reusing
+whatever field-level component already existed (`GlV2Email`/`GlV2Telefoon`/`GlV2Gsm`,
+`GlV2SearchSelect`, the search-style Activiteiten multiselect) and adding exactly two new generic
+pieces the pilot genuinely didn't have yet.
+
+**Two new generic `EditorTemplates`** (`Views/Shared/EditorTemplates/`, both `Views/Shared/`-level, not
+page-scoped):
+- **`GlV2Date`** (`@model DateOnly?`) — the pilot's first real date field. Plain HTML5 `<input
+  type="date">` inside the usual `.gl-v2-field-box`/`.gl-v2-field-input` shell, no datepicker JS
+  dependency added. Value/binding always ISO (`yyyy-MM-dd`, the HTML5 standard shape for this input
+  type) — .NET's `DateOnly` model binder accepts that regardless of the app's fixed `nl-BE` request
+  culture (confirmed via `Program.cs`'s `RequestLocalizationOptions`, no custom `DateOnly` binder found
+  anywhere), so no extra binder work was needed. Used three times here (`DateSalesAgreement`,
+  `DateDeedOfSale`, `StartDateConstruction`).
+- **`GlV2Currency`** (`@model decimal?`) — re-skin of the existing, working `Currency.cshtml` template,
+  same "don't touch working JS" discipline as the BE-number formatter elsewhere: identical
+  `Currencymask` CSS class and identical `"0.00"`-InvariantCulture value formatting, so
+  `currency.js`'s own `CurrencyMask.init('.Currencymask')` keeps parsing/saving these fields exactly as
+  before — only the markup shell changed from Bootstrap `.input-group`/`.form-control` to
+  `.gl-v2-field-box`/`.gl-v2-field-input` + a `.gl-v2-field-suffix">€</span>`. `CurrencyMask.init()`
+  itself is **not** self-invoking (confirmed by reading `currency.js`) — every calling page in the app
+  already has to trigger it explicitly on load, so `gl-v2-klanten-editproject.js` does the same
+  (`initCurrencyFields()`, plus loading `autonumeric@4.10.5` + `currency.js` in the page's own
+  `@section PageScripts`, pinned to the same CDN version `_Layout.cshtml`/`_LayoutA.cshtml` already use
+  — `_LayoutV2.cshtml` loads neither globally, only Bootstrap + Phosphor icons, so every gl-v2 page that
+  needs a vendor script pulls it in itself).
+
+**Mede-eigenaars — the richest row in the whole pilot, and the first with *per-row* independent
+toggle state.** `_CoOwnerRowV2.cshtml` (`@model ClientContactBO`, `Html.BeginCollectionItem("Client.
+CoOwners")`) has two show/hide switches: a **company toggle** (pure UI, unbound — no such field exists
+on the model — seeded checked server-side from `!string.IsNullOrWhiteSpace(Model.CompanyName) ||
+!string.IsNullOrWhiteSpace(Model.VATnumber)`, same as the legacy row) revealing CompanyName/VATnumber
+**editable here**, unlike the primary owner's read-only pair; and a bound **invoice-address toggle**
+(`Model.InvoiceAddress`) revealing a full second address block. Klanten/EditV2's equivalent switches
+are singular — one `IsCompany`/one `UseInvoiceAddress` element id each, because there's only ever one
+client on that page. Co-owner rows are N-many and independently addable/removable, so a fixed-id
+approach doesn't work; `gl-v2-klanten-editproject.js` instead uses `data-role`-scoped delegated
+listeners on the row-list container (`change` event, `e.target.closest(".gl-v2-card")` to find which
+row fired), applied both at load and to freshly-fetched rows — the same shape `wireUblPair`/
+`initUblDependency` already used elsewhere in the pilot for a single dependent pair, generalized here
+to N independent rows with two toggles each.
+
+**`ClientContactBO.InvoiceAddress` is `Boolean?`, not `Boolean`** (unlike `ClientAccountBO.
+InvoiceAddress`, which the page's own top-level "afwijkend facturatieadres" switch binds to) — `Html.
+CheckBoxFor` doesn't support a nullable-bool expression (`CS0266`/`CS1662` at build). Fixed by hand-
+writing the same checkbox-plus-hidden-fallback markup `CheckBoxFor` itself generates
+(`<input type="checkbox" value="true" checked="@(...)">` + a same-named `<input type="hidden"
+value="false">`), rather than reaching for `.GetValueOrDefault()` in the lambda, which would have
+broken `Html.NameFor`/`IdFor`'s member-expression-based name resolution.
+
+**Each address block carries `data-gl-v2-address-block`**, wrapping a `data-role="country-select"` +
+its `GlV2SearchSelect` postcode field, so the shared search-select JS can resolve *which* country to
+search within per-block (`root.closest("[data-gl-v2-address-block]")`) instead of a hardcoded BE
+assumption. This page has no BE/non-BE manual-entry branch at all — the legacy page never had one here
+either, it's always the same searching-postcode-lookup UX regardless of country, unlike Leveranciers/
+Klanten Edit's own address blocks which do branch. Four independent address blocks exist on this page
+(client main + client invoice + co-owner main + co-owner invoice, the last two repeated per row), each
+wired identically via this convention.
+
+**Mede-eigenaars tab hides itself for `OwnerType == 1` (particulier)** — ported straight from the
+legacy inline script's `toggleMedeEigenaarsTab()`. `.gl-v2-tabbar-tab` sets `display: flex` itself
+(`gl-v2-shell.css`), which — same cascade-specificity/ordering as the UA default `[hidden]` rule — wins
+over plain `hidden`, so `gl-v2-klanten-editproject.css` adds `.gl-v2-tabbar-tab[hidden] { display: none;
+}` to make the attribute actually hide the tab button (the tab *panel* needed no equivalent fix — this
+page's own `.gl-v2-tab-panel[hidden] { display: none; }` was already written correctly from the start).
+If the currently-active tab is the one being hidden, JS falls back to Algemeen rather than leaving a
+hidden tab marked active with no visible panel.
+
+**Server-side stayed a pure view-selection + partial-view-selection ternary, same shape as every
+earlier page.** `EditProject` GET/POST branch `EditProjectV2`/`EditProject` on `ViewData[
+"UseGlV2Layout"]`; the POST method's 8 separate `return View(viewmodel);` calls (one per
+validation-fail/rollback branch across Client/Unit/ConstructionValue/Gifts/Poas save-and-sync logic)
+all needed the same treatment — introduced one `viewName` local right after the existing `Referrer`
+read, then every bare `return View(viewmodel)` became `return View(viewName, viewmodel)`. The four
+`BlankContactRow`/`BlankCoOwnerRow`/`BlankGiftRow`/`BlankPoaRow` add-row endpoints got the same
+ternary on their own `ViewName`, pointing at the four new `Partials/_*RowV2.cshtml` files — a natural
+extension of the established pattern the plan's own text didn't spell out row-by-row but was implicit
+in "every add-row endpoint this page has." No diff-and-sync save logic, no `FillInAddSelectListsEdit`
+call, no validation rule changed anywhere — purely the view layer.
+
+**Not done**: no VAT-lookup modal (the legacy page never had one here either — company info is
+read-only on the primary client, so there's nothing to look up), no browser-verified confirmation that
+the native `<input type="date">` round-trips correctly through the `DateOnly` binder under `nl-BE` (the
+same-format reasoning above is sound but untested end-to-end), and Eenheden intentionally has no add/
+remove — units are sourced elsewhere in the app, matching the legacy page's own read-only-unit-list
+behavior.
+
+### Projecten/IncommingInvoiceDetailV2 — purchase-invoice detail (design-handoff punt 11, the AANKOOP
+half)
+Same pixel reference (11a/11b/11d/11e) as `Invoices/DetailV2` — but for purchase/incoming invoices,
+which live entirely under `ProjectenController` (`IncommingInvoiceDetail`), a different controller and
+a much thinner data model than the sales side. Reused every component/decision from `Invoices/
+DetailV2` (section-cards, `.gl-v2-detail-grid`/`GlV2DetailField`, tabbar-with-disabled-tabs, the
+collapsible-card mechanism, the `.gl-v2-form-actionbar` reuse, the 1024px/768px breakpoint scheme) —
+only re-tinted to the mockup's blue AANKOOP palette (`#2E5F7E`/`#D7E6EF`, reversed arrow) and, more
+substantially, trimmed to what this data model actually has.
+
+**The model is real, but far thinner than 11's own mockup assumes — checked directly against
+`ProjectIncommingInvoiceModel`/`IncommingInvoiceBO` and the legacy `IncommingInvoiceDetail.cshtml`
+before building anything, not inferred from the pixel reference:**
+- **No "AAN ONS" counterparty.** `ProjectIncommingInvoiceModel` carries `Company` (the supplier) and
+  nothing resembling "our own company" — unlike `InvoiceDetailVM.Issuer` on the sales side, which is
+  real. The hero card shows only the supplier; no second party, no arrow-between-two-names.
+- **No due date, no outstanding balance.** `IncommingInvoiceBO` has no expiration date, paid amount,
+  or balance field — the amount shown is labeled "Factuurbedrag" (the actual invoice total), never
+  "Nog te betalen," which would imply payment tracking this model doesn't do.
+- **No status badges.** `IncomingInvoiceStatus` (Nieuw/Te keuren/Goedgekeurd/Afgekeurd/…) exists in
+  `BOCore` with a ready `Label()`/`BadgeClass()`, and the DB column (`IncommingInvoices.StatusId`) is
+  real — but `IncommingInvoiceBO` has no `StatusId` property and `IncommingInvoiceTranslator` never
+  maps it. Confirmed disconnected, not just unused: wiring it up would mean extending the BO and the
+  translator (`ServiceCore`), a real cross-project change, not a view-layer decision — deferred, same
+  "don't invent a status the data doesn't carry" discipline as everywhere else in this file.
+- **No approval workflow.** No "Goedkeuring" step/approver/stage concept exists anywhere in
+  `ProjectenController` — confirmed via repo-wide search, zero hits for anything resembling it. The
+  mockup's "Goedkeuren" primary action and "stap 2 van 2 · wacht op …" line have nothing to bind to.
+- **No PDF/UBL export, no original-document viewer.** Unlike sales `Invoices` (real `Pdf`/`Ubl`
+  actions), purchase invoices have neither. A DB table for the supplier's uploaded/scanned source file
+  does exist (`IncomingInvoiceAttachments` — filename, content-type, bytes, …) but nothing in the C#
+  layer reads or exposes it: no BO, no translator, no controller action. Same for an `IncomingInvoice
+  Enrichment`/`IncomingInvoiceWarning` pair that reads like scaffolding for an AI/OCR ingestion
+  pipeline (`Azure.AI.FormRecognizer` is referenced in the csproj) — fully-shaped tables, zero code
+  references outside their own definitions. None of this is built on top of; a "view document" button
+  would point at nothing today.
+
+**Net effect on the page: "Bewerken" is the only real primary action.** No Verzenden/Goedkeuren
+equivalent exists, so unlike the sales page (which has a genuine secondary-vs-primary choice between
+Pdf/Bewerken and Verzenden), there's only one meaningful write action here. It gets the primary button
+slot both in the topbar and the bottom action bar; the ⋯ menu holds only Verwijderen (or, if the viewer
+can't delete, an inert "Geen andere acties" row rather than an empty-looking menu).
+
+**Two cards, not three or four.** No "onze onderneming" card (nothing to show — see above), so the
+info row is just Leverancier + Documentgegevens, equal width, no need for the sales page's 3→2-column
+tablet reshuffling or its "Documentgegevens spans the full row" override. On phone, both stay visible
+(collapsible, same mechanism as sales) rather than one disappearing outright — there was no third/
+fourth card here to justify actually hiding one the way Documentgegevens/Verzendgeschiedenis do on the
+sales page.
+
+**Project link is real here — unlike the sales side.** `ProjectIncommingInvoiceModel.ProjectId`/
+`ProjectName` are genuinely populated (confirmed in `IncommingInvoiceDetail`, `ProjectenController.cs`)
+and already used for the page's own breadcrumb chain, so unlike `Invoices/DetailV2` (which had to omit
+a "Project" field for lack of a name-resolution path), this page links straight to `Projecten/Detail`.
+Also: this controller action already sets `ViewData["BreadcrumbNode"]` (a working `MvcBreadcrumbNode`
+chain, not the dead `ViewBag.Breadcrumbs` system most other gl-v2 pages in this file don't bother
+wiring) — nothing new needed there, it carries over to the V2 view unchanged.
+
+**New gl-v2 delete-confirm modal built from scratch, no existing one to reuse.** Unlike sales
+`Invoices` (already had `ModalDeleteV2`/`_ModalDeleteInvoiceV2.cshtml`), incoming invoices only had
+the legacy magnific-popup pattern (`ModalDeleteIncommingInvoice` + `_ModalDeleteIncommingInvoice.
+cshtml`). Added `ModalDeleteIncommingInvoiceV2` + `Modals/_ModalDeleteIncommingInvoiceV2.cshtml`
+following the sales `ModalDeleteV2` pattern exactly (same fragment-into-`.modal-content`-shell recipe).
+Deliberately **kept the delete button as a plain GET link**, not upgraded to POST+antiforgery: the
+underlying `DeleteIncommingInvoice` action itself has no `[HttpPost]`/`[ValidateAntiForgeryToken]`
+attribute and is a real, already-shipped GET-based mutation — inventing a new POST contract for one
+button in this pass would be scope creep unrelated to the gl-v2 visual work, and wouldn't be enforced
+server-side anyway.
+
+**Specificity trap avoided from the start, not fixed after the fact.** The sales page's own follow-up
+pass (above) explains the bug in detail: `_LayoutV2.cshtml` loads `@section PageStyle` before `gl-v2-
+shell.css`, so a single-class page override of a shared class like `.gl-v2-btn`/`.gl-v2-form-actionbar`
+silently loses regardless of source order. Every override here (`.gl-v2-btn.gl-v2-incominginvoice-
+topbar-btn`, `.gl-v2-form-actionbar.gl-v2-incominginvoice-actionbar`) is a two-class selector from the
+first draft. Same for the bottom action bar's tablet behavior: in-flow from the start (the shared
+component's own proven default), never attempted as `position: fixed` at tablet width the way the
+sales page's first pass wrongly did.
+
+#### Follow-up — the real "actionbar not at the bottom" fix belongs in `.gl-v2-form-actionbar` itself
+Real report, both invoice-detail pages: at tablet width the "in-flow" bar from the pass above still
+wasn't sitting at the bottom of the card — a gap of blank card showed up *below* it instead. Root
+cause, once traced through `.gl-v2-content`'s own flex-column CSS: `ViewData["GlV2FullHeightBody"]`
+stretches `.gl-v2-content` to the card's full height (`.gl-v2-body.is-full-height .gl-v2-content {
+flex: 1; min-height: 0 }`), but neither invoice page's own content wrapper (`.gl-v2-invoice-detail-
+body` / `.gl-v2-incominginvoice-detail-body`) had `flex: 1` — so none of `.gl-v2-content`'s children
+grew to absorb the stretched height, and in a flex column with no growing child, leftover space
+collects *after* the last child by default (the actionbar), not before it. `Leveranciers/EditV2.cshtml`
+never hit this because its own form wrapper (`.gl-v2-supplier-edit-form` + `.gl-v2-supplier-edit-
+scroll`, `gl-v2-leveranciers-form.css`) already sets `flex: 1; min-height: 0` on the right element —
+a real, established pattern, just one both new invoice pages forgot to repeat.
+
+Fixed centrally instead of teaching two more pages the same wrapper incantation: `.gl-v2-form-
+actionbar` itself now carries `margin-top: auto` (`gl-v2-shell.css`) — the standard flexbox way to pin
+an item to the end of a column container by having it consume all leftover free space above itself,
+regardless of how many siblings precede it or whether any of them bothered to grow. This makes the
+project-wide guarantee explicit: **any** page using `.gl-v2-form-actionbar` inside a `.gl-v2-body.is-
+full-height` card gets a bottom-pinned bar automatically, whether or not its own content wrapper
+remembers `flex: 1`. Confirmed inert on already-correct pages like `Leveranciers/EditV2` — with a
+sibling already consuming all the free space, `margin-top: auto` has nothing left to eat and computes
+to `0`, no visual change there. Doesn't interact with the `<768px` `position: fixed` override either —
+that block already resets `margin: 0` explicitly for its own reasons, unrelated to this.
+
+### Klanten/DetailV2 — client detail inside a project (design-handoff punt 12c "Klantdetail binnen een project")
+`KlantenController.Detail(int clientId, int projectId = 0)` is the page you land on from `Projecten/
+DetailClients` → a client row. 12c is explicit that it's "zelfde shell, zelfde kaartstandaard als
+12a" (Projecten/DetailV2) — same rail/inner-menu/topbar/tabbar shell, the `.gl-v2-pd-*` KPI-tile/
+grid/row visual language, just for a client instead of a project. Built the same way as both invoice
+pages: real data traced field-by-field against `ClientAccountBO`/`ClientContactBO`/`UnitBO`/
+`ChangeOrderBO`/`InvoiceListItemBO` before writing a line of the view, deviations from the mockup
+documented in-file rather than fabricated (`Views/Klanten/DetailV2.cshtml`'s own top comment lists
+all seven).
+
+**Two backend gaps the user explicitly authorized filling in** (unlike every prior gl-v2 page this
+session, where a missing capability meant "omit and document" — see the invoice-page write-ups
+above):
+- `IInvoiceQueryService` was never injected into `KlantenController` — `ProjectenController` already
+  had it (`_invoiceQueryService`, used for `Projecten/DetailV2`'s Facturatie card). Added the same
+  field/constructor parameter here, matching that naming convention exactly, so the GEFACTUREERD/
+  OPENSTAAND KPI's can call `GetByProjectAsync(projectId)` and filter the result by `ClientId` — there
+  is no per-client variant of that method, so the project-wide list is fetched once and filtered
+  client-side, same shape as `Projecten/DetailV2`'s own `RecentInvoices`.
+- `Detail` became `async Task<ActionResult>` (was sync `ActionResult`) to allow that `await`, mirroring
+  `ProjectenController.Detail`'s exact signature shape.
+- The existing `GetClientChangeOrders(4, clientId)` call (still there, untouched — the legacy
+  `Detail.cshtml` depends on its 4-item cap) can't drive the WIJZIGINGSOPDRACHTEN KPI or a real table:
+  it's hard-capped and has no "goedgekeurd vs. in aanvraag" breakdown beyond what 4 rows can show.
+  Added a second, uncapped query in the same action — `GetProjectChangeOrders(projectId)` (the exact
+  method `Projecten/DetailV2` already uses for the whole project) filtered client-side to
+  `ClientAccountID == clientId` — onto a new `ClientModel.ClientChangeOrders` property, separate from
+  the legacy-facing `ChangeOrders`. `ClientModel.ClientInvoices` (`List<InvoiceListItemBO>`) and
+  `ClientModel.IsCoordinationProject` (same flag/reason as `DetailClientsModel`'s copy — the inner
+  menu needs it) were added alongside it.
+
+**Topbar/chrome reuses the shared shell exactly as `Projecten/DetailV2` does — no new chrome was
+built.** 12c's client avatar-with-initials in the topbar was *not* ported: the shared `_LayoutV2.cshtml`
+topbar has exactly one icon slot (`ViewData["PageIcon"]`, a square icon-box), no separate circular-
+avatar slot next to it, and adding a second, page-specific chrome element to the shared topbar is
+precisely the kind of shell-wide change `Projecten/DetailV2`'s own top comment already flagged as
+out of scope for a single page ("Deliberately NOT ported... project-photo-as-thumbnail... cross-page,
+shell-level change... left for its own pass"). `ph-user` in the existing icon slot instead — same
+discipline, same reasoning, one page later. The breadcrumb subtitle line under the title ("Projecten
+/ Villa Cauxyde / Klanten / Missiaen — Berten" in the mockup) needed no new code either —
+`KlantenController.Detail` already built a full `MvcBreadcrumbNode` chain (Home → Projecten →
+project → Klanten → this client) long before this pass; `_LayoutV2.cshtml`'s topbar already renders
+`Component.InvokeAsync("Breadcrumbs", …)` under the `<h1>` for every gl-v2 page. 12c's third mockup
+detail — "nog niet opgeleverd" moves into the ⋯-menu once there would be a third topbar chip — is
+real, load-bearing UI logic (its own commentary: "vanaf drie chips duwt de rij de gebruikersnaam uit
+de balk") and was kept: the ⋯-menu's first row is that status line, shown only when
+`Client.DeliveryDate` is null, ahead of a real "Kalender afdrukken" action
+(`Klanten/CalendarToPdf`, unchanged from the legacy page).
+
+**`_ProjectInnerMenuV2`'s "Klanten" nav item** was already fixed for this page earlier in this pass
+(`Views/Shared/GlV2/_ProjectInnerMenuV2.cshtml` — `IsHere("Projecten", "DetailClients") ||
+IsHere("Klanten", "Detail")`), so it stays highlighted whether you're on the client list or one
+client's fiche, instead of dimming out the moment you open a client.
+
+**Row-list/stat-tile CSS was NOT shared with `gl-v2-projecten-detail.css`.** Even though the visual
+language is identical (`.gl-v2-pd-stats`/`-grid`/`-col-*`/`-rows`/`-row`), that stylesheet's own top
+comment scopes it "to this one page" — the same "each page gets its own copy of a shared *pattern*,
+not a shared *file*" discipline already used for the two invoice-detail pages (their CSS files don't
+share either, despite being near-identical in shape). `gl-v2-klanten-detail.css` mirrors the pattern
+under a `.gl-v2-kd-` prefix instead of reusing `.gl-v2-pd-*` classes from a stylesheet this page
+doesn't load. `gl-v2-project-inner-menu.css`/`.js` — genuinely shared, shell-level chrome for the
+`ProjectMenu` section itself — are loaded as-is, same as `Projecten/DetailV2`.
+
+**Confirmed-missing data, omitted rather than invented** (full reasoning is in the view's own top
+comment): no client/unit photo (no photo field on `ClientAccountBO`/`UnitBO`); no "opvolging
+{persoon}" in the meta line (that's `Project.SalesResponsibleUserID`, project-level data this action
+doesn't load — already visible on `Projecten/DetailV2` itself, not worth a duplicate service call
+here); no NOTARIS field (no notary field on `ClientAccountBO` — `AKTEDATUM`/`DateDeedOfSale`, genuinely
+available and already shown by the legacy page, takes its place in the grid); no per-unit FYSIEKE
+VOORTGANG (only computable project-wide via `IProjectVoortgangService`, not per unit — VOORZIENE
+OPLEVERING/`Model.FinalConstructionDate`, the same calculation the legacy page already made, stays);
+no "vervalt {datum}" under OPENSTAAND (`InvoiceListItemBO` carries `Balance`/`GrossTotal`/`StatusName`
+but no due date — the count of open invoices is shown, no fabricated date); no HOOFDCONTACT chip on
+Contactpersonen (`ClientContactBO` has `IsCoOwner`, which means something else, but no "primary
+contact" flag — every contact renders the same way).
+
+### Topbar status badges (`@section PageTitleBadges`) — moved below the topbar on tablet/gsm, shell-wide
+First real tablet/phone refinement of a component that only lived on desktop until now (Projecten/
+DetailV2's status + "N acties vereist" chips were the first caller). On request, made generic in
+`gl-v2-shell.css` rather than page-specific: at ≤1023.98px `.gl-v2-topbar-badges` gets `flex-basis:
+100%` + the highest `order` (forces it onto its own wrapped line, whatever page renders it) inside
+`.gl-v2-topbar` itself — `@RenderSection` can only render a section once per view, so a genuine
+sibling element outside the topbar would mean duplicating the badges markup, the same constraint the
+inner-menu's Outer/Phone split works around by calling its partial twice instead. First version left
+it there — technically a second line, but same background/border as the topbar above it, so it still
+read as "inside the topbar" rather than its own strip. Fixed by giving the wrapped line its own
+background (`#F7F9F5`) and a border on both edges, full-bleed via a negative margin that cancels the
+topbar's own side padding (18px tablet / 14px phone, matched to each tier's real value) — now reads
+as a distinct band under the topbar regardless of what's rendered above or below it. Scoped via
+`.gl-v2-topbar:has(.gl-v2-topbar-badges)` so pages without badges are completely unaffected.
+
+### Projecten/DetailClientsV2 — the project's client list (design-handoff punt 12d)
+Reused the established shell wholesale — same `GlV2/_ProjectInnerMenuV2` (Outer/Phone modes via
+`@section ProjectMenu`) and topbar conventions as Projecten/DetailV2 — and asked explicitly to follow
+punt 12d for the body *except* search/filters, which follow Leveranciers/IndexV2's own established
+pattern instead of 12d's literal mockup fields. `ProjectenController.DetailClients` had no
+`UseGlV2Layout` toggle at all yet (unlike every sibling Project-detail-tab action) — added it, plus a
+new `DetailClientsModel.IsCoordinationProject` flag (one extra `GetProjectByID` call) since the inner
+menu needs it on every page it renders on, not just Projecten/DetailV2.
+
+**Filters are Status/Eenheidstype, not 12d's Status/Eenheid — real, derivable data standing in for the
+mockup's own choice of dimensions.** `DataTable ext.search` custom filters (copied from
+`gl-v2-leveranciers.js`'s own recipe, same as that file's header comment says about its own filters
+card being a copy rather than a shared component) read `data-statuses`/`data-types` off each `<tr>`,
+computed per client row from `ClientAccountBO.DateDeedOfSale`/`UnitBO.IsOption` (verkocht/optie/akte)
+and `UnitBO.Type.GroupId` (Wooneenheid/Commerciële ruimte/Parkeergelegenheid/Berging) — the same status
+logic `Projecten/DetailV2`'s Eenheden table already uses, and the same four type groups the legacy
+`Clients.cshtml` table already buckets its columns by.
+
+**Scope trims, disclosed rather than silently dropped** (full reasoning in the view's own header
+comment): no tabs (Met openstaand/Opgeleverd/Kandidaten) and no Verkoopprijs/Openstaand columns —
+`DetailClientsModel`/`ClientAccountBO`/the `GetClientAccountsByProjectIdWithUnits` query carry no
+per-client outstanding-balance or prospective-client ("kandidaat") concept anywhere, and the one price
+field that does exist (`UnitBO.TotalValue`) isn't reliably loaded by this specific query's
+`.Include()` chain — showing it risked a silently-wrong number, not just an incomplete one. Topbar
+badge reads "N klanten" rather than 12d's "N van N eenheden" (no cheap total-project-unit-count on
+this model, only units actually tied to a client). Export/Excel button dropped, kept "Klantenlijst"
+(print) and "Klant toevoegen" — wiring the DataTables Buttons/JSZip extension for one icon felt beyond
+"reuse Leveranciers/Index's search bar."
+
+Row actions collapsed into the existing generic `.gl-v2-menu`/`.js-gl-v2-menu-trigger` component
+(Detail +, permission-gated, Verwijderen) instead of Leveranciers/IndexV2's own older
+`.gl-v2-row-menu-trigger` — same reasoning as Leveranciers/DetailsV2's own topbar ⋯-menu: the generic
+one already exists and needs zero page-specific CSS/JS. Row click-to-navigate and the copy-email
+button aren't reimplemented either — both are already shell-wide (`initClickableRows`/
+`initTableEmailActions` in `gl-v2-shell.js`) off `data-detail-url`/`.js-gl-v2-copy-email`, so the page
+only needed to set the right attributes, not write handlers. Delete reuses an already-existing gl-v2
+confirmation modal (`KlantenController.PartialDeleteClientModalV2` → `Modals/_DeleteClientModalV2.cshtml`)
+that was sitting unused by any gl-v2 page yet.
+
+### Inner-menu item counts — generic, not a one-off for "Klanten"
+Punt 12a/12d's own convention: an item shows a small count after its label (`Klanten … 2`), but only
+when that item is also the *active* one — first built as a single `GlV2ProjectMenuVm.ClientsCount`
+property wired straight to the "Klanten" item, then generalized on request so any page can put a count
+on any item without touching this partial again. `ClientsCount` became `ItemCounts` — a
+`Dictionary<string, int>` keyed by the item's exact Dutch label ("Klanten", "Punten", …) — and every
+item-building line in `GlV2/_ProjectInnerMenuV2.cshtml` now resolves its own count via one
+`CountFor(label)` lookup (returns `null` — no badge — for any label a page didn't set). Rendering was
+already unconditional on `item.Active && item.Count.HasValue`, so generalizing the data side was the
+whole change; the visible behavior for "Klanten" today is identical to the one-off version. Styled with
+the mockup's own literal `#2F6038` (not an existing token — a muted green legible on the `#D6E5CC`
+active tint) on both the desktop list item and the phone sheet item; tablet's icon-only rail has no
+room for a label at all, so it's skipped there, same reasoning as the tooltip/label decisions already
+documented for that tier.
+
+#### Follow-up — Klanten/DetailV2's tabbar wasn't flush against the topbar, and its "Klanten" counter was missing
+Real report: the tabbar on `Klanten/DetailV2` didn't sit flush against the topbar the way every other
+gl-v2 tabbar does. Root cause is `.gl-v2-tabbar`'s own CSS trick (`gl-v2-shell.css`): it cancels
+`.gl-v2-content`'s top/side padding with a negative margin, which only produces a flush edge against
+the topbar when the tabbar is `.gl-v2-content`'s literal first child — the rule's own comment says so
+explicitly ("Hoort als flex:none-sibling direct ná de topbar"). This page renders the `ProjectMenu`
+section's **Phone**-mode widget (`_ProjectInnerMenuV2`, `GlV2ProjectMenuMode.Phone`) inline in the
+page body, above the content, per that partial's own doc comment — and it was placed *before* the
+tabbar, so it — not the tabbar — became the actual first child, and the negative margin ended up
+closing the gap between the Phone widget and the tabbar instead of between the topbar and the tabbar.
+Neither `Projecten/DetailV2` (no tabbar at all) nor the two invoice-detail pages (no `ProjectMenu`
+section) had ever combined both, so this ordering conflict had no precedent to copy. Fixed by moving
+the tabbar to be the true first element of the page body, with the Phone-mode widget rendered right
+after it instead of before — the `.gl-v2-menu` (⋯) panel div can sit anywhere regardless, since it's
+always `display: none` / `position: fixed` and never occupies flow.
+
+Two more, requested in the same pass:
+- **`Klanten/EditProjectV2` didn't render the project inner menu at all.** You reach it from inside a
+  project (`Klanten/DetailV2` → Bewerken, or `Projecten/DetailClients` → een klant → Bewerken) and stay
+  inside that project the whole time, so it gets the same `@section ProjectMenu` (Outer) + inline
+  Phone-mode call as every other page in the project shell — and the exact same tabbar-ordering fix
+  above applied on arrival, since it already had its own tabbar as the page's first element. Gained
+  `ProjectName`/`ProjectClientCount`/`IsCoordinationProject` on `EditClientModel` — the same three
+  fields `ClientModel` carries for `Klanten/DetailV2` — populated in `FillInAddSelectListsEdit`, the
+  one helper already called on every redisplay path (the initial `GET` and every `POST` validation
+  failure across all six tabs), so the inner menu stays correct even when a save fails and the form
+  redisplays.
+- **The "Klanten" nav item's counter (see "Inner-menu item counts" above) needed a real source on both
+  pages.** `Klanten/DetailV2` and `Klanten/EditProjectV2` both keep "Klanten" active while you're
+  looking at one client (the `IsHere` exception added earlier this pass), so per that convention it
+  should show the same count `Projecten/DetailClientsV2` shows — the project's total client count —
+  but neither page had ever set `ItemCounts`, so the counter silently disappeared the moment you
+  opened one client. Added `ClientModel.ProjectClientCount`/`EditClientModel.ProjectClientCount`,
+  populated via `IClientService.GetClientAccountsByProjectId(projectId).Values.Count` (the lighter,
+  non-units-joined sibling of the method `DetailClientsV2` itself uses) in `KlantenController.Detail`
+  and `FillInAddSelectListsEdit` respectively, so "Klanten" shows the exact same number everywhere in
+  the project, whether you're looking at the list or one client inside it.
+
+### Topbar title/breadcrumb rule-2 sweep — three more offenders found
+Punt 13's own text flagged this as unaudited ("worth a project-wide sweep later rather than assuming
+these were the only two offenders") — asked to look at it, found three more pages where the
+breadcrumb's last node repeated the title:
+- **`ProjectenController.Detail`** (Projecten/DetailV2, the project hub) — breadcrumb stopped at a
+  `"Detail"` node carrying `model.Project.Name`, same text as the topbar title. Already fixed by the
+  time this pass looked (found mid-turn with its own comment citing "een projectbrede sweep" — someone
+  had already run one), stopping at `projectenIndex` ("Projecten") instead.
+- **`ProjectenController.DetailClients`** (Projecten/DetailClientsV2, punt 12d) — not caught by that
+  earlier sweep, since this action had no gl-v2 branch at all until earlier this session. Breadcrumb
+  leaf was a `"Klanten"` node, same text as the title. Fixed: stops at `projectDetail` (the project
+  name) instead, `projectKlanten` removed.
+- **`KlantenController.Detail`** (Klanten/DetailV2, punt 12c) — breadcrumb leaf carried `clientName`
+  (`model.Client?.DisplayName`), near-identical to the title (`"{Salutation} {DisplayName}"`, set in
+  the view). Fixed: stops at the `"Klanten"` node instead of adding a `clientName` leaf on top of it.
+
+Only `ViewData["BreadcrumbNode"]` was touched in all three — the legacy (non-`V2`) views for `Detail`
+and `DetailClients` render their own hardcoded `ViewBag.Breadcrumbs` list directly in the `.cshtml`
+(confirmed by reading `Projecten/DetailClients.cshtml`), completely independent of
+`BreadcrumbNode`/`SmartBreadcrumbs` — so these fixes only affect the gl-v2 branch's breadcrumb
+component, zero risk to the legacy pages' own breadcrumb UI. Not chased further: `EditProject`'s own
+breadcrumb-building block (same controller, a `"Klant bewerken"` leaf under a `clientName` *middle*
+segment) wasn't touched — a middle segment repeating a name is what rule 3's truncation already
+handles, not rule 2's target, and confirming its own leaf text doesn't duplicate its title would mean
+opening a page this pass didn't otherwise touch.
+
+### Projecten/DetailClientsV2 — follow-up: unsold units shown, mobile cards
+Two more requests against the punt 12d build. **Unsold Wooneenheid/Commerciële ruimte units, shown as
+their own "Nog geen klant" row** — `GetClientAccountsByProjectIdWithUnits` can't supply these by
+definition (it only returns accounts that already own a unit), so a second query was added
+(`IUnitService.GetUnitsWithAttachedByProjectId`, the exact same service Projecten/DetailV2's own
+Eenheden table already uses) — filtered to `Type.GroupId` 1/4 with no `ClientAccountId`, stored on a
+new `DetailClientsModel.AvailableUnits`. Rendered as extra `<tr>`s after the real client rows: dashed/
+muted `.gl-v2-avatar.is-empty` (a person icon, not initials) instead of a name, `—` for the columns
+that don't apply, and a new "Beschikbaar" option in the Status filter/its `data-statuses` value — no
+row menu (there's no client to view or delete).
+
+**Mobile (<768px) table → cards**, matching Klanten/IndexV2's own `renderMobileCards()`/
+`buildMobileCard()` recipe (`gl-v2-klanten.js`) — copied and adapted rather than shared, same
+per-page-copy convention as the filters card. Cards are built from the *live* `<tr>` DOM on every
+`table.on("draw", …)` (plus once on load and on resize), so they automatically reflect whatever the
+current search/filter state shows — including the new "Nog geen klant" rows, and skipping the
+`.gl-v2-menu`/detail-link entirely for those (nothing to view or delete, so the card just omits the
+"···" trigger rather than showing one that opens an empty/broken menu). Card tap-to-navigate is a
+small dedicated `click` listener on `.gl-v2-dc-card[data-detail-url]` — the shell's own
+`initClickableRows()` only ever matches `tr[data-detail-url]`, not an arbitrary `<div>`, so this one
+needed its own handler rather than being reusable as-is.
+
+### Projecten/DetailContractsV2, DetailContractV2, EditContractV2 — leveranciers in een project (design-handoff punt 14, "in de stijl van 12")
+Three pages, one pass, following the exact instruction: match punt 14's three sub-options and reuse
+punt 12's established conventions. `ProjectenController` already had four actions here — `DetailContracts`
+(the list), `DetailContract` (opened via a specific `contractid`) and `DetailSupplier` (opened via a
+`companyid`, no contract pre-selected), plus `EditContract`. `DetailContract` and `DetailSupplier`
+already shared one legacy view (`DetailSupplier`'s own `return View("DetailContract", model)`), so
+their gl-v2 replacement follows suit: one `DetailContractV2.cshtml`, wired from both actions, not two
+near-identical pages forking a controller that never actually forked. (A separate `AddContract`
+action — company search + brand-new contract — exists too, but nothing in this request named it, and
+14c's own mockup shows a locked, already-chosen LEVERANCIER field, matching `EditContract`'s real
+callers exactly: every one of them already knows the `contractid`. Left untouched, out of scope.)
+
+**Two small, real gaps fixed centrally before building, same discipline as every prior page this
+session:**
+- `DetailContract`/`DetailSupplier`/`EditContract` never set `ViewBag.CanWriteProjectSuppliers`/
+  `CanDeleteProjectSuppliers` — only `DetailContracts` did. The legacy `DetailContract.cshtml` reads
+  both flags for its Bewerken/Verwijderen buttons, so on that one page they were always `false`;
+  those buttons never actually rendered. Added the same `IPermissionService` computation `DetailContracts`
+  already does to all three actions — a real, working "Bewerken" button on `DetailContractV2` is only
+  possible because of this fix.
+- `_ProjectInnerMenuV2`'s "Leveranciers" nav item only matched `IsHere("Projecten", "DetailContracts")`
+  — same class of bug already fixed for "Klanten" earlier this session (`IsHere(..., "Detail") ||
+  IsHere(..., "EditProject")`). Extended the same way: `DetailContract`/`DetailSupplier`/`EditContract`
+  now keep "Leveranciers" highlighted too. No `ItemCounts["Leveranciers"]` badge on these three pages
+  though (unlike "Klanten"'s matching fix) — that count comes from `DetailContractsV2`'s own grouped
+  `SupplierRows` build, which isn't cheap to re-derive on a single-supplier page just for one number;
+  omitted rather than re-querying the whole project's contract list to show a badge.
+
+**`DetailContractsV2` (14a)** reuses `Projecten/DetailClientsV2`'s own DataTables + `gl-v2-select`
+filter recipe (copied under a `.gl-v2-pc-` prefix, same "each list page keeps its own copy" discipline
+documented there) — search box, mobile-card fallback, per-row `.gl-v2-menu`, all the same shape. 14a's
+own tabbar-styled status chips (Alle/Met contract/Niet getekend/Zonder contract) became a real
+`$.fn.dataTable.ext.search` filter keyed on a `data-status` attribute per row, not just decoration.
+Trims, disclosed in the view's own header comment: no inline expand/collapse for a multi-contract
+company (DataTables' child-row API doesn't compose with this column layout; that one row — in the
+real data, only "Fluvius System Operator" — shows "N contracten" as plain text, its totals still the
+real sum across all its contracts, one click from the full per-contract breakdown on
+`DetailContractV2`); no WAARBORG dropdown filter (the status chips already answer the primary
+question); the row-level "+ Bijbestelling" quick action isn't wired (see `EditContractV2`'s own note
+below on where that lives instead).
+
+**`DetailContractV2` (14b)** extends 14b's single-contract layout to the real range of zero/one/many
+contracts per company: zero renders a real empty state with a working "Contract toevoegen" action
+(`AddContract`, unchanged), more than one repeats 14b's whole card stack (KPI row, Vraagt actie,
+Voorwaarden, Veiligheid & attesten, Loten & bijbestellingen) once per contract under its own heading
+— not a fabricated "pick one" selector 14b never designed. "Vraagt actie" is real, computed logic
+(`!ContractSigned`, `!PidAttest`, missing `SiteManagerContactId`, `GuaranteeDocumentMissing`), same
+as `Projecten/DetailV2`'s own attention card. Two actions in that card and 14b's own topbar
+"Herinnering sturen" have **no backend action anywhere in this codebase** — no reminder-email
+endpoint exists. Rather than invent one or silently drop the button, both became a real `mailto:` to
+the company's own e-mail address (same choice already made for Klanten/DetailV2's contact actions),
+shown only when that address is actually on file. Facturen/Leverancier/Portaaltoegang stay
+`.is-disabled` tabs with real counts — the legacy page's Facturen tab already has real, working
+content (an invoice table); a natural next tab, just not this pass, same "one tab built, the rest
+counted-not-built" discipline as every other gl-v2 detail page this session.
+
+**`EditContractV2` (14c)** is this batch's biggest, most deliberate trim, spelled out in full in the
+view's own header comment: the **inputs themselves keep the shared, app-wide EditorTemplates**
+(`Percentage.cshtml`/`Currency.cshtml`/`CurrencyWithActions.cshtml`, resolved via the `[UIHint(...)]`
+attributes already on `ContractBO`/`ContractActivityBO`) and every element id/name the legacy page's
+own inline script depends on (`#ddlCompany`, `#ddlSiteManager`, `#lstGuaranteeType`,
+`#chkCashDiscount`, `#lstActivities`/`#ActivityRows`, `button.deleterow`, …) — copied onto this page
+unchanged, the whole script block included near-verbatim, including the shared
+`Partials/_ActivityRow`/`_BijbestellingModal`/`_SiteManagerNewModal` and their AJAX endpoints
+(`AddSelectedActivities`, `GetCompanys`, `GetCompanyContacts`, …). Rewriting those shared templates to
+gl-v2's own field-input look is an app-wide change well beyond one page (same "left for its own pass"
+reasoning already used for every other cross-cutting trim this session), and forking the AJAX
+endpoints to a parallel gl-v2-only contract-save path would risk silently diverging from the working
+legacy one. What genuinely did change, matching 14c's own **first** listed complaint ("labels boven
+het veld i.p.v. rechts ernaast, tot 30px ertussen"): every field sits in its own `.gl-v2-field` with
+the label directly above it, inside `.gl-v2-section-card`s grouped exactly like 14c's four sections
+(Algemeen/Voorwaarden/Verzending & status/Veiligheid & attesten) — a real fix to the reported problem,
+even though the input *inside* each field keeps its existing bootstrap look. The three boolean
+checkboxes (`ContractSigned`/`SiteNotification`/`VgmCharter`/`PidAttest`) get a pill-toggle look purely
+via CSS (`appearance: none` + `::before`) directly over the existing `<input type="checkbox">` the
+`CheckBoxFor` helpers already render — no JS component, no id changes, so `$('#chkCashDiscount').on
+('change', …)`'s existing wiring still fires exactly as before. Unlike `DetailContractV2`/
+`DetailContractsV2`, "+ Bijbestelling" per lot **is** wired here (`js-add-bijbestelling` → the shared
+`_BijbestellingModal`) — this page's whole purpose is editing a contract's lots, so leaving that one
+action out would defeat 14c's own stated purpose ("Loten en bijbestellingen in één sectie").
+
+### Primair contactpersoon, optioneel e-mailadres, EditProject-menuactivering
+Three related requests against Klanten Edit/Create/EditProject. **E-mailadres optioneel** — already
+true at the application layer before this pass (`ClientAccountBO.Email`, `ClientFormViewModel.Email`,
+`ContactInputViewModel.Email` and the shared `GlV2Email` editor template never had `[Required]`/
+`data-val-required`); the only real gap was the DB column, so `_migrations/044_
+KlantPrimairContactEnEmailOptioneel.sql` dynamically relaxes `ClientAccounts.Email` and
+`ClientContacts.Email` to nullable (reads the live column type/length from `sys.columns` instead of
+guessing a hardcoded `NVARCHAR` length, same idempotent `COL_LENGTH` guard convention as every other
+migration file here).
+
+**Primair contactpersoon** — a brand-new concept (`ClientContacts.IsPrimaryContact bit`, added by the
+same migration), threaded through `ClientContactBO` → `DALCore.ClientContacts` →
+`ClientContactTranslator`. Each client-contact-row partial gets a star toggle button
+(`.js-gl-v2-primary-contact-toggle`, a hidden `.js-gl-v2-primary-contact-input` checkbox next to it) in
+its card header, next to the title — `.gl-v2-icon-btn.is-primary` is a new generic variant in
+gl-v2-shell.css alongside the existing `.is-danger`/`.is-menu-open` ones. A first pass used the gold
+accent tokens, but the tint was too light to read against the white star icon — reused
+`.gl-v2-btn-primary`'s own solid fill instead (`--gl-v2-primary` background, white icon, same hover/
+active steps) so the active row is unambiguous. Exclusivity (only one contact may be primary) is enforced twice: client-side, a
+delegated click handler on the contacts container unchecks every sibling row when one is set (in both
+`gl-v2-klanten-form.js` and `gl-v2-klanten-editproject.js` — two separate form stacks, see below); and
+server-side, defensively, since `Html.BeginCollectionItem`'s GUID-keyed indices make it easy for stale/
+duplicate posted state to slip through — `ClientAccountTranslator.NormalizePrimaryContact` (Stack B,
+`EditProject` → `ClientAccountBO`) and `KlantenController.NormalizePrimaryContact` (Stack A,
+`AttachContacts`/`UpdateContacts` → `ContactInputViewModel`) both keep only the first `IsPrimaryContact
+= true` contact and force the rest false right before saving.
+
+Three parallel contact-row stacks all needed the same field: `_ClientContactRowV2.cshtml`
+(`ContactInputViewModel`, Klanten Edit/CreateV2), `_ProjectContactRowV2.cshtml` (`ClientContactBO`,
+EditProjectV2) — both gl-v2, both got the star toggle — and `_ContactRow.cshtml` (legacy, plain
+`BOCore.ClientContactBO`, legacy `EditProject.cshtml`) which got a plain Bootstrap checkbox instead
+(no `gl-v2-klanten-form.js` on legacy pages, so no client-side exclusivity there — server-side
+normalize is the only safety net, called out in a comment on the checkbox itself). A fourth stack, the
+legacy JS-templated contact rows in `_ClientFormFields.cshtml`'s `<template id="contact-template">`
+(cloned by `buildContactRow()` in `_ClientFormScripts.cshtml`, used by legacy `Edit.cshtml`/
+`Create.cshtml`), got a plain checkbox in the template plus a delegated `change` listener that
+unchecks siblings — no server round-trip needed there since the existing `data-name-template`/
+checkbox-type handling in `buildContactRow()` already binds/re-binds the field generically.
+
+**E-mail-kolom volgt het primaire contact** — Klanten/Index and Projecten/DetailClientsV2 both show a
+client's e-mail with a 3-tier fallback: the account's own `Email` first, else the primary contact's
+`Email` (`OrderByDescending(cc => cc.IsPrimaryContact).ThenBy(cc => cc.Id)`), else the first contact by
+`Id`, else blank. `KlantenController.Index`'s projection query does this server-side; `Projecten/
+DetailClientsV2.cshtml` computes an `effectiveEmail` local per row and uses it everywhere `client.Email`
+used to appear (search string, mailto, copy button, display span) — including in the mobile card
+markup, which is fine unchanged since those cards are built from the already-rendered `<tr>` DOM, not
+re-read from the model.
+
+**EditProject's menu-activering** — `Klanten/EditProjectV2` already had the inner-menu item count wired
+(`ItemCounts["Klanten"] = Model.ProjectClientCount`), but neither the rail's "Projecten" item nor the
+inner-menu's "Klanten" item lit up as active on this specific action, since `EditProject` lives under
+the `Klanten` controller, not `Projecten`. Fixed with one extra clause on each: `_RailPartialV2.cshtml`'s
+"Projecten" rail item now also activates when `IsActive("Klanten")` and the current action is `Detail`
+or `EditProject`; `_ProjectInnerMenuV2.cshtml`'s "Klanten" item's active-check already covered
+`IsHere("Klanten", "Detail")` from an earlier pass, extended with `IsHere("Klanten", "EditProject")`.
+
+#### Follow-up — a shell-wide underline bug, the same tabbar-flush fix a third time, and the punt-14 pages brought up to the rest of the batch's standard
+Nine real reports across all three punt-14 pages, fixed together.
+
+**One genuinely shell-wide bug**: `.gl-v2-icon-btn` never set `text-decoration: none` — every prior
+caller happened to be a `<button>`, so the missing reset was invisible until `DetailContractV2`'s
+"Contract toevoegen" icon action used an `<a>`. Fixed once in `gl-v2-shell.css`, same class every
+other `.gl-v2-icon-btn` link already benefits from now.
+
+**The tabbar-flush bug (see the Klanten/DetailV2 follow-up above) hit `DetailContractsV2` too** —
+same root cause, same fix: the Phone-mode `_ProjectInnerMenuV2` widget was rendered before the
+tabbar instead of after it, so `.gl-v2-tabbar`'s negative-margin trick closed the wrong gap.
+`DetailContractV2` had already gotten this right the first time (no separate report needed there).
+
+**`DetailContractsV2`'s two scope trims from the first pass, built for real on request:**
+- **Inline expand/collapse for a multi-contract company** (14a's own "Fluvius System Operator, 3
+  contracten" example) — originally skipped as "DataTables' child-row API doesn't compose with this
+  column layout." It does, via `table.row(tr).child(html).show()`: each multi-contract row now
+  carries its contracts as a `data-contracts` JSON payload (server-serialized, same fields as the
+  detail columns), and the chevron toggles a DataTables *child* row — which, unlike a plain injected
+  `<tr>`, is deliberately excluded from the table's own pagination/sort/search count, so "10 per
+  page" still means 10 real suppliers regardless of how many are expanded.
+- **Rows per page fixed at 25** — replaced with `adjustPageLength()`. First attempt *guessed* the
+  numbers instead of measuring them (a fixed 52px row height, a fixed 140px "remaining chrome"
+  allowance) and, on a real report from a taller screen, still left the pagination controls below the
+  fold — the guessed constants simply didn't hold at every zoom level/font size/screen height. Fixed
+  by measuring instead of guessing: the table renders once at a modest `pageLength: 10` (DataTables
+  always renders its info/pagination footer regardless of how many rows that is), then
+  `adjustPageLength()` reads the *real* rendered height of one `<tr>` and of the `.dt-layout-row`
+  footer straight out of the DOM, divides the real remaining viewport space by that real row height,
+  and calls `table.page.len(rows).draw()` — so the count is exact for whatever font/zoom/browser
+  chrome is actually in play, not a constant tuned for one screen. Re-runs on resize (debounced,
+  merged into the same handler that already rebuilds the mobile card list), clamped to [3, 25] so an
+  extreme window size can't collapse to an unusably short page or balloon past a sane ceiling.
+
+**`DetailContractV2`'s two real layout bugs, both from the same design mistake**: the page wrapped
+every contract's whole card stack in its own `.gl-v2-pcd-contract-block` (`display:flex;gap:14px`) to
+support repeating the layout once per contract. That's architecturally different from every other
+gl-v2 detail page, which lets `.gl-v2-content` itself (a flex column with `gap:16px` between its
+*direct* children, `gl-v2-shell.css`) provide the spacing — and it manifested as cards sitting flush
+against each other and the meta line touching the KPI tiles. Fixed by removing the wrapper entirely:
+the `@@foreach` over `Model.Contracts` now emits its elements as direct siblings of `.gl-v2-content`,
+inheriting the same proven 16px rhythm every other gl-v2 detail page already relies on. Multiple
+contracts are told apart by a border-top + margin on the (only-rendered-when->1) contract heading,
+not by a wrapper div.
+
+**`DetailContractV2`'s topbar actions, made properly responsive** (they were desktop-only before,
+`.gl-v2-btn`/`.gl-v2-icon-btn` visible at every width with Verwijderen hidden inside the ⋯-menu even
+on desktop): now three explicit states, same two-class-override discipline as every other responsive
+gl-v2 topbar this session (`gl-v2-pcd-topbar-btn`/`gl-v2-pcd-menu-trigger`/`gl-v2-pcd-actionbar`,
+`gl-v2-projecten-contract-detail.css`) — **desktop** (≥1024px): Bewerken/Toevoegen/Verwijderen as
+their own topbar buttons, Verwijderen now a standalone danger icon button rather than hidden in a
+menu; **tablet** (768–1023.98px): all three collapse behind the ⋯-trigger (hidden at every other
+width); **gsm** (<768px): the ⋯-trigger and the individual topbar buttons both disappear, replaced by
+a genuine bottom `.gl-v2-form-actionbar` with the same three actions as icon buttons — the same
+shared, `margin-top:auto`-pinned component every gl-v2 form page already uses, here on a page that
+isn't a form (an icon-only actionbar is a legitimate use of the same component).
+
+**`EditContractV2`'s "Verantwoordelijke werfleider" modal** (`Partials/_SiteManagerNewModal.cshtml`)
+was still the plain, unstyled legacy Bootstrap modal. Rebuilt as `_SiteManagerNewModalV2.cshtml`
+following the established `.gl-v2-modal-form` (Type 2, design-handoff modals optie 4j) contract —
+same structure as `Klanten/Modals/_VatLookupModalV2.cshtml` (`.modal-header`/`.gl-v2-modal-close`,
+`.gl-v2-field`/`.gl-v2-field-full` fields in the 2-col body grid, `.gl-v2-btn-text`/`-primary`
+footer). The JS is functionally unchanged — same element ids (`#nwmName`/`#nwmEmail`/`#nwmPhone`/
+`#nwmErrors`/`#btnCreateSiteManager`), same `AddCompanyContactQuick` AJAX call — only the markup
+around it moved.
+
+**Two small `EditContractV2` field bugs**: Betaaltermijn's required-asterisk was a sibling `<span>`
+placed *after* `@@Html.LabelFor(...)`'s closing tag — `.gl-v2-field-label` is `display:flex` (a block-
+level flex container), so anything after the label, not inside it, wraps to its own line. Every other
+required-star on this page (and the new site-manager modal) already puts the star *inside* the
+label's content; this one field didn't. Fixed by writing that one label literally (`<label>… <span
+class="gl-v2-ec-required-star">*</span></label>`) instead of `LabelFor`, which has no overload for
+injecting markup into its generated text.
+
+**`EditContractV2`'s Loten & bijbestellingen card, rebuilt to match 14c's actual layout.** The first
+pass duplicated every lot — once as a bare price-input row (the legacy `_ActivityRow` partial,
+untouched), once again as a separate "bijbestellingen" card below repeating the same lot list with
+its own add/edit/delete affordances. 14c draws ONE list: a lot's row, its bijbestellingen indented
+directly beneath it, then its own "+ Bijbestelling op X" row, then the next lot — with the "Lot
+toevoegen" search control at the *bottom* of the whole list, not above it. Built `_ActivityRowV2.cshtml`
+(a V2 sibling of `_ActivityRow.cshtml`, used by both the page's own `@@foreach` and by
+`ProjectenController.AddSelectedActivities`'s AJAX response, same dual-use as the original) that
+renders a lot's row AND its bijbestellingen AND its own add-row together — collapsing what used to be
+two separate sections into the single flowing list 14c actually shows. Still doesn't touch the shared
+`CurrencyWithActions` editor template (same "app-wide template, out of scope" reasoning as the rest of
+this page) — the price+€+delete-button stays one `input-group` unit, just given its own 240px grid
+column next to a new read-only-styled lot-name box, instead of the old label-left/input-right bootstrap
+row. Contractprijs's total value also grew from 13px to 20px, primary-green — 14c's own "the biggest,
+boldest number on the card," which it wasn't before.
+
+**`DetailContractsV2` gets its own Opvolging column back (desktop only), 14a point 3** — "het vinkje
+voor 'getekend' zit al in de contractchip, dus de kolom houdt twee iconen: helm = werfmelding, schild
+= VGM-charter." Added as the last data column before the ⋯-actions one: `ph-hard-hat` (werfmelding,
+already this app's own icon for "leverancier"/contractor concerns — see the rail/inner-menu) and
+`ph-shield-check` (VGM-charter, same family as the insurance-warning icons on `Projecten/DetailV2`).
+"In orde" = filled `--gl-v2-primary-tint` box with a primary-green icon (`.gl-v2-pc-follow-icon.is-ok`);
+"ontbreekt" = white box with a dashed hairline border and a muted icon (`.is-missing`) — deliberately
+not a second grey tint, matching 14a's own complaint about the previous version of this column. For a
+multi-contract supplier row, "in orde" only shows once *every* contract has the flag — same all-or-
+nothing rule `AllContractsSigned` already uses for the GETEKEND chip, no separate partial state defined
+by the design. Each contract in `data-contracts` now also carries `siteNotification`/`vgmCharter`
+(`ContractBO.SiteNotification`/`.VgmCharter`, already the fields `DetailContractV2`'s "Veiligheid &
+attesten" checklist reads) so the expanded child-rows (`buildChildRows()`,
+`gl-v2-projecten-contracts.js`) show the same two icons per individual contract, not just per supplier.
+Name-as-tooltip on each icon (`title="Werfmelding — in orde"`) rather than a separate legend row — the
+narrower ask here was the column itself, not the full footer legend 14a also describes.
+
+### Punt 14d — reusable field types (`GlV2NumberUnit`, `GlV2ReadOnlyValue`, `GlV2ToggleSwitch`, `GlV2DateTime`)
+Design-handoff punt 14d, "Veldtypes uit 14c — elke staat, in de stijl van 8f", is the same kind of
+catalogue-of-field-states page 8f already established for the app's contact/numbered fields — this
+time drawn directly from what `EditContractV2` (punt 14c) needed. On request, every 14d field type
+that didn't already have a GlV2 template became one, applied to `EditContractV2` as the first real
+caller of all four, and documented here the same way every other `Views/Shared/EditorTemplates/GlV2*`
+component already is: **enkel expliciete aanroep, nooit via impliciete DataType/UIHint-resolutie** —
+the older, non-`GlV2`-prefixed `Percentage.cshtml`/`Currency.cshtml`/`CurrencyWithActions.cshtml`
+keep owning that implicit `[UIHint(...)]` dispatch for every page that hasn't been converted yet, so
+converting one page's fields to the new templates never silently changes another page's rendering.
+
+**`GlV2NumberUnit`** (`EditorTemplates/GlV2NumberUnit.cshtml`, model `decimal?`) — 14d's "1 · GETAL
+MET EENHEID — %, DAGEN, €". One generic template for all three units rather than three near-
+identical ones — 14d itself groups them as a single field type, and the only real difference between
+"BTW %", "Betaaltermijn (dagen)" and a future "Bedrag (€)" field is the fixed unit block on the right
+(never inside the placeholder, 14d's own rule) plus whether the value is masked as currency-style
+decimal or left as a plain integer-ish count. New shared primitive in `gl-v2-shell.css`:
+`.gl-v2-field-unit` — bleeds to the box's right edge via the same negative-margin trick
+`.gl-v2-field-attach-btn` already uses for its attached button, so it reads as one solid unit
+regardless of which unit template renders it. States: normal, focus (`:focus-within`, already
+generic), error (`ViewData.ModelMetadata`/`ModelState` — same `is-error` class every other GlV2 field
+uses), disabled (`:disabled` on the input — already generic, dims both the input *and* the unit
+chip), empty (`:placeholder-shown` — dims the unit chip the same way `.gl-v2-field-prefix` already
+dims for GSM/telefoon fields). Required ViewData: `Unit`. Optional: `Label`, `Placeholder` (default
+`"0,00"`), `Id` (override — only when existing JS expects a fixed id), `Masked` (bool, default
+`true` — adds `.Currencymask` for the existing `CurrencyMask` JS; `Betaaltermijn`/`Korting contant`'s
+day-count sets this `false`, matching the legacy page's own unmasked plain-integer look, "8" not
+"8,00"), `Max` (optional hint text under the field, e.g. `"Maximaal 100 %"` — informational only, the
+real validation stays server-/`ModelState`-driven), `Required` (bool — forces the red `*` for fields
+that are visually required without an actual `[Required]` attribute, e.g. `Betaaltermijn` — `ContractBO`
+never marked it required, but 14c/14d both draw the asterisk), `Bare` (bool — skips the field's own
+label/wrapper, rendering only `.gl-v2-field-box`, for a number that already lives inside *another*
+compound field — see Korting contant below).
+
+**`GlV2ReadOnlyValue`** (`DisplayTemplates/GlV2ReadOnlyValue.cshtml`, model `string`) — 14d's "2 ·
+ALLEEN-LEZEN VERSUS UITGESCHAKELD" (the read-only half; the disabled half needed no new component —
+it's just any other GlV2 field with `disabled` on its `<input>`, already fully styled by the generic
+`:has(.gl-v2-field-input:disabled)` rules every field template shares). Two different *meanings*, two
+different looks, 14d's own point: UITGESCHAKELD is a field that could be edited but currently isn't;
+ALLEEN-LEZEN is a field whose value will never be typed into, ever (Leverancier on `EditContractV2`,
+once a contract has a company — there is no flow that lets you change a contract's supplier after the
+fact). Lives in `DisplayTemplates/`, not `EditorTemplates/` — like `GlV2DetailField.cshtml` next to
+it, this one only shows a value, it never binds one back, so `Html.DisplayFor(...)` is the right call,
+not `Html.EditorFor(...)`. New shared primitive: `.gl-v2-field-readonly` (icon + value, tinted
+background, no border — visually distinct from both a normal `.gl-v2-field-box` and a disabled one).
+Optional ViewData: `Label`, `Icon` (Phosphor class, e.g. `"ph-hard-hat"`).
+
+**`GlV2ToggleSwitch`** (`EditorTemplates/GlV2ToggleSwitch.cshtml`, model `bool`) — 14d's "5 ·
+SCHAKELAAR MET UITLEG": 40×22px, the *entire row* is clickable (a real `<label>` wrapping the
+checkbox, not a checkbox plus a separately-click-handled `<span>`), for yes/no *facts* ("Werfmelding
+ingediend") rather than actions that do something immediately (those stay a button). Manually
+reconstructs what `Html.CheckBoxFor` already generates under the hood (checkbox + a same-name hidden
+`value="false"` fallback) rather than calling it, purely so both elements can carry this template's
+own classes — binding behaviour is identical: an unchecked box still posts `false`. New shared
+primitives in `gl-v2-shell.css`: `.gl-v2-toggle-row` (the clickable label), `.gl-v2-toggle-switch`
+(the pill itself — pure CSS over a native `<input type=checkbox>`, `appearance:none` + a `::before`
+thumb, no JS component), `.gl-v2-toggle-text`/`-label`/`-hint`, `.gl-v2-toggle-grid` (14d's "IN EEN
+GROEP — DRIE NAAST ELKAAR": three/four switches side by side instead of stacked — same rows, the
+container just gains columns). UITGESCHAKELD (14d: "Contract getekend kan pas als het contract
+verstuurd is") is the same component with `Disabled = true`. Optional ViewData: `Label`, `Hint` (the
+explanation line under the label, e.g. `"ingediend"`/`"ondertekend"`), `Disabled`.
+
+`EditContractV2`'s Korting-contant toggle is the one checkbox on the page that did **not** move to
+`GlV2ToggleSwitch` — it isn't a "schakelaar met uitleg" row at all, it's one switch sitting mid-
+sentence inside a compound field ("[toggle] 3,00 % binnen 8 dagen"), with no label/hint block of its
+own. It keeps a plain `Html.CheckBoxFor` but now carries the `.gl-v2-toggle-switch` class directly, so
+it *looks* identical to every other toggle on the page without inheriting the row/label markup that
+wouldn't apply here.
+
+**`GlV2DateTime`** (`EditorTemplates/GlV2DateTime.cshtml`, model `DateTime?`) — sibling of the
+already-existing `GlV2Date.cshtml` (which binds `DateOnly?`, first built for `Klanten/EditProjectV2`).
+Needed because a VB.NET `Date?` property — `ContractBO.ContractSentDate` among others — binds as
+`System.DateTime?`, not `DateOnly?`; calling `GlV2Date` directly on it would throw at render time
+(no implicit `DateTime?` → `DateOnly?` conversion). Same approach as `GlV2Date`, deliberately *not*
+14d's own hand-drawn calendar-dropdown ("6 · DATUM": month nav, day grid, today/selected states,
+"Vandaag"/"Wissen" footer) — a plain HTML5 `<input type="date">` inside the existing `.gl-v2-field-box`
+shell, no new datepicker dependency. `GlV2Date` made that call as the pilot's first real date field
+and it stood unchallenged since; building a full custom calendar widget now, for one field on one
+page, would be a UI component on the scale of the invoice/contract pages themselves, not a "field
+type" documentation pass. Flagged here as the one deliberate 14d state that stayed at native-input
+fidelity rather than matching the mockup pixel-for-pixel — a good candidate if a future page actually
+needs the richer calendar (keyboard month nav, inline validation like "Juni heeft 30 dagen").
+
+**`GlV2SearchSelect` was already built** (an earlier pass, `EditorTemplates/GlV2SearchSelect.cshtml`)
+and structurally matches 14d's "3 · KEUZELIJST MET KNOP — WERFLEIDER" states (empty/chosen/open) far
+better than the existing select2 dropdown does — but its own header comment says plainly that it
+ships only the closed-state shell plus an empty search panel: "het openen/zoeken/groeperen zelf is
+bewust ongewired JS... een pagina die dit ECHT wil laten werken hydrateert data-lookup-url zelf." No
+page has been the first to actually wire it yet. `EditContractV2`'s Werfleider field was **not**
+swapped to it this pass — becoming that first caller means building real search/select/keyboard-nav
+JS plus an endpoint shaped for it, a materially bigger task than adding a field-type template, and
+risked breaking a picker that already works (select2 + `GetCompanyContacts`) for a component that, as
+shipped, does nothing yet. Left as a clearly-identified next step rather than a silent gap.
+
+#### Follow-up — `EditContractV2` brought fully onto the documented field-type standards, plus two more real bugs
+Four more real reports, all on `EditContractV2`.
+
+**Duplicate suffix/unit component, discovered too late.** Building `GlV2NumberUnit` for the punt-14d
+pass above missed that a currency-suffix primitive already existed and was already documented —
+`.gl-v2-field-suffix` (`### Tekstvelden`, "Prefix/suffix slots") and its own real caller,
+`GlV2Currency.cshtml` (`@model decimal?`, first used by `Klanten/EditProjectV2`'s Eenheden tab).
+`GlV2NumberUnit` had invented a parallel `.gl-v2-field-unit` instead of reusing that. Fixed by
+retiring `.gl-v2-field-unit` and pointing `GlV2NumberUnit`'s markup at the existing
+`.gl-v2-field-suffix` — one suffix primitive for the whole app, `GlV2NumberUnit` stays the template
+that adds the `%`/`dagen` cases `GlV2Currency` doesn't cover (and the `Bare`/`Max`/`Required`
+options this page's compound "Korting contant" field needed), not a second copy of the same CSS.
+
+**Two more field types genuinely missing, both now built the same way as the punt-14d batch:**
+- **`GlV2Text`** (`EditorTemplates/GlV2Text.cshtml`, `@model string`) — the plain single-line text
+  field `### Tekstvelden` (design-handoff optie 4i) had already specified in full, whose only real
+  caller so far was a page-local toolbar search box (`Invoices/IndexV2`), never a bound form field.
+  Every other `GlV2*` text template (`GlV2Email`/`GlV2Website`/`GlV2Telefoon`/…) is really this same
+  `.gl-v2-field`/`.gl-v2-field-box`/`.gl-v2-field-input` skeleton plus one specific icon/prefix;
+  `GlV2Text` is the version with neither, for an ordinary field like Contractnaam or Opmerking
+  verzending — both of which were still raw `Html.TextBoxFor` + bootstrap `.form-control` on this
+  page, the one place on the whole page the "labels above, gl-v2 field look" conversion had missed.
+- **`GlV2Select`** (`EditorTemplates/GlV2Select.cshtml`, `@model Enum`) — the Basis variant of
+  `### Select / Dropdown` (design-handoff optie 4h): a closed trigger + plain option-list panel, no
+  search, for a short fixed list like an enum. That component was fully specified in `DESIGN.md`
+  already but, unlike `GlV2SearchSelect`, had **never shipped any working JS at all** — every real
+  caller so far was a *list filter* (Leveranciers/Klanten/DetailClients' Status/Type dropdowns), each
+  one copy-pasting its own small page-local `initSelect()`. Waarborg (`ContractBO.GuaranteeType`) was
+  still a plain `<select>` for exactly that reason — nothing generic existed yet to bind a *model
+  field* to this component. Rather than write EditContractV2's own copy of `initSelect()`, the
+  open/select/keyboard logic became `initGlV2Select()` in `gl-v2-shell.js` — shell-wide, auto-wiring
+  every `.gl-v2-select[data-gl-v2-select]` on any gl-v2 page, same "behavior ships with the
+  component" precedent as `initContextMenus()`/`initClickableRows()`. On selecting an option it
+  dispatches a real `change` event on the underlying hidden input, so the page's own existing
+  `$('#id').on('change', …)` handler (Waarborg %'s enable/disable, the bankwaarborg-document row's
+  show/hide) needed no logic changes — only its selector, since the hidden input's id is the same
+  auto-generated `Contract_GuaranteeType` `EditorFor` already produces, not the old `<select>`'s
+  explicit `id="lstGuaranteeType"`. The existing per-page filter-dropdown copies are untouched — this
+  doesn't retroactively replace them, it just means a *new* filter dropdown no longer has to write
+  its own copy either.
+- **"Lot toevoegen" stays select2**, deliberately not swapped to `GlV2Select`/`GlV2SearchSelect` —
+  it's a genuine multi-select-with-search over a potentially long activity list (both `GlV2Select`
+  variants are single-value; `GlV2SearchSelect`'s search/select JS is unwired, same reasoning as
+  Werfleider above). Only the select2 *chrome* was reskinned — page-scoped CSS targeting select2's
+  own rendered classes (`.select2-selection`, `.select2-dropdown`, `.select2-results__option`, …) to
+  match `.gl-v2-field-box`/`.gl-v2-select-panel`'s look — not a component swap, so its working
+  multi-select/search/keyboard behavior is completely unaffected.
+
+**A real icon-centering bug** in the bijbestellingen list: `.gl-v2-ec-lot-order-row i` was meant to
+style only the row's own leading arrow icon, but as a bare descendant selector it also matched the
+`ph-pencil-simple`/`ph-trash` icons *inside* the edit/delete buttons further along the same row,
+adding a stray `margin-right:6px` that pushed them off-center in their 38×38 button box. Fixed by
+giving the arrow icon its own class (`.gl-v2-ec-lot-order-icon`) and scoping the rule to that instead
+of every `i` in the row.
+
+**Icon-button severity, corrected on two of the three delete affordances on this page.** Both the
+bijbestelling delete and the lot (`ContractActivityBO`) delete were `.gl-v2-icon-btn.is-danger` (the
+same red used for "this object itself is gone" actions, e.g. the whole-contract delete in
+`DetailContractV2`'s topbar). Removing one bijbestelling or one lot doesn't delete the contract — a
+real but non-destructive, reversible-by-re-adding action, which is exactly what `.is-warning`
+(`### Buttons`, "onomkeerbaar maar niet destructief") already means elsewhere in gl-v2. Added the
+missing `.gl-v2-icon-btn.is-warning` variant to `gl-v2-shell.css` (the `.gl-v2-btn-warning` text
+button already existed; no icon-only sibling did) and moved both buttons onto it. The lot-delete
+button itself is rendered by the shared `CurrencyWithActions.cshtml` template as a bootstrap
+`.btn.btn-danger.deleterow` (deliberately unmodified, see this page's own top comment) — restyled via
+page-scoped CSS (`.gl-v2-ec-lot-row-price .deleterow`) to the identical `.gl-v2-icon-btn.is-warning`
+look instead, so `AddContract`/`AddClient` (the template's other two callers) render unaffected.
+
+**Contractprijs total, corrected back down.** An earlier pass enlarged it to 20px on the reasoning
+that it was "the boldest number on the card" — 14c's own mockup draws it at 14px (12px for the
+"Contractprijs" label beside it), one line within the card, not a KPI tile of its own. Reverted to
+match the reference exactly.
+
+### Icons
+Phosphor Regular (`ph ph-*`), not the mockup's hand-drawn custom SVG paths — the mockup's icon
+path data isn't recoverable from the static export (live template bindings), and Phosphor is
+already loaded app-wide and the documented forward direction for the current system too. Every
+gl-v2 icon should be a real Phosphor Regular glyph confirmed to exist, same discipline the current
+system's own Icons section documents for its Boxicons→Phosphor migration.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** make Deep Forest Green (`#0a5a3b`) the only brand colour on a content
-  screen; keep it to ~one mark per control cluster (The One Green Rule).
-- **Do** build type hierarchy by weight (400 / 600 / 700 Poppins) at the existing
-  sizes, not by new sizes or a second family.
-- **Do** separate surfaces with the 1px Hairline (`#e7e7e7`) border and the
-  Card-rest shadow (`0 1px 4px rgba(0,0,0,.08)`); reserve Overlay shadows for
-  menus, dropdowns, and modals (The Float-Only Rule).
-- **Do** use 7px radius for content chrome and 14–16px for navigation chrome
-  (The 7-14-16 Rule).
-- **Do** back "green-related" affordances — icon chips, tab-active rows, hovers —
-  with Mist Green (`#e8f0eb`), and use Mint Ice (`#e7fff1`) as the only text
-  colour on the green rail.
-- **Do** keep every screen usable at 360px with ≥40px touch targets; on-site
-  phone use is first-class (The Field-Width Rule).
-- **Do** prefer soft tinted state colours (e.g. `btn-gl-remove`) over solid loud
-  fills, in keeping with the restrained tone.
-- **Do** use Rust / Ochre / Taupe Grey for danger / warning / info severity —
-  never stock Bootstrap red (`#dc3545`-family), amber, or blue.
-- **Do** build a new data-entry form as a `gl-form-shell` with
-  `gl-form-section` heads and a `gl-field-grid` of `gl-field`s (label above the
-  control); render Save / Cancel with `_FormShellActions` (The Form-Shell Rule).
+- **Do** keep every new gl-v2 CSS selector scoped under `.gl-v2` — no bare-element rules, so this
+  pilot can never leak onto a page that hasn't opted in.
+- **Do** use Phosphor Regular icon classes, confirmed rendering, not hand-drawn SVGs.
+- **Do** reserve the serif face for names (page titles, panel headings), never for controls.
+- **Do** give click handlers on a hover-openable trigger idempotent "ensure open" behavior, not a
+  toggle — see the Flyout panel's Named Rule above.
+- **Do** treat a dashed-border placeholder as an honest, disclosed "not wired up yet" signal (an
+  unstyled icon button, say) rather than building a fake interactive control with nothing behind
+  it — but if it's not actually dashed/marked as a placeholder, don't ship a dead control at all;
+  suppress it instead (see the mobile search stub, Mobile Topbar) until it has something to do.
 
 ### Don't:
-- **Don't** introduce cool blue-greys for neutrals; keep them warm — Page Grey
-  and Hairline before any `#f1f5f9`-family grey (The Warm-Grey Rule).
-- **Don't** put a visible drop shadow on a resting card to signal importance; use
-  the border and, if needed, a Mist-Green header.
-- **Don't** add a second brand accent, gradient wash, uppercase tracking, or
-  italic for emphasis — reach for weight or green.
-- **Don't** give navigation a left active-bar or caret; the Forest-Green-Bright
-  tile block is the indicator.
-- **Don't** let radius drift — no pill buttons by default, no sharp 0px corners,
-  no 4px/12px one-offs outside the documented scale.
-- **Don't** restyle Select2 / datepicker / multiselect controls away from the
-  46px `form-control-modern` height; native and enhanced fields must stay aligned.
-- **Don't** start a new form on a bare `card-modern` + `row g-3` + `col-md-6` +
-  `form-label` + plain `form-control` (the `AddContact` / `EditContact` legacy
-  pattern); use `gl-form-shell`, and migrate those two views when you touch them.
-- **Don't** mix label placement in one form — labels are above the control in a
-  `gl-form-shell` form, right-aligned in a `card-big-info` form, never both.
+- **Don't** nest a `position:fixed` overlay (flyout, mobile menu, backdrop) inside anything with
+  `position:sticky` — render it as a sibling instead (see Flyout panel).
+- **Don't** rely on the `[hidden]` attribute alone to hide something that also has an explicit
+  `display` value in CSS — a plain class selector at equal specificity beats the browser's
+  `[hidden]{display:none}` default; guard with `.thing[hidden]{display:none}` explicitly.
+- **Don't** wrap `@@section` in an `@@if` in a Razor view — Razor doesn't support conditionally
+  registering a section; put the `@@if` inside the section body instead.
+- **Don't** give two elements the same `id` just because they do the same thing in two
+  presentations (e.g. a desktop topbar button and its mobile quick-action twin) — duplicate ids
+  are invalid HTML and `$('#id')`-based JS only ever reaches the first match. Share a class
+  instead and target that.
+- **Don't** duplicate the current system's Rust/Ochre/Taupe severity tokens or invent a fourth
+  status color here — no gl-v2 screen has needed status colors yet; resolve this when one does,
+  don't guess ahead of a real need.
+- **Don't** set a mobile text input's font below 16px — iOS Safari auto-zooms the whole page on
+  focus below that size, which can look like an unrelated layout bug (an oversized field, other
+  chrome pushed off-screen) rather than what it actually is. Hit this on the mobile menu's search
+  input at 13px.
+- **Don't** size a full-screen `position:fixed` overlay with `inset:0` alone and assume that's
+  the visible viewport — pair it with `height:100dvh` too. Plain `inset:0` can resolve against the
+  browser's large viewport (address bar hidden) rather than what's actually visible with the
+  address bar shown, pushing fixed content (the mobile menu footer, in this case) below the fold.
+  `dvh` is a pure progressive enhancement — unsupported browsers just ignore the line.
+- **Don't** assume a Bootstrap `.modal` just works once its own JS/CSS loads on a page that also
+  has its own very-high-z-index chrome (a floating rail, a sticky topbar). Bootstrap's `.modal`
+  sits at `z-index:1055` by default — any gl-v2 element ranked above that (the rail/topbar's
+  99996–99999 tier) renders visually on top of/through it. Check every new gl-v2 page against the
+  highest z-index already in play, don't assume 1055 is "high enough" just because it looks that
+  way in isolation.
+
+## Follow-up — four more real bugs from live testing: an unsaved lot's bijbestelling gap, a broken
+## multi-select, and the site-manager modal rendering behind the rail
+
+Same `Projecten/EditContractV2` (14c) and its `_ActivityRowV2`/`_SiteManagerNewModalV2` partials,
+found by the user testing the live page after the previous "Punt 14d field types" pass shipped.
+Four independent bugs, all fixed in the same pass.
+
+**1. A freshly-added (unsaved) lot silently couldn't get a bijbestelling, with zero explanation.**
+`_ActivityRowV2.cshtml`'s bijbestelling section (existing orders + the "+ Bijbestelling op X"
+trigger) was gated behind `@@if (Model.ContractActivityId > 0)` with no `else` — correct in spirit
+(`AddContractAdditionalOrder` needs a real, saved `ContractActivityId` to hang the order off; a lot
+added this session via `#btnAddActivities`'s AJAX call to `AddSelectedActivities` doesn't have one
+yet), but with nothing rendered at all for that case it just looked broken — silently impossible,
+no clue why. The legacy page it replaces DID carry this same explanation, just at the wrong
+granularity: one `<p>` for the whole card ("Sla het contract eerst op") shown only when the whole
+*contract* was unsaved (`Contract.Id == 0`), which `_ActivityRowV2` kept as-is but which doesn't
+cover this case (the contract itself can be very much saved; it's the *lot* that's new). Fixed with
+a new `else if` branch — `.gl-v2-ec-lot-unsaved-hint` — rendered per-lot, in the same indented
+"hangs under this lot" visual language as a bijbestelling row/the add-trigger (border-left, same
+padding), pointing at the concrete fix ("Opslaan en verder"), which already exists on this page for
+exactly this reason. `Opslaan en verder` round-trips the whole form including the newly-added lot
+and gets it a real id, after which the normal bijbestelling UI takes over on the next render — no
+backend change needed, this was purely a missing UI affordance.
+
+**2. "Lot toevoegen" replaced select2 entirely — the select2-CSS-skin from the previous pass was
+the wrong fix, not just an imperfect one.** The user's report ("a weird box inside the textbox")
+pointed at `Leveranciers/EditV2.cshtml`'s own Activiteiten field as "the fully correct component"
+for this — and they were right: `.gl-v2-select-trigger-multi`/`.gl-v2-select-chip`/
+`.gl-v2-select-option.is-multi` (design-handoff optie 4h's multi-select variant) already existed as
+a *working*, JS-wired component (`initMultiSelects()` in `gl-v2-leveranciers-form.js`/
+`gl-v2-klanten-form.js`/`gl-v2-klanten-editproject.js` — three separate page-local copies, the
+established "recipe copied per page" convention for this particular piece, unlike the single-select
+Basis variant which got a shared `initGlV2Select()` this session). Skinning select2's own chrome to
+*look* like this component was always going to fight select2's own JS-computed dropdown
+positioning — that's what produced the "rare box" (the results panel is absolutely positioned by
+select2 itself, not by the gl-v2 panel-positioning code the skin borrowed its radius/shadow from).
+The real fix: drop select2 for this field entirely and reuse the actual component, following the
+same page-local-copy convention as its three existing callers — a fourth copy of the panel-
+open/close/position infra (`gl-v2-projecten-editcontract.js`, new page-JS file; the whole inline
+`<script>` that used to live in `EditContractV2.cshtml` moved here, `window.glV2EditContractConfig`
+now carries the endpoint URLs since a `.js` file can't use `@@Url.Action`). One real difference from
+Leveranciers' Activiteiten field: "Lot toevoegen" was never form-bound (no `name`/hidden inputs
+posted with the form) — clicking "Toevoegen" always fired one AJAX call per picked item straight to
+`AddSelectedActivities` and then cleared itself, so the new picker keeps that behavior: its hidden
+inputs are a *staging area* only, read via a small `lotPicker.selected()`/`.markAdded(id)`/
+`.restore(id)` API rather than posted. Already-on-the-contract activities render as real
+`.gl-v2-select-option` buttons with `hidden` from the start (not omitted) so `.restore(id)` —
+called from `button.deleterow`'s handler, when a lot row gets removed client-side — can just
+un-hide them instead of having to fabricate a new option node.
+
+Fixing this surfaced a second, more consequential bug in the *shared* multi-select component
+itself, not just this page: `.gl-v2-select-option { display:flex; ... }` beats the browser's
+`[hidden]{display:none}` default at equal specificity (the exact "Don't" listed above) — meaning
+the search-filter code (`opt.hidden = term.length > 0 && text.indexOf(term) === -1`, present in
+this component since it first shipped) never actually hid anything on *any* of its callers
+(Leveranciers/Klanten's Activiteiten fields, `GlV2SearchSelect`'s results list). Typing into any of
+those search boxes filtered nothing — every row stayed visible regardless of the query. Fixed once,
+shared: `.gl-v2-select-option[hidden] { display: none; }` in `gl-v2-shell.css`, benefiting every
+existing and future caller, not just this page's new one.
+
+**3. `Contract_ContractSentDate` ("Verstuurd op") wasn't just unstyled — it was never going to
+match 14d #6, because 14d #6 isn't a native date picker.** The previous pass's `GlV2DateTime`
+shipped a plain `<input type="date">` as a deliberate scope trim (documented at the time as "no new
+datepicker JS dependency"). Design-handoff 14d #6 reads "dd/mm/jjjj · tikken mag altijd, de
+kalender is een hulp" — typing is *always* allowed, the calendar dropdown is an optional aid, not
+the only way in — which a native picker structurally can't do (it owns its own UI, no free-text dd/
+mm/yyyy typing in that exact shape across browsers) and doesn't remotely resemble 14d #6's actual
+calendar-dropdown mockup anyway. The user explicitly rejected the shortcut. Rebuilt for real:
+`GlV2DateTime.cshtml` is now a plain `<input type="text">` (`.gl-v2-field-box`, same trigger look as
+every other text field — no new "picker chrome", its empty/focus/error states are the ones that
+component family already has) paired with a **hidden** `yyyy-MM-dd` input carrying the actual bound
+value (same "shadow hidden input" shape as `GlV2Select` — free typing in the visible field can never
+corrupt the format the model binder expects), plus a `.gl-v2-select-panel` variant
+(`.gl-v2-datepicker-panel`, fixed 252px width rather than following the trigger's own width like
+the Basis/search variants) holding a real month-grid calendar: prev/next month nav, MA–ZO weekday
+header, a 7-column day grid built from `firstWeekday`/`daysInMonth` (leading/trailing days from the
+neighboring months render `.is-outside`, muted), `.is-today` (inset ring) and `.is-selected`
+(filled) states matching 14d #6's own two example days, and a "Vandaag"/"Wissen" footer (select
+today / clear the field). Typing is live-masked (digits only, slashes auto-inserted at 2/4 chars) and
+validated on blur via a real JS-`Date` round-trip check (`d <= daysInMonth(y,m)`), surfacing the
+exact 14d #6 error phrasing style ("Juni heeft 30 dagen") rather than a generic "invalid date"
+message. Shipped as a new shell-wide `initGlV2DatePicker()` in `gl-v2-shell.js` (this is a generic
+`EditorTemplate`, not a page-specific control — same "shared primitive, shared JS" call as
+`initGlV2Select()`, unlike the multi-select above which follows the per-page-copy precedent
+instead) with its own `closeAll()`/`[data-gl-v2-dp-owned]` marker, deliberately independent from
+`initGlV2Select()`'s: the trigger here is a bare `.gl-v2-field-box`, not a `.gl-v2-select-trigger`,
+so that function's own `closeAll()` wouldn't recognize it. `GlV2Date.cshtml` (the pre-existing
+`DateOnly?` sibling, native `<input type="date">`, built for `Klanten/EditProjectV2`) is
+deliberately **not** touched by this — only `GlV2DateTime` was reported broken, and swapping
+`GlV2Date` too would be an unrequested, unreviewed change to a page outside this bug-fix pass.
+
+**4. The werfleider ("+") modal rendered its content inline, overlapping the page, instead of as a
+centered overlay with a backdrop — a real, previously-undiscovered z-index bug affecting every
+gl-v2 Bootstrap modal, not just this one.** Bootstrap's `.modal` ships `z-index:var(--bs-modal-
+zindex)` at its own default of **1055** — far below `.gl-v2-rail`/the sticky topbar's elements,
+which this pilot deliberately ranks at **99996–99999** (a "ranked by number" tier documented
+earlier in this file, needed so rail-flyouts/the mobile menu/toasts stack correctly against each
+other). A gl-v2 Bootstrap modal was therefore opening *correctly* in every functional sense (JS,
+backdrop, focus-trap, Esc) but rendering **underneath** the floating rail and topbar, which stayed
+fully visible and interactive on top of it — reading exactly like "the modal doesn't work,
+everything just overlaps." Not unique to the werfleider modal or to `EditContractV2`: every
+`.gl-v2-modal-confirm`/`.gl-v2-modal-form`/`.gl-v2-modal-search` on every gl-v2 page had this same
+latent bug, just easy to miss on pages where a centered dialog happens not to intersect the rail's
+260px-wide left column or the topbar's ~64px top strip. Fixed once, shared, in `gl-v2-shell.css`:
+`--bs-modal-zindex: 100001` scoped to the three gl-v2 modal classes (a plain inheritable CSS custom
+property Bootstrap's own rule already reads — no specificity fight needed, unlike overriding
+`z-index` directly would require). The backdrop (`.modal-backdrop`, appended by Bootstrap's JS as a
+sibling of `<body>`, outside `.gl-v2` entirely) got `z-index: 100000` too — this is **not** the same
+category of change as the "never restyle `.modal-backdrop`" rule stated earlier in this file (that
+rule is about *visual* restyling risking bleeding onto legacy pages' own modals; a bare stacking-
+order number carries no such risk — nothing on any non-gl-v2 page sits anywhere near 99999, so
+lifting the backdrop's z-index changes nothing observable there). Left untouched: the backdrop's
+own color/opacity, exactly as the existing rule requires.
+
+Also made `_SiteManagerNewModalV2.cshtml`'s own JS more defensive while investigating this:
+`new bootstrap.Modal(el)` (eager, parse-time) became `bootstrap.Modal.getOrCreateInstance(el)`
+(lazy, called at click-time) — matching the already-proven pattern in the shared
+`Partials/_BijbestellingModal.cshtml`. Not the actual root cause (that was the z-index issue above),
+but a real defensive improvement in its own right: it removes any dependency on `bootstrap.bundle.
+min.js` having already executed by the time this particular inline `<script>` runs, which the eager
+form silently assumed.

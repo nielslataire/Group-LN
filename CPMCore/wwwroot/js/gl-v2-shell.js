@@ -14,6 +14,8 @@
     initContextMenus();
     initTableEmailActions();
     initClickableRows();
+    initGlV2Select();
+    initGlV2DatePicker();
 
     function initRailFlyouts() {
         var closeTimer = null;
@@ -540,5 +542,294 @@
             if (e.target.closest("a, button, input, select, textarea, label")) return;
             window.location.href = row.getAttribute("data-detail-url");
         });
+    }
+
+    // ── GlV2Select — design-handoff optie 4h "Dropdowns — gesloten veld, basis" (zie DESIGN.md
+    // "Select / Dropdown" — component al volledig gespecificeerd, tot nu toe enkel per pagina als
+    // FILTER gebouwd, elke keer opnieuw dezelfde kleine initSelect()-JS gekopieerd (gl-v2-leveranciers.js,
+    // gl-v2-projecten-detailclients.js, …). Dit is diezelfde open/kies-logica, nu ÉÉN keer geschreven
+    // en shell-breed, zodat een FORMULIERVELD (bv. EditorTemplates/GlV2Select.cshtml, een echt aan
+    // een model gebonden waarde) hem gratis meekrijgt zonder dat de aanroepende pagina zelf nog een
+    // initSelect()-kopie hoeft te schrijven — de bestaande filter-dropdowns blijven ongewijzigd op
+    // hun eigen page-local kopie, dit vervangt ze niet met terugwerkende kracht.
+    // Verwacht per instantie: een .gl-v2-select[data-gl-v2-select] met daarbinnen een verborgen
+    // <input> (de gebonden waarde), een .gl-v2-select-trigger en een .gl-v2-select-panel met
+    // .gl-v2-select-option[data-value]-knoppen. Bij een keuze: hidden input se waarde + trigger-
+    // label bijwerken, .is-selected verplaatsen, een echte "change"-event op de hidden input
+    // dispatchen (zodat bestaande $('#id').on('change', …)-logica op diezelfde pagina, bv. een
+    // afhankelijk veld in/uitschakelen, gewoon blijft werken — hetzelfde contract als een native
+    // <select>'s eigen change-event).
+    function initGlV2Select() {
+        var instances = document.querySelectorAll(".gl-v2-select[data-gl-v2-select]");
+        if (!instances.length) return;
+
+        function closeAll() {
+            document.querySelectorAll(".gl-v2-select-panel.is-open[data-gl-v2-owned]").forEach(function (p) {
+                p.classList.remove("is-open");
+                var trig = p.previousElementSibling;
+                if (trig && trig.classList.contains("gl-v2-select-trigger")) {
+                    trig.classList.remove("is-open");
+                    trig.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
+        function positionPanel(trigger, panel) {
+            var rect = trigger.getBoundingClientRect();
+            panel.style.left = rect.left + "px";
+            panel.style.top = (rect.bottom + 4) + "px";
+            panel.style.width = Math.max(rect.width, 200) + "px";
+        }
+
+        instances.forEach(function (wrap) {
+            var hidden = wrap.querySelector("input[type=hidden]");
+            var trigger = wrap.querySelector(".gl-v2-select-trigger");
+            var panel = wrap.querySelector(".gl-v2-select-panel");
+            if (!hidden || !trigger || !panel) return;
+            panel.setAttribute("data-gl-v2-owned", "");
+
+            function selectOption(option, fireChange) {
+                var value = option.getAttribute("data-value");
+                var label = option.querySelector("span") ? option.querySelector("span").textContent : option.textContent;
+                panel.querySelectorAll(".gl-v2-select-option").forEach(function (o) { o.classList.toggle("is-selected", o === option); });
+                if (hidden.value !== value) {
+                    hidden.value = value;
+                    if (fireChange !== false) {
+                        hidden.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+                var labelEl = trigger.querySelector(".gl-v2-select-trigger-label");
+                if (labelEl) labelEl.textContent = label;
+                trigger.classList.add("is-filled");
+            }
+
+            trigger.addEventListener("click", function () {
+                var willOpen = !panel.classList.contains("is-open");
+                closeAll();
+                if (willOpen) {
+                    positionPanel(trigger, panel);
+                    panel.classList.add("is-open");
+                    trigger.classList.add("is-open");
+                    trigger.setAttribute("aria-expanded", "true");
+                }
+            });
+            trigger.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger.click(); }
+                if (e.key === "Escape") closeAll();
+            });
+            panel.querySelectorAll(".gl-v2-select-option").forEach(function (option) {
+                option.addEventListener("click", function () {
+                    selectOption(option, true);
+                    closeAll();
+                    trigger.focus();
+                });
+            });
+        });
+
+        document.addEventListener("click", function (e) {
+            if (e.target.closest(".gl-v2-select[data-gl-v2-select]")) return;
+            closeAll();
+        });
+        window.addEventListener("resize", closeAll);
+        window.addEventListener("scroll", closeAll, true);
+    }
+
+    // ── Datumkiezer (design-handoff punt 14d "6 · DATUM") — GlV2DateTime.cshtml. Shell-breed net
+    //    als initGlV2Select() hierboven (generieke EditorTemplate), maar met een eigen closeAll()/
+    //    eigen [data-gl-v2-dp-owned]-marker: de trigger hier is gewoon .gl-v2-field-box, geen
+    //    .gl-v2-select-trigger, dus initGlV2Select() se eigen closeAll() zou 'm niet herkennen. ────
+    function initGlV2DatePicker() {
+        var instances = document.querySelectorAll(".gl-v2-select[data-gl-v2-datepicker]");
+        if (!instances.length) return;
+
+        var monthNames = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+
+        function closeAll() {
+            document.querySelectorAll(".gl-v2-select-panel.is-open[data-gl-v2-dp-owned]").forEach(function (p) {
+                p.classList.remove("is-open");
+            });
+        }
+
+        function positionPanel(trigger, panel) {
+            var rect = trigger.getBoundingClientRect();
+            panel.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 252 - 8)) + "px";
+            panel.style.top = (rect.bottom + 6) + "px";
+        }
+
+        function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+        function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+        instances.forEach(function (root) {
+            var box = root.querySelector(".gl-v2-field-box");
+            var textInput = root.querySelector('[data-role="date-text"]');
+            var hiddenInput = root.querySelector('[data-role="date-value"]');
+            var panel = root.querySelector('[data-role="panel"]');
+            var monthLabel = root.querySelector('[data-role="month-label"]');
+            var daysHost = root.querySelector('[data-role="days"]');
+            var prevBtn = root.querySelector('[data-role="prev"]');
+            var nextBtn = root.querySelector('[data-role="next"]');
+            var todayBtn = root.querySelector('[data-role="today"]');
+            var clearBtn = root.querySelector('[data-role="clear"]');
+            var errorEl = root.querySelector('[data-role="date-error"]');
+            var fieldEl = root.closest(".gl-v2-field");
+            if (!box || !textInput || !hiddenInput || !panel || !daysHost) return;
+            panel.setAttribute("data-gl-v2-dp-owned", "");
+
+            var today = new Date();
+            var selected = parseIso(hiddenInput.value);
+            var view = selected ? { y: selected.y, m: selected.m } : { y: today.getFullYear(), m: today.getMonth() + 1 };
+
+            function parseIso(v) {
+                var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || "");
+                return parts ? { y: +parts[1], m: +parts[2], d: +parts[3] } : null;
+            }
+            function parseDisplay(v) {
+                var parts = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((v || "").trim());
+                return parts ? { d: +parts[1], m: +parts[2], y: +parts[3] } : null;
+            }
+            function isValidMonth(m) { return m >= 1 && m <= 12; }
+            function isValidDate(y, m, d) { return isValidMonth(m) && d >= 1 && d <= daysInMonth(y, m); }
+
+            function setError(msg) {
+                if (fieldEl) fieldEl.classList.add("is-error");
+                if (errorEl) { errorEl.textContent = msg; errorEl.hidden = false; }
+            }
+            function clearFieldError() {
+                if (fieldEl) fieldEl.classList.remove("is-error");
+                if (errorEl) { errorEl.textContent = ""; errorEl.hidden = true; }
+            }
+
+            function setValue(y, m, d) {
+                hiddenInput.value = y + "-" + pad2(m) + "-" + pad2(d);
+                textInput.value = pad2(d) + "/" + pad2(m) + "/" + y;
+                selected = { y: y, m: m, d: d };
+                view = { y: y, m: m };
+                clearFieldError();
+                hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+                renderCalendar();
+            }
+            function clearValue() {
+                hiddenInput.value = "";
+                textInput.value = "";
+                selected = null;
+                clearFieldError();
+                hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+                renderCalendar();
+            }
+
+            function renderCalendar() {
+                if (monthLabel) monthLabel.textContent = monthNames[view.m - 1] + " " + view.y;
+                daysHost.innerHTML = "";
+                var firstWeekday = (new Date(view.y, view.m - 1, 1).getDay() + 6) % 7;
+                var total = daysInMonth(view.y, view.m);
+                var prevMonth = view.m === 1 ? 12 : view.m - 1;
+                var prevYear = view.m === 1 ? view.y - 1 : view.y;
+                var prevTotal = daysInMonth(prevYear, prevMonth);
+                var nextMonth = view.m === 12 ? 1 : view.m + 1;
+                var nextYear = view.m === 12 ? view.y + 1 : view.y;
+
+                var cells = [];
+                for (var i = 0; i < firstWeekday; i++) {
+                    cells.push({ y: prevYear, m: prevMonth, d: prevTotal - firstWeekday + 1 + i, outside: true });
+                }
+                for (var d = 1; d <= total; d++) {
+                    cells.push({ y: view.y, m: view.m, d: d, outside: false });
+                }
+                var trailing = (7 - (cells.length % 7)) % 7;
+                for (var t = 1; t <= trailing; t++) {
+                    cells.push({ y: nextYear, m: nextMonth, d: t, outside: true });
+                }
+
+                cells.forEach(function (cell) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "gl-v2-datepicker-day" + (cell.outside ? " is-outside" : "");
+                    btn.textContent = cell.d;
+                    if (cell.y === today.getFullYear() && cell.m === today.getMonth() + 1 && cell.d === today.getDate()) {
+                        btn.classList.add("is-today");
+                    }
+                    if (selected && cell.y === selected.y && cell.m === selected.m && cell.d === selected.d) {
+                        btn.classList.add("is-selected");
+                    }
+                    btn.addEventListener("click", function () {
+                        setValue(cell.y, cell.m, cell.d);
+                        closeAll();
+                        textInput.focus();
+                    });
+                    daysHost.appendChild(btn);
+                });
+            }
+
+            function openPanel() {
+                closeAll();
+                view = selected ? { y: selected.y, m: selected.m } : { y: today.getFullYear(), m: today.getMonth() + 1 };
+                renderCalendar();
+                positionPanel(box, panel);
+                panel.classList.add("is-open");
+            }
+
+            box.addEventListener("click", function () {
+                if (!panel.classList.contains("is-open")) openPanel();
+            });
+            if (prevBtn) prevBtn.addEventListener("click", function () {
+                view.m -= 1;
+                if (view.m < 1) { view.m = 12; view.y -= 1; }
+                renderCalendar();
+            });
+            if (nextBtn) nextBtn.addEventListener("click", function () {
+                view.m += 1;
+                if (view.m > 12) { view.m = 1; view.y += 1; }
+                renderCalendar();
+            });
+            if (todayBtn) todayBtn.addEventListener("click", function () {
+                setValue(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                closeAll();
+                textInput.focus();
+            });
+            if (clearBtn) clearBtn.addEventListener("click", function () {
+                clearValue();
+                textInput.focus();
+            });
+
+            textInput.addEventListener("focus", function () {
+                if (!panel.classList.contains("is-open")) openPanel();
+            });
+            textInput.addEventListener("input", function () {
+                var digits = textInput.value.replace(/[^\d]/g, "").slice(0, 8);
+                var out = digits;
+                if (digits.length > 4) { out = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4); }
+                else if (digits.length > 2) { out = digits.slice(0, 2) + "/" + digits.slice(2); }
+                textInput.value = out;
+                if (!panel.classList.contains("is-open")) openPanel();
+            });
+            textInput.addEventListener("blur", function () {
+                var text = textInput.value.trim();
+                if (!text) { clearValue(); return; }
+                var parsed = parseDisplay(text);
+                if (!parsed || !isValidDate(parsed.y, parsed.m, parsed.d)) {
+                    if (!parsed || !isValidMonth(parsed.m)) {
+                        setError("Ongeldige datum — gebruik dd/mm/jjjj.");
+                    } else {
+                        var mn = monthNames[parsed.m - 1];
+                        setError(mn.charAt(0).toUpperCase() + mn.slice(1) + " heeft " + daysInMonth(parsed.y, parsed.m) + " dagen.");
+                    }
+                    return;
+                }
+                setValue(parsed.y, parsed.m, parsed.d);
+            });
+            textInput.addEventListener("keydown", function (e) {
+                if (e.key === "Enter") { e.preventDefault(); textInput.blur(); closeAll(); }
+                if (e.key === "Escape") { closeAll(); }
+            });
+
+            renderCalendar();
+        });
+
+        document.addEventListener("click", function (e) {
+            if (e.target.closest(".gl-v2-select[data-gl-v2-datepicker]")) return;
+            closeAll();
+        });
+        window.addEventListener("resize", closeAll);
+        window.addEventListener("scroll", closeAll, true);
     }
 })();

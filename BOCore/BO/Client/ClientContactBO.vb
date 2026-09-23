@@ -173,6 +173,18 @@ Public Class ClientContactBO
         End Set
     End Property
 
+    ' Losse vlag, zelfde stijl als IsCoOwner hierboven — geen unieke-index-afdwinging op DB-niveau,
+    ' ClientService normaliseert bij het opslaan (maximaal één primair contact per klant).
+    Private m_isprimarycontact As Boolean
+    Public Property IsPrimaryContact() As Boolean
+        Get
+            Return m_isprimarycontact
+        End Get
+        Set(ByVal value As Boolean)
+            m_isprimarycontact = value
+        End Set
+    End Property
+
     Private m_coownerpercentage As Decimal?
     <Display(Name:="% Mede-eigenaar")>
     <DisplayFormat(DataFormatString:="{0:0,00}")>

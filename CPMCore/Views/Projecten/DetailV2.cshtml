@@ -54,10 +54,6 @@
         IsCoordinationProject = Model.Project.IsOnlyCoordinationProject
     };
 
-    // ── Topbar-chips (12a: status + "N acties vereist" i.p.v. een KPI-tegel voor Status) ───────
-    var actionsRequiredCount = Model.UnsignedContracts.Count + Model.GuaranteeMissingContracts.Count
-        + Model.OpenIssues.Count(i => i.Priority >= (int)ConstructionIssuePriority.High);
-
     // ── Statistiekenrij: 6 tegels, elke tegel een echte waarde, percentages als balkje (12a §1) ──
     bool KpiIsSold(CPMCore.Models.Projecten.ProjectDetailUnitRowVM r) =>
         r.Status == "Verkocht" || r.Status == "Akte verleden";
@@ -68,6 +64,10 @@
     var fysPct = Model.Voortgang?.FysiekeVoortgangPct ?? 0m;
     var finPct = Model.Voortgang?.FinancieleVoortgangPct ?? 0m;
     string BarW(decimal pct) => Math.Clamp(pct, 0m, 100m).ToString("0.##", CultureInfo.InvariantCulture);
+    // Geen budget ingesteld (TotaalBegroot) én nog niets gefactureerd (TotaalGefactureerd) — dan
+    // hebben de balkjes/kaders hieronder niets zinvols te tonen (alles staat op 0%), dus toon in de
+    // plaats een aanzet om te starten via nacalculatie i.p.v. een kaart vol nul-waarden.
+    var voortgangIsEmpty = (Model.Voortgang?.TotaalBegroot ?? 0m) == 0m && (Model.Voortgang?.TotaalGefactureerd ?? 0m) == 0m;
 
     // ── "Vraagt actie" — zelfde opbouw als de legacy Detail.cshtml se aandachtspaneel, hier 1-op-1
     // hergebruikt (BOCore/DALCore-data was al op deze pagina geladen). ────────────────────────────
@@ -189,6 +189,14 @@
         var insExtra = w.Display?.Replace($" van project {Model.Project.Name}", "");
         normalItems.Add(("Verzekering", null, insExtra, Url.Action("DetailInsurances", "Projecten", new { projectid = projectId }), "ph-shield", "Financieel", null));
     }
+    // ── Topbar-chip (12a: status + "N acties vereist" i.p.v. een KPI-tegel voor Status) — telt de
+    // ZELFDE lijst als de "ACTIE VEREIST"-groep in de Vraagt-actie-kaart hieronder. Dit was voorheen
+    // een eigen, kortere optelsom (enkel UnsignedContracts + GuaranteeMissingContracts + hoge-prio
+    // OpenIssues) die stil uit de pas liep zodra een van de andere urgentItems-bronnen (Werfmelding,
+    // ABR-verzekering, Voortgang-waarschuwingen, ProjectInsuranceWarnings) iets toevoegde — de badge
+    // toonde dan een lager aantal dan wat de kaart eronder echt liet zien. Nu is er nog maar één bron
+    // van waarheid voor "hoeveel urgente punten heeft dit project". ────────────────────────────────
+    var actionsRequiredCount = urgentItems.Count;
     var allAttentionItems = urgentItems.Concat(normalItems).ToList();
     var attentionCategories = new[] { "Contracten", "Werf", "Financieel", "Traject" }
         .Select(cat => (Naam: cat, Aantal: allAttentionItems.Count(i => i.Categorie == cat)))
@@ -318,74 +326,80 @@
 </div>
 
 @* ── "Vraagt actie" (12a §3) ──────────────────────────────────────────────────────────────── *@
-<div class="gl-v2-section-card">
-    <div class="gl-v2-pd-attention-head">
-        <span class="gl-v2-pd-attention-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
-        <span class="gl-v2-pd-attention-title">Vraagt actie</span>
-        <span class="gl-v2-field-divider"></span>
-        <span class="gl-v2-pd-attention-desc">Alles wat dit project tegenhoudt, op één plek — niet verspreid over de tabs.</span>
-        <span class="gl-v2-pd-attention-spacer"></span>
-        @if (allAttentionItems.Any())
-        {
+@* De hele kaart rendert enkel wanneer er iets aan te tonen is — geen "Niets dat aandacht vraagt"-
+   staat meer: een project zonder openstaande actiepunten hoeft geen kaart te tonen die alleen maar
+   bevestigt dat er niets is, dat is gewoon ruimte die de rest van de pagina niet krijgt.
+   gl-v2-pd-attention-card krijgt daarnaast een warning/danger-getinte bovenrand — de rest van de
+   pagina gebruikt hetzelfde neutrale .gl-v2-section-card-register, dus zonder dit las de ene kaart
+   die juist moet opvallen als nog maar een kaart in de stapel. *@
+@if (allAttentionItems.Any())
+{
+    <div class="gl-v2-section-card gl-v2-pd-attention-card has-items @(urgentItems.Any() ? "has-urgent" : "")">
+        <div class="gl-v2-pd-attention-head">
+            <span class="gl-v2-pd-attention-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+            <span class="gl-v2-pd-attention-title">Vraagt actie</span>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-pd-attention-desc">Alles wat dit project tegenhoudt, op één plek — urgent bovenaan.</span>
+            <span class="gl-v2-pd-attention-spacer"></span>
             <div class="gl-v2-pd-chips" role="group" aria-label="Filter op categorie">
-                <button type="button" class="gl-v2-pd-chip is-active js-gl-v2-pd-chip" data-cat="alle">Alles @allAttentionItems.Count</button>
+                <button type="button" class="gl-v2-pd-chip is-active js-gl-v2-pd-chip" data-cat="alle" aria-pressed="true">Alles @allAttentionItems.Count</button>
                 @foreach (var cat in attentionCategories)
                 {
-                    <button type="button" class="gl-v2-pd-chip js-gl-v2-pd-chip" data-cat="@cat.Naam">@cat.Naam @cat.Aantal</button>
+                    <button type="button" class="gl-v2-pd-chip js-gl-v2-pd-chip" data-cat="@cat.Naam" aria-pressed="false">@cat.Naam @cat.Aantal</button>
                 }
             </div>
             <div id="gl-v2-pd-filter-status" class="visually-hidden" aria-live="polite"></div>
-        }
+        </div>
+        <div class="gl-v2-pd-attention-body js-gl-v2-pd-attention-body">
+            @if (urgentItems.Any())
+            {
+                <div class="js-gl-v2-pd-attention-group">
+                    <div class="gl-v2-pd-attention-group-hdr is-urgent"><i class="ph ph-warning-circle" aria-hidden="true"></i>ACTIE VEREIST<span class="gl-v2-pd-attention-group-cnt">(@urgentItems.Count)</span></div>
+                    @foreach (var item in urgentItems)
+                    {
+                        @* Razor omits the href attribute entirely when BekijkUrl is null — no "#" fallback,
+                           so an item with no real destination renders as plain, non-clickable text
+                           instead of a link that looks live but goes nowhere (there's already no hover
+                           style on this class either way, see gl-v2-projecten-detail.css). *@
+                        <a class="gl-v2-pd-attention-item js-gl-v2-pd-attention-item" data-cat="@item.Categorie" href="@item.BekijkUrl">
+                            <i class="ph @item.Icon gl-v2-pd-attention-item-icon" aria-hidden="true"></i>
+                            <span class="gl-v2-pd-attention-item-text"><b>@item.Type</b>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")</span>
+                            @if (item.Meta is not null)
+                            {
+                                <span class="gl-v2-pd-attention-meta">@item.Meta</span>
+                            }
+                            @if (item.BekijkUrl is not null)
+                            {
+                                <span class="gl-v2-pd-attention-view">Bekijk <i class="ph ph-caret-right" aria-hidden="true"></i></span>
+                            }
+                        </a>
+                    }
+                </div>
+            }
+            @if (normalItems.Any())
+            {
+                <div class="js-gl-v2-pd-attention-group">
+                    <div class="gl-v2-pd-attention-group-hdr"><i class="ph ph-clock" aria-hidden="true"></i>OP TE LOSSEN<span class="gl-v2-pd-attention-group-cnt">(@normalItems.Count)</span></div>
+                    @foreach (var item in normalItems)
+                    {
+                        <a class="gl-v2-pd-attention-item is-normal js-gl-v2-pd-attention-item" data-cat="@item.Categorie" href="@item.BekijkUrl">
+                            <i class="ph @item.Icon gl-v2-pd-attention-item-icon" aria-hidden="true"></i>
+                            <span class="gl-v2-pd-attention-item-text"><b>@item.Type</b>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")</span>
+                            @if (item.Meta is not null)
+                            {
+                                <span class="gl-v2-pd-attention-meta">@item.Meta</span>
+                            }
+                            @if (item.BekijkUrl is not null)
+                            {
+                                <span class="gl-v2-pd-attention-view">Bekijk <i class="ph ph-caret-right" aria-hidden="true"></i></span>
+                            }
+                        </a>
+                    }
+                </div>
+            }
+        </div>
     </div>
-    <div class="gl-v2-pd-attention-body js-gl-v2-pd-attention-body">
-        @if (urgentItems.Any())
-        {
-            <div class="js-gl-v2-pd-attention-group">
-                <div class="gl-v2-pd-attention-group-hdr is-urgent"><i class="ph ph-warning-circle" aria-hidden="true"></i>ACTIE VEREIST<span class="gl-v2-pd-attention-group-cnt">(@urgentItems.Count)</span></div>
-                @foreach (var item in urgentItems)
-                {
-                    <a class="gl-v2-pd-attention-item js-gl-v2-pd-attention-item" data-cat="@item.Categorie" href="@(item.BekijkUrl ?? "#")">
-                        <i class="ph @item.Icon gl-v2-pd-attention-item-icon" aria-hidden="true"></i>
-                        <span class="gl-v2-pd-attention-item-text"><b>@item.Type</b>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")</span>
-                        @if (item.Meta is not null)
-                        {
-                            <span class="gl-v2-pd-attention-meta">@item.Meta</span>
-                        }
-                        @if (item.BekijkUrl is not null)
-                        {
-                            <span class="gl-v2-pd-attention-view">Bekijk <i class="ph ph-caret-right" aria-hidden="true"></i></span>
-                        }
-                    </a>
-                }
-            </div>
-        }
-        @if (normalItems.Any())
-        {
-            <div class="js-gl-v2-pd-attention-group">
-                <div class="gl-v2-pd-attention-group-hdr"><i class="ph ph-clock" aria-hidden="true"></i>OP TE LOSSEN<span class="gl-v2-pd-attention-group-cnt">(@normalItems.Count)</span></div>
-                @foreach (var item in normalItems)
-                {
-                    <a class="gl-v2-pd-attention-item is-normal js-gl-v2-pd-attention-item" data-cat="@item.Categorie" href="@(item.BekijkUrl ?? "#")">
-                        <i class="ph @item.Icon gl-v2-pd-attention-item-icon" aria-hidden="true"></i>
-                        <span class="gl-v2-pd-attention-item-text"><b>@item.Type</b>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")</span>
-                        @if (item.Meta is not null)
-                        {
-                            <span class="gl-v2-pd-attention-meta">@item.Meta</span>
-                        }
-                        @if (item.BekijkUrl is not null)
-                        {
-                            <span class="gl-v2-pd-attention-view">Bekijk <i class="ph ph-caret-right" aria-hidden="true"></i></span>
-                        }
-                    </a>
-                }
-            </div>
-        }
-        @if (!urgentItems.Any() && !normalItems.Any())
-        {
-            <div class="gl-v2-pd-attention-empty"><i class="ph ph-check-circle" aria-hidden="true"></i>Niets dat aandacht vraagt</div>
-        }
-    </div>
-</div>
+}
 
 @* ── Traject + Eenheden (12a §4/§7) ───────────────────────────────────────────────────────── *@
 <div class="gl-v2-pd-grid">
@@ -394,7 +408,7 @@
         <div class="gl-v2-pd-col-5 gl-v2-section-card">
             <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-flow-arrow" aria-hidden="true"></i></span>
-                <span class="gl-v2-section-card-title">Traject</span>
+                <h2 class="gl-v2-section-card-title">Traject</h2>
                 <span class="gl-v2-field-divider"></span>
                 <span class="gl-v2-section-card-desc">@(mijlpalenTotal > 0 ? $"{mijlpalenBereikt} van {mijlpalenTotal} mijlpalen bereikt" : "Nog geen traject")</span>
                 <span class="gl-v2-section-card-spacer"></span>
@@ -402,7 +416,14 @@
             </div>
             @if (traject is null)
             {
-                <div class="gl-v2-pd-traject-empty">Nog geen traject voor dit project.</div>
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-flow-arrow" aria-hidden="true"></i></span>
+                    <h3 class="gl-v2-empty-state-title">Nog geen traject</h3>
+                    <p class="gl-v2-empty-state-desc">Stel het traject in om fases en mijlpalen voor dit project op te volgen.</p>
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@mijlpaalTrajectUrl" class="gl-v2-btn gl-v2-btn-primary">Traject instellen</a>
+                    </div>
+                </div>
             }
             else
             {
@@ -438,7 +459,7 @@
     <div class="gl-v2-pd-col-7 gl-v2-section-card">
         <div class="gl-v2-section-card-header">
             <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
-            <span class="gl-v2-section-card-title">Eenheden &amp; verkoopstatus</span>
+            <h2 class="gl-v2-section-card-title">Eenheden &amp; verkoopstatus</h2>
             <span class="gl-v2-section-card-meta">@Model.UnitRows.Count</span>
             <span class="gl-v2-section-card-spacer"></span>
             <a href="@Url.Action("DetailSales", "Projecten", new { projectid = projectId })" class="gl-v2-card-header-action">Alle eenheden</a>
@@ -449,11 +470,15 @@
                 <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
                 <input type="search" id="gl-v2-pd-units-filter" placeholder="Zoek een eenheid of klant…" autocomplete="off" aria-label="Eenheden filteren op eenheid of klant" />
             </div>
+            @* Zelfde patroon als #gl-v2-pd-filter-status hierboven bij de attention-chips — zonder dit
+               kreeg een screenreader-gebruiker die hier typt geen enkele terugkoppeling dat de tabel
+               net van bv. 40 naar 2 rijen ging. *@
+            <div id="gl-v2-pd-units-filter-status" class="visually-hidden" aria-live="polite"></div>
             <div class="gl-v2-pd-units-scroll">
                 <table class="gl-v2-pd-units-table">
                     <thead>
                         <tr>
-                            <th>Eenheid</th><th>Type</th><th class="text-end">Opp.</th><th class="text-end">Prijs</th><th>Status</th><th>Klant</th>
+                            <th>Eenheid</th><th class="gl-v2-pd-units-col-collapsible">Type</th><th class="text-end gl-v2-pd-units-col-collapsible">Opp.</th><th class="text-end">Prijs</th><th>Status</th><th class="gl-v2-pd-units-col-collapsible">Klant</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -461,9 +486,25 @@
                         {
                             var effectiefVerkocht = u.Status == "Verkocht" || u.Status == "Akte verleden";
                             <tr data-unit-row data-search="@($"{u.Naam} {u.KlantNaam}".ToLowerInvariant())">
-                                <td><a href="@Url.Action("EditUnit", "Projecten", new { projectid = projectId, unitid = u.UnitId })">@u.Naam</a></td>
-                                <td>@u.TypeName</td>
-                                <td class="text-end">@(u.Oppervlakte.HasValue ? u.Oppervlakte.Value.ToString("0") + " m²" : "—")</td>
+                                <td>
+                                    <a href="@Url.Action("EditUnit", "Projecten", new { projectid = projectId, unitid = u.UnitId })">@u.Naam</a>
+                                    @* Enkel zichtbaar <768px (gl-v2-projecten-detail.css) — herhaalt Type/Opp./Klant hier
+                                       zodat die drie kolommen op de telefoon verborgen kunnen worden zonder de info te
+                                       verliezen, i.p.v. een tabel met 6 kolommen op 360px te persen. *@
+                                    <div class="gl-v2-pd-units-meta">
+                                        @u.TypeName
+                                        @if (u.Oppervlakte.HasValue)
+                                        {
+                                            @:· @(u.Oppervlakte.Value.ToString("0")) m²
+                                        }
+                                        @if (u.ClientId.HasValue)
+                                        {
+                                            @:· @u.KlantNaam
+                                        }
+                                    </div>
+                                </td>
+                                <td class="gl-v2-pd-units-col-collapsible">@u.TypeName</td>
+                                <td class="text-end gl-v2-pd-units-col-collapsible">@(u.Oppervlakte.HasValue ? u.Oppervlakte.Value.ToString("0") + " m²" : "—")</td>
                                 <td class="text-end">
                                     @if (effectiefVerkocht)
                                     {
@@ -484,7 +525,7 @@
                                     }
                                 </td>
                                 <td><span class="gl-v2-badge @StatusBadgeTone(u.StatusVariant)">@u.Status.ToUpperInvariant()</span></td>
-                                <td>
+                                <td class="gl-v2-pd-units-col-collapsible">
                                     @if (u.ClientId.HasValue)
                                     {
                                         <a href="@Url.Action("Detail", "Klanten", new { clientid = u.ClientId, projectid = projectId })">@u.KlantNaam</a>
@@ -503,7 +544,14 @@
         }
         else
         {
-            <div class="gl-v2-pd-units-empty">Nog geen eenheden ingesteld voor dit project.</div>
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Nog geen eenheden</h3>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen eenheden ingesteld voor dit project.</p>
+                <div class="gl-v2-empty-state-actions">
+                    <a href="@Url.Action("DetailUnits", "Projecten", new { projectid = projectId })" class="gl-v2-btn gl-v2-btn-primary">Eenheden beheren</a>
+                </div>
+            </div>
         }
     </div>
 </div>
@@ -513,7 +561,7 @@
     <div class="gl-v2-pd-col-5 gl-v2-section-card">
         <div class="gl-v2-section-card-header">
             <span class="gl-v2-section-card-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
-            <span class="gl-v2-section-card-title">Algemene gegevens</span>
+            <h2 class="gl-v2-section-card-title">Algemene gegevens</h2>
             <span class="gl-v2-field-divider"></span>
             <span class="gl-v2-section-card-desc">Adres, codes en alle partijen op het project.</span>
             <span class="gl-v2-section-card-spacer"></span>
@@ -547,39 +595,53 @@
     <div class="gl-v2-pd-col-4 gl-v2-section-card">
         <div class="gl-v2-section-card-header">
             <span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span>
-            <span class="gl-v2-section-card-title">Voortgang &amp; budget</span>
+            <h2 class="gl-v2-section-card-title">Voortgang &amp; budget</h2>
             <span class="gl-v2-section-card-spacer"></span>
             <a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })" class="gl-v2-card-header-action">Nacalculatie</a>
         </div>
-        <div class="gl-v2-pd-vb-bars">
-            <div>
-                <div class="gl-v2-pd-vb-bar-head"><span class="gl-v2-pd-vb-bar-label">Fysieke voortgang</span><span class="gl-v2-pd-vb-bar-pct">@fysPct.ToString("0.#", be)%</span></div>
-                <span class="gl-v2-pd-vb-track"><span class="gl-v2-pd-vb-fill" style="width:@(BarW(fysPct))%"></span></span>
+        @if (voortgangIsEmpty)
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-calculator" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Beginnen met nacalculatie?</h3>
+                <p class="gl-v2-empty-state-desc">Er is nog geen budget ingesteld en er zijn nog geen facturen voor dit project.</p>
+                <div class="gl-v2-empty-state-actions">
+                    <a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })" class="gl-v2-btn gl-v2-btn-primary">Naar nacalculatie</a>
+                </div>
             </div>
-            <div>
-                <div class="gl-v2-pd-vb-bar-head"><span class="gl-v2-pd-vb-bar-label">Financiële voortgang</span><span class="gl-v2-pd-vb-bar-pct">@finPct.ToString("0.#", be)%</span></div>
-                <span class="gl-v2-pd-vb-track"><span class="gl-v2-pd-vb-fill is-finance" style="width:@(BarW(finPct))%"></span></span>
+        }
+        else
+        {
+            <div class="gl-v2-pd-vb-bars">
+                <div>
+                    <div class="gl-v2-pd-vb-bar-head"><span class="gl-v2-pd-vb-bar-label">Fysieke voortgang</span><span class="gl-v2-pd-vb-bar-pct">@fysPct.ToString("0.#", be)%</span></div>
+                    <span class="gl-v2-pd-vb-track"><span class="gl-v2-pd-vb-fill" style="width:@(BarW(fysPct))%"></span></span>
+                </div>
+                <div>
+                    <div class="gl-v2-pd-vb-bar-head"><span class="gl-v2-pd-vb-bar-label">Financiële voortgang</span><span class="gl-v2-pd-vb-bar-pct">@finPct.ToString("0.#", be)%</span></div>
+                    <span class="gl-v2-pd-vb-track"><span class="gl-v2-pd-vb-fill is-finance" style="width:@(BarW(finPct))%"></span></span>
+                </div>
             </div>
-        </div>
-        <div class="gl-v2-pd-vb-stats">
-            <div class="gl-v2-pd-vb-stat">
-                <span class="gl-v2-pd-vb-stat-label">BUDGET</span>
-                <span class="gl-v2-pd-vb-stat-value">@((Model.Voortgang?.TotaalBegroot ?? 0m).ToString("C0", be))</span>
-                <span class="gl-v2-pd-vb-stat-sub">besteed @((Model.Voortgang?.TotaalGefactureerd ?? 0m).ToString("C0", be))</span>
+            <div class="gl-v2-pd-vb-stats">
+                <div class="gl-v2-pd-vb-stat">
+                    <span class="gl-v2-pd-vb-stat-label">BUDGET</span>
+                    <span class="gl-v2-pd-vb-stat-value">@((Model.Voortgang?.TotaalBegroot ?? 0m).ToString("C0", be))</span>
+                    <span class="gl-v2-pd-vb-stat-sub">besteed @((Model.Voortgang?.TotaalGefactureerd ?? 0m).ToString("C0", be))</span>
+                </div>
+                <div class="gl-v2-pd-vb-stat">
+                    <span class="gl-v2-pd-vb-stat-label">GECONTRACTEERD</span>
+                    <span class="gl-v2-pd-vb-stat-value">@((Model.Voortgang?.TotaalGecontracteerd ?? 0m).ToString("C0", be))</span>
+                    <span class="gl-v2-pd-vb-stat-sub">@((Model.Voortgang?.ContractueleVolwassenheidPct ?? 0m).ToString("0.#", be))% van budget</span>
+                </div>
             </div>
-            <div class="gl-v2-pd-vb-stat">
-                <span class="gl-v2-pd-vb-stat-label">GECONTRACTEERD</span>
-                <span class="gl-v2-pd-vb-stat-value">@((Model.Voortgang?.TotaalGecontracteerd ?? 0m).ToString("C0", be))</span>
-                <span class="gl-v2-pd-vb-stat-sub">@((Model.Voortgang?.ContractueleVolwassenheidPct ?? 0m).ToString("0.#", be))% van budget</span>
-            </div>
-        </div>
+        }
     </div>
 
     <div class="gl-v2-pd-col-3 gl-v2-pd-col-stack">
         <div class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-invoice" aria-hidden="true"></i></span>
-                <span class="gl-v2-section-card-title">Facturatie</span>
+                <h2 class="gl-v2-section-card-title">Facturatie</h2>
                 <span class="gl-v2-section-card-spacer"></span>
                 <a href="@Url.Action("Invoicing", "Projecten", new { projectid = projectId })" class="gl-v2-card-header-action">Blad</a>
             </div>
@@ -604,14 +666,21 @@
             }
             else
             {
-                <div class="gl-v2-pd-rows-empty">Nog geen facturen voor dit project.</div>
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-invoice" aria-hidden="true"></i></span>
+                    <h3 class="gl-v2-empty-state-title">Nog geen facturen</h3>
+                    <p class="gl-v2-empty-state-desc">Er zijn nog geen facturen voor dit project.</p>
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@Url.Action("Invoicing", "Projecten", new { projectid = projectId })" class="gl-v2-btn gl-v2-btn-primary">Factuur opmaken</a>
+                    </div>
+                </div>
             }
         </div>
 
         <div class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-folder" aria-hidden="true"></i></span>
-                <span class="gl-v2-section-card-title">Documenten</span>
+                <h2 class="gl-v2-section-card-title">Documenten</h2>
                 <span class="gl-v2-section-card-meta">@Model.LatestDocs.Count</span>
                 <span class="gl-v2-section-card-spacer"></span>
             </div>
@@ -630,12 +699,19 @@
                         </a>
                     }
                 </div>
+                <a class="gl-v2-pd-add-row" href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })"><i class="ph ph-plus" aria-hidden="true"></i>Document toevoegen</a>
             }
             else
             {
-                <div class="gl-v2-pd-rows-empty">Nog geen documenten voor dit project.</div>
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-folder" aria-hidden="true"></i></span>
+                    <h3 class="gl-v2-empty-state-title">Nog geen documenten</h3>
+                    <p class="gl-v2-empty-state-desc">Er zijn nog geen documenten voor dit project.</p>
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })" class="gl-v2-btn gl-v2-btn-primary">Document toevoegen</a>
+                    </div>
+                </div>
             }
-            <a class="gl-v2-pd-add-row" href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })"><i class="ph ph-plus" aria-hidden="true"></i>Document toevoegen</a>
         </div>
     </div>
 </div>
@@ -644,7 +720,7 @@
 <div class="gl-v2-section-card">
     <div class="gl-v2-section-card-header">
         <span class="gl-v2-section-card-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
-        <span class="gl-v2-section-card-title">Foto's &amp; media</span>
+        <h2 class="gl-v2-section-card-title">Foto's &amp; media</h2>
         <span class="gl-v2-field-divider"></span>
         <span class="gl-v2-section-card-desc">@Model.TotalPictureCount van de foto's van dit project.</span>
         <span class="gl-v2-section-card-spacer"></span>

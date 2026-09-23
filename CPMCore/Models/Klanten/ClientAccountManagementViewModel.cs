@@ -171,6 +171,12 @@ public class ContactInputViewModel
     [Display(Name = "UBL standaard meesturen")]
     public bool AttachUblByDefault { get; set; }
 
+    // Losse vlag, zelfde stijl als de andere switches hierboven — geen kruis-rij-exclusiviteit op
+    // modelniveau, de "maar één primair"-regel wordt afgedwongen in KlantenController (JS laat
+    // enkel visueel maar één rij tegelijk aan staan; de server normaliseert defensief).
+    [Display(Name = "Primair contact")]
+    public bool IsPrimaryContact { get; set; }
+
     public string? PhoneDisplay => CPMCore.Helpers.PhoneNumberFormatter.Format(Phone);
     public string? MobileDisplay => CPMCore.Helpers.PhoneNumberFormatter.Format(Mobile);
 }

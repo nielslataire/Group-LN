@@ -1,0 +1,34 @@
+@model DateOnly?
+@*
+    gl-v2 (design-handoff 8f-stijl "veldtype") — eerste echte datumveld in de hele pilot
+    (Klanten/EditProjectV2.cshtml is de eerste aanroeper). Gewoon een HTML5 <input type="date">,
+    geen nieuwe datepicker-JS-afhankelijkheid: elke browser levert die zelf al, en het bestaande
+    .gl-v2-field-box/-input-schild volstaat voor de opmaak. Waarde/binding gaan altijd in ISO
+    (yyyy-MM-dd, de HTML5-standaardvorm voor dit inputtype) — .NET se eigen DateOnly-modelbinder
+    herkent dat formaat ongeacht de request-cultuur (nl-BE hier), dus geen aparte modelbinder nodig.
+    Enkel expliciete aanroep, zelfde GlV2-prefix-conventie als de rest van deze map. Optionele extra
+    ViewData: Label (overschrijft de DisplayName-afgeleide labeltekst).
+*@
+@{
+    var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
+    var id = name.Replace(".", "_");
+    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
+    var value = Model?.ToString("yyyy-MM-dd");
+    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@id">
+        @label
+        @if (ViewData.ModelMetadata.IsRequired)
+        {
+            <span style="color:#8B2A2A">*</span>
+        }
+    </label>
+    <div class="gl-v2-field-box">
+        <input type="date" id="@id" name="@name" class="gl-v2-field-input" value="@value" />
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+</div>
