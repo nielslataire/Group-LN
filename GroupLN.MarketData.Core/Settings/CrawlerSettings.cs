@@ -25,6 +25,13 @@ public class CrawlerSettings
     // ── Playwright ───────────────────────────────────────────────────────────
     public int PlaywrightTimeoutMs { get; set; } = 30000;
 
+    /// <summary>
+    /// Maximale duur van één crawl-run per bron (uren). Daarna wordt de run afgebroken en als
+    /// "gedeeltelijk" geregistreerd; verdwenen listings worden dan NIET inactief gezet.
+    /// Immoweb met 21 gemeenten haalt 4 uur niet; productie staat op 8.
+    /// </summary>
+    public int CrawlTimeoutHours { get; set; } = 4;
+
     // ── Opruimen ─────────────────────────────────────────────────────────────
     public int MarkInactiveAfterDays { get; set; } = 30;
 

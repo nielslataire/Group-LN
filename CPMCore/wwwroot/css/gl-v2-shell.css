@@ -407,6 +407,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Optionele kortere titel <768px (ViewData["TitleMobile"], _LayoutV2.cshtml) — enkel twee
+   <span>'s binnen dezelfde <h1> i.p.v. een tweede <h1>, één echte heading blijft. Onbezet
+   (geen TitleMobile): de view rendert de titel als kale tekst, geen van deze twee klassen komt
+   voor, dus deze regels raken die pagina's niet. */
+.gl-v2-topbar-title-short { display: none; }
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-title-full { display: none; }
+    .gl-v2-topbar-title-short { display: inline; }
+}
 
 .gl-v2-topbar .breadcrumbs {
     display: flex;

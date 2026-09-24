@@ -4,8 +4,24 @@
     Projecten/EditContractV2 (en, indien later gl-v2'd, AddContract). Verwacht op de pagina:
     #txtCompanyID (hidden, leverancier-id), #txtCompanyDisplay (naam, optioneel), #ddlSiteManager
     (de dropdown), #btnNewSiteManager (de "+"-knop) en een antiforgery-token in het formulier —
-    zelfde contract als de legacy _SiteManagerNewModal.cshtml, enkel de markup is herbouwd; de JS
-    hieronder is functioneel ongewijzigd (zelfde ids, zelfde AddCompanyContactQuick-aanroep).
+    zelfde contract als de legacy _SiteManagerNewModal.cshtml, enkel de markup is herbouwd.
+
+    MOET rechtstreeks in de pagina-body aangeroepen worden (zie EditContractV2.cshtml, naast
+    _BijbestellingModal — NIET in @@section PageScripts, waar dit vroeger stond): alle --gl-v2-*
+    tokens (surface/ink/shadow/…) hangen op de `.gl-v2`-wrapperklasse in _LayoutV2.cshtml, niet op
+    :root (zie gl-v2-tokens.css se eigen toelichting). @@RenderSection("PageScripts") rendert in de
+    layout PAS na de sluitende `</div>` van die wrapper — een modal die daarbinnen staat, staat dus
+    letterlijk buiten .gl-v2 en elke var(--gl-v2-…) erin resolvet naar niets (ongeldig → initial
+    value, dus voor `background` bv. transparant). Dat was de echte oorzaak van "ik krijg een
+    overlay en een body maar geen achtergrond" — niet de eerder gevonden z-index-fout (die maakte
+    enkel zichtbaar dát de modal geen stijl had, door 'm boven de rail te tillen i.p.v. erachter).
+    _VatLookupModalV2.cshtml stond van meet af aan al vóór zijn eigen @@section PageScripts — vandaar
+    dat die als "werkend voorbeeld" gold terwijl deze het niet was.
+
+    De JS hieronder stond origineel als kale IIFE (rekende op jQuery, al geladen via de plek in
+    PageScripts ná jquery.min.js) — nu in de body, dus vóór jquery.min.js in de DOM-volgorde. Zelfde
+    fix als Partials/_BijbestellingModal.cshtml al gebruikt: wrap in DOMContentLoaded, dat vuurt pas
+    nadat alle scripts (jQuery incluis) al liepen, ongeacht waar dít scriptblok zelf in de DOM staat.
 *@
 <div class="modal fade gl-v2-modal-form" id="modalNewSiteManager" tabindex="-1" aria-hidden="true" aria-labelledby="modalNewSiteManagerLabel">
     <div class="modal-dialog modal-dialog-centered">
@@ -50,7 +66,7 @@
 </style>
 
 <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         function smToken() {
             const el = document.querySelector('input[name="__RequestVerificationToken"]');
             return el ? el.value : '';
@@ -105,6 +121,7 @@
                 const $select = $('#ddlSiteManager');
                 $select.append(new Option(data.text, data.id, false, false));
                 $select.val(data.id);
+                if (window.glV2EditContractMarkDirty) { window.glV2EditContractMarkDirty(); }
 
                 var m = getSiteManagerModal();
                 if (m) { m.hide(); }
@@ -115,5 +132,5 @@
                 button.prop('disabled', false);
             });
         });
-    })();
+    });
 </script>

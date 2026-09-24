@@ -1,5 +1,10 @@
 # GroupLN.MarketData — Setup & Testgids
 
+> **Productie-deploy en hosting: zie [DEPLOY.md](../DEPLOY.md) in de root van de solution.**
+> De worker draait als Docker-container op een Hetzner-VPS; deployen gebeurt met `.\deploy-marketdata.ps1`.
+> Deze gids hieronder gaat over lokaal opzetten en testen en is deels verouderd (tabelnamen zijn intussen
+> MarketAsset/MarketListing i.p.v. MarketProperty; Zimmo is geen stub meer maar actief).
+
 Vastgoedmarktdata-verzamelaar voor Belgische vastgoedwebsites.
 Aparte database `CPM_MarketData` — schrijft NOOIT naar de CPMCore-database.
 

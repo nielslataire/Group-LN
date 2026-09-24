@@ -75,6 +75,7 @@ public class VergelijkbaarPandRij
     public bool IsProject { get; set; }
     public decimal? Verkoopgraad { get; set; }
     public string? SourceUrl { get; set; }
+    public int? DoorlooptijdDagen { get; set; }
 }
 
 public class VergelijkbaarKpiViewModel

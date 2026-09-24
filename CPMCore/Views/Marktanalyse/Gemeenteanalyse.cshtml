@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using CPMCore.Models.Marktanalyse
 @model CPMCore.Models.Marktanalyse.GemeenteAnalyseViewModel
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -63,7 +64,7 @@
                             <div id="locatie-dropdown" class="locatie-dropdown d-none"></div>
                         </div>
                     </div>
-            <div class="col-sm-4 col-md-3">
+            <div class="col-sm-4 col-md-2">
                 <label class="form-label fw-semibold d-block text-muted">TYPE</label>
 
                 <div class="btn-group btn-group-segmented" role="group">
@@ -79,6 +80,42 @@
                         <label class="btn" for="type-@t">
                             @t
                         </label>
+                    }
+                </div>
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label fw-semibold d-block text-muted"
+                       title="Actueel = wat nu online staat. Verkocht = enkel verkopen in de periode, ook uit projecten die niet meer online staan. Alles = beide.">
+                    AANBOD <i class="bx bx-info-circle"></i>
+                </label>
+                <div class="btn-group btn-group-segmented" role="group">
+                    @foreach (var a in GemeenteAnalyseViewModel.AanbodOpties)
+                    {
+                        <input type="radio"
+                               class="btn-check"
+                               name="aanbod"
+                               id="aanbod-@a"
+                               value="@a"
+                               @(Model.GeselecteerdAanbod == a ? "checked" : "") />
+                        <label class="btn" for="aanbod-@a">@a</label>
+                    }
+                </div>
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label fw-semibold d-block text-muted"
+                       title="Periode waarbinnen een verkoop meetelt voor 'verkocht in periode', absorptie en doorlooptijd.">
+                    PERIODE VERKOCHT <i class="bx bx-info-circle"></i>
+                </label>
+                <div class="btn-group btn-group-segmented" role="group">
+                    @foreach (var p in GemeenteAnalyseViewModel.PeriodeOpties)
+                    {
+                        <input type="radio"
+                               class="btn-check"
+                               name="periodeMaanden"
+                               id="periode-@p.Maanden"
+                               value="@p.Maanden"
+                               @(Model.PeriodeMaanden == p.Maanden ? "checked" : "") />
+                        <label class="btn" for="periode-@p.Maanden">@p.Label</label>
                     }
                 </div>
             </div>
@@ -107,10 +144,16 @@
                         <div class="card-body">
                             <div class="dashboard-stat-title d-flex align-items-center">
                                 <i class="bx bx-buildings"></i>
-                                ACTIEVE PROJECTEN
+                                @(Model.GeselecteerdAanbod == "Actueel" ? "ACTIEVE PROJECTEN" : "PROJECTEN")
                             </div>
                             <div class="dashboard-stat-value">@kpi!.ActieveProjecten</div>
-                    <div class="dashboard-stat-subtitle">@kpi!.AantalLosseEenheden losse eenheden</div>
+                    <div class="dashboard-stat-subtitle">
+                        @kpi!.AantalLosseEenheden losse eenheden
+                        @if (kpi!.NietActieveProjecten > 0)
+                        {
+                            <text>· @kpi!.NietActieveProjecten niet meer online</text>
+                        }
+                    </div>
                         </div>
                     </div>
                 </div>
@@ -231,6 +274,51 @@
                                   </div>
             </div>
 
+            <!-- KPI cards rij 3: periode (verkopen en doorlooptijd binnen het gekozen venster) -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card dashboard-stat">
+                        <div class="card-body">
+                            <div class="dashboard-stat-title d-flex align-items-center">
+                                <i class="bx bx-time-five"></i>
+                                MEDIANE DOORLOOPTIJD
+                            </div>
+                            <div class="dashboard-stat-value">
+                                @(kpi!.MediaanDoorlooptijdDagen.HasValue ? kpi!.MediaanDoorlooptijdDagen.Value + " dagen" : "—")
+                            </div>
+                            <div class="dashboard-stat-subtitle">
+                                @if (kpi!.DoorlooptijdAantal > 0)
+                                {
+                                    <text>op @kpi!.DoorlooptijdAantal verkochte units, @Model.PeriodeLabel</text>
+                                }
+                                else
+                                {
+                                    <text>nog geen verkoop met gekende doorlooptijd</text>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card dashboard-stat">
+                        <div class="card-body">
+                            <div class="dashboard-stat-title d-flex align-items-center">
+                                <i class="bx bx-calendar-check"></i>
+                                VERKOCHT IN PERIODE
+                            </div>
+                            <div class="dashboard-stat-value">@kpi!.VerkochtInPeriode</div>
+                            <div class="dashboard-stat-subtitle">
+                                @if (kpi!.AbsorptiePerMaand.HasValue)
+                                {
+                                    <text>@kpi!.AbsorptiePerMaand.Value.ToString("0.#") per maand · </text>
+                                }
+                                @Model.PeriodeLabel
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Grafieken -->
     <div class="row chart-row">
         <div class="col-md-4 mb-3">
@@ -336,6 +424,7 @@
                         <th class="text-end">Verkocht</th>
                         <th class="text-end">Beschikbaar</th>
                         <th>Verkoopgraad</th>
+                        <th class="text-end" title="Mediaan dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
                         <th class="text-end">Gem. prijs</th>
                         <th class="text-end">Gem. €/m²</th>
                         <th></th>
@@ -358,6 +447,10 @@
                                 <div class="project-name">
                                     <i class="bx bx-buildings"></i>
                                     <a href="@detailUrl">@p.ProjectNaam</a>
+                                    @if (!p.IsActief)
+                                    {
+                                        <span class="badge bg-secondary ms-1" title="Project staat niet meer online (uitverkocht of offline gehaald)">Niet meer online</span>
+                                    }
                                     @if (p.HeeftDuplicaten)
                                     {
                                         <span class="dup-badge"><i class="bx bx-link"></i>@p.AantalBronnen</span>
@@ -417,6 +510,10 @@
                             </td>
 
                             <td class="text-end">
+                                @(p.MediaanDoorlooptijdDagen.HasValue ? p.MediaanDoorlooptijdDagen.Value + " d" : "—")
+                            </td>
+
+                            <td class="text-end">
                                 @(p.GemiddeldePrijs.HasValue ? "€ " + p.GemiddeldePrijs.Value.ToString("N0") : "—")
                             </td>
 
@@ -459,6 +556,8 @@
                                 geoMunicipalSectionId = Model.GeselecteerdGeoMunicipalSectionId,
                                 type                  = Model.GeselecteerdType,
                                 aanbodtype            = Model.GeselecteerdAanbodtype,
+                                aanbod                = Model.GeselecteerdAanbod,
+                                periodeMaanden        = Model.PeriodeMaanden,
                                 toonGekoppeld         = true
                             });
                             <a href="@toggleUrl" class="ms-2 small text-muted text-decoration-underline">
@@ -473,6 +572,8 @@
                             geoMunicipalSectionId = Model.GeselecteerdGeoMunicipalSectionId,
                             type                  = Model.GeselecteerdType,
                             aanbodtype            = Model.GeselecteerdAanbodtype,
+                            aanbod                = Model.GeselecteerdAanbod,
+                            periodeMaanden        = Model.PeriodeMaanden,
                             toonGekoppeld         = false
                         });
                         <a href="@toggleUrl" class="ms-2 small text-muted text-decoration-underline">Verberg gekoppelde</a>
@@ -505,6 +606,7 @@
                         <th class="text-end">Vraagprijs</th>
                         <th class="text-end">€/m²</th>
                         <th>Status</th>
+                        <th class="text-end" title="Dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
                         <th>Aangeboden door</th>
                         <th></th>
                     </tr>
@@ -536,6 +638,9 @@
                             <td class="text-end">@(e.PrijsPerM2.HasValue ? "€ " + e.PrijsPerM2.Value.ToString("N0") : "—")</td>
                             <td>
                                 <span class="status-badge @statusClass">@e.Status</span>
+                            </td>
+                            <td class="text-end" title="@(e.VerkochtOp.HasValue ? "Verkocht op " + e.VerkochtOp.Value.ToLocalTime().ToString("dd/MM/yyyy") : "")">
+                                @(e.DoorlooptijdDagen.HasValue ? e.DoorlooptijdDagen.Value + " d" : (e.VerkochtOp.HasValue ? "onbekend" : "—"))
                             </td>
                             <td>
                                 @e.AangeboenDoor
@@ -770,7 +875,7 @@
                 }
             });
 
-            document.querySelectorAll('input[name="type"]').forEach(function (radio) {
+            document.querySelectorAll('input[name="type"], input[name="aanbod"], input[name="periodeMaanden"]').forEach(function (radio) {
                 radio.addEventListener('change', function () {
                     if (hiddenMunicipalityId.value || hiddenSectionId.value) form.submit();
                 });

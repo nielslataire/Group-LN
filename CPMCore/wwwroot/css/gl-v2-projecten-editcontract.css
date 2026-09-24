@@ -173,4 +173,10 @@
     .gl-v2-ec-col-3, .gl-v2-ec-col-4, .gl-v2-ec-col-5, .gl-v2-ec-col-6, .gl-v2-ec-col-7, .gl-v2-ec-col-12 { grid-column: 1; }
     .gl-v2-ec-toggle-grid { grid-template-columns: 1fr; }
     .gl-v2-ec-actionbar-status { display: none; }
+    /* "Verstuurd op" (14d se datumkiezer) deelt zijn rij met "Opmerking verzending" op desktop/
+       tablet (col-6 elk); op gsm krijgt enkel dit veld zijn eigen volle rij, expliciet — niet
+       enkel vertrouwend op de generieke .gl-v2-ec-col-6-regel hierboven, die hetzelfde effect al
+       geeft zodra .gl-v2-ec-fields naar 1 kolom gaat, maar deze regel maakt het bedoelde resultaat
+       voor dit specifieke veld ondubbelzinnig en onafhankelijk toetsbaar. */
+    .gl-v2-ec-sentdate-col { grid-column: 1 / -1; }
 }

@@ -122,12 +122,15 @@
 @section PageActions
 {
     <div class="gl-v2-dp-topbar-actions">
-        <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })" target="_blank" class="gl-v2-btn gl-v2-btn-secondary">
-            <i class="ph ph-globe" aria-hidden="true"></i>Publieke pagina bekijken
+        <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })" target="_blank" class="gl-v2-btn gl-v2-btn-secondary" title="Publieke pagina bekijken" aria-label="Publieke pagina bekijken">
+            <i class="ph ph-globe" aria-hidden="true"></i><span class="gl-v2-dp-tablet-label">Publieke pagina bekijken</span>
         </a>
         @if (canWrite)
         {
-            <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-dp-upload-open"><i class="ph ph-upload-simple" aria-hidden="true"></i>Media uploaden</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-dp-upload-open">
+                <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                <span class="gl-v2-dp-tablet-hide">Media uploaden</span><span class="gl-v2-dp-tablet-show">Uploaden</span>
+            </button>
         }
     </div>
 }
@@ -138,7 +141,7 @@
     </a>
     @if (canWrite)
     {
-        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-gl-v2-dp-upload-open"><i class="ph ph-upload-simple" aria-hidden="true"></i>Uploaden</button>
+            <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-gl-v2-dp-upload-open"><i class="ph ph-upload-simple" aria-hidden="true"></i>Uploaden</button>
     }
 }
 @section ProjectMenu
@@ -190,7 +193,7 @@
         <div class="gl-v2-dp-hero-body">
             <div class="gl-v2-dp-hero-label"><i class="ph ph-image" aria-hidden="true"></i>Toont bovenaan op de publieke projectpagina</div>
             <div class="gl-v2-dp-hero-title js-gl-v2-dp-hero-open" role="button" tabindex="0">@(hoofdMedia.Caption ?? hoofdMedia.Name)</div>
-            <div class="gl-v2-dp-hero-meta">
+            <div class="gl-v2-dp-hero-meta gl-v2-dp-desktop-text">
                 <div class="gl-v2-dp-hero-meta-item"><span>TYPE</span><b>@(hoofdMedia.MediaType == 1 ? "Video" : "Foto") · @Ext(hoofdMedia)</b></div>
                 @if (hoofdMedia.MediaType == 1)
                 {
@@ -204,15 +207,30 @@
                 <div class="gl-v2-dp-hero-meta-item"><span>GROOTTE</span><b>@FmtSize(hoofdMedia.FileSizeBytes)</b></div>
                 <div class="gl-v2-dp-hero-meta-item"><span>OP DE WEBSITE</span><span class="gl-v2-badge @(hoofdMedia.IsPublic ? "is-positive" : "is-attention")">@(hoofdMedia.IsPublic ? "PUBLIEK" : "INTERN")</span></div>
             </div>
+            @{
+                // Design-handoff 15c punt 5: "onder 900px wordt een rij metagegevens één zin"
+                // (bv. "MP4 · 0:42 · 1920×1080 · 8,9 MB") i.p.v. de vijf-koloms desktopgrid hierboven,
+                // die er in de smalle hero-kolom (230px op tablet) niet meer past.
+                var heroMetaParts = hoofdMedia.MediaType == 1
+                    ? new[] { Ext(hoofdMedia), FmtDur(hoofdMedia.DurationSeconds), hoofdMedia.WidthPx.HasValue ? $"{hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : null, FmtSize(hoofdMedia.FileSizeBytes) }
+                    : new[] { Ext(hoofdMedia), hoofdMedia.WidthPx.HasValue ? $"{hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : null, FmtSize(hoofdMedia.FileSizeBytes) };
+            }
+            <span class="gl-v2-dp-hero-meta-line gl-v2-dp-touch-text">@string.Join(" · ", heroMetaParts.Where(s => !string.IsNullOrWhiteSpace(s)))</span>
             @if (canWrite)
             {
                 <div class="gl-v2-dp-hero-actions">
-                    <span class="gl-v2-dp-hero-hint">Bewerken, downloaden en vervangen doe je in het detailpaneel.</span>
+                    <span class="gl-v2-dp-hero-hint gl-v2-dp-desktop-text">Bewerken, downloaden en vervangen doe je in het detailpaneel.</span>
                     @if (hoofdMedia.MediaType == 1)
                     {
-                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-dp-hero-open"><i class="ph ph-image-square" aria-hidden="true"></i>Posterbeeld kiezen</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-dp-hero-open">
+                            <i class="ph ph-image-square" aria-hidden="true"></i>
+                            <span class="gl-v2-dp-desktop-text">Posterbeeld kiezen</span><span class="gl-v2-dp-touch-text">Posterbeeld</span>
+                        </button>
                     }
-                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-dp-picking-start"><i class="ph ph-arrows-left-right" aria-hidden="true"></i>Ander hoofdbeeld</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-dp-picking-start">
+                        <i class="ph ph-arrows-left-right" aria-hidden="true"></i>
+                        <span class="gl-v2-dp-desktop-text">Ander hoofdbeeld</span><span class="gl-v2-dp-touch-text">Ander beeld</span>
+                    </button>
                 </div>
             }
         </div>
@@ -235,25 +253,45 @@
     </div>
     <div class="gl-v2-dp-segmented" data-segmented="type">
         <button type="button" class="gl-v2-dp-segment is-active" data-value="all">Alles <b>@allPhotos.Count</b></button>
-        <button type="button" class="gl-v2-dp-segment" data-value="photo"><i class="ph ph-image" aria-hidden="true"></i>Foto's <b>@totalPhotos</b></button>
-        <button type="button" class="gl-v2-dp-segment" data-value="video"><i class="ph ph-video-camera" aria-hidden="true"></i>Video's <b>@totalVideos</b></button>
+        <button type="button" class="gl-v2-dp-segment" data-value="photo" title="Foto's" aria-label="Foto's"><i class="ph ph-image" aria-hidden="true"></i><span>Foto's</span> <b>@totalPhotos</b></button>
+        <button type="button" class="gl-v2-dp-segment" data-value="video" title="Video's" aria-label="Video's"><i class="ph ph-video-camera" aria-hidden="true"></i><span>Video's</span> <b>@totalVideos</b></button>
     </div>
-    <div class="gl-v2-dp-segmented" data-segmented="visibility">
-        <button type="button" class="gl-v2-dp-segment is-active" data-value="all">Publiek &amp; intern</button>
-        <button type="button" class="gl-v2-dp-segment" data-value="public"><i class="ph ph-globe" aria-hidden="true"></i>Publiek</button>
-        <button type="button" class="gl-v2-dp-segment" data-value="private"><i class="ph ph-lock-simple" aria-hidden="true"></i>Intern</button>
-    </div>
-    <div class="gl-v2-select gl-v2-dp-sort" data-gl-v2-select>
-        <input type="hidden" id="gl-v2-dp-sort-value" value="default" />
-        <div id="gl-v2-dp-sort-trigger" class="gl-v2-select-trigger is-filled" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
-            <span class="gl-v2-select-trigger-label">Eigen volgorde</span>
-            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+    <button type="button" class="gl-v2-dp-filter-trigger" id="gl-v2-dp-filter-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dp-filter-panel">
+        <i class="ph ph-funnel-simple" aria-hidden="true"></i>Filter
+        <span class="gl-v2-dp-filter-badge" id="gl-v2-dp-filter-badge" hidden>0</span>
+    </button>
+    <div class="gl-v2-dp-filter-panel" id="gl-v2-dp-filter-panel">
+        @* Design-handoff 15c punt 4: op tablet gaan Zichtbaarheid+Sorteren achter één "Filter"-knop
+           (zie .gl-v2-dp-filter-trigger hierboven) i.p.v. twee eigen plekken in de toolbar — desktop
+           toont dezelfde twee controls gewoon inline (display:contents op .gl-v2-dp-filter-panel/
+           -body, zie gl-v2-projecten-detailphotos.css), dus geen tweede, los gesynchroniseerd stel
+           controls nodig. *@
+        <div class="gl-v2-dp-filter-panel-header">
+            <span>Filter en sorteren</span>
+            <button type="button" class="gl-v2-dp-filter-clear" id="gl-v2-dp-filter-clear">Wissen</button>
         </div>
-        <div class="gl-v2-select-panel" role="listbox">
-            <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="default"><i class="ph ph-check" aria-hidden="true"></i><span>Eigen volgorde</span></button>
-            <button type="button" class="gl-v2-select-option" role="option" data-value="newest"><i class="ph ph-check" aria-hidden="true"></i><span>Nieuwste eerst</span></button>
-            <button type="button" class="gl-v2-select-option" role="option" data-value="oldest"><i class="ph ph-check" aria-hidden="true"></i><span>Oudste eerst</span></button>
-            <button type="button" class="gl-v2-select-option" role="option" data-value="name"><i class="ph ph-check" aria-hidden="true"></i><span>Naam A–Z</span></button>
+        <div class="gl-v2-dp-filter-panel-body">
+            <div class="gl-v2-dp-segmented" data-segmented="visibility">
+                <button type="button" class="gl-v2-dp-segment is-active" data-value="all">Publiek &amp; intern</button>
+                <button type="button" class="gl-v2-dp-segment" data-value="public"><i class="ph ph-globe" aria-hidden="true"></i>Publiek</button>
+                <button type="button" class="gl-v2-dp-segment" data-value="private"><i class="ph ph-lock-simple" aria-hidden="true"></i>Intern</button>
+            </div>
+            <div class="gl-v2-select gl-v2-dp-sort" data-gl-v2-select>
+                <input type="hidden" id="gl-v2-dp-sort-value" value="default" />
+                <div id="gl-v2-dp-sort-trigger" class="gl-v2-select-trigger is-filled" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="gl-v2-select-trigger-label">Eigen volgorde</span>
+                    <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                </div>
+                <div class="gl-v2-select-panel" role="listbox">
+                    <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="default"><i class="ph ph-check" aria-hidden="true"></i><span>Eigen volgorde</span></button>
+                    <button type="button" class="gl-v2-select-option" role="option" data-value="newest"><i class="ph ph-check" aria-hidden="true"></i><span>Nieuwste eerst</span></button>
+                    <button type="button" class="gl-v2-select-option" role="option" data-value="oldest"><i class="ph ph-check" aria-hidden="true"></i><span>Oudste eerst</span></button>
+                    <button type="button" class="gl-v2-select-option" role="option" data-value="name"><i class="ph ph-check" aria-hidden="true"></i><span>Naam A–Z</span></button>
+                </div>
+            </div>
+        </div>
+        <div class="gl-v2-dp-filter-panel-footer">
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dp-filter-apply">Toon resultaten</button>
         </div>
     </div>
 </div>
@@ -278,14 +316,14 @@
                 }
             </div>
         </div>
-        <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-public"><i class="ph ph-globe" aria-hidden="true"></i>Publiek maken</button>
-        <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-private"><i class="ph ph-lock-simple" aria-hidden="true"></i>Intern maken</button>
+        <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-public" title="Publiek maken" aria-label="Publiek maken"><i class="ph ph-globe" aria-hidden="true"></i><span class="gl-v2-dp-tablet-hide">Publiek maken</span></button>
+        <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-private" title="Intern maken" aria-label="Intern maken"><i class="ph ph-lock-simple" aria-hidden="true"></i><span class="gl-v2-dp-tablet-hide">Intern maken</span></button>
     }
-    <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-download"><i class="ph ph-download-simple" aria-hidden="true"></i>Downloaden</button>
+    <button type="button" class="gl-v2-dp-selectionbar-action" id="gl-v2-dp-selectionbar-download" title="Downloaden" aria-label="Downloaden"><i class="ph ph-download-simple" aria-hidden="true"></i><span class="gl-v2-dp-tablet-hide">Downloaden</span></button>
     <span class="gl-v2-dp-selectionbar-divider"></span>
     @if (canDelete)
     {
-        <button type="button" class="gl-v2-dp-selectionbar-action is-danger" id="gl-v2-dp-selectionbar-delete"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+        <button type="button" class="gl-v2-dp-selectionbar-action is-danger" id="gl-v2-dp-selectionbar-delete" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-dp-tablet-hide">Verwijderen</span></button>
     }
     <button type="button" class="gl-v2-dp-selectionbar-close" id="gl-v2-dp-selectionbar-clear" aria-label="Selectie wissen"><i class="ph ph-x" aria-hidden="true"></i></button>
 </div>
@@ -328,7 +366,7 @@
                     <span class="gl-v2-badge @(sect.IsPublic ? "is-positive" : "is-attention")">@(sect.IsPublic ? "PUBLIEK" : "INTERN")</span>
                     @if (canWrite)
                     {
-                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-dp-section-add" data-section-id="@sect.Id"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-dp-section-add" data-section-id="@sect.Id" title="Toevoegen" aria-label="Toevoegen aan @sect.Name"><i class="ph ph-plus" aria-hidden="true"></i><span class="gl-v2-dp-desktop-text">Toevoegen</span></button>
                         <button type="button" class="gl-v2-icon-btn js-gl-v2-dp-sections-open" title="Sectie bewerken" aria-label="Sectie bewerken"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
                     }
                 </div>
@@ -502,9 +540,14 @@
 
 @if (canWrite)
 {
-    @* ── Upload modal (TYPE 2 "Formulier") ── *@
+    @* ── Upload modal (TYPE 2 "Formulier") — modal-fullscreen-md-down: gsm krijgt een volledig
+       scherm i.p.v. een sheet, zelfde reden als elke andere Type 2-modal in gl-v2 (een sheet zou de
+       helft van het venster innemen zodra het bestandsveld/toetsenbord opent, zie DESIGN.md
+       "Modals"). Eerste échte toepassing van deze Bootstrap-klasse — het component stond al klaar
+       in gl-v2-shell.css maar geen enkele bestaande Type 2-modal (VatLookup/SiteManagerNew) had 'm
+       ooit effectief in de markup gezet. ── *@
     <div class="modal fade gl-v2-modal-form" id="gl-v2-dp-upload-modal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="modal-title">Media uploaden</h2>
@@ -561,7 +604,7 @@
 
     @* ── Secties beheren modal (TYPE 2 "Formulier") ── *@
     <div class="modal fade gl-v2-modal-form" id="gl-v2-dp-sections-modal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="modal-title">Secties beheren</h2>

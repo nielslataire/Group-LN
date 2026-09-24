@@ -583,7 +583,13 @@
                 <i class="bx @(Model.TypeLabel == "Woning" ? "bx-home" : Model.TypeLabel == "Appartement" ? "bx-building-house" : "bx-buildings")"></i>
                 @Model.TypeLabel
             </div>
-            <h1 class="detail-title">@Model.ProjectNaam</h1>
+            <h1 class="detail-title">
+                @Model.ProjectNaam
+                @if (!Model.IsActief)
+                {
+                    <span class="badge bg-secondary align-middle" style="font-size:.7rem;" title="Project staat niet meer online (uitverkocht of offline gehaald)">Niet meer online</span>
+                }
+            </h1>
             @if (Model.BronnenLijst.Any())
             {
                 <div class="mb-2">
@@ -659,6 +665,16 @@
     <div class="kpi-card highlight">
         <div class="kpi-card-label"><i class="bx bx-trending-up"></i>Verkoopgraad</div>
         <div class="kpi-card-value">@Model.Verkoopgraad.ToString("F0")%</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-label"><i class="bx bx-time-five"></i>Mediane doorlooptijd</div>
+        <div class="kpi-card-value">
+            @(Model.MediaanDoorlooptijdDagen.HasValue ? Model.MediaanDoorlooptijdDagen.Value + " d" : "—")
+        </div>
+        @if (Model.DoorlooptijdAantal > 0)
+        {
+            <div class="kpi-card-subtitle">op @Model.DoorlooptijdAantal verkochte units</div>
+        }
     </div>
     <div class="kpi-card">
         <div class="kpi-card-label"><span style="font-size:.85em">€</span> Gem. prijs</div>
@@ -793,6 +809,7 @@
                     <th class="text-end">Vraagprijs</th>
                     <th class="text-end">Prijs/m²</th>
                     <th>Status</th>
+                    <th class="text-end" title="Dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
                     <th>Bronnen</th>
                 </tr>
             </thead>
@@ -837,6 +854,9 @@
                             <span class="status-dot @cuStatusClass">@cu.Status</span>
                             @if (cu.HeeftStatusConflict) { <i class="bx bx-error-circle text-warning ms-1" title="Statusconflict tussen bronnen"></i> }
                         </td>
+                        <td class="text-end" title="@(cu.VerkochtOp.HasValue ? "Verkocht op " + cu.VerkochtOp.Value.ToLocalTime().ToString("dd/MM/yyyy") : "")">
+                            @(cu.DoorlooptijdDagen.HasValue ? cu.DoorlooptijdDagen.Value + " d" : (cu.VerkochtOp.HasValue ? "onbekend" : "—"))
+                        </td>
                         <td>
                             @foreach (var bron in cu.Bronnen)
                             {
@@ -853,7 +873,7 @@
                     @if (cu.AantalBronnen > 1)
                     {
                         <tr class="collapse" id="@cuRowId">
-                            <td colspan="9" class="p-0">
+                            <td colspan="10" class="p-0">
                                 <table class="table table-sm mb-0 cu-source-table">
                                     <thead class="table-light">
                                         <tr>
@@ -910,6 +930,7 @@
                         <td class="text-end">@(totPrijs.HasValue ? "€ " + totPrijs.Value.ToString("N0") : "—")</td>
                         <td class="text-end">@(totPpSqm.HasValue ? "€ " + totPpSqm.Value.ToString("N0") + "/m²" : "—")</td>
                         <td>@Model.VerkochteUnits/@Model.TotaalUnits verkocht</td>
+                        <td class="text-end">@(Model.MediaanDoorlooptijdDagen.HasValue ? Model.MediaanDoorlooptijdDagen.Value + " d" : "—")</td>
                         <td></td>
                     </tr>
                 }
@@ -928,6 +949,7 @@ else
                     <th class="text-end">Vraagprijs</th>
                     <th class="text-end">Prijs/m²</th>
                     <th>Status</th>
+                    <th class="text-end" title="Dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
                     @if (Model.HeeftDuplicaten)
                     {
                         <th>Bron</th>
@@ -960,6 +982,9 @@ else
                         <td class="text-end">@(u.Vraagprijs.HasValue ? "€ " + u.Vraagprijs.Value.ToString("N0") : "—")</td>
                         <td class="text-end">@(u.PrijsPerM2.HasValue ? "€ " + u.PrijsPerM2.Value.ToString("N0") + "/m²" : "—")</td>
                         <td><span class="status-dot @statusClass">@u.Status</span></td>
+                        <td class="text-end" title="@(u.VerkochtOp.HasValue ? "Verkocht op " + u.VerkochtOp.Value.ToLocalTime().ToString("dd/MM/yyyy") : "")">
+                            @(u.DoorlooptijdDagen.HasValue ? u.DoorlooptijdDagen.Value + " d" : (u.VerkochtOp.HasValue ? "onbekend" : "—"))
+                        </td>
                         @if (Model.HeeftDuplicaten)
                         {
                             var uBronClass = (u.BronNaam ?? "").ToLowerInvariant() switch {
@@ -990,6 +1015,7 @@ else
                         <td class="text-end">@(totPrijs.HasValue ? "€ " + totPrijs.Value.ToString("N0") : "—")</td>
                         <td class="text-end">@(totPpSqm.HasValue ? "€ " + totPpSqm.Value.ToString("N0") + "/m²" : "—")</td>
                         <td>@Model.VerkochteUnits/@Model.TotaalUnits verkocht</td>
+                        <td class="text-end">@(Model.MediaanDoorlooptijdDagen.HasValue ? Model.MediaanDoorlooptijdDagen.Value + " d" : "—")</td>
                         @if (Model.HeeftDuplicaten)
                         {
                             <td></td>

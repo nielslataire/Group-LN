@@ -54,25 +54,29 @@ body.cc-lock {
     }
 }
 
-/* ── Banner (eerste bezoek) ── */
+/* ── Banner (eerste bezoek) — centraal op het scherm, boven een blokkerende overlay ── */
 .cc-banner {
     position: fixed;
-    left: 20px;
-    bottom: 20px;
+    inset: 0;
     z-index: 2100;
-    width: 420px;
-    max-width: calc(100vw - 40px);
     display: none;
-    background: #fff;
-    border: 1px solid var(--border, rgba(0, 83, 45, 0.14));
-    border-radius: 6px;
-    box-shadow: 0 18px 50px rgba(0, 20, 10, 0.22);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
     font-family: var(--font-sans, 'Avenir', sans-serif);
 }
 .cc-banner.is-open {
-    display: block;
+    display: flex;
 }
 .cc-banner-inner {
+    width: 420px;
+    max-width: 100%;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--border, rgba(0, 83, 45, 0.14));
+    border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0, 20, 10, 0.3);
     padding: 22px 22px 18px;
 }
 .cc-banner-title {
@@ -314,12 +318,6 @@ body.cc-lock {
 }
 
 @media (max-width: 575px) {
-    .cc-banner {
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        width: auto;
-    }
     .cc-banner-acties {
         flex-wrap: wrap;
     }

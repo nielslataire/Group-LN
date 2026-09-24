@@ -10,6 +10,22 @@ public class GemeenteAnalyseViewModel
     public string GeselecteerdType { get; set; } = "Alles";
     public string GeselecteerdAanbodtype { get; set; } = "Alles";
 
+    /// <summary>
+    /// "Actueel"  = huidig aanbod (actieve projecten met al hun units + actieve losse eenheden).
+    /// "Verkocht" = enkel wat in de periode verkocht is, ook uit projecten die niet meer online staan.
+    /// "Alles"    = actueel aanbod + alles wat in de periode verkocht is.
+    /// </summary>
+    public string GeselecteerdAanbod { get; set; } = "Actueel";
+
+    /// <summary>Periode (maanden) voor "verkocht in periode"; 0 = onbeperkt.</summary>
+    public int PeriodeMaanden { get; set; } = 12;
+
+    public static readonly string[] AanbodOpties = { "Actueel", "Verkocht", "Alles" };
+    public static readonly (int Maanden, string Label)[] PeriodeOpties =
+        { (3, "3 mnd"), (6, "6 mnd"), (12, "12 mnd"), (24, "24 mnd"), (0, "Alles") };
+
+    public string PeriodeLabel => PeriodeMaanden > 0 ? $"laatste {PeriodeMaanden} maanden" : "volledige historiek";
+
     public List<GemeenteGroep> Locaties { get; set; } = new();
     public GemeenteKpiViewModel? Kpi { get; set; }
     public List<PrijsBucketViewModel> VraagprijsBuckets { get; set; } = new();
@@ -67,6 +83,21 @@ public class GemeenteKpiViewModel
     public decimal Verkoopgraad { get; set; }
     public int SoldConfirmedCount { get; set; }
     public int LikelySoldCount { get; set; }
+
+    /// <summary>Projecten in de selectie die niet meer online staan (uitverkocht of offline gehaald).</summary>
+    public int NietActieveProjecten { get; set; }
+
+    /// <summary>Units met een verkoopdatum binnen de gekozen periode.</summary>
+    public int VerkochtInPeriode { get; set; }
+
+    /// <summary>Verkochte units per maand over de gekozen periode; null bij onbeperkte periode.</summary>
+    public decimal? AbsorptiePerMaand { get; set; }
+
+    /// <summary>Mediaan van de doorlooptijd (dagen van eerste waarneming tot verkoop).</summary>
+    public int? MediaanDoorlooptijdDagen { get; set; }
+
+    /// <summary>Aantal units waarop de mediaan gebaseerd is.</summary>
+    public int DoorlooptijdAantal { get; set; }
 }
 
 public class PrijsBucketViewModel
@@ -95,6 +126,10 @@ public class ProjectRijViewModel
     public decimal Verkoopgraad { get; set; }
     public decimal? GemiddeldePrijs { get; set; }
     public decimal? GemiddeldePrijsPerM2 { get; set; }
+
+    /// <summary>False als het project niet meer online staat (uitverkocht of offline gehaald).</summary>
+    public bool IsActief { get; set; } = true;
+    public int? MediaanDoorlooptijdDagen { get; set; }
 
     public string? Straat { get; set; }
     public string? Huisnummer { get; set; }
@@ -131,6 +166,8 @@ public class LosseEenheidRijViewModel
     public string Status { get; set; } = "";
     public string AangeboenDoor { get; set; } = "";
     public string? SourceUrl { get; set; }
+    public DateTime? VerkochtOp { get; set; }
+    public int? DoorlooptijdDagen { get; set; }
 
     public long? LinkedCanonicalUnitId { get; set; }
     public string? GekoppeldProjectNaam { get; set; }

@@ -92,6 +92,28 @@
         </button>
     </div>
 }
+@* Op gsm (<768px) verdwijnt @@section PageActions volledig (shell-standaard) — deze balk geeft
+   dezelfde drie acties terug via de gedeelde vaste onderbalk (.gl-v2-mobile-quickactions,
+   _LayoutV2.cshtml), exact dezelfde tegel-stijl als Home/Index en Projecten/DetailClientsV2, in
+   plaats van hier zonder vervanging te blijven staan. De "Aannemerslijst afdrukken"-tegel is, net
+   als de tablet-⋯-versie hierboven, zelf een js-gl-v2-menu-trigger naar #gl-v2-pc-print-menu — dat
+   paneel rendert onder de 768px-breakpoint al als bottom sheet (gl-v2-shell.js positionMenu()),
+   geen apart mobiel afdruk-paneel nodig. *@
+@section MobileQuickActions
+{
+    <a href="#" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-file-xls" aria-hidden="true"></i>Exporteren
+    </a>
+    <button type="button" class="gl-v2-mobile-quickaction js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-pc-print-menu">
+        <i class="ph ph-printer" aria-hidden="true"></i>Afdrukken
+    </button>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-mobile-quickaction">
+            <i class="ph ph-plus" aria-hidden="true"></i>Leverancier toevoegen
+        </a>
+    }
+}
 @section ProjectMenu
 {
     @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }

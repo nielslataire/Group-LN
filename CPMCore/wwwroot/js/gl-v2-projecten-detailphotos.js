@@ -74,12 +74,16 @@
 
     function applyCardFilters() {
         var q = (searchInput && searchInput.value || "").trim().toLowerCase();
+        var visibleCount = 0;
         document.querySelectorAll(".gl-v2-dp-card").forEach(function (card) {
             var matchesType = typeFilter === "all" || (typeFilter === "photo" && card.dataset.mediatype === "0") || (typeFilter === "video" && card.dataset.mediatype === "1");
             var matchesVis = visFilter === "all" || (visFilter === "public" && card.dataset.ispublic === "true") || (visFilter === "private" && card.dataset.ispublic === "false");
             var matchesSearch = !q || card.dataset.caption.indexOf(q) !== -1 || card.dataset.filename.toLowerCase().indexOf(q) !== -1;
-            card.hidden = !(matchesType && matchesVis && matchesSearch);
+            var visible = matchesType && matchesVis && matchesSearch;
+            card.hidden = !visible;
+            if (visible) visibleCount++;
         });
+        updateFilterUi(visibleCount);
     }
     if (searchInput) searchInput.addEventListener("input", applyCardFilters);
     if (searchClear) searchClear.addEventListener("click", function () { searchInput.value = ""; applyCardFilters(); searchInput.focus(); });
@@ -101,6 +105,65 @@
         });
     });
 
+    // ── Filter-knop (tablet, design-handoff 15c punt 4) — badge + "Toon N resultaten" tellen mee
+    // met dezelfde live filterstaat als hierboven; Zichtbaarheid/Sorteren blijven ÉÉN DOM/staat op
+    // alle breedtes (zie de CSS se eigen toelichting bij .gl-v2-dp-filter-panel). ─────────────────
+    var filterTrigger = document.getElementById("gl-v2-dp-filter-trigger");
+    var filterPanel = document.getElementById("gl-v2-dp-filter-panel");
+    var filterBadge = document.getElementById("gl-v2-dp-filter-badge");
+    var filterApplyBtn = document.getElementById("gl-v2-dp-filter-apply");
+
+    function updateFilterUi(visibleCount) {
+        var sortMode = sortValueInput ? sortValueInput.value : "default";
+        var active = (visFilter !== "all" ? 1 : 0) + (sortMode !== "default" ? 1 : 0);
+        if (filterBadge) {
+            filterBadge.textContent = active;
+            filterBadge.hidden = active === 0;
+        }
+        if (filterApplyBtn && typeof visibleCount === "number") {
+            filterApplyBtn.textContent = "Toon " + visibleCount + " resulta" + (visibleCount === 1 ? "at" : "ten");
+        }
+    }
+
+    function closeFilterPanel() {
+        if (!filterPanel) return;
+        filterPanel.classList.remove("is-open");
+        if (filterTrigger) { filterTrigger.classList.remove("is-open"); filterTrigger.setAttribute("aria-expanded", "false"); }
+    }
+
+    if (filterTrigger && filterPanel) {
+        filterTrigger.addEventListener("click", function () {
+            var willOpen = !filterPanel.classList.contains("is-open");
+            closeFilterPanel();
+            if (willOpen) {
+                var rect = filterTrigger.getBoundingClientRect();
+                var panelWidth = 300;
+                filterPanel.style.top = (rect.bottom + 6) + "px";
+                filterPanel.style.left = Math.max(8, Math.min(rect.right - panelWidth, window.innerWidth - panelWidth - 8)) + "px";
+                filterPanel.classList.add("is-open");
+                filterTrigger.classList.add("is-open");
+                filterTrigger.setAttribute("aria-expanded", "true");
+            }
+        });
+        document.addEventListener("click", function (e) {
+            if (e.target === filterTrigger || filterTrigger.contains(e.target) || filterPanel.contains(e.target)) return;
+            closeFilterPanel();
+        });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeFilterPanel(); });
+        window.addEventListener("resize", closeFilterPanel);
+    }
+    if (filterApplyBtn) filterApplyBtn.addEventListener("click", closeFilterPanel);
+
+    var filterClearBtn = document.getElementById("gl-v2-dp-filter-clear");
+    if (filterClearBtn) filterClearBtn.addEventListener("click", function () {
+        var allVisSeg = document.querySelector('.gl-v2-dp-segmented[data-segmented="visibility"] .gl-v2-dp-segment[data-value="all"]');
+        if (allVisSeg && !allVisSeg.classList.contains("is-active")) allVisSeg.click();
+        if (sortValueInput && sortValueInput.value !== "default") {
+            var defaultOption = document.querySelector('.gl-v2-dp-sort .gl-v2-select-option[data-value="default"]');
+            if (defaultOption) defaultOption.click();
+        }
+    });
+
     // ── Sorteren binnen elk raster ("Eigen volgorde" = de oorspronkelijke servervolgorde) ──────
     var originalGridOrder = new Map();
     document.querySelectorAll(".gl-v2-dp-grid").forEach(function (grid) {
@@ -118,8 +181,12 @@
                 else if (mode === "name") cards.sort(function (a, b) { return a.dataset.caption.localeCompare(b.dataset.caption); });
                 cards.forEach(function (c) { grid.insertBefore(c, dropzone || null); });
             });
+            updateFilterUi(document.querySelectorAll(".gl-v2-dp-card:not([hidden])").length);
         });
     }
+    // Initiële badge/telling (vóór elke gebruikersinteractie): alle media telt mee, geen filter
+    // actief.
+    applyCardFilters();
 
     // ── Selectie + donkere actiebalk ───────────────────────────────────────────────────────────
     var selectedIds = new Set();

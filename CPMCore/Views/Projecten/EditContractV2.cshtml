@@ -51,6 +51,7 @@
 @{
     var companyName = Model.Contract.Company?.Display ?? "Leverancier";
     ViewData["Title"] = "Contract bewerken — " + companyName;
+    ViewData["TitleMobile"] = "Contract bewerken";
     ViewData["PageIcon"] = "ph ph-hard-hat";
     ViewData["GlV2FullHeightBody"] = true;
     var backUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId });
@@ -112,11 +113,11 @@
                 <span class="gl-v2-section-card-desc">Leverancier en verantwoordelijke op de werf.</span>
             </div>
             <div class="gl-v2-ec-fields">
-                <div class="gl-v2-ec-col-5">
+                <div class="gl-v2-ec-col-12">
                     @Html.EditorFor(m => m.Contract.ContractName, "GlV2Text", new { Placeholder = "Optionele naam, bv. “Ruwbouw fase 1”" })
                     <span class="gl-v2-ec-field-hint">leeg = de naam van het eerste lot</span>
                 </div>
-                <div class="gl-v2-ec-col-3">
+                <div class="gl-v2-ec-col-12">
                     @if (Model.Contract.Company.ID > 0)
                     {
                         @Html.DisplayFor(m => m.Contract.Company.Display, "GlV2ReadOnlyValue", new { Label = Html.DisplayNameFor(m => m.Companies).ToString(), Icon = "ph-hard-hat" })
@@ -131,7 +132,7 @@
                         @Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID" })
                     }
                 </div>
-                <div class="gl-v2-field gl-v2-ec-col-4">
+                <div class="gl-v2-field gl-v2-ec-col-12">
                     @Html.LabelFor(m => m.Contract.SiteManagerContactId, new { @class = "gl-v2-field-label" })
                     <div class="gl-v2-ec-inline-group">
                         @Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
@@ -150,13 +151,13 @@
                     <span class="gl-v2-section-card-desc">Betaling, korting en waarborg.</span>
                 </div>
                 <div class="gl-v2-ec-fields">
-                    <div class="gl-v2-ec-col-3">
+                    <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.VatPercentage, "GlV2NumberUnit", new { Unit = "%", Max = "0 % = btw verlegd" })
                     </div>
-                    <div class="gl-v2-ec-col-3">
+                    <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.PaymentTerm, "GlV2NumberUnit", new { Unit = "dagen", Placeholder = "Aantal dagen", Masked = false, Required = true })
                     </div>
-                    <div class="gl-v2-field gl-v2-ec-col-6">
+                    <div class="gl-v2-field gl-v2-ec-col-12">
                         <span class="gl-v2-field-label">@Html.DisplayNameFor(m => m.Contract.CashDiscountPaymentTerm)</span>
                         <div class="gl-v2-ec-inline-group">
                             @Html.CheckBoxFor(m => m.Contract.CashDiscount, new { id = "chkCashDiscount", @class = "gl-v2-toggle-switch" })
@@ -169,7 +170,7 @@
                     <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.GuaranteeType, "GlV2Select")
                     </div>
-                    <div class="gl-v2-ec-col-3">
+                    <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.GuaranteePercentage, "GlV2NumberUnit", new { Unit = "%", Max = "Maximaal 100 %" })
                     </div>
                     <div class="gl-v2-field gl-v2-ec-col-12" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
@@ -210,7 +211,7 @@
                     <div class="gl-v2-ec-col-12">
                         @Html.EditorFor(m => m.Contract.ContractSigned, "GlV2ToggleSwitch", new { Hint = "zet de status in de lijst op “getekend”" })
                     </div>
-                    <div class="gl-v2-ec-col-6">
+                    <div class="gl-v2-ec-col-6 gl-v2-ec-sentdate-col">
                         @Html.EditorFor(m => m.Contract.ContractSentDate, "GlV2DateTime")
                     </div>
                     <div class="gl-v2-ec-col-6">
@@ -319,7 +320,37 @@
     </div>
 }
 
+@* Niet-opgeslagen-wijzigingen-bevestiging — zelfde recept + markup als Klanten/EditProjectV2.cshtml
+   (Type 1 .gl-v2-modal-confirm, is-warning), JS in gl-v2-projecten-editcontract.js
+   (initDirtyBadge/initDiscardChangesModal). Vangt zowel #gl-v2-ec-cancel-link ("Annuleren", hierboven)
+   als de layout-brede #gl-v2-topbar-back-link (de "terug"-pijl in de topbar, _LayoutV2.cshtml) op —
+   geen van beide onderschepte tot nu toe iets, en de "NIET-OPGESLAGEN"-badge in @@section PageActions
+   werd nooit gevuld: het bestond al in de markup maar niets riep 'm ooit aan. Net als de andere twee
+   modals hierbeneden: moet in de body staan, niet in @@section PageScripts (zie diens toelichting). *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-ec-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-ec-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-ec-discard-changes-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder uw wijzigingen op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-ec-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 @await Html.PartialAsync("Partials/_BijbestellingModal")
+@* Moet hier, vóór @@section PageScripts, en niet erin — zie die partial se eigen toelichting:
+   alles binnen PageScripts rendert in _LayoutV2.cshtml buiten de .gl-v2-wrapperklasse, en elke
+   --gl-v2-*-token (surface/shadow/…) hangt daarop, niet op :root. Stond hier vroeger wél in
+   PageScripts, wat de "modal heeft geen achtergrond"-fout was. *@
+@await Html.PartialAsync("Partials/_SiteManagerNewModalV2")
 
 @section PageScripts
 {
@@ -338,5 +369,4 @@
         };
     </script>
     <script src="~/js/gl-v2-projecten-editcontract.js" asp-append-version="true"></script>
-    @await Html.PartialAsync("Partials/_SiteManagerNewModalV2")
 }

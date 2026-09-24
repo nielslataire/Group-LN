@@ -180,10 +180,12 @@
                 if (!selected || !selected.id) return;
                 $("#txtCompanyID").val(selected.id);
                 LoadSiteManagers(selected.id, "#ddlSiteManager");
+                markDirty();
             });
             $("#ddlCompany").on("select2:clear", function () {
                 $("#txtCompanyID").val("0");
                 $("#ddlSiteManager").empty().append(new Option("Geen", "", false, false));
+                markDirty();
             });
         }
 
@@ -224,6 +226,7 @@
     $("#btnAddActivities").click(function () {
         if (!lotPicker) return false;
         var items = lotPicker.selected();
+        if (!items.length) return false;
         items.forEach(function (item) {
             $.ajax({
                 url: config.addSelectedActivitiesUrl,
@@ -237,6 +240,7 @@
             });
             lotPicker.markAdded(item.id);
         });
+        markDirty();
         return false;
     });
 
@@ -244,11 +248,61 @@
         $(this).closest("div").parent("div").parent("div").remove();
         var activiteitId = $(this).data("id");
         if (lotPicker) lotPicker.restore(String(activiteitId));
+        markDirty();
         return false;
     });
+
+    // ── Niet-opgeslagen wijzigingen — zelfde recept als gl-v2-klanten-editproject.js
+    //    (markDirty/initDirtyBadge/isFormDirty/initDiscardChangesModal, woordelijk overgenomen):
+    //    élke input/change op #gl-v2-ec-form toont de "NIET-OPGESLAGEN"-badge (al aanwezig in de
+    //    markup, tot nu toe nooit gevuld) en Annuleren/de topbar-terugknop onderscheppen dan naar
+    //    een bevestigingsmodal i.p.v. gewoon weg te navigeren. initDirtyBadge() wordt bewust pas in
+    //    het LAATSTE $(document).ready-blok hieronder aangeroepen (registratievolgorde bepaalt
+    //    jQuery se eigen ready-volgorde) — de .trigger("change")-aanroepen hierboven (Waarborg-type/
+    //    Korting-contant, puur om de UI bij het laden te synchroniseren) zouden anders zelf al als
+    //    een "echte" wijziging meetellen en de badge meteen bij het openen tonen. ─────────────────
+    function markDirty() {
+        var badge = document.getElementById("gl-v2-ec-dirty-badge");
+        if (badge) badge.hidden = false;
+    }
+    // _SiteManagerNewModalV2's eigen script draait als een aparte IIFE (eigen scope) en wijzigt
+    // #ddlSiteManager programmatisch (.val(data.id), geen echte change-event) na een geslaagde
+    // aanmaak — dat moet ook als een niet-opgeslagen wijziging tellen, vandaar global.
+    window.glV2EditContractMarkDirty = markDirty;
+    function isFormDirty() {
+        var badge = document.getElementById("gl-v2-ec-dirty-badge");
+        return !!badge && !badge.hidden;
+    }
+    function initDirtyBadge() {
+        var form = document.getElementById("gl-v2-ec-form");
+        if (!form) return;
+        form.addEventListener("input", markDirty);
+        form.addEventListener("change", markDirty);
+    }
+    function initDiscardChangesModal() {
+        var modalEl = document.getElementById("gl-v2-ec-discard-changes-modal");
+        var confirmLink = document.getElementById("gl-v2-ec-discard-changes-confirm");
+        var triggers = [
+            document.getElementById("gl-v2-ec-cancel-link"),
+            document.getElementById("gl-v2-topbar-back-link")
+        ].filter(Boolean);
+        if (!triggers.length || !modalEl || !confirmLink || !window.bootstrap) return;
+
+        confirmLink.href = triggers[0].href;
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener("click", function (e) {
+                if (!isFormDirty()) return;
+                e.preventDefault();
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+        });
+    }
 
     $(document).ready(function () {
         initCurrencyMasks();
         LoadSiteManagers($("#txtCompanyID").val(), "#ddlSiteManager");
+        initDirtyBadge();
+        initDiscardChangesModal();
     });
 })();

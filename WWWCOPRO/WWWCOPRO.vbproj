@@ -244,6 +244,7 @@
     <Compile Include="Controllers\BlogController.vb" />
     <Compile Include="Controllers\VacaturesController.vb" />
     <Compile Include="Controllers\ContactController.vb" />
+    <Compile Include="Controllers\CookieConsentController.vb" />
     <Compile Include="Controllers\ErrorController.vb" />
     <Compile Include="Controllers\HomeController.vb" />
     <Compile Include="Controllers\LegalController.vb" />

@@ -24,15 +24,34 @@ public class MarktanalyseService : IMarktanalyseService
 
     /// <summary>
     /// Losse eenheden die (vermoedelijk) verkocht zijn krijgen in de worker IsActive=false.
-    /// Ze blijven zichtbaar in de analyse zolang de verkoop niet ouder is dan dit venster,
-    /// anders zou "verkocht" voor losse panden altijd nul zijn.
+    /// In "Vergelijkbare panden" (dat geen periodekeuze heeft) blijven ze zichtbaar zolang
+    /// de verkoop niet ouder is dan dit venster. Gemeenteanalyse gebruikt de periode uit het scherm.
     /// </summary>
     private const int LosseVerkochtZichtbaarMaanden = 12;
 
     private static DateTime VerkochtCutoff() => DateTime.UtcNow.AddMonths(-LosseVerkochtZichtbaarMaanden);
 
-    /// <summary>Bron-status per MarketAsset, gebruikt om de status van een CanonicalUnit af te leiden.</summary>
-    private sealed record BronStatus(SaleStatus? SaleStatus, AssetLifecycleStatus? LifecycleStatus);
+    /// <summary>Bron-status per MarketAsset, gebruikt om status en verkoopdatum van een CanonicalUnit af te leiden.</summary>
+    private sealed record BronStatus(
+        SaleStatus? SaleStatus,
+        AssetLifecycleStatus? LifecycleStatus,
+        DateTime FirstSeenAt,
+        DateTime? FirstSoldAt,
+        DateTime? LifecycleStatusUpdatedAt,
+        DateTime? StatusChangedAt)
+    {
+        public DateTime? VerkoopDatum => SaleStateHelpers.VerkoopDatum(
+            SaleStatus, LifecycleStatus, FirstSoldAt, LifecycleStatusUpdatedAt, StatusChangedAt);
+    }
+
+    /// <summary>Uit de bronnen afgeleide lifecycle, verkoopdatum en doorlooptijd van een CanonicalUnit.</summary>
+    private sealed record CanonicalAfgeleid(AssetLifecycleStatus? Lifecycle, DateTime? VerkochtOp, int? DoorlooptijdDagen)
+    {
+        public static readonly CanonicalAfgeleid Leeg = new(null, null, null);
+    }
+
+    private static DateTime BerekenVerkochtCutoff(int periodeMaanden) =>
+        periodeMaanden > 0 ? DateTime.UtcNow.AddMonths(-periodeMaanden) : new DateTime(1900, 1, 1);
 
     /// <summary>
     /// Genormaliseerde unit-statistiek voor KPI/tabel/grafiek-berekeningen.
@@ -48,7 +67,9 @@ public class MarktanalyseService : IMarktanalyseService
         decimal?              PricePerSqm,
         decimal?              Area,
         PropertyType          PropertyType,
-        bool                  IsFromCanonical);
+        bool                  IsFromCanonical,
+        DateTime?             VerkochtOp        = null,
+        int?                  DoorlooptijdDagen = null);
 
     // ── Locaties (dropdown-bron) ───────────────────────────────────────────────
 
@@ -127,6 +148,8 @@ public class MarktanalyseService : IMarktanalyseService
         string type,
         string aanbodtype    = "Alles",
         bool toonGekoppeld   = false,
+        string aanbod        = "Actueel",
+        int periodeMaanden   = 12,
         CancellationToken ct = default)
     {
         var vm = new GemeenteAnalyseViewModel
@@ -135,11 +158,16 @@ public class MarktanalyseService : IMarktanalyseService
             GeselecteerdGeoMunicipalSectionId = geoMunicipalSectionId,
             GeselecteerdType = type,
             GeselecteerdAanbodtype = aanbodtype,
-            ToonGekoppeld = toonGekoppeld
+            ToonGekoppeld = toonGekoppeld,
+            GeselecteerdAanbod = aanbod,
+            PeriodeMaanden = periodeMaanden
         };
 
         if (!geoMunicipalityId.HasValue && !geoMunicipalSectionId.HasValue)
             return vm;
+
+        var verkochtCutoff = BerekenVerkochtCutoff(periodeMaanden);
+        bool enkelVerkocht = aanbod == "Verkocht";
 
         // Laad display-namen voor de geselecteerde locatie
         await VulDisplayNamenAsync(vm, ct);
@@ -159,8 +187,11 @@ public class MarktanalyseService : IMarktanalyseService
 
         if (loadProjecten)
         {
-            var projectQuery = _db.MarketAssets
-                .Where(a => a.IsProjectGroup && a.IsActive);
+            // "Actueel" = enkel projecten die nog online staan. In de andere modi tellen ook
+            // uitverkochte/offline projecten mee, zolang ze in de periode nog verkopen hadden.
+            var projectQuery = _db.MarketAssets.Where(a => a.IsProjectGroup);
+            if (aanbod == "Actueel")
+                projectQuery = projectQuery.Where(a => a.IsActive);
 
             projectQuery = ToepassGeoFilter(projectQuery, geoMunicipalityId, geoMunicipalSectionId, fallbackZips, fallbackSectionCity);
 
@@ -170,6 +201,21 @@ public class MarktanalyseService : IMarktanalyseService
                 projectQuery = projectQuery.Where(a => a.PropertySubType == PropertySubType.HouseGroup);
 
             var alleProjecten = await projectQuery.AsNoTracking().ToListAsync(ct);
+
+            if (aanbod != "Actueel" && alleProjecten.Count > 0)
+            {
+                var kandidaatIds = alleProjecten.Select(p => p.Id).ToList();
+                var metVerkoopInPeriode = (await ToepassVerkochtInPeriode(
+                        _db.MarketAssets.Where(u => u.ParentMarketAssetId.HasValue && kandidaatIds.Contains(u.ParentMarketAssetId.Value)),
+                        verkochtCutoff)
+                    .Select(u => u.ParentMarketAssetId!.Value)
+                    .Distinct()
+                    .ToListAsync(ct)).ToHashSet();
+
+                alleProjecten = enkelVerkocht
+                    ? alleProjecten.Where(p => metVerkoopInPeriode.Contains(p.Id)).ToList()
+                    : alleProjecten.Where(p => p.IsActive || metVerkoopInPeriode.Contains(p.Id)).ToList();
+            }
 
             if (alleProjecten.Count > 0)
             {
@@ -243,9 +289,9 @@ public class MarktanalyseService : IMarktanalyseService
 
         // ── CanonicalUnits ophalen (gededupliceerde units, zelfde bron als Projectdetail) ─
         Dictionary<long, List<CanonicalUnit>> canonicalUnitsByCanonicalProjectId = new();
-        // Afgeleide lifecycle per CanonicalUnit (uit de bron-units): een canonical unit
-        // heeft zelf geen lifecycle, maar wel bronnen die uit het aanbod kunnen verdwijnen.
-        Dictionary<long, AssetLifecycleStatus?> canonicalLifecycleByUnitId = new();
+        // Afgeleide lifecycle/verkoopdatum per CanonicalUnit (uit de bron-units): een canonical
+        // unit heeft zelf geen lifecycle, maar wel bronnen die uit het aanbod kunnen verdwijnen.
+        Dictionary<long, CanonicalAfgeleid> canonicalAfgeleidByUnitId = new();
         if (projecten.Count > 0)
         {
             var canonicalProjectIdsForUnits = canonicalProjectIdByPrimary.Values
@@ -269,7 +315,7 @@ public class MarktanalyseService : IMarktanalyseService
                     .GroupBy(cu => cu.CanonicalProjectId)
                     .ToDictionary(g => g.Key, g => g.ToList());
 
-                canonicalLifecycleByUnitId = await LaadCanonicalLifecyclesAsync(canonicalUnitsAll, ct);
+                canonicalAfgeleidByUnitId = await LaadCanonicalAfgeleidAsync(canonicalUnitsAll, ct);
             }
         }
 
@@ -281,9 +327,9 @@ public class MarktanalyseService : IMarktanalyseService
         List<MarketAsset> losseEenhedenUniek = [];
         if (loadLosseEenheden)
         {
-            var losseQuery = ToepassLosseZichtbaarheid(
+            var losseQuery = ToepassAanbodFilter(
                 _db.MarketAssets.Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null),
-                VerkochtCutoff());
+                aanbod, verkochtCutoff);
 
             losseQuery = ToepassGeoFilter(losseQuery, geoMunicipalityId, geoMunicipalSectionId, fallbackZips, fallbackSectionCity);
 
@@ -356,10 +402,14 @@ public class MarktanalyseService : IMarktanalyseService
                 && cus.Count > 0)
             {
                 unitStatsByProject[project.Id] = cus
-                    .Select(cu => new ProjectUnitStat(
-                        cu.Status,
-                        canonicalLifecycleByUnitId.GetValueOrDefault(cu.Id),
-                        cu.Price, cu.PricePerSqm, cu.Area, cu.PropertyType, IsFromCanonical: true))
+                    .Select(cu =>
+                    {
+                        var afg = canonicalAfgeleidByUnitId.GetValueOrDefault(cu.Id) ?? CanonicalAfgeleid.Leeg;
+                        return new ProjectUnitStat(
+                            cu.Status, afg.Lifecycle,
+                            cu.Price, cu.PricePerSqm, cu.Area, cu.PropertyType, IsFromCanonical: true,
+                            VerkochtOp: afg.VerkochtOp, DoorlooptijdDagen: afg.DoorlooptijdDagen);
+                    })
                     .ToList();
             }
             else
@@ -374,10 +424,18 @@ public class MarktanalyseService : IMarktanalyseService
                         prijzenPerEenheid.TryGetValue(u.Id, out var snap);
                         return new ProjectUnitStat(
                             u.SaleStatus, u.LifecycleStatus, snap?.AskingPrice, snap?.PricePerSqm,
-                            u.LivingArea, u.PropertyType, IsFromCanonical: false);
+                            u.LivingArea, u.PropertyType, IsFromCanonical: false,
+                            VerkochtOp: SaleStateHelpers.VerkoopDatum(u),
+                            DoorlooptijdDagen: SaleStateHelpers.DoorlooptijdDagen(u));
                     })
                     .ToList();
             }
+
+            // Modus "Verkocht": enkel de units die in de periode verkocht zijn tellen mee.
+            if (enkelVerkocht)
+                unitStatsByProject[project.Id] = unitStatsByProject[project.Id]
+                    .Where(s => s.VerkochtOp.HasValue && s.VerkochtOp.Value >= verkochtCutoff)
+                    .ToList();
         }
         var allUnitStats = unitStatsByProject.Values.SelectMany(s => s).ToList();
 
@@ -390,7 +448,9 @@ public class MarktanalyseService : IMarktanalyseService
                 prijzenPerEenheid.TryGetValue(e.Id, out var snap);
                 return new ProjectUnitStat(
                     e.SaleStatus, e.LifecycleStatus, snap?.AskingPrice, snap?.PricePerSqm,
-                    e.LivingArea, e.PropertyType, IsFromCanonical: false);
+                    e.LivingArea, e.PropertyType, IsFromCanonical: false,
+                    VerkochtOp: SaleStateHelpers.VerkoopDatum(e),
+                    DoorlooptijdDagen: SaleStateHelpers.DoorlooptijdDagen(e));
             })
             .ToList();
         var allCombinedStats = allUnitStats.Concat(looseUnitStats).ToList();
@@ -438,8 +498,24 @@ public class MarktanalyseService : IMarktanalyseService
             .Where(u => u.Area.HasValue && u.Area > 0)
             .Select(u => u.Area!.Value).ToList();
 
+        // Periode-KPI's: verkopen en doorlooptijd binnen het gekozen venster
+        var verkochtInPeriode = allCombinedStats
+            .Where(u => u.VerkochtOp.HasValue && u.VerkochtOp.Value >= verkochtCutoff)
+            .ToList();
+        var doorlooptijden = verkochtInPeriode
+            .Where(u => u.DoorlooptijdDagen.HasValue)
+            .Select(u => u.DoorlooptijdDagen!.Value)
+            .ToList();
+
         vm.Kpi = new GemeenteKpiViewModel
         {
+            NietActieveProjecten = projecten.Count(p => !p.IsActive),
+            VerkochtInPeriode    = verkochtInPeriode.Count,
+            AbsorptiePerMaand    = periodeMaanden > 0
+                ? Math.Round((decimal)verkochtInPeriode.Count / periodeMaanden, 1)
+                : null,
+            MediaanDoorlooptijdDagen = SaleStateHelpers.Mediaan(doorlooptijden),
+            DoorlooptijdAantal       = doorlooptijden.Count,
             ActieveProjecten     = projecten.Count,
             AantalProjectUnits   = allUnitStats.Count,
             AantalLosseEenheden  = losseEenhedenUniek.Count,
@@ -556,15 +632,32 @@ public class MarktanalyseService : IMarktanalyseService
     // ── Status-/zichtbaarheidshelpers ─────────────────────────────────────────
 
     /// <summary>
-    /// Losse eenheden: actief aanbod, plus (vermoedelijk) verkochte panden waarvan de
-    /// verkoop niet ouder is dan <paramref name="verkochtCutoff"/>. EF-vertaalbaar.
+    /// Verkocht (bronstatus of lifecycle) met een verkoopdatum op of na <paramref name="verkochtCutoff"/>.
+    /// EF-vertaalbare tegenhanger van SaleStateHelpers.VerkoopDatum: voor verkochte assets is
+    /// LifecycleStatusUpdatedAt altijd gevuld, dus de COALESCE-keten volstaat.
     /// </summary>
-    private static IQueryable<MarketAsset> ToepassLosseZichtbaarheid(IQueryable<MarketAsset> query, DateTime verkochtCutoff) =>
-        query.Where(a => a.IsActive
-            || ((a.LifecycleStatus == AssetLifecycleStatus.SoldConfirmed
+    private static IQueryable<MarketAsset> ToepassVerkochtInPeriode(IQueryable<MarketAsset> query, DateTime verkochtCutoff) =>
+        query.Where(a =>
+            (a.SaleStatus == SaleStatus.Sold
+             || a.LifecycleStatus == AssetLifecycleStatus.SoldConfirmed
+             || a.LifecycleStatus == AssetLifecycleStatus.LikelySold)
+            && (a.FirstSoldAt ?? a.LifecycleStatusUpdatedAt ?? a.StatusChangedAt) >= verkochtCutoff);
+
+    /// <summary>
+    /// Aanbodfilter op losse eenheden (die krijgen IsActive=false zodra ze verkocht zijn):
+    /// "Actueel" = actief aanbod, "Verkocht" = enkel verkocht in de periode,
+    /// anders actief aanbod plus verkocht in de periode. EF-vertaalbaar.
+    /// </summary>
+    private static IQueryable<MarketAsset> ToepassAanbodFilter(IQueryable<MarketAsset> query, string aanbod, DateTime verkochtCutoff) => aanbod switch
+    {
+        "Actueel"  => query.Where(a => a.IsActive),
+        "Verkocht" => ToepassVerkochtInPeriode(query, verkochtCutoff),
+        _ => query.Where(a => a.IsActive
+            || ((a.SaleStatus == SaleStatus.Sold
+                 || a.LifecycleStatus == AssetLifecycleStatus.SoldConfirmed
                  || a.LifecycleStatus == AssetLifecycleStatus.LikelySold)
-                && a.LifecycleStatusUpdatedAt != null
-                && a.LifecycleStatusUpdatedAt >= verkochtCutoff));
+                && (a.FirstSoldAt ?? a.LifecycleStatusUpdatedAt ?? a.StatusChangedAt) >= verkochtCutoff))
+    };
 
     /// <summary>
     /// Statusfilter "Beschikbaar"/"Verkocht" op MarketAsset-niveau, met dezelfde regel als
@@ -584,11 +677,13 @@ public class MarktanalyseService : IMarktanalyseService
     };
 
     /// <summary>
-    /// Leidt per CanonicalUnit een lifecycle af uit zijn bron-units: verkocht zodra één bron
-    /// het bevestigt, vermoedelijk verkocht als álle bronnen uit het aanbod verdwenen zijn,
-    /// anders null (de bronstatus op de CanonicalUnit zelf blijft dan leidend).
+    /// Leidt per CanonicalUnit lifecycle, verkoopdatum en doorlooptijd af uit zijn bron-units:
+    /// verkocht zodra één bron het bevestigt, vermoedelijk verkocht als álle bronnen uit het
+    /// aanbod verdwenen zijn, anders geen lifecycle (de bronstatus op de CanonicalUnit zelf
+    /// blijft dan leidend). Doorlooptijd loopt van de vroegste waarneming over alle bronnen
+    /// tot de vroegste verkoopdatum.
     /// </summary>
-    private async Task<Dictionary<long, AssetLifecycleStatus?>> LaadCanonicalLifecyclesAsync(
+    private async Task<Dictionary<long, CanonicalAfgeleid>> LaadCanonicalAfgeleidAsync(
         IReadOnlyCollection<CanonicalUnit> canonicalUnits, CancellationToken ct)
     {
         var sourceIds = canonicalUnits
@@ -598,34 +693,41 @@ public class MarktanalyseService : IMarktanalyseService
             .ToList();
 
         if (sourceIds.Count == 0)
-            return canonicalUnits.ToDictionary(cu => cu.Id, _ => (AssetLifecycleStatus?)null);
+            return canonicalUnits.ToDictionary(cu => cu.Id, _ => CanonicalAfgeleid.Leeg);
 
         var bronStatus = await _db.MarketAssets
             .Where(a => sourceIds.Contains(a.Id))
-            .Select(a => new { a.Id, a.SaleStatus, a.LifecycleStatus })
+            .Select(a => new { a.Id, a.SaleStatus, a.LifecycleStatus, a.FirstSeenAt, a.FirstSoldAt, a.LifecycleStatusUpdatedAt, a.StatusChangedAt })
             .AsNoTracking()
-            .ToDictionaryAsync(a => a.Id, a => new BronStatus(a.SaleStatus, a.LifecycleStatus), ct);
+            .ToDictionaryAsync(
+                a => a.Id,
+                a => new BronStatus(a.SaleStatus, a.LifecycleStatus, a.FirstSeenAt, a.FirstSoldAt, a.LifecycleStatusUpdatedAt, a.StatusChangedAt),
+                ct);
 
         return canonicalUnits.ToDictionary(
             cu => cu.Id,
-            cu => AfgeleideCanonicalLifecycle(cu.SourceAssets
+            cu => AfgeleideCanonical(cu.SourceAssets
                 .Select(sa => bronStatus.GetValueOrDefault(sa.MarketAssetId))
                 .Where(b => b is not null)
                 .Select(b => b!)));
     }
 
-    private static AssetLifecycleStatus? AfgeleideCanonicalLifecycle(IEnumerable<BronStatus> bronnen)
+    private static CanonicalAfgeleid AfgeleideCanonical(IEnumerable<BronStatus> bronnen)
     {
         var lijst = bronnen.ToList();
-        if (lijst.Count == 0) return null;
+        if (lijst.Count == 0) return CanonicalAfgeleid.Leeg;
 
+        AssetLifecycleStatus? lifecycle = null;
         if (lijst.Any(b => b.SaleStatus == SaleStatus.Sold || b.LifecycleStatus == AssetLifecycleStatus.SoldConfirmed))
-            return AssetLifecycleStatus.SoldConfirmed;
+            lifecycle = AssetLifecycleStatus.SoldConfirmed;
+        else if (lijst.All(b => b.LifecycleStatus == AssetLifecycleStatus.LikelySold))
+            lifecycle = AssetLifecycleStatus.LikelySold;
 
-        if (lijst.All(b => b.LifecycleStatus == AssetLifecycleStatus.LikelySold))
-            return AssetLifecycleStatus.LikelySold;
+        var verkoopDatums = lijst.Select(b => b.VerkoopDatum).Where(d => d.HasValue).Select(d => d!.Value).ToList();
+        var verkochtOp = lifecycle.HasValue && verkoopDatums.Count > 0 ? verkoopDatums.Min() : (DateTime?)null;
+        var eersteWaarneming = lijst.Min(b => b.FirstSeenAt);
 
-        return null;
+        return new CanonicalAfgeleid(lifecycle, verkochtOp, SaleStateHelpers.DoorlooptijdDagen(eersteWaarneming, verkochtOp));
     }
 
     // ── Geo-filter helpers ────────────────────────────────────────────────────
@@ -914,6 +1016,9 @@ public class MarktanalyseService : IMarktanalyseService
                     Verkoopgraad     = pct,
                     GemiddeldePrijs      = unitPrices.Count > 0 ? Math.Round(unitPrices.Average(), 0) : null,
                     GemiddeldePrijsPerM2 = unitPpSqm.Count > 0  ? Math.Round(unitPpSqm.Average(), 0)  : null,
+                    IsActief             = project.IsActive,
+                    MediaanDoorlooptijdDagen = SaleStateHelpers.Mediaan(
+                        stats.Where(u => u.DoorlooptijdDagen.HasValue).Select(u => u.DoorlooptijdDagen!.Value)),
                     Straat      = project.Street,
                     Huisnummer  = project.HouseNumber,
                     Postcode    = lok?.ZipCode ?? project.PostalCode,
@@ -978,6 +1083,8 @@ public class MarktanalyseService : IMarktanalyseService
                     Status               = statusLabel,
                     AangeboenDoor        = bron,
                     SourceUrl            = sourceUrl,
+                    VerkochtOp           = SaleStateHelpers.VerkoopDatum(e),
+                    DoorlooptijdDagen    = SaleStateHelpers.DoorlooptijdDagen(e),
                     LinkedCanonicalUnitId = e.LinkedCanonicalUnitId,
                     GekoppeldProjectNaam  = projectNaam
                 };
@@ -1203,16 +1310,17 @@ public class MarktanalyseService : IMarktanalyseService
                         PrijsPerM2         = ppSqm,
                         Status             = MapStatusLabel(unit.SaleStatus, unit.LifecycleStatus),
                         IsProject          = true,
-                        Verkoopgraad       = vkGraad
+                        Verkoopgraad       = vkGraad,
+                        DoorlooptijdDagen  = SaleStateHelpers.DoorlooptijdDagen(unit)
                     });
                 }
             }
         }
 
         // ── Losse listings ────────────────────────────────────────────────────
-        var lq = ToepassLosseZichtbaarheid(
+        var lq = ToepassAanbodFilter(
             _db.MarketAssets.Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null),
-            VerkochtCutoff());
+            "Alles", VerkochtCutoff());
         lq = useRondAdres
             ? heeftGeoCenter
                 ? lq.Where(a => a.Latitude.HasValue && a.Longitude.HasValue
@@ -1281,7 +1389,8 @@ public class MarktanalyseService : IMarktanalyseService
                     PrijsPerM2  = ppSqm,
                     Status      = MapStatusLabel(e.SaleStatus, e.LifecycleStatus),
                     IsProject   = false,
-                    SourceUrl   = lst?.Url
+                    SourceUrl   = lst?.Url,
+                    DoorlooptijdDagen = SaleStateHelpers.DoorlooptijdDagen(e)
                 });
             }
         }
@@ -1457,9 +1566,9 @@ public class MarktanalyseService : IMarktanalyseService
         }
 
         // ── Losse listings binnen bounding box ────────────────────────────────
-        var lq = ToepassLosseZichtbaarheid(
+        var lq = ToepassAanbodFilter(
                 _db.MarketAssets.Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null),
-                VerkochtCutoff())
+                "Alles", VerkochtCutoff())
             .Where(a => a.Latitude.HasValue && a.Longitude.HasValue
                      && a.Latitude >= minLat && a.Latitude <= maxLat
                      && a.Longitude >= minLng && a.Longitude <= maxLng);
@@ -1740,6 +1849,8 @@ public class MarktanalyseService : IMarktanalyseService
                     Vraagprijs       = snap?.AskingPrice,
                     PrijsPerM2       = snap?.PricePerSqm,
                     Status           = status,
+                    VerkochtOp       = SaleStateHelpers.VerkoopDatum(u),
+                    DoorlooptijdDagen = SaleStateHelpers.DoorlooptijdDagen(u),
                     SourceUrl        = listing?.Url is { Length: > 0 } url ? url : null,
                     BronNaam         = bronNaam,
                     OuderProjectNaam = !string.IsNullOrEmpty(ouderProjectNaam) ? ouderProjectNaam : null,
@@ -1759,7 +1870,7 @@ public class MarktanalyseService : IMarktanalyseService
 
                 if (canonicalUnits.Count > 0)
                 {
-                    var canonicalLifecycle = await LaadCanonicalLifecyclesAsync(canonicalUnits, ct);
+                    var canonicalAfgeleid = await LaadCanonicalAfgeleidAsync(canonicalUnits, ct);
 
                     // Prijs per source-unit opzoeken via de snapshot-dictionary
                     var sourceAssetIds = canonicalUnits
@@ -1797,7 +1908,8 @@ public class MarktanalyseService : IMarktanalyseService
                                 _                      => cu.PropertyType.ToString()
                             };
 
-                            var statusLabel = StatusLabelUitgebreid(cu.Status, canonicalLifecycle.GetValueOrDefault(cu.Id));
+                            var afg = canonicalAfgeleid.GetValueOrDefault(cu.Id) ?? CanonicalAfgeleid.Leeg;
+                            var statusLabel = StatusLabelUitgebreid(cu.Status, afg.Lifecycle);
 
                             var bronnen = cu.SourceAssets.Select(sa =>
                             {
@@ -1835,6 +1947,8 @@ public class MarktanalyseService : IMarktanalyseService
                                 PrijsPerM2               = cu.PricePerSqm,
                                 Status                   = statusLabel,
                                 Verdieping               = cu.Floor,
+                                VerkochtOp               = afg.VerkochtOp,
+                                DoorlooptijdDagen        = afg.DoorlooptijdDagen,
                                 IsAmbiguous              = cu.IsAmbiguous,
                                 HeeftPrijsConflict       = cu.HasPriceConflict,
                                 HeeftStatusConflict      = cu.HasStatusConflict,
@@ -1850,6 +1964,7 @@ public class MarktanalyseService : IMarktanalyseService
             // KPI's berekenen — gebruik canonical units als beschikbaar (vermijdt dubbeltellingen)
             int kpiTotal, kpiAvail, kpiSold, kpiSoldConfirmed, kpiLikelySold;
             List<decimal> kpiPrices, kpiPpSqms, kpiAreas;
+            List<int> kpiDoorlooptijden;
 
             if (canonicalUnitRows.Count > 0)
             {
@@ -1861,6 +1976,7 @@ public class MarktanalyseService : IMarktanalyseService
                 kpiPrices        = canonicalUnitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
                 kpiPpSqms        = canonicalUnitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
                 kpiAreas         = canonicalUnitRows.Where(u => u.Oppervlakte.HasValue).Select(u => u.Oppervlakte!.Value).ToList();
+                kpiDoorlooptijden = canonicalUnitRows.Where(u => u.DoorlooptijdDagen.HasValue).Select(u => u.DoorlooptijdDagen!.Value).ToList();
             }
             else
             {
@@ -1872,6 +1988,7 @@ public class MarktanalyseService : IMarktanalyseService
                 kpiPrices        = unitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
                 kpiPpSqms        = unitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
                 kpiAreas         = units.Where(u => u.LivingArea is > 0).Select(u => u.LivingArea!.Value).ToList();
+                kpiDoorlooptijden = unitRows.Where(u => u.DoorlooptijdDagen.HasValue).Select(u => u.DoorlooptijdDagen!.Value).ToList();
             }
 
             var prices          = kpiPrices;
@@ -1928,6 +2045,9 @@ public class MarktanalyseService : IMarktanalyseService
                 GemiddeldePrijs      = prices.Count > 0 ? Math.Round(prices.Average(), 0) : null,
                 GemiddeldePrijsPerM2 = ppSqms.Count > 0 ? Math.Round(ppSqms.Average(), 0) : null,
                 GemiddeldeOppervlakte = areas.Count > 0 ? Math.Round(areas.Average(), 0) : null,
+                MediaanDoorlooptijdDagen = SaleStateHelpers.Mediaan(kpiDoorlooptijden),
+                DoorlooptijdAantal   = kpiDoorlooptijden.Count,
+                IsActief             = project.IsActive,
                 Units                = unitRows,
                 CanonicalUnits       = canonicalUnitRows,
                 AndereProjecten      = navOpties,
@@ -1940,6 +2060,7 @@ public class MarktanalyseService : IMarktanalyseService
         {
             Id          = id,
             ProjectNaam = projectNaam!,
+            IsActief    = project.IsActive,
             Straat      = project.Street,
             Huisnummer  = project.HouseNumber,
             Postcode    = projectLok?.ZipCode ?? project.PostalCode,

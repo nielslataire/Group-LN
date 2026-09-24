@@ -436,6 +436,23 @@ canWriteInvoices-gated) and `Views/Home/Index.cshtml` (5 actions, Projectleider-
 example" below) for the reference pairing (`@@section PageActions` + `@@section
 MobileQuickActions`).
 
+**A page that defines `@@section PageActions` for list/toolbar-style actions (export, print, "add
+X", a ⋯-menu — anything that isn't a single record's own save/cancel/delete) MUST also define
+`@@section MobileQuickActions` mirroring those same actions, styled as this bar — never leave gsm
+with nothing just because the topbar's own actions vanish there (`.gl-v2-topbar-actions` is
+`display:none` below 768px, shell-wide, so an omitted `MobileQuickActions` section means those
+actions simply disappear on phone, silently, with no error to catch it.** Caught on
+`Projecten/DetailContractsV2.cshtml` (2026-09-24): its three topbar actions (Exporteren/Afdrukken/
+Leverancier toevoegen) had no `MobileQuickActions` counterpart at all, so a phone user had no way to
+reach any of them — while `Projecten/DetailClientsV2.cshtml`, built in the same pass, got this right.
+Do not confuse this with `.gl-v2-form-actionbar` (**"Actiebalk voor formulieren"** below): a
+single-record detail/form page's Bewerken/Toevoegen/Verwijderen-style actions belong there instead,
+already correctly `position:fixed` at every width including phone — that pattern is a deliberate,
+already-consistent alternative for that page shape, not a gap to backfill with quick-action tiles.
+The question to ask for any new page: does `@@section PageActions` hold list/toolbar actions (→ needs
+a `MobileQuickActions` twin, this section) or does the page instead already have/need a
+`.gl-v2-form-actionbar` (→ nothing further needed, it already covers phone)?
+
 **Fixed height, not measured.** The bar's height is one CSS custom property,
 `--gl-v2-qa-bar-h: 64px` (set on `.gl-v2`, covers the icon row only — `env(safe-area-inset-bottom)`
 is added separately in every `calc()` that uses it, never baked into the 64px itself, so it doesn't
@@ -4041,3 +4058,113 @@ Also made `_SiteManagerNewModalV2.cshtml`'s own JS more defensive while investig
 but a real defensive improvement in its own right: it removes any dependency on `bootstrap.bundle.
 min.js` having already executed by the time this particular inline `<script>` runs, which the eager
 form silently assumed.
+
+## Follow-up — the werfleider modal's REAL root cause (z-index was only half the story), plus a
+## missing "niet-opgeslagen wijzigingen"-prompt on Annuleren/de terugknop
+
+**The z-index fix above was real and necessary, but not sufficient — the user's very next report
+("ik krijg een overlay en een body maar geen achtergrond van mijn modal") pointed at a second,
+bigger bug the z-index fix had just made visible rather than fixed.** `_SiteManagerNewModalV2.cshtml`
+was being called from inside `EditContractV2.cshtml`'s `@@section PageScripts`, not from the page
+body. `_LayoutV2.cshtml` closes its own `<div class="gl-v2 …">` wrapper — the ONE element every
+`--gl-v2-*` custom property is actually defined on (`gl-v2-tokens.css`: `.gl-v2 { --gl-v2-surface:
+#fff; …}`, deliberately scoped there and not on `:root`, so nothing outside the pilot can ever read
+these tokens) — well before `@@RenderSection("PageScripts", required: false)` renders. A modal
+placed inside that section therefore renders as a **sibling of `<body>`, entirely outside `.gl-v2`**:
+every `var(--gl-v2-…)` inside it resolves to nothing (an invalid reference → the property's initial
+value — `transparent` for `background`), which is exactly "an overlay and a body but no background":
+the backdrop is Bootstrap's own unscoped `rgba(0,0,0,.5)` (works fine, doesn't need any gl-v2 token),
+the modal-body TEXT still renders (color falls back to black/inherit, still legible-ish), but
+`.gl-v2-modal-form .modal-content`'s `background: var(--gl-v2-surface)` — along with its shadow,
+radius-adjacent chrome, everything else in that rule block that leans on a `--gl-v2-*` token —
+silently does nothing. The z-index fix from the previous entry was real (Bootstrap's default 1055
+really was losing to the rail/topbar's 99996–99999 tier) but only explains *why the modal rendered
+behind the page chrome*; it says nothing about *why the dialog itself looked unstyled* once lifted
+above that chrome — two independent bugs stacked on the same element, the first one visually masking
+the second until it was fixed. `Klanten/Modals/_VatLookupModalV2.cshtml` was never actually a proven
+"this pattern works" reference for this specific failure mode — it happened to dodge it by luck: its
+own caller (`Klanten/EditV2.cshtml`) includes it *before* `@@section PageScripts`, not inside it.
+
+**Fix: moved the partial's call site in `EditContractV2.cshtml`** from inside `@@section PageScripts`
+to the page body, right after the form closes (next to `Partials/_BijbestellingModal`, which was
+already correctly placed there) — now a real descendant of `.gl-v2`, tokens resolve, background
+shows. The partial's own inline `<script>` (element lookups + the `AddCompanyContactQuick` AJAX
+flow) depended on running *after* `jquery.min.js`, which is why it used to need to live inside
+`PageScripts` (loaded near the end of `<body>`, after jQuery) — moving the markup earlier in the DOM
+would otherwise have broken that script, since it now sits *before* jQuery's own `<script>` tag in
+source order. Fixed the same way `Partials/_BijbestellingModal.cshtml` already solves this exact
+problem: wrapped the whole thing in `document.addEventListener('DOMContentLoaded', …)`, which fires
+only once every script on the page (jQuery included) has already run, regardless of where in the DOM
+the listening script itself physically sits. **Checked project-wide for the same mis-placement**
+(any `.gl-v2-modal-*`/gl-v2-styled partial called from inside a `@@section PageScripts` block) —
+`_SiteManagerNewModalV2` was the only one; not a systemic pattern, just a one-off copy-paste from
+wherever the legacy `_SiteManagerNewModal.cshtml` used to sit (legacy modals don't care about `.gl-v2`
+scoping at all, so that placement was harmless there).
+
+**Separately, the user asked for the "niet-opgeslagen wijzigingen" (unsaved-changes) prompt on
+Annuleren/the topbar back-button, pointing at `Klanten/EditProjectV2.cshtml` as the reference.**
+`EditContractV2.cshtml` already had the `#gl-v2-ec-dirty-badge` badge in its markup (`@@section
+PageActions`) from the original punt-14c build, but nothing had ever wired it up — same gap on
+Annuleren (`#gl-v2-ec-cancel-link`) and the layout-wide `#gl-v2-topbar-back-link`, both plain links
+that just navigated away unconditionally. Brought over verbatim, not reinvented: `markDirty()`/
+`isFormDirty()`/`initDirtyBadge()`/`initDiscardChangesModal()` from `gl-v2-klanten-editproject.js`,
+now in `gl-v2-projecten-editcontract.js`, plus a new `#gl-v2-ec-discard-changes-modal` (Type 1
+`.gl-v2-modal-confirm`, `is-warning`) copied from `Klanten/EditProjectV2.cshtml`'s own markup,
+placed in the body next to the other two modals (same `.gl-v2`-scoping requirement as above).
+`initDirtyBadge()`'s form-level `input`/`change` listener is deliberately the **last** thing wired
+up, inside the final `$(document).ready(...)` block — the existing `.trigger("change")` calls
+earlier in the file (Waarborg-type/Korting-contant, purely to sync dependent-field visibility on
+load) register their own ready-callback *before* that one, so by jQuery's registration-order
+guarantee they fire first, before `initDirtyBadge()`'s listener even exists to catch them as a false
+"you changed something" on page load — same reasoning `gl-v2-klanten-editproject.js` already
+follows (`initDirtyBadge()` listed last in its own init-call sequence). The generic listener already
+catches most of the page for free — the new `GlV2Select`/`GlV2DateTime` hidden inputs both dispatch a
+real bubbling `change` event on commit — but a few custom widgets don't naturally bubble a change
+(`#ddlCompany`'s select2 pick/clear only sets `.val()` programmatically; the lot-picker's AJAX-add/
+remove flow; a newly-created werfleider selecting itself into `#ddlSiteManager`), so those call
+`markDirty()` explicitly, matching how `gl-v2-klanten-editproject.js`'s own `initMultiSelects()`/
+`initSearchSelects()` do the same for their own non-native controls. The werfleider modal's success
+handler lives in a separate script scope (its own partial, its own IIFE) — exposed via
+`window.glV2EditContractMarkDirty` so it can call in without merging the two files.
+
+## Follow-up — EditContractV2 field-width restructure + a reusable short-title pattern
+
+Four small, concrete layout asks from live testing, all on `Projecten/EditContractV2.cshtml`.
+
+**Algemeen card: Contractnaam/Leverancier/Werfleider now stack full-width (`.gl-v2-ec-col-12` each)**
+instead of sharing one row (`col-5`/`col-3`/`col-4`) — a deliberate user call, not a mockup mismatch
+this time (14c's own reference sheet actually shows them stacked too; the side-by-side layout was
+this page's own earlier choice, now corrected to match).
+
+**Voorwaarden card regrouped into three explicit rows** instead of one grid that happened to pack
+three fields per row by column-math coincidence: BTW + Betaaltermijn (`col-6`/`col-6`, was `col-3`/
+`col-3` sharing a row with Korting contant), Korting contant alone (`col-12`, was `col-6`), Waarborg
+type + Waarborg % (`col-6`/`col-6`, was `col-6`/`col-3` — the `%` field only used half its old row).
+
+**`ContractSentDate` ("Verstuurd op") gets an explicit `.gl-v2-ec-sentdate-col` class + its own
+`<768px` rule (`grid-column: 1 / -1`)**, forcing it onto its own full row on phone specifically
+(desktop/tablet keep it `col-6` next to Opmerking verzending). The page's shared mobile rule
+(`.gl-v2-ec-col-6 { grid-column: 1 }` once `.gl-v2-ec-fields` drops to one column) already produces
+the same visual result on its own, but this makes the intent explicit and independently verifiable
+for this one field rather than relying on a side effect of the generic column system.
+
+**New reusable pattern: `ViewData["TitleMobile"]`, `_LayoutV2.cshtml`.** The topbar `<h1>` can now
+carry an optional shorter title for `<768px` — EditContractV2 sets `"Contract bewerken — {leverancier}"`
+for desktop/tablet but just `"Contract bewerken"` on a phone, where the full string was crowding the
+topbar. Same shape as the pre-existing `.gl-v2-userbox-name-full`/`-short` split (two `<span>`s, CSS
+toggles which one shows) rather than two separate `<h1>` elements — one real heading stays in the
+document outline either way. Fully backward-compatible: `ViewData["TitleMobile"]` defaults to the
+regular title when a page doesn't set it, so every other existing gl-v2 page renders identically to
+before, char-for-char (the `<h1>` falls back to plain `@@pageTitle` text with neither span in the
+DOM at all, not just an unused hidden span).
+
+**Checked but left unchanged: `.gl-v2-pcd-meta` (`Projecten/DetailContractV2.cshtml`), reported as
+"too big vs. the mockup."** Re-verified against design-handoff 14b's own markup byte-for-byte
+(`font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58`) — an exact match for the shipped rule
+(`font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted)`), and identical to the same
+"meta line under the title" convention on both sibling pages that already use it
+(`.gl-v2-pd-meta` on `Projecten/DetailV2`, `.gl-v2-kd-meta` on `Klanten/DetailV2` — both also
+`450 11.5px`). No conflicting rule, no scoping bug, no responsive override touches it. Left as-is
+rather than shrinking a value that's already correct and consistent three-for-three — flagged back
+to the user instead of guessed at, since changing it without finding an actual defect would just
+introduce the inconsistency it's trying to avoid.

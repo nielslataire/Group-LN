@@ -117,6 +117,7 @@ public static class InfrastructureExtensions
         // Tijdelijke tests
         services.AddScoped<ZimmoDetailDiscoveryTest>();
         services.AddScoped<ZimmoDirectDetailTest>();
+        services.AddScoped<ZimmoSearchTest>();
 
         return services;
     }

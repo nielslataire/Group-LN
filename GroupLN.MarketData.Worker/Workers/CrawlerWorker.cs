@@ -294,10 +294,20 @@ public class CrawlerWorker : BackgroundService
 
         try
         {
+            var timeoutHours = _settings.CrawlTimeoutHours > 0 ? _settings.CrawlTimeoutHours : 4;
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(TimeSpan.FromHours(4));
+            timeoutCts.CancelAfter(TimeSpan.FromHours(timeoutHours));
 
             var result = await crawler.CrawlAsync(source, timeoutCts.Token);
+
+            if (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                // De crawler vangt de annulering zelf op en geeft een gedeeltelijk resultaat terug.
+                result.IsPartialRun = true;
+                result.MarkInactiveSkipReason ??= $"Afgebroken door time-out van {timeoutHours}u";
+                result.Message = $"Afgebroken door time-out van {timeoutHours}u — verhoog CrawlTimeoutHours of verklein de scope.";
+                _logger.LogWarning("[{Source}] {Message}", source.Name, result.Message);
+            }
 
             await runService.CompleteRunAsync(runId, result, cancellationToken);
             await sourceService.MarkCrawlSucceededAsync(source.Name, result, nextCrawlAtOnSuccess, cancellationToken);

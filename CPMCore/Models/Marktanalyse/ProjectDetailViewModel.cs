@@ -25,6 +25,11 @@ public class ProjectDetailViewModel
     public decimal? GemiddeldePrijs { get; set; }
     public decimal? GemiddeldePrijsPerM2 { get; set; }
     public decimal? GemiddeldeOppervlakte { get; set; }
+    public int? MediaanDoorlooptijdDagen { get; set; }
+    public int DoorlooptijdAantal { get; set; }
+
+    /// <summary>False als het project niet meer online staat (uitverkocht of offline gehaald).</summary>
+    public bool IsActief { get; set; } = true;
 
     // Eenheden (source units — gebruikt als CanonicalUnits leeg is)
     public List<UnitRijViewModel> Units { get; set; } = new();
@@ -73,6 +78,8 @@ public class UnitRijViewModel
     public string? BronNaam { get; set; }
     public string? OuderProjectNaam { get; set; }
     public bool IsBronActief { get; set; } = true;
+    public DateTime? VerkochtOp { get; set; }
+    public int? DoorlooptijdDagen { get; set; }
 }
 
 public class ProjectNavigatieOptie
@@ -94,6 +101,8 @@ public class CanonicalUnitViewModel
     public decimal? PrijsPerM2 { get; set; }
     public string Status { get; set; } = "";
     public int? Verdieping { get; set; }
+    public DateTime? VerkochtOp { get; set; }
+    public int? DoorlooptijdDagen { get; set; }
     public bool IsAmbiguous { get; set; }
     public bool HeeftPrijsConflict { get; set; }
     public bool HeeftStatusConflict { get; set; }

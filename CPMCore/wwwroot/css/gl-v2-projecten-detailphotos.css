@@ -7,13 +7,42 @@
 
 /* ── Topbar actions ─────────────────────────────────────────────────────────────────────────── */
 .gl-v2-dp-topbar-actions { display: flex; align-items: center; gap: 8px; }
-/* Onder 1024px (tablet + gsm) verhuizen "Publieke pagina bekijken"/"Media uploaden" naar de
-   MobileQuickActions-balk onderaan (zelfde balk-bereik als .gl-v2-mobile-quickactions zelf,
-   gl-v2-shell.css) — het shell-brede .gl-v2-topbar-actions{display:none} geldt vandaag enkel
-   <768px, dus hier expliciet ook voor het 768–1023.98px-tablet-bereik van DEZE pagina, zonder de
-   generieke regel voor elke andere gl-v2-pagina te verbreden. */
-@media (max-width: 1023.98px) {
+.gl-v2-dp-tablet-show { display: none; }
+
+/* Design-handoff punt 15c (834px tablet): de topbar houdt BEIDE acties — de secundaire wordt een
+   34px icoonknop, de primaire behoudt een label maar ingekort ("Uploaden"). Enkel op gsm (<768px,
+   zelfde drempel als het shell-brede .gl-v2-topbar-actions{display:none}) verhuizen ze naar de
+   MobileQuickActions-balk onderaan — op tablet blijft die balk daarom uit, incl. de bodemruimte die
+   .gl-v2-content.has-mobile-quickactions er anders voor reserveert (gl-v2-shell.css), anders staat
+   de balk daar leeg onder de topbar-knoppen die 'm al vervangen. */
+@media (max-width: 767.98px) {
     .gl-v2-dp-topbar-actions { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-mobile-quickactions { display: none; }
+    .gl-v2-content.has-mobile-quickactions { padding-bottom: 0; }
+
+    .gl-v2-dp-topbar-actions .gl-v2-dp-tablet-label,
+    .gl-v2-dp-topbar-actions .gl-v2-dp-tablet-hide { display: none; }
+    .gl-v2-dp-topbar-actions .gl-v2-dp-tablet-show { display: inline; }
+    .gl-v2-dp-topbar-actions .gl-v2-btn-secondary {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    /* Design-handoff 15c punt 8: de selectiebalk toont enkel iconen op tablet, behalve
+       "Verplaatsen naar …" (die blijft z'n label houden — het enige stuk tekst dat context geeft
+       over WAARHEEN, niet te raden vanuit een icoon alleen). Minimaal 38px raakvlak. */
+    .gl-v2-dp-tablet-hide { display: none; }
+    .gl-v2-dp-selectionbar-action { min-width: 38px; padding: 0 10px; justify-content: center; }
+
+    /* Design-handoff 15c: het type-segment (Alles/foto/video) wordt icoon-only, "Alles" (dat toch
+       geen icoon heeft) behoudt enkel z'n tekst zonder aantal. */
+    .gl-v2-dp-segmented[data-segmented="type"] .gl-v2-dp-segment b,
+    .gl-v2-dp-segmented[data-segmented="type"] .gl-v2-dp-segment span { display: none; }
+    .gl-v2-dp-segmented[data-segmented="type"] .gl-v2-dp-segment { min-width: 38px; padding: 0 10px; }
 }
 
 /* .gl-v2-toolbar-card/.gl-v2-toolbar-search have no shared definition in gl-v2-shell.css — same
@@ -32,6 +61,67 @@
 }
 .gl-v2-toolbar-search { flex: 1; min-width: 180px; }
 .gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
+
+/* ── Filter-knop (tablet) — design-handoff 15c punt 4: Zichtbaarheid + Sorteren achter één knop
+   i.p.v. twee eigen toolbarplekken. .gl-v2-dp-filter-panel/-panel-body worden op desktop en gsm
+   `display:contents` (geen eigen doos — de Zichtbaarheid-segmenten en de Sorteren-select stromen
+   dan gewoon als losse toolbar-items, exact zoals vóór deze wijziging) en enkel op tablet een echt
+   zwevend paneel met eigen kop/voet — één en dezelfde DOM/staat op alle breedtes, geen tweede,
+   apart te synchroniseren kopie van dezelfde controls. */
+.gl-v2-dp-filter-trigger {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+    flex: none;
+}
+.gl-v2-dp-filter-trigger i { font-size: 14px; }
+.gl-v2-dp-filter-trigger:hover,
+.gl-v2-dp-filter-trigger.is-open { border-color: var(--gl-v2-primary); }
+.gl-v2-dp-filter-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-primary);
+    color: #fff;
+    font: 600 10px var(--gl-v2-font-sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-dp-filter-badge[hidden] { display: none; }
+
+.gl-v2-dp-filter-panel-header {
+    align-items: center;
+    gap: 10px;
+    height: 54px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    font: 600 14px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-dp-filter-panel-header span:first-child { flex: 1; }
+.gl-v2-dp-filter-clear { border: 0; background: transparent; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; }
+.gl-v2-dp-filter-clear:hover { color: var(--gl-v2-primary); }
+.gl-v2-dp-filter-panel-footer { padding: 12px 16px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-dp-filter-panel-footer .gl-v2-btn { width: 100%; justify-content: center; }
+
+/* Desktop en gsm: geen popover, de twee controls stromen gewoon als toolbar-items (gsm: gestapelde
+   kolom, zie de bestaande <768px-regel verderop — die regelt de kolomrichting, niet deze regel). */
+@media (max-width: 767.98px), (min-width: 1024px) {
+    .gl-v2-dp-filter-panel,
+    .gl-v2-dp-filter-panel-body { display: contents; }
+    .gl-v2-dp-filter-panel-header,
+    .gl-v2-dp-filter-panel-footer { display: none; }
+}
 
 /* Elementen die met de kale `hidden`-property getoggled worden (JS) maar ook een klasse dragen die
    zelf een expliciete `display` zet — zonder deze guard wint de auteursklasse van de browser se eigen
@@ -231,6 +321,9 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
 .gl-v2-dp-hero-meta-item span:first-child { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted); }
 .gl-v2-dp-hero-meta-item b { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
 .gl-v2-dp-hero-meta-item .gl-v2-badge { align-self: flex-start; }
+/* Design-handoff 15c punt 5 — het compacte, één-regel-zin-alternatief voor de meta-grid hierboven,
+   getoond onder 1024px (zie .gl-v2-dp-touch-text hieronder). */
+.gl-v2-dp-hero-meta-line { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); font-variant-numeric: tabular-nums; }
 .gl-v2-dp-hero-actions { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; flex-wrap: wrap; }
 .gl-v2-dp-hero-hint { flex: 1; min-width: 140px; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 
@@ -532,22 +625,94 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
 .gl-v2-dp-panel-footer-spacer { flex: 1; }
 
 /* ── Secties beheren — rijenlijst (JS-gerenderd, zelfde look als een compacte tabellijst) ──── */
-.gl-v2-dp-sections-list { display: flex; flex-direction: column; }
+.gl-v2-dp-sections-list { display: flex; flex-direction: column; min-width: 0; }
 .gl-v2-dp-sections-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 6px 10px;
     padding: 9px 2px;
     border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    min-width: 0;
 }
 .gl-v2-dp-sections-row:last-child { border-bottom: 0; }
-.gl-v2-dp-sections-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.gl-v2-dp-sections-row-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+/* flex-basis groot genoeg dat naam+beschrijving altijd hun eigen regel krijgen zodra de rij te smal
+   wordt (modal krimpt naar 380px op tablet) — badge + bewerk-/verwijderknop wikkelen dan naar een
+   tweede regel i.p.v. buiten de kaart te lopen (die zelf geen overflow:hidden/scroll heeft). */
+.gl-v2-dp-sections-row-text { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-dp-sections-row-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-dp-sections-row-desc { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-dp-sections-row-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); white-space: nowrap; }
+.gl-v2-dp-sections-row > .gl-v2-badge,
+.gl-v2-dp-sections-row > .js-gl-v2-dp-sect-edit,
+.gl-v2-dp-sections-row > .js-gl-v2-dp-sect-del { flex: none; }
 .gl-v2-dp-sections-edit { display: flex; flex-direction: column; gap: 8px; padding: 10px 2px; background: #F7F9F5; border-radius: var(--gl-v2-radius-sm); }
 .gl-v2-dp-sections-edit-actions { display: flex; gap: 8px; }
 .gl-v2-dp-sections-new { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+
+/* ── Tablet + gsm (<1024px) — design-handoff 15c punt 5: het hoofdbeeld se metagegevens worden één
+   zin (.gl-v2-dp-hero-meta-line, zie .gl-v2-dp-touch-text hierboven) en de twee acties staan naast
+   elkaar met kortere labels i.p.v. los te wikkelen om de uitleg-hint (die hier verdwijnt). ──────── */
+@media (max-width: 1023.98px) {
+    .gl-v2-dp-hero-actions > button { flex: 1; justify-content: center; }
+
+    /* Design-handoff 15c punt 7: de sectiekop se subtitel verhuist naar een eigen regel i.p.v.
+       achter een ellipsis te verdwijnen, en "Toevoegen" wordt een icoonknop zoals ⋯ ernaast al is. */
+    .gl-v2-dp-section .gl-v2-card-header { flex-wrap: wrap; row-gap: 4px; }
+    .gl-v2-dp-section-desc {
+        flex-basis: 100%;
+        order: 10;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+    .gl-v2-card-header .gl-v2-dp-section-add {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        justify-content: center;
+    }
+}
+
+/* ── Tablet (768–1023.98px) — design-handoff 15c: hoofdbeeld blijft twee kolommen maar de
+   beeldkolom krimpt naar 230px, en het raster toont 3 kaarten per rij i.p.v. auto-fill. ────────── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-dp-hero { grid-template-columns: 230px minmax(0, 1fr); }
+    .gl-v2-dp-hero-media { height: auto; }
+    .gl-v2-card-body.gl-v2-dp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    /* Design-handoff 15c punt 4/"FILTER" OPEN — één knop opent een zwevend paneel met Zichtbaarheid
+       + Sorteren, JS-gepositioneerd t.o.v. de knop (zelfde recept als .gl-v2-select-panel/.gl-v2-menu
+       elders: getBoundingClientRect, buiten-klik/Esc sluit — zie gl-v2-projecten-detailphotos.js). */
+    .gl-v2-dp-filter-trigger { display: flex; }
+    .gl-v2-dp-filter-panel {
+        display: none;
+        position: fixed;
+        width: 300px;
+        max-height: min(420px, calc(100dvh - 24px));
+        box-sizing: border-box;
+        flex-direction: column;
+        border-radius: var(--gl-v2-radius-lg);
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        z-index: 600;
+        overflow: hidden;
+    }
+    .gl-v2-dp-filter-panel.is-open { display: flex; }
+    .gl-v2-dp-filter-panel-header { display: flex; flex: none; }
+    .gl-v2-dp-filter-panel-body {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 12px 16px 14px;
+        overflow-y: auto;
+    }
+    .gl-v2-dp-filter-panel-body .gl-v2-dp-segmented[data-segmented="visibility"] { flex-direction: column; background: transparent; padding: 0; gap: 2px; }
+    .gl-v2-dp-filter-panel-body .gl-v2-dp-segmented[data-segmented="visibility"] .gl-v2-dp-segment { justify-content: flex-start; height: 38px; }
+    .gl-v2-dp-filter-panel-body .gl-v2-dp-sort { width: 100%; }
+    .gl-v2-dp-filter-panel-body .gl-v2-select-panel { position: static; width: 100% !important; max-height: none; box-shadow: none; border: 1px solid var(--gl-v2-hairline); margin-top: 4px; }
+    .gl-v2-dp-filter-panel-footer { display: flex; flex: none; }
+}
 
 /* ── Mobiel (<768px) — detailpaneel wordt volledig scherm, zelfde reden als Modals TYPE 2 (een
    sheet zou de helft van het venster innemen zodra een veld het toetsenbord opent). ──────────── */
@@ -556,7 +721,6 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     .gl-v2-dp-panel.is-open { right: 0; }
     .gl-v2-dp-hero { grid-template-columns: 1fr; }
     .gl-v2-dp-hero-media { height: 160px; }
-    .gl-v2-dp-hero-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gl-v2-dp-panel-fields-row { grid-template-columns: 1fr; }
     .gl-v2-dp-toolbar { flex-direction: column; align-items: stretch; }
     .gl-v2-dp-sort { width: 100%; }

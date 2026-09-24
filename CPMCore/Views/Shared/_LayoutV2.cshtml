@@ -19,6 +19,11 @@
         ? $"{char.ToUpperInvariant(userNameParts[0][0])}. {userNameParts[^1]}"
         : userDisplayName;
     var pageTitle = ViewData["Title"] as string ?? string.Empty;
+    // Optioneel, kortere titel voor <768px (bv. "Contract bewerken" i.p.v. "Contract bewerken —
+    // Dakwerken Demeyer") — enkel gezet door een pagina waarvan de volledige titel op een telefoon
+    // te veel ruimte inneemt/afkapt op een onhandige plek. Onbezet (de meeste pagina's): gewoon
+    // dezelfde titel op elke breedte, geen gedragswijziging.
+    var pageTitleMobile = ViewData["TitleMobile"] as string ?? pageTitle;
     var pageIcon = ViewData["PageIcon"] as string ?? "ph ph-file";
     // Tablet-liggend (1024–1399.98px) herschikt de snelactiebalk normaal tot een rail rechts (design-
     // handoff 7g). Home/Index wil dat niet: die breedte blijft er gewoon de balk onderaan, dezelfde
@@ -116,7 +121,17 @@
                            a page with no heading-1 anywhere. title-attribuut = volledige tekst als tooltip
                            zodra de ellipsis (gl-v2-shell.css) effectief afkapt — design-handoff punt 13
                            "Topbar met lange namen", regel 3. *@
-                        <h1 class="gl-v2-topbar-title" title="@pageTitle">@pageTitle</h1>
+                        <h1 class="gl-v2-topbar-title" title="@pageTitle">
+                            @if (pageTitleMobile != pageTitle)
+                            {
+                                <span class="gl-v2-topbar-title-full">@pageTitle</span>
+                                <span class="gl-v2-topbar-title-short">@pageTitleMobile</span>
+                            }
+                            else
+                            {
+                                @pageTitle
+                            }
+                        </h1>
                         @await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
                     </div>
                     @* Optioneel — design-handoff 8a/8d: statusbadges direct naast de titel (bv.

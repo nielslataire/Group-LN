@@ -369,8 +369,7 @@ End Code
         End Section*@
 
     @* ── Cookietoestemming ── *@
-    @* Meet eerst hoeveel bezoekers effectief niet klikken (zie cookie-consent.js) voor we
-       de banner blokkerend maken — de blokkerende overlay-variant volgt in een latere stap. *@
+    @* Banner staat gecentreerd op het scherm met een blokkerende overlay (zie cookie-consent.css/.js). *@
     <div id="ccConsent" class="cc">
         <div class="cc-overlay" data-cc-close-prefs></div>
 

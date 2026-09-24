@@ -117,6 +117,17 @@ using (var scope = host.Services.CreateScope())
     ConfigDebugLogger.LogAll(logger, configuration, settings, env);
 }
 
+// ── Zimmo zoekpagina-diagnose (geen DB) ──────────────────────────────────
+// dotnet GroupLN.MarketData.Worker.dll --zimmo-search-test [--postcode 8000]
+if (args.Contains("--zimmo-search-test"))
+{
+    var postcodeArg = args.SkipWhile(a => a != "--postcode").Skip(1).FirstOrDefault();
+    logger.LogInformation("[Program] --zimmo-search-test modus — normale worker wordt NIET gestart.");
+    await RunScopedCommandAsync<ZimmoSearchTest>(host, t => t.RunAsync(postcodeArg));
+    logger.LogInformation("[Program] Zimmo zoekpagina-diagnose voltooid. Afsluiten.");
+    return;
+}
+
 // ── Tijdelijke Zimmo detail-test ─────────────────────────────────────────
 if (args.Contains("--zimmo-detail-test"))
 {

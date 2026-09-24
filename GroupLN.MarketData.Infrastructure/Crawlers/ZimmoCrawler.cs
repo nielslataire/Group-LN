@@ -291,9 +291,10 @@ public class ZimmoCrawler : BaseCrawler
                 return ([], null);
             }
 
-            // Listing-URL's uit DOM
+            // Listing-URL's uit DOM — oude markup (.property-item) én Angular-markup (zimmo-listing article h2 a)
             var rawHrefs = await page.EvaluateAsync<string[]>(
-                "() => Array.from(document.querySelectorAll('.property-item a.property-item_link[href]'))" +
+                "() => Array.from(document.querySelectorAll(" +
+                "'.property-item a.property-item_link[href], zimmo-listing article h2 a[href], article .infobox_content h2 a[href]'))" +
                 ".map(a => a.getAttribute('href') || '').filter(h => h.length > 0)") ?? [];
 
             const string ZimmoBase = "https://www.zimmo.be";
@@ -307,6 +308,12 @@ public class ZimmoCrawler : BaseCrawler
             Logger.LogInformation(
                 "[Zimmo] {City} p{N}: HTTP {Status} | {Count} listing-URL's",
                 city, pageNum, httpStatus, listingUrls.Count);
+
+            if (listingUrls.Count == 0)
+                Logger.LogWarning(
+                    "[Zimmo] {City} p{N}: 0 listing-URL's op een HTTP {Status}-pagina met titel '{Title}'. " +
+                    "Mogelijk is de pagina-opbouw van Zimmo gewijzigd — draai '--zimmo-search-test' voor diagnose.",
+                    city, pageNum, httpStatus, pageTitle);
 
             // ── Search-cards: DOM-extractie (primair) ─────────────────────────
             var domCards    = await ExtractDomCardsAsync(page, city, pageNum);
@@ -377,43 +384,75 @@ public class ZimmoCrawler : BaseCrawler
     private async Task<IReadOnlyList<(string ExternalId, ListingDto Dto)>> ExtractDomCardsAsync(
         IPage page, string city, int pageNum)
     {
-        // data-code op .property-item is de betrouwbaarste bron voor ExternalId.
-        // data-project="1" op de save-knop geeft het type direct.
-        // Adres staat in .property-item_address met <br> als regelscheider.
-        // Opp en slaapkamers staan in .opp-icon/.bedroom-icon spans.
+        // Twee pagina-generaties, zelfde uitvoervorm:
+        //  (1) Oude markup: .property-item[data-code] met a.property-item_link, .property-item_price, ...
+        //  (2) Angular-markup (sinds zomer 2026): <zimmo-listing><article> met .zimmo-code, h2 a[href],
+        //      .price .amount, <address>, .sticker ("Project - 80% beschikbaar"/"Nieuw") en
+        //      .features_item[aria-label="De woonoppervlakte is 88 vierkante meter"] / "...slaapkamers is 1".
+        //      __NEXT_DATA__ bestaat niet meer; de kaart is de enige bron.
         const string js = """
-            () => Array.from(document.querySelectorAll('.property-item[data-code]')).map(item => {
-                const code = (item.getAttribute('data-code') || '').trim();
-                const link = item.querySelector('a.property-item_link');
-                const href = link ? (link.getAttribute('href') || '').trim() : '';
-
-                const saveBtn = item.querySelector('a.property-item_save-property[data-project]');
-                const isProject = saveBtn ? saveBtn.getAttribute('data-project') === '1' : false;
-
-                const priceEl   = item.querySelector('.property-item_price');
-                const priceText = priceEl ? (priceEl.textContent || '').replace(/\s+/g, ' ').trim() : '';
-
-                const addrEl   = item.querySelector('.property-item_address');
-                const addrLines = addrEl
-                    ? (addrEl.innerHTML || '')
+            () => {
+                const clean = s => (s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+                const addrLinesOf = el => el
+                    ? (el.innerHTML || '')
                         .replace(/<br\s*\/?>/gi, '\n')
                         .replace(/<[^>]+>/g, '')
                         .split('\n')
-                        .map(s => s.replace(/\s+/g, ' ').trim())
+                        .map(s => clean(s))
                         .filter(Boolean)
                     : [];
 
-                const stickerEl   = item.querySelector('.property-item_sticker.__project, .property-item_sticker');
-                const stickerText = stickerEl ? (stickerEl.textContent || '').trim() : '';
+                // (1) Oude markup
+                const oldItems = Array.from(document.querySelectorAll('.property-item[data-code]'));
+                if (oldItems.length > 0) {
+                    return oldItems.map(item => {
+                        const code = (item.getAttribute('data-code') || '').trim();
+                        const link = item.querySelector('a.property-item_link');
+                        const href = link ? (link.getAttribute('href') || '').trim() : '';
+                        const saveBtn = item.querySelector('a.property-item_save-property[data-project]');
+                        const isProject = saveBtn ? saveBtn.getAttribute('data-project') === '1' : false;
+                        const priceText = clean(item.querySelector('.property-item_price')?.textContent);
+                        const addrLines = addrLinesOf(item.querySelector('.property-item_address'));
+                        const stickerText = clean(item.querySelector('.property-item_sticker.__project, .property-item_sticker')?.textContent);
+                        const oppText = clean(item.querySelector('.opp-icon.property-item_icon, [class*="opp-icon"]')?.textContent);
+                        const bedText = clean(item.querySelector('.bedroom-icon.property-item_icon, [class*="bedroom-icon"]')?.textContent);
+                        return { code, href, isProject, priceText, addrLines, stickerText, oppText, bedText, markup: 'legacy' };
+                    });
+                }
 
-                const oppEl   = item.querySelector('.opp-icon.property-item_icon, [class*="opp-icon"]');
-                const oppText = oppEl ? (oppEl.textContent || '').replace(/\s+/g, ' ').trim() : '';
+                // (2) Angular-markup
+                const articles = Array.from(document.querySelectorAll('zimmo-listing article, article'))
+                    .filter(a => a.querySelector('.zimmo-code'));
+                return articles.map(item => {
+                    const code = clean(item.querySelector('.zimmo-code')?.textContent);
+                    const link = item.querySelector('h2 a[href], a[href*="/te-koop/"]');
+                    const href = link ? (link.getAttribute('href') || '').trim() : '';
 
-                const bedEl   = item.querySelector('.bedroom-icon.property-item_icon, [class*="bedroom-icon"]');
-                const bedText = bedEl ? (bedEl.textContent || '').replace(/\s+/g, ' ').trim() : '';
+                    const titleEl = item.querySelector('.title');
+                    let titleText = '';
+                    if (titleEl) {
+                        for (const n of titleEl.childNodes) if (n.nodeType === 3) titleText += n.textContent;
+                        titleText = clean(titleText);
+                    }
+                    const stickerText = clean(item.querySelector('.sticker')?.textContent);
+                    const isProject = /\/nieuwbouwproject\//i.test(href)
+                        || /^project\b/i.test(titleText)
+                        || /^project\b/i.test(stickerText);
 
-                return { code, href, isProject, priceText, addrLines, stickerText, oppText, bedText };
-            })
+                    const priceText = clean(item.querySelector('.price .amount, .price')?.textContent);
+                    const addrLines = addrLinesOf(item.querySelector('address'));
+
+                    let oppText = '', bedText = '';
+                    for (const f of item.querySelectorAll('.features_item')) {
+                        const label = (f.getAttribute('aria-label') || '').toLowerCase();
+                        const value = clean(f.querySelector('.value')?.textContent);
+                        if (label.includes('woonoppervlakte')) oppText = value;
+                        else if (label.includes('slaapkamer')) bedText = value;
+                    }
+
+                    return { code, href, isProject, priceText, addrLines, stickerText, oppText, bedText, markup: 'angular' };
+                });
+            }
             """;
 
         JsonElement raw;

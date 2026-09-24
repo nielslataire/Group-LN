@@ -12,6 +12,8 @@ public interface IMarktanalyseService
         string type,
         string aanbodtype      = "Alles",
         bool toonGekoppeld     = false,
+        string aanbod          = "Actueel",
+        int periodeMaanden     = 12,
         CancellationToken ct   = default);
 
     Task<ProjectDetailViewModel?> GetProjectDetailAsync(long id, CancellationToken ct = default);

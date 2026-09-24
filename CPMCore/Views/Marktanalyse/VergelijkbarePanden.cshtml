@@ -414,6 +414,7 @@
                                         <th class="text-end">Prijs</th>
                                         <th class="text-end">Prijs/m²</th>
                                         <th>Status</th>
+                                        <th class="text-end" title="Dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
                                         <th>Verkoopstatus</th>
                                     </tr>
                                 </thead>
@@ -453,6 +454,7 @@
                                                 @(p.PrijsPerM2.HasValue ? $"€ {p.PrijsPerM2.Value:N0}/m²".Replace(",",".") : "—")
                                             </td>
                                             <td><span class="status-badge @statusCss">@p.Status</span></td>
+                                            <td class="text-end vp-cell-muted">@(p.DoorlooptijdDagen.HasValue ? p.DoorlooptijdDagen.Value + " d" : "—")</td>
                                             <td>
                                                 <div class="sales-cell">
                                                     @if (p.IsProject && p.Verkoopgraad.HasValue)

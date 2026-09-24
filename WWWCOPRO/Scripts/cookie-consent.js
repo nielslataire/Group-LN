@@ -128,25 +128,32 @@
     }
 
     // ── UI ───────────────────────────────────────────────────────────
-    function openBanner() { banner.classList.add('is-open'); logShownOnce(); }
-    function closeBanner() { banner.classList.remove('is-open'); }
+    // Overlay + scroll-lock zijn gedeeld tussen banner en voorkeurenpaneel: zolang één
+    // van beide open staat, blijft de rest van de pagina afgeschermd. De banner sluit
+    // niet bij een klik op de overlay — dat zou de verplichte keuze omzeilen.
+    function updateOverlay() {
+        var open = banner.classList.contains('is-open') || dialog.classList.contains('is-open');
+        overlay.classList.toggle('is-open', open);
+        document.body.classList.toggle('cc-lock', open);
+    }
+
+    function openBanner() { banner.classList.add('is-open'); updateOverlay(); logShownOnce(); }
+    function closeBanner() { banner.classList.remove('is-open'); updateOverlay(); }
 
     function openDialog() {
         var current = parseConsent(readCookie());
         var cats = current ? current.categories : { analytics: false, marketing: false };
         if (inputAnalytics) { inputAnalytics.checked = !!cats.analytics; }
         if (inputMarketing) { inputMarketing.checked = !!cats.marketing; }
-        overlay.classList.add('is-open');
         dialog.classList.add('is-open');
-        document.body.classList.add('cc-lock');
+        updateOverlay();
         var focusable = dialog.querySelector('input, button');
         if (focusable) { focusable.focus(); }
     }
 
     function closeDialog() {
-        overlay.classList.remove('is-open');
         dialog.classList.remove('is-open');
-        document.body.classList.remove('cc-lock');
+        updateOverlay();
     }
 
     function showFab() { fab.classList.add('is-visible'); }

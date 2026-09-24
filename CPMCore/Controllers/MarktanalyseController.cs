@@ -26,20 +26,29 @@ public class MarktanalyseController : BaseController
         string type                = "Alles",
         string aanbodtype          = "Alles",
         bool toonGekoppeld         = false,
+        string aanbod              = "Actueel",
+        int periodeMaanden         = 12,
         CancellationToken ct       = default)
     {
         SetPageHeader("bx bx-map", "Gemeenteanalyse");
+
+        if (!GemeenteAnalyseViewModel.AanbodOpties.Contains(aanbod)) aanbod = "Actueel";
+        if (periodeMaanden < 0) periodeMaanden = 0;
 
         var locaties = await _svc.GetLocatiesAsync(ct);
 
         GemeenteAnalyseViewModel vm;
         if (!geoMunicipalityId.HasValue && !geoMunicipalSectionId.HasValue)
         {
-            vm = new GemeenteAnalyseViewModel { GeselecteerdType = type, GeselecteerdAanbodtype = aanbodtype, ToonGekoppeld = toonGekoppeld };
+            vm = new GemeenteAnalyseViewModel
+            {
+                GeselecteerdType = type, GeselecteerdAanbodtype = aanbodtype, ToonGekoppeld = toonGekoppeld,
+                GeselecteerdAanbod = aanbod, PeriodeMaanden = periodeMaanden
+            };
         }
         else
         {
-            vm = await _svc.GetGemeenteAnalyseAsync(geoMunicipalityId, geoMunicipalSectionId, type, aanbodtype, toonGekoppeld, ct);
+            vm = await _svc.GetGemeenteAnalyseAsync(geoMunicipalityId, geoMunicipalSectionId, type, aanbodtype, toonGekoppeld, aanbod, periodeMaanden, ct);
         }
 
         vm.Locaties = locaties;
@@ -175,7 +184,7 @@ public class MarktanalyseController : BaseController
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Vergelijkbare panden");
 
-        string[] headers = { "Project", "Adres", "Type", "Oppervlakte (m²)", "Slpk.", "Prijs", "Prijs/m²", "Status", "Verkoopstatus" };
+        string[] headers = { "Project", "Adres", "Type", "Oppervlakte (m²)", "Slpk.", "Prijs", "Prijs/m²", "Status", "Verkoopstatus", "Doorlooptijd (dagen)" };
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(1, i + 1).Value = headers[i];
 
@@ -206,6 +215,7 @@ public class MarktanalyseController : BaseController
             ws.Cell(rij, 9).Value = p.IsProject
                 ? (p.Verkoopgraad.HasValue ? $"{Math.Round(p.Verkoopgraad.Value)}% verkocht" : "Project")
                 : "Losse eenheid";
+            if (p.DoorlooptijdDagen.HasValue) ws.Cell(rij, 10).Value = p.DoorlooptijdDagen.Value;
             rij++;
         }
 
