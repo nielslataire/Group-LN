@@ -59,7 +59,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 namespace CPMCore.Controllers
 {
     [Authorize]
-    public class ProjectenController : BaseController
+    public partial class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
         private readonly cpmRunningContext _db; // TODO: vervangen door service methoden (UnitExecutionPlan, Users, CompanyContacts)
@@ -82,6 +82,7 @@ namespace CPMCore.Controllers
         private readonly BudgetActivityService    _budgetActivityService;
         private readonly BouwIndexService            _bouwIndex;
         private readonly BudgetBerekeningService     _berekeningService;
+        private readonly IVerkoopVoorstelService     _verkoopVoorstelService;
         private readonly BudgetExcelService          _excelService;
         private readonly ServiceCore.Budget.BudgetFormulaService _formulaService;
         private readonly IEmailTemplateService _emailTemplateService;
@@ -96,7 +97,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IMijlpaalService mijlpaalService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IMijlpaalService mijlpaalService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, IVerkoopVoorstelService verkoopVoorstelService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
         {
             _logger = logger;
             Configuration = configuration;
@@ -119,6 +120,7 @@ namespace CPMCore.Controllers
             _budgetActivityService  = budgetActivityService;
             _bouwIndex              = bouwIndex;
             _berekeningService      = berekeningService;
+            _verkoopVoorstelService = verkoopVoorstelService;
             _excelService           = excelService;
             _formulaService         = formulaService;
             _emailTemplateService   = emailTemplateService;
@@ -371,7 +373,19 @@ namespace CPMCore.Controllers
             FillInAvailableUsers(model);
             model.Users = GetOrderedUsers();
 
-            return View(model);
+            SetToevoegenBreadcrumbV2();
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
+        }
+
+        // gl-v2 (design-handoff punt 19): titel "Nieuw project" — de kruimel stopt bij "Projecten" i.p.v.
+        // "Project toevoegen" te herhalen (zelfde titel/kruimel-regel als de rest van gl-v2).
+        private void SetToevoegenBreadcrumbV2()
+        {
+            if (ViewData["UseGlV2Layout"] as bool? != true) return;
+            var home = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = home };
+            // "Projecten" is hier de laatste kruimel, maar niet de huidige pagina — dus klikbaar (→ Projecten/Index).
+            ViewData["BreadcrumbLastIsLink"] = true;
         }
 
         [HttpPost]
@@ -385,7 +399,8 @@ namespace CPMCore.Controllers
                 FillInAddSelectLists(model);
                 FillInAvailableUsers(model);
                 model.Users = GetOrderedUsers();
-                return View(model);
+                SetToevoegenBreadcrumbV2();
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
             }
 
             model.Project.Postalcode.Country.CountryId = model.SelectedCountry;
@@ -450,7 +465,8 @@ namespace CPMCore.Controllers
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
             model.Users = GetOrderedUsers();
-            return View(model);
+            SetToevoegenBreadcrumbV2();
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
         }
 
 
@@ -585,6 +601,12 @@ namespace CPMCore.Controllers
                             clientByUnitId[u.Id] = cwu;
                 }
 
+                // Namen van de afwerkingen in één query (de rijen tonen ze per eenheid).
+                var rowUnitIds = unitsResp.Values.Select(x => x.Unit.Id).ToList();
+                var optionNames = _db.UnitFinishingOption.AsNoTracking()
+                    .Where(o => rowUnitIds.Contains(o.UnitId))
+                    .ToDictionary(o => o.Id, o => o.Name);
+
                 model.UnitRows = unitsResp.Values.Select(u =>
                 {
                     // Verkocht: exact dezelfde waarde als op Klanten/Detail per eenheid
@@ -596,19 +618,27 @@ namespace CPMCore.Controllers
                     // die elk apart getoond worden.
                     bool isSold = u.Unit.ClientAccountId is not null;
                     var constructionValues = u.Unit.ConstructionValues ?? new List<UnitConstructionValueBO>();
-                    var baseValues = constructionValues.Where(cv => cv.FinishingOptionId is null);
-                    var finishValues = constructionValues.Where(cv => cv.FinishingOptionId is not null);
+                    // Constructieprijs volgens ServiceCore.Helpers.UnitPricing (dezelfde regel als de
+                    // publieke site): zonder afwerkingen alle constructieprijzen samen; met afwerkingen is
+                    // elke afwerking een volledig alternatief. De views tellen Vraagprijs + Afwerking.Cost
+                    // op, dus bij afwerkingen is Vraagprijs enkel de grondwaarde en Cost het totaal van
+                    // die afwerking (i.p.v. één losse bouwwaarderegel).
+                    var pricing = ServiceCore.Helpers.UnitPricing.Compute(constructionValues.Select(cv => (cv.FinishingOptionId, cv.Value ?? 0m)));
 
                     decimal prijs = isSold
                         ? u.Unit.TotalValueSold
-                        : (u.Unit.LandValue ?? 0m) + baseValues.Sum(cv => cv.Value ?? 0m);
+                        : (u.Unit.LandValue ?? 0m) + (pricing.HasOptions ? 0m : pricing.From);
 
-                    var afwerkingen = isSold
+                    var afwerkingen = isSold || !pricing.HasOptions
                         ? new List<(string Description, decimal Cost)>()
-                        : finishValues.Select(cv => (
-                            Description: string.IsNullOrWhiteSpace(cv.Description) ? "Afwerkingsoptie" : cv.Description,
-                            Cost: cv.Value ?? 0m
-                        )).ToList();
+                        : constructionValues
+                            .Where(cv => cv.FinishingOptionId is not null)
+                            .GroupBy(cv => cv.FinishingOptionId!.Value)
+                            .Select(g => (
+                                Description: optionNames.TryGetValue(g.Key, out var optionName) && !string.IsNullOrWhiteSpace(optionName) ? optionName : "Afwerking",
+                                Cost: g.Sum(cv => cv.Value ?? 0m)))
+                            .OrderBy(a => a.Cost)
+                            .ToList();
 
                     clientByUnitId.TryGetValue(u.Unit.Id, out var clientWithUnits);
                     var client = clientWithUnits?.Client;
@@ -782,11 +812,14 @@ namespace CPMCore.Controllers
                 Parent = bcDetail,
                 RouteValues = new { projectid = projectid }
             };
-            ViewData["BreadcrumbNode"] = bcEdit;
+            // gl-v2 (punt 19): titel "Project bewerken" — de kruimel stopt bij de projectnaam i.p.v. een
+            // "Gegevens bewerken"-blad toe te voegen dat de titel herhaalt.
+            ViewData["BreadcrumbNode"] = ViewData["UseGlV2Layout"] as bool? == true ? bcDetail : bcEdit;
+            ViewData["ProjectUnitCount"] = _db.Set<DALCore.Models.Units>().Count(u => u.ProjectId == projectid);
 
             SetPageHeader("bx bx-building-house", $"{model.Project.Name} — gegevens bewerken");
 
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
         }
 
         [HttpPost]
@@ -800,7 +833,8 @@ namespace CPMCore.Controllers
                 FillInAddSelectListsDetailEdit(model);
                 FillInAvailableUsers(model);
                 model.Users = GetOrderedUsers();
-                return View(model);
+                SetEditBreadcrumbV2(model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
             }
 
             model.Project.Postalcode.Country.CountryId = model.SelectedCountry;
@@ -841,6 +875,7 @@ namespace CPMCore.Controllers
                 // Sla contract schijven op
                 service.SaveContractSlices(projectId, model.ContractSlices?.Select(s => new ProjectContractSliceBO
                 {
+                    Id = s.Id, // behoudt factuurkoppeling/Progress; de lijstpositie wordt de SortOrder
                     Description = s.Description,
                     Percentage = s.Percentage
                 }).ToList() ?? new List<ProjectContractSliceBO>());
@@ -861,7 +896,27 @@ namespace CPMCore.Controllers
             FillInAddSelectListsDetailEdit(model);
             FillInAvailableUsers(model);
             model.Users = GetOrderedUsers();
-            return View(model);
+            SetEditBreadcrumbV2(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
+        }
+
+        // Herweergave na een mislukte Edit-POST: de gl-v2-view heeft de kruimel (tot de projectnaam) en
+        // het eenhedenaantal voor het dossiermenu opnieuw nodig — de GET zet ze, de POST niet.
+        private void SetEditBreadcrumbV2(EditProjectDetail model)
+        {
+            if (ViewData["UseGlV2Layout"] as bool? != true) return;
+            var pid = model.Project.Id;
+            var home = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var list = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = home };
+            ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.Project.Name ?? "Project")
+            {
+                Parent = list,
+                RouteValues = new { projectid = pid }
+            };
+            ViewData["ProjectUnitCount"] = _db.Set<DALCore.Models.Units>().Count(u => u.ProjectId == pid);
+            model.Docs = _projectService.GetProjectDocs(pid).Values;
+            var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProject = ps.HasWrite(PermissionCodes.ProjectsDetail);
         }
         private async Task<string?> ProcessStandardFotoUploadAsync(IFormFile file)
         {
@@ -1701,8 +1756,11 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Eenheid toevoegen")]
         [Breadcrumb("Eenheid toevoegen", FromAction = "DetailUnits")]
-        public ActionResult AddUnit(int projectid)
+        public ActionResult AddUnit(int projectid, int copyFrom = 0, string? returnUrl = null)
         {
+            // gl-v2 (design-handoff 16c): gedeeld formulier, zie ProjectenController.UnitFormV2.cs.
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                return UnitFormV2Get(projectid, 0, copyFrom, returnUrl)!;
             var referrer = Request.Headers["Referer"].ToString();
 
             // Use the referrer URL as needed
@@ -1809,8 +1867,15 @@ namespace CPMCore.Controllers
         [HttpGet]
         [Breadcrumb("Eenheid bewerken", FromAction = "DetailUnits")]
         //[Breadcrumb("Eenheid bewerken")]
-        public async Task<ActionResult> EditUnit(int projectid, int unitid)
+        public async Task<ActionResult> EditUnit(int projectid, int unitid, string? returnUrl = null)
         {
+            // gl-v2 (design-handoff 16b): gedeeld formulier, zie ProjectenController.UnitFormV2.cs.
+            // null = een KOPPELING-pseudo-eenheid (IsLink) — die houdt haar legacy formulier.
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                var v2 = UnitFormV2Get(projectid, unitid, 0, returnUrl);
+                if (v2 != null) return v2;
+            }
             var referrer = Request.Headers["Referer"].ToString();
 
             // Use the referrer URL as needed
@@ -2420,12 +2485,18 @@ namespace CPMCore.Controllers
 
         /// <summary>De prijs van één eenheid, met dezelfde definitie als de Eenheden-tabel op
         /// Projecten/DetailV2: verkocht = grondwaarde verkocht + som van de ValueSold-bouwwaarden,
-        /// anders grondwaarde + de bouwwaarderegels zonder afwerkingsoptie, met de goedkoopste en
-        /// duurste afwerkingsoptie apart (de "vanaf …"/"afgewerkt …"-regels uit 16a).</summary>
-        private static (decimal Price, decimal? From, decimal? Finished) UnitPriceV2(UnitBO money, bool isSold)
+        /// anders grondwaarde + constructieprijzen volgens ServiceCore.Helpers.UnitPricing (dezelfde regel als
+        /// de publieke site): zonder afwerkingen alle constructieprijzen samen, met afwerkingen elke
+        /// afwerking als volledig alternatief — Price/From = de goedkoopste, Finished = de duurste (de
+        /// "vanaf …"/"afgewerkt …"-regels uit 16a).</summary>
+        private (decimal Price, decimal? From, decimal? Finished) UnitPriceV2(UnitBO money, bool isSold)
         {
             var values = money.ConstructionValues ?? new List<UnitConstructionValueBO>();
-            var basePrice = (money.LandValue ?? 0m) + values.Where(cv => cv.FinishingOptionId is null).Sum(cv => cv.Value ?? 0m);
+            var land = money.LandValue ?? 0m;
+            var pricing = ServiceCore.Helpers.UnitPricing.Compute(
+                values.Select(cv => (cv.FinishingOptionId, cv.Value ?? 0m)), DefaultOptionIdOf(money.Id));
+            // Price = de STANDAARDafwerking (zo rekenen ook de budgetten); "vanaf" blijft de goedkoopste.
+            var basePrice = land + pricing.Standard;
 
             if (isSold)
             {
@@ -2437,9 +2508,33 @@ namespace CPMCore.Controllers
                 return (sold > 0m ? sold : basePrice, null, null);
             }
 
-            var finishing = values.Where(cv => cv.FinishingOptionId is not null).Select(cv => cv.Value ?? 0m).ToList();
-            if (finishing.Count == 0) return (basePrice, null, null);
-            return (basePrice, basePrice + finishing.Min(), basePrice + finishing.Max());
+            if (!pricing.HasOptions) return (basePrice, null, null);
+            return (basePrice, land + pricing.From, land + pricing.To);
+        }
+
+        // Standaardafwerking per eenheid (UnitFinishingOption.IsDefault), per request in één query geladen
+        // voor de eenheden die een pagina toont; een niet voorgeladen eenheid wordt apart opgevraagd.
+        private readonly Dictionary<int, int?> _defaultOptionCache = new();
+        private void PreloadDefaultOptionIds(IEnumerable<int> unitIds)
+        {
+            var missing = unitIds.Where(id => !_defaultOptionCache.ContainsKey(id)).Distinct().ToList();
+            if (missing.Count == 0) return;
+            var found = _db.UnitFinishingOption.AsNoTracking()
+                .Where(o => o.IsDefault && missing.Contains(o.UnitId))
+                .Select(o => new { o.UnitId, o.Id, o.SortOrder })
+                .ToList()
+                .GroupBy(o => o.UnitId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(o => o.SortOrder).ThenBy(o => o.Id).First().Id);
+            foreach (var id in missing) _defaultOptionCache[id] = found.TryGetValue(id, out var v) ? v : null;
+        }
+        private int? DefaultOptionIdOf(int unitId)
+        {
+            if (!_defaultOptionCache.TryGetValue(unitId, out var id))
+            {
+                PreloadDefaultOptionIds(new[] { unitId });
+                id = _defaultOptionCache[unitId];
+            }
+            return id;
         }
 
         /// <summary>Bouwt de volledige eenhedenboom + KPI-cijfers voor Projecten/DetailUnitsV2.</summary>
@@ -2478,6 +2573,7 @@ namespace CPMCore.Controllers
                 var moneyResp = _unitService.GetUnitsById(moneyIds.Distinct().ToList());
                 if (moneyResp.Success && moneyResp.Values is not null)
                     foreach (var u in moneyResp.Values) moneyById[u.Id] = u;
+                PreloadDefaultOptionIds(moneyById.Keys);
             }
             UnitBO Money(UnitBO fallback) => moneyById.TryGetValue(fallback.Id, out var m) ? m : fallback;
 
@@ -2594,15 +2690,34 @@ namespace CPMCore.Controllers
             // Groepen in de volgorde van 16a: hoofdeenheden eerst, dan wat nog los te koop staat.
             // "Los te koop" = nevenruimtes die aan geen enkel lot hangen — 16a §6: "dan zie je meteen
             // wat nog een koper of een lot zoekt".
-            void AddGroup(string key, string label, string icon, Func<DetailUnitsV2Row, bool> match)
+            void AddGroup(string key, string label, string icon, Func<DetailUnitsV2Row, bool> match, bool summarize = false)
             {
                 var rows = topRows.Where(match).OrderBy(r => r.Name, comparator).ToList();
-                if (rows.Count > 0)
-                    vm.Groups.Add(new DetailUnitsV2Group { Key = key, Label = label, IconClass = icon, Rows = rows });
+                if (rows.Count == 0) return;
+                var group = new DetailUnitsV2Group { Key = key, Label = label, IconClass = icon, Rows = rows };
+                if (summarize)
+                {
+                    // Losse nevenruimtes per type samengevat in de groepskop, dicht tot je ze opent:
+                    // twintig bergingen onder elkaar zeggen je niets dat "20 bergingen · 96 m² · € 180.000"
+                    // niet ook zegt. Alleen wat nog los staat: een gekoppelde eenheid hangt in de boom
+                    // onder haar lot en is hier al niet meer bij.
+                    var be = CultureInfo.GetCultureInfo("nl-BE");
+                    var surface = rows.Sum(r => r.Surface ?? 0m);
+                    var value = rows.Sum(r => r.PriceFinished ?? r.Price);
+                    var sold = rows.Count(r => r.StatusFilterKey == "verkocht");
+                    var parts = new List<string>();
+                    if (sold > 0) parts.Add($"{rows.Count - sold} beschikbaar · {sold} verkocht");
+                    if (surface > 0m) parts.Add(surface.ToString("#,##0.##", be) + " m²");
+                    if (value > 0m) parts.Add(value.ToString("C0", be));
+                    group.Summary = string.Join(" · ", parts);
+                    group.CollapsedByDefault = true;
+                }
+                vm.Groups.Add(group);
             }
             AddGroup("woningen", "Woningen", "ph-house", r => r.TypeGroupId == 1);
             AddGroup("commercieel", "Commerciële ruimtes", "ph-storefront", r => r.TypeGroupId == 4);
-            AddGroup("los", "Los te koop", "ph-tag", r => r.TypeGroupId == 2 || r.TypeGroupId == 3);
+            AddGroup("los-berging", "Losse bergingen", "ph-package", r => r.TypeGroupId == 2, summarize: true);
+            AddGroup("los-parking", "Losse parkings", "ph-car", r => r.TypeGroupId == 3, summarize: true);
             AddGroup("overig", "Overige eenheden", "ph-squares-four", r => r.TypeGroupId is not (1 or 2 or 3 or 4));
 
             foreach (var group in vm.Groups)
@@ -2644,7 +2759,7 @@ namespace CPMCore.Controllers
 
         /// <summary>Koppeldialoog uit 16c: eerst wát je koppelt, dan de bedragen die daaruit volgen.</summary>
         [HttpGet]
-        public IActionResult ModalAttachUnitV2(int unitid)
+        public IActionResult ModalAttachUnitV2(int unitid, string? returnUrl = null)
         {
             var lotResp = _unitService.GetUnitById(unitid);
             if (!lotResp.Success || lotResp.Value is null) return NotFound();
@@ -2654,7 +2769,8 @@ namespace CPMCore.Controllers
             {
                 ProjectId = lot.ProjectId,
                 LotUnitId = lot.Id,
-                LotName = lot.Name ?? ""
+                LotName = lot.Name ?? "",
+                ReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : null
             };
 
             var treeResp = _unitService.GetUnitsWithAttachedByProjectId(lot.ProjectId);
@@ -2673,6 +2789,7 @@ namespace CPMCore.Controllers
             var moneyResp = _unitService.GetUnitsById(candidateIds.Distinct().ToList());
             if (moneyResp.Success && moneyResp.Values is not null)
                 foreach (var u in moneyResp.Values) moneyById[u.Id] = u;
+            PreloadDefaultOptionIds(moneyById.Keys);
             UnitBO Money(UnitBO fallback) => moneyById.TryGetValue(fallback.Id, out var m) ? m : fallback;
 
             // "Nieuwe prijs <lot>, casco" vertrekt van wat de lijst nu toont: eigen prijs + wat er al
@@ -2694,8 +2811,9 @@ namespace CPMCore.Controllers
                     Name = u.Name ?? "",
                     TypeLine = typeLine,
                     LandValue = money.LandValue ?? 0m,
-                    ConstructionValue = (money.ConstructionValues ?? new List<UnitConstructionValueBO>())
-                        .Where(cv => cv.FinishingOptionId is null).Sum(cv => cv.Value ?? 0m),
+                    // Constructieprijs volgens dezelfde regel als de lijst (Price minus grond) — vroeger
+                    // enkel de regels zonder afwerking, dus € 0 voor een eenheid met afwerkingen.
+                    ConstructionValue = UnitPriceV2(money, false).Price - (money.LandValue ?? 0m),
                     Price = UnitPriceV2(money, false).Price,
                     AttachedToName = attachedTo
                 };
@@ -2726,12 +2844,16 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsUnits)]
-        public IActionResult AttachUnitV2(int projectid, int lotUnitId, int unitId, string? landValue)
+        public IActionResult AttachUnitV2(int projectid, int lotUnitId, int unitId, string? landValue, string? returnUrl = null)
         {
+            IActionResult Back() => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? Redirect(returnUrl)
+                : RedirectToAction("DetailUnits", "Projecten", new { projectid });
+
             if (lotUnitId == 0 || unitId == 0 || lotUnitId == unitId)
             {
                 AddMessage("error", "Er is geen eenheid gekozen om te koppelen.", "Fout!");
-                return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+                return Back();
             }
 
             var unitResp = _unitService.GetUnitById(unitId);
@@ -2739,7 +2861,7 @@ namespace CPMCore.Controllers
             if (!unitResp.Success || unitResp.Value is null || !lotResp.Success || lotResp.Value is null)
             {
                 AddMessage("error", "De eenheid kon niet gevonden worden.", "Fout!");
-                return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+                return Back();
             }
 
             var unit = unitResp.Value;
@@ -2747,12 +2869,12 @@ namespace CPMCore.Controllers
             if (unit.ProjectId != lot.ProjectId || lot.ProjectId != projectid)
             {
                 AddMessage("error", "De eenheid hoort niet bij dit project.", "Fout!");
-                return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+                return Back();
             }
             if (unit.IsLink || lot.IsLink)
             {
                 AddMessage("error", "Een samengestelde koppeling kan hier niet gekoppeld worden.", "Fout!");
-                return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+                return Back();
             }
 
             unit.AttachedUnitsId = lotUnitId;
@@ -2765,20 +2887,24 @@ namespace CPMCore.Controllers
             else
                 AddMessage("error", "De koppeling is niet gelukt, gelieve opnieuw te proberen of contact op te nemen met de administrator.", "Fout!");
 
-            return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+            return Back();
         }
 
         /// <summary>De tegenhanger van AttachUnitV2 — zonder dit is koppelen een eenrichtingsdeur.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsUnits)]
-        public IActionResult DetachUnitV2(int projectid, int unitId)
+        public IActionResult DetachUnitV2(int projectid, int unitId, string? returnUrl = null)
         {
+            IActionResult Back() => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? Redirect(returnUrl)
+                : RedirectToAction("DetailUnits", "Projecten", new { projectid });
+
             var unitResp = _unitService.GetUnitById(unitId);
             if (!unitResp.Success || unitResp.Value is null || unitResp.Value.ProjectId != projectid)
             {
                 AddMessage("error", "De eenheid kon niet gevonden worden.", "Fout!");
-                return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+                return Back();
             }
 
             var unit = unitResp.Value;
@@ -2789,7 +2915,7 @@ namespace CPMCore.Controllers
             else
                 AddMessage("error", "Het ontkoppelen is niet gelukt, gelieve opnieuw te proberen of contact op te nemen met de administrator.", "Fout!");
 
-            return RedirectToAction("DetailUnits", "Projecten", new { projectid });
+            return Back();
         }
 
         /// <summary>De Excel-helft van 16a's samengevoegde "Exporteren"-knop (§5). Vervangt de
@@ -6310,8 +6436,11 @@ namespace CPMCore.Controllers
         [HttpGet]
         [Breadcrumb("Documenten", FromAction = "Detail")]
         //[Breadcrumb("Documenten")]
-        public IActionResult DetailDocs(int projectid, int? clientaccountid)
+        public async Task<IActionResult> DetailDocs(int projectid, int? clientaccountid, string? folder = null, string? smart = null, int? unit = null, int? client = null, int? company = null, int? open = null, int? request = null)
         {
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                return await DetailDocsV2Get(projectid, clientaccountid, folder, smart, unit, client, company, open, request);
+
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ViewBag.DocWebUrl = Configuration["URL:DocWebUrl"];
 
@@ -6935,94 +7064,8 @@ namespace CPMCore.Controllers
                 return NotFound();
 
             var proj = projResp.Value;
-            var model = new Models.Projecten.ProjectCoordinatieModel
-            {
-                ProjectId                   = projectid,
-                ProjectName                 = proj.Name,
-                ContractType                = proj.ContractType,
-                ProjectDistanceKm           = proj.ProjectDistanceKm,
-                KmAllowance                 = proj.KmAllowance,
-                CoordinationIssuerCompanyId = proj.CoordinationIssuerCompanyId,
-                ProjectManagerUserId        = proj.AspNetUserID,
-            };
-
-            model.ContractPrice = _db.Contract
-                .AsNoTracking()
-                .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
-                .SelectMany(c => c.ContractActivity.Where(a => a.ActivityId == 277).Select(a => a.Price))
-                .FirstOrDefault();
-
-            var slicesResp = _projectService.GetContractSlices(projectid);
-            if (slicesResp.Success)
-            {
-                var contractPrice = model.ContractPrice ?? 0m;
-                model.ContractSlices = slicesResp.Values.Select(s => new Models.Projecten.ProjectContractSliceVM
-                {
-                    Id               = s.Id,
-                    Description      = s.Description,
-                    Percentage       = s.Percentage,
-                    Amount           = Math.Round(contractPrice * s.Percentage / 100m, 2, MidpointRounding.AwayFromZero),
-                    InvoiceId        = s.InvoiceId,
-                    InvoicePublicId  = s.InvoicePublicId
-                }).ToList();
-            }
-
-            // Gefactureerd bedrag:
-            // 1) Directe schijf-factuurkoppeling (InvoiceId op schijf) — meest nauwkeurig
-            var linkedInvoiceIds = model.ContractSlices
-                .Where(s => s.InvoiceId.HasValue)
-                .Select(s => s.InvoiceId!.Value)
-                .ToList();
-
-            model.InvoicedAmount = model.ContractSlices
-                .Where(s => s.IsInvoiced)
-                .Sum(s => s.Amount);
-
-            // 2) Fallback voor bestaande facturen zonder directe schijfkoppeling
-            if (model.CoordinationIssuerCompanyId.HasValue)
-            {
-                var fallbackQuery = _db.Invoices
-                    .Where(i => i.ProjectId == projectid
-                             && i.IssuerCompanyId == model.CoordinationIssuerCompanyId.Value
-                             && i.StatusId != 7); // 7 = Cancelled
-
-                if (linkedInvoiceIds.Count > 0)
-                    fallbackQuery = fallbackQuery.Where(i => !linkedInvoiceIds.Contains(i.Id));
-
-                model.InvoicedAmount += fallbackQuery
-                    .SelectMany(i => i.InvoicesDetails)
-                    .Where(d => d.LineType == "detail")
-                    .Sum(d => (decimal?)d.Price) ?? 0m;
-            }
-
-            var ratesResp = _projectService.GetProjectHourlyRates(projectid);
-            if (ratesResp.Success)
-                model.HourlyRates = ratesResp.Values.Select(r => new Models.Projecten.ProjectHourlyRateVM
-                {
-                    UserId       = r.UserId,
-                    UserFullName = r.UserFullName,
-                    HourlyRate   = r.HourlyRate
-                }).ToList();
-
-            var regieResp = _projectService.GetRegieUren(projectid);
-            if (regieResp.Success)
-            {
-                var rateMap = model.HourlyRates.ToDictionary(r => r.UserId, r => r.HourlyRate);
-                model.RegieUren = regieResp.Values.Select(r => new Models.Projecten.ProjectRegieUurVM
-                {
-                    Id              = r.Id,
-                    UserId          = r.UserId,
-                    UserFullName    = r.UserFullName,
-                    HourlyRate      = rateMap.TryGetValue(r.UserId, out var rate) ? rate : 0m,
-                    Date            = r.Date,
-                    Hours           = r.Hours,
-                    WithTravel      = r.WithTravel,
-                    TravelKm        = r.TravelKm,
-                    Description     = r.Description,
-                    InvoiceId       = r.InvoiceId,
-                    InvoicePublicId = r.InvoicePublicId
-                }).ToList();
-            }
+            var model = BuildCoordinatieModel(projectid, proj);
+            var useGlV2 = ViewData["UseGlV2Layout"] as bool? == true;
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
@@ -7036,9 +7079,18 @@ namespace CPMCore.Controllers
                 Parent = projectDetail,
                 RouteValues = new { projectid }
             };
-            ViewData["BreadcrumbNode"] = lastnode;
+            // gl-v2: de kruimel stopt bij de projectnaam — "Coördinatie" is al de paginatitel (design-handoff
+            // punt 13, regel 2: het laatste kruimelitem herhaalt nooit de titel).
+            ViewData["BreadcrumbNode"] = useGlV2 ? projectDetail : lastnode;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Coördinatie");
+
+            if (useGlV2)
+            {
+                var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+                model.GlV2 = BuildDetailCoordinatieV2Vm(model, proj, _ps.HasWrite(PermissionCodes.ProjectsDetail));
+                return View("DetailCoordinatieV2", model);
+            }
             return View(model);
         }
 
@@ -7135,6 +7187,7 @@ namespace CPMCore.Controllers
             // Schijven en uurtarieven opslaan
             _projectService.SaveContractSlices(projectid, (vm.ContractSlices ?? new()).Select(s => new BOCore.ProjectContractSliceBO
             {
+                Id          = s.Id, // zonder Id werd elke schijf verwijderd en opnieuw aangemaakt — met verlies van de factuurkoppeling
                 Description = s.Description,
                 Percentage  = s.Percentage
             }).ToList());
@@ -7148,57 +7201,7 @@ namespace CPMCore.Controllers
                 }).ToList());
 
             // Coördinatiecontract aanmaken/bijwerken indien facturatiebedrijf geselecteerd
-            if (vm.CoordinationIssuerCompanyId.HasValue)
-            {
-                // Gebruik LegacyCompanyInfoId als directe link; anders fallback via CompanyIssuerCompany
-                var linkedCompanyId = _db.IssuerCompany
-                    .AsNoTracking()
-                    .Where(ic => ic.Id == vm.CoordinationIssuerCompanyId.Value)
-                    .Select(ic => ic.LegacyCompanyInfoId)
-                    .FirstOrDefault()
-                    ?? _db.CompanyIssuerCompany
-                           .Where(c => c.IssuerCompanyId == vm.CoordinationIssuerCompanyId.Value)
-                           .Select(c => (int?)c.CompanyId)
-                           .FirstOrDefault();
-
-                if (linkedCompanyId.HasValue)
-                {
-                    var existingContract = _db.Contract
-                        .Include(c => c.ContractActivity)
-                        .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
-                        .FirstOrDefault();
-
-                    if (existingContract == null)
-                    {
-                        var contractBo = new BOCore.ContractBO
-                        {
-                            ProjectId      = projectid,
-                            VatPercentage  = 21,
-                            PaymentTerm    = 14,
-                            ContractSigned = true,
-                            GuaranteeType  = BOCore.ContractGuaranteeType.NoGuarantee
-                        };
-                        contractBo.Company.ID = linkedCompanyId.Value;
-                        contractBo.Activities.Add(new BOCore.ContractActivityBO
-                        {
-                            Activity = new BOCore.ActivityBO { ID = 277 },
-                            Price    = vm.ContractPrice
-                        });
-                        _projectService.InsertUpdateProjectContract(contractBo);
-                    }
-                    else
-                    {
-                        existingContract.CompanyId      = linkedCompanyId.Value;
-                        existingContract.VatPercentage  = 21;
-                        existingContract.PaymentTerm    = 14;
-                        existingContract.ContractSigned = true;
-                        var coordActivity = existingContract.ContractActivity.FirstOrDefault(a => a.ActivityId == 277);
-                        if (coordActivity != null)
-                            coordActivity.Price = vm.ContractPrice;
-                        _db.SaveChanges();
-                    }
-                }
-            }
+            UpsertCoordinationContract(projectid, vm.CoordinationIssuerCompanyId, vm.ContractPrice, overwritePrice: true);
 
             return RedirectToAction(nameof(DetailCoordinatie), new { projectid });
         }
@@ -8680,7 +8683,7 @@ namespace CPMCore.Controllers
             try
             {
                 var (invoiceId, _) = await cmd.CreateWithLinesAsync(draft, issueNow: false);
-                _projectService.MarkRegieUrenAsInvoiced(entries.Select(e => e.Id).ToList(), invoiceId);
+                _projectService.MarkRegieUrenAsInvoiced(entries.Select(e => e.Id).ToList(), invoiceId, rateMap);
 
                 // Detailbijlage genereren en opslaan
                 var appendixBytes = BuildRegieAppendix(
@@ -11719,7 +11722,8 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BudgetParams(BudgetParamsModel model,
-            decimal? pctProjectcoord, decimal? pctArchitect, decimal? pctIngenieur)
+            decimal? pctProjectcoord, decimal? pctArchitect, decimal? pctIngenieur,
+            decimal? pctDoelmarge, decimal? pctGrondmarge)
         {
             // Projectcoördinatie / Architect / Ingenieur worden in procentpunten (5,25)
             // ingevoerd maar als fractie bewaard. Leeg of 0 bij architect/ingenieur =
@@ -11727,6 +11731,9 @@ namespace CPMCore.Controllers
             model.Params.ProjectcoordinatiePerc = Math.Round((pctProjectcoord ?? 0m) / 100m, 6);
             model.Params.ArchitectPerc = pctArchitect.GetValueOrDefault() == 0m ? (decimal?)null : Math.Round(pctArchitect.Value / 100m, 6);
             model.Params.StudieIRPerc  = pctIngenieur.GetValueOrDefault() == 0m ? (decimal?)null : Math.Round(pctIngenieur.Value / 100m, 6);
+            // Marges voor het verkoopvoorstel: zelfde conventie (procentpunten in, fractie opgeslagen, leeg = standaard).
+            model.Params.DoelMargePerc  = pctDoelmarge.GetValueOrDefault()  == 0m ? (decimal?)null : Math.Round(pctDoelmarge.Value  / 100m, 6);
+            model.Params.GrondMargePerc = pctGrondmarge.GetValueOrDefault() == 0m ? (decimal?)null : Math.Round(pctGrondmarge.Value / 100m, 6);
 
             var bestaand = await _db.BudgetParams
                 .FirstOrDefaultAsync(p => p.BudgetVersieId == model.BudgetVersieId);
@@ -11757,6 +11764,8 @@ namespace CPMCore.Controllers
                 bestaand.AankoopprijsGrond        = model.Params.AankoopprijsGrond;
                 bestaand.OnvoorzienPerc           = model.Params.OnvoorzienPerc;
                 bestaand.PubliciteitForfait       = model.Params.PubliciteitForfait;
+                bestaand.DoelMargePerc            = model.Params.DoelMargePerc;
+                bestaand.GrondMargePerc           = model.Params.GrondMargePerc;
             }
 
             await _db.SaveChangesAsync();
@@ -11787,8 +11796,14 @@ namespace CPMCore.Controllers
 
             var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
 
+            var voorstel = await _verkoopVoorstelService.BerekenAsync(versieId);
+            var unitOptions = BuildVerkoopUnitOptions(versie.ProjectId);
+            ViewData["UnitOptions"] = unitOptions;
+
             var model = new BudgetVerkoopModel
             {
+                Voorstel              = voorstel,
+                UnitOptions           = unitOptions,
                 BudgetVersieId        = versieId,
                 ProjectId             = versie.ProjectId,
                 ProjectName           = projectNaam,
@@ -11844,12 +11859,38 @@ namespace CPMCore.Controllers
         [HttpPost]
         public IActionResult BlankVerkoopRij(int versieId, string eenheidNaam)
         {
+            var projectId = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId).Select(v => (int?)v.ProjectId).FirstOrDefault();
+            ViewData["UnitOptions"] = projectId.HasValue ? BuildVerkoopUnitOptions(projectId.Value) : new List<SelectListItem>();
+
             var lijn = new BudgetVerkoopLijn
             {
                 BudgetVersieId = versieId,
                 EenheidNaam    = eenheidNaam
             };
             return PartialView("Partials/_VerkoopRij", lijn);
+        }
+
+        private List<SelectListItem> BuildVerkoopUnitOptions(int projectId)
+        {
+            var resp = _unitService.GetUnitsByProjectIdForSelect(projectId, false);
+            var items = new List<SelectListItem> { new SelectListItem("— geen eenheid —", "") };
+            if (resp.Success && resp.Values != null)
+                items.AddRange(resp.Values.Select(u => new SelectListItem(u.Display, u.ID.ToString())));
+            return items;
+        }
+
+        // POST /Projecten/DoorzettenVerkoopNaarUnits — grond-/bouwwaarde van de verkooplijnen naar de Units.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DoorzettenVerkoopNaarUnits(int versieId)
+        {
+            var response = await _verkoopVoorstelService.DoorzettenNaarUnitsAsync(versieId);
+            return Json(new
+            {
+                success  = response.Success,
+                messages = response.Messages.Select(m => new { type = m.Type.ToString(), text = m.Message }).ToList()
+            });
         }
 
         // ── BudgetResultaat (stap 9) ──────────────────────────────────────────
@@ -11865,6 +11906,7 @@ namespace CPMCore.Controllers
             if (versie == null) return NotFound();
 
             var resultaat = await _berekeningService.BerekenAsync(versieId);
+            resultaat.Verkoop = await _verkoopVoorstelService.SamenvattingAsync(versieId);
             resultaat.VersieNaam   = versie.VersieNaam   ?? string.Empty;
             resultaat.Versienummer = versie.Versienummer;
 
@@ -11894,8 +11936,11 @@ namespace CPMCore.Controllers
 
             var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
 
+            var voorstel = await _verkoopVoorstelService.BerekenAsync(versieId);
+
             var model = new BudgetResultaatModel
             {
+                Voorstel             = voorstel,
                 BudgetVersieId       = versieId,
                 ProjectId            = versie.ProjectId,
                 ProjectName          = projectNaam,
@@ -11952,6 +11997,11 @@ namespace CPMCore.Controllers
                 return Json(new { success = false, message = "Geen versies geselecteerd." });
 
             var resultaten = await _berekeningService.GetVergelijkingAsync(req.VersieIds);
+            foreach (var r in resultaten)
+            {
+                try { r.Verkoop = await _verkoopVoorstelService.SamenvattingAsync(r.BudgetVersieId); }
+                catch { r.Verkoop = null; }
+            }
             return Json(new { success = true, resultaten });
         }
 
@@ -12116,7 +12166,9 @@ namespace CPMCore.Controllers
                     StraightloanGrondMaanden= bronParams.StraightloanGrondMaanden,
                     AankoopprijsGrond       = bronParams.AankoopprijsGrond,
                     OnvoorzienPerc          = bronParams.OnvoorzienPerc,
-                    PubliciteitForfait      = bronParams.PubliciteitForfait
+                    PubliciteitForfait      = bronParams.PubliciteitForfait,
+                    DoelMargePerc           = bronParams.DoelMargePerc,
+                    GrondMargePerc          = bronParams.GrondMargePerc
                 });
 
             // Verkooplijnen
@@ -12133,6 +12185,9 @@ namespace CPMCore.Controllers
                     OppTuin        = v.OppTuin,
                     OppTerras      = v.OppTerras,
                     OppDakterras   = v.OppDakterras,
+                    Grondwaarde    = v.Grondwaarde,
+                    Bouwwaarde     = v.Bouwwaarde,
+                    Vraagprijs     = v.Vraagprijs,
                     IsRuil         = v.IsRuil,
                     ExtraForfait   = v.ExtraForfait,
                     SortOrder      = v.SortOrder
@@ -12155,6 +12210,7 @@ namespace CPMCore.Controllers
             if (versie == null) return NotFound();
 
             var resultaat = await _berekeningService.BerekenAsync(versieId);
+            resultaat.Verkoop = await _verkoopVoorstelService.SamenvattingAsync(versieId);
 
             var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
             var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
@@ -12192,6 +12248,7 @@ namespace CPMCore.Controllers
             if (versie == null) return NotFound();
 
             var resultaat = await _berekeningService.BerekenAsync(versieId);
+            resultaat.Verkoop = await _verkoopVoorstelService.SamenvattingAsync(versieId);
 
             var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
             var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");

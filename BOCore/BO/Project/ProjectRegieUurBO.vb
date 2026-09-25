@@ -14,4 +14,7 @@ Public Class ProjectRegieUurBO
     Public Property InvoiceId As Integer?
     Public Property InvoicePublicId As String
 
+    ''' <summary>Uurtarief op het moment van factureren; Nothing zolang de prestatie nog niet gefactureerd is.</summary>
+    Public Property HourlyRateInvoiced As Decimal?
+
 End Class

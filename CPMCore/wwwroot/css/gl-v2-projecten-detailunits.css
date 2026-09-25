@@ -149,6 +149,8 @@
 .gl-v2-du-group-toggle > i { font-size: 14px; color: var(--gl-v2-muted-soft); flex: none; }
 .gl-v2-du-group-count { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; }
 .gl-v2-du-group-spacer { flex: 1; }
+/* Samenvatting van een samengevatte groep (losse bergingen/parkings): aantal, oppervlakte, waarde. */
+.gl-v2-du-group-summary { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gl-v2-du-group-caret { transition: transform .15s ease; }
 .gl-v2-du-group-toggle[aria-expanded="false"] .gl-v2-du-group-caret { transform: rotate(-90deg); }
 
@@ -195,26 +197,6 @@
 .gl-v2-du-stack-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gl-v2-du-tabular { font-variant-numeric: tabular-nums; }
 .gl-v2-du-muted { color: var(--gl-v2-muted-light); }
-
-/* Koppelregel in de tabel — 16a §2: "Koppelen is een regel in de tabel en geen derde icoon in een rij
-   van drie". Het ⋯-menu houdt bewerken/ontkoppelen/verwijderen. */
-.gl-v2-du-attach-row td { padding: 0; background: #FBFCFA; }
-.gl-v2-du-attach-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    height: 36px;
-    padding: 0 18px 0 76px;
-    border: 0;
-    background: transparent;
-    color: var(--gl-v2-primary);
-    font: 600 11.5px var(--gl-v2-font-sans);
-    cursor: pointer;
-    text-align: left;
-}
-.gl-v2-du-attach-btn:hover { background: var(--gl-v2-hover-tint); }
-.gl-v2-du-attach-btn i { font-size: 14px; }
 
 /* Totaalregel (16a: "Totaal <project>"). */
 .gl-v2-du-table tfoot td {
@@ -313,7 +295,10 @@
 .gl-v2-du-attach-result-old { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; text-decoration: line-through; }
 .gl-v2-du-attach-result-new { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
 
-/* ── Tablet (768–1023.98px): verdieping en oppervlakte vervallen als losse kolom (zelfde afweging als
+/* ── Tablet (768–1023.98px): enkel Eenheid, Type en de actieknop blijven als kolom over — verdieping,
+   oppervlakte, verkoopprijs, basisakte/koper en status vervallen (.gl-v2-du-col-collapsible; de
+   naam-/typecel bevat al de rest van wat je nodig hebt om een rij te herkennen, de details staan achter
+   Bewerken). Historisch: verdieping en oppervlakte vervallen als losse kolom (zelfde afweging als
    .gl-v2-dc-col-collapsible op DetailClientsV2 en .gl-v2-pd-units-col-collapsible op DetailV2), en de
    twee topbar-knoppen verhuizen naar het ⋯-menu. ──────────────────────────────────────────────── */
 @media (min-width: 1024px) {
@@ -351,6 +336,12 @@
     .gl-v2-du-card-foot { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
     .gl-v2-du-card-price { flex: 1; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
     .gl-v2-du-card-group-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--gl-v2-muted); padding: 6px 2px 0; }
+    /* Samengevatte groep: het label is een toggle (44px-raakvlak), samenvatting op een eigen regel. */
+    .gl-v2-du-card-group-label.is-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; width: 100%; min-height: 44px; padding: 6px 2px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+    .gl-v2-du-card-group-label.is-toggle[hidden] { display: none; }
+    .gl-v2-du-card-group-label.is-toggle > i { font-size: 14px; color: var(--gl-v2-muted-soft); }
+    .gl-v2-du-card-group-label.is-toggle[aria-expanded="false"] .gl-v2-du-group-caret { transform: rotate(-90deg); }
+    .gl-v2-du-card-group-summary { flex-basis: 100%; font: 450 11.5px var(--gl-v2-font-sans); letter-spacing: 0; text-transform: none; color: var(--gl-v2-muted); }
 
     /* iOS Safari zoomt de hele pagina in op een tekstveld onder 16px — zie DESIGN.md's eigen
        "Don't"-regel hierover. */
@@ -367,7 +358,7 @@
    lijst zelf, uitgeklapt en zonder eigen achtergronden. ──────────────────────────────────────────── */
 @media print {
     .gl-v2-rail, .gl-v2-topbar, .gl-v2-qa-bar, .gl-v2-pm-desktop, .gl-v2-pm-tablet, .gl-v2-pm-phone,
-    .gl-v2-du-toolbar, .gl-v2-du-mobile-list, .gl-v2-menu, .gl-v2-du-attach-row,
+    .gl-v2-du-toolbar, .gl-v2-du-mobile-list, .gl-v2-menu,
     .gl-v2-du-table thead th:last-child, .gl-v2-du-table td:last-child { display: none !important; }
 
     .gl-v2, .gl-v2-body, .gl-v2-content, .gl-v2-card, .gl-v2-du-table-card {

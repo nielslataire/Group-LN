@@ -150,6 +150,10 @@
                                    href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = item.Id })">
                                     <i class="fa fa-print"></i>
                                 </a>
+                                <a data-toggle="tooltip" data-placement="top" title="Digitaal ter ondertekening sturen"
+                                   href="@Url.Action("ChangeOrderSignV2", "Projecten", new { changeorderid = item.Id })">
+                                    <i class="fa fa-signature"></i>
+                                </a>
                                 <a data-toggle="tooltip" data-placement="top" title="Bewerken"
                                    href="@Url.Action("EditChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientid = item.ClientAccountID, coid = item.Id })">
                                     <i class="fa fa-edit"></i>

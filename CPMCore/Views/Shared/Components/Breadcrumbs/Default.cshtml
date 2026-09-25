@@ -56,7 +56,7 @@
         @for (int i = 1; i < nodes.Count; i++)
         {
             var node = nodes[i];
-            var isLast = i == nodes.Count - 1;
+            var isLast = i == nodes.Count - 1 && ViewData["LastCrumbIsLink"] as bool? != true;
             var url = ResolveUrl(node);
 
             @* title-attribuut = volledige tekst als tooltip zodra gl-v2-shell.css's ellipsis een

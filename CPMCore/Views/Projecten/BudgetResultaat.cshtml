@@ -86,6 +86,80 @@
                     ("fa-right-left",   "Alt. vs nacalc (bouwkost)",                 "€ " + (Model.TotaalBouwAlternatief - Model.TotaalBouwNacalc).ToString("N0")),
                 };
             }
+            @if (Model.Voorstel is not null)
+            {
+                var vs = Model.Voorstel;
+                var margeKleur = vs.MargeBedrag >= 0 ? "var(--primary)" : "#dc3545";
+                <div class="gl-kpi2-strip bw-kpi-row mb-2">
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                            <div class="gl-kpi2-icon"><i class="fa-solid fa-tag" aria-hidden="true"></i></div>
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">Minimale verkoopwaarde (kost + marge)</div>
+                                <div class="gl-kpi2-value">€ @vs.TotaalVerkoopwaarde.ToString("N0")</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                            <div class="gl-kpi2-icon"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></div>
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">Grondwaarde (@((vs.GrondMargePerc * 100m).ToString("0.#")) % marge)</div>
+                                <div class="gl-kpi2-value">€ @vs.Grondwaarde.ToString("N0")</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                            <div class="gl-kpi2-icon"><i class="fa-solid fa-building" aria-hidden="true"></i></div>
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">Bouwwaarde (@((vs.DoelMargePerc * 100m).ToString("0.#")) % marge)</div>
+                                <div class="gl-kpi2-value">€ @vs.Bouwwaarde.ToString("N0")</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: @margeKleur;">
+                            <div class="gl-kpi2-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></div>
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">Marge op kostprijs incl. grond (€ @vs.TotaalKostprijs.ToString("N0"))</div>
+                                <div class="gl-kpi2-value">€ @vs.MargeBedrag.ToString("N0") · @((vs.MargePerc * 100m).ToString("0.#")) %</div>
+                            </div>
+                        </div>
+                    </div>
+                    @if (Model.Resultaat.Verkoop is { VraagprijzenLijnen: not null } vk)
+                    {
+                        var vkKleur = vk.Marge >= 0 ? "var(--primary)" : "#dc3545";
+                        <div class="gl-kpi2-tile-col">
+                            <div class="gl-kpi2-tile" style="--kpi-color: @vkKleur;">
+                                <div class="gl-kpi2-icon"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i></div>
+                                <div class="gl-kpi2-body">
+                                    <div class="gl-kpi2-label">Vastgelegde vraagprijzen (@vk.AantalLijnenMetVraagprijs lijnen) · marge</div>
+                                    <div class="gl-kpi2-value">€ @vk.Opbrengst.ToString("N0") · € @vk.Marge.ToString("N0") (@((vk.MargePerc * 100m).ToString("0.#")) %)</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (vs.MarktTotaal.HasValue && vs.MinimumTotaalMetMarkt is > 0)
+                    {
+                        var marktDelta = (vs.MarktTotaal.Value - vs.MinimumTotaalMetMarkt.Value) / vs.MinimumTotaalMetMarkt.Value;
+                        var marktKleur = marktDelta >= 0 ? "var(--primary)" : "#dc3545";
+                        <div class="gl-kpi2-tile-col">
+                            <div class="gl-kpi2-tile" style="--kpi-color: @marktKleur;">
+                                <div class="gl-kpi2-icon"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i></div>
+                                <div class="gl-kpi2-body">
+                                    <div class="gl-kpi2-label">Marktwaarde @(vs.Markt?.GemeenteNaam) (@vs.AantalEenhedenMetMarkt/@vs.AantalEenheden eenh.)</div>
+                                    <div class="gl-kpi2-value">€ @vs.MarktTotaal.Value.ToString("N0") · @(marktDelta >= 0 ? "+" : "")@((marktDelta * 100m).ToString("0.#")) % t.o.v. minimum</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <p class="text-muted small mb-4">
+                    Verkoopvoorstel per eenheid op <a href="@Url.Action("BudgetVerkoop", "Projecten", new { versieId = Model.BudgetVersieId })">stap 8 Verkoop</a>.
+                    Kostprijs hieronder is exclusief de aankoopprijs van de grond; het voorstel telt die wel mee.
+                </p>
+            }
             <div class="gl-kpi2-strip bw-kpi-row mb-4">
                 @foreach (var (icon, lbl, val) in resKpis)
                 {

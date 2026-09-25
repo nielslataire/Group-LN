@@ -1,0 +1,158 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@*
+    Projecten/DetailCoordinatieV2 — de modals van de pagina. Alle vier zitten in de pagina-body (niet in
+    @@section PageScripts): de --gl-v2-* tokens hangen aan de .gl-v2-wrapper, zie de toelichting in
+    Partials/_SiteManagerNewModalV2.cshtml. Eén modal per soort met per rij wisselende inhoud (dezelfde keuze als
+    Projecten/DetailUnitsV2's verwijdermodal): TYPE 2 "Formulier" voor schijf toevoegen/bewerken en factuur
+    koppelen, TYPE 1 "Bevestiging" voor verwijderen en het busy-scherm tijdens het factureren.
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    var vm = Model.GlV2!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var unlinked = vm.UnlinkedInvoices;
+}
+
+@* ── Schijf toevoegen / bewerken (TYPE 2) ─────────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form gl-v2-co-modal" id="gl-v2-co-slice-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-co-slice-modal-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("SaveCoordSlice", "Projecten")" id="gl-v2-co-slice-form" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="projectId" value="@vm.ProjectId" />
+                <input type="hidden" name="sliceId" id="gl-v2-co-slice-id" value="0" />
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-co-slice-modal-title">Schijf toevoegen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-co-slice-desc">Omschrijving <span class="gl-v2-co-required" aria-hidden="true">*</span></label>
+                        <div class="gl-v2-field-box">
+                            <input type="text" class="gl-v2-field-input" id="gl-v2-co-slice-desc" name="description" maxlength="255" required placeholder="bv. Bij de aanvang van de vloerplaat" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-co-slice-pct">Percentage <span class="gl-v2-co-required" aria-hidden="true">*</span></label>
+                        <div class="gl-v2-field-box">
+                            <input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-co-slice-pct" name="percentage" min="0.01" max="100" step="0.01" inputmode="decimal" required placeholder="0,00" autocomplete="off" />
+                            <span class="gl-v2-field-unit">%</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">Bedrag</span>
+                        <div class="gl-v2-co-slice-amount" id="gl-v2-co-slice-amount" data-price="@vm.ContractPrice.ToString("0.####", CultureInfo.InvariantCulture)">€ 0,00</div>
+                    </div>
+                    <p class="gl-v2-co-fieldnote gl-v2-field-full" id="gl-v2-co-slice-room"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Factuur koppelen aan een schijf (TYPE 2) ─────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form gl-v2-co-modal" id="gl-v2-co-link-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-co-link-modal-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("LinkCoordSliceInvoice", "Projecten")" id="gl-v2-co-link-form" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="projectId" value="@vm.ProjectId" />
+                <input type="hidden" name="sliceId" id="gl-v2-co-link-slice-id" value="0" />
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-co-link-modal-title">Factuur koppelen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p class="gl-v2-co-fieldnote is-lead gl-v2-field-full" id="gl-v2-co-link-for">Koppel een bestaande factuur aan deze schijf.</p>
+                    <div class="gl-v2-field-full">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "invoiceId",
+                            Id = "co-link-invoice",
+                            Label = "Factuur",
+                            Value = "",
+                            Placeholder = "Kies een factuur",
+                            Help = "Enkel facturen van dit coördinatiebedrijf op dit project die aan geen schijf of prestatie hangen.",
+                            Items = unlinked.Select(i => new GlV2SelectItem { Value = i.Id.ToString(), Text = $"{i.PublicId} · {i.Date:dd/MM/yyyy} · € {i.AmountExVat.ToString("N2", be)}" }).ToList()
+                        })
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Koppelen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Koppeling verwijderen: een POST (het wijzigt data), dus een verborgen formulier met antiforgery-token —
+   geen GET-link die een prefetch zou kunnen uitvoeren. *@
+<form method="post" action="@Url.Action("LinkCoordSliceInvoice", "Projecten")" id="gl-v2-co-unlink-form" class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="projectId" value="@vm.ProjectId" />
+    <input type="hidden" name="sliceId" value="" />
+</form>
+
+@* ── Schijf verwijderen (TYPE 1, danger) ───────────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-co-slice-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger">
+            <form method="post" action="@Url.Action("DeleteCoordSlice", "Projecten")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="projectId" value="@vm.ProjectId" />
+                <input type="hidden" name="sliceId" id="gl-v2-co-slice-delete-id" value="0" />
+                <div class="modal-body">
+                    <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                    <div class="gl-v2-modal-text">
+                        <h2 class="gl-v2-modal-title">Schijf verwijderen?</h2>
+                        <p class="gl-v2-modal-desc">Je staat op het punt <strong id="gl-v2-co-slice-delete-name"></strong> te verwijderen. Het contractbedrag wordt dan door de overblijvende schijven niet meer volledig gedekt.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Prestatie verwijderen (TYPE 1, danger) — AJAX, dus een knop i.p.v. een formulier ─────────────── *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-co-regie-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title">Prestatie verwijderen?</h2>
+                    <p class="gl-v2-modal-desc">Je staat op het punt de prestatie <strong id="gl-v2-co-regie-delete-name"></strong> te verwijderen.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="gl-v2-co-regie-delete-confirm">Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Bezig met factureren (TYPE 1, success) ────────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-co-busy-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-success">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-success"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title">Factuur wordt opgemaakt</h2>
+                    <p class="gl-v2-modal-desc"><span class="gl-v2-spinner" aria-hidden="true"></span> Even geduld. De pagina wordt vernieuwd zodra de verwerking klaar is.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -230,7 +230,28 @@
         resultaten.forEach(function (r) { m2Rij += '<td class="bedrag">' + fmtEuro(r.TotaalPerM2GBA) + '</td>'; });
         m2Rij += '</tr>';
 
-        $('#vergelijkBody').html(tbody + totaalRij + eenheidRij + m2Rij);
+        // ── Verkoopkant (voorstel + vastgelegde vraagprijzen) ──────────────
+        let verkoopRijen = '';
+        if (resultaten.some(function (r) { return r.Verkoop; })) {
+            const colspan = resultaten.length + 1;
+            verkoopRijen += '<tr><th colspan="' + colspan + '" class="groep-header"><i class="fa-solid fa-tag me-1"></i>Verkoop</th></tr>';
+            function vRij(label, getter, bold) {
+                let tr = '<tr><td class="' + (bold ? 'fw-semibold' : 'ps-4') + '">' + label + '</td>';
+                resultaten.forEach(function (r) {
+                    const v = r.Verkoop ? getter(r.Verkoop) : null;
+                    tr += '<td class="bedrag">' + (v == null ? '—' : v) + '</td>';
+                });
+                return tr + '</tr>';
+            }
+            function fmtPct(f) { return (f >= 0 ? '+' : '') + (f * 100).toFixed(1).replace('.', ',') + ' %'; }
+            verkoopRijen += vRij('Kostprijs incl. grond',            function (v) { return fmtEuro(v.TotaalKostprijsInclGrond); });
+            verkoopRijen += vRij('Minimale verkoopwaarde (kost + marge)', function (v) { return fmtEuro(v.MinimaleVerkoopwaarde); });
+            verkoopRijen += vRij('Marktwaarde (mediaan)',             function (v) { return v.MarktTotaal == null ? null : fmtEuro(v.MarktTotaal); });
+            verkoopRijen += vRij('Opbrengst',                         function (v) { return fmtEuro(v.Opbrengst) + ' <span class="text-muted small">' + v.OpbrengstBron + '</span>'; }, true);
+            verkoopRijen += vRij('Marge',                             function (v) { return '<span class="' + (v.Marge >= 0 ? 'text-success' : 'text-danger') + '">' + fmtEuro(v.Marge) + ' · ' + fmtPct(v.MargePerc) + '</span>'; }, true);
+        }
+
+        $('#vergelijkBody').html(tbody + totaalRij + eenheidRij + m2Rij + verkoopRijen);
     }
 </script>
 }

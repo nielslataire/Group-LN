@@ -48,6 +48,9 @@ public class NormalizedPropertyDto
 
     public bool IsNewBuild { get; set; }
 
+    /// <summary>Door de bron gerapporteerde verkoopgraad (0-100) van een projectgroep; null als onbekend.</summary>
+    public decimal? ReportedSoldPercentage { get; set; }
+
     public string? DeveloperName { get; set; }
     public string? DeveloperWebsite { get; set; }
     public string? DeveloperPhone { get; set; }

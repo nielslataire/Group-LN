@@ -212,6 +212,68 @@ DALCore/Migrations/BudgetActivityFormules.sql
 
 ---
 
+## 7. Verkoopvoorstel per eenheid — grond- en bouwwaarde (sept 2026)
+
+Increment 1 van de verkoopprijsbepaling in de budgetwizard. Bottom-up: wat moet elke eenheid
+minstens opbrengen om kostprijs + marge te dekken, gesplitst in grondwaarde en bouwwaarde.
+Niets wordt opgeslagen; het voorstel wordt telkens berekend uit de actuele budgetgegevens.
+
+**Rekenregels** (`ServiceCore/Budget/VerkoopVoorstelService.cs`, pure statische `Bereken(...)`, unit-getest):
+- GrondKost = aankoopprijs grond + infrastructuurforfait + opmeting/sondering + straight loan grond
+- BouwKost  = `BudgetResultaatBO.TotaalKosten` − die grondgebonden posten
+- Grondwaarde = GrondKost × (1 + grondmarge), verdeeld op `Grondopp` per eenheid (fallback: bouwsleutel)
+- Bouwwaarde  = BouwKost × (1 + doelmarge), verdeeld op `BudgetOppervlaktesBO.OppGereduceerd`
+  (bestaande wegingsconventie van de wizard; fallback bewoonbare opp, dan gelijk per eenheid)
+- Minimumverkoopprijs per eenheid = grondwaarde + bouwwaarde
+
+**Marges:** `BudgetParams.DoelMargePerc` / `GrondMargePerc` (fractie, NULL = standaard uit Instellingen >
+Bouwkost %, sleutels `doelmarge`/`grondmarge`) — zelfde mechanisme als architect/ingenieur.
+Invoer op stap 7 Parameters in procentpunten (`pctDoelmarge`/`pctGrondmarge`).
+
+**UI:** stap 8 Verkoop toont het voorstel (tegels + tabel per eenheid) boven de verkooplijnen;
+stap 9 Resultaat toont minimale verkoopwaarde, grond/bouw en marge.
+
+**SQL uitvoeren:** `_migrations/047_BudgetParamsVerkoopMarges.sql` (kolommen + standaardrijen).
+
+**Increment 2 — marktreferentie (sept 2026):**
+- `FacadeCore/IMarktReferentieService` + `CPMCore/Services/MarktReferentieService.cs`: project → postcode →
+  GeoMunicipality (MarketData) → alle nieuwbouw-units (appartement/woning, project-units + losse) in de gemeente:
+  laatste vraagprijs, €/m², verkocht (SaleStateHelpers) met verkoopdatum en doorlooptijd. Enkel CPMCore kent
+  de MarketData-context; ServiceCore krijgt een `MarktReferentieBO` (BOCore/Budget/MarktReferentieBO.vb).
+- `VerkoopVoorstelService.VerrijkMetMarkt` (pure, unit-getest): per eenheid mediaan/P25/P75 €/m² van ≥5
+  vergelijkbare units, voorkeur verkocht (12 mnd) → te koop → beide (≥3 = "beperkt"); van nauw naar breed:
+  zelfde type ±20 % opp → zelfde type → alle types. Marktprijs = mediaan × bewoonbare opp; aanbevolen
+  vraagprijs = marktprijs maar nooit onder de minimumverkoopprijs. Gemeentecijfers: te koop, verkocht in
+  periode, absorptie/maand, mediane doorlooptijd.
+- UI: stap 8 extra kolommen Markt €/m² / Marktprijs (Δ t.o.v. minimum) / Aanbevolen + gemeentestrook met
+  link naar Gemeenteanalyse; stap 9 tegel Marktwaarde. Geen postcode of te weinig data → waarschuwing,
+  voorstel blijft bruikbaar.
+
+**Increment 3 — overnemen, opbrengst, doorzetten (sept 2026):**
+- `BudgetVerkoopLijnen` + kolommen `Grondwaarde`, `Bouwwaarde`, `Vraagprijs` (`_migrations/048_BudgetVerkoopLijnenWaarden.sql`);
+  `UnitId` (bestond) wordt nu gevuld via een Unit-dropdown per lijn.
+- Stap 8: knop "Overnemen" per voorstelrij en "Alles overnemen" → vult/creëert de verkooplijn van die eenheid
+  (grond, bouw, aanbevolen vraagprijs; Unit met dezelfde naam wordt voorgeselecteerd). Knop "Doorzetten naar units"
+  slaat op en roept `IUnitService.UpdateUnitBudgetWaarden` aan: `Units.LandValue` ← grondwaarde,
+  basis-`UnitConstructionValue` (zonder FinishingOptionId) ← bouwwaarde (0 rijen: aanmaken; 1: bijwerken;
+  >1: overslaan + waarschuwing). Verkochte units (klant gekoppeld / Sold-waarden) worden overgeslagen.
+- `BudgetResultaatBO.Verkoop` (`BudgetVerkoopSamenvattingBO`, via `IVerkoopVoorstelService.SamenvattingAsync`):
+  kostprijs incl. grond, minimale verkoopwaarde, marktwaarde, opbrengst (= vastgelegde vraagprijzen als die er
+  zijn, anders aanbevolen prijzen), marge. Getoond op stap 9, in de versievergelijking (groep "Verkoop") en in
+  PDF/Excel (KPI + blok onder de kostentabel).
+
+**Losse verbeteringen (sept 2026):**
+- Gerapporteerde verkoopgraad: `MarketAsset.ReportedSoldPercentage` (EF-migratie Sprint16, auto bij worker-start).
+  Immoweb `soldPercentage`, Zimmo zoekkaart-label "Project - 80% beschikbaar" (`ZimmoCrawler.ParseStickerSoldPercentage`).
+  Gemeenteanalyse/Projectdetail gebruiken het als fallback voor de verkoopgraad wanneer een project geen units heeft
+  (info-icoon "volgens de advertentie").
+- Aanbod over tijd: `MarktanalyseService.BerekenAanbodPerMaand` (te koop einde maand + verkocht per maand, uit eerste
+  waarneming / verkoopdatum / verdwijnmoment) → grafiek "Aanbod en verkopen per maand" in Gemeenteanalyse.
+- Eigen verkopen als referentie: `MarktReferentieService.VoegEigenVerkopenToeAsync` haalt verkochte CPM-Units in
+  dezelfde postcode (grond + basisbouwwaarde zoals verkocht, €/m² op Surface) en voegt ze als `IsEigenVerkoop`
+  toe aan de "verkocht"-pool van het verkoopvoorstel; apart getoond in de gemeentestrook op stap 8. Ze tellen niet
+  mee in absorptie (geen verkoopdatum op Units).
+
 ## 6. Factuur btw-berekening — per tarief op de maatstaf (aug 2026)
 
 **Probleem:** Btw werd per detaillijn afgerond en daarna opgeteld. Bij factuur 0030.08.2026 (id 1136) gaf dat 269,45 i.p.v. 269,44 (21% op 1.283,05). De EPC-QR-code en de Octopus-boeking gebruikten wél het bedrag op de maatstaf, waardoor de afgedrukte factuur er 1 cent naast zat.
@@ -235,3 +297,18 @@ DALCore/Migrations/BudgetActivityFormules.sql
 DALCore/Migrations/InvoiceVatPerTarief.sql
 ```
 Maakt `vwInvoiceTotals` consistent: btw per tarief afgerond én korting (`DiscountAmount`) meegenomen in het brutototaal (werd voorheen genegeerd in de view).
+
+## 8. Documenten — één document, veel plaatsen (sept 2026, design-handoff 17)
+
+Gl-v2-pagina `Projecten/DetailDocs` (`DetailDocsV2.cshtml`, actielogica in `ProjectenController.DocsV2.cs`,
+service `ServiceCore/Documents/DocumentService*.cs`, modelbeschrijving in DESIGN.md "Projecten/DetailDocsV2").
+
+**Deployvolgorde (belangrijk):** voer eerst `_migrations/049_DocumentenModel.sql` uit op de live DB, dán pas de nieuwe
+CPMCore-build — `ProjectDocs` heeft nieuwe kolommen die elke EF-query op die tabel selecteert (ook de legacy pagina's).
+De migratie is additief: WWWCOPRO (leest `ProjectDocs` met `ClientAccountId IS NULL AND Type = 1`) blijft ongewijzigd
+werken; `SyncLegacyColumns` houdt die kolommen zo bij dat een klantdocument of concept nooit op de site komt.
+De migratie backfillt elk bestaand document met een map (uit `Type`), een revisie A (goedgekeurd) en een klantkoppeling
+(uit `ClientAccountId`). Sjablonen (`DocumentTemplates`) zijn een startset voor projecttype 1 (woonproject); pas ze aan.
+
+Nog niet gebouwd: klant-/leveranciersportaal (leesmodel `GetPortalDocuments` en de revisie-/aanvraagvelden staan klaar),
+itsme-ondertekening (handmatig registreren), bestelbon-PDF, automatische herinneringen (achtergrondtaak).

@@ -665,6 +665,10 @@
     <div class="kpi-card highlight">
         <div class="kpi-card-label"><i class="bx bx-trending-up"></i>Verkoopgraad</div>
         <div class="kpi-card-value">@Model.Verkoopgraad.ToString("F0")%</div>
+        @if (Model.VerkoopgraadGerapporteerd)
+        {
+            <div class="kpi-card-subtitle">volgens de advertentie (geen units bekend)</div>
+        }
     </div>
     <div class="kpi-card">
         <div class="kpi-card-label"><i class="bx bx-time-five"></i>Mediane doorlooptijd</div>

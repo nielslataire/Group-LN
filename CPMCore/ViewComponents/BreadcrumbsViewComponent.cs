@@ -23,6 +23,11 @@ public class BreadcrumbsViewComponent : ViewComponent
         for (var n = leaf; n != null; n = n.Parent) list.Add(n);
         list.Reverse();
 
+        // Opt-in: een pagina waarvan de kruimel bewust bij een OVERKOEPELENDE pagina stopt (gl-v2: de titel
+        // wordt niet herhaald, bv. Projecten/Toevoegen eindigt op "Projecten") wil dat die laatste kruimel
+        // toch klikbaar is — de laatste kruimel is normaal de huidige pagina en dus gewone tekst.
+        ViewData["LastCrumbIsLink"] = ViewContext.ViewData["BreadcrumbLastIsLink"] as bool? == true;
+
         return View(viewName, list); // gebruikt /Views/Shared/Components/Breadcrumbs/Default.cshtml
     }
 }

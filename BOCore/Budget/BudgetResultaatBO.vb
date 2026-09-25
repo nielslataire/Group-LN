@@ -23,6 +23,9 @@ Namespace Budget
         Public Property Financiering As New List(Of BudgetKostenPostBO)
         Public Property Onvoorzien As Decimal
 
+        ''' <summary>Verkoopkant (voorstel + verkooplijnen); Nothing als niet opgehaald.</summary>
+        Public Property Verkoop As BudgetVerkoopSamenvattingBO
+
         Public ReadOnly Property TotaalKosten As Decimal
             Get
                 Return TotaalBouw _

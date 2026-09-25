@@ -49,6 +49,14 @@ namespace FacadeCore
         /// zou voor een lijst van 40 eenheden 80 queries kosten. Eenheden die niet bij projectId horen
         /// worden overgeslagen.</summary>
         Response UpdateUnitLandshares(int projectId, IDictionary<int, decimal?> landshareByUnitId);
+
+        /// <summary>
+        /// Zet grond-/bouwwaarde uit het budget-verkoopvoorstel op de Units: Units.LandValue ← Grondwaarde,
+        /// basis-bouwwaarde (UnitConstructionValue zonder FinishingOptionId) ← Bouwwaarde.
+        /// Verkochte units (klant gekoppeld of Sold-waarden gevuld) worden overgeslagen; units met meerdere
+        /// basis-bouwwaardelijnen krijgen enkel de grondwaarde en een waarschuwing.
+        /// </summary>
+        Response UpdateUnitBudgetWaarden(int projectId, IReadOnlyList<BOCore.Budget.UnitBudgetWaardeBO> waarden);
         Response InsertUpdateUnit(UnitBO bo);
         Response InsertUpdateUnitToClientAccount(UnitBO bo);
         Response DeleteUnit(List<int> ids);

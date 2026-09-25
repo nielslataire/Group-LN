@@ -68,6 +68,9 @@ body.cc-lock {
 .cc-banner.is-open {
     display: flex;
 }
+.cc-dialog-open .cc-banner {
+    visibility: hidden;
+}
 .cc-banner-inner {
     width: 420px;
     max-width: 100%;
@@ -133,7 +136,7 @@ body.cc-lock {
 .cc-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2200;
+    z-index: 2050; /* onder .cc-banner (2100) en .cc-dialog (2300), anders blokkeert hij de knoppen */
     display: none;
     background: rgba(0, 0, 0, 0.5);
 }

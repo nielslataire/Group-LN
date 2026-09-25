@@ -1,0 +1,91 @@
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@model CPMCore.Models.Projecten.ProjectModel
+@*
+    gl-v2 — Projecten/Toevoegen ("Project toevoegen"), de aanmaakkant van design-handoff punt 19. Punt 19
+    tekent enkel het bewerkformulier; de regel erachter is dat bewerken en aanmaken dezelfde kaarten
+    gebruiken (zelfde aanpak als 16c "Nieuwe eenheid" naast 16b): hier dus dezelfde partials als EditV2
+    (Identiteit, Ligging, Standaard foto), enkel het minimum om een project aan te maken — de rest vul je
+    erna aan bij Bewerken (ProjectenController.Toevoegen stuurt na het aanmaken meteen daarheen).
+    Geen tabs, geen dossiermenu (het project bestaat nog niet), zelfde POST als de legacy pagina.
+*@
+@{
+    ViewData["Title"] = "Nieuw project";
+    ViewData["PageIcon"] = "ph ph-plus-circle";
+    ViewData["GlV2FullHeightBody"] = true;
+    var backUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("Index", "Projecten") ?? "/";
+    ViewData["BackUrl"] = backUrl;
+    ViewData["ShowSalesResponsible"] = true;
+    ViewData["CurrentPhotoUrl"] = null;
+    var totalErrorCount = ViewContext.ModelState.Sum(kv => kv.Value.Errors.Count);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-form.css" asp-append-version="true" />
+}
+@section MobileTopbarAction
+{
+}
+@section PageActions
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+
+@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "gl-v2-project-form", id = "gl-v2-project-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+
+    <div class="gl-v2-project-scroll">
+        <p class="gl-v2-pf-formhint">Genoeg om het project aan te maken — de rest vul je erna aan bij Bewerken. Velden met <span class="gl-v2-pf-req" aria-hidden="true">*</span> zijn verplicht.</p>
+
+        @await Html.PartialAsync("Partials/_ProjectFormV2Identity", Model)
+        @await Html.PartialAsync("Partials/_ProjectFormV2Location", Model)
+        @await Html.PartialAsync("Partials/_ProjectFormV2Photo", Model)
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        @if (totalErrorCount > 0)
+        {
+            <span class="gl-v2-form-actionbar-status is-error">
+                <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                @(totalErrorCount == 1 ? "1 fout in het formulier" : $"{totalErrorCount} fouten in het formulier")
+            </span>
+            <button type="button" class="gl-v2-form-actionbar-link" id="gl-v2-goto-first-error">Ga naar de eerste fout</button>
+        }
+        else
+        {
+            <span class="gl-v2-form-actionbar-status gl-v2-pf-actionbar-note"><b>2</b> verplichte velden: naam en gemeente</span>
+        }
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@backUrl" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-cancel-link">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-project-submit">Project aanmaken</button>
+        </div>
+    </div>
+}
+
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-discard-changes-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder het project aan te maken.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-discard-changes-confirm">Niet aanmaken</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        window.glV2ProjectFormConfig = { forceTab: '', mode: 'add', availableUsers: [] };
+    </script>
+    <script src="~/js/gl-v2-projecten-form.js" asp-append-version="true"></script>
+}

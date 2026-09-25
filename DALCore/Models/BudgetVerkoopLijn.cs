@@ -31,6 +31,15 @@ public partial class BudgetVerkoopLijn
 
     public int SortOrder { get; set; }
 
+    /// <summary>Grondwaarde per eenheid, overgenomen uit het verkoopvoorstel en eventueel bijgestuurd.</summary>
+    public decimal? Grondwaarde { get; set; }
+
+    /// <summary>Bouwwaarde per eenheid (excl. grond).</summary>
+    public decimal? Bouwwaarde { get; set; }
+
+    /// <summary>Vastgelegde vraagprijs (standaard = aanbevolen prijs uit het voorstel).</summary>
+    public decimal? Vraagprijs { get; set; }
+
     public virtual BudgetVersie BudgetVersie { get; set; }
 
     public virtual Units Unit { get; set; }

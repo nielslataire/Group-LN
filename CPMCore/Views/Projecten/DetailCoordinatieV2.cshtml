@@ -1,0 +1,274 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 18 "Coördinatie": 18a "Combinatie
+    schijven + regie — beide kaarten, één selectiebalk" en 18b "Enkel schijven · enkel regie · instellingen").
+    Eén pagina voor schijven, regie of beide: het contracttype (chip in de topbar) bepaalt welke kaarten er
+    staan (18a §1). Shell hergebruikt zoals op Projecten/DetailClientsV2: hetzelfde dossiermenu
+    (GlV2/_ProjectInnerMenuV2, Outer + Phone), dezelfde topbar-conventies en de gedeelde GlV2/_KpiStrip.
+
+    Wat er anders is dan de legacy Views/Projecten/DetailCoordinatie.cshtml, met het nummer uit 18a:
+    §1  Contracttype als chip in de topbar; tabs (Overzicht/Schijven/Regie/Facturen) enkel bij beide types.
+    §2  KPI's tellen over beide heen: schijven in euro, regie als open uren + bedrag, gefactureerd en nog te
+        factureren. "Voortgang" en "Openstaand" (die samenvielen) zijn weg.
+    §3  Schijven krijgen een status i.p.v. een lege kolom Factuur: gefactureerd (met factuurnummer, niet meer
+        aan te vinken) of te factureren. Een balk toont het verloop over het hele contract.
+    §4  Regie invoeren blijft één rij bovenaan, met labels boven de velden en het tarief eronder. Verplaatsing
+        is een schakelaar met de standaardafstand al ingevuld; het potlood geeft een afwijkende km voor één
+        prestatie. Een gouden stip in de tabel verraadt aangepaste km's.
+    §5  "Kies een periode" is een filter in de kaart (Vandaag · Einde vorige maand · datum) dat alle open
+        prestaties tot die datum selecteert; de blauwe/groene infoblokken vallen weg.
+    §6  Eén donkere selectiebalk onderaan telt schijven en regie samen op en maakt er één factuur van.
+    §7  Gefactureerde prestaties zitten ingeklapt per factuur; de prullenbak per rij zit in het ⋯-menu en is
+        uitgeschakeld voor wat al gefactureerd is.
+    18b Instellingen als zijpaneel (tandwiel) i.p.v. een aparte pagina.
+
+    Bewuste afwijkingen van het mockup, met de reden erbij:
+    - **Tarieven zijn ten allen tijde aan te passen voor wat nog niet gefactureerd is.** Het mockup laat
+      ingevoerde prestaties hun oude tarief behouden; hier geldt een gewijzigd uurtarief voor álle open
+      prestaties (het tarief wordt pas bij het factureren vastgelegd, ProjectRegieUur.HourlyRateInvoiced),
+      omdat regie-uren vaak maanden open blijven staan. Gefactureerde prestaties houden hun tarief.
+    - **Schijven kennen geen "nog niet bereikt".** Dat zou een koppeling tussen schijf en bouwfase
+      vragen die nergens bestaat; een open schijf is dus "te factureren" en aan te vinken.
+    - **Geen regiebudget/plafond en geen "heen en terug/enkel"-keuze** in de instellingen — daar bestaat
+      geen veld voor; de verplaatsing blijft de afstand heen en terug (2 × de berekende afstand).
+    - **Instellingen bewerken de schijven niet.** Schijven staan op de pagina zelf (Schijf toevoegen/bewerken),
+      zoals het mockup ze in de kaart plaatst. Zo kan opslaan van een tarief nooit meer factuurkoppelingen
+      raken (de oude pagina deed dat wél — zie migratie 051).
+*@
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@{
+    var vm = Model.GlV2!;
+    ViewData["Title"] = "Coördinatie";
+    ViewData["PageIcon"] = "ph ph-users-three";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = vm.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string EurK(decimal v) => "€ " + v.ToString("#,##0.##", be);
+    string Hrs(decimal v) => v.ToString("N2", be) + " u";
+    string Plural(int n, string one, string many) => n == 1 ? one : many;
+
+    var typeLabel = vm.IsCombined ? "SCHIJVEN + REGIE" : vm.ShowSchijven ? "SCHIJVEN" : vm.ShowRegie ? "REGIE" : "";
+    var hasType = vm.ShowSchijven || vm.ShowRegie;
+    var linkedInvoiceCount = vm.Invoices.Count(i => i.IsLinked);
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = vm.ProjectId,
+        ProjectName = vm.ProjectName,
+        ProjectSubtitle = "project · coördinatie" + (hasType ? " · " + typeLabel.ToLowerInvariant() : ""),
+        IsCoordinationProject = vm.IsCoordinationProject
+    };
+
+    // ── KPI's (18a §2 / 18b) ──────────────────────────────────────────────────────────────────────
+    var slicesPct = vm.ContractPrice > 0m ? Math.Round(vm.SlicesInvoicedAmount / vm.ContractPrice * 100m) : 0m;
+    var oldestOpen = vm.RegieOldestOpen;
+    var kpis = new List<GlV2KpiItemVm>();
+    if (vm.IsCombined)
+    {
+        kpis.Add(new() { Label = "SCHIJVEN", Value = $"{EurK(vm.SlicesInvoicedAmount)} / {EurK(vm.ContractPrice)}", Hint = $"{slicesPct} % gefactureerd", IconClass = "ph-stack" });
+        kpis.Add(new() { Label = "REGIE OPEN", Value = Hrs(vm.RegieOpenHours), Hint = Eur(vm.RegieOpenAmount) + (oldestOpen.HasValue ? " · oudste " + oldestOpen.Value.ToString("dd/MM/yyyy") : ""), IconClass = "ph-timer" });
+        kpis.Add(new() { Label = "GEFACTUREERD", Value = Eur(vm.InvoicedTotal), Hint = $"{linkedInvoiceCount} {Plural(linkedInvoiceCount, "factuur", "facturen")} · schijven + regie", IconClass = "ph-receipt" });
+        kpis.Add(new() { Label = "NOG TE FACTUREREN", Value = Eur(vm.ToInvoiceTotal), Hint = $"schijven {EurK(vm.SlicesOpenAmount)} + regie {Eur(vm.RegieOpenAmount)}", IconClass = "ph-hourglass" });
+    }
+    else if (vm.ShowSchijven)
+    {
+        kpis.Add(new() { Label = "CONTRACT", Value = EurK(vm.ContractPrice), Hint = $"{vm.Slices.Count} {Plural(vm.Slices.Count, "schijf", "schijven")}", IconClass = "ph-stack" });
+        kpis.Add(new() { Label = "GEFACTUREERD", Value = Eur(vm.SlicesInvoicedAmount), Hint = $"{slicesPct} % van het contract", IconClass = "ph-receipt" });
+        kpis.Add(new() { Label = "NOG TE FACTUREREN", Value = Eur(vm.SlicesOpenAmount), Hint = $"{vm.Slices.Count - vm.SlicesInvoicedCount} {Plural(vm.Slices.Count - vm.SlicesInvoicedCount, "schijf", "schijven")}", IconClass = "ph-hourglass" });
+        kpis.Add(new() { Label = "SCHIJVEN", Value = $"{vm.SlicesInvoicedCount} / {vm.Slices.Count}", Hint = "gefactureerd", IconClass = "ph-list-checks" });
+    }
+    else if (vm.ShowRegie)
+    {
+        kpis.Add(new() { Label = "GEPRESTEERD", Value = Hrs(vm.RegieTotalHours), Hint = vm.RegieFirstEver.HasValue ? "sinds " + vm.RegieFirstEver.Value.ToString("dd/MM/yyyy") : "nog geen prestaties", IconClass = "ph-timer" });
+        kpis.Add(new() { Label = "TE FACTUREREN", Value = Eur(vm.RegieOpenAmount), Hint = Hrs(vm.RegieOpenHours) + (oldestOpen.HasValue ? " · oudste " + oldestOpen.Value.ToString("dd/MM") : ""), IconClass = "ph-hourglass" });
+        kpis.Add(new() { Label = "GEFACTUREERD", Value = Eur(vm.RegieInvoicedAmount), Hint = $"{linkedInvoiceCount} {Plural(linkedInvoiceCount, "factuur", "facturen")}", IconClass = "ph-receipt" });
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detailcoordinatie.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (hasType)
+    {
+        <span class="gl-v2-badge is-positive">@typeLabel</span>
+    }
+}
+@* Op tablet (768–1023.98px) verhuizen de knoppen naar het ⋯-menu — zelfde recept als DetailClientsV2/
+   DetailUnitsV2; op gsm (<768px) verdwijnt @@section PageActions volledig en komen dezelfde acties terug via
+   @@section MobileQuickActions. *@
+@section PageActions
+{
+    <a href="@Url.Action("ExportCoordinatieExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-topbar-btn">
+        <i class="ph ph-export" aria-hidden="true"></i>Exporteren
+    </a>
+    @if (vm.CanWrite)
+    {
+        <button type="button" class="gl-v2-icon-btn gl-v2-co-topbar-btn js-co-open-settings" aria-label="Coördinatie-instellingen" title="Instellingen">
+            <i class="ph ph-gear-six" aria-hidden="true"></i>
+        </button>
+    }
+    <button type="button" class="gl-v2-icon-btn gl-v2-co-topbar-menu-trigger js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-topbar-menu" aria-label="Meer acties">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>
+    </button>
+}
+@section MobileQuickActions
+{
+    <a href="@Url.Action("ExportCoordinatieExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-file-xls" aria-hidden="true"></i>Excel
+    </a>
+    @if (vm.CanWrite)
+    {
+        <a href="#" class="gl-v2-mobile-quickaction js-co-open-settings">
+            <i class="ph ph-gear-six" aria-hidden="true"></i>Instellingen
+        </a>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-menu" id="gl-v2-co-topbar-menu">
+    <a href="@Url.Action("ExportCoordinatieExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-menu-item">
+        <i class="ph ph-file-xls" aria-hidden="true"></i>Excel-bestand
+    </a>
+    @if (vm.CanWrite)
+    {
+        <a href="#" class="gl-v2-menu-item js-co-open-settings"><i class="ph ph-gear-six" aria-hidden="true"></i>Instellingen</a>
+    }
+</div>
+
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (zie DESIGN.md, "Klanten/DetailV2's
+   tabbar wasn't flush"): het Phone-menu komt er dus ná. Bij één contracttype geen tabs (18b) — dan is het
+   Phone-menu zelf het eerste element. *@
+@if (vm.IsCombined)
+{
+    <div class="gl-v2-tabbar" role="tablist" id="gl-v2-co-tabbar">
+        <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-co-tab="overzicht">Overzicht</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-co-tab="schijven">Schijven <span class="gl-v2-tabbar-count">@vm.Slices.Count</span></button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-co-tab="regie">Regie <span class="gl-v2-tabbar-count">@Hrs(vm.RegieOpenHours)</span></button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-co-tab="facturen">Facturen <span class="gl-v2-tabbar-count">@vm.Invoices.Count</span></button>
+    </div>
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (!hasType)
+{
+    <div class="gl-v2-card gl-v2-co-card">
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-users-three" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen contracttype</h2>
+                <p class="gl-v2-empty-state-desc">Kies of dit coördinatieproject met schijven, op regie of met beide gefactureerd wordt.</p>
+                @if (vm.CanWrite)
+                {
+                    <div class="gl-v2-empty-state-actions">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-co-open-settings">Instellingen openen</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div id="gl-v2-co-root"
+         data-project-id="@vm.ProjectId"
+         data-combined="@(vm.IsCombined ? "true" : "false")">
+
+        @await Html.PartialAsync("GlV2/_KpiStrip", kpis)
+
+        @if (vm.CanWrite && vm.InvoiceBlockedReason is not null)
+        {
+            <div class="gl-v2-co-notice is-warning">
+                <span class="gl-v2-co-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+                <span class="gl-v2-co-notice-title">Nog niet te factureren</span>
+                <span class="gl-v2-co-notice-desc">@vm.InvoiceBlockedReason</span>
+                <span class="gl-v2-co-notice-spacer"></span>
+                <button type="button" class="gl-v2-co-notice-action js-co-open-settings">Instellingen</button>
+            </div>
+        }
+
+        @if (vm.ShowSchijven)
+        {
+            <section data-co-panel="schijven">
+                @await Html.PartialAsync("Partials/_CoordinatieV2Schijven", Model)
+            </section>
+        }
+        @if (vm.ShowRegie)
+        {
+            <section data-co-panel="regie">
+                @await Html.PartialAsync("Partials/_CoordinatieV2Regie", Model)
+            </section>
+        }
+        @if (vm.IsCombined)
+        {
+            <section data-co-panel="facturen" hidden>
+                @await Html.PartialAsync("Partials/_CoordinatieV2Facturen", Model)
+            </section>
+        }
+
+        @* 18a §6 — één donkere selectiebalk voor schijven én regie. Alleen wie mag factureren krijgt 'm. *@
+        @if (vm.CanInvoice)
+        {
+            <form id="gl-v2-co-invoice-form" method="post" action="@Url.Action("MakeCoordInvoice", "Projecten")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="projectId" value="@vm.ProjectId" />
+                <div id="gl-v2-co-invoice-regie-ids"></div>
+            </form>
+            <div class="gl-v2-co-selbar" id="gl-v2-co-selbar" hidden role="region" aria-label="Selectie om te factureren">
+                <span class="gl-v2-co-selbar-title">Klaar om te factureren</span>
+                <span class="gl-v2-co-selbar-parts">
+                    <span class="gl-v2-co-selbar-part" data-co-sel-slices hidden></span>
+                    <span class="gl-v2-co-selbar-plus" data-co-sel-plus hidden aria-hidden="true">+</span>
+                    <span class="gl-v2-co-selbar-part" data-co-sel-regie hidden></span>
+                </span>
+                <span class="gl-v2-co-selbar-spacer"></span>
+                <span class="gl-v2-co-selbar-total"><b data-co-sel-total>€ 0,00</b> <span>excl. btw</span></span>
+                <button type="button" class="gl-v2-co-selbar-clear" id="gl-v2-co-sel-clear">Wis</button>
+                <button type="submit" form="gl-v2-co-invoice-form" class="gl-v2-btn gl-v2-co-selbar-go" id="gl-v2-co-invoice-go">
+                    <i class="ph ph-receipt" aria-hidden="true"></i>Eén factuur maken
+                </button>
+            </div>
+        }
+    </div>
+
+}
+
+@* Paneel en modals horen ook bij een project zonder contracttype: daar is "Instellingen openen" de enige uitweg. *@
+@if (vm.CanWrite)
+{
+    @await Html.PartialAsync("Partials/_CoordinatieV2Settings", Model)
+    @await Html.PartialAsync("Partials/_CoordinatieV2Modals", Model)
+}
+
+@section PageScripts
+{
+    <script id="gl-v2-co-config" type="application/json">
+    {
+        "projectId": @vm.ProjectId,
+        "defaultKm": @vm.DefaultKm.ToString("0.##", CultureInfo.InvariantCulture),
+        "kmAllowance": @vm.KmAllowance.ToString("0.####", CultureInfo.InvariantCulture),
+        "addUrl": "@Url.Action("AddRegieUur", "Projecten")",
+        "deleteUrl": "@Url.Action("DeleteRegieUur", "Projecten")",
+        "defaultsUrl": "@Url.Action("GetIssuerCompanyDefaults", "Projecten")",
+        "defaultUserId": "@(Model.ProjectManagerUserId ?? "")",
+        "rates": {
+            @Html.Raw(string.Join(",", vm.Rates.Select(r => $"\"{System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(r.UserId)}\": {{\"name\": \"{System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(r.Name)}\", \"rate\": {r.Rate.ToString("0.####", CultureInfo.InvariantCulture)}}}")))
+        }
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-detailcoordinatie.js" asp-append-version="true"></script>
+}

@@ -46,6 +46,13 @@ public class ListingDto
     // cluster.projectInfo.projectName — alleen gevuld voor ProjectGroups
     public string? ProjectName { get; set; }
 
+    /// <summary>
+    /// Verkoopgraad zoals de bron ze zelf rapporteert (0-100), alleen voor projectgroepen:
+    /// Immoweb cluster.projectInfo.soldPercentage, Zimmo zoekkaart-label "Project - 80% beschikbaar".
+    /// Onafhankelijk van de unit-telling; nuttig als er geen units bekend zijn (Zimmo zonder detailpagina).
+    /// </summary>
+    public decimal? ReportedSoldPercentage { get; set; }
+
     public string? DeveloperName { get; set; }
     public string? DeveloperWebsite { get; set; }
     public string? DeveloperPhone { get; set; }

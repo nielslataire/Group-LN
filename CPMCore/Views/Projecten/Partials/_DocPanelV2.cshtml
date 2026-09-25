@@ -1,0 +1,318 @@
+@model CPMCore.Models.Projecten.DocPanelVm
+@*
+    Detailpaneel van een document (17a rechts, 17d ondertekening, 17e prijsvergelijking). Fragment: wordt via
+    Projecten/DocumentPanelV2 opgehaald en door gl-v2-projecten-detaildocs.js in #gl-v2-dd-panel-body gezet.
+    Acties zijn data-dd-act-knoppen; het JS routeert ze naar de POST-endpoints. Wat het paneel toont hangt van
+    de map-soort af (Detail.ViewKind): revisies (default), ondertekening (contracten), prijsvergelijking (offertes).
+*@
+@using System.Globalization
+@{
+    var d = Model.Detail;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Date(DateTime? v) => v.HasValue ? v.Value.ToLocalTime().ToString("dd/MM/yyyy", be) : "—";
+    string DateOnlyText(DateOnly? v) => v.HasValue ? v.Value.ToString("dd/MM/yyyy", be) : "—";
+    string Eur(decimal v) => v.ToString("C0", be);
+    string BadgeTone(string key) => key switch
+    {
+        "ok" or "signed" or "awarded" => "is-positive",
+        "pending" or "signing" or "requested" or "expiring" => "is-attention",
+        "missing" or "expired" => "is-blocked",
+        "submitted" => "is-info",
+        "notawarded" => "is-inactive",
+        _ => "is-neutral"
+    };
+    string ExtClass(string ext) => ext switch
+    {
+        "DWG" or "DXF" or "RVT" or "SKP" => "is-cad",
+        "DOC" or "DOCX" or "XLS" or "XLSX" or "PPT" or "PPTX" or "CSV" => "is-office",
+        _ => ""
+    };
+    var canWrite = Model.CanWrite;
+    var canDelete = Model.CanDelete;
+    var previewUrl = d.PreviewRevisionId.HasValue ? Url.Action("DocumentFileV2", "Projecten", new { projectid = d.ProjectId, revisionId = d.PreviewRevisionId }) : null;
+    var pending = d.Revisions.FirstOrDefault(r => r.Id == d.PendingRevisionId);
+    var companyLinks = d.Chips.Where(c => c.Type == "company").ToList();
+    var clientLinks = d.Chips.Where(c => c.Type == "client").ToList();
+    var unitLinks = d.Chips.Where(c => c.Type == "unit").ToList();
+    var isContract = d.ViewKind == "contracten";
+    var isOffer = d.ViewKind == "offertes";
+    var sigSuggest = System.Text.Json.JsonSerializer.Serialize(clientLinks.Select(c => new { name = c.Label, clientId = c.Id }));
+    var maxOffer = d.Offers.Count == 0 ? 0m : d.Offers.Max(o => o.Amount);
+    var bestOffer = d.Offers.Count == 0 ? 0m : d.Offers.Min(o => o.Amount);
+}
+<div class="gl-v2-dd-panel-root"
+     data-panel-doc
+     data-doc-id="@d.Id"
+     data-doc-name="@d.Name"
+     data-folder-id="@d.FolderId"
+     data-number="@d.DocumentNumber"
+     data-author="@d.AuthoredBy"
+     data-date="@d.DocumentDate?.ToString("yyyy-MM-dd")"
+     data-expires="@d.ExpiresOn?.ToString("yyyy-MM-dd")"
+     data-perceel="@d.Perceel"
+     data-frozen="@(d.IsFrozen ? "1" : "0")"
+     data-signers="@sigSuggest">
+
+    <div class="gl-v2-dd-p-head">
+        <span class="gl-v2-dd-ext @ExtClass(d.Ext)" aria-hidden="true">@d.Ext</span>
+        <div class="gl-v2-dd-p-title">
+            <span class="gl-v2-dd-p-name">@d.Name</span>
+            <span class="gl-v2-dd-p-sub">@d.FolderName@(string.IsNullOrWhiteSpace(d.SubLine) ? "" : " · " + d.SubLine)</span>
+            <span><span class="gl-v2-badge @BadgeTone(d.StatusKey)">@d.StatusLabel.ToUpperInvariant()</span></span>
+        </div>
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-dd-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
+
+    <div class="gl-v2-dd-p-preview">
+        @if (!string.IsNullOrWhiteSpace(Model.ThumbUrl))
+        {
+            <img src="@Model.ThumbUrl" alt="Voorbeeld van @d.Name" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'gl-v2-dd-p-preview-ph',innerHTML:'<i class=&quot;ph ph-file&quot;></i>Geen voorbeeld beschikbaar'}))" />
+        }
+        else
+        {
+            <span class="gl-v2-dd-p-preview-ph"><i class="ph ph-file" aria-hidden="true"></i>Geen voorbeeld beschikbaar</span>
+        }
+        @if (previewUrl != null)
+        {
+            <div class="gl-v2-dd-p-preview-bar">
+                <span>voorbeeld van revisie @d.PreviewLabel</span>
+                <a href="@previewUrl" target="_blank" rel="noopener">Openen</a>
+            </div>
+        }
+    </div>
+
+    @if (d.IsFrozen)
+    {
+        <div class="gl-v2-dd-p-section">
+            <div class="gl-v2-dd-notice is-success"><i class="ph ph-lock-key" aria-hidden="true"></i><span>@(d.Status == 3 ? "Getekend en bevroren" : "Er is al getekend: het document is bevroren"): er komen geen nieuwe revisies meer. Wil je iets wijzigen, maak dan een nieuw document dat dit vervangt (bv. een wijzigingsopdracht).</span></div>
+        </div>
+    }
+
+    <div class="gl-v2-dd-p-section">
+        <div class="gl-v2-dd-p-label">Gegevens
+            @if (canWrite) { <button type="button" class="gl-v2-dd-p-label-action" data-dd-act="edit">Bewerken</button> }
+        </div>
+        <div class="gl-v2-dd-p-grid">
+            <div class="gl-v2-dd-p-kv"><span>Documentnr.</span><b>@(string.IsNullOrWhiteSpace(d.DocumentNumber) ? "—" : d.DocumentNumber)</b></div>
+            <div class="gl-v2-dd-p-kv"><span>Documentdatum</span><b>@DateOnlyText(d.DocumentDate)</b></div>
+            <div class="gl-v2-dd-p-kv"><span>Opgesteld door</span><b>@(string.IsNullOrWhiteSpace(d.AuthoredBy) ? "—" : d.AuthoredBy)</b></div>
+            <div class="gl-v2-dd-p-kv"><span>Vervalt op</span><b>@DateOnlyText(d.ExpiresOn)</b></div>
+            @if (!string.IsNullOrWhiteSpace(d.Perceel))
+            {
+                <div class="gl-v2-dd-p-kv"><span>Perceel</span><b>@d.Perceel</b></div>
+            }
+            @if (isOffer && d.CurrentAmount.HasValue)
+            {
+                <div class="gl-v2-dd-p-kv"><span>Bedrag (excl. btw)</span><b>@Eur(d.CurrentAmount.Value)</b></div>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-dd-p-section">
+        <div class="gl-v2-dd-p-label">Gekoppeld aan
+            @if (canWrite) { <button type="button" class="gl-v2-dd-p-label-action" data-dd-act="link">+ Koppelen</button> }
+        </div>
+        <div class="gl-v2-dd-p-links">
+            @foreach (var c in d.Chips)
+            {
+                <span class="gl-v2-dd-linkchip is-@c.Type">
+                    @c.Label
+                    @if (c.Type != "project" && canWrite)
+                    {
+                        <button type="button" data-dd-act="unlink" data-link-id="@c.LinkId" aria-label="@c.Label ontkoppelen" title="Ontkoppelen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                    }
+                </span>
+            }
+        </div>
+        @if (unitLinks.Count + clientLinks.Count + companyLinks.Count > 0)
+        {
+            <span class="gl-v2-dd-p-help">Verschijnt ook op de pagina van @string.Join(", ", d.Chips.Where(c => c.Type != "project").Select(c => c.Label)), tab Documenten.</span>
+        }
+        else
+        {
+            <span class="gl-v2-dd-p-help">Enkel gekoppeld aan het project. Koppel het aan een eenheid, klant of leverancier om het daar ook te tonen — het blijft één bestand.</span>
+        }
+    </div>
+
+    @if (isOffer && d.Offers.Count > 1)
+    {
+        <div class="gl-v2-dd-p-section">
+            <div class="gl-v2-dd-p-label">Prijsvergelijking · @d.Perceel</div>
+            <div class="gl-v2-dd-compare">
+                @foreach (var o in d.Offers)
+                {
+                    <div class="gl-v2-dd-compare-row @(o.Amount == bestOffer ? "is-best" : "") @(o.IsThis ? "is-this" : "")">
+                        <span>@o.Company@(o.IsThis ? " (dit document)" : "")</span>
+                        <b>@Eur(o.Amount)</b>
+                        <span class="gl-v2-dd-compare-bar"><span style="width:@((int)Math.Round(o.Amount * 100m / (maxOffer == 0 ? 1 : maxOffer)))%"></span></span>
+                    </div>
+                }
+            </div>
+            @if (d.Offers.Count >= 2)
+            {
+                <span class="gl-v2-dd-p-help">@d.Offers[0].Company is @Eur(d.Offers[1].Amount - d.Offers[0].Amount) goedkoper dan @d.Offers[1].Company.</span>
+            }
+        </div>
+    }
+
+    @if (isContract)
+    {
+        <div class="gl-v2-dd-p-section">
+            <div class="gl-v2-dd-p-label">Ondertekening
+                @if (canWrite && d.Signatures.Count == 0 && d.CurrentRevisionId.HasValue)
+                {
+                    <button type="button" class="gl-v2-dd-p-label-action" data-dd-act="sign-send">Ter ondertekening sturen</button>
+                }
+            </div>
+            @if (d.Signatures.Count == 0)
+            {
+                <span class="gl-v2-dd-p-help">Nog niet ter ondertekening verstuurd. @(d.UnitEffectHint)</span>
+            }
+            else
+            {
+                <div>
+                    @foreach (var s in d.Signatures)
+                    {
+                        <div class="gl-v2-dd-sigrow">
+                            <span class="gl-v2-dd-sig @(s.Status == 2 ? "is-signed" : s.Status == 1 ? "is-opened" : "")">@s.Initials</span>
+                            <span class="gl-v2-dd-share-text">
+                                <span class="gl-v2-dd-share-name">@s.Name@(string.IsNullOrWhiteSpace(s.Role) ? "" : " · " + s.Role)</span>
+                                <span class="gl-v2-dd-share-sub">
+                                    @(s.Status == 2 ? "getekend " + Date(s.SignedDate) + (s.Method == "itsme" ? " via itsme" : s.Method == "email-otp" ? " via persoonlijke link + e-mailcode" : " (handmatig geregistreerd)") : s.Status == 1 ? "geopend " + Date(s.OpenedDate) + ", nog niet getekend" : "verstuurd " + Date(s.SentDate) + (s.ReminderDate.HasValue ? " · herinnerd " + Date(s.ReminderDate) : ""))
+                                </span>
+                            </span>
+                            @if (canWrite && s.Status != 2)
+                            {
+                                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-dd-act="sign-remind" data-signature-id="@s.Id">Herinneren</button>
+                                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-dd-act="sign-mark" data-signature-id="@s.Id" data-name="@s.Name">Getekend</button>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(d.UnitEffectHint))
+                {
+                    <span class="gl-v2-dd-p-help">@d.UnitEffectHint</span>
+                }
+            }
+        </div>
+    }
+
+    <div class="gl-v2-dd-p-section">
+        <div class="gl-v2-dd-p-label">Revisies</div>
+        @if (d.Revisions.Count == 0)
+        {
+            <span class="gl-v2-dd-p-help">Nog geen revisies.</span>
+        }
+        else
+        {
+            <div class="gl-v2-dd-revs">
+                @foreach (var r in d.Revisions)
+                {
+                    <div class="gl-v2-dd-revrow @(r.IsCurrent ? "is-current" : "") @(r.Status == 1 ? "is-pending" : "")">
+                        <span class="gl-v2-dd-revlet">@r.Label</span>
+                        <div class="gl-v2-dd-revbody">
+                            <div class="gl-v2-dd-revhead">
+                                @if (r.IsCurrent) { <span class="gl-v2-badge is-positive">HUIDIG</span> }
+                                else if (r.Status == 1) { <span class="gl-v2-badge is-attention">TER GOEDKEURING</span> }
+                                else if (r.Status == 0) { <span class="gl-v2-badge is-neutral">CONCEPT</span> }
+                                else { <span class="gl-v2-badge is-inactive">VERVANGEN</span> }
+                                @if (r.Amount.HasValue)
+                                {
+                                    <span class="gl-v2-dd-revamount">@Eur(r.Amount.Value)</span>
+                                    @if (r.AmountDelta.HasValue && r.AmountDelta.Value != 0m)
+                                    {
+                                        <span class="gl-v2-dd-revdelta @(r.AmountDelta.Value < 0 ? "is-down" : "is-up")">@(r.AmountDelta.Value < 0 ? "− " : "+ ")@Eur(Math.Abs(r.AmountDelta.Value))</span>
+                                    }
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(r.Note))
+                            {
+                                <span class="gl-v2-dd-revmeta" style="color:var(--gl-v2-ink)">@r.Note</span>
+                            }
+                            <span class="gl-v2-dd-revmeta">
+                                @(r.UploadedByKind == 2 ? "Leverancier" : r.UploadedByKind == 1 ? "Klant" : "")@(r.UploadedByKind is 1 or 2 ? " " : "")@(r.UploadedByName ?? "") · @Date(r.UploadedDate)
+                                @(r.ApprovedDate.HasValue && r.Status == 2 ? " · goedgekeurd" + (string.IsNullOrWhiteSpace(r.ApprovedByName) ? "" : " door " + r.ApprovedByName) : "")
+                                @(r.SizeBytes.HasValue ? " · " + ServiceCore.Documents.DocumentRules.SizeText(r.SizeBytes) : "")
+                            </span>
+                            @if (r.Status == 1 && canWrite)
+                            {
+                                <div class="gl-v2-dd-revactions">
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-dd-act="approve" data-revision-id="@r.Id"><i class="ph ph-check" aria-hidden="true"></i>Rev. @r.Label goedkeuren</button>
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-dd-act="reject" data-revision-id="@r.Id" data-label="@r.Label">Afwijzen</button>
+                                    <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("DocumentFileV2", "Projecten", new { projectid = d.ProjectId, revisionId = r.Id })" target="_blank" rel="noopener">Bekijken</a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-dd-p-section">
+        <div class="gl-v2-dd-p-label">Gedeeld met</div>
+        <div>
+            <div class="gl-v2-dd-share-row">
+                <span class="gl-v2-dd-share-ico"><i class="ph ph-users-three" aria-hidden="true"></i></span>
+                <span class="gl-v2-dd-share-text"><span class="gl-v2-dd-share-name">Intern team</span><span class="gl-v2-dd-share-sub">altijd — alle revisies</span></span>
+            </div>
+            @if (d.HasClientAudience)
+            {
+                <div class="gl-v2-dd-share-row">
+                    <span class="gl-v2-dd-share-ico is-klant"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                    <span class="gl-v2-dd-share-text">
+                        <span class="gl-v2-dd-share-name">Klantportaal</span>
+                        <span class="gl-v2-dd-share-sub">
+                            @(d.ShareClientOn ? "enkel huidige revisie, zichtbaar voor " + (unitLinks.Count + clientLinks.Count > 0 ? string.Join(", ", unitLinks.Concat(clientLinks).Select(c => c.Label)) : "alle kopers van het project") : "niet gedeeld")
+                        </span>
+                    </span>
+                    @if (canWrite)
+                    {
+                        <label class="gl-v2-toggle-row" style="margin:0"><input type="checkbox" class="gl-v2-toggle-switch" data-dd-act="share" data-audience="klant" @(d.ShareClientOn ? "checked" : null) aria-label="Delen met klantportaal" /></label>
+                    }
+                </div>
+            }
+            @foreach (var c in companyLinks)
+            {
+                <div class="gl-v2-dd-share-row">
+                    <span class="gl-v2-dd-share-ico is-leverancier"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                    <span class="gl-v2-dd-share-text">
+                        <span class="gl-v2-dd-share-name">Leveranciersportaal · @c.Label</span>
+                        <span class="gl-v2-dd-share-sub">@(c.Shared ? "enkel huidige revisie" : "niet gedeeld")</span>
+                    </span>
+                    @if (canWrite)
+                    {
+                        <label class="gl-v2-toggle-row" style="margin:0"><input type="checkbox" class="gl-v2-toggle-switch" data-dd-act="link-share" data-link-id="@c.LinkId" @(c.Shared ? "checked" : null) aria-label="Delen met @c.Label" /></label>
+                    }
+                </div>
+            }
+            @if (companyLinks.Count == 0)
+            {
+                <div class="gl-v2-dd-share-row">
+                    <span class="gl-v2-dd-share-ico is-leverancier"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                    <span class="gl-v2-dd-share-text"><span class="gl-v2-dd-share-name">Leveranciersportaal</span><span class="gl-v2-dd-share-sub">koppel eerst een leverancier</span></span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-dd-panel-foot">
+        @if (canWrite && !d.IsFrozen)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-dd-act="new-revision"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nieuwe revisie</button>
+        }
+        @if (isOffer && canWrite && d.Status == 5)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-dd-act="award" data-name="@d.Name"><i class="ph ph-seal-check" aria-hidden="true"></i>Gunnen</button>
+        }
+        @if (previewUrl != null)
+        {
+            <a class="gl-v2-btn gl-v2-btn-secondary" href="@previewUrl" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen</a>
+        }
+        <span class="gl-v2-dd-foot-spacer"></span>
+        @if (canDelete)
+        {
+            <button type="button" class="gl-v2-icon-btn is-danger" data-dd-act="delete" aria-label="Document verwijderen" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        }
+    </div>
+</div>

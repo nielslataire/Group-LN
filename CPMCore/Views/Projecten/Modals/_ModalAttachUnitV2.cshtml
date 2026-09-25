@@ -46,6 +46,10 @@
     @Html.AntiForgeryToken()
     <input type="hidden" name="projectid" value="@Model.ProjectId" />
     <input type="hidden" name="lotUnitId" value="@Model.LotUnitId" />
+    @if (!string.IsNullOrEmpty(Model.ReturnUrl))
+    {
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    }
     <input type="hidden" name="unitId" value="" data-attach-unit-id />
 
     <div class="modal-body">

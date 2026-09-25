@@ -104,6 +104,11 @@ namespace ServiceCore.Budget
                     KpiBox("Totale kostprijs", $"€ {_resultaat.TotaalKosten:N0}",    Colors.Blue.Medium);
                     KpiBox("Per eenheid",      $"€ {_resultaat.TotaalPerEenheid:N0}", Colors.Green.Medium);
                     KpiBox("Per m² GBA",       $"€ {_resultaat.TotaalPerM2GBA:N0}",   Colors.Grey.Darken1);
+                    if (_resultaat.Verkoop is { } vk)
+                    {
+                        KpiBox("Opbrengst", $"€ {vk.Opbrengst:N0}", Colors.Orange.Medium);
+                        KpiBox("Marge", $"€ {vk.Marge:N0} ({vk.MargePerc * 100m:0.#}%)", vk.Marge >= 0 ? Colors.Green.Darken2 : Colors.Red.Medium);
+                    }
                     row.RelativeItem();
                 });
 
@@ -191,6 +196,25 @@ namespace ServiceCore.Budget
                     tbl.Cell().Padding(3).Text("Per m² GBA").Italic();
                     tbl.Cell().Padding(3).AlignRight().Text($"€ {_resultaat.TotaalPerM2GBA:N0}").Italic();
                     tbl.Cell().Padding(3).AlignRight().Text($"{_resultaat.TotaalGBA:N0} m²").Italic().FontColor(Colors.Grey.Darken1);
+
+                    if (_resultaat.Verkoop is { } vk)
+                    {
+                        GroepHeader("Verkoop");
+                        KostenRij("Kostprijs incl. aankoopprijs grond", vk.TotaalKostprijsInclGrond);
+                        KostenRij("Grondwaarde (kost + marge)", vk.Grondwaarde);
+                        KostenRij("Bouwwaarde (kost + marge)", vk.Bouwwaarde);
+                        KostenRij("Minimale verkoopwaarde", vk.MinimaleVerkoopwaarde);
+                        if (vk.MarktTotaal.HasValue) KostenRij("Marktwaarde (mediaan vergelijkbare units)", vk.MarktTotaal.Value);
+
+                        tbl.Cell().Background(Colors.Orange.Lighten4).Padding(4).Text($"OPBRENGST ({vk.OpbrengstBron})").Bold();
+                        tbl.Cell().Background(Colors.Orange.Lighten4).Padding(4).AlignRight().Text($"€ {vk.Opbrengst:N0}").Bold();
+                        tbl.Cell().Background(Colors.Orange.Lighten4).Padding(4).AlignRight().Text("").Bold();
+
+                        var margeKleur = vk.Marge >= 0 ? Colors.Green.Darken2 : Colors.Red.Medium;
+                        tbl.Cell().Padding(4).Text("MARGE").Bold().FontColor(margeKleur);
+                        tbl.Cell().Padding(4).AlignRight().Text($"€ {vk.Marge:N0}").Bold().FontColor(margeKleur);
+                        tbl.Cell().Padding(4).AlignRight().Text($"{vk.MargePerc * 100m:0.#}%").Bold().FontColor(margeKleur);
+                    }
                 });
             });
         }

@@ -1962,6 +1962,10 @@ public partial class ImmowebCrawler : BaseCrawler
 
         var (projectName, soldPct, units) = ParseProjectGroupUnits(rawJson, dto.ExternalId ?? "", dto.Url);
 
+        // Door Immoweb zelf gerapporteerde verkoopgraad (naast onze eigen unit-telling)
+        if (soldPct is >= 0 and <= 100)
+            dto.ReportedSoldPercentage = soldPct.Value;
+
         // Unitstatistieken berekenen uit geparsede units
         var unitsTotal     = units.Count;
         var unitsSold      = units.Count(u => u.SaleStatus == SaleStatus.Sold);

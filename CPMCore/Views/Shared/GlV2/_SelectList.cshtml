@@ -1,0 +1,74 @@
+@model CPMCore.Models.GlV2.GlV2SelectListVm
+@*
+    gl-v2 keuzelijst (design-handoff optie 4h, "Basis" — zie DESIGN.md "Select / Dropdown") voor een
+    lijst die niet uit een enum komt. Zelfde markup als EditorTemplates/GlV2Select.cshtml (verborgen
+    input + .gl-v2-select-trigger + .gl-v2-select-panel), dus gl-v2-shell.js se initGlV2Select()
+    bedient dit veld zonder eigen JS; een keuze dispatcht een echte "change" op de verborgen input.
+    Nieuw t.o.v. GlV2Select: placeholder-staat (trigger zonder .is-filled), een optionele lege optie
+    ("Geen …"), groepskoppen (.gl-v2-select-group-header, 8f·3), een gedimde tweede regel per optie,
+    niet-kiesbare opties, en een Bare-modus voor cellen in een tabelrij. Opties kunnen client-side
+    vervangen worden via window.GlV2Select.setItems() (afhankelijke keuzelijst, bv. type → subtype).
+*@
+@{
+    var id = Model.Id ?? Model.Name.Replace(".", "_").Replace("[", "_").Replace("]", "_");
+    var current = Model.Value ?? "";
+    var selected = Model.Items.FirstOrDefault(i => i.Value == current);
+    var emptyChosen = selected == null && current == "" && Model.EmptyText != null;
+    var hasValue = selected != null || emptyChosen;
+    var triggerText = selected?.Text ?? (emptyChosen ? Model.EmptyText : Model.Placeholder);
+    var hasError = !string.IsNullOrEmpty(Model.Error);
+    var dataAttrs = string.Join(" ", Model.Data.Select(kv => kv.Key + "=\"" + System.Net.WebUtility.HtmlEncode(kv.Value) + "\""));
+    string lastGroup = "\u0000";
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")@(Model.Bare ? " gl-v2-field-bare" : "")">
+    @if (!Model.Bare && !string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="gl-v2-field-label" for="@(id)_trigger">
+            @Model.Label
+            @if (Model.Required)
+            {
+                <span style="color:#8B2A2A">*</span>
+            }
+        </label>
+    }
+    <div class="gl-v2-select" data-gl-v2-select id="@(id)_select" data-placeholder="@Model.Placeholder" @Html.Raw(dataAttrs)><input type="hidden" id="@id" name="@Model.Name" value="@current" />
+        <div id="@(id)_trigger" class="gl-v2-select-trigger@(hasValue ? " is-filled" : "")@(hasError ? " is-error" : "")" role="button" tabindex="@(Model.Disabled ? -1 : 0)" aria-haspopup="listbox" aria-expanded="false" aria-disabled="@(Model.Disabled ? "true" : null)">
+            @if (!string.IsNullOrWhiteSpace(Model.Icon))
+            {
+                <i class="ph @Model.Icon" aria-hidden="true"></i>
+            }
+            <span class="gl-v2-select-trigger-label">@triggerText</span>
+            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-select-panel" role="listbox">
+            @if (Model.EmptyText != null)
+            {
+                <button type="button" class="gl-v2-select-option@(current == "" ? " is-selected" : "")" role="option" data-value="">
+                    <i class="ph ph-check" aria-hidden="true"></i><span>@Model.EmptyText</span>
+                </button>
+            }
+            @foreach (var item in Model.Items)
+            {
+                @if (item.Group != null && item.Group != lastGroup)
+                {
+                    lastGroup = item.Group;
+                    <div class="gl-v2-select-group-header">
+                        <span class="gl-v2-select-group-label">@item.Group.ToUpperInvariant()</span>
+                        <span class="gl-v2-select-group-rule"></span>
+                    </div>
+                }
+                <button type="button" class="gl-v2-select-option@(item.Value == current ? " is-selected" : "")" role="option" data-value="@item.Value" disabled="@(item.Disabled ? "disabled" : null)">
+                    <i class="ph ph-check" aria-hidden="true"></i><span>@item.Text</span>
+                </button>
+            }
+        </div>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help">@Model.Error</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Help))
+    {
+        <span class="gl-v2-field-help">@Model.Help</span>
+    }
+</div>

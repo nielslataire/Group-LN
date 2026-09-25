@@ -680,14 +680,13 @@ namespace CPMCore.Models.Projecten
         public string Naam { get; set; }
         public string TypeName { get; set; }
         public decimal? Oppervlakte { get; set; }
-        /// <summary>Verkoopprijs (grond + basisconstructie, ValueSold-velden) als verkocht,
-        /// anders vraagprijs (grond + basisconstructie, Value-velden) — exclusief gekozen
-        /// afwerkingsopties (UnitConstructionValueBO's met FinishingOptionId), die apart
-        /// in Afwerkingen staan i.p.v. blind meegeteld in dit bedrag.</summary>
+        /// <summary>Verkoopprijs (grond + constructie, ValueSold-velden) als verkocht, anders vraagprijs.
+        /// Zonder afwerkingen: grond + alle constructieprijzen. Met afwerkingen: enkel de grondwaarde —
+        /// het volledige bedrag per afwerking staat in Afwerkingen (Vraagprijs + Cost). Zie
+        /// ServiceCore.Helpers.UnitPricing.</summary>
         public decimal Vraagprijs { get; set; }
-        /// <summary>Gekozen afwerkingsopties (UnitConstructionValueBO waar FinishingOptionId
-        /// gezet is) met hun eigen kostprijs, apart van de basisprijs — niet in Vraagprijs
-        /// meegeteld, dus apart getoond i.p.v. blind bij de bouwwaarde opgeteld.</summary>
+        /// <summary>De afwerkingen van de eenheid (leeg zonder afwerkingen of als verkocht): naam +
+        /// het TOTAAL van hun constructieprijzen, elk een volledig alternatief bovenop Vraagprijs.</summary>
         public List<(string Description, decimal Cost)> Afwerkingen { get; set; } = new();
         /// <summary>"Beschikbaar" | "In optie" | "Verkocht" | "Akte verleden".</summary>
         public string Status { get; set; }
@@ -3366,6 +3365,11 @@ namespace CPMCore.Models.Projecten
                 _changeorder = value;
             }
         }
+
+        /// <summary>Digitale handtekeningen (SigningService) die in het handtekeningblok komen — leeg op het gewone PDF.</summary>
+        public List<FacadeCore.SignatureEvidence> Signatures { get; set; } = new List<FacadeCore.SignatureEvidence>();
+        /// <summary>Dit PDF gaat digitaal ter ondertekening (link per e-mail): in plaats van een lege handtekeningcel een korte uitleg.</summary>
+        public bool DigitalSigningPending { get; set; }
     }
 
     public class ProjectIncommingInvoiceAddUpdateModel
@@ -4186,6 +4190,10 @@ namespace CPMCore.Models.Projecten
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
         public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
         public List<ProjectRegieUurVM> RegieUren { get; set; } = new();
+
+        /// <summary>gl-v2 (Projecten/DetailCoordinatieV2, design-handoff punt 18) — enkel gevuld wanneer die
+        /// pagina gerenderd wordt.</summary>
+        public DetailCoordinatieV2Vm? GlV2 { get; set; }
     }
 
     public class ProjectRegieUurVM

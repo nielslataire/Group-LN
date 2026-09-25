@@ -49,5 +49,11 @@ public partial class BudgetParams
 
     public decimal? PubliciteitForfait { get; set; }
 
+    /// <summary>Doelmarge op de bouwkost (fractie, 0.15 = 15 %). NULL = standaard uit Instellingen (sleutel 'doelmarge').</summary>
+    public decimal? DoelMargePerc { get; set; }
+
+    /// <summary>Marge op de grondkost (fractie). NULL = standaard uit Instellingen (sleutel 'grondmarge').</summary>
+    public decimal? GrondMargePerc { get; set; }
+
     public virtual BudgetVersie BudgetVersie { get; set; }
 }

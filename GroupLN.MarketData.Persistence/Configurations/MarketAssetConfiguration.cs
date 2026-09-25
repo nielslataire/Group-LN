@@ -28,6 +28,7 @@ public class MarketAssetConfiguration : IEntityTypeConfiguration<MarketAsset>
         builder.Property(x => x.Latitude).HasPrecision(9, 6);
         builder.Property(x => x.Longitude).HasPrecision(9, 6);
         builder.Property(x => x.LivingArea).HasPrecision(10, 2);
+        builder.Property(x => x.ReportedSoldPercentage).HasPrecision(5, 2);
         builder.Property(x => x.LandArea).HasPrecision(10, 2);
         builder.Property(x => x.TerraceArea).HasPrecision(10, 2);
         builder.Property(x => x.GardenArea).HasPrecision(10, 2);

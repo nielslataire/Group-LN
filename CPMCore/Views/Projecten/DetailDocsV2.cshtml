@@ -1,0 +1,599 @@
+@model CPMCore.Models.Projecten.DocsV2PageVm
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 17 "Documenten"). Eén pagina voor
+    de vijf uitwerkingen 17a t/m 17e; wat verandert is de KOLOMSET en de GROEPERING van de gekozen map
+    (DocumentFolders.ViewKind), niet de pagina:
+      17a  default     mappen + slimme lijsten links, groepen per map, detailpaneel rechts
+      17c  keuringen   groepen per EENHEID met dekkingsbalk "2 / 4", verwachte documenten als stippellijn-rij
+      17d  contracten  groepen per KLANT, ondertekening (initialen per partij) i.p.v. revisie
+      17e  offertes    groepen per LEVERANCIER, perceel- en bedragkolom, gunnen
+    17b (uploaden als revisie, dezelfde kaart op elke detailpagina, wat de klant ziet) zit in de upload-
+    dialoog (_DocModalsV2), de herbruikbare kaart (Partials/_DocumentsCardV2, DocumentCardV2) en
+    DocumentService.GetPortalDocuments.
+
+    Het MODEL (17a "één document, veel plaatsen"): ProjectDocs blijft het document; koppelingen naar
+    eenheid/klant/leverancier staan in DocumentLinks (0-n, nooit kopieën), revisies in DocumentRevisions
+    (enkel de huidige goedgekeurde is zichtbaar in de portalen), verwachte documenten zonder bestand in
+    DocumentRequests, ondertekening in DocumentSignatures. Zie DESIGN.md "Projecten/DetailDocsV2".
+
+    Bewuste afwijkingen van het mockup staan in DESIGN.md (o.a.: itsme is niet gekoppeld — een
+    handtekening wordt handmatig geregistreerd; de bestelbon-PDF wordt nog niet gegenereerd).
+*@
+@using System.Globalization
+@using CPMCore.Helpers
+@using FacadeCore
+@{
+    var ov = Model.Overview;
+    ViewData["Title"] = "Documenten";
+    ViewData["PageIcon"] = "ph ph-folder";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = ov.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var kind = ov.ViewKind;
+    var canWrite = Model.CanWrite;
+    var canDelete = Model.CanDelete;
+    var totalDocs = ov.Total;
+
+    var menuVm = new CPMCore.Models.GlV2.GlV2ProjectMenuVm
+    {
+        ProjectId = ov.ProjectId,
+        ProjectName = ov.ProjectName,
+        ProjectSubtitle = $"project · {totalDocs} document" + (totalDocs == 1 ? "" : "en"),
+        ItemCounts = new Dictionary<string, int> { ["Documenten"] = totalDocs }
+    };
+
+    // Kolomset per map-soort (17c: "kolommen wisselen met de map")
+    var colCount = kind switch { "keuringen" => 6, "contracten" => 7, "offertes" => 7, _ => 7 };
+
+    object EntityRoute(string? folderCode, string? smart) => new
+    {
+        projectid = ov.ProjectId,
+        folder = folderCode,
+        smart,
+        unit = Model.FilterUnitId,
+        client = Model.FilterClientId,
+        company = Model.FilterCompanyId
+    };
+
+    string ExtClass(string ext) => ext switch
+    {
+        "DWG" or "DXF" or "RVT" or "SKP" => "is-cad",
+        "DOC" or "DOCX" or "XLS" or "XLSX" or "PPT" or "PPTX" or "CSV" => "is-office",
+        _ => ""
+    };
+
+    string BadgeTone(string key) => key switch
+    {
+        "ok" or "signed" or "awarded" => "is-positive",
+        "pending" or "signing" or "requested" or "expiring" => "is-attention",
+        "missing" or "expired" => "is-blocked",
+        "submitted" => "is-info",
+        "notawarded" => "is-inactive",
+        _ => "is-neutral"
+    };
+
+    string FolderIcon(string? icon) => icon switch
+    {
+        "plan" => "ph-blueprint",
+        "tag" => "ph-tag",
+        "signature" => "ph-signature",
+        "coins" => "ph-coins",
+        "certificate" => "ph-certificate",
+        "shield" => "ph-shield-check",
+        "mail" => "ph-envelope-simple",
+        _ => "ph-folder"
+    };
+
+    string SmartIcon(string key) => key switch
+    {
+        "goedkeuring" => "ph-clock",
+        "vervalt" => "ph-hourglass-medium",
+        "ontbreekt" => "ph-warning-circle",
+        _ => "ph-share-network"
+    };
+
+    string GroupIcon(DocGroup g) => g.Kind switch
+    {
+        "unit" => "ph-house",
+        "client" => "ph-user",
+        "company" => "ph-hard-hat",
+        "project" => "ph-buildings",
+        _ => FolderIcon(g.Icon)
+    };
+
+    string Date(DateTime? d) => d.HasValue ? d.Value.ToLocalTime().ToString("dd/MM/yyyy", be) : "—";
+    string DateOnlyText(DateOnly? d) => d.HasValue ? d.Value.ToString("dd/MM/yyyy", be) : "—";
+
+    var noFilters = !Model.FilterUnitId.HasValue && !Model.FilterClientId.HasValue && !Model.FilterCompanyId.HasValue;
+    var folderName = ov.ActiveFolderNav?.Name;
+    var smartLabel = ov.ActiveSmart != null ? ov.Smart.FirstOrDefault(s => s.Key == ov.ActiveSmart)?.Label : null;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detaildocs.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@totalDocs DOCUMENT@(totalDocs == 1 ? "" : "EN")</span>
+    @if (ov.Smart.First(s => s.Key == "ontbreekt").Count > 0)
+    {
+        <span class="gl-v2-badge is-blocked">@ov.Smart.First(s => s.Key == "ontbreekt").Count ONTBREEKT</span>
+    }
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-dd-topbar-btn js-gl-v2-dd-open-request">
+            <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Document aanvragen
+        </button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary gl-v2-dd-topbar-btn js-gl-v2-dd-open-upload">
+            <i class="ph ph-upload-simple" aria-hidden="true"></i>Uploaden
+        </button>
+    }
+}
+@section MobileQuickActions
+{
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction js-gl-v2-dd-open-upload">
+            <i class="ph ph-upload-simple" aria-hidden="true"></i>Uploaden
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction js-gl-v2-dd-open-request">
+            <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Aanvragen
+        </button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@Html.AntiForgeryToken()
+
+<div class="gl-v2-dd" id="gl-v2-dd" data-project-id="@ov.ProjectId" data-view-kind="@kind" data-open-doc="@(Model.OpenDocId?.ToString() ?? "")" data-open-request="@(Model.OpenRequestId?.ToString() ?? "")">
+
+    @* ── Map-rail (17a): vaste mappen + slimme lijsten ("Opvolging telt mee, je sleept er niets in") ── *@
+    <nav class="gl-v2-dd-rail" aria-label="Mappen">
+        <div class="gl-v2-dd-rail-card">
+            <span class="gl-v2-dd-rail-label">Mappen</span>
+            <a class="gl-v2-dd-rail-item @(ov.ActiveFolder == null && ov.ActiveSmart == null ? "is-active" : "")" href="@Url.Action("DetailDocs", "Projecten", EntityRoute(null, null))">
+                <i class="ph ph-folder-open" aria-hidden="true"></i>
+                <span class="gl-v2-dd-rail-name">Alle documenten</span>
+                <span class="gl-v2-dd-rail-count">@ov.Total</span>
+            </a>
+            @foreach (var f in ov.Folders)
+            {
+                <a class="gl-v2-dd-rail-item @(ov.ActiveFolder == f.Code && ov.ActiveSmart == null ? "is-active" : "")" href="@Url.Action("DetailDocs", "Projecten", EntityRoute(f.Code, null))" title="@(f.Missing > 0 ? (f.Missing + " ontbreekt") : null)">
+                    <i class="ph @FolderIcon(f.Icon)" aria-hidden="true"></i>
+                    <span class="gl-v2-dd-rail-name">@f.Name</span>
+                    <span class="gl-v2-dd-rail-count">@f.Count</span>
+                </a>
+            }
+            <span class="gl-v2-dd-rail-sep" aria-hidden="true"></span>
+            <span class="gl-v2-dd-rail-label">Opvolging</span>
+            @foreach (var s in ov.Smart)
+            {
+                <a class="gl-v2-dd-rail-item @(s.Tone == "attention" ? "is-attention" : s.Tone == "danger" ? "is-danger" : "") @(ov.ActiveSmart == s.Key ? "is-active" : "") @(s.Count == 0 ? "is-zero" : "")" href="@Url.Action("DetailDocs", "Projecten", EntityRoute(null, s.Key))">
+                    <i class="ph @SmartIcon(s.Key)" aria-hidden="true"></i>
+                    <span class="gl-v2-dd-rail-name">@s.Label</span>
+                    <span class="gl-v2-dd-rail-count">@s.Count</span>
+                </a>
+            }
+        </div>
+        <p class="gl-v2-dd-rail-hint">Mappen zijn vast per bedrijf, zodat elk project dezelfde structuur heeft. Opvolging zijn slimme lijsten: ze tellen mee, je sleept er niets in.</p>
+    </nav>
+
+    <div class="gl-v2-dd-main">
+        @if (!noFilters)
+        {
+            <div class="gl-v2-dd-scope">
+                <i class="ph ph-funnel" aria-hidden="true"></i>
+                <span>Enkel documenten van <b>@Model.FilterLabel</b></span>
+                <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = ov.ProjectId, folder = ov.ActiveFolder, smart = ov.ActiveSmart })">Alle documenten tonen</a>
+            </div>
+        }
+
+        <div class="gl-v2-dd-toolbar">
+            <div class="gl-v2-field gl-v2-dd-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="gl-v2-dd-search" placeholder="Zoek in naam, inhoud of revisie …" autocomplete="off" aria-label="Documenten zoeken">
+                    <button type="button" class="gl-v2-field-clear" id="gl-v2-dd-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                </div>
+            </div>
+            <div class="gl-v2-dd-chips" role="group" aria-label="Filter op koppeling">
+                <button type="button" class="gl-v2-dd-chipbtn is-active" data-scope="">Alles <span class="gl-v2-dd-chipbtn-count">@ov.Scope.All</span></button>
+                <button type="button" class="gl-v2-dd-chipbtn" data-scope="project" @(ov.Scope.Project == 0 ? "disabled" : "")>Project <span class="gl-v2-dd-chipbtn-count">@ov.Scope.Project</span></button>
+                <button type="button" class="gl-v2-dd-chipbtn" data-scope="units" @(ov.Scope.Units == 0 ? "disabled" : "")>Eenheden <span class="gl-v2-dd-chipbtn-count">@ov.Scope.Units</span></button>
+                <button type="button" class="gl-v2-dd-chipbtn" data-scope="clients" @(ov.Scope.Clients == 0 ? "disabled" : "")>Klanten <span class="gl-v2-dd-chipbtn-count">@ov.Scope.Clients</span></button>
+                <button type="button" class="gl-v2-dd-chipbtn" data-scope="suppliers" @(ov.Scope.Suppliers == 0 ? "disabled" : "")>Leveranciers <span class="gl-v2-dd-chipbtn-count">@ov.Scope.Suppliers</span></button>
+            </div>
+            <span class="gl-v2-dd-chip-sep gl-v2-dd-col-collapsible" aria-hidden="true"></span>
+            <button type="button" class="gl-v2-dd-filterbtn js-gl-v2-menu-trigger gl-v2-dd-col-collapsible" id="gl-v2-dd-aud-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dd-aud-menu">
+                <span class="gl-v2-dd-filterbtn-key">Zichtbaar voor</span><span id="gl-v2-dd-aud-label">iedereen</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+            </button>
+            @if (kind == "keuringen" && ov.Units.Count > 0)
+            {
+                <button type="button" class="gl-v2-dd-filterbtn js-gl-v2-menu-trigger" id="gl-v2-dd-unit-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dd-unit-menu">
+                    <span class="gl-v2-dd-filterbtn-key">Eenheid</span><span id="gl-v2-dd-unit-label">alle</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+                </button>
+            }
+            @if (kind == "offertes" && ov.Percelen.Count > 0)
+            {
+                <button type="button" class="gl-v2-dd-filterbtn js-gl-v2-menu-trigger" id="gl-v2-dd-perceel-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dd-perceel-menu">
+                    <span class="gl-v2-dd-filterbtn-key">Perceel</span><span id="gl-v2-dd-perceel-label">alle</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+                </button>
+            }
+        </div>
+
+        <div class="gl-v2-card gl-v2-dd-table-card">
+            <div class="gl-v2-card-body">
+                @if (ov.Total == 0 && ov.Groups.Sum(g => g.Rows.Count) == 0 && ov.ActiveFolder == null && ov.ActiveSmart == null && noFilters)
+                {
+                    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                        <span class="gl-v2-empty-state-icon"><i class="ph ph-folder-open" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-empty-state-title">Nog geen documenten</h2>
+                        <p class="gl-v2-empty-state-desc">Upload het eerste document van dit project, of laat de verwachte documenten (EPC, keuringen, …) uit het sjabloon aanmaken.</p>
+                        @if (canWrite)
+                        {
+                            <div class="gl-v2-empty-state-actions">
+                                <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-dd-open-upload">Document uploaden</button>
+                                @if (ov.HasTemplates)
+                                {
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-dd-generate">Verwachte documenten aanmaken</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else if (ov.Groups.Sum(g => g.Rows.Count) == 0)
+                {
+                    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                        <span class="gl-v2-empty-state-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-empty-state-title">Niets in @(smartLabel ?? folderName ?? "deze selectie")</h2>
+                        <p class="gl-v2-empty-state-desc">Er zijn hier geen documenten die aan deze selectie voldoen.</p>
+                        <div class="gl-v2-empty-state-actions">
+                            <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = ov.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary">Alle documenten tonen</a>
+                            @if (canWrite && ov.HasTemplates && kind == "keuringen")
+                            {
+                                <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-dd-generate">Verwachte documenten aanmaken</button>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-dd-table-scroll">
+                        <table class="gl-v2-dd-table" id="gl-v2-dd-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Document</th>
+                                    @switch (kind)
+                                    {
+                                        case "keuringen":
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Verantwoordelijke</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Vervalt</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible gl-v2-dd-col-secondary">Zichtbaar</th>
+                                            break;
+                                        case "contracten":
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Eenheid</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Rev.</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Ondertekening</th>
+                                            break;
+                                        case "offertes":
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Perceel</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Rev.</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible is-right">Bedrag</th>
+                                            break;
+                                        default:
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Gekoppeld aan</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible">Rev.</th>
+                                            <th scope="col" class="gl-v2-dd-col-collapsible gl-v2-dd-col-secondary">Zichtbaar</th>
+                                            break;
+                                    }
+                                    <th scope="col">Status</th>
+                                    @if (kind != "keuringen")
+                                    {
+                                        <th scope="col" class="gl-v2-dd-col-collapsible gl-v2-dd-col-secondary">Bijgewerkt</th>
+                                    }
+                                    <th scope="col"><span class="visually-hidden">Acties</span></th>
+                                </tr>
+                            </thead>
+                            @foreach (var group in ov.Groups)
+                            {
+                                <tbody>
+                                    @if (group.Kind != "flat")
+                                    {
+                                        <tr class="gl-v2-dd-group-row" data-group-row data-group="@group.Key">
+                                            <td colspan="@colCount">
+                                                <button type="button" class="gl-v2-dd-group-toggle" data-group-toggle="@group.Key" aria-expanded="true">
+                                                    <i class="ph ph-caret-down gl-v2-dd-group-caret" aria-hidden="true"></i>
+                                                    <i class="ph @GroupIcon(group)" aria-hidden="true"></i>
+                                                    @group.Label
+                                                    <span class="gl-v2-dd-group-count">@group.Rows.Count</span>
+                                                    @if (!string.IsNullOrWhiteSpace(group.Sub))
+                                                    {
+                                                        <span class="gl-v2-dd-group-sub">@group.Sub</span>
+                                                    }
+                                                    <span class="gl-v2-dd-group-spacer"></span>
+                                                    @if (group.MissingCount > 0 && !group.ShowCoverage)
+                                                    {
+                                                        <span class="gl-v2-dd-group-missing">@group.MissingCount ontbreekt</span>
+                                                    }
+                                                    @if (group.ShowCoverage && group.CoverageTotal > 0)
+                                                    {
+                                                        var pct = (int)Math.Round(group.Covered * 100.0 / group.CoverageTotal);
+                                                        <span class="gl-v2-dd-cover @(group.Covered < group.CoverageTotal ? "is-partial" : "")" title="@group.Covered van @group.CoverageTotal in orde">
+                                                            @group.Covered / @group.CoverageTotal
+                                                            <span class="gl-v2-dd-cover-bar"><span style="width:@(pct)%"></span></span>
+                                                        </span>
+                                                    }
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                    @foreach (var r in group.Rows)
+                                    {
+                                        var unitIds = string.Join(",", r.Chips.Where(c => c.Type == "unit" && c.Id.HasValue).Select(c => c.Id));
+                                        var chips = r.Chips.Where(c => c.Type != "project" || r.Chips.Count == 1).ToList();
+                                        var shown = chips.Take(3).ToList();
+                                        var menuId = $"gl-v2-dd-menu-{group.Key}-{r.Kind}-{r.Id}";
+                                        <tr class="gl-v2-dd-row @(r.IsDraft ? "is-draft" : "")"
+                                            data-doc-row
+                                            data-kind="@r.Kind"
+                                            data-id="@r.Id"
+                                            data-group="@group.Key"
+                                            data-scopes="@r.Scopes"
+                                            data-audiences="@r.Audiences"
+                                            data-units="@unitIds"
+                                            data-perceel="@r.Perceel"
+                                            data-search="@r.SearchText">
+                                            <td>
+                                                <div class="gl-v2-dd-doc">
+                                                    @if (r.Kind == "request")
+                                                    {
+                                                        <span class="gl-v2-dd-ext is-missing" aria-hidden="true">?</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="gl-v2-dd-ext @ExtClass(r.Ext)" aria-hidden="true">@r.Ext</span>
+                                                    }
+                                                    <span class="gl-v2-dd-doc-text">
+                                                        <button type="button" class="gl-v2-dd-doc-name" data-open-panel>@r.Name</button>
+                                                        <span class="gl-v2-dd-doc-sub">
+                                                            @{
+                                                                var subBits = new List<string>();
+                                                                if (ov.ActiveFolder == null && group.Kind != "folder") subBits.Add(r.FolderName);
+                                                                var subText = kind == "keuringen" && r.Kind == "request" ? r.DueText : r.SubLine;
+                                                                if (!string.IsNullOrWhiteSpace(subText)) subBits.Add(subText!);
+                                                            }
+                                                            @string.Join(" · ", subBits)
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            @switch (kind)
+                                            {
+                                                case "keuringen":
+                                                    <td class="gl-v2-dd-col-collapsible"><span class="gl-v2-dd-stack-main">@(r.Responsible ?? "—")</span></td>
+                                                    <td class="gl-v2-dd-col-collapsible"><span class="gl-v2-dd-date">@(r.Kind == "doc" ? DateOnlyText(r.ExpiresOn) : "—")</span></td>
+                                                    <td class="gl-v2-dd-col-collapsible gl-v2-dd-col-secondary">
+                                                        @if (r.Kind == "doc")
+                                                        {
+                                                            <span class="gl-v2-dd-vis">
+                                                                <span class="gl-v2-dd-vis-dot is-intern is-on" title="Intern team"><i class="ph ph-users-three" aria-hidden="true"></i></span>
+                                                                <span class="gl-v2-dd-vis-dot is-klant @(r.ShareClient ? "is-on" : "")" title="@(r.ShareClient ? "Zichtbaar in het klantportaal" : "Niet gedeeld met klanten")"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                                                                <span class="gl-v2-dd-vis-dot is-leverancier @(r.ShareSupplier ? "is-on" : "")" title="@(r.ShareSupplier ? "Zichtbaar in het leveranciersportaal" : "Niet gedeeld met leveranciers")"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                                                            </span>
+                                                        }
+                                                        else { <span class="gl-v2-dd-muted">—</span> }
+                                                    </td>
+                                                    break;
+                                                case "contracten":
+                                                    <td class="gl-v2-dd-col-collapsible">
+                                                        <span class="gl-v2-dd-chips-cell">
+                                                            @foreach (var c in r.Chips.Where(c => c.Type == "unit").Take(2))
+                                                            {
+                                                                <span class="gl-v2-dd-tag is-unit">@c.Label</span>
+                                                            }
+                                                            @if (!r.Chips.Any(c => c.Type == "unit")) { <span class="gl-v2-dd-muted">—</span> }
+                                                        </span>
+                                                    </td>
+                                                    <td class="gl-v2-dd-col-collapsible"><span class="gl-v2-dd-rev">@r.RevLabel</span></td>
+                                                    <td class="gl-v2-dd-col-collapsible">
+                                                        @if (r.Signatures.Count > 0)
+                                                        {
+                                                            <span class="gl-v2-dd-sigs">
+                                                                @foreach (var s in r.Signatures)
+                                                                {
+                                                                    <span class="gl-v2-dd-sig @(s.Status == 2 ? "is-signed" : s.Status == 1 ? "is-opened" : "")" title="@s.Name — @(s.Status == 2 ? "getekend" : s.Status == 1 ? "geopend" : "wacht")">@s.Initials</span>
+                                                                }
+                                                                <span class="gl-v2-dd-sigs-count">@r.SignedCount/@r.SignTotal</span>
+                                                            </span>
+                                                        }
+                                                        else { <span class="gl-v2-dd-muted">—</span> }
+                                                    </td>
+                                                    break;
+                                                case "offertes":
+                                                    <td class="gl-v2-dd-col-collapsible"><span class="gl-v2-dd-stack-main">@(r.Perceel ?? "—")</span></td>
+                                                    <td class="gl-v2-dd-col-collapsible"><span class="gl-v2-dd-rev">@(r.Kind == "doc" ? "v" + (r.RevLabel == "—" ? "1" : ((int)(r.RevLabel[0] - 'A' + 1)).ToString()) : "—")</span></td>
+                                                    <td class="gl-v2-dd-col-collapsible is-right">
+                                                        @if (r.Amount.HasValue) { <span class="gl-v2-dd-amount">@r.Amount.Value.ToString("C0", be)</span> }
+                                                        else { <span class="gl-v2-dd-muted">—</span> }
+                                                    </td>
+                                                    break;
+                                                default:
+                                                    <td class="gl-v2-dd-col-collapsible">
+                                                        <span class="gl-v2-dd-chips-cell">
+                                                            @foreach (var c in shown)
+                                                            {
+                                                                <span class="gl-v2-dd-tag is-@c.Type" title="@c.Label">@c.Label</span>
+                                                            }
+                                                            @if (chips.Count > shown.Count)
+                                                            {
+                                                                <span class="gl-v2-dd-tag is-more">+@(chips.Count - shown.Count)</span>
+                                                            }
+                                                        </span>
+                                                    </td>
+                                                    <td class="gl-v2-dd-col-collapsible">
+                                                        @if (r.Kind == "doc")
+                                                        {
+                                                            <span class="gl-v2-dd-rev">@r.RevLabel@if (r.PendingRevisions > 0) { <span class="gl-v2-dd-rev-more" title="@r.PendingRevisions nieuwere revisie(s) wachten op goedkeuring">+@r.PendingRevisions</span> }</span>
+                                                        }
+                                                        else { <span class="gl-v2-dd-muted">—</span> }
+                                                    </td>
+                                                    <td class="gl-v2-dd-col-collapsible gl-v2-dd-col-secondary">
+                                                        @if (r.Kind == "doc")
+                                                        {
+                                                            <span class="gl-v2-dd-vis">
+                                                                <span class="gl-v2-dd-vis-dot is-intern is-on" title="Intern team"><i class="ph ph-users-three" aria-hidden="true"></i></span>
+                                                                <span class="gl-v2-dd-vis-dot is-klant @(r.ShareClient ? "is-on" : "")" title="@(r.ShareClient ? "Zichtbaar in het klantportaal" : "Niet gedeeld met klanten")"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                                                                <span class="gl-v2-dd-vis-dot is-leverancier @(r.ShareSupplier ? "is-on" : "")" title="@(r.ShareSupplier ? "Zichtbaar in het leveranciersportaal" : "Niet gedeeld met leveranciers")"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                                                            </span>
+                                                        }
+                                                        else { <span class="gl-v2-dd-muted">—</span> }
+                                                    </td>
+                                                    break;
+                                            }
+
+                                            <td><span class="gl-v2-badge @BadgeTone(r.StatusKey)">@r.StatusLabel.ToUpperInvariant()</span></td>
+                                            @if (kind != "keuringen")
+                                            {
+                                                <td class="gl-v2-dd-col-collapsible gl-v2-dd-col-secondary"><span class="gl-v2-dd-date">@(r.Kind == "doc" ? Date(r.UpdatedDate) : "—")</span></td>
+                                            }
+                                            <td>
+                                                <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @r.Name">
+                                                    <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                                </button>
+                                                <div class="gl-v2-menu" id="@menuId">
+                                                    <a href="#" class="gl-v2-menu-item" data-open-panel data-kind="@r.Kind" data-id="@r.Id"><i class="ph ph-sidebar-simple" aria-hidden="true"></i>Details</a>
+                                                    @if (r.Kind == "doc")
+                                                    {
+                                                        @if (r.RevisionId.HasValue)
+                                                        {
+                                                            <a href="@Url.Action("DocumentFileV2", "Projecten", new { projectid = ov.ProjectId, revisionId = r.RevisionId })" target="_blank" rel="noopener" class="gl-v2-menu-item"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen</a>
+                                                        }
+                                                        @if (canWrite)
+                                                        {
+                                                            <a href="#" class="gl-v2-menu-item js-gl-v2-dd-new-revision" data-doc-id="@r.Id"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nieuwe revisie</a>
+                                                        }
+                                                        @if (canDelete)
+                                                        {
+                                                            <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-dd-delete-doc" data-doc-id="@r.Id" data-doc-name="@r.Name"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                                        }
+                                                    }
+                                                    else if (canWrite)
+                                                    {
+                                                        <a href="#" class="gl-v2-menu-item js-gl-v2-dd-upload-for-request" data-request-id="@r.Id"><i class="ph ph-upload-simple" aria-hidden="true"></i>Zelf uploaden</a>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            }
+                        </table>
+                    </div>
+                    <div class="gl-v2-dd-no-results" id="gl-v2-dd-no-results" hidden>Geen documenten voor deze zoekopdracht.</div>
+                    <div class="gl-v2-dd-legend">
+                        @if (kind == "default" || kind == "keuringen")
+                        {
+                        <span class="gl-v2-dd-legend-item is-wide"><b>Zichtbaar</b></span>
+                        <span class="gl-v2-dd-legend-item is-wide"><span class="gl-v2-dd-vis-dot is-intern is-on"><i class="ph ph-users-three" aria-hidden="true"></i></span>intern team</span>
+                        <span class="gl-v2-dd-legend-item is-wide"><span class="gl-v2-dd-vis-dot is-klant is-on"><i class="ph ph-house-line" aria-hidden="true"></i></span>klantportaal</span>
+                        <span class="gl-v2-dd-legend-item is-wide"><span class="gl-v2-dd-vis-dot is-leverancier is-on"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>leveranciersportaal</span>
+                        <span class="gl-v2-dd-legend-item is-wide"><span class="gl-v2-dd-vis-dot"></span>niet gedeeld</span>
+                        }
+                        <span class="gl-v2-dd-legend-spacer"></span>
+                        <span class="gl-v2-dd-legend-item" id="gl-v2-dd-shown">@ov.Groups.Sum(g => g.Rows.Select(r => r.Kind + r.Id).Distinct().Count()) van @ov.Total@(ov.ActiveFolder == null && ov.ActiveSmart == null ? "" : " · gefilterd")</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ── Detailpaneel (17a rechts): opent bij klik op een rij en vervangt een aparte detailpagina ── *@
+    <aside class="gl-v2-dd-panel" id="gl-v2-dd-panel" role="dialog" aria-label="Documentdetail" hidden>
+        <div class="gl-v2-dd-panel-body" id="gl-v2-dd-panel-body"></div>
+    </aside>
+</div>
+<div class="gl-v2-dd-backdrop js-gl-v2-dd-close" id="gl-v2-dd-backdrop" hidden></div>
+
+@* ── Filtermenu's (native gl-v2-menu; JS zet data-* filters) ── *@
+<div class="gl-v2-menu" id="gl-v2-dd-aud-menu">
+    <a href="#" class="gl-v2-menu-item" data-aud="">Iedereen</a>
+    <a href="#" class="gl-v2-menu-item" data-aud="klant"><i class="ph ph-house-line" aria-hidden="true"></i>Klantportaal</a>
+    <a href="#" class="gl-v2-menu-item" data-aud="leverancier"><i class="ph ph-hard-hat" aria-hidden="true"></i>Leveranciersportaal</a>
+    <a href="#" class="gl-v2-menu-item" data-aud="niet"><i class="ph ph-lock-simple" aria-hidden="true"></i>Enkel intern (niet gedeeld)</a>
+</div>
+@if (kind == "keuringen" && ov.Units.Count > 0)
+{
+    <div class="gl-v2-menu" id="gl-v2-dd-unit-menu">
+        <a href="#" class="gl-v2-menu-item" data-unit="">Alle eenheden</a>
+        @foreach (var u in ov.Units)
+        {
+            <a href="#" class="gl-v2-menu-item" data-unit="@u.Id">@u.Name</a>
+        }
+    </div>
+}
+@if (kind == "offertes" && ov.Percelen.Count > 0)
+{
+    <div class="gl-v2-menu" id="gl-v2-dd-perceel-menu">
+        <a href="#" class="gl-v2-menu-item" data-perceel="">Alle percelen</a>
+        @foreach (var p in ov.Percelen)
+        {
+            <a href="#" class="gl-v2-menu-item" data-perceel="@p">@p</a>
+        }
+    </div>
+}
+
+@await Html.PartialAsync("Partials/_DocModalsV2", Model)
+
+@section PageScripts
+{
+    <script>
+        window.glV2DocsConfig = {
+            projectId: @ov.ProjectId,
+            viewKind: "@kind",
+            activeFolderId: @(ov.ActiveFolderNav?.Id ?? 0),
+            filterUnitId: @(Model.FilterUnitId ?? 0),
+            filterClientId: @(Model.FilterClientId ?? 0),
+            filterCompanyId: @(Model.FilterCompanyId ?? 0),
+            canWrite: @(canWrite ? "true" : "false"),
+            canDelete: @(canDelete ? "true" : "false"),
+            userName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(User.GetCpmDisplayName() ?? "")),
+            urls: {
+                panel: "@Url.Action("DocumentPanelV2", "Projecten")",
+                requestPanel: "@Url.Action("DocumentRequestPanelV2", "Projecten")",
+                replaceOptions: "@Url.Action("DocumentReplaceOptionsV2", "Projecten")",
+                upload: "@Url.Action("DocumentUploadV2", "Projecten")",
+                approve: "@Url.Action("DocumentApproveV2", "Projecten")",
+                reject: "@Url.Action("DocumentRejectV2", "Projecten")",
+                update: "@Url.Action("DocumentUpdateV2", "Projecten")",
+                del: "@Url.Action("DocumentDeleteV2", "Projecten")",
+                linkAdd: "@Url.Action("DocumentLinkAddV2", "Projecten")",
+                linkRemove: "@Url.Action("DocumentLinkRemoveV2", "Projecten")",
+                share: "@Url.Action("DocumentShareV2", "Projecten")",
+                linkShare: "@Url.Action("DocumentLinkShareV2", "Projecten")",
+                requestSave: "@Url.Action("DocumentRequestSaveV2", "Projecten")",
+                requestRemind: "@Url.Action("DocumentRequestRemindV2", "Projecten")",
+                requestNotRequired: "@Url.Action("DocumentRequestNotRequiredV2", "Projecten")",
+                requestDelete: "@Url.Action("DocumentRequestDeleteV2", "Projecten")",
+                generate: "@Url.Action("DocumentGenerateExpectedV2", "Projecten")",
+                signSend: "@Url.Action("DocumentSignSendV2", "Projecten")",
+                signMark: "@Url.Action("DocumentSignMarkV2", "Projecten")",
+                signRemind: "@Url.Action("DocumentSignRemindV2", "Projecten")",
+                award: "@Url.Action("DocumentAwardV2", "Projecten")"
+            }
+        };
+    </script>
+    <script src="~/js/gl-v2-projecten-detaildocs.js" asp-append-version="true"></script>
+}

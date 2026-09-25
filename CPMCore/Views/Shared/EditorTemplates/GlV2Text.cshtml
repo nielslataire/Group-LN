@@ -12,7 +12,10 @@
     GlV2-prefix-conventie als de rest van deze map.
 
     Optioneel: Label (override), Placeholder, Icon (Phosphor-klasse, bv. "ph-tag" — weglaten = geen
-    icoonslot, zelfde "met en zonder icoon" die 4i zelf noemt), MaxLength.
+    icoonslot, zelfde "met en zonder icoon" die 4i zelf noemt), MaxLength, Required (bool — forceert de
+    rode "*" ook zonder [Required]-attribuut op het model, zelfde afspraak als GlV2NumberUnit), Help
+    (hint-tekst onder het veld, naast de foutmelding), Mono (bool — cijfer/code-velden zoals kadaster
+    of een EAN-nummer, 8f: "monospace").
 *@
 @{
     var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
@@ -21,12 +24,16 @@
     var placeholder = ViewData["Placeholder"] as string ?? " ";
     var icon = ViewData["Icon"] as string;
     var maxLength = ViewData["MaxLength"] as int?;
+    var required = ViewData["Required"] as bool? ?? ViewData.ModelMetadata.IsRequired;
+    var help = ViewData["Help"] as string;
+    var mono = ViewData["Mono"] as bool? ?? false;
+    var inputClass = "gl-v2-field-input" + (mono ? " is-mono" : "");
     var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
 }
 <div class="gl-v2-field@(hasError ? " is-error" : "")">
     <label class="gl-v2-field-label" for="@id">
         @label
-        @if (ViewData.ModelMetadata.IsRequired)
+        @if (required)
         {
             <span style="color:#8B2A2A">*</span>
         }
@@ -38,15 +45,19 @@
         }
         @if (maxLength.HasValue)
         {
-            <input type="text" id="@id" name="@name" class="gl-v2-field-input" value="@Model" placeholder="@placeholder" autocomplete="off" maxlength="@maxLength" />
+            <input type="text" id="@id" name="@name" class="@inputClass" value="@Model" placeholder="@placeholder" autocomplete="off" maxlength="@maxLength" />
         }
         else
         {
-            <input type="text" id="@id" name="@name" class="gl-v2-field-input" value="@Model" placeholder="@placeholder" autocomplete="off" />
+            <input type="text" id="@id" name="@name" class="@inputClass" value="@Model" placeholder="@placeholder" autocomplete="off" />
         }
     </div>
     @if (hasError)
     {
         <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(help))
+    {
+        <span class="gl-v2-field-help">@help</span>
     }
 </div>

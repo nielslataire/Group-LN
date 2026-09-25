@@ -1,0 +1,33 @@
+/* gl-v2 — Projecten/ChangeOrderSignV2: wijzigingsopdracht digitaal ter ondertekening sturen. */
+.gl-v2-cos { display: flex; flex-direction: column; gap: 16px; max-width: 920px; }
+
+.gl-v2-cos-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 18px; padding: 16px 18px 18px; align-items: end; }
+.gl-v2-cos-fact { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-cos-fact span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-cos-fact b { font: 500 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-cos-fact.is-total b { font-weight: 700; color: var(--gl-v2-primary); }
+.gl-v2-cos-fact.is-action { align-items: flex-start; }
+
+.gl-v2-cos-signers { display: flex; flex-direction: column; padding: 4px 18px; }
+.gl-v2-cos-signer { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-cos-signer:last-child { border-bottom: 0; }
+.gl-v2-cos-signer-main { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-cos-signer-main b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-cos-signer-main span { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow-wrap: anywhere; }
+.gl-v2-cos-signer-meta { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.gl-v2-cos-signer-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-cos-foot { padding: 8px 18px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+
+.gl-v2-cos-form { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 18px; }
+.gl-v2-cos-rows { display: flex; flex-direction: column; gap: 10px; }
+.gl-v2-cos-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px; gap: 12px; align-items: end; }
+.gl-v2-cos-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gl-v2-cos-spacer { flex: 1; }
+.gl-v2-cos-notice { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-info-tint); color: var(--gl-v2-info); font: 450 12px/1.55 var(--gl-v2-font-sans); }
+.gl-v2-cos-notice i { font-size: 17px; flex: none; margin-top: 1px; }
+.gl-v2-cos-notice code { font-size: 11.5px; }
+
+@media (max-width: 767.98px) {
+    .gl-v2-cos-row { grid-template-columns: 1fr 40px; }
+    .gl-v2-cos-row .gl-v2-field:first-child { grid-column: 1 / -1; }
+}

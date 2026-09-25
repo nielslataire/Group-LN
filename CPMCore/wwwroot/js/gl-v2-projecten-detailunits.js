@@ -32,13 +32,30 @@
     var noResults = document.getElementById("gl-v2-du-no-results");
     var rows = Array.prototype.slice.call(document.querySelectorAll("[data-unit-row]"));
     var cards = Array.prototype.slice.call(document.querySelectorAll("[data-unit-card]"));
-    var attachRows = Array.prototype.slice.call(document.querySelectorAll("[data-attach-row]"));
     var groupRows = Array.prototype.slice.call(document.querySelectorAll("[data-group-row]"));
     var cardGroupLabels = Array.prototype.slice.call(document.querySelectorAll("[data-card-group-label]"));
 
     var activeType = "";
     var activeStatus = "";
+    // Een expliciete klik op een groepskop wint altijd (true/false). Zonder klik geldt de standaard:
+    // de samengevatte groepen (losse bergingen/parkings) staan dicht — behalve zodra er gezocht of
+    // gefilterd wordt, anders zou een zoekterm op een losse berging "geen resultaat" tonen terwijl ze
+    // gewoon achter een dichte groep zit.
     var collapsedGroups = Object.create(null);
+    var collapsedByDefault = Object.create(null);
+    document.querySelectorAll('[data-group-toggle][data-collapsed-default="true"]').forEach(function (t) {
+        collapsedByDefault[t.getAttribute("data-group-toggle")] = true;
+    });
+
+    function filtersActive() {
+        var term = (searchInput && searchInput.value ? searchInput.value : "").trim();
+        return !!(term || activeType || activeStatus);
+    }
+
+    function isCollapsed(group) {
+        if (group in collapsedGroups) return collapsedGroups[group];
+        return !!collapsedByDefault[group] && !filtersActive();
+    }
 
     function matches(el) {
         var term = (searchInput && searchInput.value ? searchInput.value : "").trim().toLowerCase();
@@ -77,23 +94,21 @@
             var group = tr.getAttribute("data-group");
             var show = rowVisible[tr.getAttribute("data-row-id")];
             if (show) shownPerGroup[group] = (shownPerGroup[group] || 0) + 1;
-            tr.hidden = !show || !!collapsedGroups[group];
-        });
-
-        // De koppelregel hoort bij haar hoofdeenheid: verdwijnt mee wanneer die wegvalt of de groep
-        // dicht is.
-        attachRows.forEach(function (tr) {
-            var group = tr.getAttribute("data-group");
-            tr.hidden = !rowVisible[tr.getAttribute("data-parent-id")] || !!collapsedGroups[group];
+            tr.hidden = !show || isCollapsed(group);
         });
 
         groupRows.forEach(function (tr) {
             tr.hidden = !shownPerGroup[tr.getAttribute("data-group")];
         });
 
+        // De kop volgt de effectieve stand (ook wanneer die door een filter i.p.v. een klik open ging).
+        document.querySelectorAll("[data-group-toggle]").forEach(function (t) {
+            t.setAttribute("aria-expanded", isCollapsed(t.getAttribute("data-group-toggle")) ? "false" : "true");
+        });
+
         cards.forEach(function (card) {
             var group = card.getAttribute("data-group");
-            card.hidden = !cardVisible[card.getAttribute("data-row-id")] || !!collapsedGroups[group];
+            card.hidden = !cardVisible[card.getAttribute("data-row-id")] || isCollapsed(group);
         });
         cardGroupLabels.forEach(function (label) {
             label.hidden = !shownPerGroup[label.getAttribute("data-card-group-label")];
@@ -139,8 +154,7 @@
         var toggle = e.target.closest("[data-group-toggle]");
         if (!toggle) return;
         var key = toggle.getAttribute("data-group-toggle");
-        collapsedGroups[key] = !collapsedGroups[key];
-        toggle.setAttribute("aria-expanded", collapsedGroups[key] ? "false" : "true");
+        collapsedGroups[key] = !isCollapsed(key);
         applyFilters();
     });
 

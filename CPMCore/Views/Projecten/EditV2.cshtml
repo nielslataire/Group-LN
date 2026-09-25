@@ -1,0 +1,659 @@
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@model CPMCore.Models.Projecten.EditProjectDetail
+@*
+    gl-v2 — Projecten/Bewerken, design-handoff punt 19 ("Project bewerken — het ontbrekende formulier bij
+    12a. Regel: de zijkant zegt WAAR je bent in het dossier, de tabbar zegt WELK DEEL van dit ene record
+    je bewerkt"). Zelfde zeven tabs als de legacy Edit.cshtml (Algemeen, Status & foto, Planning,
+    Partners, Documenten, SEO & website, Coördinatie), zelfde modelbinding, zelfde POST
+    (ProjectenController.Edit) — enkel de schil is gl-v2: dossiermenu links (Outer-modus van
+    _ProjectInnerMenuV2), gl-v2-tabbar met foutstipjes, .gl-v2-section-card per blok, en één
+    .gl-v2-form-actionbar onderaan ("één opslag voor alle tabs": alle velden blijven in één <form>,
+    wisselen van tab toont/verbergt enkel panelen).
+
+    Bewust anders dan het mockup:
+    - Geen "laatst opgeslagen 22/09/2026 16:46 door …": Project bewaart geen wijzigingsmoment (zelfde
+      afweging als Projecten/UnitFormV2).
+    - Geen "Bekijk op website ↗" bij Gepubliceerd: er is geen bekende publieke project-URL in de
+      configuratie — een link die nergens naartoe kan wijzen wordt niet getoond.
+    - Geen "+ Document toevoegen aan de lijst": de verplichte documenten zijn zeven vaste velden op
+      het project, geen open lijst. "Opladen ↗" opent de bestaande documentenpagina van dit project.
+    - Contractschijven zijn wel herschikbaar (handvat/pijltjes): ProjectContractSlice.SortOrder bestaat en wordt bewaard.
+    - De titel is "Project bewerken" met de projectnaam als laatste kruimel (rule 2 van de topbar-regel:
+      de kruimel herhaalt de titel niet) i.p.v. "{naam} bewerken" + "Bewerken" als kruimel.
+*@
+@functions {
+    // Welke veld-sleutels bij welke tab horen — om een tab te markeren die na een mislukte Save een
+    // validatiefout bevat (zelfde indeling als de legacy Edit.cshtml).
+    private static readonly (string Key, string[] Prefixes)[] TabMap = new[]
+    {
+        ("algemeen",    new[] { "Project.Name", "Project.ProjectCode", "Project.Street", "Project.HouseNumber", "Project.AspNetUserID", "SelectedCountry", "SelectedPostalcode", "Project.Postalcode", "Project.Werfmelding", "Project.Developer", "Project.Builder", "Project.IssuerCompanyIdBuilder", "Project.IssuerCompanyIdLandOwner" }),
+        ("status",      new[] { "SelectedStatus", "Project.Status", "Project.ProjectType", "Project.TotalLandShare", "Project.IsPublished", "Project.StandardFotoName", "StandardFotoUpload" }),
+        ("planning",    new[] { "Project.StartDateConstruction", "Project.ExecutionDays", "Project.DeliveryDate", "Project.DeliveryDateDef", "Project.WheaterStation" }),
+        ("partners",    new[] { "Project.Architect", "Project.Engineer", "Project.SecurityCoordinator", "Project.EpbReporter", "Project.Notary", "Project.SalesResponsibleUserID" }),
+        ("documenten",  new[] { "Project.Doc" }),
+        ("seo",         new[] { "Project.Seo", "Project.CommercialTitleNL", "Project.CommercialTextNL" }),
+        ("coordinatie", new[] { "Project.Coordination", "Project.ContractType", "Project.IsCoordinationProject", "Project.IsOnlyCoordinationProject", "Project.KmAllowance", "ContractSlices", "HourlyRates" }),
+    };
+}
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
+    var project = Model.Project;
+    var projectName = string.IsNullOrWhiteSpace(project.Name) ? "Project" : project.Name.Trim();
+    ViewData["Title"] = "Project bewerken";
+    ViewData["PageIcon"] = "ph ph-pencil-simple";
+    ViewData["GlV2FullHeightBody"] = true;
+    var backUrl = (TempData.Peek("Referrer") as string) ?? Url.Action("Detail", "Projecten", new { projectid = project.Id }) ?? "/";
+    ViewData["BackUrl"] = backUrl;
+
+    // "pictures/447/" bestaat enkel voor afbeeldingen; een video als standaardfoto (MediaType == 1)
+    // heeft er geen en zou een gebroken beeld geven.
+    string currentPhotoUrl = null;
+    var imgBase = Configuration["URL:ImageWebUrl"];
+    if (!string.IsNullOrEmpty(project.StandardFotoName))
+        currentPhotoUrl = imgBase + "pictures/447/" + project.StandardFotoName;
+    else if (project.DefaultPicture?.Name is not null && project.DefaultPicture.MediaType != 1)
+        currentPhotoUrl = imgBase + "pictures/447/" + project.DefaultPicture.Name;
+    ViewData["CurrentPhotoUrl"] = currentPhotoUrl;
+
+    var erroredKeys = ViewData.ModelState
+        .Where(kv => kv.Value != null && kv.Value.Errors.Count > 0)
+        .Select(kv => kv.Key).ToList();
+    int TabErrors(string tabKey) => erroredKeys.Count(k => TabMap.First(t => t.Key == tabKey).Prefixes.Any(p => k.StartsWith(p, StringComparison.OrdinalIgnoreCase)));
+    string ErrorFor(string key) =>
+        ViewContext.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0 ? entry.Errors[0].ErrorMessage : null;
+
+    var tabDefs = new (string Key, string Label)[]
+    {
+        ("algemeen", "Algemeen"), ("status", "Status & foto"), ("planning", "Planning"), ("partners", "Partners"),
+        ("documenten", "Documenten"), ("seo", "SEO & website"), ("coordinatie", "Coördinatie"),
+    };
+    var forceTab = tabDefs.Select(t => t.Key).FirstOrDefault(k => TabErrors(k) > 0) ?? "";
+    var totalErrorCount = ViewContext.ModelState.Sum(kv => kv.Value.Errors.Count);
+
+    var unitCount = ViewData["ProjectUnitCount"] as int? ?? 0;
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = project.Id,
+        ProjectName = projectName,
+        ProjectSubtitle = $"project · {unitCount} eenhe{(unitCount == 1 ? "id" : "den")}",
+        IsCoordinationProject = project.IsOnlyCoordinationProject
+    };
+
+    var userItems = (Model.Users ?? Enumerable.Empty<CpmUserOption>())
+        .Select(u => new GlV2SelectItem { Value = u.Id, Text = u.DisplayName ?? "" }).ToList();
+    var issuerItems = (Model.IssuerCompanies ?? new List<ProjectIssuerCompanyOptionVM>())
+        .Select(c => new GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name ?? "" }).ToList();
+    var statusItems = (Model.Statuses ?? new List<IdNameBO>())
+        .Select(s => new GlV2SelectItem { Value = s.ID.ToString(), Text = s.Display ?? "" }).ToList();
+    var typeItems = Enum.GetValues<ProjectType>()
+        .Select(t => new GlV2SelectItem { Value = ((int)t).ToString(), Text = t.ToString() }).ToList();
+
+    string CompanyLookup = Url.Action("GetCompanys", "Projecten") ?? "";
+
+    // Verplichte documenten: (veldnaam, verplicht?, label, datum indien aangeleverd).
+    var docDatesByType = (Model.Docs ?? new List<ProjectDocBO>())
+        .Where(d => d.DocDate.HasValue).GroupBy(d => d.Type).ToDictionary(g => g.Key, g => g.Max(d => d.DocDate));
+    DateOnly? DocDateFor(ProjectDocType type) => docDatesByType.TryGetValue(type, out var d) ? d : null;
+    var docRows = new List<ProjectRequiredDocRowVm>
+    {
+        new() { FieldName = "Project.DocDelivery", Required = project.DocDelivery ?? false, Label = "Voorlopige oplevering", DeliveredOn = project.DeliveryDate },
+        new() { FieldName = "Project.DocDefDelivery", Required = project.DocDefDelivery ?? false, Label = "Definitieve oplevering", DeliveredOn = project.DeliveryDateDef },
+        new() { FieldName = "Project.DocPID", Required = project.DocPID ?? false, Label = "Postinterventiedossier", DeliveredOn = DocDateFor(ProjectDocType.PID) },
+        new() { FieldName = "Project.DocElectricalInspection", Required = project.DocElectricalInspection ?? false, Label = "Elektrische keuring", DeliveredOn = DocDateFor(ProjectDocType.Electrical_inspection) },
+        new() { FieldName = "Project.DocWaterInspection", Required = project.DocWaterInspection ?? false, Label = "Waterkeuring", DeliveredOn = DocDateFor(ProjectDocType.Water_inspection) },
+        new() { FieldName = "Project.DocFireInspection", Required = project.DocFireInspection ?? false, Label = "Branddetectie keuring", DeliveredOn = DocDateFor(ProjectDocType.Fire_inspection) },
+        new() { FieldName = "Project.DocSewerInspection", Required = project.DocSewerInspection ?? false, Label = "Rioolkeuring", DeliveredOn = DocDateFor(ProjectDocType.Sewer_inspection) },
+    };
+    var docsRequired = docRows.Count(r => r.Required);
+    var docsPresent = docRows.Count(r => r.Required && r.DeliveredOn.HasValue);
+
+    var sliceTotal = (Model.ContractSlices ?? new List<ProjectContractSliceVM>()).Sum(s => s.Percentage);
+    var contractType = project.ContractType.HasValue ? (int)project.ContractType.Value : 0;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-form.css" asp-append-version="true" />
+}
+@section MobileTopbarAction
+{
+}
+@section PageActions
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* Tabbar blijft het letterlijke eerste kind van .gl-v2-content (zelfde regel als Klanten/EditProjectV2):
+   de Phone-modus van het dossiermenu komt er daarom NA. *@
+<div class="gl-v2-tabbar" id="gl-v2-project-tabbar" role="tablist">
+    @foreach (var t in tabDefs)
+    {
+        var n = TabErrors(t.Key);
+        <button type="button" class="gl-v2-tabbar-tab@(t.Key == "algemeen" ? " is-active" : "")" role="tab" data-tab="@t.Key" aria-selected="@(t.Key == "algemeen" ? "true" : "false")">
+            @t.Label
+            <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(n == 0)"></span>
+        </button>
+    }
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@using (Html.BeginForm("Edit", "Projecten", FormMethod.Post, new { @class = "gl-v2-project-form", id = "gl-v2-project-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Project.Id)
+    @Html.HiddenFor(m => m.Project.StandardFotoName)
+
+    <div class="gl-v2-project-scroll">
+        <p class="gl-v2-pf-formhint">Velden met <span class="gl-v2-pf-req" aria-hidden="true">*</span> zijn verplicht · wisselen van tab bewaart je invoer, niets gaat verloren tot je annuleert.</p>
+
+        @* ── Tab 1 · Algemeen ─────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
+            @await Html.PartialAsync("Partials/_ProjectFormV2Identity", Model)
+            @await Html.PartialAsync("Partials/_ProjectFormV2Location", Model)
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Werfmelding</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Aangifte van de start bij de overheid.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Project.WerfmeldingDate, "GlV2Date", new { Label = "Datum werfmelding" })</div>
+                    <div class="gl-v2-col-4" id="gl-v2-pf-werfmelding-end">
+                        @Html.EditorFor(m => m.Project.WerfmeldingEndDate, "GlV2Date", new { Label = "Einddatum werfmelding" })
+                        <span class="gl-v2-field-help gl-v2-pf-inline-help" id="gl-v2-pf-werfmelding-months" hidden></span>
+                    </div>
+                    <div class="gl-v2-col-4 gl-v2-pf-tablet-full">@Html.EditorFor(m => m.Project.WerfmeldingDossier, "GlV2Text", new { Label = "Dossiernummer werfmelding", MaxLength = 100 })</div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Betrokken bedrijven</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Wie bouwt, ontwikkelt en factureert.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6">
+                        @await Html.PartialAsync("Partials/_ProjectFormV2SearchSelect", new ProjectSearchSelectVm
+                        {
+                            Label = "Bouwheer", IdName = "Project.Builder.ID", IdValue = project.Builder?.ID.ToString(),
+                            TextName = "Project.Builder.Display", TextValue = project.Builder?.Display, DisplayText = project.Builder?.ID > 0 ? project.Builder.Display : null,
+                            LookupUrl = CompanyLookup, Placeholder = "Zoek een bedrijf …", MinChars = 3
+                        })
+                    </div>
+                    <div class="gl-v2-col-6">
+                        @await Html.PartialAsync("Partials/_ProjectFormV2SearchSelect", new ProjectSearchSelectVm
+                        {
+                            Label = "Projectontwikkelaar", IdName = "Project.Developer.ID", IdValue = project.Developer?.ID.ToString(),
+                            TextName = "Project.Developer.Display", TextValue = project.Developer?.Display, DisplayText = project.Developer?.ID > 0 ? project.Developer.Display : null,
+                            LookupUrl = CompanyLookup, Placeholder = "Zoek een bedrijf …", MinChars = 3
+                        })
+                    </div>
+                    <div class="gl-v2-col-6">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Project.IssuerCompanyIdBuilder", Label = "Facturatiebedrijf aannemer",
+                            Value = project.IssuerCompanyIdBuilder?.ToString(), Items = issuerItems,
+                            EmptyText = "— Selecteer —", Placeholder = "— Selecteer —",
+                            Help = "factureert de aanneming aan de kopers"
+                        })
+                    </div>
+                    <div class="gl-v2-col-6">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Project.IssuerCompanyIdLandOwner", Label = "Facturatiebedrijf grondeigenaar",
+                            Value = project.IssuerCompanyIdLandOwner?.ToString(), Items = issuerItems,
+                            EmptyText = "— Selecteer —", Placeholder = "— Selecteer —",
+                            Help = "factureert het grondaandeel"
+                        })
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Tab 2 · Status & foto ────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="status" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-flag" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Status &amp; publicatie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Waar staat het project en is het publiek zichtbaar?</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-4">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "SelectedStatus", Label = "Status", Value = Model.SelectedStatus.ToString(), Items = statusItems,
+                            Placeholder = "Kies een status …", Help = "staat ook als chip in de topbar van het dossier"
+                        })
+                    </div>
+                    <div class="gl-v2-col-4">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Project.ProjectType", Label = "Type project", Value = ((int)project.ProjectType).ToString(), Items = typeItems,
+                            Placeholder = "Kies een type …"
+                        })
+                    </div>
+                    <div class="gl-v2-col-4">
+                        <div class="gl-v2-field@(ErrorFor("Project.TotalLandShare") != null ? " is-error" : "")">
+                            <label class="gl-v2-field-label" for="Project_TotalLandShare">Totale grondaandelen</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Project.TotalLandShare, new { @class = "gl-v2-field-input is-tabular", type = "number", step = "0.01", min = "0", placeholder = " ", id = "Project_TotalLandShare" })
+                            </div>
+                            <span class="gl-v2-field-help">@(ErrorFor("Project.TotalLandShare") ?? "som van de aandelen per eenheid — verdeelt de grondprijs")</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12 gl-v2-pf-tablet-half">
+                        <div class="gl-v2-toggle-grid gl-v2-pf-toggle-single">
+                            @Html.EditorFor(m => m.Project.IsPublished, "GlV2ToggleSwitch", new { Label = "Gepubliceerd", Hint = "zichtbaar op de publieke website" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @await Html.PartialAsync("Partials/_ProjectFormV2Photo", Model)
+        </div>
+
+        @* ── Tab 3 · Planning ─────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="planning" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-calendar-blank" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Planning</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Uitvoering en oplevering.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Project.StartDateConstruction, "GlV2Date", new { Label = "Aanvangsdatum" })</div>
+                    <div class="gl-v2-col-4">
+                        <div class="gl-v2-field@(ErrorFor("Project.ExecutionDays") != null ? " is-error" : "")">
+                            <label class="gl-v2-field-label" for="Project_ExecutionDays">Uitvoeringstermijn</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "gl-v2-field-input is-tabular", type = "number", min = "0", placeholder = " ", id = "Project_ExecutionDays" })
+                                <span class="gl-v2-field-suffix">werkdagen</span>
+                            </div>
+                            @if (ErrorFor("Project.ExecutionDays") != null) { <span class="gl-v2-field-help">@ErrorFor("Project.ExecutionDays")</span> }
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-4 gl-v2-pf-planning-weather">
+                        @await Html.PartialAsync("Partials/_ProjectFormV2SearchSelect", new ProjectSearchSelectVm
+                        {
+                            Label = "Weerstation", IdName = "Project.WheaterStation.Id", IdValue = project.WheaterStation?.Id.ToString(),
+                            TextName = "Project.WheaterStation.Name", TextValue = project.WheaterStation?.Name,
+                            DisplayText = project.WheaterStation?.Id > 0 ? project.WheaterStation.Name : null,
+                            LookupUrl = Url.Action("GetWheaterstations", "Projecten") ?? "", Placeholder = "Zoek een KMI-weerstation …", MinChars = 1,
+                            Help = "weerverlet wordt per dag van dit station geteld"
+                        })
+                    </div>
+                    <div class="gl-v2-col-4">
+                        @Html.EditorFor(m => m.Project.DeliveryDate, "GlV2Date", new { Label = "Opleveringsdatum" })
+                        <span class="gl-v2-field-help gl-v2-pf-inline-help">leeg laten = berekend uit aanvang + termijn + weerverletdagen</span>
+                    </div>
+                    <div class="gl-v2-col-4">
+                        @Html.EditorFor(m => m.Project.DeliveryDateDef, "GlV2Date", new { Label = "Definitieve opleveringsdatum" })
+                        <span class="gl-v2-field-help gl-v2-pf-inline-help">meestal één jaar na de voorlopige oplevering</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Tab 4 · Partners ─────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="partners" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-users-three" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Partners</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Architect, veiligheid, EPB, notaris en verkoopverantwoordelijke.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    @foreach (var p in new (string Label, string Prop, IdNameBO Value)[]
+                    {
+                        ("Architect", "Architect", project.Architect), ("Ingenieur", "Engineer", project.Engineer),
+                        ("Veiligheidscoördinator", "SecurityCoordinator", project.SecurityCoordinator),
+                        ("EPB-verslaggever", "EpbReporter", project.EpbReporter), ("Notaris", "Notary", project.Notary)
+                    })
+                    {
+                        <div class="gl-v2-col-6">
+                            @await Html.PartialAsync("Partials/_ProjectFormV2SearchSelect", new ProjectSearchSelectVm
+                            {
+                                Label = p.Label, IdName = $"Project.{p.Prop}.ID", IdValue = p.Value?.ID.ToString(),
+                                TextName = $"Project.{p.Prop}.Display", TextValue = p.Value?.Display,
+                                DisplayText = p.Value?.ID > 0 ? p.Value.Display : null,
+                                LookupUrl = CompanyLookup, Placeholder = "Zoek een bedrijf …", MinChars = 3
+                            })
+                        </div>
+                    }
+                    <div class="gl-v2-col-6">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Project.SalesResponsibleUserID", Label = "Verkoopverantwoordelijke", Value = project.SalesResponsibleUserID,
+                            Items = userItems, EmptyText = "Geen verkoopverantwoordelijke", Placeholder = "Kies een persoon …"
+                        })
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <p class="gl-v2-pf-note">
+                            Partners komen uit Leveranciers. Staat iemand er niet tussen?
+                            <a href="@Url.Action("Create", "Leveranciers")" target="_blank" rel="noopener" class="gl-v2-pf-note-link"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe leverancier</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Tab 5 · Documenten ───────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="documenten" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verplichte documenten</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Welke documenten dit project moet hebben. De bestanden zelf staan bij de documenten van het project.</span>
+                    <span class="gl-v2-pf-doc-count" id="gl-v2-pf-doc-count"><b>@docsPresent</b> / @docsRequired AANWEZIG</span>
+                </div>
+                @if (canWriteProject)
+                {
+                    <div class="gl-v2-pf-doctable" role="table" aria-label="Verplichte documenten">
+                        <div class="gl-v2-pf-doctable-head" role="row">
+                            <span role="columnheader">DOCUMENT</span>
+                            <span role="columnheader">VERPLICHT</span>
+                            <span role="columnheader">AANGELEVERD</span>
+                            <span role="columnheader"></span>
+                        </div>
+                        @foreach (var row in docRows)
+                        {
+                            <div class="gl-v2-pf-docrow" role="row" data-delivered="@(row.DeliveredOn.HasValue ? "1" : "0")">
+                                <span class="gl-v2-pf-doc-label" role="cell">@row.Label</span>
+                                <span role="cell">
+                                    <label class="gl-v2-toggle-row gl-v2-pf-doc-toggle">
+                                        @Html.CheckBox(row.FieldName, row.Required, new { @class = "gl-v2-toggle-switch js-gl-v2-pf-doc-required", aria_label = "Verplicht: " + row.Label })
+                                    </label>
+                                </span>
+                                <span role="cell">
+                                    @if (row.DeliveredOn.HasValue)
+                                    {
+                                        <span class="gl-v2-badge is-positive">@row.DeliveredOn.Value.ToString("dd/MM/yy", be)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-badge is-attention">ONTBREEKT</span>
+                                    }
+                                </span>
+                                <span role="cell" class="gl-v2-pf-doc-action">
+                                    @if (!row.DeliveredOn.HasValue)
+                                    {
+                                        <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = project.Id })" target="_blank" rel="noopener" class="gl-v2-pf-note-link">Opladen <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-section-grid"><div class="gl-v2-col-12"><p class="gl-v2-pf-note">Je hebt geen rechten om de verplichte documenten te wijzigen.</p></div></div>
+                }
+            </div>
+        </div>
+
+        @* ── Tab 6 · SEO & website ────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="seo" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-browser" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Website-presentatie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Commerciële titel en tekst zoals op de publieke website.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Project.CommercialTitleNL, "GlV2Text", new { Label = "Titel" })</div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Tekst</span>
+                            <div class="gl-v2-pf-editor" id="commercialTextEditorContainer"></div>
+                            @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "gl-v2-pf-editor-source", id = "commercialTextEditor", hidden = "hidden" })
+                            <span class="gl-v2-field-help">opmaak (vet, lijsten, links) wordt bewaard</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">SEO</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Laat leeg om automatisch te genereren.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Project_SeoTitle">SEO-titel</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Project.SeoTitle, new { @class = "gl-v2-field-input", placeholder = " ", maxlength = "120", autocomplete = "off", id = "Project_SeoTitle" })
+                                <span class="gl-v2-field-suffix gl-v2-pf-counter" id="gl-v2-pf-seotitle-count" data-limit="60">0 / 60</span>
+                            </div>
+                            <span class="gl-v2-field-help">tekens — getoond in zoekresultaten</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Project_SeoDescription">Meta-omschrijving</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea">
+                                @Html.TextAreaFor(m => m.Project.SeoDescription, 4, 40, new { @class = "gl-v2-field-input", placeholder = " ", maxlength = "320", id = "Project_SeoDescription" })
+                            </div>
+                            <span class="gl-v2-field-help"><span class="gl-v2-pf-counter-inline" id="gl-v2-pf-seodesc-count" data-limit="155">0 / 155</span> tekens — getoond onder de titel in Google</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <span class="gl-v2-field-label">Voorbeeld in Google</span>
+                        <div class="gl-v2-pf-serp" id="gl-v2-pf-serp" data-slug="@project.Slug" data-fallback-title="@projectName">
+                            <span class="gl-v2-pf-serp-url" id="gl-v2-pf-serp-url"></span>
+                            <span class="gl-v2-pf-serp-title" id="gl-v2-pf-serp-title"></span>
+                            <span class="gl-v2-pf-serp-desc" id="gl-v2-pf-serp-desc"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Tab 7 · Coördinatie ──────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-tab-panel" data-tab-panel="coordinatie" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-briefcase" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Type project</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Eigen ontwikkeling, coördinatie met contract, of beide.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-toggle-grid">
+                            @Html.EditorFor(m => m.Project.IsOnlyCoordinationProject, "GlV2ToggleSwitch", new { Label = "Puur coördinatieproject", Hint = "enkel coördinatie, geen eigen ontwikkeling" })
+                            @Html.EditorFor(m => m.Project.IsCoordinationProject, "GlV2ToggleSwitch", new { Label = "Heeft coördinatie", Hint = "toont het contract hieronder en de pagina Coördinatie in het dossier" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="coordinationCard" class="gl-v2-pf-coordination">
+                <div class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Type &amp; vergoeding</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Coördinatiecontract.</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-6">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "Project.CoordinationIssuerCompanyId", Label = "Coördinatiebedrijf",
+                                Value = project.CoordinationIssuerCompanyId?.ToString(), Items = issuerItems,
+                                EmptyText = "— Selecteer facturatiebedrijf —", Placeholder = "— Selecteer facturatiebedrijf —"
+                            })
+                        </div>
+                        <div class="gl-v2-col-6">
+                            <div class="gl-v2-field">
+                                <span class="gl-v2-field-label">Contracttype</span>
+                                <input type="hidden" name="Project.ContractType" id="Project_ContractType" value="@(contractType == 0 ? "" : contractType.ToString())" />
+                                <div class="gl-v2-pf-seg" role="radiogroup" aria-label="Contracttype" id="gl-v2-pf-contracttype">
+                                    <button type="button" class="gl-v2-pf-seg-btn@(contractType == 1 ? " is-active" : "")" role="radio" aria-checked="@(contractType == 1 ? "true" : "false")" data-value="1">Schijven</button>
+                                    <button type="button" class="gl-v2-pf-seg-btn@(contractType == 2 ? " is-active" : "")" role="radio" aria-checked="@(contractType == 2 ? "true" : "false")" data-value="2">Regie</button>
+                                    <button type="button" class="gl-v2-pf-seg-btn@(contractType == 3 ? " is-active" : "")" role="radio" aria-checked="@(contractType == 3 ? "true" : "false")" data-value="3">Combinatie</button>
+                                </div>
+                                <span class="gl-v2-field-help">tarieven en km-instellingen verschijnen bij Regie of Combinatie</span>
+                            </div>
+                        </div>
+                        @if (project.ProjectDistanceKm.HasValue)
+                        {
+                            <div class="gl-v2-col-12">
+                                <p class="gl-v2-pf-note"><i class="ph ph-path" aria-hidden="true"></i> Berekende afstand: <b>@project.ProjectDistanceKm.Value.ToString("0.##", be) km</b></p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="gl-v2-section-card" id="slicesSection">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-list-numbers" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Contractschijven</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Totaal moet exact 100 % zijn.</span>
+                        <span class="gl-v2-badge @(Math.Round(sliceTotal, 2) == 100 ? "is-positive" : "is-attention")" id="gl-v2-pf-slices-chip">@(Math.Round(sliceTotal, 2) == 100 ? "KLOPT" : "TOTAAL ≠ 100 %")</span>
+                    </div>
+                    <div class="gl-v2-pf-rows">
+                        <div id="slicesContainer">
+                            @for (int i = 0; i < Model.ContractSlices.Count; i++)
+                            {
+                                <div class="gl-v2-pf-row slice-row">
+                                    <input type="hidden" name="ContractSlices[@i].Id" value="@Model.ContractSlices[i].Id" />
+                                    <span class="gl-v2-pf-handle" title="Sleep om te herschikken" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span>
+                                    <div class="gl-v2-field gl-v2-pf-row-main"><div class="gl-v2-field-box"><input type="text" name="ContractSlices[@i].Description" value="@Model.ContractSlices[i].Description" class="gl-v2-field-input" placeholder=" " autocomplete="off" aria-label="Omschrijving schijf" /></div></div>
+                                    <div class="gl-v2-field gl-v2-pf-row-num"><div class="gl-v2-field-box"><input type="number" step="0.01" min="0.01" max="100" name="ContractSlices[@i].Percentage" value="@Model.ContractSlices[i].Percentage.ToString("0.##", CultureInfo.InvariantCulture)" class="gl-v2-field-input is-tabular slice-pct" placeholder=" " aria-label="Percentage schijf" /><span class="gl-v2-field-suffix">%</span></div></div>
+                                    <div class="gl-v2-pf-row-actions">
+                                        <button type="button" class="gl-v2-icon-btn move-slice-up" aria-label="Schijf omhoog" title="Omhoog"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-icon-btn move-slice-down" aria-label="Schijf omlaag" title="Omlaag"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-icon-btn is-danger remove-slice" aria-label="Schijf verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="gl-v2-pf-total">
+                            <span class="gl-v2-pf-total-label">Totaal</span>
+                            <span class="gl-v2-pf-progress"><span class="gl-v2-pf-progress-fill" id="slicesProgressFill"></span></span>
+                            <span class="gl-v2-pf-total-pct" aria-live="polite"><span id="slicesTotal">@sliceTotal.ToString("0.##", be)</span> %</span>
+                        </div>
+                        <span class="gl-v2-field-help is-error-text" id="slicesTotalError" role="alert" hidden>De schijven moeten samen 100 % zijn.</span>
+                        <div class="gl-v2-pf-rows-foot">
+                            <button type="button" id="addSlice" class="gl-v2-select-newitem-btn"><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
+                            <span class="gl-v2-field-help">de volgorde wordt bewaard — sleep aan het handvat of gebruik de pijltjes · bij een verschil ≠ 100 % blokkeert opslaan met uitleg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gl-v2-section-card" id="regieSection">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-clock" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Uurtarieven (regie)</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Vergoeding per gepresteerd uur.</span>
+                    </div>
+                    <div class="gl-v2-pf-rows">
+                        <div id="ratesContainer">
+                            @for (int i = 0; i < Model.HourlyRates.Count; i++)
+                            {
+                                <div class="gl-v2-pf-row rate-row">
+                                    <div class="gl-v2-field gl-v2-pf-row-main">
+                                        <div class="gl-v2-field-box">
+                                            <select name="HourlyRates[@i].UserId" class="gl-v2-field-input rate-user" aria-label="Persoon">
+                                                <option value="">— Selecteer persoon —</option>
+                                                @foreach (var u in Model.AvailableUsers)
+                                                {
+                                                    <option value="@u.Group" selected="@(Model.HourlyRates[i].UserId == u.Group ? "selected" : null)">@u.Display</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <input type="hidden" name="HourlyRates[@i].UserFullName" value="@Model.HourlyRates[i].UserFullName" />
+                                    </div>
+                                    <div class="gl-v2-field gl-v2-pf-row-num"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="number" step="0.01" min="0" name="HourlyRates[@i].HourlyRate" value="@Model.HourlyRates[i].HourlyRate.ToString("0.##", CultureInfo.InvariantCulture)" class="gl-v2-field-input is-tabular" placeholder=" " aria-label="Uurtarief" /></div></div>
+                                    <button type="button" class="gl-v2-icon-btn is-danger remove-rate" aria-label="Tarief verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                </div>
+                            }
+                        </div>
+                        <div class="gl-v2-pf-rows-foot">
+                            <button type="button" id="addRate" class="gl-v2-select-newitem-btn"><i class="ph ph-plus" aria-hidden="true"></i>Tarief toevoegen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        @if (totalErrorCount > 0)
+        {
+            <span class="gl-v2-form-actionbar-status is-error">
+                <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                @(totalErrorCount == 1 ? "1 fout in het formulier" : $"{totalErrorCount} fouten in het formulier")
+            </span>
+            <button type="button" class="gl-v2-form-actionbar-link" id="gl-v2-goto-first-error">Ga naar de eerste fout</button>
+        }
+        else
+        {
+            <span class="gl-v2-form-actionbar-status gl-v2-pf-actionbar-note">Eén opslag voor alle tabs</span>
+        }
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@backUrl" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-cancel-link">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-project-submit">Wijzigingen opslaan</button>
+        </div>
+    </div>
+}
+
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-discard-changes-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder uw wijzigingen op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+    <script>
+        window.glV2ProjectFormConfig = {
+            forceTab: '@forceTab',
+            mode: 'edit',
+            availableUsers: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableUsers.Select(u => new { id = u.Group, text = u.Display }).ToList()))
+        };
+    </script>
+    <script src="~/js/gl-v2-projecten-form.js" asp-append-version="true"></script>
+}

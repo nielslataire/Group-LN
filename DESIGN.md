@@ -244,6 +244,17 @@ answers "wát," the breadcrumb answers "wáár." Only the title, then the breadc
 truncate with an ellipsis and a tooltip; chips, actions, and the avatar never do. See "Topbar title &
 breadcrumb — long names" under Components for the full rule set and its two applied examples.
 
+**The Clickable-Crumb Rule (standing rule).** Every breadcrumb item that is *not the current page itself*
+is a link — always, including the last item. The last crumb is normally the page itself and renders as
+plain text, but a page that deliberately ends its trail at an *overarching* page (because repeating its own
+title would break the One-Line Topbar Rule — e.g. `Projecten/Toevoegen`, title "Nieuw project", trail
+`Dashboard / Projecten`) must not leave that last crumb dead. Mechanism: the action sets
+`ViewData["BreadcrumbLastIsLink"] = true` next to its `ViewData["BreadcrumbNode"]`;
+`BreadcrumbsViewComponent` hands it to `Views/Shared/Components/Breadcrumbs/Default.cshtml`, which then
+renders the last node as a link too. Opt-in per action, so every page whose last crumb *is* the page keeps
+plain text. Applied: `ProjectenController.SetToevoegenBreadcrumbV2` (`Projecten` → `Projecten/Index`); any
+new gl-v2 page whose trail stops above itself sets the same flag.
+
 ## Elevation & Depth
 
 Floating, not flat. Every card carries a real ambient shadow — the opposite of the current
@@ -3794,7 +3805,7 @@ Needed because a VB.NET `Date?` property — `ContractBO.ContractSentDate` among
 (no implicit `DateTime?` → `DateOnly?` conversion). Same approach as `GlV2Date`, deliberately *not*
 14d's own hand-drawn calendar-dropdown ("6 · DATUM": month nav, day grid, today/selected states,
 "Vandaag"/"Wissen" footer) — a plain HTML5 `<input type="date">` inside the existing `.gl-v2-field-box`
-shell, no new datepicker dependency. `GlV2Date` made that call as the pilot's first real date field
+shell, no new datepicker dependency. (Superseded: `GlV2Date` is since converted to the same picker — see "Datumveld — één veld doorheen het project".) `GlV2Date` made that call as the pilot's first real date field
 and it stood unchallenged since; building a full custom calendar widget now, for one field on one
 page, would be a UI component on the scale of the invoice/contract pages themselves, not a "field
 type" documentation pass. Flagged here as the one deliberate 14d state that stayed at native-input
@@ -3885,6 +3896,75 @@ that it was "the boldest number on the card" — 14c's own mockup draws it at 14
 "Contractprijs" label beside it), one line within the card, not a KPI tile of its own. Reverted to
 match the reference exactly.
 
+### Projecten/EditV2 + ToevoegenV2 — project bewerken en aanmaken (design-handoff punt 19)
+Punt 19 tekent enkel het bewerkformulier ("de zijkant zegt WAAR je bent in het dossier, de tabbar zegt WELK
+DEEL van dit ene record je bewerkt"). `ProjectenController.Edit`/`Toevoegen` (GET + beide POST-herweergaves)
+vertakken via de gebruikelijke `UseGlV2Layout`-ternary naar `EditV2.cshtml`/`ToevoegenV2.cshtml`; model, POST,
+validatie en redirects zijn ongewijzigd — dezelfde veldnamen als de legacy `Edit.cshtml`/`_ProjectForm*`.
+
+**Schil.** Dossiermenu links (Outer-modus `_ProjectInnerMenuV2`, "Project" is nu ook actief op `Projecten/Edit`),
+`.gl-v2-tabbar` met de zeven delen uit de legacy pagina (Algemeen, Status & foto, Planning, Partners,
+Documenten, SEO & website, Coördinatie — foutstipjes uit `ModelState`-prefixen, `#hash` en de eerste tab met een
+fout winnen), `.gl-v2-section-card` per blok, één `.gl-v2-form-actionbar`. Alle velden blijven in één `<form>`:
+wisselen van tab toont/verbergt enkel panelen, dus één Opslaan bewaart alles. Dirty-badge + "wijzigingen niet
+opslaan"-modal + `beforeunload` zoals Klanten/EditProjectV2. Titel "Project bewerken" / "Nieuw project"; de
+kruimel stopt bij de projectnaam (Toevoegen: bij "Projecten") zodat hij de titel niet herhaalt.
+
+**Gedeelde partials** (`Views/Projecten/Partials/`): `_ProjectFormV2Identity` (Naam*, Projectcode, Projectbeheerder,
+op Toevoegen ook Verkoopverantwoordelijke), `_ProjectFormV2Location` (Land, Gemeente*, Straat, Nr),
+`_ProjectFormV2Photo` (huidige foto + sleep-/kies-zone) — Toevoegen is exact deze drie kaarten, zonder tabs.
+`_ProjectFormV2SearchSelect` (+ `ProjectSearchSelectVm`) is de zoekende keuzelijst voor de drie bestaande POST-
+lookups (`GetPostcodesByCountry`, `GetWheaterstations`, `GetCompanys`) en bindt naast het id ook het verborgen
+weergavenaam-veld (`Project.Developer.Display`, …) dat de POST leest. Enumlijsten gebruiken `GlV2/_SelectList`,
+datums `GlV2Date`, schakelaars `GlV2ToggleSwitch`. De open/zoek-logica staat in `gl-v2-projecten-form.js`
+(page-lokale kopie, zelfde afspraak als de andere formulierpagina's); `select2`/`ios7-switch`/de legacy
+`theme.admin.extension.js` worden op deze pagina niet meer geladen. Een gewist zoekveld schrijft "0" (niet "")
+in het id-veld, zoals de legacy select2 — anders faalt de binding op een niet-nullable int.
+
+**Bewust anders dan het mockup** (ook in de view-kop): geen "laatst opgeslagen … door" (Project bewaart geen
+wijzigingsmoment); geen "Bekijk op website ↗" (geen bekende publieke project-URL); geen "+ Document toevoegen
+aan de lijst" (zeven vaste velden, geen open lijst — "Opladen ↗" opent de bestaande `DetailDocs`); geen "zo verschijnt ze in de topbar (48px)" bij de foto
+(het dossiermenu toont een icoon, geen projectfoto). Op tablet/gsm (<1024px) staat "Tik om …" i.p.v. "Sleep …".
+**Contractschijven zijn geordend**: de volgorde is betekenisvol (schijf 1 = eerste factuur) en wordt bewaard
+als `SortOrder` = positie in de lijst (`ProjectService.SaveContractSlices`). Elke rij post daarom `ContractSlices[i].Id`
+mee (anders werd bij elke opslag alles verwijderd en opnieuw aangemaakt, met verlies van factuurkoppeling en
+voortgang) en de namen worden na elke verplaatsing/verwijdering hernummerd. Herschikken kan met het handvat
+`.gl-v2-pf-handle` (muis, HTML5-drag, enkel vanaf het handvat zodat tekst selecteren blijft werken) of met de
+pijltjes omhoog/omlaag (`.move-slice-up/-down`, de enige weg op tablet/gsm waar slepen niet werkt).
+Contractschijven en uurtarieven posten `type="number"` (invariant `12.5`), net als de legacy pagina — een
+tekstveld met komma zou door de nl-BE-modelbinder anders gelezen worden.
+
+**Dirty-badge.** `markDirty()` doet pas iets nadat de initialisatie klaar is (`formReady`, één tick later): Quill
+vuurt bij het vullen met de opgeslagen tekst zelf een `text-change` af (bron "user") en dat toonde de badge al bij
+het openen. De startinhoud gaat nu "silent" binnen en de badge komt enkel bij een echt afwijkende inhoud.
+
+**Tablet (768–1023,98px)** — `.gl-v2-project-form …`-regels: de schakelaars van Coördinatie in twee kolommen over
+de volle breedte; Gepubliceerd naast Totale grondaandelen (elk 6 kolommen); dossiernummer werfmelding op 12;
+Planning met beide opleveringsdatums naast elkaar en het weerstation eronder (`order`); documententabel met
+smallere Verplicht/Aangeleverd zodat "Document" de ruimte krijgt.
+
+**Regel voor page-CSS die de shell moet overschrijven.** `_LayoutV2.cshtml` laadt `@section PageStyle` (regel 65)
+VÓÓR `gl-v2-shell.css` (regel 70): bij gelijke specificiteit wint dus de shell. Een page-regel die een shell-regel
+moet overschrijven staat daarom onder een extra klasse (`.gl-v2-project-form …`, `.gl-v2 …`). Dit bleek een echte
+bug op `Projecten/DetailPhotosV2` (de quick-actions-balk bleef op tablet zichtbaar) en is daar gecorrigeerd.
+
+### Datumveld — één veld doorheen het project (`GlV2Date` / `GlV2DateTime` → `GlV2/_DateField`)
+Elke datum in gl-v2 is hetzelfde veld: het van 14d "6 · DATUM" — een gewone tekstinvoer `dd/mm/jjjj` (vrij typen,
+live-masker, validatie bij verlaten met meldingen als "Juni heeft 30 dagen") met een optionele kalender-dropdown
+(`.gl-v2-datepicker-panel`: maandnavigatie, MA–ZO, vandaag/geselecteerd, "Vandaag"/"Wissen"). De gebonden waarde
+staat in een verborgen `yyyy-MM-dd`-input (`data-role="date-value"`, zelfde schaduw-input-patroon als `GlV2Select`)
+en vuurt een bubbelend `change` bij elke keuze, dus dirty-tracking en modelbinding werken zonder extra code.
+
+- **Gebruik altijd** `@Html.EditorFor(m => m.X, "GlV2Date")` voor `DateOnly?` of `"GlV2DateTime"` voor `DateTime?`
+  (VB `Date?`), optioneel `new { Label = "…" }`. Beide templates bouwen een `GlV2DateFieldVm` en renderen de ene
+  partial `Views/Shared/GlV2/_DateField.cshtml`; het uiterlijk/gedrag staat dus op één plek, JS =
+  `initGlV2DatePicker()` in `gl-v2-shell.js` (shell-breed, wired op `[data-gl-v2-datepicker]`).
+- **Nooit** een eigen `<input type="date">` of losse datepicker in een gl-v2-pagina. Een extra hulpregel onder het veld
+  is `.gl-v2-field-help` (bv. "leeg laten = berekend uit …").
+- Historie: `GlV2Date` was eerst een native `<input type="date">` (Klanten/EditProjectV2); die versie is vervangen zodat
+  Klanten, Projecten/EditV2 (werfmelding, aanvang, oplevering, definitief) en EditContractV2 exact dezelfde datumkiezer
+  tonen. Een nieuwe pagina met een datum hoeft dus niets te ontwerpen — enkel de template aanroepen.
+
 ### Icons
 Phosphor Regular (`ph ph-*`), not the mockup's hand-drawn custom SVG paths — the mockup's icon
 path data isn't recoverable from the static export (live template bindings), and Phosphor is
@@ -3905,6 +3985,9 @@ system's own Icons section documents for its Boxicons→Phosphor migration.
   unstyled icon button, say) rather than building a fake interactive control with nothing behind
   it — but if it's not actually dashed/marked as a placeholder, don't ship a dead control at all;
   suppress it instead (see the mobile search stub, Mobile Topbar) until it has something to do.
+
+- **Do** make every breadcrumb item that is not the current page a link — including the last one when the
+  trail stops above the page (see the Clickable-Crumb Rule under the topbar rule).
 
 ### Don't:
 - **Don't** nest a `position:fixed` overlay (flyout, mobile menu, backdrop) inside anything with
@@ -4228,7 +4311,22 @@ bestaat niet. Eén terugval toegevoegd die DetailV2 niet had: een verkochte eenh
 verkoopbedragen toont haar vraagprijs i.p.v. € 0 — nul leest als een fout, niet als "nog niet
 ingevuld".
 
-**Koppelen werd een regel in de tabel (16a §2) en een nieuwe actie naast de oude.** Het legacy
+**Losse nevenruimtes staan per type samengevat, en de aparte koppelregel is weg.** 16a zet onder elk
+lot een regel "Berging of parking koppelen aan …" en toont losse bergingen/parkings als één lange lijst
+onder "Los te koop". Allebei maakten de tabel onnodig lang: de koppelregel deed exact wat "Eenheid
+koppelen" in het ⋯-menu van de rij al doet (dus dubbel), en twintig losse bergingen onder elkaar zeggen
+niets wat "20 bergingen · 96 m² · € 180.000" niet ook zegt. Daarom: geen koppelregel meer (koppelen enkel
+via het ⋯-menu, zelfde `.js-gl-v2-du-attach`-actie), en de losse nevenruimtes vormen per type een eigen
+groep — "Losse bergingen" en "Losse parkings" — met een samenvatting (aantal, oppervlakte, waarde; bij
+verkochte losse eenheden ook "n beschikbaar · m verkocht") in de groepskop
+(`DetailUnitsV2Group.Summary`), dicht tot je ze opent (`CollapsedByDefault`). Een eenheid die al aan een lot
+gekoppeld is, hoort niet meer bij die groepen: de dienst geeft enkel eenheden zonder `AttachedUnitId` als
+hoofdrij terug, gekoppelde staan alleen nog ingesprongen onder hun lot. Zodra er gezocht of gefilterd
+wordt, gaan de dichte groepen vanzelf open (anders zou zoeken op een losse berging "geen resultaat"
+tonen), tenzij je zelf op de kop klikte — een expliciete klik wint altijd. Op gsm is het groepslabel
+van zo'n groep dezelfde toggle (`.gl-v2-du-card-group-label.is-toggle`, 44px-raakvlak).
+
+**Koppelen werd een actie naast de oude (16a §2, zonder de koppelregel hierboven).** Het legacy
 koppelicoon (derde icoon in een rij van drie, `ModalAddUnitLink` → `AddUnitLink`) maakte een
 samengestelde KOPPELING-pseudo-eenheid aan (`Units.IsLink`, naam = "Lot 1 - Berging B1", aandeel =
 som van de leden) waarna de leden uit de lijst verdwenen — een ander mechanisme dan de
@@ -4575,3 +4673,332 @@ legacy `.card` met eigen koptekst en knoppen, geen gl-v2 `modal-body`/`modal-foo
 te laden dat de rij zelf niet al weet — dus één statische bevestiging in de pagina die per rij zijn
 naam en doel-URL krijgt, i.p.v. een AJAX-fragment of een modal per eenheid. De verwijderactie zelf
 (`ProjectenController.DeleteUnit`) blijft ongewijzigd.
+
+## Projecten/UnitFormV2 — eenheid toevoegen én bewerken (design-handoff 16b + 16c)
+
+`ProjectenController.AddUnit` en `.EditUnit` sturen in de gl-v2-lay-out door naar **één** view,
+`Views/Projecten/UnitFormV2.cshtml` — 16c's eigen regel: *"Nieuw gebruikt exact het formulier van 16b:
+zelfde secties, zelfde volgorde, lege velden met voorbeeld-placeholders."* Wat verschilt (titel "Nieuwe
+eenheid", knoppen "Eenheid aanmaken" + "Opslaan en nog een", de kopieerkaart bovenaan) hangt aan
+`UnitFormV2Vm.IsNew`, niet aan een tweede pagina. De controllerlogica staat in een eigen
+`ProjectenController.UnitFormV2.cs` (de klasse is daarvoor `partial` geworden — de 12k-regels-file
+groeit niet verder); de legacy acties hebben enkel een `UseGlV2Layout`-doorschakeling gekregen en blijven
+verder ongewijzigd (legacy POST's/views werken dus nog voor wie de oude lay-out gebruikt). Een
+KOPPELING-pseudo-eenheid (`Units.IsLink`) houdt haar legacy formulier: `UnitFormV2Get` geeft dan `null`.
+
+**Eén POST bewaart alles (`SaveUnitV2`) — dat is de echte structuurwijziging t.o.v. legacy.** Op de
+legacy pagina belandden afwerkingsopties al bij het klikken via AJAX in de database
+(`AddFinishingOption`/`RenameFinishingOption`/`RemoveFinishingOption`) — onmogelijk voor een eenheid
+die nog niet bestaat, en strijdig met een "niet-opgeslagen wijzigingen"-badge. Nu staat alles in het
+formulier en wordt bij "Opslaan" gesynchroniseerd (`SyncUnitFinishingOptionsV2`/`SyncUnitRoomsV2`/
+`SyncUnitExecutionPlansV2`): een gepost id dat niet bij deze eenheid hoort wordt als nieuw behandeld; wat
+er niet meer gepost wordt, wordt verwijderd (ook ruimtes, wat legacy nooit deed: een uit het formulier
+gehaalde ruimte bleef daar in de database staan). Bouwwaarderegels **zonder** afwerkingsoptie (oudere
+"basis"-invoer; de lijst telt ze nog apart mee, `UnitPriceV2`) worden nooit verwijderd — het formulier
+toont ze niet als blok, dus het mag ze ook niet wissen; een korte melding onder Bedragen zegt dat ze
+bestaan. De eenheid zelf wordt **over de bestaande BO heen** bijgewerkt (enkel de velden die dit
+formulier bezit), zodat klant/verkochte bedragen/koppeling/betalingsgroep nooit stil gewist worden door
+een verborgen veld dat hier niet staat. Bij een fout ná het aanmaken (afwerkingen/ruimtes/plannen) gaat de
+gebruiker naar de bewerkpagina van de nieuwe eenheid, niet terug naar "nieuw" — daar zou een tweede POST
+een dubbele eenheid maken.
+
+**Rijen zonder AJAX: `<template>` + expliciete veldnamen.** Afwerkingsblok, bouwwaarderegel en ruimte
+zijn partials (`_UnitOptionV2`, `_UnitCvRowV2`, `_UnitRoomRowV2`) met gegenereerde namen
+(`FinishingOptions[key].ConstructionValues[key].Value`) i.p.v. `Html.BeginCollectionItem` — dezelfde
+markup rendert server-side voor echte rijen én één keer in een `<template>` met de sleutels
+`__OPT__/__CV__/__CV0__/__ROOM__`, die `gl-v2-projecten-unitform.js` per kloon vervangt. Elke collectie
+draagt zijn eigen `….index`-hidden zodat willekeurige sleutels binden. Geen `BlankRoomRow`-achtige
+roundtrips meer, en het werkt identiek voor een nog niet bestaande eenheid.
+
+**Layout.** Links een klevende sectielijst (8b, "meescrollende sectielijst") die per sectie een live
+badge toont (gekoppelde eenheden, `€ 975k`, aantal ruimtes, aantal documenten) en via een
+`IntersectionObserver` de actieve sectie volgt; onder 1024px wordt dat een horizontale klevende balk.
+Zes `.gl-v2-section-card`'s met het gedeelde 12-koloms `.gl-v2-section-grid`. Bedragen: links de
+grondwaarde + afwerkingsblokken, rechts een **vaste prijsberekening** (`.gl-v2-unit-price`,
+`position: sticky`) die live rekent op elke bedragwijziging (grond + bouw per afwerking, de
+standaardafwerking als hoofdregel, overige afwerkingen eronder, + gekoppelde eenheden, totaal). De
+scrollmodel: **het document scrolt**, niet een wrapper binnenin — `.gl-v2-app` heeft enkel `min-height:100vh`, dus een
+intern `overflow-y:auto` scrolde nooit en liet de sticky sectielijst nergens aan kleven (eerste versie, door de gebruiker
+gemeld: "het secties menu schuift niet mee"). Bovendien is `.gl-v2-body` `overflow:hidden` in de shell, en dat maakt van
+de kaart een scrollcontainer die nooit scrolt: **elke `position:sticky` binnen `.gl-v2-body` is daardoor stuk** (dat
+geldt ook voor toekomstige pagina's). Op deze pagina is `.gl-v2-body.is-full-height` daarom `overflow:clip` (zelfde
+afknipping/afronding, maar geen scrollcontainer; drie-klassen-selector wegens de PageStyle-volgorde). Zo blijven de
+sectielijst (nu met kaartachtergrond) en de actiebalk (`position:sticky; bottom:0`, ≥768px) in beeld. Onder 1024px
+vervangt de **standaard `.gl-v2-tabbar`** (eerste kind van `.gl-v2-content`, klevend) de sectielijst; ≥1024px is die
+tabbar verborgen. Ook rechtgezet na gebruikersfeedback: Bedragen en Indeling hebben dezelfde `max-width:1420px` als het
+veldraster van Algemene info; het lege eenheidsblokje bij "Aandeel basisakte" (`GlV2NumberUnit` rendert het blok niet
+meer zonder `Unit`, en het toont nu `/ N` zodra het project een aandelentotaal heeft) — dat was het "onzichtbare icoon";
+Naam is `col-5` zoals Straat; `ph-cabinet` (Indeling) bestaat niet in Phosphor 2.1.2 → `ph-layout`. Alle andere iconen
+van dit formulier zijn tegen de echte icoonlijst gecontroleerd. Niet in een browser gezien: de sticky-werking en de
+tabbar-weergave.
+
+**Bewust anders dan het mockup.**
+- **Straat/Nr/Grondwaarde dragen geen "\*"**: `Units` kent ze niet als verplicht en bergingen/parkings
+  hebben geen adres of eigen grondwaarde — een verplichting zou bestaande eenheden blokkeren bij hun
+  volgende bewaring. Echt verplicht zijn naam, type en subtype (dat zijn precies de "3 verplichte
+  velden" uit 16c's eigen actiebalk); de statusregel telt ze live en de validatie loopt op de knopklik
+  (niet op het submit-event: AutoNumeric's `unformatOnSubmit` zou na een geblokkeerde submit de
+  bedragvelden ongeformatteerd achterlaten).
+- **Geen postcode-veld en geen "laatst opgeslagen 12:04 door …"**: `Units` heeft geen postcode-kolom en
+  er wordt geen wijzigingsmoment bijgehouden. Het verkoopplan toont ook geen bestandsgrootte/datum;
+  onder de leesbare naam ("Verkoopplan Lot 1.pdf") staat de opgeslagen bestandsnaam als "origineel".
+- **Enter bewaart niet.** In dit lange formulier zou Enter in een tekstveld de éérste submitknop kiezen
+  (dat is "Opslaan en naar …"); bewaren gaat enkel via de knoppen onderaan.
+- **Verdieping is een keuzelijst** (Kelder … Verdieping 15), zoals het mockup laat zien, geen
+  getalveld — de opgeslagen waarde blijft het bestaande `Units.Level` (int).
+- **Kopiëren van een bestaande eenheid (16c)** herlaadt het formulier met `AddUnit?copyFrom=…` (type,
+  grond-/bouwwaarden, oppervlaktes en indeling overgenomen met id's op 0; naam, verdieping, aandeel,
+  adres, kadaster, EAN en watermeter blijven leeg) i.p.v. client-side te vullen: zo gaat de gekopieerde
+  data door exact dezelfde renderroute als een bestaande eenheid.
+- **"Opslaan en naar Lot 2"** = de eenheid die alfanumeriek volgt op de huidige in het project
+  (`AlphanumComparator`, dezelfde volgorde als de lijst); `returnUrl` reist mee zodat de keten niet de
+  vorige bewerkpagina als "terug" onthoudt.
+- **Gekoppelde eenheden beheer je in het formulier (16b §5)**: "Ontkoppelen"/"Eenheid koppelen"
+  hergebruiken `DetachUnitV2`/`AttachUnitV2` + de 16c-dialoog (`ModalAttachUnitV2`), die er nu een
+  `returnUrl` bij hebben (lokale url, standaard nog steeds de lijst) zodat je terug op het formulier
+  belandt. Ze herladen de pagina, dus met openstaande wijzigingen tonen ze eerst een toast "Sla je
+  wijzigingen eerst op" i.p.v. ze stil weg te gooien.
+
+**Nieuwe/uitgebreide gedeelde bouwstenen** (bedoeld voor hergebruik, niet pagina-specifiek):
+- `Views/Shared/GlV2/_SelectList.cshtml` + `GlV2SelectListVm` — de **Basis**-keuzelijst (4h) voor een lijst
+  die niet uit een enum komt (`GlV2Select` dekt enkel enums): expliciete `Name`/`Value`/`Items`,
+  placeholder-staat, optionele lege optie ("Geen — dit is een hoofdeenheid"), groepskoppen
+  (`.gl-v2-select-group-header`, 8f·3), niet-kiesbare opties, `Bare`-modus voor een tabelcel, extra
+  `data-*` op de wrapper. Zelfde markup als `GlV2Select`, dus dezelfde JS.
+- `gl-v2-shell.js`: `initGlV2Select(scope)` is nu **herhaalbaar** (`window.GlV2Select.init(scope)`,
+  bedraadt enkel nog niet bedrade instanties via `data-gl-v2-wired`; de document-brede luisteraars staan
+  er één keer) en delegeert de optieklik op het paneel; `window.GlV2Select.setItems(wrap, items, value,
+  emptyText)` vervangt de opties van een afhankelijke keuzelijst (type → subtype) zonder herbedrading.
+  Ook rechtgezet: **scrollen binnen een open lijst sloot die** (de `scroll`-luisteraar met capture-vlag
+  ving ook het scrollen van het paneel zelf) — onzichtbaar bij korte lijsten, breekbaar voor de lange
+  lijst van hoofdeenheden.
+- `GlV2Text`: nieuwe ViewData `Required` (rode "\*" zonder `[Required]` op het model), `Help`
+  (hinttekst onder het veld) en `Mono` (cijfer-/codevelden: kadaster, EAN — `.gl-v2-field-input.is-mono`,
+  8f "monospace"). `GlV2Currency`: `Required` en `Help`. `.gl-v2-col-2` toegevoegd aan de kolomhelpers.
+- Bestaand hergebruikt: `GlV2NumberUnit` (aandeel `/ 1.000` met live "nog X te verdelen", m²),
+  `GlV2ReadOnlyValue` (status), `.gl-v2-modal-confirm` (niet-opgeslagen wijzigingen, afwerking
+  verwijderen), `.gl-v2-icon-btn.is-warning` (rij-verwijderknoppen, zelfde ernstniveau als bij
+  bijbestellingen), `.gl-v2-form-actionbar`. Het "niet-opgeslagen wijzigingen"-recept (badge +
+  Annuleren/topbar-terug onderscheppen) is overgenomen uit `Klanten/EditProjectV2`; de modals staan in de
+  body, niet in `@section PageScripts` (zie de EditContractV2-follow-up: daarbuiten hangen geen
+  `--gl-v2-*`-tokens).
+
+**Niet gecontroleerd in een browser.** Gebouwd en gecompileerd (Razor + C# zonder fouten) en de JS is
+syntactisch gecontroleerd, maar de pagina is niet doorlopen in een draaiende app (de site vereist
+Entra-aanmelding + database). Eerste dingen om na te lopen: de scrollspy/sticky sectielijst binnen de
+interne scroller, het opslaan met een nieuw afwerkingsblok + nieuwe ruimte, en de koppeldialoog vanuit het
+formulier.
+
+### Constructieprijs: één rekenregel, gelijk aan de publieke site (`ServiceCore.Helpers.UnitPricing`)
+
+Domeinregel (bevestigd): een eenheid heeft **altijd een grondwaarde** en **één of meerdere constructieprijzen**;
+**afwerkingen zijn optioneel** — verkoop je dezelfde woning afgewerkt of casco (of anders), dan is elke afwerking
+een **volledig alternatief** met haar eigen constructieprijzen. Constructieprijzen buiten én binnen afwerkingen
+bestaan niet naast elkaar. WWWCOPRO (`Projects/Detail.vbhtml`, de vanaf-prijs in `BlogController.vb`,
+`Service/ProjectService.vb`) rekende al zo; CPMCore niet:
+- **Zonder afwerkingen:** grond + alle constructieprijzen samen.
+- **Met afwerkingen:** grond + de constructieprijzen van die ene afwerking; **vanaf** = de goedkoopste, "afgewerkt" =
+  de duurste. Regels zonder afwerking tellen dan niet mee (zoals op de publieke site).
+
+Vóór deze pas had CPMCore drie afwijkende varianten: de eenhedenlijst (`UnitPriceV2`: grond + regels zonder
+afwerking, "vanaf/afgewerkt" uit de kleinste/grootste *losse regel*), de koppeldialoog (enkel regels zonder afwerking,
+dus € 0 bij een eenheid met afwerkingen) en de projecttotalen `ProjectService.GetProjectSalesData`
+(`ValueForSale`/`StartingPrice` telden ALLE regels op, dus alle afwerkingen samen). Nu rekenen ze allemaal via
+`UnitPricing.Compute(...)` (unit tests: `ServiceCore.Tests/UnitPricingTests.cs`): de lijst (Price/From = goedkoopste
+afwerking, Finished = duurste), de koppeldialoog (bouwwaarde = Price − grond), de eenheidsrijen op Projecten/Detail(V2)
+(`Vraagprijs` = enkel grond bij afwerkingen, `Afwerkingen` = naam + **totaal** per afwerking i.p.v. één losse regel —
+de views tellen `Vraagprijs + Cost` op en bleven ongewijzigd) en `ValueForSale`/`StartingPrice`. Verkochte eenheden
+blijven op `ValueSold` rekenen. 
+
+**Standaardafwerking:** waardecijfers rekenen met de afwerking die als standaard (`IsDefault`) is aangeduid — zo
+rekenen ook de budgetten — en vallen zonder aangeduide standaard terug op de goedkoopste
+(`UnitPricing.Result.Standard`). `ValueForSale` en `Price` in de eenhedenlijst (dat voor totalen/kaarten dient)
+gebruiken die; "vanaf" blijft de goedkoopste afwerking en "afgewerkt" de duurste. `StartingPrice` blijft de
+goedkoopste (het is een vanaf-prijs). De legacy layout (`EditUnit` met `EnsureDefaultFinishingOption`) blijft
+bewust ongemoeid: die gaat binnenkort uit werking.
+
+
+**Gevolg voor het eenheidsformulier:** een eenheid **zonder** afwerkingen toont haar constructieprijzen los onder de
+grondwaarde ("BOUWWAARDE") — ook een nieuwe eenheid begint zo, niet meer met een verplichte "Afgewerkt"-afwerking (dat
+zou elke nieuwe eenheid voor de publieke site een eenheid "met opties" maken). Posten: `BaseConstructionValues[…]`.
+"Afwerking toevoegen" verhuist die regels naar de eerste afwerking (name-attributen worden herschreven, ids blijven,
+dus geen dataverlies); verwijder je de laatste afwerking, dan gaan de regels terug naar de basis. `EditUnit` (V2)
+roept `EnsureDefaultFinishingOption` niet meer aan. **Let op:** de legacy `EditUnit` doet dat nog wel — een eenheid
+zonder afwerkingen die daar geopend wordt, krijgt alsnog een "Standaard"-afwerking.
+
+### Projecten/DetailCoordinatieV2 — coördinatie: schijven, regie of beide (design-handoff punt 18, 18a/18b)
+`ProjectenController.DetailCoordinatie` vertakt via de gebruikelijke `UseGlV2Layout`-ternary naar
+`DetailCoordinatieV2.cshtml` (+ partials `_CoordinatieV2Schijven/Regie/Facturen/Settings/Modals`); de legacy view blijft
+staan en deelt met de V2 enkel `BuildCoordinatieModel`. Model: `ProjectCoordinatieModel.GlV2` (`DetailCoordinatieV2Vm`),
+alle bedragen **excl. btw** (zoals het mockup: "€ 25.812,50 excl. btw"). Code staat in de partial
+`ProjectenController.CoordinatieV2.cs`, zoals het eenheidsformulier.
+
+**Eén pagina, het contracttype bepaalt de kaarten (18a §1).** Chip in de topbar (`SCHIJVEN` / `REGIE` / `SCHIJVEN + REGIE`).
+Tabs (`.gl-v2-tabbar`: Overzicht · Schijven n · Regie u · Facturen n) bestaan enkel bij beide types en schakelen kaarten
+aan/uit (hash `#regie` enz. bewaart de tab over een herlaad); bij één type is er geen tabbar en geen Facturen-lijst (18b:
+"Geen tabs"). De tabbar is het letterlijke eerste kind van de pagina, het Phone-menu komt erna (zie de Klanten/DetailV2-fix
+hierboven). KPI's via de gedeelde `_KpiStrip`, 4 kaarten bij beide types / schijven, 3 bij enkel regie; "Voortgang" en
+"Openstaand" (die in de oude pagina samenvielen) zijn weg.
+
+**Schijven (18a §3).** Status i.p.v. een lege kolom Factuur: `GEFACTUREERD` (badge + factuurnummer als link, niet meer aan te
+vinken) of `TE FACTUREREN`. Het mockup kent ook `NOG NIET BEREIKT`; dat is bewust niet gebouwd — het zou een koppeling tussen
+schijf en bouwfase vragen die nergens bestaat, en een open schijf blijft dus altijd aanvinkbaar. De verloopbalk
+(`.gl-v2-co-seg`: gefactureerd · geselecteerd · nog te factureren) rekent in % van de som van de schijven (minstens 100), zodat
+een totaal ≠ 100 % zichtbaar is i.p.v. verdoezeld. Schijven bewerk je **op de kaart** (Schijf toevoegen, ⋯ → Bewerken /
+Verwijderen, TYPE 2/TYPE 1-modals), niet in de instellingen: een gefactureerde schijf kan niet gewijzigd of verwijderd worden
+(uitgeschakelde menu-items, §7) en de server dwingt dat ook af.
+
+**Regie (18a §4/§5/§7).** Invoerrij met labels boven de velden (`_SelectList`, `_DateField`, uren met eenheid, verplaatsing,
+omschrijving) en het tarief eronder als live regel. **Verplaatsing = schakelaar + km + potlood**: aan = de standaardafstand
+heen en terug (2 × `ProjectDistanceKm`), uit = geen, potlood = een afwijkende afstand voor die ene prestatie
+(`travelKm` wordt dan het ingevulde getal); een gouden stip (`.gl-v2-co-dot.is-custom`) in de tabel verraadt afwijkende km's.
+Oudere rijen zijn met de opgeronde afstand opgeslagen (`Math.Ceiling`) en tellen dus ook als standaard. "Factureren t/m"
+(chips Vandaag · Einde vorige maand + datumveld) selecteert alle open prestaties tot die datum. De vijf recentste open
+prestaties staan open, de rest achter "Toon n oudere prestaties"; gefactureerde prestaties zitten per factuur ingeklapt.
+Na een toevoeging/verwijdering herlaadt de pagina (tab + toast via `sessionStorage`): KPI's, tab-tellers en totalen kloppen dan
+vanzelf zonder dat de JS ze allemaal apart moet bijhouden.
+
+**Uurtarieven zijn ten allen tijde aan te passen voor wat nog niet gefactureerd is** (bewust anders dan het mockup, dat ingevoerde
+prestaties hun oude tarief laat houden). Een open prestatie rekent altijd met het *actuele* projecttarief van de medewerker;
+het tarief wordt pas bij het factureren vastgelegd in `ProjectRegieUur.HourlyRateInvoiced` (migratie 050, met backfill van wat al
+gefactureerd was). Gefactureerde prestaties tonen dat vastgelegde tarief, dus een tariefwijziging raakt nooit een reeds
+gefactureerd bedrag — waar de oude pagina beide live opzocht. Toegang: "Uurtarieven" in de Regie-kaart opent het instellingenpaneel
+op de tarieven. Later kan hier een indexeringsvoorstel voor lonen bovenop (het tarief per medewerker blijft één waarde per project).
+
+**Eén donkere selectiebalk (18a §6, `.gl-v2-co-selbar`).** `position: sticky` onderaan de pagina, `--gl-v2-ink` als achtergrond;
+telt aangevinkte schijven en de door de periode geselecteerde regie op en maakt er via `MakeCoordInvoice` **één** conceptfactuur
+van (schijflijnen, één lijn per medewerker, één km-lijn, prestatiebijlage). Op gsm zweeft de balk boven de vaste groene
+actiebalk (`--gl-v2-qa-bar-h`). `MakeCoordInvoice` factureert enkel wat nog niet gefactureerd is (de oude schijfactie deed
+die controle niet). Zonder coördinatiebedrijf of bouwheer toont de pagina de reden (`InvoiceBlockedReason`) i.p.v. stil niets
+te doen.
+
+**Instellingen als zijpaneel (18b, `.gl-v2-co-drawer`) — het eerste zijpaneel van gl-v2.** Rechts, 440px, volledig scherm op
+gsm; eigen backdrop, Escape, focusval en terugkeer van de focus. Bevat: contracttype (drie keuzekaarten, radio's), coördinatiebedrijf
+(`_SelectList`), contractbedrag (enkel bij schijven), uurtarief per medewerker (goud + "aangepast · terug naar € 85,00" wanneer
+het afwijkt van het standaardtarief van het facturatiebedrijf, `GetIssuerCompanyDefaults`), medewerker toevoegen uit de vaste
+lijst, km-vergoeding, de verplaatsing (VAN/NAAR, read-only) en de factuurreferentie. Opslaan is een gewoon formulier naar
+`SaveCoordinatieInstellingenV2` en raakt de schijven niet aan; het bestaande bedrag blijft staan als het veld verborgen was
+(`UpsertCoordinationContract(overwritePrice: false)`) en de afstand wordt enkel herberekend bij een ander coördinatiebedrijf of
+zolang er geen is (niet bij elke opslag: dat is een externe routeaanvraag). Niet gebouwd omdat er geen veld voor bestaat:
+regiebudget/plafond en de keuze "heen en terug / enkel".
+
+**De bug "schijven staan niet als gefactureerd" (project 68, factuur 1033) en de fix.** Oorzaak: `CoordinatieInstellingen` (POST)
+gaf per schijf enkel Omschrijving en Percentage aan `SaveContractSlices` door, zonder Id. Die service behandelt een schijf zonder Id
+als nieuw en verwijdert alle bestaande — elke opslag van de instellingen (bv. om een tarief aan te passen) zette dus alle
+schijven zonder `InvoiceId` terug. Fixes: (1) de Id wordt nu meegegeven; (2) `SaveContractSlices` verwijdert een gefactureerde
+schijf nooit meer, wat er ook gepost wordt; (3) het nieuwe paneel raakt de schijven niet aan; (4) `_migrations/051_HerstelSchijfFactuurkoppeling_Project68.sql`
+zet de koppeling voor project 68 terug via de factuurtekst `Projectcoördinatie – <omschrijving> (<%>)`. Daarnaast zegt de pagina
+zelf wanneer er facturen van het coördinatiebedrijf op het project staan die aan geen enkele schijf hangen (melding op de
+Schijven-kaart; `NIET GEKOPPELD` in Facturen) en biedt ⋯ → **Factuur koppelen** / *Koppeling verwijderen* een handmatige uitweg.
+
+**Export.** Eén Excel-bestand (`ExportCoordinatieExcel`, ClosedXML) met een blad per gebruikt contracttype, i.p.v. de client-side
+DataTables-export die enkel de schijventabel meenam. Geen pdf (de legacy pagina had er enkel een voor de schijventabel).
+
+**Mobiel (<768px).** Zelfde markup, andere weergave: elke tabelrij wordt een kaart (`data-label` geeft een kleine kop), zodat er
+geen tweede, gekloonde lijst hoeft te bestaan die met filters en selectie mee zou moeten. Modals TYPE 2 zijn volledig scherm
+(`modal-fullscreen-md-down`), TYPE 1 blijft een sheet.
+
+## Projecten/DetailDocsV2 — documenten van een project (design-handoff 17a t/m 17e)
+
+`ProjectenController.DetailDocs` schakelt in de gl-v2-lay-out door naar `Views/Projecten/DetailDocsV2.cshtml`
+(actielogica in de partial `ProjectenController.DocsV2.cs`, de legacy pagina/acties blijven onaangeroerd). **Eén
+pagina voor vijf mockups**: 17a (mappen, koppelingen, revisies, delen in één scherm), 17b (uploaden als revisie,
+dezelfde kaart op elke detailpagina, wat de klant ziet), 17c (keuringen per eenheid), 17d (contracten per klant
+met ondertekening), 17e (offertes per leverancier). Wat verandert is niet de pagina maar de **kolomset en de
+groepering van de gekozen map** (`DocumentFolders.ViewKind`: `default | keuringen | contracten | offertes`) —
+17c's eigen regel 2: "kolommen wisselen met de map".
+
+### Het model — "één document, veel plaatsen" (17a §1-§5)
+Migratie `_migrations/049_DocumentenModel.sql` (handmatig uit te voeren, strikt additief, idempotent), entiteiten
+in `DALCore/Models/Documenten.cs` + `cpmRunningContext.Documenten.cs`, logica in `ServiceCore/Documents/`
+(`DocumentService` = lezen + `.Write.cs`, `DocumentRules` = pure regels, getest in
+`ServiceCore.Tests/DocumentServiceTests.cs` op EF-InMemory):
+
+| Tabel | Rol |
+|---|---|
+| `ProjectDocs` (uitgebreid) | **Het document.** Blijft de bron voor de publieke site. Kreeg `FolderId, DocumentNumber, AuthoredBy, Status, ExpiresOn, ShareAllBuyers, Perceel, RelatedDocumentId, CurrentRevisionId` + audit. |
+| `DocumentFolders` | Vaste mappen per bedrijf (Plannen, Verkoop, Contracten, Offertes & bestellingen, Keuringen & attesten, Verzekeringen, Correspondentie, Overige) + `ViewKind`. |
+| `DocumentRevisions` | Bestandsversies (A, B, C …). Enkel de **huidige goedgekeurde** is zichtbaar in de portalen; `UploadedByKind` (intern/klant/leverancier/extern) is er al voor de portalen. |
+| `DocumentLinks` | 0-n koppelingen naar **eenheid, klant of leverancier** (check-constraint: precies één) mét `SharedInPortal` per koppeling — 17a §4 "zichtbaarheid is per doelgroep én per koppeling". Nooit kopieën: het compromis van Lot 1 is één bestand bij project, Lot 1 én Fam. Vermeulen. |
+| `DocumentSignatures` | Ondertekening per partij (initialen, geopend/getekend, `Method` itsme/manueel). |
+| `DocumentRequests` | Verwachte/aangevraagde documenten **zonder bestand** ("Ontbreekt", "Aangevraagd", "Niet vereist") — 17a §5 en 17c. |
+| `DocumentTemplates` | Sjabloon per projecttype (nieuwbouw: EPC, elektriciteit, PID, gas, EPB-startverklaring) waaruit `GenerateExpected` per **hoofdeenheid** de verwachte documenten aanmaakt (idempotent via unieke index). |
+
+Status van een document (`DocumentStatus`): concept → ter goedkeuring → goedgekeurd → getekend; daarnaast
+ter ondertekening, en voor offertes ingediend / gegund / niet gegund. Vervaldatum geeft de afgeleide toestanden
+"vervalt dd/MM" (≤ 90 dagen) en "vervallen".
+
+### Wat de publieke site (WWWCOPRO) mag blijven zien — de belangrijkste veiligheidsregel
+`WWWCOPRO` leest `ProjectDocs where ClientAccountId is null and Type = 1 (Verkoop)`. Daarom houdt
+`DocumentService.SyncLegacyColumns` de oude kolommen bewust in sync:
+- `ClientAccountId` = de eerste klantkoppeling → **een klantdocument belandt nooit op de website**;
+- `Type = 1` wordt enkel gezet voor een **goedgekeurd, niet-gekoppeld** document in de map Verkoop
+  (`DocumentRules.LegacyTypeAfterChange`); een concept of ter-goedkeuring-revisie lekt dus niet;
+- een nieuwe revisie vervangt `Filename` pas als ze **goedgekeurd** is: de website blijft de huidige versie tonen;
+- verliest een oud klantdocument zijn laatste klantkoppeling, dan gaat `Type` op null (anders zou het als brochure
+  op de site verschijnen);
+- documenten die de oude pagina of een import zonder map/revisie aanmaakte, krijgen bij het openen van het overzicht
+  alsnog een map en revisie A (`EnsureLegacyRows`), inclusief een klantkoppeling als `ClientAccountId` gevuld was.
+De oude kolommen `Filename`, `ClientAccountId`, `Type` blijven dus geldig; niets werd hernoemd of verwijderd.
+
+### Pagina (17a)
+- **Map-rail** (212px, sticky) met vaste mappen + de **slimme lijsten** "Ter goedkeuring", "Vervalt binnen 90 d",
+  "Ontbreekt" en "Gedeeld in portaal" — 17a: "ze tellen mee, je sleept er niets in". Mappen/lijsten zijn gewone links
+  (server-side filter, tellers kloppen altijd); zoeken, de koppelchips (Alles/Project/Eenheden/Klanten/
+  Leveranciers), "Zichtbaar voor" en de eenheid-/perceelkeuze filteren client-side op `data-*` van de rijen.
+- Tabel volgens de lijststandaard (zelfde chroom als `Projecten/DetailUnitsV2`): groepskoppen inklapbaar,
+  rijklik opent het paneel, ⋯-menu per rij. Zichtbaarheid = drie vakjes (intern altijd · klantportaal ·
+  leveranciersportaal, gestippeld = niet gedeeld) + legende. Een verwacht document is een stippellijn-rij.
+- **Detailpaneel** rechts (372px inline ≥1200px; daaronder een zijblad zoals 15b, op gsm volledig scherm). Het is een
+  server-gerenderd fragment (`DocumentPanelV2`/`DocumentRequestPanelV2`): gegevens, gekoppeld aan (chips met ✕ +
+  "Koppelen"), revisies (goedkeuren/afwijzen), ondertekening (17d), prijsvergelijking (17e), gedeeld met
+  (per doelgroep en per leverancierskoppeling een schakelaar). Met open paneel verdwijnen de secundaire kolommen
+  (`.gl-v2-dd-col-secondary`) zodat de lijst niet horizontaal scrolt.
+- **Mobiel/tablet:** de rail wordt een horizontale chipstrook; op tablet blijven Document · Status · acties over
+  (`.gl-v2-dd-col-collapsible`, zelfde recept als de eenhedenlijst).
+
+### Uploaden als revisie (17b)
+De dialoog vraagt eerst **"Wat is dit?" — nieuw document of nieuwe revisie van …** (een bestaand document óf een
+"ontbreekt"-document). Bij een revisie worden nummer, koppelingen en delen overgenomen en toont de dialoog enkel
+datum, vervaldatum, opmerking en status. Bij een verwacht document (`requestId`) worden map, eenheid, leverancier
+en vervaldatum (`ExpiryYears`) uit de aanvraag genomen en wordt de aanvraag "ontvangen". **Koppelen stelt voor wat
+logisch volgt**: koppel je Lot 1, dan vraagt het of de koper (Fam. Vermeulen) ook gekoppeld moet worden. Een
+document van een klant/leverancier (`UploaderKind` ≠ intern) komt binnen als **"ter goedkeuring"** en wordt pas na
+goedkeuring huidig — behalve offertes, die tellen meteen (17e §2, "v2 van 2").
+
+### Keuringen (17c), contracten (17d), offertes (17e)
+- **Keuringen**: groepen per eenheid (koper eronder) met dekkingsbalk "2 / 4"; kolommen verantwoordelijke · vervalt ·
+  zichtbaar. Verwachte documenten komen uit het sjabloon (`Genereer verwachte documenten`); "Document aanvragen"
+  stuurt een e-mail (`IEmailSender`) en zet het op "Aangevraagd"; "Herinnering sturen" idem.
+- **Contracten**: groepen per klant met de eenheid als kolom; ondertekening vervangt revisie (initialen, gevuld =
+  getekend, gouden stippellijn = wacht, "1 / 3 getekend"). Een getekend document — of eentje met een geplaatste
+  handtekening — is **bevroren**: `DocumentService.Upload` weigert dan een nieuwe revisie. Zijn alle partijen
+  getekend en hangt het document aan precies één eenheid en één klant, dan gaat de eenheid van "optie" naar
+  "verkocht" (`ApplySignedEffects`; nooit als de eenheid aan een andere klant hangt).
+- **Offertes**: groepen per leverancier, perceel- en bedragkolom, twee offertes voor hetzelfde perceel worden in het
+  paneel vergeleken, **Gunnen** zet de andere ingediende offertes van dat perceel op "niet gegund".
+
+### Herbruikbare kaart (17b "één kaart, overal") en portaalmodel
+`Partials/_DocumentsCardV2` (+ `DocumentCardV2`, `DocumentService.GetCard`) is dezelfde kaart voor project,
+eenheid, klant en leverancier: tabs **Rechtstreeks** / **Ook via project** (op een klant: via zijn eenheden; op een
+eenheid: projectdocumenten in Verkoop/Keuringen en documenten van de koper), bij leveranciers met projectkolom.
+`DocumentService.GetPortalDocuments` is de leesmodel-kant van de latere portalen (klant: "mijn woning" / "het
+project"; leverancier: gedeelde documenten met revisieletter + open aanvragen om te uploaden) — enkel de
+**huidige goedgekeurde** revisie van **gedeelde** documenten. De portalen zelf zijn niet gebouwd.
+
+### Rechten
+Alle actienamen bevatten "Document": `PermissionResolver` koppelt ze aan `ProjectsDocuments` (GET = lezen,
+POST = schrijven, "Delete"/"Remove" = verwijderen) zonder extra attributen.
+
+### Bewuste afwijkingen van het mockup (en wat er niet is)
+- **Geen itsme-koppeling:** een handtekening wordt handmatig geregistreerd ("Getekend"-knop, `Method = manueel`);
+  `DocumentSignatures.Method = 'itsme'` en de kolommen zijn er klaar voor.
+- **Geen bestelbon-PDF:** "Gunnen" maakt een verwacht document "Bestelbon …" in dezelfde map; het genereren van de
+  PDF ontbreekt.
+- **"Vergelijken" (v1 ↔ v2) is geen bestandsvergelijking:** bij offertes toont het paneel de bedragen en het verschil
+  per revisie; voor andere documenten is er geen vergelijkknop.
+- **Herinneringen per e-mail gebeuren op klik**, niet automatisch "30 dagen voor de deadline, dan wekelijks": de
+  velden (`ReminderDaysBefore`, `LastReminderDate`) liggen klaar voor een latere achtergrondtaak.
+- Kolomsets per map zijn vast per `ViewKind` (17c: "instelbaar door een beheerder" is niet gebouwd).
+- Verwijderen haalt de bestanden **niet** uit de storage (zoals de legacy pagina).
+- De legacy modal `_ModalAddDoc`/`Docs` blijft enkel voor de oude lay-out.

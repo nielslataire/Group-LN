@@ -2642,6 +2642,7 @@ public partial class cpmRunningContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.HourlyRateInvoiced).HasColumnType("decimal(9, 2)");
             entity.Property(e => e.Hours).HasColumnType("decimal(6, 2)");
             entity.Property(e => e.TravelKm).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.UserId)
@@ -3419,6 +3420,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LiftPrijsPerStuk).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.AankoopprijsGrond).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PubliciteitForfait).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.DoelMargePerc).HasColumnType("decimal(8, 4)");
+            entity.Property(e => e.GrondMargePerc).HasColumnType("decimal(8, 4)");
 
             entity.HasOne(d => d.BudgetVersie).WithOne()
                 .HasForeignKey<BudgetParams>(d => d.BudgetVersieId)
@@ -3450,6 +3453,9 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.OppTerras).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.OppDakterras).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.ExtraForfait).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Grondwaarde).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Bouwwaarde).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Vraagprijs).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.IsRuil).HasDefaultValue(false);
             entity.Property(e => e.SortOrder).HasDefaultValue(0);
 

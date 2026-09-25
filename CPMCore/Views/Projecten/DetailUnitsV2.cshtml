@@ -21,14 +21,16 @@
         legacy lijst was plat (GetUnitsByProjectId) met een dood plus-icoontje; hier komt de boom van
         GetUnitsWithAttachedByProjectId — dezelfde dienst die de Eenheden-tabel op Projecten/DetailV2
         al gebruikt.
-    §2  Koppelen is een regel in de tabel ("Berging of parking koppelen aan …"), niet een derde icoon
-        in een rij van drie. Het ⋯-menu houdt bewerken, ontkoppelen en verwijderen.
+    §2  Koppelen zit in het ⋯-menu van de rij ("Eenheid koppelen"), niet als derde icoon in een rij van
+        drie. 16a zet er ook een aparte "Berging of parking koppelen aan …"-regel onder elk lot; die is
+        bewust weggelaten — ze deed hetzelfde als het menu-item en verdubbelde de tabel in hoogte.
     §3  Echte kolommen: adres + kadaster onder de naam, oppervlakte (+ grond), verkoopprijs (inclusief
         wat gekoppeld is), aandeel basisakte of koper, en status.
     §4  "Totaal basisakte: 0" wordt een waarschuwing met context i.p.v. een leeg totaal.
     §5  De twee naamloze groene icoonknoppen (Excel/PDF) worden één knop "Exporteren" met keuze.
-    §6  Groepen zijn inklapbaar; nevenruimtes die nog aan geen enkel lot hangen staan apart onder
-        "Los te koop".
+    §6  Groepen zijn inklapbaar; nevenruimtes die nog aan geen enkel lot hangen staan apart, per type
+        samengevat ("Losse bergingen", "Losse parkings": aantal, oppervlakte en waarde in de groepskop)
+        en dicht tot je ze opent. Eenmaal gekoppeld staan ze enkel nog onder hun lot.
     §7  Paginering valt weg (16a rekent daar zelf op onder 50 eenheden) — en kán hier ook niet: zie de
         kop van gl-v2-projecten-detailunits.js over waarom deze lijst geen DataTable is.
 
@@ -328,9 +330,9 @@ else if (!vm.HasBasisakte)
                             <th scope="col">Type</th>
                             <th scope="col" class="gl-v2-du-col-collapsible">Verdieping</th>
                             <th scope="col" class="is-right gl-v2-du-col-collapsible">Oppervlakte</th>
-                            <th scope="col" class="is-right">Verkoopprijs</th>
-                            <th scope="col" class="@(vm.HasBasisakte ? "is-right" : "")">@(vm.HasBasisakte ? "Basisakte" : "Koper")</th>
-                            <th scope="col">Status</th>
+                            <th scope="col" class="is-right gl-v2-du-col-collapsible">Verkoopprijs</th>
+                            <th scope="col" class="@(vm.HasBasisakte ? "is-right " : "")gl-v2-du-col-collapsible">@(vm.HasBasisakte ? "Basisakte" : "Koper")</th>
+                            <th scope="col" class="gl-v2-du-col-collapsible">Status</th>
                             <th scope="col"><span class="visually-hidden">Acties</span></th>
                         </tr>
                     </thead>
@@ -339,12 +341,16 @@ else if (!vm.HasBasisakte)
                         <tbody>
                             <tr class="gl-v2-du-group-row" data-group-row data-group="@group.Key">
                                 <td colspan="8">
-                                    <button type="button" class="gl-v2-du-group-toggle" data-group-toggle="@group.Key" aria-expanded="true">
+                                    <button type="button" class="gl-v2-du-group-toggle" data-group-toggle="@group.Key" data-collapsed-default="@(group.CollapsedByDefault ? "true" : null)" aria-expanded="@(group.CollapsedByDefault ? "false" : "true")">
                                         <i class="ph ph-caret-down gl-v2-du-group-caret" aria-hidden="true"></i>
                                         <i class="ph @group.IconClass" aria-hidden="true"></i>
                                         @group.Label
                                         <span class="gl-v2-du-group-count">@group.TotalRowCount</span>
                                         <span class="gl-v2-du-group-spacer"></span>
+                                        @if (!string.IsNullOrEmpty(group.Summary))
+                                        {
+                                            <span class="gl-v2-du-group-summary">@group.Summary</span>
+                                        }
                                     </button>
                                 </td>
                             </tr>
@@ -400,7 +406,7 @@ else if (!vm.HasBasisakte)
                                                 }
                                             </span>
                                         </td>
-                                        <td class="is-right">
+                                        <td class="is-right gl-v2-du-col-collapsible">
                                             <span class="gl-v2-du-stack is-right">
                                                 @if (r.PriceFrom.HasValue)
                                                 {
@@ -419,7 +425,7 @@ else if (!vm.HasBasisakte)
                                         </td>
                                         @if (vm.HasBasisakte)
                                         {
-                                            <td class="is-right">
+                                            <td class="is-right gl-v2-du-col-collapsible">
                                                 <span class="gl-v2-du-stack-main gl-v2-du-tabular @((r.Landshare ?? 0m) > 0m ? "" : "gl-v2-du-muted")">@Num(r.Landshare ?? 0m)</span>
                                             </td>
                                         }
@@ -427,7 +433,7 @@ else if (!vm.HasBasisakte)
                                         {
                                             @* 16d §2: de vrijgekomen kolom wordt "Koper" met de datum van het compromis;
                                                gekoppelde eenheden tonen "via <lot>". *@
-                                            <td>
+                                            <td class="gl-v2-du-col-collapsible">
                                                 @if (r.IsAttached)
                                                 {
                                                     <span class="gl-v2-du-stack-main gl-v2-du-muted">via @r.ParentName</span>
@@ -448,13 +454,14 @@ else if (!vm.HasBasisakte)
                                                 }
                                             </td>
                                         }
-                                        <td><span class="gl-v2-badge @r.StatusTone">@r.Status.ToUpperInvariant()</span></td>
+                                        <td class="gl-v2-du-col-collapsible"><span class="gl-v2-badge @r.StatusTone">@r.Status.ToUpperInvariant()</span></td>
                                         <td>
                                             <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-du-menu-@r.UnitId" aria-label="Meer acties voor @r.Name">
                                                 <i class="ph ph-dots-three" aria-hidden="true"></i>
                                             </button>
                                             <div class="gl-v2-menu" id="gl-v2-du-menu-@r.UnitId">
                                                 <a href="@editUrl" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                                <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = vm.ProjectId, unit = r.UnitId })" class="gl-v2-menu-item"><i class="ph ph-folder-open" aria-hidden="true"></i>Documenten</a>
                                                 @if (canWrite && r.IsAttached)
                                                 {
                                                     <a href="#" class="gl-v2-menu-item js-gl-v2-du-detach" data-unit-id="@r.UnitId"><i class="ph ph-link-break" aria-hidden="true"></i>Ontkoppelen</a>
@@ -468,17 +475,6 @@ else if (!vm.HasBasisakte)
                                                     <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-du-delete" data-unit-name="@r.Name" data-delete-url="@Url.Action("DeleteUnit", "Projecten", new { id = r.UnitId, projectid = vm.ProjectId })"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
                                                 }
                                             </div>
-                                        </td>
-                                    </tr>
-                                }
-                                @if (row.CanAttach && vm.HasAttachableUnits)
-                                {
-                                    @* 16a §2: koppelen is een regel in de tabel, geen derde icoon in een rij van drie. *@
-                                    <tr class="gl-v2-du-attach-row" data-attach-row data-parent-id="@row.UnitId" data-group="@group.Key">
-                                        <td colspan="8">
-                                            <button type="button" class="gl-v2-du-attach-btn js-gl-v2-du-attach" data-unit-id="@row.UnitId">
-                                                <i class="ph ph-plus-circle" aria-hidden="true"></i>Berging of parking koppelen aan @row.Name
-                                            </button>
                                         </td>
                                     </tr>
                                 }
@@ -496,18 +492,18 @@ else if (!vm.HasBasisakte)
                                     <span class="gl-v2-du-stack-sub">bewoonbaar</span>
                                 </span>
                             </td>
-                            <td class="is-right gl-v2-du-tabular">@Euro(vm.SalesValueTotal)</td>
+                            <td class="is-right gl-v2-du-tabular gl-v2-du-col-collapsible">@Euro(vm.SalesValueTotal)</td>
                             @if (vm.HasBasisakte)
                             {
-                                <td class="is-right">
+                                <td class="is-right gl-v2-du-col-collapsible">
                                     <span class="gl-v2-du-total-landshare @(landshareOk ? "" : "is-warning")">@Num(vm.LandshareAssigned) / @Num(vm.LandshareTotal)</span>
                                 </td>
                             }
                             else
                             {
-                                <td><span class="gl-v2-du-stack-sub">@vm.SoldMainCount van @vm.MainCount loten verkocht</span></td>
+                                <td class="gl-v2-du-col-collapsible"><span class="gl-v2-du-stack-sub">@vm.SoldMainCount van @vm.MainCount loten verkocht</span></td>
                             }
-                            <td></td>
+                            <td class="gl-v2-du-col-collapsible"></td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -521,7 +517,23 @@ else if (!vm.HasBasisakte)
             <div class="gl-v2-du-mobile-list">
                 @foreach (var group in vm.Groups)
                 {
-                    <div class="gl-v2-du-card-group-label" data-card-group-label="@group.Key">@group.Label</div>
+                    @if (group.CollapsedByDefault)
+                    {
+                        @* Een samengevatte groep is dicht tot je ze opent — ook op gsm, dus het label is hier
+                           dezelfde toggle als de groepskop in de tabel. *@
+                        <button type="button" class="gl-v2-du-card-group-label is-toggle" data-card-group-label="@group.Key" data-group-toggle="@group.Key" data-collapsed-default="true" aria-expanded="false">
+                            <i class="ph ph-caret-down gl-v2-du-group-caret" aria-hidden="true"></i>
+                            @group.Label <span class="gl-v2-du-group-count">@group.TotalRowCount</span>
+                            @if (!string.IsNullOrEmpty(group.Summary))
+                            {
+                                <span class="gl-v2-du-card-group-summary">@group.Summary</span>
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="gl-v2-du-card-group-label" data-card-group-label="@group.Key">@group.Label</div>
+                    }
                     @foreach (var row in group.Rows)
                     {
                         foreach (var r in new[] { row }.Concat(row.Children))
@@ -550,6 +562,7 @@ else if (!vm.HasBasisakte)
                                     </button>
                                     <div class="gl-v2-menu" id="gl-v2-du-menu-m-@r.UnitId">
                                         <a href="@Url.Action("EditUnit", "Projecten", new { projectid = vm.ProjectId, unitid = r.UnitId })" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                        <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = vm.ProjectId, unit = r.UnitId })" class="gl-v2-menu-item"><i class="ph ph-folder-open" aria-hidden="true"></i>Documenten</a>
                                         @if (canWrite && r.IsAttached)
                                         {
                                             <a href="#" class="gl-v2-menu-item js-gl-v2-du-detach" data-unit-id="@r.UnitId"><i class="ph ph-link-break" aria-hidden="true"></i>Ontkoppelen</a>

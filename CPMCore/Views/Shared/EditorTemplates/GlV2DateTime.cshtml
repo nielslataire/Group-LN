@@ -1,64 +1,23 @@
 @model DateTime?
 @*
-    gl-v2 — DateTime?-sibling van GlV2Date.cshtml (dat bindt op DateOnly?). Design-handoff punt 14d
-    "6 · DATUM" tekent een eigen kalender-dropdown, "tikken mag altijd, de kalender is een hulp" —
-    dus een gewone <input type="text"> (dd/mm/jjjj, vrij te typen), geen native <input type="date">
-    meer (dat was deze template se eerste versie; de gebruiker wees 'm expliciet af: opende niet
-    betrouwbaar op klik EN zag er niets uit als 14d #6). De echte modelbinding blijft een VERBORGEN
-    yyyy-MM-dd-input — zelfde "shadow hidden input"-patroon als GlV2Select — zodat vrij typen het
-    bound-formaat niet kan breken. JS: initGlV2DatePicker() in gl-v2-shell.js (shell-breed, net als
-    initGlV2Select() — dit is een generieke EditorTemplate, geen page-local component).
-
-    Nodig omdat een VB.NET "Date?"-property (bv. ContractBO.ContractSentDate) als System.DateTime?
-    bindt, niet DateOnly?. Enkel expliciete aanroep, tijd-component wordt genegeerd (altijd 00:00 bij
-    het terugschrijven).
-
-    Optioneel: Label (override).
+    gl-v2 — DateTime?-editor van het gedeelde datumveld (zie GlV2/_DateField.cshtml en DESIGN.md
+    "Datumveld"): vrij typen dd/mm/jjjj + kalender-dropdown. Enkel expliciete aanroep. Optioneel: Label.
 *@
 @{
     var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
-    var id = name.Replace(".", "_");
-    var label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
-    var isoValue = Model?.ToString("yyyy-MM-dd") ?? "";
-    var displayValue = Model?.ToString("dd/MM/yyyy") ?? "";
-    var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+    var vm = new CPMCore.Models.GlV2.GlV2DateFieldVm
+    {
+        Name = name,
+        Id = name.Replace(".", "_"),
+        Label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName,
+        Required = ViewData.ModelMetadata.IsRequired,
+        IsoValue = Model?.ToString("yyyy-MM-dd") ?? "",
+        DisplayValue = Model?.ToString("dd/MM/yyyy") ?? "",
+    };
+    if (ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0)
+    {
+        vm.HasError = true;
+        vm.ErrorMessage = entry.Errors[0].ErrorMessage;
+    }
 }
-<div class="gl-v2-field@(hasError ? " is-error" : "")">
-    <label class="gl-v2-field-label" for="@(id)_text">
-        @label
-        @if (ViewData.ModelMetadata.IsRequired)
-        {
-            <span style="color:#8B2A2A">*</span>
-        }
-    </label>
-    <div class="gl-v2-select gl-v2-datepicker" data-gl-v2-datepicker id="@(id)_picker">
-        <div class="gl-v2-field-box">
-            <i class="ph ph-calendar" aria-hidden="true"></i>
-            <input type="text" class="gl-v2-field-input" id="@(id)_text" data-role="date-text" value="@displayValue" placeholder="dd/mm/jjjj" autocomplete="off" inputmode="numeric" maxlength="10" />
-        </div>
-        <input type="hidden" id="@id" name="@name" data-role="date-value" value="@isoValue" />
-        <div class="gl-v2-select-panel gl-v2-datepicker-panel" data-role="panel">
-            <div class="gl-v2-datepicker-nav-row">
-                <button type="button" class="gl-v2-datepicker-nav" data-role="prev" aria-label="Vorige maand"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
-                <span class="gl-v2-datepicker-month" data-role="month-label"></span>
-                <button type="button" class="gl-v2-datepicker-nav" data-role="next" aria-label="Volgende maand"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
-            </div>
-            <div class="gl-v2-datepicker-weekdays">
-                <span>MA</span><span>DI</span><span>WO</span><span>DO</span><span>VR</span><span>ZA</span><span>ZO</span>
-            </div>
-            <div class="gl-v2-datepicker-days" data-role="days"></div>
-            <div class="gl-v2-datepicker-footer">
-                <button type="button" class="gl-v2-datepicker-footer-link" data-role="today">Vandaag</button>
-                <button type="button" class="gl-v2-datepicker-footer-link is-muted" data-role="clear">Wissen</button>
-            </div>
-        </div>
-    </div>
-    @if (hasError)
-    {
-        <span class="gl-v2-field-help" data-role="date-error">@entry!.Errors[0].ErrorMessage</span>
-    }
-    else
-    {
-        <span class="gl-v2-field-help" data-role="date-error" hidden></span>
-    }
-</div>
+@await Html.PartialAsync("GlV2/_DateField", vm)

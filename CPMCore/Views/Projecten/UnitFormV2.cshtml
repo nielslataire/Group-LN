@@ -1,0 +1,614 @@
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@model UnitFormV2Vm
+@*
+    gl-v2 eenheidsformulier — design-handoff 16b ("Eenheid bewerken — alle secties op één pagina, prijs
+    live berekend") én 16c ("Nieuwe eenheid": "gebruikt exact het formulier van 16b: zelfde secties,
+    zelfde volgorde, lege velden met voorbeeld-placeholders. Wat verschilt: de titel, de primaire knop
+    + 'Opslaan en nog een', en bovenaan de optie om van een bestaande eenheid te kopiëren"). Daarom één
+    view voor ProjectenController.AddUnit én .EditUnit (beide sturen hier naartoe zodra de gl-v2-lay-out
+    actief is, zie ProjectenController.UnitFormV2.cs); enkel Model.IsNew verschilt.
+
+    Wat 16b vraagt en hier gebouwd is: alle zes secties op één pagina met een meescrollende sectielijst
+    links (de regel uit 8b) die per sectie toont wat erin zit; label boven het veld in het 12-koloms
+    raster; afwerkingen als benoemde blokken met subtotaal en één standaard; een vaste, live
+    prijsberekening rechts naast de bedragen; gekoppelde eenheden beheren binnen het formulier zelf;
+    indeling met kolomkoppen en totaal (lege oppervlakte grijs); leesbare naam voor het verkoopplan;
+    EAN-velden met formaatregel + monospace; "Opslaan en naar <volgende eenheid>".
+
+    Bewust anders dan het mockup (zie ook DESIGN.md, "Projecten/UnitFormV2"):
+    - Straat/Nr/Grondwaarde dragen géén "*": Units kent die niet als verplicht en nevenruimtes
+      (parking, berging) hebben geen adres of eigen grondwaarde — een verplichting zou bestaande
+      eenheden blokkeren. Echt verplicht (en dus met "*"): naam, type, subtype — dat zijn de "3
+      verplichte velden" uit 16c's eigen actiebalk.
+    - Geen Postcode-veld en geen "laatst opgeslagen 12:04 door …": Units heeft geen postcode-kolom en
+      er wordt geen wijzigingsmoment bijgehouden.
+    - Verkoopplan toont geen bestandsgrootte/datum (niet bewaard); de opgeslagen bestandsnaam staat
+      als "origineel" onder de leesbare naam.
+*@
+@{
+    var isNew = Model.IsNew;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var unitName = (Model.Unit.Name ?? "").Trim();
+    ViewData["Title"] = isNew ? "Nieuwe eenheid" : (unitName == "" ? "Eenheid" : unitName) + " bewerken";
+    ViewData["PageIcon"] = "ph ph-buildings";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Model.ReturnUrl;
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = $"project · {Model.ProjectUnitCount} eenhe{(Model.ProjectUnitCount == 1 ? "id" : "den")}",
+        ItemCounts = new Dictionary<string, int> { ["Eenheden"] = Model.ProjectUnitCount }
+    };
+
+    string ErrorFor(string key) =>
+        ViewContext.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0 ? entry.Errors[0].ErrorMessage : null;
+
+    var groupItems = Model.GroupTypes.Select(g => new GlV2SelectItem { Value = g.Id.ToString(), Text = g.Name ?? "" }).ToList();
+    var typeItems = Model.Types.Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Name ?? "" }).ToList();
+    var attachItems = Model.AttachableUnits
+        .Select(u => new GlV2SelectItem { Value = u.ID.ToString(), Text = u.Display ?? "", Group = string.IsNullOrWhiteSpace(u.Group) ? null : u.Group })
+        .ToList();
+    var copyItems = Model.CopySources.Select(u => new GlV2SelectItem { Value = u.ID.ToString(), Text = u.Display ?? "" }).ToList();
+
+    var levelValues = Enumerable.Range(-3, 19).ToList();
+    if (Model.Unit.Level.HasValue && !levelValues.Contains(Model.Unit.Level.Value)) levelValues.Add(Model.Unit.Level.Value);
+    string LevelLabel(int level) => level == 0 ? "Gelijkvloers" : level > 0 ? $"Verdieping {level}" : (level == -1 ? "Kelder" : $"Kelder {-level}");
+    var levelItems = levelValues.OrderBy(v => v).Select(v => new GlV2SelectItem { Value = v.ToString(), Text = LevelLabel(v) }).ToList();
+
+    var totalShares = Model.ProjectLandShare;
+    var linkedTotal = Model.LinkedUnits.Sum(l => l.Price);
+    var nextLabel = isNew ? "Opslaan en nog een" : (Model.NextUnitId.HasValue ? "Opslaan en naar " + Model.NextUnitName : null);
+    var cancelUrl = Model.ReturnUrl ?? Url.Action("DetailUnits", "Projecten", new { projectid = Model.ProjectId });
+    var hasPlan = !string.IsNullOrWhiteSpace(Model.Unit.Plan);
+    var attachedLevelNote = "kies een lot als dit een berging of parking is";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detailunits.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-unitform.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (!isNew && !string.IsNullOrEmpty(Model.StatusLabel))
+    {
+        <span class="gl-v2-badge @Model.StatusTone">@Model.StatusLabel.ToUpperInvariant()</span>
+    }
+}
+@section PageActions
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-unit-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* Tablet/gsm (<1024px): de STANDAARD .gl-v2-tabbar (dezelfde als Klanten/EditProjectV2 en Leveranciers) i.p.v.
+   een eigen chipbalk — de sectielijst links verdwijnt daar. Moet het letterlijke eerste kind van
+   .gl-v2-content zijn (de "vlak tegen de topbar"-regel), dus vóór de Phone-modus van het inner menu.
+   Tabs springen naar hun sectie en volgen het scrollen (gl-v2-projecten-unitform.js); ≥1024px staat de
+   balk verborgen (gl-v2-projecten-unitform.css). *@
+<div class="gl-v2-tabbar gl-v2-unit-tabbar" id="gl-v2-unit-tabbar" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab gl-v2-unit-tab is-active" role="tab" data-sec="algemeen" data-target="gl-v2-sec-algemeen">Algemene info</button>
+    <button type="button" class="gl-v2-tabbar-tab gl-v2-unit-tab" role="tab" data-sec="type" data-target="gl-v2-sec-type">Type &amp; koppeling <span class="gl-v2-tabbar-count" data-nav-badge="type"></span></button>
+    <button type="button" class="gl-v2-tabbar-tab gl-v2-unit-tab" role="tab" data-sec="bedragen" data-target="gl-v2-sec-bedragen">Bedragen <span class="gl-v2-tabbar-count" data-nav-badge="bedragen"></span></button>
+    <button type="button" class="gl-v2-tabbar-tab gl-v2-unit-tab" role="tab" data-sec="opp" data-target="gl-v2-sec-opp">Oppervlaktes</button>
+    <button type="button" class="gl-v2-tabbar-tab gl-v2-unit-tab" role="tab" data-sec="indeling" data-target="gl-v2-sec-indeling">Indeling <span class="gl-v2-tabbar-count" data-nav-badge="indeling"></span></button>
+    <button type="button" class="gl-v2-tabbar-tab gl-v2-unit-tab" role="tab" data-sec="docs" data-target="gl-v2-sec-docs">Documenten <span class="gl-v2-tabbar-count" data-nav-badge="docs"></span></button>
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@using (Html.BeginForm("SaveUnitV2", "Projecten", FormMethod.Post, new { @class = "gl-v2-unit-form", id = "gl-v2-unit-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Unit.Id)
+    @Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
+    @Html.HiddenFor(m => m.ReturnUrl)
+    <input type="hidden" name="SaveMode" id="gl-v2-unit-savemode" value="save" />
+    <input type="hidden" name="RemovePlan" id="gl-v2-unit-removeplan" value="false" />
+
+    <div class="gl-v2-unit-scroll">
+        @if (isNew)
+        {
+            @* 16c: "bovenaan de optie om van een bestaande eenheid te kopiëren — in een project met twintig
+               gelijke appartementen scheelt dat het meeste werk". Kiezen herlaadt het formulier met de
+               gegevens van die eenheid (AddUnit?copyFrom=…); een leeg formulier blijft de standaard. *@
+            <div class="gl-v2-unit-copy@(Model.CopyFromUnitId > 0 ? " is-active" : "")">
+                <span class="gl-v2-unit-copy-icon"><i class="ph ph-copy" aria-hidden="true"></i></span>
+                <div class="gl-v2-unit-copy-text">
+                    <strong>Kopiëren van een bestaande eenheid</strong>
+                    @if (Model.CopyFromUnitId > 0)
+                    {
+                        <span>Type, bedragen, oppervlaktes en indeling zijn overgenomen van @Model.CopyFromName — enkel naam, verdieping, adres en kadaster vul je opnieuw in.</span>
+                    }
+                    else
+                    {
+                        <span>Lijkt deze eenheid op een andere? Neem type, bedragen, oppervlaktes en indeling over — enkel naam, adres en kadaster vul je opnieuw in.</span>
+                    }
+                </div>
+                <div class="gl-v2-unit-copy-select" id="gl-v2-unit-copy">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "CopyFromUnitId",
+                        Value = Model.CopyFromUnitId > 0 ? Model.CopyFromUnitId.ToString() : "",
+                        Items = copyItems,
+                        Placeholder = "Kopieer van …",
+                        EmptyText = "Niet kopiëren (leeg formulier)",
+                        Bare = true,
+                        Disabled = copyItems.Count == 0
+                    })
+                </div>
+            </div>
+        }
+
+        <div class="gl-v2-unit-layout">
+            <nav class="gl-v2-unit-secnav" aria-label="Secties" id="gl-v2-unit-secnav">
+                <span class="gl-v2-unit-secnav-title">SECTIES</span>
+                <a href="#gl-v2-sec-algemeen" class="gl-v2-unit-secnav-item is-active" data-sec="algemeen"><span class="gl-v2-unit-secnav-label">Algemene info</span></a>
+                <a href="#gl-v2-sec-type" class="gl-v2-unit-secnav-item" data-sec="type"><span class="gl-v2-unit-secnav-label">Type &amp; koppeling</span><span class="gl-v2-unit-secnav-badge" data-nav-badge="type"></span></a>
+                <a href="#gl-v2-sec-bedragen" class="gl-v2-unit-secnav-item" data-sec="bedragen"><span class="gl-v2-unit-secnav-label">Bedragen</span><span class="gl-v2-unit-secnav-badge" data-nav-badge="bedragen"></span></a>
+                <a href="#gl-v2-sec-opp" class="gl-v2-unit-secnav-item" data-sec="opp"><span class="gl-v2-unit-secnav-label">Oppervlaktes</span></a>
+                <a href="#gl-v2-sec-indeling" class="gl-v2-unit-secnav-item" data-sec="indeling"><span class="gl-v2-unit-secnav-label">Indeling</span><span class="gl-v2-unit-secnav-badge" data-nav-badge="indeling"></span></a>
+                <a href="#gl-v2-sec-docs" class="gl-v2-unit-secnav-item" data-sec="docs"><span class="gl-v2-unit-secnav-label">Documenten</span><span class="gl-v2-unit-secnav-badge" data-nav-badge="docs"></span></a>
+                <p class="gl-v2-unit-secnav-note">Alle secties staan op één pagina; dit lijstje springt ernaartoe en blijft meescrollen.</p>
+            </nav>
+
+            <div class="gl-v2-unit-sections">
+
+                @* ── 1 · Algemene info ─────────────────────────────────────────────────────────── *@
+                <section class="gl-v2-section-card" id="gl-v2-sec-algemeen" data-sec-anchor="algemeen">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-identification-card" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Algemene info</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Identificatie, adres en nutsaansluitingen.</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-5" data-required-field="name">
+                            @Html.EditorFor(m => m.Unit.Name, "GlV2Text", new { Label = "Naam", Required = true, Placeholder = isNew ? "bv. Lot 3" : "bv. Lot 1", MaxLength = 100 })
+                        </div>
+                        <div class="gl-v2-col-3">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "Unit.Level",
+                                Label = "Verdieping",
+                                Value = Model.Unit.Level?.ToString() ?? "",
+                                Items = levelItems,
+                                Placeholder = "Kies …"
+                            })
+                        </div>
+                        <div class="gl-v2-col-2" id="gl-v2-unit-share">
+                            @Html.EditorFor(m => m.Unit.Landshare, "GlV2NumberUnit", new
+                            {
+                                Label = "Aandeel basisakte",
+                                Unit = totalShares > 0 ? "/ " + totalShares.ToString("N0", be) : "",
+                                Masked = false,
+                                Placeholder = "0",
+                                Max = totalShares > 0 ? $"nog {Math.Max(0, totalShares - Model.LandShareOthers - (int)(Model.Unit.Landshare ?? 0m)).ToString("N0", be)} te verdelen" : ""
+                            })
+                        </div>
+                        @if (!isNew)
+                        {
+                            <div class="gl-v2-col-2">
+                                @Html.DisplayFor(m => m.StatusLabel, "GlV2ReadOnlyValue", new { Label = "Status", Icon = "ph-circle" })
+                            </div>
+                        }
+                        <div class="gl-v2-col-5">
+                            @Html.EditorFor(m => m.Unit.Street, "GlV2Text", new { Label = "Straat", Placeholder = "bv. Kerkstraat" })
+                        </div>
+                        <div class="gl-v2-col-2">
+                            @Html.EditorFor(m => m.Unit.HouseNumber, "GlV2Text", new { Label = "Nr", Placeholder = "bv. 61A" })
+                        </div>
+                        <div class="gl-v2-col-2">
+                            @Html.EditorFor(m => m.Unit.BusNumber, "GlV2Text", new { Label = "Bus", Placeholder = "bus" })
+                        </div>
+                        <div class="gl-v2-col-3">
+                            @Html.EditorFor(m => m.Unit.PreKad, "GlV2Text", new { Label = "Kadaster", Placeholder = "bv. 38343 B 94 R P0000", Mono = true, Help = "afdeling · sectie · perceel" })
+                        </div>
+                        <div class="gl-v2-unit-subhead gl-v2-col-12">NUTSAANSLUITINGEN</div>
+                        <div class="gl-v2-col-4">
+                            @Html.EditorFor(m => m.Unit.EanGas, "GlV2Text", new { Label = "EAN gas", Placeholder = "54 …", Mono = true, Help = "18 cijfers, begint met 54", MaxLength = 18 })
+                        </div>
+                        <div class="gl-v2-col-4">
+                            @Html.EditorFor(m => m.Unit.EanElektriciteit, "GlV2Text", new { Label = "EAN elektriciteit", Placeholder = "54 …", Mono = true, Help = "18 cijfers, begint met 54", MaxLength = 18 })
+                        </div>
+                        <div class="gl-v2-col-4">
+                            @Html.EditorFor(m => m.Unit.WatermeterNummer, "GlV2Text", new { Label = "Watermeter", Placeholder = "nummer op de meter" })
+                        </div>
+                    </div>
+                </section>
+
+                @* ── 2 · Type & koppeling ──────────────────────────────────────────────────────── *@
+                <section class="gl-v2-section-card" id="gl-v2-sec-type" data-sec-anchor="type">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Type &amp; koppeling</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Wat dit is, en wat er samen mee verkocht wordt.</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-4" data-required-field="group">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "SelectedGroupType",
+                                Label = "Type",
+                                Required = true,
+                                Value = Model.SelectedGroupType > 0 ? Model.SelectedGroupType.ToString() : "",
+                                Items = groupItems,
+                                Placeholder = "Kies een type",
+                                Data = new Dictionary<string, string> { ["data-role"] = "group" }
+                            })
+                        </div>
+                        <div class="gl-v2-col-4" data-required-field="subtype">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "SelectedType",
+                                Label = "Subtype",
+                                Required = true,
+                                Value = Model.SelectedType > 0 ? Model.SelectedType.ToString() : "",
+                                Items = typeItems,
+                                Placeholder = Model.SelectedGroupType > 0 ? "Kies een subtype" : "Kies eerst een type",
+                                Error = ErrorFor("SelectedType"),
+                                Data = new Dictionary<string, string> { ["data-role"] = "subtype" }
+                            })
+                        </div>
+                        <div class="gl-v2-col-4">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "Unit.AttachedUnitsId",
+                                Label = "Hoort bij hoofdeenheid",
+                                Value = Model.Unit.AttachedUnitsId is > 0 ? Model.Unit.AttachedUnitsId.ToString() : "",
+                                Items = attachItems,
+                                EmptyText = "Geen — dit is een hoofdeenheid",
+                                Placeholder = "Geen — dit is een hoofdeenheid",
+                                Help = attachedLevelNote,
+                                Error = ErrorFor("Unit.AttachedUnitsId")
+                            })
+                        </div>
+
+                        <div class="gl-v2-col-12 gl-v2-unit-linked" id="gl-v2-unit-linked" data-linked-total="@linkedTotal.ToString("0.##", CultureInfo.InvariantCulture)">
+                            <span class="gl-v2-field-label">GEKOPPELDE EENHEDEN</span>
+                            @if (isNew)
+                            {
+                                <p class="gl-v2-unit-linked-hint"><i class="ph ph-info" aria-hidden="true"></i>Sla de eenheid eerst op — daarna kan je er bergingen en parkings aan koppelen.</p>
+                            }
+                            else
+                            {
+                                <div class="gl-v2-unit-linked-list">
+                                    @foreach (var linked in Model.LinkedUnits)
+                                    {
+                                        <div class="gl-v2-unit-linked-row" data-linked-price="@linked.Price.ToString("0.##", CultureInfo.InvariantCulture)" data-linked-name="@linked.Name">
+                                            <span class="gl-v2-unit-linked-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
+                                            <span class="gl-v2-unit-linked-name">
+                                                <strong>@linked.Name</strong>
+                                                @if (!string.IsNullOrWhiteSpace(linked.TypeLine))
+                                                {
+                                                    <span> · @linked.TypeLine</span>
+                                                }
+                                            </span>
+                                            <span class="gl-v2-unit-linked-price">@linked.Price.ToString("C0", be)</span>
+                                            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-detach="@linked.UnitId">Ontkoppelen</button>
+                                        </div>
+                                    }
+                                    @if (Model.LinkedUnits.Count == 0)
+                                    {
+                                        <p class="gl-v2-unit-linked-hint">Nog niets gekoppeld.</p>
+                                    }
+                                </div>
+                                @if (!Model.IsSecondaryUnit)
+                                {
+                                    <div class="gl-v2-unit-linked-actions">
+                                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-unit-attach-open" data-unit-id="@Model.Unit.Id"><i class="ph ph-link" aria-hidden="true"></i>Eenheid koppelen</button>
+                                        <span class="gl-v2-field-help">gekoppelde eenheden worden samen met @(unitName == "" ? "deze eenheid" : unitName) verkocht; hun prijs komt bovenop de prijs hieronder</span>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </section>
+
+                @* ── 3 · Bedragen ──────────────────────────────────────────────────────────────── *@
+                <section class="gl-v2-section-card" id="gl-v2-sec-bedragen" data-sec-anchor="bedragen">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-currency-eur" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Bedragen</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Grondwaarde + bouwwaarde per afwerking = verkoopprijs.</span>
+                    </div>
+                    <div class="gl-v2-unit-money">
+                        <div class="gl-v2-unit-money-main">
+                            <div class="gl-v2-unit-money-land">
+                                @Html.EditorFor(m => m.Unit.LandValue, "GlV2Currency", new { Label = "Grondwaarde", Help = "gelijk voor elke afwerking" })
+                            </div>
+                            @* Geen afwerkingen (standaard, ook voor een nieuwe eenheid): de constructieprijzen staan
+                               los onder de grondwaarde en grond + alles = verkoopprijs. Een afwerking (afgewerkt,
+                               casco, …) is optioneel; zodra er één is, verhuizen deze regels naar die afwerking en
+                               is elke afwerking een volledig alternatief (zelfde regel als de publieke site,
+                               ServiceCore.Helpers.UnitPricing). *@
+                            <div class="gl-v2-unit-base" id="gl-v2-unit-base" @(Model.FinishingOptions.Count > 0 ? "hidden" : null)>
+                                <div class="gl-v2-unit-subhead">BOUWWAARDE</div>
+                                <div class="gl-v2-unit-option gl-v2-unit-base-card">
+                                    <div class="gl-v2-unit-option-body" data-base-list>
+                                        @for (var i = 0; i < Model.BaseConstructionValues.Count; i++)
+                                        {
+                                            @await Html.PartialAsync("Partials/_UnitCvRowV2", new UnitFormV2CvRow
+                                            {
+                                                OptionKey = "",
+                                                Key = i.ToString(),
+                                                Value = Model.BaseConstructionValues[i],
+                                                PaymentGroups = Model.PaymentGroups
+                                            })
+                                        }
+                                    </div>
+                                    <div class="gl-v2-unit-option-foot">
+                                        <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-unit-add-base-cv"><i class="ph ph-plus" aria-hidden="true"></i>Bouwwaarde toevoegen</button>
+                                        <span class="gl-v2-unit-option-spacer"></span>
+                                        <span class="gl-v2-unit-option-subtotal">subtotaal <strong data-base-subtotal>€ 0,00</strong></span>
+                                    </div>
+                                </div>
+                                <p class="gl-v2-unit-linked-hint"><i class="ph ph-info" aria-hidden="true"></i>Verkoop je deze eenheid in meerdere uitvoeringen, bv. afgewerkt én casco? Voeg dan een afwerking toe — de bedragen hierboven gaan mee in de eerste afwerking.</p>
+                            </div>
+                            <div class="gl-v2-unit-options-wrap" id="gl-v2-unit-options-wrap" @(Model.FinishingOptions.Count > 0 ? null : "hidden")>
+                            <div class="gl-v2-unit-subhead">BOUWWAARDE PER AFWERKING</div>
+                            <div class="gl-v2-unit-options" id="gl-v2-unit-options">
+                                @for (var i = 0; i < Model.FinishingOptions.Count; i++)
+                                {
+                                    @await Html.PartialAsync("Partials/_UnitOptionV2", new UnitFormV2OptionRow
+                                    {
+                                        Key = i.ToString(),
+                                        Option = Model.FinishingOptions[i],
+                                        PaymentGroups = Model.PaymentGroups
+                                    })
+                                }
+                            </div>
+                            </div>
+                            @if (Model.UnlistedBaseValue > 0)
+                            {
+                                <p class="gl-v2-unit-linked-hint"><i class="ph ph-info" aria-hidden="true"></i>Deze eenheid heeft ook @Model.UnlistedBaseValue.ToString("C0", be) aan bouwwaardes buiten de afwerkingen (basisregels uit een oudere invoer). Ze blijven behouden maar staan niet in dit overzicht.</p>
+                            }
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-unit-add-option" id="gl-v2-unit-add-option"><i class="ph ph-plus" aria-hidden="true"></i>Afwerking toevoegen</button>
+                        </div>
+                        <aside class="gl-v2-unit-price" id="gl-v2-unit-price" aria-live="polite">
+                            <span class="gl-v2-unit-price-title">VERKOOPPRIJS</span>
+                            <div class="gl-v2-unit-price-rows" data-price-rows></div>
+                            <span class="gl-v2-unit-price-note">excl. btw en kosten · live berekend</span>
+                        </aside>
+                    </div>
+                </section>
+
+                @* ── 4 · Oppervlaktes ──────────────────────────────────────────────────────────── *@
+                <section class="gl-v2-section-card" id="gl-v2-sec-opp" data-sec-anchor="opp">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-ruler" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Oppervlaktes</h2>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-4">
+                            @Html.EditorFor(m => m.Unit.GroundSurface, "GlV2NumberUnit", new { Label = "Grondoppervlakte", Unit = "m²", Max = "volgens kadaster", Placeholder = "0,00" })
+                        </div>
+                        <div class="gl-v2-col-4">
+                            @Html.EditorFor(m => m.Unit.Surface, "GlV2NumberUnit", new { Label = "Bewoonbare oppervlakte", Unit = "m²", Max = "netto, binnenmaten", Placeholder = "0,00" })
+                        </div>
+                    </div>
+                </section>
+
+                @* ── 5 · Indeling ──────────────────────────────────────────────────────────────── *@
+                <section class="gl-v2-section-card" id="gl-v2-sec-indeling" data-sec-anchor="indeling">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-layout" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Indeling</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Ruimtes zoals ze op het verkoopplan staan.</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <span class="gl-v2-unit-rooms-total" id="gl-v2-unit-rooms-total"></span>
+                    </div>
+                    <div class="gl-v2-unit-rooms">
+                        <div class="gl-v2-unit-room-head" aria-hidden="true">
+                            <span>RUIMTE</span><span>AANTAL</span><span>OPP. PER STUK</span><span>OPMERKING</span><span></span>
+                        </div>
+                        <div id="gl-v2-unit-room-rows">
+                            @for (var i = 0; i < Model.Rooms.Count; i++)
+                            {
+                                @await Html.PartialAsync("Partials/_UnitRoomRowV2", new UnitFormV2RoomRow { Key = i.ToString(), Room = Model.Rooms[i] })
+                            }
+                        </div>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-unit-add-room" id="gl-v2-unit-add-room"><i class="ph ph-plus" aria-hidden="true"></i>Ruimte toevoegen</button>
+                    </div>
+                </section>
+
+                @* ── 6 · Documenten ────────────────────────────────────────────────────────────── *@
+                <section class="gl-v2-section-card" id="gl-v2-sec-docs" data-sec-anchor="docs">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Documenten</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Verkoopplan voor klanten, uitvoeringsplannen voor de werf.</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-6">
+                            <span class="gl-v2-field-label">VERKOOPPLAN</span>
+                            <div class="gl-v2-unit-doc" id="gl-v2-unit-plan" data-has-plan="@(hasPlan ? "true" : "false")">
+                                <div class="gl-v2-unit-doc-row" data-plan-current @(hasPlan ? null : "hidden")>
+                                    <span class="gl-v2-unit-doc-type">PDF</span>
+                                    <span class="gl-v2-unit-doc-name">
+                                        <strong data-plan-name>Verkoopplan @(unitName == "" ? "eenheid" : unitName).pdf</strong>
+                                        <span data-plan-sub>@(hasPlan ? "origineel: " + Model.Unit.Plan : "")</span>
+                                    </span>
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-plan-replace>Vervangen</button>
+                                    <button type="button" class="gl-v2-icon-btn is-warning" data-plan-remove title="Verkoopplan verwijderen" aria-label="Verkoopplan verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                </div>
+                                <button type="button" class="gl-v2-unit-drop" data-plan-drop @(hasPlan ? "hidden" : null)>
+                                    <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                                    <span>Sleep het verkoopplan hierheen of klik</span>
+                                </button>
+                                <input type="file" name="file" id="gl-v2-unit-plan-file" accept="application/pdf,.pdf" class="gl-v2-unit-file" tabindex="-1" />
+                                <span class="gl-v2-field-help">één bestand · zichtbaar voor de klant in het portaal</span>
+                                @if (ErrorFor("file") is { } fileError)
+                                {
+                                    <span class="gl-v2-field-help" style="color:#8A3B2A">@fileError</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="gl-v2-col-6">
+                            <span class="gl-v2-field-label">UITVOERINGSPLANNEN</span>
+                            <div class="gl-v2-unit-doc" id="gl-v2-unit-exec">
+                                <div class="gl-v2-unit-exec-list" id="gl-v2-unit-exec-list">
+                                    @foreach (var plan in Model.ExecutionPlans)
+                                    {
+                                        <div class="gl-v2-unit-doc-row" data-exec-existing="@plan.Id">
+                                            <span class="gl-v2-unit-doc-type">PDF</span>
+                                            <span class="gl-v2-unit-doc-name">
+                                                <strong>@plan.Name</strong>
+                                                @if (!string.IsNullOrEmpty(plan.Url))
+                                                {
+                                                    <a href="@plan.Url" target="_blank" rel="noopener" class="gl-v2-unit-doc-open">openen</a>
+                                                }
+                                            </span>
+                                            <input type="hidden" name="deleteExecutionPlanIds" value="@plan.Id" disabled data-exec-delete="@plan.Id" />
+                                            <button type="button" class="gl-v2-icon-btn is-warning" data-exec-remove="@plan.Id" title="Uitvoeringsplan verwijderen" aria-label="Uitvoeringsplan verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                        </div>
+                                    }
+                                </div>
+                                <button type="button" class="gl-v2-unit-drop" data-exec-drop>
+                                    <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                                    <span>Sleep plannen hierheen of klik</span>
+                                    <span class="gl-v2-unit-drop-sub">— per plan een naam</span>
+                                </button>
+                                <input type="file" id="gl-v2-unit-exec-files" name="executionPlanFiles" accept="application/pdf,.pdf" multiple class="gl-v2-unit-file" tabindex="-1" />
+                                <span class="gl-v2-field-help" id="gl-v2-unit-exec-empty" @(Model.ExecutionPlans.Count > 0 ? "hidden" : null)>nog geen uitvoeringsplannen · de werfleider ziet ze in de app</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-form-actionbar-status" id="gl-v2-unit-required-status"><i class="ph ph-warning-circle" aria-hidden="true"></i><span data-status-text>3 verplichte velden</span></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@cancelUrl" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-unit-cancel-link">Annuleren</a>
+            @if (nextLabel != null)
+            {
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" data-save-mode="next">@nextLabel</button>
+            }
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" data-save-mode="save">@(isNew ? "Eenheid aanmaken" : "Opslaan")</button>
+        </div>
+    </div>
+}
+
+@* Ontkoppelen is een POST (wijzigt data) — eigen formulier BUITEN het hoofdformulier (geen geneste
+   forms), met returnUrl naar dit formulier zodat je niet op de lijst belandt. *@
+@if (!isNew)
+{
+    <form method="post" action="@Url.Action("DetachUnitV2", "Projecten")" id="gl-v2-unit-detach-form" hidden>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="projectid" value="@Model.ProjectId" />
+        <input type="hidden" name="unitId" value="" />
+        <input type="hidden" name="returnUrl" value="@Url.Action("EditUnit", "Projecten", new { projectid = Model.ProjectId, unitid = Model.Unit.Id, returnUrl = Model.ReturnUrl })" />
+    </form>
+}
+
+@* Sjablonen voor rijen die client-side bijkomen — zelfde partials als de server-rijen, met de
+   sleutels __OPT__/__CV__/__CV0__/__ROOM__ die gl-v2-projecten-unitform.js per kloon vervangt. *@
+<template id="gl-v2-unit-tpl-option">
+    @await Html.PartialAsync("Partials/_UnitOptionV2", new UnitFormV2OptionRow
+    {
+        Key = "__OPT__",
+        Option = new UnitFinishingOptionBO { ConstructionValues = { new UnitConstructionValueBO() } },
+        PaymentGroups = Model.PaymentGroups
+    })
+</template>
+<template id="gl-v2-unit-tpl-cv-base">
+    @await Html.PartialAsync("Partials/_UnitCvRowV2", new UnitFormV2CvRow { OptionKey = "", Key = "__CV__", PaymentGroups = Model.PaymentGroups })
+</template>
+<template id="gl-v2-unit-tpl-cv">
+    @await Html.PartialAsync("Partials/_UnitCvRowV2", new UnitFormV2CvRow { OptionKey = "__OPT__", Key = "__CV__", PaymentGroups = Model.PaymentGroups })
+</template>
+<template id="gl-v2-unit-tpl-room">
+    @await Html.PartialAsync("Partials/_UnitRoomRowV2", new UnitFormV2RoomRow { Key = "__ROOM__" })
+</template>
+
+@* Niet-opgeslagen-wijzigingen-bevestiging — zelfde recept + markup als Klanten/EditProjectV2 en
+   Projecten/EditContractV2 (Type 1, is-warning). In de body, niet in @@section PageScripts: elke
+   --gl-v2-*-token hangt aan .gl-v2, en PageScripts rendert daarbuiten (zie EditContractV2). *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-unit-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-unit-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-unit-discard-changes-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder uw wijzigingen op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-unit-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Afwerking verwijderen — enkel gevraagd wanneer het blok al bedragen bevat. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-unit-remove-option-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-unit-remove-option-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-unit-remove-option-title">Afwerking verwijderen?</h2>
+                    <p class="gl-v2-modal-desc">Deze afwerking en alle bijhorende bouwwaardes worden verwijderd zodra je de eenheid opslaat.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="gl-v2-unit-remove-option-confirm">Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!isNew)
+{
+    @* Koppeldialoog (16c) — zelfde modal-shell + fragment als Projecten/DetailUnitsV2; het fragment krijgt
+       een returnUrl mee zodat "Koppelen" terugkeert naar dit formulier. *@
+    <div class="modal fade gl-v2-modal-form gl-v2-du-attach-modal" id="gl-v2-unit-attach-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content" id="gl-v2-unit-attach-container"></div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+    <script src="~/js/currency.js"></script>
+    <script>
+        window.glV2UnitFormConfig = {
+            isNew: @(isNew ? "true" : "false"),
+            projectId: @Model.ProjectId,
+            unitId: @Model.Unit.Id,
+            unitName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(unitName)),
+            subTypeUrl: '@Url.Action("GetSubType", "Projecten")',
+            addUnitUrl: '@Url.Action("AddUnit", "Projecten", new { projectid = Model.ProjectId })',
+            attachModalUrl: '@Url.Action("ModalAttachUnitV2", "Projecten")',
+            attachReturnUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(isNew ? "" : Url.Action("EditUnit", "Projecten", new { projectid = Model.ProjectId, unitid = Model.Unit.Id, returnUrl = Model.ReturnUrl }))),
+            landShareTotal: @totalShares,
+            landShareOthers: @Model.LandShareOthers
+        };
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-unitform.js" asp-append-version="true"></script>
+}

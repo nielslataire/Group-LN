@@ -1630,6 +1630,9 @@
    (huidig én toekomstig) heeft 'm nodig. */
 .gl-v2-select-option[hidden] { display: none; }
 
+/* Cijfer-/codevelden (kadaster, EAN, …) — 8f: "monospace". GlV2Text se optie Mono=true. */
+.gl-v2-field-input.is-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; letter-spacing: .02em; }
+
 .gl-v2-select-option.is-selected {
     background: var(--gl-v2-primary-tint);
     font-weight: 600;
@@ -4377,6 +4380,7 @@
     max-width: 1420px;
 }
 .gl-v2-col-1 { grid-column: span 1; }
+.gl-v2-col-2 { grid-column: span 2; }
 .gl-v2-col-3 { grid-column: span 3; }
 .gl-v2-col-4 { grid-column: span 4; }
 .gl-v2-col-5 { grid-column: span 5; }

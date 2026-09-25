@@ -662,6 +662,82 @@ namespace ServiceCore
             return response;
         }
 
+        public Response UpdateUnitBudgetWaarden(int projectId, IReadOnlyList<BOCore.Budget.UnitBudgetWaardeBO> waarden)
+        {
+            var response = new Response();
+            if (waarden is null || waarden.Count == 0)
+            {
+                response.AddError("Geen verkooplijnen met een gekoppelde eenheid en een grond- of bouwwaarde.");
+                return response;
+            }
+
+            var ids = waarden.Select(w => w.UnitId).Distinct().ToList();
+            // Getrackt: deze entiteiten worden gewijzigd en bewaard.
+            var units = _uow.Units.GetNormal().Where(u => u.ProjectId == projectId && ids.Contains(u.Id)).ToList();
+            var basisWaarden = _uow.UnitConstructionValues.GetNormal()
+                .Where(cv => ids.Contains(cv.UnitId) && cv.FinishingOptionId == null)
+                .ToList();
+
+            int bijgewerkt = 0, verkocht = 0, meerdere = 0, nietGevonden = 0;
+            var overgeslagen = new List<string>();
+
+            foreach (var w in waarden)
+            {
+                var unit = units.FirstOrDefault(u => u.Id == w.UnitId);
+                if (unit is null) { nietGevonden++; continue; }
+
+                var isVerkocht = unit.ClientAccountId.HasValue || unit.LandValueSold.HasValue || unit.ConstructionValueSold.HasValue;
+                if (isVerkocht)
+                {
+                    verkocht++;
+                    overgeslagen.Add(unit.Name);
+                    continue;
+                }
+
+                if (w.Grondwaarde.HasValue)
+                    unit.LandValue = w.Grondwaarde;
+
+                if (w.Bouwwaarde.HasValue)
+                {
+                    var basis = basisWaarden.Where(cv => cv.UnitId == unit.Id).ToList();
+                    if (basis.Count == 0)
+                    {
+                        _uow.UnitConstructionValues.Add(new UnitConstructionValue
+                        {
+                            UnitId      = unit.Id,
+                            Description = "Bouwwaarde (budget)",
+                            Value       = w.Bouwwaarde
+                        });
+                    }
+                    else if (basis.Count == 1)
+                    {
+                        basis[0].Value = w.Bouwwaarde;
+                    }
+                    else
+                    {
+                        meerdere++;
+                        overgeslagen.Add($"{unit.Name} (bouwwaarde: {basis.Count} basislijnen, manueel)");
+                    }
+                    // Legacy kolom mee bijhouden zodat oudere schermen dezelfde waarde tonen.
+                    unit.ConstructionValue = w.Bouwwaarde;
+                }
+
+                bijgewerkt++;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result,
+                $"{bijgewerkt} eenhe{(bijgewerkt == 1 ? "id" : "den")} bijgewerkt.",
+                "Geen wijzigingen: alle gekoppelde eenheden hadden deze waarden al.");
+            if (verkocht > 0)
+                response.AddInfo($"{verkocht} verkochte eenhe{(verkocht == 1 ? "id" : "den")} overgeslagen: {string.Join(", ", overgeslagen.Take(verkocht))}.");
+            if (meerdere > 0)
+                response.AddWarning($"{meerdere} eenhe{(meerdere == 1 ? "id heeft" : "den hebben")} meerdere basis-bouwwaardelijnen; enkel de grondwaarde is gezet. Pas de bouwwaarde manueel aan.");
+            if (nietGevonden > 0)
+                response.AddWarning($"{nietGevonden} gekoppelde eenhe{(nietGevonden == 1 ? "id" : "den")} niet gevonden in dit project.");
+            return response;
+        }
+
         public Response InsertUpdateUnit(UnitBO bo)
         {
             var response = new Response();

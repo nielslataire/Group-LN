@@ -443,6 +443,19 @@ namespace ServiceCore
                 if (ublDocs.Count > 0)
                     _db.InvoiceUbl.RemoveRange(ublDocs);
 
+                // Coördinatieproject (Projecten/DetailCoordinatie): schijven en regie-uren die op deze factuur
+                // stonden komen weer vrij om opnieuw te factureren. Zonder dit bleven ze "gefactureerd" op een
+                // factuur die niet meer bestaat. Het vastgelegde uurtarief gaat mee terug: een open prestatie
+                // rekent weer met het actuele projecttarief.
+                await _db.ProjectContractSlice
+                    .Where(s => s.InvoiceId == invoiceId)
+                    .ExecuteUpdateAsync(u => u.SetProperty(s => s.InvoiceId, (int?)null), ct);
+                await _db.ProjectRegieUur
+                    .Where(r => r.InvoiceId == invoiceId)
+                    .ExecuteUpdateAsync(u => u
+                        .SetProperty(r => r.InvoiceId, (int?)null)
+                        .SetProperty(r => r.HourlyRateInvoiced, (decimal?)null), ct);
+
                 _uow.Invoices.Remove(invoice);
 
                 if (sequence != null && invoiceNumber.HasValue && sequence.CurrentNumber == invoiceNumber.Value)

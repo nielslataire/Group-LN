@@ -1,0 +1,292 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@*
+    Projecten/DetailCoordinatieV2 — de kaart "Regie" (design-handoff 18a §4, §5, §7). Invoerrij bovenaan met
+    labels boven de velden en het tarief eronder; verplaatsing is één schakelaar met de standaardafstand al
+    ingevuld (aan = standaard, uit = geen verplaatsing, potlood = afwijkende km voor die ene prestatie).
+    "Factureren t/m" is een filter in de kaart dat alle open prestaties tot die datum selecteert. De meest
+    recente prestaties staan open, oudere achter "Toon n oudere prestaties"; gefactureerde prestaties zitten
+    per factuur ingeklapt.
+
+    Uurtarief: een open prestatie rekent altijd met het ACTUELE projecttarief van de medewerker — wijzig je dat
+    (Uurtarieven), dan verandert het bedrag van alles wat nog niet gefactureerd is. Gefactureerde prestaties
+    tonen het tarief waarmee ze gefactureerd werden.
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@{
+    var vm = Model.GlV2!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string Hrs(decimal v) => v.ToString("N2", be);
+    string Km(decimal v) => v.ToString("0.#", be);
+    string Inv(decimal v) => v.ToString("0.####", CultureInfo.InvariantCulture);
+    const int recentCount = 5;
+
+    var open = vm.RegieOpen.ToList();
+    var employeeCount = vm.Regie.Select(r => r.UserId).Distinct().Count();
+    var defaultUser = vm.Rates.Any(r => r.UserId == Model.ProjectManagerUserId) ? Model.ProjectManagerUserId : vm.Rates.FirstOrDefault()?.UserId;
+    var canEnter = vm.CanWrite && vm.Rates.Any();
+    var hasDefaultKm = vm.DefaultKm > 0m;
+    var today = DateTime.Today;
+    var todayIso = today.ToString("yyyy-MM-dd");
+    var todayDisplay = today.ToString("dd/MM/yyyy");
+    var invoiceInfo = vm.Invoices.ToDictionary(i => i.Id, i => i);
+}
+<div class="gl-v2-card gl-v2-co-card" id="gl-v2-co-regie-card">
+    <div class="gl-v2-card-header">
+        <span class="gl-v2-card-header-icon"><i class="ph ph-timer" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-card-header-title">Regie</h2>
+        <span class="gl-v2-card-header-count">@Hrs(vm.RegieTotalHours) u gepresteerd@(employeeCount > 0 ? " · " + employeeCount + (employeeCount == 1 ? " medewerker" : " medewerkers") : "")</span>
+        <span class="gl-v2-card-header-spacer"></span>
+        @if (vm.CanWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-small js-co-open-settings" data-focus="rates"><i class="ph ph-currency-eur" aria-hidden="true"></i>Uurtarieven</button>
+        }
+    </div>
+    <div class="gl-v2-card-body gl-v2-co-body">
+
+        @if (vm.CanWrite && !vm.Rates.Any())
+        {
+            <div class="gl-v2-co-notice is-warning">
+                <span class="gl-v2-co-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+                <span class="gl-v2-co-notice-title">Nog geen uurtarieven</span>
+                <span class="gl-v2-co-notice-desc">Voeg de medewerkers van dit project met hun uurtarief toe om prestaties te kunnen invoeren.</span>
+                <span class="gl-v2-co-notice-spacer"></span>
+                <button type="button" class="gl-v2-co-notice-action js-co-open-settings" data-focus="rates">Uurtarieven instellen</button>
+            </div>
+        }
+
+        @* ── Invoerrij (18a §4) ─────────────────────────────────────────────────────────────────── *@
+        @if (canEnter)
+        {
+            <div class="gl-v2-co-entry" id="gl-v2-co-entry">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "regie-worker",
+                    Id = "regie-worker",
+                    Label = "Medewerker",
+                    Value = defaultUser,
+                    Placeholder = "Kies medewerker",
+                    Items = vm.Rates.Select(r => new GlV2SelectItem { Value = r.UserId, Text = r.Name }).ToList()
+                })
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm
+                {
+                    Name = "regie-date",
+                    Id = "regie-date",
+                    Label = "Datum",
+                    IsoValue = todayIso,
+                    DisplayValue = todayDisplay
+                })
+                <div class="gl-v2-field gl-v2-co-hours">
+                    <label class="gl-v2-field-label" for="regie-hours">Uren</label>
+                    <div class="gl-v2-field-box">
+                        <input type="number" class="gl-v2-field-input is-tabular" id="regie-hours" min="0" step="0.25" inputmode="decimal" placeholder="0,00" autocomplete="off" />
+                        <span class="gl-v2-field-unit">u</span>
+                    </div>
+                </div>
+                <div class="gl-v2-field gl-v2-co-travel-field">
+                    <span class="gl-v2-field-label">Verplaatsing</span>
+                    <div class="gl-v2-co-travel" id="gl-v2-co-travel">
+                        <input type="checkbox" class="gl-v2-toggle-switch" id="regie-travel-on" aria-label="Verplaatsing" @(hasDefaultKm ? "checked" : "disabled") />
+                        <span class="gl-v2-co-travel-text" id="regie-travel-label">
+                            @if (hasDefaultKm)
+                            {
+                                <b>@Km(vm.DefaultKm) km</b><span class="gl-v2-co-travel-tag"> standaard</span>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-co-muted">geen afstand berekend</span>
+                            }
+                        </span>
+                        <button type="button" class="gl-v2-icon-btn gl-v2-co-icon-sm" id="regie-travel-edit" aria-label="Afwijkende afstand invullen" title="Afwijkende afstand voor deze prestatie" @(hasDefaultKm ? null : "disabled")><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                        <div class="gl-v2-field-box gl-v2-co-travel-input" id="regie-travel-input-box" hidden>
+                            <input type="number" class="gl-v2-field-input is-tabular" id="regie-travel-km" min="0" step="0.1" inputmode="decimal" aria-label="Afstand in km" />
+                            <span class="gl-v2-field-unit">km</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-field gl-v2-co-desc-field">
+                    <label class="gl-v2-field-label" for="regie-desc">Omschrijving</label>
+                    <div class="gl-v2-field-box">
+                        <input type="text" class="gl-v2-field-input" id="regie-desc" maxlength="500" placeholder="Wat heb je gedaan? bv. werfbezoek, bespreking architect" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="gl-v2-co-entry-go">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="regie-add"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                </div>
+            </div>
+            <p class="gl-v2-co-entry-hint" id="regie-hint" aria-live="polite"></p>
+        }
+
+        @* ── Factureren t/m (18a §5) ────────────────────────────────────────────────────────────── *@
+        @if (vm.CanInvoice && open.Any())
+        {
+            <div class="gl-v2-co-period" id="gl-v2-co-period">
+                <span class="gl-v2-co-period-label">Factureren t/m</span>
+                <div class="gl-v2-co-period-chips">
+                    <button type="button" class="gl-v2-co-chip" data-co-cutoff="today">Vandaag</button>
+                    <button type="button" class="gl-v2-co-chip" data-co-cutoff="lastmonth">Einde vorige maand</button>
+                </div>
+                <div class="gl-v2-co-period-date">
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "regie-cutoff", Id = "regie-cutoff", Label = null, IsoValue = "", DisplayValue = "" })
+                </div>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-co-small" id="regie-cutoff-clear" hidden>Wis</button>
+                <span class="gl-v2-co-period-hint">selecteert alle open prestaties t/m die datum</span>
+            </div>
+        }
+
+        @if (!vm.Regie.Any())
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-timer" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen prestaties</h2>
+                <p class="gl-v2-empty-state-desc">@(canEnter ? "Voer hierboven je eerste prestatie in." : "Er zijn nog geen regie-uren geregistreerd voor dit project.")</p>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-co-table-scroll">
+                <table class="gl-v2-co-table gl-v2-co-regie-table" id="gl-v2-co-regie-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Datum</th>
+                            <th scope="col">Medewerker</th>
+                            <th scope="col">Omschrijving</th>
+                            <th scope="col" class="is-right">Uren</th>
+                            <th scope="col" class="is-right">Km</th>
+                            <th scope="col" class="is-right">Totaal</th>
+                            <th scope="col"><span class="visually-hidden">Acties</span></th>
+                        </tr>
+                    </thead>
+
+                    @* ── Nog niet gefactureerd ── *@
+                    <tbody class="gl-v2-co-group">
+                        <tr class="gl-v2-co-group-row">
+                            <td colspan="7">
+                                <div class="gl-v2-co-group-head">
+                                    <i class="ph ph-clock-countdown" aria-hidden="true"></i>
+                                    <b>Nog niet gefactureerd</b>
+                                    <span class="gl-v2-co-muted" id="gl-v2-co-open-summary">@open.Count @(open.Count == 1 ? "prestatie" : "prestaties") · @Hrs(vm.RegieOpenHours) u · @Eur(vm.RegieOpenAmount)</span>
+                                    <span class="gl-v2-co-group-spacer"></span>
+                                    <span class="gl-v2-co-selected-note" id="gl-v2-co-open-selected" hidden></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody id="gl-v2-co-regie-open">
+                        @if (!open.Any())
+                        {
+                            <tr class="gl-v2-co-empty-row"><td colspan="7" class="gl-v2-co-muted">Geen openstaande prestaties.</td></tr>
+                        }
+                        @for (var i = 0; i < open.Count; i++)
+                        {
+                            var r = open[i];
+                            var older = i >= recentCount;
+                            <tr class="gl-v2-co-row" data-regie-row data-id="@r.Id" data-date="@r.Date.ToString("yyyy-MM-dd")" data-hours="@Inv(r.Hours)" data-amount="@Inv(r.Amount)" data-invoiced="false" hidden="@(older ? "hidden" : null)" data-older="@(older ? "true" : null)">
+                                <td class="gl-v2-co-tabular" data-label="Datum">@r.Date.ToString("dd/MM/yyyy")</td>
+                                <td data-label="">
+                                    <span class="gl-v2-co-person"><span class="gl-v2-avatar gl-v2-co-avatar">@r.Initials</span>@r.UserName</span>
+                                </td>
+                                <td class="gl-v2-co-desc gl-v2-co-muted-text">@r.Description</td>
+                                <td class="is-right gl-v2-co-tabular" data-label="Uren">@Hrs(r.Hours)</td>
+                                <td class="is-right gl-v2-co-tabular" data-label="Km">
+                                    @if (r.Km > 0m)
+                                    {
+                                        @Km(r.Km)
+                                        @if (r.KmIsCustom)
+                                        {
+                                            <span class="gl-v2-co-dot is-custom" title="Aangepaste afstand (standaard @Km(vm.DefaultKm) km)" aria-label="aangepast"></span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-co-muted">—</span>
+                                    }
+                                </td>
+                                <td class="is-right gl-v2-co-tabular gl-v2-co-strong" data-label="Totaal">
+                                    @Eur(r.Amount)
+                                    @if (!r.HasRate)
+                                    {
+                                        <span class="gl-v2-badge is-attention gl-v2-co-total-badge" title="Deze medewerker heeft geen uurtarief meer op dit project">geen tarief</span>
+                                    }
+                                </td>
+                                <td class="is-actions">
+                                    @if (vm.CanWrite)
+                                    {
+                                        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-regie-menu-@r.Id" aria-label="Meer acties voor prestatie van @r.Date.ToString("dd/MM/yyyy")">
+                                            <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="gl-v2-menu" id="gl-v2-co-regie-menu-@r.Id">
+                                            <a href="#" class="gl-v2-menu-item is-danger js-co-regie-delete" data-id="@r.Id" data-label="@r.UserName · @r.Date.ToString("dd/MM/yyyy") · @Hrs(r.Hours) u"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (open.Count > recentCount)
+                        {
+                            <tr class="gl-v2-co-more-row" id="gl-v2-co-older-row">
+                                <td colspan="7"><button type="button" class="gl-v2-co-more-btn" id="gl-v2-co-older-btn" aria-expanded="false" data-more="Toon @(open.Count - recentCount) oudere @(open.Count - recentCount == 1 ? "prestatie" : "prestaties")" data-less="Toon minder">Toon @(open.Count - recentCount) oudere @(open.Count - recentCount == 1 ? "prestatie" : "prestaties")</button></td>
+                            </tr>
+                        }
+                    </tbody>
+
+                    @* ── Gefactureerd, ingeklapt per factuur (18a §7) ── *@
+                    @foreach (var g in vm.RegieInvoiced.GroupBy(r => r.InvoiceId!.Value)
+                        .OrderByDescending(g => invoiceInfo.TryGetValue(g.Key, out var inf) ? inf.Date : DateOnly.MinValue))
+                    {
+                        invoiceInfo.TryGetValue(g.Key, out var info);
+                        var label = g.First().InvoicePublicId ?? info?.PublicId ?? "Concept";
+                        <tbody class="gl-v2-co-group is-invoiced" data-co-invgroup="@g.Key">
+                            <tr class="gl-v2-co-group-row">
+                                <td colspan="7">
+                                    <div class="gl-v2-co-group-head">
+                                        <button type="button" class="gl-v2-co-group-toggle" data-co-group-toggle aria-expanded="false">
+                                            <i class="ph ph-caret-down gl-v2-co-caret" aria-hidden="true"></i>
+                                            <b>Gefactureerd</b>
+                                            <span class="gl-v2-co-muted">@(info is not null ? info.Date.ToString("dd/MM/yyyy") + " · " : "")@Hrs(g.Sum(r => r.Hours)) u · @Eur(g.Sum(r => r.Amount))</span>
+                                        </button>
+                                        <a class="gl-v2-badge is-positive gl-v2-co-invoice-badge" href="@Url.Action("Detail", "Invoices", new { id = g.Key })" title="Factuur bekijken">@label</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            @foreach (var r in g.OrderByDescending(r => r.Date).ThenByDescending(r => r.Id))
+                            {
+                                <tr class="gl-v2-co-row is-invoiced" data-regie-row data-id="@r.Id" data-invoiced="true" data-hours="@Inv(r.Hours)" data-amount="@Inv(r.Amount)" hidden>
+                                    <td class="gl-v2-co-tabular" data-label="Datum">@r.Date.ToString("dd/MM/yyyy")</td>
+                                    <td data-label=""><span class="gl-v2-co-person"><span class="gl-v2-avatar gl-v2-co-avatar">@r.Initials</span>@r.UserName</span></td>
+                                    <td class="gl-v2-co-desc gl-v2-co-muted-text">@r.Description</td>
+                                    <td class="is-right gl-v2-co-tabular" data-label="Uren">@Hrs(r.Hours)</td>
+                                    <td class="is-right gl-v2-co-tabular" data-label="Km">@(r.Km > 0m ? Km(r.Km) : "—")@if (r.KmIsCustom) { <span class="gl-v2-co-dot is-custom" title="Aangepaste afstand" aria-label="aangepast"></span> }</td>
+                                    <td class="is-right gl-v2-co-tabular" data-label="Totaal">@Eur(r.Amount)</td>
+                                    <td class="is-actions">
+                                        @if (vm.CanWrite)
+                                        {
+                                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-regie-menu-@r.Id" aria-label="Meer acties">
+                                                <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="gl-v2-menu" id="gl-v2-co-regie-menu-@r.Id">
+                                                <span class="gl-v2-menu-item is-disabled" aria-disabled="true" title="Al gefactureerd"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</span>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    }
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">Totaal</td>
+                            <td class="is-right gl-v2-co-tabular">@Hrs(vm.RegieTotalHours)</td>
+                            <td class="is-right gl-v2-co-tabular">@(vm.Regie.Sum(r => r.Km) > 0m ? Km(vm.Regie.Sum(r => r.Km)) : "—")</td>
+                            <td class="is-right gl-v2-co-tabular">@Eur(vm.Regie.Sum(r => r.Amount))</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="gl-v2-co-legend"><b>Km:</b> <i class="gl-v2-co-dot is-custom" aria-hidden="true"></i> aangepaste afstand · — geen verplaatsing · een open prestatie rekent met het actuele uurtarief</p>
+        }
+    </div>
+</div>

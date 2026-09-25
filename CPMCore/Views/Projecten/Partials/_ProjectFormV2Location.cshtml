@@ -1,0 +1,71 @@
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+@*
+    gl-v2 (design-handoff punt 19 "Ligging") — land, gemeente (zoekend, verplicht), straat en nummer.
+    Gedeeld door EditV2 (tab Algemeen) en ToevoegenV2. De gemeente-zoeker vraagt de bestaande
+    Projecten/GetPostcodesByCountry (POST, term + countryId) en schrijft de gekozen id in
+    SelectedPostalcode — exact wat de legacy select2 deed. "Ook gebruikt voor de km-afstand in
+    coördinatie" (19a) is waar: CoordinationIssuerCompanyId + SelectedPostalcode voeden de routeberekening
+    in ProjectenController.Edit.
+*@
+@{
+    var countryItems = (Model.Countries ?? new List<BOCore.IdNameBO>())
+        .Select(c => new GlV2SelectItem { Value = c.ID.ToString(), Text = c.Display ?? "" }).ToList();
+    var postal = Model.Project.Postalcode;
+    var postalText = Model.SelectedPostalcode > 0 && postal != null
+        ? $"{postal.Postcode} · {postal.Gemeente}"
+        : null;
+    var postalError = ViewContext.ModelState.TryGetValue("SelectedPostalcode", out var pe) && pe.Errors.Count > 0 ? pe.Errors[0].ErrorMessage : null;
+}
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Ligging</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Adres van de werf — ook gebruikt voor de km-afstand in coördinatie.</span>
+    </div>
+    <div class="gl-v2-section-grid">
+        <div class="gl-v2-col-3">
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "SelectedCountry",
+                Label = "Land",
+                Value = Model.SelectedCountry.ToString(),
+                Items = countryItems,
+                Placeholder = "Kies een land …"
+            })
+        </div>
+        <div class="gl-v2-col-4">
+            @await Html.PartialAsync("Partials/_ProjectFormV2SearchSelect", new ProjectSearchSelectVm
+            {
+                Label = "Gemeente",
+                Required = true,
+                IdName = "SelectedPostalcode",
+                IdValue = Model.SelectedPostalcode.ToString(),
+                DisplayText = postalText,
+                Placeholder = "Zoek postcode of gemeente …",
+                LookupUrl = Url.Action("GetPostcodesByCountry", "Projecten") ?? "",
+                CountrySelector = "#SelectedCountry",
+                RequiredMessage = "Kies een gemeente uit de lijst.",
+                Error = postalError
+            })
+        </div>
+        <div class="gl-v2-col-3">
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="Project_Street">Straat</label>
+                <div class="gl-v2-field-box">
+                    @Html.TextBoxFor(m => m.Project.Street, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", id = "Project_Street" })
+                </div>
+            </div>
+        </div>
+        <div class="gl-v2-col-2">
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="Project_HouseNumber">Nr</label>
+                <div class="gl-v2-field-box">
+                    @Html.TextBoxFor(m => m.Project.HouseNumber, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", id = "Project_HouseNumber" })
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

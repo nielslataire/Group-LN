@@ -1,0 +1,56 @@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@model CPMCore.Models.Projecten.UnitFormV2RoomRow
+@*
+    Eén ruimte in "Indeling" (16b §6: "Indeling heeft kolomkoppen en een totaal … Lege oppervlakte blijft
+    grijs, niet 0,00 in zwarte tekst" — daarom rendert een oppervlakte van 0 als leeg veld met een
+    grijze placeholder; gl-v2-projecten-unitform.js zet lege aantal-/oppervlaktevelden bij het opslaan
+    terug op 0 omdat RoomBO.Number/Surface niet-nullable zijn). Expliciet gegenereerde veldnamen, zie
+    _UnitCvRowV2.
+*@
+@{
+    var inv = CultureInfo.InvariantCulture;
+    var k = Model.Key;
+    var r = Model.Room;
+    var prefix = $"Rooms[{k}]";
+    var typeValue = (int)r.Type;
+    var items = Enum.GetValues<BOCore.RoomType>()
+        .Where(t => (int)t != 0)
+        .OrderBy(t => t.ToString(), StringComparer.CurrentCultureIgnoreCase)
+        .Select(t => new GlV2SelectItem { Value = ((int)t).ToString(), Text = t.ToString() })
+        .ToList();
+    var surface = r.Surface == 0m ? "" : r.Surface.ToString("0.00", inv);
+    var count = r.Number == 0 && typeValue == 0 && string.IsNullOrEmpty(r.Remark) ? 1 : r.Number;
+}
+<div class="gl-v2-unit-room-row" data-room-row>
+    <input type="hidden" name="Rooms.index" value="@k" />
+    <input type="hidden" name="@(prefix).Id" value="@r.Id" />
+    <input type="hidden" name="@(prefix).UnitId" value="@r.UnitId" />
+    <div class="gl-v2-unit-room-type">
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+        {
+            Name = prefix + ".Type",
+            Value = typeValue == 0 ? "" : typeValue.ToString(),
+            Items = items,
+            Placeholder = "Kies een ruimte",
+            Bare = true
+        })
+    </div>
+    <div class="gl-v2-field gl-v2-unit-room-count">
+        <div class="gl-v2-field-box">
+            <input type="number" min="0" step="1" name="@(prefix).Number" value="@count" class="gl-v2-field-input is-tabular" inputmode="numeric" data-room-count data-zero-if-empty aria-label="Aantal" />
+        </div>
+    </div>
+    <div class="gl-v2-field gl-v2-unit-room-surface">
+        <div class="gl-v2-field-box">
+            <input type="text" name="@(prefix).Surface" value="@surface" placeholder="0,00" class="gl-v2-field-input Currencymask is-tabular" inputmode="decimal" autocomplete="off" data-room-surface data-zero-if-empty aria-label="Oppervlakte per stuk" />
+            <span class="gl-v2-field-suffix">m²</span>
+        </div>
+    </div>
+    <div class="gl-v2-field gl-v2-unit-room-remark">
+        <div class="gl-v2-field-box">
+            <input type="text" name="@(prefix).Remark" value="@r.Remark" placeholder="bv. met dressing" class="gl-v2-field-input" autocomplete="off" aria-label="Opmerking" />
+        </div>
+    </div>
+    <button type="button" class="gl-v2-icon-btn is-warning" data-remove-room title="Ruimte verwijderen" aria-label="Ruimte verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+</div>

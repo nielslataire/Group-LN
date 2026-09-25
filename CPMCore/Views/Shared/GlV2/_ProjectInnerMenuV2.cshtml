@@ -66,7 +66,7 @@
     var groups = new List<(string Key, string Label, List<(string Text, string Icon, string Href, bool Active, int? Count)> Items)>();
 
     var algemeenItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
-    if (canSeeDetail) algemeenItems.Add(("Project", "ph-house", Url.Action("Detail", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Detail"), CountFor("Project")));
+    if (canSeeDetail) algemeenItems.Add(("Project", "ph-house", Url.Action("Detail", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Detail") || IsHere("Projecten", "Edit"), CountFor("Project")));
     // "Klanten" blijft actief zowel op de klantenlijst (Projecten/DetailClients) als op een
     // individuele klantfiche (Klanten/Detail) én het klant-bewerken-scherm (Klanten/EditProject)
     // binnen dit project, gl-v2 — anders dooft de actieve-menu-indicator uit zodra je één klant
@@ -82,7 +82,7 @@
     var detailsItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (showPhotos) detailsItems.Add(("Media", "ph-image", Url.Action("DetailPhotos", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailPhotos"), CountFor("Media")));
     if (showNews) detailsItems.Add(("Nieuws", "ph-newspaper", Url.Action("DetailNews", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailNews"), CountFor("Nieuws")));
-    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits") || IsHere("Projecten", "Landshares"), CountFor("Eenheden")));
+    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits") || IsHere("Projecten", "Landshares") || IsHere("Projecten", "AddUnit") || IsHere("Projecten", "EditUnit"), CountFor("Eenheden")));
     if (detailsItems.Count > 0) groups.Add(("details", "Details", detailsItems));
 
     var opvolgingItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
