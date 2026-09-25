@@ -1,0 +1,436 @@
+/* gl-v2 layout-pilot — Projecten/DetailUnitsV2 (design-handoff punt 16, opties 16a "Eenhedenlijst —
+   hoofdeenheden met hun berging en parking eronder" en 16d "Eenhedenlijst zonder basisakte — elk lot
+   een eigen perceel, koper in plaats van aandeel"). Page-specific, zoals elke gl-v2-lijstpagina zijn
+   eigen toolbar/tabel-chroom heeft (gl-v2-projecten-detailclients.css, gl-v2-leveranciers.css): de
+   .gl-v2-toolbar-card/.gl-v2-filters-*-familie staat nergens gedeeld in gl-v2-shell.css, dus de
+   toolbar hieronder is dezelfde kopieer-en-pas-aan als daar — geen sluiproute.
+
+   Eén verschil met die twee pagina's, bewust: hier staat GEEN DataTable onder. De lijst is een boom
+   (gekoppelde eenheden onder hun hoofdeenheid) met groepskoppen en een totaalregel; een plugin die
+   rijen sorteert/pagineert los van elkaar zou die relatie stilzwijgend breken. Zoeken, de chips en het
+   inklappen van een groep zijn daarom eigen JS over de rijen (zelfde recept als de Eenheden-tabel op
+   Projecten/DetailV2, .gl-v2-pd-units-*), en paginering valt weg — 16a §7 rekent daar zelf al op
+   ("Paginering valt weg onder 50 eenheden"). */
+
+/* ── Toolbar: zoekveld + type-/statuschips met tellers (16a §6) ──────────────────────────────────── */
+.gl-v2-du-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+    flex: none;
+}
+
+.gl-v2-du-search { flex: 1 1 260px; min-width: 0; }
+.gl-v2-du-search .gl-v2-field-input { min-width: 0; }
+
+.gl-v2-du-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.gl-v2-du-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 14px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 500 11.5px var(--gl-v2-font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.gl-v2-du-chip:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-du-chip.is-active {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    font-weight: 600;
+}
+.gl-v2-du-chip-count { font-variant-numeric: tabular-nums; color: var(--gl-v2-muted-light); }
+.gl-v2-du-chip.is-active .gl-v2-du-chip-count { color: rgba(255, 255, 255, .75); }
+/* Een chip zonder eenheden erachter blijft staan maar is niet klikbaar — een verdwijnende chip laat de
+   rij op elk project anders ogen, en "Bergingen 0" is zelf ook informatie. Het niet-klikbare deel komt
+   van een echt disabled-attribuut in de markup (dus ook uit de tab-orde en onbereikbaar via het
+   toetsenbord), niet van pointer-events:none — dat laat een klik via Enter wél nog door. */
+.gl-v2-du-chip.is-empty { opacity: .45; }
+.gl-v2-du-chip:disabled { cursor: default; }
+
+.gl-v2-du-chip-sep { width: 1px; height: 22px; background: var(--gl-v2-hairline); flex: none; }
+
+/* ── Projectregel boven de lijst ────────────────────────────────────────────────────────────────────
+   Twee gedaanten van hetzelfde element. .is-warning = 16a §4: een niet-verdeelde basisakte is geen
+   totaal maar een ontbrekende taak. .is-neutral = 16d §3: zonder basisakte is er niks fout, dus een
+   gewone projectregel die zegt waarom er geen aandelen zijn. */
+.gl-v2-du-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    flex: none;
+}
+.gl-v2-du-notice.is-warning { border-color: #EBD9B4; }
+.gl-v2-du-notice-icon { color: var(--gl-v2-warning); font-size: 17px; display: flex; flex: none; }
+.gl-v2-du-notice-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-du-notice-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; }
+.gl-v2-du-notice.is-warning .gl-v2-du-notice-title { color: var(--gl-v2-warning); }
+.gl-v2-du-notice-desc { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; }
+.gl-v2-du-notice-spacer { flex: 1; }
+.gl-v2-du-notice-action { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; flex: none; }
+.gl-v2-du-notice-action:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+
+/* ── De lijst ──────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-du-table-card { flex: none; }
+.gl-v2-du-table-card .gl-v2-card-body { padding: 0; }
+.gl-v2-du-table-scroll { overflow-x: auto; }
+
+.gl-v2-du-table { width: 100%; border-collapse: collapse; }
+
+.gl-v2-du-table thead th {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    text-align: left;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    padding: 12px 10px 9px;
+    white-space: nowrap;
+}
+.gl-v2-du-table thead th:first-child { padding-left: 18px; }
+.gl-v2-du-table thead th:last-child { padding-right: 18px; }
+.gl-v2-du-table th.is-right, .gl-v2-du-table td.is-right { text-align: right; }
+
+.gl-v2-du-table td {
+    padding: 8px 10px;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+.gl-v2-du-table td:first-child { padding-left: 18px; }
+.gl-v2-du-table td:last-child { padding-right: 18px; }
+
+.gl-v2-du-row { min-height: 56px; }
+.gl-v2-du-row:hover td { background: var(--gl-v2-bg); }
+/* Gekoppelde eenheid: één tint lichter dan haar hoofdeenheid, zodat de boom ook zonder de
+   verbindingslijn leesbaar blijft (16a §1). */
+.gl-v2-du-row.is-child > td { background: #FBFCFA; padding-top: 6px; padding-bottom: 6px; }
+.gl-v2-du-row.is-child:hover > td { background: var(--gl-v2-bg); }
+
+/* Groepskop (16a §6, "Groepen zijn inklapbaar"). */
+.gl-v2-du-group-row td {
+    padding: 0;
+    background: #F7F9F5;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-du-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 38px;
+    padding: 0 18px;
+    border: 0;
+    background: transparent;
+    color: var(--gl-v2-ink);
+    font: 700 12px var(--gl-v2-font-sans);
+    cursor: pointer;
+    text-align: left;
+}
+.gl-v2-du-group-toggle:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-du-group-toggle > i { font-size: 14px; color: var(--gl-v2-muted-soft); flex: none; }
+.gl-v2-du-group-count { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; }
+.gl-v2-du-group-spacer { flex: 1; }
+.gl-v2-du-group-caret { transition: transform .15s ease; }
+.gl-v2-du-group-toggle[aria-expanded="false"] .gl-v2-du-group-caret { transform: rotate(-90deg); }
+
+/* Eenheidscel: icoon + naam + adres/kadaster (of "gekoppeld aan …"). */
+.gl-v2-du-unit { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.gl-v2-du-unit-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-du-unit-icon i { font-size: 15px; }
+.gl-v2-du-unit-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-du-unit-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-du-unit-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Ingesprongen gekoppelde eenheid met verbindingslijn — 16a §1: "ingesprongen met een
+   verbindingslijn. In jouw lijst zag je niet dat een berging bij Lot 1 hoort". */
+.gl-v2-du-unit.is-child { padding-left: 22px; }
+.gl-v2-du-unit.is-child .gl-v2-du-unit-icon { width: 26px; height: 26px; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); }
+.gl-v2-du-unit.is-child .gl-v2-du-unit-icon i { font-size: 13px; }
+.gl-v2-du-unit.is-child .gl-v2-du-unit-name { font-weight: 500; }
+.gl-v2-du-connector {
+    width: 12px;
+    height: 18px;
+    flex: none;
+    border-left: 1.5px solid #B8CDB0;
+    border-bottom: 1.5px solid #B8CDB0;
+    border-bottom-left-radius: 5px;
+    margin-top: -10px;
+}
+
+/* Tweeregelige cel (type/subtype, oppervlakte/grond, prijs/opbouw, koper/compromis). */
+.gl-v2-du-stack { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-du-stack.is-right { text-align: right; }
+.gl-v2-du-stack-main { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-du-stack-main.is-link { color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-du-stack-main.is-link:hover { text-decoration: underline; }
+.gl-v2-du-stack-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-du-tabular { font-variant-numeric: tabular-nums; }
+.gl-v2-du-muted { color: var(--gl-v2-muted-light); }
+
+/* Koppelregel in de tabel — 16a §2: "Koppelen is een regel in de tabel en geen derde icoon in een rij
+   van drie". Het ⋯-menu houdt bewerken/ontkoppelen/verwijderen. */
+.gl-v2-du-attach-row td { padding: 0; background: #FBFCFA; }
+.gl-v2-du-attach-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 36px;
+    padding: 0 18px 0 76px;
+    border: 0;
+    background: transparent;
+    color: var(--gl-v2-primary);
+    font: 600 11.5px var(--gl-v2-font-sans);
+    cursor: pointer;
+    text-align: left;
+}
+.gl-v2-du-attach-btn:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-du-attach-btn i { font-size: 14px; }
+
+/* Totaalregel (16a: "Totaal <project>"). */
+.gl-v2-du-table tfoot td {
+    border-bottom: 0;
+    border-top: 1px solid var(--gl-v2-hairline);
+    padding-top: 13px;
+    padding-bottom: 14px;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-du-total-landshare { font: 600 13px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+.gl-v2-du-total-landshare.is-warning { color: var(--gl-v2-warning); }
+
+.gl-v2-du-no-results { padding: 26px 18px; text-align: center; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-du-no-results[hidden] { display: none; }
+
+/* Legacy "KOPPELING"-eenheid (Units.IsLink): een samengestelde verkoopeenheid uit het oude
+   koppelmechanisme. Krijgt een eigen markering i.p.v. stil door te gaan voor een gewone eenheid — deze
+   pagina koppelt zelf via Units.AttachedUnitId (zie de koppeldialoog), maar bestaande data kan nog
+   KOPPELING-rijen bevatten. */
+.gl-v2-du-legacy-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 16px;
+    padding: 0 6px;
+    margin-left: 6px;
+    border-radius: var(--gl-v2-radius-pill);
+    background: var(--gl-v2-neutral-tint);
+    color: var(--gl-v2-muted);
+    font: 600 8.5px var(--gl-v2-font-sans);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+/* ── Koppeldialoog (16c) ───────────────────────────────────────────────────────────────────────── */
+/* Type 2 "Formulier" uit de gedeelde modal-familie (.gl-v2-modal-form): die levert de koptekst, het
+   tweekolommige body-raster en de voetbalk al, dus hieronder staat enkel wat 16c daar extra bovenop
+   vraagt — de keuzelijst en de prijsvoetregel. Iets breder dan de standaard 500px omdat de keuzelijst
+   per regel naam + subtype + prijs naast elkaar zet. */
+.gl-v2-du-attach-modal .modal-dialog { width: 520px; }
+
+/* Keuzelijst: "los te koop" (kiesbaar) en "al gekoppeld" (niet kiesbaar) — 16c's eigen groepering. */
+.gl-v2-du-picker {
+    border-radius: var(--gl-v2-radius-md);
+    border: 1px solid var(--gl-v2-hairline);
+    padding: 6px;
+    max-height: 244px;
+    overflow-y: auto;
+}
+.gl-v2-du-picker-group-label { display: block; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted-light); padding: 8px 10px 4px; }
+.gl-v2-du-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+.gl-v2-du-picker-option:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-du-picker-option.is-selected { background: var(--gl-v2-primary-tint); }
+.gl-v2-du-picker-option.is-disabled { cursor: default; opacity: .6; }
+.gl-v2-du-picker-option.is-disabled:hover { background: transparent; }
+.gl-v2-du-picker-icon {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: 7px;
+    background: var(--gl-v2-neutral-tint);
+    color: var(--gl-v2-muted-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-du-picker-icon i { font-size: 13px; }
+.gl-v2-du-picker-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.gl-v2-du-picker-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-du-picker-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-du-picker-price { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); font-variant-numeric: tabular-nums; flex: none; }
+.gl-v2-du-picker-empty { padding: 14px 10px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Voetregel van de dialoog: de nieuwe prijs van het lot, meteen zichtbaar (16c). */
+.gl-v2-du-attach-result {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    border-radius: 9px;
+    background: #F7F9F5;
+    padding: 10px 12px;
+}
+.gl-v2-du-attach-result-label { flex: 1; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-du-attach-result-old { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; text-decoration: line-through; }
+.gl-v2-du-attach-result-new { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Tablet (768–1023.98px): verdieping en oppervlakte vervallen als losse kolom (zelfde afweging als
+   .gl-v2-dc-col-collapsible op DetailClientsV2 en .gl-v2-pd-units-col-collapsible op DetailV2), en de
+   twee topbar-knoppen verhuizen naar het ⋯-menu. ──────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+    .gl-v2-du-topbar-menu-trigger { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-du-topbar-btn { display: none; }
+    .gl-v2-du-col-collapsible { display: none; }
+}
+
+/* ── Mobiel (<768px) — kaarten i.p.v. tabel, zelfde keuze als DetailClientsV2/Klanten/IndexV2, maar
+   server-side gerenderd i.p.v. uit de tabelrijen gekloond: daar bouwde de JS de kaarten op elke
+   DataTables-"draw", hier is er geen DataTable en dus ook geen draw-event om op te hangen. ──────── */
+@media (max-width: 767.98px) {
+    .gl-v2-du-table-scroll { display: none; }
+    .gl-v2-du-mobile-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .gl-v2-du-card {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        padding: 13px 14px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-du-card.is-child { margin-left: 16px; border-left: 2px solid #B8CDB0; }
+    /* .gl-v2-du-card se eigen display:flex wint anders van het [hidden]-attribuut dat de filter-JS
+       zet — zie DESIGN.md's eigen "Don't rely on [hidden] alone"-regel. */
+    .gl-v2-du-card[hidden] { display: none !important; }
+    .gl-v2-du-card-head { display: flex; align-items: center; gap: 8px; }
+    .gl-v2-du-card-head .gl-v2-du-unit { flex: 1; }
+    .gl-v2-du-card-head .js-gl-v2-menu-trigger { flex: none; }
+    .gl-v2-du-card-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+    .gl-v2-du-card-foot { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+    .gl-v2-du-card-price { flex: 1; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+    .gl-v2-du-card-group-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--gl-v2-muted); padding: 6px 2px 0; }
+
+    /* iOS Safari zoomt de hele pagina in op een tekstveld onder 16px — zie DESIGN.md's eigen
+       "Don't"-regel hierover. */
+    .gl-v2-du-search .gl-v2-field-input,
+    .gl-v2-du-attach-modal .gl-v2-field-input { font-size: 16px; }
+}
+@media (min-width: 768px) {
+    .gl-v2-du-mobile-list { display: none; }
+}
+
+/* ── Afdrukken (Ctrl+P). De "Exporteren"-knop van 16a §5 levert zijn PDF via een echt document
+   (ProjectenController.PrintUnitList → UnitListDocument), dus dit is niet díe route — het is het vangnet
+   voor wie de pagina gewoon uitprint. Alles wat navigatie of actie is valt weg; wat overblijft is de
+   lijst zelf, uitgeklapt en zonder eigen achtergronden. ──────────────────────────────────────────── */
+@media print {
+    .gl-v2-rail, .gl-v2-topbar, .gl-v2-qa-bar, .gl-v2-pm-desktop, .gl-v2-pm-tablet, .gl-v2-pm-phone,
+    .gl-v2-du-toolbar, .gl-v2-du-mobile-list, .gl-v2-menu, .gl-v2-du-attach-row,
+    .gl-v2-du-table thead th:last-child, .gl-v2-du-table td:last-child { display: none !important; }
+
+    .gl-v2, .gl-v2-body, .gl-v2-content, .gl-v2-card, .gl-v2-du-table-card {
+        background: #fff !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .gl-v2-du-table-scroll { display: block !important; overflow: visible !important; }
+    .gl-v2-du-row, .gl-v2-du-group-row { break-inside: avoid; }
+    .gl-v2-du-row[hidden], .gl-v2-du-group-row[hidden] { display: none !important; }
+}
+
+/* ── Projecten/LandsharesV2 — "Aandelen basisakte verdelen" ─────────────────────────────────────────
+   Deelt dit bestand met de eenhedenlijst (zelfde tabel, zelfde boomopmaak, zelfde projectregel), dus
+   hieronder staat enkel wat dit scherm er extra bij heeft: de scrollende formulierkolom met de vaste
+   actiebalk eronder, en het aandeelveld in de tabelcel. De kolomopbouw is dezelfde
+   flex:1/min-height:0-truc als Leveranciers/EditV2's eigen .gl-v2-supplier-edit-form/-scroll, waar
+   .gl-v2-form-actionbar zelf naar verwijst. */
+.gl-v2-ls-form {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.gl-v2-ls-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Altijd wat lucht boven de actiebalk, ook volledig naar onder gescrold. */
+    padding-bottom: 20px;
+}
+
+.gl-v2-ls-toolbar { gap: 10px; }
+.gl-v2-ls-hint { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: right; }
+
+/* Het aandeelveld zit in een tabelcel, dus geen eigen label en een vaste, smalle breedte — een
+   volle-breedte veld zou de kolom laten meegroeien met de tabel. */
+.gl-v2-ls-field { width: 118px; margin-left: auto; }
+.gl-v2-ls-field .gl-v2-field-box { height: 34px; }
+.gl-v2-ls-input { text-align: right; }
+
+/* De aandeelkolom staat rechts uitgelijnd; een tabelrij hoeft hier niet op te lichten bij hover (er is
+   niets klikbaar behalve het veld zelf). */
+.gl-v2-ls-table .gl-v2-du-row:hover td { background: transparent; }
+.gl-v2-ls-table .gl-v2-du-row.is-child:hover > td { background: #FBFCFA; }
+/* Groepskop is hier geen knop (niets in te klappen tijdens het invullen) — zelfde uiterlijk, geen
+   cursor/hover die een klik belooft. */
+.gl-v2-ls-table .gl-v2-du-group-toggle { cursor: default; }
+.gl-v2-ls-table .gl-v2-du-group-toggle:hover { background: transparent; }
+
+@media (max-width: 767.98px) {
+    /* De aandelentabel blijft ook op telefoon een tabel: kaarten met een invoerveld erin verliezen
+       precies wat je hier nodig hebt — de kolom cijfers onder elkaar om tegen het totaal te lezen.
+       Horizontaal scrollen is hier het kleinere kwaad (.gl-v2-du-table-scroll doet dat al). */
+    .gl-v2-ls-table { display: table; }
+    .gl-v2-ls-form .gl-v2-du-table-scroll { display: block; }
+    .gl-v2-ls-hint { text-align: left; }
+    .gl-v2-ls-field { width: 104px; }
+    /* iOS Safari zoomt in op een tekstveld onder 16px — zie DESIGN.md's eigen "Don't"-regel. */
+    .gl-v2-ls-input { font-size: 16px; }
+}

@@ -27,11 +27,15 @@
                dit een echte flex-kolom die label+value strak samenhoudt naast het icoon — zie
                gl-v2-shell.css voor waarom dit als aparte elementen moet i.p.v. één grid-reflow-truc
                met drie losse items (het icoon zou dan twee auto-rijen laten opblazen). *@
-            <div class="gl-v2-kpi-card @toneClass">
+            <div class="gl-v2-kpi-card @toneClass @(string.IsNullOrWhiteSpace(kpi.Hint) ? "" : "has-hint")">
                 <span class="gl-v2-kpi-icon"><i class="ph @kpi.IconClass" aria-hidden="true"></i></span>
                 <span class="gl-v2-kpi-text">
                     <span class="gl-v2-kpi-label">@kpi.Label</span>
                     <span class="gl-v2-kpi-value">@kpi.Value</span>
+                    @if (!string.IsNullOrWhiteSpace(kpi.Hint))
+                    {
+                        <span class="gl-v2-kpi-hint">@kpi.Hint</span>
+                    }
                 </span>
             </div>
         }

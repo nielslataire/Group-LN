@@ -1,36 +1,80 @@
 ﻿@model CPMCore.Models.Projecten.AddUnitLinkModel;
-@using (Html.BeginForm("AddUnitLink", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#", id = "FormAddUnitLInk", enctype = "multipart/form-data" }))
+@*
+	Legacy koppeldialoog (Projecten/DetailUnits + Partials/Units.cshtml). Maakt een samengestelde
+	KOPPELING-eenheid aan (Units.IsLink) — een ANDER mechanisme dan Units.AttachedUnitId, waarop de
+	eenhedenboom van Projecten/DetailUnitsV2 en Projecten/DetailV2 rusten. Beide op dezelfde eenheid
+	toepassen laat haar prijs en aandeel twee keer meetellen; zie DESIGN.md, "De twee koppelmechanismen
+	op Units". De keuzelijst komt daarom van GetUnitsForLinkSelect en bevat alleen nog eenheden die aan
+	niets vasthangen; AddUnitLink controleert hetzelfde nog eens voor een oud tabblad. Blijft die lijst
+	leeg, dan zegt dit blok dat, i.p.v. een formulier met een lege dropdown te tonen.
+
+	Let op bij verder werk hieraan: de aangeklikte eenheid wordt zelf GEEN lid van de koppeling. Er staat
+	geen hidden field voor SelectedUnit.Id, dus dat is 0 bij de POST en HandleLinkedUnits negeert die —
+	de koppeling bestaat enkel uit wat in de dropdown gekozen is. De titel hieronder suggereert iets
+	anders; bewust niet aangepast, want een hidden field toevoegen zou veranderen wát een koppeling
+	bevat (van 2 naar 3 leden in het bestaande gebruikspatroon).
+*@
+@if (Model.Units.Count == 0)
 {
-	@Html.AntiForgeryToken()
-	@Html.HiddenFor(m => m.SelectedUnit.ProjectId)
 	<section class="card">
 		<header class="card-header">
-			<h2 class="card-title">Eenheden koppelen aan @Model.SelectedUnit.Type.Name @Model.SelectedUnit.Name</h2>
+			<h2 class="card-title">Niets om te koppelen</h2>
 		</header>
 		<div class="card-body">
-
-				<div class="form-group col-md-8">
-					<label>Eenheden</label>
-				@Html.DropDownListFor(m => m.SelectedUnits, new SelectList(Model.Units, "ID", "Display", Model.SelectedUnits, null), new { @class = "form-control populate", id = "lstLinkUnits", multiple = "multiple" })
+			<div class="modal-wrapper">
+				<div class="modal-icon">
+					<i class="fas fa-info-circle"></i>
 				</div>
-			<div class="form-group col-md-8">
-				<label>@Html.LabelFor(m => m.Unit.ConstructionValue)</label>
-				@Html.EditorFor(m => m.Unit.ConstructionValue)
+				<div class="modal-text">
+					<p>
+						Er is in dit project geen andere @Model.SelectedUnit.Type.Name die nog vrij is. Eenheden die al onder
+						een andere eenheid hangen of al in een koppeling zitten, komen hier niet in de lijst.
+					</p>
 				</div>
-			<div class="form-group col-md-8">
-				<label>@Html.LabelFor(m => m.Unit.LandValue)</label>
-				@Html.EditorFor(m => m.Unit.LandValue)
 			</div>
 		</div>
 		<footer class="card-footer">
 			<div class="row">
 				<div class="col-md-12 text-end">
-					<button class="btn btn-primary modal-confirm">Koppelen</button>
-					<button class="btn btn-default modal-dismiss">Annuleren</button>
+					<button class="btn btn-default modal-dismiss">Sluiten</button>
 				</div>
 			</div>
 		</footer>
 	</section>
 }
+else
+{
+	using (Html.BeginForm("AddUnitLink", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#", id = "FormAddUnitLInk", enctype = "multipart/form-data" }))
+	{
+		@Html.AntiForgeryToken()
+		@Html.HiddenFor(m => m.SelectedUnit.ProjectId)
+		<section class="card">
+			<header class="card-header">
+				<h2 class="card-title">Eenheden koppelen aan @Model.SelectedUnit.Type.Name @Model.SelectedUnit.Name</h2>
+			</header>
+			<div class="card-body">
 
-End Using
+				<div class="form-group col-md-8">
+					<label>Eenheden</label>
+					@Html.DropDownListFor(m => m.SelectedUnits, new SelectList(Model.Units, "ID", "Display", Model.SelectedUnits, null), new { @class = "form-control populate", id = "lstLinkUnits", multiple = "multiple" })
+				</div>
+				<div class="form-group col-md-8">
+					<label>@Html.LabelFor(m => m.Unit.ConstructionValue)</label>
+					@Html.EditorFor(m => m.Unit.ConstructionValue)
+				</div>
+				<div class="form-group col-md-8">
+					<label>@Html.LabelFor(m => m.Unit.LandValue)</label>
+					@Html.EditorFor(m => m.Unit.LandValue)
+				</div>
+			</div>
+			<footer class="card-footer">
+				<div class="row">
+					<div class="col-md-12 text-end">
+						<button class="btn btn-primary modal-confirm">Koppelen</button>
+						<button class="btn btn-default modal-dismiss">Annuleren</button>
+					</div>
+				</div>
+			</footer>
+		</section>
+	}
+}

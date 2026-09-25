@@ -82,7 +82,7 @@
     var detailsItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (showPhotos) detailsItems.Add(("Media", "ph-image", Url.Action("DetailPhotos", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailPhotos"), CountFor("Media")));
     if (showNews) detailsItems.Add(("Nieuws", "ph-newspaper", Url.Action("DetailNews", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailNews"), CountFor("Nieuws")));
-    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits"), CountFor("Eenheden")));
+    if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits") || IsHere("Projecten", "Landshares"), CountFor("Eenheden")));
     if (detailsItems.Count > 0) groups.Add(("details", "Details", detailsItems));
 
     var opvolgingItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();

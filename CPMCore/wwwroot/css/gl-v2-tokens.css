@@ -32,6 +32,15 @@
     --gl-v2-danger: #8B2A2A;
     --gl-v2-danger-tint: #F8EBEB;
     --gl-v2-neutral-tint: #EDEFEB;
+    /* Vierde statustint, en de eerste die gl-v2 écht nodig had — DESIGN.md's eigen "Don't invent a
+       fourth status color"-regel zegt: pas oplossen wanneer een scherm het nodig heeft, niet vooruit
+       gokken. Dat scherm is er nu: de eenhedenlijst (16a/16d) onderscheidt "LOS TE KOOP" (een berging
+       of parking die nog geen lot én geen koper heeft) van "MET LOT 1" en "BESCHIKBAAR", die in het
+       mockup allebei neutraal-grijs zijn. Waarden letterlijk uit dat mockup overgenomen, zoals eerder
+       ook met #2F6038 voor de menuteller gebeurde. Het is een informatietint, geen ernst-niveau: niets
+       hieraan is beter of slechter dan groen of oker. */
+    --gl-v2-info: #2E5F7E;
+    --gl-v2-info-tint: #E4EDF2;
 
     --gl-v2-radius-sm: 8px;
     --gl-v2-radius-md: 12px;

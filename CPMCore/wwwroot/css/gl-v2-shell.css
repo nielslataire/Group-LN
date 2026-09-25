@@ -2728,10 +2728,32 @@
    initKpiToggle in gl-v2-shell.js). */
 .gl-v2-kpi-toggle { display: none; }
 
+/* ── Optionele derde regel op een KPI-kaart ("Hint") — design-handoff 16a/16d's eigen voetjes onder
+   het cijfer ("2 woningen · 3 bergingen en parkings", "nog niet verdeeld over de eenheden"). Een
+   eigen .has-hint-variant i.p.v. de basiskaart uitbreiden: die heeft per breakpoint een VASTE hoogte
+   met twee auto-rijen, dus een derde regel zou daar geperst worden. Met .has-hint komt er een echte
+   derde grid-rij bij en wordt de hoogte een minimum i.p.v. een maat — kaarten zonder hint blijven
+   letterlijk ongewijzigd, dus geen bestaande pagina verschuift hierdoor. */
+.gl-v2-kpi-card.has-hint {
+    grid-template-areas: "icon label" "value value" "hint hint";
+    height: auto;
+    min-height: 74px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    row-gap: 3px;
+}
+.gl-v2-kpi-hint {
+    grid-area: hint;
+    font: 450 10.5px/1.35 var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    min-width: 0;
+}
+
 /* ── Tablet (768–1023.98px) — altijd de compacte vorm, altijd 4 kolommen, ongeacht aantal items. ── */
 @media (min-width: 768px) and (max-width: 1023.98px) {
     .gl-v2-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .gl-v2-kpi-card { height: 76px; column-gap: 8px; }
+    .gl-v2-kpi-card.has-hint { height: auto; min-height: 76px; }
     .gl-v2-kpi-icon { width: 28px; height: 28px; border-radius: 14px; }
     .gl-v2-kpi-icon i { font-size: 15px; }
     .gl-v2-kpi-label { font-size: 10.5px; }
@@ -2746,6 +2768,7 @@
 @media (min-width: 1024px) {
     .gl-v2-kpi-grid { grid-template-columns: repeat(var(--gl-v2-kpi-desktop-cols, 4), minmax(0, 1fr)); gap: 10px; }
     .gl-v2-kpi-card { height: 78px; column-gap: 8px; }
+    .gl-v2-kpi-card.has-hint { height: auto; min-height: 78px; }
     .gl-v2-kpi-icon { width: 26px; height: 26px; border-radius: 13px; }
     .gl-v2-kpi-icon i { font-size: 14px; }
     .gl-v2-kpi-label { font-size: 10px; }
@@ -4138,7 +4161,7 @@
 }
 
 /* ── Badges (optie 8e, "1 · BADGES IN DE TOPBAR") ──────────────────────────────────────────────
-   Generiek statuslabel, niet enkel voor de topbar — 5 semantische tonen. Max 3 naast elkaar +
+   Generiek statuslabel, niet enkel voor de topbar — 6 semantische tonen. Max 3 naast elkaar +
    "+n"-overflow is een markup-conventie (gewoon meerdere .gl-v2-badge-spans naast elkaar), geen
    aparte containerklasse nodig. */
 .gl-v2-badge {
@@ -4159,6 +4182,7 @@
 .gl-v2-badge.is-neutral { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); }
 .gl-v2-badge.is-attention { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
 .gl-v2-badge.is-blocked { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-badge.is-info { background: var(--gl-v2-info-tint); color: var(--gl-v2-info); }
 .gl-v2-badge.is-inactive { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-light); text-decoration: line-through; }
 
 /* ── Tabbar (optie 8e, "2 · TABBAR"), altijd gepositioneerd zoals optie 8d ─────────────────────

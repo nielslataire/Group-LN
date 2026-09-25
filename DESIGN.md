@@ -4168,3 +4168,389 @@ DOM at all, not just an unused hidden span).
 rather than shrinking a value that's already correct and consistent three-for-three — flagged back
 to the user instead of guessed at, since changing it without finding an actual defect would just
 introduce the inconsistency it's trying to avoid.
+
+### Projecten/DetailUnitsV2 — de eenhedenlijst van een project (design-handoff punt 16a én 16d, koppeldialoog 16c)
+Eén pagina voor twee mockups. 16d's eigen regel 1 — "Het projecttype bepaalt de kolommen, niet de
+gebruiker" — is hier letterlijk de implementatie: `DetailUnitsV2Vm.HasBasisakte` (waar
+`ProjectBO.TotalLandShare > 0`, óf er al aandelen aan eenheden hangen) kiest tussen de 16a-variant
+(kolom BASISAKTE, vierde KPI "BASISAKTE n / totaal", de waarschuwing van 16a §4) en de 16d-variant
+(diezelfde kolom wordt KOPER met de compromisdatum, vierde KPI wordt GRONDOPPERVLAKTE, de
+waarschuwing wordt een neutrale projectregel). Er is dus geen schakelaar en geen tweede view: het
+project beslist. De vlag valt ook terug op "er zijn al aandelen verdeeld" en niet enkel op het
+projecttotaal, zodat een project waar iemand het totaal nog niet invulde maar de aandelen wél al
+verdeelde niet plots als "losse loten" leest.
+
+**De lijst is een boom, en dáárom is dit de eerste gl-v2-lijstpagina zonder DataTable.** 16a §1 is de
+kern van het hele punt: een berging hangt onder haar hoofdeenheid, ingesprongen, met een
+verbindingslijn — in de legacy lijst (`Partials/Units.cshtml`, plat via `GetUnitsByProjectId`, met een
+plus-icoontje dat naar een `data-target` verwees dat nergens gerenderd werd) zag je niet dát Berging B1
+bij Lot 1 hoorde. De boom komt van `IUnitService.GetUnitsWithAttachedByProjectId`, exact dezelfde
+dienst die de Eenheden-tabel op `Projecten/DetailV2` en de "Nog geen klant"-rijen op
+`Projecten/DetailClientsV2` al gebruiken. Een sorteer-/pagineerplugin die rijen los van elkaar
+herschikt zou die ouder-kindrelatie stil breken (en de groepskoppen + totaalregel struikelen sowieso
+over DataTables' eis van gelijke celaantallen per rij, want die gebruiken `colspan`). Zoeken, de chips
+en het in-/uitklappen van een groep zijn daarom eigen filter-JS over de rijen — hetzelfde recept als
+`#gl-v2-pd-units-filter` op `Projecten/DetailV2`, niet het DataTables-recept van IndexV2/DetailClientsV2.
+Paginering valt daarmee weg; 16a §7 rekent daar zelf al op ("Paginering valt weg onder 50 eenheden").
+
+De boom wordt bewust één niveau diep gerenderd, ook al ondersteunt de dienst drie niveaus: die vlakt
+kleinkinderen zelf al af in dezelfde `AttachedUnits`-lijst van de hoofdeenheid. Een berging die aan een
+parking hangt die aan Lot 1 hangt, staat dus ingesprongen onder Lot 1 met "gekoppeld aan Lot 1" — wat
+ook precies is wat je wil weten (ze wordt mét Lot 1 verkocht), en het houdt de prijsoptelling van het
+lot in één som i.p.v. per niveau. Ontkoppelen blijft correct: dat wist `AttachedUnitId`, dat bij zo'n
+kleinkind nog steeds naar zijn echte ouder wijst, niet naar het lot.
+
+**Filterregel in een boom, expliciet vastgelegd:** een gekoppelde eenheid is zichtbaar wanneer ze zélf
+aan de filters voldoet; een hoofdeenheid is zichtbaar wanneer ze zélf voldoet óf wanneer een van haar
+gekoppelde eenheden zichtbaar blijft. Zonder die tweede helft zou filteren op "Bergingen" ingesprongen
+rijen tonen zonder de eenheid waaraan ze hangen — precies de verwarring die 16a §1 wegneemt.
+
+**Filters zijn chips met tellers, niet het Filters-paneel van DetailClientsV2.** Die pagina koos
+bewust Leveranciers/IndexV2's zoek-en-filterpaneel boven 12d's eigen mockupvelden, op expliciete
+vraag; hier vraagt het mockup zelf chips (Alles / Woningen / Bergingen / Parkings · Beschikbaar /
+Verkocht), en de tellers erop zijn echte, afleidbare data die het grootste deel van de vraag "wat
+staat hier eigenlijk?" al beantwoorden. Een chip met nul eenheden blijft staan maar wordt niet
+klikbaar (`.is-empty`): een verdwijnende chip laat de rij op elk project anders ogen, en "Bergingen 0"
+is zelf ook informatie.
+
+**Prijzen komen uit een tweede lezing, niet uit de boom — en dat is geen dubbel werk maar een
+correctheidskwestie.** `GetUnitsWithAttachedByProjectId` include't `UnitConstructionValue` enkel voor
+de hoofdeenheden, niet voor de genestte gekoppelde eenheden: elke berging/parking zou daar dus € 0
+bouwwaarde tonen. De prijs per eenheid komt daarom van `GetUnitsById(ids)` (die de bouwwaarderegels
+voor élke opgevraagde eenheid wél laadt), met dezelfde prijsdefinitie als `Projecten/DetailV2` al
+gebruikt: verkocht = grondwaarde verkocht + som van de `ValueSold`-regels, anders grondwaarde + de
+regels zonder afwerkingsoptie, met de goedkoopste/duurste afwerkingsoptie als de "vanaf … / afgewerkt
+…"-regels. Het legacy `Units.ConstructionValue`-veld (één bedrag) wordt bewust *niet* gelezen: het
+huidige eenheidsformulier werkt dat niet meer bij, dus het zou een stil verkeerd getal zijn in plaats
+van een onvolledig getal. Status en koper komen wél uit de boom (die heeft `ClientAccount` mee) plus
+dezelfde omgekeerde eenheid→klant-lookup als DetailV2, want een kant-en-klare eenheid→klant-join
+bestaat niet. Eén terugval toegevoegd die DetailV2 niet had: een verkochte eenheid zonder ingevulde
+verkoopbedragen toont haar vraagprijs i.p.v. € 0 — nul leest als een fout, niet als "nog niet
+ingevuld".
+
+**Koppelen werd een regel in de tabel (16a §2) en een nieuwe actie naast de oude.** Het legacy
+koppelicoon (derde icoon in een rij van drie, `ModalAddUnitLink` → `AddUnitLink`) maakte een
+samengestelde KOPPELING-pseudo-eenheid aan (`Units.IsLink`, naam = "Lot 1 - Berging B1", aandeel =
+som van de leden) waarna de leden uit de lijst verdwenen — een ander mechanisme dan de
+`Units.AttachedUnitId` waarop 16a's boom rust. Deze pagina koppelt via dat tweede mechanisme, met
+`AttachUnitV2`/`DetachUnitV2`/`ModalAttachUnitV2` als eigen acties náást de legacy `AddUnitLink`, die
+ongemoeid blijft voor de legacy pagina — zelfde `*V2`-naast-het-origineel-conventie als
+`PartialDeleteClientModalV2`/`_ModalDeleteContractV2`. `Ontkoppelen` is er meteen bij gebouwd: zonder
+dat is koppelen een eenrichtingsdeur. Beide zijn POST met antiforgery-token (het wijzigt data) via één
+verborgen formulier in de pagina, geen GET-link die een prefetch zou kunnen uitvoeren.
+
+**Bestaande KOPPELING-eenheden blijven zichtbaar, met een markering** (`.gl-v2-du-legacy-tag`).
+Ze stil weglaten zou eenheden doen verdwijnen uit projecten die het oude mechanisme al gebruikten; ze
+tonen als gewone eenheid zou verzwijgen waaróm ze zo heten. Ze kunnen niet als koppeldoel of
+koppelbron dienen — `TranslateBOToEntity` herschrijft de naam van zo'n eenheid uit haar leden, dus
+erdoorheen koppelen zou de naam onder je handen veranderen.
+
+#### De twee koppelmechanismen op `Units` — wat ze zijn, waar ze botsen, en wat uitfaseren zou vragen
+Deze pagina bouwt op het ene mechanisme en laat het andere ongemoeid. Omdat dat een bewuste keuze is met
+gevolgen, staat de hele analyse hier — met een read-only inventarisscript ernaast
+(`_migrations/INVENTARIS_Koppelingen_ReadOnly.sql`) dat de nulmeting in de echte database doet.
+
+**A — `Units.AttachedUnitId`: "hangt onder".** Eén nullabele FK op de eenheid zelf, naar een andere
+eenheid. De berging behoudt haar eigen rij, naam, prijs, aandeel, status en klant; ze hangt alleen
+onder een lot. Gezet door de dropdown "Gekoppelde eenheid" op `Projecten/AddUnit`/`EditUnit` en door de
+koppeldialoog van punt 16c. Gelezen door `GetUnitsWithAttachedByProjectId`, dat als hoofdeenheid
+beschouwt wat `AttachedUnit == null && LinkedUnit == null` heeft en de afhankelijke eenheden tot drie
+niveaus diep genest meegeeft. Dat is de query waar `Projecten/DetailV2`, `Projecten/DetailClientsV2` en
+`Projecten/DetailUnitsV2` allemaal op staan.
+
+**B — `Units.IsLink` + `Units.LinkedUnitId`: "samengestelde verkoopeenheid".** Hier komt er een EXTRA
+`Units`-rij bij met `IsLink = 1`; de leden krijgen `LinkedUnitId` naar die rij. Bij elke save herschrijft
+`UnitTranslator.TranslateBOToEntity` die pseudo-rij: `Name` wordt de namen van de leden met " - " ertussen,
+`Landshare` de SOM van de leden, en `TypeId`/`LevelId` worden overgenomen van het eerste lid. Daarnaast
+draagt de pseudo-rij haar eigen `LandValue`/`ConstructionValue` — dat zijn de twee lege bedragvelden die
+16c zelf aanwijst als het probleem met die dialoog. Aangemaakt door `ProjectenController.AddUnitLink`
+(POST uit `Modals/_ModalAddLink.cshtml`, geopend door het koppelicoon op de legacy `Partials/Units.cshtml`).
+
+**Vier plekken waar ze vandaag al botsen — los van deze pagina.**
+1. **De legacy lijst telt dubbel, de gl-v2-lijst niet.** `GetUnitsByProjectId` (legacy) geeft zowel de
+   pseudo-rij als haar leden terug: drie regels voor twee eenheden, en de footer van
+   `Partials/Units.cshtml` sommeert de kolom "Verdeling Basisakte" over álle regels — dus het aandeel van
+   de leden wordt daar geteld én nog eens via de som op de pseudo-rij.
+   `GetUnitsWithAttachedByProjectId` (gl-v2) sluit de leden uit en houdt alleen de pseudo-rij, dus daar
+   telt het aandeel exact één keer. Beide zijn intern consistent; ze spreken elkaar tegen.
+2. **Prijzen idem.** De pseudo-rij heeft eigen bedragen náást die van haar leden. Welk bedrag in een
+   projecttotaal landt, hangt af van welke query de pagina gebruikt.
+3. **Een verkocht lid is onzichtbaar in gl-v2.** `ClientAccountId` kan op zowel de pseudo-rij als op een
+   lid staan. `GetClientAccountsByProjectIdWithUnits` geeft alle eenheden van een klant terug, ook leden —
+   terwijl de eenhedenboom die leden uitsluit. Een klantpagina kan dus een eenheid tonen die op
+   `DetailUnitsV2` (en op `DetailV2`) nergens staat.
+4. **De oude dialoog kan de twee mechanismen over elkaar heen leggen.** Zijn keuzelijst
+   (`GetUnitsByProjectIdForSelect(projectId, unitTypeId)`) filtert alléén op eenheidstype — niet op
+   `AttachedUnitId`, niet op `LinkedUnitId`, niet op `IsLink`. Je kan dus een berging die al onder Lot 1
+   hangt tot lid van een KOPPELING maken (haar prijs wordt dan twee keer geteld: één keer in de prijs van
+   Lot 1, één keer in de eigen bedragen van de pseudo-rij), en zelfs een pseudo-rij tot lid van een
+   andere pseudo-rij, want die erft het `TypeId` van haar eerste lid en duikt zo in diezelfde keuzelijst
+   op. Blok 4 en 5 van het inventarisscript zoeken precies die twee gevallen.
+
+**Wat deze pagina daaraan verandert: niets aan de data, alles aan wat ze nog kan aanmaken.** De
+koppeldialoog van 16c biedt enkel nevenruimtes aan die in de boom op het hoogste niveau staan — dus met
+`AttachedUnitId` én `LinkedUnitId` leeg — en weigert `IsLink`-rijen als bron én als doel. Ze kán geval 4
+dus niet veroorzaken. De legacy pagina blijft haar eigen dialoog houden en kan dat wél; zolang beide
+pagina's naast elkaar bestaan, blijft dat de enige open deur.
+
+**Uitfaseren van B zou dit vragen, in deze orde.**
+1. **Nulmeting** met het inventarisscript. Geeft blok 1 nul rijen, dan is er niets te migreren en
+   volstaat stap 2 alleen.
+2. **De ingang dichtzetten**: het koppelicoon + `ModalAddUnitLink`/`AddUnitLink` uit de legacy pagina
+   halen (of z'n keuzelijst filteren op `AttachedUnitId IS NULL AND LinkedUnitId IS NULL AND IsLink = 0`,
+   wat geval 4 en 5 meteen onmogelijk maakt zonder de functie weg te nemen). Dit is de goedkoopste stap
+   en al op zichzelf de moeite.
+3. **Migreren per KOPPELING** — en dit is het deel dat handwerk blijft, niet één UPDATE:
+   - *Welke eenheid wordt de hoofdeenheid?* Als de groep één wooneenheid (`GroupId` 1) of commerciële
+     ruimte (4) bevat, is dat de natuurlijke ouder en krijgen de andere leden haar id in
+     `AttachedUnitId`. Bestaat de groep uit alleen nevenruimtes, dan is er geen ouder en moet iemand
+     beslissen wat de koppeling eigenlijk betekende. Blok 2 van het script laat per koppeling zien welk
+     geval het is.
+   - *De eigen bedragen van de pseudo-rij.* Staat daar een grond-/bouwwaarde op die niet ook al bij de
+     leden staat, dan verdwijnt die bij het verwijderen. Blok 1 telt hoeveel koppelingen dat betreft.
+   - *Het aandeel.* De pseudo-rij draagt de som; na migratie dragen de leden hun eigen aandeel weer.
+     Klopt die som niet met wat de leden samen hebben, dan is de basisakte-verdeling van dat project
+     onbetrouwbaar en moet ze herbekeken worden — het nieuwe scherm `Projecten/Landshares` is daar dan
+     de plek voor.
+   - *De klant.* Hangt `ClientAccountId` op de pseudo-rij, dan moet die naar de hoofdeenheid; anders
+     verliest de klant zijn eenheid.
+   - *Alle andere verwijzingen.* `UnitService.DeleteUnit` maakt zelf al `AttachedUnitId` en
+     `LinkedUnitId` van kinderen los, maar veertien andere tabellen verwijzen ook naar een eenheid
+     (factuurlijnen, mijlpalen, dossiers, taken, punten, media, nutsaansluitingen, bouwwaarderegels,
+     ruimtes, uitvoeringsplannen, budgetverkooplijnen, contactaanvragen …). Hangt daar iets aan een
+     pseudo-rij, dan is verwijderen geen optie zonder die verwijzingen eerst te verleggen. Blok 6 van
+     het script telt dat per koppeling.
+4. **Pas daarna** `IsLink`/`LinkedUnitId` uit de code halen (de `HandleLinkedUnits`-tak en de
+   naam-/aandeel-herschrijving in `UnitTranslator`, de `LinkedUnit`-filters in `UnitService`).
+
+**Aanbeveling:** stap 1 en 2 nu, stap 3 en 4 alleen als de nulmeting laat zien dat het de moeite is. Stap
+2 alleen haalt al de enige manier weg waarop nieuwe conflicten kunnen ontstaan; de bestaande
+KOPPELING-rijen blijven dan gewoon leesbaar staan, met hun markering op de nieuwe pagina.
+
+##### Nulmeting op de testdatabase (`db_ab5fbb_testdb`, 2026-09-25) — en de fix die eruit volgde
+Het inventarisscript is uitgevoerd. De uitkomst draait de verwachting om: er is **geen enkel
+data-conflict**, en het oude mechanisme blijkt niet verwaarloosd maar *bewust en consequent* gebruikt —
+terwijl de LEGACY pagina er een verkeerd totaal van maakt en de nieuwe het juiste toont.
+
+**Wat er staat.** 394 eenheden, waarvan 11 KOPPELING-rijen met 22 leden (3 projecten: Zuidleie 7,
+De Vlaschaard 2, Muelenaers 2) en 40 eenheden die onder een lot hangen — waarvan 7 de
+KOPPELING-rijen zelf zijn en 33 gewone eenheden. Alle 11 koppelingen zijn **paren
+parkeerplaatsen/garages met één klant erop**; die klant staat uitsluitend op de pseudo-rij, nooit op
+een lid. 7 van de 11 pseudo-rijen hangen zelf met `AttachedUnitId` onder een **appartement** — de twee
+mechanismen worden dus al gecombineerd, en precies zoals het hoort: het parkeerpaar wordt samen met dat
+appartement verkocht. Eén echte eenheid hangt onder een pseudo-rij die zelf onder een lot hangt (drie
+niveaus diep; de 3-diepe walk van `GetUnitsWithAttachedByProjectId` pakt dat mee).
+
+**Geen van de vier conflictgevallen komt voor.** Nul eenheden met zowel `AttachedUnitId` als
+`LinkedUnitId`, nul geneste koppelingen, nul wees-`IsLink`-rijen, nul `LinkedUnitId` naar een
+niet-`IsLink`-rij. De eerder beschreven risico's waren dus reëel maar nog niet gerealiseerd.
+
+**De echte vondst: het aandeeltotaal op de legacy pagina is verkeerd, dat op de gl-v2-pagina juist.**
+Per project, aandelen versus het projecttotaal uit de basisakte:
+
+| Project | Projecttotaal | Legacy lijst (alle rijen) | gl-v2 (zonder leden) |
+|---|---|---|---|
+| Muelenaers | 10.000 | 10.132 | **10.000** |
+| Zuidleie | 9.000 | 9.280 | **9.000** |
+| De Vlaschaard | 10.000 | 10.126 | **10.000** |
+
+De basisakte is in alle drie projecten dus volledig en correct verdeeld. De legacy footer telt het
+aandeel van elk lid er nog eens bovenop het aandeel van de pseudo-rij (die per definitie de som van
+haar leden draagt), en toonde daardoor altijd een te hoog totaal. `DetailUnitsV2` telt elk aandeel
+exact één keer en meldt "volledig verdeeld" — dat is niet een gelukkig toeval van de nieuwe query maar
+het bewijs dat de pseudo-rij de bedoelde drager van het aandeel is, en dat de boomlezing dus de juiste
+is. Ook nuttig: de terugval in `UnitPriceV2` (verkochte eenheid zonder verkoopbedragen toont haar
+vraagprijs) doet echt werk — koppeling "18 - 19" heeft al haar `ValueSold`-bedragen op 0 staan en zou
+anders als € 0 in de lijst komen.
+
+**Dat de bedragen op pseudo-rij en leden niet altijd optellen, is geen fout maar informatie.** Bij 3
+van de 11 koppelingen staan de bedragen alléén op de pseudo-rij (de leden hebben geen grond-/bouwwaarde);
+bij de andere 8 hebben de leden hun eigen bedragen én verschilt de som van die van de pseudo-rij (bv.
+2 × € 16.000 aan de leden tegenover € 25.000 op het paar). Dat leest als een pakketprijs voor het paar,
+en het is de pseudo-rij die de lijst toont — dus het bedrag dat er staat, is het bedrag waarvoor het
+paar verkocht is.
+
+**Stap 2 uitgevoerd: de deur naar nieuwe conflicten is dicht.** Nieuwe, gefilterde
+`IUnitService.GetUnitsForLinkSelect(projectId, unitTypeId, excludeUnitId)` — de kandidatenlijst van de
+legacy koppeldialoog laat alleen eenheden over die nog aan niets vasthangen (`AttachedUnitId IS NULL`,
+`LinkedUnitId IS NULL`, `IsLink = 0`), plus dezelfde controle in de `AddUnitLink`-POST voor een oud
+tabblad. Bewust een *nieuwe* methode en niet een filter op `GetUnitsByProjectIdForSelect`: die tweede
+wordt ook gebruikt om de leden van een BESTAANDE koppeling te laden, en daar moeten eenheden mét een
+`LinkedUnitId` juist wél in de lijst blijven staan. Effect op de echte data: waar de dialoog vroeger
+bv. 37 ondergrondse parkeerplaatsen aanbood, blijven er 10 vrije over; twee combinaties die volledig
+vastzitten (project 49 "Bovengrondse garage", project 50 "Bovengrondse parkeerplaats") tonen nu
+"Niets om te koppelen" i.p.v. een keuze die dubbel tellen zou opleveren.
+
+**Beide schrijvers van `AttachedUnitId` zijn nu afgedicht, niet alleen de dialoog.** De filter op de
+keuzelijst sluit de ene richting (een al vasthangende eenheid tot lid van een koppeling maken); de
+andere richting loopt via de dropdown "Gekoppelde eenheid" op `EditUnit`. Die lijst hield leden van een
+koppeling al buiten de OUDER-keuze (`GetUnitsByProjectIdForSelectAttachedUnit` filtert op
+`LinkedUnit == null`), maar belette niet dat de eenheid die je daar bewerkt zélf een lid is — dan zou ze
+via beide mechanismen vasthangen. De `EditUnit`-POST weigert die combinatie nu met een expliciete
+melding. Bewust geen `ModelState`-fout: die legacy view toont geen ValidationSummary en herbouwt haar
+keuzelijsten niet bij een ongeldige POST, dus dat zou als een stille, half lege pagina landen; een
+omleiding naar de GET geeft een schoon formulier mét uitleg, ten koste van de andere wijzigingen uit die
+ene POST. Wat NIET geblokkeerd wordt: een KOPPELING-rij die zelf onder een lot hangt — dat is geen fout
+maar precies wat 7 van de 11 bestaande koppelingen doen (het parkeerpaar wordt samen met dat
+appartement verkocht).
+
+**Wat hierna nog kan mislopen, eerlijk opgesomd.** De UI van CPMCore kan de combinatie niet meer
+aanmaken, maar drie wegen blijven open: (1) de **oude VB-toepassing** (`CPM/`) heeft zijn eigen
+`ModalAddUnitLink` en roept daar nog de ongefilterde `GetUnitsByProjectIdForSelect` aan — draait die nog
+ergens, dan is dat dezelfde deur, niet dichtgedaan; (2) **rechtstreekse databasewijzigingen**; en (3)
+bestaande inconsistenties tussen de bedragen op een pseudo-rij en die op haar leden, die geen enkele
+validatie vandaag opmerkt. Daarnaast blijft de **aandeel-footer van de legacy `Partials/Units.cshtml`**
+te veel tellen — een verkeerd getal op het scherm, geen verkeerde data. Het inventarisscript is de
+hercontrole voor alle drie.
+
+**Onderweg gezien, bewust NIET aangeraakt:** de aangeklikte eenheid wordt zelf géén lid van de
+koppeling. `_ModalAddLink.cshtml` post geen hidden field voor `SelectedUnit.Id`, dus dat is 0 bij de
+POST en `HandleLinkedUnits` negeert die — de koppeling bestaat enkel uit wat in de dropdown gekozen is,
+terwijl de titel ("Eenheden koppelen aan …") iets anders suggereert. Dat klopt met de data (11 paren van
+telkens 2 gekozen eenheden). Het hidden field toevoegen zou veranderen wát een koppeling bevat (van 2
+naar 3 leden in het bestaande gebruikspatroon), dus dat is een aparte beslissing, geen bijkomstigheid
+van deze filter.
+
+**Migreren is voorlopig niet nodig, en drie harde redenen maken het bovendien duur.**
+1. **Er is geen natuurlijke hoofdeenheid.** Alle 11 koppelingen bestaan uit twéé nevenruimtes
+   (parkeerplaatsen, garages, carports; `GroupId` 3), dus in geen enkele groep zit een wooneenheid om
+   de leden onder te hangen — precies het geval dat de migratieroute hierboven als handwerk aanmerkt.
+2. **De klant hangt altijd op de pseudo-rij**, nooit op een lid. Die rij verwijderen zonder de klant
+   eerst te verleggen kost 11 klanten hun eenheid.
+3. **Er hangen factuurlijnen aan** (blok 6): 9 van de 11 pseudo-rijen zijn het doel van
+   `InvoicesDetails.UnitId` — koppeling "7 & 8" alleen al 20 lijnen, de overige acht 1 tot 6 elk, samen
+   57 factuurlijnen. `UnitService.DeleteUnit` maakt wel `AttachedUnitId`/`LinkedUnitId` los, maar niet
+   dit; verwijderen zou dus op de FK stuklopen of gefactureerde historiek losmaken. Alle andere
+   verwijzingen (afwerkingsopties, ruimtes, uitvoeringsplannen, mijlpalen, dossiers, taken, punten,
+   media, nutssleutels/-aansluitingen, budgetverkooplijnen, contactaanvragen) staan op 0; elke
+   koppeling heeft verder precies één bouwwaarderegel.
+
+Met de deur nu dicht en de gl-v2-lijst die het juiste totaal toont, is uitfaseren geen dringende schuld
+meer: de bestaande rijen blijven leesbaar staan, met hun markering. Wat wél openstaat: **de
+aandeel-footer van de legacy `Partials/Units.cshtml`** telt nog altijd te veel. Zolang die pagina
+bestaat, blijft dat een verkeerd getal op het scherm.
+
+##### Nog een vondst uit dezelfde meting: "ondergronds/bovengronds" zit in het eenheidstype
+De `UnitTypes` van deze projecten heten letterlijk "Ondergrondse berging", "Bovengrondse
+parkeerplaats", "Ondergrondse garage", "Bovengrondse garage", "Ondergrondse parkeerplaats" en
+"Carport". Het onderscheid dat hierboven in `Units.LevelId`/`ProjectLevels` gezocht werd, bestaat dus
+wél — maar in het TYPE, niet in een verdiepingsveld. `DetailUnitsV2` toont dat al als tweede regel in
+de TYPE-kolom, dus die informatie staat er. De "Ondergronds"-nuance op de VERDIEPING-kolom blijft
+staan als aanvulling (welke kelderverdieping), niet als vervanging.
+
+**Koppeldialoog = 16c, met één eerlijkheidsaanpassing.** 16c's eigen kritiek op de legacy dialoog
+("begon met twee lege bedragvelden zonder te weten waarvoor") bepaalt de volgorde: eerst de keuzelijst,
+gegroepeerd in "los te koop" (kiesbaar) en "al gekoppeld" (zichtbaar, niet kiesbaar, met "bij Lot 1"),
+dan de bedragen die uit die keuze volgen, dan onderaan meteen de nieuwe prijs van het lot. **GRONDWAARDE
+is bewerkbaar** (`Units.LandValue`, één echt veld dat 1-op-1 meegaat); **BOUWWAARDE is alleen-lezen**
+(`.gl-v2-field-readonly`, het bestaande veldtype uit punt 14d) hoewel het mockup daar een invoerveld
+zet: een bouwwaarde bestaat uit losse `UnitConstructionValue`-regels per betalingsgroep/afwerkingsoptie,
+dus één bedrag laten typen zou die regels stil laten afwijken van het totaal dat de lijst toont. Het
+mockup-zoekveld boven de keuzelijst is weggelaten — bij de aantallen waar dit over gaat (de
+nevenruimtes van één project) is de volledige lijst korter dan de zoekbalk nuttig maakt. Opmaak komt
+van de gedeelde modal-familie TYPE 2 "Formulier" (`.gl-v2-modal-form`), inclusief
+`modal-fullscreen-md-down` — en de modal-shell staat in de pagina-body, niet in `@section PageScripts`,
+om exact de reden die `_SiteManagerNewModalV2.cshtml` documenteert (daar resolven alle `--gl-v2-*`
+tokens naar niets).
+
+**Twee generieke uitbreidingen, geen pagina-specifieke trucs:**
+- **`GlV2KpiItemVm.Hint`** — een optionele derde regel onder het cijfer, de "2 hoofdeenheden · 3
+  bergingen en parkings"-voetjes die 16a/16d bij élke KPI zetten. `_KpiStrip` zet `.has-hint` op de
+  kaart wanneer er een hint is; die variant krijgt een echte derde grid-rij en een `min-height` i.p.v.
+  de vaste hoogte van de basiskaart (die heeft per breakpoint twee auto-rijen in een vaste hoogte, dus
+  een derde regel zou daar geperst worden). Kaarten zonder hint blijven letterlijk ongewijzigd, dus
+  geen enkele bestaande pagina verschuift. In de "ruime" desktopvorm (≤4 items) is `.gl-v2-kpi-text`
+  al een echte flexkolom, dus daar is de hint gewoon het derde kind.
+- **`.gl-v2-badge.is-info` + `--gl-v2-info`/`--gl-v2-info-tint`** — de vierde statustint, en de eerste
+  die gl-v2 écht nodig had. De Don't-regel hieronder ("Don't duplicate the current system's Rust/Ochre/
+  Taupe severity tokens or invent a fourth status color here") zegt: oplossen wanneer een scherm het
+  nodig heeft, niet vooruit gokken. Dat scherm is er nu — 16a onderscheidt "LOS TE KOOP" (een berging
+  of parking zonder lot én zonder koper) van "MET LOT 1" en "BESCHIKBAAR", die beide neutraal-grijs
+  zijn. Waarden letterlijk uit het mockup (`#E4EDF2`/`#2E5F7E`), zoals eerder ook met `#2F6038` voor de
+  menuteller. Het is een informatietint, geen ernstniveau: niets eraan is beter of slechter dan groen
+  of oker. De Don't-regel hierboven is daarmee opgelost, niet geschonden — laat ze staan als de
+  drempel voor een eventuele vijfde.
+
+**Exporteren: één knop met een menu (16a §5), beide helften echt server-side.** De legacy pagina had
+twee naamloze groene icoonknoppen (Excel/PDF), beide client-side via DataTables Buttons + pdfmake.
+Client-side kón hier niet blijven — er is geen DataTable meer om een export op te hangen — dus beide
+helften werden een echte actie. Excel is `ProjectenController.ExportUnitsExcel` (ClosedXML, zelfde
+recept als `ExportInvoicesExcel`), die de boom uitschrijft met de juiste tiende kolom per variant
+(Aandeel basisakte óf Koper). PDF is `PrintUnitList` → `Documents/UnitListDocument.cs`, het derde
+document op de gedeelde `GroupLnPdfDocument`-basis (na de aannemers- en de klantenlijst): A4 liggend,
+huisstijlkop met logo, een PROJECTFICHE, en dan de eenhedentabel met bandrij per groep, ingesprongen
+gekoppelde eenheden (`└` i.p.v. een kleurvlak — een PDF heeft geen hover) en dezelfde totaalregel als
+het scherm. Ook hier schakelt `HasBasisakte` de voorlaatste kolom tussen AANDEEL en KOPER, zodat print
+en scherm nooit een andere kolommenset laten zien. De `@media print`-regels blijven staan als vangnet
+voor wie de pagina gewoon met Ctrl+P uitprint; ze zijn niet meer de exportroute.
+
+**"Aandelen verdelen" (16a §4) kreeg een eigen scherm: `Projecten/Landshares` → `LandsharesV2.cshtml`.**
+De waarschuwing zelf volgt de handoff ("Nul is geen totaal, het is een ontbrekende taak", plus een
+tweede variant voor "de aandelen kloppen niet met het projecttotaal"), maar de handoff zegt niet waar
+de knop heen gaat — er bestond geen scherm dat aandelen in één keer verdeelt, en een aandeel per keer
+op het eenheidsformulier invullen is precies het werk dat een lijst-met-totaal kan overnemen. Het
+scherm **deelt zijn view-model met de eenhedenlijst** (`DetailUnitsV2Vm`, via dezelfde
+`BuildDetailUnitsV2Vm`): dezelfde boom, dezelfde volgorde, dezelfde totalen — de som kan hier dus nooit
+iets anders zeggen dan de lijst waar je net vandaan kwam. Verder:
+- **Eén tabel, dus geen sectienavigatie** (punt 8b's linkerkolom heeft niets te navigeren met één
+  sectie), maar wél de vaste actiebalk `.gl-v2-form-actionbar` van de EditV2-pagina's, met de
+  lopende stand als statusregel links ("Nog 122 aandelen te verdelen" / "De verdeling klopt").
+- **"Verdelen op oppervlakte"** is de eigenlijke reden dat het scherm bestaat: naar rato van
+  `Surface`, afgerond op hele aandelen, met de afrondingsrest naar de grootste eenheid zodat de som
+  exact op het projecttotaal landt. De knop verschijnt alleen wanneer er oppervlaktes én een
+  projecttotaal zijn — anders zou ze altijd nul opleveren.
+- **Leeg ≠ 0.** Een leeg veld is "nog geen aandeel toegekend", 0 is "bewust geen aandeel". De POST
+  bewaart dat onderscheid (`null` vs `0m`), want de lijst leest het verschil: pas bij een som van 0
+  toont ze de "niet verdeeld"-waarschuwing.
+- **Het projecttotaal is hier alleen-lezen**, met een link naar `Projecten/Edit`. `TotalLandShare`
+  hoort bij het project, niet bij de eenheden; op twee plaatsen bewerkbaar maken levert twee schermen
+  op die elkaars waarde kunnen overschrijven.
+- **Nieuwe, smalle service-methode: `IUnitService.UpdateUnitLandshares(projectId, dict)`.** Bewust
+  géén lus van `InsertUpdateUnit`: dat leest per eenheid een volledige `UnitBO` in en schrijft élk veld
+  terug (met alle nevenschade-risico's die de `PaymentGroup`-fix hieronder illustreert) en zou voor 40
+  eenheden 80 queries kosten. Deze schrijft alleen `Units.Landshare`, in één `SaveChanges`, en negeert
+  id's die niet bij het meegegeven project horen.
+- **Het scherm bestaat alleen in gl-v2** (DESIGN.md's eigen regel voor nieuw werk), dus zonder de
+  preview-cookie zou `_ViewStart` `_Layout` kiezen en de pagina volledig ongestyled renderen. De actie
+  stuurt in dat geval terug naar de eenhedenlijst i.p.v. een kapot scherm te tonen.
+- Het inner menu houdt **"Eenheden" actief** op dit scherm — zelfde `IsHere`-uitzondering als "Klanten"
+  al had voor `Klanten/Detail`/`Klanten/EditProject`.
+
+**Gevonden en gefixt onderweg: `GetUnitById` laadde `Units.PaymentGroup` niet.** `UnitTranslator`
+zet `_entity.PaymentGroupId = null` zodra `bo.PaymentGroupId` leeg is, dus élke aanroeper die een
+eenheid via `GetUnitById` inleest, iets wijzigt en met `InsertUpdateUnit` terugschrijft wiste stil de
+koppeling met de betalingsgroep (`PaymentGroupLink`/`LinkPaymentGroupToUnit`). `EditUnit` ontsnapte
+daaraan enkel doordat zijn formulier `Unit.PaymentGroupId` als hidden field meepost — de koppeldialoog
+van 16c zou er wél over gestruikeld zijn. Eén `.Include(m => m.PaymentGroup)` erbij, en de klasse van
+fouten verdwijnt voor alle huidige en toekomstige aanroepers.
+
+**Verdiepingslabel: `Units.LevelId`/`ProjectLevels` is dode data, dus de kolom leest uit
+`Units.Level`.** Er bestaat een `ProjectLevels`-tabel (een vrije verdiepingslijst per project, met
+`GetLevelsByProjectId`/`InsertUpdateLevel` in de service en de facade) en `Units.LevelId` verwijst
+ernaar — maar geen enkel scherm vult of leest dat veld, en de enige schrijfregel in de hele codebase
+kopieert het van een lid naar een KOPPELING-eenheid. De kolom VERDIEPING leest daarom het numerieke
+`Units.Level`, dat het eenheidsformulier wél bijhoudt. Eén nuance toegevoegd op vraag: bij een
+nevenruimte (berging/parking) leest een negatief niveau als **"Ondergronds"** i.p.v. "Kelder -1" — dat
+is het woord waarmee een berging of staanplaats in de praktijk beschreven wordt, terwijl "Kelder n" bij
+een wooneenheid wél juist is. Verder valt er niets uit de data te halen: "buiten" of "bovengronds"
+staat nergens als veld en zit vandaag in de naam van het eenheidstype (`UnitTypes`), die deze pagina al
+als tweede regel in de TYPE-kolom toont.
+
+**Mobiele kaarten server-side, niet uit de tabelrijen gekloond.** DetailClientsV2 en Klanten/IndexV2
+bouwen hun kaarten in JS op elke DataTables-`draw`; zonder DataTable is er hier geen draw-event om op
+te hangen, en de boomrelatie (welke kaart hangt onder welke) is in Razor al bekend. Dezelfde
+`data-*`-attributen op kaart en rij, dus één filterpas bedient beide. `.gl-v2-du-card[hidden]` krijgt
+een expliciete `display:none !important` — de kaart heeft zelf `display:flex`, dat wint anders van het
+`[hidden]`-attribuut (zie de Don't-regel daarover).
+
+**Kruimelpad:** stopt bij de projectnaam i.p.v. nog een "Eenheden"-knoop toe te voegen die de
+paginatitel herhaalt (punt 13, regel 2 — zelfde fix als DetailClients). Enkel in de gl-v2-tak: anders
+dan bij DetailClients rendert de legacy `DetailUnits.cshtml` géén eigen `ViewBag.Breadcrumbs` (dat blok
+staat er uitgecommentarieerd) en leest dus hetzelfde `BreadcrumbNode`, dus die houdt zijn eigen laatste
+knoop.
+
+**Verwijderen hergebruikt de legacy modal niet.** `Modals/_ModalDeleteUnit.cshtml` is een volledige
+legacy `.card` met eigen koptekst en knoppen, geen gl-v2 `modal-body`/`modal-footer`, en er valt niets
+te laden dat de rij zelf niet al weet — dus één statische bevestiging in de pagina die per rij zijn
+naam en doel-URL krijgt, i.p.v. een AJAX-fragment of een modal per eenheid. De verwijderactie zelf
+(`ProjectenController.DeleteUnit`) blijft ongewijzigd.

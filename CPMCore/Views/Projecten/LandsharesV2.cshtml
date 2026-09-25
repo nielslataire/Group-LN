@@ -1,0 +1,281 @@
+@model CPMCore.Models.Projecten.DetailUnitsV2Vm
+@*
+    gl-v2 — "Aandelen basisakte verdelen". De bestemming van de waarschuwing op Projecten/DetailUnitsV2
+    (design-handoff 16a §4: "Nul is geen totaal, het is een ontbrekende taak"). Dit scherm staat NIET in
+    de design-handoff: 16a zet daar enkel een knop "Aandelen verdelen" zonder te zeggen waar die
+    heengaat. De opbouw volgt daarom de bestaande gl-v2-formulierconventies i.p.v. een nieuw patroon te
+    verzinnen: dezelfde shell en inner menu als de eenhedenlijst, één tabel als enige sectie (geen
+    sectienavigatie uit punt 8b — er is maar één sectie), en de vaste actiebalk onderaan
+    (.gl-v2-form-actionbar) met de niet-opgeslagen-wijzigingen-afhandeling die EditContractV2 al gebruikt.
+
+    Deelt zijn view-model met de eenhedenlijst (DetailUnitsV2Vm): dezelfde boom, dezelfde totalen,
+    dezelfde volgorde. Zo kan de som hier nooit iets anders zeggen dan de lijst waar je net vandaan komt.
+
+    Twee bewuste keuzes:
+    - **Het projecttotaal is hier alleen-lezen**, met een link naar de projectinstellingen. Dat getal
+      (ProjectBO.TotalLandShare) hoort bij het project, niet bij de eenheden; het op twee plaatsen
+      bewerkbaar maken levert twee schermen op die elkaars waarde kunnen overschrijven.
+    - **Een leeg veld is niet hetzelfde als 0.** Leeg = "nog geen aandeel toegekend", 0 = "bewust geen
+      aandeel". De controller bewaart dat onderscheid (null vs 0), dus de lijst kan blijven zien welke
+      eenheden nog wachten.
+*@
+@using System.Globalization
+@using CPMCore.Models.Projecten
+@{
+    ViewData["Title"] = "Aandelen basisakte";
+    ViewData["PageIcon"] = "ph ph-scales";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailUnits", "Projecten", new { projectid = Model.ProjectId });
+
+    var canWrite = ViewBag.CanWriteProjectUnits as bool? ?? false;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+
+    string Num(decimal value) => value.ToString("#,##0.##", be);
+    string M2(decimal? value) => (value ?? 0m) > 0m ? Num(value!.Value) + " m²" : "—";
+    string UnitIcon(int groupId) => groupId switch
+    {
+        1 => "ph-house",
+        4 => "ph-storefront",
+        2 => "ph-package",
+        3 => "ph-car",
+        _ => "ph-squares-four"
+    };
+
+    var unitCount = Model.AllRows.Count;
+    var menuVm = new CPMCore.Models.GlV2.GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = $"project · {unitCount} eenhe" + (unitCount == 1 ? "id" : "den"),
+        IsCoordinationProject = Model.IsCoordinationProject,
+        ItemCounts = new Dictionary<string, int> { ["Eenheden"] = unitCount }
+    };
+
+    // Grondslag voor "Verdelen op oppervlakte": zonder oppervlaktes valt er niks proportioneel te
+    // verdelen, dus dan blijft die knop weg i.p.v. een knop te tonen die altijd nul oplevert.
+    var surfaceBase = Model.AllRows.Sum(r => r.Surface ?? 0m);
+    var canDistribute = canWrite && Model.LandshareTotal > 0m && surfaceBase > 0m;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detailunits.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral" id="gl-v2-ls-total-badge"
+          data-total="@Model.LandshareTotal.ToString("0.##", CultureInfo.InvariantCulture)">
+        @Num(Model.LandshareAssigned) / @Num(Model.LandshareTotal)
+    </span>
+    <span class="gl-v2-badge is-attention" id="gl-v2-ls-dirty-badge" hidden>NIET-OPGESLAGEN</span>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form method="post" action="@Url.Action("SaveLandshares", "Projecten")" id="gl-v2-ls-form" class="gl-v2-ls-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+
+    <div class="gl-v2-ls-scroll">
+        <div class="gl-v2-du-notice is-neutral">
+            <span class="gl-v2-du-notice-label">Projecttotaal</span>
+            <span class="gl-v2-du-notice-title">@Num(Model.LandshareTotal) aandelen</span>
+            <span class="gl-v2-du-notice-desc">
+                — dit is het totaal uit de basisakte. Verdeel het hieronder over de eenheden; de som moet exact
+                op dit getal uitkomen.
+            </span>
+            <span class="gl-v2-du-notice-spacer"></span>
+            <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-du-notice-action">Totaal wijzigen</a>
+        </div>
+
+        @if (unitCount == 0)
+        {
+            <div class="gl-v2-card gl-v2-du-table-card">
+                <div class="gl-v2-card-body">
+                    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                        <span class="gl-v2-empty-state-icon"><i class="ph ph-scales" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-empty-state-title">Nog geen eenheden</h2>
+                        <p class="gl-v2-empty-state-desc">Er is nog niets om aandelen over te verdelen. Voeg eerst eenheden toe aan dit project.</p>
+                        <div class="gl-v2-empty-state-actions">
+                            <a href="@Url.Action("DetailUnits", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">Naar de eenheden</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (canWrite)
+            {
+                <div class="gl-v2-du-toolbar gl-v2-ls-toolbar">
+                    @if (canDistribute)
+                    {
+                        @* De eigenlijke reden dat dit scherm bestaat: met de hand 40 keer een aandeel
+                           uitrekenen is precies de taak die een lijst-met-totaal kan overnemen. Verdeelt
+                           naar rato van de oppervlakte, met de rest bij de grootste eenheid zodat de som
+                           exact op het projecttotaal uitkomt. *@
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-ls-distribute">
+                            <i class="ph ph-scales" aria-hidden="true"></i>Verdelen op oppervlakte
+                        </button>
+                    }
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-ls-clear">
+                        <i class="ph ph-eraser" aria-hidden="true"></i>Alles leegmaken
+                    </button>
+                    <span class="gl-v2-du-notice-spacer"></span>
+                    <span class="gl-v2-ls-hint">Een leeg veld betekent "nog geen aandeel", 0 betekent "bewust geen aandeel".</span>
+                </div>
+            }
+
+            <div class="gl-v2-card gl-v2-du-table-card">
+                <div class="gl-v2-card-body">
+                    <div class="gl-v2-du-table-scroll">
+                        <table class="gl-v2-du-table gl-v2-ls-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Eenheid</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col" class="is-right gl-v2-du-col-collapsible">Oppervlakte</th>
+                                    <th scope="col" class="is-right">Aandeel</th>
+                                    <th scope="col" class="is-right">Aandeel %</th>
+                                </tr>
+                            </thead>
+                            @foreach (var group in Model.Groups)
+                            {
+                                <tbody>
+                                    <tr class="gl-v2-du-group-row">
+                                        <td colspan="5">
+                                            <span class="gl-v2-du-group-toggle" role="presentation">
+                                                <i class="ph @group.IconClass" aria-hidden="true"></i>
+                                                @group.Label
+                                                <span class="gl-v2-du-group-count">@group.TotalRowCount</span>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    @foreach (var row in group.Rows)
+                                    {
+                                        foreach (var r in new[] { row }.Concat(row.Children))
+                                        {
+                                            <tr class="gl-v2-du-row @(r.IsAttached ? "is-child" : "")" data-ls-row data-surface="@((r.Surface ?? 0m).ToString("0.##", CultureInfo.InvariantCulture))">
+                                                <td>
+                                                    <div class="gl-v2-du-unit @(r.IsAttached ? "is-child" : "")">
+                                                        @if (r.IsAttached)
+                                                        {
+                                                            <span class="gl-v2-du-connector" aria-hidden="true"></span>
+                                                        }
+                                                        <span class="gl-v2-du-unit-icon"><i class="ph @UnitIcon(r.TypeGroupId)" aria-hidden="true"></i></span>
+                                                        <span class="gl-v2-du-unit-text">
+                                                            <span class="gl-v2-du-unit-name">@r.Name</span>
+                                                            @if (!string.IsNullOrWhiteSpace(r.SubLine))
+                                                            {
+                                                                <span class="gl-v2-du-unit-sub">@r.SubLine</span>
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="gl-v2-du-stack">
+                                                        <span class="gl-v2-du-stack-main">@r.TypeGroupLabel</span>
+                                                        @if (!string.IsNullOrWhiteSpace(r.TypeName))
+                                                        {
+                                                            <span class="gl-v2-du-stack-sub">@r.TypeName</span>
+                                                        }
+                                                    </span>
+                                                </td>
+                                                <td class="is-right gl-v2-du-col-collapsible">
+                                                    <span class="gl-v2-du-stack-main gl-v2-du-tabular @((r.Surface ?? 0m) > 0m ? "" : "gl-v2-du-muted")">@M2(r.Surface)</span>
+                                                </td>
+                                                <td class="is-right">
+                                                    <input type="hidden" name="unitIds" value="@r.UnitId" />
+                                                    <div class="gl-v2-field gl-v2-ls-field">
+                                                        <div class="gl-v2-field-box">
+                                                            <input type="text"
+                                                                   name="landshares"
+                                                                   class="gl-v2-field-input is-tabular gl-v2-ls-input"
+                                                                   value="@(r.Landshare.HasValue ? Num(r.Landshare.Value) : "")"
+                                                                   placeholder="—"
+                                                                   inputmode="decimal"
+                                                                   autocomplete="off"
+                                                                   aria-label="Aandeel voor @r.Name"
+                                                                   disabled="@(canWrite ? null : "disabled")" />
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="is-right">
+                                                    <span class="gl-v2-du-stack-sub gl-v2-du-tabular gl-v2-ls-pct">—</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            }
+                            <tfoot>
+                                <tr>
+                                    <td>Totaal @Model.ProjectName</td>
+                                    <td></td>
+                                    <td class="is-right gl-v2-du-col-collapsible">
+                                        <span class="gl-v2-du-stack-main gl-v2-du-tabular">@M2(surfaceBase)</span>
+                                    </td>
+                                    <td class="is-right">
+                                        <span class="gl-v2-du-total-landshare" id="gl-v2-ls-sum">@Num(Model.LandshareAssigned)</span>
+                                        <span class="gl-v2-du-stack-sub gl-v2-du-tabular">van @Num(Model.LandshareTotal)</span>
+                                    </td>
+                                    <td class="is-right"><span class="gl-v2-du-stack-sub gl-v2-du-tabular" id="gl-v2-ls-sum-pct">—</span></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* Vaste actiebalk (het bestaande .gl-v2-form-actionbar-component van de EditV2-pagina's) — de
+       statusregel links is hier de enige plek waar je in één blik ziet of de verdeling klopt. *@
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-form-actionbar-status" id="gl-v2-ls-status">
+            <i class="ph ph-scales" aria-hidden="true"></i>
+            <span id="gl-v2-ls-status-text">—</span>
+        </span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Url.Action("DetailUnits", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-ls-cancel-link">Annuleren</a>
+            @if (canWrite && unitCount > 0)
+            {
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary">
+                    <i class="ph ph-check" aria-hidden="true"></i>Aandelen opslaan
+                </button>
+            }
+        </div>
+    </div>
+</form>
+
+@* Zelfde "wijzigingen niet opslaan?"-bevestiging als EditContractV2, woordelijk hetzelfde recept. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-ls-discard-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-ls-discard-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-ls-discard-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder de aandelen op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar de verdeling</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-ls-discard-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-landshares.js" asp-append-version="true"></script>
+}

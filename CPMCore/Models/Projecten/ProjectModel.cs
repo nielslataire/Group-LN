@@ -973,6 +973,13 @@ namespace CPMCore.Models.Projecten
             }
         }
 
+
+        /// <summary>gl-v2 (Projecten/DetailUnitsV2, design-handoff punt 16a/16d) — de volledige,
+        /// voorgekauwde eenhedenboom + KPI-cijfers voor de gl-v2-variant van deze pagina. Enkel gevuld
+        /// door ProjectenController.DetailUnits; de legacy view en de AddUnit/EditUnit-paden die
+        /// FillDetailUnitModel delen raken dit niet aan.</summary>
+        public DetailUnitsV2Vm? GlV2 { get; set; }
+
         public enum EnumType : int
         {
             Eenheid = 1,

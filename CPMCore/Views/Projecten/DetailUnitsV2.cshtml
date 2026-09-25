@@ -1,0 +1,657 @@
+@model CPMCore.Models.Projecten.DetailUnitsModel
+@*
+    gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 16). Twee opties, één pagina:
+    16a "Eenhedenlijst — hoofdeenheden met hun berging en parking eronder" en 16d "Eenhedenlijst zonder
+    basisakte — elk lot een eigen perceel, koper in plaats van aandeel". 16d's eigen regel 1 is hier
+    letterlijk de implementatie: het PROJECT bepaalt de kolommen, niet de gebruiker — heeft het project
+    een totaal aandeel basisakte (ProjectBO.TotalLandShare, in te stellen op Projecten/Edit), dan toont
+    de lijst de kolom BASISAKTE plus de waarschuwing van 16a §4; heeft het dat niet, dan wordt die kolom
+    KOPER (met de datum van het compromis), wordt de vierde KPI grondoppervlakte en wordt de
+    waarschuwing een neutrale projectregel (16d §3: "Zo ziet niemand het ontbreken als een fout").
+
+    Shell hergebruikt zoals op Projecten/DetailClientsV2: hetzelfde inner menu (GlV2/_ProjectInnerMenuV2,
+    Outer + Phone via @section ProjectMenu) en dezelfde topbar-conventies
+    (PageTitleBadges/PageActions/BackUrl). KPI-strook is de gedeelde GlV2/_KpiStrip — met de nieuwe,
+    optionele Hint-regel eronder (16a/16d's eigen voetjes bij elk cijfer), zodat ook dat een gedeelde
+    component blijft i.p.v. hier vier eigen kaartjes.
+
+    Wat er anders is dan de legacy Views/Projecten/DetailUnits.cshtml + Partials/Units.cshtml, met het
+    nummer uit 16a's eigen "WAT ER ANDERS IS DAN IN JOUW HUIDIGE SCHERM":
+    §1  Gekoppelde eenheden hangen onder hun hoofdeenheid, ingesprongen met een verbindingslijn. De
+        legacy lijst was plat (GetUnitsByProjectId) met een dood plus-icoontje; hier komt de boom van
+        GetUnitsWithAttachedByProjectId — dezelfde dienst die de Eenheden-tabel op Projecten/DetailV2
+        al gebruikt.
+    §2  Koppelen is een regel in de tabel ("Berging of parking koppelen aan …"), niet een derde icoon
+        in een rij van drie. Het ⋯-menu houdt bewerken, ontkoppelen en verwijderen.
+    §3  Echte kolommen: adres + kadaster onder de naam, oppervlakte (+ grond), verkoopprijs (inclusief
+        wat gekoppeld is), aandeel basisakte of koper, en status.
+    §4  "Totaal basisakte: 0" wordt een waarschuwing met context i.p.v. een leeg totaal.
+    §5  De twee naamloze groene icoonknoppen (Excel/PDF) worden één knop "Exporteren" met keuze.
+    §6  Groepen zijn inklapbaar; nevenruimtes die nog aan geen enkel lot hangen staan apart onder
+        "Los te koop".
+    §7  Paginering valt weg (16a rekent daar zelf op onder 50 eenheden) — en kán hier ook niet: zie de
+        kop van gl-v2-projecten-detailunits.js over waarom deze lijst geen DataTable is.
+
+    Bewuste afwijkingen van het mockup, met de reden erbij:
+    - **Beide exportknoppen zijn echte server-side acties.** Excel is een .xlsx via ClosedXML
+      (ExportUnitsExcel), de PDF een opgemaakt document via UnitListDocument/QuestPDF (PrintUnitList) op
+      dezelfde huisstijlbasis (GroupLnPdfDocument) als de klantenlijst — niet de client-side
+      DataTables/pdfmake-export van de legacy pagina, die hier ook niet kón blijven omdat deze lijst geen
+      DataTable meer is. De @media print-regels in gl-v2-projecten-detailunits.css blijven staan voor wie
+      gewoon Ctrl+P gebruikt.
+    - **"Aandelen verdelen" (16a §4) gaat naar een eigen scherm, Projecten/Landshares.** Dat stond niet
+      in de handoff — 16a zet daar enkel een knop zonder bestemming. Zie LandsharesV2.cshtml voor de
+      opbouw. 16d's "Wijzigen in projectinstellingen" blijft Projecten/Edit, waar TotalLandShare staat.
+    - **Legacy "KOPPELING"-eenheden (Units.IsLink) blijven zichtbaar, met een markering.** Deze pagina
+      koppelt via Units.AttachedUnitId (16c), maar bestaande projecten kunnen nog samengestelde
+      KOPPELING-eenheden uit het oude mechanisme bevatten. Die stil weglaten zou eenheden doen verdwijnen.
+*@
+@using System.Globalization
+@using CPMCore.Models.Projecten
+@{
+    var vm = Model.GlV2!;
+    ViewData["Title"] = "Eenheden";
+    ViewData["PageIcon"] = "ph ph-buildings";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = vm.ProjectId });
+
+    var canWrite = ViewBag.CanWriteProjectUnits as bool? ?? false;
+    var canDelete = ViewBag.CanDeleteProjectUnits as bool? ?? false;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+
+    var unitCount = vm.AllRows.Count;
+    var menuVm = new CPMCore.Models.GlV2.GlV2ProjectMenuVm
+    {
+        ProjectId = vm.ProjectId,
+        ProjectName = vm.ProjectName,
+        ProjectSubtitle = $"project · {unitCount} eenhe" + (unitCount == 1 ? "id" : "den"),
+        IsCoordinationProject = vm.IsCoordinationProject,
+        ItemCounts = new Dictionary<string, int> { ["Eenheden"] = unitCount }
+    };
+
+    string Euro(decimal value) => value.ToString("C0", be);
+    string Num(decimal value) => value.ToString("#,##0.##", be);
+    string M2(decimal? value) => value.HasValue && value.Value > 0m ? Num(value.Value) + " m²" : "—";
+
+    string UnitIcon(int groupId) => groupId switch
+    {
+        1 => "ph-house",
+        4 => "ph-storefront",
+        2 => "ph-package",
+        3 => "ph-car",
+        _ => "ph-squares-four"
+    };
+
+    // Elke rij hoort bij precies één groep; die sleutel hangt aan de rij zodat het in-/uitklappen en
+    // de "geen resultaten"-teller in de JS met één attribuut kunnen werken.
+    var groupKeyByUnitId = new Dictionary<int, string>();
+    foreach (var g in vm.Groups)
+    {
+        foreach (var r in g.Rows)
+        {
+            groupKeyByUnitId[r.UnitId] = g.Key;
+            foreach (var c in r.Children) groupKeyByUnitId[c.UnitId] = g.Key;
+        }
+    }
+    string GroupKeyOf(DetailUnitsV2Row row) => groupKeyByUnitId.TryGetValue(row.UnitId, out var k) ? k : "overig";
+
+    // ── KPI's (16a/16d §1) — de vierde kaart is het enige verschil tussen beide varianten ──────────
+    var landshareOk = vm.LandshareTotal > 0m && vm.LandshareAssigned == vm.LandshareTotal;
+    var kpis = new List<CPMCore.Models.GlV2.GlV2KpiItemVm>
+    {
+        new()
+        {
+            Label = "EENHEDEN",
+            Value = $"{vm.MainCount} + {vm.SecondaryCount}",
+            Hint = $"{vm.MainCount} hoofdeenhe{(vm.MainCount == 1 ? "id" : "den")} · {vm.SecondaryCount} bergingen en parkings",
+            IconClass = "ph-buildings"
+        },
+        new()
+        {
+            Label = "VERKOOPWAARDE",
+            Value = Euro(vm.SalesValueTotal),
+            Hint = "bij afgewerkte oplevering",
+            IconClass = "ph-currency-eur"
+        },
+        new()
+        {
+            Label = "VERKOCHT",
+            Value = $"{vm.SoldMainCount} / {vm.MainCount}",
+            Hint = vm.MainCount > 0
+                ? $"hoofdeenheden · {Math.Round(vm.SoldMainCount * 100m / vm.MainCount)} %"
+                : "nog geen hoofdeenheden",
+            IconClass = "ph-seal-check"
+        }
+    };
+    if (vm.HasBasisakte)
+    {
+        kpis.Add(new()
+        {
+            Label = "BASISAKTE",
+            Value = $"{Num(vm.LandshareAssigned)} / {Num(vm.LandshareTotal)}",
+            Hint = vm.LandshareAssigned == 0m
+                ? "nog niet verdeeld over de eenheden"
+                : (landshareOk ? "volledig verdeeld" : "wijkt af van het projecttotaal"),
+            IconClass = "ph-scales",
+            Tone = landshareOk ? CPMCore.Models.GlV2.GlV2KpiTone.Primary : CPMCore.Models.GlV2.GlV2KpiTone.Warning
+        });
+    }
+    else
+    {
+        kpis.Add(new()
+        {
+            Label = "GRONDOPPERVLAKTE",
+            Value = M2(vm.GroundSurfaceTotal),
+            Hint = $"{vm.ParcelCount} percel{(vm.ParcelCount == 1 ? "" : "en")} · volgens kadaster",
+            IconClass = "ph-map-trifold"
+        });
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-detailunits.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@unitCount EENHE@(unitCount == 1 ? "ID" : "DEN")</span>
+}
+@* Op tablet (768–1023.98px) verhuizen deze twee knoppen naar het ⋯-menu — zelfde recept als
+   DetailClientsV2's .gl-v2-dc-topbar-btn: de knoppen verdwijnen op dat bereik
+   (gl-v2-projecten-detailunits.css), de trigger errond is enkel dáár zichtbaar. Op gsm (<768px)
+   verdwijnt @@section PageActions sowieso volledig (shell-standaard); die breedte krijgt dezelfde
+   acties terug via @@section MobileQuickActions. *@
+@section PageActions
+{
+    <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-du-topbar-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-du-export-menu">
+        <i class="ph ph-export" aria-hidden="true"></i>Exporteren
+    </button>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddUnit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-btn gl-v2-btn-primary gl-v2-du-topbar-btn">
+            <i class="ph ph-plus" aria-hidden="true"></i>Eenheid toevoegen
+        </a>
+    }
+    <button type="button" class="gl-v2-icon-btn gl-v2-du-topbar-menu-trigger js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-du-topbar-menu" aria-label="Meer acties">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>
+    </button>
+}
+@section MobileQuickActions
+{
+    <a href="@Url.Action("ExportUnitsExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-file-xls" aria-hidden="true"></i>Excel
+    </a>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddUnit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-mobile-quickaction">
+            <i class="ph ph-plus" aria-hidden="true"></i>Eenheid toevoegen
+        </a>
+    }
+}
+
+@* 16a §5: de twee naamloze icoonknoppen worden één "Exporteren" met de keuze in het menu. *@
+<div class="gl-v2-menu" id="gl-v2-du-export-menu">
+    <a href="@Url.Action("ExportUnitsExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-menu-item">
+        <i class="ph ph-file-xls" aria-hidden="true"></i>Excel-bestand
+    </a>
+    <a href="@Url.Action("PrintUnitList", "Projecten", new { projectid = vm.ProjectId })" target="_blank" rel="noopener" class="gl-v2-menu-item">
+        <i class="ph ph-file-pdf" aria-hidden="true"></i>Pdf-eenhedenlijst
+    </a>
+</div>
+<div class="gl-v2-menu" id="gl-v2-du-topbar-menu">
+    <a href="@Url.Action("ExportUnitsExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-menu-item">
+        <i class="ph ph-file-xls" aria-hidden="true"></i>Excel-bestand
+    </a>
+    <a href="@Url.Action("PrintUnitList", "Projecten", new { projectid = vm.ProjectId })" target="_blank" rel="noopener" class="gl-v2-menu-item">
+        <i class="ph ph-file-pdf" aria-hidden="true"></i>Pdf-eenhedenlijst
+    </a>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("AddUnit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-menu-item">
+            <i class="ph ph-plus" aria-hidden="true"></i>Eenheid toevoegen
+        </a>
+        @if (vm.HasBasisakte)
+        {
+            <a href="@Url.Action("Landshares", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-menu-item">
+                <i class="ph ph-scales" aria-hidden="true"></i>Aandelen verdelen
+            </a>
+        }
+    }
+</div>
+@section ProjectMenu
+{
+    @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@await Html.PartialAsync("GlV2/_KpiStrip", kpis)
+
+@if (vm.HasBasisakte && vm.LandshareAssigned == 0m)
+{
+    @* 16a §4: nul is geen totaal, het is een ontbrekende taak. *@
+    <div class="gl-v2-du-notice is-warning">
+        <span class="gl-v2-du-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <span class="gl-v2-du-notice-title">Basisakte niet verdeeld</span>
+        <span class="gl-v2-du-notice-desc">
+            Geen enkele eenheid heeft een aandeel, terwijl het project op @Num(vm.LandshareTotal) aandelen staat.
+            De notaris heeft die verdeling nodig voor de verkoopakte.
+        </span>
+        <span class="gl-v2-du-notice-spacer"></span>
+        @if (canWrite)
+        {
+            <a href="@Url.Action("Landshares", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-du-notice-action">Aandelen verdelen</a>
+        }
+    </div>
+}
+else if (vm.HasBasisakte && vm.LandshareTotal > 0m && vm.LandshareAssigned != vm.LandshareTotal)
+{
+    <div class="gl-v2-du-notice is-warning">
+        <span class="gl-v2-du-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <span class="gl-v2-du-notice-title">Aandelen kloppen niet</span>
+        <span class="gl-v2-du-notice-desc">
+            De eenheden dragen samen @Num(vm.LandshareAssigned) aandelen, terwijl het project op @Num(vm.LandshareTotal) staat.
+        </span>
+        <span class="gl-v2-du-notice-spacer"></span>
+        @if (canWrite)
+        {
+            <a href="@Url.Action("Landshares", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-du-notice-action">Aandelen verdelen</a>
+        }
+        <a href="@Url.Action("Edit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-du-notice-action">Projectinstellingen</a>
+    </div>
+}
+else if (!vm.HasBasisakte)
+{
+    @* 16d §3: een neutrale projectregel die zegt waarom er geen basisakte is. *@
+    <div class="gl-v2-du-notice is-neutral">
+        <span class="gl-v2-du-notice-label">Projecttype</span>
+        <span class="gl-v2-du-notice-title">Losse loten, geen mede-eigendom</span>
+        <span class="gl-v2-du-notice-desc">— geen basisakte, elk lot wordt apart verkocht met eigen perceel</span>
+        <span class="gl-v2-du-notice-spacer"></span>
+        <a href="@Url.Action("Edit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-du-notice-action">Wijzigen in projectinstellingen</a>
+    </div>
+}
+
+<div class="gl-v2-du-toolbar">
+    <div class="gl-v2-field gl-v2-du-search">
+        <div class="gl-v2-field-box">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" class="gl-v2-field-input" id="gl-v2-du-search" placeholder="Zoek op naam, adres of kadaster …" autocomplete="off" aria-label="Eenheden zoeken">
+            <button type="button" class="gl-v2-field-clear" id="gl-v2-du-search-clear" aria-label="Zoekterm wissen">&times;</button>
+        </div>
+    </div>
+    @* 16a §6: chips met tellers i.p.v. een dichtgeklapt filterpaneel — de tellers zijn zelf al het
+       antwoord op "wat heb ik hier eigenlijk staan". Een chip zonder eenheden blijft staan maar is niet
+       klikbaar (zie .is-empty in de CSS). *@
+    <div class="gl-v2-du-chips" role="group" aria-label="Filter op type">
+        <button type="button" class="gl-v2-du-chip is-active" data-chip-kind="type" data-chip-value="">Alles <span class="gl-v2-du-chip-count">@unitCount</span></button>
+        <button type="button" class="gl-v2-du-chip @(vm.WoningCount == 0 ? "is-empty" : "")" data-chip-kind="type" data-chip-value="woning" disabled="@(vm.WoningCount == 0 ? "disabled" : null)">Woningen <span class="gl-v2-du-chip-count">@vm.WoningCount</span></button>
+        @if (vm.CommercialCount > 0)
+        {
+            <button type="button" class="gl-v2-du-chip" data-chip-kind="type" data-chip-value="commercieel">Commercieel <span class="gl-v2-du-chip-count">@vm.CommercialCount</span></button>
+        }
+        <button type="button" class="gl-v2-du-chip @(vm.StorageCount == 0 ? "is-empty" : "")" data-chip-kind="type" data-chip-value="berging" disabled="@(vm.StorageCount == 0 ? "disabled" : null)">Bergingen <span class="gl-v2-du-chip-count">@vm.StorageCount</span></button>
+        <button type="button" class="gl-v2-du-chip @(vm.ParkingCount == 0 ? "is-empty" : "")" data-chip-kind="type" data-chip-value="parking" disabled="@(vm.ParkingCount == 0 ? "disabled" : null)">Parkings <span class="gl-v2-du-chip-count">@vm.ParkingCount</span></button>
+    </div>
+    <span class="gl-v2-du-chip-sep" aria-hidden="true"></span>
+    <div class="gl-v2-du-chips" role="group" aria-label="Filter op status">
+        <button type="button" class="gl-v2-du-chip @(vm.AvailableCount == 0 ? "is-empty" : "")" data-chip-kind="status" data-chip-value="beschikbaar" disabled="@(vm.AvailableCount == 0 ? "disabled" : null)">Beschikbaar <span class="gl-v2-du-chip-count">@vm.AvailableCount</span></button>
+        <button type="button" class="gl-v2-du-chip @(vm.SoldCount == 0 ? "is-empty" : "")" data-chip-kind="status" data-chip-value="verkocht" disabled="@(vm.SoldCount == 0 ? "disabled" : null)">Verkocht <span class="gl-v2-du-chip-count">@vm.SoldCount</span></button>
+    </div>
+</div>
+
+<div class="gl-v2-card gl-v2-du-table-card">
+    <div class="gl-v2-card-body">
+        @if (unitCount == 0)
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen eenheden</h2>
+                <p class="gl-v2-empty-state-desc">Er zijn nog geen eenheden toegevoegd aan dit project.</p>
+                @if (canWrite)
+                {
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@Url.Action("AddUnit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">Eenheid toevoegen</a>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-du-table-scroll">
+                <table class="gl-v2-du-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Eenheid</th>
+                            <th scope="col">Type</th>
+                            <th scope="col" class="gl-v2-du-col-collapsible">Verdieping</th>
+                            <th scope="col" class="is-right gl-v2-du-col-collapsible">Oppervlakte</th>
+                            <th scope="col" class="is-right">Verkoopprijs</th>
+                            <th scope="col" class="@(vm.HasBasisakte ? "is-right" : "")">@(vm.HasBasisakte ? "Basisakte" : "Koper")</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Acties</span></th>
+                        </tr>
+                    </thead>
+                    @foreach (var group in vm.Groups)
+                    {
+                        <tbody>
+                            <tr class="gl-v2-du-group-row" data-group-row data-group="@group.Key">
+                                <td colspan="8">
+                                    <button type="button" class="gl-v2-du-group-toggle" data-group-toggle="@group.Key" aria-expanded="true">
+                                        <i class="ph ph-caret-down gl-v2-du-group-caret" aria-hidden="true"></i>
+                                        <i class="ph @group.IconClass" aria-hidden="true"></i>
+                                        @group.Label
+                                        <span class="gl-v2-du-group-count">@group.TotalRowCount</span>
+                                        <span class="gl-v2-du-group-spacer"></span>
+                                    </button>
+                                </td>
+                            </tr>
+                            @foreach (var row in group.Rows)
+                            {
+                                foreach (var r in new[] { row }.Concat(row.Children))
+                                {
+                                    var editUrl = Url.Action("EditUnit", "Projecten", new { projectid = vm.ProjectId, unitid = r.UnitId });
+                                    <tr class="gl-v2-du-row @(r.IsAttached ? "is-child" : "")"
+                                        data-unit-row
+                                        data-row-id="@r.UnitId"
+                                        data-parent-id="@(r.ParentUnitId?.ToString() ?? "")"
+                                        data-group="@GroupKeyOf(r)"
+                                        data-type="@r.TypeFilterKey"
+                                        data-status="@r.StatusFilterKey"
+                                        data-search="@r.SearchText">
+                                        <td>
+                                            <div class="gl-v2-du-unit @(r.IsAttached ? "is-child" : "")">
+                                                @if (r.IsAttached)
+                                                {
+                                                    <span class="gl-v2-du-connector" aria-hidden="true"></span>
+                                                }
+                                                <span class="gl-v2-du-unit-icon"><i class="ph @UnitIcon(r.TypeGroupId)" aria-hidden="true"></i></span>
+                                                <span class="gl-v2-du-unit-text">
+                                                    <a class="gl-v2-du-unit-name" href="@editUrl">@r.Name</a>
+                                                    @if (!string.IsNullOrWhiteSpace(r.SubLine))
+                                                    {
+                                                        <span class="gl-v2-du-unit-sub">@r.SubLine</span>
+                                                    }
+                                                </span>
+                                                @if (r.IsLink)
+                                                {
+                                                    <span class="gl-v2-du-legacy-tag" title="Samengestelde eenheid uit het oude koppelmechanisme">Koppeling</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="gl-v2-du-stack">
+                                                <span class="gl-v2-du-stack-main">@r.TypeGroupLabel</span>
+                                                @if (!string.IsNullOrWhiteSpace(r.TypeName))
+                                                {
+                                                    <span class="gl-v2-du-stack-sub">@r.TypeName</span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td class="gl-v2-du-col-collapsible">@r.LevelLabel</td>
+                                        <td class="is-right gl-v2-du-col-collapsible">
+                                            <span class="gl-v2-du-stack is-right">
+                                                <span class="gl-v2-du-stack-main gl-v2-du-tabular @((r.Surface ?? 0m) > 0m ? "" : "gl-v2-du-muted")">@M2(r.Surface)</span>
+                                                @if ((r.GroundSurface ?? 0m) > 0m)
+                                                {
+                                                    <span class="gl-v2-du-stack-sub gl-v2-du-tabular">grond @Num(r.GroundSurface!.Value) m²</span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td class="is-right">
+                                            <span class="gl-v2-du-stack is-right">
+                                                @if (r.PriceFrom.HasValue)
+                                                {
+                                                    <span class="gl-v2-du-stack-main gl-v2-du-tabular">vanaf @Euro(r.PriceFrom.Value)</span>
+                                                    <span class="gl-v2-du-stack-sub gl-v2-du-tabular">afgewerkt @Euro(r.PriceFinished!.Value)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="gl-v2-du-stack-main gl-v2-du-tabular">@Euro(r.Price)</span>
+                                                    @if (r.AttachedCount > 0)
+                                                    {
+                                                        <span class="gl-v2-du-stack-sub gl-v2-du-tabular">@Euro(r.OwnPrice) + @r.AttachedCount gekoppeld</span>
+                                                    }
+                                                }
+                                            </span>
+                                        </td>
+                                        @if (vm.HasBasisakte)
+                                        {
+                                            <td class="is-right">
+                                                <span class="gl-v2-du-stack-main gl-v2-du-tabular @((r.Landshare ?? 0m) > 0m ? "" : "gl-v2-du-muted")">@Num(r.Landshare ?? 0m)</span>
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            @* 16d §2: de vrijgekomen kolom wordt "Koper" met de datum van het compromis;
+                                               gekoppelde eenheden tonen "via <lot>". *@
+                                            <td>
+                                                @if (r.IsAttached)
+                                                {
+                                                    <span class="gl-v2-du-stack-main gl-v2-du-muted">via @r.ParentName</span>
+                                                }
+                                                else if (r.ClientId.HasValue)
+                                                {
+                                                    <span class="gl-v2-du-stack">
+                                                        <a class="gl-v2-du-stack-main is-link" href="@Url.Action("Detail", "Klanten", new { clientid = r.ClientId, projectid = vm.ProjectId })">@r.ClientName</a>
+                                                        @if (r.SalesAgreementDate.HasValue)
+                                                        {
+                                                            <span class="gl-v2-du-stack-sub">compromis @r.SalesAgreementDate.Value.ToString("dd/MM/yyyy")</span>
+                                                        }
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="gl-v2-du-stack-main gl-v2-du-muted">—</span>
+                                                }
+                                            </td>
+                                        }
+                                        <td><span class="gl-v2-badge @r.StatusTone">@r.Status.ToUpperInvariant()</span></td>
+                                        <td>
+                                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-du-menu-@r.UnitId" aria-label="Meer acties voor @r.Name">
+                                                <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="gl-v2-menu" id="gl-v2-du-menu-@r.UnitId">
+                                                <a href="@editUrl" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                                @if (canWrite && r.IsAttached)
+                                                {
+                                                    <a href="#" class="gl-v2-menu-item js-gl-v2-du-detach" data-unit-id="@r.UnitId"><i class="ph ph-link-break" aria-hidden="true"></i>Ontkoppelen</a>
+                                                }
+                                                @if (r.CanAttach && vm.HasAttachableUnits)
+                                                {
+                                                    <a href="#" class="gl-v2-menu-item js-gl-v2-du-attach" data-unit-id="@r.UnitId"><i class="ph ph-link" aria-hidden="true"></i>Eenheid koppelen</a>
+                                                }
+                                                @if (canDelete)
+                                                {
+                                                    <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-du-delete" data-unit-name="@r.Name" data-delete-url="@Url.Action("DeleteUnit", "Projecten", new { id = r.UnitId, projectid = vm.ProjectId })"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (row.CanAttach && vm.HasAttachableUnits)
+                                {
+                                    @* 16a §2: koppelen is een regel in de tabel, geen derde icoon in een rij van drie. *@
+                                    <tr class="gl-v2-du-attach-row" data-attach-row data-parent-id="@row.UnitId" data-group="@group.Key">
+                                        <td colspan="8">
+                                            <button type="button" class="gl-v2-du-attach-btn js-gl-v2-du-attach" data-unit-id="@row.UnitId">
+                                                <i class="ph ph-plus-circle" aria-hidden="true"></i>Berging of parking koppelen aan @row.Name
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    }
+                    <tfoot>
+                        <tr>
+                            <td>Totaal @vm.ProjectName</td>
+                            <td></td>
+                            <td class="gl-v2-du-col-collapsible"></td>
+                            <td class="is-right gl-v2-du-col-collapsible">
+                                <span class="gl-v2-du-stack is-right">
+                                    <span class="gl-v2-du-stack-main gl-v2-du-tabular">@M2(vm.LivingSurfaceTotal)</span>
+                                    <span class="gl-v2-du-stack-sub">bewoonbaar</span>
+                                </span>
+                            </td>
+                            <td class="is-right gl-v2-du-tabular">@Euro(vm.SalesValueTotal)</td>
+                            @if (vm.HasBasisakte)
+                            {
+                                <td class="is-right">
+                                    <span class="gl-v2-du-total-landshare @(landshareOk ? "" : "is-warning")">@Num(vm.LandshareAssigned) / @Num(vm.LandshareTotal)</span>
+                                </td>
+                            }
+                            else
+                            {
+                                <td><span class="gl-v2-du-stack-sub">@vm.SoldMainCount van @vm.MainCount loten verkocht</span></td>
+                            }
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            @* Mobiel (<768px): kaarten i.p.v. de tabel. Server-side gerenderd, anders dan op
+               DetailClientsV2 waar ze uit de tabelrijen gekloond worden op elke DataTables-"draw" —
+               hier is er geen DataTable en dus ook geen draw-event, en de boomrelatie (welke kaart hangt
+               onder welke) is in Razor al bekend. *@
+            <div class="gl-v2-du-mobile-list">
+                @foreach (var group in vm.Groups)
+                {
+                    <div class="gl-v2-du-card-group-label" data-card-group-label="@group.Key">@group.Label</div>
+                    @foreach (var row in group.Rows)
+                    {
+                        foreach (var r in new[] { row }.Concat(row.Children))
+                        {
+                            <div class="gl-v2-du-card @(r.IsAttached ? "is-child" : "")"
+                                 data-unit-card
+                                 data-row-id="@r.UnitId"
+                                 data-parent-id="@(r.ParentUnitId?.ToString() ?? "")"
+                                 data-group="@group.Key"
+                                 data-type="@r.TypeFilterKey"
+                                 data-status="@r.StatusFilterKey"
+                                 data-search="@r.SearchText">
+                                <div class="gl-v2-du-card-head">
+                                    <div class="gl-v2-du-unit">
+                                        <span class="gl-v2-du-unit-icon"><i class="ph @UnitIcon(r.TypeGroupId)" aria-hidden="true"></i></span>
+                                        <span class="gl-v2-du-unit-text">
+                                            <a class="gl-v2-du-unit-name" href="@Url.Action("EditUnit", "Projecten", new { projectid = vm.ProjectId, unitid = r.UnitId })">@r.Name</a>
+                                            @if (!string.IsNullOrWhiteSpace(r.SubLine))
+                                            {
+                                                <span class="gl-v2-du-unit-sub">@r.SubLine</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-du-menu-m-@r.UnitId" aria-label="Meer acties voor @r.Name">
+                                        <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="gl-v2-menu" id="gl-v2-du-menu-m-@r.UnitId">
+                                        <a href="@Url.Action("EditUnit", "Projecten", new { projectid = vm.ProjectId, unitid = r.UnitId })" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                        @if (canWrite && r.IsAttached)
+                                        {
+                                            <a href="#" class="gl-v2-menu-item js-gl-v2-du-detach" data-unit-id="@r.UnitId"><i class="ph ph-link-break" aria-hidden="true"></i>Ontkoppelen</a>
+                                        }
+                                        @if (r.CanAttach && vm.HasAttachableUnits)
+                                        {
+                                            <a href="#" class="gl-v2-menu-item js-gl-v2-du-attach" data-unit-id="@r.UnitId"><i class="ph ph-link" aria-hidden="true"></i>Eenheid koppelen</a>
+                                        }
+                                        @if (canDelete)
+                                        {
+                                            <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-du-delete" data-unit-name="@r.Name" data-delete-url="@Url.Action("DeleteUnit", "Projecten", new { id = r.UnitId, projectid = vm.ProjectId })"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="gl-v2-du-card-meta">
+                                    <span>@r.TypeGroupLabel@(string.IsNullOrWhiteSpace(r.TypeName) ? "" : " · " + r.TypeName)</span>
+                                    <span>@r.LevelLabel</span>
+                                    @if ((r.Surface ?? 0m) > 0m)
+                                    {
+                                        <span>@M2(r.Surface)</span>
+                                    }
+                                    @if (vm.HasBasisakte)
+                                    {
+                                        <span>aandeel @Num(r.Landshare ?? 0m)</span>
+                                    }
+                                    else if (r.IsAttached)
+                                    {
+                                        <span>via @r.ParentName</span>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(r.ClientName))
+                                    {
+                                        <span>@r.ClientName</span>
+                                    }
+                                </div>
+                                <div class="gl-v2-du-card-foot">
+                                    <span class="gl-v2-du-card-price">@Euro(r.PriceFinished ?? r.Price)</span>
+                                    <span class="gl-v2-badge @r.StatusTone">@r.Status.ToUpperInvariant()</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+
+            <div class="gl-v2-du-no-results" id="gl-v2-du-no-results" hidden>Geen eenheid gevonden die aan deze filters voldoet.</div>
+        }
+    </div>
+</div>
+
+@* Ontkoppelen wijzigt data, dus een POST met antiforgery-token — geen GET-link die een prefetch of een
+   linkchecker zou kunnen uitvoeren. Eén formulier voor de hele pagina; de JS vult het eenheid-id. *@
+<form method="post" action="@Url.Action("DetachUnitV2", "Projecten")" id="gl-v2-du-detach-form" class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="projectid" value="@vm.ProjectId" />
+    <input type="hidden" name="unitId" value="" />
+</form>
+
+@* z-index-fix (.gl-v2-modal-confirm in gl-v2-shell.css) — zie DetailContractV2's eigen toelichting:
+   zonder die klasse staat een Bootstrap-modal onder zijn eigen, altijd naar 100000 getilde
+   .modal-backdrop. *@
+@* Modal-familie TYPE 2 "Formulier" (.gl-v2-modal-form): een dialoog met velden, geen bevestiging.
+   modal-fullscreen-md-down is de markup-helft van die familie's eigen mobiele regel — onder 768px wordt
+   Type 2 een volledig scherm i.p.v. een sheet, omdat een sheet samen met het toetsenbord het venster
+   zou halveren. *@
+<div class="modal fade gl-v2-modal-form gl-v2-du-attach-modal" id="gl-v2-du-attach-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content" id="gl-v2-du-attach-container"></div>
+    </div>
+</div>
+
+@* Verwijderen: één bevestiging in de pagina die per rij zijn naam en doel-URL krijgt. De legacy
+   _ModalDeleteUnit.cshtml is niet hergebruikt — dat fragment is een volledige legacy .card met eigen
+   koptekst/knoppen, geen gl-v2 modal-body/footer, en er valt niets te laden dat de rij zelf niet al
+   weet. De verwijderactie zelf (ProjectenController.DeleteUnit) blijft ongewijzigd. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-du-delete-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title">Eenheid verwijderen?</h2>
+                    <p class="gl-v2-modal-desc">
+                        U staat op het punt om <strong id="gl-v2-du-delete-name"></strong> te verwijderen.
+                        Weet je zeker dat je deze eenheid wilt verwijderen?
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-danger" id="gl-v2-du-delete-confirm">Verwijderen</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        window.glV2DetailUnitsConfig = {
+            attachModalUrl: '@Url.Action("ModalAttachUnitV2", "Projecten")'
+        };
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-detailunits.js" asp-append-version="true"></script>
+}

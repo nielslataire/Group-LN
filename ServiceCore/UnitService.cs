@@ -35,6 +35,14 @@ namespace ServiceCore
                 .Include(m => m.InverseLinkedUnit)
                 .Include(m => m.InverseAttachedUnit)
                 .Include(m => m.LevelNavigation)
+                // PaymentGroup van de EENHEID zelf (niet die van haar bouwwaarderegels, dat is de
+                // ThenInclude hieronder). Nodig omdat UnitTranslator.TranslateBOToEntity bij een
+                // lege bo.PaymentGroupId het veld op de entiteit op null zet: elke aanroeper die een
+                // eenheid via GetUnitById inleest, iets wijzigt en met InsertUpdateUnit terugschrijft
+                // wiste hier stil de koppeling met de betalingsgroep (PaymentGroupLink /
+                // LinkPaymentGroupToUnit). EditUnit ontsnapte daaraan enkel doordat zijn formulier
+                // Unit.PaymentGroupId als hidden field meepost.
+                .Include(m => m.PaymentGroup)
                 .Include(m => m.UnitConstructionValue)
                 .ThenInclude(m => m.PaymentGroup)
                 .FirstOrDefault();
@@ -517,6 +525,24 @@ namespace ServiceCore
             return response;
         }
 
+        public GetResponse<IdNameBO> GetUnitsForLinkSelect(int projectId, int unitTypeId, int excludeUnitId)
+        {
+            var response = new GetResponse<IdNameBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId
+                         && m.TypeId == unitTypeId
+                         && m.Id != excludeUnitId
+                         && m.AttachedUnitId == null
+                         && m.LinkedUnitId == null
+                         && !m.IsLink)
+                .Include(m => m.Type).ThenInclude(t => t.Group)
+                .OrderBy(m => m.Name);
+
+            foreach (var e in query) response.AddValue(e.GetIdName());
+            return response;
+        }
+
         public GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int projectId)
         {
             var response = new GetResponse<IdNameBO>();
@@ -609,6 +635,30 @@ namespace ServiceCore
             entity.IsOption = isOption;
             var result = _uow.SaveChanges();
             response.AddSaveChangesResult(result, "Status opgeslagen", "Geen wijzigingen");
+            return response;
+        }
+
+        public Response UpdateUnitLandshares(int projectId, IDictionary<int, decimal?> landshareByUnitId)
+        {
+            var response = new Response();
+            if (landshareByUnitId is null || landshareByUnitId.Count == 0)
+            {
+                response.AddError("no units");
+                return response;
+            }
+
+            var ids = landshareByUnitId.Keys.ToList();
+            // Getrackt (GetNormal, niet GetNoTracking): deze entiteiten worden hieronder gewijzigd en bewaard.
+            var entities = _uow.Units.GetNormal().Where(u => u.ProjectId == projectId && ids.Contains(u.Id)).ToList();
+
+            foreach (var entity in entities)
+            {
+                if (landshareByUnitId.TryGetValue(entity.Id, out var landshare))
+                    entity.Landshare = landshare;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Aandelen opgeslagen", "Geen wijzigingen");
             return response;
         }
 

@@ -1,0 +1,134 @@
+@model CPMCore.Models.Projecten.AttachUnitV2Vm
+@*
+    gl-v2 koppeldialoog (design-handoff optie 16c "Koppelen vanuit de lijst"). Dit fragment IS de
+    .modal-content-inhoud (header + body + footer), geladen in de al aanwezige #gl-v2-du-attach-container
+    op Projecten/DetailUnitsV2 — zelfde AJAX-fragment-in-lege-modal-shell recept als
+    Projecten/Modals/_ModalDeleteContractV2.cshtml en de verwijdermodal op DetailClientsV2. Opmaak komt
+    van de gedeelde modal-familie TYPE 2 "Formulier" (.gl-v2-modal-form in gl-v2-shell.css): die levert
+    de koptekst, het tweekolommige body-raster (.gl-v2-field-full spant beide) en de voetbalk.
+
+    16c's eigen kritiek op de legacy dialoog (Modals/_ModalAddLink.cshtml) bepaalt de volgorde: "begon
+    met twee lege bedragvelden zonder te weten waarvoor". Dus eerst WÁT je koppelt — een keuzelijst
+    gegroepeerd in "los te koop" (kiesbaar) en "al gekoppeld" (zichtbaar maar niet kiesbaar, zodat je
+    ziet dat ze bestaan én waarom je ze hier niet kan kiezen) — en pas daarna de bedragen die uit die
+    keuze volgen, met onderaan meteen de nieuwe prijs van het lot.
+
+    Twee dingen bewust anders dan het mockup:
+    - **BOUWWAARDE is alleen-lezen** (.gl-v2-field-readonly, het bestaande "alleen-lezen versus
+      uitgeschakeld"-veldtype uit punt 14d). Het mockup zet er een invoerveld met de hint "overgenomen
+      van de eenheid", maar een bouwwaarde bestaat in de database uit losse
+      UnitConstructionValue-regels per betalingsgroep/afwerkingsoptie — één bedrag laten typen zou die
+      regels stil laten afwijken van het totaal dat de lijst toont. Aanpassen gebeurt op het
+      eenheidsformulier zelf; de link daarnaartoe staat eronder. GRONDWAARDE is wél bewerkbaar: dat is
+      één echt veld (Units.LandValue) dat 1-op-1 meegaat.
+    - **Geen tekstinvoer om te zoeken in de keuzelijst.** Het mockup toont een typeveld ("park") boven
+      de lijst; bij de aantallen waar dit over gaat (de nevenruimtes van één project) is de volledige
+      lijst korter dan de zoekbalk zelf nuttig maakt.
+*@
+@using System.Globalization
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Euro(decimal value) => value.ToString("C0", be);
+    var hasChoice = Model.Available.Count > 0;
+}
+<div class="modal-header">
+    <span class="gl-v2-modal-icon is-success"><i class="ph ph-link" aria-hidden="true"></i></span>
+    <div class="gl-v2-modal-text">
+        <h2 class="modal-title">Eenheid koppelen aan @Model.LotName</h2>
+        <span class="gl-v2-du-picker-sub">wordt samen met @Model.LotName verkocht</span>
+    </div>
+    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+</div>
+<form method="post"
+      action="@Url.Action("AttachUnitV2", "Projecten")"
+      data-attach-form
+      data-lot-price="@Model.LotPrice.ToString("0.##", CultureInfo.InvariantCulture)">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+    <input type="hidden" name="lotUnitId" value="@Model.LotUnitId" />
+    <input type="hidden" name="unitId" value="" data-attach-unit-id />
+
+    <div class="modal-body">
+        <div class="gl-v2-field gl-v2-field-full">
+            <span class="gl-v2-field-label">Eenheid <span style="color:#8B2A2A">*</span></span>
+            <div class="gl-v2-du-picker" role="listbox" aria-label="Te koppelen eenheid">
+                @if (hasChoice)
+                {
+                    <span class="gl-v2-du-picker-group-label">Los te koop</span>
+                    @foreach (var candidate in Model.Available)
+                    {
+                        <button type="button" class="gl-v2-du-picker-option" role="option" aria-selected="false"
+                                data-unit-id="@candidate.UnitId"
+                                data-price="@candidate.Price.ToString("0.##", CultureInfo.InvariantCulture)"
+                                data-land-value="@candidate.LandValue.ToString("#,##0.00", be)"
+                                data-build-value="@candidate.ConstructionValue.ToString("0.##", CultureInfo.InvariantCulture)">
+                            <span class="gl-v2-du-picker-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
+                            <span class="gl-v2-du-picker-text">
+                                <span class="gl-v2-du-picker-name">@candidate.Name</span>
+                                <span class="gl-v2-du-picker-sub">@candidate.TypeLine</span>
+                            </span>
+                            <span class="gl-v2-du-picker-price">@Euro(candidate.Price)</span>
+                        </button>
+                    }
+                }
+                else
+                {
+                    <div class="gl-v2-du-picker-empty">
+                        Er is geen berging of parking meer die nog aan geen enkel lot hangt.
+                        Maak er eerst een aan, of ontkoppel er een via het ⋯-menu in de lijst.
+                    </div>
+                }
+
+                @if (Model.AlreadyAttached.Count > 0)
+                {
+                    <span class="gl-v2-du-picker-group-label">Al gekoppeld</span>
+                    @foreach (var candidate in Model.AlreadyAttached)
+                    {
+                        <div class="gl-v2-du-picker-option is-disabled" role="option" aria-disabled="true" aria-selected="false">
+                            <span class="gl-v2-du-picker-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
+                            <span class="gl-v2-du-picker-text">
+                                <span class="gl-v2-du-picker-name">@candidate.Name</span>
+                                <span class="gl-v2-du-picker-sub">bij @candidate.AttachedToName</span>
+                            </span>
+                            <span class="gl-v2-du-picker-price">@Euro(candidate.Price)</span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="gl-v2-du-attach-land">Grondwaarde</label>
+            <div class="gl-v2-field-box">
+                <input type="text" id="gl-v2-du-attach-land" name="landValue" class="gl-v2-field-input is-tabular"
+                       value="" placeholder="0,00" inputmode="decimal" autocomplete="off" data-attach-land-value />
+                <span class="gl-v2-field-unit">€</span>
+            </div>
+            <span class="gl-v2-field-help">overgenomen van de eenheid, hier aanpasbaar</span>
+        </div>
+
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label">Bouwwaarde</span>
+            <div class="gl-v2-field-readonly">
+                <i class="ph ph-lock-simple" aria-hidden="true"></i>
+                <span data-attach-build-value>—</span>
+            </div>
+            <span class="gl-v2-field-help">overgenomen van de eenheid, aanpasbaar op de eenheid zelf</span>
+        </div>
+
+        @* 16c: onderaan meteen de nieuwe prijs van het lot, i.p.v. pas na opslaan te zien wat er
+           gebeurde. *@
+        <div class="gl-v2-du-attach-result gl-v2-field-full">
+            <span class="gl-v2-du-attach-result-label">Nieuwe prijs @Model.LotName</span>
+            <span class="gl-v2-du-attach-result-old" data-attach-result-old hidden>@Euro(Model.LotPrice)</span>
+            <span class="gl-v2-du-attach-result-new" data-attach-result-new>@Euro(Model.LotPrice)</span>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-primary" data-attach-submit disabled>
+            <i class="ph ph-link" aria-hidden="true"></i>Koppelen
+        </button>
+    </div>
+</form>
