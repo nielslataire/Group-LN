@@ -5002,3 +5002,21 @@ POST = schrijven, "Delete"/"Remove" = verwijderen) zonder extra attributen.
 - Kolomsets per map zijn vast per `ViewKind` (17c: "instelbaar door een beheerder" is niet gebouwd).
 - Verwijderen haalt de bestanden **niet** uit de storage (zoals de legacy pagina).
 - De legacy modal `_ModalAddDoc`/`Docs` blijft enkel voor de oude lay-out.
+
+### Projecten/ChangeOrderSignV2 en de publieke ondertekenpagina (sept 2026)
+Aanvulling op "Projecten/DetailDocsV2": een wijzigingsopdracht digitaal laten ondertekenen zonder klantportaal.
+- **Intern** (`ProjectenController.ChangeOrderSign.cs`, `Views/Projecten/ChangeOrderSignV2.cshtml`, gl-v2, kaarten zoals het eenheidsformulier):
+  samenvatting van de opdracht (bedragen incl. btw uit `ChangeOrderBO.Totaal` + btw-percentage van het project), lijst ondertekenaars met
+  status (wacht/geopend/getekend, referentie) en "Link opnieuw sturen" (nieuwe token, de vorige vervalt), en het verzendformulier
+  (naam + e-mail per ondertekenaar, meerdere mogelijk). Zodra iemand getekend heeft, kan de groep niet meer gewijzigd worden.
+  Ingang: icoon "Digitaal ter ondertekening sturen" in `Klanten/Partials/ChangeOrders`; de pagina forceert de gl-v2-lay-out.
+- **Publiek** (`SigningController`, `Views/Signing/*`): bewust GEEN BaseController en geen gl-v2-shell — eigen, lichte pagina die op elk toestel
+  werkt. Token in het pad (`/ondertekenen/{token}`), `no-store`/`noindex`/`no-referrer`, het PDF loopt via onze server (same-origin iframe).
+  Stappen: lezen → code aanvragen (mail) → code + volledige naam + aangevinkte akkoordtekst → ondertekenen. Foutmeldingen zijn algemeen
+  (geen onderscheid tussen onbekende en verlopen token buiten "verlopen").
+- **Beveiliging**: token = 32 willekeurige bytes, enkel SHA-256 bewaard; code 6 cijfers per token gezouten gehasht, 10 min geldig, max. 5 pogingen,
+  max. 5 codes per uur; link standaard 30 dagen geldig (na tekenen 90 dagen om het ondertekende PDF op te halen); vaste-tijd-vergelijking.
+- **Bewijs**: naam, tijdstip, IP (+ eerste X-Forwarded-For), user-agent, exacte akkoordtekst, SHA-256 van het verstuurde PDF, referentie WO-…; het
+  ondertekende PDF (`ChangeOrderPDF.cshtml` met handtekeningblok) komt als nieuwe huidige revisie; het document is bevroren; `ChangeOrder.DateAgreement`
+  wordt gezet. Een wijzigingsopdracht wijzigt nooit de verkoopstatus van een eenheid (`ApplySignedEffects` slaat `ChangeOrderId`-documenten over).
+- **Juridisch niveau**: eenvoudige elektronische handtekening (methode `email-otp`); zie JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md. itsme = later via een aanbieder.

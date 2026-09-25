@@ -312,3 +312,10 @@ De migratie backfillt elk bestaand document met een map (uit `Type`), een revisi
 
 Nog niet gebouwd: klant-/leveranciersportaal (leesmodel `GetPortalDocuments` en de revisie-/aanvraagvelden staan klaar),
 itsme-ondertekening (handmatig registreren), bestelbon-PDF, automatische herinneringen (achtergrondtaak).
+
+### Ondertekenen van wijzigingsopdrachten via link (sept 2026)
+Publiek: `SigningController` (`/ondertekenen/{token}`, AllowAnonymous, eigen views in `Views/Signing`); intern:
+`ProjectenController.ChangeOrderSign.cs` + `Views/Projecten/ChangeOrderSignV2.cshtml`; logica `ServiceCore/Documents/SigningService.cs`
+(tokens/codes enkel als SHA-256, code 10 min / 5 pogingen / 5 per uur); PDF via `CPMCore/Services/ChangeOrderPdfService.cs` (hergebruikt
+`ChangeOrderPDF.cshtml`, nu met handtekeningblok); storage via `DocStorageService`. **Migratie 054 na 049.** Juridisch: JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md.
+Vereist `App:BaseUrl` (voor de link in de mail), de e-mailconfiguratie (`IEmailSender`) en wkhtmltopdf (Rotativa) op de server.
