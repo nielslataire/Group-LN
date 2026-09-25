@@ -4394,14 +4394,35 @@ ene POST. Wat NIET geblokkeerd wordt: een KOPPELING-rij die zelf onder een lot h
 maar precies wat 7 van de 11 bestaande koppelingen doen (het parkeerpaar wordt samen met dat
 appartement verkocht).
 
-**Wat hierna nog kan mislopen, eerlijk opgesomd.** De UI van CPMCore kan de combinatie niet meer
-aanmaken, maar drie wegen blijven open: (1) de **oude VB-toepassing** (`CPM/`) heeft zijn eigen
-`ModalAddUnitLink` en roept daar nog de ongefilterde `GetUnitsByProjectIdForSelect` aan — draait die nog
-ergens, dan is dat dezelfde deur, niet dichtgedaan; (2) **rechtstreekse databasewijzigingen**; en (3)
-bestaande inconsistenties tussen de bedragen op een pseudo-rij en die op haar leden, die geen enkele
-validatie vandaag opmerkt. Daarnaast blijft de **aandeel-footer van de legacy `Partials/Units.cshtml`**
-te veel tellen — een verkeerd getal op het scherm, geen verkeerde data. Het inventarisscript is de
-hercontrole voor alle drie.
+**Wat hierna nog kan mislopen.** De oude VB-toepassing (`CPM/`) heeft zijn eigen, ongefilterde
+`ModalAddUnitLink` en zou dezelfde deur openzetten, maar die toepassing wordt niet meer gebruikt
+(bevestigd 25/09/2026); `Views/Projecten/Partials/Units.cshtml` met zijn te hoge aandeelfooter hoort bij
+de oude layout en verdwijnt met de gl-v2-uitrol. Blijft over: bestaande inconsistenties tussen de
+bedragen op een pseudo-rij en die op haar leden, waar geen enkele validatie iets van zegt — dat is een
+inhoudelijke beoordeling, geen structurele fout. Het inventarisscript blijft de hercontrole.
+
+**Sluitstuk: vier check-constraints op `dbo.Units` (`_migrations/046_UnitsKoppelmechanismenCheck.sql`).**
+De twee afdichtingen hierboven zijn applicatieregels; deze migratie maakt er een databaseregel van, zodat
+ook een rechtstreekse `UPDATE` of een toekomstig scherm de combinatie niet meer kan maken:
+`CK_Units_NietBeideKoppelmechanismen` (niet `AttachedUnitId` én `LinkedUnitId` tegelijk),
+`CK_Units_KoppelingNietGenest` (een `IsLink`-rij kan zelf geen lid zijn), en twee vangnetten tegen een
+eenheid die naar zichzelf verwijst — een zelfverwijzing zou de 3-diepe boomwalk van
+`GetUnitsWithAttachedByProjectId` in een cirkel duwen. **Bewust niet geblokkeerd:** een KOPPELING-rij die
+zélf onder een lot hangt (`IsLink = 1` mét `AttachedUnitId`). Dat is geen fout maar het normale gebruik —
+7 van de 11 bestaande koppelingen zijn een parkeerpaar dat samen met een appartement verkocht wordt.
+
+Het script controleert per constraint eerst of de doeldatabase overtredingen bevat en slaat er dan één
+over met een `PRINT` in plaats van halverwege stuk te vallen; het is idempotent via
+`sys.check_constraints` en draagt onderaan zijn eigen rollback-regels. Toegepast op
+`db_ab5fbb_testdb` (25/09/2026): alle vier toegevoegd, `is_disabled = 0` én `is_not_trusted = 0` — dus
+ook gevalideerd tegen de bestaande 394 rijen. Een negatieve test (verboden combinatie schrijven binnen
+een transactie die teruggedraaid wordt) werd door `CK_Units_NietBeideKoppelmechanismen` geweigerd, dus
+de regel bijt echt. **Nog uit te voeren op de live database**, handmatig via SSMS zoals DEPLOY.md
+voorschrijft.
+
+Eén gevolg om te kennen: wordt een constraint tóch geraakt, dan komt dat als een `SqlException` naar
+boven, niet als een nette melding. Beide UI-paden zijn hierboven al afgedicht, dus dat zou betekenen dat
+er een derde schrijver bestaat die we niet kennen — precies het signaal dat je dan wil.
 
 **Onderweg gezien, bewust NIET aangeraakt:** de aangeklikte eenheid wordt zelf géén lid van de
 koppeling. `_ModalAddLink.cshtml` post geen hidden field voor `SelectedUnit.Id`, dus dat is 0 bij de
