@@ -3316,6 +3316,35 @@ invoice numbering, no ClientAccount columns), the gl-v2 project client list (`Di
 views (`Invoices/Detail.cshtml`, `Projecten/Invoicing.cshtml`, `Partials/Clients.cshtml`) still
 print `Client.Name` alone — untouched by the never-modify-legacy rule.
 
+#### Follow-up — AddClientAccountV2 visueel gelijkgetrokken met 23a/23b (kaart-body, eenhedenkiezer, eenheidskaart)
+Screenshot feedback after the first build: the dashed "+ Mede-eigenaar/Contact toevoegen" buttons sat
+in the section-card *header* (where `.gl-v2-select-newitem-btn` is `width:100%`, so they ran to the
+card edge), and the co-owner rows, verdeelsleutel bar and help text lived directly in the card, outside
+`.gl-v2-section-grid`'s 18px 20px padding — so they were misaligned with the columns and "Gelijk
+verdelen" stuck out. Fix: everything after (or instead of) the grid now sits in `.gl-v2-kd-card-body`
+(same 20px side padding; `.is-standalone` adds top padding when there is no grid above), with the
+add button as a `.gl-v2-client-row-list-header` row inside it — the exact structure EditProjectV2's
+tab panels already use.
+
+**Eenhedenkiezer (23b)** is no longer a plain `<select>` of available units: it is the
+GlV2SearchSelect trigger/panel shell with the *full* project list already in the page
+(`AddClientAccountModel.UnitChoices`, built by `KlantenController.BuildUnitChoices` from `Units` +
+type + owner + payment group) — "Beschikbaar" options are choosable, "Niet beschikbaar" ones
+(verkocht / in optie) are `aria-disabled` and show the buyer/option holder as the reason, borrowing
+`_ModalAttachUnitV2`'s grouped-option look (`.gl-v2-kd-upk-*`, page-scoped copy). A unit added to
+this account disappears from the list (`data-in-account`) and returns when its card is deleted;
+"Eenheid toevoegen" is disabled until something is chosen; typing filters client-side (no lookup call).
+
+**Eenheidskaart (23a)** (`_UnitRowV2`): head with type · oppervlakte and a "Beschikbaar → Verkocht"
+badge, editable Grondwaarde/Constructiewaarde(n) with their "gefactureerd door …" hints, read-only
+Totaal (live), Grondaandeel ("x / 1.000", uit Eenheden), Betalingsgroep (name via
+`ViewData["PaymentGroupNames"]`, set in `FillInAddSelectLists`/`AddSelectedUnits` — `UnitBO` only
+carries the id), and "Standaardwaarden — prijzen voorgesteld uit Eenheden · Herstellen"
+(`data-default-land`/`data-default-cvs` on the card, reset through AutoNumeric when CurrencyMask is
+attached). Below the cards: "Totaal account excl. btw"; in the action bar: "N eigenaars · M eenheden ·
+verdeelsleutel X %", kept live by `recalcShares`/the picker. Not verified in a browser in this pass —
+build-verified plus a `node --check` on the page JS.
+
 ### Projecten/IncommingInvoiceDetailV2 — purchase-invoice detail (design-handoff punt 11, the AANKOOP
 half)
 Same pixel reference (11a/11b/11d/11e) as `Invoices/DetailV2` — but for purchase/incoming invoices,
