@@ -1,0 +1,69 @@
+@model FacadeCore.Signing.PublicVerificationView
+@using BOCore
+@{
+    Layout = "_LayoutPublic";
+    var status = (SigningCaseStatus)Model.Status;
+    var completed = status == SigningCaseStatus.Completed;
+    var badgeClass = status switch
+    {
+        SigningCaseStatus.Completed => "is-positive",
+        SigningCaseStatus.Declined or SigningCaseStatus.Expired or SigningCaseStatus.Cancelled => "is-blocked",
+        SigningCaseStatus.Open => "is-attention",
+        _ => "is-neutral",
+    };
+    var statusLabel = status switch
+    {
+        SigningCaseStatus.Draft => "In voorbereiding",
+        SigningCaseStatus.Open => "Ter ondertekening",
+        SigningCaseStatus.Completed => "Ondertekend",
+        SigningCaseStatus.Declined => "Geweigerd",
+        SigningCaseStatus.Expired => "Verlopen",
+        SigningCaseStatus.Cancelled => "Geannuleerd",
+        _ => "Onbekend",
+    };
+}
+<section class="gl-v2-public-card">
+    <div class="gl-v2-public-card-header">
+        <h1 class="gl-v2-public-title" style="margin:0">@Model.DocumentTypeLabel@(Model.DocumentNumber is null ? "" : $" {Model.DocumentNumber}")</h1>
+    </div>
+    <div class="gl-v2-public-card-body">
+        <span class="gl-v2-public-badge @badgeClass">@statusLabel</span>
+
+        @if (completed)
+        {
+            <p style="margin-top:12px">
+                Dit document is elektronisch ondertekend door @Model.SignerCount ondertekenaar@(Model.SignerCount == 1 ? "" : "s")
+                @if (Model.CompletedAt is DateTime completedAt)
+                {
+                    @: op @completedAt.ToString("d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")) om @completedAt.ToString("HH:mm").
+                }
+            </p>
+        }
+        else
+        {
+            <p style="margin-top:12px">Dit dossier is nog niet voltooid.</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.OriginalSha256) || !string.IsNullOrWhiteSpace(Model.FinalSha256))
+        {
+            <div class="gl-v2-public-notice" style="margin-top:14px">
+                @if (!string.IsNullOrWhiteSpace(Model.OriginalSha256))
+                {
+                    <div>SHA-256 van het document vóór ondertekening: <code>@Model.OriginalSha256</code></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.FinalSha256))
+                {
+                    <div style="margin-top:4px">SHA-256 van het volledige ondertekende PDF: <code>@Model.FinalSha256</code></div>
+                }
+                <p class="gl-v2-public-help" style="margin-top:8px">
+                    Deze twee waarden verschillen altijd: het ondertekende PDF bevat het originele document plus een
+                    ondertekeningsblad erachter (naam, datum, handtekening) — dat blad voegt bytes toe, dus de hash
+                    wijzigt. Dat is geen fout. Vergelijk de eerste waarde met een hash van het document zoals u dat
+                    kreeg vóór ondertekening, en de tweede met een hash van het volledige ondertekende PDF dat u nu
+                    in bezit heeft — enkel als één van beide niet overeenkomt met de bijhorende kopie, klopt er iets
+                    niet.
+                </p>
+            </div>
+        }
+    </div>
+</section>

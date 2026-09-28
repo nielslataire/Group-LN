@@ -7,6 +7,7 @@ Public Class ClientAccountBO
         _contacts = New List(Of ClientContactBO)
         _coowners = New List(Of ClientContactBO)
         m_ownertype = New ClientOwnerTypeBO
+        _invoicerecipients = New List(Of ClientInvoiceRecipientBO)
     End Sub
     Private m_Id As Integer
     Public Property Id() As Integer
@@ -25,6 +26,18 @@ Public Class ClientAccountBO
         End Get
         Set(ByVal value As String)
             m_Name = value
+        End Set
+    End Property
+    ' Voornaam van eigenaar 1 (migratie 057) — mirrort ClientContactBO.Firstname. Optioneel: bestaande
+    ' accounts hebben enkel Name gevuld, DisplayName hieronder valt dan terug op Name alleen.
+    Private m_Firstname As String
+    <Display(Name:="Voornaam")>
+    Public Property Firstname() As String
+        Get
+            Return m_Firstname
+        End Get
+        Set(ByVal value As String)
+            m_Firstname = value
         End Set
     End Property
     Private m_Salutation As Salutation
@@ -297,6 +310,28 @@ Public Class ClientAccountBO
             m_email = value
         End Set
     End Property
+    ' Migratie 058_KlantenaccountTelefoon.sql: eigenaar 1 had tot dan geen telefoon/gsm, in
+    ' tegenstelling tot elke mede-eigenaar/contactpersoon (ClientContactBO.Phone/Cellphone).
+    Private m_phone As String
+    <Display(Name:="Telefoon")>
+    Public Property Phone() As String
+        Get
+            Return m_phone
+        End Get
+        Set(ByVal value As String)
+            m_phone = value
+        End Set
+    End Property
+    Private m_cellphone As String
+    <Display(Name:="Gsm")>
+    Public Property Cellphone() As String
+        Get
+            Return m_cellphone
+        End Get
+        Set(ByVal value As String)
+            m_cellphone = value
+        End Set
+    End Property
     Private m_invoiceemail As String
     <Display(Name:="Facturatie e-mail")>
     Public Property InvoiceEmail() As String
@@ -326,11 +361,79 @@ Public Class ClientAccountBO
         End Set
     End Property
 
+    ' FACTURATIE- EN ONDERTEKENVOORKEUREN (migratie 057, design-handoff 23) — enkel bewaard; de
+    ' facturatie-generatie (ServiceCore/InvoiceCommandService.vb) en de ondertekenregel-uitvoering
+    ' (ServiceCore/Signing/SigningRuleEvaluator.cs) lezen dit nog niet. DefaultSigningRule stuurt enkel
+    ' het ondertekenaarsvoorstel in CPMCore/Services/Signing/ChangeOrderSigningSource.cs.
+    Private m_invoicingMode As ClientInvoicingMode
+    <Display(Name:="Facturatiewijze")>
+    Public Property InvoicingMode() As ClientInvoicingMode
+        Get
+            Return m_invoicingMode
+        End Get
+        Set(ByVal value As ClientInvoicingMode)
+            m_invoicingMode = value
+        End Set
+    End Property
+    Private m_billedToType As ClientBilledToType?
+    <Display(Name:="Op naam van")>
+    Public Property BilledToType() As ClientBilledToType?
+        Get
+            Return m_billedToType
+        End Get
+        Set(ByVal value As ClientBilledToType?)
+            m_billedToType = value
+        End Set
+    End Property
+    Private m_billedToClientContactId As Integer?
+    Public Property BilledToClientContactId() As Integer?
+        Get
+            Return m_billedToClientContactId
+        End Get
+        Set(ByVal value As Integer?)
+            m_billedToClientContactId = value
+        End Set
+    End Property
+    Private m_defaultSigningRule As SigningRule?
+    <Display(Name:="WO ondertekenen door")>
+    Public Property DefaultSigningRule() As SigningRule?
+        Get
+            Return m_defaultSigningRule
+        End Get
+        Set(ByVal value As SigningRule?)
+            m_defaultSigningRule = value
+        End Set
+    End Property
+    Private m_portalInviteRequested As Boolean
+    <Display(Name:="Uitnodigen voor het klantenportaal")>
+    Public Property PortalInviteRequested() As Boolean
+        Get
+            Return m_portalInviteRequested
+        End Get
+        Set(ByVal value As Boolean)
+            m_portalInviteRequested = value
+        End Set
+    End Property
+    Private _invoicerecipients As List(Of ClientInvoiceRecipientBO)
+    Public Property InvoiceRecipients() As List(Of ClientInvoiceRecipientBO)
+        Get
+            Return _invoicerecipients
+        End Get
+        Set(ByVal value As List(Of ClientInvoiceRecipientBO))
+            _invoicerecipients = value
+        End Set
+    End Property
+
     'HELPER
+    ' De ENE canonieke plek voor "toon een klantnaam" — achternaam eerst, zoals op de akte
+    ' (design-handoff 23: "familienaam eerst"). Vrijwel elke view/PDF roept DisplayName aan, dus deze
+    ' ene wijziging laat Voornaam overal mee verschijnen zonder 29 losse view-aanpassingen.
     Public ReadOnly Property DisplayName() As String
         Get
             If Name IsNot Nothing Then
-
+                If Not String.IsNullOrWhiteSpace(Firstname) Then
+                    Return Name & " " & Firstname
+                End If
                 Return Name
             Else
                 Return CompanyName
@@ -339,6 +442,15 @@ Public Class ClientAccountBO
     End Property
 
 
+End Class
+
+''' <summary>"Verzenden naar" — extra e-mailontvanger van een klantenaccount, los van de eigenaars zelf
+''' (bv. een boekhouder). Migratie 057.</summary>
+Public Class ClientInvoiceRecipientBO
+    Public Property Id() As Integer
+    Public Property ClientContactId() As Integer?
+    Public Property Email() As String
+    Public Property DisplayName() As String
 End Class
 
 Public Class ClientGiftWithAccountDetailsBO

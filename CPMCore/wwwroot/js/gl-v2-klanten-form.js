@@ -15,6 +15,7 @@
     initMultiSelects();
     initSearchSelects();
     initClientTypeToggle();
+    initSalutationFirstnameToggle();
     initInvoiceAddressToggle();
     initAddressToggles();
     initBtwCheck();
@@ -344,13 +345,21 @@
             searchInput.focus();
         }
 
+        // mousedown (i.p.v. de click zelf) legt vast of het paneel al open stond VÓÓR deze interactie —
+        // nodig omdat de focus-listener hieronder het paneel soms al opent nog vóórdat de click zelf
+        // afgaat (browser-volgorde: mousedown → focus → click), anders zou de click meteen weer sluiten
+        // wat de focus-listener net opende.
+        var wasOpenBeforeInteraction = false;
+        trigger.addEventListener("mousedown", function () {
+            wasOpenBeforeInteraction = panel.classList.contains("is-open");
+        });
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (panel.classList.contains("is-open")) {
+            if (wasOpenBeforeInteraction) {
                 closeAllPanels();
-                return;
+            } else {
+                openThisPanel();
             }
-            openThisPanel();
         });
         // De trigger is een <div role="button"> (geen echte <button>, zie GlV2SearchSelect.cshtml se
         // eigen toelichting) — toetsenbordactivatie (Enter/spatie) moet daardoor hier zelf.
@@ -363,6 +372,11 @@
             } else {
                 openThisPanel();
             }
+        });
+        // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
+        // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
+        trigger.addEventListener("focus", function () {
+            if (!panel.classList.contains("is-open")) openThisPanel();
         });
 
         if (clearTrigger) {
@@ -394,6 +408,25 @@
         }
 
         toggle.addEventListener("change", function () {
+            apply();
+            markDirty();
+        });
+        apply();
+    }
+
+    // ── "Voornaam" uitschakelen bij een gedeelde aanspreking ("Dhr. & Mevr."/"Dhr. & Dhr."/"Mevr. &
+    //    Mevr.", Salutation-waarden 2/3/4) — dat is een account voor meerdere personen, er is dan geen
+    //    eigen voornaam. .gl-v2-field-input:disabled heeft al de grijze opmaak (gl-v2-shell.css). ─────
+    function initSalutationFirstnameToggle() {
+        var select = document.querySelector('[data-role="salutation-select"]');
+        var input = document.querySelector('[data-role="firstname-input"]');
+        if (!select || !input) return;
+
+        function apply() {
+            input.disabled = parseInt(select.value, 10) >= 2;
+        }
+
+        select.addEventListener("change", function () {
             apply();
             markDirty();
         });

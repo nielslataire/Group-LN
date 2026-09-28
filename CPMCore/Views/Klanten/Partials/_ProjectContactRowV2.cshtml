@@ -1,14 +1,23 @@
 @model BOCore.ClientContactBO
 @using HtmlHelpers.BeginCollectionItemCore
 @*
-    gl-v2-vertaling van Partials/_ContactRow.cshtml — zelfde Html.BeginCollectionItem("Client.
-    Contacts")-wrapper, binding/index-gedrag ongewijzigd. Eigen partial (niet _ClientContactRowV2.
-    cshtml hergebruikt) omdat dit een ander model is: ClientContactBO (BOCore, gebruikt in
-    EditProjectV2) i.p.v. ContactInputViewModel (gebruikt in Klanten/Edit/CreateV2) — andere
-    veldnamen (Firstname i.p.v. Forename) en dit model heeft ook een Salutation-veld.
+    gl-v2-vertaling van Partials/_ContactRow.cshtml — zelfde Html.BeginCollectionItem(...)-wrapper,
+    binding/index-gedrag ongewijzigd. Eigen partial (niet _ClientContactRowV2.cshtml hergebruikt) omdat
+    dit een ander model is: ClientContactBO (BOCore, gebruikt in EditProjectV2/AddClientAccountV2)
+    i.p.v. ContactInputViewModel (gebruikt in Klanten/Edit/CreateV2) — andere veldnamen (Firstname
+    i.p.v. Forename) en dit model heeft ook een Salutation-veld.
 *@
+@{
+    // Migratie 057-stijl fix (zelfde als _CoOwnerRowV2.cshtml onderging): BlankContactRow zet
+    // ViewData["ContactCollectionName"] al door (default "ClientAccount.Contacts") — herbruikt door
+    // Klanten/AddClientAccountV2 ("ClientAccount.Contacts") naast Klanten/EditProjectV2 ("Client.
+    // Contacts", de bestaande, ongewijzigde standaard). Deze partial las die sleutel voorheen nooit,
+    // en had de prefix hardgecodeerd op "Client.Contacts" — zou AddClientAccountV2 se contacten
+    // stilzwijgend fout gebonden hebben.
+    var contactCollectionName = ViewData["ContactCollectionName"] as string ?? "Client.Contacts";
+}
 <div class="gl-v2-client-row">
-@using (Html.BeginCollectionItem("Client.Contacts"))
+@using (Html.BeginCollectionItem(contactCollectionName))
 {
     @Html.HiddenFor(m => m.Id)
     @Html.HiddenFor(m => m.IsCoOwner)

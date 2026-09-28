@@ -3000,6 +3000,10 @@ namespace CPMCore.Controllers
                     .ThenInclude(pc => pc.Country)
                 .Include(i => i.ClientIdClientAccountNavigation)!
                     .ThenInclude(c => c.ClientContacts)
+                // Migratie 057: "Verzenden naar" (expliciete factuurontvangers van het account) — nodig
+                // in BuildInvoiceRecipients hieronder.
+                .Include(i => i.ClientIdClientAccountNavigation)!
+                    .ThenInclude(c => c.InvoiceRecipients)
                 .Include(i => i.ClientIdClientAccountNavigation)!
                     .ThenInclude(c => c.PostalCode)!
                         .ThenInclude(pc => pc.Country)
@@ -3309,6 +3313,33 @@ namespace CPMCore.Controllers
                     foreach (var accountContact in account.ClientContacts.Where(c => !c.IsCoOwner && c.RequiresDigitalInvoice))
                     {
                         AddRecipient(recipients, accountContact.InvoiceEmail, accountContact.Email);
+                    }
+                }
+
+                // Migratie 057 — "Verzenden naar" (ClientAccountInvoiceRecipient): de ontvangers die de
+                // gebruiker expliciet op het klantenaccount zette (Klanten/EditProjectV2 en
+                // AddClientAccountV2, tab/sectie Facturatie). Tot hier werden die enkel BEWAARD en niet
+                // gebruikt — een factuur ging dus nooit naar bv. de boekhouder die daar stond. Ze komen
+                // nu bovenop de bestaande logica (digitale-factuur-vlag van account/contacten), gededupli-
+                // ceerd door AddRecipient. Een ontvanger die enkel naar een contact verwijst (geen eigen
+                // e-mail) valt terug op dat contact se factuur-/gewone e-mail.
+                if (account.InvoiceRecipients != null)
+                {
+                    foreach (var storedRecipient in account.InvoiceRecipients.OrderBy(r => r.SortOrder))
+                    {
+                        if (!string.IsNullOrWhiteSpace(storedRecipient.Email))
+                        {
+                            AddRecipient(recipients, storedRecipient.Email, null);
+                            continue;
+                        }
+
+                        var linkedContact = storedRecipient.ClientContactId is int linkedId
+                            ? account.ClientContacts?.FirstOrDefault(c => c.Id == linkedId)
+                            : null;
+                        if (linkedContact != null)
+                        {
+                            AddRecipient(recipients, linkedContact.InvoiceEmail, linkedContact.Email);
+                        }
                     }
                 }
             }
@@ -4342,7 +4373,10 @@ END";
                 || (!string.IsNullOrWhiteSpace(invoice.VatNumber) && invoice.ClientType != (int)InvoicePartyType.ClientContact)
                 || (!string.IsNullOrWhiteSpace(company?.VatNumber) || !string.IsNullOrWhiteSpace(company?.Ondernemingsnummer));
 
+            // Echte voornaam (migratie 057) wint; zonder Forename (niet-gemigreerde accounts) blijft dit
+            // exact het bestaande surrogaat: het hele Name-veld als "voornaam" naar Octopus.
             var firstName = clientContact?.Forename
+                ?? clientAccount?.Forename
                 ?? clientAccount?.Name
                 ?? clientName;
 
@@ -4400,17 +4434,32 @@ END";
                 return company.BedrijfsNaam;
             }
 
+            // Migratie 057: achternaam + voornaam (zelfde volgorde als ClientAccountBO.DisplayName en
+            // InvoiceCommandService.ResolvePartySnapshotAsync) — voordien enkel Name, waardoor een
+            // gesplitste klant op de factuur/partij enkel met zijn achternaam verscheen.
             if (!string.IsNullOrWhiteSpace(clientAccount?.Name))
             {
-                return clientAccount.Name;
+                return string.IsNullOrWhiteSpace(clientAccount.Forename)
+                    ? clientAccount.Name
+                    : clientAccount.Name.Trim() + " " + clientAccount.Forename.Trim();
             }
 
             if (!string.IsNullOrWhiteSpace(clientContact?.Name))
             {
-                return clientContact.Name;
+                return string.IsNullOrWhiteSpace(clientContact.Forename)
+                    ? clientContact.Name
+                    : clientContact.Name.Trim() + " " + clientContact.Forename.Trim();
             }
 
             return invoice.ClientName;
+        }
+
+        /// <summary>Achternaam + voornaam (migratie 057), null als er geen achternaam is — voor de
+        /// sjabloonvelden/terugvalketens die voordien enkel <c>Name</c> namen.</summary>
+        private static string? JoinNameForename(string? name, string? forename)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            return string.IsNullOrWhiteSpace(forename) ? name : name.Trim() + " " + forename.Trim();
         }
         private static string? BuildStreetAndNumber(string? street, string? houseNumber, string? busNumber, string? fallback)
         {
@@ -5037,8 +5086,8 @@ END";
                 "PUBLICID" => string.IsNullOrWhiteSpace(invoice.PublicId) ? formattedPublicId : invoice.PublicId,
                 "STRUCTUREDCOMMOGM" => invoice.StructuredCommOgm,
                 "CLIENTNAME" => invoice.ClientName
-                    ?? invoice.ClientIdClientAccountNavigation?.Name
-                    ?? invoice.ClientIdClientContactsNavigation?.Name,
+                    ?? JoinNameForename(invoice.ClientIdClientAccountNavigation?.Name, invoice.ClientIdClientAccountNavigation?.Forename)
+                    ?? JoinNameForename(invoice.ClientIdClientContactsNavigation?.Name, invoice.ClientIdClientContactsNavigation?.Forename),
                 "VATNUMBER" => invoice.VatNumber,
                 "VATREGIME" => invoice.VatRegime,
                 "CURRENCYCODE" => invoice.CurrencyCode,

@@ -273,6 +273,15 @@ public sealed class SigningService : ISigningService
         return signingCase is null ? null : ToView(signingCase);
     }
 
+    public async Task<CaseStatusView?> GetCompletedCaseForSourceAsync(string documentType, int sourceEntityId, CancellationToken ct = default)
+    {
+        var signingCase = await QueryCases()
+            .Where(c => c.DocumentType == documentType && c.SourceEntityId == sourceEntityId && c.Status == (int)SigningCaseStatus.Completed)
+            .OrderByDescending(c => c.CompletedAt)
+            .FirstOrDefaultAsync(ct);
+        return signingCase is null ? null : ToView(signingCase);
+    }
+
     public async Task<IReadOnlyList<CaseStatusView>> ListCasesAsync(int? projectId, int? status, int take = 200, CancellationToken ct = default)
     {
         var q = QueryCases();
@@ -838,6 +847,23 @@ public sealed class SigningService : ISigningService
         return due.Count;
     }
 
+    /// <summary>Vangnet naast <see cref="ExpireOverdueCasesAsync"/>: dossiers die regel-compleet zijn
+    /// maar nog niet verlopen, waarvan een eerdere finalisatie faalde. Zelfde herevaluatie + dezelfde
+    /// idempotente <see cref="TryFinalizeAsync"/> als daar.</summary>
+    public async Task<int> RetryStuckFinalizationsAsync(CancellationToken ct = default)
+    {
+        var ids = await _db.SigningCase.Where(c => c.Status == (int)SigningCaseStatus.Open && c.CompletedAt == null).Select(c => c.Id).ToListAsync(ct);
+        var count = 0;
+        foreach (var id in ids)
+        {
+            var signingCase = await LoadCaseAsync(id, ct);
+            if (signingCase is null || signingCase.Status != (int)SigningCaseStatus.Open) continue;
+            if (!SigningRuleEvaluator.Evaluate((SigningRule)signingCase.SigningRule, RuleStates(signingCase)).IsComplete) continue;
+            if (await TryFinalizeAsync(id, SystemContext, ct)) count++;
+        }
+        return count;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════════════════════
     // Kern: finaliseren, sluiten, uitnodigen, documenten
     // ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -1200,7 +1226,11 @@ public sealed class SigningService : ISigningService
         return new SigningEventDraft(caseId, partyId, type, (int)actorType, ctx.ActorUserId, ctx.ActorLabel, ctx.Ip, ctx.UserAgent, documentSha, data);
     }
 
-    private string SignUrl(string rawToken) => $"{_options.PublicBaseUrl!.TrimEnd('/')}/ondertekenen/{rawToken}";
+    // MERGE 28/09/2026: "/ondertekenen" is (nog) de route van SigningController (de link-per-e-mail-
+    // flow van de andere pc, ONDERTEKENEN_VOORTGANG.md "Samenloop"). Fase 2 van deze module gebruikt
+    // voorlopig "/tekenen" om die niet te breken; de cutover (route overnemen, hun flow verwijderen)
+    // is een latere, bewuste stap.
+    private string SignUrl(string rawToken) => $"{_options.PublicBaseUrl!.TrimEnd('/')}/tekenen/{rawToken}";
     private string InternalUrl(int caseId) => $"{_options.PublicBaseUrl!.TrimEnd('/')}/SigningAdmin/Dossier/{caseId}";
     private string VerifyUrl(Guid publicId) => $"{_options.PublicBaseUrl!.TrimEnd('/')}/verifieer/{publicId:D}";
 

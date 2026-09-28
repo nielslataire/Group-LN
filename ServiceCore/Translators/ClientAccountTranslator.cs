@@ -19,6 +19,7 @@ namespace ServiceCore.Translators
                 return ErrorCode.BoNull;
             bo.Id = _entity.Id;
             bo.Name = _entity.Name;
+            bo.Firstname = _entity.Forename;
             bo.Salutation = (Salutation)Enum.Parse(typeof(Salutation), _entity.Salutation);
             bo.Street = _entity.Street;
             bo.Housenumber = _entity.Housenumber;
@@ -40,9 +41,22 @@ namespace ServiceCore.Translators
             bo.InvoiceBusnumber = _entity.InvoiceBusnumber;
             bo.InvoiceExtra = _entity.InvoiceExtra;
             bo.Email = _entity.Email;
+            bo.Phone = _entity.Phone;
+            bo.Cellphone = _entity.Cellphone;
             bo.InvoiceEmail = _entity.InvoiceEmail;
             bo.RequiresDigitalInvoice = _entity.RequiresDigitalInvoice;
             bo.AttachUblByDefault = _entity.AttachUblByDefault;
+
+            // Facturatie-/ondertekenvoorkeuren (migratie 057) — enkel bewaard, zie ClientAccountBO.
+            bo.InvoicingMode = (BOCore.ClientInvoicingMode)_entity.InvoicingMode;
+            bo.BilledToType = _entity.BilledToType.HasValue ? (BOCore.ClientBilledToType?)_entity.BilledToType.Value : null;
+            bo.BilledToClientContactId = _entity.BilledToClientContactId;
+            bo.DefaultSigningRule = _entity.DefaultSigningRule.HasValue ? (SigningRule?)_entity.DefaultSigningRule.Value : null;
+            bo.PortalInviteRequested = _entity.PortalInviteRequested;
+            bo.InvoiceRecipients = _entity.InvoiceRecipients?
+                .OrderBy(r => r.SortOrder).ThenBy(r => r.Id)
+                .Select(r => new ClientInvoiceRecipientBO { Id = r.Id, ClientContactId = r.ClientContactId, Email = r.Email, DisplayName = r.DisplayName })
+                .ToList() ?? new List<ClientInvoiceRecipientBO>();
 
             if (_entity.ExecutionDays is not null)
                 bo.ExecutionDays = _entity.ExecutionDays;
@@ -144,6 +158,7 @@ namespace ServiceCore.Translators
 
             // 1) Eenvoudige velden
             entity.Name = bo.Name;
+            entity.Forename = bo.Firstname;
             entity.Salutation = bo.Salutation.ToString();
             entity.Street = bo.Street;
             entity.Housenumber = bo.Housenumber;
@@ -164,9 +179,19 @@ namespace ServiceCore.Translators
             entity.InvoiceBusnumber = bo.InvoiceBusnumber;
             entity.InvoiceExtra = bo.InvoiceExtra;
             entity.Email = bo.Email;
+            entity.Phone = bo.Phone;
+            entity.Cellphone = bo.Cellphone;
             entity.InvoiceEmail = bo.InvoiceEmail;
             entity.RequiresDigitalInvoice = bo.RequiresDigitalInvoice;
             entity.AttachUblByDefault = bo.AttachUblByDefault;
+            entity.InvoicingMode = (byte)bo.InvoicingMode;
+            entity.BilledToType = bo.BilledToType.HasValue ? (byte?)bo.BilledToType.Value : null;
+            // BilledToClientContactId wordt pas ná HandleContacts/HandleCoOwners gezet (zie §5 hieronder):
+            // "één specifieke mede-eigenaar" kan pas gekozen worden als die al een echte Id heeft (een
+            // net-op-hetzelfde-formulier toegevoegde mede-eigenaar heeft die pas na SaveChanges — bewust
+            // niet opgelost via een tijdelijke rijtoken, dit is een bewaar-voorkeur, geen harde koppeling).
+            entity.DefaultSigningRule = bo.DefaultSigningRule.HasValue ? (byte?)bo.DefaultSigningRule.Value : null;
+            entity.PortalInviteRequested = bo.PortalInviteRequested;
 
             // 2) OwnerType
             if (bo.OwnerType != null && bo.OwnerType.Id != 0)
@@ -195,7 +220,53 @@ namespace ServiceCore.Translators
             err = HandleCoOwners(entity, bo.CoOwners, bo.Contacts, uow);
             if (err != ErrorCode.Success) return err;
 
+            // 5) "Op naam van: één eigenaar" — enkel geldig als het een al bestaande, BEHOUDEN
+            // mede-eigenaar is. Bewust getoetst tegen bo.Contacts/bo.CoOwners (de binnenkomende POST-
+            // lijsten) en niet tegen entity.ClientContacts: die laatste bevat de rijen die HandleContacts/
+            // HandleCoOwners hierboven net met uow.Context.Remove(...) heeft gemarkeerd voor verwijdering
+            // óók nog fysiek in de in-memory collectie (Remove markeert de rij als "te verwijderen" in de
+            // change tracker, maar haalt 'm niet meteen uit entity.ClientContacts). FK_ClientAccount_
+            // BilledToContact staat sinds migratie 057 op ON DELETE NO ACTION (moest wel, zie die migratie
+            // se eigen toelichting over cascade-paden) — zonder deze toets zou een net-verwijderde
+          // mede-eigenaar hier alsnog als BilledToClientContactId weggeschreven kunnen worden en de
+            // SaveChanges met een rauwe FK-fout laten crashen i.p.v. gewoon terugvallen op "alle eigenaars".
+            var keepableContactIds = new HashSet<int>();
+            if (bo.Contacts != null) foreach (var c in bo.Contacts) if (c.Id > 0) keepableContactIds.Add(c.Id);
+            if (bo.CoOwners != null) foreach (var c in bo.CoOwners) if (c.Id > 0) keepableContactIds.Add(c.Id);
+
+            entity.BilledToClientContactId = bo.BilledToClientContactId is int contactId && contactId > 0
+                && keepableContactIds.Contains(contactId)
+                ? contactId
+                : null;
+
+            HandleInvoiceRecipients(entity, bo.InvoiceRecipients, uow);
+
             return ErrorCode.Success;
+        }
+
+        // "Verzenden naar" (migratie 057) — een kleine, ordeloze lijst zonder eigen sub-entiteiten die
+        // van iets anders afhangen; eenvoudiger en even veilig om te vervangen i.p.v. per rij te diffen
+        // zoals Contacts/CoOwners hierboven (die wél child-FK's van andere tabellen kunnen dragen).
+        private static void HandleInvoiceRecipients(ClientAccount entity, List<ClientInvoiceRecipientBO> recipients, UnitOfWorkCore uow)
+        {
+            foreach (var existing in entity.InvoiceRecipients.ToList())
+                uow.Context.Remove(existing);
+            entity.InvoiceRecipients.Clear();
+
+            if (recipients == null) return;
+            var order = 0;
+            foreach (var r in recipients)
+            {
+                var hasContact = r.ClientContactId is int rcid && rcid > 0;
+                if (string.IsNullOrWhiteSpace(r.Email) && !hasContact) continue;
+                entity.InvoiceRecipients.Add(new ClientAccountInvoiceRecipient
+                {
+                    ClientContactId = r.ClientContactId is int cid && cid > 0 && entity.ClientContacts.Any(c => c.Id == cid) ? cid : null,
+                    Email = string.IsNullOrWhiteSpace(r.Email) ? null : r.Email.Trim(),
+                    DisplayName = string.IsNullOrWhiteSpace(r.DisplayName) ? null : r.DisplayName.Trim(),
+                    SortOrder = order++
+                });
+            }
         }
 
         // Defensief, niet enkel cosmetisch: de UI (elke gl-v2-contactrij) laat visueel maar één rij

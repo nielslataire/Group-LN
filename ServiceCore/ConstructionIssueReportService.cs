@@ -25,6 +25,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
     private readonly cpmRunningContext _db;
     private readonly IConstructionIssueService _issueService;
     private readonly IConfiguration _configuration;
+    private readonly FacadeCore.Signing.IAssetStorageClient _assetStorageClient;
     private static SixLabors.Fonts.Font? _markerFont;
 
     private static void EnsureFontLoaded()
@@ -47,11 +48,12 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         _markerFont = family.CreateFont(32, SixLabors.Fonts.FontStyle.Regular);
     }
 
-    public ConstructionIssueReportService(cpmRunningContext db, IConstructionIssueService issueService, IConfiguration configuration)
+    public ConstructionIssueReportService(cpmRunningContext db, IConstructionIssueService issueService, IConfiguration configuration, FacadeCore.Signing.IAssetStorageClient assetStorageClient)
     {
         _db = db;
         _issueService = issueService;
         _configuration = configuration;
+        _assetStorageClient = assetStorageClient;
     }
 
     public async Task<ConstructionIssueReport> CreateReportEntity(int projectId, int reportType, int responsiblePartyType, int? responsiblePartyId, string? responsibleOtherName, string? responsibleOtherEmail, List<int> issueIds, string? userId)
@@ -749,11 +751,24 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
 
     private static bool IsLikelyImage(byte[] bytes)
     {
+        // JPEG/PNG/GIF magic bytes ontbrak WebP — en projectfoto's (ConstructionIssueMedia, upload-
+        // pad UploadIssueMediaToStorageAsync) worden ONgewijzigd/in hun oorspronkelijk formaat naar
+        // "pictures" geüpload (enkel bij een MISLUKTE eerste upload wordt er herencodeerd naar .jpg),
+        // dus een rechtstreeks als WebP geüploade foto (bv. vanaf een toestel/browser dat al WebP
+        // aanlevert, zoals `Projecten/*`'s eigen webpName-conversie elders in de app) faalde hier altijd
+        // stil — vandaar "Foto niet beschikbaar" in de PDF-lijst terwijl dezelfde foto in de browser
+        // (die WebP wél native toont) prima zichtbaar was bij het individueel bewerken van het punt.
         return bytes.Length > 4
                && ((bytes[0] == 0xFF && bytes[1] == 0xD8)
                    || (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
-                   || (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46));
+                   || (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46)
+                   || IsLikelyWebp(bytes));
     }
+
+    private static bool IsLikelyWebp(byte[] bytes)
+        => bytes.Length > 11
+           && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 // "RIFF"
+           && bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50; // "WEBP"
 
     private static string DetectImageMime(byte[] bytes)
     {
@@ -826,71 +841,16 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         }
     }
 
+    // Gedelegeerd naar de gedeelde IAssetStorageClient (ONDERTEKENEN_VOORSTEL.md §4.7) i.p.v. een eigen
+    // sign/download-implementatie — deze had de "map 'pictures' is rechtstreeks publiek, niet
+    // ondertekenen"-uitzondering niet (zie AssetStorageClient.GetSignedUrlAsync), waardoor foto's van
+    // punten (ConstructionIssueMedia, altijd in "pictures") hier via een /sign-aanroep liepen die voor
+    // die map niet bedoeld is — vandaar "Foto niet beschikbaar" in de PDF-lijst terwijl de individuele
+    // punt-pagina (die via ProjectIssuesController al wél door IAssetStorageClient liep) de foto gewoon
+    // toonde. "plans" (ResolvePlanPageImageBytes) blijft via dezelfde client lopen en dus ongewijzigd
+    // ondertekend gedrag behouden.
     private byte[]? LoadAssetBytes(string fileId, string folder)
-    {
-        var url = GetSignedAssetUrlByFileName(fileId, folder);
-        if (!string.IsNullOrWhiteSpace(url))
-        {
-            try
-            {
-                using var httpClient = new HttpClient();
-                var bytes = httpClient.GetByteArrayAsync(url).GetAwaiter().GetResult();
-                if (bytes.Length > 0)
-                    return bytes;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Thumbnail download failed: {url} - {ex.Message}");
-            }
-        }
-
-        return null;
-    }
-
-    private string? GetSignedAssetUrlByFileName(string fileName, string folder)
-    {
-        var safeFileName = System.IO.Path.GetFileName(fileName ?? string.Empty);
-        if (string.IsNullOrWhiteSpace(safeFileName))
-            return null;
-
-        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            return null;
-
-        var readKey = _configuration["StorageApi:ReadApiKey"];
-        if (!string.IsNullOrWhiteSpace(readKey))
-        {
-            try
-            {
-                using var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.Add("X-Api-Key", readKey);
-
-                var signUrl = $"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(safeFileName)}/sign";
-                var response = httpClient.PostAsync(signUrl, content: null).GetAwaiter().GetResult();
-                if (response.IsSuccessStatusCode)
-                {
-                    var payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    using var jsonDoc = JsonDocument.Parse(payload);
-                    if (jsonDoc.RootElement.TryGetProperty("url", out var urlElement))
-                    {
-                        var relativeOrAbsolute = urlElement.GetString();
-                        if (!string.IsNullOrWhiteSpace(relativeOrAbsolute))
-                        {
-                            return relativeOrAbsolute.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                                ? relativeOrAbsolute
-                                : $"{baseUrl}{relativeOrAbsolute}";
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Thumbnail download failed: {ex.Message}");
-            }
-        }
-
-        return $"{baseUrl}/{folder}/{Uri.EscapeDataString(safeFileName)}";
-    }
+        => _assetStorageClient.DownloadAsync(folder, fileId).GetAwaiter().GetResult();
 
     private sealed record IssuePlanSection(int? UnitId, string UnitName, string PlanName, int PageNumber, string? FileId, IReadOnlyList<IssuePlanMarker> Markers);
     private sealed record IssuePlanMarker(int Number, float X, float Y);

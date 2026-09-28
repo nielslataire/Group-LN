@@ -1,0 +1,144 @@
+@model FacadeCore.Signing.SigningSessionView
+@using BOCore
+@{
+    Layout = "_LayoutPublic";
+    var caseStatus = (SigningCaseStatus)Model.CaseStatus;
+    var partyStatus = (SigningPartyStatus)Model.PartyStatus;
+    var completed = caseStatus == SigningCaseStatus.Completed;
+    var closedWithoutSigning = partyStatus is SigningPartyStatus.Declined or SigningPartyStatus.Expired or SigningPartyStatus.Revoked;
+    var waitingOnOthers = partyStatus == SigningPartyStatus.Signed && !completed;
+    var readyToSign = !completed && !closedWithoutSigning && !waitingOnOthers;
+}
+<section class="gl-v2-public-card">
+    <div class="gl-v2-public-card-header">
+        <h1 class="gl-v2-public-title" style="margin:0">@Model.Title</h1>
+    </div>
+    <div class="gl-v2-public-card-body">
+        <span class="gl-v2-public-badge @(completed ? "is-positive" : closedWithoutSigning ? "is-blocked" : waitingOnOthers ? "is-attention" : "is-neutral")" id="gl-tekenen-status-badge">
+            @(completed ? "Voltooid" : closedWithoutSigning ? "Niet meer beschikbaar" : waitingOnOthers ? "Wacht op andere ondertekenaar(s)" : "Te ondertekenen")
+        </span>
+        @if (!string.IsNullOrWhiteSpace(Model.Summary))
+        {
+            <p style="margin-top:12px">@Model.Summary</p>
+        }
+        @if (Model.AmountInclVat is decimal total)
+        {
+            <p class="gl-v2-public-help">Totaal incl. btw: @total.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("nl-BE"))</p>
+        }
+        <p class="gl-v2-public-help">Voor akkoord door @Model.SignerName@(string.IsNullOrWhiteSpace(Model.SignerCapacity) ? "" : $" ({Model.SignerCapacity})")</p>
+    </div>
+</section>
+
+<section class="gl-v2-public-card">
+    <div class="gl-v2-public-card-header">
+        <h2 class="gl-v2-public-card-title">Document</h2>
+    </div>
+    <div class="gl-v2-public-card-body">
+        @* Ná voltooiing toont de preview het ondertekende PDF (incl. ondertekeningsblad), niet meer
+           enkel het origineel — anders lijkt het alsof de handtekening nergens verschijnt. *@
+        <iframe src="@Url.Action(completed ? "Finaal" : "Bestand")" style="width:100%;height:60vh;border:1px solid var(--gl-v2-hairline);border-radius:var(--gl-v2-radius-sm)" title="@Model.Title"></iframe>
+    </div>
+</section>
+
+@if (completed)
+{
+    <section class="gl-v2-public-card">
+        <div class="gl-v2-public-card-header"><h2 class="gl-v2-public-card-title">Voltooid</h2></div>
+        <div class="gl-v2-public-card-body" style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="gl-v2-public-btn is-primary" href="@Url.Action("Finaal")">Ondertekend document downloaden</a>
+        </div>
+    </section>
+}
+else if (closedWithoutSigning)
+{
+    <div class="gl-v2-public-empty">
+        <h2 class="gl-v2-public-empty-title">Deze link is niet meer beschikbaar</h2>
+        <p class="gl-v2-public-empty-desc">Neem contact op met Group LN als u denkt dat dit niet klopt.</p>
+    </div>
+}
+else if (waitingOnOthers)
+{
+    <div class="gl-v2-public-empty">
+        <h2 class="gl-v2-public-empty-title">Uw handtekening is geregistreerd</h2>
+        <p class="gl-v2-public-empty-desc">We wachten nog op de handtekening van de andere betrokkene(n). U ontvangt een bevestiging zodra alles ondertekend is.</p>
+    </div>
+}
+else
+{
+    <section class="gl-v2-public-card" id="gl-tekenen-actiekaart"
+              data-otp-required="@(Model.OtpRequired ? "1" : "0")"
+              data-destination="@(Model.VerificationDestinationMasked ?? "uw e-mailadres")">
+        <div class="gl-v2-public-card-header"><h2 class="gl-v2-public-card-title">Ondertekenen</h2></div>
+        <div class="gl-v2-public-card-body">
+            @Html.AntiForgeryToken()
+            <div id="gl-tekenen-melding"></div>
+
+            @* Stap 1: eerst een keuze — akkoord of weigeren. Nog geen code, nog geen handtekeningvak. *@
+            <div id="gl-tekenen-stap1">
+                <p class="gl-v2-public-help">@Model.ConsentText</p>
+                <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+                    <button type="button" id="gl-tekenen-akkoord" class="gl-v2-public-btn is-primary">Akkoord met deze wijzigingsopdracht</button>
+                    <button type="button" id="gl-tekenen-weiger" class="gl-v2-public-btn is-text">Weigeren</button>
+                </div>
+            </div>
+
+            @* Stap 2: pas na "Akkoord" — verificatiecode (indien nodig) en het handtekeningvak. *@
+            <div id="gl-tekenen-stap2" style="display:none">
+                <div id="gl-tekenen-otp" style="display:none">
+                    <p class="gl-v2-public-help">
+                        Er is een verificatiecode gestuurd. Vul de code hieronder in.
+                        <button type="button" id="gl-tekenen-opnieuw-code" class="gl-v2-public-btn is-text" style="padding:0;height:auto;font-size:inherit">Geen code ontvangen? Opnieuw versturen</button>
+                    </p>
+                    <div class="gl-v2-public-field" style="max-width:160px">
+                        <label class="gl-v2-public-label" for="gl-tekenen-code-input">Code</label>
+                        <input class="gl-v2-public-input" id="gl-tekenen-code-input" maxlength="10" autocomplete="one-time-code" inputmode="numeric" />
+                    </div>
+                </div>
+
+                <div class="gl-v2-public-field" style="margin-top:14px">
+                    <label class="gl-v2-public-label">Handtekening</label>
+                    <p class="gl-v2-public-help" style="margin:0 0 4px">Teken hieronder uw volledige handtekening.</p>
+                    <canvas id="gl-tekenen-canvas" width="600" height="180"
+                            style="border:1px solid var(--gl-v2-hairline);border-radius:var(--gl-v2-radius-sm);touch-action:none;width:100%;max-width:600px;height:180px;background:#fff"></canvas>
+                    <button type="button" id="gl-tekenen-wis" class="gl-v2-public-btn is-text" style="align-self:flex-start;padding-left:0">Handtekening wissen</button>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+                    <button type="button" id="gl-tekenen-teken" class="gl-v2-public-btn is-primary" disabled>Ondertekenen</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    @* Bevestiging na weigeren: geen reload — de sessie/token wordt bij weigeren meteen ingetrokken
+       (DeclineAsync roept RevokeTokens aan), dus een herlaad-poging zou altijd op de neutrale
+       "sessie verlopen"-pagina uitkomen i.p.v. een echte bevestiging. Deze blok staat er al, verborgen,
+       en de JS toont 'm rechtstreeks met wat de server net teruggaf. *@
+    <div class="gl-v2-public-empty" id="gl-tekenen-geweigerd-bevestiging" hidden>
+        <h2 class="gl-v2-public-empty-title">U hebt geweigerd te ondertekenen</h2>
+        <p class="gl-v2-public-empty-desc">Group LN neemt hierover contact met u op. U kan deze pagina nu sluiten.</p>
+    </div>
+
+    <div class="gl-v2-public-modal-backdrop" id="gl-tekenen-weiger-modal" hidden>
+        <div class="gl-v2-public-modal is-warning" role="dialog" aria-modal="true" aria-labelledby="gl-tekenen-weiger-titel">
+            <div class="gl-v2-public-modal-body">
+                <h2 class="gl-v2-public-modal-title" id="gl-tekenen-weiger-titel">Weigeren te ondertekenen</h2>
+                <p class="gl-v2-public-modal-desc">Geef kort aan waarom u niet akkoord gaat. Group LN neemt hierover contact met u op.</p>
+            </div>
+            <div class="gl-v2-public-modal-field">
+                <div class="gl-v2-public-field">
+                    <label class="gl-v2-public-label" for="gl-tekenen-weiger-reden">Reden</label>
+                    <textarea class="gl-v2-public-textarea" id="gl-tekenen-weiger-reden" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="gl-v2-public-modal-footer">
+                <button type="button" class="gl-v2-public-btn is-text" id="gl-tekenen-weiger-annuleer">Annuleren</button>
+                <button type="button" class="gl-v2-public-btn is-danger" id="gl-tekenen-weiger-bevestig">Weigeren</button>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts {
+    <script src="~/js/gl-v2-tekenen.js" asp-append-version="true"></script>
+}

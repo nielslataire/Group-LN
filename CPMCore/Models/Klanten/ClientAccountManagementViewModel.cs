@@ -42,6 +42,9 @@ public class ClientFormViewModel
     [Display(Name = "Naam")]
     public string? Name { get; set; }
 
+    [Display(Name = "Voornaam")]
+    public string? Forename { get; set; }
+
     [Display(Name = "Aanspreking")]
     public Salutation? Salutation { get; set; }
     public string DisplayName { get; set; } = string.Empty;
@@ -106,6 +109,14 @@ public class ClientFormViewModel
     [Display(Name = "E-mail")]
     [EmailAddress(ErrorMessage = "Ongeldige e-mail")]
     public string? Email { get; set; }
+
+    // Migratie 058_KlantenaccountTelefoon.sql: eigenaar 1 had geen telefoon/gsm, in tegenstelling tot
+    // elke contactpersoon hieronder (ContactInputViewModel.Phone/Mobile).
+    [Display(Name = "Telefoon")]
+    public string? Phone { get; set; }
+
+    [Display(Name = "Gsm")]
+    public string? Cellphone { get; set; }
 
     [Display(Name = "Facturatie e-mail")]
     [EmailAddress(ErrorMessage = "Ongeldige e-mail")]

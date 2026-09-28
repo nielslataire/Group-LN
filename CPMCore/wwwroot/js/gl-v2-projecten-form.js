@@ -209,9 +209,15 @@
             clearBtn.hidden = true;
             searchInput.focus();
         }
+        // mousedown (i.p.v. de click zelf) legt vast of het paneel al open stond VÓÓR deze interactie —
+        // nodig omdat de focus-listener hieronder het paneel soms al opent nog vóórdat de click zelf
+        // afgaat (browser-volgorde: mousedown → focus → click), anders zou de click meteen weer sluiten
+        // wat de focus-listener net opende.
+        var wasOpenBeforeInteraction = false;
+        trigger.addEventListener("mousedown", function () { wasOpenBeforeInteraction = panel.classList.contains("is-open"); });
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (panel.classList.contains("is-open")) closeAllPanels(); else openThis();
+            if (wasOpenBeforeInteraction) closeAllPanels(); else openThis();
         });
         trigger.addEventListener("keydown", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
@@ -219,6 +225,9 @@
             e.preventDefault();
             if (panel.classList.contains("is-open")) closeAllPanels(); else openThis();
         });
+        // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
+        // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
+        trigger.addEventListener("focus", function () { if (!panel.classList.contains("is-open")) openThis(); });
         if (clearTrigger) clearTrigger.addEventListener("click", function (e) { e.stopPropagation(); choose("", ""); });
     }
 

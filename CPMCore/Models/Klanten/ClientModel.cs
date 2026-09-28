@@ -608,6 +608,48 @@ namespace CPMCore.Models.Klanten
                 _salutations = value;
             }
         }
+
+        // gl-v2 (Klanten/AddClientAccountV2, design-handoff 23a/23b): de eenhedenkiezer toont ALLE
+        // eenheden van het project — beschikbare kiesbaar, verkochte/in optie zichtbaar maar niet
+        // kiesbaar mét de reden (koper/optiehouder). AvailableUnits hierboven blijft de legacy lijst
+        // (enkel beschikbare) voor de niet-gl-v2 view.
+        public List<UnitChoiceVm> UnitChoices { get; set; } = new();
+
+        // gl-v2 (Klanten/AddClientAccountV2): zelfde afgeleide vlag/patroon als EditClientModel.IsCompany
+        // hierboven — "Dit is een bedrijf"-schakelaar, bepaald uit CompanyName (geen eigen kolom nodig).
+        private bool _iscompany;
+        [Display(Name = "Eigenaar is een onderneming")]
+        public bool IsCompany
+        {
+            get
+            {
+                if (ClientAccount is not null)
+                    return ClientAccount.CompanyName != null;
+                return false;
+            }
+            set
+            {
+                _iscompany = value;
+            }
+        }
+    }
+
+    /// <summary>Eén regel in de eenhedenkiezer van Klanten/AddClientAccountV2 (design-handoff 23b:
+    /// "verkochte eenheden zichtbaar maar niet kiesbaar"). Gebouwd in KlantenController.BuildUnitChoices.</summary>
+    public class UnitChoiceVm
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        /// <summary>"open bebouwing · 2.081 m² · Woning 6 % btw" — type, oppervlakte, betalingsgroep.</summary>
+        public string Sub { get; set; } = "";
+        public decimal Price { get; set; }
+        public bool Available { get; set; }
+        /// <summary>BESCHIKBAAR / VERKOCHT / IN OPTIE.</summary>
+        public string StatusLabel { get; set; } = "";
+        /// <summary>Bij niet-beschikbaar: de koper/optiehouder — dé reden waarom je 'm hier niet kan kiezen.</summary>
+        public string? Reason { get; set; }
+        /// <summary>Type-groep (Wooneenheden, Nevenruimtes …) voor de sortering/groepering.</summary>
+        public string? Group { get; set; }
     }
 
     public class AddUpdateClientCoOwnerModel

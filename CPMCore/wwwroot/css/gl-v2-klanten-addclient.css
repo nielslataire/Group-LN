@@ -1,0 +1,81 @@
+/* gl-v2 layout-pilot — Klanten/AddClientAccountV2.cshtml (design-handoff 23a "Klant toevoegen").
+   Geladen NA gl-v2-klanten-editproject.css (zie PageStyle in de view) — de gedeelde .gl-v2-kep-*
+   bouwstenen (verdeelsleutelbalk, facturatie-voorbeeldkaart, segmentcontrole) komen van dat bestand
+   en worden hier NIET herhaald; dit bestand bevat enkel wat deze pagina eigen is: de eenhedenrij-
+   opmaak (_UnitRowV2.cshtml, .gl-v2-addclient-unit-*) en enkele kleine lay-outdetails van de
+   sectiekaart-opzet (23a heeft geen tabbar, dus geen tabbar-CSS nodig — .gl-v2-section-card/-grid/
+   -col-* komen al uit gl-v2-shell.css). */
+
+.gl-v2-addclient-unit-row { margin-bottom: 12px; }
+.gl-v2-addclient-unit-row:last-child { margin-bottom: 0; }
+
+.gl-v2-addclient-unit-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--gl-v2-border, #E4E0D8);
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft, #6B6759);
+}
+.gl-v2-addclient-unit-meta b { color: var(--gl-v2-ink, #2C3B2A); font-weight: 700; }
+
+/* "Nog geen eenheden toegevoegd" — zelfde toon als de andere lege-staat-hints in de pilot. */
+#gl-v2-kd-units-empty { padding: 4px 4px 0; }
+
+/* ── Kaart-body buiten het veldraster (rijlijsten, verdeelsleutel, kiezer, hulptekst) ──────────────
+   .gl-v2-section-grid (gl-v2-shell.css) draagt 18px 20px binnenmarge; alles wat op deze pagina ná
+   of i.p.v. dat raster in de sectiekaart staat (mede-eigenaar-/contact-/eenheidsrijen, de
+   verdeelsleutelbalk, de "+ … toevoegen"-knop) moet dezelfde 20px zijmarge krijgen, anders staat
+   het tot tegen de kaartrand en valt de dashed toevoegknop breder dan de kolommen eronder. */
+.gl-v2-kd-card-body { padding: 0 20px 18px; display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-kd-card-body.is-standalone { padding-top: 18px; }
+.gl-v2-kd-card-body > .gl-v2-field-help { display: block; margin: 0; }
+.gl-v2-kd-card-body .gl-v2-client-row-list-header { display: flex; }
+.gl-v2-kd-card-body .gl-v2-client-row-list:empty { display: none; }
+
+/* ── Eenhedenkiezer (23a/23b) — zoekende dropdown zoals GlV2SearchSelect (trigger + paneel uit
+   gl-v2-shell.css), met binnenin de gegroepeerde optie-opmaak van Projecten/_ModalAttachUnitV2
+   (.gl-v2-du-picker-*, hier page-scoped overgenomen als .gl-v2-kd-upk-*): beschikbaar = kiesbaar,
+   verkocht/in optie = zichtbaar maar niet kiesbaar, met de koper als reden. ───────────────────── */
+.gl-v2-kd-unit-pick { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.gl-v2-kd-unit-pick-field { flex: 1 1 360px; min-width: 0; }
+.gl-v2-kd-unit-pick .gl-v2-btn { flex: none; height: 40px; }
+.gl-v2-kd-upk { padding: 4px; }
+.gl-v2-kd-upk-group-label { display: block; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted-light); padding: 8px 10px 4px; }
+.gl-v2-kd-upk-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 4px 10px; border: 0; border-radius: 7px; background: transparent; cursor: pointer; text-align: left; }
+.gl-v2-kd-upk-option:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-kd-upk-option.is-selected { background: var(--gl-v2-primary-tint); }
+.gl-v2-kd-upk-option.is-disabled { cursor: default; opacity: .6; }
+.gl-v2-kd-upk-option.is-disabled:hover { background: transparent; }
+.gl-v2-kd-upk-option[hidden] { display: none; }
+.gl-v2-kd-upk-icon { width: 26px; height: 26px; flex: none; border-radius: 7px; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); display: flex; align-items: center; justify-content: center; }
+.gl-v2-kd-upk-icon i { font-size: 13px; }
+.gl-v2-kd-upk-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.gl-v2-kd-upk-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-kd-upk-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-kd-upk-badge { flex: none; height: 20px; padding: 0 8px; border-radius: 10px; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; display: inline-flex; align-items: center; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); }
+.gl-v2-kd-upk-badge.is-available { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-kd-upk-badge.is-option { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-kd-upk-empty { padding: 14px 10px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Eenheidskaart (23a) — kop met type/oppervlakte + "Beschikbaar → Verkocht", veldenraster met
+   bewerkbare prijzen en alleen-lezen Totaal/Grondaandeel/Betalingsgroep, "Standaardwaarden". ─── */
+.gl-v2-addclient-unit-head { gap: 10px; }
+.gl-v2-addclient-unit-head-icon { width: 28px; height: 28px; flex: none; border-radius: 7px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.gl-v2-addclient-unit-head-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-addclient-unit-head-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-addclient-unit-badge { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 11px; background: var(--gl-v2-neutral-tint); font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted-soft); }
+.gl-v2-addclient-unit-badge span:last-child { color: var(--gl-v2-primary); }
+.gl-v2-addclient-unit-badge i { font-size: 11px; }
+.gl-v2-addclient-unit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 14px; }
+.gl-v2-addclient-unit-defaults { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--gl-v2-hairline); font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-addclient-unit-defaults-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted-light); margin-right: 4px; }
+.gl-v2-addclient-unit-defaults .gl-v2-btn { height: auto; padding: 0 2px; }
+
+/* Totaal van het account (onder de eenheidskaarten) + de samenvatting in de actiebalk. */
+.gl-v2-kd-units-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-neutral-tint); font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-kd-units-total b { font: 700 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-kd-actionbar-summary { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 767.98px) { .gl-v2-kd-actionbar-summary { display: none; } }

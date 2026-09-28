@@ -841,7 +841,10 @@ namespace ServiceCore
                 var salutation = FormatSalutation(client.Salutation);
                 if (!string.IsNullOrWhiteSpace(salutation)) nameParts.Add(salutation);
                 if (!string.IsNullOrWhiteSpace(client.Name))
+                {
                     nameParts.Add(client.Name.Trim());
+                    if (!string.IsNullOrWhiteSpace(client.Forename)) nameParts.Add(client.Forename.Trim());
+                }
                 else if (!string.IsNullOrWhiteSpace(client.CompanyName))
                     nameParts.Add(client.CompanyName.Trim());
 

@@ -129,6 +129,8 @@
 .gl-v2-public-btn.is-primary:hover { background: var(--gl-v2-primary-deep); border-color: var(--gl-v2-primary-deep); color: #fff; }
 .gl-v2-public-btn.is-primary:disabled { background: #E4E8E2; border-color: #E4E8E2; color: #A8B3A6; cursor: not-allowed; }
 .gl-v2-public-btn.is-text { border-color: transparent; background: transparent; color: var(--gl-v2-muted); }
+.gl-v2-public-btn.is-danger { background: var(--gl-v2-danger); border-color: var(--gl-v2-danger); color: #fff; }
+.gl-v2-public-btn.is-danger:hover { background: #6f2020; border-color: #6f2020; color: #fff; }
 
 .gl-v2-public-field { display: flex; flex-direction: column; gap: 6px; }
 .gl-v2-public-label { font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
@@ -138,10 +140,44 @@
     font: 500 16px var(--gl-v2-font-sans); color: var(--gl-v2-ink);   /* 16px: iOS zoomt anders in */
 }
 .gl-v2-public-input:focus { outline: none; border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px var(--gl-v2-primary-tint); }
+.gl-v2-public-textarea {
+    padding: 10px 14px; border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface);
+    font: 500 16px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-ink); resize: vertical;
+}
+.gl-v2-public-textarea:focus { outline: none; border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px var(--gl-v2-primary-tint); }
 .gl-v2-public-help { font: 400 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-public-error { padding: 10px 12px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); font: 500 12.5px var(--gl-v2-font-sans); }
 .gl-v2-public-notice { padding: 10px 14px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface); border: 1px solid var(--gl-v2-hairline); font: 400 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
 .gl-v2-public-notice.is-warning { border-color: #EBD9B4; color: var(--gl-v2-warning); }
+
+/* ── Modal (DESIGN.md "TYPE 1 Bevestiging"-taal, zelfstandig herbouwd: deze CSP-strikte pagina's laden
+   geen Bootstrap/gl-v2-shell.css) ─────────────────────────────────────────────────────────────────── */
+.gl-v2-public-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(18, 28, 18, .45);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+}
+.gl-v2-public-modal-backdrop[hidden] { display: none; }
+.gl-v2-public-modal {
+    width: 100%; max-width: 460px; background: var(--gl-v2-surface); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 30px 60px -28px rgba(44, 59, 42, .45);
+}
+.gl-v2-public-modal.is-warning { border-top: 3px solid var(--gl-v2-warning); }
+.gl-v2-public-modal-body { padding: 22px 22px 6px; }
+.gl-v2-public-modal-title { margin: 0; font: 500 18px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-public-modal-desc { margin: 6px 0 0; font: 400 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-public-modal-field { padding: 14px 22px 4px; }
+.gl-v2-public-modal-field .gl-v2-public-textarea { width: 100%; }
+.gl-v2-public-modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px; padding: 16px 22px;
+    border-top: 1px solid var(--gl-v2-hairline-soft); margin-top: 14px;
+}
+
+@media (max-width: 767.98px) {
+    .gl-v2-public-modal-backdrop { align-items: flex-end; padding: 0; }
+    .gl-v2-public-modal { max-width: none; border-radius: 14px 14px 0 0; }
+    .gl-v2-public-modal-footer { flex-direction: column-reverse; }
+}
 
 /* Neutrale foutpagina (§5.2 stap 1): geen technische informatie, geen onderscheid tussen oorzaken. */
 .gl-v2-public-empty { padding: 48px 22px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }

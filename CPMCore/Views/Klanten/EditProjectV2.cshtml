@@ -39,6 +39,7 @@
     var medeEigenaarsHasError = KeyHasError("Client.CoOwners");
     var toegiftenHasError = KeyHasError("Gifts");
     var aandachtspuntenHasError = KeyHasError("Poas");
+    var facturatieHasError = KeyHasError("Client.InvoicingMode") || KeyHasError("Client.BilledToType") || KeyHasError("Client.InvoiceRecipients");
     // ?activetab=N (KlantenController.EditProject, altijd meegegeven — de bestaande "Bewerken"-links
     // sturen allemaal activetab=0) koos tot nu toe nooit een tab: ViewData["activetab"] werd wel
     // gezet maar nergens gelezen, dus elke link kwam altijd op "Algemeen" uit. Hier alsnog verwerkt
@@ -52,12 +53,14 @@
         3 => "medeeigenaars",
         4 => "toegiften",
         5 => "aandachtspunten",
+        6 => "facturatie",
         _ => "algemeen"
     };
     var forceTab = algemeenHasError ? "algemeen"
         : eenhedenHasError ? "eenheden"
         : contactenHasError ? "contacten"
         : medeEigenaarsHasError ? "medeeigenaars"
+        : facturatieHasError ? "facturatie"
         : toegiftenHasError ? "toegiften"
         : aandachtspuntenHasError ? "aandachtspunten"
         : requestedTab;
@@ -124,6 +127,9 @@
         Mede-eigenaars <span class="gl-v2-tabbar-count">@Model.Client.CoOwners.Count</span>
         <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!medeEigenaarsHasError)"></span>
     </button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="facturatie" aria-selected="false">
+        Facturatie
+    </button>
     <button type="button" class="gl-v2-tabbar-tab" role="tab" data-tab="toegiften" aria-selected="false">
         Toegiften <span class="gl-v2-tabbar-count">@Model.Gifts.Count</span>
         <span class="gl-v2-tabbar-error-dot" data-role="error-dot" hidden="@(!toegiftenHasError)"></span>
@@ -140,7 +146,6 @@
 @using (Html.BeginForm("EditProject", "Klanten", FormMethod.Post, new { @class = "gl-v2-client-edit-form", id = "gl-v2-client-form" }))
 {
     @Html.HiddenFor(m => m.Client.Id)
-    @Html.HiddenFor(m => m.Client.OwnerPercentage)
     @Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
 
     <div class="gl-v2-client-edit-scroll">
@@ -158,11 +163,12 @@
                         <div class="gl-v2-field">
                             <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Salutation)">Aanspreking</label>
                             <div class="gl-v2-field-box">
-                                @Html.DropDownListFor(m => m.Client.Salutation, Html.GetEnumSelectList<Salutation>(), new { @class = "gl-v2-field-input" })
+                                @Html.DropDownListFor(m => m.Client.Salutation, Html.GetEnumSelectList<Salutation>(), new { @class = "gl-v2-field-input", data_role = "salutation-select" })
                             </div>
+                            <span class="gl-v2-field-help">"Dhr. &amp; Mevr." e.d. = koppel als één eigenaar (geen eigen voornaam); elk een eigen aandeel/adres → tab Mede-eigenaars.</span>
                         </div>
                     </div>
-                    <div class="gl-v2-col-5">
+                    <div class="gl-v2-col-3">
                         <div class="gl-v2-field">
                             <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Name)">Naam</label>
                             <div class="gl-v2-field-box">
@@ -170,7 +176,15 @@
                             </div>
                         </div>
                     </div>
-                    <div class="gl-v2-col-4">
+                    <div class="gl-v2-col-3">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Firstname)">Voornaam</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Client.Firstname, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", data_role = "firstname-input" })
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-3">
                         <div class="gl-v2-field">
                             <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.OwnerType.Id)">Type eigenaar</label>
                             <div class="gl-v2-field-box">
@@ -349,9 +363,12 @@
                     <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Bereikbaarheid</h2>
                     <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-section-card-desc">E-mail en facturatievoorkeuren.</span>
+                    <span class="gl-v2-section-card-desc">Telefoon, e-mail en facturatievoorkeuren.</span>
                 </div>
                 <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Client.Phone, "GlV2Telefoon")</div>
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Client.Cellphone, "GlV2Gsm")</div>
+                    <div class="gl-v2-col-4"></div>
                     <div class="gl-v2-col-4">@Html.EditorFor(m => m.Client.Email, "GlV2Email")</div>
                     <div class="gl-v2-col-4">@Html.EditorFor(m => m.Client.InvoiceEmail, "GlV2Email")</div>
                     <div class="gl-v2-col-4 gl-v2-kep-col-full-tablet">
@@ -393,6 +410,42 @@
                                 @Html.TextBoxFor(m => m.Client.ExecutionDays, new { @class = "gl-v2-field-input", placeholder = " ", type = "number", autocomplete = "off" })
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            @* WO ondertekenen door + klantenportaal (migratie 057, design-handoff 23a) — enkel bewaard:
+               stuurt het ondertekenaarsvoorstel van een latere wijzigingsopdracht (ChangeOrderSigningSource)
+               en niets meer; het klantenportaal bestaat nog niet, vandaar de expliciete hint. *@
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-signature" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Ondertekenen &amp; portaal</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Standaardvoorkeuren voor deze klant — enkel bewaard, niet afgedwongen.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">WO ondertekenen door</span>
+                            <div class="gl-v2-kep-seg" role="radiogroup" aria-label="WO ondertekenen door">
+                                <label><input type="radio" name="@Html.NameFor(m => m.Client.DefaultSigningRule)" value="@((int)SigningRule.All)" checked="@(Model.Client.DefaultSigningRule != SigningRule.Any ? "checked" : null)" /><span>Alle eigenaars</span></label>
+                                <label><input type="radio" name="@Html.NameFor(m => m.Client.DefaultSigningRule)" value="@((int)SigningRule.Any)" checked="@(Model.Client.DefaultSigningRule == SigningRule.Any ? "checked" : null)" /><span>Eén volstaat</span></label>
+                            </div>
+                            <span class="gl-v2-field-help">Standaard voor wijzigingsopdrachten — enkel een voorstel, aanpasbaar bij het versturen zelf.</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6">
+                        <div class="gl-v2-switch-group">
+                            <div class="gl-v2-switch-row">
+                                <label class="gl-v2-switch">
+                                    @Html.CheckBoxFor(m => m.Client.PortalInviteRequested, new { @class = "gl-v2-client-switch-input" })
+                                    <span class="gl-v2-switch-track"></span>
+                                </label>
+                                <span class="gl-v2-switch-row-label">Uitnodigen voor het klantenportaal</span>
+                            </div>
+                        </div>
+                        <span class="gl-v2-field-help">Nog niet actief — er bestaat nog geen klantenportaal; dit wordt enkel onthouden.</span>
                     </div>
                 </div>
             </div>
@@ -450,6 +503,7 @@
             <div id="gl-v2-contact-rows">
                 @foreach (var contact in Model.Client.Contacts)
                 {
+                    ViewData["ContactCollectionName"] = "Client.Contacts";
                     @Html.Partial("Partials/_ProjectContactRowV2", contact)
                 }
             </div>
@@ -466,6 +520,109 @@
                 {
                     @Html.Partial("Partials/_CoOwnerRowV2", coOwner)
                 }
+            </div>
+            @* Verdeelsleutel (migratie 057, design-handoff 23a "100 % KLOPT") — eigenaar 1 se aandeel
+               (voorheen enkel een verborgen veld op deze pagina) staat hier expliciet zodat de som
+               zichtbaar en aanpasbaar is; #gl-v2-kep-owner1-share deelt zijn name met de hidden Id.
+               Live herberekend door gl-v2-klanten-editproject.js (dezelfde JS als AddClientAccountV2). *@
+            <div class="gl-v2-kep-shares" id="gl-v2-kep-shares" data-role="share-total">
+                <div class="gl-v2-field" style="max-width:160px">
+                    <label class="gl-v2-field-label" for="gl-v2-kep-owner1-share">Aandeel eigenaar 1</label>
+                    <div class="gl-v2-field-box">
+                        <input type="number" min="0" max="100" step="1" class="gl-v2-field-input" id="gl-v2-kep-owner1-share"
+                               name="@Html.NameFor(m => m.Client.OwnerPercentage)" value="@(Model.Client.OwnerPercentage ?? 100)" data-role="share-input" />
+                        <span class="gl-v2-field-unit">%</span>
+                    </div>
+                </div>
+                <span class="gl-v2-kep-shares-spacer"></span>
+                <span class="gl-v2-kep-shares-label">Verdeelsleutel</span>
+                <span class="gl-v2-kep-shares-value" data-role="share-value">100</span>
+                <span class="gl-v2-kep-shares-badge" data-role="share-badge"><i class="ph ph-check" aria-hidden="true"></i>Klopt</span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-role="share-equalize">Gelijk verdelen</button>
+            </div>
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="facturatie" hidden>
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Facturatie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Hoe dit account zijn facturen krijgt — geldt voor schijven, meer-/minwerken en nuts. Enkel bewaard: de facturatie-generatie zelf blijft manueel zoals vandaag.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Facturatiewijze</span>
+                            <div class="gl-v2-kep-seg" role="radiogroup" aria-label="Facturatiewijze" id="gl-v2-kep-invmode">
+                                <label><input type="radio" name="@Html.NameFor(m => m.Client.InvoicingMode)" value="@((int)ClientInvoicingMode.Joint)" checked="@(Model.Client.InvoicingMode != ClientInvoicingMode.PerOwner ? "checked" : null)" data-role="invmode-joint" /><span>Gemeenschappelijk — één factuur</span></label>
+                                <label><input type="radio" name="@Html.NameFor(m => m.Client.InvoicingMode)" value="@((int)ClientInvoicingMode.PerOwner)" checked="@(Model.Client.InvoicingMode == ClientInvoicingMode.PerOwner ? "checked" : null)" data-role="invmode-perowner" /><span>Per eigenaar volgens aandeel</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="gl-v2-kep-billedto">Op naam van</label>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" id="gl-v2-kep-billedto" name="@Html.NameFor(m => m.Client.BilledToType)" data-role="billedto-select">
+                                    <option value="" selected="@(Model.Client.BilledToType is null or ClientBilledToType.AllOwners ? "selected" : null)">Alle eigenaars</option>
+                                    <option value="@((int)ClientBilledToType.SpecificOwner)" selected="@(Model.Client.BilledToType == ClientBilledToType.SpecificOwner ? "selected" : null)">Eén eigenaar …</option>
+                                    @if (Model.IsCompany)
+                                    {
+                                        <option value="@((int)ClientBilledToType.Company)" selected="@(Model.Client.BilledToType == ClientBilledToType.Company ? "selected" : null)">Bedrijf</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6" data-role="billedto-owner-field" hidden="@(Model.Client.BilledToType != ClientBilledToType.SpecificOwner)">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="gl-v2-kep-billedto-contact">Welke eigenaar</label>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" id="gl-v2-kep-billedto-contact" name="@Html.NameFor(m => m.Client.BilledToClientContactId)">
+                                    <option value="">Eigenaar 1 — @Model.Client.DisplayName</option>
+                                    @foreach (var co in Model.Client.CoOwners.Where(c => c.Id > 0))
+                                    {
+                                        var coLabel = !string.IsNullOrWhiteSpace(co.Name) ? (co.Name + (string.IsNullOrWhiteSpace(co.Firstname) ? "" : " " + co.Firstname)) : (co.CompanyName ?? "Mede-eigenaar");
+                                        <option value="@co.Id" selected="@(Model.Client.BilledToClientContactId == co.Id ? "selected" : null)">@coLabel</option>
+                                    }
+                                </select>
+                            </div>
+                            <span class="gl-v2-field-help">Nog niet opgeslagen mede-eigenaars zijn hier pas kiesbaar na een eerste keer opslaan.</span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Verzenden naar</span>
+                            <div class="gl-v2-kep-recipients" id="gl-v2-kep-recipients" data-role="recipients">
+                                @for (var i = 0; i < Model.Client.InvoiceRecipients.Count; i++)
+                                {
+                                    var r = Model.Client.InvoiceRecipients[i];
+                                    <span class="gl-v2-kep-recipient-chip">
+                                        @Html.HiddenFor(m => m.Client.InvoiceRecipients[i].Id)
+                                        @Html.HiddenFor(m => m.Client.InvoiceRecipients[i].ClientContactId)
+                                        @Html.HiddenFor(m => m.Client.InvoiceRecipients[i].Email)
+                                        @Html.HiddenFor(m => m.Client.InvoiceRecipients[i].DisplayName)
+                                        @(string.IsNullOrWhiteSpace(r.DisplayName) ? r.Email : r.DisplayName)
+                                        <button type="button" data-role="remove-recipient" aria-label="Ontvanger verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                                    </span>
+                                }
+                            </div>
+                            <div class="gl-v2-field-box" style="max-width:320px;margin-top:8px">
+                                <input type="email" class="gl-v2-field-input" placeholder="extra e-mailadres toevoegen …" id="gl-v2-kep-recipient-add" />
+                            </div>
+                            @* Gevuld door JS: de e-mails van hoofdklant/mede-eigenaars/contactpersonen die op deze
+                               pagina al ingevuld staan, als één-klik-suggesties (geen tweede keer overtikken). *@
+                            <div class="gl-v2-kep-recipient-suggestions" data-role="recipient-suggestions" hidden></div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-kep-invoice-preview" data-role="invoice-preview">
+                            <span class="gl-v2-kep-invoice-preview-title">Zo wordt gefactureerd — voorbeeld schijf € 10.000</span>
+                            <div data-role="invoice-preview-rows"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -3152,6 +3152,170 @@ same-format reasoning above is sound but untested end-to-end), and Eenheden inte
 remove — units are sourced elsewhere in the app, matching the legacy page's own read-only-unit-list
 behavior.
 
+### Klanten/AddClientAccountV2 + EditProjectV2's Facturatie-tab — meerdere eigenaars, een verdeelsleutel, een Voornaam-veld overal (design-handoff 23, migratie 057)
+Two combined requests: rebuild `Klanten/AddClientAccount` (project-scoped client creation, until now
+fully legacy) and extend `EditProjectV2` per design-handoff **23** ("Klant toevoegen — aanvulling op
+12c/12d" — multiple owners with a share-key, a Facturatiewijze choice, "WO ondertekenen door", a
+client-portal-invite option, a reworked unit picker), plus a standing, general request: **every client
+name is Voornaam + Naam as two fields, everywhere, including the account/eigenaar-1 record** — not the
+one free-text "Naam" field the mockup itself shows for every owner ("familienaam eerst, zoals op de
+akte"). That second request is explicit and overrides the mockup on this one point; every other part of
+23 was followed as drawn.
+
+**Migration 057 is small — almost every mockup field already had a column.** `ClientAccount.
+OwnerPercentage` (owner 1's share) and `ClientContacts.CoOwnerPercentage` already existed;
+`ClientContacts.Name`/`Forename` were already split. The actual gap was `ClientAccount.Forename`
+(mirroring `ClientContacts.Forename`) plus five new preference/child-table columns:
+`InvoicingMode` (tinyint, default 0 = Gemeenschappelijk), `BilledToType`/`BilledToClientContactId`
+(nullable — "wie staat er op de factuur"), `DefaultSigningRule` (nullable, reuses `BOCore.SigningRule`
+— **no new enum**, `All`/`Any` map 1:1 onto the mockup's "Alle eigenaars"/"Eén volstaat"), and
+`PortalInviteRequested` (bit, default 0), plus a new small child table `ClientAccountInvoiceRecipient`
+("Verzenden naar" — kept separate from `ClientContacts` so an extra recipient, e.g. an accountant, isn't
+forced into being a contact/co-owner). Every column is nullable or defaults to exactly today's implied
+behavior, so an existing account (only `Name`, no preferences) keeps working and displaying unchanged
+without anyone having to fill in anything new — the standing "additive-only, old data keeps working"
+house rule ([[db_migration_workflow]]).
+
+**`ClientAccountBO.DisplayName` became the one canonical place for "achternaam eerst, plus voornaam"**
+(`Name` (+ " " + `Firstname` when present) or `CompanyName`) — since nearly all ~29 views/PDFs already
+call `client.DisplayName`, this one change fixes rendering almost everywhere for free. Six independent
+*re-implementations* of "format a client name" were found and each got Forename added **without
+harmonizing their own, different precedence rules** (a deliberate, minimal-blast-radius choice):
+`ChangeOrderPdfBuilder.DisplayName(ClientAccount)` (entity-level, the active signing module's PDF),
+`KlantenController`'s list/breadcrumb helper (keeps its own CompanyName-before-Name rule),
+`PartyLookupService`'s invoice-party search, `InvoiceCommandService.ResolvePartySnapshotAsync`'s
+snapshot-name builder (now Salutation+Name+Forename, matching the `ClientContacts` branch already next
+to it), and the Octopus accounting sync (`KlantenController`/`InvoicesController` — used to send
+`ClientAccount.Name` into Octopus's own `Firstname` field as a workaround; now sends the real `Forename`
+when present, falling back to the exact old surrogate for un-migrated accounts).
+
+**"WO ondertekenen door" is a stored *preference*, not a rule change.** `ChangeOrderSigningSource.
+BuildAsync`'s `SuggestedRule` now reads `ClientAccount.DefaultSigningRule` when set (else the existing
+hardcoded `All`) — one line, because the method already only *suggests* a rule that
+`SigningAdminController`'s start screen lets the user override; `SigningRuleEvaluator`/the completion
+logic is untouched. Symmetrically, Facturatiewijze/BilledToType and the invoice-recipient list are
+**stored and shown in a live preview card only** — `InvoiceCommandService`'s actual invoice generation
+is unchanged (still one manual, undifferentiated flow); the preview card client-side-recomputes "who
+gets what" for an illustrative €10.000 schijf, nothing more. And the client-portal-invite switch is
+shown, clearly labelled "nog niet actief — er bestaat nog geen klantenportaal" — nothing is sent. All
+three limits were chosen up front (smallest-blast-radius option each time) rather than discovered mid-
+build.
+
+**`Klanten/AddClientAccountV2.cshtml` is one scrolling page of section-cards, deliberately *not* a
+tabbar** — unlike `EditProjectV2`, which edits a bigger, already-existing dossier across 6+ tabs, this
+page creates an account in one pass (mockup 23a itself has no tabs). Four cards: Klantenaccount
+(Verkoopdatum, WO-signing 2-radio toggle, portal-invite switch), Eigenaars (eigenaar 1 = the account's
+own fields including the new Voornaam, `_CoOwnerRowV2` reused for eigenaar 2+, a verdeelsleutel bar),
+Facturatie (same fields/preview recipe as `EditProjectV2`'s new tab, written inline a second time —
+see below), Eenheden (the existing `AvailableUnits`/`AddSelectedUnits` mechanism, given a `_UnitRowV2`
+translation of the legacy `_UnitRow` grond-/constructiewaarde card). Controller side is the same
+`ViewData["UseGlV2Layout"] ? "AddClientAccountV2" : "AddClientAccount"` ternary `EditProject` already
+established; the legacy view/action logic is untouched.
+
+**`_CoOwnerRowV2.cshtml` is reused by *two* different parent pages with two different collection
+prefixes** (`EditProjectV2`'s existing `"Client.CoOwners"`, this page's new `"ClientAccount.CoOwners"`)
+— it already read a dynamic `collectionName` from `ViewData["CoOwnerCollectionName"]` in principle
+(`BlankCoOwnerRow`'s fetch-a-blank-row endpoint set it), but the partial's own `Html.
+BeginCollectionItem(...)` call had the prefix **hardcoded** to `"Client.CoOwners"` regardless — a latent
+bug that would have silently broken co-owner binding on this new page, caught during research rather
+than in the field. Fixed additively: the partial now reads `ViewData["CoOwnerCollectionName"] ??
+"Client.CoOwners"`, so `EditProjectV2`'s existing behavior is byte-for-byte unchanged and the new page
+just has to set the ViewData key before its own `foreach`/`@Html.Partial` call (which the fetch endpoint
+already did for dynamically-added rows).
+
+**No shared Razor partial for the Facturatie fields** — `RenderPartialAsync` with a different model root
+loses the parent form's field-name prefix (`Client.` vs `ClientAccount.`), and nothing in this codebase
+generalizes a dynamically-prefixed *single nested object* partial the way `_CoOwnerRowV2`'s
+`ViewData["CoOwnerCollectionName"]` does for a *collection*. The Facturatiewijze/"Op naam
+van"/ontvangers/voorbeeldkaart markup is therefore written inline, once per page — accepted page-level
+duplication, consistent with this pilot's existing rule that every gl-v2 list/form page owns its own
+toolbar/chrome rather than sharing it.
+
+**Scope-limited "Op naam van: één eigenaar."** On `AddClientAccountV2` specifically, no co-owner has a
+real `Id` yet (everything is being created in the same POST) and the account itself doesn't exist yet
+either, so the picker only ever offers "Alle eigenaars" or "Bedrijf" (shown only once "Dit is een
+bedrijf" is checked) — the specific-owner option is omitted outright rather than shown-and-broken, with
+help text explaining a specific owner becomes choosable after the first save. `EditProjectV2`'s
+equivalent (an existing, already-persisted account) keeps the full picker, filtered to `CoOwners.Where(c
+=> c.Id > 0)` so a co-owner added in the *same* edit isn't offered either, for the same reason.
+
+**Verdeelsleutel is new, everywhere it appears.** `ClientAccount.OwnerPercentage` existed but was a
+hidden field on `EditProjectV2`; it's now a real, visible, editable input on both pages (same `name`
+attribute, so binding is unchanged). A shared bar (`.gl-v2-kep-shares`, "100 % KLOPT") sums owner 1's
+percentage plus every visible `CoOwnerPercentage` input, live, on every `input` event anywhere in the
+form — including inside freshly fetched co-owner rows, since the listener is delegated at `document`
+level rather than bound per-row — with a "Gelijk verdelen" button that splits 100 evenly (remainder to
+owner 1). Both `AddClientAccount` and `EditProject` POST actions gained the same server-side 100%
+check (0.01 tolerance) as a hard `ModelState` error, so a client-side-only bypass can't slip through.
+
+**Client (buiten het project) — Voornaam consistency, kleiner werk.** `Klanten/Create(V2)`/`Edit(V2)`
+(`ClientFormViewModel`, unrelated to `ClientAccountBO`-bound stack above) got the same Voornaam field
+next to Naam. The invoice-side quick-create flow (`QuickCreateClientDto`, reached from the
+factuur-partijzoeker) used to glue Forename+Name together into the one `Name` column
+(`string.Join(" ", [Forename, Name])`) — this was, in effect, the exact "gewoon naam" problem the user
+flagged, on a second entry point; it now writes `Forename`/`Name` to their own columns like every other
+path.
+
+**Not done in this pass**: no browser/RenderHarness screenshot verification against mockups
+23a/23c/23d (unlike the documenten-module work earlier in this session) — verified instead by a clean
+`dotnet build` of `CPMCore`/`BOCore` and a full read-through of every reused convention (`_CoOwnerRowV2`,
+`GlV2SearchSelect`, the `.gl-v2-kep-*` classes, `AddSelectedUnits`) against its existing call sites;
+`ServiceCore.Tests` stayed at the pre-existing baseline (85 passed / 2 pre-existing, unrelated failures
+/ 87 total, no new regressions). `InvoiceCommandService` splitting a real invoice per owner, "Eén
+volstaat" actually completing a signing dossier on the first signature, and an actual klantenportaal
+invite mail are all explicitly future work — see the three scope-limit paragraphs above.
+
+#### Follow-up — hoe een klantenaccount écht in elkaar zit (personen, contactgegevens, facturatie), na een tweede logische doorlichting
+A second pass, prompted by "de personen die je toevoegt en hun contactgegevens lijken niet helemaal
+logisch in elkaar te zitten", found the model itself is sound but was **not consistently guarded**:
+
+- **Three person roles, one table.** `ClientAccount` *is* eigenaar 1 (no separate account entity);
+  `ClientContacts` holds both **mede-eigenaars** (`IsCoOwner=true`: aandeel, type, eigen adres) and
+  **contactpersonen** (`IsCoOwner=false`: aanspreekpunt, primair-contact-vlag, geen aandeel). The
+  new `AddClientAccountV2` had ported only Eigenaars; the legacy page's "Contactgegevens" section
+  (regular contacts) was missing. Added as its own section-card, reusing `_ProjectContactRowV2` /
+  `BlankContactRow` — which had the **same hardcoded-prefix bug** `_CoOwnerRowV2` had (`"Client.
+  Contacts"` baked in although `BlankContactRow` already passed `ViewData["ContactCollectionName"]`);
+  fixed the same additive way, default preserved for `EditProjectV2`.
+- **The real risk was the *other* stack.** The global `Klanten/Edit` (`ClientFormViewModel`) loaded
+  *all* `ClientContacts` — co-owners included — into a flat contacts list that knows nothing of
+  aandeel/type/adres, and `UpdateContacts` deletes every row that doesn't come back. A user editing a
+  client outside a project could silently delete a mede-eigenaar (and break the verdeelsleutel) or
+  flip its primair-contact flag. Fix: that stack now filters `!c.IsCoOwner` on load *and* scopes its
+  delete/update sweep to non-co-owner rows. **Rule from now on: mede-eigenaars are managed only via
+  the project screens (EditProjectV2/AddClientAccountV2); the global Klanten/Edit and Details never
+  see them.**
+- **Eigenaar 1 had no telefoon/gsm** while every co-owner/contact does — migration **058** adds
+  `ClientAccount.Phone`/`Cellphone` (NVARCHAR(50), nullable, additive). Surfaced on all four edit
+  pages (both stacks) and in the client list's phone column (own number first, then primary contact —
+  same precedence Email already used). Consequence for signing: `SmsOtpMethod` used to send eigenaar
+  1's **signature OTP to a random contact's/co-owner's phone** (the account had none) — it now uses
+  the account's own `Cellphone`, falling back to the old lookup only for accounts without a number.
+- **"Verzenden naar" was stored but never used.** `InvoicesController.BuildInvoiceRecipients` now
+  adds the account's `InvoiceRecipients` (e-mail, or the linked contact's invoice/normal e-mail) on
+  top of the existing digital-invoice logic, deduplicated. Note the behaviour change: an account
+  *without* "digitale factuur" but *with* explicit recipients now gets the invoice mailed — that is
+  what the field says. Both Facturatie sections also offer "Snel toevoegen" one-click suggestions
+  from the e-mails already typed on the page (eigenaar 1, mede-eigenaars, contacten) so nothing is
+  retyped; suggestions carry `ClientContactId` when the person already has a real Id.
+- **Naam + voornaam in invoicing.** `SelectClientName` and the `CLIENTNAME` template fallback used
+  `Name` only; both now append `Forename` (achternaam eerst, same as `DisplayName` and the party
+  snapshot). The signer list in `ChangeOrderSigningSource` listed co-owners voornaam-first next to an
+  achternaam-first eigenaar 1 — harmonised.
+- **Aanspreking vs. mede-eigenaar.** "Dhr. & Mevr." (Salutation ≥ 2) now disables Voornaam
+  everywhere the pair exists (both stacks, co-owner and contact rows, dynamically added rows too), and
+  the Eigenaars card explains when to use a shared aanspreking versus a separate mede-eigenaar.
+- **FK consistency.** The EF model said `DeleteBehavior.SetNull` for the two 057 back-references
+  while the DB (after the Msg 1785 fix) is `NO ACTION`; aligned to `NoAction`, and
+  `ClientService.DeleteClientContact` now nulls `BilledToClientContactId`/recipient links before
+  deleting a contact, as `Delete`/the translator already did.
+
+Audited and found fine: signing signer proposal (eigenaar 1 + co-owners only, contacts excluded),
+the invoice party snapshot (`ResolvePartySnapshotAsync`, aanspreking + naam + voornaam), raw SQL (only
+invoice numbering, no ClientAccount columns), the gl-v2 project client list (`DisplayName`). Legacy
+views (`Invoices/Detail.cshtml`, `Projecten/Invoicing.cshtml`, `Partials/Clients.cshtml`) still
+print `Client.Name` alone — untouched by the never-modify-legacy rule.
+
 ### Projecten/IncommingInvoiceDetailV2 — purchase-invoice detail (design-handoff punt 11, the AANKOOP
 half)
 Same pixel reference (11a/11b/11d/11e) as `Invoices/DetailV2` — but for purchase/incoming invoices,

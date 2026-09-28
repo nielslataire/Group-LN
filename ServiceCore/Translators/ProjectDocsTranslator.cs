@@ -24,7 +24,12 @@ namespace ServiceCore.Translators
             bo.ClientAccountId = _entity.ClientAccountId;
             bo.Filename = _entity.Filename;
             bo.SortOrder = _entity.SortOrder;
-            bo.Type = (ProjectDocType)_entity.Type;
+            // _entity.Type is int? (documenten-module 17a-e: generieke ProjectDocs-rijen hebben vaak
+            // geen classificatie) — bo.Type is een niet-nullable enum, dus rechtstreeks casten crashte
+            // met "Nullable object must have a value" zodra Type niet ingevuld is (bv. Klanten/Detail's
+            // GetLatestClientDocs). 0 is geen benoemde ProjectDocType-waarde, maar wel exact de impliciete
+            // standaardwaarde van het VB-veld zelf (Private _type As ProjectDocType, geen initializer).
+            bo.Type = (ProjectDocType)(_entity.Type ?? 0);
             bo.DocDate = _entity.Date;
 
             return ErrorCode.Success;

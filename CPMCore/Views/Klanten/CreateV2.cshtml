@@ -152,18 +152,26 @@
                                 <div class="gl-v2-field@(algemeenHasError && KeyHasError("Salutation") ? " is-error" : "")" data-gl-v2-required="Kies een aanspreking">
                                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Salutation)">Aanspreking <span style="color:#8B2A2A">*</span></label>
                                     <div class="gl-v2-field-box">
-                                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<Salutation>(), "Kies …", new { @class = "gl-v2-field-input" })
+                                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<Salutation>(), "Kies …", new { @class = "gl-v2-field-input", data_role = "salutation-select" })
                                     </div>
                                     @Html.ValidationMessageFor(m => m.Salutation, "", new { @class = "gl-v2-field-help" })
                                 </div>
                             </div>
-                            <div class="gl-v2-col-5">
+                            <div class="gl-v2-col-4">
                                 <div class="gl-v2-field@(algemeenHasError && KeyHasError("Name") ? " is-error" : "")" data-gl-v2-required="Naam is verplicht">
                                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam <span style="color:#8B2A2A">*</span></label>
                                     <div class="gl-v2-field-box">
                                         @Html.TextBoxFor(m => m.Name, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
                                     </div>
                                     @Html.ValidationMessageFor(m => m.Name, "", new { @class = "gl-v2-field-help" })
+                                </div>
+                            </div>
+                            <div class="gl-v2-col-5">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Forename)">Voornaam</label>
+                                    <div class="gl-v2-field-box">
+                                        @Html.TextBoxFor(m => m.Forename, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", data_role = "firstname-input" })
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -328,9 +336,12 @@
                     <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Bereikbaarheid</h2>
                     <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-section-card-desc">Algemene en facturatie-e-mail — persoonlijke gegevens staan bij de contacten.</span>
+                    <span class="gl-v2-section-card-desc">Telefoon, algemene en facturatie-e-mail — bijkomende contactpersonen staan verderop.</span>
                 </div>
                 <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Phone, "GlV2Telefoon")</div>
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Cellphone, "GlV2Gsm")</div>
+                    <div class="gl-v2-col-4"></div>
                     <div class="gl-v2-col-4">@Html.EditorFor(m => m.Email, "GlV2Email")</div>
                     <div class="gl-v2-col-4">@Html.EditorFor(m => m.InvoiceEmail, "GlV2Email")</div>
                 </div>

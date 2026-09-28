@@ -1,5 +1,6 @@
 using System.Globalization;
 using BOCore;
+using CPMCore.Services;
 using DALCore.Models;
 using FacadeCore.Signing;
 using Microsoft.EntityFrameworkCore;
@@ -30,12 +31,27 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
 
     private readonly cpmRunningContext _db;
     private readonly ChangeOrderPdfBuilder _pdf;
+    // Volledig gekwalificeerd waar gebruikt: FacadeCore.IDocumentService/DocUploadDto/DocLinkRef liggen
+    // in dezelfde root-namespace als FacadeCore.ISigningService (Side B) — "using FacadeCore;" zou hier
+    // de al geïmporteerde FacadeCore.Signing.ISigningService ambigu maken. Geen ISigningService-injectie
+    // hier: SigningService bouwt zijn ISigningDocumentSource-lijst op (via SigningRegistry) en zou
+    // anders een kringafhankelijkheid vormen — het definitieve PDF wordt daarom rechtstreeks via _db
+    // gelezen (SigningCase.FinalDocumentId), niet via de service.
+    private readonly FacadeCore.IDocumentService _documents;
+    private readonly DocStorageService _storage;
     private readonly ILogger<ChangeOrderSigningSource> _logger;
 
-    public ChangeOrderSigningSource(cpmRunningContext db, ChangeOrderPdfBuilder pdf, ILogger<ChangeOrderSigningSource> logger)
+    public ChangeOrderSigningSource(
+        cpmRunningContext db,
+        ChangeOrderPdfBuilder pdf,
+        FacadeCore.IDocumentService documents,
+        DocStorageService storage,
+        ILogger<ChangeOrderSigningSource> logger)
     {
         _db = db;
         _pdf = pdf;
+        _documents = documents;
+        _storage = storage;
         _logger = logger;
     }
 
@@ -62,7 +78,10 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
             ProjectId: model.ProjectId > 0 ? model.ProjectId : null,
             ClientAccountId: model.ClientAccountId,
             SuggestedParties: parties,
-            SuggestedRule: (int)SigningRule.All,
+            // Standaardvoorkeur van het klantenaccount (migratie 057, "WO ondertekenen door" op
+            // Klanten/AddClientAccountV2 en EditProjectV2) — enkel een VOORSTEL: de gebruiker past het op
+            // dit startscherm nog aan, en de voltooiingsregel (SigningRuleEvaluator) verandert niet.
+            SuggestedRule: await SuggestedRuleAsync(model.ClientAccountId, ct),
             Attachments: Array.Empty<SigningAttachmentInput>());
     }
 
@@ -70,6 +89,13 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     /// contacten met een eigen e-mailadres dat nog niet in de lijst zit. Wie geen e-mail heeft komt
     /// tóch in het voorstel — het startscherm toont dan een waarschuwing en laat het aanvullen —
     /// want stil weglaten zou een mede-eigenaar doen verdwijnen.</summary>
+    private async Task<int> SuggestedRuleAsync(int clientAccountId, CancellationToken ct)
+    {
+        var rule = await _db.ClientAccount.AsNoTracking().Where(a => a.Id == clientAccountId)
+            .Select(a => a.DefaultSigningRule).FirstOrDefaultAsync(ct);
+        return rule.HasValue ? rule.Value : (int)SigningRule.All;
+    }
+
     public async Task<IReadOnlyList<SigningPartyInput>> SuggestPartiesAsync(Documents.ChangeOrderPdfModel model, CancellationToken ct)
     {
         var list = new List<SigningPartyInput>();
@@ -92,7 +118,10 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
         {
             var email = c.Email?.Trim();
             if (!string.IsNullOrWhiteSpace(email) && !seen.Add(email)) continue;   // zelfde adres als het account: één handtekening volstaat
-            var name = string.Join(" ", new[] { c.Forename, c.Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            // Achternaam eerst, zelfde volgorde als eigenaar 1 hierboven (ChangeOrderPdfBuilder.DisplayName)
+            // en ClientAccountBO.DisplayName — anders staan eigenaar 1 en de mede-eigenaars in één en
+            // dezelfde ondertekenaarslijst in een verschillende naamvolgorde.
+            var name = string.Join(" ", new[] { c.Name, c.Forename }.Where(s => !string.IsNullOrWhiteSpace(s)));
             if (string.IsNullOrWhiteSpace(name)) name = c.CompanyName ?? "Mede-eigenaar";
             list.Add(new SigningPartyInput((int)SigningPartyType.ClientContact, c.Id, name, email,
                 SigningCrypto.MaskPhone(c.Cellphone), "Mede-eigenaar", order++));
@@ -114,12 +143,84 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
 
     public async Task OnCaseCompletedAsync(int sourceEntityId, int caseId, DateTime completedAtUtc, CancellationToken ct = default)
     {
-        var co = await _db.ChangeOrder.FirstOrDefaultAsync(c => c.Id == sourceEntityId, ct);
+        var co = await _db.ChangeOrder
+            .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Project)
+            .FirstOrDefaultAsync(c => c.Id == sourceEntityId, ct);
         if (co is null) return;
         co.DateAgreement = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(completedAtUtc, Brussels));
         co.DateSendToClient ??= co.DateAgreement;
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("Wijzigingsopdracht {ChangeOrderId} kreeg akkoorddatum {Date} via ondertekendossier {CaseId}.", sourceEntityId, co.DateAgreement, caseId);
+
+        await ArchiveSignedDocumentAsync(co, caseId, ct);
+    }
+
+    /// <summary>Legt het ondertekende PDF vast als ProjectDocs-revisie (ONDERTEKENEN_VOORTGANG.md,
+    /// keuze 5) — best effort: mag de akkoorddatum hierboven nooit blokkeren of ongedaan maken.</summary>
+    private async Task ArchiveSignedDocumentAsync(ChangeOrder co, int caseId, CancellationToken ct)
+    {
+        try
+        {
+            var signingCase = await _db.SigningCase.AsNoTracking().FirstOrDefaultAsync(c => c.Id == caseId, ct);
+            if (signingCase?.FinalDocumentId is not int finalDocId)
+            {
+                _logger.LogWarning("Dossier {CaseId} is voltooid maar heeft geen definitief document; geen ProjectDocs-revisie.", caseId);
+                return;
+            }
+            var finalDoc = await _db.SigningDocument.AsNoTracking().FirstOrDefaultAsync(d => d.Id == finalDocId, ct);
+            if (finalDoc?.Content is null || !SigningCrypto.FixedTimeEqualsHex(SigningCrypto.Sha256Hex(finalDoc.Content), finalDoc.Sha256))
+            {
+                _logger.LogError("Definitief document {DocumentId} van dossier {CaseId} ontbreekt of komt niet overeen met zijn hash; geen ProjectDocs-revisie.", finalDocId, caseId);
+                return;
+            }
+
+            var stored = await _storage.UploadAsync(finalDoc.Content, finalDoc.FileName, finalDoc.ContentType, "docs");
+            if (stored is null)
+            {
+                _logger.LogWarning("Ondertekend PDF van dossier {CaseId} kon niet naar de Storage API weggeschreven worden.", caseId);
+                return;
+            }
+
+            // ChangeOrderId (migratie 054) blijft in gebruik als koppeling — enkel DocumentSignatures wordt uitgefaseerd.
+            var existing = await _db.ProjectDocs.FirstOrDefaultAsync(d => d.ChangeOrderId == co.Id, ct);
+            var dto = new FacadeCore.DocUploadDto
+            {
+                ProjectId = co.ContractActivity?.Contract?.Project?.ProjectId ?? existing?.ProjectId ?? 0,
+                Mode = existing is null ? "new" : "revision",
+                DocumentId = existing?.Id,
+                FolderId = existing is null ? await _db.DocumentFolders.Where(f => f.Code == "contracten").Select(f => (int?)f.Id).FirstOrDefaultAsync(ct) : null,
+                Name = existing is null ? finalDoc.FileName : null,
+                Number = existing is null ? $"WO-{co.Id}" : null,
+                Links = existing is null
+                    ? new List<FacadeCore.DocLinkRef> { new() { Type = "client", Id = co.ClientAccountId } }
+                    : new List<FacadeCore.DocLinkRef>(),
+                Status = DocumentStatus.Goedgekeurd,
+                UploaderKind = DocumentUploaderKind.Intern,
+                StoredFilename = stored,
+                OriginalFilename = finalDoc.FileName,
+                SizeBytes = finalDoc.ByteLength,
+                Note = "Ondertekende versie (elektronische ondertekening)",
+                UserName = "Systeem (elektronische ondertekening)",
+            };
+
+            var result = await _documents.Upload(dto);
+            if (!result.Ok || result.Id is not int docId)
+            {
+                _logger.LogWarning("ProjectDocs-revisie voor dossier {CaseId} kon niet geschreven worden: {Message}", caseId, result.Message);
+                return;
+            }
+            if (existing is null)
+            {
+                var doc = await _db.ProjectDocs.FirstAsync(d => d.Id == docId, ct);
+                doc.ChangeOrderId = co.Id;
+                await _db.SaveChangesAsync(ct);
+            }
+            _logger.LogInformation("Ondertekend PDF van dossier {CaseId} vastgelegd als ProjectDocs {DocumentId} (wijzigingsopdracht {ChangeOrderId}).", caseId, docId, co.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Archiveren van het ondertekende PDF naar Documenten faalde voor dossier {CaseId}.", caseId);
+        }
     }
 
     public Task OnCaseClosedAsync(int sourceEntityId, int caseId, int caseStatus, CancellationToken ct = default)

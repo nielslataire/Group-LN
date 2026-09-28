@@ -16,6 +16,14 @@ public interface ISigningService
     Task<SigningOperationResult> RegenerateLinkAsync(int partyId, SigningRequestContext ctx, CancellationToken ct = default);
     Task<CaseStatusView?> GetCaseStatusAsync(int caseId, CancellationToken ct = default);
     Task<CaseStatusView?> GetActiveCaseForSourceAsync(string documentType, int sourceEntityId, CancellationToken ct = default);
+
+    /// <summary>Het meest recente voltooide dossier voor deze bron, of null. Gebruikt om verwijderen te
+    /// blokkeren zodra een bron ooit rechtsgeldig ondertekend werd (Niels, 2026-09-28) — de hash-ketting
+    /// is met opzet niet-verwijderbaar (append-only trigger), dus de bron die ze bewijst mag ook niet
+    /// zomaar verdwijnen (en `ProjectDocs.ChangeOrderId` heeft geen ON DELETE CASCADE: verwijderen zou
+    /// anders gewoon op een FK-fout stuklopen). Dit is enkel een applicatie-check, geen DB-constraint —
+    /// een beheerder blijft via SSMS vrij om dit alsnog te doen.</summary>
+    Task<CaseStatusView?> GetCompletedCaseForSourceAsync(string documentType, int sourceEntityId, CancellationToken ct = default);
     Task<IReadOnlyList<CaseStatusView>> ListCasesAsync(int? projectId, int? status, int take = 200, CancellationToken ct = default);
     Task<IReadOnlyList<SigningEventView>> GetEventsAsync(int caseId, CancellationToken ct = default);
     Task<ChainVerification> VerifyAuditChainAsync(int caseId, CancellationToken ct = default);
@@ -41,6 +49,12 @@ public interface ISigningService
     Task<int> ExpireOverdueCasesAsync(CancellationToken ct = default);
     Task<int> SendDueRemindersAsync(CancellationToken ct = default);
     Task<int> ApplyRetentionScrubAsync(CancellationToken ct = default);
+
+    /// <summary>Dossiers die regel-compleet zijn (alle vereiste handtekeningen staan er al) maar nooit
+    /// voltooid raakten omdat een eerdere <c>TryFinalizeAsync</c> faalde — <c>ExpireOverdueCasesAsync</c>
+    /// probeert dit ook, maar enkel voor dossiers waarvan de termijn al verstreken is; dit vangt de
+    /// rest (fase 3, ONDERTEKENEN_VOORTGANG.md).</summary>
+    Task<int> RetryStuckFinalizationsAsync(CancellationToken ct = default);
 }
 
 public sealed record PublicVerificationView(

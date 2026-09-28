@@ -61,6 +61,7 @@ var videosPath    = Path.Combine(rootPath, AssetFolders.Videos);
 var plansPath     = Path.Combine(rootPath, AssetFolders.Plans);
 var docsPath      = Path.Combine(rootPath, AssetFolders.Docs);
 var guaranteesPath = Path.Combine(rootPath, AssetFolders.Guarantees);
+var signingPath   = Path.Combine(rootPath, AssetFolders.Signing);
 
 Directory.CreateDirectory(rootPath);
 Directory.CreateDirectory(picturesPath);
@@ -68,6 +69,7 @@ Directory.CreateDirectory(videosPath);
 Directory.CreateDirectory(plansPath);
 Directory.CreateDirectory(docsPath);
 Directory.CreateDirectory(guaranteesPath);
+Directory.CreateDirectory(signingPath);
 
 app.UseExceptionHandler(handler =>
 {
@@ -781,14 +783,15 @@ static class AssetFolders
     public const string Plans = "plans";
     public const string Docs = "docs";
     public const string Guarantees = "guarantees";
+    public const string Signing = "signing";
 
     public static bool IsValid(string folder) =>
         folder is Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
             or PicturesBlog
-            or Videos or Plans or Docs or Guarantees;
+            or Videos or Plans or Docs or Guarantees or Signing;
 
-    public static bool IsPrivate(string folder) => folder is Plans or Docs or Guarantees;
+    public static bool IsPrivate(string folder) => folder is Plans or Docs or Guarantees or Signing;
     public static bool IsPictures(string folder) => folder.StartsWith("pictures", StringComparison.Ordinal);
     public static bool IsVideos(string folder) => folder == Videos;
     public static bool IsPublicMedia(string folder) => IsPictures(folder) || IsVideos(folder);

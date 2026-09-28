@@ -43,9 +43,12 @@ namespace ServiceCore
 
             // 1) EF-vriendelijke projectie naar anonieme types
             var clientsRaw = await _db.ClientAccount.AsNoTracking()
-                .Where(x => term == "" || EF.Functions.Like(x.Name, like))
+                .Where(x => term == ""
+                       || EF.Functions.Like(x.Name, like)
+                       || EF.Functions.Like(x.Forename, like)
+                       || EF.Functions.Like(x.Name + " " + x.Forename, like))
                 .OrderBy(x => x.Name)
-                .Select(x => new { x.Id, x.Name, x.CompanyName, x.Salutation })
+                .Select(x => new { x.Id, x.Name, x.Forename, x.CompanyName, x.Salutation })
                 .Take(take)
                 .ToListAsync(ct);
 
@@ -72,7 +75,7 @@ namespace ServiceCore
             {
                 var company = string.IsNullOrWhiteSpace(x.CompanyName) ? null : x.CompanyName.Trim();
                 var baseName = !string.IsNullOrWhiteSpace(x.Name)
-                    ? x.Name.Trim()
+                    ? (string.IsNullOrWhiteSpace(x.Forename) ? x.Name.Trim() : x.Name.Trim() + " " + x.Forename.Trim())
                     : (company ?? string.Empty);
 
                 var salutation = FormatSalutation(x.Salutation);

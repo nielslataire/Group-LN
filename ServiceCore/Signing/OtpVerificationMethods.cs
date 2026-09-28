@@ -69,11 +69,24 @@ public sealed class SmsOtpMethod : IVerificationMethod
             }
             else if (partyType == (int)SigningPartyType.ClientAccount)
             {
-                phone = await _db.ClientContacts.AsNoTracking()
-                    .Where(c => c.ClientAccountId == id && !string.IsNullOrEmpty(c.Cellphone))
-                    .OrderByDescending(c => c.IsPrimaryContact).ThenBy(c => c.Id)
-                    .Select(c => c.Cellphone)
+                // Migratie 058: het account (eigenaar 1) heeft nu een eigen Cellphone — die wint. Tot
+                // dan bestond er geen accountnummer en viel de code voor eigenaar 1 se HANDTEKENING op
+                // het gsm-nummer van een willekeurige contactpersoon/mede-eigenaar van dat account —
+                // functioneel een andere persoon. Die terugval blijft enkel voor accounts zonder eigen
+                // nummer (bestaande data), zodat lopende dossiers niet plots zonder sms-kanaal vallen.
+                phone = await _db.ClientAccount.AsNoTracking()
+                    .Where(a => a.Id == id && !string.IsNullOrEmpty(a.Cellphone))
+                    .Select(a => a.Cellphone)
                     .FirstOrDefaultAsync(ct);
+
+                if (string.IsNullOrWhiteSpace(phone))
+                {
+                    phone = await _db.ClientContacts.AsNoTracking()
+                        .Where(c => c.ClientAccountId == id && !string.IsNullOrEmpty(c.Cellphone))
+                        .OrderByDescending(c => c.IsPrimaryContact).ThenBy(c => c.Id)
+                        .Select(c => c.Cellphone)
+                        .FirstOrDefaultAsync(ct);
+                }
             }
         }
 

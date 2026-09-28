@@ -5370,6 +5370,22 @@ namespace CPMCore.Controllers
 
         private const string SigningLockedMessage = "Er loopt een elektronische ondertekening voor deze wijzigingsopdracht. Annuleer die eerst in het ondertekendossier.";
 
+        /// <summary>Verwijderen blokkeren zodra deze wijzigingsopdracht ooit rechtsgeldig ondertekend werd
+        /// (Niels, 2026-09-28): de hash-ketting van het dossier is met opzet niet-verwijderbaar, en
+        /// `ProjectDocs.ChangeOrderId` heeft geen ON DELETE CASCADE — verwijderen zou anders op een
+        /// FK-fout stuklopen. Enkel een applicatie-check, geen DB-constraint: rechtstreeks via SQL blijft
+        /// het mogelijk voor een beheerder die dat toch nodig heeft.</summary>
+        private async Task<FacadeCore.Signing.CaseStatusView?> CompletedSigningCaseAsync(int changeOrderId)
+        {
+            if (changeOrderId <= 0) return null;
+            var features = HttpContext.RequestServices.GetRequiredService<IOptions<CPMCore.Configuration.FeatureFlagsOptions>>().Value;
+            if (!features.EnableSigning) return null;
+            var signing = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.ISigningService>();
+            return await signing.GetCompletedCaseForSourceAsync(CPMCore.Services.Signing.ChangeOrderSigningSource.Key, changeOrderId, HttpContext.RequestAborted);
+        }
+
+        private const string SigningCompletedLockedMessage = "Deze wijzigingsopdracht is elektronisch ondertekend en kan niet meer verwijderd worden. Het ondertekenbewijs (audit trail) blijft bewaard.";
+
         [HttpGet]
         [Breadcrumb("Wijzigingsopdracht toevoegen", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
         //[Breadcrumb("Wijzigingsopdracht toevoegen")]
@@ -5752,6 +5768,11 @@ namespace CPMCore.Controllers
             {
                 AddMessage("error", SigningLockedMessage, "Vergrendeld");
                 return Json(new { success = false, message = SigningLockedMessage });
+            }
+            if (await CompletedSigningCaseAsync(id) is not null)
+            {
+                AddMessage("error", SigningCompletedLockedMessage, "Vergrendeld");
+                return Json(new { success = false, message = SigningCompletedLockedMessage });
             }
 
             var service = _projectService;

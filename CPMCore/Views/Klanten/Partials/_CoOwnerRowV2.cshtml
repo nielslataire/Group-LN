@@ -15,8 +15,15 @@
     pilot, deze rij zoekt gewoon binnen het land dat op dat moment gekozen staat (zelfde gedrag als
     de legacy select2-versie).
 *@
+@{
+    // Migratie 057: herbruikt door Klanten/AddClientAccountV2 ("ClientAccount.CoOwners") naast
+    // Klanten/EditProjectV2 ("Client.CoOwners", de bestaande, ongewijzigde standaard). De actie
+    // BlankCoOwnerRow zet dit al in ViewData; een rechtstreekse @@Html.Partial-aanroep bij het eerste
+    // laden van de pagina (het bestaande foreach hieronder) geeft het zelf mee of laat de standaard staan.
+    var coOwnerCollectionName = ViewData["CoOwnerCollectionName"] as string ?? "Client.CoOwners";
+}
 <div class="gl-v2-client-row">
-@using (Html.BeginCollectionItem("Client.CoOwners"))
+@using (Html.BeginCollectionItem(coOwnerCollectionName))
 {
     @Html.HiddenFor(m => m.Id)
     @Html.HiddenFor(m => m.IsCoOwner)
@@ -34,7 +41,7 @@
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Salutation)">Aanspreking</label>
                     <div class="gl-v2-field-box">
-                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<BOCore.Salutation>(), new { @class = "gl-v2-field-input" })
+                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<BOCore.Salutation>(), new { @class = "gl-v2-field-input", data_role = "salutation-select" })
                     </div>
                 </div>
                 <div class="gl-v2-field">
@@ -46,7 +53,7 @@
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Firstname)">Voornaam</label>
                     <div class="gl-v2-field-box">
-                        @Html.TextBoxFor(m => m.Firstname, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off" })
+                        @Html.TextBoxFor(m => m.Firstname, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", data_role = "firstname-input" })
                     </div>
                 </div>
             </div>

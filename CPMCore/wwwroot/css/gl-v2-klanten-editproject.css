@@ -96,3 +96,58 @@
 }
 
 .gl-v2-client-row .gl-v2-switch-group { padding-top: 2px; }
+
+/* ── WO ondertekenen door / Facturatiewijze — kleine 2-optie-toggle (migratie 057) ─────────────── */
+.gl-v2-kep-seg { display: inline-flex; padding: 3px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-neutral-tint); gap: 2px; width: max-content; max-width: 100%; }
+.gl-v2-kep-seg label { margin: 0; }
+.gl-v2-kep-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.gl-v2-kep-seg span { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 7px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); cursor: pointer; white-space: nowrap; }
+.gl-v2-kep-seg input:checked + span { background: var(--gl-v2-surface); color: var(--gl-v2-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .15); }
+.gl-v2-kep-seg input:focus-visible + span { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }
+@media (max-width: 767.98px) { .gl-v2-kep-seg { width: 100%; } .gl-v2-kep-seg label { flex: 1; } .gl-v2-kep-seg span { justify-content: center; } }
+
+/* ── Verdeelsleutel-balk (Mede-eigenaars-tab / AddClientAccountV2 "Eigenaars") ──────────────────── */
+.gl-v2-kep-shares {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
+}
+.gl-v2-kep-shares-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-kep-shares-value { font: 700 18px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; color: var(--gl-v2-ink); }
+.gl-v2-kep-shares-badge { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 12px; font: 600 11px var(--gl-v2-font-sans); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-kep-shares.is-off .gl-v2-kep-shares-badge { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-kep-shares.is-off .gl-v2-kep-shares-value { color: var(--gl-v2-warning); }
+.gl-v2-kep-shares-spacer { flex: 1; }
+
+/* ── Facturatie-tab: voorbeeldkaart (live herberekend, JS) ──────────────────────────────────────── */
+.gl-v2-kep-invoice-preview {
+    border-radius: var(--gl-v2-radius-sm);
+    background: #F7F9F5;
+    border: 1px solid var(--gl-v2-hairline-soft);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.gl-v2-kep-invoice-preview-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-kep-invoice-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-kep-invoice-row b { font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums; }
+.gl-v2-kep-recipients { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.gl-v2-kep-recipient-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 5px 0 10px; border-radius: 13px; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2-kep-recipient-chip button { width: 18px; height: 18px; border: 0; border-radius: 9px; background: transparent; color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: .7; padding: 0; }
+.gl-v2-kep-recipient-chip button:hover { opacity: 1; background: rgba(0, 0, 0, .07); }
+
+/* ── "Snel toevoegen"-suggesties onder "Verzenden naar" (Klanten/EditProjectV2 + AddClientAccountV2):
+   de e-mails die op de pagina al ingevuld staan als één-klik-knoppen, gestileerd als een open
+   (gestippelde) variant van .gl-v2-kep-recipient-chip zodat het verschil "al gekozen" vs "voorstel"
+   meteen zichtbaar is. ─────────────────────────────────────────────────────────────────────────── */
+.gl-v2-kep-recipient-suggestions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.gl-v2-kep-recipient-suggestions-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); margin-right: 2px; }
+.gl-v2-kep-recipient-suggestion { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px dashed var(--gl-v2-border, #D9D5CC); border-radius: 13px; background: transparent; color: var(--gl-v2-muted-soft); font: 500 11.5px var(--gl-v2-font-sans); cursor: pointer; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-kep-recipient-suggestion:hover { border-style: solid; border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); }
+.gl-v2-kep-recipient-suggestion:focus-visible { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }

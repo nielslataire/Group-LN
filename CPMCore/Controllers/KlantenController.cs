@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using NuGet.Configuration;
 using ServiceCore;
+using ServiceCore.Signing;
 using SmartBreadcrumbs.Attributes;
 using SmartBreadcrumbs.Nodes;
 using System;
@@ -147,7 +148,9 @@ namespace CPMCore.Controllers
                 .Select(c => new ClientListItemViewModel
                 {
                     Id = c.Id,
-                    DisplayName = string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName,
+                    DisplayName = !string.IsNullOrWhiteSpace(c.CompanyName)
+                        ? c.CompanyName
+                        : (string.IsNullOrWhiteSpace(c.Forename) ? c.Name : c.Name + " " + c.Forename),
                     EnterpriseNumber = c.Vatnumber,
                     City = c.PostalCode != null
                         ? c.PostalCode.Postcode + " " + c.PostalCode.Gemeente
@@ -164,10 +167,17 @@ namespace CPMCore.Controllers
                             .Select(cc => cc.Email)
                             .FirstOrDefault(),
 
-                    Phone = c.ClientContacts
-                        .OrderBy(cc => cc.Id)
-                        .Select(cc => cc.Phone != null ? cc.Phone : cc.Cellphone)
-                        .FirstOrDefault(),
+                    // Migratie 058: eigenaar 1 se eigen Phone/Cellphone wint nu, zelfde voorrangsregel
+                    // als Email hierboven (eigen waarde eerst, anders de eerste/primaire contactpersoon).
+                    Phone = !string.IsNullOrWhiteSpace(c.Phone)
+                        ? c.Phone
+                        : !string.IsNullOrWhiteSpace(c.Cellphone)
+                            ? c.Cellphone
+                            : c.ClientContacts
+                                .OrderByDescending(cc => cc.IsPrimaryContact)
+                                .ThenBy(cc => cc.Id)
+                                .Select(cc => cc.Phone != null ? cc.Phone : cc.Cellphone)
+                                .FirstOrDefault(),
 
                     IssuerCompanies = c.ClientAccountIssuerCompany
                         .Select(i => i.IssuerCompany.Name)
@@ -314,7 +324,7 @@ namespace CPMCore.Controllers
             var canDelete = deleteScope.HasAccess
                 && (deleteScope.HasAllIssuers || client.ClientAccountIssuerCompany.Any(i => deleteScope.AllowedIssuerIds.Contains(i.IssuerCompanyId)));
 
-            var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
+            var clientDisplayName = DisplayNameOf(client);
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var KlantenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Klanten", "Klanten")
             {
@@ -341,6 +351,7 @@ namespace CPMCore.Controllers
                 IsCompany = isCompany,
                 CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
                 Name = client.Name,
+                Forename = client.Forename,
                 Salutation = isCompany ? null : salutation,
                 EnterpriseNumber = isCompany ? vatNumber : null,
                 EnterpriseNumberCountryCode = isCompany ? vatCountryCode ?? "BE" : "BE",
@@ -360,13 +371,20 @@ namespace CPMCore.Controllers
                 InvoiceCity = client.InvoicePostalCode?.Gemeente,
                 SelectedInvoiceCountryId = client.InvoicePostalCode?.CountryId,
                 Email = client.Email,
+                Phone = client.Phone,
+                Cellphone = client.Cellphone,
                 InvoiceEmail = client.InvoiceEmail,
                 RequiresDigitalInvoice = client.RequiresDigitalInvoice,
                 AttachUblByDefault = client.AttachUblByDefault,
                 SelectedIssuerCompanyIds = client.ClientAccountIssuerCompany
                     .Select(i => i.IssuerCompanyId)
                     .ToList(),
+                // Mede-eigenaars (IsCoOwner) horen hier niet tussen — dit is de contactenlijst van het
+                // globale (projectloze) scherm, en ContactInputViewModel heeft geen aandeel/type/adres
+                // om ze correct te tonen. Ze zouden hier als "gewoon contact" verschijnen, zonder hun
+                // eigenaarsrol — zelfde reden als de Edit-actie hieronder ze uitsluit.
                 Contacts = client.ClientContacts
+                    .Where(c => !c.IsCoOwner)
                     .OrderBy(c => c.Id)
                     .Select(c => new ContactInputViewModel
                     {
@@ -569,10 +587,15 @@ namespace CPMCore.Controllers
             }
             else
             {
-                // Save as ClientAccount (klant)
+                // Save as ClientAccount (klant) — Naam en Voornaam apart bewaard (migratie 057) i.p.v.
+                // samengevoegd; enkel als Naam zelf leeg bleef (snel toegevoegd met enkel een voornaam)
+                // valt dit terug op de samengevoegde entityName, zoals voorheen.
                 var entity = new ClientAccount
                 {
-                    Name = entityName,
+                    Name = dto.IsCompany
+                        ? dto.CompanyName
+                        : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : entityName),
+                    Forename = dto.IsCompany || string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Forename?.Trim(),
                     CompanyName = dto.IsCompany ? dto.CompanyName : null,
                     Salutation = dto.IsCompany ? null : dto.Salutation,
                     Vatnumber = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
@@ -652,7 +675,7 @@ namespace CPMCore.Controllers
 
             TempData["Referrer"] = Request.Headers["Referer"].ToString();
 
-            var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
+            var clientDisplayName = DisplayNameOf(client);
             var klantenNode = new MvcBreadcrumbNode(nameof(Index), "Klanten", "Klanten")
             {
                 Parent = new MvcBreadcrumbNode("Index", "Home", "Home")
@@ -680,6 +703,7 @@ namespace CPMCore.Controllers
                 IsCompany = isCompany,
                 CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
                 Name = client.Name,
+                Forename = client.Forename,
                 Salutation = isCompany ? null : salutation,
                 EnterpriseNumber = isCompany ? vatNumber : null,
                 EnterpriseNumberCountryCode = isCompany ? vatCountryCode ?? "BE" : "BE",
@@ -699,13 +723,21 @@ namespace CPMCore.Controllers
                 InvoiceCity = client.InvoicePostalCode?.Gemeente,
                 SelectedInvoiceCountryId = client.InvoicePostalCode?.CountryId,
                 Email = client.Email,
+                Phone = client.Phone,
+                Cellphone = client.Cellphone,
                 InvoiceEmail = client.InvoiceEmail,
                 RequiresDigitalInvoice = client.RequiresDigitalInvoice,
                 AttachUblByDefault = client.AttachUblByDefault,
                 SelectedIssuerCompanyIds = client.ClientAccountIssuerCompany
                     .Select(i => i.IssuerCompanyId)
                     .ToList(),
+                // Mede-eigenaars (IsCoOwner) worden hier bewust NIET getoond — dit globale scherm kent
+                // hun aandeel/type/adres niet (ContactInputViewModel heeft die velden niet), en zou ze
+                // via UpdateContacts hieronder blind als "gewoon contact" overschrijven of, als de rij
+                // niet terugkomt, zelfs verwijderen. Mede-eigenaars blijven uitsluitend beheerd via het
+                // projectscherm (Klanten/EditProject), waar ze wél met hun volledige context staan.
                 Contacts = client.ClientContacts
+                    .Where(c => !c.IsCoOwner)
                     .OrderBy(c => c.Id)
                     .Select(c => new ContactInputViewModel
                     {
@@ -778,9 +810,16 @@ namespace CPMCore.Controllers
             var requiresOctopusSync = client.ClientAccountIssuerCompany.Any(l => (l.OctopusRelationId ?? 0) > 0)
                && HasClientDataChanged(client, model);
 
+            // Signingmodule §6.3: e-mail/gsm zijn de OTP-bestemming bij het ondertekenen — een wijziging
+            // hier moet in ClientContactChangeLog komen (gemaskeerd) vóór MapToEntity/UpdateContacts de
+            // oude waarden overschrijven.
+            var oldEmail = client.Email;
+            var oldContacts = client.ClientContacts.ToDictionary(c => c.Id, c => (c.Email, c.Cellphone));
+
             MapToEntity(model, client);
             UpdateIssuerCompany(model, client);
             UpdateContacts(model, client);
+            LogContactChanges(client, oldEmail, oldContacts);
 
             await _db.SaveChangesAsync(ct);
 
@@ -981,13 +1020,14 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = bcAdd;
 
             SetPageHeader("bx bx-group", model.ProjectName);
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddClientAccountV2" : "AddClientAccount", model);
         }
         [HttpPost]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, List<UnitBO> units)
         {
             SetPageHeader("bx bx-group", model.ProjectName);
+            var viewName = ViewData["UseGlV2Layout"] as bool? == true ? "AddClientAccountV2" : "AddClientAccount";
             var Referrer = TempData["Referrer"];
             var errors = new Dictionary<string, ModelErrorCollection>();
 
@@ -1006,10 +1046,20 @@ namespace CPMCore.Controllers
                 ModelState.AddModelError("CustomError", "U dient minstens één eenheid te kiezen voor deze klant");
             }
 
+            // Verdeelsleutel (migratie 057, design-handoff 23a "100 % KLOPT") — enkel relevant zodra er
+            // mede-eigenaars zijn; een solo-eigenaar staat altijd op 100 (standaardwaarde bij Toevoegen).
+            var coOwnersForShareCheck = model.ClientAccount.CoOwners?.Any() == true ? model.ClientAccount.CoOwners : contacts?.Where(c => c.IsCoOwner).ToList();
+            if (coOwnersForShareCheck?.Any() == true)
+            {
+                var shareTotal = (model.ClientAccount.OwnerPercentage ?? 0) + coOwnersForShareCheck.Sum(c => c.CoOwnerPercentage ?? 0);
+                if (Math.Abs(shareTotal - 100m) > 0.01m)
+                    ModelState.AddModelError("CustomError", $"De verdeelsleutel moet 100% zijn (nu {shareTotal:0.##}%).");
+            }
+
             if (!ModelState.IsValid)
             {
                 FillInAddSelectLists(ref model);
-                return View(model);
+                return View(viewName, model);
             }
 
             // Postcodes en contacten koppelen
@@ -1027,7 +1077,7 @@ namespace CPMCore.Controllers
             if (!response.Success || response.Messages == null || !response.Messages.Any())
             {
                 AddMessage("error", $"De klantenaccount {model.ClientAccount.Name} is NIET toegevoegd", "Fout!");
-                return View(model);
+                return View(viewName, model);
             }
 
             model.ClientAccount.Id = response.InsertedId;
@@ -1102,7 +1152,7 @@ namespace CPMCore.Controllers
                 }
 
                 FillInAddSelectLists(ref model);
-                return View(model);
+                return View(viewName, model);
             }
 
             // Alles is gelukt
@@ -1206,7 +1256,56 @@ namespace CPMCore.Controllers
             var uresponse = uservice.GetAvailableUnitsByProjectId(model.ProjectId);
             if ((uresponse.Success))
                 model.AvailableUnits = uresponse.Values;
+
+            // gl-v2 (AddClientAccountV2, 23a/23b): volledige projectlijst voor de kiezer + de namen van de
+            // betalingsgroepen voor de eenheidskaart (_UnitRowV2, "BETALINGSGROEP").
+            model.UnitChoices = BuildUnitChoices(model.ProjectId);
+            ViewData["PaymentGroupNames"] = PaymentGroupNamesFor(model.ProjectId);
         }
+
+        /// <summary>Design-handoff 23b: álle (niet-gelinkte) eenheden van het project — beschikbare
+        /// kiesbaar, verkochte/in optie zichtbaar maar niet kiesbaar mét de koper/optiehouder als reden.
+        /// Zelfde beschikbaarheidsregel als IUnitService.GetAvailableUnitsByProjectId (geen klant, geen
+        /// gelinkte eenheid); de naamopbouw volgt Units.GetIdName (type-naam vóór de naam voor type 11).</summary>
+        private List<UnitChoiceVm> BuildUnitChoices(int projectId)
+        {
+            var paymentGroups = PaymentGroupNamesFor(projectId);
+            var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+
+            var units = _db.Units.AsNoTracking()
+                .Where(u => u.ProjectId == projectId && u.LinkedUnitId == null && !u.IsLink)
+                .Include(u => u.Type).ThenInclude(t => t.Group)
+                .Include(u => u.ClientAccount)
+                .OrderBy(u => u.Type != null ? u.Type.GroupId : 0).ThenBy(u => u.Name)
+                .ToList();
+
+            return units.Select(u =>
+            {
+                var name = u.Type != null && u.Type.Id == 11 ? $"{u.Type.Name} {u.Name}" : u.Name;
+                var subParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(u.Type?.Name)) subParts.Add(u.Type.Name.ToLowerInvariant());
+                if (u.Surface is decimal surface && surface > 0) subParts.Add(surface.ToString("N0", be) + " m²");
+                if (u.PaymentGroupId is int pgId && paymentGroups.TryGetValue(pgId, out var pgName)) subParts.Add(pgName);
+                var sold = u.ClientAccountId != null;
+                return new UnitChoiceVm
+                {
+                    Id = u.Id,
+                    Name = name,
+                    Sub = string.Join(" · ", subParts),
+                    Price = (u.LandValue ?? 0) + (u.ConstructionValue ?? 0),
+                    Available = !sold,
+                    StatusLabel = !sold ? "BESCHIKBAAR" : (u.IsOption ? "IN OPTIE" : "VERKOCHT"),
+                    Reason = sold && u.ClientAccount != null ? DisplayNameOf(u.ClientAccount) : null,
+                    Group = u.Type?.Group?.Name
+                };
+            }).ToList();
+        }
+
+        private Dictionary<int, string> PaymentGroupNamesFor(int projectId)
+            => _db.InvoicingPaymentGroup.AsNoTracking()
+                .Where(g => g.ProjectId == projectId)
+                .ToDictionary(g => g.Id, g => g.Name ?? "");
+
         public PartialViewResult BlankContactRow(string collectionName = "ClientAccount.Contacts")
         {
             var viewData = new ViewDataDictionary<ClientContactBO>(ViewData, new ClientContactBO())
@@ -1441,6 +1540,7 @@ namespace CPMCore.Controllers
         private static void MapToEntity(ClientFormViewModel model, ClientAccount entity)
         {
             entity.Name = model.IsCompany ? model.CompanyName : model.Name;
+            entity.Forename = model.IsCompany ? null : model.Forename;
             entity.CompanyName = model.IsCompany ? model.CompanyName : null;
             entity.Salutation = model.IsCompany ? null : model.Salutation?.ToString();
             entity.Vatnumber = model.IsCompany
@@ -1456,6 +1556,8 @@ namespace CPMCore.Controllers
             entity.InvoiceBusnumber = model.UseInvoiceAddress ? model.InvoiceBusNumber : null;
             entity.InvoicePostalCodeId = model.UseInvoiceAddress ? model.SelectedInvoicePostalCodeId : null;
             entity.Email = model.Email;
+            entity.Phone = model.Phone;
+            entity.Cellphone = model.Cellphone;
             entity.InvoiceEmail = model.InvoiceEmail;
             entity.RequiresDigitalInvoice = model.RequiresDigitalInvoice;
             entity.AttachUblByDefault = model.AttachUblByDefault;
@@ -1532,7 +1634,13 @@ namespace CPMCore.Controllers
         {
             NormalizePrimaryContact(model.Contacts);
             var incomingIds = model.Contacts.Where(c => c.Id.HasValue).Select(c => c.Id!.Value).ToList();
-            var toRemove = entity.ClientContacts.Where(c => !incomingIds.Contains(c.Id)).ToList();
+            // Mede-eigenaars (IsCoOwner) komen nooit in model.Contacts terecht (zie de Edit-actie
+            // hierboven, die ze bewust niet laadt) — hun Id staat dus nooit in incomingIds. Zonder deze
+            // filter zou de "verwijder wat niet terugkomt"-opruiming hieronder ELKE mede-eigenaar van
+            // deze klant stilzwijgend verwijderen bij elke keer opslaan vanuit dit globale scherm. Enkel
+            // de niet-mede-eigenaar-rijen zijn hier beheerbaar; mede-eigenaars blijven ongemoeid.
+            var manageableContacts = entity.ClientContacts.Where(c => !c.IsCoOwner).ToList();
+            var toRemove = manageableContacts.Where(c => !incomingIds.Contains(c.Id)).ToList();
 
             foreach (var removal in toRemove)
             {
@@ -1543,7 +1651,7 @@ namespace CPMCore.Controllers
             {
                 if (contactModel.Id is int contactId)
                 {
-                    var existing = entity.ClientContacts.FirstOrDefault(c => c.Id == contactId);
+                    var existing = manageableContacts.FirstOrDefault(c => c.Id == contactId);
                     if (existing != null)
                     {
                         existing.Name = contactModel.Name;
@@ -1569,6 +1677,50 @@ namespace CPMCore.Controllers
                     AttachUblByDefault = contactModel.AttachUblByDefault,
                     IsPrimaryContact = contactModel.IsPrimaryContact
                 });
+            }
+        }
+
+        /// <summary>ClientContactChangeLog vullen (fase 3, signingmodule §6.3 — e-mail/gsm zijn de
+        /// OTP-bestemming bij het ondertekenen) — enkel gemaskeerde oude/nieuwe waarden, nooit de echte
+        /// e-mail/gsm zelf. Nieuwe contacten (geen oude waarde om mee te vergelijken) en verwijderde
+        /// contacten worden niet gelogd — buiten scope, zie ONDERTEKENEN_VOORTGANG.md.</summary>
+        private void LogContactChanges(ClientAccount client, string oldEmail, Dictionary<int, (string Email, string Cellphone)> oldContacts)
+        {
+            var userId = User.GetCpmUserId();
+            var now = DateTime.UtcNow;
+
+            if (!string.Equals(oldEmail, client.Email, StringComparison.Ordinal))
+            {
+                _db.ClientContactChangeLog.Add(new ClientContactChangeLog
+                {
+                    EntityType = "ClientAccount", EntityId = client.Id, ClientAccountId = client.Id, Field = "Email",
+                    OldValueMasked = SigningCrypto.MaskEmail(oldEmail), NewValueMasked = SigningCrypto.MaskEmail(client.Email),
+                    ChangedByUserId = userId, ChangedAt = now,
+                });
+            }
+
+            foreach (var contact in client.ClientContacts)
+            {
+                if (!oldContacts.TryGetValue(contact.Id, out var old)) continue;
+
+                if (!string.Equals(old.Email, contact.Email, StringComparison.Ordinal))
+                {
+                    _db.ClientContactChangeLog.Add(new ClientContactChangeLog
+                    {
+                        EntityType = "ClientContact", EntityId = contact.Id, ClientAccountId = client.Id, Field = "Email",
+                        OldValueMasked = SigningCrypto.MaskEmail(old.Email), NewValueMasked = SigningCrypto.MaskEmail(contact.Email),
+                        ChangedByUserId = userId, ChangedAt = now,
+                    });
+                }
+                if (!string.Equals(old.Cellphone, contact.Cellphone, StringComparison.Ordinal))
+                {
+                    _db.ClientContactChangeLog.Add(new ClientContactChangeLog
+                    {
+                        EntityType = "ClientContact", EntityId = contact.Id, ClientAccountId = client.Id, Field = "Cellphone",
+                        OldValueMasked = SigningCrypto.MaskPhone(old.Cellphone), NewValueMasked = SigningCrypto.MaskPhone(contact.Cellphone),
+                        ChangedByUserId = userId, ChangedAt = now,
+                    });
+                }
             }
         }
 
@@ -1677,7 +1829,9 @@ namespace CPMCore.Controllers
                     ExternalRelationId = client.Id
                 },
                 Name = name,
-                Firstname = client.Name,
+                // Echte voornaam (migratie 057) wint; zonder Forename blijft dit het bestaande
+                // surrogaat (heel Name als "voornaam") voor niet-gemigreerde accounts.
+                Firstname = client.Forename ?? client.Name,
                 Client = true,
                 Supplier = false,
                 Active = true,
@@ -1791,7 +1945,9 @@ namespace CPMCore.Controllers
             }
 
             ViewData["mode"] = "add";
-            return PartialView("_UnitRow", unit);
+            // gl-v2 (_UnitRowV2, 23a "BETALINGSGROEP"): naam van de betalingsgroep — UnitBO kent enkel het id.
+            ViewData["PaymentGroupNames"] = PaymentGroupNamesFor(unit.ProjectId);
+            return PartialView(ViewData["UseGlV2Layout"] as bool? == true ? "Partials/_UnitRowV2" : "_UnitRow", unit);
         }
 
         //KLANT BEWERKEN BIJ PROJECT
@@ -1929,6 +2085,15 @@ namespace CPMCore.Controllers
             // vertakken als de GET — anders zou een mislukte opslag onder gl-v2-preview alsnog stil
             // terugvallen op de legacy EditProject-view.
             var viewName = ViewData["UseGlV2Layout"] as bool? == true ? "EditProjectV2" : "EditProject";
+
+            // Verdeelsleutel (migratie 057, design-handoff 23a) — enkel relevant zodra er mede-eigenaars zijn.
+            if (viewmodel.Client?.CoOwners?.Any() == true)
+            {
+                var shareTotal = (viewmodel.Client.OwnerPercentage ?? 0) + viewmodel.Client.CoOwners.Sum(c => c.CoOwnerPercentage ?? 0);
+                if (Math.Abs(shareTotal - 100m) > 0.01m)
+                    ModelState.AddModelError("Client.CoOwners", $"De verdeelsleutel moet 100% zijn (nu {shareTotal:0.##}%).");
+            }
+
             if (!ModelState.IsValid || viewmodel.Client.Id == 0)
             {
                 FillInAddSelectListsEdit(ref viewmodel);
@@ -2355,6 +2520,16 @@ namespace CPMCore.Controllers
 
             var sanitizedCountry = SanitizeVatCountry(countryCode);
             return string.IsNullOrEmpty(sanitizedCountry) ? sanitizedNumber : sanitizedCountry + sanitizedNumber;
+        }
+
+        /// <summary>Klantenlijst/breadcrumb-weergavenaam: bedrijfsnaam wint hier bewust (andere regel dan
+        /// ClientAccountBO.DisplayName, dat Naam eerst toont) — enkel Voornaam (migratie 057) toegevoegd,
+        /// de precedentie blijft ongewijzigd.</summary>
+        private static string DisplayNameOf(DALCore.Models.ClientAccount client)
+        {
+            if (!string.IsNullOrWhiteSpace(client.CompanyName)) return client.CompanyName;
+            if (string.IsNullOrWhiteSpace(client.Name)) return client.CompanyName ?? client.Name;
+            return string.IsNullOrWhiteSpace(client.Forename) ? client.Name : client.Name + " " + client.Forename;
         }
 
         private static (string? CountryCode, string? NumberPart) SplitEnterpriseNumber(string? value)

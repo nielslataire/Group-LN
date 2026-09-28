@@ -1,0 +1,99 @@
+@model BOCore.UnitBO
+@using HtmlHelpers.BeginCollectionItemCore
+@using System.Globalization
+@using System.Text.Json
+@*
+    gl-v2-vertaling van Partials/_UnitRow.cshtml (Klanten/AddClientAccountV2, design-handoff 23a
+    "Eenheden"). Zelfde Html.BeginCollectionItem("units")-wrapper en onderliggende POST
+    (KlantenController.AddClientAccount POST, param "units") als de legacy rij — enkel de opmaak is
+    nieuw, en volgt 23a se eenheidskaart: kop (naam · type/oppervlakte · badge "BESCHIKBAAR → VERKOCHT"),
+    bewerkbare GRONDWAARDE/CONSTRUCTIEWAARDE(N), alleen-lezen TOTAAL/GRONDAANDEEL/BETALINGSGROEP en
+    "Standaardwaarden — prijzen voorgesteld uit Eenheden · Herstellen".
+    data-unit-id/-name/-group op de kaart: gl-v2-klanten-addclient.js zet een verwijderde eenheid ermee
+    terug in de kiezer; data-default-land/-cvs dragen de voorgestelde prijzen voor "Herstellen".
+    ViewData["PaymentGroupNames"] (Dictionary<int,string>) komt van KlantenController (FillInAddSelectLists
+    / AddSelectedUnits) — UnitBO kent enkel PaymentGroupId.
+*@
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var paymentGroupNames = ViewData["PaymentGroupNames"] as Dictionary<int, string>;
+    var paymentGroupName = Model.PaymentGroupId is int pgId && paymentGroupNames != null && paymentGroupNames.TryGetValue(pgId, out var pgName) ? pgName : null;
+    var subParts = new List<string>();
+    if (!string.IsNullOrWhiteSpace(Model.Type?.Name)) subParts.Add(Model.Type.Name.ToLowerInvariant());
+    if (Model.Surface is decimal surface && surface > 0) subParts.Add(surface.ToString("N0", be) + " m²");
+    var total = (Model.LandValueSold ?? 0) + Model.ConstructionValues.Sum(cv => cv.ValueSold ?? 0);
+    var defaultLand = (Model.LandValue ?? Model.LandValueSold ?? 0).ToString("0.00", CultureInfo.InvariantCulture);
+    var defaultCvs = JsonSerializer.Serialize(Model.ConstructionValues.Select((cv, i) => new { i, v = (cv.Value ?? cv.ValueSold ?? 0).ToString("0.00", CultureInfo.InvariantCulture) }));
+}
+<div class="gl-v2-card gl-v2-addclient-unit-row" data-unit-id="@Model.Id" data-unit-name="@Model.Name" data-unit-group="@Model.Type?.Name" data-default-land="@defaultLand" data-default-cvs="@defaultCvs">
+@using (Html.BeginCollectionItem("units"))
+{
+    @Html.HiddenFor(m => m.Id)
+    <div class="gl-v2-card-header gl-v2-addclient-unit-head">
+        <span class="gl-v2-addclient-unit-head-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+        <span class="gl-v2-addclient-unit-head-text">
+            <span class="gl-v2-card-header-title">@(Model.Type != null && Model.Type.Id == 11 ? Model.Type.Name + " " : "")@Model.Name</span>
+            @if (subParts.Count > 0)
+            {
+                <span class="gl-v2-addclient-unit-head-sub">@string.Join(" · ", subParts)</span>
+            }
+        </span>
+        <span class="gl-v2-card-header-spacer"></span>
+        <span class="gl-v2-addclient-unit-badge" title="Na opslaan wordt deze eenheid aan dit account verkocht"><span>Beschikbaar</span><i class="ph ph-arrow-right" aria-hidden="true"></i><span>Verkocht</span></span>
+        <button type="button" class="gl-v2-icon-btn is-danger js-gl-v2-delete-unit-row" aria-label="Eenheid verwijderen" title="Eenheid verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+    </div>
+    <div class="gl-v2-card-body">
+        @if (Model.FinishingOptions is { Count: > 0 })
+        {
+            <div class="gl-v2-field" style="max-width:320px;margin-bottom:12px">
+                <label class="gl-v2-field-label">Afwerking</label>
+                <div class="gl-v2-field-box">
+                    <select class="gl-v2-field-input gl-finishing-option-select" data-unit-id="@Model.Id" data-unit-name="@Model.Name" data-unit-group="@Model.Type?.Name">
+                        @{ var selectedOptId = Model.ConstructionValues.Any() ? Model.ConstructionValues.First().FinishingOptionId : (int?)null; }
+                        @foreach (var opt in Model.FinishingOptions)
+                        {
+                            <option value="@opt.Id" selected="@(opt.Id == selectedOptId ? "selected" : null)">@opt.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        }
+        <div class="gl-v2-addclient-unit-grid">
+            @Html.EditorFor(m => m.LandValueSold, "GlV2Currency", new { Label = "Grondwaarde", Help = "gefactureerd door grondeigenaar" })
+            @for (var j = 0; j < Model.ConstructionValues.Count; j++)
+            {
+                @Html.HiddenFor(m => m.ConstructionValues[j].Id)
+                @Html.EditorFor(m => m.ConstructionValues[j].ValueSold, "GlV2Currency", new { Label = string.IsNullOrWhiteSpace(Model.ConstructionValues[j].Description) ? "Constructiewaarde" : Model.ConstructionValues[j].Description, Help = "gefactureerd door aannemer" })
+            }
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Totaal</span>
+                <div class="gl-v2-field-readonly">
+                    <i class="ph ph-lock-simple" aria-hidden="true"></i>
+                    <span data-role="unit-total">@total.ToString("C2", be)</span>
+                </div>
+            </div>
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Grondaandeel</span>
+                <div class="gl-v2-field-readonly">
+                    <i class="ph ph-chart-pie-slice" aria-hidden="true"></i>
+                    <span>@(Model.Landshare is > 0 ? Model.Landshare.Value.ToString("N0", be) + " / 1.000" : "—")</span>
+                </div>
+                <span class="gl-v2-field-help">uit Eenheden</span>
+            </div>
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Betalingsgroep</span>
+                <div class="gl-v2-field-readonly">
+                    <i class="ph ph-receipt" aria-hidden="true"></i>
+                    <span>@(paymentGroupName ?? "—")</span>
+                </div>
+                <span class="gl-v2-field-help">bepaalt schijven en btw voor de klant — ook voor meer-/minwerken en nuts</span>
+            </div>
+        </div>
+        <div class="gl-v2-addclient-unit-defaults">
+            <span class="gl-v2-addclient-unit-defaults-label">Standaardwaarden</span>
+            <span>prijzen voorgesteld uit Eenheden ·</span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-role="unit-reset">Herstellen</button>
+        </div>
+    </div>
+}
+</div>

@@ -174,8 +174,12 @@ beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeli
 ### Operationele randvoorwaarden
 - **Klok**: alle bewijs is server-side UTC; de host moet NTP-gesynchroniseerd zijn.
 - **E-mail**: SPF/DKIM/DMARC op het verzenddomein, anders belanden uitnodigingen in spam.
-- **Reverse proxy**: de rate limiter partitioneert op client-IP; achter een proxy is dat het proxy-IP
-  tenzij `ForwardedHeaders` geconfigureerd is (nog niet — fase 2).
+- **Reverse proxy**: opgelost in fase 3 — `Program.cs` roept `app.UseForwardedHeaders(...)` als eerste
+  middleware aan (`ForwardedHeaders.XForwardedFor | XForwardedProto`, `ForwardLimit = 1`, lege
+  `KnownNetworks`/`KnownProxies`). Aanname: SmarterASP.NET is gedeelde IIS-hosting met IIS als enige
+  hop vóór de app — als er toch nog een laag vóór IIS zit (CDN/eigen load balancer) moet `ForwardLimit`
+  naar 2. Verifiëren: na deploy een test-ondertekening doorlopen en in de audit trail checken dat het
+  IP je eigen (herkenbare) adres is, niet steeds hetzelfde interne adres.
 - **Back-up**: de ondertekende documenten en het auditrapport staan als bytes in SQL (`SigningDocument`);
   de databaseback-up dekt ze. De Storage API-map `signing/` is een spiegel, geen bewijsbron.
 
@@ -197,3 +201,38 @@ beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeli
   icoon "Elektronisch laten ondertekenen" → Start (controleer "Bekijk de pdf") → Aanbieden → de
   uitnodigingsmail komt op het testadres; het dossier toont per partij "Uitgenodigd", de audit trail
   toont CaseCreated/DocumentStored/CaseOpened/InvitationSent. De link in de mail werkt pas in fase 2.
+
+### Fase 2 (28/09/2026): publieke ondertekenpagina
+- **Route `/tekenen`**, niet `/ondertekenen`: die laatste is nog de route van de oudere,
+  live link-per-e-mail-flow (`SigningController`) tot de cutover — zie ONDERTEKENEN_VOORTGANG.md
+  "Samenloop". `OndertekenenController` ([AllowAnonymous], sessiecookie `gl_tekenen_sid`).
+- **Handtekening verplicht**: de klant tekent op een canvas vóór "Ondertekenen" bruikbaar wordt; ook
+  server-side afgedwongen (`OndertekenenController.Tekenen` weigert zonder `SignatureImagePng`).
+- **`ISigningDocumentRenderer`** is niet langer de fase-0-stub: `SignedDocumentComposer` (QuestPDF +
+  PdfSharpCore) bouwt het ondertekende document en het auditrapport — zonder dit blijft elk dossier
+  voor altijd hangen in `FinalizationFailed` (fase 3 lost het "hangen" zelf ook op, zie hieronder).
+- **Documentenkoppeling**: bij voltooiing komt het ondertekende PDF ook als `ProjectDocs`-revisie
+  binnen (map "Contracten"), gekoppeld via `ChangeOrder.Id` → `ProjectDocs.ChangeOrderId`.
+
+### Fase 3 (28/09/2026): opvolging & hardening
+- **`SigningHostedService`** (nieuw, `CPMCore/Services/`): elke 15 min — verlopen dossiers sluiten,
+  vervallen herinneringen versturen, de bewaarregel toepassen, én dossiers die regel-compleet zijn maar
+  nooit voltooid raakten (mislukte finalisatie) opnieuw proberen (`ISigningService.RetryStuckFinalizationsAsync`,
+  nieuw). Ook bereikbaar via `GET /api/trigger/signing?key=...` (fire-and-forget, 202 Accepted) —
+  **`TriggerKeys:Signing` staat nog nergens ingesteld**, moet vóór gebruik gezet worden:
+  `dotnet user-secrets set "TriggerKeys:Signing" "<waarde>"` vanuit `CPMCore/` (lokaal/test), en de
+  overeenkomstige config op de testomgeving/live.
+- **Publieke verificatiepagina `/verifieer/{id}`** (nieuw, `VerifieerController`): toont dossierstatus,
+  aantal ondertekenaars, voltooiingsdatum en beide SHA-256-hashes — geen namen/IP's. De QR die hiernaar
+  wijst staat nu ook weer op het ondertekende document (was tijdelijk weggehaald toen de pagina nog
+  niet bestond).
+- **`ForwardedHeaders`**: zie "Operationele randvoorwaarden" hierboven.
+- **`ClientContactChangeLog`** wordt nu gevuld vanuit `Klanten/Edit` én `Klanten/EditProject`
+  (e-mail/gsm-wijzigingen, gemaskeerd) — bekende beperking: het `EditProject`-pad
+  (`ServiceCore/ClientService.InsertUpdate`) heeft geen gebruikerscontext, dus `ChangedByUserId` blijft
+  daar leeg. Een parallelle, oudere .NET-Framework-4.8-app (`CPM/Controllers/KlantenController.vb`) kan
+  dezelfde tabellen bewerken buiten deze log om, als die nog gebruikt wordt.
+- **Testen (fase 3):** een dossier laten voltooien → `/api/trigger/signing?key=...` aanroepen → logs
+  tonen de vier sub-jobs zonder exceptions; de QR op het ondertekende PDF scannen → `/verifieer/{id}`
+  toont het dossier; een klant- of contactformulier bewerken met een gewijzigd e-mailadres/gsm-nummer →
+  rij verschijnt in `ClientContactChangeLog`.

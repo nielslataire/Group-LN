@@ -1,6 +1,7 @@
 ﻿using CPMCore.Configuration;
 using GroupLN.MarketData.Persistence.Extensions;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Service;
@@ -329,8 +330,8 @@ builder.Services.Configure<ServiceCore.Signing.SigningOptions>(configuration.Get
 }
 builder.Services.AddScoped<FacadeCore.Signing.ISigningEvidenceStore, ServiceCore.Signing.SigningEvidenceStore>();
 builder.Services.AddScoped<FacadeCore.Signing.ISigningNotifier, ServiceCore.Signing.SigningNotifier>();
-// Fase 0: nog geen renderer voor het ondertekende document/auditrapport (komt in fase 2, CPMCore/Documents).
-builder.Services.AddScoped<FacadeCore.Signing.ISigningDocumentRenderer, ServiceCore.Signing.NotAvailableSigningDocumentRenderer>();
+// Fase 2: ondertekend document + auditrapport (CPMCore/Documents, QuestPDF + PdfSharpCore).
+builder.Services.AddScoped<FacadeCore.Signing.ISigningDocumentRenderer, CPMCore.Services.Signing.SignedDocumentComposer>();
 // Strategy-registraties (zelfde recept als ITrajectTriggerAction): methodes/kanalen/bronnen op sleutel.
 builder.Services.AddScoped<FacadeCore.Signing.ISignatureMethodProvider, ServiceCore.Signing.InternalSesProvider>();
 builder.Services.AddScoped<FacadeCore.Signing.IVerificationMethod, ServiceCore.Signing.EmailOtpMethod>();
@@ -342,6 +343,9 @@ builder.Services.AddScoped<CPMCore.Services.Signing.ChangeOrderPdfBuilder>();
 builder.Services.AddScoped<FacadeCore.Signing.ISigningDocumentSource, CPMCore.Services.Signing.ChangeOrderSigningSource>();
 builder.Services.AddScoped<ServiceCore.Signing.SigningRegistry>();
 builder.Services.AddScoped<FacadeCore.Signing.ISigningService, ServiceCore.Signing.SigningService>();
+// Fase 3: achtergrondjob (verlopen/herinneringen/retentie/hervat-finalisatie) + /api/trigger/signing hieronder.
+builder.Services.AddSingleton<CPMCore.Services.SigningHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CPMCore.Services.SigningHostedService>());
 
 // Rate limiting (§6.4) — eerste gebruik in de app; enkel de signing-policies zijn benoemd, dus
 // geen enkele bestaande route krijgt een limiet. Partities per client-IP; de limiet per
@@ -510,6 +514,21 @@ var app = builder.Build();
 RotativaConfiguration.Setup(app.Environment.WebRootPath, "lib/rotativa");
 
 // Configure the HTTP request pipeline.
+
+// Vooraan, vóór alles wat RemoteIpAddress/schema leest (rate limiter, signing-audit-IP's, HTTPS-
+// redirect): SmarterASP.NET is gedeelde IIS-hosting, dus de app zit altijd achter IIS op dezelfde
+// host. ForwardLimit=1 + lege KnownNetworks/KnownProxies = vertrouw exact die ene, onmiddellijke hop
+// (Microsoft's eigen aanbeveling voor "IIS vóór Kestrel/ASP.NET Core op dezelfde machine"). Zonder
+// dit zag de signingmodule's rate limiter en IP-logging altijd het IIS-adres i.p.v. de echte
+// ondertekenaar (DEPLOY.md, "Operationele randvoorwaarden" — fase 3 lost dit op). Onbevestigde
+// aanname: als SmarterASP zelf nog een laag vóór IIS heeft (CDN/eigen load balancer), volstaat
+// ForwardLimit=1 niet — dat is van hieruit niet te verifiëren.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit = 1,
+});
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -579,6 +598,24 @@ app.Map("/api/trigger", triggerApp =>
             }
             var trajectHosted = ctx.RequestServices.GetRequiredService<TrajectHostedService>();
             _ = Task.Run(() => trajectHosted.RunAsync("http-trigger"));
+            ctx.Response.StatusCode = 202;
+            await ctx.Response.WriteAsJsonAsync(new { status = "Accepted", timestamp = DateTime.UtcNow });
+            return;
+        }
+
+        if (path.Equals("/signing", StringComparison.OrdinalIgnoreCase)
+            && ctx.Request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+        {
+            var expectedKey = cfg["TriggerKeys:Signing"];
+            var key = ctx.Request.Query["key"].FirstOrDefault();
+            if (string.IsNullOrEmpty(expectedKey) || key != expectedKey)
+            {
+                ctx.Response.StatusCode = 401;
+                await ctx.Response.WriteAsJsonAsync(new { error = "Ongeldige sleutel." });
+                return;
+            }
+            var signingHosted = ctx.RequestServices.GetRequiredService<CPMCore.Services.SigningHostedService>();
+            _ = Task.Run(() => signingHosted.RunJobsAsync("http-trigger"));
             ctx.Response.StatusCode = 202;
             await ctx.Response.WriteAsJsonAsync(new { status = "Accepted", timestamp = DateTime.UtcNow });
             return;

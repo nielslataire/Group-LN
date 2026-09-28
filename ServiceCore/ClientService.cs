@@ -2,9 +2,12 @@
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
+using ServiceCore.Signing;
 using ServiceCore.Translators;
 using DALCore.Query;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 
@@ -229,8 +232,11 @@ namespace ServiceCore
             }
 
             ClientAccount entity;
+            var isNew = clientaccount.Id == 0;
+            string oldEmail = null;
+            Dictionary<int, (string Email, string Cellphone)> oldContacts = null;
 
-            if (clientaccount.Id == 0)
+            if (isNew)
             {
                 entity = _uow.ClientAccounts.GetNew();
 
@@ -245,6 +251,13 @@ namespace ServiceCore
                 entity = _uow.Context.Set<ClientAccount>()
                          .Include(ca => ca.ClientContacts)   // pas propertynaam aan indien nodig
                          .FirstOrDefault(ca => ca.Id == clientaccount.Id);
+                // Signingmodule §6.3: e-mail/gsm zijn de OTP-bestemming bij het ondertekenen — vóór
+                // TranslateBOToEntity de oude waarden overschrijft, snapshotten voor ClientContactChangeLog.
+                if (entity != null)
+                {
+                    oldEmail = entity.Email;
+                    oldContacts = entity.ClientContacts.ToDictionary(c => c.Id, c => (c.Email, c.Cellphone));
+                }
             }
 
             if (entity == null)
@@ -260,6 +273,9 @@ namespace ServiceCore
                 return response;
             }
 
+            if (!isNew)
+                LogContactChanges(entity, oldEmail, oldContacts);
+
             // Slim saven: buiten transactie echt saven; binnen transactie "succes" teruggeven
             var hasTx = _uow.HasActiveTransaction;
             var saved = _uow.SaveIfNoActiveTransaction(); // 0 als hasTx==true, anders echte savecount
@@ -270,7 +286,50 @@ namespace ServiceCore
             return response;
         }
 
+        /// <summary>ClientContactChangeLog vullen (fase 3, signingmodule §6.3 — e-mail/gsm zijn de
+        /// OTP-bestemming bij het ondertekenen) — enkel gemaskeerde oude/nieuwe waarden. Bekende
+        /// beperking: <see cref="ClientService"/> heeft geen HttpContext/gebruiker beschikbaar
+        /// (constructor neemt enkel <see cref="UnitOfWorkCore"/>), dus <c>ChangedByUserId</c> blijft
+        /// hier null — dat threaden zou InsertUpdate's signatuur en alle call sites raken voor een
+        /// kleine winst (zie ONDERTEKENEN_VOORTGANG.md).</summary>
+        private void LogContactChanges(ClientAccount entity, string oldEmail, Dictionary<int, (string Email, string Cellphone)> oldContacts)
+        {
+            var now = DateTime.UtcNow;
 
+            if (!string.Equals(oldEmail, entity.Email, StringComparison.Ordinal))
+            {
+                _uow.Context.Set<ClientContactChangeLog>().Add(new ClientContactChangeLog
+                {
+                    EntityType = "ClientAccount", EntityId = entity.Id, ClientAccountId = entity.Id, Field = "Email",
+                    OldValueMasked = SigningCrypto.MaskEmail(oldEmail), NewValueMasked = SigningCrypto.MaskEmail(entity.Email),
+                    ChangedByUserId = null, ChangedAt = now,
+                });
+            }
+
+            foreach (var contact in entity.ClientContacts)
+            {
+                if (oldContacts == null || !oldContacts.TryGetValue(contact.Id, out var old)) continue;
+
+                if (!string.Equals(old.Email, contact.Email, StringComparison.Ordinal))
+                {
+                    _uow.Context.Set<ClientContactChangeLog>().Add(new ClientContactChangeLog
+                    {
+                        EntityType = "ClientContact", EntityId = contact.Id, ClientAccountId = entity.Id, Field = "Email",
+                        OldValueMasked = SigningCrypto.MaskEmail(old.Email), NewValueMasked = SigningCrypto.MaskEmail(contact.Email),
+                        ChangedByUserId = null, ChangedAt = now,
+                    });
+                }
+                if (!string.Equals(old.Cellphone, contact.Cellphone, StringComparison.Ordinal))
+                {
+                    _uow.Context.Set<ClientContactChangeLog>().Add(new ClientContactChangeLog
+                    {
+                        EntityType = "ClientContact", EntityId = contact.Id, ClientAccountId = entity.Id, Field = "Cellphone",
+                        OldValueMasked = SigningCrypto.MaskPhone(old.Cellphone), NewValueMasked = SigningCrypto.MaskPhone(contact.Cellphone),
+                        ChangedByUserId = null, ChangedAt = now,
+                    });
+                }
+            }
+        }
 
 
         public Response AddClientAccountToUnit(int unitId, int accountId)
@@ -294,6 +353,25 @@ namespace ServiceCore
         public Response Delete(List<int> ids)
         {
             var response = new Response();
+
+            // Documenten-module (migratie 049) heeft drie FK's naar ClientAccount zonder ON DELETE
+            // CASCADE/SET NULL — een klant verwijderen crashte SaveChanges met een rauwe SqlException
+            // ("FK_DocumentLinks_ClientAccount" e.a.) zodra er een document aan de klant gekoppeld was.
+            // DocumentLinks: CK_DocumentLinks_OneTarget staat geen lege koppeling toe (precies één van
+            // Unit/ClientAccount/Company moet gevuld zijn) — de koppelingsrij zelf moet dus weg, het
+            // document blijft gewoon bestaan. DocumentSignatures/DocumentRequests hebben geen zo'n
+            // check en zijn puur historisch/toewijzend, dus daar volstaat de referentie op NULL zetten.
+            var linkedDocLinks = _uow.Context.Set<DocumentLink>().Where(l => l.ClientAccountId != null && ids.Contains(l.ClientAccountId.Value));
+            _uow.Context.RemoveRange(linkedDocLinks);
+
+            var linkedSignatures = _uow.Context.Set<DocumentSignature>().Where(s => s.ClientAccountId != null && ids.Contains(s.ClientAccountId.Value)).ToList();
+            foreach (var signature in linkedSignatures)
+                signature.ClientAccountId = null;
+
+            var linkedRequests = _uow.Context.Set<DocumentRequest>().Where(r => r.ResponsibleClientAccountId != null && ids.Contains(r.ResponsibleClientAccountId.Value)).ToList();
+            foreach (var request in linkedRequests)
+                request.ResponsibleClientAccountId = null;
+
             foreach (var id in ids)
                 _uow.ClientAccounts.DeleteObject(id);
 
@@ -365,6 +443,21 @@ namespace ServiceCore
         public Response DeleteClientContact(List<int> ids)
         {
             var response = new Response();
+
+            // Migratie 057: FK_ClientAccount_BilledToContact en FK_ClientAccountInvoiceRecipient_
+            // ClientContact staan op ON DELETE NO ACTION (SQL Server liet SET NULL niet toe — cascade-
+            // paden). Een contact/mede-eigenaar los verwijderen terwijl er nog naar verwezen wordt
+            // ("op naam van" of als factuurontvanger) zou anders crashen op een rauwe FK-fout; de
+            // verwijzingen worden hier eerst zelf op NULL gezet (zelfde "app normaliseert"-regel als
+            // ClientAccountTranslator dat bij het opslaan al doet).
+            var billedAccounts = _uow.Context.Set<ClientAccount>().Where(a => a.BilledToClientContactId != null && ids.Contains(a.BilledToClientContactId.Value)).ToList();
+            foreach (var account in billedAccounts)
+                account.BilledToClientContactId = null;
+
+            var recipientRefs = _uow.Context.Set<ClientAccountInvoiceRecipient>().Where(r => r.ClientContactId != null && ids.Contains(r.ClientContactId.Value)).ToList();
+            foreach (var recipient in recipientRefs)
+                recipient.ClientContactId = null;
+
             foreach (var id in ids)
                 _uow.ClientContacts.DeleteObject(id);
 

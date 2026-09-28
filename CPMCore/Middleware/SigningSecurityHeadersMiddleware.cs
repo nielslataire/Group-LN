@@ -11,12 +11,10 @@ namespace CPMCore.Middleware;
 /// </summary>
 public sealed class SigningSecurityHeadersMiddleware
 {
-    // MERGE 28/09/2026: "/ondertekenen" is sinds de merge de route van SigningController (de
-    // link-per-e-mail-flow van de andere pc), die met Layout = null en een inline <script> werkt —
-    // deze CSP (script-src 'self') zou die pagina breken. Daarom voorlopig enkel "/verifieer" (nog
-    // ongebruikt). Fase 2 van de signingmodule kiest een eigen prefix of neemt "/ondertekenen" over
-    // zodra beslist is welke flow blijft (ONDERTEKENEN_VOORTGANG.md, "Samenloop").
-    private static readonly string[] Prefixes = { "/verifieer" };
+    // MERGE 28/09/2026: "/ondertekenen" is nog altijd de route van SigningController (de
+    // link-per-e-mail-flow van de andere pc, ONDERTEKENEN_VOORTGANG.md "Samenloop") en blijft erbuiten
+    // tot de cutover. Fase 2 van de signingmodule (OndertekenenController) gebruikt "/tekenen".
+    private static readonly string[] Prefixes = { "/verifieer", "/tekenen" };
 
     private const string Csp =
         "default-src 'self'; " +

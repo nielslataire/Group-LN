@@ -18,6 +18,7 @@
     initMultiSelects(document);
     initSearchSelects(document);
     initClientTypeToggle();
+    initSalutationFirstnameToggle(document);
     initInvoiceAddressToggle();
     initContactRows();
     initCoOwnerRows();
@@ -29,6 +30,8 @@
     initGotoFirstError();
     initDirtyBadge();
     initDiscardChangesModal();
+    initShareTotal();
+    initInvoicingTab();
 
     function getBackdrop() {
         if (backdrop) return backdrop;
@@ -362,13 +365,21 @@
             searchInput.focus();
         }
 
+        // mousedown (i.p.v. de click zelf) legt vast of het paneel al open stond VÓÓR deze interactie —
+        // nodig omdat de focus-listener hieronder het paneel soms al opent nog vóórdat de click zelf
+        // afgaat (browser-volgorde: mousedown → focus → click), anders zou de click meteen weer sluiten
+        // wat de focus-listener net opende.
+        var wasOpenBeforeInteraction = false;
+        trigger.addEventListener("mousedown", function () {
+            wasOpenBeforeInteraction = panel.classList.contains("is-open");
+        });
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (panel.classList.contains("is-open")) {
+            if (wasOpenBeforeInteraction) {
                 closeAllPanels();
-                return;
+            } else {
+                openThisPanel();
             }
-            openThisPanel();
         });
         trigger.addEventListener("keydown", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
@@ -379,6 +390,11 @@
             } else {
                 openThisPanel();
             }
+        });
+        // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
+        // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
+        trigger.addEventListener("focus", function () {
+            if (!panel.classList.contains("is-open")) openThisPanel();
         });
 
         if (clearTrigger) {
@@ -405,6 +421,33 @@
         }
 
         toggle.addEventListener("change", function () {
+            apply();
+            markDirty();
+        });
+        apply();
+    }
+
+    // ── "Voornaam" uitschakelen bij een gedeelde aanspreking ("Dhr. & Mevr."/"Dhr. & Dhr."/"Mevr. &
+    //    Mevr.", Salutation-waarden 2/3/4) — dat is een account/mede-eigenaar voor meerdere personen,
+    //    er is dan geen eigen voornaam. Werkt op de hoofdklant (één vast koppel op de pagina) én, via
+    //    de scope-parameter, op elke (ook dynamisch toegevoegde) mede-eigenaar-rij — zie initCoOwnerRows.
+    //    .gl-v2-field-input:disabled heeft al de grijze opmaak (gl-v2-shell.css). ─────────────────────
+    function initSalutationFirstnameToggle(scope) {
+        scope.querySelectorAll('[data-role="salutation-select"]').forEach(wireSalutationFirstnameToggle);
+    }
+
+    function wireSalutationFirstnameToggle(select) {
+        if (select.hasAttribute("data-gl-v2-wired-firstname")) return;
+        select.setAttribute("data-gl-v2-wired-firstname", "1");
+        var fieldScope = select.closest(".gl-v2-field-group") || select.closest(".gl-v2-section-grid");
+        var input = fieldScope && fieldScope.querySelector('[data-role="firstname-input"]');
+        if (!input) return;
+
+        function apply() {
+            input.disabled = parseInt(select.value, 10) >= 2;
+        }
+
+        select.addEventListener("change", function () {
             apply();
             markDirty();
         });
@@ -545,6 +588,7 @@
             applyCoOwnerCompanyToggle(card);
             applyCoOwnerInvoiceToggle(card);
         });
+        initSalutationFirstnameToggle(rows);
 
         rows.addEventListener("change", function (e) {
             var card = e.target.closest(".gl-v2-card");
@@ -571,6 +615,7 @@
                         if (!rowEl) return;
                         rows.appendChild(rowEl);
                         initSearchSelects(rowEl);
+                        initSalutationFirstnameToggle(rowEl);
                         var card = rowEl.querySelector(".gl-v2-card");
                         if (card) {
                             applyCoOwnerCompanyToggle(card);
@@ -578,6 +623,7 @@
                         }
                         updateTabCount("medeeigenaars", rows, ".gl-v2-client-row");
                         markDirty();
+                        recalcShares();
                     })
                     .catch(function () {
                         if (window.GlV2Toast) window.GlV2Toast.show({ tone: "danger", title: "Fout", body: "Kon geen mede-eigenaar toevoegen." });
@@ -591,7 +637,249 @@
             deleteBtn.closest(".gl-v2-client-row").remove();
             updateTabCount("medeeigenaars", rows, ".gl-v2-client-row");
             markDirty();
+            recalcShares();
         });
+
+        rows.addEventListener("input", function (e) {
+            if (e.target.matches('[data-role="coowner-percentage"]') || /CoOwnerPercentage$/.test(e.target.name || "")) recalcShares();
+        });
+    }
+
+    // ── Verdeelsleutel (migratie 057, design-handoff 23a "100 % KLOPT") — som van eigenaar 1 se
+    //    aandeel + alle zichtbare mede-eigenaar-percentages, live herberekend. "Gelijk verdelen"
+    //    verdeelt 100 % gelijk over het aantal zichtbare eigenaars (afgerond, rest naar eigenaar 1).
+    function shareInputs() {
+        var list = [];
+        var owner1 = document.querySelector('[data-role="share-input"]');
+        if (owner1) list.push(owner1);
+        document.querySelectorAll('#gl-v2-coowner-rows input[name$="CoOwnerPercentage"]').forEach(function (el) { list.push(el); });
+        return list;
+    }
+
+    function recalcShares() {
+        var bar = document.getElementById("gl-v2-kep-shares");
+        if (!bar) return;
+        var inputs = shareInputs();
+        var total = inputs.reduce(function (sum, el) { return sum + (parseFloat((el.value || "0").replace(",", ".")) || 0); }, 0);
+        var rounded = Math.round(total * 100) / 100;
+        var valueEl = bar.querySelector('[data-role="share-value"]');
+        var badge = bar.querySelector('[data-role="share-badge"]');
+        if (valueEl) valueEl.textContent = (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(2));
+        var ok = Math.abs(rounded - 100) < 0.01;
+        bar.classList.toggle("is-off", !ok);
+        if (badge) badge.innerHTML = ok
+            ? '<i class="ph ph-check" aria-hidden="true"></i>Klopt'
+            : '<i class="ph ph-warning" aria-hidden="true"></i>' + (rounded > 100 ? "Te veel" : "Nog niet 100 %");
+    }
+
+    function initShareTotal() {
+        var bar = document.getElementById("gl-v2-kep-shares");
+        if (!bar) return;
+        document.addEventListener("input", function (e) {
+            if (shareInputs().indexOf(e.target) >= 0) recalcShares();
+        });
+        var equalizeBtn = bar.querySelector('[data-role="share-equalize"]');
+        if (equalizeBtn) {
+            equalizeBtn.addEventListener("click", function () {
+                var inputs = shareInputs();
+                if (!inputs.length) return;
+                var each = Math.floor(100 / inputs.length);
+                var remainder = 100 - each * inputs.length;
+                inputs.forEach(function (el, i) {
+                    el.value = String(i === 0 ? each + remainder : each);
+                    el.dispatchEvent(new Event("input", { bubbles: true }));
+                });
+                markDirty();
+                recalcShares();
+            });
+        }
+        recalcShares();
+    }
+
+    // ── Facturatie-tab (migratie 057): "op naam van"-afhankelijk veld, ontvangers-chips, live
+    //    voorbeeldkaart. Enkel weergave/bewaren — geen echte facturatie-aanroep. ────────────────────
+    function invoicingPreviewData() {
+        var mode = document.querySelector('#gl-v2-kep-invmode input:checked');
+        var perOwner = !!mode && mode.getAttribute("data-role") === "invmode-perowner";
+        var name = (document.getElementById("gl-v2-kd-account-name") || {}).value
+            || (document.querySelector('[name$="Client.Name"], [name$="ClientAccount.Name"]') || {}).value
+            || "Klant";
+        var owners = [{ name: name, pct: 100 }];
+        if (perOwner) {
+            owners = [];
+            var owner1Pct = parseFloat(((document.querySelector('[data-role="share-input"]') || {}).value || "100").replace(",", ".")) || 0;
+            owners.push({ name: name, pct: owner1Pct });
+            document.querySelectorAll("#gl-v2-coowner-rows .gl-v2-card, #gl-v2-add-owner-rows .gl-v2-card").forEach(function (card) {
+                var nameEl = card.querySelector('input[name$=".Name"]');
+                var pctEl = card.querySelector('input[name$="CoOwnerPercentage"]');
+                var pct = parseFloat(((pctEl || {}).value || "0").replace(",", ".")) || 0;
+                owners.push({ name: (nameEl && nameEl.value) || "Mede-eigenaar", pct: pct });
+            });
+        }
+        return owners;
+    }
+
+    function updateInvoicePreview() {
+        var host = document.querySelector('[data-role="invoice-preview-rows"]');
+        if (!host) return;
+        var owners = invoicingPreviewData();
+        var amount = 10000;
+        host.innerHTML = "";
+        owners.forEach(function (o) {
+            var row = document.createElement("div");
+            row.className = "gl-v2-kep-invoice-row";
+            var share = owners.length > 1 ? " · " + (o.pct % 1 === 0 ? o.pct.toFixed(0) : o.pct.toFixed(1)) + " %" : "";
+            var part = owners.length > 1 ? amount * o.pct / 100 : amount;
+            row.innerHTML = "<span>" + o.name + share + "</span><b>€ " + part.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "</b>";
+            host.appendChild(row);
+        });
+    }
+
+    function initInvoicingTab() {
+        var panel = document.querySelector('[data-tab-panel="facturatie"]');
+        if (!panel) return;
+
+        var billedToSelect = panel.querySelector('[data-role="billedto-select"]');
+        var ownerField = panel.querySelector('[data-role="billedto-owner-field"]');
+        if (billedToSelect && ownerField) {
+            billedToSelect.addEventListener("change", function () {
+                ownerField.hidden = billedToSelect.value !== "1";
+            });
+        }
+
+        var recipients = panel.querySelector('[data-role="recipients"]');
+        var addInput = document.getElementById("gl-v2-kep-recipient-add");
+        var suggestionsHost = panel.querySelector('[data-role="recipient-suggestions"]');
+        var recipientIndex = recipients ? recipients.querySelectorAll(".gl-v2-kep-recipient-chip").length : 0;
+        var namePrefix = (billedToSelect && billedToSelect.name || "").replace(/BilledToType$/, "InvoiceRecipients");
+
+        function escapeAttr(value) {
+            return String(value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+        }
+
+        function existingRecipientEmails() {
+            if (!recipients) return [];
+            return Array.prototype.map.call(recipients.querySelectorAll('input[name$=".Email"]'), function (el) {
+                return (el.value || "").trim().toLowerCase();
+            });
+        }
+
+        // displayName/contactId zijn optioneel: een vrij ingetikt adres heeft ze niet, een "snel
+        // toevoegen"-suggestie (uit de personen op deze pagina) wél — dan gaat ook ClientContactId mee
+        // (enkel voor een al opgeslagen mede-eigenaar/contact met echte Id, anders leeg).
+        function addRecipientChip(email, displayName, contactId) {
+            if (!recipients || !namePrefix) return;
+            if (existingRecipientEmails().indexOf(email.trim().toLowerCase()) >= 0) return;
+            var chip = document.createElement("span");
+            chip.className = "gl-v2-kep-recipient-chip";
+            var idx = recipientIndex++;
+            chip.innerHTML =
+                '<input type="hidden" name="' + namePrefix + '[' + idx + '].Id" value="0" />' +
+                '<input type="hidden" name="' + namePrefix + '[' + idx + '].ClientContactId" value="' + escapeAttr(contactId) + '" />' +
+                '<input type="hidden" name="' + namePrefix + '[' + idx + '].Email" value="' + escapeAttr(email) + '" />' +
+                '<input type="hidden" name="' + namePrefix + '[' + idx + '].DisplayName" value="' + escapeAttr(displayName) + '" />' +
+                '<span data-role="recipient-label"></span>' +
+                '<button type="button" data-role="remove-recipient" aria-label="Ontvanger verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button>';
+            chip.querySelector('[data-role="recipient-label"]').textContent = displayName ? displayName + " · " + email : email;
+            recipients.appendChild(chip);
+            markDirty();
+            renderSuggestions();
+        }
+
+        // ── "Snel toevoegen": de e-mails die op deze pagina al ingevuld staan (hoofdklant, mede-
+        //    eigenaars, contactpersonen) als één-klik-suggesties, zodat je een adres niet een tweede
+        //    keer moet overtikken. Al toegevoegde adressen vallen weg uit de suggesties. ─────────────
+        function personLabel(nameEl, firstnameEl) {
+            var name = (nameEl && nameEl.value || "").trim();
+            var first = (firstnameEl && firstnameEl.value || "").trim();
+            return (name + (first ? " " + first : "")).trim();
+        }
+
+        function knownPeople() {
+            var list = [];
+            var owner1Email = document.querySelector('[name$="ClientAccount.Email"], [name$="Client.Email"]');
+            if (owner1Email && owner1Email.value.indexOf("@") > 0) {
+                list.push({
+                    email: owner1Email.value.trim(),
+                    name: personLabel(document.querySelector('[name$="ClientAccount.Name"], [name$="Client.Name"]'), document.querySelector('[name$="ClientAccount.Firstname"], [name$="Client.Firstname"]')) || "Eigenaar 1",
+                    contactId: ""
+                });
+            }
+            document.querySelectorAll("#gl-v2-coowner-rows .gl-v2-client-row, #gl-v2-contact-rows .gl-v2-client-row").forEach(function (row) {
+                var emailEl = row.querySelector('input[name$=".Email"]');
+                if (!emailEl || emailEl.value.indexOf("@") <= 0) return;
+                var idEl = row.querySelector('input[type="hidden"][name$=".Id"]');
+                var id = idEl && parseInt(idEl.value, 10) > 0 ? idEl.value : "";
+                list.push({
+                    email: emailEl.value.trim(),
+                    name: personLabel(row.querySelector('input[name$=".Name"]'), row.querySelector('input[name$=".Firstname"]')),
+                    contactId: id
+                });
+            });
+            return list;
+        }
+
+        function renderSuggestions() {
+            if (!suggestionsHost) return;
+            var taken = existingRecipientEmails();
+            var seen = {};
+            var items = knownPeople().filter(function (p) {
+                var key = p.email.toLowerCase();
+                if (seen[key] || taken.indexOf(key) >= 0) return false;
+                seen[key] = true;
+                return true;
+            });
+            suggestionsHost.innerHTML = "";
+            suggestionsHost.hidden = items.length === 0;
+            if (!items.length) return;
+            var label = document.createElement("span");
+            label.className = "gl-v2-kep-recipient-suggestions-label";
+            label.textContent = "Snel toevoegen:";
+            suggestionsHost.appendChild(label);
+            items.forEach(function (p) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "gl-v2-kep-recipient-suggestion";
+                btn.textContent = (p.name ? p.name + " · " : "") + p.email;
+                btn.addEventListener("click", function () { addRecipientChip(p.email, p.name, p.contactId); });
+                suggestionsHost.appendChild(btn);
+            });
+        }
+
+        if (addInput) {
+            addInput.addEventListener("keydown", function (e) {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                var value = addInput.value.trim();
+                if (!value || value.indexOf("@") < 0) return;
+                addRecipientChip(value, "", "");
+                addInput.value = "";
+            });
+            addInput.addEventListener("blur", function () {
+                var value = addInput.value.trim();
+                if (value && value.indexOf("@") > 0) { addRecipientChip(value, "", ""); addInput.value = ""; }
+            });
+        }
+        if (recipients) {
+            recipients.addEventListener("click", function (e) {
+                var btn = e.target.closest('[data-role="remove-recipient"]');
+                if (!btn) return;
+                btn.closest(".gl-v2-kep-recipient-chip").remove();
+                markDirty();
+                renderSuggestions();
+            });
+        }
+
+        panel.addEventListener("change", updateInvoicePreview);
+        document.addEventListener("input", function (e) {
+            if (shareInputs().indexOf(e.target) >= 0) updateInvoicePreview();
+            if (e.target.matches('input[name$=".Email"], input[name$=".Name"], input[name$=".Firstname"]')) renderSuggestions();
+        });
+        document.addEventListener("click", function (e) {
+            if (e.target.closest(".js-gl-v2-delete-contact-row, .js-gl-v2-delete-coowner-row")) window.setTimeout(renderSuggestions, 0);
+        });
+        updateInvoicePreview();
+        renderSuggestions();
     }
 
     // ── Toegiften-rijen. ────────────────────────────────────────────────────────────────────────

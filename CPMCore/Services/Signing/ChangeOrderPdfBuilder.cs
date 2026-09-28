@@ -19,9 +19,6 @@ namespace CPMCore.Services.Signing;
 /// </summary>
 public sealed class ChangeOrderPdfBuilder
 {
-    private static readonly object FontLock = new();
-    private static bool _fontsRegistered;
-
     private readonly cpmRunningContext _db;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<ChangeOrderPdfBuilder> _logger;
@@ -93,15 +90,20 @@ public sealed class ChangeOrderPdfBuilder
         };
     }
 
-    /// <summary>Zelfde regel als ClientAccountBO.DisplayName: naam, anders bedrijfsnaam.</summary>
+    /// <summary>Zelfde regel als ClientAccountBO.DisplayName (migratie 057): achternaam eerst, dan
+    /// voornaam indien gekend, anders bedrijfsnaam.</summary>
     public static string DisplayName(ClientAccount? client)
-        => client is null ? "" : (!string.IsNullOrWhiteSpace(client.Name) ? client.Name : client.CompanyName ?? "");
+    {
+        if (client is null) return "";
+        if (string.IsNullOrWhiteSpace(client.Name)) return client.CompanyName ?? "";
+        return string.IsNullOrWhiteSpace(client.Forename) ? client.Name : client.Name + " " + client.Forename;
+    }
 
     public byte[] Render(ChangeOrderPdfModel model)
     {
         var logoPath = Path.Combine(_env.WebRootPath, "Img", "groupln-logo.png");
         byte[]? logo = File.Exists(logoPath) ? File.ReadAllBytes(logoPath) : null;
-        var fontFamily = EnsureFontsRegistered();
+        var fontFamily = GroupLnFonts.EnsureAvenirRegistered(_env, _logger);
         return new ChangeOrderDocument(model, logo, fontFamily).GeneratePdf();
     }
 
@@ -109,39 +111,5 @@ public sealed class ChangeOrderPdfBuilder
     {
         var safe = string.Concat((model.ProjectName ?? "Project").Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch)).Trim();
         return $"Wijzigingsopdracht_{safe}_{model.Date:yyyyMMdd}_{model.Id}.pdf";
-    }
-
-    /// <summary>Avenir één keer per proces registreren (QuestPDF's FontManager is globaal); de
-    /// bestaande afdrukacties doen dit per aanroep, hier gebeurt het ook vanuit een achtergrondpad
-    /// zonder controller. Valt terug op het standaardlettertype als de TTF's ontbreken.</summary>
-    private string? EnsureFontsRegistered()
-    {
-        lock (FontLock)
-        {
-            if (_fontsRegistered) return "Avenir";
-            var fontsRoot = Path.Combine(_env.WebRootPath, "fonts");
-            var any = false;
-            try
-            {
-                foreach (var f in new[]
-                {
-                    "Avenir-Roman.ttf", "Avenir-Medium.ttf", "Avenir-Heavy.ttf", "Avenir-Black.ttf",
-                    "Avenir-Oblique.ttf", "Avenir-MediumOblique.ttf", "Avenir-HeavyOblique.ttf", "Avenir-BlackOblique.ttf"
-                })
-                {
-                    var fp = Path.Combine(fontsRoot, f);
-                    if (!File.Exists(fp)) continue;
-                    using var stream = File.OpenRead(fp);
-                    FontManager.RegisterFont(stream);
-                    any = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Avenir-fonts konden niet geregistreerd worden; de PDF valt terug op het standaardlettertype.");
-            }
-            _fontsRegistered = true;
-            return any ? "Avenir" : null;
-        }
     }
 }
