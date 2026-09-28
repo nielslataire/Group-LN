@@ -31,6 +31,9 @@ public class ProjectDetailViewModel
     /// <summary>False als het project niet meer online staat (uitverkocht of offline gehaald).</summary>
     public bool IsActief { get; set; } = true;
 
+    /// <summary>True als de verkoopgraad uit de advertentie zelf komt (geen units bekend).</summary>
+    public bool VerkoopgraadGerapporteerd { get; set; }
+
     // Eenheden (source units — gebruikt als CanonicalUnits leeg is)
     public List<UnitRijViewModel> Units { get; set; } = new();
 

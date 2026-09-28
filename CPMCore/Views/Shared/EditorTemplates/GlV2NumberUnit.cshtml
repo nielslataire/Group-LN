@@ -49,7 +49,10 @@
     <div class="gl-v2-field-box">
         <input type="text" id="@id" name="@name" value="@value" placeholder="@placeholder" autocomplete="off"
                inputmode="decimal" class="gl-v2-field-input is-tabular@(masked ? " Currencymask" : "")" />
-        <span class="gl-v2-field-unit">@unit</span>
+        @if (!string.IsNullOrWhiteSpace(unit))
+        {
+            <span class="gl-v2-field-unit">@unit</span>
+        }
     </div>
     @if (hasError)
     {

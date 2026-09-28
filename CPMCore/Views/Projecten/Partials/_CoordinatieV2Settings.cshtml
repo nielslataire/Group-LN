@@ -1,0 +1,153 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@*
+    Projecten/DetailCoordinatieV2 — instellingen als zijpaneel (design-handoff 18b "⚙ INSTELLINGEN — ZIJPANEEL"):
+    het tandwiel opent geen aparte pagina maar een paneel. Contracttype met drie grote keuzes; daaronder enkel de
+    velden die bij dat type horen. Medewerkers kies je uit de vaste lijst (Instellingen → Medewerkers); een
+    nieuwe rij neemt het standaardtarief van het coördinatiebedrijf over, daarna vrij aan te passen. Wijkt het
+    tarief af van dat standaardtarief, dan kleurt het veld goud met "aangepast · terug naar € 85,00".
+
+    Belangrijk: een gewijzigd uurtarief geldt voor ALLE nog niet gefactureerde prestaties (de kaart Regie
+    rekent met het actuele tarief); gefactureerde prestaties houden hun tarief. De schijven staan niet in dit
+    paneel — die bewerk je in hun eigen kaart, zodat opslaan hier nooit factuurkoppelingen kan raken.
+
+    MOET rechtstreeks in de pagina-body staan (niet in @@section PageScripts): de --gl-v2-* tokens hangen aan de
+    .gl-v2-wrapper, zie de toelichting in Partials/_SiteManagerNewModalV2.cshtml.
+*@
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@{
+    var vm = Model.GlV2!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Inv(decimal v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+    var type = vm.ContractType;
+    var typeValue = type.HasValue ? (int)type.Value : 0;
+    var usedIds = vm.Rates.Select(r => r.UserId).ToHashSet();
+    var roundTrip = vm.DefaultKm;
+}
+<div class="gl-v2-co-drawer-backdrop" id="gl-v2-co-drawer-backdrop" hidden></div>
+<aside class="gl-v2-co-drawer" id="gl-v2-co-drawer" role="dialog" aria-modal="true" aria-labelledby="gl-v2-co-drawer-title" hidden>
+    <form method="post" action="@Url.Action("SaveCoordinatieInstellingenV2", "Projecten")" id="gl-v2-co-settings-form" class="gl-v2-co-drawer-form" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ProjectId" value="@vm.ProjectId" />
+
+        <header class="gl-v2-co-drawer-head">
+            <span class="gl-v2-co-drawer-icon"><i class="ph ph-gear-six" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-co-drawer-title" id="gl-v2-co-drawer-title">Coördinatie-instellingen</h2>
+            <span class="gl-v2-co-drawer-spacer"></span>
+            <button type="button" class="gl-v2-modal-close js-co-close-settings" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+        </header>
+
+        <div class="gl-v2-co-drawer-body">
+            <fieldset class="gl-v2-co-fieldset">
+                <legend class="gl-v2-field-label">Contracttype</legend>
+                <div class="gl-v2-co-typegrid" role="radiogroup" aria-label="Contracttype">
+                    <label class="gl-v2-co-typecard">
+                        <input type="radio" name="ContractType" value="1" @(typeValue == 1 ? "checked" : null) />
+                        <span class="gl-v2-co-typecard-body"><i class="ph ph-stack" aria-hidden="true"></i><b>Schijven</b><span>vast bedrag in delen</span></span>
+                    </label>
+                    <label class="gl-v2-co-typecard">
+                        <input type="radio" name="ContractType" value="2" @(typeValue == 2 ? "checked" : null) />
+                        <span class="gl-v2-co-typecard-body"><i class="ph ph-timer" aria-hidden="true"></i><b>Regie</b><span>uren × tarief</span></span>
+                    </label>
+                    <label class="gl-v2-co-typecard">
+                        <input type="radio" name="ContractType" value="3" @(typeValue == 3 ? "checked" : null) />
+                        <span class="gl-v2-co-typecard-body"><i class="ph ph-arrows-merge" aria-hidden="true"></i><b>Combinatie</b><span>schijven + regie</span></span>
+                    </label>
+                </div>
+                <p class="gl-v2-co-fieldnote">Wisselen naar een ander type mag altijd; al gefactureerde schijven en prestaties blijven staan en worden enkel verborgen als hun kaart verdwijnt.</p>
+            </fieldset>
+
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "CoordinationIssuerCompanyId",
+                Id = "co-issuer",
+                Label = "Coördinatiebedrijf",
+                Value = vm.CoordinationIssuerCompanyId?.ToString(),
+                Placeholder = "Kies het facturatiebedrijf",
+                Help = "Het bedrijf dat de facturen voor dit project uitgeeft.",
+                Items = vm.IssuerCompanies.Select(i => new GlV2SelectItem { Value = i.Id.ToString(), Text = i.Name }).ToList()
+            })
+
+            <div class="gl-v2-field" data-co-if="schijven">
+                <label class="gl-v2-field-label" for="co-contract-price">Contractbedrag schijven</label>
+                <div class="gl-v2-field-box">
+                    <input type="number" class="gl-v2-field-input is-tabular" id="co-contract-price" name="ContractPrice" min="0" step="0.01" inputmode="decimal" placeholder="0,00" value="@(vm.ContractPrice > 0m ? Inv(vm.ContractPrice) : "")" autocomplete="off" />
+                    <span class="gl-v2-field-unit">€</span>
+                </div>
+                <span class="gl-v2-field-help">Excl. btw. De bedragen van de schijven volgen hieruit.</span>
+            </div>
+
+            <div class="gl-v2-co-block" data-co-if="regie" id="gl-v2-co-rates-block">
+                <span class="gl-v2-field-label">Uurtarief per medewerker</span>
+                <p class="gl-v2-co-fieldnote is-lead">Het tarief geldt enkel voor dit project. Een wijziging telt voor alle prestaties die nog niet gefactureerd zijn; wat al gefactureerd is behoudt zijn tarief.</p>
+                <div class="gl-v2-co-rates" id="gl-v2-co-rates">
+                    @foreach (var r in vm.Rates)
+                    {
+                        <div class="gl-v2-co-raterow" data-rate-row data-user-id="@r.UserId">
+                            <input type="hidden" data-rate-user value="@r.UserId" />
+                            <span class="gl-v2-avatar gl-v2-co-avatar">@r.Initials</span>
+                            <span class="gl-v2-co-rate-name">@r.Name</span>
+                            <div class="gl-v2-field-box gl-v2-co-rate-box">
+                                <input type="number" class="gl-v2-field-input is-tabular" data-rate-input min="0" step="0.01" inputmode="decimal" value="@Inv(r.Rate)" aria-label="Uurtarief @r.Name" />
+                                <span class="gl-v2-field-unit">€/u</span>
+                            </div>
+                            <button type="button" class="gl-v2-icon-btn gl-v2-co-icon-sm js-co-rate-remove" aria-label="@r.Name verwijderen uit de lijst" title="Verwijderen uit de lijst"><i class="ph ph-x" aria-hidden="true"></i></button>
+                            <span class="gl-v2-co-rate-note" data-rate-note hidden></span>
+                        </div>
+                    }
+                    <p class="gl-v2-co-muted" id="gl-v2-co-rates-empty" @(vm.Rates.Any() ? "hidden" : null)>Nog geen medewerkers.</p>
+                </div>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "co-add-user",
+                    Id = "co-add-user",
+                    Label = null,
+                    Bare = true,
+                    Value = "",
+                    Placeholder = "+ Medewerker toevoegen",
+                    Icon = "ph-user-plus",
+                    Items = vm.AvailableUsers.Where(u => !string.IsNullOrEmpty(u.Group)).Select(u => new GlV2SelectItem { Value = u.Group, Text = u.Display }).ToList()
+                })
+                <p class="gl-v2-co-fieldnote">Uit de lijst medewerkers (Instellingen → Medewerkers). Kiezen neemt het standaardtarief van het coördinatiebedrijf over, daarna vrij aan te passen.</p>
+            </div>
+
+            <div class="gl-v2-field" data-co-if="regie">
+                <label class="gl-v2-field-label" for="co-km-allowance">Km-vergoeding</label>
+                <div class="gl-v2-field-box">
+                    <input type="number" class="gl-v2-field-input is-tabular" id="co-km-allowance" name="KmAllowance" min="0" step="0.01" inputmode="decimal" placeholder="0,00" value="@(vm.KmAllowance > 0m ? Inv(vm.KmAllowance) : "")" autocomplete="off" />
+                    <span class="gl-v2-field-unit">€/km</span>
+                </div>
+            </div>
+
+            <div class="gl-v2-co-block" data-co-if="regie">
+                <span class="gl-v2-field-label">Verplaatsing</span>
+                <div class="gl-v2-co-route">
+                    <div class="gl-v2-co-route-line"><span class="gl-v2-co-route-tag">VAN</span><span>Bureel @(vm.IssuerCompanyName ?? "— nog geen coördinatiebedrijf")</span></div>
+                    <div class="gl-v2-co-route-line"><span class="gl-v2-co-route-tag">NAAR</span><span>Werf @(string.IsNullOrWhiteSpace(vm.ProjectAddress) ? "— geen adres" : vm.ProjectAddress)</span></div>
+                    @if (vm.DistanceOneWayKm.HasValue)
+                    {
+                        <div class="gl-v2-co-route-result"><b>@vm.DistanceOneWayKm.Value.ToString("0.##", be) km</b> enkel · heen en terug <b>@roundTrip.ToString("0.#", be) km</b> — berekend via de route</div>
+                    }
+                    else
+                    {
+                        <div class="gl-v2-co-route-result gl-v2-co-muted">Nog geen afstand berekend. Ze wordt berekend bij het opslaan, zodra het coördinatiebedrijf en het werfadres bekend zijn.</div>
+                    }
+                </div>
+                <p class="gl-v2-co-fieldnote">Wijzig je het coördinatiebedrijf, dan wordt de afstand opnieuw berekend. Al ingevoerde prestaties behouden hun km.</p>
+            </div>
+
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="co-reference">Referentie op de factuur</label>
+                <div class="gl-v2-field-box">
+                    <input type="text" class="gl-v2-field-input" id="co-reference" name="CoordinationReference" maxlength="200" value="@vm.CoordinationReference" placeholder="bv. dossiernummer of projectnaam van de bouwheer" autocomplete="off" />
+                </div>
+            </div>
+        </div>
+
+        <footer class="gl-v2-co-drawer-foot">
+            <button type="button" class="gl-v2-btn gl-v2-btn-text js-co-close-settings">Annuleren</button>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-settings-save">Opslaan</button>
+        </footer>
+    </form>
+</aside>

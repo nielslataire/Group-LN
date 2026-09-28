@@ -1,5 +1,5 @@
 -- =============================================
--- Migratie: 048_SigningCase_SourceFingerprint
+-- Migratie: 056_SigningCase_SourceFingerprint
 -- Datum: 2026-09-27
 -- Omschrijving: Elektronisch ondertekenen, fase 1. SigningCase.SourceFingerprint — SHA-256 (hex) van
 --   de broninhoud op het moment van aanmaken (ISigningDocumentSource.ComputeFingerprintAsync). Bij het

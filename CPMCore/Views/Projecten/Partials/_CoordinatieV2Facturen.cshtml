@@ -1,0 +1,68 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@*
+    Projecten/DetailCoordinatieV2 — tab "Facturen" (design-handoff 18a: "Facturen 2", enkel bij schijven + regie).
+    Alle facturen van het coördinatiebedrijf op dit project, met wat erin zit (schijven, regie of allebei).
+    Een factuur die aan geen enkele schijf of prestatie hangt is zichtbaar als "niet gekoppeld" — dat is
+    precies wat overblijft wanneer een koppeling verloren ging (zie migratie 051) en het kan hier niet stil
+    ontbreken.
+*@
+@using System.Globalization
+@{
+    var vm = Model.GlV2!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+}
+<div class="gl-v2-card gl-v2-co-card">
+    <div class="gl-v2-card-header">
+        <span class="gl-v2-card-header-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-card-header-title">Facturen</h2>
+        <span class="gl-v2-card-header-count">@vm.Invoices.Count @(vm.Invoices.Count == 1 ? "factuur" : "facturen")@(vm.IssuerCompanyName is null ? "" : " van " + vm.IssuerCompanyName)</span>
+    </div>
+    <div class="gl-v2-card-body gl-v2-co-body">
+        @if (!vm.Invoices.Any())
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen facturen</h2>
+                <p class="gl-v2-empty-state-desc">Vink schijven aan of kies een periode bij de regie en maak er één factuur van.</p>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-co-table-scroll">
+                <table class="gl-v2-co-table gl-v2-co-invoices-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Factuur</th>
+                            <th scope="col">Datum</th>
+                            <th scope="col">Bevat</th>
+                            <th scope="col" class="is-right">Bedrag excl. btw</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in vm.Invoices)
+                        {
+                            <tr class="gl-v2-co-row">
+                                <td data-label=""><a class="gl-v2-co-invoice-link" href="@Url.Action("Detail", "Invoices", new { id = i.Id })">@i.PublicId</a></td>
+                                <td class="gl-v2-co-tabular" data-label="Datum">@i.Date.ToString("dd/MM/yyyy")</td>
+                                <td data-label="Bevat">
+                                    @if (i.IsLinked)
+                                    {
+                                        <span>@i.Kind@(i.RegieCount > 0 ? " · " + i.RegieHours.ToString("N2", be) + " u" : "")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-badge is-attention" title="Hangt aan geen enkele schijf of prestatie">NIET GEKOPPELD</span>
+                                    }
+                                </td>
+                                <td class="is-right gl-v2-co-tabular" data-label="Bedrag">@Eur(i.AmountExVat)</td>
+                                <td data-label="Status"><span class="gl-v2-badge @i.StatusTone">@i.StatusLabel.ToUpperInvariant()</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -6,7 +6,7 @@ namespace DALCore.Models;
 /// <summary>
 /// Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §3) — DbSets + fluent config, aangeroepen
 /// vanuit <c>OnModelCreatingPartial</c> in <c>cpmRunningContext.Seeding.cs</c>, zelfde recept als
-/// Taak/Dossier/Traject. Tabellen: migratie <c>_migrations/047_Signing.sql</c>.
+/// Taak/Dossier/Traject. Tabellen: migratie <c>_migrations/055_Signing.sql</c>.
 /// </summary>
 public partial class cpmRunningContext
 {
@@ -45,7 +45,7 @@ public partial class cpmRunningContext
             entity.Property(e => e.ProviderCaseRef).HasMaxLength(200);
             entity.Property(e => e.VerificationMethod).HasMaxLength(50);
             entity.Property(e => e.CloseReason).HasMaxLength(1000);
-            entity.Property(e => e.SourceFingerprint).HasMaxLength(64);   // migratie 048
+            entity.Property(e => e.SourceFingerprint).HasMaxLength(64);   // migratie 056
             entity.Property(e => e.AmountExclVat).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.VatAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.AmountInclVat).HasColumnType("decimal(18, 2)");

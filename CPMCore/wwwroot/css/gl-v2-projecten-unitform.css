@@ -1,0 +1,214 @@
+/* gl-v2 layout-pilot — Projecten/UnitFormV2 (design-handoff 16b "Eenheid bewerken" + 16c "Nieuwe
+   eenheid"). Page-specific; alle gedeelde bouwstenen (.gl-v2-section-card, .gl-v2-section-grid/-col-*,
+   .gl-v2-field/-box/-input, .gl-v2-select, .gl-v2-badge, .gl-v2-btn, .gl-v2-icon-btn, .gl-v2-form-
+   actionbar, .gl-v2-modal-*) komen uit gl-v2-shell.css — hier staat enkel wat dit formulier zelf nieuw
+   heeft: de meescrollende sectielijst, de afwerkingsblokken, de vaste prijsberekening, de indeling-
+   tabel, de documentrijen en de kopieerkaart. Alles onder .gl-v2-unit-* (page-scope). */
+
+.gl-v2-unit-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* Scrollmodel: .gl-v2-app heeft enkel min-height:100vh, dus bij een lange pagina scrolt het DOCUMENT —
+   niet een wrapper binnenin (een intern overflow-y:auto scrolde nooit, waardoor de sticky sectielijst
+   nergens aan bleef kleven). Daarom géén overflow op .gl-v2-unit-scroll, en .gl-v2-body (overflow:hidden
+   in de shell — dat maakt van de kaart een scrollcontainer die nooit scrolt en breekt daarmee elke
+   position:sticky erbinnen) wordt op DEZE pagina overflow:clip: zelfde afronding/afknipping, maar geen
+   scrollcontainer. Drie-klassen-selector: PageStyle laadt vóór gl-v2-shell.css (zie EditContractV2). */
+.gl-v2 .gl-v2-body.is-full-height { overflow: clip; }
+.gl-v2-unit-scroll { display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
+
+/* ── Kopieerkaart (16c, alleen "Nieuw") ─────────────────────────────────────────────────────────── */
+.gl-v2-unit-copy {
+    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card);
+}
+/* Actief (er is van een eenheid gekopieerd): ring + lichte tint i.p.v. een dikke zijrand. */
+.gl-v2-unit-copy.is-active { background: var(--gl-v2-primary-tint); box-shadow: 0 0 0 1px rgba(0, 83, 45, .25), var(--gl-v2-shadow-card); }
+.gl-v2-unit-copy-icon {
+    flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font-size: 17px;
+}
+.gl-v2-unit-copy-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-unit-copy-text strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-unit-copy-text span { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-unit-copy-select { flex: none; width: 280px; }
+.gl-v2-unit-copy-select .gl-v2-select { display: flex; width: 100%; }
+
+/* ── Sectielijst links + secties (8b: "meescrollende sectielijst") ──────────────────────────────── */
+.gl-v2-unit-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; align-items: start; }
+.gl-v2-unit-sections { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-unit-secnav {
+    position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow-y: auto;
+    display: flex; flex-direction: column; gap: 2px; padding: 12px 8px;
+    background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card);
+}
+.gl-v2-unit-secnav-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); padding: 0 12px 8px; }
+.gl-v2-unit-secnav-item {
+    display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 9px; text-decoration: none;
+    font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft);
+    border-left: 2.5px solid transparent;
+}
+.gl-v2-unit-secnav-item:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
+.gl-v2-unit-secnav-item.is-active { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font-weight: 600; border-left-color: var(--gl-v2-gold); }
+.gl-v2-unit-secnav-label { flex: 1; min-width: 0; }
+.gl-v2-unit-secnav-badge { flex: none; font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+.gl-v2-unit-secnav-badge:empty { display: none; }
+.gl-v2-unit-secnav-item.is-active .gl-v2-unit-secnav-badge { color: var(--gl-v2-primary); }
+.gl-v2-unit-secnav-note { margin: 10px 12px 0; font: 450 11px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+/* Sprongdoelen: de scrollende .gl-v2-content heeft geen sticky header boven de kaarten, dus een kleine
+   marge volstaat zodat een kaart na een sectiesprong niet tegen de rand plakt. */
+.gl-v2-unit-sections > .gl-v2-section-card { scroll-margin-top: 12px; }
+
+.gl-v2-unit-subhead { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); padding-top: 4px; }
+.gl-v2-section-grid .gl-v2-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+/* ── Type & koppeling: gekoppelde eenheden ──────────────────────────────────────────────────────── */
+.gl-v2-unit-linked { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-unit-linked-list { display: flex; flex-direction: column; gap: 6px; }
+.gl-v2-unit-linked-row {
+    display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+    border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface);
+}
+.gl-v2-unit-linked-icon { flex: none; color: var(--gl-v2-muted); font-size: 16px; display: flex; }
+.gl-v2-unit-linked-name { flex: 1; min-width: 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-unit-linked-name strong { color: var(--gl-v2-ink); font-weight: 600; }
+.gl-v2-unit-linked-price { flex: none; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-unit-linked-hint { margin: 0; display: flex; align-items: center; gap: 7px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-unit-linked-hint i { color: var(--gl-v2-muted-light); font-size: 14px; flex: none; }
+.gl-v2-unit-linked-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* ── Bedragen: afwerkingsblokken + vaste prijsberekening ────────────────────────────────────────── */
+.gl-v2-unit-money { max-width: 1420px; display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 24px; padding: 18px 20px 20px; align-items: start; }
+.gl-v2-unit-money-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gl-v2-unit-money-land { max-width: 320px; }
+.gl-v2-unit-options { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-unit-add-option { align-self: flex-start; }
+.gl-v2-unit-base, .gl-v2-unit-options-wrap { display: flex; flex-direction: column; gap: 10px; }
+.gl-v2-unit-base[hidden], .gl-v2-unit-options-wrap[hidden] { display: none; }
+
+.gl-v2-unit-option {
+    border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface);
+    display: flex; flex-direction: column;
+}
+.gl-v2-unit-option.is-default { border-color: rgba(0, 83, 45, .35); box-shadow: 0 0 0 1px rgba(0, 83, 45, .06); }
+.gl-v2-unit-option-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+.gl-v2-unit-option-name { width: 240px; max-width: 100%; }
+.gl-v2-unit-option-spacer { flex: 1; }
+.gl-v2-unit-option-badge { display: none; }
+.gl-v2-unit-option.is-default .gl-v2-unit-option-badge { display: inline-flex; }
+.gl-v2-unit-option.is-default .gl-v2-unit-option-make-default { display: none; }
+.gl-v2-unit-option-body { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; }
+.gl-v2-unit-option-foot { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-unit-option-subtotal { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-unit-option-subtotal strong { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; margin-left: 6px; }
+
+.gl-v2-unit-cv-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) 210px 38px; gap: 10px; align-items: center; }
+.gl-v2-unit-cv-row .gl-v2-field, .gl-v2-unit-room-row .gl-v2-field { gap: 0; }
+.gl-v2-unit-cv-group .gl-v2-select, .gl-v2-unit-room-type .gl-v2-select { display: flex; width: 100%; }
+
+.gl-v2-unit-price {
+    position: sticky; top: 12px; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px;
+    border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-bg); border: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-unit-price-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-unit-price-rows { display: flex; flex-direction: column; }
+.gl-v2-unit-price-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-unit-price-row:last-child { border-bottom: 0; }
+.gl-v2-unit-price-row > span:first-child { flex: 1; min-width: 0; }
+.gl-v2-unit-price-row > span:last-child { flex: none; color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; font-weight: 500; }
+.gl-v2-unit-price-row.is-strong { padding: 10px 0; }
+.gl-v2-unit-price-row.is-strong > span:first-child { color: var(--gl-v2-ink); font-weight: 600; }
+.gl-v2-unit-price-row.is-strong > span:last-child { font: 600 17px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-unit-price-row.is-total { border-top: 1.5px solid var(--gl-v2-hairline); border-bottom: 0; margin-top: 4px; padding-top: 10px; }
+.gl-v2-unit-price-row.is-total > span:first-child { font-weight: 600; color: var(--gl-v2-ink); }
+.gl-v2-unit-price-row.is-total > span:last-child { font: 600 20px var(--gl-v2-font-sans); }
+.gl-v2-unit-price-row.is-muted > span { color: var(--gl-v2-muted-light) !important; }
+.gl-v2-unit-price-note { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+/* ── Indeling ───────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-unit-rooms { max-width: 1420px; display: flex; flex-direction: column; gap: 8px; padding: 14px 20px 18px; }
+.gl-v2-unit-rooms-total { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+.gl-v2-unit-room-head, .gl-v2-unit-room-row {
+    display: grid; grid-template-columns: minmax(170px, 1.1fr) 90px 160px minmax(0, 2fr) 38px; gap: 10px; align-items: center;
+}
+.gl-v2-unit-room-head span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+#gl-v2-unit-room-rows { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-unit-add-room { align-self: flex-start; margin-top: 4px; }
+
+/* ── Documenten ─────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-unit-doc { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.gl-v2-unit-exec-list { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-unit-doc-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface);
+}
+.gl-v2-unit-doc-row[hidden], .gl-v2-unit-drop[hidden], .gl-v2-field-help[hidden] { display: none; }
+.gl-v2-unit-doc-type {
+    flex: none; width: 34px; height: 34px; border-radius: 8px; background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger);
+    display: flex; align-items: center; justify-content: center; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .05em;
+}
+.gl-v2-unit-doc-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-unit-doc-name strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-unit-doc-name span { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-unit-doc-open { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-unit-doc-open:hover { text-decoration: underline; }
+.gl-v2-unit-doc-name-input { flex: 1; min-width: 0; }
+.gl-v2-unit-drop {
+    display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; width: 100%;
+    border: 1.5px dashed var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-md); background: transparent;
+    font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer;
+}
+.gl-v2-unit-drop i { font-size: 17px; color: var(--gl-v2-primary); }
+.gl-v2-unit-drop:hover, .gl-v2-unit-drop.is-dragover { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
+.gl-v2-unit-drop-sub { color: var(--gl-v2-muted-light); font-weight: 450; }
+.gl-v2-unit-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+
+/* ── Vaste actiebalk: statusregel ───────────────────────────────────────────────────────────────── */
+.gl-v2-form-actionbar-status.is-ok { color: var(--gl-v2-muted); }
+.gl-v2-form-actionbar-status.is-ok > i:first-child { color: var(--gl-v2-primary); }
+
+/* De tabbar is er enkel voor <1024px (zie de view); daarboven staat de sectielijst links. */
+@media (min-width: 1024px) {
+    .gl-v2-tabbar.gl-v2-unit-tabbar { display: none; }
+}
+.gl-v2-unit-tabbar .gl-v2-tabbar-count:empty { display: none; }
+
+/* Vaste actiebalk onderaan het scherm bij een lange pagina (≥768px; <768px is ze in de shell al fixed). */
+@media (min-width: 768px) {
+    .gl-v2-unit-form .gl-v2-form-actionbar { position: sticky; bottom: 0; z-index: 20; }
+}
+
+/* ── Responsief ─────────────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1199.98px) {
+    .gl-v2-unit-money { grid-template-columns: 1fr; }
+    .gl-v2-unit-price { position: static; }
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-unit-layout { grid-template-columns: 1fr; gap: 12px; }
+    /* De sectielijst links maakt plaats voor de STANDAARD .gl-v2-tabbar (markup bovenaan de view) —
+       klevend, zodat je op tablet én gsm altijd naar een sectie kan springen. Twee-klassen-selector
+       (shell laadt later, en zet enkel <768px zelf sticky). */
+    .gl-v2-unit-secnav { display: none; }
+    .gl-v2-tabbar.gl-v2-unit-tabbar { position: sticky; top: 0; z-index: 30; }
+    .gl-v2-unit-sections > .gl-v2-section-card { scroll-margin-top: 60px; }
+    .gl-v2-unit-copy { flex-wrap: wrap; }
+    .gl-v2-unit-copy-select { width: 100%; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-unit-cv-row { grid-template-columns: minmax(0, 1fr) 38px; }
+    .gl-v2-unit-cv-amount, .gl-v2-unit-cv-desc, .gl-v2-unit-cv-group { grid-column: 1; }
+    .gl-v2-unit-cv-row > .gl-v2-icon-btn { grid-column: 2; grid-row: 1; }
+    .gl-v2-unit-room-head { display: none; }
+    .gl-v2-unit-room-row { grid-template-columns: minmax(0, 1fr) 90px 38px; }
+    .gl-v2-unit-room-type { grid-column: 1 / span 2; }
+    .gl-v2-unit-room-row > .gl-v2-icon-btn { grid-column: 3; grid-row: 1; }
+    .gl-v2-unit-room-count { grid-column: 1; }
+    .gl-v2-unit-room-surface { grid-column: 2 / span 2; }
+    .gl-v2-unit-room-remark { grid-column: 1 / -1; }
+    .gl-v2-unit-linked-row { flex-wrap: wrap; }
+    .gl-v2-unit-option-name { width: 100%; }
+    /* De vaste actiebalk is hier position:fixed (gl-v2-shell.css) — laat ruimte onderaan. */
+    .gl-v2-unit-scroll { padding-bottom: 140px; }
+}
+@media print {
+    .gl-v2-unit-secnav, .gl-v2-form-actionbar { display: none; }
+}

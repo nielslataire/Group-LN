@@ -9,7 +9,35 @@ Reist mee via git: commit + push vóór je van machine wisselt.
 zijn de bestaande Invoicing-tests). Fase 1 is nog **niet in de browser doorlopen** — dat is het eerste
 wat op de volgende machine moet gebeuren (zie "Eerst te doen" hieronder). Daarna fase 2.
 
+## ⚠️ Samenloop: twee ondertekenimplementaties na de merge van 28/09/2026
+Bij het mergen van `origin/layout-experiment` (commits 8b973887 + 5ce94e6a van de andere pc) bleek
+daar **een tweede, onafhankelijke ondertekenflow** gebouwd te zijn. Beide staan nu naast elkaar in de
+code en compileren samen; er is **geen beslissing genomen** welke blijft. Dat is de eerste keuze voor
+de volgende sessie.
+
+| | Signingmodule (deze voortgang) | Link-per-e-mail-flow (andere pc) |
+|---|---|---|
+| Code | `FacadeCore.Signing.*`, `ServiceCore.Signing.*`, `CPMCore/Services/Signing`, `SigningAdminController` | `FacadeCore.ISigningService`, `ServiceCore.Documents.SigningService`, `SigningController` (`/ondertekenen/{token}`), `ProjectenController.ChangeOrderSign.cs` (`ChangeOrderSignV2`), `ChangeOrderPdfService` |
+| Data | 8 eigen tabellen (`SigningCase`… + append-only `SigningEvent`), migraties **055** + **056** (hernummerd bij de merge, waren 047/048) | `ProjectDocs.ChangeOrderId` + `DocumentSignatures` op het Documenten-model, migratie 049 + **054** |
+| PDF | QuestPDF `ChangeOrderDocument` (huisstijl), ondertekeningsblad in fase 2 | Rotativa `ChangeOrderPDF.cshtml` mét handtekeningblok (Signatures/DigitalSigningPending) |
+| Bewijs | hash-ketting, OTP-HMAC, sessiecookie, bewaarregel, testmodus, feature-vlag, rate limiter | SHA-256 van token/code, 10 min/5 pogingen/5 codes per uur, IP + X-Forwarded-For, evidence per handtekening |
+| Status | interne schermen klaar (fase 1), publieke pagina nog niet (fase 2) | publieke pagina + intern startscherm bestaan; zie hun DESIGN.md-sectie "Projecten/ChangeOrderSignV2" en `JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md` |
+
+Wat bij de merge gedaan is om beide te laten samenleven (geen inhoudelijke keuze):
+- `Klanten/Partials/ChangeOrders.cshtml`: beide actie-iconen staan er (hun `fa-signature` altijd, mijn
+  `fa-file-signature` enkel met `Features:EnableSigning`); mijn slotje/vergrendeling blijft.
+- `SigningSecurityHeadersMiddleware` beperkt tot `/verifieer`: `/ondertekenen` is nu hun route
+  (Layout = null + inline script; mijn CSP zou die pagina breken). Fase 2 kiest een eigen prefix.
+- `SigningAdminController` gebruikt `FacadeCore.Signing.ISigningService` volledig gekwalificeerd
+  (naamsconflict met hun `FacadeCore.ISigningService`).
+- Migraties 047/048 van de signingmodule → 055/056 (hun 047–054 kwamen eerst). Op testdb zijn ze al
+  uitgevoerd onder de oude naam; de scripts zijn idempotent, inhoud ongewijzigd.
+- `Projecten/ChangeOrderPDF` (afdrukken) rendert via QuestPDF; hun `ChangeOrderPdfService` rendert
+  de Rotativa-view zelf en gebruikt die actie niet. Twee renderers voor hetzelfde document totdat beslist is.
+
 ## Eerst te doen (volgende sessie)
+0. **Kies één ondertekenflow** (tabel hierboven) en verwijder de andere — of leg vast dat ze elk een
+   eigen doel hebben. Tot dan: `Features:EnableSigning` uit laten, zodat enkel hun flow zichtbaar is.
 1. **Commit + push** van alles wat nu uncommitted staat (fase 0 + fase 1; `git status` toont ~45 bestanden).
 2. Module aanzetten op de testomgeving: `Features:EnableSigning=true`, `Signing:PublicBaseUrl`,
    `Signing:TestRecipientOverride=<eigen adres>` in appsettings; `Signing:OtpHmacKey` in user-secrets.
@@ -30,7 +58,7 @@ wat op de volgende machine moet gebeuren (zie "Eerst te doen" hieronder). Daarna
    én, zodra je de module aanzet, `Signing:OtpHmacKey` (≥ 32 bytes base64). `Signing:PublicBaseUrl` en
    `Features:EnableSigning` staan in `appsettings.json` (dat bestand is git-genegeerd → ook daar
    overnemen: secties `Features` en `Signing`, zie DEPLOY.md "Elektronisch ondertekenen").
-3. Testdb (`db_ab5fbb_testdb`) heeft migraties 047 en 048 al. Nieuwe migraties: `_migrations/NNN_*.sql`,
+3. Testdb (`db_ab5fbb_testdb`) heeft migraties 055 en 056 al. Nieuwe migraties: `_migrations/NNN_*.sql`,
    handmatig uitvoeren (SSMS), zoals altijd. Live heeft nog géén van beide.
 4. Lees §"Waar we staan" hieronder en ga verder bij het eerste onafgevinkte punt.
 
@@ -52,7 +80,7 @@ wat op de volgende machine moet gebeuren (zie "Eerst te doen" hieronder). Daarna
 ### Fase 0 — fundament ✅ (2026-09-27)
 - [x] Enums `BOCore/Enum/Signing/*.vb`; permissiecode `Signing` (+ catalogus, resolver voor `SigningAdmin`)
 - [x] Entiteiten `DALCore/Models/Signing*.cs`, `ClientContactChangeLog.cs`, `cpmRunningContext.Signing.cs`
-- [x] Migratie `047_Signing.sql` — toegepast op testdb; append-only trigger getest (UPDATE/DELETE geweigerd, scrub toegelaten)
+- [x] Migratie `055_Signing.sql` — toegepast op testdb; append-only trigger getest (UPDATE/DELETE geweigerd, scrub toegelaten)
 - [x] Contracten `FacadeCore/Signing/` (ISigningService, ISigningDocumentSource, ISignatureMethodProvider,
       IVerificationMethod, IMessageChannel/ISmsProvider, ISigningEvidenceStore, IAssetStorageClient,
       ISigningNotifier, ISigningDocumentRenderer + DTO's)
@@ -65,7 +93,7 @@ wat op de volgende machine moet gebeuren (zie "Eerst te doen" hieronder). Daarna
 - [x] Docs: DESIGN.md-sectie, DEPLOY.md-sectie, voorstel bijgewerkt
 
 ### Fase 1 — wijzigingsopdracht + interne schermen ✅ gebouwd (2026-09-27), ⚠️ nog niet in de browser getest
-- [x] `SigningCase.SourceFingerprint` (migratie 048, op testdb) + `ISigningDocumentSource.ComputeFingerprintAsync`
+- [x] `SigningCase.SourceFingerprint` (migratie 056, op testdb) + `ISigningDocumentSource.ComputeFingerprintAsync`
       i.p.v. `HasChangedSinceAsync`; `SigningCrypto.ComputeFingerprint` (lengteprefix per onderdeel) + test
 - [x] `CPMCore/Documents/ChangeOrderDocument.cs` — QuestPDF, staand A4 op `GroupLnPdfDocument` (basis kreeg
       `PageSize` en `FooterNote` als virtual). Rooktest rendert 111 KB / 18 regels zonder lay-outfout.

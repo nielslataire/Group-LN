@@ -31,6 +31,9 @@ public class GemeenteAnalyseViewModel
     public List<PrijsBucketViewModel> VraagprijsBuckets { get; set; } = new();
     public List<PrijsBucketViewModel> PrijsPerM2Buckets { get; set; } = new();
     public List<ProjectVerkoopgraadViewModel> VerkoopgraadPerProject { get; set; } = new();
+
+    /// <summary>Aanbod op het einde van elke maand en verkopen per maand, over de gekozen periode.</summary>
+    public List<MaandPuntViewModel> AanbodPerMaand { get; set; } = new();
     public List<ProjectRijViewModel> Projecten { get; set; } = new();
     public List<LosseEenheidRijViewModel> LosseEenheden { get; set; } = new();
     public bool ToonGekoppeld { get; set; } = false;
@@ -106,6 +109,15 @@ public class PrijsBucketViewModel
     public int Aantal { get; set; }
 }
 
+public class MaandPuntViewModel
+{
+    public string Label { get; set; } = "";
+    /// <summary>Units die op het einde van de maand te koop stonden.</summary>
+    public int Aanbod { get; set; }
+    /// <summary>Units verkocht in die maand.</summary>
+    public int Verkocht { get; set; }
+}
+
 public class ProjectVerkoopgraadViewModel
 {
     public string ProjectNaam { get; set; } = "";
@@ -130,6 +142,9 @@ public class ProjectRijViewModel
     /// <summary>False als het project niet meer online staat (uitverkocht of offline gehaald).</summary>
     public bool IsActief { get; set; } = true;
     public int? MediaanDoorlooptijdDagen { get; set; }
+
+    /// <summary>True als de verkoopgraad uit de advertentie zelf komt (geen units bekend).</summary>
+    public bool VerkoopgraadGerapporteerd { get; set; }
 
     public string? Straat { get; set; }
     public string? Huisnummer { get; set; }

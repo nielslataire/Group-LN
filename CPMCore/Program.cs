@@ -234,6 +234,8 @@ builder.Services.AddHttpClient("I2021Sync").ConfigurePrimaryHttpMessageHandler((
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityFormuleService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetBerekeningService>();
+builder.Services.AddScoped<FacadeCore.IVerkoopVoorstelService, ServiceCore.Budget.VerkoopVoorstelService>();
+builder.Services.AddScoped<FacadeCore.IMarktReferentieService, CPMCore.Services.MarktReferentieService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetExcelService>();
 builder.Services.AddScoped<IConstructionIssueService, ConstructionIssueService>();
 builder.Services.AddScoped<IConstructionIssueReportService, ConstructionIssueReportService>();
@@ -260,6 +262,10 @@ builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.MaakDossierAction>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.StuurDossierAanvraagMailAction>();
 builder.Services.AddScoped<FacadeCore.IProjectDossierService, ServiceCore.Traject.ProjectDossierService>();
+builder.Services.AddScoped<FacadeCore.IDocumentService, ServiceCore.Documents.DocumentService>();
+builder.Services.AddScoped<FacadeCore.ISigningService, ServiceCore.Documents.SigningService>();
+builder.Services.AddScoped<CPMCore.Services.DocStorageService>();
+builder.Services.AddScoped<CPMCore.Services.ChangeOrderPdfService>();
 builder.Services.AddScoped<FacadeCore.INutsAansluitingService, ServiceCore.Traject.NutsAansluitingService>();
 builder.Services.AddScoped<FacadeCore.IProjectTaakService, ServiceCore.Traject.ProjectTaakService>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.MaakTaakAction>();

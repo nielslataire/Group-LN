@@ -19,8 +19,11 @@
     .gl-v2-dp-topbar-actions { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1023.98px) {
-    .gl-v2-mobile-quickactions { display: none; }
-    .gl-v2-content.has-mobile-quickactions { padding-bottom: 0; }
+    /* .gl-v2 ervoor: dit bestand laadt via @section PageStyle VÓÓR gl-v2-shell.css (zie
+       _LayoutV2.cshtml), dus bij gelijke specificiteit wint de shell — een extra klasse eromheen
+       (0,2,0/0,3,0 tegen 0,1,0/0,2,0) wint ongeacht laadvolgorde. */
+    .gl-v2 .gl-v2-mobile-quickactions { display: none; }
+    .gl-v2 .gl-v2-content.has-mobile-quickactions { padding-bottom: 0; }
 
     .gl-v2-dp-topbar-actions .gl-v2-dp-tablet-label,
     .gl-v2-dp-topbar-actions .gl-v2-dp-tablet-hide { display: none; }

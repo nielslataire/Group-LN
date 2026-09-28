@@ -1,0 +1,167 @@
+@model CPMCore.Models.Projecten.ChangeOrderSignVm
+@*
+    Wijzigingsopdracht digitaal ter ondertekening sturen. De klant krijgt een persoonlijke link (geen CPM-login) en
+    tekent op de publieke pagina Controllers/SigningController; hier stuurt en volgt de projectleider dat op.
+    Wat de handtekening juridisch is (eenvoudig/elektronisch, link + e-mailcode) staat in
+    JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md en DESIGN.md "Projecten/ChangeOrderSignV2".
+*@
+@using System.Globalization
+@using FacadeCore
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var st = Model.Status;
+    var fullySigned = st != null && st.DocumentStatus == DALCore.Models.DocumentStatus.Getekend;
+    var anySigned = st != null && st.Signers.Any(x => x.Status == 2);
+    string Dt(DateTime? d) => d.HasValue ? d.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", be) : "—";
+    string Badge(byte s) => s == 2 ? "is-positive" : s == 1 ? "is-info" : "is-attention";
+    string Label(byte s) => s == 2 ? "GETEKEND" : s == 1 ? "GEOPEND" : "WACHT";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-changeordersign.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (fullySigned)
+    {
+        <span class="gl-v2-badge is-positive">GETEKEND</span>
+    }
+    else if (st != null)
+    {
+        <span class="gl-v2-badge is-attention">TER ONDERTEKENING</span>
+    }
+    else
+    {
+        <span class="gl-v2-badge is-neutral">NOG NIET VERSTUURD</span>
+    }
+}
+
+<div class="gl-v2-cos">
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">@Model.Description</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Wijzigingsopdracht voor @Model.ClientName · @Model.ProjectName</span>
+        </div>
+        <div class="gl-v2-cos-facts">
+            <div class="gl-v2-cos-fact"><span>Datum</span><b>@Model.Date.ToString("dd/MM/yyyy", be)</b></div>
+            <div class="gl-v2-cos-fact"><span>Te ondertekenen tegen</span><b>@Model.ExpirationDate.ToString("dd/MM/yyyy", be)</b></div>
+            <div class="gl-v2-cos-fact"><span>Totaal excl. btw</span><b>@Model.TotalExcl.ToString("C2", be)</b></div>
+            <div class="gl-v2-cos-fact"><span>Btw</span><b>@Model.VatAmount.ToString("C2", be)</b></div>
+            <div class="gl-v2-cos-fact is-total"><span>Totaal incl. btw</span><b>@Model.TotalIncl.ToString("C2", be)</b></div>
+            <div class="gl-v2-cos-fact is-action">
+                <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = Model.ChangeOrderId })" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF bekijken</a>
+            </div>
+        </div>
+    </section>
+
+    @if (st != null)
+    {
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-signature" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Ondertekenaars</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">
+                    @(fullySigned ? "Alle partijen tekenden — het document is bevroren." : "Een persoonlijke link per ondertekenaar; het document is klaar zodra iedereen tekende.")
+                </span>
+            </div>
+            <div class="gl-v2-cos-signers">
+                @foreach (var s in st.Signers)
+                {
+                    <div class="gl-v2-cos-signer">
+                        <div class="gl-v2-cos-signer-main">
+                            <b>@s.Name</b>
+                            <span>@s.Email</span>
+                        </div>
+                        <div class="gl-v2-cos-signer-meta">
+                            <span class="gl-v2-badge @Badge(s.Status)">@Label(s.Status)</span>
+                            <span class="gl-v2-cos-signer-sub">
+                                @(s.Status == 2 ? "getekend " + Dt(s.SignedDate) + " · ref. " + s.EvidenceRef : s.Status == 1 ? "geopend " + Dt(s.OpenedDate) : "verstuurd " + Dt(s.SentDate))
+                            </span>
+                        </div>
+                        @if (s.Status != 2 && Model.CanWrite)
+                        {
+                            <form method="post" asp-action="ChangeOrderSignResendV2" asp-controller="Projecten">
+                                <input type="hidden" name="changeorderid" value="@Model.ChangeOrderId" />
+                                <input type="hidden" name="signatureId" value="@s.SignatureId" />
+                                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Link opnieuw sturen</button>
+                            </form>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="gl-v2-cos-foot">
+                <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, open = st.DocumentId })"><i class="ph ph-folder-open" aria-hidden="true"></i>Bekijk in de documenten</a>
+            </div>
+        </section>
+    }
+
+    @if (Model.CanWrite && !anySigned)
+    {
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">@(st == null ? "Ter ondertekening sturen" : "Opnieuw versturen met andere ondertekenaars")</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Elke ondertekenaar heeft een eigen e-mailadres nodig (bv. beide kopers).</span>
+            </div>
+            <form method="post" asp-action="ChangeOrderSignSendV2" asp-controller="Projecten" id="gl-v2-cos-form" class="gl-v2-cos-form">
+                <input type="hidden" name="changeorderid" value="@Model.ChangeOrderId" />
+                <div id="gl-v2-cos-rows" class="gl-v2-cos-rows">
+                    @foreach (var s in Model.SuggestedSigners)
+                    {
+                        <div class="gl-v2-cos-row">
+                            <div class="gl-v2-field"><label class="gl-v2-field-label">NAAM</label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="names" value="@s.Name" maxlength="150" /></div></div>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label">E-MAIL</label><div class="gl-v2-field-box"><input type="email" class="gl-v2-field-input" name="emails" value="@s.Email" maxlength="254" /></div></div>
+                            <button type="button" class="gl-v2-icon-btn js-cos-remove" aria-label="Ondertekenaar verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                        </div>
+                    }
+                </div>
+                <div class="gl-v2-cos-actions">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-cos-add"><i class="ph ph-plus" aria-hidden="true"></i>Ondertekenaar toevoegen</button>
+                    <span class="gl-v2-cos-spacer"></span>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>@(st == null ? "Verstuur ter ondertekening" : "Opnieuw versturen")</button>
+                </div>
+                <div class="gl-v2-cos-notice">
+                    <i class="ph ph-info" aria-hidden="true"></i>
+                    <div>
+                        <b>Hoe het werkt.</b> De klant krijgt een e-mail met het PDF en een persoonlijke link. Op de pagina bekijkt hij het document, vraagt een
+                        code aan (die naar datzelfde e-mailadres gaat), typt zijn naam en vinkt de akkoordverklaring aan:
+                        <em>"@Model.ConsentText"</em>
+                        Naam, tijdstip, IP-adres, de akkoordtekst en een controlegetal (hash) van het verstuurde PDF worden vastgelegd; het ondertekende
+                        PDF met handtekeningblok komt als nieuwe versie in de map Contracten.
+                        Dit is een <b>eenvoudige elektronische handtekening</b> (geen itsme) — zie <code>JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md</code>.
+                        @if (st != null) { <text>Opnieuw versturen maakt een nieuwe versie van het PDF en maakt de vorige links ongeldig.</text> }
+                    </div>
+                </div>
+            </form>
+        </section>
+    }
+</div>
+
+@section PageScripts
+{
+    <script>
+        (function () {
+            var rows = document.getElementById("gl-v2-cos-rows");
+            var add = document.getElementById("gl-v2-cos-add");
+            if (!rows || !add) return;
+            function bindRemove(scope) {
+                scope.querySelectorAll(".js-cos-remove").forEach(function (b) {
+                    b.onclick = function () { if (rows.children.length > 1) b.closest(".gl-v2-cos-row").remove(); };
+                });
+            }
+            add.addEventListener("click", function () {
+                var first = rows.querySelector(".gl-v2-cos-row");
+                var clone = first.cloneNode(true);
+                clone.querySelectorAll("input").forEach(function (i) { i.value = ""; });
+                rows.appendChild(clone);
+                bindRemove(clone);
+                clone.querySelector("input").focus();
+            });
+            bindRemove(rows);
+        })();
+    </script>
+}

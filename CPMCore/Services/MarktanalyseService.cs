@@ -45,7 +45,7 @@ public class MarktanalyseService : IMarktanalyseService
     }
 
     /// <summary>Uit de bronnen afgeleide lifecycle, verkoopdatum en doorlooptijd van een CanonicalUnit.</summary>
-    private sealed record CanonicalAfgeleid(AssetLifecycleStatus? Lifecycle, DateTime? VerkochtOp, int? DoorlooptijdDagen)
+    private sealed record CanonicalAfgeleid(AssetLifecycleStatus? Lifecycle, DateTime? VerkochtOp, int? DoorlooptijdDagen, DateTime? EersteWaarneming = null)
     {
         public static readonly CanonicalAfgeleid Leeg = new(null, null, null);
     }
@@ -69,7 +69,13 @@ public class MarktanalyseService : IMarktanalyseService
         PropertyType          PropertyType,
         bool                  IsFromCanonical,
         DateTime?             VerkochtOp        = null,
-        int?                  DoorlooptijdDagen = null);
+        int?                  DoorlooptijdDagen = null,
+        DateTime?             EersteWaarneming  = null,
+        DateTime?             EindeAanbod       = null);
+
+    /// <summary>Moment waarop een niet-verkochte unit uit het aanbod verdween (offline gehaald); null als nog te koop of verkocht.</summary>
+    private static DateTime? EindeAanbodVan(MarketAsset a) =>
+        SaleStateHelpers.IsSold(a) || a.IsActive ? null : (a.LifecycleStatusUpdatedAt ?? a.UpdatedAt);
 
     // ── Locaties (dropdown-bron) ───────────────────────────────────────────────
 
@@ -408,7 +414,8 @@ public class MarktanalyseService : IMarktanalyseService
                         return new ProjectUnitStat(
                             cu.Status, afg.Lifecycle,
                             cu.Price, cu.PricePerSqm, cu.Area, cu.PropertyType, IsFromCanonical: true,
-                            VerkochtOp: afg.VerkochtOp, DoorlooptijdDagen: afg.DoorlooptijdDagen);
+                            VerkochtOp: afg.VerkochtOp, DoorlooptijdDagen: afg.DoorlooptijdDagen,
+                            EersteWaarneming: afg.EersteWaarneming);
                     })
                     .ToList();
             }
@@ -426,7 +433,9 @@ public class MarktanalyseService : IMarktanalyseService
                             u.SaleStatus, u.LifecycleStatus, snap?.AskingPrice, snap?.PricePerSqm,
                             u.LivingArea, u.PropertyType, IsFromCanonical: false,
                             VerkochtOp: SaleStateHelpers.VerkoopDatum(u),
-                            DoorlooptijdDagen: SaleStateHelpers.DoorlooptijdDagen(u));
+                            DoorlooptijdDagen: SaleStateHelpers.DoorlooptijdDagen(u),
+                            EersteWaarneming: u.FirstSeenAt,
+                            EindeAanbod: EindeAanbodVan(u));
                     })
                     .ToList();
             }
@@ -450,7 +459,9 @@ public class MarktanalyseService : IMarktanalyseService
                     e.SaleStatus, e.LifecycleStatus, snap?.AskingPrice, snap?.PricePerSqm,
                     e.LivingArea, e.PropertyType, IsFromCanonical: false,
                     VerkochtOp: SaleStateHelpers.VerkoopDatum(e),
-                    DoorlooptijdDagen: SaleStateHelpers.DoorlooptijdDagen(e));
+                    DoorlooptijdDagen: SaleStateHelpers.DoorlooptijdDagen(e),
+                    EersteWaarneming: e.FirstSeenAt,
+                    EindeAanbod: EindeAanbodVan(e));
             })
             .ToList();
         var allCombinedStats = allUnitStats.Concat(looseUnitStats).ToList();
@@ -535,6 +546,7 @@ public class MarktanalyseService : IMarktanalyseService
 
         vm.VraagprijsBuckets = BerekeningVraagprijsBuckets(combinedPrices);
         vm.PrijsPerM2Buckets = BerekeningPrijsPerM2Buckets(combinedPpSqm);
+        vm.AanbodPerMaand    = BerekenAanbodPerMaand(allCombinedStats, periodeMaanden);
 
         if (projecten.Count > 0)
         {
@@ -547,7 +559,9 @@ public class MarktanalyseService : IMarktanalyseService
                     return new ProjectVerkoopgraadViewModel
                     {
                         ProjectNaam    = projectNamen.GetValueOrDefault(p.Id) ?? p.AssetKey,
-                        Verkoopgraad   = total > 0 ? Math.Round((decimal)sold / total * 100, 1) : 0m,
+                        // Geen units bekend (bv. Zimmo zonder detailpagina): verkoopgraad uit de advertentie zelf
+                        Verkoopgraad   = total > 0 ? Math.Round((decimal)sold / total * 100, 1)
+                                       : p.ReportedSoldPercentage.HasValue ? Math.Round(p.ReportedSoldPercentage.Value, 1) : 0m,
                         VerkochteUnits = sold,
                         TotaalUnits    = total
                     };
@@ -727,7 +741,7 @@ public class MarktanalyseService : IMarktanalyseService
         var verkochtOp = lifecycle.HasValue && verkoopDatums.Count > 0 ? verkoopDatums.Min() : (DateTime?)null;
         var eersteWaarneming = lijst.Min(b => b.FirstSeenAt);
 
-        return new CanonicalAfgeleid(lifecycle, verkochtOp, SaleStateHelpers.DoorlooptijdDagen(eersteWaarneming, verkochtOp));
+        return new CanonicalAfgeleid(lifecycle, verkochtOp, SaleStateHelpers.DoorlooptijdDagen(eersteWaarneming, verkochtOp), eersteWaarneming);
     }
 
     // ── Geo-filter helpers ────────────────────────────────────────────────────
@@ -945,6 +959,43 @@ public class MarktanalyseService : IMarktanalyseService
         return result;
     }
 
+    // ── Aanbod over tijd ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Per maand: hoeveel units stonden er op het einde van de maand te koop, en hoeveel werden er
+    /// die maand verkocht. Gebaseerd op eerste waarneming, verkoopdatum en (voor offline gehaalde,
+    /// niet-verkochte units) het moment van verdwijnen. De huidige maand telt tot vandaag.
+    /// </summary>
+    private static List<MaandPuntViewModel> BerekenAanbodPerMaand(IReadOnlyList<ProjectUnitStat> stats, int periodeMaanden)
+    {
+        var maanden = periodeMaanden > 0 ? Math.Min(periodeMaanden, 36) : 24;
+        var nu = DateTime.UtcNow;
+        var eersteMaand = new DateTime(nu.Year, nu.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(maanden - 1));
+        var cultuur = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+
+        var reeks = new List<MaandPuntViewModel>(maanden);
+        for (var i = 0; i < maanden; i++)
+        {
+            var start = eersteMaand.AddMonths(i);
+            var eind  = start.AddMonths(1);
+
+            var aanbod = stats.Count(s =>
+                s.EersteWaarneming.HasValue && s.EersteWaarneming.Value < eind
+                && (!s.VerkochtOp.HasValue || s.VerkochtOp.Value >= eind)
+                && (!s.EindeAanbod.HasValue || s.EindeAanbod.Value >= eind));
+
+            var verkocht = stats.Count(s => s.VerkochtOp.HasValue && s.VerkochtOp.Value >= start && s.VerkochtOp.Value < eind);
+
+            reeks.Add(new MaandPuntViewModel
+            {
+                Label    = start.ToString("MMM yy", cultuur),
+                Aanbod   = aanbod,
+                Verkocht = verkocht
+            });
+        }
+        return reeks;
+    }
+
     // ── Bucket helpers ────────────────────────────────────────────────────────
 
     private static List<PrijsBucketViewModel> BerekeningVraagprijsBuckets(List<decimal> prices) =>
@@ -1003,9 +1054,16 @@ public class MarktanalyseService : IMarktanalyseService
                 var pct = stats.Count > 0
                     ? Math.Round((decimal)soldCount / stats.Count * 100, 1)
                     : 0m;
+                var gerapporteerd = false;
+                if (stats.Count == 0 && project.ReportedSoldPercentage.HasValue)
+                {
+                    pct = Math.Round(project.ReportedSoldPercentage.Value, 1);
+                    gerapporteerd = true;
+                }
 
                 return new ProjectRijViewModel
                 {
+                    VerkoopgraadGerapporteerd = gerapporteerd,
                     Id               = project.Id,
                     ProjectNaam      = namen.GetValueOrDefault(project.Id) ?? project.AssetKey,
                     Ontwikkelaar     = project.DeveloperName ?? "-",
@@ -2041,7 +2099,9 @@ public class MarktanalyseService : IMarktanalyseService
                 VerkochteUnits       = soldCnt,
                 SoldConfirmedCount   = soldConfirmedCnt,
                 LikelySoldCount      = likelySoldCnt,
-                Verkoopgraad         = kpiTotal > 0 ? Math.Round((decimal)soldCnt / kpiTotal * 100, 1) : 0m,
+                Verkoopgraad         = kpiTotal > 0 ? Math.Round((decimal)soldCnt / kpiTotal * 100, 1)
+                                       : project.ReportedSoldPercentage.HasValue ? Math.Round(project.ReportedSoldPercentage.Value, 1) : 0m,
+                VerkoopgraadGerapporteerd = kpiTotal == 0 && project.ReportedSoldPercentage.HasValue,
                 GemiddeldePrijs      = prices.Count > 0 ? Math.Round(prices.Average(), 0) : null,
                 GemiddeldePrijsPerM2 = ppSqms.Count > 0 ? Math.Round(ppSqms.Average(), 0) : null,
                 GemiddeldeOppervlakte = areas.Count > 0 ? Math.Round(areas.Average(), 0) : null,

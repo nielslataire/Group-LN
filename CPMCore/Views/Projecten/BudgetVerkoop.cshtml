@@ -90,11 +90,200 @@
                 }
             </div>
 
+            @* ── Verkoopvoorstel: kostprijs + marge → grond- en bouwwaarde per eenheid ── *@
+            @if (Model.Voorstel is not null)
+            {
+                var vs = Model.Voorstel;
+                string Eur(decimal v) => "€ " + v.ToString("N0");
+                string Pct(decimal f) => (f * 100m).ToString("0.#") + " %";
+                string PctS(decimal f) => (f >= 0 ? "+" : "") + (f * 100m).ToString("0.#") + " %";
+                var voorstelKpis = new List<(string Icon, string Lbl, string Val)>
+                {
+                    ("fa-euro-sign",    "Kostprijs incl. grond",                              Eur(vs.TotaalKostprijs)),
+                    ("fa-map-location-dot", $"Grondwaarde ({Pct(vs.GrondMargePerc)} marge)", Eur(vs.Grondwaarde)),
+                    ("fa-building",     $"Bouwwaarde ({Pct(vs.DoelMargePerc)} marge)",        Eur(vs.Bouwwaarde)),
+                    ("fa-tag",          "Minimale verkoopwaarde",                             Eur(vs.TotaalVerkoopwaarde)),
+                    ("fa-chart-line",   "Marge",                                              Eur(vs.MargeBedrag) + " · " + Pct(vs.MargePerc)),
+                };
+                if (vs.MarktTotaal.HasValue && vs.MinimumTotaalMetMarkt is > 0)
+                {
+                    var delta = (vs.MarktTotaal.Value - vs.MinimumTotaalMetMarkt.Value) / vs.MinimumTotaalMetMarkt.Value;
+                    voorstelKpis.Add(("fa-scale-balanced",
+                        $"Marktwaarde (mediaan, {vs.AantalEenhedenMetMarkt}/{vs.AantalEenheden} eenh.)",
+                        Eur(vs.MarktTotaal.Value) + " · " + PctS(delta) + " t.o.v. minimum"));
+                }
+                var markt = vs.Markt;
+
+                <div class="bw-dt mb-4">
+                    <div class="bw-dt__head">
+                        <div class="bw-dt__title"><i class="fa-solid fa-calculator me-1"></i>Verkoopvoorstel (kostprijs + marge)</div>
+                        <div class="bw-dt__actions">
+                            <a href="@Url.Action("BudgetParams", "Projecten", new { versieId = Model.BudgetVersieId })" class="btn btn-sm btn-light border">
+                                <i class="fa-solid fa-sliders me-1"></i> Marges aanpassen
+                            </a>
+                            @if (vs.HeeftEenheden)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAllesOvernemen"
+                                        title="Zet aanbevolen vraagprijs, grond- en bouwwaarde van elke eenheid in de verkooplijnen">
+                                    <i class="fa-solid fa-arrow-down me-1"></i> Alles overnemen
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <div class="gl-kpi2-strip bw-kpi-row mb-3">
+                            @foreach (var (icon, lbl, val) in voorstelKpis)
+                            {
+                                <div class="gl-kpi2-tile-col">
+                                    <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                                        <div class="gl-kpi2-icon"><i class="fa-solid @icon" aria-hidden="true"></i></div>
+                                        <div class="gl-kpi2-body">
+                                            <div class="gl-kpi2-label">@lbl</div>
+                                            <div class="gl-kpi2-value">@val</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <p class="text-muted small mb-2">
+                            Grondkost = aankoopprijs grond + infrastructuur + opmeting/sondering + straight loan grond (@Eur(vs.GrondKost)).
+                            Bouwkost = alle overige kosten uit het budget (@Eur(vs.BouwKost)).
+                            Bouwwaarde verdeeld op @vs.VerdeelsleutelBouw, grondwaarde op @vs.VerdeelsleutelGrond.
+                        </p>
+                        @if (markt is not null && markt.HeeftData)
+                        {
+                            <div class="alert alert-light border py-2 px-3 small mb-2">
+                                <i class="fa-solid fa-map-location-dot me-1 text-primary"></i>
+                                <strong>Markt @markt.GemeenteNaam</strong>, laatste @markt.PeriodeMaanden maanden:
+                                @markt.AantalTeKoop te koop ·
+                                @markt.VerkochtInPeriode verkocht@(markt.AbsorptiePerMaand.HasValue ? $" ({markt.AbsorptiePerMaand.Value.ToString("0.#")} per maand)" : "") ·
+                                mediaan €/m² te koop @(markt.MediaanPrijsPerM2TeKoop.HasValue ? Eur(markt.MediaanPrijsPerM2TeKoop.Value) : "—"),
+                                verkocht @(markt.MediaanPrijsPerM2Verkocht.HasValue ? Eur(markt.MediaanPrijsPerM2Verkocht.Value) : "—") ·
+                                mediane doorlooptijd @(markt.MediaanDoorlooptijdDagen.HasValue ? markt.MediaanDoorlooptijdDagen.Value + " dagen" : "—").
+                                @if (markt.EigenVerkopen > 0)
+                                {
+                                    <span class="ms-1"><strong>Eigen verkopen</strong> in postcode @markt.Postcode: @markt.EigenVerkopen, mediaan €/m² @(markt.MediaanPrijsPerM2EigenVerkoop.HasValue ? Eur(markt.MediaanPrijsPerM2EigenVerkoop.Value) : "—") (werkelijke verkoopprijzen, tellen mee als "verkocht").</span>
+                                }
+                                <span class="text-muted">Marktprijs per eenheid = mediaan €/m² van vergelijkbare units (zelfde type, oppervlakte ±20 %, bij voorkeur verkocht) × bewoonbare oppervlakte. Aanbevolen vraagprijs = marktprijs, nooit onder het minimum.</span>
+                                <a class="ms-1" href="@Url.Action("Gemeenteanalyse", "Marktanalyse", new { geoMunicipalityId = markt.GeoMunicipalityId, aanbod = "Alles" })" target="_blank">Gemeenteanalyse <i class="bx bx-link-external"></i></a>
+                            </div>
+                        }
+                        @foreach (var w in vs.Waarschuwingen)
+                        {
+                            <div class="alert alert-warning py-2 px-3 small mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>@w</div>
+                        }
+                    </div>
+                    @if (vs.HeeftEenheden)
+                    {
+                        <div class="bw-dt__scroll">
+                            <table class="bw-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Eenheid</th>
+                                        <th>Type</th>
+                                        <th class="bw-num">Bewoonbaar</th>
+                                        <th class="bw-num" title="Gereduceerde oppervlakte (wegingsconventie tabblad Oppervlaktes)">Gered. m²</th>
+                                        <th class="bw-num">Grond m²</th>
+                                        <th class="bw-num">Kostprijs</th>
+                                        <th class="bw-num">Grondwaarde</th>
+                                        <th class="bw-num">Bouwwaarde</th>
+                                        <th class="bw-num">Min. verkoopprijs</th>
+                                        <th class="bw-num">€/m² bew.</th>
+                                        <th class="bw-num" title="Mediaan €/m² van vergelijkbare units in de gemeente (aantal, basis)">Markt €/m²</th>
+                                        <th class="bw-num" title="Mediaan €/m² × bewoonbare oppervlakte; bandbreedte = 25e–75e percentiel">Marktprijs</th>
+                                        <th class="bw-num" title="Marktprijs, maar nooit onder de minimumverkoopprijs">Aanbevolen</th>
+                                        <th style="width:56px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var e in vs.Eenheden)
+                                    {
+                                        var icv = System.Globalization.CultureInfo.InvariantCulture;
+                                        <tr class="voorstel-row"
+                                            data-eenheid="@e.EenheidNaam"
+                                            data-grond="@Math.Round(e.Grondwaarde, 0).ToString(icv)"
+                                            data-bouw="@Math.Round(e.Bouwwaarde, 0).ToString(icv)"
+                                            data-prijs="@Math.Round(e.AanbevolenVraagprijs, 0).ToString(icv)">
+                                            <td class="fw-semibold">@e.EenheidNaam</td>
+                                            <td class="text-muted">@(string.IsNullOrEmpty(e.TypeName) ? e.GroupTypeName : e.TypeName)</td>
+                                            <td class="bw-num">@e.BewoonbareOpp.ToString("N0") m²</td>
+                                            <td class="bw-num">@e.OppGereduceerd.ToString("N0")</td>
+                                            <td class="bw-num">@(e.Grondopp > 0 ? e.Grondopp.ToString("N0") : "—")</td>
+                                            <td class="bw-num">@Eur(e.Kostprijs)</td>
+                                            <td class="bw-num">@Eur(e.Grondwaarde)</td>
+                                            <td class="bw-num">@Eur(e.Bouwwaarde)</td>
+                                            <td class="bw-num fw-bold text-primary">@Eur(e.MinimumVerkoopprijs)</td>
+                                            <td class="bw-num">@(e.PrijsPerM2Bewoonbaar.HasValue ? Eur(e.PrijsPerM2Bewoonbaar.Value) : "—")</td>
+                                            @if (e.MarktAantal > 0 && e.MarktMediaanPerM2.HasValue)
+                                            {
+                                                var beperkt = e.MarktAantal < 5;
+                                                var deltaCls = e.MarktVerschilPerc >= 0 ? "text-success" : "text-danger";
+                                                <td class="bw-num" title="@e.MarktVergelijking, basis: @e.MarktBasis">
+                                                    @Eur(e.MarktMediaanPerM2.Value)
+                                                    <span class="text-muted small">(@e.MarktAantal@(beperkt ? ", beperkt" : ""))</span>
+                                                </td>
+                                                <td class="bw-num" title="@(e.MarktPrijsLaag.HasValue ? Eur(e.MarktPrijsLaag.Value) + " – " + Eur(e.MarktPrijsHoog!.Value) : "")">
+                                                    @Eur(e.MarktPrijs!.Value)
+                                                    <span class="small @deltaCls">@PctS(e.MarktVerschilPerc!.Value)</span>
+                                                </td>
+                                                <td class="bw-num fw-bold">@Eur(e.AanbevolenVraagprijs)</td>
+                                            }
+                                            else
+                                            {
+                                                <td class="bw-num text-muted" title="Te weinig vergelijkbare units">—</td>
+                                                <td class="bw-num text-muted">—</td>
+                                                <td class="bw-num fw-bold">@Eur(e.AanbevolenVraagprijs)</td>
+                                            }
+                                            <td class="text-end">
+                                                <div class="bw-row-actions">
+                                                    <button type="button" class="bw-row-btn btn-overnemen"
+                                                            title="Overnemen in de verkooplijn van deze eenheid" aria-label="Overnemen">
+                                                        <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="fw-bold">
+                                        <td>Totaal</td>
+                                        <td></td>
+                                        <td class="bw-num">@vs.Eenheden.Sum(e => e.BewoonbareOpp).ToString("N0") m²</td>
+                                        <td class="bw-num">@vs.Eenheden.Sum(e => e.OppGereduceerd).ToString("N0")</td>
+                                        <td class="bw-num">@(vs.Eenheden.Sum(e => e.Grondopp) > 0 ? vs.Eenheden.Sum(e => e.Grondopp).ToString("N0") : "—")</td>
+                                        <td class="bw-num">@Eur(vs.TotaalKostprijs)</td>
+                                        <td class="bw-num">@Eur(vs.Grondwaarde)</td>
+                                        <td class="bw-num">@Eur(vs.Bouwwaarde)</td>
+                                        <td class="bw-num text-primary">@Eur(vs.TotaalVerkoopwaarde)</td>
+                                        <td class="bw-num"></td>
+                                        <td class="bw-num"></td>
+                                        <td class="bw-num">@(vs.MarktTotaal.HasValue ? Eur(vs.MarktTotaal.Value) : "—")</td>
+                                        <td class="bw-num">@Eur(vs.TotaalAanbevolenVraagprijs)</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+
             @* ── Verkooplijnen tabel ── *@
             <div class="bw-dt mb-4">
                 <div class="bw-dt__head">
-                    <div class="bw-dt__title">Verkooplijnen per eenheid</div>
+                    <div class="bw-dt__title">
+                        Verkooplijnen per eenheid
+                        @if (Model.VraagprijzenLijnen.HasValue)
+                        {
+                            <span class="text-muted small ms-2">vastgelegde vraagprijzen: <strong>€ @Model.VraagprijzenLijnen.Value.ToString("N0")</strong></span>
+                        }
+                    </div>
                     <div class="bw-dt__actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnDoorzetten"
+                                title="Slaat de lijnen op en schrijft grond- en bouwwaarde naar de gekoppelde Units van het project (verkochte units worden overgeslagen)">
+                            <i class="fa-solid fa-share-from-square me-1"></i> Doorzetten naar units
+                        </button>
                         <select class="bw-cell-input" id="ddlEenheidNaam" style="min-width:160px">
                             <option value="">Kies eenheid…</option>
                             @foreach (var e in Model.BeschikbareEenheden)
@@ -113,14 +302,18 @@
                     <table class="bw-table mb-0">
                             <thead>
                                 <tr>
-                                    <th style="width:18%" class="bw-th-cell">Eenheid</th>
-                                    <th style="width:8%" class="bw-num bw-th-cell">Code bouw</th>
-                                    <th style="width:8%" class="bw-num bw-th-cell">Code grond</th>
-                                    <th style="width:9%" class="bw-num bw-th-cell">Opp. tuin</th>
-                                    <th style="width:9%" class="bw-num bw-th-cell">Opp. terras</th>
-                                    <th style="width:9%" class="bw-num bw-th-cell">Opp. dakterras</th>
-                                    <th style="width:6%" class="text-center">Ruil</th>
-                                    <th style="width:10%" class="bw-num bw-th-cell">Extra forfait</th>
+                                    <th style="min-width:140px" class="bw-th-cell">Eenheid</th>
+                                    <th style="min-width:150px" class="bw-th-cell" title="Koppeling met een Unit van het project, nodig om door te zetten">Unit</th>
+                                    <th class="bw-num bw-th-cell">Code bouw</th>
+                                    <th class="bw-num bw-th-cell">Code grond</th>
+                                    <th class="bw-num bw-th-cell">Opp. tuin</th>
+                                    <th class="bw-num bw-th-cell">Opp. terras</th>
+                                    <th class="bw-num bw-th-cell">Opp. dakterras</th>
+                                    <th class="text-center">Ruil</th>
+                                    <th class="bw-num bw-th-cell">Extra forfait</th>
+                                    <th class="bw-num bw-th-cell" title="Uit het voorstel overgenomen, bij te sturen">Grondwaarde</th>
+                                    <th class="bw-num bw-th-cell" title="Uit het voorstel overgenomen, bij te sturen">Bouwwaarde</th>
+                                    <th class="bw-num bw-th-cell" title="Vastgelegde vraagprijs (standaard = aanbevolen prijs)">Vraagprijs</th>
                                     <th style="width:56px;"></th>
                                 </tr>
                             </thead>
@@ -178,47 +371,134 @@
         $(this).closest('tr').remove();
     });
 
-    $('#btnSaveVerkoop').on('click', function () {
-        BudgetWizard.setSaveStatus('saving');
-        BudgetWizard.beginTransition();
-
+    function verzamelLijnen() {
         const lijnen = [];
         $('#verkoopLijnenBody .verkoop-row').each(function () {
             lijnen.push({
                 eenheidNaam:  $(this).find('.eenheid-naam').val(),
+                unitId:       parseInt($(this).find('.unit-select').val())      || null,
                 codeBouw:     parseInt($(this).find('.code-bouw').val())       || null,
                 codeGrond:    parseInt($(this).find('.code-grond').val())      || null,
                 oppTuin:      parseFloat($(this).find('.opp-tuin').val())      || null,
                 oppTerras:    parseFloat($(this).find('.opp-terras').val())    || null,
                 oppDakterras: parseFloat($(this).find('.opp-dakterras').val()) || null,
                 isRuil:       $(this).find('.is-ruil').is(':checked'),
-                extraForfait: parseFloat($(this).find('.extra-forfait').val()) || null
+                extraForfait: parseFloat($(this).find('.extra-forfait').val()) || null,
+                grondwaarde:  parseFloat($(this).find('.grondwaarde').val())   || null,
+                bouwwaarde:   parseFloat($(this).find('.bouwwaarde').val())    || null,
+                vraagprijs:   parseFloat($(this).find('.vraagprijs').val())    || null
             });
         });
+        return lijnen;
+    }
 
+    function meld(type, tekst) {
+        if (typeof toastr !== 'undefined') { (toastr[type] || toastr.info)(tekst); } else { alert(tekst); }
+    }
+
+    // Slaat de verkooplijnen op; roept daarna onSuccess() aan.
+    function bewaarVerkoop(onSuccess) {
+        BudgetWizard.setSaveStatus('saving');
         $.ajax({
             url: '@Url.Action("SaveBudgetVerkoop", "Projecten")',
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ budgetVersieId: versieId, lijnen: lijnen }),
+            data: JSON.stringify({ budgetVersieId: versieId, lijnen: verzamelLijnen() }),
             success: function (res) {
-                if (res.success) {
-                    if (typeof toastr !== 'undefined') toastr.success('Verkoopgegevens opgeslagen.');
-                    setTimeout(function () { window.location.href = resultaatUrl; }, 600);
-                } else {
-                    BudgetWizard.setSaveStatus('error');
-                    BudgetWizard.cancelTransition();
-                    if (typeof toastr !== 'undefined') toastr.error('Fout: ' + res.message);
-                    else alert('Fout: ' + res.message);
-                }
+                if (res.success) { BudgetWizard.setSaveStatus('saved'); onSuccess(); }
+                else { BudgetWizard.setSaveStatus('error'); meld('error', 'Fout: ' + res.message); }
             },
-            error: function () {
-                BudgetWizard.setSaveStatus('error');
-                BudgetWizard.cancelTransition();
-                if (typeof toastr !== 'undefined') toastr.error('Verbindingsfout.');
-                else alert('Verbindingsfout.');
+            error: function () { BudgetWizard.setSaveStatus('error'); meld('error', 'Verbindingsfout.'); }
+        });
+    }
+
+    $('#btnSaveVerkoop').on('click', function () {
+        BudgetWizard.beginTransition();
+        bewaarVerkoop(function () {
+            meld('success', 'Verkoopgegevens opgeslagen.');
+            setTimeout(function () { window.location.href = resultaatUrl; }, 600);
+        });
+        // Bij fout: transitie annuleren zodat de pagina bruikbaar blijft
+        setTimeout(function () { if ($('#verkoopLijnenBody').length) BudgetWizard.cancelTransition && BudgetWizard.cancelTransition(); }, 4000);
+    });
+
+    // ── Overnemen uit het voorstel ─────────────────────────────────────────
+    function vulRij($row, d) {
+        $row.find('.grondwaarde').val(d.grond);
+        $row.find('.bouwwaarde').val(d.bouw);
+        $row.find('.vraagprijs').val(d.prijs);
+        $row.addClass('table-success');
+        setTimeout(function () { $row.removeClass('table-success'); }, 1500);
+    }
+
+    function zoekRij(naam) {
+        const n = (naam || '').trim().toLowerCase();
+        return $('#verkoopLijnenBody .verkoop-row').filter(function () {
+            return ($(this).find('.eenheid-naam').val() || '').trim().toLowerCase() === n;
+        }).first();
+    }
+
+    function neemOver($voorstelRij, done) {
+        const d = {
+            eenheid: $voorstelRij.data('eenheid'),
+            grond:   $voorstelRij.attr('data-grond'),
+            bouw:    $voorstelRij.attr('data-bouw'),
+            prijs:   $voorstelRij.attr('data-prijs')
+        };
+        const $bestaand = zoekRij(d.eenheid);
+        if ($bestaand.length) { vulRij($bestaand, d); if (done) done(); return; }
+        $.ajax({
+            url: '@Url.Action("BlankVerkoopRij", "Projecten")',
+            type: 'POST',
+            data: { versieId: versieId, eenheidNaam: d.eenheid, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+            success: function (html) {
+                const $nieuw = $(html).appendTo('#verkoopLijnenBody');
+                // Unit met dezelfde naam automatisch voorselecteren
+                $nieuw.find('.unit-select option').each(function () {
+                    if ($(this).text().trim().toLowerCase() === (d.eenheid || '').trim().toLowerCase()) $(this).prop('selected', true);
+                });
+                vulRij($nieuw, d);
+                if (done) done();
             }
         });
+    }
+
+    $(document).on('click', '.btn-overnemen', function () {
+        neemOver($(this).closest('tr.voorstel-row'));
+    });
+
+    $('#btnAllesOvernemen').on('click', function () {
+        const rijen = $('tr.voorstel-row').toArray();
+        (function volgende(i) {
+            if (i >= rijen.length) { meld('success', rijen.length + ' eenheden overgenomen. Vergeet niet op te slaan.'); return; }
+            neemOver($(rijen[i]), function () { volgende(i + 1); });
+        })(0);
+    });
+
+    // ── Doorzetten naar units ──────────────────────────────────────────────
+    $('#btnDoorzetten').on('click', async function () {
+        const gekoppeld = $('#verkoopLijnenBody .verkoop-row').filter(function () { return parseInt($(this).find('.unit-select').val()) > 0; }).length;
+        if (gekoppeld === 0) { meld('warning', 'Kies eerst per verkooplijn de eenheid (kolom Unit).'); return; }
+        if (!await BudgetWizard.confirmModal({
+            title: 'Doorzetten naar units',
+            body: 'De lijnen worden opgeslagen en grond- en bouwwaarde van ' + gekoppeld + ' gekoppelde eenhe' + (gekoppeld === 1 ? 'id' : 'den') + ' worden naar de Units van het project geschreven. Verkochte units blijven ongemoeid. Doorgaan?',
+            okLabel: 'Doorzetten',
+            okClass: 'btn-primary'
+        })) return;
+
+        const $btn = $(this).prop('disabled', true);
+        bewaarVerkoop(function () {
+            $.post('@Url.Action("DoorzettenVerkoopNaarUnits", "Projecten")',
+                { versieId: versieId, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() })
+                .done(function (res) {
+                    (res.messages || []).forEach(function (m) {
+                        meld(m.type === 'Error' ? 'error' : m.type === 'Warning' ? 'warning' : m.type === 'Info' ? 'info' : 'success', m.text);
+                    });
+                })
+                .fail(function () { meld('error', 'Verbindingsfout bij doorzetten.'); })
+                .always(function () { $btn.prop('disabled', false); });
+        });
+        $btn.prop('disabled', false);
     });
 </script>
 }

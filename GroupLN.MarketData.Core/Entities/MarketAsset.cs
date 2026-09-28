@@ -49,6 +49,13 @@ public class MarketAsset
     public string? UnitNumber { get; set; }
     public SaleStatus? SaleStatus { get; set; }
 
+    /// <summary>
+    /// Verkoopgraad (0-100) zoals de bron ze zelf rapporteert, alleen voor projectgroepen
+    /// (Immoweb soldPercentage, Zimmo "80% beschikbaar"-label). Fallback voor de analyse
+    /// wanneer er geen units bekend zijn.
+    /// </summary>
+    public decimal? ReportedSoldPercentage { get; set; }
+
     /// <summary>Ingevuld als deze losse listing gematcht is aan een CanonicalUnit in een project.</summary>
     public long? LinkedCanonicalUnitId { get; set; }
 

@@ -944,6 +944,10 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<int>("PropertyType")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("ReportedSoldPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<int?>("SaleStatus")
                         .HasColumnType("int");
 

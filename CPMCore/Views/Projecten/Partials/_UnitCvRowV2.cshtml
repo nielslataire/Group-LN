@@ -1,0 +1,56 @@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@model CPMCore.Models.Projecten.UnitFormV2CvRow
+@*
+    Eén bouwwaarderegel binnen een afwerkingsblok van het gl-v2 eenheidsformulier (16b, "Bedragen").
+    Veldnamen zijn expliciet gegenereerd (FinishingOptions[optionKey].ConstructionValues[key].…) i.p.v.
+    via Html.BeginCollectionItem, zodat dezelfde markup zowel server-side (echte rij) als in een
+    <template> (sleutels __OPT__/__CV__, door gl-v2-projecten-unitform.js vervangen) kan staan.
+    Bedrag = .Currencymask (currency.js parst/unformatteert bij submit, zoals overal), omschrijving en
+    betalingsgroep zoals de legacy _ConstructionValueRow — enkel opnieuw opgemaakt.
+
+    Zonder OptionKey is dit een constructieprijs van een eenheid ZONDER afwerkingen
+    (BaseConstructionValues[key]); mét OptionKey hoort hij bij die afwerking. gl-v2-projecten-unitform.js
+    verhuist rijen tussen die twee en herschrijft dan enkel de name-attributen.
+*@
+@{
+    var inv = CultureInfo.InvariantCulture;
+    var isBase = string.IsNullOrEmpty(Model.OptionKey);
+    var prefix = isBase
+        ? $"BaseConstructionValues[{Model.Key}]"
+        : $"FinishingOptions[{Model.OptionKey}].ConstructionValues[{Model.Key}]";
+    var indexName = isBase ? "BaseConstructionValues.index" : $"FinishingOptions[{Model.OptionKey}].ConstructionValues.index";
+    var cv = Model.Value;
+    var amount = cv.Value.HasValue ? cv.Value.Value.ToString("0.00", inv) : "";
+    var sold = cv.ValueSold.HasValue ? cv.ValueSold.Value.ToString("0.00", inv) : "";
+    var groupItems = Model.PaymentGroups.Select(g => new GlV2SelectItem { Value = g.ID.ToString(), Text = g.Display ?? "" }).ToList();
+}
+<div class="gl-v2-unit-cv-row" data-cv-row data-cv-key="@Model.Key">
+    <input type="hidden" name="@indexName" value="@Model.Key" />
+    <input type="hidden" name="@(prefix).Id" value="@cv.Id" />
+    <input type="hidden" name="@(prefix).UnitId" value="@cv.UnitId" />
+    <input type="hidden" name="@(prefix).ValueSold" value="@sold" />
+    <div class="gl-v2-field gl-v2-unit-cv-amount">
+        <div class="gl-v2-field-box">
+            <input type="text" name="@(prefix).Value" value="@amount" placeholder="0,00" class="gl-v2-field-input Currencymask" autocomplete="off" inputmode="decimal" data-cv-amount aria-label="Bouwwaarde" />
+            <span class="gl-v2-field-suffix">€</span>
+        </div>
+    </div>
+    <div class="gl-v2-field gl-v2-unit-cv-desc">
+        <div class="gl-v2-field-box">
+            <input type="text" name="@(prefix).Description" value="@cv.Description" placeholder="Omschrijving" class="gl-v2-field-input" autocomplete="off" aria-label="Omschrijving" />
+        </div>
+    </div>
+    <div class="gl-v2-unit-cv-group">
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+        {
+            Name = prefix + ".PaymentGroupId",
+            Value = cv.PaymentGroupId is > 0 ? cv.PaymentGroupId.ToString() : "",
+            Items = groupItems,
+            Placeholder = "Betalingsgroep",
+            EmptyText = "Geen betalingsgroep",
+            Bare = true
+        })
+    </div>
+    <button type="button" class="gl-v2-icon-btn is-warning" data-remove-cv title="Bouwwaarde verwijderen" aria-label="Bouwwaarde verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+</div>

@@ -18,6 +18,10 @@ public class AttachUnitV2Vm
     public int LotUnitId { get; set; }
     public string LotName { get; set; } = "";
 
+    /// <summary>Waar de POST naar terugkeert (lokale url) — de lijst is de standaard, het eenheidsformulier
+    /// (16b, Type & koppeling) geeft zijn eigen url mee zodat je niet op de lijst belandt.</summary>
+    public string? ReturnUrl { get; set; }
+
     /// <summary>Prijs van het lot zoals de lijst die nu toont (eigen prijs + wat er al aan hangt) —
     /// de "van"-waarde in de voetregel "Nieuwe prijs Lot 2, casco".</summary>
     public decimal LotPrice { get; set; }

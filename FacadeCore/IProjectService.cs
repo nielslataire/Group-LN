@@ -209,7 +209,7 @@ namespace FacadeCore
         GetResponse<ProjectRegieUurBO> GetRegieUren(int projectId);
         GetResponse<ProjectRegieUurBO> AddRegieUur(ProjectRegieUurBO bo);
         Response DeleteRegieUur(int id);
-        Response MarkRegieUrenAsInvoiced(List<int> regieUurIds, int invoiceId);
+        Response MarkRegieUrenAsInvoiced(List<int> regieUurIds, int invoiceId, IDictionary<string, decimal> hourlyRatesByUser = null);
 
         // Route-berekening (Google Maps Routes API)
         Task<(decimal? distanceKm, int? durationSeconds)> CalculateRouteAsync(int issuerCompanyId, int postalCodeId);

@@ -33,6 +33,7 @@ namespace DALCore.Models
             ConfigureHomeHeroProjectEntities(modelBuilder);
             ConfigureTrajectEntities(modelBuilder);
             ConfigureDossierEntities(modelBuilder);
+            ConfigureDocumentenEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);
             ConfigureMeldingSnoozeEntities(modelBuilder);
             ConfigureCookieConsentEventEntities(modelBuilder);

@@ -27,6 +27,9 @@ public partial class ProjectRegieUur
 
     public string Description { get; set; }
 
+    /// <summary>Uurtarief op het moment van factureren (null = nog niet gefactureerd, dan geldt het actuele projecttarief).</summary>
+    public decimal? HourlyRateInvoiced { get; set; }
+
     public virtual Invoices Invoice { get; set; }
 
     public virtual Project Project { get; set; }

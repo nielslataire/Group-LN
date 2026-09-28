@@ -343,6 +343,7 @@
                                         </button>
                                         <div class="gl-v2-menu" id="@menuId">
                                             <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-eye" aria-hidden="true"></i>Detail</a>
+                                            <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, company = row.Company.ID })" class="gl-v2-menu-item"><i class="ph ph-folder-open" aria-hidden="true"></i>Documenten</a>
                                             @if (hasSingle && canWrite)
                                             {
                                                 <a href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })" class="gl-v2-menu-item"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>

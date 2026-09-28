@@ -1,12 +1,22 @@
 @model DALCore.Models.BudgetVerkoopLijn
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
     var ic = System.Globalization.CultureInfo.InvariantCulture;
     string FmtDec(decimal? v) => v.HasValue ? v.Value.ToString("F2", ic) : string.Empty;
+    var unitOptions = ViewData["UnitOptions"] as List<SelectListItem> ?? new List<SelectListItem>();
 }
 <tr class="verkoop-row">
     <td>
         <input type="text" class="bw-cell-input eenheid-naam"
                value="@Model.EenheidNaam" placeholder="naam eenheid" />
+    </td>
+    <td>
+        <select class="bw-cell-input unit-select" title="Unit van het project waarnaar grond-/bouwwaarde doorgezet wordt">
+            @foreach (var o in unitOptions)
+            {
+                <option value="@o.Value" selected="@(Model.UnitId.HasValue && o.Value == Model.UnitId.Value.ToString())">@o.Text</option>
+            }
+        </select>
     </td>
     <td>
         <input type="number" class="bw-cell-input bw-cell-input--num code-bouw"
@@ -36,6 +46,18 @@
     <td>
         <input type="number" class="bw-cell-input bw-cell-input--num extra-forfait"
                value="@FmtDec(Model.ExtraForfait)" step="0.01" placeholder="0.00" />
+    </td>
+    <td>
+        <input type="number" class="bw-cell-input bw-cell-input--num grondwaarde"
+               value="@FmtDec(Model.Grondwaarde)" step="1" placeholder="0" />
+    </td>
+    <td>
+        <input type="number" class="bw-cell-input bw-cell-input--num bouwwaarde"
+               value="@FmtDec(Model.Bouwwaarde)" step="1" placeholder="0" />
+    </td>
+    <td>
+        <input type="number" class="bw-cell-input bw-cell-input--num vraagprijs fw-bold"
+               value="@FmtDec(Model.Vraagprijs)" step="1" placeholder="0" />
     </td>
     <td class="text-end" style="width:56px;">
         <div class="bw-row-actions">

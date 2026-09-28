@@ -1,0 +1,79 @@
+@model CPMCore.Models.Projecten.DocCardVm
+@*
+    Herbruikbare documentenkaart (design-handoff 17b "dezelfde kaart op elke detailpagina"): één kaart voor
+    project, eenheid, klant en leverancier, met "Rechtstreeks" (aan deze entiteit gekoppeld) en "Ook via …"
+    (projectdocumenten of documenten van de koper/eenheid die hier ook gelden — grijs, hier niet te
+    ontkoppelen). Op een leverancier komt er een projectkolom bij (alle projecten heen).
+    Fragment: Projecten/DocumentCardV2 levert het; CSS zit in gl-v2-projecten-detaildocs.css. Tabs zijn puur CSS
+    (radio's), zodat het ook werkt als het fragment via innerHTML in een pagina wordt gezet.
+*@
+@{
+    var c = Model.Card;
+    var uid = Guid.NewGuid().ToString("N")[..8];
+    string BadgeTone(string key) => key switch
+    {
+        "ok" or "signed" or "awarded" => "is-positive",
+        "pending" or "signing" or "requested" or "expiring" => "is-attention",
+        "missing" or "expired" => "is-blocked",
+        "submitted" => "is-info",
+        "notawarded" => "is-inactive",
+        _ => "is-neutral"
+    };
+    string ExtClass(string ext) => ext switch
+    {
+        "DWG" or "DXF" or "RVT" or "SKP" => "is-cad",
+        "DOC" or "DOCX" or "XLS" or "XLSX" or "PPT" or "PPTX" or "CSV" => "is-office",
+        _ => ""
+    };
+    var direct = c.Items.Where(i => i.Direct).ToList();
+    var via = c.Items.Where(i => !i.Direct).ToList();
+}
+<div class="gl-v2-dd-card" data-dd-card>
+    <div class="gl-v2-dd-card-head">
+        <span class="gl-v2-dd-card-title">Documenten <span class="gl-v2-dd-card-count">@c.Items.Count</span></span>
+        <a class="gl-v2-btn gl-v2-btn-secondary" href="@Model.ViewAllUrl"><i class="ph ph-folder-open" aria-hidden="true"></i>@Model.ViewAllLabel</a>
+    </div>
+    <div class="gl-v2-dd-card-tabs">
+        <input type="radio" name="gl-v2-dd-card-tab-@uid" id="gl-v2-dd-card-d-@uid" checked hidden />
+        <input type="radio" name="gl-v2-dd-card-tab-@uid" id="gl-v2-dd-card-v-@uid" hidden />
+        <div class="gl-v2-dd-card-tabbar">
+            <label for="gl-v2-dd-card-d-@uid">Rechtstreeks <span>@direct.Count</span></label>
+            <label for="gl-v2-dd-card-v-@uid">Ook via project <span>@via.Count</span></label>
+        </div>
+        <div class="gl-v2-dd-card-list is-direct">
+            @if (direct.Count == 0)
+            {
+                <p class="gl-v2-dd-card-empty">Nog geen documenten die hier rechtstreeks aan gekoppeld zijn.</p>
+            }
+            @foreach (var i in direct)
+            {
+                <a class="gl-v2-dd-card-row" href="@Url.Action("DetailDocs", "Projecten", new { projectid = i.ProjectId, open = i.Kind == "doc" ? i.Id : (int?)null, request = i.Kind == "request" ? i.Id : (int?)null })">
+                    <span class="gl-v2-dd-ext @(i.Kind == "request" ? "is-missing" : ExtClass(i.Ext))" aria-hidden="true">@(i.Kind == "request" ? "?" : i.Ext)</span>
+                    <span class="gl-v2-dd-doc-text">
+                        <span class="gl-v2-dd-doc-name" style="cursor:pointer">@i.Name</span>
+                        <span class="gl-v2-dd-doc-sub">@(c.ShowProjectColumn ? i.ProjectName + " · " : "")@i.SubLine</span>
+                    </span>
+                    <span class="gl-v2-badge @BadgeTone(i.StatusKey)">@i.StatusLabel.ToUpperInvariant()</span>
+                </a>
+            }
+        </div>
+        <div class="gl-v2-dd-card-list is-via">
+            @if (via.Count == 0)
+            {
+                <p class="gl-v2-dd-card-empty">Geen extra documenten via het project of de koper.</p>
+            }
+            @foreach (var i in via)
+            {
+                <a class="gl-v2-dd-card-row is-via" href="@Url.Action("DetailDocs", "Projecten", new { projectid = i.ProjectId, open = i.Id })">
+                    <span class="gl-v2-dd-ext @ExtClass(i.Ext)" aria-hidden="true">@i.Ext</span>
+                    <span class="gl-v2-dd-doc-text">
+                        <span class="gl-v2-dd-doc-name" style="cursor:pointer">@i.Name</span>
+                        <span class="gl-v2-dd-doc-sub">@(c.ShowProjectColumn ? i.ProjectName + " · " : "")@i.SubLine · via @i.ViaLabel</span>
+                    </span>
+                    <span class="gl-v2-badge @BadgeTone(i.StatusKey)">@i.StatusLabel.ToUpperInvariant()</span>
+                </a>
+            }
+        </div>
+        <p class="gl-v2-dd-card-foot">Rechtstreeks = aan deze pagina gekoppeld. Ook via project = projectdocumenten (brochure, EPB, …) die hier ook gelden — ze staan niet dubbel, je ontkoppelt ze enkel op de documentenpagina.</p>
+    </div>
+</div>

@@ -119,6 +119,32 @@ namespace ServiceCore.Budget
             ws1.Range(rij, 1, rij, 3).Style.Fill.BackgroundColor = XLColor.FromHtml("#bdd7ff");
             ws1.Range(rij, 1, rij, 3).Style.Font.FontSize = 11;
 
+            if (resultaat.Verkoop is { } vk)
+            {
+                rij += 2;
+                SetGroepHeader(rij++, "Verkoop");
+                SetKostenRij(rij++, "Kostprijs incl. aankoopprijs grond", vk.TotaalKostprijsInclGrond);
+                SetKostenRij(rij++, "Grondwaarde (kost + marge)", vk.Grondwaarde);
+                SetKostenRij(rij++, "Bouwwaarde (kost + marge)", vk.Bouwwaarde);
+                SetKostenRij(rij++, "Minimale verkoopwaarde", vk.MinimaleVerkoopwaarde);
+                if (vk.MarktTotaal.HasValue) SetKostenRij(rij++, "Marktwaarde (mediaan vergelijkbare units)", vk.MarktTotaal.Value);
+
+                ws1.Cell(rij, 1).Value = $"OPBRENGST ({vk.OpbrengstBron})";
+                ws1.Cell(rij, 2).Value = (double)vk.Opbrengst;
+                ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
+                ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
+                ws1.Range(rij, 1, rij, 3).Style.Fill.BackgroundColor = XLColor.FromHtml("#ffe5b4");
+                rij++;
+
+                ws1.Cell(rij, 1).Value = "MARGE";
+                ws1.Cell(rij, 2).Value = (double)vk.Marge;
+                ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
+                ws1.Cell(rij, 3).Value = (double)vk.MargePerc;
+                ws1.Cell(rij, 3).Style.NumberFormat.Format = "0.0%";
+                ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
+                ws1.Range(rij, 1, rij, 3).Style.Font.FontColor = XLColor.FromHtml(vk.Marge >= 0 ? "#198754" : "#dc3545");
+            }
+
             ws1.Column(1).Width = 45;
             ws1.Column(2).Width = 20;
             ws1.Column(3).Width = 15;

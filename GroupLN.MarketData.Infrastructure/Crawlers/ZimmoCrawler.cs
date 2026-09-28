@@ -564,6 +564,9 @@ public class ZimmoCrawler : BaseCrawler
                 bedrooms?.ToString() ?? "?",
                 stickerText);
 
+            // "Project - 80% beschikbaar" → 20 % verkocht; "… 35% verkocht" → 35 %.
+            dto.ReportedSoldPercentage = ParseStickerSoldPercentage(stickerText);
+
             result.Add((code, dto));
         }
 
@@ -572,6 +575,20 @@ public class ZimmoCrawler : BaseCrawler
     }
 
     // ── Parseer-helpers (statisch) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Leest de verkoopgraad uit het projectlabel op de zoekkaart. Zimmo toont het beschikbare
+    /// aandeel ("80% beschikbaar"), soms het verkochte ("35% verkocht"). Null als er geen percentage staat.
+    /// </summary>
+    internal static decimal? ParseStickerSoldPercentage(string? sticker)
+    {
+        if (string.IsNullOrWhiteSpace(sticker)) return null;
+        var m = Regex.Match(sticker, @"(\d{1,3})\s*%\s*(beschikbaar|verkocht|disponible|vendu)", RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        if (!int.TryParse(m.Groups[1].Value, out var pct) || pct < 0 || pct > 100) return null;
+        var woord = m.Groups[2].Value.ToLowerInvariant();
+        return woord is "beschikbaar" or "disponible" ? 100 - pct : pct;
+    }
 
     private static decimal? ParseCardPrice(string text)
     {

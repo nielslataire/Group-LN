@@ -171,6 +171,15 @@
                                    href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = item.Id })">
                                     <i class="fa fa-print"></i>
                                 </a>
+                                @* MERGE 28/09/2026 — twee ondertekenpaden naast elkaar (zie ONDERTEKENEN_VOORTGANG.md,
+                                   "Samenloop"): "Digitaal ter ondertekening sturen" is de link-per-e-mail-flow van de
+                                   andere pc (ChangeOrderSignV2/SigningController); het fa-file-signature-icoon is de
+                                   signingmodule (SigningAdmin), enkel zichtbaar met Features:EnableSigning. Eén van
+                                   beide verdwijnt zodra beslist is welke blijft. *@
+                                <a data-toggle="tooltip" data-placement="top" title="Digitaal ter ondertekening sturen"
+                                   href="@Url.Action("ChangeOrderSignV2", "Projecten", new { changeorderid = item.Id })">
+                                    <i class="fa fa-signature"></i>
+                                </a>
                                 @if (Model.SigningEnabled && Model.CanStartSigning)
                                 {
                                     if (signingActive || signingCompleted)

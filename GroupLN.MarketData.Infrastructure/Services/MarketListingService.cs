@@ -1233,6 +1233,7 @@ public class MarketListingService : IMarketListingService
         if (!string.IsNullOrEmpty(dto.DeveloperName)) asset.DeveloperName = dto.DeveloperName;
         if (!string.IsNullOrEmpty(dto.DeveloperWebsite)) asset.DeveloperWebsite = dto.DeveloperWebsite;
         if (!string.IsNullOrEmpty(dto.DeveloperPhone)) asset.DeveloperPhone = dto.DeveloperPhone;
+        if (dto.ReportedSoldPercentage.HasValue) asset.ReportedSoldPercentage = dto.ReportedSoldPercentage;
         asset.LastSeenAt = now;
         asset.UpdatedAt = now;
     }
@@ -1269,6 +1270,7 @@ public class MarketListingService : IMarketListingService
         DeveloperWebsite = dto.DeveloperWebsite,
         DeveloperPhone = dto.DeveloperPhone,
         NewBuild = dto.IsNewBuild,
+        ReportedSoldPercentage = dto.ReportedSoldPercentage,
         IsProjectGroup = dto.IsProjectListing || dto.PropertyType == PropertyType.ProjectGroup,
         ProjectExternalId = dto.ProjectExternalId,
         UnitExternalId = dto.UnitExternalId,

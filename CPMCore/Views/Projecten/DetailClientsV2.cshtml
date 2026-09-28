@@ -293,6 +293,7 @@
                                     </button>
                                     <div class="gl-v2-menu" id="gl-v2-dc-menu-@client.Id">
                                         <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-eye" aria-hidden="true"></i>Detail</a>
+                                        <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, client = client.Id })" class="gl-v2-menu-item"><i class="ph ph-folder-open" aria-hidden="true"></i>Documenten</a>
                                         @if (canDelete)
                                         {
                                             <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-dc-delete" data-id="@client.Id"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>

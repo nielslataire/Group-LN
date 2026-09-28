@@ -135,6 +135,9 @@
         var open = banner.classList.contains('is-open') || dialog.classList.contains('is-open');
         overlay.classList.toggle('is-open', open);
         document.body.classList.toggle('cc-lock', open);
+        // Het voorkeurenpaneel komt voor de banner: die verdwijnt zolang het paneel open staat
+        // en komt terug als het paneel gesloten wordt zonder keuze.
+        root.classList.toggle('cc-dialog-open', dialog.classList.contains('is-open'));
     }
 
     function openBanner() { banner.classList.add('is-open'); updateOverlay(); logShownOnce(); }

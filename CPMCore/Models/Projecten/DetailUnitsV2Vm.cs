@@ -57,9 +57,9 @@ public class DetailUnitsV2Vm
     public int SoldCount { get; set; }
 }
 
-/// <summary>Eén groepskop in de eenhedenlijst ("Woningen", "Commerciële ruimtes", "Los te koop") —
+/// <summary>Eén groepskop in de eenhedenlijst ("Woningen", "Commerciële ruimtes", "Losse bergingen") —
 /// design-handoff 16a §6: "Groepen zijn inklapbaar en losse nevenruimtes die nog niet gekoppeld zijn,
-/// staan apart onder 'Los te koop'".</summary>
+/// staan apart". Losse nevenruimtes staan per type samengevat in de kop (zie <see cref="Summary"/>).</summary>
 public class DetailUnitsV2Group
 {
     public string Key { get; set; } = "";
@@ -68,6 +68,12 @@ public class DetailUnitsV2Group
     public string IconClass { get; set; } = "ph-buildings";
     /// <summary>Enkel de hoofdeenheden; hun gekoppelde eenheden zitten in <see cref="DetailUnitsV2Row.Children"/>.</summary>
     public List<DetailUnitsV2Row> Rows { get; set; } = new();
+
+    /// <summary>Samenvatting in de groepskop (aantal, oppervlakte, waarde) — enkel bij een groep die per
+    /// type "samengevat" wordt i.p.v. rij per rij uit te schrijven (de losse bergingen/parkings).</summary>
+    public string? Summary { get; set; }
+    /// <summary>De groep staat dicht tot je ze opent of tot een zoekterm/chip iets in de groep zoekt.</summary>
+    public bool CollapsedByDefault { get; set; }
 
     /// <summary>Aantal rijen dat de groepskop toont — hoofdeenheden én hun gekoppelde eenheden.</summary>
     public int TotalRowCount => Rows.Count + Rows.Sum(r => r.Children.Count);

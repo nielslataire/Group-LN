@@ -1,0 +1,476 @@
+/* gl-v2 layout-pilot — Projecten/DetailCoordinatieV2 (design-handoff punt 18, opties 18a "Combinatie schijven +
+   regie — beide kaarten, één selectiebalk" en 18b "Enkel schijven · enkel regie · instellingen").
+   Page-specifiek, zoals elke gl-v2-lijstpagina zijn eigen tabel-chroom heeft (gl-v2-projecten-detailunits.css,
+   gl-v2-projecten-detailclients.css). Alles hangt aan de gedeelde gl-v2-tokens en -componenten (KPI-strook,
+   tabbar, badge, kaart, veld, keuzelijst, ⋯-menu, modals); wat hieronder staat is enkel wat 18 daar extra
+   bovenop vraagt: de verloopbalk, de invoerrij, de periodefilter, de selectiebalk en het instellingenpaneel. */
+
+/* ── Topbar: knoppen op desktop, ⋯-menu op tablet (zelfde recept als DetailUnitsV2/DetailClientsV2) ───────── */
+@media (min-width: 1024px) {
+    .gl-v2-co-topbar-menu-trigger { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-co-topbar-btn { display: none; }
+}
+
+/* De pagina-inhoud staat in één wrapper (#gl-v2-co-root); die neemt de kolomopbouw van .gl-v2-content over
+   (flex-kolom, 16px ertussen — zie gl-v2-shell.css), anders plakken KPI-strook, meldingen en kaarten tegen
+   elkaar. De <section>-omhulsels van de kaarten zijn zelf geen flex-item-doos maar gewoon blokken. */
+#gl-v2-co-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+#gl-v2-co-root > [data-co-panel] { flex: none; }
+
+/* ── Projectregel/waarschuwing boven een kaart ────────────────────────────────────────────────────── */
+.gl-v2-co-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    flex: none;
+}
+.gl-v2-co-notice.is-warning { border-color: #EBD9B4; }
+.gl-v2-co-notice-icon { color: var(--gl-v2-warning); font-size: 17px; display: flex; flex: none; }
+.gl-v2-co-notice-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); flex: none; }
+.gl-v2-co-notice-desc { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; flex: 1 1 260px; }
+.gl-v2-co-notice-spacer { flex: 1; }
+.gl-v2-co-notice-action {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+    flex: none;
+}
+.gl-v2-co-notice-action:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+
+/* ── Kaarten ────────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-card { flex: none; }
+.gl-v2-co-body { display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-co-card .gl-v2-card-header { flex-wrap: wrap; }
+.gl-v2-co-small { height: 32px; padding: 0 12px; font-size: 11.5px; }
+.gl-v2-co-muted { color: var(--gl-v2-muted-light); }
+.gl-v2-co-muted-text { color: var(--gl-v2-muted); }
+.gl-v2-co-strong { font-weight: 600; }
+.gl-v2-co-tabular { font-variant-numeric: tabular-nums; }
+.gl-v2-co-required { color: var(--gl-v2-danger); }
+.gl-v2-co-icon-sm { width: 30px; height: 30px; }
+.gl-v2-co-icon-sm i { font-size: 15px; }
+
+/* [hidden] verliest van elke author-display-regel (zie DESIGN.md, "Don't rely on [hidden] alone") — de
+   elementen hieronder die zowel een eigen display hebben als door de JS verborgen worden. */
+.gl-v2-co-selbar[hidden],
+.gl-v2-co-drawer[hidden],
+.gl-v2-co-drawer-backdrop[hidden],
+.gl-v2-co-selbar-part[hidden],
+.gl-v2-co-selbar-plus[hidden],
+.gl-v2-co-selected-note[hidden],
+.gl-v2-co-travel-input[hidden],
+.gl-v2-co-rate-note[hidden],
+.gl-v2-co-row[hidden],
+[data-co-panel][hidden],
+[data-co-if][hidden] { display: none !important; }
+
+/* Dot (legenda, gouden stip bij aangepaste km) */
+.gl-v2-co-dot { display: inline-block; width: 8px; height: 8px; border-radius: 4px; vertical-align: middle; margin: 0 6px 0 2px; flex: none; }
+.gl-v2-co-dot.is-invoiced { background: var(--gl-v2-primary); }
+.gl-v2-co-dot.is-selected { background: var(--gl-v2-gold); }
+.gl-v2-co-dot.is-open { background: var(--gl-v2-neutral-tint); box-shadow: inset 0 0 0 1px var(--gl-v2-hairline); }
+.gl-v2-co-dot.is-custom { background: var(--gl-v2-gold); margin-left: 6px; }
+
+/* ── Verloopbalk over het hele contract (18a §3) ─────────────────────────────────────────────────── */
+.gl-v2-co-seg { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-co-seg-track {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--gl-v2-neutral-tint);
+    overflow: hidden;
+}
+.gl-v2-co-seg-fill { display: block; height: 100%; flex: none; transition: width .2s ease; }
+.gl-v2-co-seg-fill.is-invoiced { background: var(--gl-v2-primary); }
+.gl-v2-co-seg-fill.is-selected { background: var(--gl-v2-gold); }
+.gl-v2-co-seg-legend { display: flex; flex-wrap: wrap; gap: 4px 18px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-seg-legend b { color: var(--gl-v2-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Tabellen ────────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-table-scroll { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
+.gl-v2-co-table { width: 100%; border-collapse: collapse; }
+.gl-v2-co-table thead th {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    text-align: left;
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    padding: 10px 10px 9px;
+    white-space: nowrap;
+}
+.gl-v2-co-table th.is-right, .gl-v2-co-table td.is-right { text-align: right; }
+.gl-v2-co-table td {
+    padding: 9px 10px;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+.gl-v2-co-table th.is-check, .gl-v2-co-table td.is-check { width: 34px; padding-right: 0; }
+.gl-v2-co-table th.is-num, .gl-v2-co-table td.is-num { width: 34px; color: var(--gl-v2-muted-light); }
+.gl-v2-co-table td.is-actions { width: 44px; text-align: right; white-space: nowrap; }
+.gl-v2-co-table .gl-v2-co-desc { min-width: 180px; }
+.gl-v2-co-row:hover td { background: var(--gl-v2-bg); }
+.gl-v2-co-row.is-selected td { background: var(--gl-v2-primary-tint); }
+.gl-v2-co-row.is-selected:hover td { background: var(--gl-v2-primary-tint); }
+.gl-v2-co-row.is-invoiced td { color: var(--gl-v2-muted-soft); }
+.gl-v2-co-table tfoot td {
+    border-bottom: 0;
+    border-top: 1px solid var(--gl-v2-hairline);
+    padding-top: 12px;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-co-status { white-space: nowrap; }
+.gl-v2-co-status .gl-v2-badge { margin-right: 8px; }
+.gl-v2-co-invoice-link { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; font-variant-numeric: tabular-nums; }
+.gl-v2-co-invoice-link:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+.gl-v2-co-total-badge { margin-left: 8px; }
+.gl-v2-co-legend { margin: 0; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-legend b { font-weight: 600; color: var(--gl-v2-muted-soft); }
+
+.gl-v2-co-person { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.gl-v2-co-avatar { width: 26px; height: 26px; font-size: 10px; flex: none; }
+
+/* Uitgeschakeld ⋯-menu-item ("uitgeschakeld voor alles wat al gefactureerd is", 18a §7). */
+.gl-v2 .gl-v2-menu-item.is-disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
+
+/* Checkbox — zelfde zelfstandige opbouw als in Facturen (gl-v2-invoices.css): _LayoutV2 laadt theme.css niet,
+   dus box en vinkje zijn helemaal van gl-v2 zelf. */
+.gl-v2-co-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; }
+.gl-v2-co-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
+.gl-v2-co-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
+.gl-v2-co-check label:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-radius: 5px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+.gl-v2-co-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
+.gl-v2-co-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-co-check input[type="checkbox"]:checked + label:after {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    inset: 0;
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+    color: var(--gl-v2-surface);
+}
+.gl-v2-co-check input[type="checkbox"]:indeterminate + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-co-check input[type="checkbox"]:indeterminate + label:after {
+    content: "";
+    position: absolute;
+    left: 4px; right: 4px; top: 8px; height: 2px;
+    border-radius: 1px;
+    background: var(--gl-v2-surface);
+}
+.gl-v2-co-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+
+/* ── Regie: invoerrij (18a §4) ───────────────────────────────────────────────────────────────────── */
+.gl-v2-co-entry {
+    display: grid;
+    grid-template-columns: minmax(150px, 1.1fr) minmax(140px, .9fr) minmax(96px, .5fr) minmax(210px, 1.1fr) minmax(200px, 2fr) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 14px;
+    border-radius: var(--gl-v2-radius-md);
+    background: #F7F9F5;
+    border: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-co-entry .gl-v2-field { min-width: 0; }
+.gl-v2-co-entry-go .gl-v2-btn { width: 100%; }
+.gl-v2-co-entry-hint { margin: -6px 0 0; font: 450 11.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-height: 1em; }
+.gl-v2-co-entry-hint b { color: var(--gl-v2-ink); font-weight: 600; }
+.gl-v2-co-entry-hint.is-error { color: var(--gl-v2-danger); }
+
+/* Verplaatsing: schakelaar + km + potlood in één veld (18a §4). */
+.gl-v2-co-travel { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.gl-v2-co-travel-text { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; }
+.gl-v2-co-travel-text b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gl-v2-co-travel-tag { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted-light); }
+.gl-v2-co-travel-tag.is-custom { color: var(--gl-v2-warning); }
+.gl-v2-co-travel-input { width: 110px; flex: none; }
+
+/* ── Factureren t/m (18a §5) ─────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-period { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.gl-v2-co-period-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-co-period-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.gl-v2-co-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 15px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 500 11.5px var(--gl-v2-font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.gl-v2-co-chip:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-co-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+.gl-v2-co-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+.gl-v2-co-period-date { width: 170px; }
+.gl-v2-co-period-hint { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+/* ── Groepen in de regietabel ───────────────────────────────────────────────────────────────────── */
+.gl-v2-co-group-row td { padding: 0; background: #F7F9F5; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-co-group-head { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex-wrap: wrap; }
+.gl-v2-co-group-head > i { font-size: 15px; color: var(--gl-v2-muted-soft); flex: none; }
+.gl-v2-co-group-spacer { flex: 1; }
+.gl-v2-co-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: 450 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+    text-align: left;
+}
+.gl-v2-co-group-toggle > i { font-size: 14px; color: var(--gl-v2-muted-soft); }
+.gl-v2-co-group-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); border-radius: 4px; }
+.gl-v2-co-caret { transition: transform .15s ease; transform: rotate(-90deg); }
+.gl-v2-co-group-toggle[aria-expanded="true"] .gl-v2-co-caret { transform: none; }
+.gl-v2-co-selected-note { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-co-invoice-badge { text-decoration: none; }
+.gl-v2-co-more-row td { padding: 0; border-bottom: 0; }
+.gl-v2-co-more-btn {
+    width: 100%;
+    min-height: 40px;
+    border: 0;
+    background: transparent;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+.gl-v2-co-more-btn:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-co-empty-row td { padding: 14px 10px; font: 450 12.5px var(--gl-v2-font-sans); }
+
+/* ── Selectiebalk (18a §6) — donker, onderaan; telt schijven en regie samen op ──────────────────── */
+.gl-v2-co-selbar {
+    position: sticky;
+    bottom: 14px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-ink);
+    color: var(--gl-v2-surface);
+    box-shadow: 0 18px 40px -18px rgba(20, 26, 19, .7);
+    flex: none;
+}
+.gl-v2-co-selbar-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); flex: none; }
+.gl-v2-co-selbar-parts { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font: 500 13px var(--gl-v2-font-sans); }
+.gl-v2-co-selbar-part { font-variant-numeric: tabular-nums; }
+.gl-v2-co-selbar-part b { font-weight: 600; }
+.gl-v2-co-selbar-plus { color: rgba(255, 255, 255, .55); }
+.gl-v2-co-selbar-spacer { flex: 1; }
+.gl-v2-co-selbar-total { display: inline-flex; align-items: baseline; gap: 6px; font: 450 11px var(--gl-v2-font-sans); color: rgba(255, 255, 255, .6); }
+.gl-v2-co-selbar-total b { font: 600 17px var(--gl-v2-font-sans); color: var(--gl-v2-surface); font-variant-numeric: tabular-nums; }
+.gl-v2-co-selbar-clear {
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, .75);
+    font: 600 12px var(--gl-v2-font-sans);
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.gl-v2-co-selbar-clear:hover { color: var(--gl-v2-surface); background: rgba(255, 255, 255, .1); }
+.gl-v2-co-selbar-clear:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+.gl-v2 .gl-v2-btn.gl-v2-co-selbar-go { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-btn.gl-v2-co-selbar-go:hover { background: #E4EFDD; border-color: #E4EFDD; box-shadow: none; }
+.gl-v2 .gl-v2-btn.gl-v2-co-selbar-go:disabled { background: rgba(255, 255, 255, .15); border-color: transparent; color: rgba(255, 255, 255, .5); }
+
+/* ── Instellingenpaneel (18b "⚙ INSTELLINGEN — ZIJPANEEL") ─────────────────────────────────────── */
+.gl-v2-co-drawer-backdrop { position: fixed; inset: 0; height: 100dvh; background: rgba(20, 26, 19, .45); z-index: 99900; }
+.gl-v2-co-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    max-width: 100vw;
+    height: 100dvh;
+    z-index: 99910;
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    display: flex;
+    flex-direction: column;
+    animation: gl-v2-co-drawer-in .18s ease-out;
+}
+@keyframes gl-v2-co-drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .gl-v2-co-drawer { animation: none; } }
+.gl-v2-co-drawer-form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.gl-v2-co-drawer-head { display: flex; align-items: center; gap: 11px; padding: 16px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex: none; }
+.gl-v2-co-drawer-icon {
+    width: 32px; height: 32px; border-radius: 9px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary);
+}
+.gl-v2-co-drawer-icon i { font-size: 17px; }
+.gl-v2-co-drawer-title { margin: 0; font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-co-drawer-spacer { flex: 1; }
+.gl-v2-co-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 18px; }
+.gl-v2-co-drawer-foot { display: flex; justify-content: flex-end; gap: 9px; padding: 12px 20px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--gl-v2-hairline-soft); background: var(--gl-v2-surface); box-shadow: var(--gl-v2-shadow-actionbar); flex: none; }
+.gl-v2-co-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-co-fieldset legend { float: none; width: auto; padding: 0; margin: 0 0 8px; }
+.gl-v2-co-fieldnote { margin: 0; font: 450 11px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-fieldnote.is-lead { font-size: 11.5px; }
+.gl-v2-co-block { display: flex; flex-direction: column; gap: 8px; }
+
+/* Contracttype: drie grote keuzes. */
+.gl-v2-co-typegrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.gl-v2-co-typecard { position: relative; display: block; cursor: pointer; }
+.gl-v2-co-typecard input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.gl-v2-co-typecard-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    height: 100%;
+    padding: 11px 12px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    font: 450 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-co-typecard-body i { font-size: 18px; color: var(--gl-v2-muted-soft); margin-bottom: 4px; }
+.gl-v2-co-typecard-body b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-typecard:hover .gl-v2-co-typecard-body { border-color: var(--gl-v2-primary); background: #F7F9F5; }
+.gl-v2-co-typecard input:checked + .gl-v2-co-typecard-body { border-color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); box-shadow: inset 0 0 0 1px var(--gl-v2-primary); }
+.gl-v2-co-typecard input:checked + .gl-v2-co-typecard-body i { color: var(--gl-v2-primary); }
+.gl-v2-co-typecard input:focus-visible + .gl-v2-co-typecard-body { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+
+/* Uurtarieven per medewerker. */
+.gl-v2-co-rates { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-co-raterow { display: grid; grid-template-columns: auto minmax(0, 1fr) 128px auto; align-items: center; gap: 4px 10px; }
+.gl-v2-co-rate-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-co-rate-note { grid-column: 2 / -1; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-warning); }
+.gl-v2-co-rate-note button { border: 0; background: transparent; padding: 0; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-co-rate-note button:hover { text-decoration: underline; }
+/* Wijkt af van het standaardtarief: het veld kleurt goud (18b). */
+.gl-v2-co-raterow.is-custom .gl-v2-field-box { border-color: var(--gl-v2-gold); background: var(--gl-v2-gold-tint); }
+
+/* Verplaatsing (VAN/NAAR). */
+.gl-v2-co-route { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: var(--gl-v2-radius-sm); background: #F7F9F5; font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-route-line { display: flex; gap: 10px; align-items: baseline; }
+.gl-v2-co-route-tag { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; color: var(--gl-v2-muted-light); width: 34px; flex: none; }
+.gl-v2-co-route-result { padding-top: 6px; border-top: 1px solid var(--gl-v2-hairline-soft); color: var(--gl-v2-muted-soft); }
+.gl-v2-co-route-result b { color: var(--gl-v2-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Modals (TYPE 2 om te bewerken/koppelen) ─────────────────────────────────────────────────────── */
+.gl-v2-co-modal .modal-content > form { display: contents; }
+.gl-v2-co-slice-amount { display: flex; align-items: center; min-height: 40px; font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Tablet: de tabel behoudt zijn kolommen maar scrolt horizontaal; de invoerrij gaat naar twee kolommen ─ */
+@media (min-width: 768px) and (max-width: 1279.98px) {
+    .gl-v2-co-entry { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .gl-v2-co-desc-field { grid-column: span 2; }
+}
+
+/* ── Mobiel (<768px): kaarten i.p.v. tabel ────────────────────────────────────────────────────────
+   Dezelfde markup, andere weergave: elke rij wordt een kaart (de td's stapelen, data-label geeft een
+   kleine kop) zodat er geen tweede, gekloonde lijst hoeft te bestaan die met de filters/selectie
+   mee zou moeten. De selectiebalk zweeft boven de vaste groene actiebalk onderaan. */
+@media (max-width: 767.98px) {
+    .gl-v2-co-table-scroll { margin: 0; padding: 0; overflow: visible; }
+    .gl-v2-co-table, .gl-v2-co-table tbody, .gl-v2-co-table tfoot, .gl-v2-co-table tr, .gl-v2-co-table td { display: block; }
+    .gl-v2-co-table thead { display: none; }
+
+    .gl-v2-co-table tr.gl-v2-co-row {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 14px;
+        padding: 12px 44px 12px 14px;
+        margin-top: 8px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        border: 1px solid var(--gl-v2-hairline-soft);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 10px 22px -18px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-co-table tr.gl-v2-co-row[hidden] { display: none !important; }
+    .gl-v2-co-table tr.gl-v2-co-row td { padding: 0; border: 0; background: transparent; width: auto; }
+    .gl-v2-co-row:hover td, .gl-v2-co-row.is-selected td { background: transparent; }
+    .gl-v2-co-table tr.gl-v2-co-row.is-selected { background: var(--gl-v2-primary-tint); }
+    .gl-v2-co-table td.is-actions { position: absolute; top: 6px; right: 6px; width: auto; }
+    .gl-v2-co-table td.is-check { order: -2; }
+    .gl-v2-co-table td.is-num { order: -1; font-weight: 600; color: var(--gl-v2-muted); }
+    .gl-v2-co-table td.gl-v2-co-desc { flex: 1 1 100%; min-width: 0; order: 0; }
+    .gl-v2-co-table td.is-right { text-align: left; }
+    .gl-v2-co-table td[data-label]:not([data-label=""])::before {
+        content: attr(data-label);
+        display: inline-block;
+        margin-right: 6px;
+        font: 600 9px var(--gl-v2-font-sans);
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--gl-v2-muted-light);
+    }
+    .gl-v2-co-table tbody + tbody, .gl-v2-co-table .gl-v2-co-group-row td { display: block; }
+    .gl-v2-co-table tr.gl-v2-co-group-row { margin-top: 12px; }
+    .gl-v2-co-group-row td { border-radius: var(--gl-v2-radius-sm); }
+    .gl-v2-co-table tr.gl-v2-co-more-row, .gl-v2-co-table tr.gl-v2-co-empty-row { margin-top: 6px; }
+    .gl-v2-co-table tfoot tr { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 12px 14px 0; }
+    .gl-v2-co-table tfoot td { display: block; padding: 0; border: 0; width: auto; }
+    .gl-v2-co-table tfoot td.is-check, .gl-v2-co-table tfoot td.is-num, .gl-v2-co-table tfoot td:empty { display: none; }
+
+    .gl-v2-co-entry { grid-template-columns: 1fr; padding: 12px; }
+    .gl-v2-co-desc-field { grid-column: auto; }
+    .gl-v2-co-entry-go .gl-v2-btn { height: 44px; }
+    .gl-v2-co-period-date { width: 100%; }
+    .gl-v2-co-period-hint { flex: 1 1 100%; }
+    .gl-v2-co-chip { height: 36px; }
+
+    /* Boven de vaste groene actiebalk (Excel/Instellingen) i.p.v. erachter. */
+    .gl-v2-co-selbar { bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px) + 10px); }
+    .gl-v2-co-selbar-spacer { display: none; }
+    .gl-v2-co-selbar-total { flex: 1 1 auto; }
+    .gl-v2-co-selbar .gl-v2-btn { height: 44px; flex: 1 1 100%; justify-content: center; }
+    .gl-v2-co-selbar-clear { min-height: 44px; }
+
+    /* Volledig scherm i.p.v. zijpaneel — een paneel van 440px zou op een gsm zelf een volledig scherm zijn. */
+    .gl-v2-co-drawer { width: 100vw; }
+    .gl-v2-co-typegrid { grid-template-columns: 1fr; }
+    .gl-v2-co-typecard-body { flex-direction: row; align-items: center; gap: 10px; }
+    .gl-v2-co-typecard-body i { margin: 0; }
+    .gl-v2-co-raterow { grid-template-columns: auto minmax(0, 1fr) 118px auto; }
+    .gl-v2-co-icon-sm { width: 40px; height: 40px; }
+}
+
+/* Tablet liggend met de groene rail rechts: de selectiebalk mag er niet onder schuiven. */
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+    .gl-v2-co-selbar { margin-right: 0; }
+}
+
+@media print {
+    .gl-v2-co-selbar, .gl-v2-co-drawer, .gl-v2-co-drawer-backdrop, .gl-v2-co-entry, .gl-v2-co-period { display: none !important; }
+}

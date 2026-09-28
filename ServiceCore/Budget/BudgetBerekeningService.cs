@@ -182,9 +182,13 @@ namespace ServiceCore.Budget
                 var archStd = StdFractie("architect");
                 var ingStd  = StdFractie("ingenieur");
                 var pcStd    = StdFractie("projectcoordinatie");
+                var doelStd  = StdFractie("doelmarge");
+                var grondStd = StdFractie("grondmarge");
 
                 if (bestaand.ArchitectPerc == null && archStd != 0m) bestaand.ArchitectPerc = archStd;
                 if (bestaand.StudieIRPerc  == null && ingStd  != 0m) bestaand.StudieIRPerc  = ingStd;
+                if (bestaand.DoelMargePerc  == null && doelStd  != 0m) bestaand.DoelMargePerc  = doelStd;
+                if (bestaand.GrondMargePerc == null && grondStd != 0m) bestaand.GrondMargePerc = grondStd;
                 if ((bestaand.ProjectcoordinatiePerc == 0m || bestaand.ProjectcoordinatiePerc == 0.0525m)
                     && pcStd != 0m)
                     bestaand.ProjectcoordinatiePerc = pcStd;
@@ -198,6 +202,8 @@ namespace ServiceCore.Budget
                 ProjectcoordinatiePerc = StdFractie("projectcoordinatie") is var pc && pc != 0m ? pc : 0.0525m,
                 ArchitectPerc          = StdFractie("architect") is var a && a != 0m ? a : (decimal?)null,
                 StudieIRPerc           = StdFractie("ingenieur")  is var i && i != 0m ? i : (decimal?)null,
+                DoelMargePerc          = StdFractie("doelmarge")  is var dm && dm != 0m ? dm : (decimal?)null,
+                GrondMargePerc         = StdFractie("grondmarge") is var gm && gm != 0m ? gm : (decimal?)null,
                 WetBreynePerc          = 0.01m,
                 StraightloanGebouwPerc = 0.0125m,
                 StraightloanGrondPerc  = 0.0125m,

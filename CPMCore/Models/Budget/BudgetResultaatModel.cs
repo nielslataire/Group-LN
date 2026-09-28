@@ -22,5 +22,8 @@ namespace CPMCore.Models.Budget
         public decimal GewogenFactor         { get; set; }
 
         public List<BudgetVersie> AndereVersies { get; set; } = new();
+
+        /// <summary>Verkoopvoorstel: minimale verkoopwaarde (kostprijs + marge), grond/bouw gesplitst.</summary>
+        public BudgetVerkoopVoorstelBO Voorstel { get; set; }
     }
 }

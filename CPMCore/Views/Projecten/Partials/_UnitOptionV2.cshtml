@@ -1,0 +1,51 @@
+@using System.Globalization
+@model CPMCore.Models.Projecten.UnitFormV2OptionRow
+@*
+    Eén afwerkingsblok ("Afgewerkt", "Casco", …) van het gl-v2 eenheidsformulier (16b §3: "Afwerkingen
+    zijn benoemde blokken met elk hun bouwwaardes en subtotaal, en één is de standaard"). Zie
+    _UnitCvRowV2 voor waarom de veldnamen expliciet gegenereerd worden. IsDefault is een verborgen
+    "true"/"false" die gl-v2-projecten-unitform.js omzet wanneer je "Als standaard instellen" kiest; de
+    server bewaart er hoogstens één als standaard (SyncUnitFinishingOptionsV2). STANDAARD-badge en de
+    "Als standaard instellen"-knop wisselen puur via de .is-default-klasse op het blok (CSS).
+*@
+@{
+    var k = Model.Key;
+    var o = Model.Option;
+    var prefix = $"FinishingOptions[{k}]";
+    var cvIndex = 0;
+}
+<div class="gl-v2-unit-option@(o.IsDefault ? " is-default" : "")" data-option data-option-key="@k" data-option-id="@o.Id">
+    <input type="hidden" name="FinishingOptions.index" value="@k" />
+    <input type="hidden" name="@(prefix).Id" value="@o.Id" />
+    <input type="hidden" name="@(prefix).UnitId" value="@o.UnitId" />
+    <input type="hidden" name="@(prefix).SortOrder" value="@o.SortOrder" data-option-sort />
+    <input type="hidden" name="@(prefix).IsDefault" value="@(o.IsDefault ? "true" : "false")" data-option-default />
+    <div class="gl-v2-unit-option-head">
+        <div class="gl-v2-field gl-v2-unit-option-name">
+            <div class="gl-v2-field-box">
+                <input type="text" name="@(prefix).Name" value="@o.Name" placeholder="Naam van de afwerking, bv. Casco" class="gl-v2-field-input" autocomplete="off" maxlength="100" data-option-name aria-label="Naam van de afwerking" />
+            </div>
+        </div>
+        <span class="gl-v2-badge is-positive gl-v2-unit-option-badge">STANDAARD</span>
+        <span class="gl-v2-unit-option-spacer"></span>
+        <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-unit-option-make-default" data-make-default>Als standaard instellen</button>
+        <button type="button" class="gl-v2-icon-btn is-warning" data-remove-option title="Afwerking verwijderen" aria-label="Afwerking verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+    </div>
+    <div class="gl-v2-unit-option-body" data-cv-list>
+        @foreach (var cv in o.ConstructionValues)
+        {
+            @await Html.PartialAsync("Partials/_UnitCvRowV2", new CPMCore.Models.Projecten.UnitFormV2CvRow
+            {
+                OptionKey = k,
+                Key = k.StartsWith("__") ? "__CV0__" : (cvIndex++).ToString(),
+                Value = cv,
+                PaymentGroups = Model.PaymentGroups
+            })
+        }
+    </div>
+    <div class="gl-v2-unit-option-foot">
+        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-add-cv><i class="ph ph-plus" aria-hidden="true"></i>Bouwwaarde toevoegen</button>
+        <span class="gl-v2-unit-option-spacer"></span>
+        <span class="gl-v2-unit-option-subtotal">subtotaal <strong data-option-subtotal>€ 0,00</strong></span>
+    </div>
+</div>

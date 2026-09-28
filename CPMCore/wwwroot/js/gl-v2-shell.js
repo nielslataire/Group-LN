@@ -559,33 +559,101 @@
     // dispatchen (zodat bestaande $('#id').on('change', …)-logica op diezelfde pagina, bv. een
     // afhankelijk veld in/uitschakelen, gewoon blijft werken — hetzelfde contract als een native
     // <select>'s eigen change-event).
-    function initGlV2Select() {
-        var instances = document.querySelectorAll(".gl-v2-select[data-gl-v2-select]");
-        if (!instances.length) return;
-
-        function closeAll() {
-            document.querySelectorAll(".gl-v2-select-panel.is-open[data-gl-v2-owned]").forEach(function (p) {
-                p.classList.remove("is-open");
-                var trig = p.previousElementSibling;
-                if (trig && trig.classList.contains("gl-v2-select-trigger")) {
-                    trig.classList.remove("is-open");
-                    trig.setAttribute("aria-expanded", "false");
-                }
-            });
-        }
-
-        function positionPanel(trigger, panel) {
-            var rect = trigger.getBoundingClientRect();
-            panel.style.left = rect.left + "px";
-            panel.style.top = (rect.bottom + 4) + "px";
-            panel.style.width = Math.max(rect.width, 200) + "px";
-        }
-
-        instances.forEach(function (wrap) {
+    // Client-side opties vervangen op een bestaand .gl-v2-select[data-gl-v2-select] (afhankelijke
+    // keuzelijst). items: [{value, text, group?, disabled?}]. De gekozen waarde blijft behouden als ze
+    // nog voorkomt, anders wordt de trigger weer een placeholder. Geen "change" — de aanroeper beslist.
+    window.GlV2Select = {
+        setItems: function (wrap, items, value, emptyText) {
+            if (!wrap) return;
             var hidden = wrap.querySelector("input[type=hidden]");
             var trigger = wrap.querySelector(".gl-v2-select-trigger");
             var panel = wrap.querySelector(".gl-v2-select-panel");
             if (!hidden || !trigger || !panel) return;
+            var wanted = value == null ? hidden.value : String(value);
+            panel.innerHTML = "";
+            function addOption(v, text, isSelected, disabled) {
+                var b = document.createElement("button");
+                b.type = "button";
+                b.className = "gl-v2-select-option" + (isSelected ? " is-selected" : "");
+                b.setAttribute("role", "option");
+                b.setAttribute("data-value", v);
+                if (disabled) b.disabled = true;
+                var i = document.createElement("i");
+                i.className = "ph ph-check";
+                i.setAttribute("aria-hidden", "true");
+                var span = document.createElement("span");
+                span.textContent = text;
+                b.appendChild(i);
+                b.appendChild(span);
+                panel.appendChild(b);
+            }
+            var found = null;
+            if (emptyText) addOption("", emptyText, wanted === "", false);
+            var lastGroup = null;
+            items.forEach(function (item) {
+                if (item.group && item.group !== lastGroup) {
+                    lastGroup = item.group;
+                    var h = document.createElement("div");
+                    h.className = "gl-v2-select-group-header";
+                    h.innerHTML = "<span class=\"gl-v2-select-group-label\"></span><span class=\"gl-v2-select-group-rule\"></span>";
+                    h.firstChild.textContent = item.group.toUpperCase();
+                    panel.appendChild(h);
+                }
+                var sel = String(item.value) === wanted;
+                if (sel) found = item;
+                addOption(String(item.value), item.text, sel, !!item.disabled);
+            });
+            var label = trigger.querySelector(".gl-v2-select-trigger-label");
+            if (found) {
+                hidden.value = String(found.value);
+                if (label) label.textContent = found.text;
+                trigger.classList.add("is-filled");
+            } else if (emptyText && wanted === "") {
+                hidden.value = "";
+                if (label) label.textContent = emptyText;
+                trigger.classList.add("is-filled");
+            } else {
+                hidden.value = "";
+                if (label) label.textContent = wrap.getAttribute("data-placeholder") || "Kies …";
+                trigger.classList.remove("is-filled");
+            }
+        }
+    };
+
+    var glV2SelectListenersBound; // bewust zonder = false: initGlV2Select() draait al bovenaan, vóór deze regel
+
+    function glV2SelectCloseAll() {
+        document.querySelectorAll(".gl-v2-select-panel.is-open[data-gl-v2-owned]").forEach(function (p) {
+            p.classList.remove("is-open");
+            var trig = p.previousElementSibling;
+            if (trig && trig.classList.contains("gl-v2-select-trigger")) {
+                trig.classList.remove("is-open");
+                trig.setAttribute("aria-expanded", "false");
+            }
+        });
+    }
+
+    function glV2SelectPosition(trigger, panel) {
+        var rect = trigger.getBoundingClientRect();
+        panel.style.left = rect.left + "px";
+        panel.style.top = (rect.bottom + 4) + "px";
+        panel.style.width = Math.max(rect.width, 200) + "px";
+    }
+
+    // Bedraadt elke nog niet bedraade .gl-v2-select[data-gl-v2-select] binnen scope. Ook publiek
+    // (window.GlV2Select.init) voor keuzelijsten die pas na het laden in de DOM komen (bv. een
+    // nieuwe rij in een herhaalbare lijst) — de document-brede luisteraars staan er maar één keer.
+    function initGlV2Select(scope) {
+        var root = scope && scope.querySelectorAll ? scope : document;
+        var instances = root.querySelectorAll(".gl-v2-select[data-gl-v2-select]");
+
+        instances.forEach(function (wrap) {
+            if (wrap.hasAttribute("data-gl-v2-wired")) return;
+            var hidden = wrap.querySelector("input[type=hidden]");
+            var trigger = wrap.querySelector(".gl-v2-select-trigger");
+            var panel = wrap.querySelector(".gl-v2-select-panel");
+            if (!hidden || !trigger || !panel) return;
+            wrap.setAttribute("data-gl-v2-wired", "");
             panel.setAttribute("data-gl-v2-owned", "");
 
             function selectOption(option, fireChange) {
@@ -604,10 +672,11 @@
             }
 
             trigger.addEventListener("click", function () {
+                if (trigger.getAttribute("aria-disabled") === "true") return;
                 var willOpen = !panel.classList.contains("is-open");
-                closeAll();
+                glV2SelectCloseAll();
                 if (willOpen) {
-                    positionPanel(trigger, panel);
+                    glV2SelectPosition(trigger, panel);
                     panel.classList.add("is-open");
                     trigger.classList.add("is-open");
                     trigger.setAttribute("aria-expanded", "true");
@@ -615,24 +684,34 @@
             });
             trigger.addEventListener("keydown", function (e) {
                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger.click(); }
-                if (e.key === "Escape") closeAll();
+                if (e.key === "Escape") glV2SelectCloseAll();
             });
-            panel.querySelectorAll(".gl-v2-select-option").forEach(function (option) {
-                option.addEventListener("click", function () {
-                    selectOption(option, true);
-                    closeAll();
-                    trigger.focus();
-                });
+            // Gedelegeerd i.p.v. één listener per optie: window.GlV2Select.setItems() vervangt de
+            // opties van een afhankelijke keuzelijst (type → subtype) en mag niet opnieuw bedraad
+            // hoeven worden. Niet-kiesbare opties (disabled) doen niets.
+            panel.addEventListener("click", function (e) {
+                var option = e.target.closest(".gl-v2-select-option");
+                if (!option || option.disabled || !panel.contains(option)) return;
+                selectOption(option, true);
+                glV2SelectCloseAll();
+                trigger.focus();
             });
         });
 
+        if (glV2SelectListenersBound) return;
+        glV2SelectListenersBound = true;
         document.addEventListener("click", function (e) {
             if (e.target.closest(".gl-v2-select[data-gl-v2-select]")) return;
-            closeAll();
+            glV2SelectCloseAll();
         });
-        window.addEventListener("resize", closeAll);
-        window.addEventListener("scroll", closeAll, true);
+        window.addEventListener("resize", glV2SelectCloseAll);
+        // Scrollen BINNEN een open lijst (lange lijst, bv. alle hoofdeenheden) mag die niet sluiten.
+        window.addEventListener("scroll", function (e) {
+            if (e.target && e.target.closest && e.target.closest(".gl-v2-select-panel")) return;
+            glV2SelectCloseAll();
+        }, true);
     }
+    window.GlV2Select.init = initGlV2Select;
 
     // ── Datumkiezer (design-handoff punt 14d "6 · DATUM") — GlV2DateTime.cshtml. Shell-breed net
     //    als initGlV2Select() hierboven (generieke EditorTemplate), maar met een eigen closeAll()/

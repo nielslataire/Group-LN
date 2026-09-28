@@ -1,0 +1,71 @@
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+@*
+    gl-v2 (design-handoff punt 19 "Identiteit") — Naam, projectcode en projectbeheerder. Gedeeld door
+    Projecten/EditV2 (tab Algemeen) en Projecten/ToevoegenV2 (het hele formulier) — zelfde velden,
+    zelfde namen/ids als de legacy _ProjectFormCoreFields, dus de POST bindt ongewijzigd. Op Toevoegen
+    staat de verkoopverantwoordelijke er ook bij (ViewData["ShowSalesResponsible"]) — op Bewerken leeft
+    die op de tab Partners, waar 19a hem ook toont.
+*@
+@{
+    var showSales = ViewData["ShowSalesResponsible"] as bool? ?? false;
+    var userItems = (Model.Users ?? Enumerable.Empty<CpmUserOption>())
+        .Select(u => new GlV2SelectItem { Value = u.Id, Text = u.DisplayName ?? "" }).ToList();
+    string ErrorFor(string key) =>
+        ViewContext.ModelState.TryGetValue(key, out var e) && e.Errors.Count > 0 ? e.Errors[0].ErrorMessage : null;
+    var nameError = ErrorFor("Project.Name");
+}
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-identification-card" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Identiteit</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Naam, code en wie het project beheert.</span>
+    </div>
+    <div class="gl-v2-section-grid">
+        <div class="@(showSales ? "gl-v2-col-6" : "gl-v2-col-5")">
+            <div class="gl-v2-field@(nameError != null ? " is-error" : "")" data-gl-v2-required="Vul de naam van het project in.">
+                <label class="gl-v2-field-label" for="Project_Name">Naam <span class="gl-v2-pf-req" aria-hidden="true">*</span></label>
+                <div class="gl-v2-field-box">
+                    @Html.TextBoxFor(m => m.Project.Name, new { @class = "gl-v2-field-input", placeholder = " ", autocomplete = "off", id = "Project_Name" })
+                </div>
+                <span class="gl-v2-field-help" data-role="help" hidden="@(nameError == null)">@nameError</span>
+            </div>
+        </div>
+        <div class="@(showSales ? "gl-v2-col-3" : "gl-v2-col-3")">
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="Project_ProjectCode">Projectcode</label>
+                <div class="gl-v2-field-box">
+                    @Html.TextBoxFor(m => m.Project.ProjectCode, new { @class = "gl-v2-field-input is-tabular", placeholder = " ", maxlength = "50", autocomplete = "off", id = "Project_ProjectCode" })
+                </div>
+                <span class="gl-v2-field-help">jaar-volgnummer, uniek</span>
+            </div>
+        </div>
+        <div class="@(showSales ? "gl-v2-col-3" : "gl-v2-col-4")">
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "Project.AspNetUserID",
+                Label = "Projectbeheerder",
+                Value = Model.Project.AspNetUserID,
+                Items = userItems,
+                EmptyText = "Geen verantwoordelijke",
+                Placeholder = "Kies een persoon …"
+            })
+        </div>
+        @if (showSales)
+        {
+            <div class="gl-v2-col-6">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "Project.SalesResponsibleUserID",
+                    Label = "Verkoopverantwoordelijke",
+                    Value = Model.Project.SalesResponsibleUserID,
+                    Items = userItems,
+                    EmptyText = "Geen verkoopverantwoordelijke",
+                    Placeholder = "Kies een persoon …"
+                })
+            </div>
+        }
+    </div>
+</div>

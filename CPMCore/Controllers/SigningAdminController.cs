@@ -26,7 +26,9 @@ namespace CPMCore.Controllers;
 /// </summary>
 public class SigningAdminController : BaseController
 {
-    private readonly ISigningService _signing;
+    // Volledig gekwalificeerd: sinds de merge van 28/09/2026 bestaat er ook een FacadeCore.ISigningService
+    // (de link-per-e-mail-flow van SigningController) — zelfde naam, andere module.
+    private readonly FacadeCore.Signing.ISigningService _signing;
     private readonly SigningRegistry _registry;
     private readonly cpmRunningContext _db;
     private readonly IPermissionService _permissions;
@@ -35,7 +37,7 @@ public class SigningAdminController : BaseController
     private readonly ILogger<SigningAdminController> _logger;
 
     public SigningAdminController(
-        ISigningService signing,
+        FacadeCore.Signing.ISigningService signing,
         SigningRegistry registry,
         cpmRunningContext db,
         IPermissionService permissions,

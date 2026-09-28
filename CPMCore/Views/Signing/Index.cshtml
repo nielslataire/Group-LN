@@ -1,0 +1,191 @@
+@model CPMCore.Models.Signing.SigningPageVm
+@{
+    Layout = null;
+    var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    var info = Model.Info;
+    var basePath = Url.Content("~/ondertekenen/" + Model.Token);
+    var signed = info.State == "signed";
+    string Euro(decimal v) => v.ToString("C2", be);
+}
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Ondertekenen — @info.DocumentName</title>
+    <style>
+        :root { --green:#00532D; --green-deep:#00401F; --tint:#D6E5CC; --ink:#2C3B2A; --muted:#5a6b58; --line:rgba(44,59,42,.14); --bg:#F2F5EF; --danger:#8B2A2A; --danger-tint:#F8EBEB; --warn-tint:#F6EEDC; }
+        * { box-sizing: border-box; }
+        body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif; }
+        .wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px 56px; }
+        .brand { display:flex; align-items:center; gap:10px; padding:6px 2px 16px; font-weight:600; color:var(--green); letter-spacing:.02em; }
+        .brand img { height: 30px; }
+        .card { background:#fff; border-radius:14px; box-shadow:0 1px 2px rgba(0,83,45,.06),0 18px 40px -26px rgba(44,59,42,.4); padding:22px 22px; margin-bottom:16px; }
+        h1 { font-size:21px; margin:0 0 4px; }
+        h2 { font-size:15px; margin:0 0 10px; }
+        .sub { color:var(--muted); font-size:13.5px; margin:0 0 14px; }
+        .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px 18px; margin:16px 0 0; }
+        .fact span { display:block; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+        .fact b { font-size:16px; font-variant-numeric:tabular-nums; }
+        .fact.total b { color:var(--green); }
+        iframe { width:100%; height:520px; border:1px solid var(--line); border-radius:10px; background:#fafbf9; }
+        .pdflink { display:inline-block; margin-top:8px; font-size:13.5px; color:var(--green); font-weight:600; }
+        label { display:block; font-weight:600; font-size:13.5px; margin:14px 0 6px; }
+        input[type=text] { width:100%; height:46px; border:1px solid var(--line); border-radius:9px; padding:0 14px; font:inherit; background:#fff; }
+        input[type=text]:focus { outline:2px solid var(--green); outline-offset:1px; }
+        input.code { letter-spacing:8px; font-size:22px; text-align:center; max-width:230px; font-variant-numeric:tabular-nums; }
+        .btn { display:inline-flex; align-items:center; justify-content:center; height:46px; padding:0 22px; border-radius:9px; border:1px solid var(--green); background:var(--green); color:#fff; font:600 15px inherit; font-family:inherit; cursor:pointer; }
+        .btn:hover { background:var(--green-deep); }
+        .btn.secondary { background:#fff; color:var(--green); }
+        .btn.secondary:hover { background:var(--tint); }
+        .btn[disabled] { opacity:.55; cursor:default; }
+        .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+        .msg { margin-top:12px; padding:10px 14px; border-radius:9px; font-size:14px; }
+        .msg.ok { background:var(--tint); color:var(--green-deep); }
+        .msg.err { background:var(--danger-tint); color:var(--danger); }
+        .consent { display:flex; gap:12px; align-items:flex-start; margin-top:18px; padding:14px; border-radius:10px; background:#F7F9F5; border:1px solid var(--line); }
+        .consent input { width:22px; height:22px; margin-top:2px; flex:none; accent-color:var(--green); }
+        .consent label { margin:0; font-weight:400; font-size:14px; }
+        .steps { counter-reset:s; padding:0; margin:0; list-style:none; }
+        .steps li { position:relative; padding-left:38px; margin-bottom:6px; }
+        .steps li::before { counter-increment:s; content:counter(s); position:absolute; left:0; top:0; width:26px; height:26px; border-radius:13px; background:var(--tint); color:var(--green); font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; }
+        .done { text-align:center; padding:8px 0 4px; }
+        .done .tick { width:56px; height:56px; border-radius:28px; background:var(--tint); color:var(--green); display:inline-flex; align-items:center; justify-content:center; font-size:30px; margin-bottom:10px; }
+        .others { margin:12px 0 0; padding:0; list-style:none; font-size:14px; color:var(--muted); }
+        .fine { font-size:12.5px; color:var(--muted); margin-top:18px; }
+        [hidden] { display:none !important; }
+        @@media (max-width:600px) { iframe { height: 380px; } .card { padding:18px 16px; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="brand"><img src="~/img/groupln-logo.png" alt="" onerror="this.style.display='none'"> Group LN</div>
+
+    <div class="card">
+        <h1>@(signed ? "Ondertekend" : "Wijzigingsopdracht ondertekenen")</h1>
+        <p class="sub">@info.ProjectName · @(string.IsNullOrWhiteSpace(Model.Description) ? info.DocumentName : Model.Description)</p>
+        @if (Model.HasAmounts)
+        {
+            <div class="facts">
+                <div class="fact"><span>Datum</span><b>@Model.Date.ToString("dd/MM/yyyy", be)</b></div>
+                <div class="fact"><span>Te ondertekenen tegen</span><b>@Model.ExpirationDate.ToString("dd/MM/yyyy", be)</b></div>
+                <div class="fact"><span>Totaal excl. btw</span><b>@Euro(Model.TotalExcl)</b></div>
+                <div class="fact total"><span>Totaal incl. btw</span><b>@Euro(Model.TotalIncl)</b></div>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <h2>Het document</h2>
+        <iframe src="@basePath/pdf" title="Wijzigingsopdracht (PDF)"></iframe>
+        <a class="pdflink" href="@basePath/pdf" target="_blank" rel="noopener">Open het PDF in een nieuw venster</a>
+    </div>
+
+    @if (signed)
+    {
+        <div class="card done">
+            <div class="tick">✓</div>
+            <h1>Bedankt, @info.SignedName</h1>
+            <p class="sub">U ondertekende op @info.SignedDate?.ToLocalTime().ToString("dd/MM/yyyy 'om' HH:mm", be). Referentie: <strong>@info.EvidenceRef</strong>.</p>
+            @if (info.AllSigned)
+            {
+                <p>Alle partijen tekenden. Het ondertekende document is per e-mail naar u gestuurd; u kan het hierboven ook bekijken.</p>
+            }
+            else
+            {
+                <p>Zodra alle partijen getekend hebben, ontvangt u het ondertekende document per e-mail.</p>
+                <ul class="others" style="display:inline-block;text-align:left">
+                    @foreach (var o in info.Others) { <li>@(o.Signed ? "✓" : "○") @o.Name — @(o.Signed ? "getekend" : "wacht nog")</li> }
+                </ul>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card" id="sign-card">
+            <h2>Ondertekenen</h2>
+            <ol class="steps">
+                <li><strong>Lees het document</strong> hierboven.</li>
+                <li><strong>Vraag een code aan.</strong> We sturen ze naar <strong>@info.SignerEmailMasked</strong>.</li>
+                <li><strong>Vul de code en uw naam in</strong> en bevestig.</li>
+            </ol>
+
+            <div class="row" style="margin-top:14px">
+                <button type="button" class="btn secondary" id="btn-code">Stuur mij een code</button>
+                <span id="code-msg" class="msg ok" hidden></span>
+            </div>
+
+            <form id="sign-form" autocomplete="off" style="margin-top:6px" onsubmit="return false">
+                @Html.AntiForgeryToken()
+                <label for="code">Code uit de e-mail</label>
+                <input type="text" id="code" name="code" class="code" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
+
+                <label for="typedName">Uw volledige naam (@info.SignerName)</label>
+                <input type="text" id="typedName" name="typedName" maxlength="150" autocomplete="name">
+
+                <div class="consent">
+                    <input type="checkbox" id="consent" name="consent">
+                    <label for="consent">@Model.ConsentText</label>
+                </div>
+
+                <div class="row" style="margin-top:18px">
+                    <button type="button" class="btn" id="btn-sign">Ondertekenen</button>
+                </div>
+                <div id="sign-msg" class="msg err" hidden role="alert"></div>
+            </form>
+
+            @if (info.Others.Count > 0)
+            {
+                <ul class="others">
+                    @foreach (var o in info.Others) { <li>@(o.Signed ? "✓" : "○") @o.Name — @(o.Signed ? "getekend" : "moet ook nog tekenen")</li> }
+                </ul>
+            }
+            <p class="fine">Deze handtekening is een elektronische bevestiging via uw persoonlijke link en een code op uw e-mailadres. Wij bewaren uw naam, het tijdstip, uw IP-adres en de akkoordtekst als bewijs.
+                Liever op papier? Onderteken het PDF uit onze e-mail en bezorg het ons terug.</p>
+        </div>
+    }
+</div>
+
+@if (!signed)
+{
+    <script>
+    (function () {
+        var base = "@basePath";
+        var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        var btnCode = document.getElementById("btn-code"), codeMsg = document.getElementById("code-msg");
+        var btnSign = document.getElementById("btn-sign"), signMsg = document.getElementById("sign-msg");
+        function post(path, params) {
+            return fetch(base + path, {
+                method: "POST", credentials: "same-origin",
+                headers: { "RequestVerificationToken": tokenInput ? tokenInput.value : "", "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(params || {}).toString()
+            }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+              .catch(function () { return { ok: false, message: "Er ging iets mis. Vernieuw de pagina en probeer opnieuw." }; });
+        }
+        btnCode.addEventListener("click", function () {
+            btnCode.disabled = true; codeMsg.hidden = true;
+            post("/code").then(function (res) {
+                codeMsg.className = "msg " + (res.ok ? "ok" : "err"); codeMsg.textContent = res.message; codeMsg.hidden = false;
+                if (res.ok) { document.getElementById("code").focus(); setTimeout(function () { btnCode.disabled = false; btnCode.textContent = "Stuur me een nieuwe code"; }, 30000); }
+                else btnCode.disabled = false;
+            });
+        });
+        btnSign.addEventListener("click", function () {
+            signMsg.hidden = true;
+            btnSign.disabled = true; btnSign.textContent = "Bezig …";
+            post("/sign", {
+                code: document.getElementById("code").value.trim(),
+                typedName: document.getElementById("typedName").value.trim(),
+                consent: document.getElementById("consent").checked ? "true" : "false"
+            }).then(function (res) {
+                if (res.ok) { window.location.reload(); return; }
+                signMsg.textContent = res.message; signMsg.hidden = false;
+                btnSign.disabled = false; btnSign.textContent = "Ondertekenen";
+            });
+        });
+    })();
+    </script>
+}
+</body>
+</html>

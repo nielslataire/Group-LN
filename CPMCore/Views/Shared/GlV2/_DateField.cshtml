@@ -1,0 +1,46 @@
+@model CPMCore.Models.GlV2.GlV2DateFieldVm
+@*
+    gl-v2 — het ENIGE datumveld van de pilot (design-handoff punt 14d "6 · DATUM"): vrij te typen
+    dd/mm/jjjj + optionele kalender-dropdown, bound waarde in een verborgen yyyy-MM-dd-input. Beide
+    EditorTemplates (GlV2Date voor DateOnly?, GlV2DateTime voor DateTime?) renderen deze ene partial,
+    zodat elke datum in het project er hetzelfde uitziet en zich hetzelfde gedraagt. JS: initGlV2DatePicker() in gl-v2-shell.js.
+*@
+<div class="gl-v2-field@(Model.HasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@(Model.Id)_text">
+        @Model.Label
+        @if (Model.Required)
+        {
+            <span style="color:#8B2A2A">*</span>
+        }
+    </label>
+    <div class="gl-v2-select gl-v2-datepicker" data-gl-v2-datepicker id="@(Model.Id)_picker">
+        <div class="gl-v2-field-box">
+            <i class="ph ph-calendar" aria-hidden="true"></i>
+            <input type="text" class="gl-v2-field-input" id="@(Model.Id)_text" data-role="date-text" value="@Model.DisplayValue" placeholder="dd/mm/jjjj" autocomplete="off" inputmode="numeric" maxlength="10" />
+        </div>
+        <input type="hidden" id="@Model.Id" name="@Model.Name" data-role="date-value" value="@Model.IsoValue" />
+        <div class="gl-v2-select-panel gl-v2-datepicker-panel" data-role="panel">
+            <div class="gl-v2-datepicker-nav-row">
+                <button type="button" class="gl-v2-datepicker-nav" data-role="prev" aria-label="Vorige maand"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+                <span class="gl-v2-datepicker-month" data-role="month-label"></span>
+                <button type="button" class="gl-v2-datepicker-nav" data-role="next" aria-label="Volgende maand"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+            </div>
+            <div class="gl-v2-datepicker-weekdays">
+                <span>MA</span><span>DI</span><span>WO</span><span>DO</span><span>VR</span><span>ZA</span><span>ZO</span>
+            </div>
+            <div class="gl-v2-datepicker-days" data-role="days"></div>
+            <div class="gl-v2-datepicker-footer">
+                <button type="button" class="gl-v2-datepicker-footer-link" data-role="today">Vandaag</button>
+                <button type="button" class="gl-v2-datepicker-footer-link is-muted" data-role="clear">Wissen</button>
+            </div>
+        </div>
+    </div>
+    @if (Model.HasError)
+    {
+        <span class="gl-v2-field-help" data-role="date-error">@Model.ErrorMessage</span>
+    }
+    else
+    {
+        <span class="gl-v2-field-help" data-role="date-error" hidden></span>
+    }
+</div>

@@ -81,6 +81,7 @@ public class PropertyNormalizer : IPropertyNormalizer
             EPCLabel = ParseEPCLabel(listing.EPCLabelRaw),
 
             IsNewBuild = listing.IsNewBuild ?? false,
+            ReportedSoldPercentage = listing.ReportedSoldPercentage is >= 0 and <= 100 ? listing.ReportedSoldPercentage : null,
 
             DeveloperName = listing.DeveloperName?.Trim(),
             DeveloperWebsite = listing.DeveloperWebsite?.Trim(),

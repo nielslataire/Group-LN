@@ -157,7 +157,7 @@ de module is onbereikbaar tot `Features:EnableSigning` op `true` staat.
 Ontbreekt `OtpHmacKey` of `PublicBaseUrl` terwijl de module aanstaat, dan **start de applicatie niet** (bewust: fail closed).
 
 ### Schema
-Migratie `_migrations/047_Signing.sql` (8 tabellen, trigger `TR_SigningEvent_AppendOnly`, seed van het
+Migratie `_migrations/055_Signing.sql` (8 tabellen, trigger `TR_SigningEvent_AppendOnly`, seed van het
 beleid voor wijzigingsopdrachten). Toegepast op `db_ab5fbb_testdb` op 27/09/2026; op live handmatig
 via SSMS zoals elke migratie hier. De trigger weigert UPDATE/DELETE op `SigningEvent` — ook voor een
 beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeling.
@@ -180,8 +180,8 @@ beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeli
   de databaseback-up dekt ze. De Storage API-map `signing/` is een spiegel, geen bewijsbron.
 
 ### Fase 1 (27/09/2026): wijzigingsopdrachten + interne schermen
-- **Migratie `_migrations/048_SigningCase_SourceFingerprint.sql`** (één kolom, additief). Toegepast op
-  `db_ab5fbb_testdb`; op live handmatig via SSMS ná 047.
+- **Migratie `_migrations/056_SigningCase_SourceFingerprint.sql`** (één kolom, additief). Toegepast op
+  `db_ab5fbb_testdb`; op live handmatig via SSMS ná 055.
 - **Permissie toekennen.** De nieuwe code `Signing` ("Elektronisch ondertekenen") staat in de catalogus
   maar is aan geen enkele rol gekoppeld. Zonder leesrecht: geen menu-item "Ondertekeningen", geen
   ingang op de lijst Wijzigingsopdrachten, 403 op `/SigningAdmin`. Schrijfrecht = aanbieden,

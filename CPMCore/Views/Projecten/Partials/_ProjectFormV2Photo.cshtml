@@ -1,0 +1,48 @@
+@using CPMCore.Models.Projecten
+@model IProjectFormModel
+@*
+    gl-v2 (design-handoff punt 19 "Standaard foto") — huidige foto naast een sleep-/kies-zone.
+    Bindt exact hetzelfde als de legacy _ProjectFormMedia: het bestandsveld heet StandardFotoUpload
+    (multipart), en Project.StandardFotoName blijft als hidden bestaan zodat "leeg laten" de huidige
+    foto houdt. Het live voorbeeld van een net gekozen bestand doet gl-v2-projecten-form.js. Slepen
+    bestaat niet op touch (tablet/gsm) — daar staat "Tik om …" i.p.v. "Sleep …" (zie .gl-v2-pf-touch-text).
+*@
+@{
+    var currentPhotoUrl = ViewData["CurrentPhotoUrl"] as string;
+    var hasCurrent = !string.IsNullOrEmpty(currentPhotoUrl);
+}
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Standaard foto</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Wordt overal als projectbeeld getoond. Optioneel.</span>
+    </div>
+    <div class="gl-v2-section-grid">
+        <div class="gl-v2-col-4">
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">@(hasCurrent ? "Huidige foto" : "Voorbeeld")</span>
+                <div class="gl-v2-pf-photo-preview@(hasCurrent ? "" : " is-empty")" id="gl-v2-pf-photo-preview">
+                    <img id="projectStdFotoPreview" src="@(hasCurrent ? Url.Content(currentPhotoUrl) : "")" alt="Voorbeeld van de standaard projectfoto" @(hasCurrent ? null : Html.Raw("hidden")) />
+                    <span class="gl-v2-pf-photo-empty" id="projectStdFotoEmpty" @(hasCurrent ? Html.Raw("hidden") : null)>
+                        <i class="ph ph-image" aria-hidden="true"></i>Nog geen foto
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="gl-v2-col-8">
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">@(hasCurrent ? "Nieuwe foto" : "Foto")</span>
+                <label class="gl-v2-pf-dropzone" id="gl-v2-pf-dropzone" for="StandardFotoUpload">
+                    <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                    <span class="gl-v2-pf-dropzone-title" id="gl-v2-pf-dropzone-title">
+                        <span class="gl-v2-pf-desktop-text">Sleep een foto hierheen of kies een bestand</span>
+                        <span class="gl-v2-pf-touch-text">Tik om een foto te kiezen</span>
+                    </span>
+                    <span class="gl-v2-pf-dropzone-sub">JPG, PNG of WEBP@(hasCurrent ? " · leeg laten houdt de huidige foto" : " · kan ook later worden toegevoegd")</span>
+                    <input type="file" name="StandardFotoUpload" id="StandardFotoUpload" accept="image/jpeg,image/png,image/webp" hidden />
+                </label>
+            </div>
+        </div>
+    </div>
+</div>

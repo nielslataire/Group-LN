@@ -1,5 +1,5 @@
 -- =============================================
--- Migratie: 047_Signing
+-- Migratie: 055_Signing
 -- Datum: 2026-09-27
 -- Omschrijving: Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §3). Acht tabellen:
 --     SigningPolicy          beleid per documenttype (seed: ChangeOrder)

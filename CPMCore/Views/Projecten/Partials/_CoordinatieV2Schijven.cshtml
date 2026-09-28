@@ -1,0 +1,192 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@*
+    Projecten/DetailCoordinatieV2 — de kaart "Schijven" (design-handoff 18a §3 en 18b). Een schijf heeft een
+    status i.p.v. een lege kolom Factuur met streepje: GEFACTUREERD (met factuurnummer, niet meer aan te
+    vinken) of TE FACTUREREN. De balk bovenaan toont het verloop over het hele contract; het deel
+    "geselecteerd" wordt door de JS ingevuld zodra er schijven aangevinkt zijn (18a §6).
+*@
+@using System.Globalization
+@{
+    var vm = Model.GlV2!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string EurK(decimal v) => "€ " + v.ToString("#,##0.##", be);
+    string Pct(decimal v) => v.ToString("0.##", be);
+    var canSelect = vm.CanInvoice && vm.ContractPrice > 0m;
+    var invoicedPct = vm.Slices.Where(s => s.IsInvoiced).Sum(s => s.Percentage);
+    var openPct = vm.Slices.Where(s => !s.IsInvoiced).Sum(s => s.Percentage);
+    var unlinked = vm.UnlinkedInvoices;
+    var hasOpen = vm.Slices.Any(s => !s.IsInvoiced);
+    string Inv(decimal v) => v.ToString("0.####", CultureInfo.InvariantCulture);
+}
+<div class="gl-v2-card gl-v2-co-card" id="gl-v2-co-slices-card">
+    <div class="gl-v2-card-header">
+        <span class="gl-v2-card-header-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-card-header-title">Schijven</h2>
+        <span class="gl-v2-card-header-count">@(vm.ContractPrice > 0m ? "contract " + EurK(vm.ContractPrice) + " · " : "")@vm.Slices.Count @(vm.Slices.Count == 1 ? "schijf" : "schijven")</span>
+        <span class="gl-v2-card-header-spacer"></span>
+        @if (vm.CanWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-small js-co-slice-add"><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
+        }
+    </div>
+    <div class="gl-v2-card-body gl-v2-co-body">
+        @if (vm.CanWrite && vm.ContractPrice <= 0m)
+        {
+            <div class="gl-v2-co-notice is-warning">
+                <span class="gl-v2-co-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+                <span class="gl-v2-co-notice-title">Geen contractbedrag</span>
+                <span class="gl-v2-co-notice-desc">Zonder contractbedrag hebben de schijven geen bedrag en kunnen ze niet gefactureerd worden.</span>
+                <span class="gl-v2-co-notice-spacer"></span>
+                <button type="button" class="gl-v2-co-notice-action js-co-open-settings">Instellingen</button>
+            </div>
+        }
+        @if (vm.CanWrite && unlinked.Any() && hasOpen)
+        {
+            var unlinkedTotal = unlinked.Sum(i => i.AmountExVat);
+            <div class="gl-v2-co-notice is-warning">
+                <span class="gl-v2-co-notice-icon"><i class="ph ph-link-break" aria-hidden="true"></i></span>
+                <span class="gl-v2-co-notice-title">@(unlinked.Count == 1 ? "1 factuur hangt aan geen schijf" : unlinked.Count + " facturen hangen aan geen schijf")</span>
+                <span class="gl-v2-co-notice-desc">
+                    @string.Join(", ", unlinked.Take(4).Select(i => i.PublicId))@(unlinked.Count > 4 ? " …" : "") · @Eur(unlinkedTotal) van @(vm.IssuerCompanyName ?? "het coördinatiebedrijf") op dit project.
+                    Was dat een schijf? Koppel de factuur via ⋯ → Factuur koppelen.
+                </span>
+            </div>
+        }
+
+        @if (!vm.Slices.Any())
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen schijven</h2>
+                <p class="gl-v2-empty-state-desc">Verdeel het contractbedrag in schijven — elke schijf is een deel dat je apart factureert.</p>
+                @if (vm.CanWrite)
+                {
+                    <div class="gl-v2-empty-state-actions">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-co-slice-add">Schijf toevoegen</button>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            @* Verloopbalk over het hele contract (18a §3). Breedtes in % van de SOM van de schijven, niet van
+               100: klopt het totaal niet, dan zegt de balk dat eerlijk i.p.v. te doen alsof het compleet is. *@
+            var barTotal = Math.Max(vm.SlicesTotalPct, 100m);
+            <div class="gl-v2-co-seg" id="gl-v2-co-seg" data-bar-total="@Inv(barTotal)" data-invoiced-pct="@Inv(invoicedPct)" data-open-pct="@Inv(openPct)">
+                <div class="gl-v2-co-seg-track" role="img" aria-label="@Pct(invoicedPct) % gefactureerd, @Pct(openPct) % nog te factureren">
+                    <span class="gl-v2-co-seg-fill is-invoiced" style="width:@((invoicedPct / barTotal * 100m).ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                    <span class="gl-v2-co-seg-fill is-selected" id="gl-v2-co-seg-selected" style="width:0%"></span>
+                </div>
+                <div class="gl-v2-co-seg-legend">
+                    <span><i class="gl-v2-co-dot is-invoiced" aria-hidden="true"></i><b>@Pct(invoicedPct) %</b> gefactureerd</span>
+                    <span id="gl-v2-co-seg-selected-legend" hidden><i class="gl-v2-co-dot is-selected" aria-hidden="true"></i><b id="gl-v2-co-seg-selected-pct">0 %</b> geselecteerd</span>
+                    <span><i class="gl-v2-co-dot is-open" aria-hidden="true"></i><b id="gl-v2-co-seg-open-pct">@Pct(openPct) %</b> nog te factureren</span>
+                </div>
+            </div>
+
+            <div class="gl-v2-co-table-scroll">
+                <table class="gl-v2-co-table" id="gl-v2-co-slices-table">
+                    <thead>
+                        <tr>
+                            @if (canSelect)
+                            {
+                                <th scope="col" class="is-check">
+                                    @if (hasOpen)
+                                    {
+                                        <span class="gl-v2-co-check"><input type="checkbox" id="gl-v2-co-slices-all" aria-label="Alle schijven selecteren" /><label for="gl-v2-co-slices-all"></label></span>
+                                    }
+                                </th>
+                            }
+                            <th scope="col" class="is-num">#</th>
+                            <th scope="col">Schijf</th>
+                            <th scope="col" class="is-right">%</th>
+                            <th scope="col" class="is-right">Bedrag</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Acties</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in vm.Slices)
+                        {
+                            <tr class="gl-v2-co-row" data-slice-row data-slice-id="@s.Id" data-pct="@Inv(s.Percentage)" data-amount="@Inv(s.Amount)">
+                                @if (canSelect)
+                                {
+                                    <td class="is-check" data-label="">
+                                        @if (!s.IsInvoiced)
+                                        {
+                                            <span class="gl-v2-co-check">
+                                                <input type="checkbox" class="js-co-slice" id="gl-v2-co-slice-@s.Id" name="sliceIds" value="@s.Id" form="gl-v2-co-invoice-form" data-amount="@Inv(s.Amount)" data-pct="@Inv(s.Percentage)" aria-label="Schijf @s.Number selecteren" />
+                                                <label for="gl-v2-co-slice-@s.Id"></label>
+                                            </span>
+                                        }
+                                    </td>
+                                }
+                                <td class="is-num gl-v2-co-tabular">@s.Number.ToString("00")</td>
+                                <td class="gl-v2-co-desc">@s.Description</td>
+                                <td class="is-right gl-v2-co-tabular" data-label="%">@Pct(s.Percentage) %</td>
+                                <td class="is-right gl-v2-co-tabular" data-label="Bedrag">@Eur(s.Amount)</td>
+                                <td class="gl-v2-co-status">
+                                    @if (s.IsInvoiced)
+                                    {
+                                        <span class="gl-v2-badge is-positive">GEFACTUREERD</span>
+                                        <a class="gl-v2-co-invoice-link" href="@Url.Action("Detail", "Invoices", new { id = s.InvoiceId })" title="Factuur bekijken">@(s.InvoicePublicId ?? "Concept")</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-badge is-attention">TE FACTUREREN</span>
+                                    }
+                                </td>
+                                <td class="is-actions">
+                                    @if (vm.CanWrite || s.IsInvoiced)
+                                    {
+                                        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-slice-menu-@s.Id" aria-label="Meer acties voor schijf @s.Number">
+                                            <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="gl-v2-menu" id="gl-v2-co-slice-menu-@s.Id">
+                                            @if (s.IsInvoiced)
+                                            {
+                                                <a href="@Url.Action("Detail", "Invoices", new { id = s.InvoiceId })" class="gl-v2-menu-item"><i class="ph ph-receipt" aria-hidden="true"></i>Factuur bekijken</a>
+                                                @if (vm.CanWrite)
+                                                {
+                                                    <a href="#" class="gl-v2-menu-item js-co-slice-unlink" data-slice-id="@s.Id"><i class="ph ph-link-break" aria-hidden="true"></i>Koppeling met factuur verwijderen</a>
+                                                    <span class="gl-v2-menu-item is-disabled" aria-disabled="true" title="Al gefactureerd"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</span>
+                                                    <span class="gl-v2-menu-item is-disabled" aria-disabled="true" title="Al gefactureerd"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <a href="#" class="gl-v2-menu-item js-co-slice-edit" data-slice-id="@s.Id" data-description="@s.Description" data-percentage="@Inv(s.Percentage)"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                                @if (unlinked.Any())
+                                                {
+                                                    <a href="#" class="gl-v2-menu-item js-co-slice-link" data-slice-id="@s.Id" data-description="@s.Description"><i class="ph ph-link" aria-hidden="true"></i>Factuur koppelen</a>
+                                                }
+                                                <a href="#" class="gl-v2-menu-item is-danger js-co-slice-delete" data-slice-id="@s.Id" data-description="@s.Description"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            @if (canSelect) { <td class="is-check"></td> }
+                            <td class="is-num"></td>
+                            <td>Totaal @vm.Slices.Count @(vm.Slices.Count == 1 ? "schijf" : "schijven")</td>
+                            <td class="is-right gl-v2-co-tabular">
+                                @Pct(vm.SlicesTotalPct) %
+                                @if (Math.Abs(vm.SlicesTotalPct - 100m) > 0.005m)
+                                {
+                                    <span class="gl-v2-badge is-attention gl-v2-co-total-badge" title="De schijven horen samen 100 % te zijn">wijkt af</span>
+                                }
+                            </td>
+                            <td class="is-right gl-v2-co-tabular">@Eur(vm.Slices.Sum(s => s.Amount))</td>
+                            <td colspan="2"><span class="gl-v2-co-muted">@vm.SlicesInvoicedCount van @vm.Slices.Count gefactureerd</span></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>

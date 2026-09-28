@@ -1248,11 +1248,13 @@ namespace ServiceCore
                     u.Type,
                     u.LandValue,
                     u.LandValueSold,
+                    DefaultOptionId = u.UnitFinishingOption.Where(o => o.IsDefault).Select(o => (int?)o.Id).FirstOrDefault(),
                     UnitConstructionValues = u.UnitConstructionValue
                         .Select(v => new
                         {
                             v.Value,
-                            v.ValueSold
+                            v.ValueSold,
+                            v.FinishingOptionId
                         })
                 })
                 .ToList(); // ⬅️ materialiseer HIER
@@ -1274,7 +1276,10 @@ namespace ServiceCore
                     .Where(m => m.ClientAccountId == null)
                     .Select(m =>
                         (m.LandValue ?? 0m) +
-                        (m.UnitConstructionValues.Sum(x => (decimal?)x.Value) ?? 0m))
+                        // Eén rekenregel voor de constructieprijs (zie ServiceCore.Helpers.UnitPricing): met
+                        // afwerkingen de STANDAARDafwerking (zoals de budgetten rekenen) i.p.v. ze allemaal op
+                        // te tellen; zonder aangeduide standaard de goedkoopste.
+                        UnitPricing.Compute(m.UnitConstructionValues.Select(x => (x.FinishingOptionId, x.Value ?? 0m)), m.DefaultOptionId).Standard)
                     .Sum();
                 //
 
@@ -1304,7 +1309,7 @@ namespace ServiceCore
                 decimal startingPrice = u
                     .Where(i => i.ClientAccountId == null && (i.Type.GroupId == 1 || i.Type.GroupId == 4))
                     .Select(i =>
-                        (i.UnitConstructionValues.Sum(v => (decimal?)v.Value) ?? 0m)
+                        UnitPricing.Compute(i.UnitConstructionValues.Select(v => (v.FinishingOptionId, v.Value ?? 0m))).From
                         + (i.LandValue ?? 0m))
                     .DefaultIfEmpty(0m)
                     .Min();
@@ -2960,7 +2965,9 @@ namespace ServiceCore
                     Description = s.Description,
                     Percentage = s.Percentage,
                     SortOrder = s.SortOrder,
-                    InvoiceId = s.InvoiceId,
+                    // Een koppeling naar een factuur die niet meer bestaat (verwijderd vóór InvoiceCommandService.DeleteAsync
+                    // de koppelingen losmaakte) telt niet: de schijf is dan gewoon weer te factureren.
+                    InvoiceId = s.Invoice != null ? s.InvoiceId : null,
                     InvoicePublicId = s.Invoice?.PublicId
                 });
             }
@@ -2977,8 +2984,9 @@ namespace ServiceCore
 
             var incomingIds = slices.Where(s => s.Id > 0).Select(s => s.Id).ToHashSet();
 
-            // Verwijder schijven die niet langer in de lijst staan
-            foreach (var e in existing.Where(e => !incomingIds.Contains(e.Id)))
+            // Verwijder schijven die niet langer in de lijst staan — behalve gefactureerde: die hangen aan
+            // een factuur en horen nooit stilletjes te verdwijnen omdat een formulier ze niet meepost.
+            foreach (var e in existing.Where(e => !incomingIds.Contains(e.Id) && e.InvoiceId == null))
                 _uow.ProjectContractSlices.DeleteObject(e);
 
             int order = 0;
@@ -3093,8 +3101,9 @@ namespace ServiceCore
                     WithTravel      = r.WithTravel || (r.TravelKm.HasValue && r.TravelKm > 0),
                     TravelKm        = r.TravelKm,
                     Description     = r.Description,
-                    InvoiceId       = r.InvoiceId,
-                    InvoicePublicId = r.Invoice?.PublicId
+                    InvoiceId       = r.Invoice != null ? r.InvoiceId : null,
+                    InvoicePublicId = r.Invoice?.PublicId,
+                    HourlyRateInvoiced = r.Invoice != null ? r.HourlyRateInvoiced : null
                 });
             }
             return response;
@@ -3163,7 +3172,7 @@ namespace ServiceCore
             return response;
         }
 
-        public Response MarkRegieUrenAsInvoiced(List<int> regieUurIds, int invoiceId)
+        public Response MarkRegieUrenAsInvoiced(List<int> regieUurIds, int invoiceId, IDictionary<string, decimal> hourlyRatesByUser = null)
         {
             var response = new Response();
             var entities = _uow.ProjectRegieUren.GetNormal()
@@ -3171,7 +3180,13 @@ namespace ServiceCore
                 .ToList();
 
             foreach (var e in entities)
+            {
                 e.InvoiceId = invoiceId;
+                // Het tarief waarmee gefactureerd werd blijft bij de prestatie staan: het projecttarief van
+                // een medewerker mag daarna wijzigen zonder dat dit reeds gefactureerde bedragen raakt.
+                if (hourlyRatesByUser != null && hourlyRatesByUser.TryGetValue(e.UserId, out var rate))
+                    e.HourlyRateInvoiced = rate;
+            }
 
             var result = _uow.SaveChanges();
             response.AddSaveChangesResult(result, "Regie-uren gemarkeerd als gefactureerd", "Markeren mislukt");

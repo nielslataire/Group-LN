@@ -180,7 +180,18 @@
         </tr>
     </table>
 
-    <div class="notice">Gelieve, indien u akkoord gaat, deze wijzigingsopdracht voor akkoord ondertekend terug te bezorgen tegen ten laatste @Html.DisplayFor(m => m.ChangeOrder.ExpirationDate).</div>
+    @if (Model.Signatures.Count > 0)
+    {
+        <div class="notice">Deze wijzigingsopdracht werd digitaal ondertekend (zie het handtekeningblok onderaan).</div>
+    }
+    else if (Model.DigitalSigningPending)
+    {
+        <div class="notice">Gelieve, indien u akkoord gaat, deze wijzigingsopdracht digitaal te ondertekenen via de persoonlijke link in de e-mail, tegen ten laatste @Html.DisplayFor(m => m.ChangeOrder.ExpirationDate).</div>
+    }
+    else
+    {
+        <div class="notice">Gelieve, indien u akkoord gaat, deze wijzigingsopdracht voor akkoord ondertekend terug te bezorgen tegen ten laatste @Html.DisplayFor(m => m.ChangeOrder.ExpirationDate).</div>
+    }
 
     <div class="footer">
         <table>
@@ -191,8 +202,30 @@
             </tr>
             <tr class="signature-row">
                 <td>@Model.ChangeOrder.ChangeOrderConditions</td>
-                <td></td>
-                <td></td>
+                @if (Model.Signatures.Count > 0)
+                {
+                    <td style="font-size:9px">@Model.Signatures.Max(s => s.SignedAt).ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td style="font-size:8.5px;line-height:1.35">
+                        @foreach (var sg in Model.Signatures)
+                        {
+                            <div style="margin-bottom:4px">
+                                <strong>Digitaal ondertekend door @sg.SignedName</strong><br />
+                                @sg.SignedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") via persoonlijke link + e-mailcode<br />
+                                Ref. @sg.EvidenceRef@(string.IsNullOrWhiteSpace(sg.DocumentHash) ? "" : " · SHA-256 ter ondertekening verstuurd document: " + sg.DocumentHash.Substring(0, Math.Min(16, sg.DocumentHash.Length)) + "…")
+                            </div>
+                        }
+                    </td>
+                }
+                else if (Model.DigitalSigningPending)
+                {
+                    <td></td>
+                    <td style="font-size:9px">Wordt digitaal ondertekend via een persoonlijke link.</td>
+                }
+                else
+                {
+                    <td></td>
+                    <td></td>
+                }
             </tr>
         </table>
     </div>

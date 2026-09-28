@@ -1,0 +1,52 @@
+@model CPMCore.Models.Projecten.ProjectSearchSelectVm
+@*
+    gl-v2 zoekende keuzelijst voor Projecten/EditV2 + ToevoegenV2 (Gemeente, weerstation, bedrijven).
+    Zelfde markup/CSS als EditorTemplates/GlV2SearchSelect.cshtml (verborgen input + trigger met wis-
+    knop + .gl-v2-select-panel-search), maar met twee dingen die dat template niet heeft en dit
+    formulier wel nodig heeft: (1) een tweede verborgen veld voor de weergavenaam (het project bindt
+    bv. Project.Developer.ID ÉN .Display — de POST leest beide), en (2) een generieke lookup-URL +
+    optioneel landveld, zodat één partial de drie bestaande endpoints bedient. Het openen/zoeken/kiezen
+    zit in wwwroot/js/gl-v2-projecten-form.js (wireSearchSelect), niet in de shell — zelfde "elke
+    pagina houdt haar eigen kopie"-afspraak als de andere formulierpagina's.
+*@
+@{
+    var id = Model.IdName.Replace(".", "_");
+    var isFilled = !string.IsNullOrWhiteSpace(Model.DisplayText);
+    var hasError = !string.IsNullOrEmpty(Model.Error);
+}
+<div class="gl-v2-field@(hasError ? " is-error" : "")"@(Model.RequiredMessage != null ? Html.Raw(" data-gl-v2-required=\"" + System.Net.WebUtility.HtmlEncode(Model.RequiredMessage) + "\"") : null)>
+    <label class="gl-v2-field-label" for="@(id)_trigger">
+        @Model.Label
+        @if (Model.Required)
+        {
+            <span class="gl-v2-pf-req" aria-hidden="true">*</span>
+        }
+    </label>
+    <div class="gl-v2-select" data-gl-v2-search-select data-lookup-url="@Model.LookupUrl" data-search-placeholder="@Model.Placeholder" data-country-source="@Model.CountrySelector" data-min-chars="@Model.MinChars">
+        <input type="hidden" id="@id" name="@Model.IdName" value="@(string.IsNullOrEmpty(Model.IdValue) ? "0" : Model.IdValue)" data-role="id-hidden" />
+        @if (!string.IsNullOrEmpty(Model.TextName))
+        {
+            <input type="hidden" id="@(Model.TextName.Replace(".", "_"))" name="@Model.TextName" value="@Model.TextValue" data-role="text-hidden" />
+        }
+        <div id="@(id)_trigger" class="gl-v2-select-trigger@(isFilled ? " is-filled" : "")@(hasError ? " is-error" : "")" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+            <span class="gl-v2-select-trigger-label">@(isFilled ? Model.DisplayText : Model.Placeholder)</span>
+            <button type="button" class="gl-v2-select-trigger-clear" data-role="clear-trigger" aria-label="Selectie wissen">
+                <i class="ph ph-x" aria-hidden="true"></i>
+            </button>
+            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+        </div>
+        <div class="gl-v2-select-panel gl-v2-select-panel-search" data-role="panel"></div>
+    </div>
+    @if (hasError)
+    {
+        <span class="gl-v2-field-help" data-role="help">@Model.Error</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Help))
+    {
+        <span class="gl-v2-field-help" data-role="help">@Model.Help</span>
+    }
+    else if (Model.RequiredMessage != null)
+    {
+        <span class="gl-v2-field-help" data-role="help" hidden></span>
+    }
+</div>

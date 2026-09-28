@@ -363,6 +363,20 @@
             </div>
         </div>
     </div>
+    <!-- Aanbod en verkopen over tijd -->
+    <div class="row chart-row">
+        <div class="col-12 mb-3">
+            <div class="card chart-card">
+                <div class="card-body">
+                    <h6 class="chart-title d-flex align-items-center"><i class="bx bx-line-chart me-1 text-primary"></i>Aanbod en verkopen per maand</h6>
+                    <div class="chart-subtitle">Lijn = units te koop op het einde van de maand · staven = verkocht in die maand · op basis van de huidige selectie (@Model.PeriodeLabel)</div>
+                    <div class="chart-container-h" style="height:260px;">
+                        <canvas id="chartAanbod"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Tabel-schakelaar (client-side) -->
     <div class="row mb-3 g-3">
         <div class="col-auto">
@@ -506,6 +520,10 @@
                                         </div>
                                     </div>
                                     <strong>@p.Verkoopgraad.ToString("F0")%</strong>
+                                    @if (p.VerkoopgraadGerapporteerd)
+                                    {
+                                        <i class="bx bx-info-circle text-muted ms-1" title="Verkoopgraad zoals vermeld in de advertentie; er zijn geen units bekend"></i>
+                                    }
                                 </div>
                             </td>
 
@@ -895,6 +913,9 @@
             var ppSqmData        = @Html.Raw(JsonSerializer.Serialize(Model.PrijsPerM2Buckets.Select(b => b.Aantal).ToList()));
             var vkgLabels        = @Html.Raw(JsonSerializer.Serialize(Model.VerkoopgraadPerProject.Select(p => p.ProjectNaam).ToList()));
             var vkgData          = @Html.Raw(JsonSerializer.Serialize(Model.VerkoopgraadPerProject.Select(p => p.Verkoopgraad).ToList()));
+            var aanbodLabels     = @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Label).ToList()));
+            var aanbodData       = @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Aanbod).ToList()));
+            var verkochtData     = @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Verkocht).ToList()));
 
 const primaryColor = getComputedStyle(document.documentElement)
     .getPropertyValue('--primary')
@@ -971,6 +992,49 @@ new Chart(document.getElementById('chartPrijsPerM2'), {
     },
     options: defaultBarOptions
 });
+if (document.getElementById('chartAanbod')) {
+    new Chart(document.getElementById('chartAanbod'), {
+        data: {
+            labels: aanbodLabels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Verkocht in de maand',
+                    data: verkochtData,
+                    backgroundColor: mediumColor,
+                    borderRadius: 4,
+                    barPercentage: .6,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'line',
+                    label: 'Te koop (einde maand)',
+                    data: aanbodData,
+                    borderColor: primaryColor,
+                    backgroundColor: primaryColor,
+                    tension: .3,
+                    pointRadius: 3,
+                    fill: false,
+                    yAxisID: 'y'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'bottom' },
+                tooltip: { backgroundColor: '#0f172a', padding: 10 }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
 new Chart(document.getElementById('chartVerkoopgraad'), {
     type: 'bar',
     data: {

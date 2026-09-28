@@ -1,0 +1,455 @@
+@model CPMCore.Models.Projecten.DocsV2PageVm
+@*
+    Dialogen van Projecten/DetailDocsV2 (design-handoff 17b/17c). Staan in de BODY van de pagina, niet in
+    @@section PageScripts: elk --gl-v2-*-token hangt aan .gl-v2 en PageScripts rendert daarbuiten.
+    Alle formulieren worden door gl-v2-projecten-detaildocs.js via fetch verstuurd (multipart voor de upload).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    var ov = Model.Overview;
+    var today = DateTime.Today;
+    GlV2DateFieldVm DateVm(string id, string name, string label, DateTime? value) => new()
+    {
+        Id = id,
+        Name = name,
+        Label = label,
+        IsoValue = value?.ToString("yyyy-MM-dd") ?? "",
+        DisplayValue = value?.ToString("dd/MM/yyyy") ?? ""
+    };
+    var activeFolderId = ov.ActiveFolderNav?.Id ?? 0;
+}
+
+@* ── Uploaden (17b): eerst nieuw of revisie ─────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form gl-v2-dd-upload-modal" id="gl-v2-dd-upload-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dd-upload-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-dd-upload-title">Document uploaden</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <form id="gl-v2-dd-upload-form" enctype="multipart/form-data" autocomplete="off">
+                <input type="hidden" name="projectid" value="@ov.ProjectId" />
+                <input type="hidden" name="requestId" id="gl-v2-dd-up-request" value="" />
+                <input type="hidden" name="documentId" id="gl-v2-dd-up-document" value="" />
+                <input type="hidden" name="mode" id="gl-v2-dd-up-mode" value="new" />
+                <div class="modal-body">
+                    <div class="gl-v2-dd-dropzone gl-v2-field-full" id="gl-v2-dd-up-dropzone" tabindex="0" role="button" aria-label="Bestand kiezen">
+                        <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                        <span class="gl-v2-dd-dropzone-title" id="gl-v2-dd-up-filename">Sleep een bestand hierheen of klik om te kiezen</span>
+                        <span class="gl-v2-dd-dropzone-sub" id="gl-v2-dd-up-filesize">PDF, DWG, Word, Excel, afbeeldingen …</span>
+                        <input type="file" name="file" id="gl-v2-dd-up-file" hidden />
+                    </div>
+
+                    <div class="gl-v2-field gl-v2-field-full" id="gl-v2-dd-up-what-field">
+                        <span class="gl-v2-field-label">WAT IS DIT?</span>
+                        <div class="gl-v2-dd-seg" role="radiogroup" aria-label="Nieuw document of nieuwe revisie">
+                            <label><input type="radio" name="whatIsThis" value="new" checked /><span>Nieuw document</span></label>
+                            <label><input type="radio" name="whatIsThis" value="revision" /><span>Nieuwe revisie van …</span></label>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-field gl-v2-field-full" id="gl-v2-dd-up-replaces-field" hidden>
+                        <label class="gl-v2-field-label" for="gl-v2-dd-up-replaces">VERVANGT <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" id="gl-v2-dd-up-replaces"><option value="">Kies een document …</option></select>
+                        </div>
+                        <span class="gl-v2-field-help">Nummer, koppelingen en delen worden overgenomen — je hoeft enkel te bevestigen.</span>
+                    </div>
+
+                    <div id="gl-v2-dd-up-meta" class="gl-v2-field-full" style="display:contents">
+                        <div class="gl-v2-field gl-v2-field-full" data-dd-new-only>
+                            <label class="gl-v2-field-label" for="gl-v2-dd-up-name">NAAM <span style="color:#8B2A2A">*</span></label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="name" id="gl-v2-dd-up-name" maxlength="200" /></div>
+                        </div>
+                        <div class="gl-v2-field" data-dd-new-only>
+                            <label class="gl-v2-field-label" for="gl-v2-dd-up-folder">MAP <span style="color:#8B2A2A">*</span></label>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" name="folderId" id="gl-v2-dd-up-folder">
+                                    @foreach (var f in ov.Folders)
+                                    {
+                                        <option value="@f.Id" data-kind="@f.ViewKind" selected="@(f.Id == activeFolderId ? "selected" : null)">@f.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-up-date", "docDate", "DOCUMENTDATUM", today))
+                        </div>
+                        <div>
+                            @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-up-expires", "expiresOn", "VERVALT OP", null))
+                        </div>
+                        <div class="gl-v2-field" data-dd-new-only>
+                            <label class="gl-v2-field-label" for="gl-v2-dd-up-number">DOCUMENTNR.</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="number" id="gl-v2-dd-up-number" maxlength="50" /></div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full" data-dd-new-only>
+                            <label class="gl-v2-field-label" for="gl-v2-dd-up-author">OPGESTELD DOOR</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="authoredBy" id="gl-v2-dd-up-author" maxlength="150" placeholder="bv. Studiebureau Arcade" /></div>
+                        </div>
+                        <div id="gl-v2-dd-up-offer" style="display:none">
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-dd-up-perceel">PERCEEL</label>
+                                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="perceel" id="gl-v2-dd-up-perceel" maxlength="100" list="gl-v2-dd-up-perceel-list" placeholder="bv. Sanitair" /></div>
+                                <datalist id="gl-v2-dd-up-perceel-list">
+                                    @foreach (var p in ov.Percelen) { <option value="@p"></option> }
+                                </datalist>
+                            </div>
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-dd-up-amount">BEDRAG (EXCL. BTW)</label>
+                                <div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" class="gl-v2-field-input" name="amount" id="gl-v2-dd-up-amount" inputmode="decimal" placeholder="0,00" /></div>
+                            </div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gl-v2-dd-up-note">OMSCHRIJVING VAN DE WIJZIGING</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="note" id="gl-v2-dd-up-note" maxlength="500" placeholder="bv. Wapening aangepast na grondsondering" /></div>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-field gl-v2-field-full" id="gl-v2-dd-up-links-field">
+                        <span class="gl-v2-field-label">GEKOPPELD AAN</span>
+                        <div class="gl-v2-dd-linkpicker" id="gl-v2-dd-up-links">
+                            <span class="gl-v2-dd-linkchip is-project"><i class="ph ph-buildings" aria-hidden="true"></i>&nbsp;Project</span>
+                            <div id="gl-v2-dd-up-linkchips" style="display:contents"></div>
+                            <div class="gl-v2-field-box" style="min-width:210px">
+                                <select class="gl-v2-field-input" id="gl-v2-dd-up-linkadd" aria-label="Koppelen aan eenheid, klant of leverancier">
+                                    <option value="">+ eenheid, klant of leverancier …</option>
+                                    @if (ov.Units.Count > 0)
+                                    {
+                                        <optgroup label="Eenheden">
+                                            @foreach (var u in ov.Units) { <option value="unit:@u.Id" data-label="@u.Name" data-buyer="@u.Ref" data-buyer-name="@u.Sub">@u.Name</option> }
+                                        </optgroup>
+                                    }
+                                    @if (ov.Clients.Count > 0)
+                                    {
+                                        <optgroup label="Klanten">
+                                            @foreach (var c in ov.Clients) { <option value="client:@c.Id" data-label="@c.Name">@c.Name</option> }
+                                        </optgroup>
+                                    }
+                                    @if (ov.Companies.Count > 0)
+                                    {
+                                        <optgroup label="Leveranciers">
+                                            @foreach (var c in ov.Companies) { <option value="company:@c.Id" data-label="@c.Name">@c.Name</option> }
+                                        </optgroup>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="gl-v2-dd-suggest" id="gl-v2-dd-up-suggest" hidden>
+                            <i class="ph ph-lightbulb" aria-hidden="true"></i>
+                            <span id="gl-v2-dd-up-suggest-text"></span>
+                            <button type="button" id="gl-v2-dd-up-suggest-yes">Ja, koppelen</button>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <span class="gl-v2-field-label">DELEN</span>
+                        <div class="gl-v2-toggle-grid">
+                            <label class="gl-v2-toggle-row">
+                                <input type="checkbox" class="gl-v2-toggle-switch" name="shareClients" value="true" id="gl-v2-dd-up-share-clients" />
+                                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Klantportaal</span><span class="gl-v2-toggle-hint" id="gl-v2-dd-up-share-clients-hint">zichtbaar voor de koper van de gekoppelde eenheid, of alle kopers zonder koppeling</span></span>
+                            </label>
+                            <label class="gl-v2-toggle-row">
+                                <input type="checkbox" class="gl-v2-toggle-switch" name="shareSuppliers" value="true" id="gl-v2-dd-up-share-suppliers" />
+                                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Leveranciersportaal</span><span class="gl-v2-toggle-hint" id="gl-v2-dd-up-share-suppliers-hint">zichtbaar voor de gekoppelde leverancier(s)</span></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-up-status">STATUS NA OPSLAAN</label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="status" id="gl-v2-dd-up-status">
+                                <option value="2" selected>Goedgekeurd</option>
+                                <option value="1">Ter goedkeuring</option>
+                                <option value="0">Concept</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="gl-v2-dd-formerror gl-v2-field-full" id="gl-v2-dd-up-error" role="alert" hidden></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dd-up-submit"><i class="ph ph-upload-simple" aria-hidden="true"></i>Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Document aanvragen / verwacht document (17c) ───────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-dd-request-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dd-request-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-dd-request-title">Document aanvragen</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <form id="gl-v2-dd-request-form" autocomplete="off">
+                <input type="hidden" name="projectid" value="@ov.ProjectId" />
+                <input type="hidden" name="id" id="gl-v2-dd-rq-id" value="" />
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-name">DOCUMENT <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="name" id="gl-v2-dd-rq-name" maxlength="200" placeholder="bv. Keuringsverslag elektriciteit" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-folder">MAP <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="folderId" id="gl-v2-dd-rq-folder">
+                                @foreach (var f in ov.Folders) { <option value="@f.Id" selected="@(f.Id == activeFolderId ? "selected" : null)">@f.Name</option> }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-unit">EENHEID</label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="unitId" id="gl-v2-dd-rq-unit">
+                                <option value="">Heel het project</option>
+                                @foreach (var u in ov.Units) { <option value="@u.Id" selected="@(Model.FilterUnitId == u.Id ? "selected" : null)">@u.Name</option> }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-kind">GEVRAAGD AAN</label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="kind" id="gl-v2-dd-rq-kind">
+                                <option value="leverancier">Leverancier</option>
+                                <option value="klant">Klant</option>
+                                <option value="extern">Andere (extern)</option>
+                                <option value="intern">Intern</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field" data-rq-who="leverancier">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-company">LEVERANCIER</label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="companyId" id="gl-v2-dd-rq-company">
+                                <option value="">Kies een leverancier …</option>
+                                @foreach (var c in ov.Companies) { <option value="@c.Id" selected="@(Model.FilterCompanyId == c.Id ? "selected" : null)">@c.Name</option> }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field" data-rq-who="klant" hidden>
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-client">KLANT</label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="clientAccountId" id="gl-v2-dd-rq-client">
+                                <option value="">Kies een klant …</option>
+                                @foreach (var c in ov.Clients) { <option value="@c.Id" selected="@(Model.FilterClientId == c.Id ? "selected" : null)">@c.Name</option> }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field" data-rq-who="extern intern" hidden>
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-who">VERANTWOORDELIJKE</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="responsibleName" id="gl-v2-dd-rq-who" maxlength="150" placeholder="bv. EPB-verslaggever De Wit" /></div>
+                    </div>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-rq-due", "dueDate", "TEGEN", null))
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-duelabel">OF: MOMENT</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="dueLabel" id="gl-v2-dd-rq-duelabel" maxlength="100" placeholder="bv. bij oplevering" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-remind">HERINNERING (DAGEN VOOR DEADLINE)</label>
+                        <div class="gl-v2-field-box"><input type="number" min="0" max="365" class="gl-v2-field-input" name="reminderDays" id="gl-v2-dd-rq-remind" placeholder="30" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-expiry">GELDIG (JAREN)</label>
+                        <div class="gl-v2-field-box"><input type="number" min="0" max="99" class="gl-v2-field-input" name="expiryYears" id="gl-v2-dd-rq-expiry" placeholder="bv. 25" /></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-perceel">PERCEEL (OFFERTES)</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="perceel" id="gl-v2-dd-rq-perceel" maxlength="100" /></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <div class="gl-v2-toggle-grid">
+                            <label class="gl-v2-toggle-row">
+                                <input type="checkbox" class="gl-v2-toggle-switch" name="shareAfter" value="true" id="gl-v2-dd-rq-shareafter" checked />
+                                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Na goedkeuring delen met de koper</span><span class="gl-v2-toggle-hint">zichtbaar in het klantportaal van de eenheid</span></span>
+                            </label>
+                            <label class="gl-v2-toggle-row">
+                                <input type="checkbox" class="gl-v2-toggle-switch" name="sendNow" value="true" id="gl-v2-dd-rq-sendnow" />
+                                <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Meteen aanvragen</span><span class="gl-v2-toggle-hint">e-mail naar de verantwoordelijke</span></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-note">OPMERKING</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="note" id="gl-v2-dd-rq-note" maxlength="500" /></div>
+                    </div>
+                    <p class="gl-v2-dd-formerror gl-v2-field-full" id="gl-v2-dd-rq-error" role="alert" hidden></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dd-rq-submit"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Gegevens bewerken ─────────────────────────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-dd-edit-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dd-edit-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-dd-edit-title">Gegevens bewerken</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <form id="gl-v2-dd-edit-form" autocomplete="off">
+                <input type="hidden" name="projectid" value="@ov.ProjectId" />
+                <input type="hidden" name="id" id="gl-v2-dd-ed-id" value="" />
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-ed-name">NAAM <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="name" id="gl-v2-dd-ed-name" maxlength="200" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-ed-folder">MAP</label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" name="folderId" id="gl-v2-dd-ed-folder">
+                                @foreach (var f in ov.Folders) { <option value="@f.Id">@f.Name</option> }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-ed-number">DOCUMENTNR.</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="number" id="gl-v2-dd-ed-number" maxlength="50" /></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-ed-author">OPGESTELD DOOR</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="authoredBy" id="gl-v2-dd-ed-author" maxlength="150" /></div>
+                    </div>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-ed-date", "docDate", "DOCUMENTDATUM", null))
+                    </div>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-ed-expires", "expiresOn", "VERVALT OP", null))
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-ed-perceel">PERCEEL</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="perceel" id="gl-v2-dd-ed-perceel" maxlength="100" /></div>
+                    </div>
+                    <p class="gl-v2-dd-formerror gl-v2-field-full" id="gl-v2-dd-ed-error" role="alert" hidden></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dd-ed-submit">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Koppelen ──────────────────────────────────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-dd-link-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dd-link-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-dd-link-title">Document koppelen</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <form id="gl-v2-dd-link-form" autocomplete="off">
+                <input type="hidden" id="gl-v2-dd-lk-doc" value="" />
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-dd-lk-target">KOPPELEN AAN <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box">
+                            <select class="gl-v2-field-input" id="gl-v2-dd-lk-target">
+                                <option value="">Kies een eenheid, klant of leverancier …</option>
+                                @if (ov.Units.Count > 0)
+                                {
+                                    <optgroup label="Eenheden">
+                                        @foreach (var u in ov.Units) { <option value="unit:@u.Id" data-buyer="@u.Ref" data-buyer-name="@u.Sub">@u.Name</option> }
+                                    </optgroup>
+                                }
+                                @if (ov.Clients.Count > 0)
+                                {
+                                    <optgroup label="Klanten">
+                                        @foreach (var c in ov.Clients) { <option value="client:@c.Id">@c.Name</option> }
+                                    </optgroup>
+                                }
+                                @if (ov.Companies.Count > 0)
+                                {
+                                    <optgroup label="Leveranciers">
+                                        @foreach (var c in ov.Companies) { <option value="company:@c.Id">@c.Name</option> }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+                        <span class="gl-v2-field-help">Het document blijft één bestand: het verschijnt ook bij deze koppeling, er komt geen kopie.</span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-toggle-row">
+                            <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-dd-lk-share" />
+                            <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Ook delen in het portaal</span><span class="gl-v2-toggle-hint">zichtbaar voor deze koppeling (koper of leverancier)</span></span>
+                        </label>
+                    </div>
+                    <div class="gl-v2-dd-suggest gl-v2-field-full" id="gl-v2-dd-lk-suggest" hidden>
+                        <i class="ph ph-lightbulb" aria-hidden="true"></i>
+                        <span id="gl-v2-dd-lk-suggest-text"></span>
+                    </div>
+                    <p class="gl-v2-dd-formerror gl-v2-field-full" id="gl-v2-dd-lk-error" role="alert" hidden></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dd-lk-submit"><i class="ph ph-link" aria-hidden="true"></i>Koppelen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Ter ondertekening sturen (17d) ─────────────────────────────────────────────────────────────── *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-dd-sign-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dd-sign-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-dd-sign-title">Ter ondertekening sturen</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <form id="gl-v2-dd-sign-form" autocomplete="off">
+                <input type="hidden" id="gl-v2-dd-sg-doc" value="" />
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <span class="gl-v2-field-label">ONDERTEKENAARS</span>
+                        <div class="gl-v2-dd-sign-rows" id="gl-v2-dd-sg-rows"></div>
+                        <div><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-dd-sg-add"><i class="ph ph-plus" aria-hidden="true"></i>Ondertekenaar toevoegen</button></div>
+                    </div>
+                    <div class="gl-v2-dd-notice is-info gl-v2-field-full">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>De handtekeningen worden voorlopig handmatig geregistreerd zodra een partij getekend heeft. Een itsme-koppeling is er nog niet. Na de eerste handtekening kan het document niet meer gewijzigd worden.</span>
+                    </div>
+                    <p class="gl-v2-dd-formerror gl-v2-field-full" id="gl-v2-dd-sg-error" role="alert" hidden></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dd-sg-submit"><i class="ph ph-signature" aria-hidden="true"></i>Ter ondertekening sturen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Generieke bevestiging (verwijderen, gunnen, afwijzen met reden) ────────────────────────────── *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-dd-confirm-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dd-confirm-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger" id="gl-v2-dd-confirm-content">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger" id="gl-v2-dd-confirm-icon"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-dd-confirm-title">Verwijderen?</h2>
+                    <p class="gl-v2-modal-desc" id="gl-v2-dd-confirm-desc"></p>
+                    <div class="gl-v2-field" id="gl-v2-dd-confirm-note-field" hidden style="margin-top:10px">
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dd-confirm-note" maxlength="300" placeholder="Reden (optioneel)" /></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="gl-v2-dd-confirm-ok">Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>

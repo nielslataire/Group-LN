@@ -1,0 +1,108 @@
+@model CPMCore.Models.Projecten.DocRequestPanelVm
+@*
+    Detailpaneel van een verwacht/aangevraagd document (17c): geen revisies maar de AANVRAAG — aan wie, tegen
+    wanneer, gezien in het portaal, en naar wie het na goedkeuring vanzelf gaat.
+*@
+@using System.Globalization
+@{
+    var r = Model.Detail;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Date(DateTime? v) => v.HasValue ? v.Value.ToLocalTime().ToString("dd/MM/yyyy", be) : "—";
+    string DateOnlyText(DateOnly? v) => v.HasValue ? v.Value.ToString("dd/MM/yyyy", be) : "—";
+    string tone = r.StatusKey switch { "requested" => "is-attention", "missing" => "is-blocked", _ => "is-neutral" };
+    var asked = r.RequestedDate.HasValue;
+    var canWrite = Model.CanWrite;
+    var canDelete = Model.CanDelete;
+}
+<div class="gl-v2-dd-panel-root" data-panel-request data-request-id="@r.Id" data-request-name="@r.Name"
+     data-folder-id="@r.FolderId" data-unit-id="@r.UnitId" data-kind="@r.ResponsibleKind" data-company-id="@r.ResponsibleCompanyId"
+     data-client-id="@r.ResponsibleClientAccountId" data-who="@r.ResponsibleName" data-due="@r.DueDate?.ToString("yyyy-MM-dd")"
+     data-due-label="@r.DueLabel" data-remind="@r.ReminderDaysBefore" data-expiry="@r.ExpiryYears" data-perceel="@r.Perceel"
+     data-note="@r.Note" data-share-after="@(r.ShareAfter ? "1" : "0")" data-asked="@(r.RequestedDate.HasValue ? "1" : "0")">
+    <div class="gl-v2-dd-p-head">
+        <span class="gl-v2-dd-ext is-missing" aria-hidden="true">?</span>
+        <div class="gl-v2-dd-p-title">
+            <span class="gl-v2-dd-p-name">@r.Name</span>
+            <span class="gl-v2-dd-p-sub">@r.FolderName@(r.UnitLabel != null ? " · " + r.UnitLabel : "") · nog geen bestand</span>
+            <span><span class="gl-v2-badge @tone">@r.StatusLabel.ToUpperInvariant()</span></span>
+        </div>
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-dd-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
+
+    <div class="gl-v2-dd-p-section">
+        @if (r.Status == 1)
+        {
+            <div class="gl-v2-dd-notice"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Aangevraagd bij <b>@(r.ResponsibleName ?? "de verantwoordelijke")</b>. Zodra het leveranciersportaal er is, verschijnt dit als taak in hun portaal; tot dan gaat de aanvraag per e-mail.</span></div>
+        }
+        else if (r.Status == 3)
+        {
+            <div class="gl-v2-dd-notice is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Voor dit project niet vereist. Het telt niet mee als ontbrekend.</span></div>
+        }
+        else
+        {
+            <div class="gl-v2-dd-notice is-danger"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>Dit document wordt verwacht maar is nog niet aangevraagd of aangeleverd.</span></div>
+        }
+    </div>
+
+    <div class="gl-v2-dd-p-section">
+        <div class="gl-v2-dd-p-label">Aanvraag
+            @if (canWrite) { <button type="button" class="gl-v2-dd-p-label-action" data-dd-act="request-edit">Bewerken</button> }
+        </div>
+        <div class="gl-v2-dd-p-grid">
+            <div class="gl-v2-dd-p-kv"><span>Gevraagd aan</span><b>@(r.ResponsibleName ?? "—")</b></div>
+            <div class="gl-v2-dd-p-kv"><span>Gevraagd op</span><b>@(asked ? Date(r.RequestedDate) + (string.IsNullOrWhiteSpace(r.RequestedByName) ? "" : " door " + r.RequestedByName) : "—")</b></div>
+            <div class="gl-v2-dd-p-kv"><span>Tegen</span><b>@(r.DueDate.HasValue ? DateOnlyText(r.DueDate) : (r.DueLabel ?? "—"))</b></div>
+            <div class="gl-v2-dd-p-kv"><span>Herinnering</span><b>@(r.ReminderDaysBefore.HasValue ? r.ReminderDaysBefore + " dagen voor deadline" : "geen")</b></div>
+            @if (r.ExpiryYears.HasValue)
+            {
+                <div class="gl-v2-dd-p-kv"><span>Geldig</span><b>@r.ExpiryYears jaar</b></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(r.Perceel))
+            {
+                <div class="gl-v2-dd-p-kv"><span>Perceel</span><b>@r.Perceel</b></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(r.Note))
+            {
+                <div class="gl-v2-dd-p-kv is-wide"><span>Opmerking</span><b>@r.Note</b></div>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-dd-p-section">
+        <div class="gl-v2-dd-p-label">Verloop</div>
+        <div class="gl-v2-dd-timeline">
+            <div class="gl-v2-dd-tl @(asked ? "" : "is-todo")">@(asked ? "Aangevraagd" : "Nog niet aangevraagd")<small>@(asked ? Date(r.RequestedDate) + " · e-mail" : "kies Aanvragen om de aanvraag te versturen")</small></div>
+            @if (r.LastReminderDate.HasValue)
+            {
+                <div class="gl-v2-dd-tl">Herinnering verstuurd<small>@Date(r.LastReminderDate)</small></div>
+            }
+            <div class="gl-v2-dd-tl @(r.SeenInPortalDate.HasValue ? "" : "is-todo")">@(r.SeenInPortalDate.HasValue ? "Gezien in portaal" : "Nog niet gezien in portaal")<small>@(r.SeenInPortalDate.HasValue ? Date(r.SeenInPortalDate) + (string.IsNullOrWhiteSpace(r.SeenByName) ? "" : " door " + r.SeenByName) : "wordt bijgehouden zodra het portaal er is")</small></div>
+            <div class="gl-v2-dd-tl is-todo">Geüpload door de verantwoordelijke<small>komt binnen als "ter goedkeuring"</small></div>
+            <div class="gl-v2-dd-tl is-todo">Goedgekeurd<small>@(r.BuyerName != null ? "daarna automatisch zichtbaar voor " + r.BuyerName : "daarna zichtbaar volgens de deelinstellingen")</small></div>
+        </div>
+    </div>
+
+    <div class="gl-v2-dd-panel-foot">
+        @if (canWrite && r.Status != 3)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-dd-act="request-upload"><i class="ph ph-upload-simple" aria-hidden="true"></i>Zelf uploaden</button>
+            @if (asked)
+            {
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-dd-act="request-remind"><i class="ph ph-bell-ringing" aria-hidden="true"></i>Herinnering sturen</button>
+            }
+            else
+            {
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-dd-act="request-send"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Aanvragen</button>
+            }
+        }
+        @if (canWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-dd-act="request-notrequired" data-not-required="@(r.Status == 3 ? "false" : "true")">@(r.Status == 3 ? "Toch vereist" : "Niet vereist")</button>
+        }
+        <span class="gl-v2-dd-foot-spacer"></span>
+        @if (canDelete)
+        {
+            <button type="button" class="gl-v2-icon-btn is-danger" data-dd-act="request-delete" aria-label="Verwacht document verwijderen" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        }
+    </div>
+</div>
