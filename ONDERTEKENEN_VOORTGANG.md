@@ -35,9 +35,37 @@ Wat bij de merge gedaan is om beide te laten samenleven (geen inhoudelijke keuze
 - `Projecten/ChangeOrderPDF` (afdrukken) rendert via QuestPDF; hun `ChangeOrderPdfService` rendert
   de Rotativa-view zelf en gebruikt die actie niet. Twee renderers voor hetzelfde document totdat beslist is.
 
+**Richting (Niels, 28/09/2026): samenvoegen tot één geheel, niet kiezen-en-weggooien.** De
+link-per-e-mail-flow van de andere pc is functioneel wat er nodig is (dat is de werkende, meest recente
+flow); de signingmodule levert de structuur — datamodel, bewijs (hash-ketting, OTP-HMAC, append-only
+events), abstracties (`ISigningDocumentSource`/provider/verificatie/kanaal), gl-v2-schermen. Het
+samenvoegen zelf gebeurt in een volgende sessie. Voorbereidend denkwerk voor dan:
+- Publieke pagina: hun `SigningController` (werkt, route `/ondertekenen/{token}`) als vertrekpunt voor
+  fase 2, maar tegen de signingmodule (`RedeemTokenAsync` → sessie → `RequestVerificationAsync`/
+  `VerifyCodeAsync`/`SignAsync`) i.p.v. `ServiceCore.Documents.SigningService`.
+- Intern: hun `ChangeOrderSignV2` en mijn `SigningAdmin/Start` doen hetzelfde; één ervan blijft (Start
+  is generiek per documenttype, ChangeOrderSignV2 is wijzigingsopdracht-specifiek).
+- Documenten: hun koppeling `ProjectDocs.ChangeOrderId` + het ondertekende PDF als documentrevisie is
+  waardevol — de signingmodule zou bij voltooiing het definitieve PDF óók als `ProjectDocs`-revisie
+  moeten wegschrijven (`OnCaseCompletedAsync` in `ChangeOrderSigningSource`), zodat het in Documenten
+  verschijnt. `DocumentSignatures` (054) wordt dan overbodig.
+- PDF: één renderer. Hun handtekeningblok (naam, tijdstip, methode, ref, SHA-256) is inhoudelijk het
+  model voor het QuestPDF-ondertekeningsblad van fase 2.
+- Juridische tekst: `JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md` (andere pc) en `SigningPolicy.ConsentText`
+  (055-seed) op elkaar afstemmen.
+
+**Werkregel bij het samenvoegen (Niels, 28/09/2026): niets zelf beslissen — bij elk stuk dat uit
+één van beide kanten komt, eerst aan Niels vragen wat hij wil behouden en van welke commit.** Concreet:
+per onderdeel (publieke pagina, intern startscherm, datamodel/bewijs, PDF + handtekeningblok,
+documentenkoppeling, e-mails, juridische tekst, migraties) de twee varianten kort naast elkaar zetten
+met verwijzing naar de commit/bestanden (signingmodule: lokale commit 42ce3b26 "10.7" + merge cbd50c6e;
+e-mailflow: 8b973887 + 5ce94e6a "10.7" van de andere pc) en pas na zijn keuze code aanpassen of
+verwijderen. Geldt ook voor kleine dingen (teksten, routes, iconen): niet stilzwijgend één kant kiezen.
+
 ## Eerst te doen (volgende sessie)
-0. **Kies één ondertekenflow** (tabel hierboven) en verwijder de andere — of leg vast dat ze elk een
-   eigen doel hebben. Tot dan: `Features:EnableSigning` uit laten, zodat enkel hun flow zichtbaar is.
+0. **Samenvoegplan uitwerken** (zie "Richting" hierboven) als een lijst keuzes per onderdeel, elke
+   keuze aan Niels voorleggen (werkregel hierboven), en pas dan bouwen. Tot dan:
+   `Features:EnableSigning` uit laten, zodat enkel de bestaande flow van de andere pc zichtbaar is.
 1. **Commit + push** van alles wat nu uncommitted staat (fase 0 + fase 1; `git status` toont ~45 bestanden).
 2. Module aanzetten op de testomgeving: `Features:EnableSigning=true`, `Signing:PublicBaseUrl`,
    `Signing:TestRecipientOverride=<eigen adres>` in appsettings; `Signing:OtpHmacKey` in user-secrets.
