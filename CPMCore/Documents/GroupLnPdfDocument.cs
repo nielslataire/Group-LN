@@ -67,11 +67,15 @@ namespace CPMCore.Documents
         /// <summary>De eigenlijke pagina-inhoud (projectfiche, tabellen, legende, ...).</summary>
         protected abstract void Content(IContainer c);
 
+        /// <summary>Paginaformaat. Standaard A4 liggend (de werf-lijsten); een documenttype voor klanten
+        /// (bv. de wijzigingsopdracht) zet dit op staand — kop, voet en kleuren blijven identiek.</summary>
+        protected virtual PageSize PageSize => PageSizes.A4.Landscape();
+
         public void Compose(IDocumentContainer container)
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4.Landscape());
+                page.Size(PageSize);
                 page.MarginVertical(26);
                 page.MarginHorizontal(28);
                 page.DefaultTextStyle(x => x.FontSize(7.4f).FontFamily(FontFamilyName).FontColor(Ink).LineHeight(1.45f));
@@ -202,6 +206,10 @@ namespace CPMCore.Documents
             return raw.Trim();
         }
 
+        /// <summary>Korte vermelding rechts in de voet, vóór de paginanummering. De werf-lijsten zijn
+        /// intern ("vertrouwelijk"); een klantdocument overschrijft dit met bv. zijn referentie.</summary>
+        protected virtual string FooterNote => "Vertrouwelijk — enkel voor projectbetrokkenen";
+
         // ── Voet ──────────────────────────────────────────────────────────────────
         private void Footer(IContainer c)
         {
@@ -217,7 +225,7 @@ namespace CPMCore.Documents
                         .FontSize(6.6f).FontColor(Muted).LetterSpacing(0.034f);
                     row.RelativeItem().AlignMiddle().AlignRight().Text(t =>
                     {
-                        t.Span("Vertrouwelijk — enkel voor projectbetrokkenen · ").FontSize(6.6f).FontColor(Muted).LetterSpacing(0.034f);
+                        t.Span(FooterNote + " · ").FontSize(6.6f).FontColor(Muted).LetterSpacing(0.034f);
                         t.CurrentPageNumber().FontSize(6.6f).FontColor(Muted);
                         t.Span("/").FontSize(6.6f).FontColor(Muted);
                         t.TotalPages().FontSize(6.6f).FontColor(Muted);

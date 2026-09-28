@@ -1,0 +1,159 @@
+/* gl-v2 — Elektronisch ondertekenen, interne schermen (SigningAdmin/Start, /Dossier, /Index).
+   Pagina-specifiek onder een .gl-v2-sg- prefix, zelfde kopieer-en-pas-aan-discipline als
+   gl-v2-projecten-contracts.css: de gedeelde bouwstenen (sectiekaarten, detail-grid, velden,
+   badges, menu's, actiebalk, tabbar) komen uit gl-v2-shell.css; hier staat enkel wat deze drie
+   schermen zelf nodig hebben — de ondertekenaarsrijen, de documentenlijst, de tijdlijn. */
+
+/* ── Meldingsbalk — letterlijk de vorm van .gl-v2-du-notice (DetailUnitsV2): hairline rondom, bij
+   een waarschuwing enkel de randkleur en de titel getint. Geen gekleurde zijstreep. ─────────────── */
+.gl-v2-sg-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    flex: none;
+}
+.gl-v2-sg-notice.is-warning { border-color: #EBD9B4; }
+.gl-v2-sg-notice-icon { color: var(--gl-v2-warning); font-size: 17px; display: flex; flex: none; }
+.gl-v2-sg-notice-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-sg-notice-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; }
+.gl-v2-sg-notice.is-warning .gl-v2-sg-notice-title { color: var(--gl-v2-warning); }
+.gl-v2-sg-notice-desc { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; }
+.gl-v2-sg-notice-spacer { flex: 1; }
+.gl-v2-sg-notice-action { border: 0; background: none; padding: 0; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; text-decoration: none; flex: none; }
+.gl-v2-sg-notice-action:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+
+/* ── Formulier (Start) — scrollend blok + vaste actiebalk, zoals Leveranciers/EditV2 ─────────── */
+.gl-v2-sg-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.gl-v2-sg-scroll { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 16px; }
+.gl-v2-sg-amount { font-weight: 700; color: var(--gl-v2-primary); }
+.gl-v2-sg-settings-grid { padding: 18px 20px; }
+.gl-v2-sg-policy-grid { padding: 0; }
+.gl-v2-sg-consent { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-sg-consent summary { cursor: pointer; font-weight: 600; color: var(--gl-v2-primary); }
+.gl-v2-sg-consent p { margin: 8px 0 0; padding: 12px 14px; background: var(--gl-v2-bg); border-radius: var(--gl-v2-radius-sm); line-height: 1.6; white-space: pre-wrap; }
+
+/* ── Ondertekenaarsrijen (Start) ─────────────────────────────────────────────────────────────── */
+.gl-v2-sg-parties { display: flex; flex-direction: column; }
+.gl-v2-sg-party {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1.4fr) minmax(0, 1.6fr) minmax(0, 1fr) 36px;
+    gap: 12px;
+    align-items: start;
+    padding: 14px 20px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-sg-party:first-child { border-top: 0; }
+.gl-v2-sg-party.is-excluded .gl-v2-field { opacity: .45; }
+.gl-v2-sg-party-include { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 22px; cursor: pointer; }
+.gl-v2-sg-party-order { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-sg-party-type { font-weight: 450; color: var(--gl-v2-muted); text-transform: none; letter-spacing: 0; }
+.gl-v2-sg-party-remove { margin-top: 22px; }
+.gl-v2-sg-parties-empty { padding: 18px 20px; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-sg-inline-form { display: contents; }
+
+/* ── Tabellen (Dossier: ondertekenaars — Index: dossiers) ────────────────────────────────────── */
+.gl-v2-sg-table-scroll { overflow-x: auto; }
+.gl-v2-sg-table { width: 100%; border-collapse: collapse; }
+.gl-v2-sg-table thead th {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    border-bottom: 1px solid var(--gl-v2-hairline);
+    padding: 12px 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+.gl-v2-sg-table thead th:first-child, .gl-v2-sg-table tbody td:first-child { padding-left: 20px; }
+.gl-v2-sg-table thead th:last-child, .gl-v2-sg-table tbody td:last-child { padding-right: 20px; }
+.gl-v2-sg-table td {
+    padding: 10px;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+.gl-v2-sg-table tbody tr:last-child td { border-bottom: 0; }
+.gl-v2-sg-table .is-right { text-align: right; }
+.gl-v2-sg-table tbody tr[data-detail-url] { cursor: pointer; }
+.gl-v2-sg-table tbody tr[data-detail-url]:hover td { background: var(--gl-v2-bg); }
+.gl-v2-sg-party-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-sg-party-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-sg-party-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-sg-reason { margin-top: 4px; font-style: italic; }
+.gl-v2-sg-muted { color: var(--gl-v2-muted-light); }
+.gl-v2-sg-strong { color: var(--gl-v2-ink); font-weight: 500; }
+.gl-v2-sg-danger { color: var(--gl-v2-danger); font-weight: 600; }
+.gl-v2-sg-mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; word-break: break-all; }
+.gl-v2-sg-list-card { flex: none; }
+.gl-v2-sg-list-card .gl-v2-card-body { padding: 0; }
+.gl-v2-sg-empty-filter { padding: 22px 20px; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-sg-topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ── Documenten (Dossier) ────────────────────────────────────────────────────────────────────── */
+.gl-v2-sg-docs { display: flex; flex-direction: column; }
+.gl-v2-sg-doc { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-sg-doc:first-child { border-top: 0; }
+.gl-v2-sg-doc.is-pending { opacity: .6; }
+.gl-v2-sg-doc-icon { width: 34px; height: 34px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; flex: none; }
+.gl-v2-sg-doc-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.gl-v2-sg-doc-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-sg-doc-hash { font: 450 11px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--gl-v2-muted); }
+.gl-v2-sg-doc-note { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-style: italic; }
+
+/* ── Tijdlijn (Dossier: audit trail) ─────────────────────────────────────────────────────────── */
+.gl-v2-sg-timeline { list-style: none; margin: 0; padding: 8px 20px 14px; }
+.gl-v2-sg-event {
+    display: grid;
+    grid-template-columns: 14px 118px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    padding: 8px 0;
+    position: relative;
+}
+.gl-v2-sg-event::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 1px; background: var(--gl-v2-hairline-soft); }
+.gl-v2-sg-event:first-child::before { top: 14px; }
+.gl-v2-sg-event:last-child::before { bottom: auto; height: 14px; }
+.gl-v2-sg-event-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gl-v2-primary); margin: 5px 0 0 2px; position: relative; z-index: 1; }
+.gl-v2-sg-event.is-alert .gl-v2-sg-event-dot { background: var(--gl-v2-danger); }
+.gl-v2-sg-event-when { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding-top: 2px; white-space: nowrap; }
+.gl-v2-sg-event-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-sg-event-title { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-sg-event.is-alert .gl-v2-sg-event-title { color: var(--gl-v2-danger); }
+.gl-v2-sg-event-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-sg-event-data summary { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-sg-event-data code { display: block; margin-top: 4px; padding: 6px 8px; background: var(--gl-v2-bg); border-radius: var(--gl-v2-radius-sm); font-size: 11px; white-space: pre-wrap; word-break: break-all; color: var(--gl-v2-muted-soft); }
+.gl-v2-sg-event-hash { font: 450 10.5px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--gl-v2-muted-light); padding-top: 3px; }
+.gl-v2-sg-modal-intro { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); margin: 0 0 4px; }
+
+/* ── Tablet (768–1023.98px): minder kolommen, knoppen naar het ⋯-menu ────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-sg-col-collapsible { display: none; }
+    .gl-v2-sg-topbar-btn { display: none; }
+    .gl-v2-sg-party { grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr) 36px; }
+    .gl-v2-sg-party-capacity { grid-column: 2 / span 2; }
+    .gl-v2-sg-event { grid-template-columns: 14px 96px minmax(0, 1fr); }
+    .gl-v2-sg-event-hash { display: none; }
+}
+
+/* ── Gsm (<768px) ─────────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-sg-col-collapsible { display: none; }
+    .gl-v2-sg-party { grid-template-columns: 44px minmax(0, 1fr) 36px; padding: 12px 14px; }
+    .gl-v2-sg-party .gl-v2-field { grid-column: 2; }
+    .gl-v2-sg-party-include { grid-row: 1 / span 3; }
+    .gl-v2-sg-party-remove { grid-row: 1; grid-column: 3; }
+    .gl-v2-sg-event { grid-template-columns: 14px minmax(0, 1fr); }
+    .gl-v2-sg-event-when { grid-column: 2; }
+    .gl-v2-sg-event-body { grid-column: 2; }
+    .gl-v2-sg-event-hash { display: none; }
+    .gl-v2-sg-doc { flex-wrap: wrap; }
+    .gl-v2-sg-table thead th:first-child, .gl-v2-sg-table tbody td:first-child { padding-left: 14px; }
+    .gl-v2-sg-table thead th:last-child, .gl-v2-sg-table tbody td:last-child { padding-right: 14px; }
+    .gl-v2-sg-notice-spacer { display: none; }
+}

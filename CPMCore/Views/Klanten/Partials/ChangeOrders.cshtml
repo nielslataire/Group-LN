@@ -127,6 +127,19 @@
                 else if (sent) { iconClass = "bx bxs-circle text-warning"; title = "Verzonden, geen akkoord"; }
                 else { iconClass = "bx bxs-circle text-muted"; title = "Open, nog niet vervallen"; }
 
+                // Elektronisch ondertekenen (fase 1): het recentste dossier van deze wijzigingsopdracht.
+                // Loopt er een dossier, dan is de wijzigingsopdracht vergrendeld (bewerken/verwijderen
+                // weigert server-side) en toont de status dat in plaats van het papieren "verzonden".
+                FacadeCore.Signing.CaseStatusView? signingCase = null;
+                Model.SigningCases?.TryGetValue(item.Id, out signingCase);
+                bool signingActive = signingCase is not null && (signingCase.Status == (int)SigningCaseStatus.Draft || signingCase.Status == (int)SigningCaseStatus.Open);
+                bool signingCompleted = signingCase is not null && signingCase.Status == (int)SigningCaseStatus.Completed;
+                if (signingActive) { iconClass = "bx bxs-circle text-warning"; title = "Ter ondertekening (elektronisch)"; }
+                else if (signingCompleted && hasAgreement) { title = "Akkoord (elektronisch ondertekend)"; }
+                var signingUrl = signingCase is not null
+                    ? Url.Action("Dossier", "SigningAdmin", new { id = signingCase.CaseId })
+                    : Url.Action("Start", "SigningAdmin", new { documentType = "ChangeOrder", sourceId = item.Id, backUrl = Context.Request.Path + Context.Request.QueryString });
+
                         <tr data-co-id="@item.Id" aria-expanded="false">
                             <td class="details-control text-center" role="button" aria-label="Toon details" tabindex="0">
                                 <i class="bx bx-chevron-right"></i>
@@ -143,17 +156,43 @@
                             <td class="text-center">@((item.Invoiceable ? "Bouwheer" : "Aannemer"))</td>
                             <td class="text-center">@invoicedLabel</td>
                             <td>@openAmount.ToString("C")</td>
-                            <td><i class="@iconClass" title="@title" aria-label="@title"></i> <span class="status-text">@title</span></td>
+                            <td>
+                                <i class="@iconClass" title="@title" aria-label="@title"></i> <span class="status-text">@title</span>
+                                @if (signingCase is not null)
+                                {
+                                    <a href="@signingUrl" class="d-block small text-decoration-none" title="Ondertekendossier openen">
+                                        <i class="fa fa-file-signature"></i> @CPMCore.Models.Signing.SigningLabels.CaseStatus(signingCase.Status)
+                                    </a>
+                                }
+                            </td>
                             <td>
                                 <a data-toggle="tooltip" data-placement="top" title="Afdrukken"
                                    class="js-print-changeorder"
                                    href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = item.Id })">
                                     <i class="fa fa-print"></i>
                                 </a>
-                                <a data-toggle="tooltip" data-placement="top" title="Bewerken"
-                                   href="@Url.Action("EditChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientid = item.ClientAccountID, coid = item.Id })">
-                                    <i class="fa fa-edit"></i>
-                                </a>
+                                @if (Model.SigningEnabled && Model.CanStartSigning)
+                                {
+                                    if (signingActive || signingCompleted)
+                                    {
+                                        <a data-toggle="tooltip" data-placement="top" title="Ondertekendossier" href="@signingUrl"><i class="fa fa-file-signature"></i></a>
+                                    }
+                                    else if (!hasAgreement)
+                                    {
+                                        <a data-toggle="tooltip" data-placement="top" title="Elektronisch laten ondertekenen" href="@signingUrl"><i class="fa fa-file-signature"></i></a>
+                                    }
+                                }
+                                @if (signingActive)
+                                {
+                                    <i class="fa fa-lock text-muted" data-toggle="tooltip" data-placement="top" title="Vergrendeld: er loopt een ondertekening"></i>
+                                }
+                                else
+                                {
+                                    <a data-toggle="tooltip" data-placement="top" title="Bewerken"
+                                       href="@Url.Action("EditChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientid = item.ClientAccountID, coid = item.Id })">
+                                        <i class="fa fa-edit"></i>
+                                    </a>
+                                }
                                 @if (User.IsInRole("Admin"))
                                 {
                                     <a href="#modaldeletechangeorder" data-toggle="tooltip" data-placement="top" title="Verwijderen"

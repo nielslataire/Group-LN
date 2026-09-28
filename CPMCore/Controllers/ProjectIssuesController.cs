@@ -878,37 +878,9 @@ public class ProjectsIssuesController : BaseController
 
     private string? GetSignedAssetUrlByFileName(string fileName, string folder)
     {
-        var safeFileName = Path.GetFileName(fileName ?? string.Empty);
-        if (string.IsNullOrWhiteSpace(safeFileName)) return null;
-
-        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            return null;
-
-        if (string.Equals(folder, "pictures", StringComparison.OrdinalIgnoreCase))
-            return $"{baseUrl}/pictures/{Uri.EscapeDataString(safeFileName)}";
-
-        var readKey = _configuration["StorageApi:ReadApiKey"];
-        if (string.IsNullOrWhiteSpace(readKey))
-            return null;
-
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("X-Api-Key", readKey);
-
-        var signUrl = $"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(safeFileName)}/sign";
-        var response = httpClient.PostAsync(signUrl, content: null).GetAwaiter().GetResult();
-        if (!response.IsSuccessStatusCode) return null;
-
-        var payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        using var jsonDoc = JsonDocument.Parse(payload);
-        if (!jsonDoc.RootElement.TryGetProperty("url", out var urlElement)) return null;
-
-        var relativeOrAbsolute = urlElement.GetString();
-        if (string.IsNullOrWhiteSpace(relativeOrAbsolute)) return null;
-
-        return relativeOrAbsolute.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? relativeOrAbsolute
-            : $"{baseUrl}{relativeOrAbsolute}";
+        // Gedelegeerd naar de gedeelde IAssetStorageClient (incl. de publieke "pictures"-uitzondering, die daar nu ook zit).
+        var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
+        return storage.GetSignedUrl(folder, fileName);
     }
 
     private async Task<string?> UploadAssetToStorageAsync(IFormFile file, string folder)
@@ -919,29 +891,9 @@ public class ProjectsIssuesController : BaseController
 
     private async Task<string?> UploadAssetToStorageAsync(Stream fileStream, string originalFileName, string? contentType, string folder)
     {
-        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
-        var writeKey = _configuration["StorageApi:WriteApiKey"];
-        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
-            return null;
-
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("X-Api-Key", writeKey);
-
-        using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(folder), "folder");
-
-        var fileContent = new StreamContent(fileStream);
-        if (!string.IsNullOrWhiteSpace(contentType))
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-        content.Add(fileContent, "file", originalFileName);
-
-        var response = await httpClient.PostAsync($"{baseUrl}/api/assets/upload", content);
-        if (!response.IsSuccessStatusCode) return null;
-
-        var payload = await response.Content.ReadAsStringAsync();
-        using var jsonDoc = JsonDocument.Parse(payload);
-        if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
-        return fileNameElement.GetString();
+        // Gedelegeerd naar de gedeelde IAssetStorageClient (ONDERTEKENEN_VOORSTEL.md §4.7) — was een kopie van ProjectenController.
+        var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
+        return await storage.UploadAsync(fileStream, originalFileName, contentType, folder);
     }
 
     public sealed class IssueSendPreviewRequest

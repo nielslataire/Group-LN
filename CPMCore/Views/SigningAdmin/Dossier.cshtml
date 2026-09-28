@@ -1,0 +1,425 @@
+@model CPMCore.Models.Signing.SigningDossierVm
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Signing
+@*
+    Elektronisch ondertekenen — fase 1 (ONDERTEKENEN_VOORSTEL.md §5.3). Het interne dossier: status
+    per ondertekenaar met de acties die de service toelaat (herinnering, nieuwe link), de documenten
+    met hun SHA-256, de audit trail (append-only, hash-ketting) en annuleren met verplichte reden.
+    Detailpagina-conventies van Leveranciers/DetailsV2 (sectiekaarten + .gl-v2-detail-grid), het
+    projectdossier-inner-menu wanneer het dossier bij een project hoort, TYPE 2-modal (4j) voor de
+    annuleerreden. Alles wat hier staat komt uit CaseStatusView/SigningEventView: e-mail en IP zijn
+    al gemaskeerd door de service, er is geen ruwe persoonsdata in de HTML.
+*@
+@{
+    var c = Model.Case;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Dt(DateTime? d) => d.HasValue ? d.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", be) : "—";
+    string D(DateTime? d) => d.HasValue ? d.Value.ToLocalTime().ToString("dd/MM/yyyy", be) : "—";
+    string Short(string? sha) => string.IsNullOrEmpty(sha) ? "—" : sha.Length > 16 ? sha[..16] + "…" : sha;
+
+    var isOpen = c.Status == (int)SigningCaseStatus.Open;
+    var isDraft = c.Status == (int)SigningCaseStatus.Draft;
+    var isClosed = !isOpen && !isDraft;
+    var signedCount = c.Parties.Count(p => p.Status == (int)SigningPartyStatus.Signed);
+    var partyNames = c.Parties.ToDictionary(p => p.PartyId, p => p.DisplayName);
+    var hasFinal = !string.IsNullOrEmpty(c.FinalSha256);
+    var hasAudit = !string.IsNullOrEmpty(c.AuditReportSha256);
+    var expired = c.ExpiresAt is not null && c.ExpiresAt <= DateTime.UtcNow;
+
+    GlV2ProjectMenuVm? menuVm = c.ProjectId is > 0
+        ? new GlV2ProjectMenuVm
+        {
+            ProjectId = c.ProjectId.Value,
+            ProjectName = Model.ProjectName ?? "",
+            ProjectSubtitle = "project · ondertekening",
+            IsCoordinationProject = Model.IsCoordinationProject
+        }
+        : null;
+
+    bool CanAct(FacadeCore.Signing.PartyStatusView p) => isOpen && Model.CanWrite && p.Status is
+        (int)SigningPartyStatus.Invited or (int)SigningPartyStatus.Opened or (int)SigningPartyStatus.Verified;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-signing.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @SigningLabels.CaseStatusBadge(c.Status)">@SigningLabels.CaseStatus(c.Status).ToUpperInvariant()</span>
+    @if (Model.IsTestMode)
+    {
+        <span class="gl-v2-badge is-attention">TESTMODUS</span>
+    }
+}
+@section PageActions
+{
+    <div class="gl-v2-sg-topbar-actions">
+        <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Original, inline = true })" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary gl-v2-sg-topbar-btn">
+            <i class="ph ph-file-pdf" aria-hidden="true"></i>Document
+        </a>
+        @if (hasFinal)
+        {
+            <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Final })" class="gl-v2-btn gl-v2-btn-primary gl-v2-sg-topbar-btn">
+                <i class="ph ph-download-simple" aria-hidden="true"></i>Ondertekend document
+            </a>
+        }
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-sg-topbar-menu" aria-label="Meer acties">
+            <i class="ph ph-dots-three" aria-hidden="true"></i>
+        </button>
+    </div>
+}
+@section MobileQuickActions
+{
+    <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Original, inline = true })" target="_blank" rel="noopener" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-file-pdf" aria-hidden="true"></i>Document
+    </a>
+    @if (hasFinal)
+    {
+        <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Final })" class="gl-v2-mobile-quickaction">
+            <i class="ph ph-download-simple" aria-hidden="true"></i>Ondertekend
+        </a>
+    }
+    <button type="button" class="gl-v2-mobile-quickaction js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-sg-topbar-menu">
+        <i class="ph ph-dots-three" aria-hidden="true"></i>Meer
+    </button>
+}
+@section ProjectMenu
+{
+    @if (menuVm is not null)
+    {
+        menuVm.Mode = GlV2ProjectMenuMode.Outer;
+        @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+    }
+}
+@{ ViewData["GlV2NoProjectMenu"] = menuVm is null; }
+@if (menuVm is not null)
+{
+    menuVm.Mode = GlV2ProjectMenuMode.Phone;
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-menu" id="gl-v2-sg-topbar-menu">
+    <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Original })" class="gl-v2-menu-item"><i class="ph ph-file-pdf" aria-hidden="true"></i>Aangeboden document downloaden</a>
+    @if (hasFinal)
+    {
+        <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Final })" class="gl-v2-menu-item"><i class="ph ph-file-arrow-down" aria-hidden="true"></i>Ondertekend document downloaden</a>
+    }
+    @if (hasAudit)
+    {
+        <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.AuditReport })" class="gl-v2-menu-item"><i class="ph ph-shield-check" aria-hidden="true"></i>Auditrapport downloaden</a>
+    }
+    <form method="post" asp-action="VerifyChain" class="gl-v2-sg-inline-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="caseId" value="@c.CaseId" />
+        <button type="submit" class="gl-v2-menu-item"><i class="ph ph-link" aria-hidden="true"></i>Audit trail controleren</button>
+    </form>
+    @if (!string.IsNullOrWhiteSpace(Model.SourceUrl))
+    {
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+        <a href="@Model.SourceUrl" class="gl-v2-menu-item"><i class="ph ph-arrow-u-up-left" aria-hidden="true"></i>Naar @Model.SourceLabel</a>
+    }
+    @if ((isOpen || isDraft) && Model.CanWrite)
+    {
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+        <button type="button" class="gl-v2-menu-item is-danger" data-bs-toggle="modal" data-bs-target="#gl-v2-sg-cancel-modal"><i class="ph ph-prohibit" aria-hidden="true"></i>Dossier annuleren</button>
+    }
+</div>
+
+@if (isDraft)
+{
+    <div class="gl-v2-sg-notice is-warning">
+        <span class="gl-v2-sg-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <span class="gl-v2-sg-notice-title">Nog niet aangeboden</span>
+        <span class="gl-v2-sg-notice-desc">Het dossier is aangemaakt maar de uitnodigingen zijn niet verstuurd. Probeer opnieuw of annuleer het dossier.</span>
+        <span class="gl-v2-sg-notice-spacer"></span>
+        @if (Model.CanWrite)
+        {
+            <form method="post" asp-action="Reopen" class="gl-v2-sg-inline-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="caseId" value="@c.CaseId" />
+                <button type="submit" class="gl-v2-sg-notice-action">Nu aanbieden</button>
+            </form>
+        }
+    </div>
+}
+else if (isOpen && expired)
+{
+    <div class="gl-v2-sg-notice is-warning">
+        <span class="gl-v2-sg-notice-icon"><i class="ph ph-clock-countdown" aria-hidden="true"></i></span>
+        <span class="gl-v2-sg-notice-title">Vervaldatum voorbij</span>
+        <span class="gl-v2-sg-notice-desc">De links werken niet meer; de achtergrondtaak sluit dit dossier binnenkort als verlopen.</span>
+    </div>
+}
+else if (c.Status == (int)SigningCaseStatus.Completed && !hasFinal)
+{
+    <div class="gl-v2-sg-notice is-warning">
+        <span class="gl-v2-sg-notice-icon"><i class="ph ph-hourglass" aria-hidden="true"></i></span>
+        <span class="gl-v2-sg-notice-title">Afwerking bezig</span>
+        <span class="gl-v2-sg-notice-desc">Alle handtekeningen zijn gezet; het ondertekende document en het auditrapport worden opgemaakt.</span>
+    </div>
+}
+else if (isClosed && !string.IsNullOrWhiteSpace(c.CloseReason))
+{
+    <div class="gl-v2-sg-notice is-neutral">
+        <span class="gl-v2-sg-notice-label">Reden</span>
+        <span class="gl-v2-sg-notice-title">@SigningLabels.CaseStatus(c.Status)</span>
+        <span class="gl-v2-sg-notice-desc">— @c.CloseReason</span>
+    </div>
+}
+
+@* ── Overzicht ────────────────────────────────────────────────────────────────────────────────── *@
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">@Model.DocumentTypeLabel</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">@c.Title</span>
+        <span class="gl-v2-section-card-spacer"></span>
+        <span class="gl-v2-section-card-meta">@signedCount / @c.Parties.Count ondertekend</span>
+    </div>
+    <div class="gl-v2-detail-grid">
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Status</span>
+            <span class="gl-v2-detail-value"><span class="gl-v2-badge @SigningLabels.CaseStatusBadge(c.Status)">@SigningLabels.CaseStatus(c.Status)</span></span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Regel</span>
+            <span class="gl-v2-detail-value">@SigningLabels.Rule(c.SigningRule)</span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Verificatie</span>
+            <span class="gl-v2-detail-value">@(c.OtpRequired ? SigningLabels.VerificationMethod(c.VerificationMethod) : "Geen")</span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Project</span>
+            <span class="gl-v2-detail-value @(string.IsNullOrWhiteSpace(Model.ProjectName) ? "is-empty" : "")">@(Model.ProjectName ?? "—")</span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Aangemaakt</span>
+            <span class="gl-v2-detail-value">@Dt(c.CreatedAt)</span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Aangeboden</span>
+            <span class="gl-v2-detail-value @(c.OpenedAt is null ? "is-empty" : "")">@Dt(c.OpenedAt)</span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">Geldig tot</span>
+            <span class="gl-v2-detail-value @(expired && isOpen ? "gl-v2-sg-danger" : "")">@D(c.ExpiresAt)</span>
+        </div>
+        <div class="gl-v2-detail-field">
+            <span class="gl-v2-detail-label">@(c.CompletedAt is not null ? "Voltooid" : "Afgesloten")</span>
+            <span class="gl-v2-detail-value @((c.CompletedAt ?? c.ClosedAt) is null ? "is-empty" : "")">@Dt(c.CompletedAt ?? c.ClosedAt)</span>
+        </div>
+        <div class="gl-v2-detail-field is-full">
+            <span class="gl-v2-detail-label">Publieke verificatie</span>
+            <span class="gl-v2-detail-value gl-v2-sg-mono">@Model.VerificationUrl</span>
+        </div>
+    </div>
+</div>
+
+@* ── Ondertekenaars ───────────────────────────────────────────────────────────────────────────── *@
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Ondertekenaars</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Wie moet tekenen, hoe ver elk staat en wat je nog kunt doen.</span>
+    </div>
+    <div class="gl-v2-sg-table-scroll">
+        <table class="gl-v2-sg-table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Ondertekenaar</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="gl-v2-sg-col-collapsible">Uitgenodigd</th>
+                    <th scope="col" class="gl-v2-sg-col-collapsible">Geopend</th>
+                    <th scope="col" class="gl-v2-sg-col-collapsible">Geverifieerd</th>
+                    <th scope="col">Ondertekend</th>
+                    <th scope="col" class="gl-v2-sg-col-collapsible">Herinneringen</th>
+                    <th scope="col" class="is-right"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in c.Parties)
+                {
+                    var menuId = "gl-v2-sg-party-menu-" + p.PartyId;
+                    <tr>
+                        <td class="gl-v2-sg-muted">@(p.SortOrder + 1)</td>
+                        <td>
+                            <div class="gl-v2-sg-party-cell">
+                                <span class="gl-v2-sg-party-name">@p.DisplayName</span>
+                                <span class="gl-v2-sg-party-sub">@SigningLabels.PartyType(p.PartyType)@(string.IsNullOrWhiteSpace(p.Capacity) ? "" : " · " + p.Capacity)@(string.IsNullOrWhiteSpace(p.EmailMasked) ? "" : " · " + p.EmailMasked)</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="gl-v2-badge @SigningLabels.PartyStatusBadge(p.Status)">@SigningLabels.PartyStatus(p.Status)</span>
+                            @if (p.Status == (int)SigningPartyStatus.Declined && !string.IsNullOrWhiteSpace(p.DeclineReason))
+                            {
+                                <div class="gl-v2-sg-party-sub gl-v2-sg-reason">„@p.DeclineReason”</div>
+                            }
+                        </td>
+                        <td class="gl-v2-sg-col-collapsible @(p.InvitedAt is null ? "gl-v2-sg-muted" : "")">@Dt(p.InvitedAt)</td>
+                        <td class="gl-v2-sg-col-collapsible @(p.FirstOpenedAt is null ? "gl-v2-sg-muted" : "")">@Dt(p.FirstOpenedAt)</td>
+                        <td class="gl-v2-sg-col-collapsible @(p.VerifiedAt is null ? "gl-v2-sg-muted" : "")">@Dt(p.VerifiedAt)</td>
+                        <td class="@(p.SignedAt is null ? "gl-v2-sg-muted" : "gl-v2-sg-strong")">@Dt(p.SignedAt)</td>
+                        <td class="gl-v2-sg-col-collapsible gl-v2-sg-muted">@(p.ReminderCount == 0 ? "—" : $"{p.ReminderCount}× · laatst {D(p.LastReminderAt)}")</td>
+                        <td class="is-right">
+                            @if (CanAct(p))
+                            {
+                                <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Acties voor @p.DisplayName">
+                                    <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                </button>
+                                <div class="gl-v2-menu" id="@menuId">
+                                    <form method="post" asp-action="Remind" class="gl-v2-sg-inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="caseId" value="@c.CaseId" />
+                                        <input type="hidden" name="partyId" value="@p.PartyId" />
+                                        <button type="submit" class="gl-v2-menu-item"><i class="ph ph-bell-ringing" aria-hidden="true"></i>Herinnering sturen</button>
+                                    </form>
+                                    <form method="post" asp-action="Regenerate" class="gl-v2-sg-inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="caseId" value="@c.CaseId" />
+                                        <input type="hidden" name="partyId" value="@p.PartyId" />
+                                        <button type="submit" class="gl-v2-menu-item"><i class="ph ph-link-simple" aria-hidden="true"></i>Nieuwe link sturen <span class="gl-v2-menu-item-sub">oude link wordt ingetrokken</span></button>
+                                    </form>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@* ── Documenten ───────────────────────────────────────────────────────────────────────────────── *@
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-files" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Documenten</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Elke download wordt gecontroleerd op zijn SHA-256 en in de audit trail genoteerd.</span>
+    </div>
+    <div class="gl-v2-sg-docs">
+        <div class="gl-v2-sg-doc">
+            <span class="gl-v2-sg-doc-icon"><i class="ph ph-file-pdf" aria-hidden="true"></i></span>
+            <span class="gl-v2-sg-doc-text">
+                <span class="gl-v2-sg-doc-name">Aangeboden document</span>
+                <span class="gl-v2-sg-doc-hash" title="@c.OriginalSha256">SHA-256 @Short(c.OriginalSha256)</span>
+            </span>
+            @if (!string.IsNullOrEmpty(c.OriginalSha256) && (!isClosed || c.Status == (int)SigningCaseStatus.Completed))
+            {
+                <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Original })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-download-simple" aria-hidden="true"></i>Downloaden</a>
+            }
+            else if (isClosed)
+            {
+                <span class="gl-v2-sg-doc-note">inhoud verwijderd — niet ondertekend</span>
+            }
+        </div>
+        <div class="gl-v2-sg-doc @(hasFinal ? "" : "is-pending")">
+            <span class="gl-v2-sg-doc-icon"><i class="ph ph-seal-check" aria-hidden="true"></i></span>
+            <span class="gl-v2-sg-doc-text">
+                <span class="gl-v2-sg-doc-name">Ondertekend document</span>
+                <span class="gl-v2-sg-doc-hash" title="@c.FinalSha256">@(hasFinal ? "SHA-256 " + Short(c.FinalSha256) : "nog niet beschikbaar")</span>
+            </span>
+            @if (hasFinal)
+            {
+                <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.Final })" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-download-simple" aria-hidden="true"></i>Downloaden</a>
+            }
+        </div>
+        <div class="gl-v2-sg-doc @(hasAudit ? "" : "is-pending")">
+            <span class="gl-v2-sg-doc-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+            <span class="gl-v2-sg-doc-text">
+                <span class="gl-v2-sg-doc-name">Auditrapport</span>
+                <span class="gl-v2-sg-doc-hash" title="@c.AuditReportSha256">@(hasAudit ? "SHA-256 " + Short(c.AuditReportSha256) : "nog niet beschikbaar")</span>
+            </span>
+            @if (hasAudit)
+            {
+                <a href="@Url.Action("Download", new { caseId = c.CaseId, kind = (int)SigningDocumentKind.AuditReport })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-download-simple" aria-hidden="true"></i>Downloaden</a>
+            }
+        </div>
+    </div>
+</div>
+
+@* ── Audit trail ──────────────────────────────────────────────────────────────────────────────── *@
+<div class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-list-magnifying-glass" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Audit trail</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Alleen-toevoegen, met hash-ketting. IP-adressen zijn gemaskeerd.</span>
+        <span class="gl-v2-section-card-spacer"></span>
+        <span class="gl-v2-section-card-meta">@Model.Events.Count events</span>
+        <form method="post" asp-action="VerifyChain" class="gl-v2-sg-inline-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="caseId" value="@c.CaseId" />
+            <button type="submit" class="gl-v2-card-header-action">Controleren</button>
+        </form>
+    </div>
+    <ol class="gl-v2-sg-timeline">
+        @foreach (var e in Model.Events.OrderByDescending(e => e.Id))
+        {
+            var alert = SigningLabels.IsEventAlert(e.EventType);
+            var who = e.PartyId.HasValue && partyNames.TryGetValue(e.PartyId.Value, out var n) ? n : null;
+            <li class="gl-v2-sg-event @(alert ? "is-alert" : "")">
+                <span class="gl-v2-sg-event-dot" aria-hidden="true"></span>
+                <span class="gl-v2-sg-event-when">@Dt(e.OccurredAtUtc)</span>
+                <span class="gl-v2-sg-event-body">
+                    <span class="gl-v2-sg-event-title">@SigningLabels.Event(e.EventType)</span>
+                    <span class="gl-v2-sg-event-meta">
+                        @SigningLabels.ActorType(e.ActorType)@(string.IsNullOrWhiteSpace(e.ActorLabel) ? "" : " · " + e.ActorLabel)@(who is null ? "" : " · " + who)@(string.IsNullOrWhiteSpace(e.IpMasked) ? "" : " · " + e.IpMasked)
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(e.DataJson) && e.DataJson != "{}")
+                    {
+                        <details class="gl-v2-sg-event-data">
+                            <summary>details</summary>
+                            <code>@e.DataJson</code>
+                        </details>
+                    }
+                </span>
+                <span class="gl-v2-sg-event-hash" title="@e.EventHash">@Short(e.EventHash)</span>
+            </li>
+        }
+    </ol>
+</div>
+
+@if ((isOpen || isDraft) && Model.CanWrite)
+{
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-sg-cancel-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-sg-cancel-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-sg-cancel-title">Dossier annuleren</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <form method="post" asp-action="Cancel" id="gl-v2-sg-cancel-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="caseId" value="@c.CaseId" />
+                    <div class="modal-body">
+                        <p class="gl-v2-sg-modal-intro gl-v2-field-full">Alle ondertekenlinks worden ongeldig en de ondertekenaars krijgen geen nieuwe uitnodiging. Het niet-ondertekende document wordt niet bewaard. Deze reden komt in de audit trail.</p>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gl-v2-sg-cancel-reason">Reden</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea">
+                                <textarea id="gl-v2-sg-cancel-reason" name="reason" class="gl-v2-field-input" maxlength="1000" required placeholder="bv. Wijzigingsopdracht wordt aangepast op vraag van de klant"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Dossier annuleren</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-signing.js" asp-append-version="true"></script>
+}

@@ -135,3 +135,65 @@ gemeenten verminderen of `Sources.Immoweb.DelayBetweenRequestsSeconds` verlagen.
 1. In Visual Studio: rechtsklik CPMCore → Publish → profiel `FolderProfile` (doel `C:\BUILDCPM`).
 2. De inhoud van `C:\BUILDCPM` uploaden naar de site bij SmarterASP (controlepaneel of FTP).
 3. Schema-wijzigingen: het bijhorende script uit `_migrations/` handmatig uitvoeren op de live database (zie de kop van elk script; ze zijn idempotent en additief).
+
+## Elektronisch ondertekenen (signingmodule)
+
+Ontwerp en fasering: `ONDERTEKENEN_VOORSTEL.md`. Uitrol gebeurt "donker": de code staat in de build,
+de module is onbereikbaar tot `Features:EnableSigning` op `true` staat.
+
+### Configuratie
+| Sleutel | Waar | Verplicht bij `EnableSigning=true` | Toelichting |
+|---|---|---|---|
+| `Features:EnableSigning` | appsettings | — | `false` = module aanwezig maar uit (geen knoppen, geen publieke route, geen achtergrondjob). |
+| `Signing:OtpHmacKey` | **user-secrets / omgevingsvariabele, nooit in appsettings of git** | ja | ≥ 32 bytes willekeurig als base64 (bv. `openssl rand -base64 48`). Sleutel voor de HMAC van verificatiecodes. Roteren = alle lopende codes ongeldig (dossiers blijven intact). |
+| `Signing:PublicBaseUrl` | appsettings per omgeving | ja | Basis-URL zonder slash, bv. `https://cpm.groupln.be`. Wordt in de ondertekenlinks gebruikt. |
+| `Signing:TestRecipientOverride` | appsettings **test** | nee | Gevuld = ÁLLE signing-mails gaan naar dit adres (echte ontvanger in het onderwerp). **Leeg in productie.** De app logt een waarschuwing bij het opstarten als het gevuld is. |
+| `Signing:SigningSessionMinutes` | appsettings | nee (30) | Geldigheid van een ondertekensessie zonder activiteit, en maximale ouderdom van een verificatie bij het ondertekenen. |
+| `Signing:StorageFolder` | appsettings | nee (`signing`) | Map in de Storage API voor de spiegelkopieën. |
+| `Signing:DownloadLinkDays` | appsettings | nee (90) | Geldigheid van de downloadlink in de bevestigingsmail. |
+| `Signing:FromEmail` | appsettings | nee | Afzender van signing-mails; leeg = de SMTP-gebruiker. |
+| `Signing:SmsProvider` | appsettings | nee | Sleutel van de SMS-provider (fase 4); leeg = SMS niet beschikbaar. |
+
+Ontbreekt `OtpHmacKey` of `PublicBaseUrl` terwijl de module aanstaat, dan **start de applicatie niet** (bewust: fail closed).
+
+### Schema
+Migratie `_migrations/047_Signing.sql` (8 tabellen, trigger `TR_SigningEvent_AppendOnly`, seed van het
+beleid voor wijzigingsopdrachten). Toegepast op `db_ab5fbb_testdb` op 27/09/2026; op live handmatig
+via SSMS zoals elke migratie hier. De trigger weigert UPDATE/DELETE op `SigningEvent` — ook voor een
+beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeling.
+
+### Testen vóór productie
+1. Op de testomgeving: `Features:EnableSigning=true`, `Signing:OtpHmacKey` en `Signing:PublicBaseUrl`
+   zetten, en `Signing:TestRecipientOverride` op een eigen adres.
+2. Een wijzigingsopdracht ter ondertekening aanbieden (fase 1) — alle mails komen op het testadres aan,
+   met `[TEST → klant@…]` in het onderwerp.
+3. De link uit de mail openen, code aanvragen (komt op hetzelfde testadres), ondertekenen (fase 2).
+4. In CPM: statusblok, auditrapport, "Audit trail controleren".
+5. Unit-tests: `dotnet test ServiceCore.Tests` (tokens, OTP-HMAC, hash-ketting, ALL/ANY/ORDERED).
+
+### Operationele randvoorwaarden
+- **Klok**: alle bewijs is server-side UTC; de host moet NTP-gesynchroniseerd zijn.
+- **E-mail**: SPF/DKIM/DMARC op het verzenddomein, anders belanden uitnodigingen in spam.
+- **Reverse proxy**: de rate limiter partitioneert op client-IP; achter een proxy is dat het proxy-IP
+  tenzij `ForwardedHeaders` geconfigureerd is (nog niet — fase 2).
+- **Back-up**: de ondertekende documenten en het auditrapport staan als bytes in SQL (`SigningDocument`);
+  de databaseback-up dekt ze. De Storage API-map `signing/` is een spiegel, geen bewijsbron.
+
+### Fase 1 (27/09/2026): wijzigingsopdrachten + interne schermen
+- **Migratie `_migrations/048_SigningCase_SourceFingerprint.sql`** (één kolom, additief). Toegepast op
+  `db_ab5fbb_testdb`; op live handmatig via SSMS ná 047.
+- **Permissie toekennen.** De nieuwe code `Signing` ("Elektronisch ondertekenen") staat in de catalogus
+  maar is aan geen enkele rol gekoppeld. Zonder leesrecht: geen menu-item "Ondertekeningen", geen
+  ingang op de lijst Wijzigingsopdrachten, 403 op `/SigningAdmin`. Schrijfrecht = aanbieden,
+  herinneren, nieuwe link, annuleren.
+- **Routes.** `/SigningAdmin/Index?projectId=`, `/SigningAdmin/Start?documentType=ChangeOrder&sourceId=`,
+  `/SigningAdmin/Dossier/{id}`, `/SigningAdmin/Download?caseId=&kind=`. Alle 404 zolang
+  `Features:EnableSigning` uit staat. De publieke route `/ondertekenen/{token}` komt in fase 2.
+- **Wijzigingsopdracht-PDF** (`Projecten/ChangeOrderPDF`) rendert nu via QuestPDF i.p.v. wkhtmltopdf;
+  de Rotativa-binary is voor deze actie niet meer nodig (wel nog voor `MinimalTestPDF`).
+- **Vergrendeling.** Zolang een dossier Draft/Open is, weigeren `EditChangeOrder` en
+  `DeleteChangeOrder` met een verwijzing naar het dossier. Annuleren in het dossier heft dat op.
+- **Testen (fase 1):** module aan + testmodus (zie hierboven) → Projecten › Wijzigingsopdrachten ›
+  icoon "Elektronisch laten ondertekenen" → Start (controleer "Bekijk de pdf") → Aanbieden → de
+  uitnodigingsmail komt op het testadres; het dossier toont per partij "Uitgenodigd", de audit trail
+  toont CaseCreated/DocumentStored/CaseOpened/InvitationSent. De link in de mail werkt pas in fase 2.

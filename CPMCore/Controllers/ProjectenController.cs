@@ -5110,7 +5110,7 @@ namespace CPMCore.Controllers
         // ========== WIJZIGINGSOPDRACHTEN KLANTEN/PROJECTEN ==========
 
         [HttpGet]
-        public ActionResult DetailsChangeOrder(int? projectid, int? clientid)
+        public async Task<ActionResult> DetailsChangeOrder(int? projectid, int? clientid)
         {
             if ((projectid ?? 0) <= 0 && (clientid ?? 0) <= 0)
             {
@@ -5185,6 +5185,23 @@ namespace CPMCore.Controllers
 
             model.ClientUnits = unitsLookup;
 
+            // Elektronisch ondertekenen (fase 1): recentste dossier per wijzigingsopdracht voor de
+            // statuskolom en de ingang "Elektronisch laten ondertekenen". Enkel als de module aanstaat.
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            var signingFeatures = HttpContext.RequestServices.GetRequiredService<IOptions<CPMCore.Configuration.FeatureFlagsOptions>>().Value;
+            if (signingFeatures.EnableSigning && model.CO.Count > 0)
+            {
+                var signing = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.ISigningService>();
+                var cases = await signing.ListCasesAsync(model.ProjectId > 0 ? model.ProjectId : null, null, 1000, HttpContext.RequestAborted);
+                var coIds = model.CO.Select(c => c.Id).ToHashSet();
+                model.SigningCases = cases
+                    .Where(c => c.DocumentType == CPMCore.Services.Signing.ChangeOrderSigningSource.Key && coIds.Contains(c.SourceEntityId))
+                    .GroupBy(c => c.SourceEntityId)
+                    .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedAt).First());
+                model.SigningEnabled = true;
+                model.CanStartSigning = _ps.HasWrite(PermissionCodes.Signing);
+            }
+
             // BREADCRUMBS: Home / Projectnaam / Wijzigingsopdrachten
             if (model.ProjectId > 0)
             {
@@ -5203,13 +5220,29 @@ namespace CPMCore.Controllers
                 ViewData["BreadcrumbNode"] = changeOrdersNode;
             }
 
-            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectChangeOrders = _ps.HasWrite(PermissionCodes.ProjectsChangeOrders);
             ViewBag.CanDeleteProjectChangeOrders = _ps.HasDelete(PermissionCodes.ProjectsChangeOrders);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName ?? model.ClientName} - Wijzigingsopdrachten");
             return View(model);
         }
+
+        /// <summary>
+        /// Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §9.2): zolang er een dossier Draft/Open is
+        /// voor deze wijzigingsopdracht, is ze vergrendeld — bewerken en verwijderen weigeren, met
+        /// verwijzing naar het dossier. Afgeleid van het actieve dossier, geen vlag op de ChangeOrder.
+        /// Module uit = nooit vergrendeld (en geen query naar de signingtabellen).
+        /// </summary>
+        private async Task<FacadeCore.Signing.CaseStatusView?> ActiveSigningCaseAsync(int changeOrderId)
+        {
+            if (changeOrderId <= 0) return null;
+            var features = HttpContext.RequestServices.GetRequiredService<IOptions<CPMCore.Configuration.FeatureFlagsOptions>>().Value;
+            if (!features.EnableSigning) return null;
+            var signing = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.ISigningService>();
+            return await signing.GetActiveCaseForSourceAsync(CPMCore.Services.Signing.ChangeOrderSigningSource.Key, changeOrderId, HttpContext.RequestAborted);
+        }
+
+        private const string SigningLockedMessage = "Er loopt een elektronische ondertekening voor deze wijzigingsopdracht. Annuleer die eerst in het ondertekendossier.";
 
         [HttpGet]
         [Breadcrumb("Wijzigingsopdracht toevoegen", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
@@ -5408,13 +5441,21 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Wijzigingsopdracht bewerken")]
         [Breadcrumb("Wijzigingsopdracht bewerken", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
-        public ActionResult EditChangeOrder(int projectid, int clientid, int coid)
+        public async Task<ActionResult> EditChangeOrder(int projectid, int clientid, int coid)
         {
             // 0) Basisvalidatie
             if (projectid <= 0)
             {
                 AddMessage("error", "Ongeldig project.", "Fout!");
                 return RedirectToAction("Index", "Projecten");
+            }
+
+            // 0b) Vergrendeld door een lopende elektronische ondertekening?
+            var activeSigning = await ActiveSigningCaseAsync(coid);
+            if (activeSigning is not null)
+            {
+                AddMessage("warning", SigningLockedMessage, "Vergrendeld");
+                return RedirectToAction("Dossier", "SigningAdmin", new { id = activeSigning.CaseId });
             }
 
             // 1) Veilige referrer (relative URL bewaren) + fallback
@@ -5510,8 +5551,15 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost]
-        public ActionResult EditChangeOrder(ProjectChangeOrderAddUpdateModel model, List<ChangeOrderDetailBO> Details)
+        public async Task<ActionResult> EditChangeOrder(ProjectChangeOrderAddUpdateModel model, List<ChangeOrderDetailBO> Details)
         {
+            // Vergrendeld door een lopende elektronische ondertekening? (ook server-side, niet enkel de knop)
+            var activeSigning = await ActiveSigningCaseAsync(model.ChangeOrder?.Id ?? 0);
+            if (activeSigning is not null)
+            {
+                AddMessage("error", SigningLockedMessage, "Niet bewaard");
+                return RedirectToAction("Dossier", "SigningAdmin", new { id = activeSigning.CaseId });
+            }
 
             // Merge posted details
             if (Details != null)
@@ -5569,10 +5617,16 @@ namespace CPMCore.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult DeleteChangeOrder(int id)
+        public async Task<ActionResult> DeleteChangeOrder(int id)
         {
             if (id == 0)
                 return Json(new { success = false, message = "Ongeldig ID." });
+
+            if (await ActiveSigningCaseAsync(id) is not null)
+            {
+                AddMessage("error", SigningLockedMessage, "Vergrendeld");
+                return Json(new { success = false, message = SigningLockedMessage });
+            }
 
             var service = _projectService;
             var response = service.DeleteChangeOrders(new List<int> { id });
@@ -5589,43 +5643,31 @@ namespace CPMCore.Controllers
             AddMessage("error", "De wijzigingsopdracht is niet verwijderd. Probeer opnieuw.", "Fout!");
             return Json(new { success = false, message = "Verwijderen mislukt." });
         }
+        /// <summary>
+        /// De wijzigingsopdracht als PDF. Sinds signing fase 1 via QuestPDF (Documents/ChangeOrderDocument,
+        /// geladen door ChangeOrderPdfBuilder) i.p.v. de Rotativa-view ChangeOrderPDF.cshtml — hetzelfde
+        /// bestand dat een klant elektronisch ondertekent, zodat papier en dossier nooit verschillen.
+        /// De oude view blijft voorlopig staan als referentie; ze wordt nergens meer gerenderd.
+        /// </summary>
         [HttpGet]
-        public IActionResult ChangeOrderPDF(int changeorderid)
+        public async Task<IActionResult> ChangeOrderPDF(int changeorderid)
         {
-            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var builder = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.Signing.ChangeOrderPdfBuilder>();
+            var model = await builder.LoadAsync(changeorderid, HttpContext.RequestAborted);
+            if (model is null) return NotFound();
 
-            var model = new ProjectChangeOrderExportModel();
-            var clientService = _clientService;
-            var projectService = _projectService;
-
-            var changeOrderResponse = projectService.GetChangeOrder(changeorderid);
-            if (changeOrderResponse.Success)
-                model.ChangeOrder = changeOrderResponse.Values.FirstOrDefault();
-
-            var projectResponse = projectService.GetProjectByID(model.ChangeOrder.ProjectId);
-            if (projectResponse.Success)
-                model.Project = projectResponse.Values.FirstOrDefault();
-
-            var salesSettingsResponse = projectService.GetSalesSettings(model.Project.Id);
-            if (salesSettingsResponse.Success)
-                model.ProjectSalesSettings = salesSettingsResponse.Values.FirstOrDefault();
-
-            var clientResponse = clientService.GetClientAccountById(model.ChangeOrder.ClientAccountID);
-            if (clientResponse.Success)
-                model.ClientAccount = clientResponse.Values.FirstOrDefault();
-
-            model.Units = clientService.GetClientAccountUnitsNameById(model.ChangeOrder.ClientAccountID);
-
-
-            // Gebruik juiste constructor om model + view te combineren
-            return new ViewAsPdf("ChangeOrderPDF", model)
+            byte[] pdfBytes;
+            try
             {
-                PageOrientation = Orientation.Portrait,
-                PageMargins = new Margins(10, 5, 0, 5),
-                PageSize = Rotativa.AspNetCore.Options.Size.A4,
-                FileName = $"Wijzigingsopdracht - {model.Project.Name} {DateTime.Now:yyyyMMdd}_{model.ChangeOrder.Id}.pdf",
-                //CustomSwitches = $"--footer-html {Url.Action("ChangeOrderFooter", "Projecten", new { text = model.ChangeOrder.ChangeOrderConditions }, "http")} --footer-spacing 0"
-            };
+                pdfBytes = builder.Render(model);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Wijzigingsopdracht-PDF genereren mislukt voor {ChangeOrderId}", changeorderid);
+                return StatusCode(500, "De wijzigingsopdracht kon niet worden opgemaakt: " + ex.Message);
+            }
+
+            return File(pdfBytes, "application/pdf", CPMCore.Services.Signing.ChangeOrderPdfBuilder.FileName(model));
         }
         [AllowAnonymous]
         [HttpGet]
@@ -10142,31 +10184,9 @@ namespace CPMCore.Controllers
 
         private string? GetSignedAssetUrlByFileName(string fileName, string folder)
         {
-            var safeFileName = Path.GetFileName(fileName ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(safeFileName)) return null;
-
-            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
-            var readKey = Configuration["StorageApi:ReadApiKey"];
-            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(readKey))
-                return null;
-
-            using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Add("X-Api-Key", readKey);
-
-            var signUrl = $"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(safeFileName)}/sign";
-            var response = httpClient.PostAsync(signUrl, content: null).GetAwaiter().GetResult();
-            if (!response.IsSuccessStatusCode) return null;
-
-            var payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            using var jsonDoc = JsonDocument.Parse(payload);
-            if (!jsonDoc.RootElement.TryGetProperty("url", out var urlElement)) return null;
-
-            var relativeOrAbsolute = urlElement.GetString();
-            if (string.IsNullOrWhiteSpace(relativeOrAbsolute)) return null;
-
-            return relativeOrAbsolute.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                ? relativeOrAbsolute
-                : $"{baseUrl}{relativeOrAbsolute}";
+            // Gedelegeerd naar de gedeelde IAssetStorageClient (zie UploadAssetToStorageAsync hierboven).
+            var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
+            return storage.GetSignedUrl(folder, fileName);
         }
 
         private static string BuildDocThumbFileName(string sourceFileName)
@@ -10236,29 +10256,10 @@ namespace CPMCore.Controllers
 
         private async Task<string?> UploadAssetToStorageAsync(Stream fileStream, string originalFileName, string? contentType, string folder)
         {
-            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
-            var writeKey = Configuration["StorageApi:WriteApiKey"];
-            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
-                return null;
-
-            using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Add("X-Api-Key", writeKey);
-
-            using var content = new MultipartFormDataContent();
-            content.Add(new StringContent(folder), "folder");
-
-            var fileContent = new StreamContent(fileStream);
-            if (!string.IsNullOrWhiteSpace(contentType))
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-            content.Add(fileContent, "file", originalFileName);
-
-            var response = await httpClient.PostAsync($"{baseUrl}/api/assets/upload", content);
-            if (!response.IsSuccessStatusCode) return null;
-
-            var payload = await response.Content.ReadAsStringAsync();
-            using var jsonDoc = JsonDocument.Parse(payload);
-            if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
-            return fileNameElement.GetString();
+            // Gedelegeerd naar de gedeelde IAssetStorageClient (ONDERTEKENEN_VOORSTEL.md §4.7): zelfde
+            // endpoint en gedrag als de vroegere inline HttpClient-code, maar nog maar één implementatie.
+            var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
+            return await storage.UploadAsync(fileStream, originalFileName, contentType, folder);
         }
 
         private static HttpClient CreateStorageHttpClient(string apiKey, TimeSpan timeout)

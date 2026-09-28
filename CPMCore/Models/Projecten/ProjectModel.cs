@@ -1304,6 +1304,12 @@ namespace CPMCore.Models.Projecten
 
         public IReadOnlyList<IdNameBO> Clients { get; set; } = Array.Empty<IdNameBO>();
         public IDictionary<int, string> ClientUnits { get; set; } = new Dictionary<int, string>();
+
+        // Elektronisch ondertekenen (fase 1): het recentste dossier per wijzigingsopdracht, zodat de
+        // lijst status en ingang kan tonen. Leeg wanneer Features:EnableSigning uit staat.
+        public bool SigningEnabled { get; set; }
+        public bool CanStartSigning { get; set; }
+        public IDictionary<int, FacadeCore.Signing.CaseStatusView> SigningCases { get; set; } = new Dictionary<int, FacadeCore.Signing.CaseStatusView>();
     }
 
     // UNITS

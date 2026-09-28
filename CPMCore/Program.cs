@@ -307,6 +307,61 @@ builder.Services.AddScoped<IContractorInviteService, ContractorInviteService>();
 builder.Services.AddScoped<IPortalInviteNotifier, PortalInviteNotifier>();
 builder.Services.AddSingleton<IResendInviteUrlBuilder, ResendInviteUrlBuilder>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
+
+// ── Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md, fase 0) ─────────────────────────────
+// Storage-client: één HttpClient-gebaseerde client voor de externe Storage API, vervangt de privé
+// helpers in ProjectenController/ProjectIssuesController (die delegeren er nu naartoe).
+builder.Services.AddHttpClient<FacadeCore.Signing.IAssetStorageClient, ServiceCore.Signing.AssetStorageClient>();
+builder.Services.Configure<ServiceCore.Signing.SigningOptions>(configuration.GetSection(ServiceCore.Signing.SigningOptions.SectionName));
+// Fail closed: staat de module aan, dan moet de configuratie kloppen vóór er ook maar één request
+// bediend wordt — een HMAC-sleutel of publieke URL die pas bij de eerste ondertekening blijkt te
+// ontbreken, is precies wat we niet willen.
+{
+    var signingFeatures = configuration.GetSection("Features").Get<FeatureFlagsOptions>() ?? new FeatureFlagsOptions();
+    if (signingFeatures.EnableSigning)
+        (configuration.GetSection(ServiceCore.Signing.SigningOptions.SectionName).Get<ServiceCore.Signing.SigningOptions>() ?? new ServiceCore.Signing.SigningOptions()).Validate();
+}
+builder.Services.AddScoped<FacadeCore.Signing.ISigningEvidenceStore, ServiceCore.Signing.SigningEvidenceStore>();
+builder.Services.AddScoped<FacadeCore.Signing.ISigningNotifier, ServiceCore.Signing.SigningNotifier>();
+// Fase 0: nog geen renderer voor het ondertekende document/auditrapport (komt in fase 2, CPMCore/Documents).
+builder.Services.AddScoped<FacadeCore.Signing.ISigningDocumentRenderer, ServiceCore.Signing.NotAvailableSigningDocumentRenderer>();
+// Strategy-registraties (zelfde recept als ITrajectTriggerAction): methodes/kanalen/bronnen op sleutel.
+builder.Services.AddScoped<FacadeCore.Signing.ISignatureMethodProvider, ServiceCore.Signing.InternalSesProvider>();
+builder.Services.AddScoped<FacadeCore.Signing.IVerificationMethod, ServiceCore.Signing.EmailOtpMethod>();
+builder.Services.AddScoped<FacadeCore.Signing.IVerificationMethod, ServiceCore.Signing.SmsOtpMethod>();
+builder.Services.AddScoped<FacadeCore.Signing.IMessageChannel, ServiceCore.Signing.EmailChannel>();
+builder.Services.AddScoped<FacadeCore.Signing.IMessageChannel, ServiceCore.Signing.SmsChannel>();
+// Documentbronnen (fase 1: wijzigingsopdrachten). ISmsProvider-adapters komen in fase 4.
+builder.Services.AddScoped<CPMCore.Services.Signing.ChangeOrderPdfBuilder>();
+builder.Services.AddScoped<FacadeCore.Signing.ISigningDocumentSource, CPMCore.Services.Signing.ChangeOrderSigningSource>();
+builder.Services.AddScoped<ServiceCore.Signing.SigningRegistry>();
+builder.Services.AddScoped<FacadeCore.Signing.ISigningService, ServiceCore.Signing.SigningService>();
+
+// Rate limiting (§6.4) — eerste gebruik in de app; enkel de signing-policies zijn benoemd, dus
+// geen enkele bestaande route krijgt een limiet. Partities per client-IP; de limiet per
+// ondertekenaar zit in SigningService zelf. Boven de limiet: 429 met een neutrale tekst.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+        await context.HttpContext.Response.WriteAsync("Te veel aanvragen. Probeer het over enkele minuten opnieuw.", token);
+    };
+    static string ClientKey(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    static System.Threading.RateLimiting.FixedWindowRateLimiterOptions Window(int permits) => new()
+    {
+        PermitLimit = permits,
+        Window = TimeSpan.FromMinutes(10),
+        QueueLimit = 0,
+        AutoReplenishment = true,
+    };
+    options.AddPolicy("signing-open", ctx => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => Window(30)));
+    options.AddPolicy("signing-otp-request", ctx => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => Window(10)));
+    options.AddPolicy("signing-otp-verify", ctx => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => Window(20)));
+    options.AddPolicy("signing-sign", ctx => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => Window(10)));
+    options.AddPolicy("signing-verify-page", ctx => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => Window(60)));
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
@@ -471,7 +526,13 @@ var localizationOptions = new RequestLocalizationOptions
 
 app.UseRequestLocalization(localizationOptions);
 
+// Security headers voor de publieke signing-pagina's (/ondertekenen, /verifieer) — vóór routing,
+// raakt geen enkele andere route (ONDERTEKENEN_VOORSTEL.md §6.5).
+app.UseMiddleware<CPMCore.Middleware.SigningSecurityHeadersMiddleware>();
 app.UseRouting();
+// Na UseRouting (de limiter leest de endpoint-metadata [EnableRateLimiting]); enkel benoemde
+// policies, dus zonder attribuut geen limiet.
+app.UseRateLimiter();
 
 // ── EXTERNE TRIGGER ENDPOINTS (vóór auth – geen login vereist) ────────────────
 app.Map("/api/trigger", triggerApp =>

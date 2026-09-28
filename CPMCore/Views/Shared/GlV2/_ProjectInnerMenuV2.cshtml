@@ -3,6 +3,7 @@
 @using BOCore
 @using CPMCore.Models.GlV2
 @inject IPermissionService PermissionService
+@inject Microsoft.Extensions.Options.IOptions<CPMCore.Configuration.FeatureFlagsOptions> FeatureFlags
 @*
     gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 9 "Inner menu van het
     projectdossier — 18 items in 6 groepen, op drie breedtes").
@@ -58,6 +59,9 @@
     var canSeeChangeOrders = PermissionService.HasRead(PermissionCodes.ProjectsChangeOrders);
     var canSeeForSale      = PermissionService.HasRead(PermissionCodes.ProjectsForSale);
     var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
+    // Elektronisch ondertekenen (ONDERTEKENEN_VOORTGANG.md, fase 1): eigen permissiecode én de
+    // feature-vlag — de module blijft onzichtbaar tot Features:EnableSigning aanstaat.
+    var canSeeSigning      = FeatureFlags.Value.EnableSigning && PermissionService.HasRead(PermissionCodes.Signing);
 
     var showPhotos   = canSeePhotos   && !Model.IsCoordinationProject;
     var showNews     = canSeeNews     && !Model.IsCoordinationProject;
@@ -107,6 +111,7 @@
         financieelItems.Add(("Betalingen", "ph-currency-eur", Url.Action("PaymentStages", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "PaymentStages"), CountFor("Betalingen")));
     }
     if (canSeeChangeOrders) financieelItems.Add(("Wijzigingsopdrachten", "ph-pencil-simple-line", Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder"), CountFor("Wijzigingsopdrachten")));
+    if (canSeeSigning) financieelItems.Add(("Ondertekeningen", "ph-signature", Url.Action("Index", "SigningAdmin", new { projectId = projectId }) ?? "#", IsHere("SigningAdmin"), CountFor("Ondertekeningen")));
     if (financieelItems.Count > 0) groups.Add(("financieel", "Financieel", financieelItems));
 
     var verkoopItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();

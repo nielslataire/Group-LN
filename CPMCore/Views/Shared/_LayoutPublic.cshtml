@@ -1,0 +1,44 @@
+@*
+    Publieke layout voor pagina's zonder ingelogde gebruiker — in de eerste plaats de ondertekenpagina
+    (/ondertekenen) en de verificatiepagina (/verifieer), ONDERTEKENEN_VOORSTEL.md §5.2 en §6.5.
+    Dezelfde gl-v2-taal als _LayoutV2 (DESIGN.md: sage-getinte pagina #F2F5EF, zwevende witte kaart met
+    zachte schaduw, primair groen #00532D, één serif-titel per pagina) — maar zonder rail, topbar,
+    userbox of flyouts (er is geen gebruiker), en zonder één externe bron: geen Google Fonts, geen
+    CDN-iconen, geen Bootstrap. Reden: de Content-Security-Policy op deze paden staat enkel 'self' toe,
+    omdat de eerste URL een geheim token bevat en een Referer naar een CDN dat token zou lekken.
+    Lettertype: het lokaal aanwezige Avenir (wwwroot/fonts, ook de PDF-huisstijl) met systeemfallback;
+    de serif voor de titel valt terug op Georgia. Alle stijl zit in gl-v2-public.css.
+*@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@(ViewData["Title"] as string ?? "Group LN") · Group LN</title>
+    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
+    <link rel="stylesheet" href="~/css/gl-v2-public.css" asp-append-version="true" />
+    @RenderSection("PageStyle", required: false)
+</head>
+<body class="gl-v2 gl-v2-public">
+    <a class="gl-v2-skip-link" href="#gl-v2-public-main">Naar de inhoud</a>
+    <div class="gl-v2-public-shell">
+        <header class="gl-v2-public-header">
+            <img src="@Url.Content("~/img/groupln-logo.png")" alt="Group LN" class="gl-v2-public-logo" width="34" height="34" />
+            <span class="gl-v2-public-brand">Group LN</span>
+            @if (ViewData["PublicKicker"] is string kicker && !string.IsNullOrWhiteSpace(kicker))
+            {
+                <span class="gl-v2-public-kicker">@kicker</span>
+            }
+        </header>
+        <main id="gl-v2-public-main" class="gl-v2-public-main">
+            @RenderBody()
+        </main>
+        <footer class="gl-v2-public-footer">
+            <span>Group LN · Klaverdries 53, 9031 Drongen · info@groupln.be</span>
+            <span>Beveiligde pagina — deel de link naar deze pagina met niemand.</span>
+        </footer>
+    </div>
+    @RenderSection("PageScripts", required: false)
+</body>
+</html>

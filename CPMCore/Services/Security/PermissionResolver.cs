@@ -59,6 +59,9 @@ public class PermissionResolver : IPermissionResolver
         if (string.Equals(controller, "TrajectSjabloonAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsTrajectSjablonen;
 
         if (string.Equals(controller, "IssueNotificationAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsIssueNotifications;
+        // Elektronisch ondertekenen: het interne beheer (overzicht, instellingen). De publieke
+        // ondertekenpagina (OndertekenenController) is [AllowAnonymous] en komt hier nooit.
+        if (string.Equals(controller, "SigningAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Signing;
         if (string.Equals(controller, "Marktanalyse", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Marktanalyse;
         if (string.Equals(controller, "DocumentenCentrum", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.DocumentCenter;
         if (string.Equals(controller, "BlogBeheer", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsBlogBeheer;

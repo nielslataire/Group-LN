@@ -83,7 +83,15 @@
                enkel Projecten/DetailV2.cshtml vult 'm vandaag, elke andere gl-v2-pagina blijft
                ongewijzigd. De gsm-vorm van hetzelfde menu (9c, groene balk + blad) hoort wél ÍN de
                paginakaart — die rendert de pagina zelf in <main>, zie GlV2ProjectMenuMode. *@
-            @if (IsSectionDefined("ProjectMenu"))
+            @if (IsSectionDefined("ProjectMenu") && ViewData["GlV2NoProjectMenu"] as bool? == true)
+            {
+                @* Razor laat een @@section niet toe binnen een @@if; een pagina die het projectmenu
+                   enkel tóónt wanneer ze bij een project hoort (SigningAdmin/Index zonder projectId)
+                   definieert de sectie dus altijd en zet deze vlag als er niets in staat — anders
+                   bleef hier een lege slot-kolom staan. *@
+                IgnoreSection("ProjectMenu");
+            }
+            else if (IsSectionDefined("ProjectMenu"))
             {
                 <div class="gl-v2-project-menu-slot">
                     @RenderSection("ProjectMenu", required: false)

@@ -1,0 +1,286 @@
+@model CPMCore.Models.Signing.SigningStartVm
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Signing
+@*
+    Elektronisch ondertekenen — fase 1 (ONDERTEKENEN_VOORSTEL.md §5.1, ONDERTEKENEN_VOORTGANG.md).
+    Het startscherm: één brondocument (nu: een wijzigingsopdracht) ter ondertekening aanbieden.
+    Nieuw scherm, dus enkel gl-v2 — de formulierconventies van Leveranciers/EditV2 (sectiekaarten,
+    .gl-v2-field, vaste actiebalk onderaan, GlV2FullHeightBody) en het projectdossier-inner-menu van
+    Projecten/DetailV2 wanneer het document bij een project hoort.
+
+    Wat de gebruiker hier beslist: WIE tekent (voorstel van de bron, aanpasbaar), volgens welke REGEL
+    (ALL/ANY/ORDERED) en tot WANNEER. Wat hij niet beslist: verificatiemethode en akkoordtekst — die
+    komen uit het beleid (SigningPolicy) en staan hier enkel ter informatie, zodat er geen dossier
+    per dossier "zwakker" ingesteld kan worden.
+*@
+@{
+    ViewData["GlV2FullHeightBody"] = true;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Euro(decimal? v) => v.HasValue ? v.Value.ToString("C", be) : "—";
+
+    GlV2ProjectMenuVm? menuVm = Model.ProjectId is > 0
+        ? new GlV2ProjectMenuVm
+        {
+            ProjectId = Model.ProjectId.Value,
+            ProjectName = Model.ProjectName ?? "",
+            ProjectSubtitle = "project · ondertekening",
+            IsCoordinationProject = Model.IsCoordinationProject
+        }
+        : null;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-signing.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@Model.DocumentTypeLabel.ToUpperInvariant()</span>
+    @if (Model.IsTestMode)
+    {
+        <span class="gl-v2-badge is-attention" title="Alle mails gaan naar @Model.TestRecipient">TESTMODUS</span>
+    }
+}
+@section ProjectMenu
+{
+    @if (menuVm is not null)
+    {
+        menuVm.Mode = GlV2ProjectMenuMode.Outer;
+        @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+    }
+}
+@{ ViewData["GlV2NoProjectMenu"] = menuVm is null; }
+@if (menuVm is not null)
+{
+    menuVm.Mode = GlV2ProjectMenuMode.Phone;
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<form method="post" asp-action="Start" asp-controller="SigningAdmin" id="gl-v2-sg-start-form" class="gl-v2-sg-form" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="DocumentType" value="@Model.DocumentType" />
+    <input type="hidden" name="SourceId" value="@Model.SourceId" />
+    <input type="hidden" name="BackUrl" value="@Model.BackUrl" />
+
+    <div class="gl-v2-sg-scroll">
+        @if (Model.IsTestMode)
+        {
+            <div class="gl-v2-sg-notice is-warning">
+                <span class="gl-v2-sg-notice-icon"><i class="ph ph-flask" aria-hidden="true"></i></span>
+                <span class="gl-v2-sg-notice-title">Testmodus</span>
+                <span class="gl-v2-sg-notice-desc">Alle mails van deze module gaan naar <strong>@Model.TestRecipient</strong>, met de echte ontvanger in het onderwerp. De klant ontvangt niets.</span>
+            </div>
+        }
+
+        @* ── Het document ─────────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-file-pdf" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Document</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Wat de ondertekenaar te zien krijgt. De PDF wordt bij het aanbieden vastgelegd en verandert daarna nooit meer.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (!string.IsNullOrWhiteSpace(Model.PreviewUrl))
+                {
+                    <a href="@Model.PreviewUrl" target="_blank" rel="noopener" class="gl-v2-card-header-action">Bekijk de pdf</a>
+                }
+            </div>
+            <div class="gl-v2-detail-grid">
+                <div class="gl-v2-detail-field is-wide">
+                    <span class="gl-v2-detail-label">Titel</span>
+                    <span class="gl-v2-detail-value">@Model.Title</span>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Nummer</span>
+                    <span class="gl-v2-detail-value @(string.IsNullOrWhiteSpace(Model.DocumentNumber) ? "is-empty" : "")">@(Model.DocumentNumber ?? "—")</span>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Project</span>
+                    <span class="gl-v2-detail-value @(string.IsNullOrWhiteSpace(Model.ProjectName) ? "is-empty" : "")">@(Model.ProjectName ?? "—")</span>
+                </div>
+                <div class="gl-v2-detail-field is-full">
+                    <span class="gl-v2-detail-label">Omschrijving</span>
+                    <span class="gl-v2-detail-value @(string.IsNullOrWhiteSpace(Model.Summary) ? "is-empty" : "")">@(Model.Summary ?? "—")</span>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Excl. btw</span>
+                    <span class="gl-v2-detail-value">@Euro(Model.AmountExclVat)</span>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Btw</span>
+                    <span class="gl-v2-detail-value">@Euro(Model.VatAmount)</span>
+                </div>
+                <div class="gl-v2-detail-field">
+                    <span class="gl-v2-detail-label">Incl. btw</span>
+                    <span class="gl-v2-detail-value gl-v2-sg-amount">@Euro(Model.AmountInclVat)</span>
+                </div>
+            </div>
+        </div>
+
+        @* ── Ondertekenaars ───────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Ondertekenaars</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Voorstel op basis van de klant en de mede-eigenaars. Vink uit wie niet moet tekenen, pas het e-mailadres aan of voeg iemand toe.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <button type="button" class="gl-v2-card-header-action" id="gl-v2-sg-add-party">Ondertekenaar toevoegen</button>
+            </div>
+            <div class="gl-v2-sg-parties" id="gl-v2-sg-parties">
+                @for (var i = 0; i < Model.Parties.Count; i++)
+                {
+                    var p = Model.Parties[i];
+                    var missingEmail = string.IsNullOrWhiteSpace(p.Email);
+                    <div class="gl-v2-sg-party @(p.Include ? "" : "is-excluded")" data-party-row>
+                        <input type="hidden" name="Parties[@i].PartyType" value="@p.PartyType" />
+                        <input type="hidden" name="Parties[@i].SourceRefId" value="@p.SourceRefId" />
+                        <input type="hidden" name="Parties[@i].PhoneMasked" value="@p.PhoneMasked" />
+                        <label class="gl-v2-sg-party-include" title="@(p.Include ? "Tekent mee" : "Tekent niet mee")">
+                            <input type="checkbox" name="Parties[@i].Include" value="true" class="gl-v2-toggle-switch js-gl-v2-sg-include" checked="@(p.Include ? "checked" : null)" />
+                            <input type="hidden" name="Parties[@i].Include" value="false" />
+                            <span class="gl-v2-sg-party-order">@(i + 1)</span>
+                        </label>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label">Naam <span class="gl-v2-sg-party-type">· @SigningLabels.PartyType(p.PartyType)</span></label>
+                            <div class="gl-v2-field-box">
+                                <input type="text" name="Parties[@i].DisplayName" value="@p.DisplayName" class="gl-v2-field-input" placeholder="Naam" autocomplete="off" required />
+                            </div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label">E-mail</label>
+                            <div class="gl-v2-field-box @(missingEmail ? "is-error" : "")">
+                                <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+                                <input type="email" name="Parties[@i].Email" value="@p.Email" class="gl-v2-field-input" placeholder="naam@voorbeeld.be" autocomplete="off" inputmode="email" />
+                            </div>
+                            @if (missingEmail)
+                            {
+                                <span class="gl-v2-field-help is-error">Geen e-mailadres gekend — vul het aan of vink deze ondertekenaar uit.</span>
+                            }
+                        </div>
+                        <div class="gl-v2-field gl-v2-sg-party-capacity">
+                            <label class="gl-v2-field-label">Hoedanigheid <span class="gl-v2-field-label-optional">optioneel</span></label>
+                            <div class="gl-v2-field-box">
+                                <input type="text" name="Parties[@i].Capacity" value="@p.Capacity" class="gl-v2-field-input" placeholder="bv. Klant, Mede-eigenaar" autocomplete="off" />
+                            </div>
+                        </div>
+                        <button type="button" class="gl-v2-icon-btn gl-v2-sg-party-remove js-gl-v2-sg-remove" aria-label="Ondertekenaar verwijderen" title="Verwijderen" hidden="@(p.PartyType == (int)SigningPartyType.External ? null : "hidden")">
+                            <i class="ph ph-x" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+            @if (Model.Parties.Count == 0)
+            {
+                <div class="gl-v2-sg-parties-empty" id="gl-v2-sg-parties-empty">Nog geen ondertekenaars. Voeg er minstens één toe.</div>
+            }
+        </div>
+
+        @* ── Instellingen ─────────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Ondertekening</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Regel en geldigheid van dit dossier. Verificatie en akkoordtekst volgen het beleid voor @Model.DocumentTypeLabel.ToLowerInvariant()en.</span>
+            </div>
+            <div class="gl-v2-section-grid gl-v2-sg-settings-grid">
+                <div class="gl-v2-col-4">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="SigningRule">Regel</label>
+                        <div class="gl-v2-field-box">
+                            <select id="SigningRule" name="SigningRule" class="gl-v2-field-input">
+                                @foreach (var rule in new[] { SigningRule.All, SigningRule.Any, SigningRule.Ordered })
+                                {
+                                    <option value="@((int)rule)" selected="@(Model.SigningRule == (int)rule ? "selected" : null)">@SigningLabels.Rule((int)rule)</option>
+                                }
+                            </select>
+                        </div>
+                        <span class="gl-v2-field-help">Bij "in volgorde" krijgt de volgende pas een uitnodiging nadat de vorige tekende.</span>
+                    </div>
+                </div>
+                <div class="gl-v2-col-3">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="ExpiresOn">Geldig tot en met</label>
+                        <div class="gl-v2-field-box">
+                            <i class="ph ph-calendar-blank" aria-hidden="true"></i>
+                            <input type="date" id="ExpiresOn" name="ExpiresOn" class="gl-v2-field-input" value="@Model.ExpiresOn.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <span class="gl-v2-field-help">Standaard @Model.LinkValidityDays dagen. Daarna verlopen de links en wordt het document niet bewaard.</span>
+                    </div>
+                </div>
+                <div class="gl-v2-col-5">
+                    <div class="gl-v2-detail-grid gl-v2-sg-policy-grid">
+                        <div class="gl-v2-detail-field">
+                            <span class="gl-v2-detail-label">Verificatie</span>
+                            <span class="gl-v2-detail-value">@(Model.OtpRequired ? Model.VerificationMethodLabel : "Geen extra verificatie")</span>
+                        </div>
+                        <div class="gl-v2-detail-field">
+                            <span class="gl-v2-detail-label">Handtekening</span>
+                            <span class="gl-v2-detail-value">Elektronisch via CPM (eenvoudig)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-12">
+                    <details class="gl-v2-sg-consent">
+                        <summary>Akkoordtekst die de ondertekenaar moet aanvaarden</summary>
+                        <p>@Model.ConsentText</p>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-form-actionbar-status" id="gl-v2-sg-party-count" data-singular="ondertekenaar" data-plural="ondertekenaars"></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Model.BackUrl" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-sg-submit"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Aanbieden ter ondertekening</button>
+        </div>
+    </div>
+</form>
+
+@* Sjabloon voor een extra (externe) ondertekenaar — de JS kloont dit en hernummert de indexen. *@
+<template id="gl-v2-sg-party-template">
+    <div class="gl-v2-sg-party" data-party-row>
+        <input type="hidden" name="Parties[__i__].PartyType" value="@((int)SigningPartyType.External)" />
+        <input type="hidden" name="Parties[__i__].SourceRefId" value="" />
+        <input type="hidden" name="Parties[__i__].PhoneMasked" value="" />
+        <label class="gl-v2-sg-party-include" title="Tekent mee">
+            <input type="checkbox" name="Parties[__i__].Include" value="true" class="gl-v2-toggle-switch js-gl-v2-sg-include" checked />
+            <input type="hidden" name="Parties[__i__].Include" value="false" />
+            <span class="gl-v2-sg-party-order">__n__</span>
+        </label>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label">Naam <span class="gl-v2-sg-party-type">· Extern</span></label>
+            <div class="gl-v2-field-box">
+                <input type="text" name="Parties[__i__].DisplayName" class="gl-v2-field-input" placeholder="Naam" autocomplete="off" required />
+            </div>
+        </div>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label">E-mail</label>
+            <div class="gl-v2-field-box">
+                <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+                <input type="email" name="Parties[__i__].Email" class="gl-v2-field-input" placeholder="naam@voorbeeld.be" autocomplete="off" inputmode="email" required />
+            </div>
+        </div>
+        <div class="gl-v2-field gl-v2-sg-party-capacity">
+            <label class="gl-v2-field-label">Hoedanigheid <span class="gl-v2-field-label-optional">optioneel</span></label>
+            <div class="gl-v2-field-box">
+                <input type="text" name="Parties[__i__].Capacity" class="gl-v2-field-input" placeholder="bv. Volmachthouder" autocomplete="off" />
+            </div>
+        </div>
+        <button type="button" class="gl-v2-icon-btn gl-v2-sg-party-remove js-gl-v2-sg-remove" aria-label="Ondertekenaar verwijderen" title="Verwijderen">
+            <i class="ph ph-x" aria-hidden="true"></i>
+        </button>
+    </div>
+</template>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-signing.js" asp-append-version="true"></script>
+}

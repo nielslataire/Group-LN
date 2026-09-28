@@ -1,0 +1,145 @@
+@model CPMCore.Models.Signing.SigningIndexVm
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Signing
+@*
+    Elektronisch ondertekenen — fase 1. Overzicht van dossiers, per project (via het inner menu
+    "Ondertekeningen") of over alle projecten heen (SigningAdmin/Index zonder projectId). Zelfde
+    lijstconventies als Projecten/DetailContractsV2: tabbar als statusfilter, klikbare rijen
+    (data-detail-url → gl-v2-shell.js initClickableRows), inklapbare kolommen op tablet en een
+    kaartenlijst op gsm.
+*@
+@{
+    ViewData["GlV2FullHeightBody"] = true;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string D(DateTime? d) => d.HasValue ? d.Value.ToLocalTime().ToString("dd/MM/yyyy", be) : "—";
+    string Label(string type) => Model.DocumentTypeLabels.TryGetValue(type, out var l) ? l : type;
+    string Group(int status) => (SigningCaseStatus)status switch
+    {
+        SigningCaseStatus.Draft or SigningCaseStatus.Open => "open",
+        SigningCaseStatus.Completed => "ondertekend",
+        _ => "gesloten"
+    };
+    var openCount = Model.Cases.Count(x => Group(x.Status) == "open");
+    var signedCount = Model.Cases.Count(x => Group(x.Status) == "ondertekend");
+    var closedCount = Model.Cases.Count(x => Group(x.Status) == "gesloten");
+
+    GlV2ProjectMenuVm? menuVm = Model.ProjectId is > 0
+        ? new GlV2ProjectMenuVm
+        {
+            ProjectId = Model.ProjectId.Value,
+            ProjectName = Model.ProjectName ?? "",
+            ProjectSubtitle = $"project · {Model.Cases.Count} ondertekening" + (Model.Cases.Count == 1 ? "" : "en"),
+            IsCoordinationProject = Model.IsCoordinationProject,
+            ItemCounts = new Dictionary<string, int> { ["Ondertekeningen"] = Model.Cases.Count }
+        }
+        : null;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-signing.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@Model.Cases.Count DOSSIER@(Model.Cases.Count == 1 ? "" : "S")</span>
+}
+@section ProjectMenu
+{
+    @if (menuVm is not null)
+    {
+        menuVm.Mode = GlV2ProjectMenuMode.Outer;
+        @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+    }
+}
+@{ ViewData["GlV2NoProjectMenu"] = menuVm is null; }
+
+<div class="gl-v2-tabbar" id="gl-v2-sg-status-tabs" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-status="">Alle <span class="gl-v2-tabbar-count">@Model.Cases.Count</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-status="open">Ter ondertekening <span class="gl-v2-tabbar-count">@openCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-status="ondertekend">Ondertekend <span class="gl-v2-tabbar-count">@signedCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-status="gesloten">Gesloten <span class="gl-v2-tabbar-count">@closedCount</span></button>
+</div>
+
+@if (menuVm is not null)
+{
+    menuVm.Mode = GlV2ProjectMenuMode.Phone;
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-card gl-v2-sg-list-card">
+    <div class="gl-v2-card-body">
+        @if (Model.Cases.Count == 0)
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-signature" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen ondertekeningen</h2>
+                <p class="gl-v2-empty-state-desc">Een wijzigingsopdracht bied je aan vanuit de lijst "Wijzigingsopdrachten" van het project.</p>
+                @if (Model.ProjectId is > 0)
+                {
+                    <div class="gl-v2-empty-state-actions">
+                        <a href="@Url.Action("DetailsChangeOrder", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">Naar de wijzigingsopdrachten</a>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-sg-table-scroll">
+                <table class="gl-v2-sg-table gl-v2-sg-index-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Document</th>
+                            @if (Model.ProjectId is null)
+                            {
+                                <th scope="col" class="gl-v2-sg-col-collapsible">Project</th>
+                            }
+                            <th scope="col">Ondertekenaars</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="gl-v2-sg-col-collapsible">Aangeboden</th>
+                            <th scope="col" class="gl-v2-sg-col-collapsible">Geldig tot</th>
+                            <th scope="col" class="is-right"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var x in Model.Cases)
+                        {
+                            var signed = x.Parties.Count(p => p.Status == (int)SigningPartyStatus.Signed);
+                            var url = Url.Action("Dossier", new { id = x.CaseId });
+                            <tr data-detail-url="@url" data-status="@Group(x.Status)">
+                                <td>
+                                    <div class="gl-v2-sg-party-cell">
+                                        <span class="gl-v2-sg-party-name">@Label(x.DocumentType) @x.DocumentNumber</span>
+                                        <span class="gl-v2-sg-party-sub">@x.Title</span>
+                                    </div>
+                                </td>
+                                @if (Model.ProjectId is null)
+                                {
+                                    <td class="gl-v2-sg-col-collapsible">@(x.ProjectId is > 0 ? $"#{x.ProjectId}" : "—")</td>
+                                }
+                                <td>
+                                    <div class="gl-v2-sg-party-cell">
+                                        <span>@signed / @x.Parties.Count</span>
+                                        <span class="gl-v2-sg-party-sub">@string.Join(", ", x.Parties.Select(p => p.DisplayName))</span>
+                                    </div>
+                                </td>
+                                <td><span class="gl-v2-badge @SigningLabels.CaseStatusBadge(x.Status)">@SigningLabels.CaseStatus(x.Status)</span></td>
+                                <td class="gl-v2-sg-col-collapsible">@D(x.OpenedAt)</td>
+                                <td class="gl-v2-sg-col-collapsible">@D(x.ExpiresAt)</td>
+                                <td class="is-right"><a href="@url" class="gl-v2-icon-btn" aria-label="Dossier openen"><i class="ph ph-caret-right" aria-hidden="true"></i></a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="gl-v2-sg-empty-filter" id="gl-v2-sg-empty-filter" hidden>Geen dossiers met deze status.</div>
+        }
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-signing.js" asp-append-version="true"></script>
+}

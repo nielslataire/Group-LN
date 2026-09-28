@@ -73,4 +73,9 @@ Public NotInheritable Class PermissionCodes
     Public Const DocumentCenter As String = "DocumentCenter"
     Public Const DocumentCenterByBillingCompany As String = "DocumentCenter.ByBillingCompany"
 
+    ' Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §9.7): het projectbrede overzicht van
+    ' ondertekeningsdossiers en de instellingen. Starten/annuleren van een dossier valt onder het
+    ' permissiecode van het brondocument (bv. Projects.ChangeOrders), niet onder dit code.
+    Public Const Signing As String = "Signing"
+
 End Class

@@ -4575,3 +4575,128 @@ legacy `.card` met eigen koptekst en knoppen, geen gl-v2 `modal-body`/`modal-foo
 te laden dat de rij zelf niet al weet — dus één statische bevestiging in de pagina die per rij zijn
 naam en doel-URL krijgt, i.p.v. een AJAX-fragment of een modal per eenheid. De verwijderactie zelf
 (`ProjectenController.DeleteUnit`) blijft ongewijzigd.
+
+### Elektronisch ondertekenen — fase 0, het fundament (ONDERTEKENEN_VOORSTEL.md)
+Geen scherm nog (dat is fase 1/2), wel alles waar de schermen straks op staan. Het ontwerpdocument
+zelf is `ONDERTEKENEN_VOORSTEL.md` in de root; hier enkel wat voor het ontwerpsysteem telt.
+
+**Een publieke layout, `_LayoutPublic.cshtml` + `gl-v2-public.css`.** Eerste pagina's in CPM zonder
+ingelogde gebruiker die niet op `Layout = null` draaien (zoals `ContractorInvite/ResendInviteResult`
+tot nu toe). Dezelfde taal als de shell — sage-getinte pagina, één zwevende witte kaart met de
+kaartschaduw, primair groen, 8/12/16-radius, één serif-titel — maar **zonder** rail, topbar, userbox
+en flyouts (er is geen gebruiker), en **zonder één externe bron**: geen Google Fonts, geen
+Phosphor/Boxicons-CDN, geen Bootstrap. Reden is technisch, niet esthetisch: de eerste URL van een
+ondertekenaar bevat een geheim token, en een `Referer` naar een CDN zou dat token lekken; de
+Content-Security-Policy op `/ondertekenen` en `/verifieer` laat daarom enkel `'self'` toe
+(`SigningSecurityHeadersMiddleware`). Gevolg voor de typografie: **Avenir** (de PDF-huisstijl, lokaal
+in `wwwroot/fonts`) vervangt hier IBM Plex Sans; de serif-titel valt terug op Georgia. Dat is een
+bewuste, gedocumenteerde uitzondering op de Plex/Playfair-regel van de shell, beperkt tot deze twee
+publieke paden. De tokens staan als letterlijke kopie in `gl-v2-public.css` (geen import van
+`gl-v2-tokens.css`: dat bestand hangt alles onder `.gl-v2`, en de publieke body draagt die klasse
+wél — maar de shell-CSS die erop volgt hoort hier niet te laden).
+
+**Mobiele iconen/knoppen** op die pagina's zullen inline-SVG zijn (fase 2), om dezelfde CSP-reden.
+Invoervelden staan er op 16px (iOS-zoomregel uit de Don'ts).
+
+**Testmodus is een productbeslissing, geen debugvlag.** `Signing:TestRecipientOverride` stuurt álle
+signing-mails (uitnodiging, herinnering, verificatiecode, bevestiging) naar één adres met de echte
+ontvanger in het onderwerp, zodat de hele flow op de testomgeving doorlopen kan worden zonder dat
+een klant iets ziet. `Features:EnableSigning` houdt de module donker tot ze aangezet wordt; aan =
+de configuratie (HMAC-sleutel, publieke URL) wordt bij het opstarten gevalideerd en de app weigert
+te starten zonder — fail closed, geen ingebakken fallback zoals `ResendInviteUrlBuilder` die wel had.
+
+**Bewaarregel voor documenten (beslist 27/09/2026):** enkel dossiers die effectief ondertekend werden
+houden hun PDF-bytes. Verloopt, weigert of annuleert een dossier, dan verwijdert de service meteen
+de bytes én de spiegelkopie in de Storage API; naam, grootte en SHA-256 blijven, zodat de audit trail
+leesbaar blijft. In SQL is het bewijs (één transactie met het dossier, mee in de back-up); de
+Storage API is de spiegel.
+
+**Append-only in de database, niet enkel in de code.** `SigningEvent` heeft een `INSTEAD OF
+UPDATE, DELETE`-trigger die alles weigert behalve het nullen van `Ip`/`UserAgent` (de retentiescrub),
+plus een hash-ketting per dossier waarin de ruwe IP/user-agent niet zitten maar hun hashes wél —
+zodat die scrub de ketting niet breekt. Getest op testdb met drie losse transacties (UPDATE geweigerd,
+DELETE geweigerd, scrub toegelaten), allemaal teruggedraaid.
+
+**Storage-client.** `IAssetStorageClient`/`AssetStorageClient` vervangt de privé, gedupliceerde
+Storage-API-helpers in `ProjectenController` en `ProjectIssuesController`; die delegeren nu. Zelfde
+endpoints, zelfde gedrag (incl. de publieke `pictures`-map), maar één `HttpClient` via DI in plaats
+van `new HttpClient()` per aanroep.
+
+**Rate limiting bestaat nu in CPM** (`AddRateLimiter`, .NET 8), met uitsluitend benoemde policies
+(`signing-open`, `signing-otp-request`, `signing-otp-verify`, `signing-sign`, `signing-verify-page`)
+per client-IP — geen enkele bestaande route krijgt een limiet zolang ze geen `[EnableRateLimiting]`
+draagt. Let op achter een reverse proxy: zonder `UseForwardedHeaders` is het "client-IP" de proxy;
+dat is een uitrolkwestie voor fase 2.
+
+### Elektronisch ondertekenen — fase 1: de interne schermen (SigningAdmin/Start, /Dossier, /Index) en de QuestPDF-wijzigingsopdracht
+Drie nieuwe gl-v2-pagina's zonder legacy tegenhanger, plus een klantdocument op de gedeelde PDF-basis.
+Voortgang en fasering: `ONDERTEKENEN_VOORTGANG.md`; ontwerp: `ONDERTEKENEN_VOORSTEL.md`.
+
+**Layout geforceerd, niet via de preview-cookie.** `SigningAdminController.OnActionExecuting` zet
+`ViewData["UseGlV2Layout"] = true` voor elke actie. Anders dan Projecten/Landshares (dat zonder
+cookie terugstuurt naar de legacy lijst) is hier geen legacy pagina om naar terug te vallen, en de
+module moet er voor élke gebruiker hetzelfde uitzien zodra `Features:EnableSigning` aanstaat. Vlag
+uit = 404 op elke actie, en het menu-item verschijnt niet.
+
+**Eén nieuw item in het projectdossier-inner-menu: "Ondertekeningen" (ph-signature), groep
+Financieel, direct onder Wijzigingsopdrachten.** Gedragen door de eigen permissiecode `Signing` én
+de feature-vlag (`@inject IOptions<FeatureFlagsOptions>` in `GlV2/_ProjectInnerMenuV2.cshtml` — de
+eerste keer dat de partial iets anders dan permissies raadpleegt; bewust, omdat een item tonen dat
+naar een 404 leidt erger is dan één injectie meer). De teller ("Ondertekeningen · N") volgt de
+generieke `ItemCounts`-conventie.
+
+**`@section` in een `@if` bestaat niet in Razor — daarom `ViewData["GlV2NoProjectMenu"]`.** De drie
+pagina's tonen het inner menu enkel wanneer het dossier bij een project hoort (SigningAdmin/Index
+zonder projectId toont alles over projecten heen). De sectie `ProjectMenu` wordt dus altijd
+gedefinieerd, met de `@if` erbinnen, en de pagina zet die vlag wanneer ze leeg blijft; `_LayoutV2`
+roept dan `IgnoreSection("ProjectMenu")` aan i.p.v. een lege `.gl-v2-project-menu-slot`-kolom te
+laten staan. Elke andere pagina die het menu voorwaardelijk wil, gebruikt dezelfde vlag.
+
+**Start** (formulierpagina, `GlV2FullHeightBody` + `.gl-v2-form-actionbar`, zoals Leveranciers/
+EditV2): drie sectiekaarten — Document (detail-grid met titel/nummer/bedragen en "Bekijk de pdf",
+die het pakket opnieuw opbouwt zonder iets te bewaren), Ondertekenaars (rijen met toggle "tekent
+mee", naam, e-mail, hoedanigheid; het voorstel komt van de bron, extra rijen via een `<template>`,
+hernummering van `Parties[i].*` in `gl-v2-signing.js`), Ondertekening (regel ALL/ANY/ORDERED,
+"geldig tot", en read-only wat het beleid bepaalt: verificatiemethode en akkoordtekst — die zijn
+bewust níét per dossier instelbaar). Een ondertekenaar zonder e-mail blijft in het voorstel staan
+met `.is-error` op het veld: stil weglaten zou een mede-eigenaar doen verdwijnen. Testmodus krijgt
+een `TESTMODUS`-badge naast de titel én een `.gl-v2-sg-notice.is-warning` bovenaan.
+
+**Dossier** (detailpagina, sectiekaarten + `.gl-v2-detail-grid` zoals Leveranciers/DetailsV2):
+overzicht, ondertekenaarstabel met per rij een ⋯-menu (herinnering / nieuwe link — enkel zolang de
+service dat toelaat: dossier Open en partij Invited/Opened/Verified), documentenlijst met SHA-256
+(afgekort, volledig in de tooltip), en de audit trail als tijdlijn (nieuwste bovenaan, rood puntje
+voor afwijkingen, `details`-uitklap voor de event-data, hash rechts). Annuleren is een TYPE 2-modal
+(4j) met verplichte reden — die komt letterlijk in de audit trail, dus geen TYPE 1-bevestiging
+zonder invoer. Downloads lopen altijd via de service (hash-controle + `DocumentDownloaded`-event),
+nooit rechtstreeks uit de tabel.
+
+**Index**: tabbar als statusfilter (Alle / Ter ondertekening / Ondertekend / Gesloten, client-side
+op `data-status`), klikbare rijen (`data-detail-url`, generiek in gl-v2-shell.js), zelfde
+tablet-inklap (`.gl-v2-sg-col-collapsible`) als de contractenlijst.
+
+**Alle labels op één plek: `Models/Signing/SigningLabels`.** Nederlandse teksten en badge-klassen
+voor case-/partijstatus, regel, verificatiemethode, documentsoort en de ~40 eventtypes. De legacy
+lijst Wijzigingsopdrachten gebruikt dezelfde klasse, zodat "Ter ondertekening" overal hetzelfde woord
+is. Badge-tonen: Open = `is-attention`, Ondertekend = `is-positive`, Geweigerd/Verlopen =
+`is-blocked`, Geannuleerd = `is-inactive`, Draft = `is-neutral`.
+
+**De legacy lijst Wijzigingsopdrachten kreeg een minimale ingang, geen restyling.** Per rij: de
+status toont het dossier ("Ter ondertekening (elektronisch)" / "Akkoord (elektronisch ondertekend)")
+met een link naar het dossier, het actie-icoon `fa-file-signature` start of opent het dossier, en
+een vergrendelde wijzigingsopdracht (dossier Draft/Open) toont een slotje i.p.v. het
+bewerk-icoon — de server weigert bewerken/verwijderen sowieso (`ActiveSigningCaseAsync` in
+`ProjectenController`), de knop verbergen is enkel de beleefde versie daarvan. Deze pagina blijft
+legacy tot ze aan de beurt is in de gl-v2-migratie.
+
+**De wijzigingsopdracht-PDF is nu QuestPDF (`Documents/ChangeOrderDocument`), niet meer
+Rotativa.** Een getrouwe overzetting van `ChangeOrderPDF.cshtml` (dezelfde velden, dezelfde
+prijsformule, hetzelfde papieren akkoordblok Voorwaarden/Datum/Handtekening) op
+`GroupLnPdfDocument`, dat daarvoor twee kleine openingen kreeg: `PageSize` (virtual, hier staand
+A4) en `FooterNote` (virtual; de werf-lijsten houden "Vertrouwelijk", het klantdocument toont zijn
+referentie WO-{id}). Redenen: de signingmodule heeft een `byte[]` nodig zonder MVC-context of
+wkhtmltopdf; het ondertekende document en het auditrapport (fase 2) worden ook QuestPDF; en de
+klant moet op papier en digitaal exact hetzelfde stuk zien — daarom rendert ook de legacy actie
+`ProjectenController.ChangeOrderPDF` nu via `ChangeOrderPdfBuilder`. De oude Razor-view staat er
+nog als referentie en wordt nergens meer gerenderd. Nog visueel na te kijken in de browser (de
+rooktest rendert wel, maar is niet bekeken).

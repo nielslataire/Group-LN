@@ -36,6 +36,7 @@ namespace DALCore.Models
             ConfigureTaakEntities(modelBuilder);
             ConfigureMeldingSnoozeEntities(modelBuilder);
             ConfigureCookieConsentEventEntities(modelBuilder);
+            ConfigureSigningEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>
             {
