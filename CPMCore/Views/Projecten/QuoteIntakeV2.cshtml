@@ -1,0 +1,187 @@
+@model CPMCore.Models.Projecten.QuoteIntakeV2Vm
+@*
+    gl-v2 — Offerte inlezen (design-handoff 20c: "kader rond een tabel leest regels in, kader rond een
+    foto hangt die aan een regel"). Werkt op dezelfde ChangeOrder-rij als ChangeOrderDetailV2 (20d,
+    IsQuote=true) — Opslaan/Omzetten posten bewust naar diezelfde acties (ChangeOrderDetailV2Save/
+    -Convert), dit scherm is enkel de intake-stap. Eigen klassen-namespace gl-v2-qi-*
+    (gl-v2-projecten-quoteintake.css/.js). PDF-weergave via pdf.js (wwwroot/lib/pdfjs, gevendord op
+    2026-09-30 — er was nergens in de codebase al een PDF-renderer/canvas-crop-tool).
+*@
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = "Offerte inlezen";
+    ViewData["PageIcon"] = "ph ph-scan";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId });
+
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · offertes & wijzigingen" };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-changeorderdetail.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-quoteintake.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (!Model.AzureConfigured)
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+        <i class="ph ph-warning" aria-hidden="true"></i>
+        <span>Azure Document Intelligence is niet geconfigureerd — automatisch inlezen werkt niet, regels manueel toevoegen kan wel.</span>
+    </div>
+}
+
+<form id="gl-v2-qi-form" method="post" action="@Url.Action("ChangeOrderDetailV2Save")">
+@Html.AntiForgeryToken()
+<input type="hidden" name="projectId" value="@Model.ProjectId" />
+<input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+<input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
+<input type="hidden" name="description" id="gl-v2-qi-description-hidden" value="" />
+<input type="hidden" name="invoiceableByBouwheer" value="false" />
+<input type="hidden" name="convertAfterSave" id="gl-v2-qi-convert-after-save" value="false" />
+
+<div class="gl-v2-qi-layout">
+    @* ── Linkerkolom: bronviewer + kader-selectie ─────────────────────────────────────────────────── *@
+    <div class="gl-v2-qi-source">
+        <div class="gl-v2-card gl-v2-co-card gl-v2-qi-source-card">
+            <div class="gl-v2-qi-toolbar">
+                <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-tool-select" data-mode="table">
+                    <i class="ph ph-selection" aria-hidden="true"></i>Gebied selecteren — tabel
+                </button>
+                <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-tool-photo" data-mode="photo">
+                    <i class="ph ph-image" aria-hidden="true"></i>Gebied selecteren — foto
+                </button>
+                <span class="gl-v2-qi-toolbar-spacer"></span>
+                <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-camera"><i class="ph ph-camera" aria-hidden="true"></i>Foto nemen</button>
+                <label class="gl-v2-qi-tool" for="gl-v2-qi-file"><i class="ph ph-upload-simple" aria-hidden="true"></i>Bestand</label>
+                <input type="file" id="gl-v2-qi-file" accept="application/pdf,image/*" hidden />
+                <input type="file" id="gl-v2-qi-camera-input" accept="image/*" capture="environment" hidden />
+            </div>
+            <div class="gl-v2-qi-canvas-wrap" id="gl-v2-qi-canvas-wrap">
+                <div class="gl-v2-qi-canvas-empty" id="gl-v2-qi-empty">
+                    <i class="ph ph-file-text" aria-hidden="true"></i>
+                    <p>Laad een offerte (PDF of foto) — plakken (Ctrl+V) kan ook</p>
+                </div>
+                <div class="gl-v2-qi-canvas-stage" id="gl-v2-qi-stage" hidden>
+                    <canvas id="gl-v2-qi-canvas"></canvas>
+                    <canvas id="gl-v2-qi-overlay"></canvas>
+                </div>
+            </div>
+            <div class="gl-v2-qi-hint">
+                Sleep een kader rond een tabel: regels, aantallen en prijzen worden ingelezen. Sleep een kader rond een foto of schets: die hangt als beeld aan de regel die je daarna kiest. Werkt ook met een foto van een papieren offerte of een schermafdruk (Ctrl+V).
+            </div>
+        </div>
+    </div>
+
+    @* ── Rechterkolom: offerte-gegevens + herkende regels ─────────────────────────────────────────── *@
+    <div class="gl-v2-qi-data">
+        <div class="gl-v2-card gl-v2-co-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Offerte</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-card-header-count">Van de leverancier, nog intern — niet zichtbaar voor de klant</span>
+            </div>
+            <div class="gl-v2-card-body gl-v2-co-form-grid">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-qi-contractactivity">Leverancier · contract</label>
+                    <select class="gl-v2-field-input" id="gl-v2-qi-contractactivity" name="contractActivityId">
+                        <option value="">— kies —</option>
+                        @foreach (var a in Model.ContractActivities)
+                        {
+                            <option value="@a.ID" selected="@(a.ID == Model.ContractActivityId)">@a.Display</option>
+                        }
+                    </select>
+                </div>
+                <div class="gl-v2-field">
+                    <span class="gl-v2-field-label">Klant · eenheid</span>
+                    <div class="gl-v2-co-readout">@Model.ClientName@(string.IsNullOrWhiteSpace(Model.UnitName) ? "" : " · " + Model.UnitName)</div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-qi-quote-ref">Offertenr. leverancier</label>
+                    <input type="text" class="gl-v2-field-input" id="gl-v2-qi-quote-ref" name="quoteSupplierReference" value="@Model.QuoteSupplierReference" />
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-qi-quote-vat">Btw leverancier</label>
+                    <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-qi-quote-vat" name="quoteVatPercentage" value="@Model.QuoteVatPercentage" />
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-card gl-v2-co-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Herkende regels</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-card-header-count">Controleer wat gemarkeerd is; de rest staat klaar</span>
+                <span class="gl-v2-card-header-spacer"></span>
+                <button type="button" class="gl-v2-card-header-action" id="gl-v2-qi-add-row">+ Regel</button>
+            </div>
+            <div class="gl-v2-co-table-scroll">
+                <table class="gl-v2-co-table" id="gl-v2-qi-rows-table">
+                    <thead>
+                        <tr>
+                            <th>Bron</th><th>Omschrijving</th><th class="is-center">Eenh.</th>
+                            <th class="is-right">Aantal</th><th class="is-right">Prijs lev.</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="gl-v2-qi-rows-body">
+                        @for (var i = 0; i < Model.Rows.Count; i++)
+                        {
+                            @await Html.PartialAsync("Partials/_QuoteIntakeRowV2", Model.Rows[i], new ViewDataDictionary(ViewData) { { "Index", i } })
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="is-right">Totaal leverancier excl. btw</td>
+                            <td class="is-right gl-v2-co-tabular" id="gl-v2-qi-sum-total">€ 0,00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="gl-v2-notice gl-v2-notice-compact is-info">
+            <i class="ph ph-info" aria-hidden="true"></i>
+            <span><b>Omzetten</b> neemt leverancier, regels en foto's over in een nieuwe wijzigingsopdracht. Daar komen de commissie, de btw uit de betalingsgroep en de voorwaarden bij. Deze offerte blijft gekoppeld als bron.</span>
+        </div>
+    </div>
+</div>
+</form>
+
+<div class="gl-v2-co-actionbar">
+    <span class="gl-v2-field-help" id="gl-v2-qi-status"></span>
+    <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })">Annuleren</a>
+    <button type="submit" form="gl-v2-qi-form" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-qi-save">Opslaan als offerte</button>
+    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-qi-convert">
+        <i class="ph ph-arrow-right" aria-hidden="true"></i>Omzetten naar wijzigingsopdracht
+    </button>
+</div>
+
+@section PageScripts
+{
+    <script id="gl-v2-qi-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "changeOrderId": @Model.ChangeOrderId,
+        "pdfWorkerUrl": "@Url.Content("~/lib/pdfjs/pdf.worker.min.js")",
+        "extractTableUrl": "@Url.Action("QuoteIntakeV2ExtractTable")",
+        "attachPhotoUrl": "@Url.Action("QuoteIntakeV2AttachPhoto")",
+        "addRowUrl": "@Url.Action("QuoteIntakeV2AddRow")",
+        "saveUrl": "@Url.Action("ChangeOrderDetailV2Save")",
+        "convertUrl": "@Url.Action("ChangeOrderDetailV2Convert")",
+        "listUrl": "@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })"
+    }
+    </script>
+    <script src="~/lib/pdfjs/pdf.min.js"></script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-quoteintake.js" asp-append-version="true"></script>
+}

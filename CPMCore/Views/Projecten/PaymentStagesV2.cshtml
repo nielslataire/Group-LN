@@ -1,0 +1,244 @@
+@model CPMCore.Models.Projecten.PaymentStagesV2Vm
+@*
+    gl-v2 — Betalingsschijven (design-handoff 21g "Betalingsschijven — schijven × eenheden, btw van de
+    groep, eindafrekening gemarkeerd" / 21h "Schijf bereikt aanduiden"). Eén kaart per betalingsgroep,
+    een matrix schijf × eenheid — elke cel toont per eenheid apart of die schijf al gefactureerd,
+    bereikt/te factureren of nog niet bereikt is (UnitPaymentStageReached, migratie 062).
+
+    Eigen klassen-namespace gl-v2-ps-* (gl-v2-projecten-paymentstages.css/.js). De oude
+    Views/Projecten/PaymentStages.cshtml + actie blijven ongewijzigd bereikbaar; het menu-item
+    "Betalingsschijven" wijst hier al naartoe (zelfde aanpak als bij Facturatie — dit scherm draait
+    zelf enkel binnen de gl-v2-ervaring).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = "Betalingsschijven";
+    ViewData["PageIcon"] = "ph ph-stack";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Pct(decimal v) => v.ToString("0.##", be);
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = "project · betalingsschijven",
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-paymentstages.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <a href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary">
+            <i class="ph ph-plus" aria-hidden="true"></i><span>Betalingsgroep</span>
+        </a>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div id="gl-v2-ps-root" data-project-id="@Model.ProjectId">
+    <form id="gl-v2-ps-af-form" style="display:none">@Html.AntiForgeryToken()</form>
+
+    @if (Model.Groups.Count == 0)
+    {
+        <div class="gl-v2-card gl-v2-ps-card">
+            <div class="gl-v2-card-body">
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-empty-state-title">Nog geen betalingsgroepen</h2>
+                    <p class="gl-v2-empty-state-desc">Dit project heeft nog geen betalingsgroep met schijven.</p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        if (Model.Groups.Count > 1)
+        {
+            <div class="gl-v2-ps-pills">
+                @for (var gi = 0; gi < Model.Groups.Count; gi++)
+                {
+                    var g = Model.Groups[gi];
+                    <button type="button" class="gl-v2-ps-pill @(gi == 0 ? "is-active" : "")" data-ps-pill-group="@g.GroupId">@g.Name · @Pct(g.VatPercentage) % btw · @g.Units.Count @(g.Units.Count == 1 ? "eenheid" : "eenheden")</button>
+                }
+            </div>
+        }
+        @for (var gi = 0; gi < Model.Groups.Count; gi++)
+        {
+            var group = Model.Groups[gi];
+            <div class="gl-v2-card gl-v2-ps-card" data-ps-group-card="@group.GroupId" hidden="@(Model.Groups.Count > 1 && gi > 0)">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">@group.Name</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-card-header-count">@group.Units.Count @(group.Units.Count == 1 ? "eenheid" : "eenheden")</span>
+                    <span class="gl-v2-card-header-spacer"></span>
+                    @if (Model.CanWrite)
+                    {
+                        <a href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId, groupid = group.GroupId })" class="gl-v2-card-header-action">Groep bewerken</a>
+                    }
+                </div>
+                <div class="gl-v2-ps-stats">
+                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">BTW KLANT</span><span class="gl-v2-ps-stat-value">@Pct(group.VatPercentage) %</span></div>
+                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EENHEDEN</span><span class="gl-v2-ps-stat-value">@string.Join(" · ", group.Units.Select(u => u.UnitName))</span></div>
+                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">TOTAAL</span><span class="gl-v2-ps-stat-value">@Pct(group.TotalPercentage) %</span></div>
+                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EINDAFREKENING</span><span class="gl-v2-ps-stat-value">schijf @group.LastStageNumber</span></div>
+                </div>
+                <div class="gl-v2-ps-table-scroll">
+                    <table class="gl-v2-ps-table">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="is-num">#</th>
+                                <th scope="col">Schijf</th>
+                                <th scope="col" class="is-right">%</th>
+                                @foreach (var u in group.Units)
+                                {
+                                    <th scope="col" class="is-center">@u.UnitName.ToUpperInvariant()</th>
+                                }
+                                <th scope="col"><span class="visually-hidden">Actie</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var stage in group.Stages)
+                            {
+                                <tr class="gl-v2-ps-row @(stage.IsLast ? "is-last" : "")">
+                                    <td class="is-num">@stage.Number</td>
+                                    <td class="gl-v2-ps-desc">
+                                        @stage.Name
+                                        @if (stage.IsLast)
+                                        {
+                                            <span class="gl-v2-ps-lastbadge">EINDAFREKENING</span>
+                                        }
+                                    </td>
+                                    <td class="is-right gl-v2-ps-tabular">@Pct(stage.Percentage) %</td>
+                                    @foreach (var u in group.Units)
+                                    {
+                                        var cell = stage.CellsByUnitId[u.UnitId];
+                                        <td class="is-center" data-label="@u.UnitName">
+                                            @if (cell.State == "invoiced")
+                                            {
+                                                <span class="gl-v2-ps-dot is-invoiced" title="Gefactureerd"><i class="ph ph-check" aria-hidden="true"></i></span>
+                                            }
+                                            else if (cell.State == "reached" && Model.CanWrite && !stage.IsGroupForced)
+                                            {
+                                                <span class="gl-v2-ps-dot is-reached is-clickable js-ps-unmark-one" data-stage-id="@stage.StageId" data-unit-id="@u.UnitId" title="Klik om terug uit te zetten" tabindex="0" role="button"></span>
+                                            }
+                                            else if (cell.State == "reached")
+                                            {
+                                                <span class="gl-v2-ps-dot is-reached" title="Bereikt, te factureren"></span>
+                                            }
+                                            else if (cell.State == "not-sold")
+                                            {
+                                                <span class="gl-v2-ps-dash" title="Nog niet verkocht">—</span>
+                                            }
+                                            else if (cell.State == "not-invoicable")
+                                            {
+                                                <span class="gl-v2-ps-dash" title="Akte nog niet verleden">—</span>
+                                            }
+                                            else if (Model.CanWrite)
+                                            {
+                                                <span class="gl-v2-ps-dot is-not-reached is-clickable js-ps-mark-one" data-stage-id="@stage.StageId" data-unit-id="@u.UnitId" title="Klik om dit lot als bereikt aan te duiden" tabindex="0" role="button"></span>
+                                            }
+                                            else
+                                            {
+                                                <span class="gl-v2-ps-dot is-not-reached" title="Nog niet bereikt"></span>
+                                            }
+                                        </td>
+                                    }
+                                    <td class="is-right">
+                                        @if (Model.CanWrite && stage.HasActionableUnits)
+                                        {
+                                            <button type="button" class="gl-v2-ps-action js-ps-mark-reached" data-stage-id="@stage.StageId" data-stage-number="@stage.Number" data-stage-name="@stage.Name" data-stage-percentage="@Pct(stage.Percentage)">Bereikt aanduiden →</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="gl-v2-ps-legend-cell">
+                                    <span class="gl-v2-ps-legend">
+                                        <span class="gl-v2-ps-legend-item"><span class="gl-v2-ps-dot is-invoiced"></span>gefactureerd</span>
+                                        <span class="gl-v2-ps-legend-item"><span class="gl-v2-ps-dot is-reached"></span>bereikt, te factureren</span>
+                                        <span class="gl-v2-ps-legend-item"><span class="gl-v2-ps-dot is-not-reached"></span>nog niet bereikt</span>
+                                    </span>
+                                </td>
+                                <td colspan="@(group.Units.Count + 1)"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@* ── 21h: modal-schil, inhoud komt via AJAX (MarkStageReachedModal) — zelfde patroon als Facturatie. ── *@
+@if (Model.CanWrite)
+{
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-ps-mark-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-ps-mark-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="gl-v2-ps-mark-header-text">
+                        <h2 class="modal-title" id="gl-v2-ps-mark-title">Schijf bereikt aanduiden</h2>
+                        <span class="gl-v2-ps-mark-header-sub" id="gl-v2-ps-mark-header-sub"></span>
+                    </div>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body" id="gl-v2-ps-mark-body">
+                    <div class="gl-v2-field-full"><div class="gl-v2-ps-preview-empty">Bezig met laden…</div></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-ps-mark-confirm" disabled>Bereikt voor 0 eenheden</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Genest picker-modal voor "BEWIJS" — los top-level modal-element (geen DOM-nesting in het eerste
+       modal), Bootstrap stapelt twee open .modal's gewoon via de show-volgorde. *@
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-ps-proof-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-ps-proof-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-ps-proof-title">Werffoto kiezen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body" id="gl-v2-ps-proof-picker-body">
+                    <div class="gl-v2-field-full"><div class="gl-v2-ps-preview-empty">Bezig met laden…</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script id="gl-v2-ps-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "modalUrl": "@Url.Action("MarkStageReachedModal")",
+        "submitUrl": "@Url.Action("MarkStageReached")",
+        "unmarkUrl": "@Url.Action("UnmarkStageReached")",
+        "proofPickerUrl": "@Url.Action("PickProofPhotoModal")"
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-paymentstages.js" asp-append-version="true"></script>
+}

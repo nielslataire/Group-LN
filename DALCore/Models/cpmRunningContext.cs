@@ -55,6 +55,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ChangeOrderDetail> ChangeOrderDetail { get; set; }
 
+    public virtual DbSet<ChangeOrderPaymentTerm> ChangeOrderPaymentTerm { get; set; }
+
     public virtual DbSet<ClientAccount> ClientAccount { get; set; }
 
     public virtual DbSet<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; }
@@ -244,6 +246,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<UnitFinishingOption> UnitFinishingOption { get; set; }
 
     public virtual DbSet<UnitGroupTypes> UnitGroupTypes { get; set; }
+
+    public virtual DbSet<UnitPaymentStageReached> UnitPaymentStageReached { get; set; }
 
     public virtual DbSet<UnitRooms> UnitRooms { get; set; }
 
@@ -699,6 +703,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(250);
+            entity.Property(e => e.QuoteSupplierReference).HasMaxLength(100);
+            entity.Property(e => e.QuoteVatPercentage).HasColumnType("decimal(5, 2)");
 
             entity.HasOne(d => d.ClientAccount).WithMany(p => p.ChangeOrder)
                 .HasForeignKey(d => d.ClientAccountId)
@@ -722,10 +728,27 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.VatPercentage)
                 .HasDefaultValue(21.0000m)
                 .HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.SourceImagePath).HasMaxLength(300);
 
             entity.HasOne(d => d.ChangeOrder).WithMany(p => p.ChangeOrderDetail)
                 .HasForeignKey(d => d.ChangeOrderId)
                 .HasConstraintName("FK_ChangeOrderDetail_ChangeOrder");
+        });
+
+        modelBuilder.Entity<ChangeOrderPaymentTerm>(entity =>
+        {
+            entity.Property(e => e.Percentage).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.FixedAmount).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.ChangeOrder).WithMany(p => p.ChangeOrderPaymentTerm)
+                .HasForeignKey(d => d.ChangeOrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChangeOrderPaymentTerm_ChangeOrder");
+
+            entity.HasOne(d => d.TriggerStage).WithMany()
+                .HasForeignKey(d => d.TriggerStageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChangeOrderPaymentTerm_Stage");
         });
 
         modelBuilder.Entity<ClientAccount>(entity =>
@@ -1942,6 +1965,10 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Unit).WithMany(p => p.InvoicesDetails)
                 .HasForeignKey(d => d.UnitId)
                 .HasConstraintName("FK_InvoicesStages_Units");
+
+            entity.HasOne(d => d.ChangeOrderPaymentTerm).WithMany()
+                .HasForeignKey(d => d.ChangeOrderPaymentTermId)
+                .HasConstraintName("FK_InvoicesDetails_ChangeOrderPaymentTerm");
         });
 
         modelBuilder.Entity<InvoicingPaymentGroup>(entity =>
@@ -2893,6 +2920,31 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<UnitPaymentStageReached>(entity =>
+        {
+            entity.HasIndex(e => new { e.UnitId, e.PaymentStageId }, "UQ_UnitPaymentStageReached_Unit_Stage").IsUnique();
+
+            entity.HasOne(d => d.Unit).WithMany()
+                .HasForeignKey(d => d.UnitId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnitPaymentStageReached_Unit");
+
+            entity.HasOne(d => d.PaymentStage).WithMany()
+                .HasForeignKey(d => d.PaymentStageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnitPaymentStageReached_Stage");
+
+            entity.HasOne(d => d.ProofDoc).WithMany()
+                .HasForeignKey(d => d.ProofDocId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnitPaymentStageReached_ProofDoc");
+
+            entity.HasOne(d => d.ProofMedia).WithMany()
+                .HasForeignKey(d => d.ProofMediaId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnitPaymentStageReached_ProofMedia");
         });
 
         modelBuilder.Entity<UnitRooms>(entity =>

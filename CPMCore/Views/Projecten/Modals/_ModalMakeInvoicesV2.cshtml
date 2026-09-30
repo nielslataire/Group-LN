@@ -1,0 +1,50 @@
+@model CPMCore.Models.Projecten.InvoicePreviewV2Vm
+@*
+    Facturatie V2 (21a/22i) — inhoud van de "Facturen opmaken"-modal, AJAX-geladen door
+    ProjectenController.PreviewInvoices in #gl-v2-inv-preview-body (zelfde patroon als Invoices'
+    verwijder-modal: enkel de modal-body, de schil staat al op InvoicingV2.cshtml). Puur berekend via
+    BuildStageInvoiceDraft/BuildChangeOrderInvoiceDraft — er is hier nog niets in de database geschreven.
+*@
+@using System.Globalization
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string Pct(decimal v) => v.ToString("0.##", be);
+}
+@* gl-v2-field-full: .gl-v2-modal-form's .modal-body is een 2-koloms grid (voor formuliervelden) — dit
+   voorstel is geen formulier, dus alles moet als één blok de volle breedte innemen i.p.v. per twee
+   naast elkaar te vallen. *@
+<div class="gl-v2-field-full">
+    @if (Model.Notices.Count > 0)
+    {
+        foreach (var notice in Model.Notices)
+        {
+            <div class="gl-v2-inv-notice is-warning">
+                <span class="gl-v2-inv-notice-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+                <span class="gl-v2-inv-notice-desc">@notice</span>
+            </div>
+        }
+    }
+    @if (Model.Owners.Count == 0)
+    {
+        <div class="gl-v2-inv-preview-empty">Er blijft niets over om te factureren voor deze selectie.</div>
+    }
+    else
+    {
+        foreach (var owner in Model.Owners)
+        {
+            <div class="gl-v2-inv-preview-owner">
+                <div class="gl-v2-inv-preview-owner-head">
+                    <span class="gl-v2-inv-preview-owner-name">@owner.OwnerName</span>
+                    <span class="gl-v2-inv-preview-owner-pct">@Pct(owner.Percentage) % aandeel</span>
+                </div>
+                @foreach (var line in owner.Lines)
+                {
+                    <div class="gl-v2-inv-preview-line"><span>@line.Text</span> <b>@Eur(line.Amount)</b></div>
+                }
+                <div class="gl-v2-inv-preview-total"><span>Totaal deze factuur</span> <b>@Eur(owner.Total)</b></div>
+            </div>
+        }
+        <div class="gl-v2-inv-preview-grandtotal"><span>@Model.Owners.Count @(Model.Owners.Count == 1 ? "factuur" : "facturen") · totaal</span> <b>@Eur(Model.GrandTotal)</b></div>
+    }
+</div>

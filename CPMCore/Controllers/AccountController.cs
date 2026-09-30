@@ -1,6 +1,7 @@
 ﻿using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Models.Account;
+using CPMCore.Services;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authentication;
@@ -17,36 +18,58 @@ public class AccountController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IUserSignatureService _userSignatureService;
+    private readonly GoogleLoginSettings _googleLogin;
 
-    public AccountController(cpmRunningContext db, IUserSignatureService userSignatureService)
+    public AccountController(cpmRunningContext db, IUserSignatureService userSignatureService, GoogleLoginSettings googleLogin)
     {
         _db = db;
         _userSignatureService = userSignatureService;
+        _googleLogin = googleLogin;
     }
+
+    private static LoginType ParseLoginType(string? type) => type?.ToLowerInvariant() switch
+    {
+        "contractor" => LoginType.Contractor,
+        "customer"   => LoginType.Customer,
+        _            => LoginType.Internal
+    };
+
     [AllowAnonymous]
     [HttpGet]
     public IActionResult Login(string? returnUrl = null, string? type = null)
     {
-        var loginType = type?.ToLowerInvariant() switch
-        {
-            "contractor" => LoginType.Contractor,
-            "customer"   => LoginType.Customer,
-            _            => LoginType.Internal
-        };
+        var loginType = ParseLoginType(type);
         var safeReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Content("~");
         return View(new EntraLoginViewModel
         {
             ReturnUrl = safeReturnUrl,
-            Type = loginType
+            Type = loginType,
+            // Google enkel voor portaalgasten; interne medewerkers altijd via de organisatie-tenant.
+            ShowGoogleLogin = _googleLogin.Enabled && loginType != LoginType.Internal
         });
     }
 
+    /// <param name="provider">"google" voor het Google-schema; anders (default) Microsoft Entra.</param>
+    /// <param name="type">Logintype (contractor/customer) — reist mee zodat een mislukte login
+    /// terugkeert naar de juiste portaal-layout (zie LoginRedirect).</param>
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult SignIn(string? returnUrl = null)
+    public IActionResult SignIn(string? returnUrl = null, string? provider = null, string? type = null)
     {
         var redirectUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Content("~");
         var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+        if (!string.IsNullOrWhiteSpace(type))
+            properties.Items[LoginRedirect.LoginTypeItem] = type.ToLowerInvariant();
+
+        if (string.Equals(provider, "google", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!_googleLogin.Enabled || ParseLoginType(type) == LoginType.Internal)
+            {
+                return Redirect(LoginRedirect.WithError(properties,
+                    "Aanmelden met Google is niet beschikbaar. Gebruik uw Microsoft-account."));
+            }
+            return Challenge(properties, GoogleAuthDefaults.Scheme);
+        }
 
         return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
     }
@@ -54,10 +77,24 @@ public class AccountController : BaseController
     [HttpGet]
     public IActionResult SignOut()
     {
+        // Na uitloggen terug naar de loginpagina in de juiste portaal-layout.
+        var loginType = User.GetCpmUserType() switch
+        {
+            "contractor" => "contractor",
+            "customer"   => "customer",
+            _            => null
+        };
         var properties = new AuthenticationProperties
         {
-            RedirectUri = Url.Action(nameof(Login), "Account")
+            RedirectUri = loginType == null
+                ? Url.Action(nameof(Login), "Account")
+                : Url.Action(nameof(Login), "Account", new { type = loginType })
         };
+
+        // Google kent geen RP-initiated logout (geen end_session_endpoint): enkel de eigen cookie
+        // wissen. Voor Entra ook de tenant-sessie beëindigen zoals voorheen.
+        if (User.IsGoogleLogin())
+            return SignOut(properties, CookieAuthenticationDefaults.AuthenticationScheme);
 
         return SignOut(
             properties,

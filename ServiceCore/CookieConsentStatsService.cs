@@ -33,7 +33,8 @@ namespace ServiceCore
                 PeriodEndUtc = periodEndUtc,
                 ShownCount = counts.FirstOrDefault(c => c.EventType == "Shown")?.Count ?? 0,
                 AcceptedCount = counts.FirstOrDefault(c => c.EventType == "Accepted")?.Count ?? 0,
-                RejectedCount = counts.FirstOrDefault(c => c.EventType == "Rejected")?.Count ?? 0
+                RejectedCount = counts.FirstOrDefault(c => c.EventType == "Rejected")?.Count ?? 0,
+                AbandonedCount = counts.FirstOrDefault(c => c.EventType == "Abandoned")?.Count ?? 0
             };
         }
     }

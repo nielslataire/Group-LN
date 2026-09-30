@@ -355,6 +355,34 @@ in A werkt (anders staat de app zonder werkende signing-flow).
       "Deze wijzigingsopdracht is elektronisch ondertekend en kan niet meer verwijderd worden. Het
       ondertekenbewijs (audit trail) blijft bewaard."
 
+## Vijfde ronde (Niels, 2026-09-29) — uitbreiding t.b.v. Financieel/scherm 21b
+Onderdeel van de bredere Financieel-herwerking (gl-v2, design-handoff 20-22): scherm 21b
+("WO blokkeert de eindafrekening") heeft 4 opties, waarvan Herinneren/Annuleren al bestonden
+(`SendReminderAsync`/`CancelCaseAsync`). De 2 ontbrekende zijn nu gebouwd:
+- [x] `ISigningService.UploadSignedDocumentAsync(caseId, pdfBytes, fileName, ctx, ct)` — "Getekende
+      versie opladen": het opgeladen PDF wordt zelf het definitieve document (géén door
+      `SignedDocumentComposer` samengestelde evidence-pagina, dat zou het papieren bewijs vervalsen).
+      Alle nog openstaande partijen worden als `Signed` geregistreerd (event `PartySigned`,
+      `method: "Paper"`), het dossier gaat naar `Completed`, er wordt alsnog een auditrapport +
+      dezelfde voltooiingsmails gegenereerd, en `ISigningDocumentSource.OnCaseCompletedAsync` wordt
+      aangeroepen (zelfde hook als de digitale flow — geen apart code-pad voor `ChangeOrder.
+      DateAgreement`/ProjectDocs-koppeling). Nieuw event-type `PaperDocumentUploaded`. PDF-check via
+      magic bytes (`%PDF`) + nieuwe optie `Signing:MaxUploadedDocumentBytes` (default 20MB).
+- [x] `ISigningService.DeclineByStaffAsync(partyId, reason, ctx, ct)` — "Weigering registreren": zelfde
+      overgang als `DeclineAsync` (party → Declined, tokens intrekken, `CanStillComplete`-check, dossier
+      evt. sluiten), maar aangestuurd door een beheerder via `partyId` i.p.v. de sessie van de
+      ondertekenaar zelf (bv. telefonische weigering).
+- [x] `SigningAdminController`: nieuwe acties `UploadSigned` (multipart POST) en `Decline` (POST reden).
+      `Views/SigningAdmin/Dossier.cshtml`: "Getekende versie opladen" in het dossier-menu (multipart-
+      modal), "Weigering registreren" per partij-rij (gedeelde modal, partyId via data-attributen,
+      Bootstrap `relatedTarget`) — naast de al bestaande Herinneren/Nieuwe link/Annuleren.
+- [ ] Browsertest: beide nieuwe acties in `SigningAdmin/Dossier` uittesten (upload met een echte PDF,
+      weigering met en zonder reden), en nagaan dat de Facturatie-pagina (in aanbouw, zie
+      `smooth-greeting-origami`-plan) een geblokkeerde WO na elke van de 4 opties correct bijwerkt.
+- Vervolg: scherm 21b zelf (de 4-opties-keuzemodal op de Facturatie-pagina) is nog niet gebouwd — dat
+  is stap E van het Facturatie-bouwplan, roept deze acties gewoon aan zoals `SigningAdmin/Dossier` al
+  deed.
+
 ## Open punten / te bevestigen
 - Akkoordtekst juridisch laten nakijken (`SigningPolicy.ConsentText`, seed in 047).
 - Wie zijn de interne ontvangers van "ondertekend"/"geweigerd"? Voorlopig: verkoopverantwoordelijke van

@@ -812,14 +812,16 @@ namespace CPMCore.Controllers
 
             // Signingmodule §6.3: e-mail/gsm zijn de OTP-bestemming bij het ondertekenen — een wijziging
             // hier moet in ClientContactChangeLog komen (gemaskeerd) vóór MapToEntity/UpdateContacts de
-            // oude waarden overschrijven.
+            // oude waarden overschrijven. ClientAccount.Cellphone (migratie 058) mee sinds
+            // SmsOtpMethod.ResolveDestinationAsync die kolom als eerste bestemming voor eigenaar 1 gebruikt.
             var oldEmail = client.Email;
+            var oldCellphone = client.Cellphone;
             var oldContacts = client.ClientContacts.ToDictionary(c => c.Id, c => (c.Email, c.Cellphone));
 
             MapToEntity(model, client);
             UpdateIssuerCompany(model, client);
             UpdateContacts(model, client);
-            LogContactChanges(client, oldEmail, oldContacts);
+            LogContactChanges(client, oldEmail, oldCellphone, oldContacts);
 
             await _db.SaveChangesAsync(ct);
 
@@ -1040,10 +1042,40 @@ namespace CPMCore.Controllers
                 }
             }
 
-            // Controleer of er minstens één eenheid gekozen werd
+            // ProjectName wordt niet mee gepost (enkel ProjectId) — zonder dit gaf de impliciete
+            // required-validatie op die niet-nullable string een kale "The ProjectName field is
+            // required." in de samenvatting, en bleef de projectnaam leeg in het inner menu bij redisplay.
+            ModelState.Remove(nameof(model.ProjectName));
+            if (string.IsNullOrWhiteSpace(model.ProjectName))
+                model.ProjectName = _projectService.GetProjectNameById(model.ProjectId);
+
+            // Minimum om een klant aan te maken (zelfde regels als gl-v2-klanten-addclient.js, hier als
+            // vangnet): naam of bedrijfsnaam, verkoopdatum, minstens één eenheid mét prijzen. De sleutels
+            // zijn veldnamen zodat de gl-v2-view het veld zelf ook rood kan zetten; de teksten staan in
+            // de foutensamenvatting bovenaan de pagina.
+            var hasNameError = ModelState.Values.SelectMany(v => v.Errors).Any(e => e.ErrorMessage.Contains("naam", StringComparison.OrdinalIgnoreCase));
+            if (!hasNameError && string.IsNullOrWhiteSpace(model.ClientAccount.Name) && string.IsNullOrWhiteSpace(model.ClientAccount.CompanyName))
+                ModelState.AddModelError("ClientAccount.Name", "Naam (of bedrijfsnaam) is verplicht.");
+            if (model.ClientAccount.DateSalesAgreement is null)
+                ModelState.AddModelError("ClientAccount.DateSalesAgreement", "Verkoopdatum is verplicht.");
+
             if (units == null || !units.Any())
             {
-                ModelState.AddModelError("CustomError", "U dient minstens één eenheid te kiezen voor deze klant");
+                ModelState.AddModelError("Units", "Voeg minstens één eenheid toe.");
+            }
+            else
+            {
+                foreach (var unit in units)
+                {
+                    var unitLabel = string.IsNullOrWhiteSpace(unit.Name) ? "Eenheid" : unit.Name;
+                    if ((unit.LandValueSold ?? 0) <= 0)
+                        ModelState.AddModelError("Units", $"{unitLabel}: grondwaarde ontbreekt.");
+                    foreach (var cv in unit.ConstructionValues ?? new List<UnitConstructionValueBO>())
+                    {
+                        if ((cv.ValueSold ?? 0) <= 0)
+                            ModelState.AddModelError("Units", $"{unitLabel}: {(string.IsNullOrWhiteSpace(cv.Description) ? "constructiewaarde" : cv.Description.ToLowerInvariant())} ontbreekt.");
+                    }
+                }
             }
 
             // Verdeelsleutel (migratie 057, design-handoff 23a "100 % KLOPT") — enkel relevant zodra er
@@ -1058,7 +1090,11 @@ namespace CPMCore.Controllers
 
             if (!ModelState.IsValid)
             {
+                // De gekozen eenheden komen binnen als "units" (BeginCollectionItem), niet als
+                // model.AddedUnits — zonder dit waren álle eenheidskaarten weg na een serverfout.
+                RestorePostedUnits(model, units);
                 FillInAddSelectLists(ref model);
+                ViewData["GlV2ErrorLocations"] = AddClientAccountErrorLocations();
                 return View(viewName, model);
             }
 
@@ -1081,6 +1117,17 @@ namespace CPMCore.Controllers
             }
 
             model.ClientAccount.Id = response.InsertedId;
+
+            // Deze pagina (project-scoped AddClientAccount) heeft geen eigen "Facturatiebedrijven"-
+            // keuzeveld zoals de globale Klanten/Create-Edit-flow (ClientFormViewModel.
+            // SelectedIssuerCompanyIds, zie AttachIssuerCompany/ValidateIssuerCompanies verderop in
+            // dit bestand) — zonder dit bleef ClientAccountIssuerCompany leeg voor elke klant die
+            // hier werd toegevoegd, en verscheen die klant nergens bij "Facturatiebedrijven" op
+            // Klanten/Detail. In plaats van een keuzeveld koppelt deze flow automatisch aan de twee
+            // facturatiebedrijven die al op het PROJECT zelf staan ingesteld (ProjectBO.
+            // IssuerCompanyIdLandOwner "Facturatiebedrijf grondeigenaar" / IssuerCompanyIdBuilder
+            // "Facturatiebedrijf aannemer") — grond en constructies, als ze bestaan.
+            LinkProjectIssuerCompanies(model.ClientAccount.Id, model.ProjectId);
 
             var failedUnits = new List<string>();
             var failedConstructionValues = new List<string>();
@@ -1273,7 +1320,10 @@ namespace CPMCore.Controllers
             var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
 
             var units = _db.Units.AsNoTracking()
-                .Where(u => u.ProjectId == projectId && u.LinkedUnitId == null && !u.IsLink)
+                // Exact dezelfde beschikbaarheidsregel als IUnitService.GetAvailableUnitsByProjectId
+                // (project + geen gelinkte eenheid) — een extra !IsLink-filter liet hier álle eenheden
+                // wegvallen.
+                .Where(u => u.ProjectId == projectId && u.LinkedUnitId == null)
                 .Include(u => u.Type).ThenInclude(t => t.Group)
                 .Include(u => u.ClientAccount)
                 .OrderBy(u => u.Type != null ? u.Type.GroupId : 0).ThenBy(u => u.Name)
@@ -1300,6 +1350,57 @@ namespace CPMCore.Controllers
                 };
             }).ToList();
         }
+
+        /// <summary>Redisplay na een serverfout op AddClientAccount: de gekozen eenheden komen binnen als
+        /// "units" (enkel Id + de ingevulde prijzen, via BeginCollectionItem), niet als model.AddedUnits.
+        /// Zelfde opbouw als AddSelectedUnits (echte UnitBO ophalen, afwerkingsopties/constructiewaarden
+        /// laden) en daar de gepóste prijzen overheen leggen, zodat _UnitRowV2 de kaarten opnieuw kan
+        /// tonen mét wat de gebruiker al had ingevuld.</summary>
+        private void RestorePostedUnits(AddClientAccountModel model, List<UnitBO>? postedUnits)
+        {
+            model.AddedUnits = new List<UnitBO>();
+            if (postedUnits == null) return;
+
+            foreach (var posted in postedUnits.Where(u => u.Id > 0))
+            {
+                var response = _unitService.GetUnitById(posted.Id);
+                if (!response.Success) continue;
+
+                var unit = response.Value;
+                unit.LandValueSold = posted.LandValueSold ?? unit.LandValue;
+
+                var postedCvIds = (posted.ConstructionValues ?? new List<UnitConstructionValueBO>()).Select(cv => cv.Id).ToHashSet();
+                var optResp = _unitService.GetFinishingOptions(posted.Id);
+                unit.FinishingOptions = optResp.Success ? optResp.Values : new List<UnitFinishingOptionBO>();
+                if (unit.FinishingOptions.Any())
+                {
+                    var selectedOption = unit.FinishingOptions.FirstOrDefault(o => o.ConstructionValues.Any(cv => postedCvIds.Contains(cv.Id)))
+                        ?? unit.FinishingOptions.FirstOrDefault(o => o.IsDefault)
+                        ?? unit.FinishingOptions.First();
+                    unit.ConstructionValues = selectedOption.ConstructionValues;
+                }
+
+                foreach (var cv in unit.ConstructionValues)
+                {
+                    var postedCv = posted.ConstructionValues?.FirstOrDefault(p => p.Id == cv.Id);
+                    cv.ValueSold = postedCv?.ValueSold ?? cv.Value;
+                }
+
+                model.AddedUnits.Add(unit);
+            }
+        }
+
+        /// <summary>Foutoverzicht (design-handoff punt 24) — ModelState-sleutel → locatietekst, voor
+        /// Views/Shared/GlV2/_ErrorSummaryV2.cshtml se ViewData["GlV2ErrorLocations"]. Enkel de
+        /// sleutels die hier ook echt met AddModelError gezet worden (zie de POST-actie hierboven);
+        /// een sleutel zonder locatie toont gewoon geen badge, dat is geen fout.</summary>
+        private static Dictionary<string, string> AddClientAccountErrorLocations() => new()
+        {
+            ["ClientAccount.Name"] = "Eigenaars",
+            ["ClientAccount.DateSalesAgreement"] = "Klantenaccount",
+            ["Units"] = "Eenheden",
+            ["CustomError"] = "Eigenaars"
+        };
 
         private Dictionary<int, string> PaymentGroupNamesFor(int projectId)
             => _db.InvoicingPaymentGroup.AsNoTracking()
@@ -1600,6 +1701,39 @@ namespace CPMCore.Controllers
             AttachIssuerCompany(model, entity);
         }
 
+        // Zie de aanroep in AddClientAccount (POST) hierboven voor de volledige uitleg: koppelt een
+        // net aangemaakte klant automatisch aan het/de facturatiebedrijf/bedrijven van het project
+        // (grondeigenaar en/of aannemer), als die ingesteld zijn. Werkt rechtstreeks op _db (zelfde
+        // stijl als AttachIssuerCompany hierboven) omdat ClientAccountBO/ClientService geen begrip
+        // van facturatiebedrijven kent — dat leeft enkel op ClientFormViewModel-niveau.
+        private void LinkProjectIssuerCompanies(int clientAccountId, int projectId)
+        {
+            var projectResponse = _projectService.GetProjectByID(projectId);
+            if (!projectResponse.Success || projectResponse.Value == null) return;
+
+            var issuerIds = new[] { projectResponse.Value.IssuerCompanyIdLandOwner, projectResponse.Value.IssuerCompanyIdBuilder }
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+            if (!issuerIds.Any()) return;
+
+            var alreadyLinked = _db.ClientAccountIssuerCompany
+                .Where(l => l.ClientAccountId == clientAccountId)
+                .Select(l => l.IssuerCompanyId)
+                .ToList();
+
+            foreach (var issuerId in issuerIds.Except(alreadyLinked))
+            {
+                _db.ClientAccountIssuerCompany.Add(new ClientAccountIssuerCompany
+                {
+                    ClientAccountId = clientAccountId,
+                    IssuerCompanyId = issuerId
+                });
+            }
+            _db.SaveChanges();
+        }
+
         // Defensief, niet enkel cosmetisch: de JS laat visueel maar één rij tegelijk "Primair
         // contact" aanvinken (uncheckt de andere bij een klik), maar dat is bypasbaar (JS uit,
         // bewerkte request, …) — dus hier hetzelfde normaliseren vóór het opslaan: enkel de EERSTE
@@ -1684,7 +1818,7 @@ namespace CPMCore.Controllers
         /// OTP-bestemming bij het ondertekenen) — enkel gemaskeerde oude/nieuwe waarden, nooit de echte
         /// e-mail/gsm zelf. Nieuwe contacten (geen oude waarde om mee te vergelijken) en verwijderde
         /// contacten worden niet gelogd — buiten scope, zie ONDERTEKENEN_VOORTGANG.md.</summary>
-        private void LogContactChanges(ClientAccount client, string oldEmail, Dictionary<int, (string Email, string Cellphone)> oldContacts)
+        private void LogContactChanges(ClientAccount client, string oldEmail, string oldCellphone, Dictionary<int, (string Email, string Cellphone)> oldContacts)
         {
             var userId = User.GetCpmUserId();
             var now = DateTime.UtcNow;
@@ -1695,6 +1829,15 @@ namespace CPMCore.Controllers
                 {
                     EntityType = "ClientAccount", EntityId = client.Id, ClientAccountId = client.Id, Field = "Email",
                     OldValueMasked = SigningCrypto.MaskEmail(oldEmail), NewValueMasked = SigningCrypto.MaskEmail(client.Email),
+                    ChangedByUserId = userId, ChangedAt = now,
+                });
+            }
+            if (!string.Equals(oldCellphone, client.Cellphone, StringComparison.Ordinal))
+            {
+                _db.ClientContactChangeLog.Add(new ClientContactChangeLog
+                {
+                    EntityType = "ClientAccount", EntityId = client.Id, ClientAccountId = client.Id, Field = "Cellphone",
+                    OldValueMasked = SigningCrypto.MaskPhone(oldCellphone), NewValueMasked = SigningCrypto.MaskPhone(client.Cellphone),
                     ChangedByUserId = userId, ChangedAt = now,
                 });
             }

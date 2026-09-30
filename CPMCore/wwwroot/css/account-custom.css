@@ -310,6 +310,41 @@ body > main { height: 100%; }
 .btn-gl-ms .ms-icon  { font-size: 1.15rem; }
 .btn-gl-ms .ms-arrow { margin-left: auto; font-size: 1.05rem; }
 
+/* "of"-scheiding tussen de Microsoft- en Google-knop (enkel portaal-logins) */
+.gl-or {
+    display: flex; align-items: center; gap: 12px;
+    margin: 14px 0;
+    color: #8892a4; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
+}
+.gl-or::before, .gl-or::after {
+    content: ""; flex: 1; height: 1px; background: #e3e7ee;
+}
+
+/* Google-knop: secundair (wit, rand) naast de groene primaire knop — bewust GEEN .btn-gl-ms,
+   zodat login.js' knop-morph (die de primaire kleur over het scherm laat uitdijen) enkel op de
+   Microsoft-knop blijft; deze knop navigeert gewoon. */
+.btn-gl-google {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; width: 100%;
+    background: #fff; color: #1f2937;
+    border: 1px solid #d3d9e2; border-radius: 8px;
+    padding: 12px 20px;
+    font-size: .97rem; font-weight: 600;
+    text-decoration: none;
+    transition: background .18s, box-shadow .18s, border-color .18s;
+}
+.btn-gl-google:hover {
+    background: #f7f9fb; color: #1f2937;
+    border-color: #b9c2cf;
+    box-shadow: 0 4px 16px rgba(31,41,55,.10);
+}
+.btn-gl-google:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 .2rem rgba(10,90,59,.35);
+}
+.btn-gl-google .google-icon { flex-shrink: 0; }
+.btn-gl-google .ms-arrow    { margin-left: auto; font-size: 1.05rem; color: #8892a4; }
+
 /* Info-box */
 .gl-info-box {
     display: flex; gap: 10px; align-items: flex-start;

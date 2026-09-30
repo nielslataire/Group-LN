@@ -1,0 +1,74 @@
+@model CPMCore.Models.Projecten.MarkStageReachedV2Vm
+@*
+    Betalingsschijven V2 (21h) — inhoud van de "Schijf bereikt aanduiden"-modal, AJAX-geladen door
+    ProjectenController.MarkStageReachedModal in #gl-v2-ps-mark-body (zelfde patroon als Facturatie's
+    "Facturen opmaken"-modal). Bevestigen post't rechtstreeks naar MarkStageReached (geen preview-stap
+    nodig, dit schrijft één simpele rij per gekozen eenheid).
+*@
+@using System.Globalization
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+}
+@* Schijf/naam/% staat in de modal-header (statisch in PaymentStagesV2.cshtml, JS vult het al in
+   vóór deze AJAX-inhoud terugkomt — zie .js-ps-mark-reached's click-handler) — niet hier herhalen. *@
+<div class="gl-v2-field-full">
+    <div class="gl-v2-field gl-v2-field-full">
+        <label class="gl-v2-field-label">
+            Voor welke eenheden
+            @if (Model.Units.Any(u => u.IsActionable))
+            {
+                <button type="button" class="gl-v2-ps-mark-toggle-all" id="gl-v2-ps-mark-toggle-all" data-state="all">Geen selecteren</button>
+            }
+        </label>
+        <div class="gl-v2-ps-mark-units">
+            @foreach (var u in Model.Units)
+            {
+                <label class="gl-v2-ps-mark-unit @(u.IsActionable ? "" : "is-disabled")">
+                    <span class="gl-v2-ps-check">
+                        <input type="checkbox" class="js-ps-mark-unit" value="@u.UnitId" @(u.IsActionable ? "checked" : "disabled") />
+                        <label></label>
+                    </span>
+                    <span class="gl-v2-ps-mark-unit-text">
+                        <span class="gl-v2-ps-mark-unit-name">@u.UnitName</span>
+                        <span class="gl-v2-ps-mark-unit-sub">@(u.IsActionable ? Eur(u.Amount) + " excl. btw" : u.DisabledReason)</span>
+                    </span>
+                </label>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-ps-mark-row2">
+        <div class="gl-v2-ps-mark-row2-date">
+            @await Html.PartialAsync("GlV2/_DateField", new CPMCore.Models.GlV2.GlV2DateFieldVm
+            {
+                Name = "reachedDate",
+                Id = "gl-v2-ps-mark-date",
+                Label = "Datum bereikt",
+                Required = true,
+                IsoValue = DateTime.Today.ToString("yyyy-MM-dd"),
+                DisplayValue = DateTime.Today.ToString("dd/MM/yyyy")
+            })
+        </div>
+        <div class="gl-v2-field gl-v2-ps-mark-row2-proof">
+            <label class="gl-v2-field-label">Bewijs</label>
+            <input type="hidden" id="gl-v2-ps-mark-proof-id" value="" />
+            <button type="button" class="gl-v2-ps-proof-trigger" id="gl-v2-ps-proof-trigger">
+                <i class="ph ph-image" aria-hidden="true"></i>
+                <span id="gl-v2-ps-proof-trigger-label">Werffoto's kiezen uit Media</span>
+            </button>
+            <span class="gl-v2-field-help">optioneel — komt mee als bijlage bij de factuur</span>
+        </div>
+    </div>
+
+    @* Meldingskader (design-handoff punt 25, DESIGN.md "Meldingskaders") — compact-formaat (25a),
+       altijd informatief (nooit fout/blokkerend, ook niet als er nog niets gekozen is: "Kies
+       minstens één eenheid" is een prompt, geen fout), dus is-info met de vaste gl-v2-shell.css-
+       component i.p.v. het vroegere eigen .gl-v2-ps-notice. Tekst wisselt via JS (gl-v2-projecten-
+       paymentstages.js se updateConfirm()) — enkel #gl-v2-ps-mark-info-text se textContent, geen
+       eigen kleur-/statuswissel nodig. *@
+    <div class="gl-v2-notice gl-v2-notice-compact is-info" id="gl-v2-ps-mark-info">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span id="gl-v2-ps-mark-info-text">Kies minstens één eenheid.</span>
+    </div>
+</div>

@@ -1,0 +1,60 @@
+@model CPMCore.Models.Projecten.ChangeOrderDetailRowV2
+@*
+    Wijzigingsopdracht V2 (20d) — één regel van de "Regels"-tabel. Ook gebruikt door
+    ChangeOrderDetailV2AddRow (AJAX "+ Regel", zelfde patroon als de legacy AddChangeOrderDetailRow) —
+    Index moet dan altijd de huidige rijtelling zijn zodat de name="rows[i]." vernummering klopt.
+*@
+@using BOCore
+@{
+    var index = ViewData["Index"] as int? ?? 0;
+    var vatKlant = ViewData["VatKlant"] as decimal? ?? 21m;
+    var isLocked = ViewData["IsLocked"] as bool? ?? false;
+    var vat = Model.VatPercentage > 0 ? Model.VatPercentage : vatKlant;
+    var prefix = $"rows[{index}]";
+}
+<tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "")" data-index="@index">
+    <td>
+        <input type="hidden" name="@(prefix).id" class="js-co-id" value="@Model.Id" />
+        <input type="hidden" name="@(prefix).sourceImagePath" class="js-co-sourceimage" value="@Model.SourceImagePath" />
+        <input type="text" class="gl-v2-field-input js-co-description" name="@(prefix).description" value="@Model.Description" @(isLocked ? "disabled" : "") />
+        <span class="gl-v2-co-row-flags">
+            @if (!string.IsNullOrWhiteSpace(Model.SourceImagePath))
+            {
+                <span class="gl-v2-co-photo-flag" title="Foto uit de offerte hangt aan deze regel"><i class="ph ph-image" aria-hidden="true"></i>foto</span>
+            }
+            @if (Model.NeedsReview)
+            {
+                <span class="gl-v2-co-review-flag" title="Onzekere OCR-waarde — controleer deze regel"><i class="ph ph-warning" aria-hidden="true"></i>controleer</span>
+            }
+        </span>
+    </td>
+    <td class="is-center">
+        <select class="gl-v2-field-input js-co-mtype" name="@(prefix).measurementType" @(isLocked ? "disabled" : "")>
+            @foreach (MeasurementType mt in Enum.GetValues(typeof(MeasurementType)))
+            {
+                <option value="@((int)mt)" selected="@((int)mt == Model.MeasurementType)">@mt.GetDisplayName()</option>
+            }
+        </select>
+    </td>
+    <td class="is-center">
+        <select class="gl-v2-field-input js-co-munit" name="@(prefix).measurementUnit" @(isLocked ? "disabled" : "")>
+            @foreach (MeasurementUnit mu in Enum.GetValues(typeof(MeasurementUnit)))
+            {
+                <option value="@((int)mu)" selected="@((int)mu == Model.MeasurementUnit)">@mu.GetDisplayName()</option>
+            }
+        </select>
+    </td>
+    <td class="is-right"><input type="number" step="1" class="gl-v2-field-input gl-v2-co-num js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></td>
+    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-price" name="@(prefix).price" value="@Model.Price" @(isLocked ? "disabled" : "") /></td>
+    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-commission" name="@(prefix).commission" value="@Model.Commission" @(isLocked ? "disabled" : "") /></td>
+    <td class="is-right gl-v2-co-tabular js-co-priceklant">—</td>
+    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-vat" name="@(prefix).vatPercentage" value="@vat" @(isLocked ? "disabled" : "") /></td>
+    <td class="is-right gl-v2-co-tabular js-co-total">—</td>
+    <td class="is-right">
+        <input type="hidden" name="@(prefix).needsReview" class="js-co-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />
+        @if (!isLocked)
+        {
+            <button type="button" class="gl-v2-co-row-delete js-co-delete-row" title="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        }
+    </td>
+</tr>

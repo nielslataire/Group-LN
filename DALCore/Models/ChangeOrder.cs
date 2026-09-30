@@ -29,7 +29,20 @@ public partial class ChangeOrder
 
     public string ChangeOrderConditions { get; set; }
 
+    /// <summary>Offertes & wijzigingen gl-v2 (design-handoff 20b/20c/20d, migratie 064) — offerte en WO
+    /// zijn bewust dezelfde rij (geen aparte offerte-tabel): IsQuote=1 zolang het nog een offerte is,
+    /// "Omzetten" zet 'm in-place naar 0 en vult QuoteConvertedAt. Zie ChangeOrderStatusHelper.</summary>
+    public bool IsQuote { get; set; }
+
+    public string QuoteSupplierReference { get; set; }
+
+    public decimal? QuoteVatPercentage { get; set; }
+
+    public DateTime? QuoteConvertedAt { get; set; }
+
     public virtual ICollection<ChangeOrderDetail> ChangeOrderDetail { get; set; } = new List<ChangeOrderDetail>();
+
+    public virtual ICollection<ChangeOrderPaymentTerm> ChangeOrderPaymentTerm { get; set; } = new List<ChangeOrderPaymentTerm>();
 
     public virtual ClientAccount ClientAccount { get; set; }
 

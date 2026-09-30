@@ -35,12 +35,40 @@
     /* Vierde statustint, en de eerste die gl-v2 écht nodig had — DESIGN.md's eigen "Don't invent a
        fourth status color"-regel zegt: pas oplossen wanneer een scherm het nodig heeft, niet vooruit
        gokken. Dat scherm is er nu: de eenhedenlijst (16a/16d) onderscheidt "LOS TE KOOP" (een berging
-       of parking die nog geen lot én geen koper heeft) van "MET LOT 1" en "BESCHIKBAAR", die in het
-       mockup allebei neutraal-grijs zijn. Waarden letterlijk uit dat mockup overgenomen, zoals eerder
-       ook met #2F6038 voor de menuteller gebeurde. Het is een informatietint, geen ernst-niveau: niets
-       hieraan is beter of slechter dan groen of oker. */
-    --gl-v2-info: #2E5F7E;
-    --gl-v2-info-tint: #E4EDF2;
+       of parking die nog geen lot én geen koper heeft) van "MET LOT 1" en "BESCHIKBAAR". Oorspronkelijk
+       hier een blauwe tint (#2E5F7E/#E4EDF2, letterlijk uit dat mockup overgenomen) — op uitdrukkelijk
+       verzoek vervangen door de neutraal-grijze "Info"-kleur uit Meldingskaders (punt 25,
+       --gl-v2-notice-info-icon/-bg hieronder, zelfde waarden als --gl-v2-muted-soft/--gl-v2-neutral-tint):
+       blauw hoort nergens als "info"-kleur in gl-v2 thuis, grijs is de ene, consistente info-kleur
+       overal. De "Los te koop"-badge erft dit automatisch mee, geen losse wijziging daar nodig. */
+    --gl-v2-info: #4A5B48;
+    --gl-v2-info-tint: #EDEFEB;
+
+    /* Meldingskaders (design-handoff punt 25, CRM Meldingskaders.dc.html) — eigen tokenset, niet
+       hergebruikt van --gl-v2-warning(-tint)/--gl-v2-danger(-tint) hierboven: die dekken elk maar 2
+       van de 4 waarden die een meldingskader nodig heeft (achtergrond + icoon, geen randkleur/eigen
+       tekstkleur). --gl-v2-notice-info-bg/-icon ALIASEN wél --gl-v2-info-tint/--gl-v2-info hierboven
+       (nu dezelfde grijze waarden, sinds de vervanging van blauw) — één bron voor "info", geen twee
+       tokens die toevallig hetzelfde zeggen. -line/-ink hebben geen bestaand token-equivalent, dus
+       die blijven eigen, letterlijk uit het mockup overgenomen waarden. Succes/waarschuwing/fout
+       hieronder zijn wél alle vier eigen, letterlijk uit het mockup overgenomen waarden (geen
+       bestaand token dekt alle 4 voor die drie types). */
+    --gl-v2-notice-info-bg: var(--gl-v2-info-tint);
+    --gl-v2-notice-info-line: #D6DBD1;
+    --gl-v2-notice-info-icon: var(--gl-v2-info);
+    --gl-v2-notice-info-ink: #3A4838;
+    --gl-v2-notice-success-bg: #E4EEDD;
+    --gl-v2-notice-success-line: #C6DBB9;
+    --gl-v2-notice-success-icon: #2F6038;
+    --gl-v2-notice-success-ink: #24502E;
+    --gl-v2-notice-warning-bg: #F6EEDC;
+    --gl-v2-notice-warning-line: #E6D3A8;
+    --gl-v2-notice-warning-icon: #8A6A32;
+    --gl-v2-notice-warning-ink: #6B4F22;
+    --gl-v2-notice-danger-bg: #F6E4E1;
+    --gl-v2-notice-danger-line: #E8C3BD;
+    --gl-v2-notice-danger-icon: #8B2A2A;
+    --gl-v2-notice-danger-ink: #7A2222;
 
     --gl-v2-radius-sm: 8px;
     --gl-v2-radius-md: 12px;

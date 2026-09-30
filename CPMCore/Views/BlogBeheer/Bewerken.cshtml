@@ -43,6 +43,8 @@
     .bw-blok-badge.tekst { background: #f0f2f5; color: #5a6472; }
     .bw-blok-badge.quote { background: #fef3c7; color: #92400e; }
     .bw-blok-badge.tip { background: #d1fae5; color: #065f46; }
+    .bw-blok-badge.foto { background: #e0edfa; color: #1d4ed8; }
+    .bw-blok-badge.knop { background: #ede9fe; color: #5b21b6; }
     .bw-blok-titel { flex: 1; font-size: 14px; font-weight: 500; color: #212529; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bw-blok-acties { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .bw-blok-edit-panel { background: #f8fafb; border: 1px solid #e9ecef; border-radius: 8px; margin-top: 4px; padding: 20px 20px 16px; }
@@ -55,6 +57,8 @@
     .bw-type-icon.tekst { background: #f0f2f5; color: #5a6472; }
     .bw-type-icon.quote { background: #fef3c7; color: #92400e; font-size: 18px; font-family: Georgia, serif; }
     .bw-type-icon.tip { background: #d1fae5; color: #065f46; font-size: 16px; }
+    .bw-type-icon.foto { background: #e0edfa; color: #1d4ed8; font-size: 16px; }
+    .bw-type-icon.knop { background: #ede9fe; color: #5b21b6; font-size: 16px; }
 
     /* ── Quill ── */
     .ql-container { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
@@ -414,10 +418,28 @@
                             </li>
                             <li>
                                 <button class="bw-type-item" type="button" data-type="tip">
-                                    <div class="bw-type-icon tip"><i class="bx bx-bulb"></i></div>
+                                    <div class="bw-type-icon tip"><i class="bx bx-light-bulb"></i></div>
                                     <div>
                                         <div class="fw-semibold" style="font-size:13px;color:#212529;">Tip</div>
                                         <div style="font-size:12px;color:#6c757d;">Een uitgelichte tip of aanbeveling</div>
+                                    </div>
+                                </button>
+                            </li>
+                            <li>
+                                <button class="bw-type-item" type="button" data-type="foto">
+                                    <div class="bw-type-icon foto"><i class="bx bx-image"></i></div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:13px;color:#212529;">Foto</div>
+                                        <div style="font-size:12px;color:#6c757d;">Een losse foto over de volledige breedte</div>
+                                    </div>
+                                </button>
+                            </li>
+                            <li>
+                                <button class="bw-type-item" type="button" data-type="knop">
+                                    <div class="bw-type-icon knop"><i class="bx bx-link"></i></div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:13px;color:#212529;">Knop</div>
+                                        <div style="font-size:12px;color:#6c757d;">Een centrale knop met eigen tekst en link</div>
                                     </div>
                                 </button>
                             </li>
@@ -438,7 +460,9 @@
                 <div id="blokkenLijst">
                     @foreach (var blok in Model.Blokken.OrderBy(b => b.SortOrder))
                     {
-                        var blokTitel = string.IsNullOrEmpty(blok.Titel) ? "(zonder titel)" : blok.Titel;
+                        var blokTitel = blok.BlokType == "knop"
+                            ? (string.IsNullOrEmpty(blok.KnopTekst) ? "(zonder knoptekst)" : blok.KnopTekst)
+                            : (string.IsNullOrEmpty(blok.Titel) ? "(zonder titel)" : blok.Titel);
 
                         <div class="bw-blok-wrap" data-id="@blok.ID">
                             <div class="bw-blok-row">
@@ -452,7 +476,15 @@
                                     }
                                     else if (blok.BlokType == "tip")
                                     {
-                                        <i class="bx bx-bulb" style="font-size:11px;"></i>
+                                        <i class="bx bx-light-bulb" style="font-size:11px;"></i>
+                                    }
+                                    else if (blok.BlokType == "foto")
+                                    {
+                                        <i class="bx bx-image" style="font-size:11px;"></i>
+                                    }
+                                    else if (blok.BlokType == "knop")
+                                    {
+                                        <i class="bx bx-link" style="font-size:11px;"></i>
                                     }
                                     else
                                     {
@@ -483,7 +515,7 @@
                                         <input type="hidden" name="ArtikelId" value="@Model.ID" />
 
                                         @* Type radio's *@
-                                        <div class="d-flex gap-2 mb-3 blok-type-group">
+                                        <div class="d-flex gap-2 mb-3 blok-type-group flex-wrap">
                                             <input type="radio" class="btn-check" name="BlokType" id="bt-tekst-@blok.ID" value="tekst" @(blok.BlokType == "tekst" ? "checked" : "") />
                                             <label class="btn btn-sm btn-outline-secondary" for="bt-tekst-@blok.ID">T Tekst</label>
 
@@ -491,25 +523,32 @@
                                             <label class="btn btn-sm btn-outline-warning" for="bt-quote-@blok.ID">&ldquo; Quote</label>
 
                                             <input type="radio" class="btn-check" name="BlokType" id="bt-tip-@blok.ID" value="tip" @(blok.BlokType == "tip" ? "checked" : "") />
-                                            <label class="btn btn-sm btn-outline-success" for="bt-tip-@blok.ID"><i class="bx bx-bulb"></i> Tip</label>
+                                            <label class="btn btn-sm btn-outline-success" for="bt-tip-@blok.ID"><i class="bx bx-light-bulb"></i> Tip</label>
+
+                                            <input type="radio" class="btn-check" name="BlokType" id="bt-foto-@blok.ID" value="foto" @(blok.BlokType == "foto" ? "checked" : "") />
+                                            <label class="btn btn-sm btn-outline-primary" for="bt-foto-@blok.ID"><i class="bx bx-image"></i> Foto</label>
+
+                                            <input type="radio" class="btn-check" name="BlokType" id="bt-knop-@blok.ID" value="knop" @(blok.BlokType == "knop" ? "checked" : "") />
+                                            <label class="btn btn-sm" style="border-color:#c4b5fd;color:#5b21b6;" for="bt-knop-@blok.ID"><i class="bx bx-link"></i> Knop</label>
                                         </div>
 
                                         <div class="row g-3">
                                             <div class="col-md-8 veld-titel">
                                                 <label class="form-label fw-semibold">Bloktitel</label>
                                                 <input type="text" name="Titel" value="@blok.Titel" class="form-control" placeholder="Optionele bloktitel..." />
+                                                <div class="form-text foto-titel-hint" style="display:none;">Bij een foto wordt dit het bijschrift onder de foto.</div>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label fw-semibold">Volgorde</label>
                                                 <input type="number" name="SortOrder" value="@blok.SortOrder" class="form-control" />
                                             </div>
-                                            <div class="col-12">
+                                            <div class="col-12 veld-tekst">
                                                 <label class="form-label fw-semibold">Tekst</label>
                                                 <div id="quill-blok-@blok.ID" class="quill-wrap"></div>
                                                 <textarea name="RijkeTekst" id="quill-blok-@blok.ID-input" class="d-none">@Html.Raw(blok.RijkeTekst)</textarea>
                                             </div>
                                             <div class="col-12 veld-foto">
-                                                <label class="form-label fw-semibold">Foto (optioneel)</label>
+                                                <label class="form-label fw-semibold">Foto</label>
                                                 <input type="file" name="FotoUpload" class="form-control" accept="image/*" />
                                                 @if (!string.IsNullOrEmpty(blok.FotoBestand))
                                                 {
@@ -518,6 +557,14 @@
                                                         <input type="hidden" name="FotoBestand" value="@blok.FotoBestand" />
                                                     </div>
                                                 }
+                                            </div>
+                                            <div class="col-md-6 veld-knop">
+                                                <label class="form-label fw-semibold">Knoptekst</label>
+                                                <input type="text" name="KnopTekst" value="@blok.KnopTekst" class="form-control" placeholder="Bv. Ontdek het project" maxlength="100" />
+                                            </div>
+                                            <div class="col-md-6 veld-knop">
+                                                <label class="form-label fw-semibold">Knop URL</label>
+                                                <input type="text" name="KnopUrl" value="@blok.KnopUrl" class="form-control" placeholder="https://... of /woonprojecten" maxlength="500" />
                                             </div>
                                         </div>
 
@@ -562,6 +609,7 @@
                                 <div class="col-md-8 veld-titel">
                                     <label class="form-label fw-semibold">Bloktitel</label>
                                     <input type="text" name="Titel" class="form-control" placeholder="Optionele bloktitel..." />
+                                    <div class="form-text foto-titel-hint" style="display:none;">Bij een foto wordt dit het bijschrift onder de foto.</div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Volgorde</label>
@@ -569,14 +617,22 @@
                                            value="@(Model.Blokken.Any() ? Model.Blokken.Max(b => b.SortOrder) + 10 : 0)"
                                            class="form-control" />
                                 </div>
-                                <div class="col-12">
+                                <div class="col-12 veld-tekst">
                                     <label class="form-label fw-semibold">Tekst</label>
                                     <div id="quill-new" class="quill-wrap"></div>
                                     <textarea name="RijkeTekst" id="quill-new-input" class="d-none"></textarea>
                                 </div>
                                 <div class="col-12 veld-foto">
-                                    <label class="form-label fw-semibold">Foto (optioneel)</label>
+                                    <label class="form-label fw-semibold">Foto</label>
                                     <input type="file" name="FotoUpload" class="form-control" accept="image/*" />
+                                </div>
+                                <div class="col-md-6 veld-knop">
+                                    <label class="form-label fw-semibold">Knoptekst</label>
+                                    <input type="text" name="KnopTekst" class="form-control" placeholder="Bv. Ontdek het project" maxlength="100" />
+                                </div>
+                                <div class="col-md-6 veld-knop">
+                                    <label class="form-label fw-semibold">Knop URL</label>
+                                    <input type="text" name="KnopUrl" class="form-control" placeholder="https://... of /woonprojecten" maxlength="500" />
                                 </div>
                             </div>
 
@@ -739,6 +795,15 @@
 <script>
 (function () {
     var ARTIKEL_ID = @Model.ID;
+
+    // ── "Blok toevoegen"-dropdown: de kaart heeft overflow:hidden voor de afgeronde hoeken
+    // (zie .bw-card), wat de standaard absoluut gepositioneerde dropdown afsnijdt zodra hij
+    // niet meer past. Met de fixed-strategie van Popper (dat via bootstrap.bundle.min.js al
+    // geladen is) tekent de dropdown zich los van die kaart, tegen de viewport. ──
+    var blokDropdownBtn = document.getElementById('blokDropdown');
+    if (blokDropdownBtn && window.bootstrap && bootstrap.Dropdown) {
+        new bootstrap.Dropdown(blokDropdownBtn, { popperConfig: { strategy: 'fixed' } });
+    }
     var toolbarOptions = [
         ['bold', 'italic', 'underline'],
         [{ 'color': [] }],
@@ -823,9 +888,15 @@
                         form.querySelector('input[name="BlokType"][type="hidden"]');
         var type = typeInput ? typeInput.value : 'tekst';
         var titel = form.querySelector('.veld-titel');
+        var tekst = form.querySelector('.veld-tekst');
         var foto  = form.querySelector('.veld-foto');
-        if (titel) titel.style.display = (type === 'quote') ? 'none' : '';
-        if (foto)  foto.style.display  = (type === 'tekst') ? '' : 'none';
+        var knop  = form.querySelectorAll('.veld-knop');
+        var fotoHint = form.querySelector('.foto-titel-hint');
+        if (titel) titel.style.display = (type === 'quote' || type === 'knop') ? 'none' : '';
+        if (tekst) tekst.style.display = (type === 'foto' || type === 'knop') ? 'none' : '';
+        if (foto)  foto.style.display  = (type === 'tekst' || type === 'foto') ? '' : 'none';
+        knop.forEach(function (el) { el.style.display = (type === 'knop') ? '' : 'none'; });
+        if (fotoHint) fotoHint.style.display = (type === 'foto') ? '' : 'none';
     }
 
     document.querySelectorAll('form[data-bloktype]').forEach(function (form) {
@@ -845,7 +916,7 @@
             var form = document.getElementById('nieuwBlokForm');
             if (form) { form.dataset.bloktype = type; updateVelden(form); }
 
-            var labels = { tekst: 'Nieuw tekstblok', quote: 'Nieuwe quote', tip: 'Nieuwe tip' };
+            var labels = { tekst: 'Nieuw tekstblok', quote: 'Nieuwe quote', tip: 'Nieuwe tip', foto: 'Nieuwe foto', knop: 'Nieuwe knop' };
             var titel = document.getElementById('nieuwBlokTitel');
             if (titel) titel.textContent = labels[type] || 'Nieuw blok';
 

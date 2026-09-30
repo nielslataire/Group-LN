@@ -206,7 +206,9 @@ public class BlogBeheerController : BaseController
             BlokType    = vm.BlokType,
             Titel       = vm.Titel,
             RijkeTekst  = vm.RijkeTekst,
-            FotoBestand = fotoBestand
+            FotoBestand = fotoBestand,
+            KnopTekst   = vm.KnopTekst,
+            KnopUrl     = vm.KnopUrl
         };
 
         var response = _blogService.InsertUpdateBlok(bo);
@@ -363,7 +365,9 @@ public class BlogBeheerController : BaseController
             BlokType    = b.BlokType ?? "tekst",
             Titel       = b.Titel,
             RijkeTekst  = b.RijkeTekst,
-            FotoBestand = b.FotoBestand
+            FotoBestand = b.FotoBestand,
+            KnopTekst   = b.KnopTekst,
+            KnopUrl     = b.KnopUrl
         }).ToList(),
         FaqItems = bo.FaqItems.Select(f => new BlogArtikelFaqVM
         {

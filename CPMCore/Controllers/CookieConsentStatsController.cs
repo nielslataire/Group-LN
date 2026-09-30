@@ -26,7 +26,7 @@ public class CookieConsentStatsController : BaseController
     public async Task<IActionResult> Index()
     {
         SetPageHeader("bx bx-cookie", "Cookiebanner — statistieken",
-            description: "Hoeveel bezoekers de cookiebanner op de publieke website aanvaarden, weigeren of geen keuze maken. Los van Google Analytics gemeten — die laadt zelf pas ná toestemming.");
+            description: "Hoeveel bezoekers de cookiebanner op de publieke website aanvaarden, weigeren of verlaten zonder keuze. Los van Google Analytics gemeten — die laadt zelf pas ná toestemming.");
 
         // Instellingen > Website > Cookiebanner. "Website" heeft geen eigen pagina (het is een
         // sectielabel op Instellingen/Index), dus die knoop wijst terug naar diezelfde actie —

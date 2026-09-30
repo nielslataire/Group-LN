@@ -80,8 +80,10 @@ namespace ServiceCore.Translators
             bo.Id = _entity.Id;
             bo.ChangeOrderID = _entity.ChangeOrder.Id;
             bo.Description = _entity.Description;
-            bo.MeasurementType = (MeasurementType)_entity.MeasurementType;
-            bo.MeasurementUnit = (MeasurementUnit)_entity.MeasurementUnit;
+            // Beide zijn nullable op de entity; een directe cast van null naar een non-nullable enum gooit
+            // "Nullable object must have a value" (gevonden via het Facturatie-testproject, 2026-09-29).
+            bo.MeasurementType = _entity.MeasurementType.HasValue ? (MeasurementType)_entity.MeasurementType.Value : MeasurementType.Forfait;
+            bo.MeasurementUnit = _entity.MeasurementUnit.HasValue ? (MeasurementUnit)_entity.MeasurementUnit.Value : MeasurementUnit.stuk;
             bo.Number = _entity.Number;
             bo.Price = _entity.Price;
             bo.Commision = _entity.Commission;

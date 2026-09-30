@@ -107,19 +107,22 @@ public class ClientFormViewModel
     public List<int> SelectedIssuerCompanyIds { get; set; } = new();
 
     [Display(Name = "E-mail")]
-    [EmailAddress(ErrorMessage = "Ongeldige e-mail")]
+    [EmailAddress]
     public string? Email { get; set; }
 
     // Migratie 058_KlantenaccountTelefoon.sql: eigenaar 1 had geen telefoon/gsm, in tegenstelling tot
-    // elke contactpersoon hieronder (ContactInputViewModel.Phone/Mobile).
+    // elke contactpersoon hieronder (ContactInputViewModel.Phone/Mobile). [GlV2Phone] (BOCore):
+    // voorvoegsel+geldigheid, zie GlV2PhonePrefixes/GlV2Telefoon.cshtml.
     [Display(Name = "Telefoon")]
+    [GlV2Phone]
     public string? Phone { get; set; }
 
     [Display(Name = "Gsm")]
+    [GlV2Phone]
     public string? Cellphone { get; set; }
 
     [Display(Name = "Facturatie e-mail")]
-    [EmailAddress(ErrorMessage = "Ongeldige e-mail")]
+    [EmailAddress]
     public string? InvoiceEmail { get; set; }
 
     [Display(Name = "Digitale factuur vereist")]
@@ -171,9 +174,11 @@ public class ContactInputViewModel
     public string? Email { get; set; }
 
     [Display(Name = "Telefoon")]
+    [GlV2Phone]
     public string? Phone { get; set; }
 
     [Display(Name = "GSM")]
+    [GlV2Phone]
     public string? Mobile { get; set; }
 
     [Display(Name = "Digitale factuur vereist")]

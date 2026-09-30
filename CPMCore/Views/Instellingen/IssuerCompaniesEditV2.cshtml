@@ -1,0 +1,191 @@
+@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@*
+    gl-v2 — Instellingen/Mijn bedrijven/Bewerken (design-handoff punt 24c, "CRM Instellingen.dc.html"):
+    "veertien kaarten verdeeld over zes tabs, labels boven het veld, actiebalk vast · klik de tabs".
+
+    SCOPE VAN DEZE EERSTE RONDE (uitdrukkelijk, zie DESIGN.md "Instellingen/IssuerCompaniesEditV2"):
+    enkel de tab "Algemeen" (Identiteit/Logo/Contact & adres — pure veldbewerking, past in de
+    bestaande GlV2-veldtypes) is hier volledig herwerkt. De andere vijf tabs (Facturatie,
+    Bankrekeningen, Boekhouding, Lay-out & e-mail, Uurtarieven) zijn stuk voor stuk zelf al een
+    kleine CRUD-toepassing (Octopus-koppeling in 3 stappen, bankrekeningenbeheer, nummerreeksen,
+    btw-codes, een live factuurvoorbeeld, een rich-text e-maileditor met veld-chips) — een
+    betrouwbare, geteste gl-v2-versie van al die interactie in één keer is hier niet gehaald zonder
+    het risico op iets te verliezen of stuk te maken. Elke van die vijf tabs toont daarom een
+    Meldingskader (punt 25) met een link naar de bestaande, volledig werkende klassieke
+    bewerkpagina — niets is dus onbereikbaar, enkel nog niet in het nieuwe uiterlijk.
+
+    Post't naar dezelfde bestaande actie (IssuerCompaniesEdit, POST) als de klassieke pagina — geen
+    wijziging aan de controller se schrijf-kant, enkel aan welke GET-view gerenderd wordt.
+*@
+@{
+    ViewData["Title"] ??= "Bedrijf bewerken";
+    ViewData["PageIcon"] = "ph ph-buildings";
+    ViewData["BackUrl"] = Url.Action("IssuerCompanies", "Instellingen");
+    var legalForms = (IReadOnlyList<BOCore.CompanyLegalFormBO>)ViewBag.CompanyLegalForms ?? new List<BOCore.CompanyLegalFormBO>();
+    var classicEditUrl = Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = Model.Id, classic = true });
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-issuercompany-edit.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <span class="gl-v2-badge @(Model.IsActive ? "is-positive" : "is-neutral")">@(Model.IsActive ? "ACTIEF" : "INACTIEF")</span>
+}
+
+@using (Html.BeginForm("IssuerCompaniesEdit", "Instellingen", new { id = Model.Id }, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "gl-v2-ice-form", id = "gl-v2-ice-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Id)
+
+    <div class="gl-v2-tabbar" role="tablist" id="gl-v2-ice-tabbar">
+        <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-ice-tab="algemeen">Algemeen</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-ice-tab="facturatie">Facturatie</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-ice-tab="bank">Bankrekeningen</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-ice-tab="boekhouding">Boekhouding</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-ice-tab="layout">Lay-out &amp; e-mail</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-ice-tab="uurtarieven">Uurtarieven</button>
+    </div>
+
+    <p class="gl-v2-ice-required-hint">Velden met <span class="gl-v2-ice-required-star">*</span> zijn verplicht · wisselen van tab bewaart je invoer</p>
+
+    <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
+        <div class="gl-v2-ice-cols">
+            <div class="gl-v2-ice-col">
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Identiteit</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Naam, rechtsvorm en nummers.</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.Name, "GlV2Text", new { Label = "Naam", Placeholder = "Weergavenaam" })</div>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.LegalName, "GlV2Text", new { Label = "Wettelijke naam", Placeholder = "Wettelijke naam" })</div>
+                        <div class="gl-v2-col-6">
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-ice-legalform_trigger">Rechtsvorm</label>
+                                <div class="gl-v2-select" data-gl-v2-select>
+                                    <input type="hidden" id="CompanyLegalFormId" name="CompanyLegalFormId" value="@Model.CompanyLegalFormId" />
+                                    <div id="gl-v2-ice-legalform_trigger" class="gl-v2-select-trigger@(Model.CompanyLegalFormId.HasValue ? " is-filled" : "")" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                                        <span class="gl-v2-select-trigger-label">@(legalForms.FirstOrDefault(f => f.Id == Model.CompanyLegalFormId) is { } selectedForm ? selectedForm.Abbreviation + " - " + selectedForm.Name : "— kies —")</span>
+                                        <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                                    </div>
+                                    <div class="gl-v2-select-panel" role="listbox">
+                                        @foreach (var form in legalForms)
+                                        {
+                                            <button type="button" class="gl-v2-select-option@(form.Id == Model.CompanyLegalFormId ? " is-selected" : "")" role="option" data-value="@form.Id">
+                                                <i class="ph ph-check" aria-hidden="true"></i><span>@form.Abbreviation - @form.Name</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.VatNumber, "GlV2BtwNummer")</div>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.EnterpriseNumber, "GlV2OndernemingsNummer")</div>
+                        <div class="gl-v2-col-12 gl-v2-ice-toggles">
+                            @Html.EditorFor(m => m.IsActive, "GlV2ToggleSwitch", new { Hint = "inactieve bedrijven verschijnen niet bij nieuwe facturen" })
+                            @Html.EditorFor(m => m.IsExternalCoordinationDefault, "GlV2ToggleSwitch", new { Label = "Standaard voor externe coördinatiecontracten", Hint = "contracten zonder eigen facturatiebedrijf (bv. coördinatie voor een externe bouwheer) komen onder dit bedrijf — er kan er maar één zo gemarkeerd zijn" })
+                        </div>
+                    </div>
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Logo</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Verschijnt op facturen en documenten.</span>
+                    </div>
+                    <div class="gl-v2-ice-logo-row">
+                        <div class="gl-v2-ice-logo-preview">
+                            @if (Model.LogoBytes != null && Model.LogoBytes.Length > 0)
+                            {
+                                var base64 = Convert.ToBase64String(Model.LogoBytes);
+                                <img src="data:image/png;base64,@base64" alt="Huidig logo" />
+                            }
+                            else
+                            {
+                                <span>huidig logo</span>
+                            }
+                        </div>
+                        <div class="gl-v2-ice-logo-upload">
+                            <label class="gl-v2-ice-logo-drop" for="LogoUpload">
+                                <span class="gl-v2-ice-logo-drop-title">Sleep een nieuw logo hierheen</span>
+                                <span class="gl-v2-ice-logo-drop-sub">of klik om te kiezen · PNG, SVG of JPG</span>
+                            </label>
+                            <input type="file" id="LogoUpload" name="LogoUpload" accept="image/*" class="gl-v2-ice-logo-input" />
+                            @Html.HiddenFor(m => m.LogoPath)
+                            @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+                            {
+                                <span class="gl-v2-field-help">Huidig bestand: @Model.LogoPath</span>
+                            }
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="gl-v2-ice-col">
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Contact &amp; adres</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Adres, contactinfo en website.</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <span class="gl-v2-col-12 gl-v2-ice-subhead">ADRES</span>
+                        <div class="gl-v2-col-12">@Html.EditorFor(m => m.AddressLine1, "GlV2Text", new { Label = "Adres", Placeholder = "Straat en nummer" })</div>
+                        <div class="gl-v2-col-4">@Html.EditorFor(m => m.PostalCode, "GlV2Text", new { Label = "Postcode", Placeholder = "Postcode" })</div>
+                        <div class="gl-v2-col-5">@Html.EditorFor(m => m.City, "GlV2Text", new { Label = "Gemeente", Placeholder = "Gemeente" })</div>
+                        <div class="gl-v2-col-3">@Html.EditorFor(m => m.CountryCode, "GlV2Text", new { Label = "Land", Placeholder = "BE" })</div>
+                        <span class="gl-v2-col-12 gl-v2-ice-subhead">CONTACT</span>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.Email, "GlV2Email")</div>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.InvoiceSendEmail, "GlV2Email", new { Label = "Verzend e-mailadres" })</div>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.Phone, "GlV2Telefoon")</div>
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.Phone2, "GlV2Telefoon", new { Label = "Tweede telefoon" })</div>
+                        <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website, "GlV2Website")</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    var deferredTabs = new (string Key, string Title, string Icon, string Text)[]
+    {
+        ("facturatie", "Facturatie", "ph-receipt", "standaarden voor nieuwe facturen, nummerreeksen, betaaltermijnen, EPC-betaal-QR en Peppol/e-invoicing"),
+        ("bank", "Bankrekeningen", "ph-bank", "bankrekeningen van dit bedrijf beheren en de standaardrekening kiezen"),
+        ("boekhouding", "Boekhouding", "ph-link", "de Octopus-koppeling (aanmelden, dossier, import), boekjaren/dagboeken en verkoop-btw-codes"),
+        ("layout", "Lay-out & e-mail", "ph-file-text", "factuursjabloon, huisstijlkleuren, juridische footer en de e-mailtekst bij een factuur"),
+        ("uurtarieven", "Uurtarieven", "ph-clock", "uurtarieven per medewerker en de kilometervergoeding voor regie-facturatie"),
+    };
+    foreach (var t in deferredTabs)
+    {
+        <div class="gl-v2-tab-panel" data-tab-panel="@t.Key" hidden>
+            <div class="gl-v2-notice gl-v2-notice-expanded is-info">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph @t.Icon" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">"@t.Title" is nog niet herwerkt naar de nieuwe lay-out</span>
+                    <span class="gl-v2-notice-text">Deze tab beheert @t.Text — gebruik voorlopig de klassieke bewerkpagina, alles blijft daar volledig werken.</span>
+                    <div class="gl-v2-notice-actions">
+                        <a class="gl-v2-notice-action" href="@classicEditUrl#@t.Key">Klassieke pagina openen</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Bedrijf opslaan</button>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-issuercompany-edit.js" asp-append-version="true"></script>
+}

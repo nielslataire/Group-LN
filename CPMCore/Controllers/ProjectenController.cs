@@ -8478,23 +8478,40 @@ namespace CPMCore.Controllers
                         response.AddError("Geen facturatiebedrijf geselecteerd voor het project.");
                         continue;
                     }
-                    var coDraft = BuildChangeOrderInvoiceDraft(
-                        issuerCompanyId,
-                        client.Id,
-                        changeOrders,
-                        request.Invoices.Where(i => i.ClientAccountId == client.Id).ToList(),
-                        alreadyInvoicedByDetail,
-                        project);
+                    var selectedRows = request.Invoices.Where(i => i.ClientAccountId == client.Id).ToList();
 
-                    if (coDraft != null)
+                    // Mede-eigenaars krijgen elk hun eigen factuur voor hun aandeel (zelfde patroon als
+                    // MakeInvoices voor schijven, Niels 2026-09-29): het hoofdaccount krijgt 100% min de
+                    // mede-eigenaars-percentages, elke mede-eigenaar zijn CoOwnerPercentage.
+                    var coowners = ((DALCore.Models.cpmRunningContext)uow.Context).ClientContacts
+                       .AsNoTracking()
+                       .Where(cc => cc.ClientAccountId == client.Id && cc.IsCoOwner && cc.CoOwnerPercentage.HasValue)
+                       .Select(cc => new { cc.Id, cc.CoOwnerPercentage })
+                       .ToList();
+                    var coOwnerTotal = coowners.Sum(c => c.CoOwnerPercentage ?? 0m);
+                    var mainOwnerShare = Math.Max(0m, 100m - coOwnerTotal);
+
+                    var mainDraft = BuildChangeOrderInvoiceDraft(
+                        issuerCompanyId, client.Id, null, mainOwnerShare,
+                        changeOrders, selectedRows, alreadyInvoicedByDetail, project);
+                    if (mainDraft != null)
                     {
-                        try
+                        try { await cmd.CreateWithLinesAsync(mainDraft, issueNow: false); }
+                        catch (Exception ex) { response.AddError(ex.Message); }
+                    }
+
+                    foreach (var coowner in coowners)
+                    {
+                        if (coowner.CoOwnerPercentage.GetValueOrDefault() <= 0m)
+                            continue;
+
+                        var coownerDraft = BuildChangeOrderInvoiceDraft(
+                            issuerCompanyId, null, coowner.Id, coowner.CoOwnerPercentage ?? 0m,
+                            changeOrders, selectedRows, alreadyInvoicedByDetail, project);
+                        if (coownerDraft != null)
                         {
-                            await cmd.CreateWithLinesAsync(coDraft, issueNow: false);
-                        }
-                        catch (Exception ex)
-                        {
-                            response.AddError(ex.Message);
+                            try { await cmd.CreateWithLinesAsync(coownerDraft, issueNow: false); }
+                            catch (Exception ex) { response.AddError(ex.Message); }
                         }
                     }
                 }
@@ -9172,15 +9189,26 @@ namespace CPMCore.Controllers
             return draft;
         }
 
+        /// <summary>Bouwt het factuurvoorstel voor één partij (hoofdaccount óf één mede-eigenaar) op
+        /// een selectie WO-details. <paramref name="ownerPercentage"/> is het aandeel van díe partij
+        /// (100 min de mede-eigenaars-percentages voor het hoofdaccount, anders
+        /// <c>ClientContacts.CoOwnerPercentage</c>) — zelfde aandeel-logica als
+        /// <see cref="BuildStageInvoiceDraft"/> voor schijven (Niels, 2026-09-29): de "restbedrag"-
+        /// controle blijft op het volledige detail gebeuren (alle partijen samen mogen nooit meer dan
+        /// het restbedrag factureren), maar elke partij krijgt enkel haar eigen aandeel als factuurregel.</summary>
         private static InvoiceDraftBO? BuildChangeOrderInvoiceDraft(
             int? issuerCompanyId,
-            int clientAccountId,
+            int? clientAccountId,
+            int? clientContactId,
+            decimal ownerPercentage,
             IEnumerable<ChangeOrderBO> changeOrders,
  IEnumerable<ClientAccountChangeOrderInvoiceBO> selectedRows,
             IDictionary<int, decimal> alreadyInvoicedByDetail,
             ProjectBO project)
         {
             if (!issuerCompanyId.HasValue || issuerCompanyId.Value <= 0)
+                return null;
+            if (ownerPercentage <= 0m)
                 return null;
 
             var selectedByDetail = selectedRows
@@ -9218,10 +9246,14 @@ namespace CPMCore.Controllers
                     if (selectedAmount > remaining)
                         selectedAmount = remaining;
 
+                    var ownerAmount = Math.Round(selectedAmount * ownerPercentage / 100m, 2, MidpointRounding.AwayFromZero);
+                    if (ownerAmount <= 0m)
+                        continue;
+
                     detailRows.Add((
                         DetailId: detail.Id,
                         Description: string.IsNullOrWhiteSpace(detail.Description) ? order.Description : detail.Description,
-                        Amount: selectedAmount,
+                        Amount: ownerAmount,
                         Vat: detail.VatPercentage ?? 21m));
                 }
 
@@ -9261,16 +9293,20 @@ namespace CPMCore.Controllers
             if (lines.Count == 0)
                 return null;
 
-            return new InvoiceDraftBO
+            var draft = new InvoiceDraftBO
             {
                 IssuerCompanyId = issuerCompanyId.Value,
                 InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
                 Mode = InvoiceMode.ChangeOrders,
-                ClientType = (int)InvoicePartyType.ClientAccount,
-                ClientId = clientAccountId,
                 Lines = lines,
                 ProjectId = project.Id
             };
+            if (clientAccountId.HasValue)
+                (draft.ClientType, draft.ClientId) = ((int)InvoicePartyType.ClientAccount, clientAccountId);
+            else if (clientContactId.HasValue)
+                (draft.ClientType, draft.ClientId) = ((int)InvoicePartyType.ClientContact, clientContactId);
+
+            return draft;
         }
 
         //SHARED

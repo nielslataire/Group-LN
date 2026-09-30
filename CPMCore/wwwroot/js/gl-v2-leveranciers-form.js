@@ -49,6 +49,7 @@
     function positionPanel(trigger, panel) {
         if (window.innerWidth < 768) {
             panel.style.top = "";
+            panel.style.bottom = "";
             panel.style.left = "";
             panel.style.width = "";
             return;
@@ -58,9 +59,20 @@
         panel.style.width = width + "px";
         var left = Math.min(rect.left, window.innerWidth - width - 12);
         panel.style.left = Math.max(12, left) + "px";
-        var top = rect.bottom + 8;
-        panel.style.top = top + "px";
-        panel.style.maxHeight = Math.max(160, window.innerHeight - top - 16) + "px";
+        // Onderaan te weinig plaats (trigger onderaan het scherm)? Dan naar bóven openklappen i.p.v.
+        // buiten beeld te vallen — position:fixed, dus via bottom i.p.v. top. Projectwijd hetzelfde
+        // in elke positionPanel-kopie.
+        var spaceBelow = window.innerHeight - rect.bottom - 16;
+        var spaceAbove = rect.top - 16;
+        if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+            panel.style.top = "";
+            panel.style.bottom = (window.innerHeight - rect.top + 8) + "px";
+            panel.style.maxHeight = Math.max(160, spaceAbove - 8) + "px";
+        } else {
+            panel.style.bottom = "";
+            panel.style.top = (rect.bottom + 8) + "px";
+            panel.style.maxHeight = Math.max(160, spaceBelow) + "px";
+        }
     }
 
     function openPanel(trigger, panel) {
@@ -330,6 +342,22 @@
             var term = searchInput.value.trim();
             debounceTimer = window.setTimeout(function () { search(term); }, 300);
         });
+        // Toetsenbord in de resultaten (projectwijd, zelfde blok in elke wireSearchSelect-kopie): ↓/↑
+        // lopen door de zichtbare opties (.is-active), Enter kiest de actieve — of de eerste als er nog
+        // geen actief is — en Escape sluit. Enter mag hier nooit het formulier indienen.
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { closeAllPanels(); return; }
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
+            var items = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
+            if (e.key === "Enter") e.preventDefault();
+            if (!items.length) return;
+            var current = items.findIndex(function (b) { return b.classList.contains("is-active"); });
+            if (e.key === "Enter") { items[current >= 0 ? current : 0].click(); return; }
+            e.preventDefault();
+            var next = e.key === "ArrowDown" ? (current + 1) % items.length : (current <= 0 ? items.length - 1 : current - 1);
+            items.forEach(function (b, i) { b.classList.toggle("is-active", i === next); });
+            items[next].scrollIntoView({ block: "nearest" });
+        });
         clearBtn.addEventListener("click", function (e) {
             e.stopPropagation();
             searchInput.value = "";
@@ -345,19 +373,18 @@
             searchInput.focus();
         }
 
-        // mousedown (i.p.v. de click zelf) legt vast of het paneel al open stond VÓÓR deze interactie —
-        // nodig omdat de focus-listener hieronder het paneel soms al opent nog vóórdat de click zelf
-        // afgaat (browser-volgorde: mousedown → focus → click), anders zou de click meteen weer sluiten
-        // wat de focus-listener net opende.
-        var wasOpenBeforeInteraction = false;
-        trigger.addEventListener("mousedown", function () {
-            wasOpenBeforeInteraction = panel.classList.contains("is-open");
-        });
+        // De focus-listener hieronder opent het paneel vaak al in dezelfde tik/klik; de click die daarop
+        // volgt mag dat dan niet meteen weer sluiten. Een mousedown-vlag was daarvoor niet betrouwbaar:
+        // op touch (gsm) komt focus per browser vóór óf ná de geëmuleerde mousedown, waardoor het veld
+        // "niet openging". Nu telt de tijd: een click binnen 500 ms na het openen laat het paneel open,
+        // een latere click op de open trigger sluit wel. Projectwijd hetzelfde in elke kopie.
+        var openedAt = 0;
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (wasOpenBeforeInteraction) {
-                closeAllPanels();
+            if (panel.classList.contains("is-open")) {
+                if (Date.now() - openedAt > 500) closeAllPanels();
             } else {
+                openedAt = Date.now();
                 openThisPanel();
             }
         });
@@ -376,7 +403,7 @@
         // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
         // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
         trigger.addEventListener("focus", function () {
-            if (!panel.classList.contains("is-open")) openThisPanel();
+            if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThisPanel(); }
         });
 
         if (clearTrigger) {
@@ -645,6 +672,7 @@
             if (!rowEl) return;
             container.appendChild(rowEl);
             rowEl.querySelectorAll("[data-gl-v2-search-select]").forEach(wireSearchSelect);
+            if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
             updateCounts();
             if (isDepartment) refreshContactDepartmentOptions();
         }
@@ -789,32 +817,21 @@
         return firstInvalid;
     }
 
+    var errorSummary = null;
+
+    // Gedeeld Foutoverzicht (design-handoff punt 24, gl-v2-error-summary.js): verzamelt elk
+    // [data-gl-v2-required]-veld pas bij Opslaan (24b "niet tijdens het typen"; daarna wél live bij het
+    // verlaten van een veld), rendert de samenvatting bovenaan, zet de rode tab-stippen en activeert
+    // bij een klik op een fout de juiste tab (via de bestaande .gl-v2-tabbar-tab-klik). De losse
+    // validateField/refreshTabError-helpers hierboven blijven bestaan voor de schakelaars die
+    // tussentijds een tab-stip bijwerken. Een server-redisplay rendert de samenvatting zelf
+    // (Views/Shared/GlV2/_ErrorSummaryV2.cshtml) — die blijft staan tot de volgende submit.
     function initRequiredValidation() {
         var form = document.getElementById("gl-v2-supplier-form");
-        if (!form) return;
-
-        // Live, per veld: zodra de gebruiker een verplicht veld verlaat (blur) terwijl het leeg is —
-        // niet pas bij Opslaan. "focusout" i.p.v. "blur" omdat het moet bubbelen (gedelegeerd op het
-        // formulier, werkt dus ook voor rijen die pas later worden toegevoegd).
-        form.addEventListener("focusout", function (e) {
-            var field = e.target.closest("[data-gl-v2-required]");
-            if (!field) return;
-            validateField(field);
-            var panel = field.closest("[data-tab-panel]");
-            refreshTabError(panel ? panel.getAttribute("data-tab-panel") : "algemeen");
-        });
-
-        form.addEventListener("submit", function (e) {
-            var firstInvalid = validateRequiredFields();
-            if (!firstInvalid) return;
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            var panel = firstInvalid.closest("[data-tab-panel]");
-            var tabKey = panel ? panel.getAttribute("data-tab-panel") : "algemeen";
-            if (activateTab) activateTab(tabKey);
-            firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-            var input = firstInvalid.querySelector("input, select");
-            if (input) input.focus();
+        if (!form || !window.GlV2ErrorSummary) return;
+        errorSummary = window.GlV2ErrorSummary.init({
+            form: form,
+            container: document.getElementById("gl-v2-error-summary")
         });
     }
 

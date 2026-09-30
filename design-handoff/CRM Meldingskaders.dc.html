@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#E7EDE2;font-family:'IBM Plex Sans',sans-serif}a{color:#00532D}a:hover{color:#B8935A}</style></helmet>
+<section id="t25" style="padding:40px 44px 32px">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 20px"><a href="#t25" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">25</a><span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#00532D">Meldingskaders — info, succes, waarschuwing en fout in drie formaten, vertrekkend van het kader in <a href="CRM%20Menu%20Wireframes.dc.html#17d">17d</a></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="25a" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#25a" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">25a</a>Compact — icoon + één zin, in kaarten en zijpanelen (zoals 17d)</div>
+<div style="width:460px;background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);padding:20px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ types }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:{{ t.bg }}"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;margin-top:1px;fill:none;stroke:{{ t.ic }};stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="{{ t.d }}"></path></svg><span style="font:450 11.5px/1.55 'IBM Plex Sans',sans-serif;color:{{ t.ink }};text-wrap:pretty">{{ t.short }}</span></div>
+</sc-for>
+</div>
+</div>
+
+<div id="25b" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#25b" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">25b</a>Uitgebreid — titel, uitleg en actie, bovenaan een formulier of tab · sluitbaar</div>
+<div style="width:720px;background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);padding:20px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ types }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;gap:12px;padding:14px 16px;border-radius:10px;background:{{ t.bg }};border:1px solid {{ t.line }}">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:{{ t.ic }};display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="{{ t.d }}"></path></svg></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+<span style="font:700 13px 'IBM Plex Sans',sans-serif;color:{{ t.ink }}">{{ t.title }}</span>
+<span style="font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:{{ t.ink }};text-wrap:pretty">{{ t.body }}</span>
+<div style="display:flex;gap:8px;margin-top:6px">
+<div style="height:32px;padding:0 12px;border-radius:8px;background:{{ t.ic }};color:#fff;display:flex;align-items:center;font:600 12px 'IBM Plex Sans',sans-serif">{{ t.act }}</div>
+<div style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ t.line }};background:#fff;color:{{ t.ink }};display:flex;align-items:center;font:600 12px 'IBM Plex Sans',sans-serif">{{ t.act2 }}</div>
+</div>
+</div>
+<div style="width:28px;height:28px;flex:none;border-radius:7px;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(0,0,0,.05)"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:{{ t.ink }};stroke-width:1.6;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div id="25c" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#25c" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">25c</a>Paginabalk — over de volle breedte onder de kop, voor iets dat de hele pagina raakt</div>
+<div style="width:1200px;background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);overflow:hidden;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="display:flex;flex-direction:column;gap:3px"><span style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A">Villa Cauxyde</span><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Projecten</span><span>/</span><span style="color:#00532D">Villa Cauxyde</span></div></div></div>
+<sc-for list="{{ types }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 18px;background:{{ t.bg }};border-bottom:1px solid {{ t.line }}"><svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;fill:none;stroke:{{ t.ic }};stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="{{ t.d }}"></path></svg><span style="font:700 12.5px 'IBM Plex Sans',sans-serif;color:{{ t.ink }}">{{ t.title }}</span><span style="flex:1;min-width:0;font:450 12.5px 'IBM Plex Sans',sans-serif;color:{{ t.ink }}">{{ t.bar }}</span><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:{{ t.ink }};text-decoration:underline;text-underline-offset:3px">{{ t.act }}</span></div>
+</sc-for>
+<div style="height:80px;background:#F7F9F5"></div>
+</div>
+</div>
+
+<div id="25d" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#25d" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">25d</a>Kleuren en regels</div>
+<div style="width:720px;background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:grid;grid-template-columns:130px 110px 110px 110px minmax(0,1fr);gap:12px;align-items:center;height:36px;padding:0 18px;background:#F7F9F5;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span>TYPE</span><span>ACHTERGROND</span><span>ICOON</span><span>TEKST</span><span>WANNEER</span></div>
+<sc-for list="{{ types }}" as="t" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:130px 110px 110px 110px minmax(0,1fr);gap:12px;align-items:center;min-height:52px;padding:8px 18px;border-top:1px solid rgba(44,59,42,.06)">
+<span style="display:flex;align-items:center;gap:8px;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A"><svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:{{ t.ic }};stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="{{ t.d }}"></path></svg>{{ t.n }}</span>
+<span style="display:flex;align-items:center;gap:6px;font:500 11px 'IBM Plex Mono',monospace;color:#2C3B2A"><span style="width:16px;height:16px;border-radius:4px;background:{{ t.bg }};border:1px solid rgba(0,0,0,.08)"></span>{{ t.bg }}</span>
+<span style="display:flex;align-items:center;gap:6px;font:500 11px 'IBM Plex Mono',monospace;color:#2C3B2A"><span style="width:16px;height:16px;border-radius:4px;background:{{ t.ic }}"></span>{{ t.ic }}</span>
+<span style="display:flex;align-items:center;gap:6px;font:500 11px 'IBM Plex Mono',monospace;color:#2C3B2A"><span style="width:16px;height:16px;border-radius:4px;background:{{ t.ink }}"></span>{{ t.ink }}</span>
+<span style="font:450 11.5px/1.5 'IBM Plex Sans',sans-serif;color:#4A5B48;text-wrap:pretty">{{ t.when }}</span>
+</div>
+</sc-for>
+<div style="padding:14px 18px;border-top:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column;gap:5px;font:450 11.5px/1.6 'IBM Plex Sans',sans-serif;color:#4A5B48">
+<span>· Kleur nooit alleen: elk type heeft een eigen icoonvorm (cirkel-i, vinkje, driehoek, kruis).</span>
+<span>· Compact in kaarten en zijpanelen, uitgebreid bovenaan een formulier, paginabalk enkel als het de hele pagina raakt.</span>
+<span>· Fout en waarschuwing blijven staan tot het opgelost is; info en succes mogen sluitbaar zijn.</span>
+<span>· Een melding na een actie (bv. "Opgeslagen") hoort in een toast, niet in een kader.</span>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return { types: [
+      { n: 'Info', bg: '#EDEFEB', line: '#D6DBD1', ic: '#4A5B48', ink: '#3A4838', d: 'M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 7.4v3.4 M8 5.2h.01',
+        short: 'Wijzigingen aan de facturatiewijze gelden enkel voor nieuwe facturen.', title: 'Goed om te weten', body: 'Wijzigingen aan de facturatiewijze gelden enkel voor nieuwe facturen. Bestaande schijven blijven op naam van de huidige eigenaar.', act: 'Meer info', act2: 'Begrepen', bar: 'Dit project wordt gemeenschappelijk gefactureerd op naam van Claes – Peeters.', when: 'Uitleg of context, geen actie nodig.' },
+      { n: 'Succes', bg: '#E4EEDD', line: '#C6DBB9', ic: '#2F6038', ink: '#24502E', d: 'M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M5.6 8.2l1.7 1.7 3.2-3.4',
+        short: 'Alle partijen hebben getekend. Lot 2 staat nu op Verkocht.', title: 'Contract volledig getekend', body: 'Alle partijen hebben getekend via itsme. Lot 2 staat nu op Verkocht en de koper verschijnt in Klanten.', act: 'Bekijk contract', act2: 'Sluiten', bar: 'Octopus-koppeling hersteld, 12 facturen gesynchroniseerd.', when: 'Een blijvende toestand die bereikt is.' },
+      { n: 'Waarschuwing', bg: '#F6EEDC', line: '#E6D3A8', ic: '#8A6A32', ink: '#6B4F22', d: 'M8 2.8 14 13H2z M8 6.6v3 M8 11.4h.01',
+        short: 'Optie op Lot 2 vervalt 30/09. Zolang niet alle partijen tekenden, blijft de status op Optie.', title: 'Optie vervalt binnenkort', body: 'Optie op Lot 2 vervalt 30/09. Zolang niet alle partijen tekenden, blijft de status van Lot 2 op Optie in Eenheden.', act: 'Herinnering sturen', act2: 'Later', bar: 'Octopus-token verloopt over 2 dagen — vernieuw om de synchronisatie niet te onderbreken.', when: 'Kan later een probleem geven; je kan nog verder.' },
+      { n: 'Fout', bg: '#F6E4E1', line: '#E8C3BD', ic: '#8B2A2A', ink: '#7A2222', d: 'M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M6 6l4 4 M10 6l-4 4',
+        short: 'Het saldo kan niet lager zijn dan 0. Verlaag het voorschot of maak een creditpost.', title: 'Factuur kan niet aangemaakt worden', body: 'Het saldo van wijzigingsopdracht WO-014 komt onder 0. Verlaag het voorschot of maak een creditpost aan.', act: 'Naar WO-014', act2: 'Creditpost maken', bar: 'Synchronisatie met Octopus mislukt — facturen worden niet doorgeboekt.', when: 'Blokkeert: eerst oplossen voor je verder kan.' }
+    ] };
+  }
+}
+</script>
+</body>
+</html>

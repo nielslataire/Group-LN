@@ -11,6 +11,10 @@
     projectdossier-inner-menu wanneer het dossier bij een project hoort, TYPE 2-modal (4j) voor de
     annuleerreden. Alles wat hier staat komt uit CaseStatusView/SigningEventView: e-mail en IP zijn
     al gemaskeerd door de service, er is geen ruwe persoonsdata in de HTML.
+
+    Scherm 21b (design-handoff, "WO blokkeert de eindafrekening") heeft hier zijn twee nieuwe opties:
+    "Weigering registreren" (per partij, gedeelde modal + partyId via data-attributen) en "Getekende
+    versie opladen" (per dossier, multipart-formulier) — Herinneren/Annuleren bestonden al hierboven.
 *@
 @{
     var c = Model.Case;
@@ -120,6 +124,11 @@
     {
         <div class="gl-v2-menu-divider" aria-hidden="true"></div>
         <a href="@Model.SourceUrl" class="gl-v2-menu-item"><i class="ph ph-arrow-u-up-left" aria-hidden="true"></i>Naar @Model.SourceLabel</a>
+    }
+    @if (isOpen && Model.CanWrite)
+    {
+        <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+        <button type="button" class="gl-v2-menu-item" data-bs-toggle="modal" data-bs-target="#gl-v2-sg-upload-modal"><i class="ph ph-upload-simple" aria-hidden="true"></i>Getekende versie opladen <span class="gl-v2-menu-item-sub">papieren of externe handtekening</span></button>
     }
     @if ((isOpen || isDraft) && Model.CanWrite)
     {
@@ -286,6 +295,10 @@ else if (isClosed && !string.IsNullOrWhiteSpace(c.CloseReason))
                                         <input type="hidden" name="partyId" value="@p.PartyId" />
                                         <button type="submit" class="gl-v2-menu-item"><i class="ph ph-link-simple" aria-hidden="true"></i>Nieuwe link sturen <span class="gl-v2-menu-item-sub">oude link wordt ingetrokken</span></button>
                                     </form>
+                                    <div class="gl-v2-menu-divider" aria-hidden="true"></div>
+                                    <button type="button" class="gl-v2-menu-item is-danger" data-bs-toggle="modal" data-bs-target="#gl-v2-sg-decline-modal" data-party-id="@p.PartyId" data-party-name="@p.DisplayName">
+                                        <i class="ph ph-x-circle" aria-hidden="true"></i>Weigering registreren <span class="gl-v2-menu-item-sub">bv. telefonisch geweigerd</span>
+                                    </button>
                                 </div>
                             }
                         </td>
@@ -411,6 +424,66 @@ else if (isClosed && !string.IsNullOrWhiteSpace(c.CloseReason))
                     <div class="modal-footer">
                         <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
                         <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Dossier annuleren</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@if (isOpen && Model.CanWrite)
+{
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-sg-decline-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-sg-decline-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-sg-decline-title">Weigering registreren</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <form method="post" asp-action="Decline" id="gl-v2-sg-decline-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="caseId" value="@c.CaseId" />
+                    <input type="hidden" name="partyId" id="gl-v2-sg-decline-partyid" value="" />
+                    <div class="modal-body">
+                        <p class="gl-v2-sg-modal-intro gl-v2-field-full">Gebruik dit wanneer <strong id="gl-v2-sg-decline-partyname">deze ondertekenaar</strong> buiten CPM liet weten niet te (kunnen) tekenen, bv. telefonisch. Dit registreert dezelfde weigering als bij een weigering op de publieke pagina; komt in de audit trail.</p>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gl-v2-sg-decline-reason">Reden</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea">
+                                <textarea id="gl-v2-sg-decline-reason" name="reason" class="gl-v2-field-input" maxlength="1000" required placeholder="bv. Telefonisch laten weten niet akkoord te zijn met de meerprijs"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Weigering registreren</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-sg-upload-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-sg-upload-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-sg-upload-title">Getekende versie opladen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <form method="post" asp-action="UploadSigned" enctype="multipart/form-data" id="gl-v2-sg-upload-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="caseId" value="@c.CaseId" />
+                    <div class="modal-body">
+                        <p class="gl-v2-sg-modal-intro gl-v2-field-full">Gebruik dit wanneer het document buiten CPM (op papier of extern) ondertekend werd. Het opgeladen PDF wordt het definitieve, ondertekende document; alle nog openstaande ondertekenaars worden als ondertekend geregistreerd. Dit kan niet ongedaan gemaakt worden.</p>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gl-v2-sg-upload-file">Ondertekend document (PDF)</label>
+                            <div class="gl-v2-field-box">
+                                <input type="file" id="gl-v2-sg-upload-file" name="file" accept="application/pdf" class="gl-v2-field-input" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opladen en afronden</button>
                     </div>
                 </form>
             </div>

@@ -332,7 +332,17 @@
     @* gl-v2 "hoofd-js": chrome die op elke gl-v2-pagina nodig is (rail-flyouts, mobiel
        hoofdmenu-paneel). Pagina-specifieke JS hoort in @@section PageScripts, in een eigen
        ~/js/gl-v2-<pagina>.js (zie IndexV2.cshtml + gl-v2-invoices.js voor dat patroon). *@
+    @* Valutavelden (EditorTemplates/GlV2Currency, klasse .Currencymask): AutoNumeric + currency.js
+       horen bij het gedeelde template en laden daarom hier, op elke gl-v2-pagina — niet meer per
+       pagina in @@section PageScripts (AddClientAccountV2 miste ze en toonde "100000.00" i.p.v.
+       "100.000,00"). gl-v2-shell.js initialiseert ze bij het laden; een pagina die rijen dynamisch
+       toevoegt roept daarna zelf window.CurrencyMask.init(".Currencymask") opnieuw aan (idempotent). *@
+    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.5/dist/autoNumeric.min.js"></script>
+    <script src="~/js/currency.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-shell.js" asp-append-version="true"></script>
+    @* Foutoverzicht (design-handoff punt 24) — gedeeld engine, doet niets tenzij een pagina
+       window.GlV2ErrorSummary.init({...}) aanroept. Zie DESIGN.md "Foutoverzicht (punt 24)". *@
+    <script src="~/js/gl-v2-error-summary.js" asp-append-version="true"></script>
 
     @RenderSection("PageScripts", required: false)
 

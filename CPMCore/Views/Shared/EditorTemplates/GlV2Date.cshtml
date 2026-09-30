@@ -10,7 +10,9 @@
         Name = name,
         Id = name.Replace(".", "_"),
         Label = ViewData["Label"] as string ?? ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName,
-        Required = ViewData.ModelMetadata.IsRequired,
+        // Optioneel: Required (bool) via additionalViewData — voor een veld dat op een pagina verplicht is
+        // zonder dat het BO-model het afdwingt (bv. Verkoopdatum op Klanten/AddClientAccountV2).
+        Required = ViewData["Required"] as bool? ?? ViewData.ModelMetadata.IsRequired,
         IsoValue = Model?.ToString("yyyy-MM-dd") ?? "",
         DisplayValue = Model?.ToString("dd/MM/yyyy") ?? "",
     };

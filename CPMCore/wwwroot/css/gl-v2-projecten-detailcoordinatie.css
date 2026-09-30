@@ -7,7 +7,10 @@
 
 /* ── Topbar: knoppen op desktop, ⋯-menu op tablet (zelfde recept als DetailUnitsV2/DetailClientsV2) ───────── */
 @media (min-width: 1024px) {
-    .gl-v2-co-topbar-menu-trigger { display: none; }
+    /* .gl-v2-icon-btn.gl-v2-co-topbar-menu-trigger (niet enkel de eigen klasse) — gl-v2-shell.css se
+       .gl-v2-icon-btn {display: inline-flex} laadt NÁ deze pagina-CSS en wint anders bij gelijke
+       specificiteit, zelfde fix als Projecten/DetailClientsV2/DetailContractsV2. */
+    .gl-v2-icon-btn.gl-v2-co-topbar-menu-trigger { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1023.98px) {
     .gl-v2-co-topbar-btn { display: none; }

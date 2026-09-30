@@ -14,6 +14,17 @@ public interface ISigningService
     Task<SigningOperationResult> CancelCaseAsync(int caseId, string reason, SigningRequestContext ctx, CancellationToken ct = default);
     Task<SigningOperationResult> SendReminderAsync(int partyId, SigningRequestContext ctx, CancellationToken ct = default);
     Task<SigningOperationResult> RegenerateLinkAsync(int partyId, SigningRequestContext ctx, CancellationToken ct = default);
+
+    /// <summary>Papieren ondertekening (scherm 21b, optie "Getekende versie opladen"): het opgeladen PDF
+    /// wordt het definitieve document van het dossier, alle nog openstaande partijen worden als
+    /// ondertekend geregistreerd en het dossier wordt afgesloten — zonder dat er een digitale
+    /// ondertekensessie doorlopen is.</summary>
+    Task<SigningOperationResult> UploadSignedDocumentAsync(int caseId, byte[] pdfBytes, string fileName, SigningRequestContext ctx, CancellationToken ct = default);
+
+    /// <summary>Weigering registreren namens een ondertekenaar (scherm 21b, optie "Weigering
+    /// registreren") — zelfde overgang als <see cref="DeclineAsync"/>, maar door een beheerder
+    /// aangestuurd via <paramref name="partyId"/> in plaats van via de sessie van de ondertekenaar zelf.</summary>
+    Task<SigningOperationResult> DeclineByStaffAsync(int partyId, string reason, SigningRequestContext ctx, CancellationToken ct = default);
     Task<CaseStatusView?> GetCaseStatusAsync(int caseId, CancellationToken ct = default);
     Task<CaseStatusView?> GetActiveCaseForSourceAsync(string documentType, int sourceEntityId, CancellationToken ct = default);
 

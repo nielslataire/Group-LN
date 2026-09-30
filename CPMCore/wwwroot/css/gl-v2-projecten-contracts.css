@@ -149,7 +149,10 @@ tr.is-expanded > td { background: var(--gl-v2-bg); }
    drie topbar-knoppen (Exporteren/Afdrukken/Leverancier toevoegen) verhuizen naar het ⋯-menu — zelfde
    recept als Projecten/DetailClientsV2's eigen gl-v2-dc-topbar-btn/-topbar-menu-trigger. ──────────── */
 @media (min-width: 1024px) {
-    .gl-v2-pc-topbar-menu-trigger { display: none; }
+    /* .gl-v2-icon-btn.gl-v2-pc-topbar-menu-trigger (niet enkel de eigen klasse) — zelfde reden als
+       Projecten/DetailClientsV2's identieke fix: gl-v2-shell.css se .gl-v2-icon-btn {display:
+       inline-flex} laadt NÁ deze pagina-CSS en wint anders bij gelijke specificiteit. */
+    .gl-v2-icon-btn.gl-v2-pc-topbar-menu-trigger { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1023.98px) {
     .gl-v2-pc-topbar-btn { display: none; }

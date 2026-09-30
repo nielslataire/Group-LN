@@ -41,4 +41,7 @@ public static class SigningEventTypes
     public const string DocumentContentPurged = "DocumentContentPurged";
     public const string NotificationFailed = "NotificationFailed";
     public const string AuditChainVerified = "AuditChainVerified";
+    /// <summary>Scherm 21b, optie "Getekende versie opladen": een beheerder registreert een papieren
+    /// handtekening in plaats van de digitale flow.</summary>
+    public const string PaperDocumentUploaded = "PaperDocumentUploaded";
 }

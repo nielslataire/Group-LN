@@ -135,6 +135,23 @@
 .gl-v2-unit-add-room { align-self: flex-start; margin-top: 4px; }
 
 /* ── Documenten ─────────────────────────────────────────────────────────────────────────────────── */
+/* Verkoopplan (max 1 bestand) en uitvoeringsplannen (N bestanden, elk een eigen naam+sub-tekst)
+   hebben van nature niet dezelfde inhoudshoogte. Een min-height alleen op .gl-v2-unit-drop (eerdere
+   poging) loste dit niet echt op: dat trekt enkel de KORTERE kant op tot een vaste vloer, maar
+   duwt de LANGERE kant niet mee gelijk zodra die kant zelf al meer nodig heeft (bv. doordat "Sleep
+   plannen hierheen of klik — per plan een naam" op de smallere gl-v2-col-6-breedte naar een tweede
+   regel omslaat terwijl het verkoopplan-vak op één regel past — dan bleef de rechterkant hoger,
+   ongeacht de vloerwaarde). Robuustere aanpak: de kolom zelf wordt een flex-kolom die de
+   grid-rij se eigen stretch-hoogte (CSS Grid se align-items:stretch, hier al standaard omdat
+   .gl-v2-section-grid niets anders zegt) doorgeeft aan .gl-v2-unit-doc, die het sleepvak laat
+   meegroeien met flex:1 — wat de andere kolom ook nodig heeft, het sleepvak vult precies de
+   resterende ruimte, dus de onderkant (en de helptekst eronder) staat altijd gelijk. Scoped tot
+   deze sectiekaart (#gl-v2-sec-docs), niet globaal op .gl-v2-col-6 — dat zou elke andere
+   2-koloms-lay-out in de rest van de app breken. */
+#gl-v2-sec-docs .gl-v2-col-6 { display: flex; flex-direction: column; }
+#gl-v2-sec-docs .gl-v2-unit-doc { flex: 1; }
+#gl-v2-sec-docs .gl-v2-unit-drop { flex: 1; }
+
 .gl-v2-unit-doc { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .gl-v2-unit-exec-list { display: flex; flex-direction: column; gap: 8px; }
 .gl-v2-unit-doc-row {
@@ -152,8 +169,15 @@
 .gl-v2-unit-doc-open { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
 .gl-v2-unit-doc-open:hover { text-decoration: underline; }
 .gl-v2-unit-doc-name-input { flex: 1; min-width: 0; }
+/* min-height: het verkoopplan-vak heeft één regel tekst ("Sleep het verkoopplan hierheen of klik"),
+   het uitvoeringsplan-vak twee stukjes tekst naast elkaar (hoofd- + .gl-v2-unit-drop-sub) dat op een
+   smallere breedte (gl-v2-col-6, samen met AddUnit se lege eenhedenlijst dus zonder iets erboven dat
+   het verschil camoufleert) als eerste naar een tweede regel omslaat — zonder min-height stond het
+   uitvoeringsplan-vak daardoor hoger dan het verkoopplan-vak ernaast. Twee regels + icoon + padding
+   passen ruim in 68px, ook wanneer het verkoopplan-vak zelf maar één regel nodig heeft. */
 .gl-v2-unit-drop {
     display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; width: 100%;
+    min-height: 68px;
     border: 1.5px dashed var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-md); background: transparent;
     font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer;
 }

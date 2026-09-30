@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System;
+using BOCore;
 
 namespace CPMCore.Models.Leveranciers;
 
@@ -59,9 +60,11 @@ public class SupplierFormViewModel
     public int? SelectedCountryId { get; set; }
 
     [Display(Name = "Telefoon")]
+    [GlV2Phone]
     public string? Phone { get; set; }
 
     [Display(Name = "GSM")]
+    [GlV2Phone]
     public string? Mobile { get; set; }
 
     [EmailAddress]
@@ -151,9 +154,11 @@ public class DepartmentInputViewModel
     public string? PostalDisplay { get; set; }
 
     [Display(Name = "Telefoon")]
+    [GlV2Phone]
     public string? Phone { get; set; }
 
     [Display(Name = "GSM")]
+    [GlV2Phone]
     public string? Mobile { get; set; }
 
     [EmailAddress]
@@ -176,9 +181,11 @@ public class ContactInputViewModel
     public string? Function { get; set; }
 
     [Display(Name = "Telefoon")]
+    [GlV2Phone]
     public string? Phone { get; set; }
 
     [Display(Name = "GSM")]
+    [GlV2Phone]
     public string? Mobile { get; set; }
 
     [EmailAddress]

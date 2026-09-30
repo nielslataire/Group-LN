@@ -12,6 +12,7 @@ using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Build.Definition;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
@@ -93,7 +94,7 @@ public class InstellingenController : BaseController
 
     [HttpGet]
     [Breadcrumb("Instellingen")]
-    public IActionResult Index()
+    public async Task<IActionResult> Index(CancellationToken ct)
     {
         SetPageHeader("bx bx-cog", "Instellingen");
 
@@ -104,6 +105,228 @@ public class InstellingenController : BaseController
         };
 
         ViewData["BreadcrumbNode"] = instellingenIndex;
+
+        // gl-v2 (design-handoff punt 24a, "CRM Instellingen.dc.html"): de legacy view berekent haar
+        // canXxx-permissievlaggen zelf via @inject IPermissionService — IndexV2 heeft een echt
+        // view-model nodig (een kaart kan nu ook een live status tonen, bv. Marktdata-status se
+        // laatste crawl, wat een service-aanroep vergt die niet in de view thuishoort), dus die
+        // opbouw gebeurt hier in de controller, enkel voor de gl-v2-tak.
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            var permissionService = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            await permissionService.EnsureLoadedAsync(ct);
+
+            var vm = new InstellingenIndexV2Vm();
+
+            var facturatie = new SettingsGroupVm { Key = "facturatie", Name = "Facturatie & boekhouding" };
+            if (permissionService.HasRead(PermissionCodes.SettingsBillingCompanies))
+            {
+                facturatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-buildings",
+                    Title = "Mijn bedrijven",
+                    Description = "Beheer uitgevende vennootschappen, factuurlay-out, bankrekeningen en verzendgegevens.",
+                    Href = Url.Action("IssuerCompanies", "Instellingen") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsInvoiceTemplates))
+            {
+                facturatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-file-text",
+                    Title = "Factuurtemplates",
+                    Description = "Beheer factuurlay-outs die je per bedrijf kunt selecteren en hergebruiken.",
+                    Href = Url.Action("InvoiceTemplates", "Instellingen") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsBouwIndexen))
+            {
+                facturatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-chart-line-up",
+                    Title = "Bouwindexen",
+                    Description = "Beheer S-index, I-2021-index en ABEX-index voor je budgetberekeningen.",
+                    Href = Url.Action("Bouwindexen", "Instellingen") ?? "#"
+                });
+            }
+            if (facturatie.Items.Count > 0) vm.Groups.Add(facturatie);
+
+            var team = new SettingsGroupVm { Key = "team", Name = "Team & toegang" };
+            if (permissionService.HasRead(PermissionCodes.SettingsUsers))
+            {
+                team.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-users",
+                    Title = "Gebruikers & rollen",
+                    Description = "Beheer toegang van collega's, aannemers en gastgebruikers, en hou rolrechten up-to-date.",
+                    Href = Url.Action("Index", "UserAdmin") ?? "#",
+                    Chips = { new SettingsChipVm { Label = "Rollen", Href = Url.Action("Index", "AppRoles") ?? "#" } }
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsHolidays))
+            {
+                team.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-calendar-blank",
+                    Title = "Verlofdagen",
+                    Description = "Plan collectief verlof, feestdagen en weerverlet zodat projecten juist rekenen.",
+                    Href = Url.Action("VacationDays", "Instellingen") ?? "#"
+                });
+            }
+            if (team.Items.Count > 0) vm.Groups.Add(team);
+
+            var calculatie = new SettingsGroupVm { Key = "calculatie", Name = "Calculatie" };
+            if (permissionService.HasRead(PermissionCodes.SettingsActivities))
+            {
+                calculatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-list-bullets",
+                    Title = "Activiteiten",
+                    Description = "Beheer activiteiten en activiteitgroepen (loten) die in je calculaties terugkomen.",
+                    Href = Url.Action("Activities", "Instellingen") ?? "#",
+                    Chips = { new SettingsChipVm { Label = "Groepen", Href = Url.Action("Activities", "Instellingen") ?? "#" } }
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsKostprijsMaterialen))
+            {
+                calculatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-tag",
+                    Title = "Kostprijzen materialen",
+                    Description = "Beheer referentieprijzen per materiaaltype en bouwkostpercentages voor gebruik in budgetten.",
+                    Href = Url.Action("KostprijsMaterialen", "Instellingen") ?? "#"
+                });
+                calculatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-calculator",
+                    Title = "Budgetformules",
+                    Description = "Bewerk de voorstel-formules per activiteit voor de budgetwizard, met parameters uit budget en materialen.",
+                    Href = Url.Action("BudgetFormules", "Instellingen") ?? "#"
+                });
+            }
+            if (calculatie.Items.Count > 0) vm.Groups.Add(calculatie);
+
+            var website = new SettingsGroupVm { Key = "website", Name = "Website" };
+            if (permissionService.HasRead(PermissionCodes.SettingsBlogBeheer))
+            {
+                website.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-newspaper",
+                    Title = "Blog artikelen",
+                    Description = "Beheer nieuws- en blogartikelen die op de publieke website verschijnen, inclusief foto's en rijke inhoud.",
+                    Href = Url.Action("Index", "BlogBeheer") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsVacatureBeheer))
+            {
+                website.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-briefcase",
+                    Title = "Vacatures",
+                    Description = "Beheer de openstaande vacatures die op de publieke website verschijnen.",
+                    Href = Url.Action("Index", "VacatureBeheer") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsEmailTemplates))
+            {
+                website.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-envelope-simple",
+                    Title = "E-mailtemplates",
+                    Description = "Beheer voorgedefinieerde e-mailtemplates (onderwerp + tekst) om te versturen naar projectcontacten.",
+                    Href = Url.Action("Index", "EmailTemplateBeheer") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsHomeHeroProject))
+            {
+                website.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-image",
+                    Title = "Home hero — uitgelicht project",
+                    Description = "Kies het project dat uitgelicht wordt op de home-hero van de publieke website, met eigen kicker, titel en tekst.",
+                    Href = Url.Action("Index", "HomeHeroProject") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsCookieConsentStats))
+            {
+                website.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-cookie",
+                    Title = "Cookiebanner — statistieken",
+                    Description = "Hoeveel bezoekers de cookiebanner aanvaarden, weigeren of verlaten zonder keuze — los van Google Analytics gemeten.",
+                    Href = Url.Action("Index", "CookieConsentStats") ?? "#"
+                });
+            }
+            if (website.Items.Count > 0) vm.Groups.Add(website);
+
+            var automatisatie = new SettingsGroupVm { Key = "automatisatie", Name = "Automatisatie & meldingen" };
+            if (permissionService.HasRead(PermissionCodes.SettingsIssueNotifications))
+            {
+                automatisatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-bell",
+                    Title = "Automatische puntmeldingen",
+                    Description = "Beheer schema's voor automatische e-mailmeldingen van werfpunten naar aannemers.",
+                    Href = Url.Action("Index", "IssueNotificationAdmin") ?? "#"
+                });
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsMarketDataStatus))
+            {
+                var marketItem = new SettingsItemVm
+                {
+                    Icon = "ph-pulse",
+                    Title = "Marktdata-status",
+                    Description = "Bekijk of de laatste crawl-run van GroupLN.MarketData.Worker geslaagd is, per bron, en welke fouten er eventueel optraden.",
+                    Href = Url.Action("MarketDataStatus", "Instellingen") ?? "#"
+                };
+                // 24a: "Status die je anders moet gaan zoeken ... staat op de kaart zelf" — enige kaart
+                // met een goedkope, al bestaande databron voor een live status; andere kaarten (bv.
+                // Mijn bedrijven se Octopus-token) hebben dat vandaag niet en tonen daarom geen meta.
+                try
+                {
+                    var status = await _marketDataStatus.GetStatusAsync(ct: ct);
+                    var actief = status.Sources.Where(s => s.IsActive).ToList();
+                    var mislukt = actief.Any(s => s.LastFailedCrawlAt.HasValue
+                        && (!s.LastSuccessfulCrawlAt.HasValue || s.LastFailedCrawlAt > s.LastSuccessfulCrawlAt));
+                    var laatsteSucces = actief.Where(s => s.LastSuccessfulCrawlAt.HasValue)
+                        .Select(s => s.LastSuccessfulCrawlAt!.Value)
+                        .OrderByDescending(d => d)
+                        .Cast<DateTime?>()
+                        .FirstOrDefault();
+                    if (mislukt)
+                    {
+                        marketItem.MetaTone = "is-danger";
+                        marketItem.MetaLabel = "Laatste crawl mislukt";
+                    }
+                    else if (laatsteSucces.HasValue)
+                    {
+                        marketItem.MetaTone = "is-success";
+                        marketItem.MetaLabel = "Laatste crawl: " + laatsteSucces.Value.ToString("dd/MM");
+                    }
+                }
+                catch
+                {
+                    // Marktdata-databron (aparte connection string) even niet bereikbaar — de kaart
+                    // blijft gewoon werken, enkel zonder statuslabel; MarketDataStatus zelf toont de
+                    // volledige foutdetails.
+                }
+                automatisatie.Items.Add(marketItem);
+            }
+            if (permissionService.HasRead(PermissionCodes.SettingsTrajectSjablonen))
+            {
+                automatisatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-git-branch",
+                    Title = "Trajectsjablonen",
+                    Description = "Beheer de standaardtrajecten met fases en mijlpalen per projecttype die gebruikt worden om het traject van een project op te bouwen.",
+                    Href = Url.Action("Index", "TrajectSjabloonAdmin") ?? "#"
+                });
+            }
+            if (automatisatie.Items.Count > 0) vm.Groups.Add(automatisatie);
+
+            return View("IndexV2", vm);
+        }
+
         return View();
     }
 
@@ -361,8 +584,53 @@ public class InstellingenController : BaseController
         {
             Parent = instellingenIndex,
         };
-      
+
         ViewData["BreadcrumbNode"] = InstellingenIssuer;
+
+        // gl-v2 (design-handoff punt 24b): "koppeling en standaarden per bedrijf in één oogopslag" —
+        // standaardrekening en Octopus-status staan niet op de bestaande IssuerCompanyVM (de legacy
+        // lijst toont ze niet), dus die twee kolommen worden hier apart opgebouwd per bedrijf; het
+        // aantal eigen facturatiebedrijven is klein genoeg (het zijn "onze eigen" vennootschappen,
+        // geen leverancierslijst) dat een los rekening-opzoekje per rij geen probleem is.
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            var rows = new List<IssuerCompanyListItemV2Vm>();
+            foreach (var x in list)
+            {
+                var bankAccounts = await _bank.ListByIssuerAsync(x.Id, ct: default);
+                var defaultBank = bankAccounts.FirstOrDefault(b => b.IsDefault) ?? bankAccounts.FirstOrDefault();
+
+                string octLabel; string octTone;
+                if (string.IsNullOrWhiteSpace(x.OctopusDossierNumber))
+                {
+                    octLabel = "Niet gekoppeld"; octTone = "is-muted";
+                }
+                else if (!x.OctopusAuthenticateTokenValidUntil.HasValue || x.OctopusAuthenticateTokenValidUntil.Value < DateTime.Now)
+                {
+                    octLabel = "Token verlopen"; octTone = "is-warning";
+                }
+                else
+                {
+                    octLabel = "Gekoppeld"; octTone = "is-success";
+                }
+
+                rows.Add(new IssuerCompanyListItemV2Vm
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Sub = !string.IsNullOrWhiteSpace(x.LegalName) && x.LegalName != x.Name ? x.LegalName : null,
+                    VatNumber = x.VatNumber,
+                    Iban = defaultBank?.Iban ?? "—",
+                    TemplateLabel = string.IsNullOrWhiteSpace(x.TemplateKey) ? "—" : x.TemplateKey,
+                    OctopusLabel = octLabel,
+                    OctopusTone = octTone,
+                    IsActive = x.IsActive,
+                    IsExternalCoordinationDefault = x.IsExternalCoordinationDefault,
+                    EditUrl = Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = x.Id }) ?? "#"
+                });
+            }
+            return View("IssuerCompaniesV2", rows);
+        }
 
         return View(vms);
     }
@@ -497,8 +765,15 @@ public class InstellingenController : BaseController
 
     // GET /Admin/IssuerCompanies/Edit/5
     [HttpGet("IssuerCompanies/Edit/{id:int}")]
-    public async Task<IActionResult> IssuerCompaniesEdit(int id, CancellationToken ct)
+    public async Task<IActionResult> IssuerCompaniesEdit(int id, CancellationToken ct, bool classic = false)
     {
+        // gl-v2 IssuerCompaniesEditV2 (punt 24c) heeft vandaag enkel de tab "Algemeen" — de vijf
+        // uitgestelde tabs linken elk naar dezelfde URL met ?classic=true, wat de globale
+        // gl_v2_preview-cookie (BaseController.OnActionExecuting) hier expliciet overstemt zodat die
+        // link ook echt de volledige klassieke pagina toont i.p.v. gewoon dezelfde gl-v2-pagina
+        // opnieuw te laden.
+        if (classic) ViewData["UseGlV2Layout"] = false;
+
         var referrer = Request.Headers["Referer"].ToString();
         // Use the referrer URL as needed
         TempData["Referrer"] = referrer;
@@ -658,6 +933,16 @@ public class InstellingenController : BaseController
 
         await PopulateInvoiceLayoutViewDataAsync(ct);
         SetPageHeader("bx bx-cog", $"Bedrijf bewerken — {vm.Name}");
+
+        // gl-v2 (design-handoff punt 24c): zelfde vm + exact dezelfde ViewBag-opbouw hierboven (legal
+        // forms, betaaltermijnen, bankrekeningen, factuurreeksen, Octopus-boekjaren/btw-codes,
+        // custom-field-mappings) — enkel de weergave verschilt, de POST-actie hieronder blijft
+        // ongewijzigd voor beide lay-outs.
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            return View("IssuerCompaniesEditV2", vm);
+        }
+
         return View(vm);
     }
 

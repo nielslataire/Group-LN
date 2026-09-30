@@ -106,12 +106,16 @@
     </button>
 </div>
 
-@using (Html.BeginForm("Edit", "Leveranciers", new { id = Model.Id }, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "gl-v2-supplier-edit-form", id = "gl-v2-supplier-form" }))
+@using (Html.BeginForm("Edit", "Leveranciers", new { id = Model.Id }, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "gl-v2-supplier-edit-form", id = "gl-v2-supplier-form", novalidate = "novalidate" }))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.Id)
 
     <div class="gl-v2-supplier-edit-scroll">
+        @* Foutoverzicht (design-handoff punt 24) — gedeeld component, zie DESIGN.md. Server-gerenderd
+           bij een redisplay uit ModelState; gl-v2-leveranciers-form.js herrendert dezelfde kaart
+           client-side bij een geblokkeerde submit (window.GlV2ErrorSummary). *@
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
 
         <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
             @* Design-handoff 8i ("Jouw formulier heringericht") — vier gerichte kaarten i.p.v. de
@@ -379,7 +383,6 @@
                                     }
                                 </div>
                             </div>
-                            <span class="gl-v2-field-help">chips in plaats van een leeg zoekveld: je ziet wat er al staat</span>
                         </div>
                     </div>
                 </div>
@@ -416,14 +419,8 @@
     </div>
 
     <div class="gl-v2-form-actionbar">
-        @if (totalErrorCount > 0)
-        {
-            <span class="gl-v2-form-actionbar-status is-error">
-                <i class="ph ph-warning-circle" aria-hidden="true"></i>
-                @(totalErrorCount == 1 ? "1 fout in het formulier" : $"{totalErrorCount} fouten in het formulier")
-            </span>
-            <button type="button" class="gl-v2-form-actionbar-link" id="gl-v2-goto-first-error">Ga naar de eerste fout</button>
-        }
+        @* Fout-teller + link naar het overzicht (24a/24c/24d): gerenderd door gl-v2-error-summary.js
+           (updateActionbar), ook bij een server-redisplay — geen eigen server-markup meer. *@
         <span class="gl-v2-form-actionbar-spacer"></span>
         <div class="gl-v2-form-actionbar-actions">
             @* Zelfde Referrer-patroon (TempData.Peek, niet TempData[..] — moet ook nog leven na een

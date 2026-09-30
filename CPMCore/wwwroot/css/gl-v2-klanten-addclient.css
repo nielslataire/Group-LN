@@ -29,7 +29,10 @@
    of i.p.v. dat raster in de sectiekaart staat (mede-eigenaar-/contact-/eenheidsrijen, de
    verdeelsleutelbalk, de "+ … toevoegen"-knop) moet dezelfde 20px zijmarge krijgen, anders staat
    het tot tegen de kaartrand en valt de dashed toevoegknop breder dan de kolommen eronder. */
-.gl-v2-kd-card-body { padding: 0 20px 18px; display: flex; flex-direction: column; gap: 12px; }
+/* max-width 1420px = dezelfde cap als .gl-v2-section-grid (8i/8b·B "veldblok gecapt op 1420px"):
+   zonder die cap liep de body — en dus de dashed toevoegknop, de rijen en de verdeelsleutelbalk — op
+   brede schermen breder dan de 12 kolommen erboven. */
+.gl-v2-kd-card-body { padding: 0 20px 18px; display: flex; flex-direction: column; gap: 12px; max-width: 1420px; }
 .gl-v2-kd-card-body.is-standalone { padding-top: 18px; }
 .gl-v2-kd-card-body > .gl-v2-field-help { display: block; margin: 0; }
 .gl-v2-kd-card-body .gl-v2-client-row-list-header { display: flex; }
@@ -39,8 +42,15 @@
    gl-v2-shell.css), met binnenin de gegroepeerde optie-opmaak van Projecten/_ModalAttachUnitV2
    (.gl-v2-du-picker-*, hier page-scoped overgenomen als .gl-v2-kd-upk-*): beschikbaar = kiesbaar,
    verkocht/in optie = zichtbaar maar niet kiesbaar, met de koper als reden. ───────────────────── */
-.gl-v2-kd-unit-pick { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+/* align-items:flex-start i.p.v. flex-end: bij een foutmelding komt er een regel hulptekst ONDER het
+   veld bij, wat het veld hoger maakt — flex-end zou de knop dan mee naar onder trekken en niet meer
+   naast de zoekbox zelf staan. De knop krijgt een eigen onzichtbaar label (zelfde opmaak/gap als
+   .gl-v2-field-label + .gl-v2-field se eigen gap: 5px) i.p.v. een geraden margin-top, zodat hij altijd
+   exact naast de zoekbox uitlijnt, ook als het echte label ooit van opmaak verandert. */
+.gl-v2-kd-unit-pick { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .gl-v2-kd-unit-pick-field { flex: 1 1 360px; min-width: 0; }
+.gl-v2-kd-unit-add-wrap { display: flex; flex-direction: column; gap: 5px; flex: none; }
+.gl-v2-kd-unit-add-wrap .gl-v2-field-label { visibility: hidden; }
 .gl-v2-kd-unit-pick .gl-v2-btn { flex: none; height: 40px; }
 .gl-v2-kd-upk { padding: 4px; }
 .gl-v2-kd-upk-group-label { display: block; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted-light); padding: 8px 10px 4px; }
@@ -79,3 +89,8 @@
 .gl-v2-kd-units-total b { font: 700 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
 .gl-v2-kd-actionbar-summary { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 767.98px) { .gl-v2-kd-actionbar-summary { display: none; } }
+
+/* Foutoverzicht (design-handoff punt 24) verhuisd naar het gedeelde .gl-v2-error-summary-component
+   in gl-v2-shell.css — zie Views/Shared/GlV2/_ErrorSummaryV2.cshtml en DESIGN.md. */
+/* Toetsenbordnavigatie in de eenhedenkiezer (↓/↑ = .is-active, Enter = kiezen). */
+.gl-v2-kd-upk-option.is-active { background: var(--gl-v2-hover-tint); }

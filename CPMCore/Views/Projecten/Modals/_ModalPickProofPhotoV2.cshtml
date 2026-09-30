@@ -1,0 +1,23 @@
+@model CPMCore.Models.Projecten.PickProofPhotoV2Vm
+@*
+    Betalingsschijven V2 (21h) — "BEWIJS": "Werffoto's kiezen uit Media". AJAX-geladen in het tweede,
+    genest modal-lichaam (#gl-v2-ps-proof-picker-body), zelfde AJAX-patroon als _ModalMarkStageReachedV2
+    zelf. Read-only foto-raster (enkel MediaType==0, geen video's — een video is geen "werffoto"-
+    bewijs); klikken op een kaart selecteert en sluit meteen (single-select, geen apart bevestigen).
+*@
+@if (Model.Photos.Count == 0)
+{
+    <div class="gl-v2-ps-preview-empty">Nog geen foto's in Media voor dit project.</div>
+}
+else
+{
+    <div class="gl-v2-ps-proof-grid">
+        @foreach (var p in Model.Photos)
+        {
+            <button type="button" class="gl-v2-ps-proof-card js-ps-proof-pick" data-media-id="@p.MediaId" data-thumb="@p.ThumbUrl" data-title="@p.Title">
+                <img src="@p.ThumbUrl" alt="@p.Title" loading="lazy" />
+                <span class="gl-v2-ps-proof-card-title">@p.Title</span>
+            </button>
+        }
+    </div>
+}

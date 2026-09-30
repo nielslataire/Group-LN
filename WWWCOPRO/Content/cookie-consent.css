@@ -336,3 +336,73 @@ body.cc-lock {
         text-align: center;
     }
 }
+
+/* ── Mobiel: banner en voorkeurenpaneel als "bottom sheet" ──
+   Geen gecentreerde modal meer: een blok dat onderaan het scherm hangt en ongeveer
+   de helft van de hoogte inneemt (min 50%, max 60% zodat de inhoud van het
+   voorkeurenpaneel binnen het blok kan scrollen). Bovenkant afgerond, geen zijmarge. */
+@media (max-width: 767px) {
+    .cc-banner,
+    .cc-dialog {
+        align-items: flex-end;
+        padding: 0;
+    }
+    .cc-banner-inner,
+    .cc-dialog-panel {
+        width: 100%;
+        max-width: none;
+        min-height: 50vh;
+        max-height: 60vh;
+        min-height: 50dvh;
+        max-height: 60dvh;
+        border-radius: 14px 14px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        box-shadow: 0 -12px 40px rgba(0, 20, 10, 0.3);
+        animation: cc-sheet-up 0.25s ease-out;
+    }
+    /* Banner: tekst bovenaan, knoppen onderaan tegen de rand van het blok */
+    .cc-banner-inner {
+        display: flex;
+        flex-direction: column;
+        padding: 24px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+    }
+    .cc-banner-title {
+        font-size: 20px;
+    }
+    .cc-banner-text {
+        font-size: 14px;
+    }
+    .cc-banner-acties {
+        margin-top: auto;
+        padding-top: 18px;
+    }
+    .cc-prefs-link {
+        align-self: center;
+        font-size: 13px;
+    }
+    /* Voorkeurenpaneel: kop en knoppenrij blijven staan, de categorieën scrollen */
+    .cc-dialog-head,
+    .cc-dialog-acties {
+        flex-shrink: 0;
+    }
+    .cc-dialog-body {
+        flex: 1 1 auto;
+    }
+    .cc-dialog-acties {
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@keyframes cc-sheet-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cc-banner-inner,
+    .cc-dialog-panel {
+        animation: none;
+    }
+}

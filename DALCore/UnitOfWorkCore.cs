@@ -40,6 +40,7 @@ namespace DALCore
         public GenericRepository<InvoicesDetails> InvoiceDetails { get; }
         public GenericRepository<InvoicingPaymentGroup> PaymentGroups { get; }
         public GenericRepository<InvoicingPaymentStages> PaymentStages { get; }
+        public GenericRepository<UnitPaymentStageReached> UnitPaymentStageReached { get; }
         public GenericRepository<Units> Units { get; }
         public GenericRepository<UnitRooms> UnitRooms { get; }
         public GenericRepository<UnitTypes> UnitTypes { get; }
@@ -158,6 +159,7 @@ namespace DALCore
             InvoiceDetails = new GenericRepository<InvoicesDetails>(_context);
             PaymentGroups = new GenericRepository<InvoicingPaymentGroup>(_context);
             PaymentStages = new GenericRepository<InvoicingPaymentStages>(_context);
+            UnitPaymentStageReached = new GenericRepository<UnitPaymentStageReached>(_context);
             Units = new GenericRepository<Units>(_context);
             UnitRooms = new GenericRepository<UnitRooms>(_context);
             UnitTypes = new GenericRepository<UnitTypes>(_context);

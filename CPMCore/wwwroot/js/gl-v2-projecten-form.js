@@ -32,14 +32,25 @@
         if (backdrop) backdrop.classList.remove("is-open");
     }
     function positionPanel(trigger, panel) {
-        if (window.innerWidth < 768) { panel.style.top = ""; panel.style.left = ""; panel.style.width = ""; return; }
+        if (window.innerWidth < 768) { panel.style.top = ""; panel.style.bottom = ""; panel.style.left = ""; panel.style.width = ""; return; }
         var rect = trigger.getBoundingClientRect();
         var width = Math.max(rect.width, 260);
         panel.style.width = width + "px";
         panel.style.left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)) + "px";
-        var top = rect.bottom + 8;
-        panel.style.top = top + "px";
-        panel.style.maxHeight = Math.max(160, window.innerHeight - top - 16) + "px";
+        // Onderaan te weinig plaats (trigger onderaan het scherm)? Dan naar bóven openklappen i.p.v.
+        // buiten beeld te vallen — position:fixed, dus via bottom i.p.v. top. Projectwijd hetzelfde
+        // in elke positionPanel-kopie.
+        var spaceBelow = window.innerHeight - rect.bottom - 16;
+        var spaceAbove = rect.top - 16;
+        if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+            panel.style.top = "";
+            panel.style.bottom = (window.innerHeight - rect.top + 8) + "px";
+            panel.style.maxHeight = Math.max(160, spaceAbove - 8) + "px";
+        } else {
+            panel.style.bottom = "";
+            panel.style.top = (rect.bottom + 8) + "px";
+            panel.style.maxHeight = Math.max(160, spaceBelow) + "px";
+        }
     }
     function openPanel(trigger, panel) {
         closeAllPanels();
@@ -200,6 +211,22 @@
             var term = searchInput.value.trim();
             timer = window.setTimeout(function () { search(term); }, 300);
         });
+        // Toetsenbord in de resultaten (projectwijd, zelfde blok in elke wireSearchSelect-kopie): ↓/↑
+        // lopen door de zichtbare opties (.is-active), Enter kiest de actieve — of de eerste als er nog
+        // geen actief is — en Escape sluit. Enter mag hier nooit het formulier indienen.
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { closeAllPanels(); return; }
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
+            var items = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
+            if (e.key === "Enter") e.preventDefault();
+            if (!items.length) return;
+            var current = items.findIndex(function (b) { return b.classList.contains("is-active"); });
+            if (e.key === "Enter") { items[current >= 0 ? current : 0].click(); return; }
+            e.preventDefault();
+            var next = e.key === "ArrowDown" ? (current + 1) % items.length : (current <= 0 ? items.length - 1 : current - 1);
+            items.forEach(function (b, i) { b.classList.toggle("is-active", i === next); });
+            items[next].scrollIntoView({ block: "nearest" });
+        });
         clearBtn.addEventListener("click", function (e) { e.stopPropagation(); searchInput.value = ""; search(""); searchInput.focus(); });
 
         function openThis() {
@@ -209,25 +236,30 @@
             clearBtn.hidden = true;
             searchInput.focus();
         }
-        // mousedown (i.p.v. de click zelf) legt vast of het paneel al open stond VÓÓR deze interactie —
-        // nodig omdat de focus-listener hieronder het paneel soms al opent nog vóórdat de click zelf
-        // afgaat (browser-volgorde: mousedown → focus → click), anders zou de click meteen weer sluiten
-        // wat de focus-listener net opende.
-        var wasOpenBeforeInteraction = false;
-        trigger.addEventListener("mousedown", function () { wasOpenBeforeInteraction = panel.classList.contains("is-open"); });
+        // De focus-listener hieronder opent het paneel vaak al in dezelfde tik/klik; de click die daarop
+        // volgt mag dat dan niet meteen weer sluiten. Een mousedown-vlag was daarvoor niet betrouwbaar:
+        // op touch (gsm) komt focus per browser vóór óf ná de geëmuleerde mousedown, waardoor het veld
+        // "niet openging". Nu telt de tijd: een click binnen 500 ms na het openen laat het paneel open,
+        // een latere click op de open trigger sluit wel. Projectwijd hetzelfde in elke kopie.
+        var openedAt = 0;
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (wasOpenBeforeInteraction) closeAllPanels(); else openThis();
+            if (panel.classList.contains("is-open")) {
+                if (Date.now() - openedAt > 500) closeAllPanels();
+            } else {
+                openedAt = Date.now();
+                openThis();
+            }
         });
         trigger.addEventListener("keydown", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
             if (e.key !== "Enter" && e.key !== " ") return;
             e.preventDefault();
-            if (panel.classList.contains("is-open")) closeAllPanels(); else openThis();
+            if (panel.classList.contains("is-open")) closeAllPanels(); else { openedAt = Date.now(); openThis(); }
         });
         // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
         // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
-        trigger.addEventListener("focus", function () { if (!panel.classList.contains("is-open")) openThis(); });
+        trigger.addEventListener("focus", function () { if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThis(); } });
         if (clearTrigger) clearTrigger.addEventListener("click", function (e) { e.stopPropagation(); choose("", ""); });
     }
 
@@ -603,26 +635,41 @@
     }
 
     var recomputeSlices = null;
-    form.addEventListener("submit", function (e) {
-        var firstInvalid = validateRequired();
-        var slicesOk = true;
+
+    // Contractschijven (Coördinatie): som moet exact 100 % zijn — geen leeg/niet-leeg-check, dus een
+    // eigen validator voor het gedeelde Foutoverzicht (DESIGN.md, veldcontract punt 3). De bestaande
+    // #slicesTotalError-regel onder de schijven blijft mee-schakelen.
+    function validateSlices(errors) {
         var slicesSection = document.getElementById("slicesSection");
         var slicesErr = document.getElementById("slicesTotalError");
-        if (slicesSection && !slicesSection.hidden && !slicesSection.closest("[hidden]")) {
-            var total = 0;
-            document.querySelectorAll(".slice-pct").forEach(function (i) { total += parseFloat(i.value) || 0; });
-            slicesOk = Math.round(total * 100) / 100 === 100;
-            if (slicesErr) slicesErr.hidden = slicesOk;
-            refreshTabDot("coordinatie");
-        }
-        if (firstInvalid || !slicesOk) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            var target = firstInvalid || slicesSection;
-            var key = tabKeyOf(target);
-            if (activateTab && key) activateTab(key);
-            (resolveField(target) || target).scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
+        if (!slicesSection || slicesSection.hidden || slicesSection.closest("[hidden]")) return;
+        var total = 0;
+        document.querySelectorAll(".slice-pct").forEach(function (i) { total += parseFloat(i.value) || 0; });
+        var rounded = Math.round(total * 100) / 100;
+        var ok = rounded === 100;
+        if (slicesErr) slicesErr.hidden = ok;
+        if (ok) return;
+        errors.push({
+            message: "zijn samen " + rounded + " % — moet exact 100 % zijn",
+            field: "Contractschijven",
+            location: "",
+            tab: tabKeyOf(slicesSection) || "coordinatie",
+            target: slicesSection
+        });
+    }
+
+    // Gedeeld Foutoverzicht (design-handoff punt 24, gl-v2-error-summary.js): verzamelt elk
+    // [data-gl-v2-required]-veld ([data-role="id-hidden"]/[data-role="help"] worden herkend),
+    // rendert de samenvatting bovenaan, zet de tab-stippen en activeert bij een klik de juiste tab.
+    // Blokkeert de submit zelf (stopImmediatePropagation), dus de laad-/badge-afhandeling hieronder
+    // draait enkel bij een geldige submit — daarom ná init() geregistreerd.
+    var errorSummary = window.GlV2ErrorSummary
+        ? window.GlV2ErrorSummary.init({ form: form, container: document.getElementById("gl-v2-error-summary"), validators: [validateSlices] })
+        : null;
+    form.addEventListener("submit", function (e) {
+        if (!errorSummary) {
+            var firstInvalid = validateRequired();
+            if (firstInvalid) { e.preventDefault(); e.stopImmediatePropagation(); (resolveField(firstInvalid) || firstInvalid).scrollIntoView({ behavior: "smooth", block: "center" }); return; }
         }
         var submit = document.getElementById("gl-v2-project-submit");
         if (submit) { submit.classList.add("is-loading"); submit.disabled = true; }

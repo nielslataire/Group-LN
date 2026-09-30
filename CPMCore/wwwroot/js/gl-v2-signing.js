@@ -1,9 +1,12 @@
-// gl-v2 — Elektronisch ondertekenen, interne schermen. Drie kleine, pagina-eigen gedragingen; alles
+// gl-v2 — Elektronisch ondertekenen, interne schermen. Vijf kleine, pagina-eigen gedragingen; alles
 // wat generiek is (⋯-menu's, klikbare rijen, toasts, modals) komt uit gl-v2-shell.js.
 // 1. Start: ondertekenaars toevoegen/verwijderen/uitvinken, met hernummering van Parties[i].* zodat
 //    de MVC-modelbinder een aaneengesloten lijst krijgt, en een teller in de actiebalk.
 // 2. Index: de tabbar filtert client-side op data-status (open / ondertekend / gesloten).
 // 3. Dossier: de annuleermodal zet focus op de reden en weigert een lege reden vóór de POST.
+// 4. Dossier (21b): de weigermodal is één gedeelde modal voor alle partij-rijen, gevuld via de knop
+//    die hem opent (data-party-id/-name); zelfde reden-validatie als de annuleermodal.
+// 5. Dossier (21b): de uploadmodal toont een laadstatus op de knop na verzenden (multipart POST).
 (function () {
     "use strict";
 
@@ -129,5 +132,40 @@
                 }
             });
         }
+    }
+
+    // ── 4. Dossier: weigering registreren (21b) — één modal gedeeld door alle partij-rijen; de knop
+    //    die de modal opent levert de partyId/naam via data-attributen (Bootstrap relatedTarget).
+    var declineModal = document.getElementById("gl-v2-sg-decline-modal");
+    if (declineModal) {
+        var declinePartyId = document.getElementById("gl-v2-sg-decline-partyid");
+        var declinePartyName = document.getElementById("gl-v2-sg-decline-partyname");
+        var declineReason = document.getElementById("gl-v2-sg-decline-reason");
+        declineModal.addEventListener("show.bs.modal", function (e) {
+            var trigger = e.relatedTarget;
+            if (!trigger) return;
+            if (declinePartyId) declinePartyId.value = trigger.dataset.partyId || "";
+            if (declinePartyName) declinePartyName.textContent = trigger.dataset.partyName || "deze ondertekenaar";
+        });
+        declineModal.addEventListener("shown.bs.modal", function () { if (declineReason) declineReason.focus(); });
+        var declineForm = document.getElementById("gl-v2-sg-decline-form");
+        if (declineForm) {
+            declineForm.addEventListener("submit", function (e) {
+                if (declineReason && !declineReason.value.trim()) {
+                    e.preventDefault();
+                    declineReason.focus();
+                    if (window.GlV2Toast) window.GlV2Toast.show({ tone: "error", title: "Reden verplicht", body: "Geef een reden op; die komt in de audit trail." });
+                }
+            });
+        }
+    }
+
+    // ── 5. Dossier: getekende versie opladen (21b) ──────────────────────────────────────────────
+    var uploadForm = document.getElementById("gl-v2-sg-upload-form");
+    if (uploadForm) {
+        uploadForm.addEventListener("submit", function () {
+            var submit = uploadForm.querySelector("button[type=submit]");
+            if (submit) { submit.classList.add("is-loading"); submit.disabled = true; }
+        });
     }
 })();

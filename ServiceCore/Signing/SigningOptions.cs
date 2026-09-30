@@ -31,6 +31,9 @@ public sealed class SigningOptions
     /// <summary>Maximale grootte van een handtekeningafbeelding (PNG) in bytes.</summary>
     public int MaxSignatureImageBytes { get; set; } = 512 * 1024;
 
+    /// <summary>Maximale grootte van een door een beheerder opgeladen getekende PDF (scherm 21b) in bytes.</summary>
+    public int MaxUploadedDocumentBytes { get; set; } = 20 * 1024 * 1024;
+
     /// <summary>Geldigheid van een Download-token in dagen (§9.5).</summary>
     public int DownloadLinkDays { get; set; } = 90;
 

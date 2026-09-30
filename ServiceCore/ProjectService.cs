@@ -1849,6 +1849,10 @@ namespace ServiceCore
                     u.ClientAccount.DateDeedOfSale.Value <= cutoffDate)
                 .Include(m => m.PaymentGroup)
                 .Include(m => m.ClientAccount)
+                // Nodig voor UnitTranslator's UnitBO.ConstructionValues (InvoicingV2, 2026-09-29):
+                // zonder deze Include komt UnitConstructionValue leeg mee en berekent elke schijf €0.
+                // De oude Invoicing-pagina toonde nooit een bedrag per schijf en miste dit dus nooit.
+                .Include(m => m.UnitConstructionValue)
                 .ToList();
 
             if (units.Count == 0) return response;
@@ -1877,10 +1881,13 @@ namespace ServiceCore
             var groupIds = groupMap.Values.SelectMany(g => g).Distinct().ToList();
             if (groupIds.Count == 0) return response;
 
+            // Alle schijven van de relevante groepen (niet enkel Invoicable==true) — een schijf kan ook
+            // per eenheid apart "bereikt" zijn (UnitPaymentStageReached, migratie 062/PaymentStagesV2)
+            // zonder dat de groep-brede vlag aanstaat. Zie stap 5 hieronder voor de eigenlijke OR-check.
             var stages = _uow.PaymentStages.GetNoTracking()
                 .Include(s => s.Group)
                 .Include(s => s.InvoicesDetails)
-                .Where(s => s.Invoicable == true && groupIds.Contains(s.GroupId))
+                .Where(s => groupIds.Contains(s.GroupId))
                 .ToList();
 
             if (stages.Count == 0) return response;
@@ -1897,6 +1904,18 @@ namespace ServiceCore
                 .Distinct()
                 .ToHashSet();
 
+            // Per-eenheid "bereikt" (migratie 062, PaymentStagesV2/21h) — een schijf×eenheid is
+            // factureerbaar zodra ÓF de groep-brede Invoicable-vlag aanstaat ÓF hier een rij voor
+            // bestaat. Zelfde OR-logica als ProjectenController.PaymentStagesV2.cs se IsReached; zonder
+            // deze check kwam een via Betalingsschijven "bereikt aangeduide" schijf hier nooit door
+            // (Niels 2026-09-30, gemelde bug: schijf stond op "bereikt" maar verscheen niet in Facturatie).
+            var reachedPairs = _uow.UnitPaymentStageReached.GetNoTracking()
+                .Where(r => stageIds.Contains(r.PaymentStageId) && unitIds.Contains(r.UnitId))
+                .Select(r => new { r.PaymentStageId, r.UnitId })
+                .ToList()
+                .Select(r => (StageId: r.PaymentStageId, UnitId: r.UnitId))
+                .ToHashSet();
+
             // 5) Units + bijhorende stages materialiseren
             foreach (var unit in units)
             {
@@ -1904,7 +1923,8 @@ namespace ServiceCore
                     continue;
 
                 var unitStages = stages
-                    .Where(s => unitGroupIds.Contains(s.GroupId) && !invoicedPairs.Contains((s.Id, unit.Id)))
+                    .Where(s => unitGroupIds.Contains(s.GroupId) && !invoicedPairs.Contains((s.Id, unit.Id))
+                                && (s.Invoicable || reachedPairs.Contains((s.Id, unit.Id))))
                     .ToList();
 
                 if (unitStages.Count == 0) continue;

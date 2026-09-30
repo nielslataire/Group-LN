@@ -21,5 +21,9 @@ public partial class BlogArtikelBlok
 
     public string FotoBestand { get; set; }
 
+    public string KnopTekst { get; set; }
+
+    public string KnopUrl { get; set; }
+
     public virtual BlogArtikel Artikel { get; set; }
 }

@@ -1,0 +1,151 @@
+/* gl-v2 — Instellingen/IndexV2 (design-handoff punt 24a, "CRM Instellingen.dc.html"). Twee kolommen:
+   een smalle, sticky "ONDERDELEN"-navigatie (client-side scroll-naar-sectie, geen server-side
+   filter) en de hoofdinhoud (zoekbalk + per groep een kaartraster). Kaart-brede klik via
+   data-detail-url (gedeeld met initClickableRows(), gl-v2-shell.js). Zie IndexV2.cshtml se eigen
+   toelichting voor de bewuste afwijkingen van het mockup, en DESIGN.md "Instellingen/IndexV2" voor
+   het volledige verhaal. */
+.gl-v2-set-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 22px;
+}
+.gl-v2-set-nav {
+    width: 210px;
+    flex: none;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.gl-v2-set-nav-label {
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .14em;
+    padding: 0 10px 8px;
+}
+.gl-v2-set-nav-list { display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-set-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+    color: var(--gl-v2-ink);
+}
+.gl-v2-set-nav-item:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-set-nav-item.is-active { background: var(--gl-v2-primary-tint); border-left-color: var(--gl-v2-primary); }
+.gl-v2-set-nav-item-label { flex: 1; font: 500 13px var(--gl-v2-font-sans); }
+.gl-v2-set-nav-item.is-active .gl-v2-set-nav-item-label { color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-set-nav-item-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-set-nav-rule { height: 1px; background: var(--gl-v2-hairline); margin: 12px 10px; }
+.gl-v2-set-nav-hint { font: 450 11px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding: 0 10px; text-wrap: pretty; margin: 0; }
+
+.gl-v2-set-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 26px; }
+
+.gl-v2-set-empty {
+    padding: 40px;
+    border: 1.5px dashed var(--gl-v2-dashed);
+    border-radius: var(--gl-v2-radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+.gl-v2-set-empty-title { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-set-empty-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-set-group { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-set-group-head { display: flex; align-items: baseline; gap: 10px; }
+.gl-v2-set-group-title { font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-primary); letter-spacing: .14em; }
+.gl-v2-set-group-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Vast raster van drie (24a se eigen regel — Website had vroeger vijf naast elkaar, de rest drie;
+   nu overal hetzelfde), op de referentiebreedte. Zie de media queries onderaan voor de bewuste,
+   huisstijl-conforme uitzondering op smallere breedtes (elke andere gl-v2-lijstpagina collapse't
+   ook, "altijd exact drie zelfs op een telefoon" zou hier onbruikbaar zijn geweest). */
+.gl-v2-set-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+.gl-v2-set-card {
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    border: 1px solid var(--gl-v2-hairline-soft);
+    box-shadow: var(--gl-v2-shadow-card);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+    cursor: pointer;
+    transition: border-color .12s ease;
+}
+.gl-v2-set-card:hover, .gl-v2-set-card:focus-visible { border-color: rgba(0, 83, 45, .35); }
+.gl-v2-set-card:focus-visible { outline: 2.5px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-set-card-head { display: flex; align-items: center; gap: 11px; }
+.gl-v2-set-card-icon {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 8px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.gl-v2-set-card-title { flex: 1; min-width: 0; font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-set-card-chevron { flex: none; font-size: 14px; color: var(--gl-v2-muted); }
+.gl-v2-set-card-desc { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-wrap: pretty; min-height: 36px; }
+
+.gl-v2-set-card-foot { display: flex; align-items: center; gap: 8px; min-height: 22px; flex-wrap: wrap; }
+.gl-v2-set-card-foot-spacer { flex: 1; }
+/* Kleurtaal gedeeld met Meldingskaders (punt 25) se type-klassen — geen aparte kleurtaal verzinnen
+   voor "wat er op een kaart-statuslabel staat" versus "wat er in een meldingskader staat". */
+.gl-v2-set-card-meta { display: flex; align-items: center; gap: 6px; font: 500 11px var(--gl-v2-font-sans); }
+.gl-v2-set-card-meta-dot { width: 6px; height: 6px; border-radius: 3px; background: currentColor; flex: none; }
+.gl-v2-set-card-meta.is-success { color: #2F6038; }
+.gl-v2-set-card-meta.is-warning { color: var(--gl-v2-warning); }
+.gl-v2-set-card-meta.is-danger { color: var(--gl-v2-danger); }
+.gl-v2-set-card-meta.is-info { color: var(--gl-v2-info); }
+.gl-v2-set-card-chip {
+    padding: 3px 9px;
+    border-radius: 11px;
+    border: 1px solid rgba(0, 83, 45, .25);
+    font: 600 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    text-decoration: none;
+}
+.gl-v2-set-card-chip:hover { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+
+/* Verborgen door de zoekbalk (gl-v2-instellingen.js) — leeg blok, geen enkele kaart matcht meer. */
+.gl-v2-set-group.is-search-hidden { display: none; }
+.gl-v2-set-card.is-search-hidden { display: none; }
+
+/* Tablet/gsm: navigatie wordt een horizontale chipsrij boven de inhoud i.p.v. een sticky zijkolom
+   (te weinig breedte voor twee kolommen), en het kaartraster valt terug naar 2 dan 1 kolom — zelfde
+   collapse-discipline als elke andere gl-v2-lijstpagina. */
+@media (max-width: 1023.98px) {
+    .gl-v2-set-layout { flex-direction: column; }
+    .gl-v2-set-nav {
+        width: 100%;
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+    .gl-v2-set-nav-label { display: none; }
+    .gl-v2-set-nav-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .gl-v2-set-nav-item { height: 30px; border-left: 0; border: 1px solid var(--gl-v2-hairline); }
+    .gl-v2-set-nav-item.is-active { border-color: var(--gl-v2-primary); }
+    .gl-v2-set-nav-rule, .gl-v2-set-nav-hint { display: none; }
+    .gl-v2-set-grid { grid-template-columns: 1fr; }
+}
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+    .gl-v2-set-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

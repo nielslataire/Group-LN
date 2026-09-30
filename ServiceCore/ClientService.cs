@@ -234,6 +234,7 @@ namespace ServiceCore
             ClientAccount entity;
             var isNew = clientaccount.Id == 0;
             string oldEmail = null;
+            string oldCellphone = null;
             Dictionary<int, (string Email, string Cellphone)> oldContacts = null;
 
             if (isNew)
@@ -253,9 +254,12 @@ namespace ServiceCore
                          .FirstOrDefault(ca => ca.Id == clientaccount.Id);
                 // Signingmodule §6.3: e-mail/gsm zijn de OTP-bestemming bij het ondertekenen — vóór
                 // TranslateBOToEntity de oude waarden overschrijft, snapshotten voor ClientContactChangeLog.
+                // ClientAccount.Cellphone (migratie 058) mee sinds SmsOtpMethod.ResolveDestinationAsync
+                // die kolom als eerste bestemming voor eigenaar 1 gebruikt.
                 if (entity != null)
                 {
                     oldEmail = entity.Email;
+                    oldCellphone = entity.Cellphone;
                     oldContacts = entity.ClientContacts.ToDictionary(c => c.Id, c => (c.Email, c.Cellphone));
                 }
             }
@@ -274,7 +278,7 @@ namespace ServiceCore
             }
 
             if (!isNew)
-                LogContactChanges(entity, oldEmail, oldContacts);
+                LogContactChanges(entity, oldEmail, oldCellphone, oldContacts);
 
             // Slim saven: buiten transactie echt saven; binnen transactie "succes" teruggeven
             var hasTx = _uow.HasActiveTransaction;
@@ -292,7 +296,7 @@ namespace ServiceCore
         /// (constructor neemt enkel <see cref="UnitOfWorkCore"/>), dus <c>ChangedByUserId</c> blijft
         /// hier null — dat threaden zou InsertUpdate's signatuur en alle call sites raken voor een
         /// kleine winst (zie ONDERTEKENEN_VOORTGANG.md).</summary>
-        private void LogContactChanges(ClientAccount entity, string oldEmail, Dictionary<int, (string Email, string Cellphone)> oldContacts)
+        private void LogContactChanges(ClientAccount entity, string oldEmail, string oldCellphone, Dictionary<int, (string Email, string Cellphone)> oldContacts)
         {
             var now = DateTime.UtcNow;
 
@@ -302,6 +306,15 @@ namespace ServiceCore
                 {
                     EntityType = "ClientAccount", EntityId = entity.Id, ClientAccountId = entity.Id, Field = "Email",
                     OldValueMasked = SigningCrypto.MaskEmail(oldEmail), NewValueMasked = SigningCrypto.MaskEmail(entity.Email),
+                    ChangedByUserId = null, ChangedAt = now,
+                });
+            }
+            if (!string.Equals(oldCellphone, entity.Cellphone, StringComparison.Ordinal))
+            {
+                _uow.Context.Set<ClientContactChangeLog>().Add(new ClientContactChangeLog
+                {
+                    EntityType = "ClientAccount", EntityId = entity.Id, ClientAccountId = entity.Id, Field = "Cellphone",
+                    OldValueMasked = SigningCrypto.MaskPhone(oldCellphone), NewValueMasked = SigningCrypto.MaskPhone(entity.Cellphone),
                     ChangedByUserId = null, ChangedAt = now,
                 });
             }

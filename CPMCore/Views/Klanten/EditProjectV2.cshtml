@@ -143,12 +143,16 @@
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
-@using (Html.BeginForm("EditProject", "Klanten", FormMethod.Post, new { @class = "gl-v2-client-edit-form", id = "gl-v2-client-form" }))
+@using (Html.BeginForm("EditProject", "Klanten", FormMethod.Post, new { @class = "gl-v2-client-edit-form", id = "gl-v2-client-form", novalidate = "novalidate" }))
 {
     @Html.HiddenFor(m => m.Client.Id)
     @Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
 
     <div class="gl-v2-client-edit-scroll">
+        @* Foutoverzicht (design-handoff punt 24) — gedeeld component, zie DESIGN.md. Server-gerenderd
+           bij een redisplay uit ModelState; gl-v2-klanten-editproject.js herrendert dezelfde kaart
+           client-side bij een geblokkeerde submit (window.GlV2ErrorSummary, incl. verdeelsleutel). *@
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
 
         <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
             <div class="gl-v2-section-card">
@@ -656,14 +660,8 @@
     </div>
 
     <div class="gl-v2-form-actionbar">
-        @if (totalErrorCount > 0)
-        {
-            <span class="gl-v2-form-actionbar-status is-error">
-                <i class="ph ph-warning-circle" aria-hidden="true"></i>
-                @(totalErrorCount == 1 ? "1 fout in het formulier" : $"{totalErrorCount} fouten in het formulier")
-            </span>
-            <button type="button" class="gl-v2-form-actionbar-link" id="gl-v2-goto-first-error">Ga naar de eerste fout</button>
-        }
+        @* Fout-teller + link naar het overzicht (24a/24c/24d): gerenderd door gl-v2-error-summary.js
+           (updateActionbar), ook bij een server-redisplay — geen eigen server-markup meer. *@
         <span class="gl-v2-form-actionbar-spacer"></span>
         <div class="gl-v2-form-actionbar-actions">
             <a href="@backUrl" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-cancel-link">Annuleren</a>

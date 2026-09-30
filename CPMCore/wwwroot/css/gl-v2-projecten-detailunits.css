@@ -302,7 +302,10 @@
    .gl-v2-dc-col-collapsible op DetailClientsV2 en .gl-v2-pd-units-col-collapsible op DetailV2), en de
    twee topbar-knoppen verhuizen naar het ⋯-menu. ──────────────────────────────────────────────── */
 @media (min-width: 1024px) {
-    .gl-v2-du-topbar-menu-trigger { display: none; }
+    /* .gl-v2-icon-btn.gl-v2-du-topbar-menu-trigger (niet enkel de eigen klasse) — gl-v2-shell.css se
+       .gl-v2-icon-btn {display: inline-flex} laadt NÁ deze pagina-CSS en wint anders bij gelijke
+       specificiteit, zelfde fix als Projecten/DetailClientsV2/DetailContractsV2/DetailCoordinatieV2. */
+    .gl-v2-icon-btn.gl-v2-du-topbar-menu-trigger { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1023.98px) {
     .gl-v2-du-topbar-btn { display: none; }

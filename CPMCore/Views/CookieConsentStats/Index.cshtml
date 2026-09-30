@@ -21,10 +21,14 @@
 <div class="ccs-note">
     <i class="bx bx-info-circle me-1"></i>
     Deze telling loopt los van Google Analytics: die laadt pas ná toestemming en kan dus nooit
-    meten wie weigert of geen keuze maakt. Hier telt elke weergave van de banner, elke klik op
-    "Alles aanvaarden" en elke klik op "Alles weigeren" apart mee — anoniem, zonder IP of
-    bezoekers-id. "Geen keuze" is het verschil tussen wat getoond werd en wat effectief
-    beantwoord is.
+    meten wie weigert of geen keuze maakt. Hier telt de weergave van de banner, een klik op
+    "Alles aanvaarden", een klik op "Alles weigeren" en het verlaten van de site zonder keuze
+    apart mee — anoniem, zonder IP of bezoekers-id. Per browser telt de banner één keer als
+    getoond, ook als de bezoeker pas bij een later bezoek kiest; wie al gekozen heeft, krijgt de
+    banner niet meer en telt dus niet mee. Bots en crawlers worden op user-agent overgeslagen.
+    "Verlaten" wordt sinds eind september 2026 gemeten (migratie 059); oudere periodes tonen
+    daar 0. Wie eerst verlaat en later toch kiest, telt in beide kolommen, dus de som kan
+    afwijken van "Getoond".
 </div>
 
 <section class="card mb-4">

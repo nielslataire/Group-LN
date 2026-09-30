@@ -301,6 +301,7 @@ Public Class ClientAccountBO
         End Set
     End Property
     Private m_email As String
+    <EmailAddress>
     <Display(Name:="E-mail")>
     Public Property Email() As String
         Get
@@ -312,7 +313,9 @@ Public Class ClientAccountBO
     End Property
     ' Migratie 058_KlantenaccountTelefoon.sql: eigenaar 1 had tot dan geen telefoon/gsm, in
     ' tegenstelling tot elke mede-eigenaar/contactpersoon (ClientContactBO.Phone/Cellphone).
+    ' <GlV2Phone>: voorvoegsel+geldigheid, zie GlV2PhonePrefixes/GlV2Telefoon.cshtml.
     Private m_phone As String
+    <GlV2Phone>
     <Display(Name:="Telefoon")>
     Public Property Phone() As String
         Get
@@ -323,6 +326,7 @@ Public Class ClientAccountBO
         End Set
     End Property
     Private m_cellphone As String
+    <GlV2Phone>
     <Display(Name:="Gsm")>
     Public Property Cellphone() As String
         Get
@@ -333,6 +337,7 @@ Public Class ClientAccountBO
         End Set
     End Property
     Private m_invoiceemail As String
+    <EmailAddress>
     <Display(Name:="Facturatie e-mail")>
     Public Property InvoiceEmail() As String
         Get

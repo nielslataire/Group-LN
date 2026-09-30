@@ -30,7 +30,10 @@ namespace ServiceCore.Translators
             bo.CashDiscountPercentage = _entity.CashDiscountPercentage;
             bo.PaymentTerm = _entity.PaymentTerm;
             bo.VatPercentage = _entity.VatPercentage;
-            bo.GuaranteeType = (ContractGuaranteeType)_entity.GuaranteeType;
+            // _entity.GuaranteeType is nullable (bv. een net aangemaakt contract heeft nog geen waarborgtype
+            // gekozen); een directe cast van null naar een non-nullable enum gooit "Nullable object must
+            // have a value" (gevonden via het Facturatie-testproject, 2026-09-29).
+            bo.GuaranteeType = _entity.GuaranteeType.HasValue ? (ContractGuaranteeType)_entity.GuaranteeType.Value : ContractGuaranteeType.NoGuarantee;
             bo.GuaranteePercentage = _entity.GuaranteePercentage;
             bo.GuaranteeDocFilename = _entity.GuaranteeDocFilename;
             bo.GuaranteeDocUploadedAt = _entity.GuaranteeDocUploadedAt;

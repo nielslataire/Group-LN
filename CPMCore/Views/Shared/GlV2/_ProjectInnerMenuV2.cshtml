@@ -47,7 +47,6 @@
     var canSeeClients      = PermissionService.HasRead(PermissionCodes.ProjectsCustomers);
     var canSeeSuppliers    = PermissionService.HasRead(PermissionCodes.ProjectsSuppliers);
     var canSeePhotos       = PermissionService.HasRead(PermissionCodes.ProjectsPhotos);
-    var canSeeNews         = PermissionService.HasRead(PermissionCodes.ProjectsNews);
     var canSeeUnits        = PermissionService.HasRead(PermissionCodes.ProjectsUnits);
     var canSeeTraject      = PermissionService.HasRead(PermissionCodes.ProjectsTraject);
     var canSeeDossiers     = PermissionService.HasRead(PermissionCodes.ProjectsDossiers);
@@ -64,7 +63,6 @@
     var canSeeSigning      = FeatureFlags.Value.EnableSigning && PermissionService.HasRead(PermissionCodes.Signing);
 
     var showPhotos   = canSeePhotos   && !Model.IsCoordinationProject;
-    var showNews     = canSeeNews     && !Model.IsCoordinationProject;
     var showContacts = canSeeContacts && !Model.IsCoordinationProject;
 
     var groups = new List<(string Key, string Label, List<(string Text, string Icon, string Href, bool Active, int? Count)> Items)>();
@@ -85,7 +83,6 @@
 
     var detailsItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (showPhotos) detailsItems.Add(("Media", "ph-image", Url.Action("DetailPhotos", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailPhotos"), CountFor("Media")));
-    if (showNews) detailsItems.Add(("Nieuws", "ph-newspaper", Url.Action("DetailNews", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailNews"), CountFor("Nieuws")));
     if (canSeeUnits) detailsItems.Add(("Eenheden", "ph-buildings", Url.Action("DetailUnits", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailUnits") || IsHere("Projecten", "Landshares") || IsHere("Projecten", "AddUnit") || IsHere("Projecten", "EditUnit"), CountFor("Eenheden")));
     if (detailsItems.Count > 0) groups.Add(("details", "Details", detailsItems));
 
@@ -107,10 +104,18 @@
     var financieelItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (canSeeInvoicing)
     {
-        financieelItems.Add(("Facturatie", "ph-invoice", Url.Action("Invoicing", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Invoicing"), CountFor("Facturatie")));
-        financieelItems.Add(("Betalingen", "ph-currency-eur", Url.Action("PaymentStages", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "PaymentStages"), CountFor("Betalingen")));
+        // gl-v2-preview: dit menu draait zelf enkel binnen de gl-v2-ervaring, dus "Facturatie" mag hier
+        // altijd naar de nieuwe pagina wijzen (Niels, 2026-09-30) — de oude /Projecten/Invoicing blijft
+        // gewoon rechtstreeks bereikbaar (bv. via een oude link), enkel dit menu-item verandert.
+        financieelItems.Add(("Facturatie", "ph-invoice", Url.Action("InvoicingV2", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Invoicing") || IsHere("Projecten", "InvoicingV2"), CountFor("Facturatie")));
+        // "Betalingsschijven" (niet "Betalingen" — dit scherm configureert/vinkt schijven af, het toont
+        // geen ontvangen betalingen; het wireframe heeft daar een aparte rij voor die nog niet bestaat).
+        financieelItems.Add(("Betalingsschijven", "ph-stack", Url.Action("PaymentStagesV2", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "PaymentStages") || IsHere("Projecten", "PaymentStagesV2"), CountFor("Betalingen")));
     }
-    if (canSeeChangeOrders) financieelItems.Add(("Wijzigingsopdrachten", "ph-pencil-simple-line", Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder"), CountFor("Wijzigingsopdrachten")));
+    // "Offertes & wijzigingen" (design-handoff 20b/20c/20d) — zelfde repointing-aanpak als Facturatie/
+    // Betalingsschijven hierboven: de oude /Projecten/DetailsChangeOrder blijft rechtstreeks bereikbaar,
+    // enkel dit menu-item wijst nu naar de gl-v2-hub (Niels, 2026-09-30).
+    if (canSeeChangeOrders) financieelItems.Add(("Offertes & wijzigingen", "ph-pencil-simple-line", Url.Action("ChangeOrdersV2", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder") || IsHere("Projecten", "ChangeOrdersV2") || IsHere("Projecten", "ChangeOrderDetailV2") || IsHere("Projecten", "QuoteIntakeV2"), CountFor("Wijzigingsopdrachten")));
     if (canSeeSigning) financieelItems.Add(("Ondertekeningen", "ph-signature", Url.Action("Index", "SigningAdmin", new { projectId = projectId }) ?? "#", IsHere("SigningAdmin"), CountFor("Ondertekeningen")));
     if (financieelItems.Count > 0) groups.Add(("financieel", "Financieel", financieelItems));
 

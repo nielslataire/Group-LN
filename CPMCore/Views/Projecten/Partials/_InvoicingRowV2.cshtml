@@ -1,0 +1,69 @@
+@model CPMCore.Models.Projecten.InvoicingPostRowV2
+@*
+    Facturatie V2 (20a) — één rij van de aanvinkbare posten-tabel. Uitgetrokken op 2026-09-30 zodat
+    zowel de per-schijf-gegroepeerde rijen als de losse WO-rijen (InvoicingV2.cshtml) dezelfde opmaak
+    delen i.p.v. twee keer dezelfde markup te onderhouden.
+*@
+@using System.Globalization
+@{
+    var account = (CPMCore.Models.Projecten.InvoicingAccountCardV2)ViewData["Account"]!;
+    var canWrite = (bool)(ViewData["CanWrite"] ?? false);
+    var invoicingUrl = (string)ViewData["InvoicingUrl"]!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string Pct(decimal v) => v.ToString("0.##", be);
+    string Inv(decimal v) => v.ToString(CultureInfo.InvariantCulture);
+    var row = Model;
+}
+<tr class="gl-v2-inv-row @(row.IsBlocked ? "is-blocked" : "")" data-inv-row data-kind="@row.Kind" data-amount="@Inv(row.Amount)">
+    <td class="is-check" data-label="">
+        @if (row.IsBlocked)
+        {
+            <span class="gl-v2-inv-check-placeholder" aria-hidden="true"></span>
+        }
+        else
+        {
+            <span class="gl-v2-inv-check">
+                @if (row.IsStage)
+                {
+                    <input type="checkbox" class="js-inv-post js-inv-stage" id="gl-v2-inv-stage-@row.StageId-@row.UnitId" data-account-id="@account.ClientAccountId" data-unit-id="@row.UnitId" data-stage-id="@row.StageId" data-amount="@Inv(row.Amount)" data-last-stage="@(row.IsLastStage ? "true" : "false")" aria-label="@row.Description selecteren" />
+                    <label for="gl-v2-inv-stage-@row.StageId-@row.UnitId"></label>
+                }
+                else
+                {
+                    <input type="checkbox" class="js-inv-post js-inv-co" id="gl-v2-inv-co-@row.ChangeOrderDetailId" data-account-id="@account.ClientAccountId" data-co-id="@row.ChangeOrderId" data-detail-id="@row.ChangeOrderDetailId" data-amount="@Inv(row.Amount)" aria-label="@row.Description selecteren" />
+                    <label for="gl-v2-inv-co-@row.ChangeOrderDetailId"></label>
+                }
+            </span>
+        }
+    </td>
+    <td data-label=""><span class="gl-v2-badge @(row.Kind == "Schijf" ? "is-neutral" : row.Kind == "Minwerk" ? "is-attention" : "is-info")">@row.Kind.ToUpperInvariant()</span></td>
+    <td class="gl-v2-inv-desc">
+        <span class="gl-v2-inv-desc-title">@row.Description</span>
+        @if (!string.IsNullOrWhiteSpace(row.UnitName) || !string.IsNullOrWhiteSpace(row.SubText) || row.IsLastStage)
+        {
+            <span class="gl-v2-inv-desc-sub">
+                @(string.Join(" · ", new[] { row.UnitName, row.SubText }.Where(s => !string.IsNullOrWhiteSpace(s))))
+                @if (row.IsLastStage)
+                {
+                    <span class="gl-v2-inv-lastbadge">EINDAFREKENING</span>
+                }
+                @if (row.IsBlocked)
+                {
+                    <text> — </text>
+                    @if (row.HasActiveCase)
+                    {
+                        <a href="#" class="gl-v2-inv-desc-action js-inv-21b-open" data-case-id="@row.SigningCaseId" data-co-id="@row.ChangeOrderId" data-description="@row.Description">beslissen</a>
+                    }
+                    else if (canWrite)
+                    {
+                        <a href="@Url.Action("Start", "SigningAdmin", new { documentType = "ChangeOrder", sourceId = row.ChangeOrderId, backUrl = invoicingUrl })" class="gl-v2-inv-desc-action">ondertekening starten</a>
+                    }
+                }
+            </span>
+        }
+    </td>
+    <td class="gl-v2-inv-muted" data-label="Moment">@row.Moment</td>
+    <td class="is-right gl-v2-inv-tabular" data-label="%">@(row.IsStage || row.IsBlocked ? Pct(row.Percentage) + " %" : "")</td>
+    <td class="is-right gl-v2-inv-tabular @(row.IsBlocked ? "gl-v2-inv-muted" : "")" data-label="Excl. btw">@Eur(row.Amount)</td>
+</tr>

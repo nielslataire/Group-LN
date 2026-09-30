@@ -191,7 +191,7 @@ Public Class BlogController
                 If artikel Is Nothing Then Return Nothing
 
                 Dim cmdBlok As New SqlCommand(
-                    "SELECT Id, SortOrder, ISNULL(BlokType, 'tekst'), Titel, RijkeTekst, FotoBestand
+                    "SELECT Id, SortOrder, ISNULL(BlokType, 'tekst'), Titel, RijkeTekst, FotoBestand, KnopTekst, KnopUrl
                        FROM BlogArtikelBlok
                       WHERE ArtikelId = @id
                       ORDER BY SortOrder", conn)
@@ -205,7 +205,9 @@ Public Class BlogController
                             .BlokType    = reader.GetString(2),
                             .Titel       = If(reader.IsDBNull(3), Nothing, reader.GetString(3)),
                             .RijkeTekst  = If(reader.IsDBNull(4), Nothing, reader.GetString(4)),
-                            .FotoBestand = If(reader.IsDBNull(5), Nothing, reader.GetString(5))
+                            .FotoBestand = If(reader.IsDBNull(5), Nothing, reader.GetString(5)),
+                            .KnopTekst   = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
+                            .KnopUrl     = If(reader.IsDBNull(7), Nothing, reader.GetString(7))
                         })
                     End While
                 End Using

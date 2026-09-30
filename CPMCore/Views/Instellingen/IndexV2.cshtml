@@ -1,0 +1,109 @@
+@model CPMCore.Models.Instellingen.InstellingenIndexV2Vm
+@*
+    gl-v2 — Instellingen/overzicht (design-handoff punt 24a, "CRM Instellingen.dc.html"): "groepen als
+    index links, kaarten in een vast raster van drie, de hele kaart is klikbaar · typ in de zoekbalk".
+
+    Bewuste aanpassingen t.o.v. het mockup zelf (24a se eigen "WAT VERANDERT TEGENOVER NU"):
+    - Knop "Open beheer" + pijltje deden hetzelfde als de kaart zelf klikken — hier enkel de kaart nog
+      (data-detail-url, gedeeld met initClickableRows() in gl-v2-shell.js — niet enkel voor
+      tabelrijen meer sinds deze pagina, zie die functie se eigen toelichting).
+    - Tweede ingangen (Gebruikers &amp; rollen → "Rollen", Activiteiten → "Groepen") blijven bestaan
+      als kleine, eigen-klikbare chips bovenop de kaart-brede klik (initClickableRows() sluit elke
+      klik op een &lt;a&gt;/&lt;button&gt; al vanzelf uit).
+    - Website had vroeger vijf kaarten naast elkaar, de rest drie — hier altijd een vast raster van
+      drie (24a se eigen regel), op elke breedte tot aan de tablet-omslag.
+    - Status die je anders moet gaan zoeken staat op de kaart zelf — vandaag enkel Marktdata-status
+      se laatste crawl (de enige kaart met een goedkope, al bestaande databron daarvoor; zie
+      InstellingenController.Index).
+
+    De linkernavigatie ("ONDERDELEN") is client-side scroll-naar-sectie, geen server-side filter —
+    24a's "groepen als index links" is navigatie binnen deze ene pagina, niet een aparte view per
+    groep. Zoeken (gl-v2-instellingen.js) doorzoekt titel+omschrijving+chips van elke kaart en
+    verbergt lege groepen/toont de "Geen instelling gevonden"-staat, zelfde tekst als het mockup.
+*@
+@{
+    ViewData["Title"] ??= "Instellingen";
+    ViewData["PageIcon"] = "ph ph-gear";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-set-layout">
+    <aside class="gl-v2-set-nav" aria-label="Onderdelen">
+        <span class="gl-v2-set-nav-label">ONDERDELEN</span>
+        <nav class="gl-v2-set-nav-list">
+            @foreach (var g in Model.Groups)
+            {
+                <a href="#gl-v2-set-@g.Key" class="gl-v2-set-nav-item" data-set-nav-item data-target="gl-v2-set-@g.Key">
+                    <span class="gl-v2-set-nav-item-label">@g.Name</span>
+                    <span class="gl-v2-set-nav-item-count">@g.Count</span>
+                </a>
+            }
+        </nav>
+        <div class="gl-v2-set-nav-rule"></div>
+        <p class="gl-v2-set-nav-hint">Instellingen gelden voor alle projecten. Wat per bedrijf verschilt, zit in Mijn bedrijven.</p>
+    </aside>
+
+    <div class="gl-v2-set-main">
+        <div class="gl-v2-toolbar-card gl-v2-filters-card">
+            <div class="gl-v2-filters-row">
+                <div class="gl-v2-field gl-v2-toolbar-search">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="gl-v2-set-search" placeholder="Zoek een instelling, bv. btw, peppol, logo …" autocomplete="off">
+                        <button type="button" class="gl-v2-field-clear" id="gl-v2-set-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-set-empty" id="gl-v2-set-empty" hidden>
+            <span class="gl-v2-set-empty-title">Geen instelling gevonden voor "<span id="gl-v2-set-empty-query"></span>"</span>
+            <span class="gl-v2-set-empty-sub">Zoek op een onderdeel of een veld, bv. "IBAN" of "betaaltermijn".</span>
+        </div>
+
+        @foreach (var g in Model.Groups)
+        {
+            <section class="gl-v2-set-group" id="gl-v2-set-@g.Key" data-set-group>
+                <div class="gl-v2-set-group-head">
+                    <span class="gl-v2-set-group-title">@g.Name.ToUpperInvariant()</span>
+                    <span class="gl-v2-set-group-count">@g.Count @(g.Count == 1 ? "onderdeel" : "onderdelen")</span>
+                </div>
+                <div class="gl-v2-set-grid">
+                    @foreach (var it in g.Items)
+                    {
+                        <div class="gl-v2-set-card" data-set-card data-detail-url="@it.Href" tabindex="0">
+                            <div class="gl-v2-set-card-head">
+                                <span class="gl-v2-set-card-icon"><i class="ph @it.Icon" aria-hidden="true"></i></span>
+                                <span class="gl-v2-set-card-title">@it.Title</span>
+                                <i class="ph ph-caret-right gl-v2-set-card-chevron" aria-hidden="true"></i>
+                            </div>
+                            <span class="gl-v2-set-card-desc">@it.Description</span>
+                            @if (!string.IsNullOrEmpty(it.MetaLabel) || it.Chips.Count > 0)
+                            {
+                                <div class="gl-v2-set-card-foot">
+                                    @if (!string.IsNullOrEmpty(it.MetaLabel))
+                                    {
+                                        <span class="gl-v2-set-card-meta @it.MetaTone"><span class="gl-v2-set-card-meta-dot"></span>@it.MetaLabel</span>
+                                    }
+                                    <span class="gl-v2-set-card-foot-spacer"></span>
+                                    @foreach (var chip in it.Chips)
+                                    {
+                                        <a href="@chip.Href" class="gl-v2-set-card-chip">@chip.Label</a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen.js" asp-append-version="true"></script>
+}

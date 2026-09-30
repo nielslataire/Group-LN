@@ -1,0 +1,60 @@
+@*
+    gl-v2 — Foutoverzicht (design-handoff punt 24 "Foutoverzicht formulier"). Gedeelde partial voor
+    ELK gl-v2-formulier: dezelfde kaart, dezelfde regels (24b), overal. Server-gerenderd bij een
+    redisplay (na een geblokkeerde submit met server-side fouten — bv. KlantenController.
+    AddClientAccount POST) uit ViewContext.ModelState; client-side herrendert gl-v2-error-summary.js
+    exact dezelfde opmaak (zelfde CSS-klassen) na een geblokkeerde submit vóórdat er iets naar de
+    server ging. Zie DESIGN.md "Foutoverzicht (punt 24) — gedeeld component" voor het volledige
+    contract (wat een veld/pagina moet voorzien om mee te doen, ook voor nog niet bestaande veldtypes).
+
+    Aanroep: @await Html.PartialAsync("GlV2/_ErrorSummaryV2") ergens bovenaan de <form>, vóór de eerste
+    sectiekaart. Optioneel: ViewData["GlV2ErrorLocations"] (Dictionary<string,string>, ModelState-sleutel
+    → "Algemeen · Identiteit"-achtige locatietekst) en ViewData["GlV2ErrorTabs"] (Dictionary<string,string>,
+    sleutel → tab-key) voor pagina's met een tabbar (EditProjectV2-stijl) — ontbreken ze, dan toont de
+    rij gewoon geen locatie/badge (nog steeds correct, enkel minder specifiek).
+*@
+@{
+    var errorEntries = ViewContext.ModelState
+        .Where(kvp => kvp.Value.Errors.Count > 0)
+        .SelectMany(kvp => kvp.Value.Errors.Select(e => new { Key = kvp.Key, Message = e.ErrorMessage }))
+        .ToList();
+    var locations = ViewData["GlV2ErrorLocations"] as System.Collections.Generic.Dictionary<string, string>;
+    var tabs = ViewData["GlV2ErrorTabs"] as System.Collections.Generic.Dictionary<string, string>;
+}
+@{
+    // 24b "Eén fout": geen teller en geen lijst — de fout zelf is de titel (.is-single verbergt de lijst).
+    var single = errorEntries.Count == 1;
+    var singleMessage = single ? errorEntries[0].Message.TrimEnd() : "";
+    if (single && !singleMessage.EndsWith(".") && !singleMessage.EndsWith("!") && !singleMessage.EndsWith("?")) singleMessage += ".";
+}
+<div class="gl-v2-error-summary@(single ? " is-single" : "")" id="gl-v2-error-summary" data-gl-v2-error-summary role="alert" tabindex="-1" hidden="@(!errorEntries.Any())">
+    <div class="gl-v2-error-summary-head">
+        <span class="gl-v2-error-summary-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <div class="gl-v2-error-summary-text">
+            <span class="gl-v2-error-summary-title" data-role="title">@(single ? singleMessage + " Er is nog niets opgeslagen." : $"{errorEntries.Count} velden moeten nog aangepast worden")</span>
+            <span class="gl-v2-error-summary-sub" data-role="subtitle" hidden="@single">Er is nog niets opgeslagen. Klik een fout om naar het veld te gaan.</span>
+        </div>
+    </div>
+    <ul class="gl-v2-error-summary-list" data-role="list">
+        @foreach (var entry in errorEntries)
+        {
+            var location = locations != null && locations.TryGetValue(entry.Key, out var loc) ? loc : null;
+            var tab = tabs != null && tabs.TryGetValue(entry.Key, out var t) ? t : null;
+            <li>
+                <a href="#" class="gl-v2-error-summary-item" data-gl-v2-error-key="@entry.Key" data-gl-v2-error-tab="@tab">
+                    <span class="gl-v2-error-summary-dot" aria-hidden="true"></span>
+                    <span class="gl-v2-error-summary-msg">@entry.Message</span>
+                    @if (!string.IsNullOrWhiteSpace(location))
+                    {
+                        <span class="gl-v2-error-summary-loc">@location</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(tab))
+                    {
+                        <span class="gl-v2-error-summary-badge">ANDERE TAB</span>
+                    }
+                    <i class="ph ph-caret-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        }
+    </ul>
+</div>

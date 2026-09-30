@@ -1,0 +1,403 @@
+@model CPMCore.Models.Projecten.InvoicingV2Vm
+@*
+    gl-v2 — Facturatie (design-handoff 20a "Facturatie — alles wat nu factureerbaar is, per
+    klantaccount"; modals 21a "Facturen opmaken"/21b "WO-006 beslissen"; tab 21j "Gefactureerd").
+    Eerste pagina van de Financieel-herwerking (plan "smooth-greeting-origami"). Sjabloon:
+    Projecten/DetailCoordinatieV2 (kaart/tabel/selectiebalk-chroom), eigen klassen-namespace
+    gl-v2-inv-* (gl-v2-projecten-invoicing.css/.js) i.p.v. de coördinatie-CSS/JS te herladen.
+
+    Een WO die nog op een handtekening wacht staat, net als in 20a, gewoon TUSSEN de andere posten
+    van hetzelfde klantaccount (InvoicingPostRowV2.IsBlocked — niet aanvinkbaar, rode rij, link naar
+    scherm 21b) i.p.v. in een apart tabblad.
+
+    Bewust NIET meegenomen (buiten scope van deze ronde, zie financieel_gl_v2_redesign-memo):
+    - De tab "NOG NIET BEREIKT": er bestaat geen "schijf nog niet bereikt"-concept in het schema
+      (InvoicingPaymentStages heeft geen mijlpaal-/bereikt-datum, enkel Invoicable/Percentage).
+    - De gesegmenteerde voortgangsbalk per kaart (vereist ALLE schijven incl. al gefactureerde, niet
+      enkel de open — grotere query dan deze ronde).
+    - Het facturatieplan "bij laatste schijf" (voorschot/tussentijds/saldo per WO, eigen KPI + gele
+      eindafrekening-banner in het wireframe) en de KPI "BIJ LAATSTE SCHIJF".
+    - Nutsaansluitingen (bestaat nog nergens als module).
+    De kolom MOMENT toont daarom enkel iets voor WO-posten ("na ondertekening"/"blokkeert"); voor
+    schijven blijft ze leeg.
+
+    De oude Views/Projecten/Invoicing.cshtml + de bijhorende actie blijven ongewijzigd bereikbaar tot
+    deze pagina getest en bevestigd is (ONDERTEKENEN_VOORTGANG.md / plan, stap B.7): het menu-item
+    "Facturatie" wijst dus nog niet hierheen.
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = "Facturatie";
+    ViewData["PageIcon"] = "ph ph-receipt";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => (v < 0 ? "− € " : "€ ") + Math.Abs(v).ToString("N2", be);
+    string Pct(decimal v) => v.ToString("0.##", be);
+    string Inv(decimal v) => v.ToString("0.####", CultureInfo.InvariantCulture);
+    string D(DateOnly d) => d.ToString("dd/MM/yyyy", be);
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = "project · facturatie",
+    };
+
+    var blockedHint = Model.BlockedCount == 0
+        ? "geen enkele WO wacht op tekenen"
+        : Model.BlockedCount + (Model.BlockedCount == 1 ? " wijzigingsopdracht" : " wijzigingsopdrachten");
+
+    var kpis = new List<GlV2KpiItemVm>
+    {
+        new() { Label = "KLAAR OM TE FACTUREREN", Value = Eur(Model.OpenAmount), Hint = $"{Model.OpenPostCount} {(Model.OpenPostCount == 1 ? "post" : "posten")} · {Model.OpenAccountCount} {(Model.OpenAccountCount == 1 ? "klantenaccount" : "klantenaccounts")}", IconClass = "ph-hourglass" },
+        new() { Label = "WACHT OP HANDTEKENING", Value = Eur(Model.BlockedAmount), Hint = blockedHint, IconClass = "ph-lock" },
+        new() { Label = "GEFACTUREERD", Value = Eur(Model.InvoicedAmount), Hint = $"{Model.InvoicedRows.Count} {(Model.InvoicedRows.Count == 1 ? "factuur" : "facturen")}", IconClass = "ph-receipt" },
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-invoicing.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-tabbar" role="tablist" id="gl-v2-inv-tabbar">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-inv-tab="open">Te factureren <span class="gl-v2-tabbar-count">@Model.OpenPostCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-inv-tab="invoiced">Gefactureerd <span class="gl-v2-tabbar-count">@Model.InvoicedRows.Count</span></button>
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div id="gl-v2-inv-root" data-project-id="@Model.ProjectId">
+    @* Token voor de fetch()-aanroepen hieronder (Preview/Make/SigningAdmin) — zelfde "grijp het eerste
+       token op de pagina"-patroon als gl-v2-projecten-detailcoordinatie.js. *@
+    <form id="gl-v2-inv-af-form" style="display:none">@Html.AntiForgeryToken()</form>
+
+    @await Html.PartialAsync("GlV2/_KpiStrip", kpis)
+
+    @if (Model.CanWrite)
+    {
+        <div class="gl-v2-inv-selbar" id="gl-v2-inv-selbar" hidden role="region" aria-label="Selectie om te factureren">
+            <span class="gl-v2-inv-selbar-title">Klaar om te factureren</span>
+            <span class="gl-v2-inv-selbar-parts">
+                <span class="gl-v2-inv-selbar-part" data-inv-sel-count></span>
+            </span>
+            <span class="gl-v2-inv-selbar-spacer"></span>
+            <span class="gl-v2-inv-selbar-total"><b data-inv-sel-total>€ 0,00</b> <span>excl. btw</span></span>
+            <button type="button" class="gl-v2-inv-selbar-clear" id="gl-v2-inv-sel-clear">Wis</button>
+            <button type="button" class="gl-v2-btn gl-v2-inv-selbar-go" id="gl-v2-inv-preview-go">
+                <i class="ph ph-receipt" aria-hidden="true"></i>Facturen opmaken
+            </button>
+        </div>
+    }
+
+    <section data-inv-panel="open">
+        @if (Model.Accounts.Count == 0)
+        {
+            <div class="gl-v2-card gl-v2-inv-card">
+                <div class="gl-v2-card-body">
+                    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                        <span class="gl-v2-empty-state-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-empty-state-title">Niets te factureren</h2>
+                        <p class="gl-v2-empty-state-desc">Er staat momenteel geen schijf of wijzigingsopdracht open om te factureren.</p>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-inv-filters">
+                <span class="gl-v2-inv-filters-label">TOON</span>
+                <button type="button" class="gl-v2-inv-filter is-active" data-inv-filter="">Alles</button>
+                <button type="button" class="gl-v2-inv-filter" data-inv-filter="Schijf">Schijven</button>
+                <button type="button" class="gl-v2-inv-filter" data-inv-filter="Meerwerk,Minwerk">Meer- en minwerken</button>
+                <span class="gl-v2-inv-filters-spacer"></span>
+                <span class="gl-v2-inv-legend">
+                    <span class="gl-v2-inv-legend-item"><span class="gl-v2-inv-legend-dot is-invoiced"></span>gefactureerd</span>
+                    <span class="gl-v2-inv-legend-item"><span class="gl-v2-inv-legend-dot is-open"></span>te factureren</span>
+                    <span class="gl-v2-inv-legend-item"><span class="gl-v2-inv-legend-dot is-not-reached"></span>nog niet vrijgegeven</span>
+                </span>
+            </div>
+
+            <div class="gl-v2-inv-cards">
+            @foreach (var account in Model.Accounts)
+            {
+                var cardClass = account.HasNothingOpen ? "is-empty" : (account.OpenRows.Any() ? "" : "is-blocked-only");
+                <div class="gl-v2-card gl-v2-inv-card @cardClass" data-inv-account-id="@account.ClientAccountId">
+                    <div class="gl-v2-card-header">
+                        <span class="gl-v2-card-header-icon"><i class="ph ph-check-circle" aria-hidden="true"></i></span>
+                        <div class="gl-v2-inv-card-title">
+                            <h2 class="gl-v2-card-header-title">@account.DisplayName</h2>
+                            @if (!string.IsNullOrWhiteSpace(account.Subtitle))
+                            {
+                                <span class="gl-v2-inv-card-subtitle">@account.Subtitle</span>
+                            }
+                        </div>
+                        @if (account.HasCoOwners)
+                        {
+                            <span class="gl-v2-inv-owners">
+                                @foreach (var owner in account.Owners)
+                                {
+                                    <span class="gl-v2-inv-owner-pill">@owner.DisplayName <b>@Pct(owner.Percentage) %</b></span>
+                                }
+                            </span>
+                        }
+                        <span class="gl-v2-card-header-spacer"></span>
+                        @if (account.HasProgress)
+                        {
+                            <div class="gl-v2-inv-progress">
+                                <div class="gl-v2-inv-progress-track" role="img" aria-label="@Pct(account.ProgressInvoicedPct) % gefactureerd, @Pct(account.ProgressOpenPct) % te factureren, @Pct(account.ProgressNotReachedPct) % nog niet vrijgegeven">
+                                    @* Eén los blokje per schijf (20a) — geen 3 samengevoegde staven — met witruimte
+                                       ertussen via de flex-gap op .gl-v2-inv-progress-track. *@
+                                    @foreach (var seg in account.ProgressSegments)
+                                    {
+                                        <span class="gl-v2-inv-progress-fill is-@seg.State" style="flex:@(seg.Percentage.ToString("0.####", CultureInfo.InvariantCulture))"></span>
+                                    }
+                                </div>
+                                <span class="gl-v2-inv-progress-label">@Pct(account.ProgressInvoicedPct) % gefactureerd</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-card-header-count">@account.OpenRows.Count() @(account.OpenRows.Count() == 1 ? "post" : "posten") · @Eur(account.OpenTotal)</span>
+                        }
+                    </div>
+                    @if (account.HasNothingOpen)
+                    {
+                        <div class="gl-v2-inv-card-empty">Niets te factureren</div>
+                    }
+                    else
+                    {
+                        @* Rijen gegroepeerd per betalingsschijf (Niels 2026-09-30) — een account met meerdere
+                           eenheden in dezelfde groep had voorheen "Schijf 3" van Lot 1 en Lot 2 los door elkaar
+                           staan (de controller vult Rows immers per eenheid, dan per schijf, niet omgekeerd).
+                           WO-posten (geen StageId, nog niet aan een schijf gekoppeld) blijven een eigen sectie
+                           erna — enkel getoond als er ook schijf-groepen zijn, anders was de kop overbodig. *@
+                        var stageGroups = account.Rows.Where(r => r.IsStage).GroupBy(r => r.StageId!.Value)
+                            .Select(g => new { StageId = g.Key, Rows = g.ToList(), First = g.First() }).ToList();
+                        var otherRows = account.Rows.Where(r => !r.IsStage).ToList();
+                        <div class="gl-v2-inv-table-scroll">
+                            <table class="gl-v2-inv-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="is-check"><span class="gl-v2-inv-check"><input type="checkbox" class="js-inv-account-all" id="gl-v2-inv-all-@account.ClientAccountId" aria-label="Alle posten van @account.DisplayName selecteren" /><label for="gl-v2-inv-all-@account.ClientAccountId"></label></span></th>
+                                        <th scope="col">Soort</th>
+                                        <th scope="col">Omschrijving</th>
+                                        <th scope="col">Moment</th>
+                                        <th scope="col" class="is-right">%</th>
+                                        <th scope="col" class="is-right">Excl. btw</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var stageGroup in stageGroups)
+                                    {
+                                        <tr class="gl-v2-inv-group-header">
+                                            <td colspan="6">@stageGroup.First.Description <span class="gl-v2-inv-tabular">· @Pct(stageGroup.First.Percentage) %</span></td>
+                                        </tr>
+                                        @foreach (var row in stageGroup.Rows)
+                                        {
+                                            @await Html.PartialAsync("Partials/_InvoicingRowV2", row, new ViewDataDictionary(ViewData) { { "Account", account }, { "CanWrite", Model.CanWrite }, { "InvoicingUrl", Url.Action("InvoicingV2", new { projectid = Model.ProjectId }) } })
+                                        }
+                                    }
+                                    @if (otherRows.Count > 0)
+                                    {
+                                        if (stageGroups.Count > 0)
+                                        {
+                                            <tr class="gl-v2-inv-group-header">
+                                                <td colspan="6">Wijzigingsopdrachten</td>
+                                            </tr>
+                                        }
+                                        @foreach (var row in otherRows)
+                                        {
+                                            @await Html.PartialAsync("Partials/_InvoicingRowV2", row, new ViewDataDictionary(ViewData) { { "Account", account }, { "CanWrite", Model.CanWrite }, { "InvoicingUrl", Url.Action("InvoicingV2", new { projectid = Model.ProjectId }) } })
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (account.HasBlocked)
+                        {
+                            <div class="gl-v2-inv-card-warning" data-inv-card-warning>
+                                <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                                <span>Bij de eindafrekening blokkeert @account.FirstBlockedDescription — moet eerst beslist zijn</span>
+                            </div>
+                        }
+                        <div class="gl-v2-inv-card-footer">
+                            @if (account.HasCoOwners)
+                            {
+                                foreach (var owner in account.Owners)
+                                {
+                                    <div class="gl-v2-inv-card-footer-row"><span>factuur @owner.DisplayName</span><span class="gl-v2-inv-tabular">@Pct(owner.Percentage) %</span><b class="gl-v2-inv-tabular">@Eur(Math.Round(account.OpenTotal * owner.Percentage / 100m, 2))</b></div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="gl-v2-inv-card-footer-row"><span>totaal @account.DisplayName</span><span></span><b class="gl-v2-inv-tabular">@Eur(account.OpenTotal)</b></div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            </div>
+        }
+    </section>
+
+    <section data-inv-panel="invoiced" hidden>
+        <div class="gl-v2-card gl-v2-inv-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Gefactureerd</h2>
+                <span class="gl-v2-card-header-count">@Model.InvoicedRows.Count @(Model.InvoicedRows.Count == 1 ? "factuur" : "facturen")</span>
+            </div>
+            <div class="gl-v2-card-body">
+                @if (Model.InvoicedRows.Count == 0)
+                {
+                    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                        <span class="gl-v2-empty-state-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-empty-state-title">Nog geen facturen</h2>
+                        <p class="gl-v2-empty-state-desc">Er is nog geen schijf of wijzigingsopdracht van dit project gefactureerd.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-inv-table-scroll">
+                        <table class="gl-v2-inv-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Factuur</th>
+                                    <th scope="col">Klant</th>
+                                    <th scope="col">Soort</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="is-right">Bedrag</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Model.InvoicedRows)
+                                {
+                                    <tr class="gl-v2-inv-row">
+                                        <td class="gl-v2-inv-desc">
+                                            <a href="@Url.Action("Detail", "Invoices", new { id = row.InvoiceId })" class="gl-v2-inv-invoice-link">@row.PublicId</a>
+                                            <span class="gl-v2-inv-unit"> · @D(row.InvoiceDate)</span>
+                                        </td>
+                                        <td data-label="Klant">@row.ClientName</td>
+                                        <td data-label="Soort">@row.Kind</td>
+                                        <td data-label="Status"><span class="gl-v2-badge @row.StatusTone">@row.StatusLabel.ToUpperInvariant()</span></td>
+                                        <td class="is-right gl-v2-inv-tabular" data-label="Bedrag">@Eur(row.AmountExVat)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+
+</div>
+
+@* ── 21a: modal-schil, inhoud komt via AJAX (PreviewInvoices) — zelfde patroon als Invoices' modals. ── *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-inv-preview-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-inv-preview-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-inv-preview-title">Facturen opmaken</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body" id="gl-v2-inv-preview-body">
+                <div class="gl-v2-field-full"><div class="gl-v2-inv-preview-empty">Bezig met berekenen…</div></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-inv-preview-confirm">Bevestigen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── 21b: 4 opties (herinneren/opladen/weigeren/annuleren) — hergebruikt de SigningAdmin-acties. ── *@
+@if (Model.CanWrite)
+{
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-inv-21b-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-inv-21b-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-inv-21b-title">Beslissen — <span id="gl-v2-inv-21b-desc"></span></h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="gl-v2-field-full gl-v2-inv-21b-options">
+                        <label class="gl-v2-inv-21b-option">
+                            <input type="radio" name="gl-v2-inv-21b-option" value="remind" checked />
+                            <span class="gl-v2-inv-21b-option-body">
+                                <span class="gl-v2-inv-21b-option-title">Herinneren</span>
+                                <span class="gl-v2-inv-21b-option-desc">Per ondertekenaar op de dossierpagina — dit opent die pagina.</span>
+                            </span>
+                        </label>
+                        <label class="gl-v2-inv-21b-option">
+                            <input type="radio" name="gl-v2-inv-21b-option" value="upload" />
+                            <span class="gl-v2-inv-21b-option-body">
+                                <span class="gl-v2-inv-21b-option-title">Getekende versie opladen</span>
+                                <span class="gl-v2-inv-21b-option-desc">Het document werd op papier of extern ondertekend. Laad het ondertekende PDF op; het dossier wordt afgesloten.</span>
+                            </span>
+                        </label>
+                        <div class="gl-v2-inv-21b-extra" data-inv-21b-extra="upload" hidden>
+                            <div class="gl-v2-field gl-v2-field-full">
+                                <label class="gl-v2-field-label" for="gl-v2-inv-21b-file">Ondertekend document (PDF)</label>
+                                <div class="gl-v2-field-box"><input type="file" id="gl-v2-inv-21b-file" accept="application/pdf" class="gl-v2-field-input" /></div>
+                            </div>
+                        </div>
+                        <label class="gl-v2-inv-21b-option">
+                            <input type="radio" name="gl-v2-inv-21b-option" value="decline" />
+                            <span class="gl-v2-inv-21b-option-body">
+                                <span class="gl-v2-inv-21b-option-title">Weigering registreren</span>
+                                <span class="gl-v2-inv-21b-option-desc">Per ondertekenaar op de dossierpagina (de ondertekenaar liet buiten CPM weten niet te tekenen) — dit opent die pagina.</span>
+                            </span>
+                        </label>
+                        <label class="gl-v2-inv-21b-option">
+                            <input type="radio" name="gl-v2-inv-21b-option" value="cancel" />
+                            <span class="gl-v2-inv-21b-option-body">
+                                <span class="gl-v2-inv-21b-option-title">Annuleren</span>
+                                <span class="gl-v2-inv-21b-option-desc">Het hele ondertekeningsdossier wordt geannuleerd; alle links worden ongeldig.</span>
+                            </span>
+                        </label>
+                        <div class="gl-v2-inv-21b-extra" data-inv-21b-extra="cancel" hidden>
+                            <div class="gl-v2-field gl-v2-field-full">
+                                <label class="gl-v2-field-label" for="gl-v2-inv-21b-cancel-reason">Reden</label>
+                                <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea id="gl-v2-inv-21b-cancel-reason" class="gl-v2-field-input" maxlength="1000" placeholder="bv. Wijzigingsopdracht wordt aangepast op vraag van de klant"></textarea></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-inv-21b-confirm">Herinnering versturen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script id="gl-v2-inv-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "previewUrl": "@Url.Action("PreviewInvoices")",
+        "makeInvoicesUrl": "@Url.Action("MakeInvoices")",
+        "makeInvoicesCoUrl": "@Url.Action("MakeInvoicesCO")",
+        "dossierUrl": "@Url.Action("Dossier", "SigningAdmin", new { id = "__CASEID__" })",
+        "cancelUrl": "@Url.Action("Cancel", "SigningAdmin")",
+        "uploadSignedUrl": "@Url.Action("UploadSigned", "SigningAdmin")"
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-invoicing.js" asp-append-version="true"></script>
+}

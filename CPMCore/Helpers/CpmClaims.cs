@@ -11,6 +11,22 @@ public static class CpmClaims
     public const string EntraObjectId = "cpm:entra-oid";
     public const string Permission = "cpm:permission";
     public const string UserType = "cpm:user-type"; // "internal" | "contractor" | "customer"
+    public const string AuthProvider = "cpm:auth-provider"; // zie AuthProviders
+}
+
+/// <summary>Waarden van de <see cref="CpmClaims.AuthProvider"/>-claim en van UserGuestInvitation.Provider.</summary>
+public static class AuthProviders
+{
+    public const string Entra  = "Entra";
+    public const string Google = "Google";
+}
+
+/// <summary>Naam van het tweede OpenID Connect-schema (rechtstreeks naar Google, buiten Entra om).
+/// Wordt enkel geregistreerd als Google:ClientId en Google:ClientSecret geconfigureerd zijn.</summary>
+public static class GoogleAuthDefaults
+{
+    public const string Scheme       = "Google";
+    public const string CallbackPath = "/signin-google";
 }
 
 public static class ClaimsPrincipalExtensions
@@ -38,4 +54,12 @@ public static class ClaimsPrincipalExtensions
 
     public static bool IsContractor(this ClaimsPrincipal principal)
         => principal.GetCpmUserType() == "contractor";
+
+    /// <summary>Provider waarmee deze sessie is aangemeld; ontbreekt de claim (sessies van vóór
+    /// de Google-login) dan is het Entra.</summary>
+    public static string GetCpmAuthProvider(this ClaimsPrincipal principal)
+        => principal.FindFirstValue(CpmClaims.AuthProvider) ?? AuthProviders.Entra;
+
+    public static bool IsGoogleLogin(this ClaimsPrincipal principal)
+        => principal.GetCpmAuthProvider() == AuthProviders.Google;
 }

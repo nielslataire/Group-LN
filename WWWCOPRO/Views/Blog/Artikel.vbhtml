@@ -148,6 +148,23 @@ End If
                                 @<div class="artikel-blok-tekst">@Html.Raw(blok.RijkeTekst)</div>
                             End If
                         </div>
+                    ElseIf blok.BlokType = "foto" Then
+                        If Not String.IsNullOrEmpty(blok.FotoBestand) Then
+                            @<text>
+                                <div class="artikel-blok-foto">
+                                    <img src="@blok.FotoBestand" alt="@(If(Not String.IsNullOrEmpty(blok.Titel), blok.Titel, titel))" />
+                                </div>
+                                @If Not String.IsNullOrEmpty(blok.Titel) Then
+                                    @<p class="artikel-blok-foto-bijschrift">@blok.Titel</p>
+                                End If
+                            </text>
+                        End If
+                    ElseIf blok.BlokType = "knop" Then
+                        If Not String.IsNullOrEmpty(blok.KnopTekst) AndAlso Not String.IsNullOrEmpty(blok.KnopUrl) Then
+                            @<div class="artikel-blok-knop">
+                                <a href="@blok.KnopUrl" class="artikel-knop-btn" target="_blank" rel="noopener">@blok.KnopTekst</a>
+                            </div>
+                        End If
                     ElseIf Not String.IsNullOrEmpty(blok.FotoBestand) Then
                         fotoTeller = fotoTeller + 1
                         @If fotoTeller Mod 2 = 1 Then

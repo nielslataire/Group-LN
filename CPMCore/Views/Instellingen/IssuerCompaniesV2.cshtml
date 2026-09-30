@@ -1,0 +1,68 @@
+@model IReadOnlyList<CPMCore.Models.Instellingen.IssuerCompanyListItemV2Vm>
+@*
+    gl-v2 — Instellingen/Mijn bedrijven (design-handoff punt 24b, "CRM Instellingen.dc.html"): "de
+    stap tussen overzicht en bewerken, koppeling en standaarden per bedrijf in één oogopslag". Eén
+    tabel, de hele rij is de link (data-detail-url, gedeeld met initClickableRows(), gl-v2-shell.js —
+    zelfde patroon als Instellingen/IndexV2's kaarten en de bestaande Leveranciers-/Klanten-tabellen).
+    Standaardrekening en Octopus-status komen niet uit de bestaande IssuerCompanyVM — zie
+    InstellingenController.IssuerCompanies() voor hoe die twee kolommen apart opgebouwd worden.
+*@
+@{
+    ViewData["Title"] ??= "Mijn bedrijven";
+    ViewData["PageIcon"] = "ph ph-buildings";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-issuercompanies.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("IssuerCompaniesCreate", "Instellingen")" class="gl-v2-btn gl-v2-btn-primary">
+        <i class="ph ph-plus" aria-hidden="true"></i>Nieuw bedrijf
+    </a>
+}
+
+<div class="gl-v2-ic-card">
+    <div class="gl-v2-ic-head">
+        <span>BEDRIJF</span>
+        <span>BTW-NUMMER</span>
+        <span>STANDAARDREKENING</span>
+        <span>SJABLOON</span>
+        <span>OCTOPUS</span>
+        <span>STATUS</span>
+        <span></span>
+    </div>
+    @foreach (var c in Model)
+    {
+        <div class="gl-v2-ic-row" data-detail-url="@c.EditUrl">
+            <div class="gl-v2-ic-name">
+                <span class="gl-v2-ic-logo">logo</span>
+                <span class="gl-v2-ic-name-text">
+                    <strong>@c.Name</strong>
+                    @if (!string.IsNullOrEmpty(c.Sub))
+                    {
+                        <span>@c.Sub</span>
+                    }
+                </span>
+            </div>
+            <span class="gl-v2-ic-mono">@(c.VatNumber ?? "—")</span>
+            <span class="gl-v2-ic-mono">@c.Iban</span>
+            <span class="gl-v2-ic-template">@c.TemplateLabel</span>
+            <span class="gl-v2-ic-meta @c.OctopusTone"><span class="gl-v2-ic-meta-dot"></span>@c.OctopusLabel</span>
+            @if (c.IsExternalCoordinationDefault)
+            {
+                <span class="gl-v2-ic-status is-external">EXTERN</span>
+            }
+            else if (c.IsActive)
+            {
+                <span class="gl-v2-ic-status is-active">ACTIEF</span>
+            }
+            else
+            {
+                <span class="gl-v2-ic-status is-inactive">INACTIEF</span>
+            }
+            <i class="ph ph-caret-right gl-v2-ic-chevron" aria-hidden="true"></i>
+        </div>
+    }
+</div>
+<span class="gl-v2-ic-footnote">"Extern" = standaard voor coördinatiecontracten zonder eigen facturatiebedrijf. Er kan er maar één zo gemarkeerd zijn.</span>

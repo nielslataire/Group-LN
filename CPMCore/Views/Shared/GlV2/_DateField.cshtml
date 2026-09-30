@@ -35,12 +35,17 @@
             </div>
         </div>
     </div>
+    @* data-role="field-error" — vaste, herbruikbare foutslot (initieel verborgen als er geen server-
+       fout is): het gedeelde Foutoverzicht (gl-v2-error-summary.js, punt 24) hergebruikt dit element
+       i.p.v. er zelf nog een aan toe te voegen — anders zou "Verkoopdatum is verplicht" twee keer
+       staan (deze span + de eigen [data-role='required-help'] van het overzicht). Zie DESIGN.md
+       "Foutoverzicht (punt 24) — gedeeld component", veldcontract punt 1. *@
     @if (Model.HasError)
     {
-        <span class="gl-v2-field-help" data-role="date-error">@Model.ErrorMessage</span>
+        <span class="gl-v2-field-help" data-role="field-error">@Model.ErrorMessage</span>
     }
     else
     {
-        <span class="gl-v2-field-help" data-role="date-error" hidden></span>
+        <span class="gl-v2-field-help" data-role="field-error" hidden></span>
     }
 </div>

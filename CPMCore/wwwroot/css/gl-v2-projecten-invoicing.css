@@ -1,0 +1,368 @@
+/* gl-v2 — Projecten/InvoicingV2 (design-handoff punt 20-22, "Facturatie"), eerste pagina van de
+   Financieel-herwerking (plan "smooth-greeting-origami"). Page-specifiek zoals elke gl-v2-lijstpagina
+   (gl-v2-projecten-detailcoordinatie.css is het directe sjabloon voor kaart/tabel/selectiebalk-chroom),
+   maar met een eigen klassen-namespace (gl-v2-inv-*) i.p.v. de coördinatie-CSS te herladen — zelfde
+   precedent als Leveranciers t.o.v. Invoices. Alles hangt aan de gedeelde gl-v2-tokens/-componenten
+   (KPI-strook, tabbar, badge, kaart, knop, ⋯-menu, modal — gl-v2-shell.css). */
+
+#gl-v2-inv-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+#gl-v2-inv-root > [data-inv-panel] { flex: none; }
+[data-inv-panel][hidden] { display: none !important; }
+
+/* Elke tab-panel kan meerdere kaarten bevatten (filterpillen + N account-kaarten in "Te factureren"),
+   i.t.t. gl-v2-projecten-detailcoordinatie.css waar elke [data-co-panel] maar één kaart-partial had —
+   zonder deze regel plakken de pillen en de kaarten tegen elkaar (enkel #gl-v2-inv-root's eigen gap
+   werkt tussen de <section>'s zelf, niet tussen wat daarbinnen staat). */
+[data-inv-panel] { display: flex; flex-direction: column; gap: 16px; }
+
+/* Kaarten per klantenaccount: altijd één kolom (design-handoff 20a toont ze zo, ook op desktop —
+   bewust geen twee-koloms-grid op brede schermen). */
+.gl-v2-inv-cards { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Filterpillen (Alles/Schijven/Meer- en minwerken) ─────────────────────────────────────────────── */
+.gl-v2-inv-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gl-v2-inv-filters-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); margin-right: 4px; }
+.gl-v2-inv-filters-spacer { flex: 1; }
+.gl-v2-inv-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-inv-legend-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.gl-v2-inv-legend-dot { display: inline-block; width: 10px; height: 6px; border-radius: 2px; }
+.gl-v2-inv-legend-dot.is-invoiced { background: var(--gl-v2-primary); }
+.gl-v2-inv-legend-dot.is-open { background: var(--gl-v2-gold); }
+.gl-v2-inv-legend-dot.is-not-reached { background: var(--gl-v2-neutral-tint); }
+.gl-v2-inv-filter {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 16px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 500 12px var(--gl-v2-font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.gl-v2-inv-filter:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-inv-filter.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+.gl-v2-inv-filter:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+
+/* ── Kleine hulpklasjes (zelfde als gl-v2-co-tabular/-small e.d., eigen namespace) ────────────────── */
+.gl-v2-inv-tabular { font-variant-numeric: tabular-nums; }
+.gl-v2-inv-small { height: 32px; padding: 0 12px; font-size: 11.5px; }
+.gl-v2-inv-invoice-link { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; font-variant-numeric: tabular-nums; }
+.gl-v2-inv-invoice-link:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+
+.gl-v2-inv-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    flex: none;
+    margin-bottom: 10px;
+}
+.gl-v2-inv-notice.is-warning { border-color: #EBD9B4; }
+.gl-v2-inv-notice-icon { color: var(--gl-v2-warning); font-size: 17px; display: flex; flex: none; }
+.gl-v2-inv-notice-desc { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; flex: 1 1 260px; }
+
+/* ── Kaarten per klantenaccount (20a: geen .gl-v2-card-body — de tabel loopt vlak tot de kaartrand,
+   zelfde als het wireframe; enkel de kop houdt de normale kaart-padding aan). ───────────────────── */
+.gl-v2-inv-card { flex: none; }
+.gl-v2-inv-card .gl-v2-card-header { flex-wrap: wrap; row-gap: 8px; }
+.gl-v2-inv-card.is-blocked-only, .gl-v2-inv-card.is-empty { opacity: .85; }
+.gl-v2-inv-card[hidden] { display: none !important; }
+.gl-v2-inv-card-empty { padding: 18px 20px 22px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Verloopbalk per kaart (20a): gefactureerd / te factureren / nog niet vrijgegeven —
+   InvoicingPaymentStages.Invoicable is de enige "nog niet bereikt"-indicator die het schema heeft. ── */
+.gl-v2-inv-progress { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex: none; }
+.gl-v2-inv-progress-track { display: flex; gap: 2px; width: 200px; height: 8px; }
+.gl-v2-inv-progress-fill { display: block; height: 100%; border-radius: 2px; }
+.gl-v2-inv-progress-fill.is-invoiced { background: var(--gl-v2-primary); }
+.gl-v2-inv-progress-fill.is-open { background: var(--gl-v2-gold); }
+.gl-v2-inv-progress-fill.is-not-reached { background: var(--gl-v2-neutral-tint); }
+.gl-v2-inv-progress-label { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+
+/* ── Kaartvoet: altijd een totaal, per eigenaar als er mede-eigenaars zijn (Niels, 2026-09-30) ────── */
+.gl-v2-inv-card-footer { display: flex; flex-direction: column; gap: 4px; padding: 10px 20px 12px; border-top: 1px solid var(--gl-v2-hairline-soft); background: #FAFBF8; }
+.gl-v2-inv-card-footer-row { display: flex; align-items: center; justify-content: flex-end; gap: 14px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-inv-card-footer-row b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-inv-card-footer-row span:empty { display: none; }
+
+.gl-v2-inv-lastbadge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: #F6EEDC;
+    font: 700 9px var(--gl-v2-font-sans);
+    letter-spacing: .05em;
+    color: var(--gl-v2-warning);
+}
+.gl-v2-inv-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* .gl-v2-card-header-title is an <h2> — shell.css never resets its UA margin because every other
+   page has it alone in a flex row (align-items:center just absorbs the margin into that one item's
+   own box, invisibly). Here it's stacked above the subtitle, so that ~0.8em margin stacked on top of
+   the 2px gap above (Niels, 2026-09-30). */
+.gl-v2-inv-card-title .gl-v2-card-header-title { margin: 0; }
+.gl-v2-inv-card-subtitle { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-inv-owners { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 6px; }
+.gl-v2-inv-owner-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 12px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    white-space: nowrap;
+}
+.gl-v2-inv-owner-pill b { font-weight: 700; color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+.gl-v2-inv-card-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    background: #FAFBF8;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-danger);
+}
+.gl-v2-inv-card-warning i { font-size: 15px; flex: none; }
+
+/* ── Tabel (zelfde opbouw als gl-v2-co-table, eigen rand-padding i.p.v. een kaart-body) ────────────── */
+.gl-v2-inv-table-scroll { overflow-x: auto; }
+.gl-v2-inv-table { width: 100%; border-collapse: collapse; }
+.gl-v2-inv-table thead th {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    text-align: left;
+    background: #F7F9F5;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+.gl-v2-inv-table th:first-child, .gl-v2-inv-table td:first-child { padding-left: 20px; }
+.gl-v2-inv-table th:last-child, .gl-v2-inv-table td:last-child { padding-right: 20px; }
+.gl-v2-inv-table th.is-right, .gl-v2-inv-table td.is-right { text-align: right; }
+.gl-v2-inv-table td {
+    padding: 9px 10px;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+.gl-v2-inv-table th.is-check, .gl-v2-inv-table td.is-check { width: 34px; padding-right: 0; }
+.gl-v2-inv-table .gl-v2-inv-desc { min-width: 200px; }
+.gl-v2-inv-row:hover td { background: var(--gl-v2-bg); }
+.gl-v2-inv-row.is-selected td { background: var(--gl-v2-primary-tint); }
+.gl-v2-inv-row.is-selected:hover td { background: var(--gl-v2-primary-tint); }
+.gl-v2-inv-row.is-blocked td { background: #FBF3F3; }
+.gl-v2-inv-row.is-blocked:hover td { background: #FBF3F3; }
+.gl-v2-inv-row[hidden] { display: none !important; }
+
+/* Groepskop per betalingsschijf (Niels 2026-09-30: "group the inv-row by paymentstages") — een lichte
+   sectierij, geen echte th/thead (blijft binnen tbody zodat sorteren/filteren op rijniveau blijft werken). */
+.gl-v2-inv-group-header td {
+    padding: 9px 16px 5px;
+    border-bottom: 0;
+    font: 700 10.5px var(--gl-v2-font-sans);
+    letter-spacing: .03em;
+    color: var(--gl-v2-muted-soft);
+    background: transparent;
+}
+.gl-v2-inv-group-header:first-child td { padding-top: 4px; }
+.gl-v2-inv-unit { color: var(--gl-v2-muted-soft); font-weight: 450; }
+.gl-v2-inv-muted { color: var(--gl-v2-muted); }
+.gl-v2-inv-desc-title { display: block; color: var(--gl-v2-ink); }
+.gl-v2-inv-row.is-blocked .gl-v2-inv-desc-title { color: var(--gl-v2-muted-soft); }
+.gl-v2-inv-desc-sub { display: block; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); margin-top: 2px; }
+.gl-v2-inv-desc-action { font-weight: 600; color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-inv-desc-action:hover { text-decoration: underline; }
+
+/* ── Kolom "Soort": dashed placeholder i.p.v. checkbox op een geblokkeerde rij ───────────────────── */
+.gl-v2-inv-check-placeholder {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1.5px dashed var(--gl-v2-hairline);
+    box-sizing: border-box;
+}
+
+/* Checkbox — zelfde zelfstandige opbouw als gl-v2-co-check (_LayoutV2 laadt theme.css niet). */
+.gl-v2-inv-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; }
+.gl-v2-inv-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
+.gl-v2-inv-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
+.gl-v2-inv-check label:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-radius: 5px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+.gl-v2-inv-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
+.gl-v2-inv-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-inv-check input[type="checkbox"]:checked + label:after {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    inset: 0;
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+    color: var(--gl-v2-surface);
+}
+.gl-v2-inv-check input[type="checkbox"]:indeterminate + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-inv-check input[type="checkbox"]:indeterminate + label:after {
+    content: "";
+    position: absolute;
+    left: 4px; right: 4px; top: 8px; height: 2px;
+    border-radius: 1px;
+    background: var(--gl-v2-surface);
+}
+.gl-v2-inv-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+/* Verplicht meegetrokken door de eindafrekening (checked + disabled, JS) — nog steeds leesbaar aangevinkt,
+   maar het handje verdwijnt zodat duidelijk is dat dit niet meer los uit te vinken valt. */
+.gl-v2-inv-check input[type="checkbox"]:disabled + label { cursor: not-allowed; }
+.gl-v2-inv-check input[type="checkbox"]:disabled:checked + label:before { background: var(--gl-v2-gold); border-color: var(--gl-v2-gold); }
+
+/* ── Sticky selectiebalk (zelfde donkere balk als gl-v2-co-selbar, maar boven de kaarten i.p.v.
+   onderaan — Niels, 2026-09-30: de balk moet zichtbaar blijven terwijl je door meerdere account-
+   kaarten scrolt, i.p.v. pas bij de allerlaatste kaart op te duiken). ─────────────────────────────── */
+.gl-v2-inv-selbar[hidden], .gl-v2-inv-selbar-part[hidden], .gl-v2-inv-selbar-plus[hidden] { display: none !important; }
+.gl-v2-inv-selbar {
+    position: sticky;
+    top: 12px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-ink);
+    color: var(--gl-v2-surface);
+    box-shadow: 0 18px 40px -18px rgba(20, 26, 19, .7);
+    flex: none;
+}
+.gl-v2-inv-selbar-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); flex: none; }
+.gl-v2-inv-selbar-parts { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font: 500 13px var(--gl-v2-font-sans); }
+.gl-v2-inv-selbar-part { font-variant-numeric: tabular-nums; }
+.gl-v2-inv-selbar-part b { font-weight: 600; }
+.gl-v2-inv-selbar-plus { color: rgba(255, 255, 255, .55); }
+.gl-v2-inv-selbar-spacer { flex: 1; }
+.gl-v2-inv-selbar-total { display: inline-flex; align-items: baseline; gap: 6px; font: 450 11px var(--gl-v2-font-sans); color: rgba(255, 255, 255, .6); }
+.gl-v2-inv-selbar-total b { font: 600 17px var(--gl-v2-font-sans); color: var(--gl-v2-surface); font-variant-numeric: tabular-nums; }
+.gl-v2-inv-selbar-clear { border: 0; background: transparent; color: rgba(255, 255, 255, .75); font: 600 12px var(--gl-v2-font-sans); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.gl-v2-inv-selbar-clear:hover { color: var(--gl-v2-surface); background: rgba(255, 255, 255, .1); }
+.gl-v2-inv-selbar-clear:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+.gl-v2 .gl-v2-btn.gl-v2-inv-selbar-go { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-btn.gl-v2-inv-selbar-go:hover { background: #E4EFDD; border-color: #E4EFDD; box-shadow: none; }
+.gl-v2 .gl-v2-btn.gl-v2-inv-selbar-go:disabled { background: rgba(255, 255, 255, .15); border-color: transparent; color: rgba(255, 255, 255, .5); }
+
+/* ── Preview-modal (21a/22i) ──────────────────────────────────────────────────────────────────────── */
+.gl-v2-inv-preview-owner { padding: 12px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-inv-preview-owner:last-child { border-bottom: 0; }
+.gl-v2-inv-preview-owner-head { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; }
+.gl-v2-inv-preview-owner-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-inv-preview-owner-pct { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-inv-preview-line { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-inv-preview-line b { color: var(--gl-v2-ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-inv-preview-total { display: flex; justify-content: space-between; gap: 12px; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-inv-preview-total b { font-variant-numeric: tabular-nums; }
+.gl-v2-inv-preview-grandtotal { display: flex; justify-content: space-between; gap: 12px; padding-top: 10px; margin-top: 6px; font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-inv-preview-grandtotal b { font-variant-numeric: tabular-nums; }
+.gl-v2-inv-preview-empty { padding: 24px 0; text-align: center; color: var(--gl-v2-muted); font: 450 13px var(--gl-v2-font-sans); }
+
+/* ── Scherm 21b: 4-opties-modal ───────────────────────────────────────────────────────────────────── */
+.gl-v2-inv-21b-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    cursor: pointer;
+}
+.gl-v2-inv-21b-option:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-inv-21b-option input[type="radio"] { margin-top: 3px; flex: none; }
+.gl-v2-inv-21b-option-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-inv-21b-option-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-inv-21b-option-desc { font: 450 11.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-inv-21b-options { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-inv-21b-extra[hidden] { display: none !important; }
+.gl-v2-inv-21b-extra { margin-top: 10px; padding-left: 42px; }
+
+/* ── Tablet: horizontale scroll, geen kaart-stack (>= 1024px blijft tabel; 768-1023.98px ook nog tabel maar scrollend) ── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-inv-owners { font-size: 11px; }
+}
+
+/* ── Mobiel (<768px): kaarten i.p.v. tabelrijen, zelfde recept als gl-v2-co-table ────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-inv-table-scroll { margin: 0; padding: 0; overflow: visible; }
+    .gl-v2-inv-table, .gl-v2-inv-table tbody, .gl-v2-inv-table tfoot, .gl-v2-inv-table tr, .gl-v2-inv-table td { display: block; }
+    .gl-v2-inv-table thead { display: none; }
+
+    .gl-v2-inv-table tr.gl-v2-inv-row {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 14px;
+        padding: 12px 14px;
+        margin-top: 8px;
+        border-radius: var(--gl-v2-radius-md);
+        background: var(--gl-v2-surface);
+        border: 1px solid var(--gl-v2-hairline-soft);
+        box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 10px 22px -18px rgba(44, 59, 42, .4);
+    }
+    .gl-v2-inv-table tr.gl-v2-inv-row td { padding: 0; border: 0; background: transparent; width: auto; }
+    .gl-v2-inv-row:hover td, .gl-v2-inv-row.is-selected td, .gl-v2-inv-row.is-blocked td { background: transparent; }
+    .gl-v2-inv-table tr.gl-v2-inv-row.is-selected { background: var(--gl-v2-primary-tint); }
+    .gl-v2-inv-table tr.gl-v2-inv-row.is-blocked { background: #FBF3F3; border-color: #EBD3D3; }
+    .gl-v2-inv-table td.is-check { order: -2; }
+    .gl-v2-inv-table td.gl-v2-inv-desc { flex: 1 1 100%; min-width: 0; order: 0; }
+    .gl-v2-inv-table td.is-right { text-align: left; }
+    .gl-v2-inv-table td[data-label]:not([data-label=""])::before {
+        content: attr(data-label);
+        display: inline-block;
+        margin-right: 6px;
+        font: 600 9px var(--gl-v2-font-sans);
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--gl-v2-muted-light);
+    }
+    .gl-v2-inv-table tfoot tr { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 12px 14px 0; }
+    .gl-v2-inv-table tfoot td { display: block; padding: 0; border: 0; width: auto; }
+    .gl-v2-inv-table tfoot td.is-check, .gl-v2-inv-table tfoot td:empty { display: none; }
+
+    .gl-v2-inv-card-warning { padding: 11px 14px; }
+
+    .gl-v2-inv-selbar-spacer { display: none; }
+    .gl-v2-inv-selbar-total { flex: 1 1 auto; }
+    .gl-v2-inv-selbar .gl-v2-btn { height: 44px; flex: 1 1 100%; justify-content: center; }
+    .gl-v2-inv-selbar-clear { min-height: 44px; }
+
+    .gl-v2-inv-21b-extra { padding-left: 0; }
+}
+
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+    .gl-v2-inv-selbar { margin-right: 0; }
+}
+
+@media print {
+    .gl-v2-inv-selbar, .gl-v2-inv-filters { display: none !important; }
+}

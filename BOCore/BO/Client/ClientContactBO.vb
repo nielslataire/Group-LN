@@ -99,6 +99,7 @@ Public Class ClientContactBO
     End Property
     Private m_phone As String
     <UIHint("Phone")>
+    <GlV2Phone>
     <Display(Name:="Telefoon")>
     Public Property Phone() As String
         Get
@@ -110,6 +111,7 @@ Public Class ClientContactBO
     End Property
     Private m_cellphone As String
     <UIHint("Cellphone")>
+    <GlV2Phone>
     <Display(Name:="GSM")>
     Public Property Cellphone() As String
         Get

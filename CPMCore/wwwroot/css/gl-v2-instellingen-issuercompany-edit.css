@@ -1,0 +1,71 @@
+/* gl-v2 — Instellingen/IssuerCompaniesEditV2 ("Bedrijf bewerken", design-handoff punt 24c). Enkel
+   de tab "Algemeen" heeft hier eigen lay-out nodig (Identiteit/Logo links, Contact & adres rechts) —
+   de vijf uitgestelde tabs hergebruiken enkel de gedeelde .gl-v2-notice-expanded-component
+   (gl-v2-shell.css). Zie DESIGN.md "Instellingen/IssuerCompaniesEditV2" voor de scope-uitleg. */
+.gl-v2-ice-required-hint {
+    font: 450 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    margin: 10px 0 14px;
+}
+.gl-v2-ice-required-star { color: var(--gl-v2-danger); }
+
+.gl-v2-ice-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+.gl-v2-ice-col { display: flex; flex-direction: column; gap: 14px; }
+
+.gl-v2-ice-subhead {
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    letter-spacing: .14em;
+    padding-top: 12px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-col-12.gl-v2-ice-subhead:first-child { padding-top: 0; border-top: 0; }
+
+.gl-v2-ice-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+
+.gl-v2-ice-logo-row { display: flex; gap: 16px; align-items: center; padding: 18px 20px 20px; }
+.gl-v2-ice-logo-preview {
+    width: 200px;
+    height: 110px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-md);
+    border: 1.5px dashed var(--gl-v2-dashed);
+    background: var(--gl-v2-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.gl-v2-ice-logo-preview span { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ice-logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.gl-v2-ice-logo-upload { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gl-v2-ice-logo-drop {
+    height: 74px;
+    border: 1.5px dashed rgba(0, 83, 45, .3);
+    border-radius: var(--gl-v2-radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+}
+.gl-v2-ice-logo-drop:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-ice-logo-drop-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-ice-logo-drop-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ice-logo-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+
+@media (max-width: 1023.98px) {
+    .gl-v2-ice-cols { grid-template-columns: 1fr; }
+}

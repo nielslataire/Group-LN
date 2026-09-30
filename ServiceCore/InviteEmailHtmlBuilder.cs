@@ -25,16 +25,26 @@ public static class InviteEmailHtmlBuilder
         string loginUrl,
         string? redeemUrl,
         DateTime sentDate,
-        string companyName = "Group LN")
+        string companyName = "Group LN",
+        bool googleLoginEnabled = false)
     {
         var sb = new StringBuilder();
         AppendHeader(sb, companyName, sentDate);
+
+        // Met Google-login actief is de loginpagina (keuze Microsoft/Google) de juiste landingsplek;
+        // de Microsoft-redeemlink blijft dan als hulplijn onderaan staan. Zonder Google blijft alles
+        // exact zoals voorheen (redeemlink als primaire knop).
+        var primaryHref  = googleLoginEnabled ? loginUrl : (redeemUrl ?? loginUrl);
+        var primaryLabel = googleLoginEnabled ? "Naar het portaal" : "Aanmelden met Microsoft";
+        var accountWording = googleLoginEnabled
+            ? "uw <strong>Microsoft-account</strong> of uw <strong>Google-account</strong>"
+            : "uw <strong>Microsoft-account</strong>";
 
         // ── Greeting ─────────────────────────────────────────────────────────
         sb.Append($@"
 <p style=""margin:0 0 14px;font-size:15px;color:{TextMain};font-family:{Font};"">Beste <strong style=""color:{GreenDark};font-weight:600;"">{HtmlEnc(recipientName)}</strong>,</p>
 <p style=""margin:0 0 14px;font-size:13.5px;color:{TextMain};line-height:1.65;font-family:{Font};"">{HtmlEnc(companyName)} werkt met een online <strong>aannemersportaal</strong>. Daar volgt u eenvoudig uw werven op: u ziet uw <strong>openstaande punten</strong>, kunt deze <strong>zelf beheren</strong> en bijkomende info rechtstreeks doorsturen &mdash; zonder telkens te mailen.</p>
-<p style=""margin:0 0 28px;font-size:13.5px;color:{TextMain};line-height:1.65;font-family:{Font};"">Aanmelden is eenvoudig en veilig: u logt in met uw <strong>Microsoft-account</strong> dat gekoppeld is aan uw e-mailadres <strong>{HtmlEnc(recipientEmail)}</strong>. U heeft dus geen nieuw wachtwoord aan te maken of te onthouden.</p>");
+<p style=""margin:0 0 28px;font-size:13.5px;color:{TextMain};line-height:1.65;font-family:{Font};"">Aanmelden is eenvoudig en veilig: u logt in met {accountWording} dat gekoppeld is aan uw e-mailadres <strong>{HtmlEnc(recipientEmail)}</strong>. U heeft dus geen nieuw wachtwoord aan te maken of te onthouden.</p>");
 
         // ── CTA card ──────────────────────────────────────────────────────────
         sb.Append($@"
@@ -53,11 +63,11 @@ public static class InviteEmailHtmlBuilder
       </table>
 
       <div style=""font-size:20px;font-weight:700;color:{TextMain};margin-bottom:8px;font-family:{Font};line-height:1.3;"">Activeer uw toegang in &eacute;&eacute;n klik</div>
-      <div style=""font-size:13px;color:{TextSoft};line-height:1.6;margin-bottom:24px;font-family:{Font};"">Klik op de knop hieronder en meld u aan met uw Microsoft-account.<br/>Uw toegang wordt meteen geactiveerd.</div>
+      <div style=""font-size:13px;color:{TextSoft};line-height:1.6;margin-bottom:24px;font-family:{Font};"">{(googleLoginEnabled ? "Klik op de knop hieronder en kies Microsoft of Google." : "Klik op de knop hieronder en meld u aan met uw Microsoft-account.")}<br/>Uw toegang wordt meteen geactiveerd.</div>
 
-      {BuildLoginButtonHtml(redeemUrl ?? loginUrl)}
+      {BuildLoginButtonHtml(primaryHref, primaryLabel)}
 
-      <div style=""margin-top:14px;font-size:11.5px;color:{Muted};font-family:{Font};"">Inloggen via uw Microsoft-account &nbsp;&middot;&nbsp; {HtmlEnc(recipientEmail)}</div>
+      <div style=""margin-top:14px;font-size:11.5px;color:{Muted};font-family:{Font};"">{(googleLoginEnabled ? "Inloggen via Microsoft of Google" : "Inloggen via uw Microsoft-account")} &nbsp;&middot;&nbsp; {HtmlEnc(recipientEmail)}</div>
     </td>
   </tr>
 </table>");
@@ -75,16 +85,24 @@ public static class InviteEmailHtmlBuilder
   </tr>
   <tr>
     <td bgcolor=""#ffffff"" style=""background:#ffffff;padding:16px 18px;border-bottom:1px solid {BorderSoft};"">
-      {BuildStepHtml(1,
-          "Klik op &ldquo;Aanmelden met Microsoft&rdquo;",
-          "U wordt doorgestuurd naar de beveiligde aanmeldpagina van Microsoft.")}
+      {(googleLoginEnabled
+          ? BuildStepHtml(1,
+              "Klik op &ldquo;Naar het portaal&rdquo;",
+              "U komt op de aanmeldpagina van het portaal, met de keuze tussen Microsoft en Google.")
+          : BuildStepHtml(1,
+              "Klik op &ldquo;Aanmelden met Microsoft&rdquo;",
+              "U wordt doorgestuurd naar de beveiligde aanmeldpagina van Microsoft."))}
     </td>
   </tr>
   <tr>
     <td bgcolor=""#ffffff"" style=""background:#ffffff;padding:16px 18px;border-bottom:1px solid {BorderSoft};"">
-      {BuildStepHtml(2,
-          "Log in met uw e-mailadres",
-          $"Gebruik het Microsoft-account gekoppeld aan <strong>{HtmlEnc(recipientEmail)}</strong>. Heeft u nog geen Microsoft-account met dit adres? Dan maakt u er gratis &eacute;&eacute;n aan in enkele klikken.")}
+      {(googleLoginEnabled
+          ? BuildStepHtml(2,
+              "Kies Microsoft of Google en log in met uw e-mailadres",
+              $"Gebruik het account gekoppeld aan <strong>{HtmlEnc(recipientEmail)}</strong>. Is dat een Google-adres (Gmail of Google Workspace)? Kies dan &ldquo;Aanmelden met Google&rdquo;. Anders kiest u &ldquo;Aanmelden met Microsoft&rdquo;.")
+          : BuildStepHtml(2,
+              "Log in met uw e-mailadres",
+              $"Gebruik het Microsoft-account gekoppeld aan <strong>{HtmlEnc(recipientEmail)}</strong>. Heeft u nog geen Microsoft-account met dit adres? Dan maakt u er gratis &eacute;&eacute;n aan in enkele klikken."))}
     </td>
   </tr>
   <tr>
@@ -135,7 +153,7 @@ public static class InviteEmailHtmlBuilder
 <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border:1px solid {Border};border-radius:8px;border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr>
     <td bgcolor=""#fafbfc"" style=""background:#fafbfc;padding:12px 18px;border-radius:8px 8px 0 0;border-bottom:1px solid {Border};"">
-      <span style=""font-size:12px;font-weight:700;color:{TextMain};font-family:{Font};"">&#128279;&nbsp; Werkt de knop niet?</span>
+      <span style=""font-size:12px;font-weight:700;color:{TextMain};font-family:{Font};"">&#128279;&nbsp; {(googleLoginEnabled ? "Gebruikt u een Microsoft-account en lukt het aanmelden niet? Gebruik dan deze uitnodigingslink van Microsoft:" : "Werkt de knop niet?")}</span>
     </td>
   </tr>
   <tr>
@@ -154,7 +172,7 @@ public static class InviteEmailHtmlBuilder
 <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr>
     <td bgcolor=""{AmberBg}"" style=""background:{AmberBg};border-left:4px solid {AmberBorder};padding:12px 14px;border-radius:0 6px 6px 0;"">
-      <span style=""font-size:12px;color:{AmberText};line-height:1.6;font-family:{Font};""><strong>Goed om te weten:</strong> deze uitnodiging blijft geldig en is persoonlijk. Meld u aan met het e-mailadres waarop u deze mail ontving &mdash; anders krijgt u geen toegang. Aanmelden heeft u maar &eacute;&eacute;n keer te doen; daarna logt u steeds met uw Microsoft-account in.</span>
+      <span style=""font-size:12px;color:{AmberText};line-height:1.6;font-family:{Font};""><strong>Goed om te weten:</strong> deze uitnodiging blijft geldig en is persoonlijk. Meld u aan met het e-mailadres waarop u deze mail ontving &mdash; anders krijgt u geen toegang. Aanmelden heeft u maar &eacute;&eacute;n keer te doen; daarna logt u steeds met {(googleLoginEnabled ? "hetzelfde account (Microsoft of Google)" : "uw Microsoft-account")} in.</span>
     </td>
   </tr>
 </table>");
@@ -173,19 +191,20 @@ public static class InviteEmailHtmlBuilder
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private static string BuildLoginButtonHtml(string href)
+    private static string BuildLoginButtonHtml(string href, string label = "Aanmelden met Microsoft")
     {
-        var safeHref = HtmlEnc(href);
+        var safeHref  = HtmlEnc(href);
+        var safeLabel = HtmlEnc(label);
         return $@"
 <!--[if mso]>
 <v:roundrect xmlns:v=""urn:schemas-microsoft-com:vml"" xmlns:w=""urn:schemas-microsoft-com:office:word""
   href=""{safeHref}"" style=""height:44px;v-text-anchor:middle;width:268px;"" arcsize=""12%"" stroke=""f"" fillcolor=""{Green}"">
   <w:anchorlock/>
-  <center style=""color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;"">Aanmelden met Microsoft</center>
+  <center style=""color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;"">{safeLabel}</center>
 </v:roundrect>
 <![endif]-->
 <!--[if !mso]><!-- -->
-<a href=""{safeHref}"" style=""background:{Green};color:#ffffff;display:inline-block;font-family:{Font};font-size:14px;font-weight:700;line-height:44px;text-align:center;text-decoration:none;width:268px;border-radius:7px;white-space:nowrap;"">Aanmelden met Microsoft</a>
+<a href=""{safeHref}"" style=""background:{Green};color:#ffffff;display:inline-block;font-family:{Font};font-size:14px;font-weight:700;line-height:44px;text-align:center;text-decoration:none;width:268px;border-radius:7px;white-space:nowrap;"">{safeLabel}</a>
 <!--<![endif]-->";
     }
 

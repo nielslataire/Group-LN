@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#E7EDE2;font-family:'IBM Plex Sans',sans-serif}a{color:#00532D}a:hover{color:#B8935A}input::placeholder{color:#9aa898}</style></helmet>
+<section id="t24" style="padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 20px"><a href="#t24" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">24</a><span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#00532D">Instellingen — overzicht, Mijn bedrijven en Bedrijf bewerken in de kaartstandaard van <a href="CRM%20Menu%20Wireframes.dc.html#t19">19</a>. Regel: één lange pagina met veertien kaarten wordt zes tabs, opslaan staat altijd onderaan vast</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="24a" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#24a" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">24a</a>Overzicht — groepen als index links, kaarten in een vast raster van drie, de hele kaart is klikbaar · typ in de zoekbalk</div>
+<div style="width:1500px;max-width:100%;background:#fff;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:flex;min-height:1080px;background:#F2F5EF;gap:12px;padding:12px;box-sizing:border-box">
+<div style="width:72px;flex:none;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:6px">
+<div style="width:40px;height:40px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:9px 'IBM Plex Sans',sans-serif;color:#4A5B48">logo</div>
+<div style="width:36px;height:1.5px;background:rgba(44,59,42,.10);margin:6px 0"></div>
+<sc-for list="{{ rail }}" as="m" hint-placeholder-count="11">
+<div title="{{ m.n }}" style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:{{ m.bg }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)"><svg viewBox="0 0 16 16" style="width:19px;height:19px;fill:none;stroke:{{ m.st }};stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg></div>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:36px;height:36px;flex:none;border-radius:9px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 10.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4z M8 1.8v1.8 M8 12.4v1.8 M1.8 8h1.8 M12.4 8h1.8 M3.6 3.6l1.3 1.3 M11.1 11.1l1.3 1.3 M3.6 12.4l1.3-1.3 M11.1 4.9l1.3-1.3"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0"><div style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A;line-height:1.25">Beheer &amp; instellingen</div><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Dashboard</span><span>/</span><span style="color:#00532D">Instellingen</span></div></div>
+<span style="flex:1"></span>
+<div style="width:340px;height:38px;box-sizing:border-box;border:1px solid rgba(44,59,42,.14);border-radius:9px;background:#F7F9F5;display:flex;align-items:center;gap:8px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg><input value="{{ q }}" onChange="{{ onQ }}" placeholder="Zoek een instelling, bv. btw, peppol, logo …" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A"></input><span style="font:600 10px 'IBM Plex Mono',monospace;color:#7a8a78;padding:2px 6px;border:1px solid rgba(44,59,42,.14);border-radius:5px">/</span></div>
+<div style="width:1px;height:32px;background:rgba(44,59,42,.12)"></div>
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:20px;border:1px solid rgba(44,59,42,.10)"><div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'IBM Plex Sans',sans-serif">NL</div><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Hallo, Niels Lataire</span></div>
+</div>
+<div style="flex:1;display:flex;gap:22px;padding:22px;background:#F7F9F5;align-items:flex-start">
+<div style="width:210px;flex:none;display:flex;flex-direction:column;gap:2px">
+<span style="font:600 9px 'IBM Plex Sans',sans-serif;color:#5a6b58;letter-spacing:.14em;padding:0 10px 8px">ONDERDELEN</span>
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:9px;height:34px;padding:0 10px;border-radius:8px;background:{{ g.navBg }};border-left:3px solid {{ g.navLine }};cursor:pointer" style-hover="background:#EDF2E8"><span style="flex:1;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ g.navCol }}">{{ g.n }}</span><span style="font:600 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ g.count }}</span></div>
+</sc-for>
+<div style="height:1px;background:rgba(44,59,42,.10);margin:12px 10px"></div>
+<span style="font:450 11px/1.5 'IBM Plex Sans',sans-serif;color:#7a8a78;padding:0 10px;text-wrap:pretty">Instellingen gelden voor alle projecten. Wat per bedrijf verschilt, zit in Mijn bedrijven.</span>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:26px">
+<sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+<div style="padding:40px;border:1px dashed rgba(44,59,42,.2);border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font:600 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Geen instelling gevonden voor "{{ q }}"</span><span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">Zoek op een onderdeel of een veld, bv. "IBAN" of "betaaltermijn".</span></div>
+</sc-if>
+<sc-for list="{{ shownGroups }}" as="g" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 10px 'IBM Plex Sans',sans-serif;color:#00532D;letter-spacing:.14em">{{ g.kop }}</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ g.countLabel }}</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+<div style="background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.06);box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);padding:16px 18px;display:flex;flex-direction:column;gap:9px;cursor:pointer;min-width:0" style-hover="border-color:rgba(0,83,45,.35)">
+<div style="display:flex;align-items:center;gap:11px"><div style="width:32px;height:32px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ it.d }}"></path></svg></div><span style="flex:1;min-width:0;font:600 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ it.n }}</span><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.4 3.6 10.8 8l-4.4 4.4"></path></svg></div>
+<span style="font:450 12px/1.5 'IBM Plex Sans',sans-serif;color:#5a6b58;text-wrap:pretty;min-height:36px">{{ it.t }}</span>
+<div style="display:flex;align-items:center;gap:8px;min-height:22px;flex-wrap:wrap">
+<sc-if value="{{ it.hasMeta }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:6px;font:500 11px 'IBM Plex Sans',sans-serif;color:{{ it.metaCol }}"><span style="width:6px;height:6px;border-radius:3px;background:{{ it.metaCol }}"></span>{{ it.meta }}</span></sc-if>
+<span style="flex:1"></span>
+<sc-for list="{{ it.acts }}" as="a" hint-placeholder-count="0"><span style="padding:3px 9px;border-radius:11px;border:1px solid rgba(0,83,45,.25);font:600 11px 'IBM Plex Sans',sans-serif;color:#00532D" style-hover="background:#D6E5CC">{{ a }}</span></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div style="max-width:1320px;display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font:600 9px 'IBM Plex Sans',sans-serif;color:#00532D;letter-spacing:.14em">WAT VERANDERT TEGENOVER NU</span><span style="font:450 11.5px/1.6 'IBM Plex Sans',sans-serif;color:#4A5B48">Knop "Open beheer" + pijltje deden hetzelfde; nu is de kaart de klik. Tweede ingangen (Rollen, Groepen) blijven als kleine chips. Website had vijf kaarten naast elkaar, de rest drie — nu altijd drie. Status die je anders moet gaan zoeken (Octopus-token, laatste crawl) staat op de kaart zelf.</span></div>
+</div>
+
+<div id="24b" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#24b" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">24b</a>Mijn bedrijven — de stap tussen overzicht en bewerken, koppeling en standaarden per bedrijf in één oogopslag</div>
+<div style="width:1500px;max-width:100%;background:#F7F9F5;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden;padding:22px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px"><div style="display:flex;flex-direction:column;gap:3px"><div style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A">Mijn bedrijven</div><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Instellingen</span><span>/</span><span style="color:#00532D">Mijn bedrijven</span></div></div><span style="flex:1"></span><div style="height:38px;padding:0 16px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'IBM Plex Sans',sans-serif"><span style="font-size:15px">+</span>Nieuw bedrijf</div></div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:grid;grid-template-columns:minmax(0,1.6fr) 150px 170px minmax(0,1fr) 190px 120px 40px;gap:14px;align-items:center;height:40px;padding:0 18px;background:#F7F9F5;border-bottom:1px solid rgba(44,59,42,.08);font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span>BEDRIJF</span><span>BTW-NUMMER</span><span>STANDAARDREKENING</span><span>SJABLOON</span><span>OCTOPUS</span><span>STATUS</span><span></span></div>
+<sc-for list="{{ companies }}" as="c" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:minmax(0,1.6fr) 150px 170px minmax(0,1fr) 190px 120px 40px;gap:14px;align-items:center;min-height:62px;padding:8px 18px;border-top:1px solid rgba(44,59,42,.06);cursor:pointer" style-hover="background:#F7F9F5">
+<div style="display:flex;align-items:center;gap:11px;min-width:0"><div style="width:44px;height:32px;flex:none;border-radius:6px;border:1px dashed rgba(44,59,42,.2);display:flex;align-items:center;justify-content:center;font:600 9px 'IBM Plex Sans',sans-serif;color:#7a8a78">logo</div><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ c.n }}</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ c.sub }}</span></div></div>
+<span style="font:500 12px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ c.btw }}</span>
+<span style="font:500 12px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ c.iban }}</span>
+<span style="font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ c.tpl }}</span>
+<span style="display:flex;align-items:center;gap:6px;font:500 11.5px 'IBM Plex Sans',sans-serif;color:{{ c.octCol }}"><span style="width:6px;height:6px;border-radius:3px;background:{{ c.octCol }}"></span>{{ c.oct }}</span>
+<span style="justify-self:start;padding:3px 9px;border-radius:10px;background:{{ c.stBg }};font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;color:{{ c.stCol }}">{{ c.st }}</span>
+<svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#7a8a78;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.4 3.6 10.8 8l-4.4 4.4"></path></svg>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#5a6b58">"Extern" = standaard voor coördinatiecontracten zonder eigen facturatiebedrijf. Er kan er maar één zo gemarkeerd zijn.</span>
+</div>
+</div>
+
+<div id="24c" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#24c" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">24c</a>Bedrijf bewerken — veertien kaarten verdeeld over zes tabs, labels boven het veld, actiebalk vast · klik de tabs</div>
+<div style="width:1500px;max-width:100%;background:#fff;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:flex;min-height:1120px;background:#F2F5EF;gap:12px;padding:12px;box-sizing:border-box">
+<div style="width:72px;flex:none;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:6px">
+<div style="width:40px;height:40px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:9px 'IBM Plex Sans',sans-serif;color:#4A5B48">logo</div>
+<div style="width:36px;height:1.5px;background:rgba(44,59,42,.10);margin:6px 0"></div>
+<sc-for list="{{ rail }}" as="m" hint-placeholder-count="11">
+<div style="width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;background:{{ m.bg }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)"><svg viewBox="0 0 16 16" style="width:19px;height:19px;fill:none;stroke:{{ m.st }};stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ m.d }}"></path></svg></div>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="width:54px;height:40px;flex:none;border-radius:8px;border:1px dashed rgba(44,59,42,.2);display:flex;align-items:center;justify-content:center;font:700 12px 'IBM Plex Sans',sans-serif;color:#00532D">BCO</div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0"><div style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A;line-height:1.25">BCO bewerken</div><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Instellingen</span><span>/</span><span>Mijn bedrijven</span><span>/</span><span style="color:#00532D">BCO</span></div></div>
+<span style="padding:5px 11px;border-radius:11px;background:#D6E5CC;font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;color:#00532D;margin-left:4px">ACTIEF</span>
+<span style="padding:5px 11px;border-radius:11px;background:#F6EEDC;font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;color:#8A6A32">NIET-OPGESLAGEN WIJZIGINGEN</span>
+<span style="flex:1"></span>
+<div style="width:1px;height:32px;background:rgba(44,59,42,.12)"></div>
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:20px;border:1px solid rgba(44,59,42,.10)"><div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'IBM Plex Sans',sans-serif">NL</div><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Hallo, Niels Lataire</span></div>
+</div>
+<div style="display:flex;align-items:flex-end;gap:2px;padding:10px 18px 0;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+<div onClick="{{ t.go }}" style="padding:8px 14px;display:flex;align-items:center;gap:6px;font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;font-weight:{{ t.fw }};color:{{ t.col }};border-bottom:2.5px solid {{ t.line }};margin-bottom:-1.5px;cursor:pointer;white-space:nowrap" style-hover="color:#00532D">{{ t.n }}<span style="font:600 11px 'IBM Plex Sans',sans-serif;color:{{ t.bc }}">{{ t.b }}</span></div>
+</sc-for>
+</div>
+<div style="flex:1;padding:16px 18px 22px;background:#F7F9F5;display:flex;flex-direction:column;gap:14px">
+<span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Velden met <span style="color:#8B2A2A">*</span> zijn verplicht · wisselen van tab bewaart je invoer</span>
+
+<sc-if value="{{ is0 }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M5.2 7h2 M5.2 9.4h5.4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Identiteit</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Naam, rechtsvorm en nummers.</span></div>
+<div style="padding:18px 20px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<sc-for list="{{ fIdent }}" as="f" hint-placeholder-count="5">
+<div style="grid-column:{{ f.col }};display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ f.l }}</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ f.vc }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span><sc-if value="{{ f.sel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></sc-if></div><sc-if value="{{ f.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ f.hint }}</span></sc-if></div>
+</sc-for>
+<div style="grid-column:span 12;display:flex;flex-direction:column;gap:10px;padding-top:12px;border-top:1px solid rgba(44,59,42,.08)">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:20px;flex:none;border-radius:10px;background:#00532D;position:relative"><div style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:8px;background:#fff"></div></div><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Actief</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">inactieve bedrijven verschijnen niet bij nieuwe facturen</span></div>
+<div style="display:flex;align-items:flex-start;gap:12px"><div style="width:36px;height:20px;flex:none;border-radius:10px;background:#DDE3D8;position:relative"><div style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;background:#fff"></div></div><div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Standaard voor externe coördinatiecontracten</span><span style="font:450 11px/1.5 'IBM Plex Sans',sans-serif;color:#7a8a78;text-wrap:pretty">Contracten zonder eigen facturatiebedrijf (bv. coördinatie voor een externe bouwheer) komen onder dit bedrijf. Momenteel: <a href="#24b">Group LN</a> — aanzetten verplaatst de markering.</span></div></div>
+</div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 3.6h11.2v8.8H2.4z M2.4 10.4 6 7.6l3 2.4 2.4-1.8 2.2 1.6"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Logo</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Verschijnt op facturen en documenten.</span></div>
+<div style="padding:18px 20px 20px;display:flex;gap:16px;align-items:center">
+<div style="width:200px;height:110px;flex:none;border-radius:10px;border:1px dashed rgba(44,59,42,.22);background:#F7F9F5;display:flex;align-items:center;justify-content:center;font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">huidig logo</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px"><div style="height:74px;border:1.5px dashed rgba(0,83,45,.3);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px"><span style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#00532D">Sleep een nieuw logo hierheen</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">of klik om te kiezen · PNG, SVG of JPG</span></div><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">Huidig bestand: LN-GROUP-BCO.jpg</span></div>
+</div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 14s4.6-4.2 4.6-7.6a4.6 4.6 0 0 0-9.2 0C3.4 9.8 8 14 8 14z M8 8.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6z"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Contact &amp; adres</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Adres, contactinfo en website.</span></div>
+<div style="padding:18px 20px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<span style="grid-column:span 12;font:600 9px 'IBM Plex Sans',sans-serif;color:#00532D;letter-spacing:.14em">ADRES</span>
+<sc-for list="{{ fAdres }}" as="f" hint-placeholder-count="4">
+<div style="grid-column:{{ f.col }};display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ f.l }}</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ f.vc }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span><sc-if value="{{ f.sel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></sc-if></div></div>
+</sc-for>
+<span style="grid-column:span 12;font:600 9px 'IBM Plex Sans',sans-serif;color:#00532D;letter-spacing:.14em;padding-top:12px;border-top:1px solid rgba(44,59,42,.08)">CONTACT</span>
+<sc-for list="{{ fContact }}" as="f" hint-placeholder-count="5">
+<div style="grid-column:{{ f.col }};display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ f.l }}</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ f.vc }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span></div><sc-if value="{{ f.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ f.hint }}</span></sc-if></div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is1 }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 2.4h7l2.2 2.2v9H3.4z M5.6 6.4h4.8 M5.6 8.8h4.8 M5.6 11.2h2.8"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Standaarden voor nieuwe facturen</span></div>
+<div style="padding:18px 20px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<sc-for list="{{ fFact }}" as="f" hint-placeholder-count="5">
+<div style="grid-column:{{ f.col }};display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ f.l }}</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ f.vc }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span><sc-if value="{{ f.sel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></sc-if></div><sc-if value="{{ f.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ f.hint }}</span></sc-if></div>
+</sc-for>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round"><path d="M4.4 4.4h7.2 M4.4 8h7.2 M4.4 11.6h4.8 M2.2 4.4h.01 M2.2 8h.01 M2.2 11.6h.01"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Nummerreeksen</span><span style="flex:1"></span><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">+ Nieuwe reeks</span></div>
+<div style="display:grid;grid-template-columns:100px minmax(0,1fr) 70px 80px 50px;gap:12px;align-items:center;height:34px;padding:0 20px;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58;background:#F7F9F5"><span>CODE</span><span>OMSCHRIJVING</span><span>CREDIT</span><span>STATUS</span><span></span></div>
+<div style="display:grid;grid-template-columns:100px minmax(0,1fr) 70px 80px 50px;gap:12px;align-items:center;height:44px;padding:0 20px;border-top:1px solid rgba(44,59,42,.06);font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A"><span style="font:500 12px 'IBM Plex Mono',monospace">BCO-V1</span><span>Verkoopsdagboek</span><span>Nee</span><span style="justify-self:start;padding:2px 8px;border-radius:9px;background:#D6E5CC;font:600 10px 'IBM Plex Sans',sans-serif;color:#00532D">Actief</span><span style="color:#5a6b58;text-align:right">···</span></div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5v3l2 1.4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Betaaltermijnen</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Kiesbaar op facturen van dit bedrijf.</span><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">+ Toevoegen</span></div>
+<sc-for list="{{ termijnen }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;min-height:50px;padding:6px 20px;border-top:1px solid rgba(44,59,42,.06)"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ r.n }}</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#5a6b58">Op factuur: "{{ r.txt }}"</span></div><span style="padding:3px 9px;border-radius:10px;background:#EDF2E8;font:600 10.5px 'IBM Plex Sans',sans-serif;color:#2F6038">{{ r.type }}</span><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#00532D">Bewerk</span></div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linejoin:round"><path d="M2.6 2.6h4v4h-4z M9.4 2.6h4v4h-4z M2.6 9.4h4v4h-4z M9.4 9.4h1.6v1.6H9.4z M12 12h1.4v1.4H12z"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">EPC-betaal-QR</span><span style="flex:1"></span><div style="width:36px;height:20px;border-radius:10px;background:#00532D;position:relative"><div style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:8px;background:#fff"></div></div></div>
+<div style="padding:18px 20px 20px;display:flex;gap:18px">
+<div style="flex:1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<sc-for list="{{ fQr }}" as="f" hint-placeholder-count="5">
+<div style="grid-column:{{ f.col }};display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ f.l }}</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px"><span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ f.vc }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span><sc-if value="{{ f.sel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></sc-if></div><sc-if value="{{ f.hasHint }}" hint-placeholder-val="{{ false }}"><span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ f.hint }}</span></sc-if></div>
+</sc-for>
+</div>
+<div style="width:120px;flex:none;display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:110px;height:110px;border-radius:8px;border:1px dashed rgba(44,59,42,.22);background:#F7F9F5;display:flex;align-items:center;justify-content:center;font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">QR-voorbeeld</div><span style="font:450 10px/1.4 'IBM Plex Sans',sans-serif;color:#7a8a78;text-align:center">zo staat hij op de factuur</span></div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 4.4h11.2v7.2H2.4z M2.4 4.8 8 8.8l5.6-4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Peppol / e-invoicing</span><span style="padding:3px 9px;border-radius:10px;background:#F6EEDC;font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;color:#8A6A32">UIT</span></div>
+<div style="padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:#F6EEDC"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8A6A32;stroke-width:1.4;stroke-linecap:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5v3.6 M8 10.8h.01"></path></svg><span style="font:450 11.5px/1.5 'IBM Plex Sans',sans-serif;color:#6B4F22;text-wrap:pretty">Sinds 2026 is e-facturatie tussen Belgische bedrijven verplicht. Vul het Participant ID in en zet e-invoicing aan.</span></div>
+<div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:20px;border-radius:10px;background:#DDE3D8;position:relative"><div style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;background:#fff"></div></div><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">E-invoicing actief</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">PEPPOL PARTICIPANT ID</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px"><span style="font:500 13px 'IBM Plex Mono',monospace;color:#9aa898">0208:0464670778</span></div><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">voorgesteld uit het ondernemingsnummer</span></div>
+<div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:20px;border-radius:10px;background:#00532D;position:relative"><div style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:8px;background:#fff"></div></div><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">PDF bijvoegen in UBL</span></div>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is2 }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 6.2 8 2.8l5.6 3.4z M3.6 6.6v5 M6.4 6.6v5 M9.6 6.6v5 M12.4 6.6v5 M2.2 13.2h11.6"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Bankrekeningen</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Eén rekening is standaard; projectrekeningen worden gekozen op factuur of project.</span>
+<div style="width:220px;height:34px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 10px"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg><span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#9aa898">Zoek naam of IBAN</span></div>
+<div style="height:34px;padding:0 14px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;gap:6px;font:600 12px 'IBM Plex Sans',sans-serif">+ Nieuwe rekening</div></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) 240px 110px minmax(0,1fr) 120px 110px;gap:14px;align-items:center;height:36px;padding:0 20px;background:#F7F9F5;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span>OMSCHRIJVING</span><span>IBAN</span><span>BIC</span><span>GEBRUIK</span><span>STATUS</span><span style="text-align:right">ACTIES</span></div>
+<sc-for list="{{ banks }}" as="b" hint-placeholder-count="13">
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) 240px 110px minmax(0,1fr) 120px 110px;gap:14px;align-items:center;height:44px;padding:0 20px;border-top:1px solid rgba(44,59,42,.06)" style-hover="background:#F7F9F5">
+<span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ b.n }}</span>
+<span style="font:500 12px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ b.iban }}</span>
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#9aa898">{{ b.bic }}</span>
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ b.use }}</span>
+<span style="justify-self:start;padding:3px 9px;border-radius:10px;background:{{ b.stBg }};font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.04em;color:{{ b.stCol }}">{{ b.st }}</span>
+<div style="display:flex;justify-content:flex-end;gap:12px;font:500 12px 'IBM Plex Sans',sans-serif;color:#00532D"><span>Bewerk</span><span style="color:#5a6b58">···</span></div>
+</div>
+</sc-for>
+<div style="padding:10px 20px;border-top:1px solid rgba(44,59,42,.08);font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">"Maak standaard" en "Verwijder" zitten in het ··· menu — geen drie iconen per rij meer. Een rekening die op een project gekoppeld is, kan niet verwijderd worden.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is3 }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round"><path d="M6.6 9.4 9.4 6.6 M7 4.6l1.2-1.2a2.6 2.6 0 0 1 3.7 3.7L10.7 8.3 M9 11.4l-1.2 1.2a2.6 2.6 0 0 1-3.7-3.7L5.3 7.7"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Octopus-koppeling</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Drie stappen, elk met eigen status.</span><div style="height:34px;padding:0 13px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;gap:6px;font:600 12px 'IBM Plex Sans',sans-serif">Dossier synchroniseren</div><div style="height:34px;padding:0 13px;border-radius:8px;border:1px solid #7A9E6E;color:#2F6038;display:flex;align-items:center;gap:6px;font:600 12px 'IBM Plex Sans',sans-serif">Relaties ophalen</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr))">
+<div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;border-right:1px solid rgba(44,59,42,.08)"><div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:11px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px 'IBM Plex Sans',sans-serif">1</span><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Aanmelden</span><span style="flex:1"></span><span style="font:600 10.5px 'IBM Plex Sans',sans-serif;color:#2F6038">✓ token tot 21/09 12:01</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">GEBRUIKERSNAAM</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">U17207003</div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">WACHTWOORD</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">••••••••</div></div>
+<span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">Token vernieuwen</span></div>
+<div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;border-right:1px solid rgba(44,59,42,.08)"><div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:11px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:700 11px 'IBM Plex Sans',sans-serif">2</span><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Dossier</span><span style="flex:1"></span><span style="font:600 10.5px 'IBM Plex Sans',sans-serif;color:#2F6038">✓ gekoppeld</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">DOSSIER</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;gap:8px"><span style="flex:1;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">7233</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></div></div>
+<span style="font:450 11px/1.5 'IBM Plex Sans',sans-serif;color:#5a6b58">Ander dossier kiezen koppelt meteen om; bestaande boekingen blijven staan.</span></div>
+<div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:11px;background:#D6E5CC;color:#00532D;display:flex;align-items:center;justify-content:center;font:700 11px 'IBM Plex Sans',sans-serif">3</span><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Import</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">AANKOOPDAGBOEK PREFIX</span><div style="height:40px;width:120px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'IBM Plex Sans',sans-serif;color:#9aa898">bv. A</div><span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78;text-wrap:pretty">Enkel dagboeken die met deze letter beginnen worden inkomende facturen (A → A1, A2 …). Leeg = alles.</span></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">DOWNLOADLINK-VELD</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;gap:8px"><span style="flex:1;font:500 13px 'IBM Plex Sans',sans-serif;color:#9aa898">— kies —</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></div></div></div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:14px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Boekjaren &amp; dagboeken</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">uit Octopus · alleen lezen</span></div>
+<sc-for list="{{ years }}" as="y" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;height:50px;padding:0 20px;border-top:1px solid rgba(44,59,42,.06)"><div style="width:120px;display:flex;flex-direction:column;gap:1px"><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ y.y }}</span><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">12 periodes</span></div><span style="flex:1;font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ y.dag }} dagboeken</span><span style="padding:3px 9px;border-radius:10px;background:{{ y.bg }};font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.04em;color:{{ y.col }}">{{ y.st }}</span></div>
+</sc-for>
+<div style="padding:11px 20px;border-top:1px solid rgba(44,59,42,.06);font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">+ 17 oudere boekjaren (2006–2022)</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Veldkoppeling</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">Octopus-veld → factuurveld</span></div>
+<sc-for list="{{ velden }}" as="v" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:10px;align-items:center;padding:7px 20px;border-top:1px solid rgba(44,59,42,.06)"><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#2C3B2A"><span style="font-family:'IBM Plex Mono',monospace">{{ v.k }}</span> · {{ v.n }}</span><span style="color:#7a8a78">→</span><div style="height:34px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 10px;gap:8px"><span style="flex:1;font:500 12px 'IBM Plex Sans',sans-serif;color:{{ v.vc }}">{{ v.v }}</span><svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></div></div>
+</sc-for>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Verkoop-btw-codes</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78;flex:1">enkel de factuurvermelding is hier te wijzigen</span></div>
+<div style="display:grid;grid-template-columns:62px minmax(0,1.3fr) 58px 74px minmax(0,1.4fr);gap:10px;align-items:center;height:34px;padding:0 20px;background:#F7F9F5;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span>CODE</span><span>OMSCHRIJVING</span><span>%</span><span>REKENING</span><span>VERMELDING OP FACTUUR</span></div>
+<sc-for list="{{ btw }}" as="c" hint-placeholder-count="11">
+<div style="display:grid;grid-template-columns:62px minmax(0,1.3fr) 58px 74px minmax(0,1.4fr);gap:10px;align-items:center;padding:6px 20px;border-top:1px solid rgba(44,59,42,.06)"><span style="font:500 12px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ c.c }}</span><span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ c.n }}</span><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#2C3B2A;text-align:right">{{ c.p }}</span><span style="font:450 12px 'IBM Plex Mono',monospace;color:#5a6b58">{{ c.r }}</span><div style="height:32px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:7px;display:flex;align-items:center;padding:0 10px;min-width:0"><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:{{ c.vc }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.v }}</span></div></div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is4 }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linejoin:round"><path d="M3.4 2.4h7l2.2 2.2v9H3.4z"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Factuurlay-out</span></div>
+<div style="padding:18px 20px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<div style="grid-column:span 7;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">SJABLOON</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;gap:8px"><span style="flex:1;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Layout A (Group LN / BCO)</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></div><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">Beheer sjablonen in <a href="#24a">Factuurtemplates</a></span></div>
+<div style="grid-column:span 5;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">LETTERTYPE</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'IBM Plex Sans',sans-serif;color:#9aa898">standaard van sjabloon</div></div>
+<div style="grid-column:span 6;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">PRIMAIRE KLEUR</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 6px;gap:10px"><span style="width:28px;height:28px;border-radius:6px;background:#01532D"></span><span style="font:500 12.5px 'IBM Plex Mono',monospace;color:#2C3B2A">#01532D</span></div></div>
+<div style="grid-column:span 6;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">SECUNDAIRE KLEUR</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 6px;gap:10px"><span style="width:28px;height:28px;border-radius:6px;background:#000"></span><span style="font:500 12.5px 'IBM Plex Mono',monospace;color:#2C3B2A">#000000</span></div></div>
+<div style="grid-column:span 12;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">JURIDISCHE FOOTER</span><div style="height:72px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;padding:10px 12px;font:450 12.5px 'IBM Plex Sans',sans-serif;color:#9aa898">bv. RPR Gent · algemene voorwaarden op www.bouwenconstructie.be</div></div>
+<div style="grid-column:span 12;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:8px;background:#F7F9F5;border:1px solid rgba(44,59,42,.08)"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.4 3.6 10.8 8l-4.4 4.4"></path></svg><span style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Geavanceerd — sjabloon-JSON</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">voor wie de QuestPDF-structuur wil aanpassen</span></div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 4.4h11.2v7.2H2.4z M2.4 4.8 8 8.8l5.6-4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">E-mail bij factuur</span><span style="flex:1"></span><div style="display:flex;padding:3px;border-radius:9px;background:#EDF2E8;gap:2px"><span style="padding:5px 11px;border-radius:7px;background:#fff;font:600 11.5px 'IBM Plex Sans',sans-serif;color:#00532D;box-shadow:0 1px 2px rgba(0,0,0,.08)">Open factuur</span><span style="padding:5px 11px;font:500 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Reeds betaald</span></div></div>
+<div style="padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">ONDERWERP</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;gap:6px;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Factuur <span style="padding:2px 7px;border-radius:5px;background:#D6E5CC;color:#00532D;font:600 11px 'IBM Plex Sans',sans-serif">Factuurnummer</span> van <span style="padding:2px 7px;border-radius:5px;background:#D6E5CC;color:#00532D;font:600 11px 'IBM Plex Sans',sans-serif">Bedrijfsnaam</span></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">BERICHT</span><div style="border:1px solid rgba(44,59,42,.12);border-radius:8px;overflow:hidden"><div style="display:flex;align-items:center;gap:14px;height:36px;padding:0 12px;border-bottom:1px solid rgba(44,59,42,.08);background:#F7F9F5;font:600 12px 'IBM Plex Sans',sans-serif;color:#2C3B2A"><b>B</b><i>I</i><u>U</u><span style="color:#5a6b58">• Lijst</span><span style="color:#5a6b58">Link</span><span style="flex:1"></span><span style="color:#00532D">+ Veld invoegen</span></div><div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;font:450 12.5px/1.6 'IBM Plex Sans',sans-serif;color:#2C3B2A"><span>Geachte,</span><span>In bijlage vindt u factuur <span style="padding:1px 6px;border-radius:5px;background:#D6E5CC;color:#00532D;font-weight:600;font-size:11px">Factuurnummer</span> voor een bedrag van <span style="padding:1px 6px;border-radius:5px;background:#D6E5CC;color:#00532D;font-weight:600;font-size:11px">Totaal incl.</span>. Gelieve te betalen vóór <span style="padding:1px 6px;border-radius:5px;background:#D6E5CC;color:#00532D;font-weight:600;font-size:11px">Vervaldatum</span>.</span><span style="color:#7a8a78">…</span></div></div><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">Velden als chips in plaats van codes als Invoice.PublicId — leeg laten = standaardtekst</span></div>
+</div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Voorbeeld</span><span style="flex:1"></span><div style="width:150px;height:32px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:7px;display:flex;align-items:center;padding:0 10px;font:450 12px 'IBM Plex Sans',sans-serif;color:#9aa898">laatste factuur</div><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">Open PDF</span></div>
+<div style="padding:20px;background:#EDEFEB;display:flex;justify-content:center"><div style="width:100%;max-width:420px;aspect-ratio:1/1.414;background:#fff;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);display:flex;flex-direction:column"><div style="height:12px;background:#01532D"></div><div style="flex:1;padding:22px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between"><div style="width:90px;height:36px;border:1px dashed rgba(44,59,42,.25);display:flex;align-items:center;justify-content:center;font:450 9px 'IBM Plex Sans',sans-serif;color:#7a8a78">logo</div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div style="width:80px;height:6px;background:#01532D"></div><div style="width:60px;height:5px;background:#DDE3D8"></div></div></div><div style="height:1px;background:#DDE3D8;margin:10px 0"></div><div style="width:100%;height:5px;background:#EDEFEB"></div><div style="width:100%;height:5px;background:#EDEFEB"></div><div style="width:70%;height:5px;background:#EDEFEB"></div><span style="flex:1"></span><div style="display:flex;justify-content:space-between;align-items:flex-end"><div style="width:48px;height:48px;border:1px dashed rgba(44,59,42,.25)"></div><div style="width:110px;height:10px;background:#01532D"></div></div></div><div style="height:12px;background:#01532D"></div></div></div>
+<div style="padding:11px 20px;font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78;border-top:1px solid rgba(44,59,42,.08);display:flex;gap:8px"><span style="flex:1">Werkt live bij bij elke wijziging links.</span><span style="font-weight:600;color:#8B2A2A">Reset naar standaard</span></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is5 }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:900px;background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 5v3l2 1.4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Uurtarieven &amp; kilometers</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Voor tijdsregistratie en regie-facturatie.</span></div>
+<div style="padding:18px 20px;display:flex;align-items:flex-end;gap:16px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">KILOMETERVERGOEDING</span><div style="width:220px;height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;overflow:hidden"><span style="padding:0 11px;height:100%;display:flex;align-items:center;background:#F7F9F5;font:500 13px 'IBM Plex Sans',sans-serif;color:#5a6b58">€</span><span style="flex:1;padding:0 10px;font:500 13px 'IBM Plex Sans',sans-serif;color:#9aa898">0,00</span><span style="padding:0 11px;height:100%;display:flex;align-items:center;background:#F7F9F5;font:500 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">per km</span></div></div></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 160px 160px 70px;gap:14px;align-items:center;height:34px;padding:0 20px;background:#F7F9F5;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span>MEDEWERKER</span><span>UURPRIJS</span><span>GELDIG VANAF</span><span></span></div>
+<sc-for list="{{ tarieven }}" as="r" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 160px 160px 70px;gap:14px;align-items:center;height:48px;padding:0 20px;border-top:1px solid rgba(44,59,42,.06)"><span style="display:flex;align-items:center;gap:9px;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A"><span style="width:26px;height:26px;border-radius:13px;background:#D6E5CC;color:#00532D;display:flex;align-items:center;justify-content:center;font:600 10px 'IBM Plex Sans',sans-serif">{{ r.i }}</span>{{ r.n }}</span><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ r.p }}</span><span style="font:450 12.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ r.d }}</span><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#00532D;text-align:right">Bewerk</span></div>
+</sc-for>
+<div style="padding:12px 20px;border-top:1px solid rgba(44,59,42,.06)"><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">+ Tarief toevoegen</span></div>
+</div>
+</sc-if>
+</div>
+<div style="flex:none;display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-top:1px solid rgba(44,59,42,.10);box-shadow:0 -10px 26px -22px rgba(44,59,42,.5)">
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#8A6A32">2 wijzigingen in Algemeen · 1 in Facturatie</span><span style="flex:1"></span>
+<div style="height:40px;padding:0 16px;border-radius:9px;border:1px solid rgba(44,59,42,.18);display:flex;align-items:center;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Annuleren</div>
+<div style="height:40px;padding:0 18px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'IBM Plex Sans',sans-serif">Bedrijf opslaan</div>
+</div>
+</div>
+</div>
+</div>
+<div style="max-width:1320px;display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font:600 9px 'IBM Plex Sans',sans-serif;color:#00532D;letter-spacing:.14em">INDELING</span><span style="font:450 11.5px/1.6 'IBM Plex Sans',sans-serif;color:#4A5B48">Algemeen = Identiteit · Logo · Contact &amp; adres. Facturatie = standaarden (betaaltermijn, btw, taal, valuta, nummerpatroon) · Nummerreeksen · Betaaltermijnen · EPC-QR · Peppol. Bankrekeningen = eigen tab. Boekhouding = Octopus in 3 stappen · Boekjaren · btw-codes · Veldkoppeling. Lay-out &amp; e-mail = sjabloon, kleuren, footer en e-mail naast een live voorbeeld; de JSON zit achter "Geavanceerd". Uurtarieven = eigen tab. De tabbadge toont wat aandacht vraagt (Peppol uit).</span></div>
+</div>
+
+<div id="24e" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#24e" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">24e</a>Factuurtemplates — lijst met wie elk template gebruikt; vergrendeld is een status, geen actie</div>
+<div style="width:1500px;max-width:100%;background:#F7F9F5;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden;padding:22px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px"><div style="display:flex;flex-direction:column;gap:3px"><div style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A">Factuurtemplates</div><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Instellingen</span><span>/</span><span style="color:#00532D">Factuurtemplates</span></div></div><span style="flex:1"></span><div style="height:38px;padding:0 16px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;gap:7px;font:600 12.5px 'IBM Plex Sans',sans-serif"><span style="font-size:15px">+</span>Nieuw template</div></div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:grid;grid-template-columns:70px minmax(0,1.6fr) 130px 140px minmax(0,1fr) 190px;gap:14px;align-items:center;height:40px;padding:0 18px;background:#F7F9F5;border-bottom:1px solid rgba(44,59,42,.08);font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span></span><span>NAAM</span><span>SLEUTEL</span><span>TYPE</span><span>GEBRUIKT DOOR</span><span style="text-align:right">ACTIES</span></div>
+<sc-for list="{{ tpls }}" as="p" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:70px minmax(0,1.6fr) 130px 140px minmax(0,1fr) 190px;gap:14px;align-items:center;min-height:74px;padding:10px 18px;border-top:1px solid rgba(44,59,42,.06);cursor:pointer" style-hover="background:#F7F9F5">
+<div style="width:44px;height:58px;border-radius:4px;background:#fff;border:1px solid rgba(44,59,42,.14);display:flex;flex-direction:column;overflow:hidden"><div style="height:5px;background:{{ p.c }}"></div><div style="flex:1;padding:5px;display:flex;flex-direction:column;gap:3px"><div style="width:16px;height:5px;background:#DDE3D8"></div><div style="height:2px;background:#EDEFEB"></div><div style="height:2px;background:#EDEFEB"></div><div style="width:60%;height:2px;background:#EDEFEB"></div></div><div style="height:5px;background:{{ p.c }}"></div></div>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font:600 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ p.n }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ p.d }}</span></div>
+<span style="font:500 12px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ p.k }}</span>
+<span style="justify-self:start;display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:10px;background:{{ p.tBg }};font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.04em;color:{{ p.tCol }}"><sc-if value="{{ p.locked }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 16 16" style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4 7.4h8v6H4z M5.8 7.4V5.2a2.2 2.2 0 0 1 4.4 0v2.2"></path></svg></sc-if>{{ p.t }}</span>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ p.used }}" as="u" hint-placeholder-count="1"><span style="padding:3px 9px;border-radius:10px;border:1px solid rgba(44,59,42,.16);font:500 11px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ u }}</span></sc-for><sc-if value="{{ p.unused }}" hint-placeholder-val="{{ false }}"><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#9aa898">nog door geen bedrijf</span></sc-if></div>
+<div style="display:flex;justify-content:flex-end;gap:14px;font:500 12px 'IBM Plex Sans',sans-serif;color:#00532D"><span>{{ p.a1 }}</span><span>Dupliceren</span><span style="color:#5a6b58">···</span></div>
+</div>
+</sc-for>
+</div>
+<span style="font:450 11px/1.5 'IBM Plex Sans',sans-serif;color:#5a6b58">Standaardtemplates zijn vergrendeld: openen = bekijken, "Dupliceren" maakt een eigen kopie om aan te passen. Een template dat door een bedrijf gebruikt wordt, kan niet verwijderd worden.</span>
+</div>
+</div>
+
+<div id="24f" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#24f" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">24f</a>Factuurtemplate bewerken — gegevens bovenaan, JSON met regelnummers en validatie, live voorbeeld per bedrijf ernaast</div>
+<div style="width:1500px;max-width:100%;background:#F7F9F5;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;padding:0 22px;height:62px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:3px"><div style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A">Kopie van Layout A</div><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Instellingen</span><span>/</span><span>Factuurtemplates</span><span>/</span><span style="color:#00532D">Bewerken</span></div></div>
+<span style="padding:5px 11px;border-radius:11px;background:#EDF2E8;font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;color:#2F6038">EIGEN TEMPLATE</span>
+<span style="flex:1"></span>
+<span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Gebaseerd op <a href="#24e">Layout A (Group LN / BCO)</a></span>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;padding:16px 18px 22px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 4h10.8v8H2.6z M5.2 7h2 M5.2 9.4h5.4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Gegevens</span></div>
+<div style="padding:18px 20px 20px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px 16px">
+<div style="grid-column:span 8;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">NAAM <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Kopie van Layout A</div></div>
+<div style="grid-column:span 4;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">SLEUTEL <span style="color:#8B2A2A">*</span></span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 12.5px 'IBM Plex Mono',monospace;color:#2C3B2A">layoutA-kopie</div><span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78">uniek, kleine letters, geen spaties</span></div>
+<div style="grid-column:span 12;display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">BESCHRIJVING</span><div style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;font:500 13px 'IBM Plex Sans',sans-serif;color:#9aa898">Waarvoor dient dit template?</div></div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:16px;height:16px;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M5.4 4 2.4 8l3 4 M10.6 4l3 4-3 4"></path></svg></div><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Template-JSON</span><span style="width:1px;height:16px;background:rgba(44,59,42,.14)"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58;flex:1">Kleuren komen uit het bedrijf, niet uit het template.</span><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">Opmaken</span><span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">Schema bekijken</span></div>
+<div style="display:flex;background:#FBFCFA;font:450 12px/22px 'IBM Plex Mono',monospace">
+<div style="flex:none;padding:12px 10px 12px 14px;text-align:right;color:#9aa898;border-right:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column">
+<sc-for list="{{ jsonLines }}" as="j" hint-placeholder-count="20"><span style="background:{{ j.bg }}">{{ j.no }}</span></sc-for>
+</div>
+<div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;color:#2C3B2A;white-space:pre">
+<sc-for list="{{ jsonLines }}" as="j" hint-placeholder-count="20"><span style="background:{{ j.bg }}">{{ j.t }}</span></sc-for>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 20px;border-top:1px solid rgba(44,59,42,.08);background:#fff"><span style="display:flex;align-items:center;gap:6px;font:600 11.5px 'IBM Plex Sans',sans-serif;color:#8A6A32"><span style="width:7px;height:7px;border-radius:4px;background:#8A6A32"></span>Regel 17: "secondary" wordt genegeerd — de secundaire kleur komt uit het bedrijf</span><span style="flex:1"></span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">schema v1 · 3 regels gewijzigd</span></div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Voorbeeld</span><span style="flex:1"></span><div style="display:flex;padding:3px;border-radius:9px;background:#EDF2E8;gap:2px"><span style="padding:5px 11px;border-radius:7px;background:#fff;font:600 11.5px 'IBM Plex Sans',sans-serif;color:#00532D;box-shadow:0 1px 2px rgba(0,0,0,.08)">als BCO</span><span style="padding:5px 11px;font:500 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">als Group LN</span></div></div>
+<div style="padding:20px;background:#EDEFEB;display:flex;justify-content:center"><div style="width:100%;max-width:400px;aspect-ratio:1/1.414;background:#fff;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);display:flex;flex-direction:column"><div style="height:12px;background:#01532D"></div><div style="flex:1;padding:22px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between"><div style="width:90px;height:36px;border:1px dashed rgba(44,59,42,.25);display:flex;align-items:center;justify-content:center;font:450 9px 'IBM Plex Sans',sans-serif;color:#7a8a78">logo BCO</div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><div style="width:80px;height:6px;background:#01532D"></div><div style="width:60px;height:5px;background:#DDE3D8"></div></div></div><div style="height:1px;background:#DDE3D8;margin:10px 0"></div><div style="width:100%;height:5px;background:#EDEFEB"></div><div style="width:100%;height:5px;background:#EDEFEB"></div><div style="width:70%;height:5px;background:#EDEFEB"></div><span style="flex:1"></span><div style="display:flex;justify-content:space-between;align-items:flex-end"><div style="width:48px;height:48px;border:1px dashed rgba(44,59,42,.25)"></div><div style="width:110px;height:10px;background:#01532D"></div></div></div><div style="height:12px;background:#01532D"></div></div></div>
+<div style="padding:11px 20px;border-top:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column;gap:4px"><span style="font:600 11px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Met voorbeeldgegevens, zodat je geen factuur-ID hoeft op te zoeken.</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">Logo, kleuren en footer komen uit het gekozen bedrijf.</span></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:0 22px;height:64px;background:#fff;border-top:1px solid rgba(44,59,42,.10)">
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">Nog door geen bedrijf gebruikt — kies het in <a href="#24c">Bedrijf bewerken → Lay-out &amp; e-mail</a></span><span style="flex:1"></span>
+<div style="height:40px;padding:0 16px;border-radius:9px;border:1px solid rgba(44,59,42,.18);display:flex;align-items:center;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Annuleren</div>
+<div style="height:40px;padding:0 18px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 12.5px 'IBM Plex Sans',sans-serif">Template opslaan</div>
+</div>
+</div>
+</div>
+
+<div id="24d" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#24d" style="font:600 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">24d</a>Gsm — overzicht als lijst per groep, bedrijf bewerken met tabs als strook en opslaan onderaan vast</div>
+<div style="display:flex;gap:24px;align-items:flex-start">
+<div style="width:390px;height:844px;flex:none;background:#F7F9F5;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;padding:14px 16px 12px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font:500 18px 'Playfair Display',Georgia,serif;color:#2C3B2A">Instellingen</span><div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'IBM Plex Sans',sans-serif">NL</div></div><div style="height:44px;box-sizing:border-box;border:1px solid rgba(44,59,42,.14);border-radius:9px;background:#F7F9F5;display:flex;align-items:center;gap:8px;padding:0 12px"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg><span style="font:450 13px 'IBM Plex Sans',sans-serif;color:#9aa898">Zoek een instelling</span></div></div>
+<div style="flex:1;overflow:hidden;padding:14px 12px;display:flex;flex-direction:column;gap:16px">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;color:#00532D;letter-spacing:.14em;padding:0 6px">{{ g.kop }}</span><div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05);overflow:hidden">
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:11px;min-height:52px;padding:0 14px;border-top:1px solid rgba(44,59,42,.06)"><div style="width:30px;height:30px;flex:none;border-radius:8px;background:#D6E5CC;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#00532D;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ it.d }}"></path></svg></div><span style="flex:1;font:500 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ it.n }}</span><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#7a8a78;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.4 3.6 10.8 8l-4.4 4.4"></path></svg></div></sc-for>
+</div></div>
+</sc-for>
+</div>
+</div>
+<div style="width:390px;height:844px;flex:none;background:#F7F9F5;border:1px solid rgba(0,83,45,.10);border-radius:18px;box-shadow:0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden;display:flex;flex-direction:column">
+<div style="flex:none;background:#fff;border-bottom:1px solid rgba(44,59,42,.08)"><div style="display:flex;align-items:center;gap:10px;padding:12px 14px"><div style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div><div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font:500 17px 'Playfair Display',Georgia,serif;color:#2C3B2A">BCO bewerken</span><span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Mijn bedrijven</span></div></div>
+<div style="display:flex;gap:2px;padding:0 10px;overflow:hidden">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6"><div onClick="{{ t.go }}" style="padding:12px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:{{ t.fw }};color:{{ t.col }};border-bottom:2.5px solid {{ t.line }};white-space:nowrap;cursor:pointer">{{ t.n }}</div></sc-for>
+</div></div>
+<div style="flex:1;overflow:hidden;padding:14px 12px;display:flex;flex-direction:column;gap:12px">
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05);overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D;flex:1">Identiteit</span><div style="width:36px;height:20px;border-radius:10px;background:#00532D;position:relative"><div style="position:absolute;top:2px;left:18px;width:16px;height:16px;border-radius:8px;background:#fff"></div></div><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Actief</span></div>
+<div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ fIdent }}" as="f" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:5px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ f.l }}</span><div style="height:44px;box-sizing:border-box;border:1px solid rgba(44,59,42,.12);border-radius:8px;display:flex;align-items:center;padding:0 12px;gap:8px"><span style="flex:1;font:500 14px 'IBM Plex Sans',sans-serif;color:{{ f.vc }}">{{ f.v }}</span><sc-if value="{{ f.sel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></sc-if></div></div></sc-for>
+</div></div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05);display:flex;align-items:center;gap:10px;height:52px;padding:0 14px"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D;flex:1">Logo</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05);display:flex;align-items:center;gap:10px;height:52px;padding:0 14px"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D;flex:1">Contact &amp; adres</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M4 6.2 8 10l4-3.8"></path></svg></div>
+</div>
+<div style="flex:none;display:flex;gap:10px;padding:12px 14px 22px;background:#fff;border-top:1px solid rgba(44,59,42,.10)"><div style="height:46px;padding:0 16px;border-radius:10px;border:1px solid rgba(44,59,42,.18);display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Annuleren</div><div style="flex:1;height:46px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13.5px 'IBM Plex Sans',sans-serif">Bedrijf opslaan</div></div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { q: '', tab: 0 };
+  renderVals() {
+    const G = '#00532D', ok = '#2F6038', warn = '#8A6A32';
+    const icons = {
+      home: 'M2.4 13.4V6.4L8 2.6l5.6 3.8v7z M6.2 13.4V9.2h3.6v4.2',
+      taken: 'M3 2.8h10v10.4H3z M5.4 6l1 1 1.8-2 M5.4 10l1 1 1.8-2 M9.6 6.2h1.6 M9.6 10.2h1.6',
+      dead: 'M2.8 3.8h10.4v9.4H2.8z M2.8 6.6h10.4 M5.4 2.4v2.4 M10.6 2.4v2.4 M6 9.8l1.4 1.4 2.6-2.8',
+      lev: 'M1.8 4.6h7.4v6H1.8z M9.2 6.8h2.4l2.6 2.2v1.6H9.2z',
+      klant: 'M6 7.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M2.5 13c0-2 1.6-3.2 3.5-3.2S9.5 11 9.5 13 M11 6.2a1.6 1.6 0 1 0 0-3.2 M11.2 9.9c1.4.2 2.3 1.3 2.3 3.1',
+      proj: 'M2.6 13.4V4.6L8 2.6v10.8 M8 6h5.4v7.4 M4.6 6.4h1.4 M4.6 9h1.4 M10 8.6h1.4 M10 11h1.4 M1.6 13.4h12.8',
+      fact: 'M3.4 2.4h7l2.2 2.2v9H3.4z M5.6 6.4h4.8 M5.6 8.8h4.8 M5.6 11.2h2.8',
+      doc: 'M2.4 9.6h3.2l1 1.6h2.8l1-1.6h3.2 M2.4 3.2h11.2v10H2.4z',
+      gear: 'M8 10.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4z M8 1.8v1.8 M8 12.4v1.8 M1.8 8h1.8 M12.4 8h1.8 M3.6 3.6l1.3 1.3 M11.1 11.1l1.3 1.3 M3.6 12.4l1.3-1.3 M11.1 4.9l1.3-1.3',
+      markt: 'M2.6 13.4h10.8 M4 11V8 M7 11V5 M10 11V7 M13 11V3.4',
+      link: 'M6.6 9.4 9.4 6.6 M7 4.6l1.2-1.2a2.6 2.6 0 0 1 3.7 3.7L10.7 8.3 M9 11.4l-1.2 1.2a2.6 2.6 0 0 1-3.7-3.7L5.3 7.7',
+      chart: 'M2.6 2.6v10.8h10.8 M4.8 10.6l2.6-3 2.2 1.8 3.2-4.2',
+      tag: 'M2.6 2.6h5l5.8 5.8-5 5-5.8-5.8z M5.4 5.4h.01',
+      calc: 'M2.8 2.8h10.4v10.4H2.8z M4.8 5.4h2.4 M6 4.2v2.4 M9 5.4h2.4 M4.8 10.2l2 2 M6.8 10.2l-2 2 M9 9.8h2.4 M9 11.6h2.4',
+      list: 'M2.6 4.4h7 M2.6 8h7 M2.6 11.6h4.4 M11.8 9.6v4 M9.8 11.6h4',
+      cal: 'M2.8 3.8h10.4v9.4H2.8z M2.8 6.6h10.4 M5.4 2.4v2.4 M10.6 2.4v2.4',
+      news: 'M2.4 3.4h11.2v9.2H2.4z M4.6 5.8h3.4v2.6H4.6z M9.6 6h2 M9.6 8.2h2 M4.6 10.4h7',
+      bag: 'M2.4 5.4h11.2v7.6H2.4z M5.8 5.4V3.6h4.4v1.8',
+      mail: 'M2.4 4.4h11.2v7.2H2.4z M2.4 4.8 8 8.8l5.6-4',
+      screen: 'M2.2 3h11.6v8H2.2z M6 13.6h4 M8 11v2.6',
+      cookie: 'M8 13.4A5.4 5.4 0 1 1 13.2 6.8a1.8 1.8 0 0 1-2.4-2.2A1.8 1.8 0 0 1 8.6 2.6 M5.6 7h.01 M8 10.4h.01 M10.4 9.6h.01',
+      bell: 'M4 11.2V7.4a4 4 0 0 1 8 0v3.8l1.2 1.2H2.8z M6.6 13.8h2.8',
+      pulse: 'M1.8 8h2.8l1.6-3.6 2.8 7.2 1.6-3.6h3.6',
+      branch: 'M4.6 2.6v10.8 M11.4 2.6v3.2a3 3 0 0 1-3 3H4.6',
+      bldg: 'M3 13.4V2.6h7v10.8 M10 6.4h3v7 M5.2 5h.8 M7.2 5h.8 M5.2 7.6h.8 M7.2 7.6h.8 M5.2 10.2h.8 M7.2 10.2h.8 M1.8 13.4h12.4'
+    };
+    icons.users = icons.klant;
+    const railDef = [['Dashboard','home'],['Mijn taken','taken'],['Deadlines','dead'],['Leveranciers','lev'],['Klanten','klant'],['Projecten','proj'],['Facturatie','fact'],['Documentencentrum','doc'],['Instellingen','gear'],['Marktanalyse','markt'],['Links','link']];
+    const rail = railDef.map(([n,k]) => ({ n, d: icons[k], bg: k==='gear'?G:'#fff', st: k==='gear'?'#fff':'#2C3B2A' }));
+    const I = (n, d, t, o = {}) => ({ n, d: icons[d], t, acts: o.acts || [], hasMeta: !!o.meta, meta: o.meta || '', metaCol: o.mc || '#7a8a78', kw: o.kw || '' });
+    const rawGroups = [
+      { kop: 'FACTURATIE & BOEKHOUDING', n: 'Facturatie & boekhouding', items: [
+        I('Mijn bedrijven','bldg','Uitgevende vennootschappen, factuurlay-out, bankrekeningen en verzendgegevens.',{meta:'2 bedrijven · Octopus gekoppeld',mc:ok,kw:'iban bank btw peppol logo octopus qr betaaltermijn'}),
+        I('Factuurtemplates','fact','Factuurlay-outs die je per bedrijf kiest en hergebruikt.',{kw:'sjabloon layout pdf'}),
+        I('Bouwindexen','chart','S-index, I-2021-index en ABEX-index voor budgetberekeningen.',{kw:'index abex'})]},
+      { kop: 'TEAM & TOEGANG', n: 'Team & toegang', items: [
+        I('Gebruikers & rollen','users',"Toegang van collega's, aannemers en gastgebruikers, en hun rolrechten.",{acts:['Gebruikers','Rollen'],kw:'rechten'}),
+        I('Verlofdagen','cal','Collectief verlof, feestdagen en weerverlet, zodat projecten juist rekenen.',{acts:['Plan dagen'],kw:'feestdag weer'})]},
+      { kop: 'CALCULATIE', n: 'Calculatie', items: [
+        I('Activiteiten','list','Activiteiten en activiteitgroepen (loten) die in je calculaties terugkomen.',{acts:['Activiteiten','Groepen'],kw:'loten'}),
+        I('Kostprijzen materialen','tag','Referentieprijzen per materiaaltype en bouwkostpercentages voor budgetten.',{kw:'prijs'}),
+        I('Budgetformules','calc','Voorstel-formules per activiteit voor de budgetwizard.',{kw:'formule budget'})]},
+      { kop: 'WEBSITE', n: 'Website', items: [
+        I('Blogartikelen','news','Nieuws- en blogartikelen op de publieke website, met foto\u2019s.',{kw:'nieuws'}),
+        I('Vacatures','bag','Openstaande vacatures op de publieke website.',{kw:'job'}),
+        I('E-mailtemplates','mail','Voorgedefinieerde e-mails (onderwerp + tekst) voor projectcontacten.',{kw:'mail'}),
+        I('Home hero — uitgelicht project','screen','Het project op de home-hero, met eigen kicker, titel en tekst.',{meta:'Nu: Verkaveling Keerstraat',kw:'homepage'}),
+        I('Cookiebanner — statistieken','cookie','Hoeveel bezoekers aanvaarden, weigeren of zonder keuze vertrekken.',{acts:['Bekijk cijfers'],kw:'cookie gdpr'})]},
+      { kop: 'AUTOMATISATIE & MELDINGEN', n: 'Automatisatie & meldingen', items: [
+        I('Automatische puntmeldingen','bell','Schema\u2019s voor automatische e-mails van werfpunten naar aannemers.',{kw:'mail werfpunt'}),
+        I('Marktdata-status','pulse','Laatste crawl-run van de marktdata-worker, per bron, met eventuele fouten.',{meta:'1 bron met fouten',mc:'#8B2A2A',kw:'crawl'}),
+        I('Trajectsjablonen','branch','Standaardtrajecten met fases en mijlpalen per projecttype.',{kw:'fase mijlpaal'})]}
+    ];
+    const q = this.state.q.trim().toLowerCase();
+    const groups = rawGroups.map((g, i) => ({ ...g, count: g.items.length, countLabel: g.items.length + ' onderdelen', navBg: i===0?'#D6E5CC':'transparent', navLine: i===0?G:'transparent', navCol: i===0?G:'#2C3B2A' }));
+    const shownGroups = groups.map(g => {
+      const items = q ? g.items.filter(it => (it.n + ' ' + it.t + ' ' + it.kw).toLowerCase().includes(q)) : g.items;
+      return { ...g, items, countLabel: q ? items.length + ' gevonden' : g.countLabel };
+    }).filter(g => g.items.length);
+    const companies = [
+      { n: 'BCO', sub: 'BV · Drongen', btw: 'BE0464.670.778', iban: 'BE68 0015 1882 9434', tpl: 'Layout A (Group LN / BCO)', oct: 'Dossier 7233 · token tot 21/09', octCol: ok, st: 'ACTIEF', stBg: '#D6E5CC', stCol: G },
+      { n: 'Group LN', sub: 'Drongen', btw: '—', iban: '—', tpl: 'Layout A (Group LN / BCO)', oct: 'Token verlopen', octCol: warn, st: 'ACTIEF · EXTERN', stBg: '#D6E5CC', stCol: G }
+    ];
+    const tabDef = [['Algemeen',''],['Facturatie','1'],['Bankrekeningen','13'],['Boekhouding',''],['Lay-out & e-mail',''],['Uurtarieven','']];
+    const tabs = tabDef.map(([n,b],i) => { const on = this.state.tab===i; return { n, b, bc: n==='Facturatie'?warn:'#7a8a78', fw: on?600:450, col: on?G:'#5a6b58', line: on?G:'transparent', go: () => this.setState({ tab: i }) }; });
+    const F = (l, v, span = 12, o = {}) => ({ l, v: v || o.ph || '', col: 'span ' + span, vc: v ? '#2C3B2A' : '#9aa898', sel: !!o.sel, hint: o.hint || '', hasHint: !!o.hint });
+    const fIdent = [F('WEERGAVENAAM *','BCO',6), F('WETTELIJKE NAAM *','BCO',6), F('RECHTSVORM','BV — Besloten vennootschap',12,{sel:1}), F('BTW-NUMMER','BE 0464.670.778',6), F('ONDERNEMINGSNUMMER','0464.670.778',6,{hint:'overgenomen uit btw-nummer'})];
+    const fAdres = [F('STRAAT EN NUMMER','Klaverdries 53',12), F('POSTCODE','9031',3), F('GEMEENTE','Drongen',6), F('LAND','België',3,{sel:1})];
+    const fContact = [F('ALGEMEEN E-MAILADRES','info@bouwenconstructie.be',6), F('FACTUREN VERZENDEN VANAF','facturatie@bouwenconstructie.be',6,{hint:'afzender van factuurmails'}), F('TELEFOON','09 216 49 50',6), F('TELEFOON 2','',6,{ph:'optioneel'}), F('WEBSITE','www.bouwenconstructie.be',12)];
+    const fFact = [F('BETAALTERMIJN','14 dagen',6,{sel:1}), F('BTW-CODE','21 — Verkopen 21 %',6,{sel:1}), F('TAAL','Nederlands (België)',6,{sel:1}), F('VALUTA','EUR',6,{sel:1}), F('PATROON FACTUURNUMMER','{num:0000}.{date:MM}.{date:yyyy}',12,{hint:'Volgende factuur wordt bv. 0043.09.2026'})];
+    const fQr = [F('NAAM BEGUNSTIGDE','BCO',12), F('IBAN','',7,{ph:'standaardrekening',hint:'leeg = standaard bankrekening'}), F('BIC','',5,{ph:'optioneel'}), F('OVERSCHRIJVINGSTYPE','',6,{ph:'— kies —',sel:1}), F('TEKST','',6,{ph:'bv. Factuur {PublicId}'})];
+    const termijnen = [{ n: 'Bij de voorlopige oplevering', type: 'Tekst', txt: 'Uiterlijk bij de voorlopige oplevering' }];
+    const bankRaw = [['Zichtrekening','BE68 0015 1882 9434','Algemeen',1],['De Vlaschaard','BE24 3631 5668 3938'],['Elisabeth','BE64 3631 6701 5852'],['Erpe-Mere','BE93 0020 0436 6267'],['Ketenhoekstraat','BE02 0019 5501 9640'],['Koksijde','BE27 0020 0436 6873'],['Locanda','BE05 3631 6701 8175'],['Muelenaers','BE68 0015 1882 9434'],['Parkdomein Kervijn','BE80 3630 1316 6677'],['Renaat De Rudderstraat','BE47 0019 6626 5980'],['Verkaveling Keerstraat','BE93 0020 0436 6267'],['Wonnegaarde','BE80 0019 0427 2977'],['Zuidleie','BE32 3631 6191 8302']];
+    const banks = bankRaw.map(([n,iban,use,std]) => ({ n, iban, bic: '—', use: use || 'Projectrekening', st: std ? 'Standaard' : 'Actief', stBg: std ? G : '#EDF2E8', stCol: std ? '#fff' : ok }));
+    const years = [['2026',25,1],['2025',25],['2024',24],['2023',25]].map(([y,dag,open]) => ({ y, dag, st: open ? 'Open' : 'Afgesloten', bg: open ? '#D6E5CC' : '#EDEFEB', col: open ? G : '#5a6b58' }));
+    const velden = [['FACTNR','Factuurnummer'],['LINK','Link'],['REF','Referentie'],['BANK','Rekeningnummer']].map(([k,n]) => ({ k, n, v: '— kies —', vc: '#9aa898' }));
+    const btwRaw = [['00','Verkopen aan nultarief','0 %','700000'],['CM','Verkopen intracommunautair','0 %','700600'],['EX','Verkopen export buiten EEG','0 %','700700'],['MC','Verkopen medecontractant','0 %','700500','Verlegging van heffing. Bij gebrek aan schriftelijke betwisting …'],['VCMD','Intracommunautaire diensten','0 %','0'],['VR','Verkoop vrij van btw','0 %','700000'],['06','Verkopen 6 %','6 %','700006'],['12','Verkopen 12 %','12 %','700200'],['21','Verkopen 21 %','21 %','700021'],['VKC','Verkopen — commissies','21 %','747200'],['VKCMW','Commissies op meerwerken','21 %','747201']];
+    const btw = btwRaw.map(([c,n,p,r,v]) => ({ c, n, p, r, v: v || 'Vermelding op factuur', vc: v ? '#2C3B2A' : '#9aa898' }));
+    const tarieven = [{ i: 'NL', n: 'Niels Lataire', p: '€ 0,00 / uur', d: 'nog in te vullen' }];
+    const tpls = [
+      { n: 'Layout A (Group LN / BCO)', d: 'Standaard lay-out voor Group LN / BCO.', k: 'layoutA', t: 'Standaard', locked: true, used: ['BCO', 'Group LN'], a1: 'Bekijken', c: '#01532D' },
+      { n: 'Layout B (Home-Estate)', d: 'Standaard lay-out voor Home-Estate.', k: 'layoutHE', t: 'Standaard', locked: true, used: [], a1: 'Bekijken', c: '#7A9E6E' },
+      { n: 'Kopie van Layout A', d: 'Eigen variant, in opmaak.', k: 'layoutA-kopie', t: 'Eigen', locked: false, used: [], a1: 'Bewerken', c: '#01532D' }
+    ].map(p => ({ ...p, unused: !p.used.length, tBg: p.locked ? '#EDEFEB' : '#D6E5CC', tCol: p.locked ? '#5a6b58' : G }));
+    const jsonSrc = ['{','  "version": 1,','  "page": {','    "margin": 36,','    "bands": {','      "top":    { "height": 24, "color": "{primary}" },','      "bottom": { "height": 24, "color": "{primary}" }','    }','  },','  "header": {','    "logo": { "align": "left", "maxHeight": 48 },','    "title": "Factuur {Invoice.PublicId}"','  },','  "lines": { "columns": ["omschrijving", "aantal", "prijs", "btw", "totaal"] },','  "footer": { "legal": true, "qr": true },','  "theme": {','    "secondary": "#111111"','  }','}'];
+    const jsonLines = jsonSrc.map((tx, i) => ({ no: i + 1, t: tx || ' ', bg: i === 16 ? '#F6EEDC' : 'transparent' }));
+    const t = this.state.tab;
+    return {
+      rail, groups, shownGroups, noResults: !!q && !shownGroups.length, q: this.state.q,
+      onQ: e => this.setState({ q: e.target.value }),
+      companies, tabs, fIdent, fAdres, fContact, fFact, fQr, termijnen, banks, years, velden, btw, tarieven, tpls, jsonLines,
+      is0: t===0, is1: t===1, is2: t===2, is3: t===3, is4: t===4, is5: t===5
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -44,6 +44,9 @@
         ProjectSubtitle = "klant toevoegen",
     };
     var addedUnitIds = Model.AddedUnits.Select(u => u.Id).ToHashSet();
+    // Server-fout op een specifiek veld (sleutel = veldnaam, zie KlantenController.AddClientAccount POST)
+    // → het veld zelf rood, naast de samenvatting bovenaan.
+    bool KeyHasError(string key) => ViewContext.ModelState.TryGetValue(key, out var ks) && ks.Errors.Count > 0;
 }
 @section PageStyle
 {
@@ -74,20 +77,17 @@
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
-@using (Html.BeginForm("AddClientAccount", "Klanten", FormMethod.Post, new { @class = "gl-v2-client-edit-form", id = "gl-v2-client-form" }))
+@using (Html.BeginForm("AddClientAccount", "Klanten", FormMethod.Post, new { @class = "gl-v2-client-edit-form", id = "gl-v2-client-form", novalidate = "novalidate" }))
 {
     @Html.HiddenFor(m => m.ProjectId)
     <div class="gl-v2-client-edit-scroll">
 
-        @if (!ViewContext.ModelState.IsValid)
-        {
-            <div class="gl-v2-section-card" style="border-color:var(--gl-v2-danger, #8B2A2A)">
-                <span class="gl-v2-field-help" style="color:var(--gl-v2-danger, #8B2A2A);padding:0">
-                    <i class="ph ph-warning-circle" aria-hidden="true"></i>
-                    @string.Join(" ", ViewContext.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage))
-                </span>
-            </div>
-        }
+        @* Foutoverzicht (design-handoff punt 24) — gedeeld component, zie DESIGN.md. Server-gerenderd
+           bij een redisplay uit ModelState; gl-v2-klanten-addclient.js herrendert dezelfde kaart client-
+           side bij een geblokkeerde submit (window.GlV2ErrorSummary). Minimum om op te slaan: naam,
+           verkoopdatum, minstens één eenheid mét prijzen — de velden zelf worden daarnaast rood
+           gemarkeerd (elk GlV2*-editortemplate doet dat al zelf voor een server-fout). *@
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
 
         <div class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
@@ -100,7 +100,7 @@
                 <div class="gl-v2-col-12">
                     <span class="gl-v2-field-label" id="gl-v2-kd-account-title">Nieuwe klant</span>
                 </div>
-                <div class="gl-v2-col-3">@Html.EditorFor(m => m.ClientAccount.DateSalesAgreement, "GlV2Date", new { Label = "Verkoopdatum", Help = "datum compromis" })</div>
+                <div class="gl-v2-col-3" data-gl-v2-required="Verkoopdatum is verplicht" data-gl-v2-error-location="Klantenaccount">@Html.EditorFor(m => m.ClientAccount.DateSalesAgreement, "GlV2Date", new { Label = "Verkoopdatum", Help = "datum compromis", Required = true })</div>
                 <div class="gl-v2-col-5">
                     <div class="gl-v2-field">
                         <span class="gl-v2-field-label">WO ondertekenen door</span>
@@ -143,7 +143,7 @@
                     </div>
                 </div>
                 <div class="gl-v2-col-3">
-                    <div class="gl-v2-field" data-gl-v2-required="Naam is verplicht">
+                    <div class="gl-v2-field@(KeyHasError("ClientAccount.Name") || KeyHasError("ClientAccount") ? " is-error" : "")" data-gl-v2-required="Naam is verplicht" data-gl-v2-error-location="Eigenaars">
                         <label class="gl-v2-field-label" for="@Html.IdFor(m => m.ClientAccount.Name)">Naam <span style="color:#8B2A2A">*</span></label>
                         <div class="gl-v2-field-box">
                             @Html.TextBoxFor(m => m.ClientAccount.Name, new { @class = "gl-v2-field-input", placeholder = "bv. Maes", autocomplete = "off", id = "gl-v2-kd-owner1-name" })
@@ -455,10 +455,12 @@
                                     @foreach (var u in availableChoices)
                                     {
                                         var inAccount = addedUnitIds.Contains(u.Id);
-                                        <button type="button" class="gl-v2-kd-upk-option" role="option" aria-selected="false"
+                                        @* "Al in dit account" als CSS-klasse (is-in-account) + letterlijk 'hidden', niet als
+                                           data-attribuut met null-waarde: Razor rendert dat laatste als data-in-account=""
+                                           en dan telt de JS het als aanwezig — elke beschikbare eenheid werd zo verborgen. *@
+                                        <button type="button" class="gl-v2-kd-upk-option@(inAccount ? " is-in-account" : "")" role="option" aria-selected="false"
                                                 data-unit-id="@u.Id" data-unit-name="@u.Name" data-unit-group="@u.Group"
-                                                data-search="@((u.Name + " " + u.Sub).ToLowerInvariant())"
-                                                data-in-account="@(inAccount ? "1" : null)" hidden="@inAccount">
+                                                data-search="@((u.Name + " " + u.Sub).ToLowerInvariant())" @(inAccount ? "hidden" : "")>
                                             <span class="gl-v2-kd-upk-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
                                             <span class="gl-v2-kd-upk-text">
                                                 <span class="gl-v2-kd-upk-name">@u.Name</span>
@@ -487,9 +489,15 @@
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-kd-unit-add" disabled><i class="ph ph-plus" aria-hidden="true"></i>Eenheid toevoegen</button>
+                    @* Onzichtbaar label van dezelfde hoogte als "EENHEID" hierboven i.p.v. een geraden
+                       margin-top — blijft zo exact uitgelijnd met de zoekbox, ook als het label ooit
+                       van opmaak verandert. *@
+                    <div class="gl-v2-kd-unit-add-wrap">
+                        <span class="gl-v2-field-label" aria-hidden="true">&nbsp;</span>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-kd-unit-add" disabled><i class="ph ph-plus" aria-hidden="true"></i>Eenheid toevoegen</button>
+                    </div>
                 </div>
-                <div class="gl-v2-client-row-list" id="gl-v2-kd-unit-rows">
+                <div class="gl-v2-client-row-list" id="gl-v2-kd-unit-rows" data-gl-v2-required-units="Voeg minstens één eenheid toe">
                     @foreach (var unit in Model.AddedUnits)
                     {
                         @Html.Partial("Partials/_UnitRowV2", unit)
@@ -537,6 +545,7 @@
         window.glV2AddClientConfig = {
             addCoOwnerUrl: '@Url.Action("BlankCoOwnerRow", "Klanten", new { collectionName = "ClientAccount.CoOwners" })',
             addContactUrl: '@Url.Action("BlankContactRow", "Klanten", new { collectionName = "ClientAccount.Contacts" })',
+            hasServerErrors: @(ViewContext.ModelState.IsValid ? "false" : "true"),
             addUnitUrl: '@Url.Action("AddSelectedUnits", "Klanten")',
             postalLookupUrl: '@Url.Action("GetPostcodesByCountry", "Shared")'
         };

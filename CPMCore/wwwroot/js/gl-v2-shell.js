@@ -385,6 +385,11 @@
             var dx = 0;
 
             el.addEventListener("pointerdown", function (e) {
+                // Niet vastgrijpen als de aanraking op het kruisje/de actielink zelf begint — anders
+                // herleidt setPointerCapture (hieronder) de bijhorende pointerup/click naar `el` i.p.v.
+                // die knop, en lijkt het kruisje niets te doen (het handje/CSS was altijd al in orde,
+                // enkel de klik zelf kwam nooit aan — projectwijd bug, gevonden via Niels, 2026-09-30).
+                if (e.target.closest(".gl-v2-toast-close, .gl-v2-toast-action")) return;
                 startX = e.clientX;
                 dx = 0;
                 el.setPointerCapture(e.pointerId);
@@ -531,13 +536,15 @@
         });
     }
 
-    // Rij → detail, knoppen in de rij zijn de uitzondering. Opt-in via data-detail-url op de <tr>
-    // (Leveranciers/Klanten-tabellen vandaag) — elke klik die binnen een <a>/<button>/form-element
-    // van de rij gebeurt (naam-link, "···"-rijmenu en z'n items) doet gewoon haar eigen ding, de rij
-    // navigeert dan niet nog eens extra.
+    // Rij/kaart → detail, knoppen erbinnen zijn de uitzondering. Opt-in via data-detail-url — niet
+    // enkel op een <tr> (Leveranciers/Klanten-tabellen), ook op eender welk ander element (bv. een
+    // .gl-v2-set-card op Instellingen/IndexV2, punt 24a "de hele kaart is klikbaar") — elke klik die
+    // binnen een <a>/<button>/form-element van dat element gebeurt (naam-link, "···"-rijmenu en z'n
+    // items, een kaart se eigen chip) doet gewoon haar eigen ding, het element navigeert dan niet
+    // nog eens extra.
     function initClickableRows() {
         document.addEventListener("click", function (e) {
-            var row = e.target.closest("tr[data-detail-url]");
+            var row = e.target.closest("[data-detail-url]");
             if (!row) return;
             if (e.target.closest("a, button, input, select, textarea, label")) return;
             window.location.href = row.getAttribute("data-detail-url");
@@ -713,6 +720,12 @@
     }
     window.GlV2Select.init = initGlV2Select;
 
+    // Zelfde "opnieuw aanroepbaar voor AJAX-geladen inhoud"-conventie als GlV2Select.init hierboven —
+    // eerste gebruik: Projecten/PaymentStagesV2's 21h-modal (Niels, 2026-09-30). Enkel veilig op een
+    // pagina zonder een AL bestaand GlV2Date-veld (geen dubbel-init-wacht ingebouwd, zie initGlV2Select
+    // voor dat patroon); voor deze modal-only-pagina's is dat geen probleem.
+    window.GlV2DatePicker = { init: function () { initGlV2DatePicker(); } };
+
     // ── Datumkiezer (design-handoff punt 14d "6 · DATUM") — GlV2DateTime.cshtml. Shell-breed net
     //    als initGlV2Select() hierboven (generieke EditorTemplate), maar met een eigen closeAll()/
     //    eigen [data-gl-v2-dp-owned]-marker: de trigger hier is gewoon .gl-v2-field-box, geen
@@ -730,9 +743,29 @@
         }
 
         function positionPanel(trigger, panel) {
+            // < 768px: het gedeelde .gl-v2-select-panel-mobielgedrag (bottom sheet, gl-v2-shell.css)
+            // moet zijn werk kunnen doen — géén inline top/left, anders overschrijft die inline top de
+            // sheet-CSS (top:auto + bottom:0) en rekt de kalender uit tot onderaan het scherm.
+            if (window.innerWidth < 768) {
+                panel.style.top = "";
+                panel.style.bottom = "";
+                panel.style.left = "";
+                panel.style.maxHeight = "";
+                return;
+            }
             var rect = trigger.getBoundingClientRect();
             panel.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 252 - 8)) + "px";
-            panel.style.top = (rect.bottom + 6) + "px";
+            // Onderaan te weinig plaats? Dan naar bóven openklappen (zelfde regel als de zoekende
+            // selects in gl-v2-<pagina>.js) i.p.v. buiten beeld te vallen.
+            var spaceBelow = window.innerHeight - rect.bottom - 14;
+            var spaceAbove = rect.top - 14;
+            if (spaceBelow < 320 && spaceAbove > spaceBelow) {
+                panel.style.top = "";
+                panel.style.bottom = (window.innerHeight - rect.top + 6) + "px";
+            } else {
+                panel.style.bottom = "";
+                panel.style.top = (rect.bottom + 6) + "px";
+            }
         }
 
         function pad2(n) { return n < 10 ? "0" + n : "" + n; }
@@ -749,7 +782,9 @@
             var nextBtn = root.querySelector('[data-role="next"]');
             var todayBtn = root.querySelector('[data-role="today"]');
             var clearBtn = root.querySelector('[data-role="clear"]');
-            var errorEl = root.querySelector('[data-role="date-error"]');
+            // Foutslot van het veld — hernoemd naar het generieke [data-role="field-error"] (het gedeelde
+            // Foutoverzicht, punt 24, hergebruikt datzelfde element; zie GlV2/_DateField.cshtml).
+            var errorEl = root.querySelector('[data-role="field-error"]');
             var fieldEl = root.closest(".gl-v2-field");
             if (!box || !textInput || !hiddenInput || !panel || !daysHost) return;
             panel.setAttribute("data-gl-v2-dp-owned", "");
@@ -911,4 +946,72 @@
         window.addEventListener("resize", closeAll);
         window.addEventListener("scroll", closeAll, true);
     }
+})();
+
+// ── Valutavelden (EditorTemplates/GlV2Currency, .Currencymask) — AutoNumeric + currency.js laden
+//    sinds de layout ze meelevert op élke gl-v2-pagina (zie _LayoutV2.cshtml); hier één keer
+//    initialiseren zodat een pagina dat niet zelf hoeft te doen. currency.js se init() slaat al
+//    geïnitialiseerde velden over, dus pagina's die 'm zelf ook aanroepen (na een dynamisch
+//    toegevoegde rij) doen niets dubbel. ────────────────────────────────────────────────────────
+(function () {
+    "use strict";
+    if (window.CurrencyMask && typeof window.CurrencyMask.init === "function") {
+        window.CurrencyMask.init(".Currencymask");
+    }
+})();
+
+// ── Telefoon-/gsm-velden (EditorTemplates/GlV2Telefoon.cshtml/GlV2Gsm.cshtml) — bewerkbaar
+//    landcode-voorvoegsel, project-wijd. Het zichtbare paar (voorvoegsel-select + nummerveld)
+//    bindt niet zelf naar de server; hun waarden worden hier samengevoegd in de verborgen
+//    input ([data-role="phone-value"], de echte, post'ende naam) telkens wanneer één van beide
+//    wijzigt — "+32 495123456", zelfde formaat als BOCore.GlV2PhonePrefixes.Combine() server-
+//    side. Ook de tel:/sms:-actielink volgt mee. Shell-breed geladen (élke gl-v2-pagina), dus een
+//    pagina hoeft dit voor haar eigen velden niet zelf te doen — enkel voor een NA het laden
+//    dynamisch toegevoegde rij (bv. "+ Mede-eigenaar toevoegen") roept de pagina zelf
+//    window.GlV2Phone.init(rowEl) aan, zelfde conventie als window.GlV2Select.init(scope). Idempotent
+//    (data-gl-v2-phone-wired-marker), dus een dubbele aanroep doet niets dubbel. ─────────────────
+(function () {
+    "use strict";
+
+    function initGlV2PhoneFields(scope) {
+        (scope || document).querySelectorAll('[data-role="phone-box"]').forEach(function (box) {
+            if (box.dataset.glV2PhoneWired) return;
+            var prefixSelect = box.querySelector('[data-role="phone-prefix"]');
+            var numberInput = box.querySelector('[data-role="phone-number"]');
+            var hidden = box.querySelector('[data-role="phone-value"]');
+            var action = box.querySelector('[data-role="phone-action"]');
+            if (!prefixSelect || !numberInput || !hidden) return;
+            box.dataset.glV2PhoneWired = "1";
+            var scheme = action && action.getAttribute("href") && action.getAttribute("href").indexOf("sms:") === 0 ? "sms:" : "tel:";
+
+            function sync() {
+                var number = numberInput.value.trim();
+                var value = number ? (prefixSelect.value + " " + number) : "";
+                hidden.value = value;
+                if (action) action.setAttribute("href", scheme + value);
+            }
+            prefixSelect.addEventListener("change", sync);
+            numberInput.addEventListener("input", sync);
+        });
+    }
+
+    initGlV2PhoneFields();
+    window.GlV2Phone = { init: initGlV2PhoneFields };
+})();
+
+// ── Meldingskaders (design-handoff punt 25, gl-v2-notice*, zie DESIGN.md "Meldingskaders") — de
+//    enige gedragslogica die dit component nodig heeft: een sluitknop verbergt haar eigen kaart.
+//    25d "fout en waarschuwing blijven staan tot het opgelost is; info en succes mogen sluitbaar
+//    zijn" is een MARKUP-regel (een pagina voegt een sluitknop enkel toe op is-info/is-success),
+//    geen JS-regel — dit bestand dwingt dat dus niet af, het maakt een aanwezige knop enkel
+//    functioneel. Gedelegeerd op document (shell-breed, ook voor een later dynamisch toegevoegde
+//    kaart) i.p.v. één listener per knop. ───────────────────────────────────────────────────────
+(function () {
+    "use strict";
+    document.addEventListener("click", function (e) {
+        var closeBtn = e.target.closest(".gl-v2-notice-close");
+        if (!closeBtn) return;
+        var notice = closeBtn.closest(".gl-v2-notice");
+        if (notice) notice.remove();
+    });
 })();

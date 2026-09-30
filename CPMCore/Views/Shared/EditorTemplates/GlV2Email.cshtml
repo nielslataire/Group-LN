@@ -7,6 +7,12 @@
     spatie als placeholder-attribuut — zie GlV2Telefoon.cshtml se eigen toelichting voor waarom
     (:placeholder-shown-CSS matcht nooit zonder een placeholder-attribuut, dus zonder dit zou
     "Mailen" altijd zichtbaar zijn). Optionele extra ViewData: Placeholder.
+
+    Validatie: data-gl-v2-format="email" laat gl-v2-error-summary.js altijd een fout tonen zodra er
+    een ingevulde, ongeldige waarde staat (verplicht-zijn blijft een losse data-gl-v2-required op de
+    pagina). Server-side dekt [EmailAddress] (elk model dat dit veld gebruikt) hetzelfde af — bare
+    [EmailAddress]/<EmailAddress> zonder eigen ErrorMessage krijgt de gedeelde Nederlandse boodschap
+    via DutchRequiredMessageProvider. Zie DESIGN.md "Telefoon/Gsm-voorvoegsel + validatie".
 *@
 @{
     var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
@@ -15,7 +21,7 @@
     var placeholder = ViewData["Placeholder"] as string ?? " ";
     var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
 }
-<div class="gl-v2-field@(hasError ? " is-error" : "")">
+<div class="gl-v2-field@(hasError ? " is-error" : "")" data-gl-v2-format="email" data-gl-v2-format-message="@(label) is geen geldig e-mailadres.">
     <label class="gl-v2-field-label" for="@id">@label</label>
     <div class="gl-v2-field-box">
         <i class="ph ph-envelope-simple" aria-hidden="true"></i>
@@ -25,6 +31,6 @@
     </div>
     @if (hasError)
     {
-        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+        <span class="gl-v2-field-help" data-role="field-error">@entry!.Errors[0].ErrorMessage</span>
     }
 </div>

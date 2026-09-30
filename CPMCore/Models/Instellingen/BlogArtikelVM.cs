@@ -83,6 +83,12 @@ public class BlogArtikelBlokVM
     public string? RijkeTekst { get; set; }
     public string? FotoBestand { get; set; }
     public IFormFile? FotoUpload { get; set; }
+
+    [StringLength(100)]
+    public string? KnopTekst { get; set; }
+
+    [StringLength(500)]
+    public string? KnopUrl { get; set; }
 }
 
 public class BlokVolgordeVM

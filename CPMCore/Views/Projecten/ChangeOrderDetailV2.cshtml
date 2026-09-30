@@ -1,0 +1,375 @@
+@model CPMCore.Models.Projecten.ChangeOrderDetailV2Vm
+@*
+    gl-v2 — Wijzigingsopdracht (design-handoff 20d: "verloop bovenaan, regels met interne commissie,
+    facturatieplan met voorschot/termijnen, ondertekening opvolgen"). Een offerte en een WO zijn dezelfde
+    ChangeOrder-rij (Model.IsQuote) — "Omzetten" is een in-place-actie, geen kopieerstap (beslissing
+    Niels 2026-09-30). Eigen klassen-namespace gl-v2-co-* (gl-v2-projecten-changeorderdetail.css/.js).
+
+    Signing-acties (herinneren/getekende versie opladen/weigeren/annuleren) worden bewust NIET hier
+    herbouwd — de "Ondertekening"-kaart toont enkel status en linkt naar SigningAdmin/Dossier, waar die
+    vier acties al volledig bestaan (21b). Dat voorkomt twee plekken met dezelfde formulieren.
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = Model.IsNew ? "Nieuwe wijzigingsopdracht" : (Model.Description.Length > 0 ? Model.Description : "Wijzigingsopdracht");
+    ViewData["PageIcon"] = "ph ph-file-text";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string Pct(decimal? v) => (v ?? 0).ToString("0.##", be);
+
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · offertes & wijzigingen" };
+
+    string StatusTone(CPMCore.Models.Projecten.ChangeOrderStepV2 s) => s.State switch { "done" => "is-done", "current" => "is-current", _ => "is-future" };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-changeorderdetail.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form id="gl-v2-co-form" method="post" action="@Url.Action("ChangeOrderDetailV2Save")">
+@Html.AntiForgeryToken()
+<input type="hidden" name="projectId" value="@Model.ProjectId" />
+<input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+<input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
+<div id="gl-v2-co-root" data-project-id="@Model.ProjectId" data-co-id="@Model.ChangeOrderId">
+    <div class="gl-v2-co-titlebar">
+        <div class="gl-v2-co-titlebar-text">
+            <h1 class="gl-v2-co-title">@(Model.IsNew ? "Nieuwe wijzigingsopdracht" : (string.IsNullOrWhiteSpace(Model.Description) ? "Wijzigingsopdracht" : Model.Description))</h1>
+            <div class="gl-v2-co-titlebar-badges">
+                <span class="gl-v2-badge @(Model.IsQuote ? "is-neutral" : "is-info")">@Model.StatusLabel.ToUpperInvariant()</span>
+            </div>
+        </div>
+        @if (Model.IsLocked)
+        {
+            <div class="gl-v2-co-locked" title="@Model.LockedReason"><i class="ph ph-lock-simple" aria-hidden="true"></i>@Model.LockedReason</div>
+        }
+    </div>
+
+    @* ── Stepper ───────────────────────────────────────────────────────────────────────────────────── *@
+    <div class="gl-v2-card gl-v2-co-card">
+        <div class="gl-v2-card-body gl-v2-co-stepper">
+            @foreach (var step in Model.Steps)
+            {
+                <div class="gl-v2-co-step @StatusTone(step)">
+                    <span class="gl-v2-co-step-dot">
+                        @if (step.State == "done")
+                        {
+                            <i class="ph ph-check" aria-hidden="true"></i>
+                        }
+                    </span>
+                    <span class="gl-v2-co-step-label">@step.Label</span>
+                    @if (!string.IsNullOrWhiteSpace(step.Hint))
+                    {
+                        <span class="gl-v2-co-step-hint">@step.Hint</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-co-layout">
+        <div class="gl-v2-co-main">
+            @* ── Opdracht ──────────────────────────────────────────────────────────────────────────── *@
+            <div class="gl-v2-card gl-v2-co-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-briefcase" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">Opdracht</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-card-header-count">Voor wie, van welke leverancier en waarom</span>
+                </div>
+                <div class="gl-v2-card-body gl-v2-co-form-grid">
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">Klant · eenheid</span>
+                        <div class="gl-v2-co-readout">@Model.ClientName@(string.IsNullOrWhiteSpace(Model.UnitName) ? "" : " · " + Model.UnitName)</div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-co-contractactivity">Leverancier · contract</label>
+                        <select class="gl-v2-field-input" id="gl-v2-co-contractactivity" name="contractActivityId" @(Model.IsLocked ? "disabled" : "")>
+                            <option value="">— kies —</option>
+                            @foreach (var a in Model.ContractActivities)
+                            {
+                                <option value="@a.ID" selected="@(a.ID == Model.ContractActivityId)">@a.Display</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">Btw klant</span>
+                        <div class="gl-v2-co-readout gl-v2-co-locked-field" title="wijzigen in Betalingsschijven"><i class="ph ph-lock-simple" aria-hidden="true"></i>@Model.VatKlantLabel</div>
+                        <input type="hidden" id="gl-v2-co-vat-klant" value="@Model.VatKlantPercentage.ToString(CultureInfo.InvariantCulture)" />
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-co-description">Omschrijving voor de klant</label>
+                        <textarea class="gl-v2-field-input" id="gl-v2-co-description" name="description" rows="2" @(Model.IsLocked ? "disabled" : "")>@Model.Description</textarea>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-toggle-row" for="gl-v2-co-bouwheer">
+                            <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-co-bouwheer" name="invoiceableByBouwheer" @(Model.InvoiceableByBouwheer ? "checked" : "") @(Model.IsLocked ? "disabled" : "") />
+                            <span class="gl-v2-toggle-text">
+                                <span class="gl-v2-toggle-label">Te factureren door bouwheer</span>
+                                <span class="gl-v2-toggle-hint">uit = wij factureren, via het facturatiebedrijf aannemer</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Regels ────────────────────────────────────────────────────────────────────────────── *@
+            <div class="gl-v2-card gl-v2-co-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">Regels</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-card-header-count">Kostprijs en commissie zijn intern — de klant ziet enkel de prijs klant</span>
+                    <span class="gl-v2-card-header-spacer"></span>
+                    @if (!Model.IsLocked)
+                    {
+                        <button type="button" class="gl-v2-card-header-action" id="gl-v2-co-add-row">+ Regel</button>
+                    }
+                </div>
+                <div class="gl-v2-co-table-scroll">
+                    <table class="gl-v2-co-table" id="gl-v2-co-rows-table">
+                        <thead>
+                            <tr>
+                                <th>Omschrijving</th>
+                                <th class="is-center">Meetm.</th>
+                                <th class="is-center">Eenh.</th>
+                                <th class="is-right">Aantal</th>
+                                <th class="is-right">Prijs lev.</th>
+                                <th class="is-right">Comm. %</th>
+                                <th class="is-right">Prijs klant</th>
+                                <th class="is-right">Btw</th>
+                                <th class="is-right">Totaal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="gl-v2-co-rows-body">
+                            @for (var i = 0; i < Model.Rows.Count; i++)
+                            {
+                                @await Html.PartialAsync("Partials/_ChangeOrderDetailRowV2", Model.Rows[i], new ViewDataDictionary(ViewData) { { "Index", i }, { "VatKlant", Model.VatKlantPercentage }, { "IsLocked", Model.IsLocked } })
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="8" class="is-right">Kostprijs leverancier · intern</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-cost">€ 0,00</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="is-right">Commissie · intern</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-commission">€ 0,00</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="is-right">Totaal excl. btw</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-excl">€ 0,00</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="is-right">Btw</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-vat">€ 0,00</td>
+                                <td></td>
+                            </tr>
+                            <tr class="gl-v2-co-sum-total">
+                                <td colspan="8" class="is-right">Te betalen door klant</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-total">€ 0,00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                @if (Model.HasRowsNeedingReview)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                        <i class="ph ph-warning" aria-hidden="true"></i>
+                        <span>Minstens één regel staat op "controleer" — verzenden kan pas als elke regel bevestigd is.</span>
+                    </div>
+                }
+            </div>
+
+            @* ── Facturatieplan ────────────────────────────────────────────────────────────────────── *@
+            <div class="gl-v2-card gl-v2-co-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">Facturatieplan</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-card-header-count">Hoe het bedrag gefactureerd wordt — het saldo ten laatste bij de laatste schijf</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <div class="gl-v2-co-presets" id="gl-v2-co-presets" role="group">
+                        <span class="gl-v2-co-presets-label">SNEL KIEZEN</span>
+                        <button type="button" class="gl-v2-co-preset @(Model.FacturatieplanPreset == "laatste-schijf" ? "is-active" : "")" data-preset="laatste-schijf">Alles bij laatste schijf</button>
+                        <button type="button" class="gl-v2-co-preset @(Model.FacturatieplanPreset == "voorschot-saldo" ? "is-active" : "")" data-preset="voorschot-saldo">Voorschot + saldo</button>
+                        <button type="button" class="gl-v2-co-preset @(Model.FacturatieplanPreset == "na-ondertekening" ? "is-active" : "")" data-preset="na-ondertekening">Volledig na ondertekening</button>
+                        <button type="button" class="gl-v2-co-preset @(Model.FacturatieplanPreset == "eigen" ? "is-active" : "")" data-preset="eigen">Eigen verdeling</button>
+                    </div>
+                    <table class="gl-v2-co-table gl-v2-co-terms-table" id="gl-v2-co-terms-table">
+                        <thead>
+                            <tr>
+                                <th>Termijn</th>
+                                <th class="is-right">%</th>
+                                <th class="is-right">Excl. btw</th>
+                                <th>Wanneer factureerbaar</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="gl-v2-co-terms-body">
+                            @for (var i = 0; i < Model.Terms.Count; i++)
+                            {
+                                @await Html.PartialAsync("Partials/_ChangeOrderTermRowV2", Model.Terms[i], new ViewDataDictionary(ViewData) { { "Index", i }, { "Stages", Model.Stages }, { "IsLocked", Model.IsLocked } })
+                            }
+                        </tbody>
+                    </table>
+                    @if (!Model.IsLocked)
+                    {
+                        <button type="button" class="gl-v2-co-add-term" id="gl-v2-co-add-term">
+                            <i class="ph ph-plus" aria-hidden="true"></i>+ Tussentijdse termijn
+                        </button>
+                        <span class="gl-v2-field-help">% of vast bedrag · factureerbaar na ondertekening, bij een schijf, of manueel vrijgeven</span>
+                    }
+                    <div class="gl-v2-co-terms-total">
+                        <span id="gl-v2-co-terms-total-pct">0 %</span>
+                        <span class="gl-v2-badge" id="gl-v2-co-terms-total-badge">controleer</span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-co-conditions">Voorwaarden op het document</label>
+                        <textarea class="gl-v2-field-input" id="gl-v2-co-conditions" name="conditionsText" rows="2" @(Model.IsLocked ? "disabled" : "")>@Model.ConditionsText</textarea>
+                        <span class="gl-v2-field-help">volgt het plan automatisch, blijft aanpasbaar · na verzenden ligt het plan vast</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="gl-v2-co-side">
+            @* ── Ondertekening ─────────────────────────────────────────────────────────────────────── *@
+            <div class="gl-v2-card gl-v2-co-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-signature" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">Ondertekening</h2>
+                </div>
+                <div class="gl-v2-card-body">
+                    @if (!Model.SigningEnabled)
+                    {
+                        <p class="gl-v2-field-help">Elektronisch ondertekenen staat uit voor dit project.</p>
+                    }
+                    else if (Model.ActiveSigningCase != null)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                            <i class="ph ph-clock" aria-hidden="true"></i>
+                            <span>Wacht op ondertekening</span>
+                        </div>
+                        <a class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" href="@Url.Action("Dossier", "SigningAdmin", new { id = Model.ActiveSigningCase.CaseId })">Dossier openen →</a>
+                    }
+                    else if (Model.CompletedSigningCase != null)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                            <i class="ph ph-check-circle" aria-hidden="true"></i>
+                            <span>Ondertekend</span>
+                        </div>
+                        <a class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" href="@Url.Action("Dossier", "SigningAdmin", new { id = Model.CompletedSigningCase.CaseId })">Dossier openen →</a>
+                    }
+                    else if (!Model.IsNew && !Model.IsQuote && Model.CanStartSigning)
+                    {
+                        <a class="gl-v2-btn gl-v2-btn-primary gl-v2-co-side-btn" href="@Url.Action("Start", "SigningAdmin", new { documentType = "ChangeOrder", sourceId = Model.ChangeOrderId, backUrl = Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, coid = Model.ChangeOrderId }) })">Ondertekening starten</a>
+                    }
+                    else
+                    {
+                        <p class="gl-v2-field-help">Sla eerst op om ondertekening te kunnen starten.</p>
+                    }
+                </div>
+            </div>
+
+            @* ── Bron ──────────────────────────────────────────────────────────────────────────────── *@
+            <div class="gl-v2-card gl-v2-co-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">Bron</h2>
+                </div>
+                <div class="gl-v2-card-body gl-v2-co-source">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-co-quote-ref">Offertenr. leverancier</label>
+                        <input type="text" class="gl-v2-field-input" id="gl-v2-co-quote-ref" name="quoteSupplierReference" value="@Model.QuoteSupplierReference" @(Model.IsLocked ? "disabled" : "") />
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-co-quote-vat">Btw leverancier</label>
+                        <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-co-quote-vat" name="quoteVatPercentage" value="@Model.QuoteVatPercentage" @(Model.IsLocked ? "disabled" : "") />
+                    </div>
+                    @if (Model.IsQuote)
+                    {
+                        <button type="button" class="gl-v2-btn gl-v2-btn-primary gl-v2-co-side-btn" id="gl-v2-co-convert" @(Model.IsNew ? "disabled title=\"Sla eerst op\"" : "")>
+                            <i class="ph ph-arrow-right" aria-hidden="true"></i>Omzetten naar wijzigingsopdracht
+                        </button>
+                    }
+                    else if (Model.QuoteConvertedAt.HasValue)
+                    {
+                        <p class="gl-v2-field-help">Omgezet op @Model.QuoteConvertedAt.Value.ToString("dd/MM/yyyy")@(string.IsNullOrWhiteSpace(Model.QuoteSupplierReference) ? "" : $" · {Model.QuoteSupplierReference}").</p>
+                    }
+                </div>
+            </div>
+
+            @* ── Historiek ─────────────────────────────────────────────────────────────────────────── *@
+            <div class="gl-v2-card gl-v2-co-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-card-header-title">Historiek</h2>
+                </div>
+                <div class="gl-v2-card-body gl-v2-co-history">
+                    @if (Model.History.Count == 0)
+                    {
+                        <p class="gl-v2-field-help">Nog geen geschiedenis.</p>
+                    }
+                    else
+                    {
+                        @foreach (var h in Model.History)
+                        {
+                            <div class="gl-v2-co-history-item">
+                                <span class="gl-v2-co-history-date">@(h.When?.ToString("dd/MM/yyyy") ?? "")</span>
+                                <span>@h.Label</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+
+@if (!Model.IsLocked)
+{
+    <div class="gl-v2-co-actionbar">
+        <span class="gl-v2-field-help">Na verzenden: regels aanpassen maakt een nieuwe versie en vraagt opnieuw een handtekening</span>
+        <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })">Annuleren</a>
+        <button type="submit" form="gl-v2-co-form" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-save">Opslaan</button>
+    </div>
+}
+
+@section PageScripts
+{
+    <script id="gl-v2-co-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "changeOrderId": @Model.ChangeOrderId,
+        "clientAccountId": @Model.ClientAccountId,
+        "vatKlant": @Model.VatKlantPercentage.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        "saveUrl": "@Url.Action("ChangeOrderDetailV2Save")",
+        "convertUrl": "@Url.Action("ChangeOrderDetailV2Convert")",
+        "addRowUrl": "@Url.Action("ChangeOrderDetailV2AddRow")",
+        "addTermUrl": "@Url.Action("ChangeOrderDetailV2AddTerm")",
+        "listUrl": "@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })"
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-changeorderdetail.js" asp-append-version="true"></script>
+}

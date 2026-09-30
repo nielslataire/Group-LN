@@ -259,6 +259,138 @@ public sealed class SigningService : ISigningService
         return sent ? SigningOperationResult.Ok(party.SigningCaseId) : SigningOperationResult.Fail("De nieuwe link kon niet verstuurd worden.");
     }
 
+    /// <summary>Scherm 21b, "Getekende versie opladen": het opgeladen PDF wordt zelf het definitieve
+    /// document (geen door <see cref="_renderer"/> samengestelde evidence-pagina — het bewijs van de
+    /// papieren handtekening zit in dit event en het auditrapport, niet in het PDF-bestand zelf). Alle
+    /// nog openstaande partijen worden als ondertekend geregistreerd zodat het auditrapport hen correct
+    /// vermeldt, en het dossier wordt zoals bij een digitale voltooiing afgesloten.</summary>
+    public async Task<SigningOperationResult> UploadSignedDocumentAsync(int caseId, byte[] pdfBytes, string fileName, SigningRequestContext ctx, CancellationToken ct = default)
+    {
+        if (!IsAcceptablePdf(pdfBytes)) return SigningOperationResult.Fail("Het bestand is geen leesbare PDF (of te groot).");
+
+        var signingCase = await LoadCaseAsync(caseId, ct);
+        if (signingCase is null) return SigningOperationResult.Fail("Dossier niet gevonden.");
+        if (signingCase.Status != (int)SigningCaseStatus.Open) return SigningOperationResult.Fail("Het dossier is niet (meer) open.");
+
+        var actor = ctx.ActorLabel ?? "een beheerder";
+        var now = Now;
+        var newlySigned = signingCase.Parties.Where(p => p.Status is (int)SigningPartyStatus.Pending or (int)SigningPartyStatus.Invited
+            or (int)SigningPartyStatus.Opened or (int)SigningPartyStatus.Verified).ToList();
+        foreach (var party in newlySigned)
+        {
+            await _db.Entry(party).Collection(p => p.AccessTokens).LoadAsync(ct);
+            RevokeTokens(party, "Papieren handtekening geregistreerd");
+            party.Status = (int)SigningPartyStatus.Signed;
+            party.SignedAt = now;
+            party.ConsentAcceptedAt ??= now;
+            party.ConsentTextSnapshot ??= signingCase.ConsentTextSnapshot;
+        }
+        await _db.SaveChangesAsync(ct);
+
+        var originalSha = await OriginalShaAsync(signingCase.Id, ct);
+        foreach (var party in newlySigned)
+            await _evidence.AppendAsync(Draft(signingCase.Id, party.Id, SigningEventTypes.PartySigned, ctx, originalSha,
+                new { method = "Paper", summary = $"Papieren handtekening, geregistreerd door {actor}" }, SigningActorType.Internal), ct);
+
+        var finalDoc = await StoreDocumentAsync(signingCase.Id, null, SigningDocumentKind.Final, fileName, "application/pdf", pdfBytes, ctx.ActorUserId, ctx, ct, quiet: true);
+        signingCase.FinalDocumentId = finalDoc.Id;
+        signingCase.Status = (int)SigningCaseStatus.Completed;
+        signingCase.CompletedAt = now;
+        var policy = await _db.SigningPolicy.AsNoTracking().FirstOrDefaultAsync(p => p.DocumentType == signingCase.DocumentType, ct);
+        signingCase.RetentionUntil = policy?.RetentionDays is int days ? now.AddDays(days) : null;
+        await _db.SaveChangesAsync(ct);
+        await _evidence.AppendAsync(Draft(signingCase.Id, null, SigningEventTypes.PaperDocumentUploaded, ctx, finalDoc.Sha256,
+            new { documentId = finalDoc.Id, bytes = finalDoc.ByteLength, fileName = finalDoc.FileName, actor }, SigningActorType.Internal), ct);
+        await _evidence.AppendAsync(Draft(signingCase.Id, null, SigningEventTypes.CaseCompleted, ctx, finalDoc.Sha256,
+            new { signers = signingCase.Parties.Count(p => p.Status == (int)SigningPartyStatus.Signed), finalSha256 = finalDoc.Sha256, registeredByStaff = true, actor }, SigningActorType.Internal), ct);
+
+        // Auditrapport, zoals TryFinalizeAsync, maar zonder ComposeFinalPdfAsync: het definitieve
+        // document is hier het opgeladen bestand zelf, niet iets dat wij samenstellen.
+        try
+        {
+            var original = await _db.SigningDocument.AsNoTracking().FirstOrDefaultAsync(d => d.Id == signingCase.OriginalDocumentId, ct);
+            var signers = await SignedPartyInfosAsync(signingCase, ct);
+            var events = await _evidence.ListAsync(signingCase.Id, ct);
+            var chain = await _evidence.VerifyAsync(signingCase.Id, ct);
+            var verifyUrl = VerifyUrl(signingCase.PublicVerificationId);
+            var report = await _renderer.RenderAuditReportAsync(new AuditReportInput(ToView(signingCase), original?.Sha256 ?? "", finalDoc.Sha256,
+                signingCase.ConsentTextSnapshot ?? string.Empty, signers, events, chain, verifyUrl), ct);
+            var reportDoc = await StoreDocumentAsync(signingCase.Id, null, SigningDocumentKind.AuditReport,
+                $"{SafeFileName(signingCase.Title)}-auditrapport.pdf", "application/pdf", report, ctx.ActorUserId, ctx, ct, quiet: true);
+            signingCase.AuditReportDocumentId = reportDoc.Id;
+            await _db.SaveChangesAsync(ct);
+            await _evidence.AppendAsync(Draft(signingCase.Id, null, SigningEventTypes.AuditReportCreated, ctx, reportDoc.Sha256,
+                new { documentId = reportDoc.Id, bytes = reportDoc.ByteLength, chainValid = chain.Valid }, SigningActorType.System), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Auditrapport voor papieren dossier {CaseId} kon niet aangemaakt worden.", caseId);
+            await _evidence.AppendAsync(Draft(signingCase.Id, null, SigningEventTypes.FinalizationFailed, ctx, null, new { error = ex.GetType().Name, stage = "AuditReport" }, SigningActorType.System), ct);
+        }
+
+        var source = _registry.TrySource(signingCase.DocumentType);
+        if (source is not null)
+        {
+            try { await source.OnCaseCompletedAsync(signingCase.SourceEntityId, signingCase.Id, signingCase.CompletedAt!.Value, ct); }
+            catch (Exception ex) { _logger.LogError(ex, "Bron {DocumentType}/{SourceId} kon niet bijgewerkt worden na voltooiing (papier).", signingCase.DocumentType, signingCase.SourceEntityId); }
+        }
+
+        var mailDoc = await MailDocumentAsync(signingCase, ct);
+        foreach (var party in signingCase.Parties.Where(p => p.Status == (int)SigningPartyStatus.Signed && !string.IsNullOrWhiteSpace(p.Email)))
+        {
+            var (raw, _) = await IssueTokenAsync(party, SigningTokenPurpose.Download, now.AddDays(_options.DownloadLinkDays), null, ct);
+            await TryNotifyAsync(() => _notifier.SendCompletedToPartyAsync(mailDoc, new SigningMailRecipient(party.DisplayName, party.Email!), pdfBytes, SignUrl(raw), ct), signingCase.Id, party.Id, ct);
+        }
+        if (source is not null)
+        {
+            var internals = await SafeInternalRecipientsAsync(source, signingCase.SourceEntityId, ct);
+            await TryNotifyAsync(() => _notifier.SendCompletedInternalAsync(mailDoc, internals, InternalUrl(signingCase.Id), ct), signingCase.Id, null, ct);
+        }
+        return SigningOperationResult.Ok(signingCase.Id);
+    }
+
+    /// <summary>Scherm 21b, "Weigering registreren": zelfde statusovergang als <see cref="DeclineAsync"/>,
+    /// maar aangestuurd door een beheerder via <paramref name="partyId"/> — zelfde signatuurstijl als
+    /// <see cref="SendReminderAsync"/>.</summary>
+    public async Task<SigningOperationResult> DeclineByStaffAsync(int partyId, string reason, SigningRequestContext ctx, CancellationToken ct = default)
+    {
+        reason = (reason ?? string.Empty).Trim();
+        if (reason.Length == 0) return SigningOperationResult.Fail("Geef een reden op.");
+
+        var party = await _db.SigningParty.Include(p => p.SigningCase).ThenInclude(c => c.OriginalDocument)
+            .Include(p => p.SigningCase).ThenInclude(c => c.Parties)
+            .FirstOrDefaultAsync(p => p.Id == partyId, ct);
+        if (party is null) return SigningOperationResult.Fail("Ondertekenaar niet gevonden.");
+        var signingCase = party.SigningCase;
+        if (signingCase.Status != (int)SigningCaseStatus.Open) return SigningOperationResult.Fail("Het dossier is niet (meer) open.");
+        if (party.Status is not ((int)SigningPartyStatus.Pending or (int)SigningPartyStatus.Invited or (int)SigningPartyStatus.Opened or (int)SigningPartyStatus.Verified))
+            return SigningOperationResult.Fail("Deze ondertekenaar kan niet meer geweigerd worden.");
+
+        party.Status = (int)SigningPartyStatus.Declined;
+        party.DeclinedAt = Now;
+        party.DeclineReason = Truncate(reason, 1000);
+        await _db.Entry(party).Collection(p => p.AccessTokens).LoadAsync(ct);
+        RevokeTokens(party, "Geweigerd (intern geregistreerd)");
+        await _db.SaveChangesAsync(ct);
+        await _evidence.AppendAsync(Draft(signingCase.Id, party.Id, SigningEventTypes.PartyDeclined, ctx, await OriginalShaAsync(signingCase.Id, ct),
+            new { reason = party.DeclineReason, registeredByStaff = true }, SigningActorType.Internal), ct);
+
+        var mailDoc = await MailDocumentAsync(signingCase, ct);
+        if (!SigningRuleEvaluator.CanStillComplete((SigningRule)signingCase.SigningRule, RuleStates(signingCase)))
+        {
+            await CloseCaseAsync(signingCase, SigningCaseStatus.Declined, $"Geweigerd door {party.DisplayName} (intern geregistreerd): {reason}", ctx,
+                "Een betrokkene heeft geweigerd te ondertekenen; het dossier is gesloten.", SigningEventTypes.PartyDeclined, ct, skipEvent: true);
+        }
+
+        var source = _registry.TrySource(signingCase.DocumentType);
+        if (source is not null)
+        {
+            var internals = await SafeInternalRecipientsAsync(source, signingCase.SourceEntityId, ct);
+            await TryNotifyAsync(() => _notifier.SendDeclinedInternalAsync(mailDoc, internals, party.DisplayName, reason, InternalUrl(signingCase.Id), ct), signingCase.Id, party.Id, ct);
+        }
+        return SigningOperationResult.Ok(signingCase.Id);
+    }
+
     public async Task<CaseStatusView?> GetCaseStatusAsync(int caseId, CancellationToken ct = default)
     {
         var signingCase = await QueryCases().FirstOrDefaultAsync(c => c.Id == caseId, ct);
@@ -1258,6 +1390,13 @@ public sealed class SigningService : ISigningService
         if (data.Length < 100 || data.Length > _options.MaxSignatureImageBytes) return false;
         // PNG-handtekening: 89 50 4E 47 0D 0A 1A 0A
         return data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 && data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A;
+    }
+
+    private bool IsAcceptablePdf(byte[] data)
+    {
+        if (data.Length < 5 || data.Length > _options.MaxUploadedDocumentBytes) return false;
+        // PDF-signatuur: "%PDF"
+        return data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46;
     }
 
     private static string SafeFileName(string name)

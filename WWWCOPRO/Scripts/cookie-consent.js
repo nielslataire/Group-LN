@@ -6,6 +6,8 @@
    - Stuurt Google Consent Mode aan en laadt Google Tag Manager pas
      nadat statistiek of marketing is aanvaard (window.grouplnLoadGTM,
      gedefinieerd in _Layout.vbhtml).
+   - Anonieme telling van de banner-uitkomst (Shown/Accepted/Rejected/
+     Abandoned) via POST /cookie-consent-event, zie logEvent() hieronder.
    ================================================ */
 (function () {
     'use strict';
@@ -14,6 +16,7 @@
     var COOKIE_DAYS = 182; // ~6 maanden
     var EVENT_URL = '/cookie-consent-event';
     var SHOWN_LOGGED_KEY = 'groupln_cc_shown_logged';
+    var ABANDONED_LOGGED_KEY = 'groupln_cc_abandoned_logged';
 
     var root = document.getElementById('ccConsent');
     var fab = document.getElementById('ccFab');
@@ -35,12 +38,57 @@
         } catch (e) { /* meting mag de pagina nooit breken */ }
     }
 
+    // "Shown" en "Abandoned" tellen één keer per browser (localStorage), niet per sessie of
+    // tabblad: een aarzelaar die pas bij zijn derde bezoek kiest, is één "getoond" en één keuze,
+    // geen drie "getoond". Bij een keuze worden de vlaggen gewist, zodat de volgende cyclus
+    // (cookie vervallen na 6 maanden, cookies gewist) opnieuw als één weergave telt.
+    function flagStore() {
+        try { if (window.localStorage) { return window.localStorage; } } catch (e) { /* geblokkeerd */ }
+        try { if (window.sessionStorage) { return window.sessionStorage; } } catch (e) { /* geblokkeerd */ }
+        return null;
+    }
+    function flagIsSet(key) {
+        try { var st = flagStore(); return !!(st && st.getItem(key)); } catch (e) { return false; }
+    }
+    function flagSet(key) {
+        try { var st = flagStore(); if (st) { st.setItem(key, '1'); } } catch (e) { /* privé-modus e.d.: dan liever te vaak dan nooit tellen */ }
+    }
+    function flagClear(key) {
+        try { var st = flagStore(); if (st) { st.removeItem(key); } } catch (e) { /* niets te wissen */ }
+    }
+
     function logShownOnce() {
-        try {
-            if (sessionStorage.getItem(SHOWN_LOGGED_KEY)) { return; }
-            sessionStorage.setItem(SHOWN_LOGGED_KEY, '1');
-        } catch (e) { /* privé-modus e.d.: dan liever te vaak dan nooit tellen */ }
+        if (flagIsSet(SHOWN_LOGGED_KEY)) { return; }
+        flagSet(SHOWN_LOGGED_KEY);
         logEvent('Shown');
+    }
+
+    // ── "Verlaten": de bezoeker sluit het tabblad, gaat terug of klikt weg naar een andere site
+    //    terwijl de banner nog open staat. pagehide vuurt óók bij navigatie binnen de site, dus
+    //    een klik op een interne link of een formulierverzending zet eerst een vlag: dan is het
+    //    geen verlaten, de banner komt op de volgende pagina gewoon terug. ──
+    var internalNavPending = false;
+
+    function markInternalNavigation(e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) { return; }
+        var target = (a.getAttribute('target') || '').toLowerCase();
+        if (target && target !== '_self') { return; } // nieuw tabblad: deze pagina blijft open
+        var href = a.getAttribute('href') || '';
+        if (/^(mailto|tel|javascript):/i.test(href)) { return; }
+        try {
+            if (new URL(href, location.href).origin === location.origin) { internalNavPending = true; }
+        } catch (err) { /* ongeldige href: als extern behandelen */ }
+    }
+
+    function logAbandonedOnce() {
+        var open = banner.classList.contains('is-open') || dialog.classList.contains('is-open');
+        if (!open) { return; }
+        if (parseConsent(readCookie())) { return; }
+        if (internalNavPending) { internalNavPending = false; return; }
+        if (flagIsSet(ABANDONED_LOGGED_KEY)) { return; }
+        flagSet(ABANDONED_LOGGED_KEY);
+        logEvent('Abandoned');
     }
 
     var banner = root.querySelector('.cc-banner');
@@ -178,6 +226,8 @@
         // Enkel de allereerste keuze (nog geen cookie) telt mee als "Aanvaard"/"Geweigerd" —
         // een latere wijziging via het cookie-icoon is geen antwoord op de banner meer.
         if (!isChange) { logEvent((cats.analytics || cats.marketing) ? 'Accepted' : 'Rejected'); }
+        flagClear(SHOWN_LOGGED_KEY);
+        flagClear(ABANDONED_LOGGED_KEY);
         closeDialog();
         closeBanner();
         showFab();
@@ -196,6 +246,10 @@
     });
 
     fab.addEventListener('click', openDialog);
+
+    document.addEventListener('click', markInternalNavigation, true);
+    document.addEventListener('submit', function () { internalNavPending = true; }, true);
+    window.addEventListener('pagehide', logAbandonedOnce);
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && dialog.classList.contains('is-open')) { closeDialog(); }

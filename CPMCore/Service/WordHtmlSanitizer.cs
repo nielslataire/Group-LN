@@ -19,8 +19,12 @@ namespace CPMCore.Service
         private static readonly Regex WordBodyRegex = new(
             @"<body[^>]*>([\s\S]*)</body>",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Enkel POSITIEVE voorwaarden ("[if gte vml 1]", "[if mso]") verwijderen. De genegeerde
+        // variant "<!--[if !mso]><!-- --> ... <!--<![endif]-->" is net de tak voor alle niet-Outlook-
+        // clients (bv. de knop en de stapnummers in de uitnodigingsmail): "!mso" bevat ook het woord
+        // "mso", dus zonder de (?![^\]]*!)-uitsluiting werd die tak mét inhoud weggegooid.
         private static readonly Regex VmlMsoConditionalBlockRegex = new(
-            @"<!--\[if[^\]]*\b(?:vml|mso)\b[^\]]*\]>[\s\S]*?<!\[endif\]-->",
+            @"<!--\[if(?![^\]]*!)[^\]]*\b(?:vml|mso)\b[^\]]*\]>[\s\S]*?<!\[endif\]-->",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex DownlevelRevealedMarkerRegex = new(
             @"<!\[if[^\]]*\]>|<!\[endif\]>",

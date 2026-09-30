@@ -222,7 +222,12 @@
    niet default te tonen (op desktop zijn de twee volwaardige knoppen al zichtbaar, een tweede
    ingang naar identiek dezelfde twee acties is daar overbodig). ─────────────────────────────────── */
 @media (min-width: 1024px) {
-    .gl-v2-dc-topbar-menu-trigger { display: none; }
+    /* .gl-v2-icon-btn.gl-v2-dc-topbar-menu-trigger (niet enkel de eigen klasse): gl-v2-shell.css se
+       eigen .gl-v2-icon-btn { display: inline-flex } laadt NÁ deze pagina-CSS (vaste laadvolgorde,
+       zie DESIGN.md/memory "gl-v2 page CSS loads BEFORE shell.css") — bij gelijke specificiteit wint
+       de later geladen regel, dus zonder de extra klasse hier bleef deze knop op desktop gewoon
+       zichtbaar ondanks deze regel. */
+    .gl-v2-icon-btn.gl-v2-dc-topbar-menu-trigger { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1023.98px) {
     .gl-v2-dc-topbar-btn { display: none; }

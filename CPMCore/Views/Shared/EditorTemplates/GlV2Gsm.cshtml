@@ -1,11 +1,12 @@
 @model string
 @*
     gl-v2 (design-handoff optie 8f·2, "GSM"). Zelfde veld als GlV2Telefoon.cshtml, ander icoon en
-    andere actie (Sms i.p.v. Bellen) — zoals de mockup se eigen toelichting het stelt. Enkel
-    expliciete aanroep. Geen zichtbare standaard placeholder-tekst, wel een spatie als placeholder-
-    attribuut — zie GlV2Telefoon.cshtml se eigen toelichting voor waarom (:placeholder-shown-CSS
-    matcht nooit zonder een placeholder-attribuut, dus zonder dit zou "Sms" altijd zichtbaar zijn).
-    Optionele extra ViewData: Placeholder.
+    andere actie (Sms i.p.v. Bellen), zelfde bewerkbare-voorvoegsel-opzet — zie GlV2Telefoon.cshtml
+    se eigen toelichting voor het volledige verhaal (opslagformaat "+32 495123456",
+    GlV2PhonePrefixes.Split/Combine, initGlV2PhoneFields() in gl-v2-shell.js, [GlV2Phone]-validatie).
+    Enkel expliciete aanroep. Geen zichtbare standaard placeholder-tekst, wel een spatie als
+    placeholder-attribuut (:placeholder-shown-CSS matcht nooit zonder een placeholder-attribuut,
+    dus zonder dit zou "Sms" altijd zichtbaar zijn). Optionele extra ViewData: Placeholder.
 *@
 @{
     var name = ViewData.TemplateInfo.GetFullHtmlFieldName("");
@@ -13,19 +14,33 @@
     var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
     var placeholder = ViewData["Placeholder"] as string ?? " ";
     var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+    var parsed = BOCore.GlV2PhonePrefixes.Split(Model);
 }
-<div class="gl-v2-field@(hasError ? " is-error" : "")">
-    <label class="gl-v2-field-label" for="@id">@label</label>
-    <div class="gl-v2-field-box">
+<div class="gl-v2-field@(hasError ? " is-error" : "")" data-gl-v2-format="phone" data-gl-v2-format-message="@(label) is geen geldig telefoonnummer.">
+    <label class="gl-v2-field-label" for="@(id)_number">@label</label>
+    <div class="gl-v2-field-box" data-role="phone-box">
         <i class="ph ph-device-mobile" aria-hidden="true"></i>
-        <span class="gl-v2-field-prefix">+32</span>
+        <select class="gl-v2-field-prefix-select" data-role="phone-prefix" aria-label="Landcode van @label.ToLowerInvariant()">
+            @foreach (var p in BOCore.GlV2PhonePrefixes.All)
+            {
+                if (p.Code == parsed.Prefix)
+                {
+                    <option value="@p.Code" selected>@p.Code</option>
+                }
+                else
+                {
+                    <option value="@p.Code">@p.Code</option>
+                }
+            }
+        </select>
         <span class="gl-v2-field-divider"></span>
-        <input type="tel" id="@id" name="@name" class="gl-v2-field-input"
-               value="@Model" placeholder="@placeholder" autocomplete="off" />
-        <a class="gl-v2-field-action" href="sms:@Model"><span>Sms</span></a>
+        <input type="tel" id="@(id)_number" data-role="phone-number" class="gl-v2-field-input"
+               value="@parsed.Number" placeholder="@placeholder" autocomplete="off" inputmode="tel" />
+        <input type="hidden" id="@id" name="@name" data-role="phone-value" value="@Model" />
+        <a class="gl-v2-field-action" data-role="phone-action" href="sms:@Model"><span>Sms</span></a>
     </div>
     @if (hasError)
     {
-        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+        <span class="gl-v2-field-help" data-role="field-error">@entry!.Errors[0].ErrorMessage</span>
     }
 </div>

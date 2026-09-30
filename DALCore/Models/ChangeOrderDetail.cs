@@ -29,5 +29,14 @@ public partial class ChangeOrderDetail
 
     public decimal? VatPercentage { get; set; }
 
+    /// <summary>Offertes & wijzigingen gl-v2 (design-handoff 20c, migratie 064) — de goud
+    /// "controleer"-vlag: een onzekere OCR-waarde. Een WO met minstens één regel op NeedsReview=1 mag
+    /// niet verzonden worden (spec §8).</summary>
+    public bool NeedsReview { get; set; }
+
+    /// <summary>Bijgesneden foto uit 20c ("kader rond een foto hangt die aan een regel"), opgeslagen via
+    /// dezelfde Storage-service als andere documentbijlagen.</summary>
+    public string SourceImagePath { get; set; }
+
     public virtual ChangeOrder ChangeOrder { get; set; }
 }

@@ -369,7 +369,7 @@ End Code
         End Section*@
 
     @* ── Cookietoestemming ── *@
-    @* Banner staat gecentreerd op het scherm met een blokkerende overlay (zie cookie-consent.css/.js). *@
+    @* Banner staat gecentreerd op het scherm met een blokkerende overlay; op gsm (≤767px) als bottom sheet onderaan (zie cookie-consent.css/.js). *@
     <div id="ccConsent" class="cc">
         <div class="cc-overlay" data-cc-close-prefs></div>
 

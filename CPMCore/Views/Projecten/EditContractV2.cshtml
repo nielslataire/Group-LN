@@ -95,7 +95,7 @@
 
 <span class="gl-v2-ec-required-note">Velden met <span class="gl-v2-ec-required-star">*</span> zijn verplicht · zelfde formulier voor een nieuw contract, dan met lege velden</span>
 
-@using (Html.BeginForm("EditContract", "Projecten", FormMethod.Post, new { @class = "gl-v2-ec-form", id = "gl-v2-ec-form", enctype = "multipart/form-data" }))
+@using (Html.BeginForm("EditContract", "Projecten", FormMethod.Post, new { @class = "gl-v2-ec-form", id = "gl-v2-ec-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })

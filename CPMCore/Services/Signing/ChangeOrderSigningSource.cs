@@ -105,8 +105,10 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
         var account = await _db.ClientAccount.AsNoTracking().FirstOrDefaultAsync(a => a.Id == model.ClientAccountId, ct);
         if (account is not null)
         {
+            // account.Cellphone (migratie 058) i.p.v. hardcoded null: SmsOtpMethod.ResolveDestinationAsync
+            // gebruikt dat nummer al als OTP-bestemming voor eigenaar 1 — het startscherm moet 'm dan ook tonen.
             list.Add(new SigningPartyInput((int)SigningPartyType.ClientAccount, account.Id, ChangeOrderPdfBuilder.DisplayName(account),
-                account.Email?.Trim(), null, "Klant", order++));
+                account.Email?.Trim(), SigningCrypto.MaskPhone(account.Cellphone), "Klant", order++));
             if (!string.IsNullOrWhiteSpace(account.Email)) seen.Add(account.Email.Trim());
         }
 

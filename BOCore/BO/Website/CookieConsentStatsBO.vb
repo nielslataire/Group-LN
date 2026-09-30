@@ -1,7 +1,10 @@
 ''' <summary>
 ''' Geaggregeerde telling van de cookiebanner-uitkomst op WWWCOPRO over een periode.
-''' NoDecisionCount is afgeleid (ShownCount minus de twee andere), nooit apart geteld —
-''' er bestaat geen gebeurtenis voor "niet geklikt", enkel de afwezigheid van een keuze.
+''' Alle vier de tellers zijn echte gebeurtenissen (zie migraties 033 en 059). "Verlaten"
+''' (AbandonedCount) wordt sinds 059 apart gemeten: de bezoeker sloot het tabblad, ging terug
+''' of klikte weg naar een andere site terwijl de banner nog open stond. Het is geen restwaarde
+''' meer, dus Shown hoeft niet gelijk te zijn aan de som van de drie andere: wie eerst verlaat
+''' en later toch kiest, telt in beide.
 ''' </summary>
 Public Class CookieConsentStatsBO
 
@@ -10,12 +13,7 @@ Public Class CookieConsentStatsBO
     Public Property ShownCount As Integer
     Public Property AcceptedCount As Integer
     Public Property RejectedCount As Integer
-
-    Public ReadOnly Property NoDecisionCount As Integer
-        Get
-            Return Math.Max(0, ShownCount - AcceptedCount - RejectedCount)
-        End Get
-    End Property
+    Public Property AbandonedCount As Integer
 
     Public ReadOnly Property AcceptedPercentage As Decimal
         Get
@@ -29,9 +27,9 @@ Public Class CookieConsentStatsBO
         End Get
     End Property
 
-    Public ReadOnly Property NoDecisionPercentage As Decimal
+    Public ReadOnly Property AbandonedPercentage As Decimal
         Get
-            Return PercentageOf(NoDecisionCount)
+            Return PercentageOf(AbandonedCount)
         End Get
     End Property
 

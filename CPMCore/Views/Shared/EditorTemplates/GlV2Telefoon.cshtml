@@ -1,14 +1,30 @@
 @model string
 @*
     gl-v2 (design-handoff optie 8f·2, "TELEFOON"). Zelfde skelet als GSM/E-mail/Website hieronder —
-    icoon vooraan, +32-voorvoegsel achter een scheidingslijntje, actie ("Bellen") rechts die pas
-    verschijnt zodra er een waarde staat. Geen zichtbare standaard placeholder-tekst — icoon+label+
-    voorvoegsel zeggen al genoeg — maar wél een placeholder-attribuut met één spatie: de LEEG/
-    INGEVULD-CSS (.gl-v2-field-input:not(:placeholder-shown), en dus ook ".gl-v2-field-action pas
-    tonen zodra ingevuld") draait op :placeholder-shown, wat NOOIT matcht op een veld zonder
-    placeholder-attribuut — zonder dit zou "Bellen" altijd zichtbaar zijn, ook bij een leeg veld
-    (precies de regressie die de eerdere "geen placeholders"-opkuis hier veroorzaakte). Een spatie
-    voldoet aan de spec ("niet de lege string") en toont niets zichtbaars. Enkel expliciete aanroep.
+    icoon vooraan, voorvoegsel achter een scheidingslijntje, actie ("Bellen") rechts die pas
+    verschijnt zodra er een waarde staat.
+
+    Voorvoegsel is een echte keuzelijst (GlV2PhonePrefixes.All, BOCore) i.p.v. een vast "+32"-label:
+    de gebruiker kan een ander land kiezen, en het gekozen voorvoegsel wordt mee opgeslagen — niet in
+    een aparte kolom (geen migratie nodig), maar als onderdeel van dezelfde bestaande tekstkolom
+    ("+32 495123456", zie GlV2PhonePrefixes.Combine/Split). Daarom bindt @Html.EditorFor hier NIET
+    rechtstreeks op een zichtbaar veld: een verborgen input (data-role="phone-value") draagt de
+    echte, gecombineerde waarde en is wat effectief post't; het zichtbare nummerveld
+    (data-role="phone-number") en de voorvoegsel-select (data-role="phone-prefix") worden door
+    initGlV2PhoneFields() (gl-v2-shell.js, shell-breed geladen) samengevoegd bij elke wijziging. Een
+    bestaand record zonder "+" (elk record van vóór deze feature) toont gewoon +32 — ongewijzigd
+    gedrag, geen migratie.
+
+    Validatie: [GlV2Phone] (BOCore) server-side (ModelState, dus dit template se eigen
+    ViewContext.ModelState-check hieronder pakt 'm al op), data-gl-v2-format="phone" client-side
+    (gl-v2-error-summary.js, altijd getoond zodra er een waarde staat — verplicht-zijn blijft een
+    losse data-gl-v2-required op de pagina die dit veld gebruikt). Zie DESIGN.md "Telefoon/Gsm-
+    voorvoegsel + validatie".
+
+    Geen zichtbare standaard placeholder-tekst — icoon+label+voorvoegsel zeggen al genoeg — maar wél
+    een placeholder-attribuut met één spatie: de LEEG/INGEVULD-CSS (:placeholder-shown) draait
+    daarop, zonder placeholder-attribuut matcht die nooit (zie git-geschiedenis: precies de
+    regressie die de eerdere "geen placeholders"-opkuis hier veroorzaakte). Enkel expliciete aanroep.
     Optionele extra ViewData: Placeholder (overschrijft de spatie met echte zichtbare tekst).
 *@
 @{
@@ -17,19 +33,33 @@
     var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
     var placeholder = ViewData["Placeholder"] as string ?? " ";
     var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+    var parsed = BOCore.GlV2PhonePrefixes.Split(Model);
 }
-<div class="gl-v2-field@(hasError ? " is-error" : "")">
-    <label class="gl-v2-field-label" for="@id">@label</label>
-    <div class="gl-v2-field-box">
+<div class="gl-v2-field@(hasError ? " is-error" : "")" data-gl-v2-format="phone" data-gl-v2-format-message="@(label) is geen geldig telefoonnummer.">
+    <label class="gl-v2-field-label" for="@(id)_number">@label</label>
+    <div class="gl-v2-field-box" data-role="phone-box">
         <i class="ph ph-phone" aria-hidden="true"></i>
-        <span class="gl-v2-field-prefix">+32</span>
+        <select class="gl-v2-field-prefix-select" data-role="phone-prefix" aria-label="Landcode van @label.ToLowerInvariant()">
+            @foreach (var p in BOCore.GlV2PhonePrefixes.All)
+            {
+                if (p.Code == parsed.Prefix)
+                {
+                    <option value="@p.Code" selected>@p.Code</option>
+                }
+                else
+                {
+                    <option value="@p.Code">@p.Code</option>
+                }
+            }
+        </select>
         <span class="gl-v2-field-divider"></span>
-        <input type="tel" id="@id" name="@name" class="gl-v2-field-input"
-               value="@Model" placeholder="@placeholder" autocomplete="off" />
-        <a class="gl-v2-field-action" href="tel:@Model"><span>Bellen</span></a>
+        <input type="tel" id="@(id)_number" data-role="phone-number" class="gl-v2-field-input"
+               value="@parsed.Number" placeholder="@placeholder" autocomplete="off" inputmode="tel" />
+        <input type="hidden" id="@id" name="@name" data-role="phone-value" value="@Model" />
+        <a class="gl-v2-field-action" data-role="phone-action" href="tel:@Model"><span>Bellen</span></a>
     </div>
     @if (hasError)
     {
-        <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+        <span class="gl-v2-field-help" data-role="field-error">@entry!.Errors[0].ErrorMessage</span>
     }
 </div>

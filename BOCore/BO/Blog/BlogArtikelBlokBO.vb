@@ -7,5 +7,7 @@ Public Class BlogArtikelBlokBO
     Public Property Titel As String
     Public Property RijkeTekst As String
     Public Property FotoBestand As String
+    Public Property KnopTekst As String
+    Public Property KnopUrl As String
 
 End Class

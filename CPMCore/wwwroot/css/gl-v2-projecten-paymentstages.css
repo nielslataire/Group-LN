@@ -1,0 +1,237 @@
+/* gl-v2 — Projecten/PaymentStagesV2 (design-handoff 21g/21h, "Betalingsschijven"). Page-specifiek,
+   eigen klassen-namespace (gl-v2-ps-*) zoals elke gl-v2-lijstpagina. Hangt aan de gedeelde gl-v2-
+   tokens (kaart, badge, knop, modal komen uit gl-v2-shell.css). Checkbox/notice/leeg-melding zijn
+   BEWUST hier eigen gedupliceerd (gl-v2-ps-check/-notice/-preview-empty) i.p.v. gl-v2-projecten-
+   invoicing.css te laden — deze pagina laadt die stylesheet niet, dezelfde aanpak als Leveranciers
+   t.o.v. Invoices eerder deze sessie (2026-09-30, na een bug: de klassen zagen er zonder die CSS
+   ongestyled uit). */
+
+#gl-v2-ps-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-ps-card { flex: none; }
+
+/* ── Groep-pillen (design-handoff 21g: "Woning 6 % btw · 4 eenheden" / "Woning 21 % btw · 0") — enkel
+   getoond bij meer dan één groep, wisselt welke kaart zichtbaar is (zelfde is-active/pill-recept als
+   .gl-v2-inv-filter, eigen namespace). ─────────────────────────────────────────────────────────────── */
+.gl-v2-ps-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.gl-v2-ps-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 13px;
+    border-radius: 16px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 500 12px var(--gl-v2-font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+}
+.gl-v2-ps-pill:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-ps-pill.is-active { background: var(--gl-v2-primary-tint); border-color: transparent; color: var(--gl-v2-primary); font-weight: 600; }
+
+/* ── Statistiekenrij (BTW KLANT / EENHEDEN / TOTAAL / EINDAFREKENING) ─────────────────────────────── */
+.gl-v2-ps-stats { display: flex; gap: 28px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ps-stat { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-ps-stat-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-ps-stat-value { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+/* ── Matrix-tabel (schijf × eenheid) ──────────────────────────────────────────────────────────────── */
+.gl-v2-ps-table-scroll { overflow-x: auto; }
+.gl-v2-ps-table { width: 100%; border-collapse: collapse; }
+.gl-v2-ps-table thead th {
+    font: 600 9px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    text-align: left;
+    background: #F7F9F5;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+.gl-v2-ps-table th:first-child, .gl-v2-ps-table td:first-child { padding-left: 20px; }
+.gl-v2-ps-table th:last-child, .gl-v2-ps-table td:last-child { padding-right: 20px; }
+.gl-v2-ps-table th.is-right, .gl-v2-ps-table td.is-right { text-align: right; }
+.gl-v2-ps-table th.is-center, .gl-v2-ps-table td.is-center { text-align: center; }
+.gl-v2-ps-table th.is-num, .gl-v2-ps-table td.is-num { width: 44px; color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; }
+.gl-v2-ps-table td {
+    padding: 7px 10px;
+    font: 500 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    vertical-align: middle;
+}
+.gl-v2-ps-desc { min-width: 200px; }
+/* Vaste breedte voor Schijf/% op grote schermen (Niels 2026-09-30) — anders schuiven de eenheid-
+   kolommen mee met de lengte van elke schijfomschrijving, wat de matrix per schijf-rij laat "springen". */
+@media (min-width: 1024px) {
+    .gl-v2-ps-table .gl-v2-ps-desc { width: 460px; max-width: 460px; white-space: normal; }
+    .gl-v2-ps-table th:nth-child(3), .gl-v2-ps-table td:nth-child(3) { width: 64px; }
+}
+.gl-v2-ps-row.is-last td { background: #FAFBF8; }
+.gl-v2-ps-tabular { font-variant-numeric: tabular-nums; }
+.gl-v2-ps-lastbadge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: #F6EEDC;
+    font: 700 9px var(--gl-v2-font-sans);
+    letter-spacing: .05em;
+    color: var(--gl-v2-warning);
+}
+
+/* Statuspunt per cel */
+.gl-v2-ps-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+.gl-v2-ps-dot.is-invoiced { background: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-ps-dot.is-invoiced i { font-size: 11px; }
+.gl-v2-ps-dot.is-reached { background: var(--gl-v2-gold); }
+.gl-v2-ps-dot.is-not-reached { border: 1.5px solid var(--gl-v2-hairline); }
+.gl-v2-ps-dash { color: var(--gl-v2-muted-light); font: 450 11px var(--gl-v2-font-sans); }
+
+/* Statuspunt is ook aanklikbaar (één eenheid als bereikt markeren) — enkel op "nog niet bereikt",
+   Niels 2026-09-30: "als je op een bol zelf klikt de schijf ook aangeduid wordt als te factureren,
+   maar specifiek voor het ene lot". Al gefactureerd/al bereikt blijven niet-klikbaar (niets te doen). */
+.gl-v2-ps-dot.is-clickable { cursor: pointer; transition: transform .12s ease, border-color .12s ease; }
+.gl-v2-ps-dot.is-clickable:hover { border-color: var(--gl-v2-gold); transform: scale(1.12); }
+.gl-v2-ps-dot.is-clickable:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: 2px; }
+.gl-v2-ps-dot.is-clickable.is-loading { opacity: .5; cursor: wait; pointer-events: none; }
+
+/* Legende: kleinere, louter illustratieve bolletjes — niet dezelfde maat als de klikbare tabelcellen */
+.gl-v2-ps-legend-item .gl-v2-ps-dot { width: 12px; height: 12px; border-radius: 6px; }
+.gl-v2-ps-legend-item .gl-v2-ps-dot.is-invoiced i { font-size: 7px; }
+.gl-v2-ps-legend-item .gl-v2-ps-dot.is-reached:before { width: 5px; height: 5px; border-radius: 2.5px; }
+.gl-v2-ps-legend-item .gl-v2-ps-dot.is-not-reached { border-width: 1px; }
+
+.gl-v2-ps-action {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.gl-v2-ps-action:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+
+/* ── Legende (footer) ─────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-ps-legend-cell { border-bottom: 0 !important; padding-top: 11px !important; padding-bottom: 11px !important; background: #FAFBF8; }
+.gl-v2-ps-legend { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.gl-v2-ps-legend-item { display: inline-flex; align-items: center; gap: 6px; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ps-table tfoot td { background: #FAFBF8; border-bottom: 0; }
+
+/* ── 21h-modal ─────────────────────────────────────────────────────────────────────────────────────── */
+/* Titel + "Schijf N · naam · %" gestapeld in de modal-header (JS vult -header-sub in, zie
+   gl-v2-projecten-paymentstages.js) — .gl-v2-modal-form .modal-header staat al op align-items:center,
+   dus deze kolom moet zelf zijn twee regels verticaal stapelen. */
+.gl-v2-ps-mark-header-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-ps-mark-header-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ps-mark-toggle-all { border: 0; background: transparent; padding: 0; margin-left: 10px; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-ps-mark-toggle-all:hover { text-decoration: underline; }
+.gl-v2-ps-mark-units { border: 1px solid var(--gl-v2-hairline); border-radius: 10px; overflow: hidden; }
+.gl-v2-ps-mark-unit { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px; border-top: 1px solid var(--gl-v2-hairline-soft); cursor: pointer; }
+.gl-v2-ps-mark-unit:first-child { border-top: 0; }
+.gl-v2-ps-mark-unit.is-disabled { opacity: .55; cursor: default; }
+.gl-v2-ps-mark-unit-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-ps-mark-unit-name { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ps-mark-unit-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+/* Datum bereikt + Bewijs naast elkaar, zoals 21h (5/7-kolomverdeling van de wireframe vereenvoudigd
+   naar een gelijke 2-koloms grid — hier is geen ruimtekrapte zoals in de 600px-brede wireframe-modal). */
+.gl-v2-ps-mark-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+@media (max-width: 575.98px) { .gl-v2-ps-mark-row2 { grid-template-columns: 1fr; } }
+
+.gl-v2-ps-proof-trigger {
+    height: 38px;
+    box-sizing: border-box;
+    border: 1.5px dashed var(--gl-v2-primary);
+    border-radius: 8px;
+    background: #F7F9F5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 11px;
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary-deep);
+    cursor: pointer;
+    width: 100%;
+}
+.gl-v2-ps-proof-trigger:hover { background: #EEF3EA; }
+.gl-v2-ps-proof-trigger.has-photo { border-style: solid; justify-content: space-between; }
+.gl-v2-ps-proof-trigger-thumb { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
+.gl-v2-ps-proof-trigger-thumb img { width: 24px; height: 24px; border-radius: 5px; object-fit: cover; flex: none; }
+.gl-v2-ps-proof-trigger-thumb span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ps-proof-trigger-remove { border: 0; background: transparent; padding: 2px; color: var(--gl-v2-muted); cursor: pointer; flex: none; }
+.gl-v2-ps-proof-trigger-remove:hover { color: var(--gl-v2-danger); }
+
+/* Picker-modal (21h "Werffoto's kiezen uit Media") — raster van klikbare kaarten, geen selectievak
+   nodig: klikken = kiezen = modal sluit meteen. */
+.gl-v2-ps-proof-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.gl-v2-ps-proof-card {
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: 10px;
+    background: #fff;
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+.gl-v2-ps-proof-card:hover { border-color: var(--gl-v2-primary); }
+.gl-v2-ps-proof-card img { width: 100%; height: 84px; object-fit: cover; display: block; }
+.gl-v2-ps-proof-card-title { padding: 6px 8px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Checkbox (21h eenhedenlijst) — zelfde zelfstandige opbouw als gl-v2-inv-check/gl-v2-co-check,
+   hier gedupliceerd omdat deze pagina gl-v2-projecten-invoicing.css niet laadt. ────────────────── */
+.gl-v2-ps-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; flex: none; }
+.gl-v2-ps-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
+.gl-v2-ps-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
+.gl-v2-ps-check label:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-radius: 5px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+.gl-v2-ps-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
+.gl-v2-ps-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-ps-check input[type="checkbox"]:checked + label:after {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    inset: 0;
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+    color: var(--gl-v2-surface);
+}
+.gl-v2-ps-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+.gl-v2-ps-check input[type="checkbox"]:disabled + label { cursor: not-allowed; }
+.gl-v2-ps-check input[type="checkbox"]:disabled:checked + label:before { background: var(--gl-v2-gold); border-color: var(--gl-v2-gold); }
+
+/* ── Infobanner (21h "N posten komen in Facturatie…") — gebruikt nu de gedeelde Meldingskaders-
+   component (punt 25, gl-v2-notice/-compact/is-info, gl-v2-shell.css), geen eigen opmaak meer hier.
+   .gl-v2-ps-notice(-icon/-desc) bestaan niet meer — zie _ModalMarkStageReachedV2.cshtml. Wél nog een
+   layout-regel nodig: de modal-eigen margin-top die de gedeelde component zelf niet aanneemt. ─────── */
+#gl-v2-ps-mark-info { margin-top: 14px; }
+
+.gl-v2-ps-preview-empty { padding: 24px 0; text-align: center; color: var(--gl-v2-muted); font: 450 13px var(--gl-v2-font-sans); }
+
+/* ── Mobiel (<768px): kaarten i.p.v. tabelrijen, zelfde recept als gl-v2-inv-table ───────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-ps-stats { gap: 14px; padding: 12px 14px; }
+    .gl-v2-ps-table-scroll { overflow-x: auto; }
+    .gl-v2-ps-table { min-width: 640px; }
+}

@@ -345,6 +345,36 @@ public class SigningAdminController : BaseController
         return RedirectToAction(nameof(Dossier), new { id = caseId });
     }
 
+    /// <summary>Scherm 21b, "Weigering registreren": een beheerder registreert dat een ondertekenaar
+    /// buiten CPM (bv. telefonisch) liet weten niet te (kunnen) tekenen.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Decline(int caseId, int partyId, string? reason, CancellationToken ct)
+    {
+        var r = await _signing.DeclineByStaffAsync(partyId, reason ?? "", Ctx(), ct);
+        AddMessage(r.Success ? "success" : "error", r.Success ? "De weigering is geregistreerd." : r.Error ?? "Mislukt.", r.Success ? "Weigering geregistreerd" : "Niet geregistreerd");
+        return RedirectToAction(nameof(Dossier), new { id = caseId });
+    }
+
+    /// <summary>Scherm 21b, "Getekende versie opladen": een buiten CPM (papier of extern) ondertekend
+    /// PDF wordt het definitieve document; alle nog openstaande ondertekenaars worden als ondertekend
+    /// geregistreerd en het dossier wordt afgesloten.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadSigned(int caseId, IFormFile? file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+        {
+            AddMessage("error", "Kies een PDF-bestand.", "Niet opgeladen");
+            return RedirectToAction(nameof(Dossier), new { id = caseId });
+        }
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream, ct);
+        var r = await _signing.UploadSignedDocumentAsync(caseId, stream.ToArray(), file.FileName, Ctx(), ct);
+        AddMessage(r.Success ? "success" : "error", r.Success ? "Het ondertekende document is opgeladen; het dossier is afgesloten." : r.Error ?? "Mislukt.", r.Success ? "Opgeladen" : "Niet opgeladen");
+        return RedirectToAction(nameof(Dossier), new { id = caseId });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reopen(int caseId, CancellationToken ct)

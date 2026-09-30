@@ -180,6 +180,8 @@ namespace ServiceCore
             entity.Titel      = bo.Titel;
             entity.RijkeTekst = bo.RijkeTekst;
             entity.FotoBestand = bo.FotoBestand;
+            entity.KnopTekst = bo.KnopTekst;
+            entity.KnopUrl = bo.KnopUrl;
 
             var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
             response.AddSaveChangesResult(result, "Blok opgeslagen.", "Blok niet opgeslagen.");
@@ -346,7 +348,9 @@ namespace ServiceCore
                         BlokType    = blok.BlokType ?? "tekst",
                         Titel       = blok.Titel,
                         RijkeTekst  = blok.RijkeTekst,
-                        FotoBestand = blok.FotoBestand
+                        FotoBestand = blok.FotoBestand,
+                        KnopTekst   = blok.KnopTekst,
+                        KnopUrl     = blok.KnopUrl
                     });
                 }
             }

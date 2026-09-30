@@ -39,6 +39,7 @@ namespace DALCore.Models
             ConfigureCookieConsentEventEntities(modelBuilder);
             ConfigureSigningEntities(modelBuilder);
             ConfigureKlanten23Entities(modelBuilder);
+            ConfigureGoogleLoginEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>
             {

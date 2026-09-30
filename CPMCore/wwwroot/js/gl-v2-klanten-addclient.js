@@ -49,6 +49,7 @@
     function positionPanel(trigger, panel) {
         if (window.innerWidth < 768) {
             panel.style.top = "";
+            panel.style.bottom = "";
             panel.style.left = "";
             panel.style.width = "";
             return;
@@ -58,9 +59,20 @@
         panel.style.width = width + "px";
         var left = Math.min(rect.left, window.innerWidth - width - 12);
         panel.style.left = Math.max(12, left) + "px";
-        var top = rect.bottom + 8;
-        panel.style.top = top + "px";
-        panel.style.maxHeight = Math.max(160, window.innerHeight - top - 16) + "px";
+        // Onderaan te weinig plaats (trigger onderaan het scherm, bv. de Eenheden-kaart als laatste
+        // sectie)? Dan naar bóven openklappen i.p.v. buiten beeld te vallen — position:fixed, dus
+        // via bottom i.p.v. top. Projectwijd hetzelfde in elke positionPanel-kopie.
+        var spaceBelow = window.innerHeight - rect.bottom - 16;
+        var spaceAbove = rect.top - 16;
+        if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+            panel.style.top = "";
+            panel.style.bottom = (window.innerHeight - rect.top + 8) + "px";
+            panel.style.maxHeight = Math.max(160, spaceAbove - 8) + "px";
+        } else {
+            panel.style.bottom = "";
+            panel.style.top = (rect.bottom + 8) + "px";
+            panel.style.maxHeight = Math.max(160, spaceBelow) + "px";
+        }
     }
 
     function openPanel(trigger, panel) {
@@ -191,6 +203,22 @@
             var term = searchInput.value.trim();
             debounceTimer = window.setTimeout(function () { search(term); }, 300);
         });
+        // Toetsenbord in de resultaten (projectwijd, zelfde blok in elke wireSearchSelect-kopie): ↓/↑
+        // lopen door de zichtbare opties (.is-active), Enter kiest de actieve — of de eerste als er nog
+        // geen actief is — en Escape sluit. Enter mag hier nooit het formulier indienen.
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { closeAllPanels(); return; }
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
+            var items = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
+            if (e.key === "Enter") e.preventDefault();
+            if (!items.length) return;
+            var current = items.findIndex(function (b) { return b.classList.contains("is-active"); });
+            if (e.key === "Enter") { items[current >= 0 ? current : 0].click(); return; }
+            e.preventDefault();
+            var next = e.key === "ArrowDown" ? (current + 1) % items.length : (current <= 0 ? items.length - 1 : current - 1);
+            items.forEach(function (b, i) { b.classList.toggle("is-active", i === next); });
+            items[next].scrollIntoView({ block: "nearest" });
+        });
         clearBtn.addEventListener("click", function (e) {
             e.stopPropagation();
             searchInput.value = "";
@@ -206,19 +234,18 @@
             searchInput.focus();
         }
 
-        // mousedown (i.p.v. de click zelf) legt vast of het paneel al open stond VÓÓR deze interactie —
-        // nodig omdat de focus-listener hieronder het paneel soms al opent nog vóórdat de click zelf
-        // afgaat (browser-volgorde: mousedown → focus → click), anders zou de click meteen weer sluiten
-        // wat de focus-listener net opende.
-        var wasOpenBeforeInteraction = false;
-        trigger.addEventListener("mousedown", function () {
-            wasOpenBeforeInteraction = panel.classList.contains("is-open");
-        });
+        // De focus-listener hieronder opent het paneel vaak al in dezelfde tik/klik; de click die daarop
+        // volgt mag dat dan niet meteen weer sluiten. Een mousedown-vlag was daarvoor niet betrouwbaar:
+        // op touch (gsm) komt focus per browser vóór óf ná de geëmuleerde mousedown, waardoor het veld
+        // "niet openging". Nu telt de tijd: een click binnen 500 ms na het openen laat het paneel open,
+        // een latere click op de open trigger sluit wel. Projectwijd hetzelfde in elke kopie.
+        var openedAt = 0;
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (wasOpenBeforeInteraction) {
-                closeAllPanels();
+            if (panel.classList.contains("is-open")) {
+                if (Date.now() - openedAt > 500) closeAllPanels();
             } else {
+                openedAt = Date.now();
                 openThisPanel();
             }
         });
@@ -235,7 +262,7 @@
         // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
         // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
         trigger.addEventListener("focus", function () {
-            if (!panel.classList.contains("is-open")) openThisPanel();
+            if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThisPanel(); }
         });
 
         if (clearTrigger) {
@@ -358,6 +385,7 @@
                         initSearchSelects(rowEl);
                         initSalutationFirstnameToggle(rowEl);
                         initUblDependency(rowEl);
+                        if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
                         var emptyHint = document.getElementById("gl-v2-kd-contacts-empty");
                         if (emptyHint) emptyHint.hidden = true;
                         markDirty();
@@ -465,6 +493,7 @@
                         rows.appendChild(rowEl);
                         initSearchSelects(rowEl);
                         initSalutationFirstnameToggle(rowEl);
+                        if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
                         var card = rowEl.querySelector(".gl-v2-card");
                         if (card) {
                             applyCoOwnerCompanyToggle(card);
@@ -794,14 +823,16 @@
         var selectedOption = null;
 
         function options() { return Array.prototype.slice.call(panel.querySelectorAll(".gl-v2-kd-upk-option")); }
-        function isChoosable(opt) { return !opt.classList.contains("is-disabled") && !opt.hasAttribute("data-in-account"); }
+        // "Al in dit account" = CSS-klasse is-in-account (server: AddClientAccountV2.cshtml; hier: na
+        // toevoegen/verwijderen) — geen data-attribuut, zie de toelichting in de view.
+        function isChoosable(opt) { return !opt.classList.contains("is-disabled") && !opt.classList.contains("is-in-account"); }
 
         function applyFilter() {
             var term = (searchInput.value || "").trim().toLowerCase();
             var anyChoosable = false;
             options().forEach(function (opt) {
                 var matches = !term || (opt.getAttribute("data-search") || "").indexOf(term) >= 0;
-                var show = matches && !opt.hasAttribute("data-in-account");
+                var show = matches && !opt.classList.contains("is-in-account");
                 opt.hidden = !show;
                 if (show && isChoosable(opt)) anyChoosable = true;
             });
@@ -829,11 +860,11 @@
             searchInput.focus();
         }
 
-        var wasOpenBeforeInteraction = false;
-        trigger.addEventListener("mousedown", function () { wasOpenBeforeInteraction = panel.classList.contains("is-open"); });
+        var openedAt = 0;
         trigger.addEventListener("click", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
-            if (wasOpenBeforeInteraction) closeAllPanels(); else openThis();
+            if (panel.classList.contains("is-open")) { if (Date.now() - openedAt > 500) closeAllPanels(); }
+            else { openedAt = Date.now(); openThis(); }
         });
         trigger.addEventListener("keydown", function (e) {
             if (e.target.closest('[data-role="clear-trigger"]')) return;
@@ -841,9 +872,24 @@
             e.preventDefault();
             if (panel.classList.contains("is-open")) closeAllPanels(); else openThis();
         });
-        trigger.addEventListener("focus", function () { if (!panel.classList.contains("is-open")) openThis(); });
+        trigger.addEventListener("focus", function () { if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThis(); } });
         searchInput.addEventListener("click", function (e) { e.stopPropagation(); });
         searchInput.addEventListener("input", applyFilter);
+        // ↓/↑ door de kiesbare eenheden, Enter kiest, Escape sluit — zelfde toetsenbordgedrag als de
+        // postcode-zoekselect (gl-v2-select-option.is-active), hier op de kiesbare .gl-v2-kd-upk-option.
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { closeAllPanels(); return; }
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
+            var items = options().filter(function (o) { return !o.hidden && isChoosable(o); });
+            if (e.key === "Enter") e.preventDefault();
+            if (!items.length) return;
+            var current = items.findIndex(function (o) { return o.classList.contains("is-active"); });
+            if (e.key === "Enter") { setSelected(items[current >= 0 ? current : 0]); closeAllPanels(); return; }
+            e.preventDefault();
+            var next = e.key === "ArrowDown" ? (current + 1) % items.length : (current <= 0 ? items.length - 1 : current - 1);
+            items.forEach(function (o, i) { o.classList.toggle("is-active", i === next); });
+            items[next].scrollIntoView({ block: "nearest" });
+        });
         if (clearTrigger) {
             clearTrigger.addEventListener("click", function (e) {
                 e.stopPropagation();
@@ -916,7 +962,7 @@
                     var rowEl = fragment.firstElementChild;
                     if (!rowEl) return;
                     rows.appendChild(rowEl);
-                    opt.setAttribute("data-in-account", "1");
+                    opt.classList.add("is-in-account");
                     setSelected(null);
                     initCurrencyFields();
                     refreshState();
@@ -940,7 +986,7 @@
             var card = deleteBtn.closest(".gl-v2-addclient-unit-row");
             if (!card) return;
             var returned = findOption(card.getAttribute("data-unit-id"));
-            if (returned) returned.removeAttribute("data-in-account");
+            if (returned) returned.classList.remove("is-in-account");
             card.remove();
             refreshState();
             markDirty();
@@ -957,21 +1003,24 @@
         refreshState();
     }
 
-    // ── Verplichte-veldencontrole (Naam is voorlopig het enige harde vereiste, zelfde controle als
-    //    de legacy pagina). Geen tabs hier, dus enkel scrollen-naar + focus, geen tab-activatie. ──────
-    function resolveFieldTarget(field) {
-        return field.classList.contains("gl-v2-field") ? field : (field.querySelector(".gl-v2-field") || field);
-    }
-
-    function isFieldElementEmpty(field) {
-        var input = field.querySelector("input, select, textarea");
-        return !input || !input.value || !input.value.trim();
-    }
-
-    function setFieldError(field, message, isInvalid) {
-        var target = resolveFieldTarget(field);
+    // ── Verplichte velden — minimum om een klant aan te maken: een naam (of bedrijfsnaam), een
+    //    verkoopdatum en minstens één eenheid mét prijzen (grondwaarde en elke constructiewaarde).
+    //    Gedelegeerd naar het gedeelde Foutoverzicht-component (window.GlV2ErrorSummary,
+    //    gl-v2-error-summary.js, project-wijd geladen — zie DESIGN.md "Foutoverzicht (punt 24)"):
+    //    [data-gl-v2-required] dekt naam/verkoopdatum al generiek; enkel de eenheden-check (minstens
+    //    één kaart, elk prijsveld > 0 — geen simpele leeg/niet-leeg-check) is hier als eigen validator.
+    //    De server (KlantenController.AddClientAccount POST) controleert exact hetzelfde als vangnet
+    //    en zet dezelfde ViewData["GlV2ErrorLocations"] door voor de server-gerenderde samenvatting. ──
+    // Val terug op de eigen rand/hulptekst-opmaak als het gedeelde component om welke reden dan ook
+    // (bv. een oudere gecachte pagina-versie, of gl-v2-error-summary.js dat niet laadde) nog niet
+    // klaarstaat — deze validator mag nooit de hele pagina laten crashen.
+    function markUnitField(field, message, isInvalid) {
+        if (errorSummary) { errorSummary.setFieldError(field, message, isInvalid); return; }
+        var target = field.classList.contains("gl-v2-field") ? field : (field.querySelector(".gl-v2-field") || field);
         target.classList.toggle("is-error", isInvalid);
-        var help = target.querySelector(".gl-v2-field-help[data-role='required-help']");
+        var trigger = target.querySelector(".gl-v2-select-trigger");
+        if (trigger) trigger.classList.toggle("is-error", isInvalid);
+        var help = target.querySelector('[data-role="field-error"]') || target.querySelector(".gl-v2-field-help[data-role='required-help']");
         if (isInvalid) {
             if (!help) {
                 help = document.createElement("span");
@@ -985,42 +1034,61 @@
         }
     }
 
-    function validateField(field) {
-        if (field.closest("[hidden]")) {
-            setFieldError(field, "", false);
-            return false;
-        }
-        var invalid = isFieldElementEmpty(field);
-        setFieldError(field, field.getAttribute("data-gl-v2-required"), invalid);
-        return invalid;
+    function unitFieldLabel(field) {
+        if (errorSummary) return errorSummary.fieldLabel(field);
+        var labelEl = field.querySelector(".gl-v2-field-label");
+        return labelEl ? labelEl.textContent.replace("*", "").trim() : "";
     }
 
-    function validateRequiredFields() {
-        var firstInvalid = null;
-        document.querySelectorAll("[data-gl-v2-required]").forEach(function (field) {
-            if (validateField(field) && !firstInvalid) firstInvalid = field;
+    function validateUnits(errors) {
+        var rows = document.getElementById("gl-v2-kd-unit-rows");
+        var pickField = document.querySelector(".gl-v2-kd-unit-pick-field");
+        if (!rows) return;
+        var cards = rows.querySelectorAll(".gl-v2-addclient-unit-row");
+        if (!cards.length) {
+            var msg = rows.getAttribute("data-gl-v2-required-units") || "Voeg minstens één eenheid toe";
+            if (pickField) markUnitField(pickField, msg, true);
+            errors.push({ message: msg, field: "Eenheden", location: "Eenheden", target: pickField || rows });
+            return;
+        }
+        if (pickField) markUnitField(pickField, "", false);
+        cards.forEach(function (card) {
+            var unitName = card.getAttribute("data-unit-name") || "eenheid";
+            card.querySelectorAll("input.Currencymask").forEach(function (input) {
+                var field = input.closest(".gl-v2-field");
+                if (!field) return;
+                var label = unitFieldLabel(field) || "Prijs";
+                var missing = parseMoney(input.value) <= 0;
+                markUnitField(field, "Vul een bedrag in", missing);
+                if (missing) errors.push({ message: label.toLowerCase() + " ontbreekt", field: unitName, location: "Eenheden", target: field });
+            });
         });
-        return firstInvalid;
     }
+
+    var errorSummary = null;
 
     function initRequiredValidation() {
         var form = document.getElementById("gl-v2-client-form");
-        if (!form) return;
+        if (!form || !window.GlV2ErrorSummary) return;
+
+        errorSummary = window.GlV2ErrorSummary.init({
+            form: form,
+            container: document.getElementById("gl-v2-error-summary"),
+            stickyLabel: "fouten",
+            validators: [validateUnits]
+        });
 
         form.addEventListener("focusout", function (e) {
-            var field = e.target.closest("[data-gl-v2-required]");
-            if (field) validateField(field);
+            if (e.target.matches("input.Currencymask")) {
+                var priceField = e.target.closest(".gl-v2-field");
+                if (priceField) markUnitField(priceField, "Vul een bedrag in", parseMoney(e.target.value) <= 0);
+            }
         });
 
-        form.addEventListener("submit", function (e) {
-            var firstInvalid = validateRequiredFields();
-            if (!firstInvalid) return;
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-            var input = firstInvalid.querySelector("input, select");
-            if (input) input.focus();
-        });
+        // Redisplay na een serverfout: de samenvatting komt dan van de server (Views/Shared/GlV2/
+        // _ErrorSummaryV2.cshtml, uit ModelState) — die laten we staan en markeren hier enkel de
+        // velden opnieuw, zodat een volgende submit meteen de volledige (client-side) lijst toont.
+        if (config.hasServerErrors) errorSummary.validate();
     }
 
     // ── Actiebalk-submit — dubbele-submit-blokkade. ────────────────────────────────────────────

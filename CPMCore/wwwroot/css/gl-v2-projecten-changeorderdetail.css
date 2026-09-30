@@ -1,0 +1,139 @@
+/* gl-v2 — Projecten/ChangeOrderDetailV2 (design-handoff 20d, "Wijzigingsopdracht"). Page-specifiek,
+   eigen klassen-namespace (gl-v2-co-*). Hangt aan de gedeelde gl-v2-tokens/-componenten (kaart, badge,
+   knop, toggle, notice — allemaal al in gl-v2-shell.css, hier niet opnieuw getekend). */
+
+#gl-v2-co-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-co-card { flex: none; }
+
+/* ── Titelbalk ─────────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.gl-v2-co-titlebar-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gl-v2-co-title { font: 500 21px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
+.gl-v2-co-titlebar-badges { display: flex; gap: 6px; }
+.gl-v2-co-locked { display: flex; align-items: center; gap: 6px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); flex: none; }
+
+/* ── Stepper ("verloop bovenaan") ──────────────────────────────────────────────────────────────────── */
+.gl-v2-co-stepper { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding: 18px 20px; }
+.gl-v2-co-step { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; min-width: 84px; position: relative; }
+.gl-v2-co-step:not(:last-child):after {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: calc(50% + 16px);
+    right: calc(-50% + 16px);
+    height: 1.5px;
+    background: var(--gl-v2-hairline);
+}
+.gl-v2-co-step.is-done:not(:last-child):after { background: var(--gl-v2-primary); }
+.gl-v2-co-step-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    border: 2px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gl-v2-surface);
+    z-index: 1;
+    flex: none;
+}
+.gl-v2-co-step-dot i { font-size: 12px; color: var(--gl-v2-surface); }
+.gl-v2-co-step.is-done .gl-v2-co-step-dot { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-co-step.is-current .gl-v2-co-step-dot { border-color: var(--gl-v2-gold); }
+.gl-v2-co-step-label { font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: center; white-space: nowrap; }
+.gl-v2-co-step.is-done .gl-v2-co-step-label, .gl-v2-co-step.is-current .gl-v2-co-step-label { color: var(--gl-v2-ink); }
+.gl-v2-co-step-hint { font: 450 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); text-align: center; }
+
+/* ── Layout: hoofdkolom + zijkolom ─────────────────────────────────────────────────────────────────── */
+.gl-v2-co-layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+.gl-v2-co-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-co-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1023.98px) {
+    .gl-v2-co-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Opdracht-kaart: form-grid ─────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.gl-v2-field-full { grid-column: 1 / -1; }
+@media (max-width: 575.98px) { .gl-v2-co-form-grid { grid-template-columns: 1fr; } }
+.gl-v2-co-readout { height: 38px; display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-locked-field { gap: 7px; color: var(--gl-v2-muted-soft); }
+.gl-v2-co-locked-field i { font-size: 13px; flex: none; }
+
+/* ── Regels/termijnen-tabel ────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-table-scroll { overflow-x: auto; }
+.gl-v2-co-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+.gl-v2-co-table th {
+    font: 600 9px var(--gl-v2-font-sans);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+    text-align: left;
+    background: #F7F9F5;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    padding: 8px 8px;
+    white-space: nowrap;
+}
+.gl-v2-co-table th.is-center, .gl-v2-co-table td.is-center { text-align: center; }
+.gl-v2-co-table th.is-right, .gl-v2-co-table td.is-right { text-align: right; }
+.gl-v2-co-table td { padding: 6px 8px; border-bottom: 1px solid var(--gl-v2-hairline-soft); vertical-align: middle; }
+.gl-v2-co-table td:first-child { padding-left: 20px; }
+.gl-v2-co-table td:last-child { padding-right: 20px; }
+.gl-v2-co-table tfoot td { border-bottom: 0; padding-top: 6px; padding-bottom: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; }
+.gl-v2-co-tabular { font-variant-numeric: tabular-nums; }
+.gl-v2-co-num { width: 84px; text-align: right; }
+.gl-v2-co-row.is-needs-review { background: #FDF9F0; }
+.gl-v2-co-row-flags { display: flex; gap: 8px; margin-top: 3px; }
+.gl-v2-co-review-flag { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; padding: 0; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-warning); cursor: pointer; }
+.gl-v2-co-review-flag:hover { text-decoration: underline; }
+.gl-v2-co-photo-flag { display: inline-flex; align-items: center; gap: 3px; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-co-row-delete { border: 0; background: transparent; padding: 4px; color: var(--gl-v2-muted-light); cursor: pointer; }
+.gl-v2-co-row-delete:hover { color: var(--gl-v2-danger); }
+
+/* ── Facturatieplan ────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-presets { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.gl-v2-co-presets-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); margin-right: 4px; }
+.gl-v2-co-preset {
+    height: 32px;
+    padding: 0 13px;
+    border-radius: 16px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted-soft);
+    font: 500 12px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-co-preset:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-co-preset.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+.gl-v2-co-term-kind-label { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-add-term { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 8px 0; color: var(--gl-v2-primary); font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-co-add-term:hover { text-decoration: underline; }
+.gl-v2-co-terms-total { display: flex; align-items: center; gap: 8px; margin: 10px 0 16px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.is-hidden { display: none !important; }
+
+/* ── Zijkolom-kaarten ──────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-side-btn { width: 100%; justify-content: center; margin-top: 10px; }
+.gl-v2-co-source { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-co-history { display: flex; flex-direction: column; gap: 10px; }
+.gl-v2-co-history-item { display: flex; flex-direction: column; gap: 1px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); padding-left: 12px; border-left: 2px solid var(--gl-v2-hairline); }
+.gl-v2-co-history-date { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-muted-light); }
+
+/* ── Sticky actiebalk ──────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-actionbar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    margin-top: 4px;
+    background: var(--gl-v2-surface);
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    box-shadow: 0 -4px 14px -10px rgba(44,59,42,.3);
+}
+.gl-v2-co-actionbar .gl-v2-field-help { flex: 1; min-width: 0; }
+
+@media (max-width: 767.98px) {
+    .gl-v2-co-table { min-width: 640px; }
+}

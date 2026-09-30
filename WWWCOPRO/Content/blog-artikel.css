@@ -84,6 +84,9 @@
     color: #36423a;
     line-height: 1.55;
     margin-bottom: 34px;
+    /* platte tekst uit CPMCore (DetailTitelTekst): enters in het tekstvak moeten als
+       regeleindes zichtbaar blijven, ook zonder opmaak/HTML in de waarde. */
+    white-space: pre-line;
 }
 
 /* --- Blok --- */
@@ -206,6 +209,62 @@
     transform: rotate(45deg);
     margin-top: 7px;
     flex-shrink: 0;
+}
+
+/* --- Foto (los blok, volledige kolombreedte, max 350px hoog) --- */
+.artikel-blok-foto {
+    border-radius: 2px;
+    overflow: hidden;
+    background: var(--mist);
+    max-height: 350px;
+    display: flex;
+}
+
+.artikel-blok-foto img {
+    width: 100%;
+    max-height: 350px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.artikel-blok-foto-bijschrift {
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--tekst-sub);
+    text-align: center;
+}
+
+/* --- Knop (centrale call-to-action) --- */
+.artikel-blok-knop {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0;
+}
+
+.artikel-knop-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 34px;
+    border-radius: 3px;
+    background: var(--color-primary);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.artikel-knop-btn:hover {
+    background: var(--color-primary-hover);
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 /* --- Pullquote --- */

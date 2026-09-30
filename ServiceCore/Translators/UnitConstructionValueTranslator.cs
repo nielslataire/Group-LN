@@ -22,10 +22,13 @@ namespace ServiceCore.Translators
                 bo.ValueSold = _entity.ValueSold;
             if (_entity.Value is not null)
                 bo.Value = _entity.Value;
-            if (_entity.PaymentGroup is not null)
-                bo.PaymentGroupId = _entity.PaymentGroup.Id;
-            if (_entity.Unit is not null)
-                bo.UnitId = _entity.Unit.Id;
+            // Rechtstreeks de FK-kolom lezen i.p.v. de PaymentGroup/Unit-navigatie: die hoeft niet overal
+            // ge-Include't te zijn waar deze translator draait (bv. GetProjectInvoicableUnits, dat enkel
+            // UnitConstructionValue zelf include't) — via de navigatie bleef PaymentGroupId/UnitId dan
+            // stil op 0 staan, waardoor elke schijf onterecht als "geen match" gold (gevonden via het
+            // Facturatie-testproject, 2026-09-29).
+            bo.PaymentGroupId = _entity.PaymentGroupId;
+            bo.UnitId = _entity.UnitId;
             bo.FinishingOptionId = _entity.FinishingOptionId;
             return ErrorCode.Success;
         }

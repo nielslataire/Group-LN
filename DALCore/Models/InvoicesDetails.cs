@@ -45,7 +45,14 @@ public partial class InvoicesDetails
 
     public decimal? UnitPrice { get; set; }
 
+    /// <summary>Offertes & wijzigingen gl-v2 (migratie 064) — welke ChangeOrderPaymentTerm (facturatieplan-
+    /// termijn) deze regel factureert, bij LineType='ChangeOrderTerm'. Blijft NULL voor de oudere
+    /// lump-sum-WO-facturatie (LineType='ChangeOrders', ChangeOrderDetailId).</summary>
+    public int? ChangeOrderPaymentTermId { get; set; }
+
     public virtual ICollection<ConnectionAdvanceApplication> ConnectionAdvanceApplication { get; set; } = new List<ConnectionAdvanceApplication>();
+
+    public virtual ChangeOrderPaymentTerm ChangeOrderPaymentTerm { get; set; }
 
     public virtual Invoices Invoice { get; set; }
 

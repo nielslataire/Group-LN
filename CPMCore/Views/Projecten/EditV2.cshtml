@@ -157,6 +157,10 @@
     @Html.HiddenFor(m => m.Project.StandardFotoName)
 
     <div class="gl-v2-project-scroll">
+        @* Foutoverzicht (design-handoff punt 24) — gedeeld component, zie DESIGN.md. Server-gerenderd
+           bij een redisplay uit ModelState; gl-v2-projecten-form.js herrendert dezelfde kaart client-
+           side bij een geblokkeerde submit (window.GlV2ErrorSummary, incl. contractschijven). *@
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
         <p class="gl-v2-pf-formhint">Velden met <span class="gl-v2-pf-req" aria-hidden="true">*</span> zijn verplicht · wisselen van tab bewaart je invoer, niets gaat verloren tot je annuleert.</p>
 
         @* ── Tab 1 · Algemeen ─────────────────────────────────────────────────────────────────── *@
@@ -606,14 +610,8 @@
     </div>
 
     <div class="gl-v2-form-actionbar">
-        @if (totalErrorCount > 0)
-        {
-            <span class="gl-v2-form-actionbar-status is-error">
-                <i class="ph ph-warning-circle" aria-hidden="true"></i>
-                @(totalErrorCount == 1 ? "1 fout in het formulier" : $"{totalErrorCount} fouten in het formulier")
-            </span>
-            <button type="button" class="gl-v2-form-actionbar-link" id="gl-v2-goto-first-error">Ga naar de eerste fout</button>
-        }
+        @* Fout-teller + link naar het overzicht (24a/24c/24d): gerenderd door gl-v2-error-summary.js
+           (updateActionbar), ook bij een server-redisplay — geen eigen server-markup meer. *@
         else
         {
             <span class="gl-v2-form-actionbar-status gl-v2-pf-actionbar-note">Eén opslag voor alle tabs</span>

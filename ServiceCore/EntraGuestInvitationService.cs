@@ -187,15 +187,19 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         invitation.ExternalTenantId     = null;
         invitation.UpdatedAt            = DateTime.UtcNow;
 
-        // Wis ook EntraObjectId zodat de gebruiker niet meer kan inloggen vóór nieuw invite.
+        // Wis ook de externe koppelingen (Entra-OID én Google-sub) zodat de gebruiker niet meer kan
+        // inloggen vóór een nieuw invite.
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user != null)
-            user.EntraObjectId = null;
+        {
+            user.EntraObjectId   = null;
+            user.GoogleSubjectId = null;
+        }
 
         await _db.SaveChangesAsync(ct);
 
         await AddAuditAsync(userId, GuestAuditAction.InviteReset, performedByUserId,
-            "Uitnodiging gereset; OID-koppeling gewist.", ct);
+            "Uitnodiging gereset; Entra- en Google-koppeling gewist.", ct);
 
         _logger.LogInformation("Gastuitnodiging gereset voor gebruiker {UserId}.", userId);
         return GuestInviteResult.Ok;
@@ -213,12 +217,15 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user != null)
-            user.EntraObjectId = null;
+        {
+            user.EntraObjectId   = null;
+            user.GoogleSubjectId = null;
+        }
 
         await _db.SaveChangesAsync(ct);
 
         await AddAuditAsync(userId, GuestAuditAction.Unlinked, performedByUserId,
-            "Entra gastuitnodiging verwijderd en OID-koppeling verbroken.", ct);
+            "Gastuitnodiging verwijderd; Entra- en Google-koppeling verbroken.", ct);
 
         _logger.LogInformation("Gastkoppeling verbroken voor gebruiker {UserId}.", userId);
         return GuestInviteResult.Ok;
@@ -297,7 +304,8 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
             loginUrl:       appBaseUrl.TrimEnd('/') + loginPath,
             redeemUrl:      redeemUrl,
             sentDate:       DateTime.UtcNow,
-            companyName:    companyName);
+            companyName:    companyName,
+            googleLoginEnabled: IsGoogleLoginEnabled());
 
         try
         {
@@ -313,6 +321,12 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
                 ex, "Branded e-mail kon niet verstuurd worden naar {Email}.", user.Email);
         }
     }
+
+    /// <summary>Zelfde afleiding als Program.cs: Google-login staat aan zodra ClientId én ClientSecret
+    /// geconfigureerd zijn. Bepaalt enkel de tekst/knop van de uitnodigingsmail.</summary>
+    private bool IsGoogleLoginEnabled()
+        => !string.IsNullOrWhiteSpace(_configuration["Google:ClientId"])
+        && !string.IsNullOrWhiteSpace(_configuration["Google:ClientSecret"]);
 
     private async Task AddAuditAsync(
         int userId, string action, int? performedBy, string? details, CancellationToken ct)

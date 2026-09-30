@@ -104,6 +104,10 @@ builder.Services.AddControllersWithViews(options =>
     p.SetNonPropertyAttemptedValueIsInvalidAccessor(v => $"De waarde '{v}' is ongeldig.");
     p.SetUnknownValueIsInvalidAccessor(f => $"De opgegeven waarde is ongeldig voor {f}.");
     p.SetNonPropertyUnknownValueIsInvalidAccessor(() => "De opgegeven waarde is ongeldig.");
+
+    // [Required] zonder eigen tekst (ook de impliciete op niet-nullable strings): "{veld} is verplicht."
+    // i.p.v. "The X field is required." — het gedeelde Foutoverzicht (punt 24) toont ModelState letterlijk.
+    options.ModelMetadataDetailsProviders.Add(new CPMCore.Helpers.DutchRequiredMessageProvider());
 })
     .AddJsonOptions(options =>
     {
@@ -203,6 +207,10 @@ builder.Services.Configure<CPMCore.Services.InvoiceExtraction.InvoiceExtractionO
     builder.Configuration.GetSection("InvoiceExtraction"));
 builder.Services.AddScoped<CPMCore.Services.InvoiceExtraction.IAzureInvoiceAnalysisService,
                             CPMCore.Services.InvoiceExtraction.AzureInvoiceAnalysisService>();
+// Offerte inlezen (20c) — hergebruikt InvoiceExtractionOptions (zelfde Azure-endpoint/API-key), eigen
+// model ("prebuilt-layout" i.p.v. "prebuilt-invoice", zie AzureQuoteAnalysisService).
+builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.IQuoteRegionAnalysisService,
+                            CPMCore.Services.QuoteExtraction.AzureQuoteAnalysisService>();
 builder.Services.AddScoped<ServiceCore.IncomingInvoices.IOctopusIncomingInvoiceSyncService, CPMCore.Services.Octopus.OctopusIncomingInvoiceSyncService>();
 builder.Services.AddScoped<FacadeCore.IIncomingInvoiceService, ServiceCore.IncomingInvoices.IncomingInvoiceService>();
 // Verrijkingspipeline
@@ -377,15 +385,104 @@ builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<PermissionConventionFilter>();
 
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme          = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-})
+});
+
+authBuilder
 .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
     .EnableTokenAcquisitionToCallDownstreamApi()
     .AddMicrosoftGraph(configuration.GetSection("Graph"))
     .AddInMemoryTokenCaches();
+
+// ── GOOGLE-LOGIN (tweede OIDC-schema, rechtstreeks naar Google, buiten Entra om) ─────────────────
+// Voor portaalgasten (aannemers/klanten) met een Google-account, ook Google Workspace op een eigen
+// domein: Entra B2B kan die niet federeren en dwong hen een Microsoft-account aan te maken. Enkel
+// registreren als de client geconfigureerd is: een OIDC-handler zonder ClientId faalt bij opties-
+// validatie en dat gebeurt in UseAuthentication voor élke request (alle request-handler-schema's
+// worden daar geïnstantieerd), dus dan zou heel de app plat liggen.
+var googleClientId     = configuration["Google:ClientId"];
+var googleClientSecret = configuration["Google:ClientSecret"];
+var googleLoginEnabled = !string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret);
+builder.Services.AddSingleton(new GoogleLoginSettings { Enabled = googleLoginEnabled });
+
+if (googleLoginEnabled)
+{
+    authBuilder.AddOpenIdConnect(GoogleAuthDefaults.Scheme, "Google", options =>
+    {
+        options.SignInScheme  = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.Authority     = "https://accounts.google.com";
+        options.ClientId      = googleClientId;
+        options.ClientSecret  = googleClientSecret;
+        options.ResponseType  = Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectResponseType.Code;
+        options.ResponseMode  = Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectResponseMode.Query;
+        options.UsePkce       = true;
+        options.SaveTokens    = false;
+        // Eigen paden: de Entra-handler bezit al /signin-oidc, /signout-callback-oidc en /signout-oidc.
+        options.CallbackPath          = GoogleAuthDefaults.CallbackPath;
+        options.SignedOutCallbackPath = "/signout-callback-google";
+        options.RemoteSignOutPath     = "/signout-google";
+        options.Scope.Clear();
+        options.Scope.Add("openid");
+        options.Scope.Add("email");
+        options.Scope.Add("profile");
+        // Alles wat we nodig hebben (sub, email, email_verified, name, picture) zit in het id_token.
+        options.GetClaimsFromUserInfoEndpoint = false;
+        // Ruwe claimnamen behouden (sub/email/...) i.p.v. de lange schemas.xmlsoap-typen.
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters.NameClaimType = "name";
+        options.TokenValidationParameters.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
+        options.Prompt = "select_account"; // Zelfde gedrag als Entra: geen stille SSO-herauthenticatie
+
+        options.Events.OnTokenValidated = async context =>
+        {
+            var principal = context.Principal;
+            var subject = principal?.FindFirst("sub")?.Value
+                ?? principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var email = principal?.FindFirst("email")?.Value
+                ?? principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            var emailVerified = string.Equals(principal?.FindFirst("email_verified")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+            var picture = principal?.FindFirst("picture")?.Value;
+            var hostedDomain = principal?.FindFirst("hd")?.Value; // enkel bij Google Workspace
+
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Authentication");
+            logger.LogInformation(
+                "Google login claims: sub={Sub}, email={Email}, verified={Verified}, hd={Hd}",
+                subject ?? "<null>", email ?? "<null>", emailVerified, hostedDomain ?? "<geen>");
+
+            var accessService = context.HttpContext.RequestServices.GetRequiredService<ICpmUserAccessService>();
+            var accessResult = await accessService.ResolveGoogleAsync(subject, email, emailVerified, context.HttpContext.RequestAborted);
+
+            if (accessResult == null || principal?.Identity is not System.Security.Claims.ClaimsIdentity identity)
+            {
+                context.Fail(GoogleLoginErrors.NotLinked);
+                return;
+            }
+
+            await accessService.SyncGooglePhotoAsync(accessResult, picture, context.HttpContext.RequestAborted);
+            accessService.ApplyClaims(identity, accessResult);
+        };
+
+        options.Events.OnRemoteFailure = context =>
+        {
+            var error = context.Failure?.Message ?? "";
+            var friendlyMessage =
+                error.Contains(GoogleLoginErrors.NotLinked)
+                    ? "Dit Google-account is niet gekend als uitgenodigde gebruiker. Meld u aan met het e-mailadres waarop u de uitnodiging ontving, of neem contact op met de beheerder."
+                : error.Contains("access_denied", StringComparison.OrdinalIgnoreCase)
+                    ? "Aanmelden met Google werd geannuleerd."
+                : "Inloggen met Google mislukt. Probeer opnieuw of neem contact op met de beheerder.";
+
+            context.Response.Redirect(LoginRedirect.WithError(context.Properties, friendlyMessage));
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
+    });
+}
 
 builder.Services.AddAuthorization(options =>
 {
@@ -473,7 +570,7 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
                 ? "Toegang geweigerd door Microsoft. Neem contact op met de beheerder."
             : "Inloggen mislukt. Probeer opnieuw of neem contact op met de beheerder.";
 
-        context.Response.Redirect($"/Account/Login?error={Uri.EscapeDataString(friendlyMessage)}");
+        context.Response.Redirect(LoginRedirect.WithError(context.Properties, friendlyMessage));
         context.HandleResponse();
         return Task.CompletedTask;
     };
@@ -643,9 +740,11 @@ app.UseAuthentication();
 // Redirect (302) i.p.v. path rewriting: UseRouting is al gelopen en rewriting had geen effect.
 app.Use(async (ctx, next) =>
 {
-    if (!(ctx.User.Identity?.IsAuthenticated == true))
+    var path = ctx.Request.Path.Value ?? "";
+    var isAuthenticated = ctx.User.Identity?.IsAuthenticated == true;
+
+    if (!isAuthenticated)
     {
-        var path = ctx.Request.Path.Value ?? "";
         if (path is "/aannemer" or "/Aannemer" or "/portaal" or "/Portaal" or "/werfportaal" or "/Werfportaal")
         {
             ctx.Response.Redirect("/Account/Login?type=contractor&returnUrl=/Werfportaal");
@@ -654,6 +753,21 @@ app.Use(async (ctx, next) =>
         if (path is "/klantenportaal" or "/Klantenportaal")
         {
             ctx.Response.Redirect("/Account/Login?type=customer&returnUrl=/Klantenportaal");
+            return;
+        }
+    }
+    else
+    {
+        // Al aangemeld (bv. de link uit de uitnodigingsmail geopend in een browser waar nog een
+        // sessie loopt): de snelkoppelingen bestaan niet als route, dus zonder dit gaf dat een 404.
+        if (path is "/aannemer" or "/Aannemer" or "/portaal" or "/Portaal" or "/werfportaal")
+        {
+            ctx.Response.Redirect("/Werfportaal");
+            return;
+        }
+        if (path is "/klantenportaal")
+        {
+            ctx.Response.Redirect("/Klantenportaal");
             return;
         }
     }
