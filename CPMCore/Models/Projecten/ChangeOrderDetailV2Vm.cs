@@ -28,6 +28,9 @@ public class ChangeOrderDetailV2Vm
     public string UnitName { get; set; } = "";
     public int ContractActivityId { get; set; }
     public List<IdNameBO> ContractActivities { get; set; } = new();
+    /// <summary>Enkel gevuld voor een nieuwe rij (ClientAccountId == 0): dan toont de pagina een
+    /// klantkeuze i.p.v. de vaste "Klant · eenheid"-uitlezing.</summary>
+    public List<IdNameBO> ClientAccounts { get; set; } = new();
     public decimal VatKlantPercentage { get; set; }
     public string VatKlantLabel { get; set; } = "";
     public string Description { get; set; } = "";
@@ -124,4 +127,7 @@ public class ChangeOrderDetailV2SaveModel
     /// bespaart een aparte round-trip (opslaan, dan pas omzetten): de Save-actie doet de in-place
     /// IsQuote-overgang er meteen bij als deze vlag aanstaat.</summary>
     public bool ConvertAfterSave { get; set; }
+    /// <summary>"quote" als het formulier van QuoteIntakeV2 (20c) komt — bij een validatiefout gaat de
+    /// gebruiker dan terug naar dát scherm i.p.v. naar een leeg 20d.</summary>
+    public string? ReturnTo { get; set; }
 }

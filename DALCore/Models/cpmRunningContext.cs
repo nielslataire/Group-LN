@@ -721,9 +721,11 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.ChangeOrderId).HasColumnName("ChangeOrderID");
             entity.Property(e => e.Commission).HasColumnType("decimal(18, 0)");
+            // 250 → 1000 in migratie 065: 20c (Offerte inlezen) vouwt de specificatierijen van een
+            // leveranciersofferte in deze omschrijving, dat past niet in 250 tekens.
             entity.Property(e => e.Description)
                 .IsRequired()
-                .HasMaxLength(250);
+                .HasMaxLength(1000);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.VatPercentage)
                 .HasDefaultValue(21.0000m)

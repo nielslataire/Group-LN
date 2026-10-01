@@ -146,7 +146,7 @@
                 var unitPrice = (detail.Price * detail.Commision / 100) + detail.Price;
                 var rowTotal = unitPrice * detail.Number;
                 <tr>
-                    <td>@detail.Description</td>
+                    <td style="white-space: pre-line;">@detail.Description</td>
                     <td>@detail.MeasurementUnit.GetDisplayName()</td>
                     <td>@detail.MeasurementType.GetDisplayName()</td>
                     <td class="text-end">@detail.Number</td>

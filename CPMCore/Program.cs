@@ -207,10 +207,27 @@ builder.Services.Configure<CPMCore.Services.InvoiceExtraction.InvoiceExtractionO
     builder.Configuration.GetSection("InvoiceExtraction"));
 builder.Services.AddScoped<CPMCore.Services.InvoiceExtraction.IAzureInvoiceAnalysisService,
                             CPMCore.Services.InvoiceExtraction.AzureInvoiceAnalysisService>();
-// Offerte inlezen (20c) — hergebruikt InvoiceExtractionOptions (zelfde Azure-endpoint/API-key), eigen
-// model ("prebuilt-layout" i.p.v. "prebuilt-invoice", zie AzureQuoteAnalysisService).
-builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.IQuoteRegionAnalysisService,
-                            CPMCore.Services.QuoteExtraction.AzureQuoteAnalysisService>();
+// Offerte inlezen (20c). Twee implementaties achter één interface:
+//  - AnthropicQuoteAnalysisService: vision (de uitsnede gaat als afbeelding mee), lay-out-onafhankelijk —
+//    de voorkeur zodra QuoteExtraction:AnthropicApiKey gezet is (zelfde sleutel als de MarketData-crawler,
+//    lokaal via user-secrets).
+//  - AzureQuoteAnalysisService: Azure Document Intelligence "prebuilt-layout" + kolomheuristiek,
+//    hergebruikt InvoiceExtractionOptions — terugval als er geen Anthropic-sleutel is.
+builder.Services.Configure<CPMCore.Services.QuoteExtraction.QuoteExtractionOptions>(
+    builder.Configuration.GetSection(CPMCore.Services.QuoteExtraction.QuoteExtractionOptions.Section));
+builder.Services.AddHttpClient(CPMCore.Services.QuoteExtraction.AnthropicQuoteAnalysisService.HttpClientName, client =>
+{
+    client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+});
+builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.AzureQuoteAnalysisService>();
+builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.AnthropicQuoteAnalysisService>();
+builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.IQuoteRegionAnalysisService>(sp =>
+{
+    var anthropic = sp.GetRequiredService<CPMCore.Services.QuoteExtraction.AnthropicQuoteAnalysisService>();
+    return anthropic.IsEnabled
+        ? anthropic
+        : sp.GetRequiredService<CPMCore.Services.QuoteExtraction.AzureQuoteAnalysisService>();
+});
 builder.Services.AddScoped<ServiceCore.IncomingInvoices.IOctopusIncomingInvoiceSyncService, CPMCore.Services.Octopus.OctopusIncomingInvoiceSyncService>();
 builder.Services.AddScoped<FacadeCore.IIncomingInvoiceService, ServiceCore.IncomingInvoices.IncomingInvoiceService>();
 // Verrijkingspipeline

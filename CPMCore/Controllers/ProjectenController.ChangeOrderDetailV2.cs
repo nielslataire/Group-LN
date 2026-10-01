@@ -94,6 +94,9 @@ namespace CPMCore.Controllers
 
             vm.ContractActivities = _projectService.GetProjectContractActivitiesForSelect(projectid) is { Success: true } actResp
                 ? actResp.Values : new List<IdNameBO>();
+            if (vm.ClientAccountId <= 0)
+                vm.ClientAccounts = _clientService.GetClientAccountsByProjectIdForSelect(projectid) is { Success: true } clResp
+                    ? clResp.Values.OrderBy(c => c.Display).ToList() : new List<IdNameBO>();
 
             vm.Stages = _db.InvoicingPaymentStages.AsNoTracking()
                 .Where(s => s.Group.ProjectId == projectid)
@@ -298,7 +301,11 @@ namespace CPMCore.Controllers
             if (model.ClientAccountId <= 0 || model.ContractActivityId <= 0)
             {
                 AddMessage("error", "Kies een klant/eenheid en een leverancier·contract.", "Kon niet opslaan");
-                return RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = model.ProjectId, coid = model.ChangeOrderId });
+                // Terug naar het scherm van herkomst — bij een nog niet opgeslagen offerte uit 20c zou een
+                // omleiding naar een leeg 20d de net ingelezen regels kwijtspelen.
+                return model.ReturnTo == "quote"
+                    ? RedirectToAction(nameof(QuoteIntakeV2), new { projectid = model.ProjectId, coid = model.ChangeOrderId })
+                    : RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = model.ProjectId, coid = model.ChangeOrderId });
             }
 
             ChangeOrder co;
@@ -361,7 +368,11 @@ namespace CPMCore.Controllers
                     entity = new ChangeOrderDetail { ChangeOrderId = co.Id };
                     co.ChangeOrderDetail.Add(entity);
                 }
-                entity.Description = r.Description.Trim();
+                // Kolom is nvarchar(1000) sinds migratie 065 (was 250 — te kort zodra 20c de specificatie-
+                // rijen in de omschrijving vouwt); ingekort i.p.v. een SQL-afkappingsfout.
+                // \r\n (textarea-submit) → \n: één vorm in de databank, QuestPDF/weergave rekenen op \n.
+                var desc = r.Description.Replace("\r\n", "\n").Trim();
+                entity.Description = desc.Length > 1000 ? desc[..1000] : desc;
                 entity.MeasurementType = r.MeasurementType;
                 entity.MeasurementUnit = r.MeasurementUnit;
                 entity.Number = r.Number;

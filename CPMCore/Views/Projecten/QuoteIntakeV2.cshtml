@@ -34,7 +34,7 @@
 {
     <div class="gl-v2-notice gl-v2-notice-compact is-warning">
         <i class="ph ph-warning" aria-hidden="true"></i>
-        <span>Azure Document Intelligence is niet geconfigureerd — automatisch inlezen werkt niet, regels manueel toevoegen kan wel.</span>
+        <span>Automatisch inlezen is niet geconfigureerd (geen AI-sleutel: QuoteExtraction:AnthropicApiKey of InvoiceExtraction:Azure) — regels manueel toevoegen kan wel.</span>
     </div>
 }
 
@@ -42,7 +42,11 @@
 @Html.AntiForgeryToken()
 <input type="hidden" name="projectId" value="@Model.ProjectId" />
 <input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
-<input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
+@if (Model.ClientAccountId > 0)
+{
+    <input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
+}
+<input type="hidden" name="returnTo" value="quote" />
 <input type="hidden" name="description" id="gl-v2-qi-description-hidden" value="" />
 <input type="hidden" name="invoiceableByBouwheer" value="false" />
 <input type="hidden" name="convertAfterSave" id="gl-v2-qi-convert-after-save" value="false" />
@@ -58,6 +62,11 @@
                 <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-tool-photo" data-mode="photo">
                     <i class="ph ph-image" aria-hidden="true"></i>Gebied selecteren — foto
                 </button>
+                <span class="gl-v2-qi-pagenav" id="gl-v2-qi-pagenav" hidden>
+                    <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-page-prev" aria-label="Vorige pagina"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+                    <span class="gl-v2-qi-pagelabel" id="gl-v2-qi-pagelabel"></span>
+                    <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-page-next" aria-label="Volgende pagina"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+                </span>
                 <span class="gl-v2-qi-toolbar-spacer"></span>
                 <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-camera"><i class="ph ph-camera" aria-hidden="true"></i>Foto nemen</button>
                 <label class="gl-v2-qi-tool" for="gl-v2-qi-file"><i class="ph ph-upload-simple" aria-hidden="true"></i>Bestand</label>
@@ -101,8 +110,22 @@
                     </select>
                 </div>
                 <div class="gl-v2-field">
-                    <span class="gl-v2-field-label">Klant · eenheid</span>
-                    <div class="gl-v2-co-readout">@Model.ClientName@(string.IsNullOrWhiteSpace(Model.UnitName) ? "" : " · " + Model.UnitName)</div>
+                    @if (Model.ClientAccountId > 0)
+                    {
+                        <span class="gl-v2-field-label">Klant · eenheid</span>
+                        <div class="gl-v2-co-readout">@Model.ClientName@(string.IsNullOrWhiteSpace(Model.UnitName) ? "" : " · " + Model.UnitName)</div>
+                    }
+                    else
+                    {
+                        <label class="gl-v2-field-label" for="gl-v2-qi-client">Klant <span style="color:#8B2A2A">*</span></label>
+                        <select class="gl-v2-field-input" id="gl-v2-qi-client" name="clientAccountId">
+                            <option value="">— kies een klant —</option>
+                            @foreach (var c in Model.ClientAccounts)
+                            {
+                                <option value="@c.ID">@c.Display</option>
+                            }
+                        </select>
+                    }
                 </div>
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="gl-v2-qi-quote-ref">Offertenr. leverancier</label>
@@ -110,7 +133,7 @@
                 </div>
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="gl-v2-qi-quote-vat">Btw leverancier</label>
-                    <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-qi-quote-vat" name="quoteVatPercentage" value="@Model.QuoteVatPercentage" />
+                    <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-qi-quote-vat" name="quoteVatPercentage" value="@(Model.QuoteVatPercentage?.ToString(System.Globalization.CultureInfo.InvariantCulture))" />
                 </div>
             </div>
         </div>

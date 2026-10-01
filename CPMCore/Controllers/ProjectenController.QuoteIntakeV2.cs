@@ -64,6 +64,9 @@ namespace CPMCore.Controllers
 
             vm.ContractActivities = _projectService.GetProjectContractActivitiesForSelect(projectid) is { Success: true } actResp
                 ? actResp.Values : new List<IdNameBO>();
+            if (vm.ClientAccountId <= 0)
+                vm.ClientAccounts = _clientService.GetClientAccountsByProjectIdForSelect(projectid) is { Success: true } clResp
+                    ? clResp.Values.OrderBy(c => c.Display).ToList() : new List<IdNameBO>();
 
             if (co != null)
             {
@@ -108,7 +111,7 @@ namespace CPMCore.Controllers
 
             var quoteService = HttpContext.RequestServices.GetRequiredService<IQuoteRegionAnalysisService>();
             if (!quoteService.IsEnabled)
-                return Json(new { success = false, message = "Azure Document Intelligence is niet geconfigureerd." });
+                return Json(new { success = false, message = "Automatisch inlezen is niet geconfigureerd (geen AI-sleutel)." });
 
             using var ms = new MemoryStream();
             await image.CopyToAsync(ms);

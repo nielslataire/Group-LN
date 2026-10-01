@@ -44,8 +44,10 @@
         canvas.width = Math.round(imgEl.naturalWidth * scale);
         canvas.height = Math.round(imgEl.naturalHeight * scale);
         ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+        pdfDoc = null; // een foto na een PDF: paginanavigatie weer weg
         syncOverlaySize();
         showStage();
+        updatePageNav();
         setStatus("Bron geladen — teken een kader.");
     }
 
@@ -57,14 +59,31 @@
         img.src = url;
     }
 
-    function loadPdfFile(file) {
-        if (!window.pdfjsLib) { setStatus("PDF-weergave is niet beschikbaar."); return; }
-        setStatus("PDF laden…");
-        file.arrayBuffer().then(function (buf) {
-            return window.pdfjsLib.getDocument({ data: buf }).promise;
-        }).then(function (pdf) {
-            return pdf.getPage(1);
-        }).then(function (page) {
+    // Meerdere pagina's: het pdf.js-document blijft in het geheugen, de paginanavigatie (vorige/
+    // volgende in de werkbalk) rendert de gevraagde pagina opnieuw op dezelfde canvas. Kaders teken je
+    // dus per pagina — elke selectie wordt apart ingelezen/gehangen, over pagina's heen stapelen de
+    // herkende regels gewoon op in de tabel rechts.
+    var pdfDoc = null, pdfPage = 1;
+    var pageNav = document.getElementById("gl-v2-qi-pagenav");
+    var pageLabel = document.getElementById("gl-v2-qi-pagelabel");
+    var pagePrev = document.getElementById("gl-v2-qi-page-prev");
+    var pageNext = document.getElementById("gl-v2-qi-page-next");
+
+    function updatePageNav() {
+        if (!pageNav) return;
+        var multi = pdfDoc && pdfDoc.numPages > 1;
+        pageNav.hidden = !multi;
+        if (!multi) return;
+        pageLabel.textContent = "pagina " + pdfPage + " van " + pdfDoc.numPages;
+        pagePrev.disabled = pdfPage <= 1;
+        pageNext.disabled = pdfPage >= pdfDoc.numPages;
+    }
+
+    function renderPdfPage(n) {
+        if (!pdfDoc) return Promise.resolve();
+        pdfPage = Math.max(1, Math.min(n, pdfDoc.numPages));
+        setStatus("Pagina " + pdfPage + " laden…");
+        return pdfDoc.getPage(pdfPage).then(function (page) {
             var viewport = page.getViewport({ scale: 1.8 });
             canvas.width = viewport.width;
             canvas.height = viewport.height;
@@ -72,12 +91,27 @@
         }).then(function () {
             syncOverlaySize();
             showStage();
-            setStatus("PDF geladen (pagina 1) — teken een kader.");
+            updatePageNav();
+            setStatus("PDF geladen (pagina " + pdfPage + " van " + pdfDoc.numPages + ") — teken een kader.");
+        });
+    }
+
+    function loadPdfFile(file) {
+        if (!window.pdfjsLib) { setStatus("PDF-weergave is niet beschikbaar."); return; }
+        setStatus("PDF laden…");
+        file.arrayBuffer().then(function (buf) {
+            return window.pdfjsLib.getDocument({ data: buf }).promise;
+        }).then(function (pdf) {
+            pdfDoc = pdf;
+            return renderPdfPage(1);
         }).catch(function (err) {
             setStatus("Kon de PDF niet weergeven.");
             console.error(err);
         });
     }
+
+    if (pagePrev) pagePrev.addEventListener("click", function () { renderPdfPage(pdfPage - 1); });
+    if (pageNext) pageNext.addEventListener("click", function () { renderPdfPage(pdfPage + 1); });
 
     function loadSource(file) {
         if (!file) return;
@@ -96,16 +130,42 @@
         cameraInput.addEventListener("change", function () { if (cameraInput.files[0]) loadSource(cameraInput.files[0]); });
     }
 
-    document.addEventListener("paste", function (e) {
-        var items = (e.clipboardData || {}).items || [];
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf("image/") === 0) {
-                var blob = items[i].getAsFile();
-                if (blob) { loadSource(blob); e.preventDefault(); }
-                return;
+    // Een geplakt/gesleept "bestand" is iets anders dan een geplakte schermafdruk: een schermafdruk komt
+    // als image/*-item binnen, een uit de Verkenner gekopieerd of gesleept PDF/foto-bestand als
+    // DataTransfer.files. Beide wegen leiden naar loadSource.
+    function firstSupportedFile(dt) {
+        if (!dt) return null;
+        var files = dt.files || [];
+        for (var i = 0; i < files.length; i++) {
+            if (files[i].type === "application/pdf" || files[i].type.indexOf("image/") === 0) return files[i];
+        }
+        var items = dt.items || [];
+        for (var j = 0; j < items.length; j++) {
+            if (items[j].kind === "file" && (items[j].type === "application/pdf" || items[j].type.indexOf("image/") === 0)) {
+                var f = items[j].getAsFile();
+                if (f) return f;
             }
         }
+        return null;
+    }
+
+    document.addEventListener("paste", function (e) {
+        var file = firstSupportedFile(e.clipboardData);
+        if (file) { loadSource(file); e.preventDefault(); }
     });
+
+    var canvasWrap = document.getElementById("gl-v2-qi-canvas-wrap");
+    if (canvasWrap) {
+        canvasWrap.addEventListener("dragover", function (e) { e.preventDefault(); canvasWrap.classList.add("is-dragover"); });
+        canvasWrap.addEventListener("dragleave", function () { canvasWrap.classList.remove("is-dragover"); });
+        canvasWrap.addEventListener("drop", function (e) {
+            e.preventDefault();
+            canvasWrap.classList.remove("is-dragover");
+            var file = firstSupportedFile(e.dataTransfer);
+            if (file) loadSource(file);
+            else setStatus("Enkel PDF of afbeeldingen worden ondersteund.");
+        });
+    }
 
     // ── 2. Kader-selectie (tabel/foto) ──────────────────────────────────────────────────────────────
     var mode = "table";
@@ -348,7 +408,18 @@
     var form = document.getElementById("gl-v2-qi-form");
     var descHidden = document.getElementById("gl-v2-qi-description-hidden");
     if (form && descHidden) {
-        form.addEventListener("submit", function () {
+        form.addEventListener("submit", function (e) {
+            // Klant en leverancier·contract zijn verplichte FK's — zonder deze guard zou de server het
+            // formulier afwijzen en zou je de net ingelezen regels kwijt zijn (Niels, 2026-10-01).
+            var client = $("#gl-v2-qi-client");
+            var contract = $("#gl-v2-qi-contractactivity");
+            if ((client && !client.value) || (contract && !contract.value)) {
+                e.preventDefault();
+                if (convertFlag) convertFlag.value = "false";
+                setStatus("Kies eerst een klant en een leverancier · contract.");
+                (client && !client.value ? client : contract).focus();
+                return;
+            }
             // Deze pagina heeft geen apart "omschrijving voor de klant"-veld (dat komt pas bij Omzetten
             // op 20d) — gebruik het offertenummer/leverancier als voorlopige omschrijving zodat de rij
             // niet naamloos in de lijst (20b) verschijnt.

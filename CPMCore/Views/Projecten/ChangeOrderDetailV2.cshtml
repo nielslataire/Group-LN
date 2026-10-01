@@ -42,7 +42,10 @@
 @Html.AntiForgeryToken()
 <input type="hidden" name="projectId" value="@Model.ProjectId" />
 <input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
-<input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
+@if (Model.ClientAccountId > 0)
+{
+    <input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
+}
 <div id="gl-v2-co-root" data-project-id="@Model.ProjectId" data-co-id="@Model.ChangeOrderId">
     <div class="gl-v2-co-titlebar">
         <div class="gl-v2-co-titlebar-text">
@@ -91,8 +94,22 @@
                 </div>
                 <div class="gl-v2-card-body gl-v2-co-form-grid">
                     <div class="gl-v2-field">
-                        <span class="gl-v2-field-label">Klant · eenheid</span>
-                        <div class="gl-v2-co-readout">@Model.ClientName@(string.IsNullOrWhiteSpace(Model.UnitName) ? "" : " · " + Model.UnitName)</div>
+                        @if (Model.ClientAccountId > 0)
+                        {
+                            <span class="gl-v2-field-label">Klant · eenheid</span>
+                            <div class="gl-v2-co-readout">@Model.ClientName@(string.IsNullOrWhiteSpace(Model.UnitName) ? "" : " · " + Model.UnitName)</div>
+                        }
+                        else
+                        {
+                            <label class="gl-v2-field-label" for="gl-v2-co-client">Klant <span style="color:#8B2A2A">*</span></label>
+                            <select class="gl-v2-field-input" id="gl-v2-co-client" name="clientAccountId">
+                                <option value="">— kies een klant —</option>
+                                @foreach (var c in Model.ClientAccounts)
+                                {
+                                    <option value="@c.ID">@c.Display</option>
+                                }
+                            </select>
+                        }
                     </div>
                     <div class="gl-v2-field">
                         <label class="gl-v2-field-label" for="gl-v2-co-contractactivity">Leverancier · contract</label>
@@ -118,7 +135,7 @@
                             <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-co-bouwheer" name="invoiceableByBouwheer" @(Model.InvoiceableByBouwheer ? "checked" : "") @(Model.IsLocked ? "disabled" : "") />
                             <span class="gl-v2-toggle-text">
                                 <span class="gl-v2-toggle-label">Te factureren door bouwheer</span>
-                                <span class="gl-v2-toggle-hint">uit = wij factureren, via het facturatiebedrijf aannemer</span>
+                                <span class="gl-v2-toggle-hint">aan = wij factureren het (facturatiebedrijf aannemer) · uit = de onderaannemer factureert zelf, rechtstreeks aan de klant</span>
                             </span>
                         </label>
                     </div>
@@ -303,7 +320,7 @@
                     </div>
                     <div class="gl-v2-field">
                         <label class="gl-v2-field-label" for="gl-v2-co-quote-vat">Btw leverancier</label>
-                        <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-co-quote-vat" name="quoteVatPercentage" value="@Model.QuoteVatPercentage" @(Model.IsLocked ? "disabled" : "") />
+                        <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-co-quote-vat" name="quoteVatPercentage" value="@(Model.QuoteVatPercentage?.ToString(CultureInfo.InvariantCulture))" @(Model.IsLocked ? "disabled" : "") />
                     </div>
                     @if (Model.IsQuote)
                     {

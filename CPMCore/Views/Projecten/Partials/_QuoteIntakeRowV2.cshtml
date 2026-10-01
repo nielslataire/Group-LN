@@ -27,7 +27,7 @@
         }
     </td>
     <td>
-        <input type="text" class="gl-v2-field-input js-qi-description" name="@(prefix).description" value="@Model.Description" />
+        <textarea class="gl-v2-field-input gl-v2-co-desc-input js-qi-description" name="@(prefix).description" rows="2" maxlength="1000">@Model.Description</textarea>
         <input type="hidden" name="@(prefix).needsReview" class="js-qi-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />
         @if (Model.NeedsReview)
         {
@@ -43,6 +43,6 @@
         </select>
     </td>
     <td class="is-right"><input type="number" step="1" class="gl-v2-field-input gl-v2-co-num js-qi-number" name="@(prefix).number" value="@Model.Number" /></td>
-    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-qi-price" name="@(prefix).price" value="@Model.Price" /></td>
+    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-qi-price" name="@(prefix).price" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" /></td>
     <td class="is-right"><button type="button" class="gl-v2-co-row-delete js-qi-delete-row" title="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
 </tr>

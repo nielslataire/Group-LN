@@ -178,6 +178,21 @@
         });
     }
 
+    // Klant (enkel bij een nieuwe rij een keuzelijst) en leverancier·contract zijn verplichte FK's —
+    // blokkeer het verzenden vóór de server het afwijst en de ingevulde regels verloren gaan.
+    var mainForm = document.getElementById("gl-v2-co-form");
+    if (mainForm) {
+        mainForm.addEventListener("submit", function (e) {
+            var client = document.getElementById("gl-v2-co-client");
+            var contract = document.getElementById("gl-v2-co-contractactivity");
+            if ((client && !client.value) || (contract && !contract.value)) {
+                e.preventDefault();
+                (client && !client.value ? client : contract).focus();
+                if (window.GlV2Toast) window.GlV2Toast.show({ tone: "warning", title: "Nog niet compleet", body: "Kies eerst een klant en een leverancier · contract." });
+            }
+        });
+    }
+
     // ── 3. Omzetten (21c, in-place) ─────────────────────────────────────────────────────────────────
     var convertBtn = document.getElementById("gl-v2-co-convert");
     if (convertBtn) {

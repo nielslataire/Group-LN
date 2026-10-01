@@ -83,6 +83,10 @@
 .gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; }
 .gl-v2-co-tabular { font-variant-numeric: tabular-nums; }
 .gl-v2-co-num { width: 84px; text-align: right; }
+/* Omschrijving als textarea: 20c vouwt de specificatierijen van de offerte in deze tekst, dus die moet
+   leesbaar blijven (vorige versie: één regel, afgekapt). Groeit mee met de inhoud waar de browser
+   field-sizing kent, anders minimaal twee regels. */
+.gl-v2-co-desc-input { min-width: 260px; min-height: 52px; height: auto; resize: vertical; line-height: 1.4; padding-top: 7px; padding-bottom: 7px; field-sizing: content; }
 .gl-v2-co-row.is-needs-review { background: #FDF9F0; }
 .gl-v2-co-row-flags { display: flex; gap: 8px; margin-top: 3px; }
 .gl-v2-co-review-flag { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; padding: 0; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-warning); cursor: pointer; }

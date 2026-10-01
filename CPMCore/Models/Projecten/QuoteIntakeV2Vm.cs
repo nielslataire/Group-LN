@@ -19,6 +19,7 @@ public class QuoteIntakeV2Vm
     public string? UnitName { get; set; }
     public int ContractActivityId { get; set; }
     public List<IdNameBO> ContractActivities { get; set; } = new();
+    public List<IdNameBO> ClientAccounts { get; set; } = new();
     public string? QuoteSupplierReference { get; set; }
     public decimal? QuoteVatPercentage { get; set; }
     public DateOnly QuoteDate { get; set; }
