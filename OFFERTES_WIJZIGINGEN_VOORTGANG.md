@@ -201,3 +201,85 @@ CPMCore/wwwroot/js/gl-v2-projecten-changeorderdetail.js, gl-v2-projecten-changeo
 CPMCore/wwwroot/js/gl-v2-projecten-paymentstages.js, gl-v2-shell.js (gewijzigd)
 CPMCore/wwwroot/lib/pdfjs/pdf.min.js, pdf.worker.min.js (nieuw, gevendord)
 ```
+
+---
+
+## 6. Flow volgens design-handoff punt 28/29 (gebouwd 02/10/2026) — NIET browser-getest
+
+Punt 29 = de flow vanaf de lijst, punt 28 (28a–28i) = één scherm per stap. Alles hieronder compileert
+(`dotnet build` 0 fouten) en de stijl is nagekeken op een statische testpagina, maar er is niets tegen de
+databank of in de echte app getest.
+
+**Eerst uitvoeren: `_migrations/066_ChangeOrderBronEnVersie.sql`** (4 nullable kolommen op `ChangeOrder`:
+`QuoteSourcePath`, `QuoteSourceFileName`, `SourceChangeOrderId`, `SourceKind`). Zonder 066 faalt elke
+ChangeOrder-query (ook de oude schermen). Migratie 065 moet ook gedraaid zijn.
+
+### 6.1 Flow (29a/29b)
+- **Lijst (`ChangeOrdersV2`)**: één knop "+ Nieuw" (gedeeld `.gl-v2-menu`) met Offerte inlezen · Leeg beginnen ·
+  Kopie van een wijzigingsopdracht · Offerte zonder omzetten. Offerte-rij opent 20c, "Omzetten →" opent de
+  21c-modal; WO-rij opent het scherm per stap; "···" op een WO-rij: Openen · Kopie maken · PDF.
+- **21c Omzetten** (`ConvertQuoteModalV2` + `ChangeOrderConvertV2`, modal in `Modals/_ModalConvertQuoteV2`):
+  klant · eenheid, commissie, btw (vergrendeld, uit de betalingsgroep), facturatieplan-snelkeuze, omschrijving,
+  voorwaarden; "Aanmaken en openen" / "Aanmaken en verzenden". Vanuit 20c gaat dezelfde modal mee in de
+  Save-POST (opslaan + omzetten in één keer). Omzetten blijft in-place (zelfde rij, OF-012 → WO-012).
+- **Kopie** (`CopyChangeOrderModalV2` + `ChangeOrderCopyV2`): kies WO + eenheid → nieuwe WO als concept,
+  regels en plan mee, `SourceChangeOrderId` = bron, `SourceKind` = 1. **Versie 2** = zelfde actie met
+  `asVersion=true` (`SourceKind` = 2): trekt een lopende ondertekening in en maakt een nieuwe WO-rij.
+- **20c**: bewaart nu ook het originele bestand (`QuoteIntakeV2UploadSource`, map "quotes"); `intent=keep` =
+  "Offerte zonder omzetten"; op een bestaande WO (vanuit Bron) koppelt het een offerte zonder omschrijving/
+  plan/commissie te overschrijven.
+
+### 6.2 Scherm per stap (`ChangeOrderDetailV2`, 28a–28i)
+`BuildScreenState` (ProjectenController.ChangeOrderDetailV2.cs) leidt `Model.Phase` af:
+concept (28a met offerte / 28b zonder) · verzonden (28c) · wacht (28d) · ondertekend/factureerbaar (28e) ·
+gefactureerd (28f) · betaald (28g) · geweigerd (28h) · telaat (28i), plus ingetrokken en verlopen (terug
+bewerkbaar). Gedeelde statusfeiten voor lijst én detail: `ProjectenController.ChangeOrderFlowV2.cs`
+(`LoadChangeOrderFlowFactsAsync` + `ComputeFlowStatus`) — termijn-triggers (na ondertekening / schijf bereikt /
+manueel vrijgegeven), facturen per termijn, betaald/vervallen.
+Acties op het scherm: `ChangeOrderDetailV2Remind`, `-Withdraw`, `-UploadSigned`, `-ReleaseTerm`, `-SetStep`
+(enkel als elektronisch ondertekenen uitstaat: verzonden/akkoord met de hand zetten).
+
+### 6.3 Bewuste afwijkingen van het ontwerp
+- Een offerte heeft nog altijd een klant nodig om bewaard te worden (`ChangeOrder.ClientAccountId` is NOT NULL;
+  nullable maken is geen additieve wijziging en raakt de oude schermen). Bij omzetten kies/wijzig je de klant
+  in 21c.
+- 21d (verzendmodal) is niet apart gebouwd: "Verzenden" gaat naar het bestaande startscherm van de
+  ondertekenmodule (`SigningAdmin/Start`).
+- "+ Uit artikellijst" en de sleepgreep op regels ontbreken (geen artikellijst, geen volgordekolom).
+- Versie 2 krijgt een nieuw WO-nummer (nieuwe rij) i.p.v. "WO-006 v2".
+- "Afsluiten" bij geweigerd is weggelaten (geweigerd is al een eindstatus); factuurherinnering/aanmaning/
+  betaling registreren linken naar de factuur (lopen via Facturatie, zoals 28i zelf zegt).
+
+### 6.4 Nog open
+- **Per-termijn factureren** (stap 5 van het oorspronkelijke plan): "Voorschot factureren" linkt naar
+  Facturatie, maar `MakeInvoicesCO`/`BuildChangeOrderInvoiceDraft`/`InvoicingV2` factureren een WO nog in één
+  keer. Het scherm toont termijnfacturen correct zodra er `InvoicesDetails`-rijen met
+  `ChangeOrderPaymentTermId` bestaan.
+- Het bewaarde bronbestand wordt in 20c niet terug in de viewer geladen (enkel als link/voorbeeld op 28a).
+- Opgeloste bugs onderweg: rijen na een verwijderde rij gingen verloren bij opslaan (gat in `rows[i]`), de
+  bouwheer-schakelaar postte "on" i.p.v. "true", en de "controleer"-vlag was op 20d niet weg te klikken.
+
+### 6.5 Aanvulling 02/10/2026 (na feedback Niels) — NIET browser-getest
+
+**Eerst uitvoeren: `_migrations/067_ChangeOrderDetailSortOrder.sql`** (`ChangeOrderDetail.SortOrder INT NULL`),
+naast 066.
+
+- **Regelvolgorde (28a/28b)**: sleepgreep op elke regel (muis/vinger, of focus + pijl omhoog/omlaag). De
+  volgorde van het formulier wordt bewaard in `SortOrder` (SyncRows); het opmaakscherm, 20c, de kopie en de
+  PDF (`ChangeOrderPdfBuilder`) volgen ze. NULL = nooit herschikt → aanmaakvolgorde (Id).
+- **21d Verzenden ter ondertekening**: nu een modal op het scherm zelf (`SendChangeOrderModalV2` +
+  `ChangeOrderSendV2`, `Modals/_ModalSendChangeOrderV2`). "Verzenden naar klant" (28a) en "Aanmaken en
+  verzenden" (21c) slaan eerst op en openen dan de modal (`?send=true`). Kanaal "Online ondertekenen" maakt
+  en opent het ondertekendossier (zelfde twee stappen als `SigningAdmin/Start`), "Alleen PDF" zet enkel de
+  verzenddatum. Ontvangers aan/uit, Alle eigenaars / Eén volstaat, vervaldatum, voorbeeld van de PDF.
+  Afwijkingen van het ontwerp, omdat de ondertekenmodule het niet kan: geen apart kanaal "Klantenportaal",
+  geen vrij BERICHT in de uitnodigingsmail, HERINNERING is een beleidsinstelling (getoond, niet aanpasbaar),
+  geen eigendomspercentages bij de ontvangers.
+- Bekende rand: na een ingetrokken online ondertekening opnieuw verzenden als "Alleen PDF" laat de status op
+  "Ingetrokken" staan (de status volgt het recentste dossier).
+
+**Volgende stap: per termijn factureren.** Het facturatieplan (voorschot/tussentijds/saldo) wordt bewaard en
+getoond, maar Facturatie (`InvoicingV2` → `MakeInvoicesCO`/`BuildChangeOrderInvoiceDraft`) factureert een
+getekende WO nog in één keer voor het volledige bedrag. Te bouwen: in Facturatie één regel per
+factureerbare termijn ("WO-006 · voorschot 30 %"), de factuurregel koppelen via
+`InvoicesDetails.ChangeOrderPaymentTermId` (LineType 'ChangeOrderTerm'), WO's zonder plan blijven in één keer.

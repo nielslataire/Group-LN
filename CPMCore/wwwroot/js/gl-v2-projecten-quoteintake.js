@@ -3,8 +3,9 @@
 // 2) een kader tekenen over die canvas — modus "tabel" stuurt de bijgesneden regio naar Azure Document
 //    Intelligence (server, prebuilt-layout) en zet de teruggekregen regels om in rijen; modus "foto"
 //    stuurt de regio naar de server-opslag en hangt de teruggekregen foto aan een gekozen regel;
-// 3) de rijentabel (Herkende regels) blijft daarna een gewone, rechtstreeks bewerkbare tabel — Opslaan/
-//    Omzetten posten naar dezelfde acties als ChangeOrderDetailV2 (20d), dit scherm is enkel de intake.
+// 3) de rijentabel (Herkende regels) blijft daarna een gewone, rechtstreeks bewerkbare tabel — Opslaan
+//    en Omzetten posten naar ChangeOrderDetailV2Save; "Omzetten" loopt via de 21c-modal
+//    (gl-v2-projecten-convertquote.js), zie stuk 5 onderaan. Het originele bestand wordt bewaard (keepSource).
 (function () {
     "use strict";
 
@@ -117,7 +118,30 @@
         if (!file) return;
         if (file.type === "application/pdf") loadPdfFile(file);
         else if (file.type.indexOf("image/") === 0) loadImageFile(file);
-        else setStatus("Enkel PDF of afbeeldingen worden ondersteund.");
+        else { setStatus("Enkel PDF of afbeeldingen worden ondersteund."); return; }
+        keepSource(file);
+    }
+
+    // Het originele bestand zelf bewaren (niet enkel de bijgesneden regio's): het opmaakscherm (28a,
+    // kaart "Offerte leverancier") toont het als voorbeeld en bijlage. Loopt op de achtergrond — het
+    // inlezen wacht er niet op; de opslagnaam gaat als verborgen veld mee met Opslaan/Omzetten. Een
+    // later geladen bestand vervangt het vorige (één bron per offerte).
+    var sourceUpload = Promise.resolve();
+    function keepSource(file) {
+        var pathInput = document.getElementById("gl-v2-qi-source-path");
+        var nameInput = document.getElementById("gl-v2-qi-source-name");
+        if (!pathInput || !cfg.uploadSourceUrl) return;
+        var fd = new FormData();
+        fd.append("file", file, file.name || (file.type === "application/pdf" ? "offerte.pdf" : "offerte.png"));
+        fd.append("__RequestVerificationToken", token());
+        sourceUpload = fetch(cfg.uploadSourceUrl, { method: "POST", body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res.success) { console.warn("Offertebestand niet bewaard:", res.message); return; }
+                pathInput.value = res.path;
+                if (nameInput) nameInput.value = res.fileName || "";
+            })
+            .catch(function () { console.warn("Offertebestand niet bewaard."); });
     }
 
     var fileInput = document.getElementById("gl-v2-qi-file");
@@ -286,7 +310,8 @@
             btn.className = "gl-v2-co-review-flag js-qi-confirm-row";
             btn.title = "Klikken om te bevestigen";
             btn.innerHTML = '<i class="ph ph-warning" aria-hidden="true"></i>controleer';
-            $(".js-qi-description", tr).insertAdjacentElement("afterend", btn);
+            var desc = $(".js-qi-description", tr);
+            (desc.closest(".gl-v2-field-box") || desc).insertAdjacentElement("afterend", btn);
         } else if (!needsReview && existingFlag) {
             existingFlag.remove();
         }
@@ -380,13 +405,29 @@
             .catch(function () { return null; });
     }
 
-    function recomputeTotal() {
+    function currentTotal() {
         var total = 0;
         $$(".js-qi-row", rowsBody).forEach(function (tr) {
             total += getNum($(".js-qi-number", tr)) * getNum($(".js-qi-price", tr));
         });
+        return total;
+    }
+
+    function recomputeTotal() {
         var el = document.getElementById("gl-v2-qi-sum-total");
-        if (el) el.textContent = formatEUR(total);
+        if (el) el.textContent = formatEUR(currentTotal());
+    }
+
+    // De modelbinder leest rows[0], rows[1], … en stopt bij het eerste gat: na het verwijderen van een
+    // rij moeten de overige opnieuw aaneensluitend genummerd worden, anders gaan alle rijen ná het gat
+    // bij Opslaan verloren.
+    function renumberRows() {
+        $$(".js-qi-row", rowsBody).forEach(function (tr, i) {
+            tr.setAttribute("data-index", i);
+            $$("[name]", tr).forEach(function (el) {
+                el.name = el.name.replace(/^rows\[\d+\]/, "rows[" + i + "]");
+            });
+        });
     }
 
     rowsBody.addEventListener("input", function (e) {
@@ -394,7 +435,7 @@
     });
     rowsBody.addEventListener("click", function (e) {
         var del = e.target.closest(".js-qi-delete-row");
-        if (del) { del.closest(".js-qi-row").remove(); recomputeTotal(); return; }
+        if (del) { del.closest(".js-qi-row").remove(); renumberRows(); recomputeTotal(); return; }
         var confirmBtn = e.target.closest(".js-qi-confirm-row");
         if (confirmBtn) { setRowNeedsReview(confirmBtn.closest(".js-qi-row"), false); }
     });
@@ -407,46 +448,83 @@
     // ── 5. Opslaan / Omzetten ────────────────────────────────────────────────────────────────────────
     var form = document.getElementById("gl-v2-qi-form");
     var descHidden = document.getElementById("gl-v2-qi-description-hidden");
-    if (form && descHidden) {
+    var convertFlag = document.getElementById("gl-v2-qi-convert-after-save");
+    var allowSubmit = false; // true zodra het bronbestand klaar is met opladen (zie hieronder)
+
+    function setHidden(id, value) { var el = document.getElementById(id); if (el) el.value = value == null ? "" : value; }
+
+    if (form) {
         form.addEventListener("submit", function (e) {
-            // Klant en leverancier·contract zijn verplichte FK's — zonder deze guard zou de server het
-            // formulier afwijzen en zou je de net ingelezen regels kwijt zijn (Niels, 2026-10-01).
+            if (allowSubmit) return;
+            e.preventDefault();
+
+            var converting = convertFlag && convertFlag.value === "true";
+            // Leverancier·contract is altijd verplicht; de klant enkel bij gewoon bewaren (bij omzetten
+            // koos de 21c-modal hem al). Zonder deze guard zou de server het formulier afwijzen en zou je
+            // de net ingelezen regels kwijt zijn (Niels, 2026-10-01).
             var client = $("#gl-v2-qi-client");
             var contract = $("#gl-v2-qi-contractactivity");
-            if ((client && !client.value) || (contract && !contract.value)) {
-                e.preventDefault();
+            if (contract && !contract.value) {
                 if (convertFlag) convertFlag.value = "false";
-                setStatus("Kies eerst een klant en een leverancier · contract.");
-                (client && !client.value ? client : contract).focus();
+                setStatus("Kies eerst een leverancier · contract.");
+                contract.focus();
                 return;
             }
-            // Deze pagina heeft geen apart "omschrijving voor de klant"-veld (dat komt pas bij Omzetten
-            // op 20d) — gebruik het offertenummer/leverancier als voorlopige omschrijving zodat de rij
-            // niet naamloos in de lijst (20b) verschijnt.
-            var ref = $("#gl-v2-qi-quote-ref");
-            descHidden.value = (ref && ref.value) ? ("Offerte " + ref.value) : "Offerte";
+            if (!converting && client && !client.value) {
+                setStatus("Kies een klant om de offerte te bewaren.");
+                client.focus();
+                return;
+            }
+            // Deze pagina heeft geen "omschrijving voor de klant"-veld (dat komt bij Omzetten, 21c) —
+            // gebruik het offertenummer als voorlopige naam zodat de rij niet naamloos in de lijst staat.
+            if (descHidden) {
+                var ref = $("#gl-v2-qi-quote-ref");
+                descHidden.value = (ref && ref.value) ? ("Offerte " + ref.value) : "Offerte";
+            }
+            // Wacht tot het bronbestand bewaard is, zodat de opslagnaam zeker meegaat.
+            setStatus("Opslaan…");
+            sourceUpload.then(function () {
+                allowSubmit = true;
+                form.submit();
+            });
         });
     }
 
+    // "Omzetten naar wijzigingsopdracht" → 21c-modal. De modal rekent met de regels zoals ze nu op het
+    // scherm staan (nog niet noodzakelijk bewaard); bevestigen vult de verborgen convert*-velden en
+    // verzendt dit formulier: opslaan + omzetten in één POST.
     var convertBtn = document.getElementById("gl-v2-qi-convert");
-    var convertFlag = document.getElementById("gl-v2-qi-convert-after-save");
-    if (convertBtn) {
+    if (convertBtn && window.GlV2ConvertQuote) {
         convertBtn.addEventListener("click", function () {
-            if (cfg.changeOrderId > 0) {
-                var f = document.createElement("form");
-                f.method = "post"; f.action = cfg.convertUrl; f.style.display = "none";
-                [["__RequestVerificationToken", token()], ["projectId", cfg.projectId], ["changeOrderId", cfg.changeOrderId]]
-                    .forEach(function (pair) {
-                        var input = document.createElement("input");
-                        input.type = "hidden"; input.name = pair[0]; input.value = pair[1];
-                        f.appendChild(input);
-                    });
-                document.body.appendChild(f);
-                f.submit();
-            } else {
-                if (convertFlag) convertFlag.value = "true";
-                form.requestSubmit ? form.requestSubmit() : form.submit();
+            var rows = $$(".js-qi-row", rowsBody).filter(function (tr) { return ($(".js-qi-description", tr).value || "").trim() !== ""; });
+            var contract = $("#gl-v2-qi-contractactivity");
+            if (contract && !contract.value) { setStatus("Kies eerst een leverancier · contract."); contract.focus(); return; }
+            if (rows.length === 0) { setStatus("Lees eerst minstens één regel in (of voeg er een toe)."); return; }
+            if (rows.some(function (tr) { return tr.classList.contains("is-needs-review"); })) {
+                setStatus("Bevestig eerst de regels die op \"controleer\" staan (klik de vlag aan).");
+                return;
             }
+
+            var ref = $("#gl-v2-qi-quote-ref");
+            var client = $("#gl-v2-qi-client");
+            var supplier = contract && contract.selectedIndex > 0 ? contract.options[contract.selectedIndex].text : "";
+            window.GlV2ConvertQuote.open({
+                url: cfg.convertModalUrl + "?projectId=" + encodeURIComponent(cfg.projectId) + "&changeOrderId=" + encodeURIComponent(cfg.changeOrderId || 0),
+                cost: currentTotal(),
+                subtitle: [cfg.number || "Nieuwe offerte", ref && ref.value, supplier, rows.length + (rows.length === 1 ? " regel" : " regels")]
+                    .filter(function (x) { return !!x; }).join(" · "),
+                clientId: (client && client.value) || cfg.clientAccountId || null,
+                onConfirm: function (v) {
+                    setHidden("gl-v2-qi-cv-client", v.clientAccountId);
+                    setHidden("gl-v2-qi-cv-commission", v.commission);
+                    setHidden("gl-v2-qi-cv-plan", v.plan);
+                    setHidden("gl-v2-qi-cv-description", v.description);
+                    setHidden("gl-v2-qi-cv-conditions", v.conditions);
+                    setHidden("gl-v2-qi-after-save", v.afterSave);
+                    if (convertFlag) convertFlag.value = "true";
+                    if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event("submit", { cancelable: true }));
+                },
+            });
         });
     }
 })();

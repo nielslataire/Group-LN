@@ -78,7 +78,7 @@ public sealed class ChangeOrderPdfBuilder
             CommentHtml = co.Comment,
             Conditions = co.ChangeOrderConditions,
             VatPercentage = vat,
-            Lines = co.ChangeOrderDetail.OrderBy(d => d.Id).Select(d => new ChangeOrderPdfLine
+            Lines = co.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderPdfLine
             {
                 Description = d.Description,
                 UnitLabel = d.MeasurementUnit.HasValue && Enum.IsDefined(typeof(MeasurementUnit), d.MeasurementUnit.Value) ? ((MeasurementUnit)d.MeasurementUnit.Value).GetDisplayName() : null,

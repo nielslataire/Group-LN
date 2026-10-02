@@ -1,0 +1,51 @@
+@model CPMCore.Models.GlV2.GlV2StappenplanVm
+@*
+    gl-v2 — Stappenplan (design-handoff punt 27, design-handoff/Stappenplan.dc.html), variant "lijn":
+    een rij bolletjes met een verbindingslijn, label en optionele subregel per stap. Niet klikbaar (een
+    statusweergave, geen navigatie). Stijl: .gl-v2-steps in gl-v2-shell.css. Kleur is nooit het enige
+    signaal: gedaan = vinkje, fout = "!", overgeslagen = "–" + doorstreept label.
+*@
+@{
+    var n = 0;
+}
+<ol class="gl-v2-steps @(Model.Size == "sm" ? "is-sm" : "")" aria-label="@(Model.AriaLabel ?? "Verloop")">
+    @foreach (var step in Model.Steps)
+    {
+        n++;
+        var isLast = n == Model.Steps.Count;
+        <li class="gl-v2-step is-@step.State" @(step.State == "current" || step.State == "wacht" ? "aria-current=step" : "")>
+            <div class="gl-v2-step-track">
+                <span class="gl-v2-step-dot" aria-hidden="true">
+                    @switch (step.State)
+                    {
+                        case "done":
+                            <i class="ph ph-check"></i>
+                            break;
+                        case "error":
+                        case "warning":
+                            <span>!</span>
+                            break;
+                        case "uit":
+                            <span>–</span>
+                            break;
+                        default:
+                            if (Model.Numbers)
+                            {
+                                <span>@n</span>
+                            }
+                            break;
+                    }
+                </span>
+                @if (!isLast)
+                {
+                    <span class="gl-v2-step-line" aria-hidden="true"></span>
+                }
+            </div>
+            <span class="gl-v2-step-label">@step.Label</span>
+            @if (!string.IsNullOrWhiteSpace(step.Sub))
+            {
+                <span class="gl-v2-step-sub">@step.Sub</span>
+            }
+        </li>
+    }
+</ol>

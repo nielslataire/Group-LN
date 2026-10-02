@@ -1,0 +1,27 @@
+@*
+    21c — schil van de modal "Omzetten naar wijzigingsopdracht" (TYPE 2 formulier-modal, design-handoff 4j).
+    Statisch op de pagina (lijst 20b en 20c); de inhoud (#gl-v2-cq-body) wordt per offerte via AJAX
+    geladen (Modals/_ModalConvertQuoteV2). Hoort bij gl-v2-projecten-convertquote.css/.js.
+*@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-cq-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-cq-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form class="modal-content" id="gl-v2-cq-form" method="post" action="@Url.Action("ChangeOrderConvertV2", "Projecten")">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <div class="gl-v2-cq-header-text">
+                    <h2 class="modal-title" id="gl-v2-cq-title">Omzetten naar wijzigingsopdracht</h2>
+                    <span class="gl-v2-cq-header-sub" id="gl-v2-cq-subtitle"></span>
+                </div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body" id="gl-v2-cq-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" name="afterSave" value="open" id="gl-v2-cq-open">Aanmaken en openen</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" name="afterSave" value="send" id="gl-v2-cq-send">
+                    <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Aanmaken en verzenden</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

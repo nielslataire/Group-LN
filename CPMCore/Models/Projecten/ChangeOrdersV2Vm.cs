@@ -11,6 +11,7 @@ public class ChangeOrdersV2Vm
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = "";
     public bool CanWrite { get; set; }
+    public bool SigningEnabled { get; set; }
 
     public List<ChangeOrderFunnelStepV2> Funnel { get; set; } = new();
     public List<ChangeOrderRowV2> Quotes { get; set; } = new();
@@ -47,6 +48,12 @@ public class ChangeOrderRowV2
     public decimal Amount { get; set; }
     public ChangeOrderStatus Status { get; set; }
     public string StatusLabel => ChangeOrderStatusHelper.DisplayName(Status);
+    /// <summary>Statuspil zoals in design-handoff 29a/28 ("Offerte · ingelezen", "Wacht op handtekening",
+    /// "Goedgekeurd", …) + de .gl-v2-badge-toon (is-neutral/is-attention/is-positive/is-blocked/is-solid).</summary>
+    public string PillLabel { get; set; } = "";
+    public string PillTone { get; set; } = "is-neutral";
+    /// <summary>Korte volgende-stap-hint rechts van de status ("nog om te zetten", "1 van 2 getekend").</summary>
+    public string? Hint { get; set; }
     /// <summary>0..5 — positie in de 6-staps verloopstrip (Offerte/Opgemaakt/Verzonden/Ondertekend/
     /// Gefactureerd/Betaald). Factureerbaar telt visueel als "Ondertekend" — de wireframe se dot-strip
     /// en funnelbalk hebben geen aparte stap daarvoor.</summary>

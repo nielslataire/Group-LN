@@ -1,64 +1,91 @@
-/* gl-v2 — Projecten/ChangeOrderDetailV2 (design-handoff 20d, "Wijzigingsopdracht"). Page-specifiek,
-   eigen klassen-namespace (gl-v2-co-*). Hangt aan de gedeelde gl-v2-tokens/-componenten (kaart, badge,
-   knop, toggle, notice — allemaal al in gl-v2-shell.css, hier niet opnieuw getekend). */
+/* gl-v2 — Projecten/ChangeOrderDetailV2 (design-handoff punt 28, "Wijzigingsopdracht — scherm per stap").
+   Page-specifiek, eigen klassen-namespace (gl-v2-co-*). Hangt aan de gedeelde gl-v2-tokens/-componenten
+   (kaart, badge, knop, toggle, meldingskader, stappenplan, formulier-actiebalk — allemaal in
+   gl-v2-shell.css, hier niet opnieuw getekend). Ook geladen door QuoteIntakeV2 (20c) voor de gedeelde
+   tabel-/veldstijlen (.gl-v2-co-table, .gl-v2-co-readout, .gl-v2-co-form-grid). */
 
-#gl-v2-co-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* ── Paginaopbouw: scrollende inhoud + vaste actiebalk onderaan (zelfde recept als Leveranciers/EditV2:
+   het formulier is de flex-kolom, .gl-v2-co-scroll neemt de resthoogte, .gl-v2-form-actionbar sluit af). */
+.gl-v2-co-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.gl-v2-co-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; padding-bottom: 20px; }
+@media (max-width: 767.98px) { .gl-v2-co-scroll { padding-bottom: 140px; } }
 .gl-v2-co-card { flex: none; }
 
-/* ── Titelbalk ─────────────────────────────────────────────────────────────────────────────────────── */
-.gl-v2-co-titlebar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.gl-v2-co-titlebar-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.gl-v2-co-title { font: 500 21px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
-.gl-v2-co-titlebar-badges { display: flex; gap: 6px; }
-.gl-v2-co-locked { display: flex; align-items: center; gap: 6px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); flex: none; }
+/* LET OP — laadvolgorde: dit bestand laadt VÓÓR gl-v2-shell.css. Een regel hier die een shell-regel
+   met dezelfde specificiteit wil bijsturen verliest dus; daarom staan de bijsturingen van
+   .gl-v2-card-body (shell: flex-kolom, gap 14px, padding 18px 20px) en .gl-v2-field-box (shell: 40px
+   hoog) hieronder telkens met een dubbele klasse of een ouder-selector. */
 
-/* ── Stepper ("verloop bovenaan") ──────────────────────────────────────────────────────────────────── */
-.gl-v2-co-stepper { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding: 18px 20px; }
-.gl-v2-co-step { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; min-width: 84px; position: relative; }
-.gl-v2-co-step:not(:last-child):after {
-    content: "";
-    position: absolute;
-    top: 12px;
-    left: calc(50% + 16px);
-    right: calc(-50% + 16px);
-    height: 1.5px;
-    background: var(--gl-v2-hairline);
-}
-.gl-v2-co-step.is-done:not(:last-child):after { background: var(--gl-v2-primary); }
-.gl-v2-co-step-dot {
-    width: 24px;
-    height: 24px;
-    border-radius: 12px;
-    border: 2px solid var(--gl-v2-hairline);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--gl-v2-surface);
-    z-index: 1;
-    flex: none;
-}
-.gl-v2-co-step-dot i { font-size: 12px; color: var(--gl-v2-surface); }
-.gl-v2-co-step.is-done .gl-v2-co-step-dot { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
-.gl-v2-co-step.is-current .gl-v2-co-step-dot { border-color: var(--gl-v2-gold); }
-.gl-v2-co-step-label { font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: center; white-space: nowrap; }
-.gl-v2-co-step.is-done .gl-v2-co-step-label, .gl-v2-co-step.is-current .gl-v2-co-step-label { color: var(--gl-v2-ink); }
-.gl-v2-co-step-hint { font: 450 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); text-align: center; }
+/* ── Stappenplan-kaart ─────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-card-body.gl-v2-co-steps { gap: 10px; padding: 14px 20px 16px; }
+.gl-v2-co-steps-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
 
 /* ── Layout: hoofdkolom + zijkolom ─────────────────────────────────────────────────────────────────── */
-.gl-v2-co-layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+.gl-v2-co-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
 .gl-v2-co-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .gl-v2-co-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 @media (max-width: 1023.98px) {
-    .gl-v2-co-layout { grid-template-columns: 1fr; }
+    .gl-v2-co-layout { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* ── Opdracht-kaart: form-grid ─────────────────────────────────────────────────────────────────────── */
-.gl-v2-co-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+/* ── Kaartkop: slotje ("Vergrendeld"/"Afgesloten"/"Archief") ───────────────────────────────────────── */
+.gl-v2-co-lock { display: inline-flex; align-items: center; gap: 5px; flex: none; height: 22px; padding: 0 9px; border-radius: 11px; background: var(--gl-v2-neutral-tint); font: 600 10px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-muted-soft); }
+.gl-v2-co-lock i { font-size: 12px; }
+
+/* ── Veldraster (Opdracht-kaart: 4 kolommen; 20c gebruikt de 2-koloms basis) ───────────────────────── */
+.gl-v2-card-body.gl-v2-co-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gl-v2-co-span2 { grid-column: span 2; }
 .gl-v2-field-full { grid-column: 1 / -1; }
-@media (max-width: 575.98px) { .gl-v2-co-form-grid { grid-template-columns: 1fr; } }
-.gl-v2-co-readout { height: 38px; display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+@media (max-width: 767.98px) {
+    .gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 575.98px) {
+    .gl-v2-card-body.gl-v2-co-form-grid, .gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: 1fr; }
+    .gl-v2-co-span2 { grid-column: auto; }
+}
+/* Korte meerregelige velden (omschrijving voor de klant, voorwaarden): twee à drie regels volstaan —
+   lager dan de standaard-textarea (104px) van de shell. */
+.gl-v2-field-box.gl-v2-field-box-textarea.gl-v2-co-textbox-sm { height: 72px; }
+.gl-v2-co-readout { min-height: 40px; display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; }
+.gl-v2-co-readout > span, .gl-v2-co-readout > a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.gl-v2-co-readout.is-multiline { padding: 9px 11px; white-space: pre-line; line-height: 1.5; align-items: flex-start; }
 .gl-v2-co-locked-field { gap: 7px; color: var(--gl-v2-muted-soft); }
 .gl-v2-co-locked-field i { font-size: 13px; flex: none; }
+.gl-v2-co-req { color: #8B2A2A; }
+.gl-v2-co-link { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-co-link:hover { text-decoration: underline; color: var(--gl-v2-primary); }
+
+/* ── Offerte leverancier (28a) ─────────────────────────────────────────────────────────────────────── */
+.gl-v2-card-body.gl-v2-co-quote { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start; }
+.gl-v2-co-quote-preview {
+    width: 200px;
+    height: 250px;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: 10px;
+    background: #F7F9F5;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--gl-v2-muted-soft);
+    font: 600 11.5px var(--gl-v2-font-sans);
+    text-decoration: none;
+}
+.gl-v2-co-quote-preview img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.gl-v2-co-quote-preview i { font-size: 34px; color: var(--gl-v2-primary); }
+.gl-v2-co-quote-preview.is-empty { border-style: dashed; color: var(--gl-v2-muted-light); }
+.gl-v2-co-quote-preview.is-empty i { color: var(--gl-v2-muted-light); }
+a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-co-quote-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.gl-v2-co-quote-note { grid-column: 1 / -1; margin: 0; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+@media (max-width: 767.98px) {
+    .gl-v2-card-body.gl-v2-co-quote { grid-template-columns: 1fr; }
+    .gl-v2-co-quote-preview { width: 100%; height: 160px; }
+    .gl-v2-co-quote-fields { grid-template-columns: 1fr 1fr; }
+}
 
 /* ── Regels/termijnen-tabel ────────────────────────────────────────────────────────────────────────── */
 .gl-v2-co-table-scroll { overflow-x: auto; }
@@ -76,17 +103,41 @@
 }
 .gl-v2-co-table th.is-center, .gl-v2-co-table td.is-center { text-align: center; }
 .gl-v2-co-table th.is-right, .gl-v2-co-table td.is-right { text-align: right; }
-.gl-v2-co-table td { padding: 6px 8px; border-bottom: 1px solid var(--gl-v2-hairline-soft); vertical-align: middle; }
-.gl-v2-co-table td:first-child { padding-left: 20px; }
-.gl-v2-co-table td:last-child { padding-right: 20px; }
+.gl-v2-co-table td { padding: 6px 8px; border-bottom: 1px solid var(--gl-v2-hairline-soft); vertical-align: middle; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-table th:first-child, .gl-v2-co-table td:first-child { padding-left: 20px; }
+.gl-v2-co-table th:last-child, .gl-v2-co-table td:last-child { padding-right: 20px; }
 .gl-v2-co-table tfoot td { border-bottom: 0; padding-top: 6px; padding-bottom: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
-.gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; }
-.gl-v2-co-tabular { font-variant-numeric: tabular-nums; }
-.gl-v2-co-num { width: 84px; text-align: right; }
+.gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; padding-bottom: 14px; }
+.gl-v2-co-tabular { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Invoervelden in een tabelcel: het gedeelde veldkader (.gl-v2-field-box), compacter dan in een
+   formulier (34px i.p.v. 40px) zodat een rij niet hoger wordt dan nodig. */
+.gl-v2-co-table .gl-v2-field-box { height: 34px; padding: 0 9px; gap: 6px; border-radius: 7px; }
+.gl-v2-co-table .gl-v2-field-box .gl-v2-field-input { font-size: 12.5px; width: 100%; }
+.gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox { width: 84px; margin-left: auto; }
+/* Een keuzelijst in een cel mag niet tot enkel haar pijltje krimpen (de tabel verdeelt de breedte zelf). */
+.gl-v2-co-table .gl-v2-field-box:has(> select) { min-width: 96px; }
+.gl-v2-co-numbox .gl-v2-field-input { text-align: right; font-variant-numeric: tabular-nums; }
+/* Leesweergave (vergrendeld): meer lucht per rij, de omschrijving behoudt haar regels/opsommingen. */
+.gl-v2-co-table.is-readonly td { padding-top: 10px; padding-bottom: 10px; vertical-align: top; }
+.gl-v2-co-table.is-readonly tfoot td { padding-top: 6px; padding-bottom: 6px; }
+.gl-v2-co-table.is-readonly .gl-v2-co-sum-total td { padding-top: 10px; padding-bottom: 14px; }
+.gl-v2-co-desc-cell { white-space: pre-line; line-height: 1.45; min-width: 240px; }
+.gl-v2-co-internal { color: var(--gl-v2-muted-soft); }
+.gl-v2-co-empty { text-align: center; color: var(--gl-v2-muted); padding: 18px 20px; }
 /* Omschrijving als textarea: 20c vouwt de specificatierijen van de offerte in deze tekst, dus die moet
    leesbaar blijven (vorige versie: één regel, afgekapt). Groeit mee met de inhoud waar de browser
    field-sizing kent, anders minimaal twee regels. */
-.gl-v2-co-desc-input { min-width: 260px; min-height: 52px; height: auto; resize: vertical; line-height: 1.4; padding-top: 7px; padding-bottom: 7px; field-sizing: content; }
+.gl-v2-co-table .gl-v2-field-box.gl-v2-co-descbox { height: auto; min-height: 52px; min-width: 260px; padding: 7px 9px; align-items: stretch; }
+.gl-v2-co-table .gl-v2-co-descbox .gl-v2-field-input { height: auto; min-height: 36px; resize: vertical; line-height: 1.4; field-sizing: content; }
+/* Sleepgreep (28a): eerste, smalle kolom. Staat NA de :first-child-regel hierboven zodat de kleinere
+   inspringing wint (zelfde specificiteit). touch-action:none: slepen met de vinger scrolt de pagina niet. */
+.gl-v2-co-table th.gl-v2-co-handle-cell, .gl-v2-co-table td.gl-v2-co-handle-cell { width: 30px; padding-left: 10px; padding-right: 0; }
+.gl-v2-co-handle { display: flex; align-items: center; justify-content: center; width: 22px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--gl-v2-muted-light); cursor: grab; touch-action: none; }
+.gl-v2-co-handle i { font-size: 16px; }
+.gl-v2-co-handle:hover, .gl-v2-co-handle:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
+.gl-v2-co-row.is-dragging { background: var(--gl-v2-hover-tint); }
+.gl-v2-co-row.is-dragging .gl-v2-co-handle { cursor: grabbing; color: var(--gl-v2-primary); }
+.gl-v2-co-rows-dragging { user-select: none; cursor: grabbing; }
 .gl-v2-co-row.is-needs-review { background: #FDF9F0; }
 .gl-v2-co-row-flags { display: flex; gap: 8px; margin-top: 3px; }
 .gl-v2-co-review-flag { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; padding: 0; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-warning); cursor: pointer; }
@@ -94,9 +145,11 @@
 .gl-v2-co-photo-flag { display: inline-flex; align-items: center; gap: 3px; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
 .gl-v2-co-row-delete { border: 0; background: transparent; padding: 4px; color: var(--gl-v2-muted-light); cursor: pointer; }
 .gl-v2-co-row-delete:hover { color: var(--gl-v2-danger); }
+.gl-v2-co-add-hint { margin-left: 12px; }
+.gl-v2-card-body.gl-v2-co-card-notice { padding-top: 12px; }
 
 /* ── Facturatieplan ────────────────────────────────────────────────────────────────────────────────── */
-.gl-v2-co-presets { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.gl-v2-co-presets { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .gl-v2-co-presets-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); margin-right: 4px; }
 .gl-v2-co-preset {
     height: 32px;
@@ -110,33 +163,137 @@
 }
 .gl-v2-co-preset:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-co-preset.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
-.gl-v2-co-term-kind-label { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+/* De bewerkbare termijntabel staat ín de kaart-body (onder de snelkeuzes): eigen kader i.p.v. de
+   rand-tot-rand-uitlijning van de regels-tabel. */
+.gl-v2-co-table-inset { border: 1px solid var(--gl-v2-hairline-soft); border-radius: 10px; }
+.gl-v2-co-table-inset .gl-v2-co-table { min-width: 620px; }
+.gl-v2-co-table-inset .gl-v2-co-table th:first-child, .gl-v2-co-table-inset .gl-v2-co-table td:first-child { padding-left: 14px; }
+.gl-v2-co-table-inset .gl-v2-co-table th:last-child, .gl-v2-co-table-inset .gl-v2-co-table td:last-child { padding-right: 10px; }
+.gl-v2-co-table-inset .gl-v2-co-table tbody tr:last-child td { border-bottom: 0; }
+.gl-v2-co-terms-table td > .gl-v2-field-box + .gl-v2-field-box { margin-top: 6px; }
+.gl-v2-co-terms-table td > .gl-v2-co-readout { min-height: 34px; }
+.gl-v2-co-term-kind-label { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); display: block; }
+.gl-v2-co-term-invoice { display: block; margin-top: 2px; font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-co-term-invoice:hover { text-decoration: underline; }
+.gl-v2-co-inline-action { margin-left: 8px; border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-co-inline-action:hover { text-decoration: underline; }
 .gl-v2-co-add-term { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 8px 0; color: var(--gl-v2-primary); font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
 .gl-v2-co-add-term:hover { text-decoration: underline; }
-.gl-v2-co-terms-total { display: flex; align-items: center; gap: 8px; margin: 10px 0 16px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-terms-foot { display: flex; align-items: center; gap: 12px; margin-top: -6px; }
+.gl-v2-co-terms-total { display: inline-flex; align-items: center; gap: 8px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-card-body.gl-v2-co-conditions { border-top: 1px solid var(--gl-v2-hairline-soft); gap: 5px; }
+.gl-v2-co-conditions p { margin: 0; font: 450 12.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: pre-line; }
 .is-hidden { display: none !important; }
 
-/* ── Zijkolom-kaarten ──────────────────────────────────────────────────────────────────────────────── */
-.gl-v2-co-side-btn { width: 100%; justify-content: center; margin-top: 10px; }
-.gl-v2-co-source { display: flex; flex-direction: column; gap: 12px; }
-.gl-v2-co-history { display: flex; flex-direction: column; gap: 10px; }
-.gl-v2-co-history-item { display: flex; flex-direction: column; gap: 1px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); padding-left: 12px; border-left: 2px solid var(--gl-v2-hairline); }
+/* ── Zijkolom: Ondertekening ───────────────────────────────────────────────────────────────────────── */
+.gl-v2-co-sign-head { padding: 9px 20px; font: 600 11.5px var(--gl-v2-font-sans); background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); }
+.gl-v2-co-sign-head.is-goud { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-co-sign-head.is-groen { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-co-sign-head.is-rood { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-card-body.gl-v2-co-sign { gap: 12px; }
+.gl-v2-co-signer { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.gl-v2-co-signer-avatar { position: relative; width: 32px; height: 32px; border-radius: 16px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--gl-v2-neutral-tint); font: 700 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-co-signer-dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 5px; border: 2px solid var(--gl-v2-surface); background: #B9C2B6; }
+.gl-v2-co-signer-dot.is-goud { background: #C9A96E; }
+.gl-v2-co-signer-dot.is-groen { background: var(--gl-v2-primary); }
+.gl-v2-co-signer-dot.is-rood { background: #8B2A2A; }
+.gl-v2-co-signer-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.gl-v2-co-signer-name { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-co-signer-status { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-signer-status.is-goud { color: var(--gl-v2-warning); }
+.gl-v2-co-signer-status.is-groen { color: var(--gl-v2-primary); }
+.gl-v2-co-signer-status.is-rood { color: var(--gl-v2-danger); }
+.gl-v2-co-meta { margin: 0; padding-top: 10px; border-top: 1px solid var(--gl-v2-hairline-soft); display: flex; flex-direction: column; gap: 5px; }
+.gl-v2-co-meta > div { display: flex; justify-content: space-between; gap: 10px; }
+.gl-v2-co-meta dt { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-meta dd { margin: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-co-side-btn { width: 100%; justify-content: center; cursor: pointer; }
+.gl-v2-co-side-link { align-self: flex-start; }
+
+/* ── Zijkolom: Facturen ────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-card-body.gl-v2-co-invoices { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
+.gl-v2-co-invoice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none; }
+.gl-v2-co-invoice:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-co-invoice-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-co-invoice-nr { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-invoice-desc { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-co-invoice-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+/* ── Zijkolom: Bron + Historiek ────────────────────────────────────────────────────────────────────── */
+.gl-v2-card-body.gl-v2-co-source { gap: 12px; }
+.gl-v2-co-source-item { display: flex; flex-direction: column; gap: 3px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-source-kind { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-co-dashed-btn { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border: 1.5px dashed var(--gl-v2-hairline); border-radius: 8px; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-co-dashed-btn:hover { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
+/* Historiek als tijdlijn: een bolletje per gebeurtenis op een doorlopende haarlijn (nieuwste bovenaan,
+   groen). Bol en lijn zijn pseudo-elementen — geen rand op het item zelf. */
+.gl-v2-card-body.gl-v2-co-history { gap: 0; }
+.gl-v2-co-history-item { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 0 0 12px 17px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-history-item:last-child { padding-bottom: 0; }
+.gl-v2-co-history-item::before { content: ""; position: absolute; left: 0; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #B9C2B6; }
+.gl-v2-co-history-item:first-child::before { background: var(--gl-v2-primary); }
+.gl-v2-co-history-item::after { content: ""; position: absolute; left: 3px; top: 14px; bottom: -1px; width: 1px; background: var(--gl-v2-hairline); }
+.gl-v2-co-history-item:last-child::after { display: none; }
 .gl-v2-co-history-date { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-muted-light); }
 
-/* ── Sticky actiebalk ──────────────────────────────────────────────────────────────────────────────── */
-.gl-v2-co-actionbar {
-    position: sticky;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
-    margin-top: 4px;
-    background: var(--gl-v2-surface);
-    border-top: 1px solid var(--gl-v2-hairline-soft);
-    box-shadow: 0 -4px 14px -10px rgba(44,59,42,.3);
+/* ── 21d — modal "Verzenden ter ondertekening" ─────────────────────────────────────────────────────────
+   De gedeelde TYPE 2 formulier-modal (.gl-v2-modal-form), breder (860px) en met een eigen indeling:
+   formulier links, voorbeeld van het document rechts. Drie klassen in de selector: dit bestand laadt
+   vóór gl-v2-shell.css. Onder 768px is de modal schermvullend (Bootstrap) — daar geen breedte forceren. */
+@media (min-width: 768px) {
+    .gl-v2-modal-form.gl-v2-co-send-modal .modal-dialog { width: min(860px, calc(100vw - 32px)); }
+    .gl-v2-modal-form.gl-v2-co-send-modal .modal-body { grid-template-columns: minmax(0, 1fr) 220px; gap: 18px; align-items: start; }
 }
-.gl-v2-co-actionbar .gl-v2-field-help { flex: 1; min-width: 0; }
+.gl-v2-co-send-icon { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; }
+.gl-v2-co-send-icon i { font-size: 17px; }
+.gl-v2-co-send-header-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.gl-v2-co-send-header-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-co-send-main, .gl-v2-co-send-section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gl-v2-co-send-section[hidden] { display: none; }
+.gl-v2-co-send-loading { grid-column: 1 / -1; padding: 28px 0; text-align: center; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-modal-form.gl-v2-co-send-modal .modal-footer { align-items: center; }
+.gl-v2-co-send-footnote { flex: 1; min-width: 0; font: 450 11px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-wrap: pretty; }
+
+/* Segmentkeuze (radio's): grijze baan, de gekozen optie als wit vlak. */
+.gl-v2-co-seg { display: flex; gap: 3px; padding: 3px; border-radius: 9px; background: var(--gl-v2-neutral-tint); }
+.gl-v2-co-seg label { position: relative; flex: 1; min-width: 0; margin: 0; display: flex; cursor: pointer; }
+.gl-v2-co-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.gl-v2-co-seg span { flex: 1; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0 8px; border-radius: 7px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-co-seg input:checked + span { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .12); }
+.gl-v2-co-seg input:focus-visible + span { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }
+.gl-v2-co-seg input:disabled + span { color: var(--gl-v2-muted-light); cursor: not-allowed; }
+
+/* Ontvangers */
+.gl-v2-co-send-parties { border: 1px solid var(--gl-v2-hairline); border-radius: 10px; overflow: hidden; }
+.gl-v2-co-send-party { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 6px 12px; }
+.gl-v2-co-send-party + .gl-v2-co-send-party { border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-co-send-party-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; margin: 0; cursor: pointer; }
+.gl-v2-co-send-party-name { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-send-party-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-co-send-party.is-warning .gl-v2-co-send-party-sub { color: var(--gl-v2-warning); white-space: normal; }
+.gl-v2-co-send-party-role { flex: none; font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-co-send-grid { display: grid; grid-template-columns: 2fr 1.1fr 1fr; gap: 12px 14px; align-items: start; }
+@media (max-width: 575.98px) { .gl-v2-co-send-grid { grid-template-columns: 1fr; } }
+
+/* Aanvinkvakje — zelfde tekening als op Betalingsschijven/Facturatie (daar pagina-eigen gedupliceerd; er
+   is nog geen gedeeld checkbox-component in de shell). */
+.gl-v2-co-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; flex: none; }
+.gl-v2-co-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
+.gl-v2-co-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
+.gl-v2-co-check label:before { content: ""; position: absolute; inset: 0; box-sizing: border-box; border-radius: 5px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); }
+.gl-v2-co-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
+.gl-v2-co-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-co-check input[type="checkbox"]:checked + label:after { content: "\f00c"; font-family: "Font Awesome 5 Free"; font-weight: 900; position: absolute; inset: 0; font-size: 10px; line-height: 18px; text-align: center; color: var(--gl-v2-surface); }
+.gl-v2-co-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+.gl-v2-co-check input[type="checkbox"]:disabled + label { cursor: not-allowed; }
+.gl-v2-co-check input[type="checkbox"]:disabled + label:before { background: var(--gl-v2-neutral-tint); }
+
+/* Voorbeeld */
+.gl-v2-co-send-preview { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gl-v2-co-send-frame { width: 100%; aspect-ratio: 1 / 1.4; border: 0; border-radius: 6px; background: var(--gl-v2-surface); box-shadow: 0 2px 6px rgba(44, 59, 42, .10), 0 16px 30px -18px rgba(44, 59, 42, .4); }
+.gl-v2-co-send-frame.is-placeholder { display: flex; align-items: center; justify-content: center; color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-co-send-frame.is-placeholder i { font-size: 40px; }
+@media (max-width: 767.98px) { .gl-v2-co-send-frame { display: none; } }
 
 @media (max-width: 767.98px) {
     .gl-v2-co-table { min-width: 640px; }

@@ -1,0 +1,40 @@
+/* gl-v2 — de 21c-modal "Omzetten naar wijzigingsopdracht" en de kopie-modal (design-handoff 21c/29b).
+   Eigen bestand omdat twee pagina's ze laden (lijst 20b en Offerte inlezen 20c) en een pagina nooit op
+   het stylesheet van een andere pagina mag leunen. Namespace gl-v2-cq-* (convert quote). De modal zelf
+   is de gedeelde TYPE 2 formulier-modal (.gl-v2-modal-form, gl-v2-shell.css) — hier enkel wat die niet
+   kent: ondertitel in de kop, vergrendelde uitlezing, segmentkeuze en de totalenstrook. */
+
+.gl-v2-cq-header-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-cq-header-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-cq-req { color: #8B2A2A; }
+
+.gl-v2-cq-readout { height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; }
+.gl-v2-cq-readout i { font-size: 13px; flex: none; }
+.gl-v2-cq-readout span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Segmentkeuze (radio's): grijze baan, de gekozen optie als wit vlak — zelfde tekening als in de
+   21d-verzendmodal (.gl-v2-co-seg, gl-v2-projecten-changeorderdetail.css). */
+.gl-v2-cq-segmented { display: flex; gap: 3px; padding: 3px; border-radius: 9px; background: var(--gl-v2-neutral-tint); }
+.gl-v2-cq-segmented label { position: relative; flex: 1; min-width: 0; margin: 0; display: flex; cursor: pointer; }
+.gl-v2-cq-segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.gl-v2-cq-segmented span { flex: 1; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0 6px; border-radius: 7px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-cq-segmented input:checked + span { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .12); }
+.gl-v2-cq-segmented input:focus-visible + span { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }
+
+/* Totalenstrook: kostprijs · commissie · prijs klant excl. · incl. btw. */
+.gl-v2-cq-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--gl-v2-hairline-soft); border-radius: 10px; background: #F7F9F5; overflow: hidden; }
+.gl-v2-cq-totals > div { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; min-width: 0; }
+.gl-v2-cq-totals > div + div { border-left: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-cq-totals-label { font: 600 8.5px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-cq-totals-value { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-cq-totals > .is-strong .gl-v2-cq-totals-value { color: var(--gl-v2-primary); font-weight: 700; }
+@media (max-width: 575.98px) {
+    .gl-v2-cq-totals { grid-template-columns: 1fr 1fr; }
+    .gl-v2-cq-totals > div:nth-child(3) { border-left: 0; }
+    .gl-v2-cq-totals > div:nth-child(n+3) { border-top: 1px solid var(--gl-v2-hairline-soft); }
+}
+
+.gl-v2-cq-loading { grid-column: 1 / -1; padding: 24px 0; text-align: center; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Voorwaarden: twee à drie regels volstaan — lager dan de standaard-textarea (104px) van de shell. */
+.gl-v2-field-box.gl-v2-field-box-textarea.gl-v2-cq-textbox-sm { height: 72px; }

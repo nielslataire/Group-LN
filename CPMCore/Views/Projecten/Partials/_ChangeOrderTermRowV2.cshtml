@@ -18,7 +18,7 @@
         <span class="gl-v2-co-term-kind-label">@Model.KindLabel</span>
     </td>
     <td class="is-right">
-        <input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-term-pct" name="@(prefix).percentage" value="@(Model.Percentage?.ToString(System.Globalization.CultureInfo.InvariantCulture))" @(isLocked || Model.Kind == 3 ? "readonly" : "") />
+        <div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-term-pct" name="@(prefix).percentage" value="@(Model.Percentage?.ToString(System.Globalization.CultureInfo.InvariantCulture))" @(isLocked || Model.Kind == 3 ? "readonly" : "") /></div>
     </td>
     <td class="is-right gl-v2-co-tabular js-co-term-amount">—</td>
     <td>
@@ -29,17 +29,17 @@
         }
         else
         {
-            <select class="gl-v2-field-input js-co-term-trigger" name="@(prefix).triggerType" @(isLocked ? "disabled" : "")>
+            <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-term-trigger" name="@(prefix).triggerType" @(isLocked ? "disabled" : "")>
                 <option value="1" selected="@(Model.TriggerType == 1)">Na ondertekening</option>
                 <option value="2" selected="@(Model.TriggerType == 2)">Bij een schijf</option>
                 <option value="3" selected="@(Model.TriggerType == 3)">Manueel vrijgeven</option>
-            </select>
-            <select class="gl-v2-field-input js-co-term-stage @(Model.TriggerType == 2 ? "" : "is-hidden")" name="@(prefix).triggerStageId">
+            </select></div>
+            <div class="gl-v2-field-box js-co-term-stagebox @(Model.TriggerType == 2 ? "" : "is-hidden")"><select class="gl-v2-field-input js-co-term-stage" name="@(prefix).triggerStageId">
                 @foreach (var s in stages)
                 {
                     <option value="@s.ID" selected="@(s.ID == Model.TriggerStageId)">@s.Display</option>
                 }
-            </select>
+            </select></div>
         }
     </td>
     <td class="is-right">

@@ -41,6 +41,7 @@ namespace CPMCore.Controllers
             var orders = await _db.ChangeOrder.AsNoTracking()
                 .Where(c => c.ContractActivity.Contract.ProjectId == projectid)
                 .Include(c => c.ChangeOrderDetail)
+                .Include(c => c.ChangeOrderPaymentTerm)
                 .Include(c => c.ClientAccount)
                 .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Company)
                 .OrderByDescending(c => c.Date)
@@ -48,53 +49,23 @@ namespace CPMCore.Controllers
 
             var today = DateOnly.FromDateTime(DateTime.Today);
 
-            var features = HttpContext.RequestServices.GetRequiredService<IOptions<FeatureFlagsOptions>>().Value;
-            var signingByOrderId = new Dictionary<int, FacadeCore.Signing.CaseStatusView>();
-            if (features.EnableSigning && orders.Count > 0)
-            {
-                var signing = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.ISigningService>();
-                var cases = await signing.ListCasesAsync(projectid, null, 1000, HttpContext.RequestAborted);
-                signingByOrderId = cases
-                    .Where(c => c.DocumentType == Services.Signing.ChangeOrderSigningSource.Key)
-                    .GroupBy(c => c.SourceEntityId)
-                    .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedAt).First());
-            }
-
-            var orderIds = orders.Select(o => o.Id).ToHashSet();
-            var termIdsByOrder = await _db.ChangeOrderPaymentTerm.AsNoTracking()
-                .Where(t => orderIds.Contains(t.ChangeOrderId))
-                .Select(t => new { t.Id, t.ChangeOrderId })
-                .ToListAsync();
-            var invoicedTermIds = await _db.InvoicesDetails.AsNoTracking()
-                .Where(d => d.LineType == "ChangeOrderTerm" && d.ChangeOrderPaymentTermId.HasValue)
-                .Select(d => d.ChangeOrderPaymentTermId!.Value)
-                .ToListAsync();
-            var invoicedTermIdSet = invoicedTermIds.ToHashSet();
-            var allTermsInvoicedByOrder = termIdsByOrder
-                .GroupBy(t => t.ChangeOrderId)
-                .ToDictionary(g => g.Key, g => g.All(t => invoicedTermIdSet.Contains(t.Id)));
-            var hasAnyTermByOrder = termIdsByOrder.Select(t => t.ChangeOrderId).ToHashSet();
+            // Zelfde statusfeiten als het scherm per stap (ChangeOrderFlowV2.cs) — één bron, zodat de
+            // lijst en het detail nooit een andere status tonen.
+            var facts = await LoadChangeOrderFlowFactsAsync(projectid, orders);
+            vm.SigningEnabled = facts.SigningEnabled;
 
             foreach (var co in orders)
             {
-                signingByOrderId.TryGetValue(co.Id, out var signingCase);
-                var hasTerms = hasAnyTermByOrder.Contains(co.Id);
-                allTermsInvoicedByOrder.TryGetValue(co.Id, out var allInvoiced);
-
-                var input = new ChangeOrderStatusInput(
-                    IsQuote: co.IsQuote,
-                    ExpirationDate: co.ExpirationDate,
-                    DateSendToClient: co.DateSendToClient,
-                    DateAgreement: co.DateAgreement,
-                    SigningCaseStatus: signingCase?.Status,
-                    HasInvoicableTerm: co.DateAgreement.HasValue && hasTerms && !allInvoiced,
-                    AllTermsInvoiced: hasTerms && allInvoiced,
-                    AllInvoicesPaid: false); // stap 5 (facturatie-integratie)
-                var status = ChangeOrderStatusHelper.Compute(input, today);
+                facts.LatestCase.TryGetValue(co.Id, out var signingCase);
+                facts.Invoices.TryGetValue(co.Id, out var invoices);
+                var status = ComputeFlowStatus(co, facts, today);
 
                 var amount = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m));
                 var companyName = co.ContractActivity?.Contract?.Company?.BedrijfsNaam;
                 var unitName = ResolveUnitNameForAccount(co.ClientAccountId, projectid);
+                var parties = signingCase?.Parties;
+                var signedCount = parties?.Count(p => p.Status == (int)SigningPartyStatus.Signed) ?? 0;
+                var anyOverdue = invoices?.Any(i => i.IsOverdue) == true;
 
                 var row = new ChangeOrderRowV2
                 {
@@ -108,16 +79,33 @@ namespace CPMCore.Controllers
                     Status = status,
                     DotPosition = DotPositionFor(status),
                     SigningCaseId = signingCase?.CaseId,
-                    CanRemind = status == ChangeOrderStatus.Verzonden,
+                    CanRemind = status == ChangeOrderStatus.Verzonden && signingCase?.Status == (int)SigningCaseStatus.Open,
                     ExpirationDate = co.ExpirationDate,
+                };
+
+                // Statuspil: zelfde woorden en kleuren als het scherm per stap (28) en de lijst in 29a.
+                (row.PillLabel, row.PillTone) = status switch
+                {
+                    ChangeOrderStatus.Offerte => ("Offerte · ingelezen", "is-neutral"),
+                    ChangeOrderStatus.Verlopen => ("Offerte · verlopen", "is-blocked"),
+                    ChangeOrderStatus.Opgemaakt => ("Opgemaakt", "is-neutral"),
+                    ChangeOrderStatus.Geannuleerd => ("Ingetrokken", "is-neutral"),
+                    ChangeOrderStatus.Geweigerd => ("Geweigerd", "is-blocked"),
+                    ChangeOrderStatus.Verzonden when signingCase?.Status == (int)SigningCaseStatus.Expired => ("Niet ondertekend", "is-blocked"),
+                    ChangeOrderStatus.Verzonden => (signedCount > 0 ? "Wacht op handtekening" : "Verzonden", "is-attention"),
+                    ChangeOrderStatus.Ondertekend or ChangeOrderStatus.Factureerbaar => (anyOverdue ? "Vervallen" : "Goedgekeurd", anyOverdue ? "is-blocked" : "is-positive"),
+                    ChangeOrderStatus.Gefactureerd => (anyOverdue ? "Vervallen" : "Gefactureerd", anyOverdue ? "is-blocked" : "is-positive"),
+                    ChangeOrderStatus.Betaald => ("Betaald", "is-solid"),
+                    _ => (ChangeOrderStatusHelper.DisplayName(status), "is-neutral"),
                 };
 
                 if (co.IsQuote)
                 {
                     row.SubText = status == ChangeOrderStatus.Verlopen
                         ? $"geldig tot {co.ExpirationDate:dd/MM/yyyy} — verlopen"
-                        : $"ingelezen · {co.ChangeOrderDetail.Count} {(co.ChangeOrderDetail.Count == 1 ? "regel" : "regels")}";
+                        : $"{co.ChangeOrderDetail.Count} {(co.ChangeOrderDetail.Count == 1 ? "regel" : "regels")} · kostprijs leverancier";
                     row.SubTextIsWarning = status == ChangeOrderStatus.Verlopen;
+                    row.Hint = "nog om te zetten";
                     vm.Quotes.Add(row);
                 }
                 else
@@ -128,11 +116,22 @@ namespace CPMCore.Controllers
                         ChangeOrderStatus.Ondertekend or ChangeOrderStatus.Factureerbaar => $"ondertekend {co.DateAgreement:dd/MM/yyyy}",
                         ChangeOrderStatus.Gefactureerd or ChangeOrderStatus.Betaald => $"ondertekend {co.DateAgreement:dd/MM/yyyy}",
                         ChangeOrderStatus.Geweigerd => "geweigerd door de klant",
-                        ChangeOrderStatus.Geannuleerd => "geannuleerd",
+                        ChangeOrderStatus.Geannuleerd => "ondertekening ingetrokken — opnieuw te verzenden",
                         _ => amount < 0 ? "minwerk · aan kostprijs, zonder commissie" : null,
                     };
                     row.SubTextIsWarning = status == ChangeOrderStatus.Verzonden && signingCase != null && signingCase.CreatedAt < DateTime.Now.AddDays(-7);
                     if (row.SubTextIsWarning) row.SubText = $"wacht {(DateTime.Now - signingCase!.CreatedAt).Days} dagen op handtekening";
+                    row.Hint = status switch
+                    {
+                        ChangeOrderStatus.Opgemaakt or ChangeOrderStatus.Geannuleerd => "nog te verzenden",
+                        ChangeOrderStatus.Verzonden when signingCase?.Status == (int)SigningCaseStatus.Expired => "opnieuw te verzenden",
+                        ChangeOrderStatus.Verzonden when parties is { Count: > 0 } => $"{signedCount} van {parties.Count} getekend",
+                        ChangeOrderStatus.Factureerbaar => "klaar om te factureren",
+                        ChangeOrderStatus.Gefactureerd => anyOverdue ? "betaling te laat" : "wacht op betaling",
+                        _ => null,
+                    };
+                    if (co.SourceChangeOrderId.HasValue)
+                        row.SourceReference = (co.SourceKind == 2 ? "versie van " : "kopie van ") + $"WO-{co.SourceChangeOrderId:000}";
                     vm.Orders.Add(row);
                 }
             }

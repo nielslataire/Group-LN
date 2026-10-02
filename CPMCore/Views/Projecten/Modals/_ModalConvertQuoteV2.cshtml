@@ -1,0 +1,82 @@
+@model CPMCore.Models.Projecten.ConvertQuoteModalV2Vm
+@*
+    21c — "Omzetten naar wijzigingsopdracht" (design-handoff 21c, flow 29b "met offerte": lijst/20c →
+    21c → 28a). Inhoud van de modal #gl-v2-cq-modal (schil in Partials/_ConvertQuoteModalShellV2),
+    AJAX-geladen door ProjectenController.ConvertQuoteModalV2 vanuit de lijst (20b) én vanuit 20c.
+    Gedrag in gl-v2-projecten-convertquote.js: de totalenstrook rekent live mee (kostprijs · commissie ·
+    prijs klant · incl. btw), btw klant volgt de gekozen eenheid (data-vat op de optie — nooit vrij te
+    kiezen), minwerk vergrendelt de commissie op 0 %. Vanuit de lijst is dit een eigen formulier naar
+    ChangeOrderConvertV2; op 20c kopieert de JS deze velden naar het paginaformulier (zelfde veldnamen),
+    zodat opslaan + omzetten één POST blijft.
+*@
+@using System.Globalization
+@{
+    var inv = CultureInfo.InvariantCulture;
+}
+<input type="hidden" name="projectId" value="@Model.ProjectId" />
+<input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+<div id="gl-v2-cq-data" hidden
+     data-subtitle="@Model.Subtitle"
+     data-cost="@Model.CostTotal.ToString(inv)"
+     data-rows="@Model.RowCount"></div>
+
+<div class="gl-v2-field gl-v2-field-full">
+    <label class="gl-v2-field-label" for="gl-v2-cq-client">Klantenaccount · eenheid <span class="gl-v2-cq-req">*</span></label>
+    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-cq-client" name="convertClientAccountId" required>
+        <option value="">— kies een klant —</option>
+        @foreach (var c in Model.Clients)
+        {
+            <option value="@c.Id" selected="@(c.Id == Model.ClientAccountId)"
+                    data-vat="@c.VatPercentage.ToString(inv)" data-vat-label="@c.VatLabel" data-unit="@c.UnitName" data-owners="@c.OwnersHint">@c.Display@(string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName)</option>
+        }
+    </select></div>
+    <span class="gl-v2-field-help" id="gl-v2-cq-client-hint">de eigenaars van deze eenheid tekenen de wijzigingsopdracht</span>
+</div>
+
+<div class="gl-v2-field">
+    <span class="gl-v2-field-label">Nummer</span>
+    <div class="gl-v2-cq-readout"><i class="ph ph-lock-simple" aria-hidden="true"></i><span>@Model.NextNumberLabel</span></div>
+    <span class="gl-v2-field-help">offerte en wijzigingsopdracht delen hun volgnummer</span>
+</div>
+<div class="gl-v2-field">
+    <label class="gl-v2-field-label" for="gl-v2-cq-commission">Commissie %</label>
+    <div class="gl-v2-field-box"><input type="number" step="0.01" min="0" class="gl-v2-field-input" id="gl-v2-cq-commission" name="convertCommission" value="@Model.DefaultCommission.ToString(inv)" /></div>
+    <span class="gl-v2-field-help" id="gl-v2-cq-commission-hint">intern — nooit zichtbaar voor de klant</span>
+</div>
+
+<div class="gl-v2-field">
+    <span class="gl-v2-field-label">Btw klant</span>
+    <div class="gl-v2-cq-readout"><i class="ph ph-lock-simple" aria-hidden="true"></i><span id="gl-v2-cq-vat-label">kies eerst een eenheid</span></div>
+    <span class="gl-v2-field-help">uit de betalingsgroep van de eenheid</span>
+</div>
+<div class="gl-v2-field">
+    <span class="gl-v2-field-label" id="gl-v2-cq-plan-label">Facturatieplan</span>
+    <div class="gl-v2-cq-segmented" role="radiogroup" aria-labelledby="gl-v2-cq-plan-label">
+        <label><input type="radio" name="convertPlan" value="laatste-schijf" checked /><span>Laatste schijf</span></label>
+        <label><input type="radio" name="convertPlan" value="voorschot-saldo" /><span>Voorschot + saldo</span></label>
+        <label><input type="radio" name="convertPlan" value="eigen" /><span>Eigen</span></label>
+    </div>
+    <span class="gl-v2-field-help" id="gl-v2-cq-plan-hint">het volledige bedrag bij de laatste betalingsschijf</span>
+</div>
+
+<div class="gl-v2-field gl-v2-field-full">
+    <label class="gl-v2-field-label" for="gl-v2-cq-description">Omschrijving voor de klant <span class="gl-v2-cq-req">*</span></label>
+    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-cq-description" name="convertDescription" maxlength="250" value="@Model.Description" placeholder="bv. Extra buitenkraan achtergevel" required /></div>
+</div>
+<div class="gl-v2-field gl-v2-field-full">
+    <label class="gl-v2-field-label" for="gl-v2-cq-conditions">Voorwaarden</label>
+    <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-cq-textbox-sm"><textarea class="gl-v2-field-input" id="gl-v2-cq-conditions" name="convertConditions" rows="2" maxlength="1000"></textarea></div>
+    <span class="gl-v2-field-help">volgt het facturatieplan, blijft aanpasbaar</span>
+</div>
+
+<div class="gl-v2-cq-totals gl-v2-field-full">
+    <div><span class="gl-v2-cq-totals-label">KOSTPRIJS · INTERN</span><span class="gl-v2-cq-totals-value" id="gl-v2-cq-sum-cost">—</span></div>
+    <div><span class="gl-v2-cq-totals-label">COMMISSIE · INTERN</span><span class="gl-v2-cq-totals-value" id="gl-v2-cq-sum-commission">—</span></div>
+    <div><span class="gl-v2-cq-totals-label">PRIJS KLANT EXCL.</span><span class="gl-v2-cq-totals-value" id="gl-v2-cq-sum-excl">—</span></div>
+    <div class="is-strong"><span class="gl-v2-cq-totals-label" id="gl-v2-cq-sum-incl-label">INCL. BTW</span><span class="gl-v2-cq-totals-value" id="gl-v2-cq-sum-incl">—</span></div>
+</div>
+
+<div class="gl-v2-notice gl-v2-notice-compact is-info gl-v2-field-full">
+    <i class="ph ph-info" aria-hidden="true"></i>
+    <span>Regels, beelden en leverancier gaan mee; de offerte blijft als bron gekoppeld. Minwerk wordt aan kostprijs verrekend: commissie vergrendeld op 0 %.</span>
+</div>

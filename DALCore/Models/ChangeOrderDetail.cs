@@ -38,5 +38,9 @@ public partial class ChangeOrderDetail
     /// dezelfde Storage-service als andere documentbijlagen.</summary>
     public string SourceImagePath { get; set; }
 
+    /// <summary>Migratie 067 (design-handoff 28a: sleepgreep op de regels) — de volgorde zoals ze op het
+    /// opmaakscherm staat. NULL = nooit herschikt: dan geldt de aanmaakvolgorde (Id).</summary>
+    public int? SortOrder { get; set; }
+
     public virtual ChangeOrder ChangeOrder { get; set; }
 }

@@ -1,10 +1,14 @@
 @model CPMCore.Models.Projecten.ChangeOrdersV2Vm
 @*
-    gl-v2 — Offertes & wijzigingen (design-handoff 20b: "één lijst, één verloop: offerte → opgemaakt →
-    verzonden → ondertekend → gefactureerd → betaald"). Hub-pagina: leidt naar ChangeOrderDetailV2 (20d,
-    zowel voor offertes als WO's — het is dezelfde rij) en QuoteIntakeV2 (20c, nog te bouwen). Eigen
-    klassen-namespace gl-v2-co2-* (gl-v2-projecten-changeorders.css/.js) — "co2" om botsing met de
-    gl-v2-co-* namespace van ChangeOrderDetailV2 te vermijden op pagina's die ooit beide zouden laden.
+    gl-v2 — Offertes & wijzigingen (design-handoff 20b + 29a: "één lijst, één verloop: offerte → opgemaakt
+    → verzonden → ondertekend → gefactureerd → betaald"). Het vertrekpunt van de flow uit 29b:
+      · "+ Nieuw" (één knop, vier ingangen): Offerte inlezen (→ 20c → 21c → 28a) · Leeg beginnen (→ 28b) ·
+        Kopie van een wijzigingsopdracht (→ kies eenheid → 28a) · Offerte zonder omzetten (→ 20c, enkel bewaren);
+      · een offerte-rij opent 20c, "Omzetten →" opent de 21c-modal; een WO-rij opent het scherm per stap (28);
+      · "···" op een WO-rij: Openen · Kopie maken · PDF.
+    Eigen klassen-namespace gl-v2-co2-* (gl-v2-projecten-changeorders.css/.js) — "co2" om botsing met de
+    gl-v2-co-* namespace van ChangeOrderDetailV2 te vermijden. De 21c- en kopie-modal delen hun stijl/gedrag
+    met 20c via gl-v2-projecten-convertquote.css/.js.
 *@
 @using System.Globalization
 @using CPMCore.Models.GlV2
@@ -23,17 +27,15 @@
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-changeorders.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-convertquote.css" asp-append-version="true" />
 }
 @section PageActions
 {
     @if (Model.CanWrite)
     {
-        <a href="@Url.Action("QuoteIntakeV2", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary">
-            <i class="ph ph-scan" aria-hidden="true"></i><span>Offerte inlezen</span>
-        </a>
-        <a href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-primary">
-            <i class="ph ph-plus" aria-hidden="true"></i><span>Wijzigingsopdracht</span>
-        </a>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-menu-trigger" id="gl-v2-co2-new-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co2-new-menu">
+            <i class="ph ph-plus" aria-hidden="true"></i><span>Nieuw</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+        </button>
     }
 }
 @section ProjectMenu
@@ -43,6 +45,43 @@
 }
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (Model.CanWrite)
+{
+    @* "+ Nieuw" (29a) — het gedeelde contextmenu (.gl-v2-menu); positie/open/sluiten door gl-v2-shell.js. *@
+    <div class="gl-v2-menu gl-v2-co2-new-menu" id="gl-v2-co2-new-menu">
+        <div class="gl-v2-menu-title">NIEUWE WIJZIGINGSOPDRACHT</div>
+        <a class="gl-v2-menu-item" href="@Url.Action("QuoteIntakeV2", "Projecten", new { projectid = Model.ProjectId })">
+            <i class="ph ph-scan" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Offerte inlezen</span>
+                <span class="gl-v2-menu-item-sub">Foto of PDF van de leverancier → regels worden herkend, daarna omzetten.</span>
+            </span>
+        </a>
+        <a class="gl-v2-menu-item" href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId })">
+            <i class="ph ph-pencil-simple-line" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Leeg beginnen</span>
+                <span class="gl-v2-menu-item-sub">Zonder offerte: regels en prijs leverancier zelf invullen.</span>
+            </span>
+        </a>
+        <button type="button" class="gl-v2-menu-item js-co2-copy" data-co-id="0" @(Model.OrderCount == 0 ? "disabled" : "")>
+            <i class="ph ph-copy" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Kopie van een wijzigingsopdracht</span>
+                <span class="gl-v2-menu-item-sub">Bv. dezelfde buitenkraan voor een ander lot.</span>
+            </span>
+        </button>
+        <div class="gl-v2-menu-divider"></div>
+        <a class="gl-v2-menu-item" href="@Url.Action("QuoteIntakeV2", "Projecten", new { projectid = Model.ProjectId, intent = "keep" })">
+            <i class="ph ph-archive-box" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Offerte zonder omzetten</span>
+                <span class="gl-v2-menu-item-sub">Enkel bewaren — later omzetten vanuit de lijst.</span>
+            </span>
+        </a>
+    </div>
+}
 
 <div id="gl-v2-co2-root" data-project-id="@Model.ProjectId">
     @* ── Tabs ──────────────────────────────────────────────────────────────────────────────────────── *@
@@ -76,10 +115,10 @@
             <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
             <input type="text" id="gl-v2-co2-search" placeholder="Zoek op nummer, klant, leverancier…" />
         </div>
-        <select class="gl-v2-field-input" id="gl-v2-co2-status">
+        <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-co2-status">
             <option value="open" selected>Status: open</option>
             <option value="all">Status: alles</option>
-        </select>
+        </select></div>
     </div>
 
     @* ── Offertes ──────────────────────────────────────────────────────────────────────────────────── *@
@@ -87,15 +126,17 @@
     {
         <div class="gl-v2-card gl-v2-co2-card" data-co2-section="offerte">
             <div class="gl-v2-card-header">
-                <span class="gl-v2-card-header-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-                <h2 class="gl-v2-card-header-title">Offertes — nog geen afspraak met de klant</h2>
+                <span class="gl-v2-card-header-icon"><i class="ph ph-scan" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Offertes</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-card-header-count">Van de leverancier — nog geen afspraak met de klant</span>
             </div>
             <div class="gl-v2-co2-table-scroll">
                 <table class="gl-v2-co2-table">
                     <thead>
                         <tr>
-                            <th>Nr</th><th>Klant</th><th>Omschrijving</th><th>Leverancier</th>
-                            <th class="is-right">Excl. btw</th><th>Status</th><th>Verloop</th><th></th>
+                            <th>Nr.</th><th>Omschrijving</th><th>Eenheid · klant</th>
+                            <th class="is-right">Kostprijs</th><th>Status</th><th>Verloop</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,8 +162,8 @@
                 <table class="gl-v2-co2-table">
                     <thead>
                         <tr>
-                            <th>Nr</th><th>Klant</th><th>Omschrijving</th><th>Leverancier</th>
-                            <th class="is-right">Excl. btw</th><th>Status</th><th>Verloop</th><th></th>
+                            <th>Nr.</th><th>Omschrijving</th><th>Eenheid · klant</th>
+                            <th class="is-right">Klant excl. btw</th><th>Status</th><th>Verloop</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -133,7 +174,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="8">
+                            <td colspan="7">
                                 <div class="gl-v2-co2-totals">
                                     <span>Meerwerk ondertekend <b class="gl-v2-co2-tabular">@Eur(Model.SignedExtraTotal)</b></span>
                                     <span>Minwerk <b class="gl-v2-co2-tabular">@Eur(Model.SignedReductionTotal)</b></span>
@@ -154,15 +195,49 @@
                 <div class="gl-v2-empty-state gl-v2-empty-state-inline">
                     <span class="gl-v2-empty-state-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-empty-state-title">Nog geen offertes of wijzigingsopdrachten</h2>
-                    <p class="gl-v2-empty-state-desc">Lees een leveranciersofferte in of maak een nieuwe wijzigingsopdracht aan.</p>
+                    <p class="gl-v2-empty-state-desc">Start met "+ Nieuw": lees een offerte van de leverancier in of begin leeg.</p>
                 </div>
             </div>
         </div>
     }
 </div>
 
+@if (Model.CanWrite)
+{
+    @await Html.PartialAsync("Partials/_ConvertQuoteModalShellV2")
+
+    @* Kopie-modal (29b "Kopie") — inhoud via AJAX (Modals/_ModalCopyChangeOrderV2). *@
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-cc-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-cc-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" action="@Url.Action("ChangeOrderCopyV2", "Projecten")">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <div class="gl-v2-cq-header-text">
+                        <h2 class="modal-title" id="gl-v2-cc-title">Kopie van een wijzigingsopdracht</h2>
+                        <span class="gl-v2-cq-header-sub">Zelfde werk voor een andere eenheid</span>
+                    </div>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body" id="gl-v2-cc-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Kopie maken en openen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
 @section PageScripts
 {
+    <script id="gl-v2-co2-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "convertModalUrl": "@Url.Action("ConvertQuoteModalV2", "Projecten")",
+        "copyModalUrl": "@Url.Action("CopyChangeOrderModalV2", "Projecten")"
+    }
+    </script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-convertquote.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-changeorders.js" asp-append-version="true"></script>
 }

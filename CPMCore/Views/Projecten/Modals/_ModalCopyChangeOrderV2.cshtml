@@ -1,0 +1,38 @@
+@model CPMCore.Models.Projecten.CopyChangeOrderModalV2Vm
+@*
+    Kopie van een wijzigingsopdracht (design-handoff 29a "+ Nieuw · Kopie van een wijzigingsopdracht" en
+    29b "Kopie": lijst · "···" op een rij → "Kies eenheid — regels en plan worden overgenomen,
+    handtekeningen niet" → 28a met Bron = de oorspronkelijke WO). Inhoud van #gl-v2-cc-modal op de lijst
+    (20b), AJAX-geladen door ProjectenController.CopyChangeOrderModalV2; het formulier post naar
+    ChangeOrderCopyV2.
+*@
+@using System.Globalization
+<input type="hidden" name="projectId" value="@Model.ProjectId" />
+
+<div class="gl-v2-field gl-v2-field-full">
+    <label class="gl-v2-field-label" for="gl-v2-cc-order">Wijzigingsopdracht <span class="gl-v2-cq-req">*</span></label>
+    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-cc-order" name="changeOrderId" required>
+        <option value="">— kies een wijzigingsopdracht —</option>
+        @foreach (var o in Model.Orders)
+        {
+            <option value="@o.ID" selected="@(o.ID == Model.ChangeOrderId)">@o.Display</option>
+        }
+    </select></div>
+</div>
+
+<div class="gl-v2-field gl-v2-field-full">
+    <label class="gl-v2-field-label" for="gl-v2-cc-client">Voor welke eenheid <span class="gl-v2-cq-req">*</span></label>
+    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-cc-client" name="clientAccountId" required>
+        <option value="">— kies een klant · eenheid —</option>
+        @foreach (var c in Model.Clients)
+        {
+            <option value="@c.Id" data-vat-label="@c.VatLabel">@c.Display@(string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName)</option>
+        }
+    </select></div>
+    <span class="gl-v2-field-help" id="gl-v2-cc-client-hint">btw klant volgt de betalingsgroep van de gekozen eenheid</span>
+</div>
+
+<div class="gl-v2-notice gl-v2-notice-compact is-info gl-v2-field-full">
+    <i class="ph ph-info" aria-hidden="true"></i>
+    <span>Regels en facturatieplan worden overgenomen, handtekeningen niet. De kopie start als concept; de oorspronkelijke wijzigingsopdracht blijft als bron gekoppeld.</span>
+</div>

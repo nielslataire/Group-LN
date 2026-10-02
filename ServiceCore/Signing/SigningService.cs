@@ -136,6 +136,7 @@ public sealed class SigningService : ISigningService
             CreatedByUserId = request.ByUserId,
             CreatedAt = Now,
             ExpiresAt = request.ExpiresAt,
+            InvitationMessage = string.IsNullOrWhiteSpace(request.InvitationMessage) ? null : Truncate(request.InvitationMessage.Trim(), 2000),
         };
         _db.SigningCase.Add(signingCase);
         await _db.SaveChangesAsync(ct);
@@ -1321,7 +1322,7 @@ public sealed class SigningService : ISigningService
     {
         var source = _registry.TrySource(signingCase.DocumentType);
         var projectName = source is null ? null : await SafeProjectNameAsync(source, signingCase.SourceEntityId, ct);
-        return new SigningMailDocument(signingCase.Id, source?.DisplayName ?? signingCase.DocumentType, signingCase.Title, signingCase.DocumentNumber, projectName, signingCase.ExpiresAt);
+        return new SigningMailDocument(signingCase.Id, source?.DisplayName ?? signingCase.DocumentType, signingCase.Title, signingCase.DocumentNumber, projectName, signingCase.ExpiresAt, signingCase.InvitationMessage);
     }
 
     private async Task<string?> SafeProjectNameAsync(ISigningDocumentSource source, int sourceEntityId, CancellationToken ct)

@@ -37,7 +37,13 @@
     <meta charset="UTF-8">
     <title>@(string.IsNullOrWhiteSpace(pageTitle) ? "CPM - GROUP LN" : pageTitle + " · CPM - GROUP LN")</title>
     <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    @* Bewust GEEN maximum-scale/user-scalable=no (toegankelijkheid: pinch-zoom blijft mogelijk) — het
+       inzoomen bij een tik op een veld wordt bij de bron opgelost: elk invoerveld is op touch ≥16px
+       (gl-v2-shell.css, "Mobiele zoekervaring"). interactive-widget=resizes-content: Chrome (Android)
+       krimpt de layout-viewport mee met het toetsenbord i.p.v. eroverheen te leggen; Safari/Chrome op
+       iOS negeren het en gebruiken window.visualViewport (gl-v2-shell.js, GlV2MobileSearch). *@
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    @await Html.PartialAsync("_PwaHead")
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

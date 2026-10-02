@@ -1,8 +1,9 @@
 @model CPMCore.Models.Projecten.ChangeOrderRowV2
 @*
-    Offertes & wijzigingen V2 (20b) — één rij van de Offertes- of Wijzigingsopdrachten-tabel. De hele
-    rij (op de actiekolom na) linkt naar ChangeOrderDetailV2 (20d) — zowel offertes als WO's, want het
-    is dezelfde pagina/rij, enkel de fase verschilt (Model.IsQuote).
+    Offertes & wijzigingen V2 (20b/29a) — één rij van de Offertes- of Wijzigingsopdrachten-tabel. De hele
+    rij (op de actiekolom na) opent het scherm van haar stap: een offerte gaat naar 20c (QuoteIntakeV2),
+    een wijzigingsopdracht naar het scherm per stap (ChangeOrderDetailV2, 28). Actiekolom: een offerte
+    krijgt "Omzetten →" (21c-modal), een WO een "···"-menu (Openen · Kopie maken · PDF).
 *@
 @using System.Globalization
 @{
@@ -10,36 +11,28 @@
     var canWrite = (bool)(ViewData["CanWrite2"] ?? false);
     var be = CultureInfo.GetCultureInfo("nl-BE");
     string Eur(decimal v) => (v < 0 ? "− € " : "€ ") + Math.Abs(v).ToString("N2", be);
-    var detailUrl = Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = Model.Id });
-    var statusTone = Model.Status switch
-    {
-        ServiceCore.Helpers.ChangeOrderStatus.Betaald or ServiceCore.Helpers.ChangeOrderStatus.Gefactureerd => "is-info",
-        ServiceCore.Helpers.ChangeOrderStatus.Ondertekend or ServiceCore.Helpers.ChangeOrderStatus.Factureerbaar => "is-positive",
-        ServiceCore.Helpers.ChangeOrderStatus.Verzonden => "is-attention",
-        ServiceCore.Helpers.ChangeOrderStatus.Geweigerd or ServiceCore.Helpers.ChangeOrderStatus.Geannuleerd or ServiceCore.Helpers.ChangeOrderStatus.Verlopen => "is-blocked",
-        _ => "is-neutral",
-    };
+    var detailUrl = Model.IsQuote
+        ? Url.Action("QuoteIntakeV2", "Projecten", new { projectid = projectId, coid = Model.Id })
+        : Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = Model.Id });
     var searchText = string.Join(" ", new[] { Model.Number, Model.ClientName, Model.UnitName, Model.Description, Model.SupplierName }.Where(s => !string.IsNullOrWhiteSpace(s))).ToLowerInvariant();
+    var subParts = new[] { Model.SupplierName, Model.SourceReference, Model.SubText }.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+    var menuId = $"gl-v2-co2-rowmenu-{Model.Id}";
 }
-<tr class="gl-v2-co2-row" data-co2-type="@(Model.IsQuote ? "offerte" : "wo")" data-co2-status="@Model.Status" data-co2-search="@searchText" onclick="location.href='@detailUrl'">
-    <td class="gl-v2-co2-tabular">@Model.Number</td>
-    <td>
-        <span class="gl-v2-co2-desc-title">@Model.ClientName</span>
-        @if (!string.IsNullOrWhiteSpace(Model.UnitName))
-        {
-            <span class="gl-v2-co2-desc-sub">@Model.UnitName</span>
-        }
-    </td>
+<tr class="gl-v2-co2-row" data-co2-type="@(Model.IsQuote ? "offerte" : "wo")" data-co2-status="@Model.Status" data-co2-search="@searchText" data-href="@detailUrl">
+    <td class="gl-v2-co2-tabular gl-v2-co2-nr"><a href="@detailUrl">@Model.Number</a></td>
     <td class="gl-v2-co2-desc">
         <span class="gl-v2-co2-desc-title">@Model.Description</span>
-        @if (!string.IsNullOrWhiteSpace(Model.SubText))
+        @if (subParts.Count > 0)
         {
-            <span class="gl-v2-co2-desc-sub @(Model.SubTextIsWarning ? "is-warning" : "")">@Model.SubText</span>
+            <span class="gl-v2-co2-desc-sub @(Model.SubTextIsWarning ? "is-warning" : "")">@string.Join(" · ", subParts)</span>
         }
     </td>
-    <td>@Model.SupplierName</td>
+    <td>
+        <span class="gl-v2-co2-desc-title">@(string.IsNullOrWhiteSpace(Model.UnitName) ? "—" : Model.UnitName)</span>
+        <span class="gl-v2-co2-desc-sub">@Model.ClientName</span>
+    </td>
     <td class="is-right gl-v2-co2-tabular @(Model.Amount < 0 ? "is-negative" : "")">@Eur(Model.Amount)</td>
-    <td><span class="gl-v2-badge @statusTone">@Model.StatusLabel.ToUpperInvariant()</span></td>
+    <td><span class="gl-v2-badge @Model.PillTone">@Model.PillLabel.ToUpperInvariant()</span></td>
     <td>
         <span class="gl-v2-co2-dots" aria-hidden="true">
             @for (var i = 0; i < 6; i++)
@@ -47,15 +40,33 @@
                 <span class="gl-v2-co2-dot @(i == Model.DotPosition ? "is-current" : i < Model.DotPosition ? "is-done" : "")"></span>
             }
         </span>
+        @if (!string.IsNullOrWhiteSpace(Model.Hint))
+        {
+            <span class="gl-v2-co2-hint">@Model.Hint</span>
+        }
     </td>
-    <td class="is-right" onclick="event.stopPropagation()">
-        @if (canWrite && Model.IsQuote)
+    <td class="is-right gl-v2-co2-actions">
+        @if (Model.IsQuote)
         {
-            <a href="@detailUrl" class="gl-v2-co2-action">Omzetten →</a>
+            @if (canWrite)
+            {
+                <button type="button" class="gl-v2-co2-action js-co2-convert" data-co-id="@Model.Id">Omzetten →</button>
+            }
         }
-        else if (canWrite && Model.CanRemind && Model.SigningCaseId.HasValue)
+        else
         {
-            <a href="@Url.Action("Dossier", "SigningAdmin", new { id = Model.SigningCaseId })" class="gl-v2-co2-action">Herinneren →</a>
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @Model.Number">
+                <i class="ph ph-dots-three" aria-hidden="true"></i>
+            </button>
+            <div class="gl-v2-menu" id="@menuId">
+                <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen</a>
+                @if (canWrite)
+                {
+                    <button type="button" class="gl-v2-menu-item js-co2-copy" data-co-id="@Model.Id"><i class="ph ph-copy" aria-hidden="true"></i>Kopie maken</button>
+                }
+                <a href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = Model.Id })" target="_blank" rel="noopener" class="gl-v2-menu-item"><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF</a>
+            </div>
         }
+        <i class="ph ph-caret-right gl-v2-co2-chevron" aria-hidden="true"></i>
     </td>
 </tr>

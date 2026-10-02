@@ -47,7 +47,9 @@ public sealed record CreateSigningCaseRequest(
     int? SigningRule,
     DateTime? ExpiresAt,
     int ByUserId,
-    string? ByUserLabel);
+    string? ByUserLabel,
+    /// <summary>Optioneel vrij bericht van de afzender voor de uitnodigingsmail (en de herinneringen).</summary>
+    string? InvitationMessage = null);
 
 public sealed record SigningOperationResult(bool Success, string? Error = null, int? CaseId = null)
 {
@@ -251,4 +253,7 @@ public sealed record SigningMailDocument(
     string Title,
     string? DocumentNumber,
     string? ProjectName,
-    DateTime? ExpiresAt);
+    DateTime? ExpiresAt,
+    /// <summary>Vrij bericht van de afzender (SigningCase.InvitationMessage) — platte tekst, de notifier
+    /// codeert het zelf naar HTML.</summary>
+    string? InvitationMessage = null);

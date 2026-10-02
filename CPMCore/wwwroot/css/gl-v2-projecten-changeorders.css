@@ -30,7 +30,9 @@
 }
 .gl-v2-co2-search i { color: var(--gl-v2-muted-light); flex: none; }
 .gl-v2-co2-search input { border: 0; outline: none; flex: 1; min-width: 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); background: transparent; }
-#gl-v2-co2-status { width: auto; height: 38px; }
+/* Statusfilter: het gedeelde veldkader, even hoog als het zoekveld ernaast (dubbele selector: dit
+   bestand laadt vóór gl-v2-shell.css). */
+.gl-v2-co2-filterbar .gl-v2-field-box { height: 38px; flex: none; }
 
 /* ── Tabel ─────────────────────────────────────────────────────────────────────────────────────────── */
 .gl-v2-co2-table-scroll { overflow-x: auto; }
@@ -68,6 +70,25 @@
 
 .gl-v2-co2-action { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; white-space: nowrap; }
 .gl-v2-co2-action:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }
+.gl-v2-co2-nr a { color: inherit; font-weight: 600; text-decoration: none; }
+.gl-v2-co2-nr a:hover { color: var(--gl-v2-primary); text-decoration: underline; }
+.gl-v2-co2-hint { display: block; margin-top: 4px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+.gl-v2-co2-actions { white-space: nowrap; cursor: default; }
+.gl-v2-co2-actions > * { vertical-align: middle; }
+.gl-v2-co2-chevron { margin-left: 6px; font-size: 12px; color: var(--gl-v2-muted-light); }
+
+/* "+ Nieuw"-menu (29a): items met een tweede regel uitleg hebben meer breedte nodig dan het standaard
+   contextmenu (224px). Dubbele klasse: dit bestand laadt vóór gl-v2-shell.css, dus een enkele klasse
+   zou de breedte van .gl-v2-menu daar niet overschrijven. Onder 768px is het menu een bottom sheet
+   (volle breedte, shell-regel) — daar niets forceren. */
+@media (min-width: 768px) {
+    .gl-v2-menu.gl-v2-co2-new-menu { width: 330px; }
+}
+.gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item { align-items: flex-start; padding-top: 9px; padding-bottom: 9px; }
+.gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item > i { margin-top: 1px; font-size: 17px; }
+.gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item-label { font-weight: 600; }
+.gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item-sub { font-size: 10.5px; line-height: 1.4; white-space: normal; }
+.gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item:disabled { opacity: .5; cursor: default; }
 
 .gl-v2-co2-totals { display: flex; gap: 22px; flex-wrap: wrap; padding: 4px 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
 .gl-v2-co2-totals b { color: var(--gl-v2-ink); font-weight: 700; margin-left: 5px; }

@@ -121,6 +121,8 @@ else
         </a>
     }
 }
+@* PWA-installatiebanner: verborgen tot js/pwa.js beslist (enkel mobiel, niet standalone, 30 dagen rust na wegklikken). *@
+@await Html.PartialAsync("_PwaInstallBanner")
 @if (Model.DashboardType == CPMCore.Models.DashboardType.Projectleider)
 {
     await Html.RenderPartialAsync("_DashboardProjectleider", Model);

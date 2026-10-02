@@ -705,6 +705,8 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(250);
             entity.Property(e => e.QuoteSupplierReference).HasMaxLength(100);
             entity.Property(e => e.QuoteVatPercentage).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.QuoteSourcePath).HasMaxLength(300);
+            entity.Property(e => e.QuoteSourceFileName).HasMaxLength(260);
 
             entity.HasOne(d => d.ClientAccount).WithMany(p => p.ChangeOrder)
                 .HasForeignKey(d => d.ClientAccountId)

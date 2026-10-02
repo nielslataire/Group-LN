@@ -23,7 +23,7 @@ namespace CPMCore.Controllers
     public partial class ProjectenController
     {
         [HttpGet]
-        public async Task<IActionResult> QuoteIntakeV2(int projectid, int? clientid, int coid = 0)
+        public async Task<IActionResult> QuoteIntakeV2(int projectid, int? clientid, int coid = 0, string intent = null)
         {
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             var canWrite = _ps.HasWrite(PermissionCodes.ProjectsChangeOrders);
@@ -48,6 +48,14 @@ namespace CPMCore.Controllers
                 vm.ChangeOrderId = co.Id;
             }
 
+            // 29a: "Offerte inlezen" (daarna omzetten) of "Offerte zonder omzetten" (intent=keep, enkel
+            // bewaren) — zelfde scherm, enkel de hoofdknop verschilt. Vanuit het opmaakscherm (Bron ·
+            // "offerte koppelen of inlezen") werkt het op een bestaande WO: dan is er niets om te zetten.
+            vm.IsQuote = co?.IsQuote ?? true;
+            vm.KeepOnly = intent == "keep";
+            vm.Number = co is null ? "" : (co.IsQuote ? $"OF-{co.Id:000}" : $"WO-{co.Id:000}");
+            vm.SourceFileName = co?.QuoteSourceFileName;
+
             vm.ClientAccountId = co?.ClientAccountId ?? clientid ?? 0;
             vm.ContractActivityId = co?.ContractActivityId ?? 0;
             vm.QuoteSupplierReference = co?.QuoteSupplierReference;
@@ -70,7 +78,7 @@ namespace CPMCore.Controllers
 
             if (co != null)
             {
-                vm.Rows = co.ChangeOrderDetail.Select(d => new ChangeOrderDetailRowV2
+                vm.Rows = co.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderDetailRowV2
                 {
                     Id = d.Id,
                     Description = d.Description,
@@ -132,6 +140,29 @@ namespace CPMCore.Controllers
                     needsReview = l.NeedsReview,
                 }),
             });
+        }
+
+        /// <summary>Het originele offertebestand (PDF of foto) bewaren zodra het geladen wordt — het
+        /// opmaakscherm (28a, kaart "Offerte leverancier") toont het als voorbeeld en bijlage. Zelfde
+        /// opslagmap als de bijgesneden regio's; de opslagnaam gaat als verborgen veld mee met Opslaan
+        /// (ChangeOrder.QuoteSourcePath, migratie 066).</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(25 * 1024 * 1024)]
+        public async Task<IActionResult> QuoteIntakeV2UploadSource(IFormFile file)
+        {
+            if (file is null || file.Length == 0) return Json(new { success = false, message = "Geen bestand ontvangen." });
+            var isSupported = file.ContentType == "application/pdf" || (file.ContentType ?? "").StartsWith("image/");
+            if (!isSupported) return Json(new { success = false, message = "Enkel PDF of afbeeldingen worden ondersteund." });
+
+            var storage = HttpContext.RequestServices.GetRequiredService<DocStorageService>();
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var fileName = string.IsNullOrWhiteSpace(file.FileName) ? (file.ContentType == "application/pdf" ? "offerte.pdf" : "offerte.png") : Path.GetFileName(file.FileName);
+            var stored = await storage.UploadAsync(ms.ToArray(), fileName, file.ContentType, "quotes");
+            if (stored is null) return Json(new { success = false, message = "Het offertebestand kon niet bewaard worden." });
+
+            return Json(new { success = true, path = stored, fileName });
         }
 
         /// <summary>"Gebied selecteren" rond een foto — hangt als bijlage aan een regel (SourceImagePath).

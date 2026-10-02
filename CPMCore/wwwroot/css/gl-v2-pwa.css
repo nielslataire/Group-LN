@@ -1,0 +1,48 @@
+/* PWA (beginscherm-app) — installatiebanner + standalone-aanpassingen. Alles wat de weergave wijzigt staat
+   hetzij achter @media (display-mode: standalone), hetzij in de banner die enkel op mobiel bestaat:
+   een gewone browser (en desktop) ziet hier niets van. Selectors dragen .gl-v2 voor specificiteit boven
+   de shell-regels, ongeacht laadvolgorde (zie DESIGN.md "gl-v2 page CSS loads BEFORE shell.css"). */
+
+/* ── Installatiebanner (dashboard) ───────────────────────────────────────────────────────────── */
+.cpm-pwa-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 12px 12px 12px 16px;
+    border-radius: 12px;
+    background: #D6E5CC;
+    color: #2C3B2A;
+    font: 450 13px/1.45 "IBM Plex Sans", -apple-system, "Segoe UI", Helvetica, sans-serif;
+}
+.cpm-pwa-banner[hidden] { display: none; }
+.cpm-pwa-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cpm-pwa-banner-text strong { font-weight: 600; font-size: 14px; color: #00532D; }
+.cpm-pwa-banner-text span[hidden] { display: none; }
+.cpm-pwa-share-icon { width: 15px; height: 15px; vertical-align: -3px; margin: 0 1px; }
+.cpm-pwa-install {
+    flex: none; min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px;
+    background: #00532D; color: #fff; font: 600 14px "IBM Plex Sans", -apple-system, sans-serif; cursor: pointer;
+}
+.cpm-pwa-install[hidden] { display: none; }
+.cpm-pwa-close {
+    flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent;
+    color: #2C3B2A; font-size: 24px; line-height: 1; cursor: pointer;
+}
+/* Nooit op desktop/groot scherm: enkel touch én smal. */
+@media not all and (pointer: coarse) and (max-width: 768px) {
+    .cpm-pwa-banner { display: none !important; }
+}
+
+/* ── Standalone (zonder browserbalken) ───────────────────────────────────────────────────────── */
+@media (display-mode: standalone) {
+    /* black-translucent: de pagina loopt onder de statusbalk door; de groene topbar loopt tot bovenaan,
+       de titel zakt onder notch/klok. Op desktop is de inset 0 → exact dezelfde hoogte als nu. */
+    .gl-v2 .gl-v2-topbar {
+        padding-top: env(safe-area-inset-top, 0px);
+        height: calc(62px + env(safe-area-inset-top, 0px));
+    }
+    .gl-v2 .gl-v2-mobile-menu-header { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+    /* Legacy-layout (geen gl-v2): hele pagina onder de statusbalk uit. */
+    body:not(:has(.gl-v2)) { padding-top: env(safe-area-inset-top, 0px); }
+}

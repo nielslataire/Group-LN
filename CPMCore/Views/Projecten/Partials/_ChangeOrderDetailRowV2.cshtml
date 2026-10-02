@@ -1,6 +1,6 @@
 @model CPMCore.Models.Projecten.ChangeOrderDetailRowV2
 @*
-    Wijzigingsopdracht V2 (20d) — één regel van de "Regels"-tabel. Ook gebruikt door
+    Wijzigingsopdracht V2 (28a/28b, bewerkbaar) — één regel van de "Regels"-tabel. Ook gebruikt door
     ChangeOrderDetailV2AddRow (AJAX "+ Regel", zelfde patroon als de legacy AddChangeOrderDetailRow) —
     Index moet dan altijd de huidige rijtelling zijn zodat de name="rows[i]." vernummering klopt.
 *@
@@ -13,10 +13,15 @@
     var prefix = $"rows[{index}]";
 }
 <tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "")" data-index="@index">
+    <td class="gl-v2-co-handle-cell">
+        @* Sleepgreep (28a): slepen met muis/vinger, of focus + pijl omhoog/omlaag. De volgorde van de rijen
+           in het formulier is de volgorde die bewaard wordt (ChangeOrderDetail.SortOrder, migratie 067). *@
+        <button type="button" class="gl-v2-co-handle js-co-handle" title="Sleep om te verplaatsen (of pijl omhoog/omlaag)" aria-label="Regel verplaatsen: sleep, of gebruik pijl omhoog en omlaag"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></button>
+    </td>
     <td>
         <input type="hidden" name="@(prefix).id" class="js-co-id" value="@Model.Id" />
         <input type="hidden" name="@(prefix).sourceImagePath" class="js-co-sourceimage" value="@Model.SourceImagePath" />
-        <textarea class="gl-v2-field-input gl-v2-co-desc-input js-co-description" name="@(prefix).description" rows="2" maxlength="1000" @(isLocked ? "disabled" : "")>@Model.Description</textarea>
+        <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-descbox"><textarea class="gl-v2-field-input js-co-description" name="@(prefix).description" rows="2" maxlength="1000" @(isLocked ? "disabled" : "")>@Model.Description</textarea></div>
         <span class="gl-v2-co-row-flags">
             @if (!string.IsNullOrWhiteSpace(Model.SourceImagePath))
             {
@@ -24,31 +29,31 @@
             }
             @if (Model.NeedsReview)
             {
-                <span class="gl-v2-co-review-flag" title="Onzekere OCR-waarde — controleer deze regel"><i class="ph ph-warning" aria-hidden="true"></i>controleer</span>
+                <button type="button" class="gl-v2-co-review-flag js-co-confirm-row" title="Onzekere waarde uit de offerte — klik om te bevestigen dat de regel klopt"><i class="ph ph-warning" aria-hidden="true"></i>controleer</button>
             }
         </span>
     </td>
     <td class="is-center">
-        <select class="gl-v2-field-input js-co-mtype" name="@(prefix).measurementType" @(isLocked ? "disabled" : "")>
+        <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-mtype" name="@(prefix).measurementType" @(isLocked ? "disabled" : "")>
             @foreach (MeasurementType mt in Enum.GetValues(typeof(MeasurementType)))
             {
                 <option value="@((int)mt)" selected="@((int)mt == Model.MeasurementType)">@mt.GetDisplayName()</option>
             }
-        </select>
+        </select></div>
     </td>
     <td class="is-center">
-        <select class="gl-v2-field-input js-co-munit" name="@(prefix).measurementUnit" @(isLocked ? "disabled" : "")>
+        <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-munit" name="@(prefix).measurementUnit" @(isLocked ? "disabled" : "")>
             @foreach (MeasurementUnit mu in Enum.GetValues(typeof(MeasurementUnit)))
             {
                 <option value="@((int)mu)" selected="@((int)mu == Model.MeasurementUnit)">@mu.GetDisplayName()</option>
             }
-        </select>
+        </select></div>
     </td>
-    <td class="is-right"><input type="number" step="1" class="gl-v2-field-input gl-v2-co-num js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></td>
-    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-price" name="@(prefix).price" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></td>
-    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="1" class="gl-v2-field-input js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></div></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-price" name="@(prefix).price" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></div></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></div></td>
     <td class="is-right gl-v2-co-tabular js-co-priceklant">—</td>
-    <td class="is-right"><input type="number" step="0.01" class="gl-v2-field-input gl-v2-co-num js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></div></td>
     <td class="is-right gl-v2-co-tabular js-co-total">—</td>
     <td class="is-right">
         <input type="hidden" name="@(prefix).needsReview" class="js-co-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />

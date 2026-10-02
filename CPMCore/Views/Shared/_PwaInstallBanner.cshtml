@@ -1,0 +1,15 @@
+@* Installatiebanner voor het dashboard — verborgen tot js/pwa.js beslist (enkel mobiel, niet standalone,
+   niet binnen 30 dagen na wegklikken). Android: knop "Installeren" (beforeinstallprompt); iOS: uitleg. *@
+<div class="cpm-pwa-banner" id="cpm-pwa-banner" role="region" aria-label="App installeren" hidden>
+    <div class="cpm-pwa-banner-text">
+        <strong>Zet CPM op je beginscherm</strong>
+        <span data-pwa-ios hidden>
+            Tik op
+            <svg class="cpm-pwa-share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Deel"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>
+            Deel en kies "Zet op beginscherm".
+        </span>
+        <span data-pwa-android hidden>Open CPM als app, zonder adresbalk.</span>
+    </div>
+    <button type="button" class="cpm-pwa-install" data-pwa-install hidden>Installeren</button>
+    <button type="button" class="cpm-pwa-close" aria-label="Sluiten">&times;</button>
+</div>

@@ -1,0 +1,89 @@
+// PWA: service worker registreren, installatiebanner (dashboard) en terugpijl in standalone-modus.
+// Raakt geen bestaande logica, routes of authenticatie.
+(function () {
+    "use strict";
+
+    var standaloneMq = window.matchMedia ? window.matchMedia("(display-mode: standalone)") : null;
+    var mobileMq = window.matchMedia ? window.matchMedia("(pointer: coarse) and (max-width: 768px)") : null;
+    function isStandalone() { return (standaloneMq && standaloneMq.matches) || window.navigator.standalone === true; }
+    function isMobile() { return !!(mobileMq && mobileMq.matches); }
+
+    // ── Service worker (scope: hele site, /sw.js staat in de root) ─────────────────────────────
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+            navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () { /* geen SW = gewone site */ });
+        });
+    }
+
+    // ── Installatiebanner ──────────────────────────────────────────────────────────────────────
+    var KEY = "cpm_pwa_banner_dismissed_at";
+    var THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    function dismissedRecently() {
+        try { var t = parseInt(window.localStorage.getItem(KEY), 10); return !!t && Date.now() - t < THIRTY_DAYS; } catch (e) { return false; }
+    }
+    function rememberDismiss() { try { window.localStorage.setItem(KEY, String(Date.now())); } catch (e) { /* privé-modus */ } }
+
+    var deferredPrompt = null;
+    var banner = null;
+
+    function eligible() { return !!banner && isMobile() && !isStandalone() && !dismissedRecently(); }
+    function showBanner(mode) {
+        if (!eligible()) return;
+        banner.querySelector("[data-pwa-ios]").hidden = mode !== "ios";
+        banner.querySelector("[data-pwa-android]").hidden = mode !== "android";
+        banner.querySelector("[data-pwa-install]").hidden = mode !== "android";
+        banner.hidden = false;
+    }
+    function hideBanner() { if (banner) banner.hidden = true; }
+
+    // Android/Chrome: de browser-prompt opvangen i.p.v. de standaard mini-infobar. Kan vóór DOMContentLoaded
+    // afgaan; dan toont de DOMContentLoaded-tak hieronder de banner alsnog.
+    window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        showBanner("android");
+    });
+    window.addEventListener("appinstalled", function () { deferredPrompt = null; hideBanner(); });
+
+    function isIos() {
+        return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        banner = document.getElementById("cpm-pwa-banner");
+        if (banner) {
+            banner.querySelector(".cpm-pwa-close").addEventListener("click", function () { rememberDismiss(); hideBanner(); });
+            banner.querySelector("[data-pwa-install]").addEventListener("click", function () {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function () { deferredPrompt = null; hideBanner(); });
+            });
+            // iOS kent geen automatische prompt: enkel uitleg (Safari en Chrome iOS: Deel → Zet op beginscherm).
+            if (isIos()) showBanner("ios");
+            else if (deferredPrompt) showBanner("android");
+        }
+
+        // ── Terugpijl in standalone: er is dan geen browser-terugknop. Enkel op mobiel, enkel waar de
+        //    pagina er zelf geen heeft (ViewData["BackUrl"]) en niet op het dashboard. ───────────────
+        if (isStandalone() && isMobile()) {
+            var topbar = document.querySelector(".gl-v2-topbar");
+            var onDashboard = /^\/(home(\/index)?)?\/?$/i.test(window.location.pathname);
+            if (topbar && !onDashboard && !topbar.querySelector(".gl-v2-topbar-back")) {
+                var back = document.createElement("a");
+                back.className = "gl-v2-topbar-back gl-v2-pwa-back";
+                back.href = "/";
+                back.setAttribute("aria-label", "Terug");
+                back.innerHTML = '<i class="ph ph-caret-left" aria-hidden="true"></i>';
+                back.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    var sameOriginReferrer = document.referrer && document.referrer.indexOf(window.location.origin) === 0;
+                    if (window.history.length > 1 && sameOriginReferrer) window.history.back();
+                    else window.location.href = "/";
+                });
+                var logo = topbar.querySelector(".gl-v2-mobile-logo");
+                if (logo && logo.parentNode === topbar) topbar.insertBefore(back, logo.nextSibling);
+                else topbar.insertBefore(back, topbar.firstChild);
+            }
+        }
+    });
+})();

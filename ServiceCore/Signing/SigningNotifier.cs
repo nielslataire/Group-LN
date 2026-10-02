@@ -31,6 +31,7 @@ public sealed class SigningNotifier : ISigningNotifier
     public Task SendInvitationAsync(SigningMailDocument d, SigningMailRecipient to, string signUrl, CancellationToken ct = default)
         => SendAsync(to, $"Ter ondertekening: {Subject(d)}", Layout(
             $"Beste {H(to.Name)},",
+            Message(d) +
             $"<p>{H(d.DocumentTypeLabel)} <strong>{H(d.Title)}</strong>{Number(d)}{Project(d)} staat klaar om elektronisch te ondertekenen.</p>" +
             $"<p>Via onderstaande persoonlijke link bekijkt u het volledige document en ondertekent u het na een verificatiecode.</p>" +
             Button(signUrl, "Document bekijken en ondertekenen") +
@@ -41,6 +42,7 @@ public sealed class SigningNotifier : ISigningNotifier
         => SendAsync(to, $"Herinnering — ter ondertekening: {Subject(d)}", Layout(
             $"Beste {H(to.Name)},",
             $"<p>Een herinnering: {H(d.DocumentTypeLabel).ToLowerInvariant()} <strong>{H(d.Title)}</strong>{Number(d)}{Project(d)} wacht nog op uw handtekening.</p>" +
+            Message(d) +
             Button(signUrl, "Document bekijken en ondertekenen") +
             Expiry(d)));
 
@@ -129,6 +131,14 @@ public sealed class SigningNotifier : ISigningNotifier
 
     private static string Project(SigningMailDocument d)
         => string.IsNullOrWhiteSpace(d.ProjectName) ? "" : $" voor project <strong>{H(d.ProjectName)}</strong>";
+
+    /// <summary>Het vrije bericht van de afzender (21d, veld BERICHT): platte tekst, hier HTML-gecodeerd
+    /// (nooit als opmaak vertrouwd) met behoud van de regeleinden. Leeg als er geen bericht is — de mail
+    /// is dan exact wat hij altijd was.</summary>
+    private static string Message(SigningMailDocument d)
+        => string.IsNullOrWhiteSpace(d.InvitationMessage)
+            ? ""
+            : $"<p style=\"margin:14px 0;padding:12px 14px;background:#F2F5EF;border-radius:8px\">{H(d.InvitationMessage.Trim()).Replace("\r\n", "\n").Replace("\n", "<br/>")}</p>";
 
     private static string Expiry(SigningMailDocument d)
         => d.ExpiresAt is null ? "" : $"<p>U kunt ondertekenen tot <strong>{d.ExpiresAt.Value.ToLocalTime():dd/MM/yyyy}</strong>.</p>";

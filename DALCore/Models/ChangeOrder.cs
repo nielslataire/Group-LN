@@ -40,6 +40,19 @@ public partial class ChangeOrder
 
     public DateTime? QuoteConvertedAt { get; set; }
 
+    /// <summary>Migratie 066 (design-handoff 28a) — het originele offertebestand van de leverancier
+    /// (opslagnaam in de DocStorage-map "quotes" + de oorspronkelijke bestandsnaam).</summary>
+    public string QuoteSourcePath { get; set; }
+
+    public string QuoteSourceFileName { get; set; }
+
+    /// <summary>Migratie 066 (design-handoff 29b "Kopie"/28c "Versie 2") — de ChangeOrder waarvan deze
+    /// rij vertrok. Bewust geen navigatie/FK: louter informatief voor de kaart "Bron".</summary>
+    public int? SourceChangeOrderId { get; set; }
+
+    /// <summary>1 = kopie (ander lot), 2 = nieuwe versie (vervangt de bron).</summary>
+    public byte? SourceKind { get; set; }
+
     public virtual ICollection<ChangeOrderDetail> ChangeOrderDetail { get; set; } = new List<ChangeOrderDetail>();
 
     public virtual ICollection<ChangeOrderPaymentTerm> ChangeOrderPaymentTerm { get; set; } = new List<ChangeOrderPaymentTerm>();

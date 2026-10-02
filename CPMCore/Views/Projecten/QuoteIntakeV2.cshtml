@@ -1,26 +1,48 @@
 @model CPMCore.Models.Projecten.QuoteIntakeV2Vm
 @*
     gl-v2 — Offerte inlezen (design-handoff 20c: "kader rond een tabel leest regels in, kader rond een
-    foto hangt die aan een regel"). Werkt op dezelfde ChangeOrder-rij als ChangeOrderDetailV2 (20d,
-    IsQuote=true) — Opslaan/Omzetten posten bewust naar diezelfde acties (ChangeOrderDetailV2Save/
-    -Convert), dit scherm is enkel de intake-stap. Eigen klassen-namespace gl-v2-qi-*
+    foto hangt die aan een regel"). Stap 1 van de flow uit 29b: lijst · "+ Nieuw" → 20c → 21c (Omzetten,
+    modal) → 28a (opmaakscherm). Werkt op dezelfde ChangeOrder-rij als het scherm per stap
+    (ChangeOrderDetailV2, IsQuote=true tot het omzetten) — opslaan én omzetten posten naar
+    ChangeOrderDetailV2Save: "Opslaan als offerte" bewaart enkel (29a "Offerte zonder omzetten"),
+    "Omzetten" opent de 21c-modal en stuurt haar keuzes mee in dezelfde POST. Vanuit het opmaakscherm
+    (Bron · "offerte koppelen of inlezen") werkt dit scherm op een bestaande WO (Model.IsQuote=false):
+    dan valt het omzetten weg en gaat opslaan terug naar die WO. Eigen klassen-namespace gl-v2-qi-*
     (gl-v2-projecten-quoteintake.css/.js). PDF-weergave via pdf.js (wwwroot/lib/pdfjs, gevendord op
     2026-09-30 — er was nergens in de codebase al een PDF-renderer/canvas-crop-tool).
 *@
 @using CPMCore.Models.GlV2
 @{
-    ViewData["Title"] = "Offerte inlezen";
+    ViewData["Title"] = Model.IsQuote
+        ? (Model.IsNew ? "Offerte inlezen" : $"{Model.Number} · Offerte inlezen")
+        : $"{Model.Number} · Offerte koppelen";
     ViewData["PageIcon"] = "ph ph-scan";
     ViewData["GlV2FullHeightBody"] = true;
     ViewData["BackUrl"] = Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId });
 
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · offertes & wijzigingen" };
+    var listUrl = Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId });
+    var backUrl = Model.IsQuote ? listUrl : Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, coid = Model.ChangeOrderId });
+
+    // Zelfde zeven stappen als het scherm per stap (28) — dit scherm is stap 1.
+    var stepLabels = new[] { "Offerte", "Opgemaakt", "Verzonden", "Ondertekend", "Factureerbaar", "Gefactureerd", "Betaald" };
+    var stappenplan = new GlV2StappenplanVm
+    {
+        Size = "sm",
+        AriaLabel = "Verloop van de wijzigingsopdracht",
+        Steps = stepLabels.Select((label, i) => new GlV2StapVm { Label = label, State = i == 0 ? "current" : "todo", Sub = i == 0 ? "inlezen en controleren" : null }).ToList(),
+    };
 }
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-changeorderdetail.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-quoteintake.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-convertquote.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@(Model.IsQuote ? "OFFERTE" : "BRON VAN " + Model.Number)</span>
 }
 @section ProjectMenu
 {
@@ -38,7 +60,7 @@
     </div>
 }
 
-<form id="gl-v2-qi-form" method="post" action="@Url.Action("ChangeOrderDetailV2Save")">
+<form id="gl-v2-qi-form" class="gl-v2-co-form" method="post" action="@Url.Action("ChangeOrderDetailV2Save")">
 @Html.AntiForgeryToken()
 <input type="hidden" name="projectId" value="@Model.ProjectId" />
 <input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
@@ -50,7 +72,27 @@
 <input type="hidden" name="description" id="gl-v2-qi-description-hidden" value="" />
 <input type="hidden" name="invoiceableByBouwheer" value="false" />
 <input type="hidden" name="convertAfterSave" id="gl-v2-qi-convert-after-save" value="false" />
+@* Origineel offertebestand (migratie 066) — gevuld door de JS zodra een bestand geladen en bewaard is. *@
+<input type="hidden" name="quoteSourcePath" id="gl-v2-qi-source-path" value="" />
+<input type="hidden" name="quoteSourceFileName" id="gl-v2-qi-source-name" value="" />
+@* Keuzes uit de 21c-modal (Omzetten) — zelfde veldnamen als ChangeOrderConvertV2Model. *@
+<input type="hidden" name="convertClientAccountId" id="gl-v2-qi-cv-client" value="" />
+<input type="hidden" name="convertCommission" id="gl-v2-qi-cv-commission" value="0" />
+<input type="hidden" name="convertPlan" id="gl-v2-qi-cv-plan" value="" />
+<input type="hidden" name="convertDescription" id="gl-v2-qi-cv-description" value="" />
+<input type="hidden" name="convertConditions" id="gl-v2-qi-cv-conditions" value="" />
+<input type="hidden" name="afterSave" id="gl-v2-qi-after-save" value="" />
 
+<div class="gl-v2-co-scroll">
+@if (Model.IsQuote)
+{
+    <div class="gl-v2-card gl-v2-co-card">
+        <div class="gl-v2-card-body gl-v2-co-steps">
+            <span class="gl-v2-co-steps-label">STAP 1 VAN 7</span>
+            @await Html.PartialAsync("GlV2/_Stappenplan", stappenplan)
+        </div>
+    </div>
+}
 <div class="gl-v2-qi-layout">
     @* ── Linkerkolom: bronviewer + kader-selectie ─────────────────────────────────────────────────── *@
     <div class="gl-v2-qi-source">
@@ -76,7 +118,11 @@
             <div class="gl-v2-qi-canvas-wrap" id="gl-v2-qi-canvas-wrap">
                 <div class="gl-v2-qi-canvas-empty" id="gl-v2-qi-empty">
                     <i class="ph ph-file-text" aria-hidden="true"></i>
-                    <p>Laad een offerte (PDF of foto) — plakken (Ctrl+V) kan ook</p>
+                    <p>Laad een offerte (PDF of foto) — slepen of plakken (Ctrl+V) kan ook</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.SourceFileName))
+                    {
+                        <p class="gl-v2-qi-source-kept"><i class="ph ph-paperclip" aria-hidden="true"></i>Bewaard bronbestand: @Model.SourceFileName — laad een nieuw bestand om verder in te lezen of het te vervangen.</p>
+                    }
                 </div>
                 <div class="gl-v2-qi-canvas-stage" id="gl-v2-qi-stage" hidden>
                     <canvas id="gl-v2-qi-canvas"></canvas>
@@ -101,13 +147,13 @@
             <div class="gl-v2-card-body gl-v2-co-form-grid">
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="gl-v2-qi-contractactivity">Leverancier · contract</label>
-                    <select class="gl-v2-field-input" id="gl-v2-qi-contractactivity" name="contractActivityId">
+                    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-qi-contractactivity" name="contractActivityId">
                         <option value="">— kies —</option>
                         @foreach (var a in Model.ContractActivities)
                         {
                             <option value="@a.ID" selected="@(a.ID == Model.ContractActivityId)">@a.Display</option>
                         }
-                    </select>
+                    </select></div>
                 </div>
                 <div class="gl-v2-field">
                     @if (Model.ClientAccountId > 0)
@@ -117,23 +163,24 @@
                     }
                     else
                     {
-                        <label class="gl-v2-field-label" for="gl-v2-qi-client">Klant <span style="color:#8B2A2A">*</span></label>
-                        <select class="gl-v2-field-input" id="gl-v2-qi-client" name="clientAccountId">
+                        <label class="gl-v2-field-label" for="gl-v2-qi-client">Klant</label>
+                        <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-qi-client" name="clientAccountId">
                             <option value="">— kies een klant —</option>
                             @foreach (var c in Model.ClientAccounts)
                             {
                                 <option value="@c.ID">@c.Display</option>
                             }
-                        </select>
+                        </select></div>
+                        <span class="gl-v2-field-help">nodig om de offerte te bewaren — bij omzetten kies je klant en eenheid in de volgende stap</span>
                     }
                 </div>
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="gl-v2-qi-quote-ref">Offertenr. leverancier</label>
-                    <input type="text" class="gl-v2-field-input" id="gl-v2-qi-quote-ref" name="quoteSupplierReference" value="@Model.QuoteSupplierReference" />
+                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-qi-quote-ref" name="quoteSupplierReference" value="@Model.QuoteSupplierReference" /></div>
                 </div>
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="gl-v2-qi-quote-vat">Btw leverancier</label>
-                    <input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-qi-quote-vat" name="quoteVatPercentage" value="@(Model.QuoteVatPercentage?.ToString(System.Globalization.CultureInfo.InvariantCulture))" />
+                    <div class="gl-v2-field-box"><input type="number" step="0.01" class="gl-v2-field-input" id="gl-v2-qi-quote-vat" name="quoteVatPercentage" value="@(Model.QuoteVatPercentage?.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></div>
                 </div>
             </div>
         </div>
@@ -174,20 +221,48 @@
 
         <div class="gl-v2-notice gl-v2-notice-compact is-info">
             <i class="ph ph-info" aria-hidden="true"></i>
-            <span><b>Omzetten</b> neemt leverancier, regels en foto's over in een nieuwe wijzigingsopdracht. Daar komen de commissie, de btw uit de betalingsgroep en de voorwaarden bij. Deze offerte blijft gekoppeld als bron.</span>
+            @if (Model.IsQuote)
+            {
+                <span><b>Omzetten</b> vraagt klant · eenheid, commissie en facturatieplan en opent daarna de wijzigingsopdracht als concept. Leverancier, regels en foto's gaan mee; deze offerte blijft gekoppeld als bron.</span>
+            }
+            else
+            {
+                <span>Je koppelt een offerte aan <b>@Model.Number</b>. Nieuwe regels krijgen de commissie en btw van die wijzigingsopdracht; omschrijving en facturatieplan blijven ongewijzigd.</span>
+            }
         </div>
+    </div>
+</div>
+</div>
+
+<div class="gl-v2-form-actionbar">
+    <span class="gl-v2-form-actionbar-status" id="gl-v2-qi-status"></span>
+    <span class="gl-v2-form-actionbar-spacer"></span>
+    <div class="gl-v2-form-actionbar-actions">
+        <a class="gl-v2-btn gl-v2-btn-text" href="@backUrl">Annuleren</a>
+        @if (!Model.IsQuote)
+        {
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-qi-save">Opslaan en terug naar @Model.Number</button>
+        }
+        else if (Model.KeepOnly)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-qi-convert">Omzetten naar wijzigingsopdracht</button>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-qi-save">Opslaan als offerte</button>
+        }
+        else
+        {
+            <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-qi-save">Opslaan als offerte</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-qi-convert">
+                <i class="ph ph-arrow-right" aria-hidden="true"></i><span>Omzetten naar wijzigingsopdracht</span>
+            </button>
+        }
     </div>
 </div>
 </form>
 
-<div class="gl-v2-co-actionbar">
-    <span class="gl-v2-field-help" id="gl-v2-qi-status"></span>
-    <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })">Annuleren</a>
-    <button type="submit" form="gl-v2-qi-form" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-qi-save">Opslaan als offerte</button>
-    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-qi-convert">
-        <i class="ph ph-arrow-right" aria-hidden="true"></i>Omzetten naar wijzigingsopdracht
-    </button>
-</div>
+@if (Model.IsQuote)
+{
+    @await Html.PartialAsync("Partials/_ConvertQuoteModalShellV2")
+}
 
 @section PageScripts
 {
@@ -195,16 +270,20 @@
     {
         "projectId": @Model.ProjectId,
         "changeOrderId": @Model.ChangeOrderId,
+        "clientAccountId": @Model.ClientAccountId,
+        "number": "@Model.Number",
+        "convertModalUrl": "@Url.Action("ConvertQuoteModalV2")",
+        "uploadSourceUrl": "@Url.Action("QuoteIntakeV2UploadSource")",
         "pdfWorkerUrl": "@Url.Content("~/lib/pdfjs/pdf.worker.min.js")",
         "extractTableUrl": "@Url.Action("QuoteIntakeV2ExtractTable")",
         "attachPhotoUrl": "@Url.Action("QuoteIntakeV2AttachPhoto")",
         "addRowUrl": "@Url.Action("QuoteIntakeV2AddRow")",
         "saveUrl": "@Url.Action("ChangeOrderDetailV2Save")",
-        "convertUrl": "@Url.Action("ChangeOrderDetailV2Convert")",
         "listUrl": "@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })"
     }
     </script>
     <script src="~/lib/pdfjs/pdf.min.js"></script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-convertquote.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-quoteintake.js" asp-append-version="true"></script>
 }

@@ -4267,6 +4267,9 @@
 .gl-v2-badge.is-blocked { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
 .gl-v2-badge.is-info { background: var(--gl-v2-info-tint); color: var(--gl-v2-info); }
 .gl-v2-badge.is-inactive { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-light); text-decoration: line-through; }
+/* Vol groen — de eindtoestand van een verloop ("Betaald", design-handoff 28g/29a): het enige label dat
+   niet op een tint staat, zodat "helemaal rond" zich onderscheidt van "goedgekeurd/positief". */
+.gl-v2-badge.is-solid { background: var(--gl-v2-primary); color: #fff; }
 
 /* ── Tabbar (optie 8e, "2 · TABBAR"), altijd gepositioneerd zoals optie 8d ─────────────────────
    Hoort als flex:none-sibling direct ná de topbar en vóór het scrollende content-blok te staan, in
@@ -4948,4 +4951,188 @@ tr[data-detail-url] { cursor: pointer; }
 @media (max-width: 767.98px) {
     .gl-v2-notice-bar { flex-wrap: wrap; }
     .gl-v2-notice-bar-text { white-space: normal; flex-basis: 100%; order: 3; }
+}
+
+/* ── Stappenplan (design-handoff punt 27, Stappenplan.dc.html) — project-wijd component, partial
+   Views/Shared/GlV2/_Stappenplan.cshtml + GlV2StappenplanVm. Variant "lijn": elke stap is een kolom
+   (flex:1) met bovenaan een bol + de verbindingslijn naar de volgende stap, eronder label en
+   optionele subregel. Zeven toestanden op de stap zelf (.is-done/-current/-todo/-wacht/-warning/
+   -error/-uit); de lijn NA een stap kleurt mee met díe stap (gedaan = groen, anders haarlijn). Maat
+   "md" is de standaard (bol 24px), .is-sm de compacte (bol 18px) voor boven een detailscherm. Een
+   statusweergave, geen navigatie — niets hier is klikbaar. Smal scherm: de rij scrollt horizontaal
+   i.p.v. de labels te pletten (min-width per stap). ─────────────────────────────────────────────── */
+.gl-v2-steps {
+    --gl-v2-step-dot: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+}
+.gl-v2-steps.is-sm { --gl-v2-step-dot: 18px; }
+
+.gl-v2-step { flex: 1 1 0; min-width: 96px; display: flex; flex-direction: column; gap: 3px; }
+.gl-v2-step:last-child { flex: 0 0 auto; }
+.gl-v2-step-track { display: flex; align-items: center; height: calc(var(--gl-v2-step-dot) + 6px); padding-left: 3px; }
+
+.gl-v2-step-dot {
+    width: var(--gl-v2-step-dot);
+    height: var(--gl-v2-step-dot);
+    border-radius: 50%;
+    flex: none;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gl-v2-surface);
+    border: 1.5px solid rgba(44, 59, 42, .28);
+    color: #5a6b58;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    font-variant-numeric: tabular-nums;
+}
+.gl-v2-step-dot i { font-size: 13px; }
+.gl-v2-steps.is-sm .gl-v2-step-dot { font-size: 10px; }
+.gl-v2-steps.is-sm .gl-v2-step-dot i { font-size: 10.5px; }
+
+.gl-v2-step-line { flex: 1; height: 2px; margin: 0 6px; border-radius: 1px; background: #DDE3D8; }
+.gl-v2-step.is-done .gl-v2-step-line { background: #7A9E6E; }
+
+.gl-v2-step-label { font: 450 13px var(--gl-v2-font-sans); color: #5a6b58; white-space: nowrap; padding-right: 10px; }
+.gl-v2-steps.is-sm .gl-v2-step-label { font-size: 11.5px; }
+.gl-v2-step-sub { font: 450 10.5px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; padding-right: 10px; }
+
+.gl-v2-step.is-done .gl-v2-step-dot { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: #fff; }
+.gl-v2-step.is-done .gl-v2-step-label { color: var(--gl-v2-ink); font-weight: 500; }
+
+.gl-v2-step.is-current .gl-v2-step-dot { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: #fff; box-shadow: 0 0 0 3px rgba(0, 83, 45, .16); }
+.gl-v2-step.is-current .gl-v2-step-label { color: var(--gl-v2-primary); font-weight: 700; }
+
+.gl-v2-step.is-wacht .gl-v2-step-dot { background: #C9A96E; border-color: #C9A96E; color: #fff; box-shadow: 0 0 0 3px rgba(201, 169, 110, .25); }
+.gl-v2-step.is-wacht .gl-v2-step-label { color: #6B4F22; font-weight: 600; }
+
+.gl-v2-step.is-warning .gl-v2-step-dot { background: #8A6A32; border-color: #8A6A32; color: #fff; }
+.gl-v2-step.is-warning .gl-v2-step-label { color: #8A6A32; font-weight: 600; }
+
+.gl-v2-step.is-error .gl-v2-step-dot { background: #8B2A2A; border-color: #8B2A2A; color: #fff; }
+.gl-v2-step.is-error .gl-v2-step-label { color: #8B2A2A; font-weight: 600; }
+
+.gl-v2-step.is-uit .gl-v2-step-dot { background: #F2F5EF; border: 1.5px dashed rgba(44, 59, 42, .28); color: #9aa898; }
+.gl-v2-step.is-uit .gl-v2-step-label { color: #9aa898; text-decoration: line-through; }
+
+/* ── Mobiele zoekervaring (iPhone/Safari, Chrome iOS) — gedeeld met de module "GlV2MobileSearch" in
+   gl-v2-shell.js; zie DESIGN.md "Mobiele zoekervaring". Alles hieronder staat achter een mobiele/touch-
+   mediaquery: desktop verandert niet. De twee queries zijn bewust identiek aan die in de JS (MQ). ──── */
+
+/* Zoekbalk-annuleerknop: bestaat enkel nadat de module 'm in zoekmodus aanmaakte. */
+.gl-v2-search-cancel { display: none; }
+
+/* A — nooit inzoomen. iOS zoomt de hele pagina in zodra een invoerveld < 16px is, en zoomt daarna
+   niet meer terug (de linkerrand valt weg). Geldt voor élk invoerveld, niet enkel zoekvelden; checkbox/
+   radio/bestand/knoppen zijn geen tekstinvoer en blijven buiten schot. !important: een hoger-specifieke
+   paginaregel mag dit nooit meer onderbieden — dat is precies de bug die hier voorkomen wordt. */
+@media (pointer: coarse), (max-width: 767.98px) {
+    :is(.gl-v2, .modal) :is(
+        input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"], [type="submit"], [type="button"], [type="reset"], [type="image"], [type="color"]),
+        select,
+        textarea
+    ) { font-size: 16px !important; }
+
+    /* type=search zonder het eigen kruisje/loepje van de browser: de app heeft al een eigen wisknop. */
+    .gl-v2 input[type="search"] { -webkit-appearance: none; appearance: none; }
+    .gl-v2 input[type="search"]::-webkit-search-cancel-button,
+    .gl-v2 input[type="search"]::-webkit-search-decoration,
+    .gl-v2 input[type="search"]::-webkit-search-results-button,
+    .gl-v2 input[type="search"]::-webkit-search-results-decoration { -webkit-appearance: none; display: none; }
+}
+
+/* C/D/E — zoekmodus (body.is-searching, gezet door de module bij focus op een zoekveld). */
+@media ((pointer: coarse) and (max-width: 1023.98px)), (max-width: 767.98px) {
+    /* De grote paginaheader, de vaste actiebalk onderaan (formulieren), de snelactiebalk (lijsten)
+       en de Filters-knop nemen anders ruimte in boven het toetsenbord. */
+    body.is-searching .gl-v2-topbar,
+    body.is-searching .gl-v2-mobile-quickactions,
+    body.is-searching .gl-v2-form-actionbar,
+    body.is-searching .gl-v2-filters-toggle { display: none !important; }
+
+    /* Zoekbalk op een lijstpagina: bovenaan vastgezet, onder de notch (safe-area), volle breedte. */
+    .gl-v2 .gl-v2-search-pinned {
+        position: fixed;
+        top: var(--gl-v2-vv-top, 0px);
+        left: 0;
+        right: 0;
+        z-index: 600;
+        margin: 0 !important;
+        border: 0 !important;
+        border-bottom: 1px solid var(--gl-v2-hairline) !important;
+        border-radius: 0 !important;
+        padding: calc(env(safe-area-inset-top, 0px) + 8px) calc(12px + env(safe-area-inset-right, 0px)) 8px calc(12px + env(safe-area-inset-left, 0px)) !important;
+        background: var(--gl-v2-surface);
+        box-shadow: 0 8px 18px -12px rgba(44, 59, 42, .55);
+    }
+    .gl-v2 .gl-v2-search-spacer { flex: none; }
+
+    /* Postcode-/eenhedenkiezer: het bottom-sheet-paneel valt anders achter het toetsenbord. Tijdens het
+       typen hangt het aan de bovenkant van het zichtbare gebied (veld bovenaan, resultaten eronder,
+       scrollbaar tot net boven het toetsenbord); --gl-v2-vv-top/-h komen uit window.visualViewport. */
+    .gl-v2 .gl-v2-select-panel.is-keyboard-pinned {
+        top: var(--gl-v2-vv-top, 0px);
+        bottom: auto;
+        height: auto;
+        max-height: var(--gl-v2-vv-h, 100dvh);
+        border-radius: 0 0 18px 18px;
+        padding: calc(env(safe-area-inset-top, 0px) + 8px) 0 8px;
+    }
+    /* Meervoudige kiezer: het filterveld zit in de trigger, het paneel (opties) hangt eronder. */
+    .gl-v2 .gl-v2-select-panel.is-keyboard-anchored {
+        top: var(--gl-v2-panel-top, auto);
+        bottom: auto;
+        left: 8px;
+        right: 8px;
+        height: auto;
+        max-height: var(--gl-v2-panel-max, 50dvh);
+        border-radius: 12px;
+        padding: 6px 0;
+    }
+    .gl-v2 .gl-v2-select-panel.is-keyboard-pinned::before,
+    .gl-v2 .gl-v2-select-panel.is-keyboard-anchored::before { display: none; }
+    .gl-v2 .gl-v2-select-panel.is-keyboard-pinned .gl-v2-select-options,
+    .gl-v2 .gl-v2-select-panel.is-keyboard-anchored .gl-v2-select-options {
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+    .gl-v2 .gl-v2-select-trigger-multi { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+
+    /* Resultatenlijsten buiten een paneel (zoekmodal, opt-in [data-gl-v2-search-results]): vangnet
+       50dvh als window.visualViewport ontbreekt; de module overschrijft dit inline met de echte maat. */
+    body.is-searching .gl-v2-modal-search-results,
+    body.is-searching [data-gl-v2-search-results] {
+        max-height: 50dvh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    /* E — "Annuleer" naast het veld, minstens 44x44 raakvlak. */
+    .gl-v2 .gl-v2-search-cancel {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        min-width: 44px;
+        min-height: 44px;
+        margin: -2px -10px -2px 2px;
+        padding: 0 12px;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-primary);
+        font: 600 14px var(--gl-v2-font-sans);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .gl-v2 .gl-v2-search-cancel[hidden] { display: none; }
 }

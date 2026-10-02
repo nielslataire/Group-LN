@@ -1,0 +1,145 @@
+@model CPMCore.Models.Projecten.SendChangeOrderModalV2Vm
+@*
+    21d — "Verzenden ter ondertekening" (design-handoff 21d: "vanuit 21c of 20d"). Inhoud van de modal
+    #gl-v2-co-send-modal op het opmaakscherm (ChangeOrderDetailV2, 28a/28b), AJAX-geladen door
+    ProjectenController.SendChangeOrderModalV2; het formulier post naar ChangeOrderSendV2. Gedrag (kanaal
+    wisselen, verzendknop aan/uit) in gl-v2-projecten-changeorderdetail.js (wireSend).
+
+    Wat de ondertekenmodule vandaag kan, bepaalt wat hier staat:
+    - KANAAL: "Online ondertekenen" (persoonlijke link per e-mail, opvolging per ontvanger) of "Alleen PDF"
+      (zelf bezorgen, later het akkoord registreren). Het ontwerp toont ook een apart kanaal
+      "Klantenportaal"; dat bestaat niet als afzonderlijke verzendweg en staat er daarom niet.
+    - HERINNERING is een instelling van het ondertekenbeleid (SigningPolicy), niet per dossier: getoond,
+      niet aanpasbaar.
+    - BERICHT: vrij bericht van de afzender, bewaard op het dossier (SigningCase.InvitationMessage,
+      migratie 068) — komt na de aanhef in de uitnodigingsmail en in elke herinnering.
+    Ontvangers, regel en vervaldatum zijn hetzelfde voorstel als op SigningAdmin/Start.
+*@
+@using BOCore
+<input type="hidden" name="projectId" value="@Model.ProjectId" />
+<input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+<div id="gl-v2-co-send-data" hidden data-subtitle="@Model.Subtitle" data-can-send="@(Model.Problem == null ? "true" : "false")"></div>
+
+<div class="gl-v2-co-send-main">
+    @if (Model.Problem != null)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-danger">
+            <i class="ph ph-x-circle" aria-hidden="true"></i>
+            <span>@Model.Problem Sluit dit venster, vul aan en verzend opnieuw.</span>
+        </div>
+    }
+
+    <div class="gl-v2-field">
+        <span class="gl-v2-field-label" id="gl-v2-co-send-channel-label">Kanaal</span>
+        <div class="gl-v2-co-seg" role="radiogroup" aria-labelledby="gl-v2-co-send-channel-label">
+            <label><input type="radio" name="channel" value="sign" @(Model.CanSign ? "checked" : "disabled") /><span>Online ondertekenen</span></label>
+            <label><input type="radio" name="channel" value="pdf" @(Model.CanSign ? "" : "checked") /><span>Alleen PDF</span></label>
+        </div>
+        <span class="gl-v2-field-help">
+            online = elke ontvanger krijgt een persoonlijke link per e-mail en je volgt op wie tekende; PDF = afdrukken of zelf bezorgen, later het akkoord registreren
+            @if (!Model.CanSign && !string.IsNullOrWhiteSpace(Model.CannotSignReason))
+            {
+                <b> · @Model.CannotSignReason</b>
+            }
+        </span>
+    </div>
+
+    @if (Model.CanSign)
+    {
+        <div class="gl-v2-co-send-section js-send-signonly">
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Ontvangers — eigenaars van het account</span>
+                <div class="gl-v2-co-send-parties">
+                    @for (var i = 0; i < Model.Parties.Count; i++)
+                    {
+                        var p = Model.Parties[i];
+                        var hasEmail = !string.IsNullOrWhiteSpace(p.Email);
+                        var checkId = $"gl-v2-co-send-party-{i}";
+                        <div class="gl-v2-co-send-party @(hasEmail ? "" : "is-warning")">
+                            <span class="gl-v2-co-check">
+                                <input type="checkbox" class="js-send-party" id="@checkId" name="parties[@i].include" value="true" @(hasEmail ? "checked" : "disabled") />
+                                <label for="@checkId"></label>
+                            </span>
+                            <input type="hidden" name="parties[@i].include" value="false" />
+                            <input type="hidden" name="parties[@i].partyType" value="@p.PartyType" />
+                            <input type="hidden" name="parties[@i].sourceRefId" value="@p.SourceRefId" />
+                            <input type="hidden" name="parties[@i].displayName" value="@p.DisplayName" />
+                            <input type="hidden" name="parties[@i].email" value="@p.Email" />
+                            <input type="hidden" name="parties[@i].phoneMasked" value="@p.PhoneMasked" />
+                            <input type="hidden" name="parties[@i].capacity" value="@p.Capacity" />
+                            <label class="gl-v2-co-send-party-text" for="@checkId">
+                                <span class="gl-v2-co-send-party-name">@p.DisplayName</span>
+                                <span class="gl-v2-co-send-party-sub">@(hasEmail ? p.Email : "geen e-mailadres — vul het aan op het klantenaccount")</span>
+                            </label>
+                            <span class="gl-v2-co-send-party-role">@p.Capacity</span>
+                        </div>
+                    }
+                    @if (Model.Parties.Count == 0)
+                    {
+                        <div class="gl-v2-co-send-party is-warning"><span class="gl-v2-co-send-party-sub">Geen eigenaars gevonden op dit klantenaccount.</span></div>
+                    }
+                </div>
+            </div>
+
+            <div class="gl-v2-co-send-grid">
+                <div class="gl-v2-field">
+                    <span class="gl-v2-field-label" id="gl-v2-co-send-rule-label">Ondertekening door</span>
+                    <div class="gl-v2-co-seg" role="radiogroup" aria-labelledby="gl-v2-co-send-rule-label">
+                        <label><input type="radio" name="signingRule" value="@((int)SigningRule.All)" @(Model.SigningRule == (int)SigningRule.All ? "checked" : "") /><span>Alle eigenaars</span></label>
+                        <label><input type="radio" name="signingRule" value="@((int)SigningRule.Any)" @(Model.SigningRule == (int)SigningRule.Any ? "checked" : "") /><span>Eén volstaat</span></label>
+                    </div>
+                </div>
+                @await Html.PartialAsync("GlV2/_DateField", new CPMCore.Models.GlV2.GlV2DateFieldVm
+                {
+                    Name = "expiresOn",
+                    Id = "gl-v2-co-send-expires",
+                    Label = "Vervalt op",
+                    Required = true,
+                    IsoValue = Model.ExpiresOn.ToString("yyyy-MM-dd"),
+                    DisplayValue = Model.ExpiresOn.ToString("dd/MM/yyyy")
+                })
+                <div class="gl-v2-field">
+                    <span class="gl-v2-field-label">Herinnering</span>
+                    <div class="gl-v2-co-readout gl-v2-co-locked-field" title="Ingesteld in het ondertekenbeleid">
+                        <i class="ph ph-lock-simple" aria-hidden="true"></i><span>@(Model.ReminderAfterDays.HasValue ? $"na {Model.ReminderAfterDays} dagen" : "geen")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="gl-v2-co-send-message">Bericht <span class="gl-v2-field-label-optional">optioneel</span></label>
+                <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-textbox-sm"><textarea class="gl-v2-field-input" id="gl-v2-co-send-message" name="invitationMessage" maxlength="2000" placeholder="bv. Zoals besproken op de werf: de wijzigingsopdracht voor de uitbreiding van jullie terras."></textarea></div>
+                <span class="gl-v2-field-help">komt in de uitnodigingsmail en in elke herinnering, na de aanhef "Beste …" — de link om te tekenen volgt eronder</span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.TestRecipient))
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                    <i class="ph ph-warning" aria-hidden="true"></i>
+                    <span>Testmodus: alle uitnodigingen gaan naar @Model.TestRecipient, niet naar de klant.</span>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="gl-v2-co-send-section js-send-pdfonly" hidden="@(Model.CanSign)">
+        <div class="gl-v2-notice gl-v2-notice-compact is-info">
+            <i class="ph ph-info" aria-hidden="true"></i>
+            <span>De wijzigingsopdracht wordt gemarkeerd als verzonden en ligt dan vast. Bezorg de PDF zelf aan de klant; zodra je de getekende versie terug hebt, registreer je het akkoord op dit scherm.</span>
+        </div>
+    </div>
+</div>
+
+<div class="gl-v2-co-send-preview">
+    <span class="gl-v2-field-label">Voorbeeld</span>
+    @if (!string.IsNullOrWhiteSpace(Model.PreviewUrl))
+    {
+        <iframe class="gl-v2-co-send-frame" src="@(Model.PreviewUrl)#toolbar=0&navpanes=0&view=FitH" title="Voorbeeld van de wijzigingsopdracht" loading="lazy"></iframe>
+    }
+    else
+    {
+        <a class="gl-v2-co-send-frame is-placeholder" href="@Model.PdfUrl" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i></a>
+    }
+    <a class="gl-v2-co-link" href="@(Model.PreviewUrl ?? Model.PdfUrl)" target="_blank" rel="noopener">PDF openen ↗</a>
+    <span class="gl-v2-field-help">enkel prijzen incl. commissie — kostprijs en commissie staan nooit op het document</span>
+</div>

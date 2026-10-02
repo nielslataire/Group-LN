@@ -91,6 +91,10 @@ public partial class SigningCase
     /// <summary>Reden bij annuleren/weigeren.</summary>
     public string CloseReason { get; set; }
 
+    /// <summary>Migratie 068 — vrij bericht van de afzender, bovenaan in de uitnodigingsmail en in elke
+    /// herinnering van dit dossier (design-handoff 21d, veld BERICHT). NULL = geen bericht.</summary>
+    public string InvitationMessage { get; set; }
+
     /// <summary>Het nieuwe dossier dat dit dossier verving na een inhoudelijke wijziging.</summary>
     public int? SupersededByCaseId { get; set; }
 

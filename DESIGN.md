@@ -5828,3 +5828,109 @@ betaaltermijnen, bankrekeningen, factuurreeksen, Octopus-boekjaren/btw-codes, cu
 wordt onveranderd meegegeven aan `IssuerCompaniesEditV2`, ook al gebruikt tab "Algemeen" er zelf maar
 één van (`CompanyLegalForms`) — zodat een latere ronde die de overige tabs herbouwt, niets aan de
 controller moet wijzigen, enkel aan de view.
+
+## Mobiele zoekervaring (iPhone/Safari, Chrome iOS) — één centrale module, alle zoekvelden
+
+Vijf klachten op touch: (1) iOS zoomt de pagina in bij een tik op een veld, (2) het toetsenbord bedekt de
+resultaten, (3) de vaste actiebalk blijft boven het toetsenbord hangen, (4) de grote paginaheader duwt het veld
+naar beneden, (5) iOS toont invulbalk/woordsuggesties. Alles zit op ÉÉN plek: `GlV2MobileSearch` onderaan
+`gl-v2-shell.js` + één blok onderaan `gl-v2-shell.css`, enkel achter `((pointer: coarse) and (max-width:
+1023.98px)), (max-width: 767.98px)`. Desktop is getest ongewijzigd (veld blijft `type=text`, niets vastgezet).
+
+- **A Geen zoom**: elk `input`/`select`/`textarea` (behalve checkbox/radio/bestand/knoppen) is op touch
+  `font-size:16px !important` (de `!important` is bewust: een hoger-specifieke paginaregel mag dit nooit
+  onderbieden). Viewport: `width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=
+  resizes-content`, bewust zonder `maximum-scale`/`user-scalable=no`.
+- **B Attributen**: elk zoekveld krijgt `type=search inputmode=search enterkeyhint=search autocomplete=off
+  autocorrect=off autocapitalize=off spellcheck=false`, ook velden die pagina-JS later aanmaakt
+  (MutationObserver). Het native kruisje van `type=search` is verborgen (de app heeft eigen wisknoppen).
+- **C Zoekmodus**: bij focus `body.is-searching` → CSS verbergt `.gl-v2-topbar`, `.gl-v2-form-actionbar`,
+  `.gl-v2-mobile-quickactions`, `.gl-v2-filters-toggle`; veld bovenaan; `scrollIntoView` na 300 ms.
+  Veld vastzetten is `position:fixed` + spacer, niet `sticky`: `.gl-v2-body` heeft `overflow:hidden` en de
+  zoekbalk-kaart heeft een te kleine containing block.
+- **D Resultaten boven het toetsenbord**: maat uit `visualViewport` (resize+scroll) via `--gl-v2-vv-top/-h`;
+  fallback `50dvh`. Vier soorten veld: `page` (zoekbalk op lijstpagina), `panel` (postcode-/eenhedenkiezer: het
+  bottom-sheet-paneel wordt bovenaan vastgezet), `trigger` (meervoudige kiezer: paneel onder de trigger),
+  `modal` (resultatenlijst in de zoekmodal). Velden in een al vaste laag (mobiel menu) krijgen enkel B.
+- **E Annuleer/Enter**: knop ≥44×44 px naast het veld (leegmaken + blur + modus uit; bij paneel ook sluiten).
+  Enter/"Zoek" blur't het veld (toetsenbord dicht), waarde en resultaten blijven.
+- Opt-in voor nieuwe velden: `data-gl-v2-search` op de input, en `data-gl-v2-search-results` op een
+  resultatenlijst die binnen het zichtbare gebied moet blijven.
+
+Velden die erbij horen: de `.gl-v2-toolbar-search`-velden (Klanten/Leveranciers/Projecten/Invoices IndexV2,
+Projecten DetailClients/Contracts/Photos V2, Instellingen IndexV2), `#gl-v2-pd-units-filter`, `#gl-v2-co2-search`,
+`#gl-v2-dd-search`, `#gl-v2-du-search`, `#gl-v2-dp-search`, het zoekveld in elk `GlV2SearchSelect`/
+`_ProjectFormV2SearchSelect`-paneel (5 JS-kopieën), de chip-filtervelden (`.gl-v2-select-trigger-multi-input`),
+de eenhedenkiezer, `.gl-v2-modal-search-input` (zoekmodals), en de menuzoekers (`#gl-v2-mobile-search`,
+`.js-gl-v2-pm-search`). Niet inbegrepen: het e-mail-typeahead "Verzenden naar" (`#gl-v2-kep-recipient-add`).
+
+### Echte oorzaak van "op gsm gaat gemeente/postcode niet open" (eerdere fix was onvolledig)
+Een zoekende keuzelijst opent bij focus (mousedown) en toont op <768px meteen een schermvullende backdrop; de
+mouseup landt daarop, dus gaat de `click` naar `<body>` en het "klik erbuiten sluit"-luisteraar van elke pagina
+sluit het paneel dat net opende. Gereproduceerd zonder mijn module; opgelost met één capture-fase-vangnet in
+`GlV2MobileSearch` (click binnen 450 ms na een focus in een keuzelijst, zonder doel erin, wordt geslikt).
+Idem: een resize die enkel de hoogte wijzigt tijdens zoekmodus (Android-Chrome met resizes-content) wordt in de
+capture-fase tegengehouden zodat paginascripts hun panelen niet sluiten.
+
+### Testen
+Playwright (Chromium, iPhone 390×844, touch) tegen de ECHTE views (gerenderd met de echte `_LayoutV2`, zonder
+login) en de echte css/js: Klanten/IndexV2, Instellingen/IndexV2, Klanten/CreateV2. Gesimuleerd toetsenbord via
+een nep-`visualViewport`. Niet automatisch te testen: het echte iOS-toetsenbord (zie opleveringsnotitie).
+
+## Stappenplan (design-handoff punt 27, `design-handoff/Stappenplan.dc.html`) — project-wijd component
+
+Toont waar iets staat in een vast verloop (offerte → opgemaakt → … → betaald). Een statusweergave, geen
+navigatie: niets is klikbaar. Eerste gebruik: de wijzigingsopdracht (punt 28) en Offerte inlezen (20c).
+
+- **Partial**: `@await Html.PartialAsync("GlV2/_Stappenplan", new GlV2StappenplanVm { Size = "sm", Steps = … })`
+  (`CPMCore/Models/GlV2/GlV2StappenplanVm.cs`). CSS: `.gl-v2-steps` in `gl-v2-shell.css`, geen JS.
+- **Variant**: voorlopig enkel "lijn" (bolletjes met verbindingslijn). De varianten chips/balk/verticaal uit
+  het ontwerp bouwen we pas wanneer een scherm ze nodig heeft — dan als modifier op hetzelfde component,
+  niet als pagina-eigen kopie.
+- **Maat**: `md` (bol 24px, standaard) of `sm` (bol 18px, `.is-sm`) voor boven een detailscherm.
+- **Toestand per stap** (`GlV2StapVm.State` → klasse `.is-…`): `done` (groen + vinkje) · `current` (groen +
+  ring, label vet) · `todo` (open bol met volgnummer) · `wacht` (goud + ring: wacht op iemand anders) ·
+  `warning` (donkergoud, "!") · `error` (rood, "!") · `uit` (gestippeld, "–", label doorstreept: deze stap
+  valt weg). Kleur is nooit het enige signaal: elke toestand heeft ook een eigen teken of lettergewicht.
+- **Sub** (`GlV2StapVm.Sub`): één korte regel onder het label (datum, referentie, "1 van 2").
+- De lijn NA een stap kleurt groen zodra die stap `done` is. Smal scherm: de rij scrollt horizontaal
+  (min-width per stap) in plaats van de labels te pletten.
+
+### Badge `.is-solid`
+`.gl-v2-badge.is-solid` (vol groen, witte tekst) is de eindtoestand van een verloop ("BETAALD", design-handoff
+28g/29a) — het enige label dat niet op een tint staat. Niet gebruiken voor gewoon "positief" (`.is-positive`).
+
+### Wijzigingsopdracht — scherm per stap (design-handoff punt 28/29)
+`Projecten/ChangeOrderDetailV2` is één scherm voor elke stap; `ProjectenController.BuildScreenState` leidt
+uit status + ondertekendossier + facturen af wat het toont (`Model.Phase`), de view beslist zelf niets.
+Vaste opbouw: stappenplan (lijn · sm) → melding (`.gl-v2-notice-expanded`, punt 25b) → kaarten Opdracht /
+Regels / Facturatieplan (bewerkbaar in concept, anders leesweergave met slotje `.gl-v2-co-lock` in de
+kaartkop) → zijkolom Ondertekening / Facturen / Bron / Historiek → `.gl-v2-form-actionbar` met contexttekst
+links en de knoppen van die stap rechts. Statuspillen staan in `@section PageTitleBadges`.
+
+Twee valkuilen die hier opnieuw opdoken (pagina-CSS laadt vóór `gl-v2-shell.css`):
+- een eigen raster op een `.gl-v2-card-body` moet met dubbele klasse (`.gl-v2-card-body.gl-v2-co-form-grid`),
+  anders wint de flex-kolom van de shell en staan alle velden onder elkaar;
+- een invoerveld is altijd `.gl-v2-field-box` > `.gl-v2-field-input` (textarea: `+ .gl-v2-field-box-textarea`),
+  ook in een tabelcel — een losse `.gl-v2-field-input` heeft geen kader. Compacter maken in een tabel gebeurt
+  op de box (`.gl-v2-co-table .gl-v2-field-box { height: 34px }`), niet op de input.
+
+## PWA — CPM op het beginscherm (iPhone Safari/Chrome iOS, Android Chrome)
+
+Bestanden (alles in `CPMCore`): `wwwroot/manifest.json`, `wwwroot/icons/` (180, 192, 512, 512-maskable; gemaakt uit het
+aangeleverde logo van 2362x2362 px, bijgesneden op het beeldmerk, op effen wit), `wwwroot/sw.js`, `wwwroot/offline.html`, `wwwroot/js/pwa.js`, `wwwroot/css/gl-v2-pwa.css`,
+`Views/Shared/_PwaHead.cshtml` (opgenomen in `_LayoutV2` en `_Layout`), `Views/Shared/_PwaInstallBanner.cshtml`
+(op Home/Index). Themakleur/achtergrond = `--gl-v2-primary` = `#00532D` (niet `#00502F`).
+
+- **Service worker** (`/sw.js`, scope `/`): navigaties network-first, enkel bij een netwerkfout `offline.html`; pagina's
+  en alles wat geen statisch bestand is worden NOOIT gecacheerd (geen POST, AJAX, ingelogde data). Statische assets
+  zelfde origin cache-first met versie in de cachenaam (`cpm-static-v1`); css/js enkel cache-first mét `?v=`-hash
+  (asp-append-version), anders zou een deploy op een oude kopie blijven hangen. Nieuwe release van de SW: `VERSION`
+  ophogen; `skipWaiting` + `clients.claim` + opruimen bij `activate`.
+- **Banner**: enkel `(pointer: coarse) and (max-width: 768px)`, niet in standalone, 30 dagen rust na wegklikken
+  (localStorage in try/catch). Android: `beforeinstallprompt` → knop Installeren. iOS: uitleg met deel-icoon.
+- **Standalone**: alles achter `@media (display-mode: standalone)`: topbar-padding en -hoogte met
+  `env(safe-area-inset-top)`, menuheader idem. Terugpijl (`pwa.js`) enkel in standalone + mobiel, enkel waar de pagina
+  geen eigen `.gl-v2-topbar-back` heeft en niet op het dashboard: `history.back()`, anders `/`.
+- Desktop: met/zonder PWA-bestanden byte-voor-byte dezelfde screenshots op 1440x900 (3 pagina's).
+- Niet gewijzigd: pull-to-refresh/`overscroll-behavior` (overleg nodig), sessieduur, auth.
