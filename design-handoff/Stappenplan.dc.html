@@ -17,7 +17,7 @@
 <sc-if value="{{ s.hasLine }}" hint-placeholder-val="{{ true }}"><span style="flex:1;height:2px;margin:0 6px;border-radius:1px;background:{{ s.lineCol }}"></span></sc-if>
 </div>
 <div style="display:flex;align-items:center;gap:6px;padding-right:10px;min-width:0"><span style="min-width:0;font-size:{{ labFs }};font-weight:{{ s.fw }};color:{{ s.lab }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ s.deco }}">{{ s.label }}</span><sc-if value="{{ s.hasBadge }}" hint-placeholder-val="{{ false }}"><span title="{{ s.badge }}" style="flex:none;min-width:18px;height:18px;box-sizing:border-box;padding:0 5px;border-radius:9px;background:{{ s.badgeSolid }};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.count }}</span></sc-if></div>
-<sc-if value="{{ s.hasSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;line-height:1.35;color:{{ s.subCol }};padding-right:10px;text-wrap:pretty">{{ s.sub }}</span></sc-if>
+<sc-if value="{{ s.hasSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;color:{{ s.subCol }};padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.sub }}</span></sc-if>
 </div>
 </sc-for>
 </div>

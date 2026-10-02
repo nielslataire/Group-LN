@@ -24,11 +24,14 @@
 
     // Zelfde zeven stappen als het scherm per stap (28) — dit scherm is stap 1.
     var stepLabels = new[] { "Offerte", "Opgemaakt", "Verzonden", "Ondertekend", "Factureerbaar", "Gefactureerd", "Betaald" };
-    var stappenplan = new GlV2StappenplanVm
+    var stappenplan = new GlV2StepsVm
     {
-        Size = "sm",
-        AriaLabel = "Verloop van de wijzigingsopdracht",
-        Steps = stepLabels.Select((label, i) => new GlV2StapVm { Label = label, State = i == 0 ? "current" : "todo", Sub = i == 0 ? "inlezen en controleren" : null }).ToList(),
+        Id = "qi-steps",
+        Variant = GlV2StepsVariant.Lijn,
+        Size = GlV2StepsSize.Sm,
+        Clickable = false,
+        Current = 0,
+        Steps = stepLabels.Select((label, i) => new GlV2StepItemVm { Label = label, Sub = i == 0 ? "inlezen en controleren" : null }).ToList(),
     };
 }
 @section PageStyle
@@ -80,7 +83,7 @@
     <div class="gl-v2-card gl-v2-co-card">
         <div class="gl-v2-card-body gl-v2-co-steps">
             <span class="gl-v2-co-steps-label">STAP 1 VAN 7</span>
-            @await Html.PartialAsync("GlV2/_Stappenplan", stappenplan)
+            @await Html.PartialAsync("GlV2/_Steps", stappenplan)
         </div>
     </div>
 }

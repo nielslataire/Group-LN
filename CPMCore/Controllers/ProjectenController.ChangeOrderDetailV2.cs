@@ -287,6 +287,34 @@ namespace CPMCore.Controllers
             };
         }
 
+        /// <summary>Het Stappenplan (punt 27, GlV2/_Steps, variant Lijn · Sm, niet klikbaar) van het scherm per
+        /// stap. De staten komen expliciet uit BuildScreenState/BuildQuoteScreenState: done · current · todo ·
+        /// wacht · warning · error · uit.</summary>
+        private static GlV2StepsVm DetailSteps(string id, string[] labels, string[] states, string[] subs)
+        {
+            static GlV2StepState Map(string s) => s switch
+            {
+                "done" => GlV2StepState.Done,
+                "current" => GlV2StepState.Current,
+                "wacht" => GlV2StepState.Wacht,
+                "warning" => GlV2StepState.Warning,
+                "error" => GlV2StepState.Error,
+                "uit" => GlV2StepState.Uit,
+                _ => GlV2StepState.Todo,
+            };
+            var current = Array.FindIndex(states, s => s is "current" or "wacht" or "error" or "warning");
+            if (current < 0) current = Math.Max(0, Array.FindLastIndex(states, s => s == "done"));
+            return new GlV2StepsVm
+            {
+                Id = id,
+                Variant = GlV2StepsVariant.Lijn,
+                Size = GlV2StepsSize.Sm,
+                Clickable = false,
+                Current = current,
+                Steps = labels.Select((label, i) => new GlV2StepItemVm { Label = label, State = Map(states[i]), Sub = subs[i] }).ToList(),
+            };
+        }
+
         /// <summary>De offerte aan de klant (stap 1): concept → verzonden per mail → omgezet naar een
         /// wijzigingsopdracht. Zelfde scherm als de WO, zonder facturatieplan en ondertekening; na verzenden
         /// ligt ze vast (terug bewerken kan via "Aanpassen"), na omzetten is ze enkel nog de bron.</summary>
@@ -317,17 +345,9 @@ namespace CPMCore.Controllers
 
             var labels = new[] { "Offerte", "Opgemaakt", "Verzonden", "Ondertekend", "Factureerbaar", "Gefactureerd", "Betaald" };
             var firstSub = converted ? "omgezet" : sent ? $"verzonden {vm.DateSendToClient:dd/MM}" : "concept";
-            vm.Stappenplan = new GlV2StappenplanVm
-            {
-                Size = "sm",
-                AriaLabel = "Verloop van de offerte",
-                Steps = labels.Select((label, i) => new GlV2StapVm
-                {
-                    Label = label,
-                    State = i == 0 ? (converted ? "done" : expired ? "warning" : "current") : "todo",
-                    Sub = i == 0 ? firstSub : null,
-                }).ToList(),
-            };
+            vm.Stappenplan = DetailSteps("qo-steps", labels,
+                labels.Select((_, i) => i == 0 ? (converted ? "done" : expired ? "warning" : "current") : "todo").ToArray(),
+                labels.Select((_, i) => i == 0 ? firstSub : null).ToArray());
             vm.StepLabel = "Stap 1 van 7";
 
             foreach (var r in recipients)
@@ -468,12 +488,7 @@ namespace CPMCore.Controllers
                 null,
             };
             var labels = new[] { "Offerte", "Opgemaakt", "Verzonden", "Ondertekend", "Factureerbaar", "Gefactureerd", "Betaald" };
-            vm.Stappenplan = new GlV2StappenplanVm
-            {
-                Size = "sm",
-                AriaLabel = "Verloop van de wijzigingsopdracht",
-                Steps = labels.Select((label, i) => new GlV2StapVm { Label = label, State = states[i], Sub = subs[i] }).ToList(),
-            };
+            vm.Stappenplan = DetailSteps("co-steps", labels, states, subs);
             vm.StepLabel = vm.Phase switch
             {
                 "betaald" => "Stap 7 · afgerond",

@@ -1,0 +1,195 @@
+@model CPMCore.Models.GlV2.GlV2StepsVm
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Stappenplan (design-handoff punt 27, "Stappenplan als één component — de stappenbalken
+    uit 20d, 22d en 22h, en de budgetflow"), project-wijd herbruikbaar zoals Meldingskaders (punt 25).
+    Render via @await Html.PartialAsync("GlV2/_Steps", new GlV2StepsVm { ... }); zie DESIGN.md
+    "Stappenplan" voor de volledige uitleg per variant/status (27a–27h) en CPMCore.Models.GlV2.
+    GlV2StepsVm/GlV2StepsResolver voor het contract. Alle afleiding (status, cijfer/vinkje, badge,
+    klikbaarheid) gebeurt in GlV2StepsResolver — deze partial rendert enkel wat die teruggeeft.
+
+    Interactie: een stap met Href is een gewone <a> (CPMCore is een MVC-app zonder client-side
+    routing — "naar een stap springen" is hier gewoon navigeren). Een klikbare stap zonder Href
+    rendert als <button data-gl-v2-steps-step> en vuurt het "gl-v2-steps:step"-event af
+    (gl-v2-shell.js) voor een toekomstige in-paginawizard; niet-klikbare/vergrendelde stappen
+    renderen als <span aria-disabled>. De cirkel/vinkje is aria-hidden — de lijst-/itemstructuur
+    plus het zichtbare label dragen de betekenis, niet de decoratieve bol.
+*@
+@{
+    var r = GlV2StepsResolver.Resolve(Model);
+    var variantClass = Model.Variant switch
+    {
+        GlV2StepsVariant.Chips => "gl-v2-steps-chips",
+        GlV2StepsVariant.Balk => "gl-v2-steps-balk",
+        GlV2StepsVariant.Verticaal => "gl-v2-steps-verticaal",
+        _ => "gl-v2-steps-lijn"
+    };
+    var sizeClass = Model.Size == GlV2StepsSize.Sm ? " is-sm" : "";
+}
+@functions {
+    private static string OpenTag(GlV2StepsResolvedItem it, string cssClass)
+    {
+        var tip = System.Net.WebUtility.HtmlEncode(it.Tooltip);
+        var current = it.IsCurrent ? " aria-current=\"step\"" : "";
+        if (it.Href is not null)
+            return $"<a href=\"{System.Net.WebUtility.HtmlEncode(it.Href)}\" class=\"{cssClass}\" title=\"{tip}\"{current}>";
+        if (it.CanInteract)
+            return $"<button type=\"button\" class=\"{cssClass}\" data-gl-v2-steps-step=\"{it.Index}\" title=\"{tip}\"{current}>";
+        return $"<span class=\"{cssClass}\" title=\"{tip}\" aria-disabled=\"true\"{current}>";
+    }
+
+    private static string CloseTag(GlV2StepsResolvedItem it) => it.Href is not null ? "</a>" : it.CanInteract ? "</button>" : "</span>";
+
+    private static string ItemClasses(GlV2StepsResolvedItem it, string baseClass)
+    {
+        var cls = baseClass + " " + it.StateClass;
+        if (it.CurrentHasErrors) cls += " current-errors";
+        else if (it.CurrentHasWarnings) cls += " current-warnings";
+        return cls;
+    }
+
+    private static string SubToneClass(GlV2StepsResolvedItem it) => it.SubTone switch
+    {
+        "error" => "is-error",
+        "warning" => "is-warning",
+        _ => ""
+    };
+}
+<div class="gl-v2-steps @variantClass@sizeClass" id="@Model.Id">
+@if (Model.Variant == GlV2StepsVariant.Balk)
+{
+    @if (Model.ShowBalkHead)
+    {
+        <div class="gl-v2-steps-balk-head">
+            @if (r.HasStatus)
+            {
+                var toneClass = Model.StatusTone switch { GlV2StepsStatusTone.Wacht => "is-wacht", GlV2StepsStatusTone.Error => "is-error", _ => "is-ok" };
+                <span class="gl-v2-steps-status-pill @toneClass">@Model.StatusLabel</span>
+            }
+            <span class="gl-v2-steps-balk-text">@r.BalkText</span>
+            @if (r.HasIssues)
+            {
+                <span class="gl-v2-steps-balk-issues @(r.IssuesAreErrors ? "is-error" : "is-warning")"><span class="gl-v2-steps-balk-issues-dot" aria-hidden="true"></span>@r.IssueText</span>
+            }
+        </div>
+    }
+    <div class="gl-v2-steps-track" title="@r.BalkText">
+        @foreach (var it in r.Items)
+        {
+            @Html.Raw(OpenTag(it, "gl-v2-steps-seg " + it.StateClass + (it.CurrentHasErrors ? " current-errors" : it.CurrentHasWarnings ? " current-warnings" : "")))
+            @Html.Raw(CloseTag(it))
+        }
+    </div>
+}
+else if (Model.Variant == GlV2StepsVariant.Chips)
+{
+    <ol class="gl-v2-steps-list">
+        @foreach (var it in r.Items)
+        {
+            <li class="gl-v2-steps-chip-wrap">
+                @Html.Raw(OpenTag(it, ItemClasses(it, "gl-v2-steps-chip")))
+                <span class="@ItemClasses(it, "gl-v2-steps-dot")" aria-hidden="true">
+                    @if (it.IsCheck)
+                    {
+                        <svg viewBox="0 0 16 16" class="gl-v2-steps-check"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>
+                    }
+                    else if (!string.IsNullOrEmpty(it.Glyph))
+                    {
+                        <span class="gl-v2-steps-glyph">@it.Glyph</span>
+                    }
+                </span>
+                <span class="gl-v2-steps-label">@it.Label</span>
+                @if (it.HasBadge)
+                {
+                    <span class="gl-v2-steps-badge-round @(it.BadgeIsError ? "is-error" : "")">@it.BadgeCount</span>
+                }
+                @Html.Raw(CloseTag(it))
+                @if (it.HasConnector)
+                {
+                    <span class="gl-v2-steps-chip-connector @(it.ConnectorDone ? "is-done" : "")" aria-hidden="true"></span>
+                }
+            </li>
+        }
+    </ol>
+}
+else if (Model.Variant == GlV2StepsVariant.Verticaal)
+{
+    <ol class="gl-v2-steps-list">
+        @foreach (var it in r.Items)
+        {
+            <li>
+                @Html.Raw(OpenTag(it, ItemClasses(it, "gl-v2-steps-vitem")))
+                <span class="gl-v2-steps-vrail" aria-hidden="true">
+                    <span class="@ItemClasses(it, "gl-v2-steps-dot")">
+                        @if (it.IsCheck)
+                        {
+                            <svg viewBox="0 0 16 16" class="gl-v2-steps-check"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>
+                        }
+                        else if (!string.IsNullOrEmpty(it.Glyph))
+                        {
+                            <span class="gl-v2-steps-glyph">@it.Glyph</span>
+                        }
+                    </span>
+                    @if (it.HasConnector)
+                    {
+                        <span class="gl-v2-steps-vline @(it.ConnectorDone ? "is-done" : "")"></span>
+                    }
+                </span>
+                <span class="gl-v2-steps-vbody">
+                    <span class="gl-v2-steps-vlabel-row">
+                        <span class="gl-v2-steps-label">@it.Label</span>
+                        @if (it.HasBadge)
+                        {
+                            <span class="gl-v2-steps-badge-soft @(it.BadgeIsError ? "is-error" : "")">@it.BadgeText</span>
+                        }
+                    </span>
+                    @if (it.HasSub)
+                    {
+                        <span class="gl-v2-steps-sub @SubToneClass(it)">@it.Sub</span>
+                    }
+                </span>
+                @Html.Raw(CloseTag(it))
+            </li>
+        }
+    </ol>
+}
+else
+{
+    <ol class="gl-v2-steps-list">
+        @foreach (var it in r.Items)
+        {
+            <li class="gl-v2-steps-item-wrap">
+                @Html.Raw(OpenTag(it, ItemClasses(it, "gl-v2-steps-item")))
+                <span class="gl-v2-steps-row">
+                    <span class="@ItemClasses(it, "gl-v2-steps-dot")" aria-hidden="true">
+                        @if (it.IsCheck)
+                        {
+                            <svg viewBox="0 0 16 16" class="gl-v2-steps-check"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg>
+                        }
+                        else if (!string.IsNullOrEmpty(it.Glyph))
+                        {
+                            <span class="gl-v2-steps-glyph">@it.Glyph</span>
+                        }
+                    </span>
+                    @if (it.HasConnector)
+                    {
+                        <span class="gl-v2-steps-connector @(it.ConnectorDone ? "is-done" : "")" aria-hidden="true"></span>
+                    }
+                </span>
+                <span class="gl-v2-steps-label-row">
+                    <span class="gl-v2-steps-label">@it.Label</span>
+                    @if (it.HasBadge)
+                    {
+                        <span class="gl-v2-steps-badge-round @(it.BadgeIsError ? "is-error" : "")" title="@it.BadgeText">@it.BadgeCount</span>
+                    }
+                </span>
+                @if (it.HasSub)
+                {
+                    <span class="gl-v2-steps-sub @SubToneClass(it)">@it.Sub</span>
+                }
+                @Html.Raw(CloseTag(it))
+            </li>
+        }
+    </ol>
+}
+</div>

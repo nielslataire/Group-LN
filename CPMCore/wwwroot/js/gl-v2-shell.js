@@ -16,6 +16,7 @@
     initClickableRows();
     initGlV2Select();
     initGlV2DatePicker();
+    initGlV2Steps();
 
     function initRailFlyouts() {
         var closeTimer = null;
@@ -548,6 +549,24 @@
             if (!row) return;
             if (e.target.closest("a, button, input, select, textarea, label")) return;
             window.location.href = row.getAttribute("data-detail-url");
+        });
+    }
+
+    // Stappenplan (design-handoff punt 27, zie DESIGN.md "Stappenplan"): een klikbare stap zonder
+    // Href rendert als <button data-gl-v2-steps-step> (Views/Shared/GlV2/_Steps.cshtml) — hier enkel
+    // een afgevaardigde listener die dat doorgeeft als een CustomEvent op de wrapper
+    // (#id van GlV2StepsVm), nooit zelf navigerend. Een toekomstige in-paginawizard (geen losse
+    // pagina per stap) luistert daarop, bv. document.getElementById('mijn-stappen')
+    // .addEventListener('gl-v2-steps:step', function (e) { ... e.detail.index ... }). Vandaag heeft
+    // nog geen enkele pagina dat nodig (elke stap is ofwel louter weergave, ofwel een echte Href) —
+    // dit is enkel het aansluitpunt, klaar om te gebruiken.
+    function initGlV2Steps() {
+        document.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-gl-v2-steps-step]");
+            if (!btn) return;
+            var wrap = btn.closest(".gl-v2-steps");
+            var index = parseInt(btn.getAttribute("data-gl-v2-steps-step"), 10);
+            if (wrap) wrap.dispatchEvent(new CustomEvent("gl-v2-steps:step", { bubbles: true, detail: { index: index, id: wrap.id } }));
         });
     }
 

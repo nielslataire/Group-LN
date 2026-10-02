@@ -83,7 +83,7 @@ namespace CPMCore.Controllers
                     SupplierName = companyName,
                     Amount = amount,
                     Status = status,
-                    DotPosition = DotPositionFor(status),
+                    Steps = ChangeOrderStepsBuilder.BuildRow(status, co.Id),
                     SigningCaseId = signingCase?.CaseId,
                     CanRemind = status == ChangeOrderStatus.Verzonden && signingCase?.Status == (int)SigningCaseStatus.Open,
                     ExpirationDate = co.ExpirationDate,
@@ -149,7 +149,7 @@ namespace CPMCore.Controllers
             }
 
             vm.Quotes = vm.Quotes.OrderByDescending(r => r.Status == ChangeOrderStatus.Offerte).ThenBy(r => r.ExpirationDate).ToList();
-            vm.Orders = vm.Orders.OrderBy(r => r.DotPosition).ThenByDescending(r => r.Id).ToList();
+            vm.Orders = vm.Orders.OrderBy(r => ChangeOrderStepsBuilder.RowPosition(r.Status)).ThenByDescending(r => r.Id).ToList();
 
             var all = vm.Quotes.Concat(vm.Orders).ToList();
             vm.Funnel = new List<ChangeOrderFunnelStepV2>
@@ -164,17 +164,6 @@ namespace CPMCore.Controllers
 
             return View(vm);
         }
-
-        private static int DotPositionFor(ChangeOrderStatus status) => status switch
-        {
-            ChangeOrderStatus.Offerte or ChangeOrderStatus.Verlopen => 0,
-            ChangeOrderStatus.Opgemaakt => 1,
-            ChangeOrderStatus.Verzonden or ChangeOrderStatus.Geweigerd or ChangeOrderStatus.Geannuleerd => 2,
-            ChangeOrderStatus.Ondertekend or ChangeOrderStatus.Factureerbaar => 3,
-            ChangeOrderStatus.Gefactureerd => 4,
-            ChangeOrderStatus.Betaald => 5,
-            _ => 0,
-        };
 
         private string? ResolveUnitNameForAccount(int clientAccountId, int projectId)
         {

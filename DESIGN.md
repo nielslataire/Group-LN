@@ -91,6 +91,17 @@ components:
 
 # Design System: CPM — Group LN (gl-v2)
 
+> **Vóór je nieuwe pagina-CSS schrijft: grep dit bestand eerst op het zelfstandig naamwoord.**
+> "Ik gebruik DESIGN.md" beschermt enkel tegen een fout die je actief opzoekt — niet tegen het
+> opnieuw uitvinden van iets dat hier al staat. Een bespoke, zelfgebouwde oplossing kan werken en tóch
+> verkeerd zijn: `ChangeOrderDetailV2.cshtml` kreeg ooit een eigen `.gl-v2-co-actionbar`
+> (`position:sticky;bottom:0`) die in de meeste gevallen prima oogde, maar bij een korte kaart niet
+> onderaan bleef hangen — exact het probleem dat `.gl-v2-form-actionbar` (zie "Actiebalk voor
+> formulieren" hieronder) al voor de hele app had opgelost, mét de reden waarom in de tekst erbij.
+> Dezelfde logica geldt voor elk ander projectwijd onderdeel: **modal**, **tabbar**, **badge**,
+> **melding/notice**, **stappenplan**, **select/dropdown**, **KPI-kaart**, **menu/⋯-paneel**, … —
+> zoek het woord op vóórdat je iets nieuws tekent, ook als je eigen versie "gewoon lijkt te werken."
+
 ## Overview
 
 **Creative North Star: "The Elevated Rail"**
@@ -5877,24 +5888,7 @@ Playwright (Chromium, iPhone 390×844, touch) tegen de ECHTE views (gerenderd me
 login) en de echte css/js: Klanten/IndexV2, Instellingen/IndexV2, Klanten/CreateV2. Gesimuleerd toetsenbord via
 een nep-`visualViewport`. Niet automatisch te testen: het echte iOS-toetsenbord (zie opleveringsnotitie).
 
-## Stappenplan (design-handoff punt 27, `design-handoff/Stappenplan.dc.html`) — project-wijd component
-
-Toont waar iets staat in een vast verloop (offerte → opgemaakt → … → betaald). Een statusweergave, geen
-navigatie: niets is klikbaar. Eerste gebruik: de wijzigingsopdracht (punt 28) en Offerte inlezen (20c).
-
-- **Partial**: `@await Html.PartialAsync("GlV2/_Stappenplan", new GlV2StappenplanVm { Size = "sm", Steps = … })`
-  (`CPMCore/Models/GlV2/GlV2StappenplanVm.cs`). CSS: `.gl-v2-steps` in `gl-v2-shell.css`, geen JS.
-- **Variant**: voorlopig enkel "lijn" (bolletjes met verbindingslijn). De varianten chips/balk/verticaal uit
-  het ontwerp bouwen we pas wanneer een scherm ze nodig heeft — dan als modifier op hetzelfde component,
-  niet als pagina-eigen kopie.
-- **Maat**: `md` (bol 24px, standaard) of `sm` (bol 18px, `.is-sm`) voor boven een detailscherm.
-- **Toestand per stap** (`GlV2StapVm.State` → klasse `.is-…`): `done` (groen + vinkje) · `current` (groen +
-  ring, label vet) · `todo` (open bol met volgnummer) · `wacht` (goud + ring: wacht op iemand anders) ·
-  `warning` (donkergoud, "!") · `error` (rood, "!") · `uit` (gestippeld, "–", label doorstreept: deze stap
-  valt weg). Kleur is nooit het enige signaal: elke toestand heeft ook een eigen teken of lettergewicht.
-- **Sub** (`GlV2StapVm.Sub`): één korte regel onder het label (datum, referentie, "1 van 2").
-- De lijn NA een stap kleurt groen zodra die stap `done` is. Smal scherm: de rij scrollt horizontaal
-  (min-width per stap) in plaats van de labels te pletten.
+## Wijzigingsopdracht — scherm per stap (design-handoff punt 28/29) en badge `.is-solid`
 
 ### Badge `.is-solid`
 `.gl-v2-badge.is-solid` (vol groen, witte tekst) is de eindtoestand van een verloop ("BETAALD", design-handoff
@@ -5934,3 +5928,145 @@ aangeleverde logo van 2362x2362 px, bijgesneden op het beeldmerk, op effen wit),
   geen eigen `.gl-v2-topbar-back` heeft en niet op het dashboard: `history.back()`, anders `/`.
 - Desktop: met/zonder PWA-bestanden byte-voor-byte dezelfde screenshots op 1440x900 (3 pagina's).
 - Niet gewijzigd: pull-to-refresh/`overscroll-behavior` (overleg nodig), sessieduur, auth.
+## Stappenplan (design-handoff punt 27, `design-handoff/CRM Stappenplan.dc.html` + `Stappenplan.dc.html`) — project-wijd component
+
+27: *"Stappenplan als één component — de stappenbalken uit 20d, 22d en 22h, en de budgetflow. Vier
+weergaven en zeven statussen, met fouten en aandachtspunten per stap."* Zelfde discipline als
+Meldingskaders (punt 25) hierboven: één gedeeld component in `gl-v2-shell.css` (geen aparte
+`<link>`), een herbruikbare partial, en hier de volledige contract-/variant-uitleg zodat een
+volgende gl-v2-pagina het meteen kan gebruiken in plaats van opnieuw een eigen stappenbalk te
+verzinnen (zoals Projecten/DetailContractsV2 se tabbar of de losse voortgangsbalken elders al deden,
+vóór dit component bestond).
+
+**Bestanden**: `Views/Shared/GlV2/_Steps.cshtml` (de partial), `CPMCore/Models/GlV2/GlV2StepsVm.cs`
+(model + enums), `CPMCore/Models/GlV2/GlV2StepsResolver.cs` (de afleiding — status/cijfer/badge/
+klikbaarheid per stap, letterlijke overname van de referentiecomponent se `renderVals()`), CSS in
+`gl-v2-shell.css` (sectie "Stappenplan"), JS-aansluitpunt in `gl-v2-shell.js` (`initGlV2Steps`).
+Render via:
+```razor
+@await Html.PartialAsync("GlV2/_Steps", new GlV2StepsVm {
+    Id = "wo-verloop",
+    Variant = GlV2StepsVariant.Lijn,
+    Current = 3,
+    Steps = new() {
+        new() { Label = "Offerte", Sub = "02/09 · Niels" },
+        new() { Label = "Opgemaakt", Sub = "04/09 · Niels" },
+        new() { Label = "Verzonden", Sub = "05/09 · naar klant" },
+        new() { Label = "Ondertekenen", State = GlV2StepState.Wacht, Sub = "1 van 2 getekend" },
+        new() { Label = "Uitvoering" }, new() { Label = "Gefactureerd" }, new() { Label = "Betaald" },
+    },
+})
+```
+
+### Contract (27f "Statussen en opties")
+| Eigenschap | Betekenis |
+|---|---|
+| `Steps` | Lijst `GlV2StepItemVm { Label, State?, Errors?, Warnings?, Sub?, Href? }`. Zonder `State` (= `Auto`) wordt de status afgeleid uit `Current`. |
+| `State` | `Auto` · `Done` · `Current` · `Todo` · `Wacht` · `Warning` · `Error` · `Uit` — zie "Statussen" hieronder. |
+| `Errors` / `Warnings` | Aantal op een stap. Toont een badge en kleurt de stap (enkel wanneer `State` op `Auto` staat én de stap niet de huidige is — zie hieronder). |
+| `Current` | Index (vanaf 0) van de huidige stap. |
+| `Variant` | `Lijn` (27c) · `Chips` (27b) · `Balk` (27d) · `Verticaal` (27e/27g). |
+| `Size` | `Md` (desktop, standaard) · `Sm` (in kaarten/zijpanelen/tablet). |
+| `Clickable` | Uit = louter weergave, geen enkele stap is een link of knop (27c se status van een wijzigingsopdracht: tonen, niet navigeren). |
+| `GlV2StepItemVm.Href` | Doel-URL voor die stap — CPMCore is een MVC-app zonder client-side routing, dus "naar een stap springen" is hier gewoon navigeren. |
+| `EmitStepEvents` | Laat een stap zonder `Href` toch als knop renderen die het `gl-v2-steps:step`-event afvuurt (zie "Klikken" hieronder) — enkel aanzetten als de pagina er ook naar luistert. |
+| `LockAhead` | Stappen verder dan de eerstvolgende open stap zijn niet klikbaar, ook met een `Href`. |
+| `StatusLabel` / `StatusTone` | Enkel bij `Balk`: statuspil links van de balk (`Ok`/`Wacht`/`Error`), bv. "VERZONDEN"/"CONCEPT"/"DEFINITIEF" — los van de status van de individuele stappen. |
+| `Numbers` | Cijfers in de bollen tonen (standaard) of enkel de statusvorm (vinkje/!/–). |
+| `ShowSub` | Subtekst onder elke stap tonen (27c/27e) of weglaten voor een compactere rij. |
+
+### Statussen (27f)
+`Done` (groene bol, vinkje), `Current` (groene bol, vetgedrukt label, lichte ring), `Todo` (witte bol
+met rand, gedempt label), `Wacht` (goudkleurige bol — "in afwachting", bv. "1 van 2 getekend"),
+`Warning` (okerkleurige bol, "!", een aandachtspunt dat de stap niet blokkeert), `Error` (rode bol,
+"!", telt mee in 27d se "N stappen met fouten"), `Uit` (gestippelde bol, "–", doorstreept label — niet
+van toepassing voor dit traject, bv. een geweigerde wijzigingsopdracht waarvan "Uitvoering"/
+"Gefactureerd"/"Betaald" nooit meer aan de beurt komen).
+
+- **Elke status heeft een eigen vorm** (vinkje, cijfer, "!", "–"), niet enkel een kleur — zelfde
+  discipline als Meldingskaders se iconen.
+- **Fout staat boven alles.** Draagt de HUIDIGE stap zelf `Errors`, dan kleurt ze vol rood —
+  ongeacht haar onderliggende status, zelfs `Wacht`/`Warning`. Draagt ze enkel `Warnings`, dan komt
+  er enkel een extra oker ring bij; de kleur zelf verandert niet. Een niet-huidige stap met
+  `Errors`/`Warnings` (en `State = Auto`) wordt automatisch `Error`/`Warning`.
+- **Klikken kan altijd terug** (een afgewerkte stap blijft een link), **vooruit enkel** als
+  `LockAhead` uit staat, of naar de eerstvolgende nog niet afgewerkte stap.
+- Op dossierniveau (27d se "2 stappen met fouten") telt een stap met zowel fouten als
+  aandachtspunten enkel als fout — geen dubbeltelling.
+
+### Lijn (27c) — horizontaal, met datum/wie onder elke stap
+Het verloop van een wijzigingsopdracht of ander traject: bol+verbindingslijn op één rij, label
+(+badge) en subtekst eronder. `ShowSub = false` geeft een compactere rij zonder de datum/wie-regel.
+```razor
+new GlV2StepsVm { Variant = GlV2StepsVariant.Lijn, Current = 3, Clickable = false, Steps = new() {
+    new() { Label = "Offerte", Sub = "02/09 · Niels" },
+    new() { Label = "Ondertekenen", State = GlV2StepState.Wacht, Sub = "1 van 2 getekend" },
+    new() { Label = "Uitvoering" },
+} }
+```
+Een geweigerde ondertekening (27c se tweede voorbeeld) zet die ene stap op `Error` met de reden als
+`Sub`, en de erna volgende stappen op `Uit` — ze komen nooit meer aan de beurt in dit dossier.
+
+### Chips (27b) — compacte pillen in een kopbalk
+Voor een budgetflow of ander traject met veel stappen in weinig hoogte: ronde bol + label + badge in
+een pil, korte lijntjes ertussen. Geen subtekst (de pil is daar te smal voor).
+```razor
+new GlV2StepsVm { Variant = GlV2StepsVariant.Chips, Current = 4, Steps = budgetStappen }
+```
+
+### Balk (27d) — smalle statusbalk voor gsm of een kaart
+Te weinig breedte voor bollen-met-labels: een optionele statuspil + "Stap 4 van 9 · Dak & Afbraak" +
+een foutenindicator, met dunne segmenten eronder in plaats van cirkels.
+```razor
+new GlV2StepsVm {
+    Variant = GlV2StepsVariant.Balk, Current = 3, StatusLabel = "VERZONDEN", StatusTone = GlV2StepsStatusTone.Wacht,
+    Steps = woStappen,
+}
+```
+
+### Verticaal (27e/27g) — zijpaneel of tablet, met uitleg per stap
+Bol+verbindingslijn links, label/badge/subtekst rechts — voor een zijpaneel (bv. naast een
+budgetformulier) of een tablet-indeling (zie "Een wizard op tablet" hieronder). De badge toont hier
+de VOLLEDIGE tekst ("2 fouten"), niet enkel het aantal: op deze breedte is er ruimte genoeg.
+```razor
+new GlV2StepsVm { Variant = GlV2StepsVariant.Verticaal, Size = GlV2StepsSize.Sm, Current = 4, Steps = budgetStappenMetUitleg }
+```
+
+### Klikken — een link wanneer mogelijk, nooit een knop die niets doet
+CPMCore is een server-gerenderde MVC-app: "naar stap 3 springen" is hier gewoon navigeren naar een
+URL, geen client-side state-wissel. Daarom is `GlV2StepItemVm.Href` de normale manier om een stap
+klikbaar te maken. Een stap zonder `Href` rendert enkel als knop (i.p.v. louter weergave) wanneer de
+pagina dat expliciet aanvraagt via `GlV2StepsVm.EmitStepEvents` — anders zou een pagina die per
+ongeluk geen `Href` meegaf een stap krijgen die er klikbaar uitziet maar niets doet. Zo een knop
+draagt `data-gl-v2-steps-step="{index}"` en vuurt bij een klik het `gl-v2-steps:step`-event af op de
+`.gl-v2-steps`-wrapper (`gl-v2-shell.js`, `initGlV2Steps`) — een toekomstige in-paginawizard
+luistert daarop:
+```js
+document.getElementById("wo-verloop").addEventListener("gl-v2-steps:step", function (e) {
+    // e.detail.index
+});
+```
+Vandaag heeft geen enkele pagina dit nodig (elke stap is ofwel louter weergave, ofwel een echte
+`Href`) — dit is enkel het aansluitpunt, al klaar om te gebruiken. Een vergrendelde stap (`Uit`, of
+voorbij `LockAhead`) rendert als `<span aria-disabled="true">`, nooit als dode link/knop. De
+decoratieve bol is `aria-hidden` — de zichtbare labeltekst en `aria-current="step"` op de huidige
+stap dragen de betekenis voor schermlezers.
+
+### 27a — de "Interactief"-demo is gereedschap van het mockup, geen eigenschap van het component
+27a toont het stappenplan met knoppen om LIVE van weergave te wisselen en validatie/`lockAhead`
+aan/uit te zetten — dat is het ontwerphulpmiddel se eigen voorbeeldscherm om de vier weergaven en
+zeven statussen in één oogopslag te vergelijken, niet een functie die het geleverde component zelf
+moet hebben. Een echte gl-v2-pagina kiest zijn `Variant`/opties één keer via `GlV2StepsVm`, zoals
+elke andere gl-v2-component (vergelijk Meldingskaders, dat ook geen live type-wisselaar heeft).
+
+### Een wizard op tablet (27g/27h) — samenstelpatroon, nog geen gebouwde pagina
+27g (tablet liggend) en 27h (tablet staand) tonen hoe een VOLLEDIGE budgetwizard-pagina dit
+component zou gebruiken: 27g als een vast zijpaneel (`Verticaal`, `Size = Sm`) naast de inhoud, 27h
+— te smal voor een vast paneel — als een `Balk` bovenaan die bij een tik een schuifpaneel
+(`Verticaal`) opent. Dit zijn **samenstelpatronen voor een toekomstige gl-v2-budgetpagina**, geen
+geleverde schermen in deze ronde: Budget (`BudgetParams`/`BudgetVerkoop`/`BudgetResultaat`/
+`BudgetVergelijken`) is nog volledig legacy, dus er is vandaag geen gl-v2-wizardpagina om dit
+component in te zetten. Zodra Budget aan de beurt is in de gl-v2-migratie, is dit de aanbevolen
+opbouw: `Verticaal` als vast paneel ≥1024px, dezelfde `Verticaal`-lijst in een schuifpaneel
+(`position:absolute` overlay, zelfde recept als de project-inner-menu-sheet op gsm) onder die
+breedte, geopend door op een `Balk`-kopbalk te tikken.

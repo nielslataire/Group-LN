@@ -84,7 +84,7 @@ public class ChangeOrderDetailV2Vm
     public string StatusPillTone { get; set; } = "is-neutral";
     public bool IsMinwerk { get; set; }
     public string StepLabel { get; set; } = "";
-    public CPMCore.Models.GlV2.GlV2StappenplanVm Stappenplan { get; set; } = new();
+    public CPMCore.Models.GlV2.GlV2StepsVm Stappenplan { get; set; } = new();
     /// <summary>info | success | warning | danger (de .gl-v2-notice-types).</summary>
     public string NoticeType { get; set; } = "info";
     public string NoticeTitle { get; set; } = "";

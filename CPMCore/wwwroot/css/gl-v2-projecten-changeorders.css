@@ -62,11 +62,10 @@
 .gl-v2-co2-tabular { font-variant-numeric: tabular-nums; }
 .is-negative { color: var(--gl-v2-warning); }
 
-/* Verloopstrip (6 bolletjes, zelfde semantiek als de badge-status maar compact) */
-.gl-v2-co2-dots { display: inline-flex; align-items: center; gap: 4px; }
-.gl-v2-co2-dot { width: 6px; height: 6px; border-radius: 3px; background: var(--gl-v2-hairline); }
-.gl-v2-co2-dot.is-done { background: var(--gl-v2-primary); }
-.gl-v2-co2-dot.is-current { width: 14px; background: var(--gl-v2-gold); }
+/* Verloopstrip — het Stappenplan-component (design-handoff punt 27, DESIGN.md "Stappenplan"), Balk-
+   variant zonder kopregel (ChangeOrderStepsBuilder.BuildRow: ShowBalkHead = false), vaste breedte zodat
+   de 6 segmenten een compacte strip blijven i.p.v. de volle kolombreedte op te vullen. */
+.gl-v2-co2-row .gl-v2-steps-balk { width: 90px; }
 
 .gl-v2-co2-action { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; white-space: nowrap; }
 .gl-v2-co2-action:hover { color: var(--gl-v2-primary-deep); text-decoration: underline; }

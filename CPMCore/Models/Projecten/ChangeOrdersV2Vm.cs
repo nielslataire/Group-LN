@@ -59,10 +59,9 @@ public class ChangeOrderRowV2
     public bool IsOpen { get; set; }
     /// <summary>Offerte: de WO die eruit gemaakt is (dan is ze "Omgezet").</summary>
     public int? ConvertedToId { get; set; }
-    /// <summary>0..5 — positie in de 6-staps verloopstrip (Offerte/Opgemaakt/Verzonden/Ondertekend/
-    /// Gefactureerd/Betaald). Factureerbaar telt visueel als "Ondertekend" — de wireframe se dot-strip
-    /// en funnelbalk hebben geen aparte stap daarvoor.</summary>
-    public int DotPosition { get; set; }
+    /// <summary>De compacte "Verloop"-strip (Stappenplan, variant Balk) — gebouwd door
+    /// ChangeOrderStepsBuilder.BuildRow.</summary>
+    public CPMCore.Models.GlV2.GlV2StepsVm Steps { get; set; } = new();
     public bool IsRejectedOrCancelled => Status == ChangeOrderStatus.Geweigerd || Status == ChangeOrderStatus.Geannuleerd;
     public bool CanRemind { get; set; }
     public int? SigningCaseId { get; set; }
