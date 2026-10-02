@@ -30,6 +30,20 @@ public static class ZimmoSearchUrlBuilder
 {
     private const string BaseUrl = "https://www.zimmo.be/nl/zoeken/";
 
+    /// <summary>
+    /// Overzichtspagina "nieuwbouwprojecten te koop" van één gemeente, zoals Zimmo ze zelf in zijn
+    /// sitemap aanbiedt: https://www.zimmo.be/nl/brugge-8000/te-koop/nieuwbouwproject/
+    /// Dit is de toegelaten overzichtspagina. De zoek-URL (<see cref="Build"/>, "/nl/zoeken/?search=…")
+    /// en de "…/filter"-paginatie staan in robots.txt als Disallow en horen niet gecrawld te worden.
+    /// Paginatie van deze pagina loopt via "?page=2" (toegelaten).
+    /// </summary>
+    /// <param name="citySlug">Slug zoals Zimmo hem schrijft, bv. "brugge", "erpe-mere", "de panne" (met spatie).</param>
+    public static string BuildProjectOverviewUrl(string citySlug, string postalCode)
+    {
+        var slug = Uri.EscapeDataString((citySlug ?? "").Trim().ToLowerInvariant());
+        return $"https://www.zimmo.be/nl/{slug}-{postalCode.Trim()}/te-koop/nieuwbouwproject/";
+    }
+
     private static readonly string[] DefaultStatuses    = ["FOR_SALE", "TAKE_OVER"];
     private static readonly string[] DefaultCategories  = ["HOUSE", "APARTMENT"];
 

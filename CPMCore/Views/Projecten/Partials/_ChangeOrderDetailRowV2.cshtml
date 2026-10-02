@@ -12,7 +12,7 @@
     var vat = Model.VatPercentage > 0 ? Model.VatPercentage : vatKlant;
     var prefix = $"rows[{index}]";
 }
-<tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "")" data-index="@index">
+<tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "") @(Model.PriceLocked ? "is-price-locked" : "")" data-index="@index">
     <td class="gl-v2-co-handle-cell">
         @* Sleepgreep (28a): slepen met muis/vinger, of focus + pijl omhoog/omlaag. De volgorde van de rijen
            in het formulier is de volgorde die bewaard wordt (ChangeOrderDetail.SortOrder, migratie 067). *@
@@ -27,6 +27,10 @@
             {
                 <span class="gl-v2-co-photo-flag" title="Foto uit de offerte hangt aan deze regel"><i class="ph ph-image" aria-hidden="true"></i>foto</span>
             }
+            @if (Model.PriceLocked)
+            {
+                <span class="gl-v2-co-photo-flag" title="Prijs, commissie en btw komen uit de offerte en liggen vast — aantal en omschrijving kan je nog aanpassen"><i class="ph ph-lock-simple" aria-hidden="true"></i>prijs uit offerte</span>
+            }
             @if (Model.NeedsReview)
             {
                 <button type="button" class="gl-v2-co-review-flag js-co-confirm-row" title="Onzekere waarde uit de offerte — klik om te bevestigen dat de regel klopt"><i class="ph ph-warning" aria-hidden="true"></i>controleer</button>
@@ -34,7 +38,7 @@
         </span>
     </td>
     <td class="is-center">
-        <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-mtype" name="@(prefix).measurementType" @(isLocked ? "disabled" : "")>
+        <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-mtype" name="@(prefix).measurementType" @(isLocked || Model.PriceLocked ? "disabled" : "")>
             @foreach (MeasurementType mt in Enum.GetValues(typeof(MeasurementType)))
             {
                 <option value="@((int)mt)" selected="@((int)mt == Model.MeasurementType)">@mt.GetDisplayName()</option>
@@ -42,7 +46,7 @@
         </select></div>
     </td>
     <td class="is-center">
-        <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-munit" name="@(prefix).measurementUnit" @(isLocked ? "disabled" : "")>
+        <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-munit" name="@(prefix).measurementUnit" @(isLocked || Model.PriceLocked ? "disabled" : "")>
             @foreach (MeasurementUnit mu in Enum.GetValues(typeof(MeasurementUnit)))
             {
                 <option value="@((int)mu)" selected="@((int)mu == Model.MeasurementUnit)">@mu.GetDisplayName()</option>
@@ -50,10 +54,10 @@
         </select></div>
     </td>
     <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="1" class="gl-v2-field-input js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></div></td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-price" name="@(prefix).price" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></div></td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></div></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-price" name="@(prefix).price" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
     <td class="is-right gl-v2-co-tabular js-co-priceklant">—</td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") /></div></td>
+    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
     <td class="is-right gl-v2-co-tabular js-co-total">—</td>
     <td class="is-right">
         <input type="hidden" name="@(prefix).needsReview" class="js-co-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />

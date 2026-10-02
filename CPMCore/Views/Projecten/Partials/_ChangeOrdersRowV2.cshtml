@@ -2,8 +2,9 @@
 @*
     Offertes & wijzigingen V2 (20b/29a) — één rij van de Offertes- of Wijzigingsopdrachten-tabel. De hele
     rij (op de actiekolom na) opent het scherm van haar stap: een offerte gaat naar 20c (QuoteIntakeV2),
-    een wijzigingsopdracht naar het scherm per stap (ChangeOrderDetailV2, 28). Actiekolom: een offerte
-    krijgt "Omzetten →" (21c-modal), een WO een "···"-menu (Openen · Kopie maken · PDF).
+    wijzigingsopdracht openen hetzelfde scherm (ChangeOrderDetailV2, 28). Actiekolom: een offerte krijgt
+    "Omzetten →" (21c-modal), een omgezette offerte linkt naar haar WO, een WO krijgt een "···"-menu
+    (Openen · Kopie maken · PDF).
 *@
 @using System.Globalization
 @{
@@ -11,14 +12,13 @@
     var canWrite = (bool)(ViewData["CanWrite2"] ?? false);
     var be = CultureInfo.GetCultureInfo("nl-BE");
     string Eur(decimal v) => (v < 0 ? "− € " : "€ ") + Math.Abs(v).ToString("N2", be);
-    var detailUrl = Model.IsQuote
-        ? Url.Action("QuoteIntakeV2", "Projecten", new { projectid = projectId, coid = Model.Id })
-        : Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = Model.Id });
+    // Offerte aan de klant en wijzigingsopdracht zijn hetzelfde scherm (ChangeOrderDetailV2).
+    var detailUrl = Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = Model.Id });
     var searchText = string.Join(" ", new[] { Model.Number, Model.ClientName, Model.UnitName, Model.Description, Model.SupplierName }.Where(s => !string.IsNullOrWhiteSpace(s))).ToLowerInvariant();
     var subParts = new[] { Model.SupplierName, Model.SourceReference, Model.SubText }.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
     var menuId = $"gl-v2-co2-rowmenu-{Model.Id}";
 }
-<tr class="gl-v2-co2-row" data-co2-type="@(Model.IsQuote ? "offerte" : "wo")" data-co2-status="@Model.Status" data-co2-search="@searchText" data-href="@detailUrl">
+<tr class="gl-v2-co2-row" data-co2-type="@(Model.IsQuote ? "offerte" : "wo")" data-co2-status="@Model.Status" data-co2-open="@(Model.IsOpen ? "true" : "false")" data-co2-search="@searchText" data-href="@detailUrl">
     <td class="gl-v2-co2-tabular gl-v2-co2-nr"><a href="@detailUrl">@Model.Number</a></td>
     <td class="gl-v2-co2-desc">
         <span class="gl-v2-co2-desc-title">@Model.Description</span>
@@ -48,9 +48,13 @@
     <td class="is-right gl-v2-co2-actions">
         @if (Model.IsQuote)
         {
-            @if (canWrite)
+            @if (canWrite && Model.ConvertedToId == null)
             {
                 <button type="button" class="gl-v2-co2-action js-co2-convert" data-co-id="@Model.Id">Omzetten →</button>
+            }
+            else if (Model.ConvertedToId.HasValue)
+            {
+                <a href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = Model.ConvertedToId })" class="gl-v2-co2-action">WO-@(Model.ConvertedToId.Value.ToString("000")) →</a>
             }
         }
         else

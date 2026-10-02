@@ -37,14 +37,16 @@ namespace CPMCore.Documents
 
         public override DocumentMetadata GetMetadata() => new DocumentMetadata
         {
-            Title = $"Wijzigingsopdracht {_m.Reference} - {_m.ProjectName}",
+            Title = $"{DocumentTitle} {_m.Reference} - {_m.ProjectName}",
             Author = "Group LN",
             Subject = _m.Description
         };
 
         protected override PageSize PageSize => PageSizes.A4.Portrait();
 
-        protected override string DocumentTitle => "Wijzigingsopdracht";
+        // Offerte aan de klant (ChangeOrder.IsQuote): zelfde document, andere titel en zonder akkoordblok —
+        // een offerte wordt niet ondertekend; het akkoord komt op de wijzigingsopdracht die eruit volgt.
+        protected override string DocumentTitle => _m.IsQuote ? "Offerte" : "Wijzigingsopdracht";
 
         protected override string WerfTitel => _m.ProjectName;
 
@@ -60,10 +62,10 @@ namespace CPMCore.Documents
         {
             c.Column(col =>
             {
-                col.Item().Element(x => SectionLabel(x, "Opdrachtfiche", first: true));
+                col.Item().Element(x => SectionLabel(x, _m.IsQuote ? "Offertefiche" : "Opdrachtfiche", first: true));
                 col.Item().PaddingBottom(14).Element(Fiche);
 
-                col.Item().Element(x => SectionLabel(x, "Opdracht"));
+                col.Item().Element(x => SectionLabel(x, _m.IsQuote ? "Omschrijving" : "Opdracht"));
                 col.Item().PaddingBottom(4).Text(string.IsNullOrWhiteSpace(_m.Description) ? "—" : _m.Description)
                     .FontSize(9.5f).SemiBold().FontColor(Heading).LineHeight(1.4f);
 
@@ -77,6 +79,20 @@ namespace CPMCore.Documents
                 }
 
                 col.Item().PaddingTop(14).Element(Totals);
+
+                if (_m.IsQuote)
+                {
+                    col.Item().PaddingTop(16).Text(
+                            $"Deze offerte is geldig tot {_m.ExpirationDate.ToString("dd/MM/yyyy", Culture)}. Gaat u akkoord, laat het ons dan weten: u ontvangt daarna een wijzigingsopdracht ter ondertekening.")
+                        .FontSize(8.4f).SemiBold().FontColor(Heading).LineHeight(1.5f);
+
+                    if (!string.IsNullOrWhiteSpace(_m.Conditions))
+                    {
+                        col.Item().Element(x => SectionLabel(x, "Voorwaarden"));
+                        col.Item().Text(_m.Conditions).FontSize(8).FontColor(Ink).LineHeight(1.5f);
+                    }
+                    return;
+                }
 
                 col.Item().PaddingTop(16).Text(
                         $"Gelieve, indien u akkoord gaat, deze wijzigingsopdracht voor akkoord ondertekend terug te bezorgen tegen ten laatste {_m.ExpirationDate.ToString("dd/MM/yyyy", Culture)}.")
@@ -225,6 +241,8 @@ namespace CPMCore.Documents
         public int Id { get; set; }
         public int ProjectId { get; set; }
         public int ClientAccountId { get; set; }
+        /// <summary>Offerte aan de klant (ChangeOrder.IsQuote): titel "Offerte", nummer OF-…, geen akkoordblok.</summary>
+        public bool IsQuote { get; set; }
         public DateOnly Date { get; set; }
         public DateOnly ExpirationDate { get; set; }
         public string ProjectName { get; set; } = "";
@@ -241,7 +259,7 @@ namespace CPMCore.Documents
         public List<ChangeOrderPdfLine> Lines { get; set; } = new();
 
         /// <summary>Zelfde nummering als de titel van de oude PDF ("WO {datum} - {id}"), kort genoteerd.</summary>
-        public string Reference => $"WO-{Id}";
+        public string Reference => IsQuote ? $"OF-{Id}" : $"WO-{Id}";
 
         /// <summary>Zelfde formule als ChangeOrderBO.Totaal: som van hoeveelheid × prijs × (1 + commissie).</summary>
         public decimal TotalExcl => Lines.Sum(l => l.RowTotal);

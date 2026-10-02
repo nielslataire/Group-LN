@@ -142,6 +142,14 @@ public class SourceSettings
     public bool OpenDetailPages { get; set; } = true;
 
     /// <summary>
+    /// Zimmo: false (standaard) = de toegelaten overzichtspagina per gemeente uit de sitemap
+    /// (/nl/{gemeente}-{postcode}/te-koop/nieuwbouwproject/, enkel projecten).
+    /// true = de oude zoek-URL met filter (/nl/zoeken/?search=…), die ook losse nieuwbouwlistings geeft
+    /// maar in robots.txt van Zimmo als Disallow staat. Niet aanzetten zonder toestemming van Zimmo.
+    /// </summary>
+    public bool UseSearchFilterUrls { get; set; } = false;
+
+    /// <summary>
     /// true (standaard) = detailpagina openen voor Zimmo nieuwbouwprojecten
     /// (URL bevat /nieuwbouwproject/ of type=PROJECT in search-card).
     /// </summary>

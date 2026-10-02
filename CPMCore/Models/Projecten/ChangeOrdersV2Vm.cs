@@ -54,6 +54,11 @@ public class ChangeOrderRowV2
     public string PillTone { get; set; } = "is-neutral";
     /// <summary>Korte volgende-stap-hint rechts van de status ("nog om te zetten", "1 van 2 getekend").</summary>
     public string? Hint { get; set; }
+    /// <summary>Telt mee onder het filter "Status: open" (nog werk aan): niet voor afgesloten WO's en niet
+    /// voor een offerte die al omgezet is.</summary>
+    public bool IsOpen { get; set; }
+    /// <summary>Offerte: de WO die eruit gemaakt is (dan is ze "Omgezet").</summary>
+    public int? ConvertedToId { get; set; }
     /// <summary>0..5 — positie in de 6-staps verloopstrip (Offerte/Opgemaakt/Verzonden/Ondertekend/
     /// Gefactureerd/Betaald). Factureerbaar telt visueel als "Ondertekend" — de wireframe se dot-strip
     /// en funnelbalk hebben geen aparte stap daarvoor.</summary>

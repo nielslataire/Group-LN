@@ -42,5 +42,10 @@ public partial class ChangeOrderDetail
     /// opmaakscherm staat. NULL = nooit herschikt: dan geldt de aanmaakvolgorde (Id).</summary>
     public int? SortOrder { get; set; }
 
+    /// <summary>Migratie 069 — de offerteregel waar deze WO-regel bij het omzetten uit overgenomen is.
+    /// Gevuld = prijs, commissie en btw liggen vast (enkel aantal/omschrijving aanpasbaar); NULL = eigen
+    /// regel met vrije prijs.</summary>
+    public int? SourceDetailId { get; set; }
+
     public virtual ChangeOrder ChangeOrder { get; set; }
 }

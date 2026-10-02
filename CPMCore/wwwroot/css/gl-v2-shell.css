@@ -5136,3 +5136,11 @@ tr[data-detail-url] { cursor: pointer; }
     }
     .gl-v2 .gl-v2-search-cancel[hidden] { display: none; }
 }
+
+/* Dashboard (Projectleider), < 1024px: het Meldingen-paneel is daar een volledig-scherm-overlay (of verborgen) en
+   neemt geen plek in, maar zijn col-auto-wrapper bleef 24px gutter-padding innemen — Mijn Werven (kop én kaarten)
+   stond daardoor 24px te ver naar rechts t.o.v. de paginamarge. Wrapper op breedte/padding 0 i.p.v. display:none:
+   een open (position:fixed) paneel erin moet nog wel renderen. ≥1024px blijft de wrapper zoals hij was. */
+@media (max-width: 1023.98px) {
+    .gl-v2 .gl-v2-mc-col { flex: 0 0 0; width: 0; padding: 0; }
+}

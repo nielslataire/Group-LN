@@ -602,6 +602,7 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 
 // SMTP server
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddSingleton<CPMCore.Services.GraphMailSender>();
 
 // BREADCRUMBS
 builder.Services.AddBreadcrumbs(Assembly.GetExecutingAssembly(), options =>

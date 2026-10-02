@@ -1,0 +1,97 @@
+@model CPMCore.Models.Projecten.SendQuoteModalV2Vm
+@*
+    Offerte aan de klant per mail verzenden (de tussenstap vóór de wijzigingsopdracht, beslissing Niels
+    2026-10-02). Inhoud van de modal #gl-v2-co-quote-send-modal op ChangeOrderDetailV2, AJAX-geladen door
+    ProjectenController.SendQuoteModalV2; het formulier post naar ChangeOrderQuoteSendV2. Eén mail per
+    ontvanger (eigen aanhef), de offerte als PDF-bijlage, een vrij bericht erboven. Geen handtekening: het
+    akkoord van de klant komt buiten het systeem en leidt tot "Omzetten naar wijzigingsopdracht".
+*@
+<input type="hidden" name="projectId" value="@Model.ProjectId" />
+<input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+<div id="gl-v2-co-send-data" hidden data-subtitle="@Model.Subtitle" data-can-send="@(Model.Problem == null ? "true" : "false")"></div>
+
+<div class="gl-v2-co-send-main">
+    @if (Model.Problem != null)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-danger">
+            <i class="ph ph-x-circle" aria-hidden="true"></i>
+            <span>@Model.Problem Sluit dit venster, vul aan en verzend opnieuw.</span>
+        </div>
+    }
+
+    <div class="gl-v2-field">
+        <span class="gl-v2-field-label">Ontvangers — eigenaars van het account</span>
+        <div class="gl-v2-co-send-parties">
+            @for (var i = 0; i < Model.Parties.Count; i++)
+            {
+                var p = Model.Parties[i];
+                var hasEmail = !string.IsNullOrWhiteSpace(p.Email);
+                var checkId = $"gl-v2-co-send-party-{i}";
+                <div class="gl-v2-co-send-party @(hasEmail ? "" : "is-warning")">
+                    <span class="gl-v2-co-check">
+                        <input type="checkbox" class="js-send-party" id="@checkId" name="parties[@i].include" value="true" @(hasEmail ? "checked" : "disabled") />
+                        <label for="@checkId"></label>
+                    </span>
+                    <input type="hidden" name="parties[@i].include" value="false" />
+                    <input type="hidden" name="parties[@i].displayName" value="@p.DisplayName" />
+                    <input type="hidden" name="parties[@i].email" value="@p.Email" />
+                    <label class="gl-v2-co-send-party-text" for="@checkId">
+                        <span class="gl-v2-co-send-party-name">@p.DisplayName</span>
+                        <span class="gl-v2-co-send-party-sub">@(hasEmail ? p.Email : "geen e-mailadres — vul het aan op het klantenaccount")</span>
+                    </label>
+                    <span class="gl-v2-co-send-party-role">@p.Capacity</span>
+                </div>
+            }
+            @if (Model.Parties.Count == 0)
+            {
+                <div class="gl-v2-co-send-party is-warning"><span class="gl-v2-co-send-party-sub">Geen eigenaars gevonden op dit klantenaccount.</span></div>
+            }
+        </div>
+    </div>
+
+    @if (Model.Senders.Count > 0)
+    {
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label" id="gl-v2-co-quote-sender-label">Verzenden vanaf</span>
+            <div class="gl-v2-co-seg" role="radiogroup" aria-labelledby="gl-v2-co-quote-sender-label">
+                @for (var i = 0; i < Model.Senders.Count; i++)
+                {
+                    <label><input type="radio" name="sender" value="@Model.Senders[i].Key" @(i == 0 ? "checked" : "") /><span>@Model.Senders[i].Label</span></label>
+                }
+            </div>
+            <span class="gl-v2-field-help">de klant ziet dit als afzender en kan er rechtstreeks op antwoorden: @string.Join(" · ", Model.Senders.Select(s => s.Email))</span>
+        </div>
+    }
+    else
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-danger">
+            <i class="ph ph-x-circle" aria-hidden="true"></i>
+            <span>Er is geen e-mailadres bekend voor jou of de projectleider om de offerte van te versturen.</span>
+        </div>
+    }
+
+    <div class="gl-v2-field">
+        <label class="gl-v2-field-label" for="gl-v2-co-quote-subject">Onderwerp</label>
+        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-co-quote-subject" name="subject" maxlength="200" value="@Model.Subject" /></div>
+    </div>
+    <div class="gl-v2-field">
+        <label class="gl-v2-field-label" for="gl-v2-co-quote-message">Bericht <span class="gl-v2-field-label-optional">optioneel</span></label>
+        <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-textbox-sm"><textarea class="gl-v2-field-input" id="gl-v2-co-quote-message" name="message" maxlength="2000" placeholder="bv. Zoals besproken op de werf: de offerte voor de uitbreiding van jullie terras."></textarea></div>
+        <span class="gl-v2-field-help">komt in de mail na de aanhef "Beste …"; de offerte zit als PDF in bijlage</span>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.TestRecipient))
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+            <i class="ph ph-warning" aria-hidden="true"></i>
+            <span>Testmodus: alle mails gaan naar @Model.TestRecipient, niet naar de klant.</span>
+        </div>
+    }
+</div>
+
+<div class="gl-v2-co-send-preview">
+    <span class="gl-v2-field-label">Bijlage</span>
+    <a class="gl-v2-co-send-frame is-placeholder" href="@Model.PdfUrl" target="_blank" rel="noopener" title="Offerte openen"><i class="ph ph-file-pdf" aria-hidden="true"></i></a>
+    <a class="gl-v2-co-link" href="@Model.PdfUrl" target="_blank" rel="noopener">PDF openen ↗</a>
+    <span class="gl-v2-field-help">enkel prijzen incl. commissie — kostprijs en commissie staan nooit op het document</span>
+</div>

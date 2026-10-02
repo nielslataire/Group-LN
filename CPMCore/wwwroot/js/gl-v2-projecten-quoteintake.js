@@ -4,8 +4,8 @@
 //    Intelligence (server, prebuilt-layout) en zet de teruggekregen regels om in rijen; modus "foto"
 //    stuurt de regio naar de server-opslag en hangt de teruggekregen foto aan een gekozen regel;
 // 3) de rijentabel (Herkende regels) blijft daarna een gewone, rechtstreeks bewerkbare tabel — Opslaan
-//    en Omzetten posten naar ChangeOrderDetailV2Save; "Omzetten" loopt via de 21c-modal
-//    (gl-v2-projecten-convertquote.js), zie stuk 5 onderaan. Het originele bestand wordt bewaard (keepSource).
+//    posten naar ChangeOrderDetailV2Save (daarna: het opmaakscherm van de offerte aan de klant, of de
+//    lijst). Het originele bestand wordt bewaard (keepSource).
 (function () {
     "use strict";
 
@@ -445,85 +445,45 @@
 
     recomputeTotal();
 
-    // ── 5. Opslaan / Omzetten ────────────────────────────────────────────────────────────────────────
+    // ── 5. Opslaan ───────────────────────────────────────────────────────────────────────────────────
     var form = document.getElementById("gl-v2-qi-form");
     var descHidden = document.getElementById("gl-v2-qi-description-hidden");
-    var convertFlag = document.getElementById("gl-v2-qi-convert-after-save");
+    var afterSave = document.getElementById("gl-v2-qi-after-save");
     var allowSubmit = false; // true zodra het bronbestand klaar is met opladen (zie hieronder)
-
-    function setHidden(id, value) { var el = document.getElementById(id); if (el) el.value = value == null ? "" : value; }
 
     if (form) {
         form.addEventListener("submit", function (e) {
             if (allowSubmit) return;
             e.preventDefault();
 
-            var converting = convertFlag && convertFlag.value === "true";
-            // Leverancier·contract is altijd verplicht; de klant enkel bij gewoon bewaren (bij omzetten
-            // koos de 21c-modal hem al). Zonder deze guard zou de server het formulier afwijzen en zou je
-            // de net ingelezen regels kwijt zijn (Niels, 2026-10-01).
+            // form.submit() verliest de knop die geklikt werd (name/value): onthoud de bestemming zelf.
+            if (afterSave && e.submitter && e.submitter.name === "afterSave") afterSave.value = e.submitter.value;
+
+            // Klant en leverancier·contract zijn verplichte FK's — zonder deze guard zou de server het
+            // formulier afwijzen en zou je de net ingelezen regels kwijt zijn (Niels, 2026-10-01).
             var client = $("#gl-v2-qi-client");
             var contract = $("#gl-v2-qi-contractactivity");
             if (contract && !contract.value) {
-                if (convertFlag) convertFlag.value = "false";
                 setStatus("Kies eerst een leverancier · contract.");
                 contract.focus();
                 return;
             }
-            if (!converting && client && !client.value) {
-                setStatus("Kies een klant om de offerte te bewaren.");
+            if (client && !client.value) {
+                setStatus("Kies voor welke klant de offerte is.");
                 client.focus();
                 return;
             }
-            // Deze pagina heeft geen "omschrijving voor de klant"-veld (dat komt bij Omzetten, 21c) —
+            // Deze pagina heeft geen "omschrijving voor de klant"-veld (dat komt op het opmaakscherm) —
             // gebruik het offertenummer als voorlopige naam zodat de rij niet naamloos in de lijst staat.
             if (descHidden) {
                 var ref = $("#gl-v2-qi-quote-ref");
-                descHidden.value = (ref && ref.value) ? ("Offerte " + ref.value) : "Offerte";
+                descHidden.value = (ref && ref.value) ? ("Leveranciersofferte " + ref.value) : "Leveranciersofferte";
             }
             // Wacht tot het bronbestand bewaard is, zodat de opslagnaam zeker meegaat.
             setStatus("Opslaan…");
             sourceUpload.then(function () {
                 allowSubmit = true;
                 form.submit();
-            });
-        });
-    }
-
-    // "Omzetten naar wijzigingsopdracht" → 21c-modal. De modal rekent met de regels zoals ze nu op het
-    // scherm staan (nog niet noodzakelijk bewaard); bevestigen vult de verborgen convert*-velden en
-    // verzendt dit formulier: opslaan + omzetten in één POST.
-    var convertBtn = document.getElementById("gl-v2-qi-convert");
-    if (convertBtn && window.GlV2ConvertQuote) {
-        convertBtn.addEventListener("click", function () {
-            var rows = $$(".js-qi-row", rowsBody).filter(function (tr) { return ($(".js-qi-description", tr).value || "").trim() !== ""; });
-            var contract = $("#gl-v2-qi-contractactivity");
-            if (contract && !contract.value) { setStatus("Kies eerst een leverancier · contract."); contract.focus(); return; }
-            if (rows.length === 0) { setStatus("Lees eerst minstens één regel in (of voeg er een toe)."); return; }
-            if (rows.some(function (tr) { return tr.classList.contains("is-needs-review"); })) {
-                setStatus("Bevestig eerst de regels die op \"controleer\" staan (klik de vlag aan).");
-                return;
-            }
-
-            var ref = $("#gl-v2-qi-quote-ref");
-            var client = $("#gl-v2-qi-client");
-            var supplier = contract && contract.selectedIndex > 0 ? contract.options[contract.selectedIndex].text : "";
-            window.GlV2ConvertQuote.open({
-                url: cfg.convertModalUrl + "?projectId=" + encodeURIComponent(cfg.projectId) + "&changeOrderId=" + encodeURIComponent(cfg.changeOrderId || 0),
-                cost: currentTotal(),
-                subtitle: [cfg.number || "Nieuwe offerte", ref && ref.value, supplier, rows.length + (rows.length === 1 ? " regel" : " regels")]
-                    .filter(function (x) { return !!x; }).join(" · "),
-                clientId: (client && client.value) || cfg.clientAccountId || null,
-                onConfirm: function (v) {
-                    setHidden("gl-v2-qi-cv-client", v.clientAccountId);
-                    setHidden("gl-v2-qi-cv-commission", v.commission);
-                    setHidden("gl-v2-qi-cv-plan", v.plan);
-                    setHidden("gl-v2-qi-cv-description", v.description);
-                    setHidden("gl-v2-qi-cv-conditions", v.conditions);
-                    setHidden("gl-v2-qi-after-save", v.afterSave);
-                    if (convertFlag) convertFlag.value = "true";
-                    if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event("submit", { cancelable: true }));
-                },
             });
         });
     }

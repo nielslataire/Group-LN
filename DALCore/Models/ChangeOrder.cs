@@ -29,9 +29,11 @@ public partial class ChangeOrder
 
     public string ChangeOrderConditions { get; set; }
 
-    /// <summary>Offertes & wijzigingen gl-v2 (design-handoff 20b/20c/20d, migratie 064) — offerte en WO
-    /// zijn bewust dezelfde rij (geen aparte offerte-tabel): IsQuote=1 zolang het nog een offerte is,
-    /// "Omzetten" zet 'm in-place naar 0 en vult QuoteConvertedAt. Zie ChangeOrderStatusHelper.</summary>
+    /// <summary>Offertes & wijzigingen gl-v2 (migratie 064) — een offerte aan de klant en een WO zitten in
+    /// dezelfde tabel (geen aparte offerte-tabel): IsQuote=1 is een offerte. "Omzetten" maakt sinds
+    /// 2026-10-02 een NIEUWE WO-rij (SourceKind=3, SourceChangeOrderId = de offerte) en vult op de
+    /// offerte QuoteConvertedAt; de offerte zelf blijft ongewijzigd bestaan. Oudere rijen werden nog
+    /// in-place omgezet (IsQuote=0 mét QuoteConvertedAt). Zie ChangeOrderStatusHelper.</summary>
     public bool IsQuote { get; set; }
 
     public string QuoteSupplierReference { get; set; }
@@ -50,7 +52,8 @@ public partial class ChangeOrder
     /// rij vertrok. Bewust geen navigatie/FK: louter informatief voor de kaart "Bron".</summary>
     public int? SourceChangeOrderId { get; set; }
 
-    /// <summary>1 = kopie (ander lot), 2 = nieuwe versie (vervangt de bron).</summary>
+    /// <summary>1 = kopie (ander lot), 2 = nieuwe versie (vervangt de bron), 3 = wijzigingsopdracht uit een
+    /// offerte aan de klant (de bron is dan de offerte-rij, IsQuote=1).</summary>
     public byte? SourceKind { get; set; }
 
     public virtual ICollection<ChangeOrderDetail> ChangeOrderDetail { get; set; } = new List<ChangeOrderDetail>();

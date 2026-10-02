@@ -261,8 +261,8 @@ Acties op het scherm: `ChangeOrderDetailV2Remind`, `-Withdraw`, `-UploadSigned`,
 
 ### 6.5 Aanvulling 02/10/2026 (na feedback Niels) — NIET browser-getest
 
-**Eerst uitvoeren: `_migrations/067_ChangeOrderDetailSortOrder.sql`** (`ChangeOrderDetail.SortOrder INT NULL`),
-naast 066.
+**Eerst uitvoeren: `_migrations/067_ChangeOrderDetailSortOrder.sql`** (`ChangeOrderDetail.SortOrder INT NULL`)
+en **`_migrations/068_SigningCaseInvitationMessage.sql`** (`SigningCase.InvitationMessage`), naast 066.
 
 - **Regelvolgorde (28a/28b)**: sleepgreep op elke regel (muis/vinger, of focus + pijl omhoog/omlaag). De
   volgorde van het formulier wordt bewaard in `SortOrder` (SyncRows); het opmaakscherm, 20c, de kopie en de
@@ -272,9 +272,14 @@ naast 066.
   verzenden" (21c) slaan eerst op en openen dan de modal (`?send=true`). Kanaal "Online ondertekenen" maakt
   en opent het ondertekendossier (zelfde twee stappen als `SigningAdmin/Start`), "Alleen PDF" zet enkel de
   verzenddatum. Ontvangers aan/uit, Alle eigenaars / Eén volstaat, vervaldatum, voorbeeld van de PDF.
+  **BERICHT** (toegevoegd op vraag van Niels, migratie `068_SigningCaseInvitationMessage.sql`): vrij bericht
+  van de afzender, bewaard op het dossier (`SigningCase.InvitationMessage`), doorgegeven via
+  `CreateSigningCaseRequest.InvitationMessage` en door `SigningNotifier` na de aanhef gezet in de
+  uitnodigingsmail en in elke herinnering (HTML-gecodeerd, regeleinden behouden). Het oude startscherm
+  `SigningAdmin/Start` heeft het veld nog niet.
   Afwijkingen van het ontwerp, omdat de ondertekenmodule het niet kan: geen apart kanaal "Klantenportaal",
-  geen vrij BERICHT in de uitnodigingsmail, HERINNERING is een beleidsinstelling (getoond, niet aanpasbaar),
-  geen eigendomspercentages bij de ontvangers.
+  HERINNERING is een beleidsinstelling (getoond, niet aanpasbaar), geen eigendomspercentages bij de
+  ontvangers.
 - Bekende rand: na een ingetrokken online ondertekening opnieuw verzenden als "Alleen PDF" laat de status op
   "Ingetrokken" staan (de status volgt het recentste dossier).
 
@@ -283,3 +288,31 @@ getoond, maar Facturatie (`InvoicingV2` → `MakeInvoicesCO`/`BuildChangeOrderIn
 getekende WO nog in één keer voor het volledige bedrag. Te bouwen: in Facturatie één regel per
 factureerbare termijn ("WO-006 · voorschot 30 %"), de factuurregel koppelen via
 `InvoicesDetails.ChangeOrderPaymentTermId` (LineType 'ChangeOrderTerm'), WO's zonder plan blijven in één keer.
+
+### 6.6 Tussenstap "offerte aan de klant" (02/10/2026, beslissing Niels) — NIET browser-getest
+
+**Eerst uitvoeren: `_migrations/069_ChangeOrderDetailSourceDetail.sql`** (`ChangeOrderDetail.SourceDetailId INT NULL`),
+naast 066/067/068.
+
+Nieuwe flow: leveranciersofferte inlezen (20c) → **offerte aan de klant opmaken** → per mail verzenden →
+**omzetten** (21c) naar een NIEUWE wijzigingsopdracht → verzenden ter ondertekening (21d).
+- Een offerte aan de klant is nog altijd een `ChangeOrder` met `IsQuote=1`, maar "Omzetten" is niet meer in-place:
+  het maakt een nieuwe WO-rij (`SourceKind=3`, `SourceChangeOrderId` = offerte) en zet `QuoteConvertedAt` op de
+  offerte, die ongewijzigd blijft bestaan (status "Omgezet"). Oudere rijen die nog in-place omgezet werden
+  (IsQuote=0 mét QuoteConvertedAt) blijven gewoon werken.
+- **Zelfde scherm** (`ChangeOrderDetailV2`) voor offerte en WO. Offerte: `?quote=true` voor een nieuwe, geen
+  facturatieplan, kaart "Verzending" i.p.v. "Ondertekening", fase `offerte` → `offerte-verzonden` →
+  `offerte-omgezet` (`BuildQuoteScreenState`). Regels volledig vrij; "Geldig tot" instelbaar.
+- **Offerte per mail** (`SendQuoteModalV2` + `ChangeOrderQuoteSendV2`): één mail per eigenaar met eigen aanhef, vrij
+  bericht en de offerte-PDF als bijlage; testmodus (`Signing:TestRecipientOverride`) geldt ook hier. Daarna ligt
+  de offerte vast; "Aanpassen" zet ze terug naar concept, "Opnieuw mailen" mailt opnieuw.
+- **PDF**: `ChangeOrderDocument` kent nu `IsQuote` (titel "Offerte", nummer OF-…, geen handtekeningblok).
+- **21c** vraagt enkel nog facturatieplan, omschrijving en voorwaarden; klant, btw en bedragen zijn uitlezing.
+  In de nieuwe WO liggen de prijzen van de overgenomen regels vast (`SourceDetailId` gevuld: prijs, commissie,
+  btw, meetmethode en eenheid niet aanpasbaar — ook niet via een geknoeid formulier, de server negeert het);
+  aantal en omschrijving wel, regels mogen weg, nieuwe regels hebben een vrije prijs.
+- **Lijst**: "+ Nieuw" = Offerte inlezen · Offerte opmaken · Wijzigingsopdracht zonder offerte · Kopie · Offerte
+  inlezen en bewaren. Offerte-rijen openen het offertescherm, een omgezette offerte linkt naar haar WO.
+- **20c** eindigt nu in "Opslaan en offerte opmaken" (of terug naar de lijst); het omzetten zit er niet meer in.
+  Voorlopige omschrijving van een ingelezen offerte: "Leveranciersofferte …" (verdwijnt zodra je de omschrijving
+  voor de klant invult; verzenden/omzetten blokkeert zolang ze er nog staat).

@@ -18,9 +18,10 @@
 @using CPMCore.Models.GlV2
 @using CPMCore.Models.Projecten
 @{
-    var title = string.IsNullOrWhiteSpace(Model.Description) ? "Wijzigingsopdracht" : Model.Description;
-    ViewData["Title"] = Model.IsNew ? "Nieuwe wijzigingsopdracht" : $"{Model.Number} · {title}";
-    ViewData["TitleMobile"] = Model.IsNew ? "Nieuwe wijzigingsopdracht" : Model.Number;
+    var title = string.IsNullOrWhiteSpace(Model.Description) ? (Model.IsQuote ? "Offerte" : "Wijzigingsopdracht") : Model.Description;
+    var newTitle = Model.IsQuote ? "Nieuwe offerte" : "Nieuwe wijzigingsopdracht";
+    ViewData["Title"] = Model.IsNew ? newTitle : $"{Model.Number} · {title}";
+    ViewData["TitleMobile"] = Model.IsNew ? newTitle : Model.Number;
     ViewData["PageIcon"] = "ph ph-file-text";
     ViewData["GlV2FullHeightBody"] = true;
 
@@ -37,6 +38,11 @@
     var editable = Model.IsEditable;
     var isSent = phase is "verzonden" or "wacht";
     var isSigned = phase is "ondertekend" or "factureerbaar" or "gefactureerd" or "betaald" or "telaat";
+    // Offerte aan de klant (stap 1): zelfde scherm, per mail verzonden i.p.v. ondertekend.
+    var isQuote = Model.IsQuote;
+    var quoteSent = phase == "offerte-verzonden";
+    var quoteConverted = phase == "offerte-omgezet";
+    var convertedUrl = Model.ConvertedToChangeOrderId.HasValue ? Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, coid = Model.ConvertedToChangeOrderId }) : null;
     var hasActiveCase = Model.ActiveSigningCase != null;
     var canSign = Model.SigningEnabled && Model.CanStartSigning;
     // Verzonden zonder lopend dossier = met de hand gezet (elektronisch ondertekenen uit, of op papier).
@@ -63,12 +69,15 @@
     var excl = cost + commissionTotal;
     var vatTotal = Model.Rows.Sum(r => r.Number * r.Price * (1 + r.Commission / 100m) * r.VatPercentage / 100m);
     var contractLabel = Model.ContractActivities.FirstOrDefault(a => a.ID == Model.ContractActivityId)?.Display ?? "—";
-    var showQuoteCard = editable && Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue;
+    // Kaart "Offerte leverancier" (28a) bovenaan: bij een offerte aan de klant altijd zodra er een
+    // leveranciersofferte aan hangt; bij een WO enkel in concept zonder eigen herkomst.
+    var showQuoteCard = isQuote ? Model.HasQuoteSource : (editable && Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue);
 }
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-changeorderdetail.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-convertquote.css" asp-append-version="true" />
 }
 @section PageTitleBadges
 {
@@ -90,7 +99,15 @@
         {
             <a href="@pdfUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-file-pdf" aria-hidden="true"></i><span>@(editable ? "Voorbeeld-PDF" : "PDF")</span></a>
         }
-        @if (isSent && hasActiveCase && canSign && waitingSigners.Count > 0)
+        @if (quoteConverted && convertedUrl != null)
+        {
+            <a href="@convertedUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-arrow-right" aria-hidden="true"></i><span>Open WO-@(Model.ConvertedToChangeOrderId!.Value.ToString("000"))</span></a>
+        }
+        else if (quoteSent && Model.CanWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary js-co-open-convert"><i class="ph ph-arrow-right" aria-hidden="true"></i><span>Omzetten naar wijzigingsopdracht</span></button>
+        }
+        else if (isSent && hasActiveCase && canSign && waitingSigners.Count > 0)
         {
             <button type="submit" form="gl-v2-co-f-remind" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-bell-ringing" aria-hidden="true"></i><span>@remindLabel</span></button>
         }
@@ -128,6 +145,11 @@
 {
     <input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />
 }
+@if (isQuote)
+{
+    @* Enkel van belang voor een nieuwe rij: een offerte aan de klant i.p.v. rechtstreeks een wijzigingsopdracht. *@
+    <input type="hidden" name="isQuote" value="true" />
+}
 @if (editable)
 {
     <input type="hidden" name="quoteVatPercentage" value="@(Model.QuoteVatPercentage?.ToString(CultureInfo.InvariantCulture))" />
@@ -150,6 +172,12 @@
                 <div class="gl-v2-notice-body">
                     <span class="gl-v2-notice-title">@Model.NoticeTitle</span>
                     <span class="gl-v2-notice-text">@Model.NoticeText</span>
+                    @if (Model.ConvertedToChangeOrderId.HasValue)
+                    {
+                        <div class="gl-v2-notice-actions">
+                            <a class="gl-v2-notice-action" href="@convertedUrl">Open WO-@(Model.ConvertedToChangeOrderId.Value.ToString("000"))</a>
+                        </div>
+                    }
                     @if (Model.ReplacedByChangeOrderId.HasValue)
                     {
                         <div class="gl-v2-notice-actions">
@@ -302,10 +330,28 @@
                         <div class="gl-v2-co-readout gl-v2-co-locked-field" title="wijzigen in Betalingsschijven"><i class="ph ph-lock-simple" aria-hidden="true"></i><span id="gl-v2-co-vat-label">@Model.VatKlantLabel</span></div>
                         <input type="hidden" id="gl-v2-co-vat-klant" value="@Model.VatKlantPercentage.ToString(CultureInfo.InvariantCulture)" />
                     </div>
-                    <div class="gl-v2-field gl-v2-co-span2">
+                    <div class="gl-v2-field">
                         <span class="gl-v2-field-label">Type</span>
-                        <div class="gl-v2-co-readout" id="gl-v2-co-type">@(Model.IsMinwerk ? "Minwerk — aan kostprijs verrekend, zonder commissie" : "Meerwerk")</div>
+                        <div class="gl-v2-co-readout" id="gl-v2-co-type">@(Model.IsMinwerk ? "Minwerk — zonder commissie" : "Meerwerk")</div>
                     </div>
+                    @if (editable)
+                    {
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm
+                        {
+                            Name = "expirationDate",
+                            Id = "gl-v2-co-expires",
+                            Label = "Geldig tot",
+                            IsoValue = Model.ExpirationDate.ToString("yyyy-MM-dd"),
+                            DisplayValue = Model.ExpirationDate.ToString("dd/MM/yyyy")
+                        })
+                    }
+                    else
+                    {
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Geldig tot</span>
+                            <div class="gl-v2-co-readout">@Model.ExpirationDate.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    }
                     <div class="gl-v2-field gl-v2-field-full">
                         @if (editable)
                         {
@@ -475,6 +521,8 @@
             </div>
 
             @* ── Facturatieplan ────────────────────────────────────────────────────────────────────── *@
+            @if (!isQuote)
+            {
             <div class="gl-v2-card gl-v2-co-card">
                 <div class="gl-v2-card-header">
                     <span class="gl-v2-card-header-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
@@ -583,10 +631,13 @@
                     }
                 }
             </div>
+            }
         </div>
 
         <div class="gl-v2-co-side">
             @* ── Ondertekening ─────────────────────────────────────────────────────────────────────── *@
+            @if (!isQuote)
+            {
             <div class="gl-v2-card gl-v2-co-card">
                 <div class="gl-v2-card-header">
                     <span class="gl-v2-card-header-icon"><i class="ph ph-signature" aria-hidden="true"></i></span>
@@ -648,6 +699,48 @@
                 </div>
             </div>
 
+            }
+            @if (isQuote)
+            {
+                @* ── Verzending (offerte aan de klant: per mail, zonder handtekening) ─────────────────── *@
+                <div class="gl-v2-card gl-v2-co-card">
+                    <div class="gl-v2-card-header">
+                        <span class="gl-v2-card-header-icon"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-card-header-title">Verzending</h2>
+                    </div>
+                    <div class="gl-v2-co-sign-head @Model.SigningHeadTone">@Model.SigningHeadText</div>
+                    <div class="gl-v2-card-body gl-v2-co-sign">
+                        @foreach (var r in Model.Recipients)
+                        {
+                            <div class="gl-v2-co-signer">
+                                <span class="gl-v2-co-signer-avatar">@r.Initials<span class="gl-v2-co-signer-dot @r.Tone" aria-hidden="true"></span></span>
+                                <span class="gl-v2-co-signer-text">
+                                    <span class="gl-v2-co-signer-name">@r.Name</span>
+                                    <span class="gl-v2-co-signer-status @(r.Tone == "is-rood" ? "is-rood" : "")">@r.StatusText</span>
+                                </span>
+                            </div>
+                        }
+                        @if (Model.Recipients.Count == 0)
+                        {
+                            <p class="gl-v2-field-help">Kies eerst een klant · eenheid — de eigenaars krijgen de offerte.</p>
+                        }
+                        @if (Model.SigningMeta.Count > 0)
+                        {
+                            <dl class="gl-v2-co-meta">
+                                @foreach (var m in Model.SigningMeta)
+                                {
+                                    <div><dt>@m.Key</dt><dd>@m.Value</dd></div>
+                                }
+                            </dl>
+                        }
+                        @if (editable)
+                        {
+                            <p class="gl-v2-field-help">De offerte gaat als PDF per mail naar de eigenaars; je kiest de ontvangers bij het verzenden. Een handtekening is niet nodig — die volgt op de wijzigingsopdracht.</p>
+                        }
+                    </div>
+                </div>
+            }
+
             @* ── Facturen (vanaf ondertekend) ──────────────────────────────────────────────────────── *@
             @if (isSigned)
             {
@@ -703,9 +796,9 @@
                         @if (Model.SourceChangeOrderId.HasValue)
                         {
                             <div class="gl-v2-co-source-item">
-                                <span class="gl-v2-co-source-kind">@(Model.SourceKind == 2 ? "VORIGE VERSIE" : "KOPIE VAN")</span>
+                                <span class="gl-v2-co-source-kind">@(Model.SourceKind == 2 ? "VORIGE VERSIE" : Model.SourceKind == 3 ? "OFFERTE AAN DE KLANT" : "KOPIE VAN")</span>
                                 <span>@Model.SourceChangeOrderLabel</span>
-                                <a class="gl-v2-co-link" href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, coid = Model.SourceChangeOrderId })">Open @(Model.SourceKind == 2 ? "vorige versie" : "oorspronkelijke WO") →</a>
+                                <a class="gl-v2-co-link" href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, coid = Model.SourceChangeOrderId })">Open @(Model.SourceKind == 2 ? "vorige versie" : Model.SourceKind == 3 ? "de offerte" : "oorspronkelijke WO") →</a>
                             </div>
                         }
                         @if (Model.HasQuoteSource)
@@ -719,7 +812,15 @@
                                 }
                             </div>
                         }
-                        @if (!Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue)
+                        @if (isQuote && Model.ConvertedToChangeOrderId.HasValue)
+                        {
+                            <div class="gl-v2-co-source-item">
+                                <span class="gl-v2-co-source-kind">WIJZIGINGSOPDRACHT</span>
+                                <span>WO-@(Model.ConvertedToChangeOrderId.Value.ToString("000"))</span>
+                                <a class="gl-v2-co-link" href="@convertedUrl">Open de wijzigingsopdracht →</a>
+                            </div>
+                        }
+                        @if (!Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue && !Model.ConvertedToChangeOrderId.HasValue)
                         {
                             <p class="gl-v2-field-help">Geen offerte gekoppeld.</p>
                         }
@@ -770,7 +871,34 @@
     <span class="gl-v2-form-actionbar-status">@Model.FooterText</span>
     <span class="gl-v2-form-actionbar-spacer"></span>
     <div class="gl-v2-form-actionbar-actions">
-        @if (editable)
+        @if (isQuote)
+        {
+            @if (editable)
+            {
+                <a class="gl-v2-btn gl-v2-btn-text" href="@listUrl">Annuleren</a>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-co-save">Opslaan</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-co-convert" name="afterSave" value="convert">Omzetten naar wijzigingsopdracht</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-send" name="afterSave" value="send">
+                    <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Verzenden per mail</span>
+                </button>
+            }
+            else if (quoteSent && Model.CanWrite)
+            {
+                <a class="gl-v2-btn gl-v2-btn-text" href="@listUrl">Sluiten</a>
+                <button type="submit" form="gl-v2-co-f-step" name="step" value="concept" class="gl-v2-btn gl-v2-btn-secondary">Aanpassen</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-co-open-send">Opnieuw mailen</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary js-co-open-convert"><i class="ph ph-arrow-right" aria-hidden="true"></i><span>Omzetten naar wijzigingsopdracht</span></button>
+            }
+            else
+            {
+                <a class="gl-v2-btn gl-v2-btn-secondary" href="@listUrl">Sluiten</a>
+                @if (convertedUrl != null)
+                {
+                    <a class="gl-v2-btn gl-v2-btn-primary" href="@convertedUrl"><i class="ph ph-arrow-right" aria-hidden="true"></i><span>Open WO-@(Model.ConvertedToChangeOrderId!.Value.ToString("000"))</span></a>
+                }
+            }
+        }
+        else if (editable)
         {
             <a class="gl-v2-btn gl-v2-btn-text" href="@listUrl">Annuleren</a>
             <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-co-save">Opslaan</button>
@@ -838,23 +966,23 @@
     @* 21d — "Verzenden ter ondertekening": opent na "Verzenden naar klant" (eerst opslaan, dan deze modal
        op de bewaarde toestand) en na 21c "Aanmaken en verzenden". Inhoud via AJAX
        (Modals/_ModalSendChangeOrderV2). *@
-    @if (editable)
+    @if (editable || quoteSent)
     {
         <div class="modal fade gl-v2-modal-form gl-v2-co-send-modal" id="gl-v2-co-send-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-co-send-title">
             <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
-                <form class="modal-content" id="gl-v2-co-send-form" method="post" action="@Url.Action("ChangeOrderSendV2")">
+                <form class="modal-content" id="gl-v2-co-send-form" method="post" action="@Url.Action(isQuote ? "ChangeOrderQuoteSendV2" : "ChangeOrderSendV2")">
                     @Html.AntiForgeryToken()
                     <div class="modal-header">
                         <span class="gl-v2-co-send-icon"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
                         <div class="gl-v2-co-send-header-text">
-                            <h2 class="modal-title" id="gl-v2-co-send-title">@Model.Number verzenden ter ondertekening</h2>
+                            <h2 class="modal-title" id="gl-v2-co-send-title">@Model.Number @(isQuote ? "per mail verzenden" : "verzenden ter ondertekening")</h2>
                             <span class="gl-v2-co-send-header-sub" id="gl-v2-co-send-subtitle"></span>
                         </div>
                         <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
                     </div>
                     <div class="modal-body" id="gl-v2-co-send-body"></div>
                     <div class="modal-footer">
-                        <span class="gl-v2-co-send-footnote">Na verzenden liggen bedragen en facturatiemoment vast; wijzigen maakt een nieuwe versie.</span>
+                        <span class="gl-v2-co-send-footnote">@(isQuote ? "De klant ontvangt de offerte als PDF. Na akkoord zet je ze om naar een wijzigingsopdracht ter ondertekening." : "Na verzenden liggen bedragen en facturatiemoment vast; wijzigen maakt een nieuwe versie.")</span>
                         <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
                         <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-send-submit" disabled>
                             <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span id="gl-v2-co-send-submit-label">Verzenden</span>
@@ -863,6 +991,13 @@
                 </form>
             </div>
         </div>
+    }
+
+    @if (isQuote && Model.CanWrite && !quoteConverted)
+    {
+        @* 21c — Omzetten naar wijzigingsopdracht: opent na "Omzetten naar wijzigingsopdracht" (eerst opslaan,
+           dan deze modal op de bewaarde toestand). Inhoud via AJAX (Modals/_ModalConvertQuoteV2). *@
+        @await Html.PartialAsync("Partials/_ConvertQuoteModalShellV2")
     }
 
     @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
@@ -897,8 +1032,11 @@
         "changeOrderId": @Model.ChangeOrderId,
         "clientAccountId": @Model.ClientAccountId,
         "editable": @(editable ? "true" : "false"),
+        "isQuote": @(isQuote ? "true" : "false"),
         "openSend": @(Model.OpenSendModal ? "true" : "false"),
-        "sendModalUrl": "@Url.Action("SendChangeOrderModalV2", "Projecten", new { projectId = Model.ProjectId, changeOrderId = Model.ChangeOrderId })",
+        "openConvert": @(Model.OpenConvertModal ? "true" : "false"),
+        "sendModalUrl": "@Url.Action(isQuote ? "SendQuoteModalV2" : "SendChangeOrderModalV2", "Projecten", new { projectId = Model.ProjectId, changeOrderId = Model.ChangeOrderId })",
+        "convertModalUrl": "@Url.Action("ConvertQuoteModalV2", "Projecten", new { projectId = Model.ProjectId, changeOrderId = Model.ChangeOrderId })",
         "vatKlant": @Model.VatKlantPercentage.ToString(CultureInfo.InvariantCulture),
         "addRowUrl": "@Url.Action("ChangeOrderDetailV2AddRow")",
         "addTermUrl": "@Url.Action("ChangeOrderDetailV2AddTerm")",
@@ -906,5 +1044,6 @@
     }
     </script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-convertquote.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-changeorderdetail.js" asp-append-version="true"></script>
 }

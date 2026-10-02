@@ -21,8 +21,9 @@ using System.Threading.Tasks;
 namespace CPMCore.Controllers
 {
     /// <summary>gl-v2 "Offertes &amp; wijzigingen" — de flow rond de schermen (design-handoff punt 28/29):
-    /// de gedeelde statusfeiten voor lijst (20b) én scherm per stap (28a–28i), de drie routes naar het
-    /// opmaakscherm (29b: omzetten vanuit een offerte = 21c, leeg beginnen, kopie) en de acties die het
+    /// de gedeelde statusfeiten voor lijst (20b) én scherm per stap (28a–28i), de routes naar het
+    /// opmaakscherm (29b: offerte aan de klant → 21c omzetten naar een nieuwe WO, rechtstreeks een WO,
+    /// kopie), het mailen van een offerte en de acties die het
     /// scherm per stap aanbiedt (herinneren, intrekken, getekende versie opladen, versie 2, termijn
     /// vrijgeven). Leest/schrijft rechtstreeks via _db, zelfde stijl als ChangeOrderDetailV2.cs.</summary>
     public partial class ProjectenController
@@ -315,124 +316,132 @@ namespace CPMCore.Controllers
         }
 
         // ═══════════════════════════════════════════════════════════════════════════════════════════
-        // 3. 21c — Omzetten naar wijzigingsopdracht
+        // 3. 21c — Omzetten: van offerte aan de klant naar wijzigingsopdracht
         // ═══════════════════════════════════════════════════════════════════════════════════════════
 
-        /// <summary>Inhoud van de 21c-modal. changeOrderId = 0 kan (20c op een nog niet opgeslagen
-        /// offerte): de pagina vult kostprijs/regelaantal dan zelf in vanuit haar formulier.</summary>
+        /// <summary>Inhoud van de 21c-modal. De offerte is op dit moment bewaard; klant, regels en prijzen
+        /// komen eruit en liggen vast — de modal vraagt enkel wat bij de wijzigingsopdracht hoort
+        /// (facturatieplan, omschrijving, voorwaarden).</summary>
         [HttpGet]
-        public async Task<IActionResult> ConvertQuoteModalV2(int projectId, int changeOrderId = 0)
+        public async Task<IActionResult> ConvertQuoteModalV2(int projectId, int changeOrderId)
         {
-            var features = HttpContext.RequestServices.GetRequiredService<IOptions<FeatureFlagsOptions>>().Value;
+            var co = await _db.ChangeOrder.AsNoTracking()
+                .Include(c => c.ChangeOrderDetail)
+                .Include(c => c.ClientAccount)
+                .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Company)
+                .FirstOrDefaultAsync(c => c.Id == changeOrderId);
+            if (co is null || !co.IsQuote) return NotFound();
+
+            var vat = await ResolveVatForClientAsync(projectId, co.ClientAccountId);
+            var cost = co.ChangeOrderDetail.Sum(d => d.Number * d.Price);
+            var excl = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m));
+            var incl = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m) * (1 + (d.VatPercentage ?? vat.Percentage) / 100m));
+            var rows = co.ChangeOrderDetail.Count;
             var vm = new ConvertQuoteModalV2Vm
             {
                 ProjectId = projectId,
-                ChangeOrderId = changeOrderId,
-                Clients = await LoadClientOptionsAsync(projectId),
-                DefaultCommission = await DefaultCommissionAsync(projectId),
-                SigningEnabled = features.EnableSigning,
-                NextNumberLabel = changeOrderId > 0 ? $"WO-{changeOrderId:000}" : "WO — nummer volgt bij aanmaken",
-            };
-
-            if (changeOrderId > 0)
-            {
-                var co = await _db.ChangeOrder.AsNoTracking()
-                    .Include(c => c.ChangeOrderDetail)
-                    .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Company)
-                    .FirstOrDefaultAsync(c => c.Id == changeOrderId);
-                if (co is null) return NotFound();
-
-                vm.ClientAccountId = co.ClientAccountId;
-                vm.CostTotal = co.ChangeOrderDetail.Sum(d => d.Number * d.Price);
-                vm.RowCount = co.ChangeOrderDetail.Count;
-                // De voorlopige naam uit 20c ("Offerte 2025-118") is geen omschrijving voor de klant.
-                vm.Description = co.Description != null && co.Description.StartsWith("Offerte") ? "" : co.Description ?? "";
-                var supplier = co.ContractActivity?.Contract?.Company?.BedrijfsNaam;
-                vm.Subtitle = string.Join(" · ", new[]
+                ChangeOrderId = co.Id,
+                Subtitle = string.Join(" · ", new[]
                 {
                     $"OF-{co.Id:000}",
-                    supplier,
-                    $"{vm.RowCount} {(vm.RowCount == 1 ? "regel" : "regels")}",
-                }.Where(s => !string.IsNullOrWhiteSpace(s)));
-            }
-
+                    co.ContractActivity?.Contract?.Company?.BedrijfsNaam,
+                    $"{rows} {(rows == 1 ? "regel" : "regels")}",
+                }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                ClientLabel = string.Join(" · ", new[] { Services.Signing.ChangeOrderPdfBuilder.DisplayName(co.ClientAccount), vat.UnitName }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                VatLabel = vat.Label,
+                VatPercentage = vat.Percentage,
+                CostTotal = cost,
+                CommissionTotal = excl - cost,
+                ExclTotal = excl,
+                InclTotal = incl,
+                // De voorlopige naam uit 20c ("Offerte 2025-118") is geen omschrijving voor de klant.
+                Description = IsIntakePlaceholder(co.Description) ? "" : co.Description ?? "",
+                Conditions = co.ChangeOrderConditions ?? "",
+                Problem = await ConvertProblemAsync(co),
+            };
             return PartialView("Modals/_ModalConvertQuoteV2", vm);
         }
 
-        /// <summary>21c bevestigen op een al opgeslagen offerte (vanuit de lijst). Vanuit 20c loopt
-        /// dezelfde omzetting via ChangeOrderDetailV2Save (opslaan + omzetten in één POST).</summary>
+        /// <summary>Wat het omzetten van een offerte in de weg staat, of null.</summary>
+        private async Task<string> ConvertProblemAsync(ChangeOrder quote)
+        {
+            if (quote.ChangeOrderDetail.Count == 0) return "De offerte heeft nog geen regels.";
+            if (quote.ChangeOrderDetail.Any(d => d.NeedsReview)) return "Minstens één regel staat nog op \"controleer\".";
+            var existing = await _db.ChangeOrder.AsNoTracking()
+                .Where(c => c.SourceChangeOrderId == quote.Id && c.SourceKind == 3)
+                .Select(c => (int?)c.Id).FirstOrDefaultAsync();
+            if (existing.HasValue) return $"Deze offerte is al omgezet naar WO-{existing:000}.";
+            return null;
+        }
+
+        /// <summary>21c bevestigen: maakt uit de offerte een NIEUWE wijzigingsopdracht (de offerte blijft
+        /// ongewijzigd bestaan als bron — beslissing Niels 2026-10-02). Elke regel wordt overgenomen met
+        /// haar prijs, commissie en btw en verwijst naar de offerteregel (SourceDetailId): die prijzen
+        /// liggen in de WO vast, het aantal en de omschrijving niet, en de regel mag daar nog weg.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeOrderConvertV2(ChangeOrderConvertV2Model model)
         {
-            var co = await _db.ChangeOrder
+            var quote = await _db.ChangeOrder
                 .Include(c => c.ChangeOrderDetail)
-                .Include(c => c.ChangeOrderPaymentTerm)
                 .FirstOrDefaultAsync(c => c.Id == model.ChangeOrderId);
-            if (co is null) return NotFound();
+            if (quote is null || !quote.IsQuote) return NotFound();
 
-            if (!co.IsQuote)
+            var problem = await ConvertProblemAsync(quote);
+            if (problem != null)
             {
-                AddMessage("info", "Deze offerte is al omgezet.", "Al omgezet");
-                return RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = model.ProjectId, coid = co.Id });
-            }
-            if (model.ConvertClientAccountId <= 0 && co.ClientAccountId <= 0)
-            {
-                AddMessage("error", "Kies een klantenaccount · eenheid.", "Kon niet omzetten");
-                return RedirectToAction(nameof(ChangeOrdersV2), new { projectid = model.ProjectId });
+                AddMessage("error", problem, "Kon niet omzetten");
+                return BackToChangeOrder(model.ProjectId, quote.Id);
             }
 
-            await ApplyConversionAsync(co, model.ProjectId, model.ConvertClientAccountId, model.ConvertCommission,
-                model.ConvertPlan, model.ConvertDescription, model.ConvertConditions);
-            await _db.SaveChangesAsync();
-
-            return await AfterSaveRedirectAsync(co, model.ProjectId, model.AfterSave, "Omgezet naar wijzigingsopdracht.", "Omgezet");
-        }
-
-        /// <summary>De eigenlijke omzetting (in-place, geen kopieerstap — offerte en WO zijn dezelfde rij):
-        /// klant, commissie op elke regel, btw uit de betalingsgroep, omschrijving, voorwaarden en het
-        /// facturatieplan volgens de gekozen snelkeuze. Minwerk (negatieve kostprijs) wordt aan kostprijs
-        /// verrekend: commissie vast op 0 %.</summary>
-        private async Task ApplyConversionAsync(ChangeOrder co, int projectId, int clientAccountId, decimal commission,
-            string plan, string description, string conditions)
-        {
-            if (clientAccountId > 0) co.ClientAccountId = clientAccountId;
-            co.IsQuote = false;
-            co.QuoteConvertedAt = DateTime.Now;
-            co.Invoiceable = true; // standaard factureren wij; de schakelaar op het opmaakscherm zet dit uit
-
-            var details = co.ChangeOrderDetail.Where(d => _db.Entry(d).State != EntityState.Deleted).ToList();
-            var cost = details.Sum(d => d.Number * d.Price);
-            var appliedCommission = cost < 0 ? 0m : Math.Clamp(commission, 0m, 999m);
-            var vat = (await ResolveVatForClientAsync(projectId, co.ClientAccountId)).Percentage;
-            foreach (var d in details)
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var description = string.IsNullOrWhiteSpace(model.ConvertDescription) ? quote.Description ?? "" : model.ConvertDescription.Trim();
+            var conditions = string.IsNullOrWhiteSpace(model.ConvertConditions) ? quote.ChangeOrderConditions : model.ConvertConditions.Trim();
+            var order = new ChangeOrder
             {
-                d.Commission = appliedCommission;
-                d.VatPercentage = vat;
+                ClientAccountId = quote.ClientAccountId,
+                Description = description.Length > 250 ? description[..250] : description,
+                Date = today,
+                ExpirationDate = quote.ExpirationDate >= today ? quote.ExpirationDate : today.AddDays(30),
+                Comment = quote.Comment,
+                Invoiceable = quote.Invoiceable,
+                ContractActivityId = quote.ContractActivityId,
+                ChangeOrderConditions = conditions is { Length: > 1000 } ? conditions[..1000] : conditions,
+                IsQuote = false,
+                QuoteSupplierReference = quote.QuoteSupplierReference,
+                QuoteVatPercentage = quote.QuoteVatPercentage,
+                QuoteSourcePath = quote.QuoteSourcePath,
+                QuoteSourceFileName = quote.QuoteSourceFileName,
+                SourceChangeOrderId = quote.Id,
+                SourceKind = 3,
+            };
+            var sortOrder = 0;
+            foreach (var d in quote.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id))
+            {
+                order.ChangeOrderDetail.Add(new ChangeOrderDetail
+                {
+                    Description = d.Description,
+                    MeasurementType = d.MeasurementType,
+                    MeasurementUnit = d.MeasurementUnit,
+                    Number = d.Number,
+                    Price = d.Price,
+                    Commission = d.Commission,
+                    VatPercentage = d.VatPercentage,
+                    SourceImagePath = d.SourceImagePath,
+                    SourceDetailId = d.Id,
+                    SortOrder = sortOrder++,
+                });
             }
 
-            if (!string.IsNullOrWhiteSpace(description))
-            {
-                var desc = description.Trim();
-                co.Description = desc.Length > 250 ? desc[..250] : desc;
-            }
-            if (!string.IsNullOrWhiteSpace(conditions))
-            {
-                var cond = conditions.Trim();
-                co.ChangeOrderConditions = cond.Length > 1000 ? cond[..1000] : cond;
-            }
-
-            foreach (var stale in co.ChangeOrderPaymentTerm.ToList())
-                _db.ChangeOrderPaymentTerm.Remove(stale);
-            void AddTerm(byte kind, decimal pct, byte trigger, int order) => co.ChangeOrderPaymentTerm.Add(new ChangeOrderPaymentTerm
+            void AddTerm(byte kind, decimal pct, byte trigger, int termOrder) => order.ChangeOrderPaymentTerm.Add(new ChangeOrderPaymentTerm
             {
                 Kind = kind,
                 Percentage = pct,
                 TriggerType = trigger,
-                SortOrder = order,
+                SortOrder = termOrder,
                 CreatedAt = DateTime.Now,
             });
-            if (plan == "voorschot-saldo")
+            if (model.ConvertPlan == "voorschot-saldo")
             {
                 AddTerm(1, 30m, 1, 0);
                 AddTerm(3, 70m, 2, 1);
@@ -443,38 +452,241 @@ namespace CPMCore.Controllers
                 // gebruiker het verder op het opmaakscherm (28a).
                 AddTerm(3, 100m, 2, 0);
             }
+
+            quote.QuoteConvertedAt = DateTime.Now;
+            _db.ChangeOrder.Add(order);
+            await _db.SaveChangesAsync();
+
+            return await AfterSaveRedirectAsync(order, model.ProjectId, model.AfterSave,
+                $"Wijzigingsopdracht WO-{order.Id:000} aangemaakt uit OF-{quote.Id:000}. De prijzen liggen vast; aantallen, omschrijvingen en het facturatieplan kan je nog aanpassen.", "Omgezet");
         }
 
-        /// <summary>Waar de gebruiker na opslaan/omzetten terechtkomt: het scherm zelf ("open"), of het
-        /// scherm met de 21d-verzendmodal meteen open ("send") — de modal werkt altijd op de zopas
-        /// bewaarde toestand, dus het document dat verzonden wordt is wat op het scherm staat.</summary>
+        /// <summary>Waar de gebruiker na opslaan/omzetten terechtkomt: het scherm zelf, of het scherm met
+        /// meteen een modal open — "send" de verzendmodal (21d voor een WO, de offertemail voor een
+        /// offerte), "convert" de 21c-omzetmodal. De modal werkt zo altijd op de zopas bewaarde toestand:
+        /// wat verzonden of omgezet wordt is wat op het scherm staat.</summary>
         private Task<IActionResult> AfterSaveRedirectAsync(ChangeOrder co, int projectId, string afterSave, string message, string title)
         {
-            if (afterSave != "send")
+            IActionResult Back(object extra = null) => RedirectToAction(nameof(ChangeOrderDetailV2), extra ?? new { projectid = projectId, coid = co.Id });
+
+            if (afterSave == "list")
             {
                 AddMessage("success", message, title);
-                return Task.FromResult<IActionResult>(RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = projectId, coid = co.Id }));
+                return Task.FromResult<IActionResult>(RedirectToAction(nameof(ChangeOrdersV2), new { projectid = projectId }));
+            }
+            if (afterSave != "send" && afterSave != "convert")
+            {
+                AddMessage("success", message, title);
+                return Task.FromResult(Back());
             }
 
             var problem = SendProblem(co);
             if (problem != null)
             {
-                AddMessage("warning", problem + " De wijzigingsopdracht is wel opgeslagen.", "Nog niet verzonden");
-                return Task.FromResult<IActionResult>(RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = projectId, coid = co.Id }));
+                AddMessage("warning", problem + " Wat je invulde is wel opgeslagen.", afterSave == "send" ? "Nog niet verzonden" : "Nog niet omgezet");
+                return Task.FromResult(Back());
             }
-            return Task.FromResult<IActionResult>(RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = projectId, coid = co.Id, send = true }));
+            return Task.FromResult(afterSave == "send"
+                ? Back(new { projectid = projectId, coid = co.Id, send = true })
+                : Back(new { projectid = projectId, coid = co.Id, convert = true }));
         }
 
-        /// <summary>Wat verzenden nog in de weg staat, of null als alles in orde is.</summary>
+        /// <summary>De voorlopige naam die 20c aan een ingelezen offerte geeft ("Leveranciersofferte 2025-118")
+        /// zolang de gebruiker nog geen omschrijving voor de klant invulde.</summary>
+        private static bool IsIntakePlaceholder(string description) => description != null && description.StartsWith("Leveranciersofferte");
+
+        /// <summary>Wat verzenden (of omzetten) nog in de weg staat, of null als alles in orde is.</summary>
         private string SendProblem(ChangeOrder co)
         {
             var details = co.ChangeOrderDetail.Where(d => _db.Entry(d).State != EntityState.Deleted).ToList();
             var terms = co.ChangeOrderPaymentTerm.Where(t => _db.Entry(t).State != EntityState.Deleted).ToList();
             if (details.Count == 0) return "Voeg minstens één regel toe.";
             if (details.Any(d => d.NeedsReview)) return "Minstens één regel staat nog op \"controleer\".";
-            if (terms.Count > 0 && Math.Abs(terms.Sum(t => t.Percentage ?? 0m) - 100m) > 0.01m) return "Het facturatieplan moet samen 100 % zijn.";
-            if (string.IsNullOrWhiteSpace(co.Description)) return "Vul een omschrijving voor de klant in.";
+            if (!co.IsQuote && terms.Count > 0 && Math.Abs(terms.Sum(t => t.Percentage ?? 0m) - 100m) > 0.01m) return "Het facturatieplan moet samen 100 % zijn.";
+            if (string.IsNullOrWhiteSpace(co.Description) || IsIntakePlaceholder(co.Description)) return "Vul een omschrijving voor de klant in.";
             return null;
+        }
+
+        /// <summary>De eigenaars van een klantenaccount met hun e-mailadres — het klantenaccount zelf
+        /// (eigenaar 1) en de mede-eigenaars; zelfde volgorde en ontdubbeling op e-mail als het voorstel
+        /// van de ondertekenmodule (ChangeOrderSigningSource.SuggestPartiesAsync).</summary>
+        private async Task<List<Models.Signing.SigningStartPartyVm>> OwnerRecipientsAsync(int clientAccountId)
+        {
+            var list = new List<Models.Signing.SigningStartPartyVm>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var account = await _db.ClientAccount.AsNoTracking().FirstOrDefaultAsync(a => a.Id == clientAccountId);
+            if (account != null)
+            {
+                var email = account.Email?.Trim();
+                list.Add(new Models.Signing.SigningStartPartyVm { Include = !string.IsNullOrWhiteSpace(email), DisplayName = Services.Signing.ChangeOrderPdfBuilder.DisplayName(account), Email = email, Capacity = "Klant" });
+                if (!string.IsNullOrWhiteSpace(email)) seen.Add(email);
+            }
+            var contacts = await _db.ClientContacts.AsNoTracking()
+                .Where(c => c.ClientAccountId == clientAccountId && c.IsCoOwner)
+                .OrderByDescending(c => c.IsPrimaryContact).ThenBy(c => c.Id)
+                .Select(c => new { c.Name, c.Forename, c.CompanyName, c.Email })
+                .ToListAsync();
+            foreach (var c in contacts)
+            {
+                var email = c.Email?.Trim();
+                if (!string.IsNullOrWhiteSpace(email) && !seen.Add(email)) continue;
+                var name = string.Join(" ", new[] { c.Name, c.Forename }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                list.Add(new Models.Signing.SigningStartPartyVm { Include = !string.IsNullOrWhiteSpace(email), DisplayName = string.IsNullOrWhiteSpace(name) ? c.CompanyName ?? "Mede-eigenaar" : name, Email = email, Capacity = "Mede-eigenaar" });
+            }
+            return list;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════════════════════
+        // 3a. Offerte aan de klant — verzenden per mail (PDF als bijlage, geen handtekening)
+        // ═══════════════════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>Mogelijke afzenders van de offertemail: de ingelogde gebruiker (standaard) en de
+        /// projectleider van het project. Enkel wie een e-mailadres heeft.</summary>
+        private async Task<List<QuoteSenderV2>> QuoteSendersAsync(ChangeOrder co)
+        {
+            var list = new List<QuoteSenderV2>();
+            var myEmail = User.GetCpmEmail();
+            if (!string.IsNullOrWhiteSpace(myEmail))
+                list.Add(new QuoteSenderV2 { Key = "me", Label = $"Mezelf ({User.GetCpmDisplayName()})", Email = myEmail.Trim() });
+            var lead = await _db.ChangeOrder.AsNoTracking()
+                .Where(c => c.Id == co.Id)
+                .Select(c => c.ContractActivity.Contract.Project.AspNetUser)
+                .FirstOrDefaultAsync(HttpContext.RequestAborted);
+            if (lead != null && !string.IsNullOrWhiteSpace(lead.Email) && !list.Any(s => string.Equals(s.Email, lead.Email.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                var name = string.Join(" ", new[] { lead.Voornaam, lead.Familienaam }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                list.Add(new QuoteSenderV2 { Key = "lead", Label = "Projectleider" + (string.IsNullOrWhiteSpace(name) ? "" : $" ({name})"), Email = lead.Email.Trim() });
+            }
+            return list;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SendQuoteModalV2(int projectId, int changeOrderId)
+        {
+            var co = await _db.ChangeOrder.AsNoTracking()
+                .Include(c => c.ChangeOrderDetail)
+                .Include(c => c.ChangeOrderPaymentTerm)
+                .Include(c => c.ClientAccount)
+                .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Project)
+                .FirstOrDefaultAsync(c => c.Id == changeOrderId);
+            if (co is null || !co.IsQuote) return NotFound();
+
+            var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+            var incl = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m) * (1 + (d.VatPercentage ?? 0m) / 100m));
+            var projectName = co.ContractActivity?.Contract?.Project?.ProjectName;
+            var vm = new SendQuoteModalV2Vm
+            {
+                ProjectId = projectId,
+                ChangeOrderId = co.Id,
+                Number = $"OF-{co.Id:000}",
+                Subtitle = string.Join(" · ", new[]
+                {
+                    co.Description,
+                    "€ " + incl.ToString("N2", be) + " incl. btw",
+                    co.ClientAccount != null ? "klantenaccount " + Services.Signing.ChangeOrderPdfBuilder.DisplayName(co.ClientAccount) : null,
+                }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                Problem = SendProblem(co),
+                Parties = await OwnerRecipientsAsync(co.ClientAccountId),
+                Senders = await QuoteSendersAsync(co),
+                Subject = $"Offerte OF-{co.Id:000}: {co.Description}" + (string.IsNullOrWhiteSpace(projectName) ? "" : $" — {projectName}"),
+                PdfUrl = Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = co.Id }),
+                TestRecipient = HttpContext.RequestServices.GetRequiredService<IOptions<ServiceCore.Signing.SigningOptions>>().Value.TestRecipientOverride,
+            };
+            return PartialView("Modals/_ModalSendQuoteV2", vm);
+        }
+
+        /// <summary>De offerte per mail naar de gekozen eigenaars: één mail per ontvanger met eigen aanhef,
+        /// het vrije bericht en de offerte als PDF-bijlage. Daarna staat de offerte op "verzonden" en ligt
+        /// ze vast (terug aanpassen kan via "Aanpassen"). Testmodus van de ondertekenmodule
+        /// (Signing:TestRecipientOverride) geldt ook hier, zodat een testomgeving nooit een klant mailt.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangeOrderQuoteSendV2(ChangeOrderQuoteSendV2Model model)
+        {
+            var ct = HttpContext.RequestAborted;
+            var co = await _db.ChangeOrder
+                .Include(c => c.ChangeOrderDetail)
+                .Include(c => c.ChangeOrderPaymentTerm)
+                .FirstOrDefaultAsync(c => c.Id == model.ChangeOrderId, ct);
+            if (co is null || !co.IsQuote) return NotFound();
+
+            var recipients = (model.Parties ?? new())
+                .Where(p => p.Include && !string.IsNullOrWhiteSpace(p.Email))
+                .Select(p => (Name: (p.DisplayName ?? "").Trim(), Email: p.Email.Trim()))
+                .ToList();
+            var senders = await QuoteSendersAsync(co);
+            var sender = senders.FirstOrDefault(s => s.Key == model.Sender) ?? senders.FirstOrDefault();
+            var error = sender == null ? "Er is geen e-mailadres bekend voor jou of de projectleider om de offerte van te versturen."
+                : co.QuoteConvertedAt.HasValue ? "Deze offerte is al omgezet naar een wijzigingsopdracht."
+                : SendProblem(co) ?? (recipients.Count == 0 ? "Kies minstens één ontvanger met een e-mailadres." : null);
+            if (error != null)
+            {
+                AddMessage("error", error, "Niet verzonden");
+                return BackToChangeOrder(model.ProjectId, co.Id);
+            }
+
+            var builder = HttpContext.RequestServices.GetRequiredService<Services.Signing.ChangeOrderPdfBuilder>();
+            var pdfModel = await builder.LoadAsync(co.Id, ct);
+            byte[] pdf;
+            try { pdf = builder.Render(pdfModel); }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Offerte-PDF genereren mislukt voor {ChangeOrderId}", co.Id);
+                AddMessage("error", "De offerte kon niet als PDF opgemaakt worden.", "Niet verzonden");
+                return BackToChangeOrder(model.ProjectId, co.Id);
+            }
+            var attachment = new EmailAttachment(Services.Signing.ChangeOrderPdfBuilder.FileName(pdfModel), pdf, "application/pdf");
+
+            var subject = string.IsNullOrWhiteSpace(model.Subject) ? $"Offerte OF-{co.Id:000}: {co.Description}" : model.Subject.Trim();
+            static string H(string x) => System.Net.WebUtility.HtmlEncode(x ?? "");
+            var message = string.IsNullOrWhiteSpace(model.Message)
+                ? ""
+                : $"<p>{H(model.Message.Trim()).Replace("\r\n", "\n").Replace("\n", "<br/>")}</p>";
+
+            var signingOptions = HttpContext.RequestServices.GetRequiredService<IOptions<ServiceCore.Signing.SigningOptions>>().Value;
+            var email = HttpContext.RequestServices.GetRequiredService<IEmailSender>();
+            var graphMail = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.GraphMailSender>();
+            var sent = new List<string>();
+            var failed = new List<string>();
+            foreach (var r in recipients)
+            {
+                // Zelfde huisstijl-omslag als de mails van de ondertekenmodule.
+                var body = ServiceCore.Signing.SigningNotifier.MailLayout($"Beste {H(r.Name)},",
+                    message +
+                    $"<p>In bijlage vindt u onze offerte <strong>{H(co.Description)}</strong> (OF-{co.Id:000}), geldig tot {co.ExpirationDate:dd/MM/yyyy}.</p>" +
+                    "<p>Gaat u akkoord of hebt u vragen, antwoord dan gerust op deze e-mail. Na uw akkoord ontvangt u een wijzigingsopdracht ter ondertekening.</p>");
+                var address = r.Email;
+                var mailSubject = subject;
+                if (signingOptions.IsTestMode)
+                {
+                    mailSubject = $"[TEST → {address}] {subject}";
+                    address = signingOptions.TestRecipientOverride;
+                }
+                try
+                {
+                    // Eerst echt namens de mailbox van de afzender (Graph, komt in diens "Verzonden items");
+                    // lukt dat niet (niet geconfigureerd, recht ontbreekt), dan via de vaste SMTP-account met
+                    // het adres van de afzender als From.
+                    var viaGraph = await graphMail.TrySendAsync(sender!.Email, address, mailSubject, body, new[] { attachment }, ct);
+                    if (!viaGraph) await email.SendEmailAsync(address, mailSubject, body, new[] { attachment }, fromEmail: sender.Email);
+                    sent.Add(r.Name);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Offertemail voor {ChangeOrderId} kon niet verstuurd worden.", co.Id);
+                    failed.Add(r.Name);
+                }
+            }
+
+            if (sent.Count > 0)
+            {
+                co.DateSendToClient = DateOnly.FromDateTime(DateTime.Today);
+                await _db.SaveChangesAsync(ct);
+                AddMessage("success", "De offerte is gemaild naar " + string.Join(" en ", sent) + ".", "Offerte verzonden");
+            }
+            if (failed.Count > 0)
+                AddMessage("error", "De mail naar " + string.Join(" en ", failed) + " kon niet verstuurd worden.", "Niet verzonden");
+            return BackToChangeOrder(model.ProjectId, co.Id);
         }
 
         // ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -867,18 +1079,18 @@ namespace CPMCore.Controllers
             var today = DateOnly.FromDateTime(DateTime.Today);
             switch (step)
             {
-                case "sent":
+                case "sent" when !co.IsQuote:
                     co.DateSendToClient ??= today;
                     AddMessage("success", "Gemarkeerd als verzonden.", "Verzonden");
                     break;
-                case "signed":
+                case "signed" when !co.IsQuote:
                     co.DateSendToClient ??= today;
                     co.DateAgreement ??= today;
                     AddMessage("success", "Akkoord van de klant geregistreerd.", "Ondertekend");
                     break;
-                case "concept" when !co.DateAgreement.HasValue:
+                case "concept" when !co.DateAgreement.HasValue && !(co.IsQuote && co.QuoteConvertedAt.HasValue):
                     co.DateSendToClient = null;
-                    AddMessage("success", "Terug naar concept — regels en facturatieplan zijn weer aanpasbaar.", "Concept");
+                    AddMessage("success", co.IsQuote ? "De offerte is weer een concept. Verzend ze opnieuw zodra ze aangepast is." : "Terug naar concept — regels en facturatieplan zijn weer aanpasbaar.", "Concept");
                     break;
             }
             await _db.SaveChangesAsync();

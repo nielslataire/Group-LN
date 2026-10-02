@@ -17,9 +17,8 @@
     var search = document.getElementById("gl-v2-co2-search");
     var statusFilter = document.getElementById("gl-v2-co2-status");
 
-    // "Geannuleerd" = ondertekening ingetrokken: de WO is weer een concept dat opnieuw verzonden moet
-    // worden, dus nog werk — hoort bij "open". "Gefactureerd" wacht nog op betaling.
-    var OPEN_STATUSES = ["Offerte", "Opgemaakt", "Geannuleerd", "Verzonden", "Ondertekend", "Factureerbaar", "Gefactureerd"];
+    // Welke rijen "open" zijn (nog werk aan) bepaalt de server (data-co2-open): een ingetrokken WO is weer
+    // een concept, een gefactureerde wacht op betaling, een omgezette of verlopen offerte is afgesloten.
 
     var configEl = document.getElementById("gl-v2-co2-config");
     var cfg = configEl ? JSON.parse(configEl.textContent) : {};
@@ -57,7 +56,7 @@
         $$(".gl-v2-co2-row").forEach(function (row) {
             var matchesType = !type || row.getAttribute("data-co2-type") === type;
             var matchesSearch = !term || (row.getAttribute("data-co2-search") || "").indexOf(term) !== -1;
-            var matchesStatus = !onlyOpen || OPEN_STATUSES.indexOf(row.getAttribute("data-co2-status")) !== -1;
+            var matchesStatus = !onlyOpen || row.getAttribute("data-co2-open") === "true";
             row.hidden = !(matchesType && matchesSearch && matchesStatus);
         });
 

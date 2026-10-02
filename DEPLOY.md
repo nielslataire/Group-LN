@@ -105,15 +105,28 @@ $env:DOTNET_ENVIRONMENT="Development"; dotnet GroupLN.MarketData.Worker.dll --zi
 ```bash
 # op de server (vanaf het Hetzner-IP), zelfde image als de worker
 ssh root@2.28.26.231
-cd /opt/marketdata && docker compose run --rm marketdata-worker dotnet GroupLN.MarketData.Worker.dll --zimmo-search-test --postcode 8000
+cd /opt/marketdata && docker compose run --rm marketdata-worker --zimmo-search-test --postcode 8000 2>&1 | grep ZimmoSearchTest
 ```
 
 Uitkomst per locatie: `OK` (kaarten gevonden), `CLOUDFLARE-BLOCKED`, `LEEG` (pagina laadt maar geen kaarten:
 opbouw gewijzigd) of `NAVIGATIE-FOUT`. HTML, tekst en screenshot staan in `debug/zimmo-search-test/`.
 
 Afspraak: Zimmo-detailpagina's worden **niet** gecrawld (`OpenProjectDetailPages=false`,
-`OpenDetailPagesForLooseListings=false`). Zimmo levert dus enkel wat op de zoekkaart staat: code, adres,
+`OpenDetailPagesForLooseListings=false`). Zimmo levert dus enkel wat op de overzichtskaart staat: code, adres,
 prijs, oppervlakte, slaapkamers en voor projecten het label "Project - 80% beschikbaar".
+
+**Welke overzichtspagina (sinds 2026-10-02).** De crawler leest per gemeente de pagina die Zimmo zelf in zijn
+sitemap aanbiedt: `https://www.zimmo.be/nl/{gemeente}-{postcode}/te-koop/nieuwbouwproject/` (paginatie `?page=2`).
+De vroegere zoek-URL `/nl/zoeken/?search=…` en de `…/filter`-paginatie staan in `robots.txt` van Zimmo als
+Disallow en worden niet meer gebruikt (`Sources.Zimmo.UseSearchFilterUrls=false`). Gevolg: Zimmo levert enkel
+nog **projecten**, geen losse nieuwbouwlistings meer. De `CitySlug` in `AllowedLocations` moet exact de
+schrijfwijze uit de sitemap zijn (bv. `"de panne"` met spatie, `"erpe-mere"`).
+
+**Cloudflare.** Op 2026-10-02 gaf de Hetzner-server HTTP 403 "Even geduld..." op de oude zoek-URL. Of de
+sitemap-pagina vanaf de server wél doorkomt, toont de diagnose hierboven na een deploy. Blijft het 403, dan
+is Zimmo vanaf een datacenter-adres niet haalbaar: de beveiliging wordt niet omzeild. Alternatieven: de
+Zimmo-run vanaf een eigen (kantoor)verbinding, toestemming/feed vragen aan Zimmo, of de bron uitzetten
+(`Sources.Zimmo.Enabled=false`).
 
 ## Crawl-time-out
 

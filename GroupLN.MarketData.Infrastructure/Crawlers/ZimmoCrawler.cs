@@ -109,6 +109,29 @@ public class ZimmoCrawler : BaseCrawler
     protected override Task ApplyRateLimitAsync(CancellationToken cancellationToken) =>
         Task.CompletedTask;
 
+    // ── Run-diagnose (statuspagina) ──────────────────────────────────────────
+    private int _searchPagesLoaded, _searchPagesBlocked, _searchPagesEmpty, _searchPagesNavError;
+    private string? _lastBlockedInfo, _lastEmptyInfo, _lastNavError;
+
+    /// <summary>
+    /// Vat samen wat er met de zoekpagina's gebeurde. Zonder dit eindigt een geblokkeerde of
+    /// lege run als "Voltooid, 0 gevonden" en is de oorzaak enkel in de containerlogs te vinden.
+    /// </summary>
+    protected override string? GetRunDiagnostics()
+    {
+        if (_searchPagesLoaded == 0) return null;
+        if (_searchPagesBlocked == 0 && _searchPagesEmpty == 0 && _searchPagesNavError == 0) return null;
+
+        var delen = new List<string> { $"Zimmo zoekpagina's: {_searchPagesLoaded} geladen" };
+        if (_searchPagesBlocked > 0)
+            delen.Add($"{_searchPagesBlocked} geblokkeerd door beveiliging ({_lastBlockedInfo})");
+        if (_searchPagesEmpty > 0)
+            delen.Add($"{_searchPagesEmpty} zonder kaarten ({_lastEmptyInfo})");
+        if (_searchPagesNavError > 0)
+            delen.Add($"{_searchPagesNavError} met laadfout ({_lastNavError})");
+        return string.Join(", ", delen);
+    }
+
     // ── Fase 1: zoek-URL's genereren ─────────────────────────────────────────
 
     protected override Task<IEnumerable<string>> GetSearchPageUrlsAsync(
@@ -118,6 +141,13 @@ public class ZimmoCrawler : BaseCrawler
         _searchCardCache.Clear();
         _projectExternalIds.Clear();
         _pendingProjectUnits.Clear();
+        _searchPagesLoaded = 0;
+        _searchPagesBlocked = 0;
+        _searchPagesEmpty = 0;
+        _searchPagesNavError = 0;
+        _lastBlockedInfo = null;
+        _lastEmptyInfo = null;
+        _lastNavError = null;
         _projectDetailPagesOpened = 0;
         _projectDetailPagesFailed = 0;
         _projectDetailPagesSkipped = 0;
@@ -167,7 +197,18 @@ public class ZimmoCrawler : BaseCrawler
                 && ZimmoSearchUrlBuilder.PlaceIdByPostalCode.TryGetValue(loc.PostalCode, out var id))
                 placeId = id;
 
-            var searchUrl = ZimmoSearchUrlBuilder.Build(placeId);
+            // Standaard de toegelaten overzichtspagina uit de sitemap van Zimmo; de zoek-URL met filter
+            // staat in hun robots.txt als Disallow en is enkel nog via UseSearchFilterUrls te gebruiken.
+            string searchUrl;
+            if (src.UseSearchFilterUrls || string.IsNullOrWhiteSpace(loc.PostalCode))
+            {
+                searchUrl = ZimmoSearchUrlBuilder.Build(placeId);
+            }
+            else
+            {
+                var slug = !string.IsNullOrWhiteSpace(loc.CitySlug) ? loc.CitySlug! : (loc.City ?? "").ToLowerInvariant();
+                searchUrl = ZimmoSearchUrlBuilder.BuildProjectOverviewUrl(slug, loc.PostalCode);
+            }
             _urlContext[searchUrl] = new LocationContext(loc.PostalCode ?? "", loc.City ?? "", placeId, maxPages);
 
             Logger.LogInformation(
@@ -274,9 +315,13 @@ public class ZimmoCrawler : BaseCrawler
             catch (PlaywrightException ex)
             {
                 Logger.LogWarning("[Zimmo] {City} p{N}: GotoAsync fout: {Msg}", city, pageNum, ex.Message);
+                _searchPagesNavError++;
+                _lastNavError = ex.Message.Split('\n')[0];
+                if (_lastNavError.Length > 120) _lastNavError = _lastNavError[..120];
             }
 
             await page.WaitForTimeoutAsync(2000);
+            _searchPagesLoaded++;
 
             var httpStatus = navResponse?.Status ?? 0;
             var pageTitle  = await page.TitleAsync();
@@ -288,6 +333,8 @@ public class ZimmoCrawler : BaseCrawler
                 Logger.LogWarning(
                     "[Zimmo] {City} p{N}: CloudflareBlocked (HTTP {Status}, '{Title}') — locatie overgeslagen.",
                     city, pageNum, httpStatus, pageTitle);
+                _searchPagesBlocked++;
+                _lastBlockedInfo = $"HTTP {httpStatus}, titel '{pageTitle}'";
                 return ([], null);
             }
 
@@ -308,6 +355,14 @@ public class ZimmoCrawler : BaseCrawler
             Logger.LogInformation(
                 "[Zimmo] {City} p{N}: HTTP {Status} | {Count} listing-URL's",
                 city, pageNum, httpStatus, listingUrls.Count);
+
+            if (listingUrls.Count == 0)
+            {
+                _searchPagesEmpty++;
+                var voorproef = (bodyText ?? "").Replace("\n", " ").Replace("\r", " ").Trim();
+                if (voorproef.Length > 80) voorproef = voorproef[..80];
+                _lastEmptyInfo = $"HTTP {httpStatus}, titel '{pageTitle}', tekst begint met '{voorproef}'";
+            }
 
             if (listingUrls.Count == 0)
                 Logger.LogWarning(

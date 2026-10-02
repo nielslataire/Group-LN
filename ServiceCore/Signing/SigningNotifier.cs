@@ -156,6 +156,10 @@ public sealed class SigningNotifier : ISigningNotifier
            "<p style=\"color:#76807a;font-size:11px\">Deze e-mail werd automatisch verstuurd door CPM, het projectbeheer van Group LN.</p>" +
            "</div>";
 
+    /// <summary>De huisstijl-omslag van de signingmails, ook bruikbaar voor andere mails van CPM (bv. de
+    /// offerte aan de klant) zodat alle klantmails er hetzelfde uitzien.</summary>
+    public static string MailLayout(string greeting, string inner) => Layout(greeting, inner);
+
     private static string H(string? s) => WebUtility.HtmlEncode(s ?? string.Empty);
 
     private static string SafeFileName(string name)

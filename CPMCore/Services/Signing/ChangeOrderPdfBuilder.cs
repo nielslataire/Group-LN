@@ -65,6 +65,7 @@ public sealed class ChangeOrderPdfBuilder
             Id = co.Id,
             ProjectId = projectId,
             ClientAccountId = co.ClientAccountId,
+            IsQuote = co.IsQuote,
             Date = co.Date,
             ExpirationDate = co.ExpirationDate,
             ProjectName = project?.ProjectName ?? "",
@@ -110,6 +111,6 @@ public sealed class ChangeOrderPdfBuilder
     public static string FileName(ChangeOrderPdfModel model)
     {
         var safe = string.Concat((model.ProjectName ?? "Project").Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch)).Trim();
-        return $"Wijzigingsopdracht_{safe}_{model.Date:yyyyMMdd}_{model.Id}.pdf";
+        return $"{(model.IsQuote ? "Offerte" : "Wijzigingsopdracht")}_{safe}_{model.Date:yyyyMMdd}_{model.Id}.pdf";
     }
 }

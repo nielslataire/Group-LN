@@ -53,6 +53,9 @@ namespace CPMCore.Controllers
             // lijst en het detail nooit een andere status tonen.
             var facts = await LoadChangeOrderFlowFactsAsync(projectid, orders);
             vm.SigningEnabled = facts.SigningEnabled;
+            var convertedTo = orders.Where(o => o.SourceKind == 3 && o.SourceChangeOrderId.HasValue)
+                .GroupBy(o => o.SourceChangeOrderId!.Value)
+                .ToDictionary(g => g.Key, g => g.Max(o => o.Id));
 
             foreach (var co in orders)
             {
@@ -67,10 +70,13 @@ namespace CPMCore.Controllers
                 var signedCount = parties?.Count(p => p.Status == (int)SigningPartyStatus.Signed) ?? 0;
                 var anyOverdue = invoices?.Any(i => i.IsOverdue) == true;
 
+                convertedTo.TryGetValue(co.Id, out var convertedToId);
+                var isConverted = co.IsQuote && (convertedToId > 0 || co.QuoteConvertedAt.HasValue);
                 var row = new ChangeOrderRowV2
                 {
                     Id = co.Id,
                     IsQuote = co.IsQuote,
+                    ConvertedToId = convertedToId > 0 ? convertedToId : null,
                     ClientName = co.ClientAccount?.Name ?? "",
                     UnitName = unitName,
                     Description = co.Description,
@@ -86,7 +92,9 @@ namespace CPMCore.Controllers
                 // Statuspil: zelfde woorden en kleuren als het scherm per stap (28) en de lijst in 29a.
                 (row.PillLabel, row.PillTone) = status switch
                 {
-                    ChangeOrderStatus.Offerte => ("Offerte · ingelezen", "is-neutral"),
+                    _ when isConverted => ("Offerte · omgezet", "is-positive"),
+                    ChangeOrderStatus.Offerte when co.DateSendToClient.HasValue => ("Offerte · verzonden", "is-attention"),
+                    ChangeOrderStatus.Offerte => ("Offerte · concept", "is-neutral"),
                     ChangeOrderStatus.Verlopen => ("Offerte · verlopen", "is-blocked"),
                     ChangeOrderStatus.Opgemaakt => ("Opgemaakt", "is-neutral"),
                     ChangeOrderStatus.Geannuleerd => ("Ingetrokken", "is-neutral"),
@@ -101,11 +109,13 @@ namespace CPMCore.Controllers
 
                 if (co.IsQuote)
                 {
-                    row.SubText = status == ChangeOrderStatus.Verlopen
-                        ? $"geldig tot {co.ExpirationDate:dd/MM/yyyy} — verlopen"
-                        : $"{co.ChangeOrderDetail.Count} {(co.ChangeOrderDetail.Count == 1 ? "regel" : "regels")} · kostprijs leverancier";
-                    row.SubTextIsWarning = status == ChangeOrderStatus.Verlopen;
-                    row.Hint = "nog om te zetten";
+                    row.SubText = isConverted ? $"omgezet naar WO-{convertedToId:000}"
+                        : status == ChangeOrderStatus.Verlopen ? $"geldig tot {co.ExpirationDate:dd/MM/yyyy} — verlopen"
+                        : $"{co.ChangeOrderDetail.Count} {(co.ChangeOrderDetail.Count == 1 ? "regel" : "regels")}"
+                          + (co.DateSendToClient.HasValue ? $" · gemaild {co.DateSendToClient:dd/MM/yyyy}" : "");
+                    row.SubTextIsWarning = !isConverted && status == ChangeOrderStatus.Verlopen;
+                    row.Hint = isConverted ? null : co.DateSendToClient.HasValue ? "wacht op akkoord klant" : "nog te verzenden";
+                    row.IsOpen = !isConverted && status != ChangeOrderStatus.Verlopen;
                     vm.Quotes.Add(row);
                 }
                 else
@@ -131,7 +141,9 @@ namespace CPMCore.Controllers
                         _ => null,
                     };
                     if (co.SourceChangeOrderId.HasValue)
-                        row.SourceReference = (co.SourceKind == 2 ? "versie van " : "kopie van ") + $"WO-{co.SourceChangeOrderId:000}";
+                        row.SourceReference = co.SourceKind == 3 ? $"uit OF-{co.SourceChangeOrderId:000}"
+                            : (co.SourceKind == 2 ? "versie van " : "kopie van ") + $"WO-{co.SourceChangeOrderId:000}";
+                    row.IsOpen = status is not (ChangeOrderStatus.Betaald or ChangeOrderStatus.Geweigerd);
                     vm.Orders.Add(row);
                 }
             }
@@ -142,7 +154,7 @@ namespace CPMCore.Controllers
             var all = vm.Quotes.Concat(vm.Orders).ToList();
             vm.Funnel = new List<ChangeOrderFunnelStepV2>
             {
-                new() { Label = "Offerte", Count = all.Count(r => r.Status == ChangeOrderStatus.Offerte || r.Status == ChangeOrderStatus.Verlopen) },
+                new() { Label = "Offerte", Count = vm.Quotes.Count(r => r.IsOpen) },
                 new() { Label = "Opgemaakt", Count = all.Count(r => r.Status == ChangeOrderStatus.Opgemaakt) },
                 new() { Label = "Verzonden", Count = all.Count(r => r.Status == ChangeOrderStatus.Verzonden), IsHighlighted = true },
                 new() { Label = "Ondertekend", Count = all.Count(r => r.Status == ChangeOrderStatus.Ondertekend || r.Status == ChangeOrderStatus.Factureerbaar) },

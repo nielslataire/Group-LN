@@ -368,7 +368,7 @@
                 return;
             }
 
-            var sending = e.submitter && e.submitter.name === "afterSave" && e.submitter.value === "send";
+            var sending = e.submitter && e.submitter.name === "afterSave" && (e.submitter.value === "send" || e.submitter.value === "convert");
             if (!sending) return;
 
             var rows = rowsBody ? $$(".js-co-row", rowsBody) : [];
@@ -384,6 +384,20 @@
     }
 
     recomputeTotals();
+})();
+
+// ── 4. Verzend- en omzetmodals ──────────────────────────────────────────────────────────────────────
+// Eigen scope, los van de bewerkbare-fase-code hierboven: ook een VERZONDEN offerte (vergrendeld) opent
+// hier "Opnieuw mailen" en "Omzetten naar wijzigingsopdracht".
+(function () {
+    "use strict";
+
+    var configEl = document.getElementById("gl-v2-co-config");
+    if (!configEl) return;
+    var cfg = JSON.parse(configEl.textContent);
+
+    function $(sel, root) { return (root || document).querySelector(sel); }
+    function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
     // ── 4. 21d — Verzenden ter ondertekening ────────────────────────────────────────────────────────
     // "Verzenden naar klant" slaat eerst op (afterSave=send); de server stuurt daarna terug naar dit
@@ -402,7 +416,7 @@
 
         function refresh() {
             var checked = $('input[name="channel"]:checked', body);
-            var channel = checked ? checked.value : "pdf";
+            var channel = checked ? checked.value : "sign"; // offertemail: geen kanaalkeuze, enkel ontvangers
             $$(".js-send-signonly", body).forEach(function (el) { el.hidden = channel !== "sign"; });
             $$(".js-send-pdfonly", body).forEach(function (el) { el.hidden = channel !== "pdf"; });
             if (submitLabel) submitLabel.textContent = channel === "pdf" ? "Markeren als verzonden" : "Verzenden";
@@ -424,13 +438,32 @@
             .catch(function () { body.innerHTML = '<div class="gl-v2-co-send-loading">Kon het verzendformulier niet laden.</div>'; });
     }
 
-    if (cfg.openSend) {
-        // ?send=true uit de adresbalk: een herlaad of "terug" opent de modal niet opnieuw.
+    // ?send=true / ?convert=true uit de adresbalk: een herlaad of "terug" opent de modal niet opnieuw.
+    function clearParam(name) {
         try {
             var url = new URL(window.location.href);
-            url.searchParams.delete("send");
+            url.searchParams.delete(name);
             window.history.replaceState(null, "", url.toString());
         } catch (err) { /* oude browser: de modal opent dan bij herladen opnieuw, geen kwaad */ }
+    }
+
+    if (cfg.openSend) {
+        clearParam("send");
         openSend();
     }
+
+    // 21c — Omzetten (offerte aan de klant → nieuwe wijzigingsopdracht): de modal laadt zijn inhoud zelf
+    // (gl-v2-projecten-convertquote.js); hier enkel de ingangen. Een bewerkbare offerte slaat eerst op
+    // (knop met afterSave=convert) en opent de modal via ?convert=true.
+    function openConvert() {
+        if (window.GlV2ConvertQuote && cfg.convertModalUrl) window.GlV2ConvertQuote.open({ url: cfg.convertModalUrl });
+    }
+    if (cfg.openConvert) {
+        clearParam("convert");
+        openConvert();
+    }
+    document.addEventListener("click", function (e) {
+        if (e.target.closest(".js-co-open-convert")) { e.preventDefault(); openConvert(); }
+        else if (e.target.closest(".js-co-open-send")) { e.preventDefault(); openSend(); }
+    });
 })();

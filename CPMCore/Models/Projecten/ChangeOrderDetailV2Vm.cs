@@ -71,8 +71,9 @@ public class ChangeOrderDetailV2Vm
 
     /// <summary>"WO-006" / "OF-006".</summary>
     public string Number { get; set; } = "";
-    /// <summary>concept | ingetrokken | verlopen | verzonden | wacht | ondertekend | factureerbaar |
-    /// gefactureerd | betaald | geweigerd | telaat.</summary>
+    /// <summary>Offerte: offerte | offerte-verzonden | offerte-omgezet. Wijzigingsopdracht: concept |
+    /// ingetrokken | verlopen | verzonden | wacht | ondertekend | factureerbaar | gefactureerd | betaald |
+    /// geweigerd | telaat.</summary>
     public string Phase { get; set; } = "concept";
     /// <summary>Regels, opdracht en facturatieplan zijn bewerkbaar (concept/ingetrokken + schrijfrecht).</summary>
     public bool IsEditable { get; set; }
@@ -124,8 +125,17 @@ public class ChangeOrderDetailV2Vm
     /// <summary>De oudste nog niet betaalde factuur (28f "Factuur openen", 28i).</summary>
     public ChangeOrderInvoiceV2? OpenInvoice { get; set; }
 
-    /// <summary>De 21d-verzendmodal meteen openen (na "Verzenden naar klant" of 21c "Aanmaken en verzenden").</summary>
+    /// <summary>De verzendmodal meteen openen (na "Verzenden naar klant"/"Verzenden per mail" of 21c
+    /// "Aanmaken en verzenden"): 21d voor een WO, de offertemail voor een offerte.</summary>
     public bool OpenSendModal { get; set; }
+    /// <summary>De 21c-omzetmodal meteen openen (na "Omzetten naar wijzigingsopdracht" op een offerte).</summary>
+    public bool OpenConvertModal { get; set; }
+
+    // Offerte aan de klant (IsQuote): de tussenstap vóór de wijzigingsopdracht.
+    /// <summary>De WO die uit deze offerte gemaakt is (SourceKind=3) — de offerte is dan "Omgezet".</summary>
+    public int? ConvertedToChangeOrderId { get; set; }
+    /// <summary>Wie de offertemail krijgt (voorstel: klantenaccount + mede-eigenaars) — kaart "Verzending".</summary>
+    public List<ChangeOrderSignerV2> Recipients { get; set; } = new();
 }
 
 public class ChangeOrderSignerV2
@@ -165,6 +175,9 @@ public class ChangeOrderDetailRowV2
     public decimal VatPercentage { get; set; }
     public bool NeedsReview { get; set; }
     public string? SourceImagePath { get; set; }
+    /// <summary>Enkel weergave (nooit vertrouwd bij het posten): een uit de offerte overgenomen WO-regel —
+    /// prijs, commissie en btw liggen vast, aantal en omschrijving niet (ChangeOrderDetail.SourceDetailId).</summary>
+    public bool PriceLocked { get; set; }
 }
 
 public class ChangeOrderTermV2
@@ -215,10 +228,11 @@ public class ChangeOrderDetailV2SaveModel
     public string? ConditionsText { get; set; }
     public List<ChangeOrderDetailRowV2> Rows { get; set; } = new();
     public List<ChangeOrderTermV2> Terms { get; set; } = new();
-    /// <summary>QuoteIntakeV2's "Omzetten naar wijzigingsopdracht" op een nog niet opgeslagen offerte —
-    /// bespaart een aparte round-trip (opslaan, dan pas omzetten): de Save-actie doet de in-place
-    /// IsQuote-overgang er meteen bij als deze vlag aanstaat.</summary>
-    public bool ConvertAfterSave { get; set; }
+    /// <summary>Enkel voor een NIEUWE rij: offerte aan de klant (true) of rechtstreeks een
+    /// wijzigingsopdracht (false). Een bestaande rij verandert nooit van soort via Opslaan.</summary>
+    public bool IsQuote { get; set; }
+    /// <summary>"Geldig tot" — op de offerte én op de wijzigingsopdracht (staat op het document).</summary>
+    public DateOnly? ExpirationDate { get; set; }
     /// <summary>"quote" als het formulier van QuoteIntakeV2 (20c) komt — bij een validatiefout gaat de
     /// gebruiker dan terug naar dát scherm i.p.v. naar een leeg 20d.</summary>
     public string? ReturnTo { get; set; }
@@ -226,51 +240,82 @@ public class ChangeOrderDetailV2SaveModel
     /// bestand geladen werd, een lege waarde laat het bestaande staan.</summary>
     public string? QuoteSourcePath { get; set; }
     public string? QuoteSourceFileName { get; set; }
-    /// <summary>"send" = na opslaan meteen door naar verzenden ter ondertekening (28a "Verzenden naar
-    /// klant", 21c "Aanmaken en verzenden"); leeg/"open" = terug naar het scherm zelf.</summary>
+    /// <summary>"send" = na opslaan de verzendmodal openen (21d voor een WO, de offertemail voor een
+    /// offerte); "convert" = na opslaan de 21c-omzetmodal openen; leeg = terug naar het scherm.</summary>
     public string? AfterSave { get; set; }
-
-    // 21c "Omzetten naar wijzigingsopdracht" vanuit 20c: de modal vult deze velden in het 20c-formulier,
-    // zodat opslaan + omzetten één POST blijft (zelfde veldnamen als ChangeOrderConvertV2Model).
-    public int ConvertClientAccountId { get; set; }
-    public decimal ConvertCommission { get; set; }
-    public string? ConvertPlan { get; set; }
-    public string? ConvertDescription { get; set; }
-    public string? ConvertConditions { get; set; }
 }
 
-/// <summary>Post-body van ChangeOrderConvertV2 — 21c "Omzetten naar wijzigingsopdracht" op een al
-/// opgeslagen offerte (vanuit de lijst 20b).</summary>
+/// <summary>Post-body van ChangeOrderConvertV2 — 21c "Omzetten naar wijzigingsopdracht": maakt uit een
+/// offerte aan de klant een nieuwe WO. Klant, regels en prijzen komen uit de offerte en liggen vast; hier
+/// kies je enkel wat bij de WO hoort.</summary>
 public class ChangeOrderConvertV2Model
 {
     public int ProjectId { get; set; }
     public int ChangeOrderId { get; set; }
-    public int ConvertClientAccountId { get; set; }
-    public decimal ConvertCommission { get; set; }
     /// <summary>laatste-schijf | voorschot-saldo | eigen.</summary>
     public string? ConvertPlan { get; set; }
     public string? ConvertDescription { get; set; }
     public string? ConvertConditions { get; set; }
-    /// <summary>"open" (Aanmaken en openen) of "send" (Aanmaken en verzenden).</summary>
+    /// <summary>"open" (Aanmaken en openen) of "send" (Aanmaken en verzenden → 21d).</summary>
     public string? AfterSave { get; set; }
 }
 
 /// <summary>Inhoud van de 21c-modal (Modals/_ModalConvertQuoteV2) — AJAX-geladen vanuit de lijst (20b)
-/// én vanuit 20c. Op 20c bestaat de offerte soms nog niet in de databank (ChangeOrderId = 0): de
-/// regels/kostprijs komen dan uit het formulier op de pagina, de modal rekent client-side.</summary>
+/// en vanuit het offertescherm. Alle bedragen komen kant-en-klaar van de server: de offerte is op dat
+/// moment bewaard en haar prijzen veranderen bij het omzetten niet meer.</summary>
 public class ConvertQuoteModalV2Vm
 {
     public int ProjectId { get; set; }
     public int ChangeOrderId { get; set; }
     public string Subtitle { get; set; } = "";
-    public string NextNumberLabel { get; set; } = "";
-    public int ClientAccountId { get; set; }
-    public List<ConvertClientOptionV2> Clients { get; set; } = new();
+    public string ClientLabel { get; set; } = "";
+    public string VatLabel { get; set; } = "";
+    public decimal VatPercentage { get; set; }
     public decimal CostTotal { get; set; }
-    public int RowCount { get; set; }
-    public decimal DefaultCommission { get; set; }
+    public decimal CommissionTotal { get; set; }
+    public decimal ExclTotal { get; set; }
+    public decimal InclTotal { get; set; }
     public string Description { get; set; } = "";
-    public bool SigningEnabled { get; set; }
+    public string Conditions { get; set; } = "";
+    /// <summary>Waarom er nog niet omgezet kan worden (geen regels, al omgezet, …).</summary>
+    public string? Problem { get; set; }
+}
+
+/// <summary>Inhoud van de offertemail-modal (Modals/_ModalSendQuoteV2): de offerte als PDF per mail naar
+/// de eigenaars, met een vrij bericht. Geen handtekening — het akkoord volgt op de wijzigingsopdracht.</summary>
+public class SendQuoteModalV2Vm
+{
+    public int ProjectId { get; set; }
+    public int ChangeOrderId { get; set; }
+    public string Number { get; set; } = "";
+    public string Subtitle { get; set; } = "";
+    public string? Problem { get; set; }
+    public List<CPMCore.Models.Signing.SigningStartPartyVm> Parties { get; set; } = new();
+    public string Subject { get; set; } = "";
+    /// <summary>Wie de offerte verstuurt: "me" (de ingelogde gebruiker, standaard) of "lead" (de projectleider).</summary>
+    public List<QuoteSenderV2> Senders { get; set; } = new();
+    public string? PdfUrl { get; set; }
+    public string? PdfFileName { get; set; }
+    public string? TestRecipient { get; set; }
+}
+
+/// <summary>Post-body van ChangeOrderQuoteSendV2 (offertemail "Verzenden").</summary>
+public class ChangeOrderQuoteSendV2Model
+{
+    public int ProjectId { get; set; }
+    public int ChangeOrderId { get; set; }
+    public List<CPMCore.Models.Signing.SigningStartPartyVm> Parties { get; set; } = new();
+    public string? Subject { get; set; }
+    public string? Message { get; set; }
+    /// <summary>"me" of "lead" — zie SendQuoteModalV2Vm.Senders.</summary>
+    public string? Sender { get; set; }
+}
+
+public class QuoteSenderV2
+{
+    public string Key { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Email { get; set; } = "";
 }
 
 public class ConvertClientOptionV2

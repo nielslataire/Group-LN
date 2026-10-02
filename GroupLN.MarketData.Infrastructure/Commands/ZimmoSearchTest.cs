@@ -29,7 +29,11 @@ public class ZimmoSearchTest
         _logger   = logger;
     }
 
-    public async Task RunAsync(string? postalCodeFilter, CancellationToken ct = default)
+    /// <param name="urlOverride">
+    /// Test exact deze URL i.p.v. de zoek-URL van de crawler, bv. een overzichtspagina uit de sitemap
+    /// van Zimmo: https://www.zimmo.be/nl/brugge-8000/te-koop/nieuwbouwproject/
+    /// </param>
+    public async Task RunAsync(string? postalCodeFilter, string? urlOverride = null, CancellationToken ct = default)
     {
         var debugDir = Path.Combine(AppContext.BaseDirectory, "debug", "zimmo-search-test");
         Directory.CreateDirectory(debugDir);
@@ -40,6 +44,8 @@ public class ZimmoSearchTest
             locations = locations.Where(l => l.PostalCode == postalCodeFilter).ToList();
         if (locations.Count == 0)
             locations = [new LocationSettings { City = "Brugge", PostalCode = postalCodeFilter ?? "8000" }];
+        if (!string.IsNullOrWhiteSpace(urlOverride))
+            locations = [new LocationSettings { City = "url", PostalCode = "test" }];
 
         var timeoutMs = src?.PlaywrightTimeoutMs ?? _settings.PlaywrightTimeoutMs;
 
@@ -57,7 +63,16 @@ public class ZimmoSearchTest
                 && ZimmoSearchUrlBuilder.PlaceIdByPostalCode.TryGetValue(loc.PostalCode, out var id))
                 placeId = id;
 
-            var url = ZimmoSearchUrlBuilder.Build(placeId);
+            // Zelfde keuze als ZimmoCrawler: standaard de toegelaten overzichtspagina, tenzij UseSearchFilterUrls.
+            string url;
+            if (!string.IsNullOrWhiteSpace(urlOverride))
+                url = urlOverride;
+            else if (src?.UseSearchFilterUrls == true || string.IsNullOrWhiteSpace(loc.PostalCode))
+                url = ZimmoSearchUrlBuilder.Build(placeId);
+            else
+                url = ZimmoSearchUrlBuilder.BuildProjectOverviewUrl(
+                    !string.IsNullOrWhiteSpace(loc.CitySlug) ? loc.CitySlug! : (loc.City ?? "").ToLowerInvariant(),
+                    loc.PostalCode);
             _logger.LogInformation("[ZimmoSearchTest] ── {City} ({Postal}) placeId={PlaceId}", loc.City, loc.PostalCode, placeId?.ToString() ?? "–");
             _logger.LogInformation("[ZimmoSearchTest]    URL: {Url}", url);
 

@@ -139,6 +139,10 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-row.is-dragging .gl-v2-co-handle { cursor: grabbing; color: var(--gl-v2-primary); }
 .gl-v2-co-rows-dragging { user-select: none; cursor: grabbing; }
 .gl-v2-co-row.is-needs-review { background: #FDF9F0; }
+/* Uit de offerte overgenomen regel: prijs, commissie en btw liggen vast (migratie 069) — het veldkader wordt
+   een grijs vlak i.p.v. een invoerveld, de waarde blijft leesbaar. */
+.gl-v2-co-table .gl-v2-co-row.is-price-locked .gl-v2-field-box:has(> .js-co-price, > .js-co-commission, > .js-co-vat, > .js-co-mtype, > .js-co-munit) { background: #F2F5EF; border-color: transparent; }
+.gl-v2-co-row.is-price-locked .js-co-price, .gl-v2-co-row.is-price-locked .js-co-commission, .gl-v2-co-row.is-price-locked .js-co-vat { color: var(--gl-v2-muted-soft); cursor: default; }
 .gl-v2-co-row-flags { display: flex; gap: 8px; margin-top: 3px; }
 .gl-v2-co-review-flag { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; padding: 0; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-warning); cursor: pointer; }
 .gl-v2-co-review-flag:hover { text-decoration: underline; }

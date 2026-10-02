@@ -122,8 +122,9 @@ using (var scope = host.Services.CreateScope())
 if (args.Contains("--zimmo-search-test"))
 {
     var postcodeArg = args.SkipWhile(a => a != "--postcode").Skip(1).FirstOrDefault();
+    var testUrlArg  = args.SkipWhile(a => a != "--url").Skip(1).FirstOrDefault();
     logger.LogInformation("[Program] --zimmo-search-test modus — normale worker wordt NIET gestart.");
-    await RunScopedCommandAsync<ZimmoSearchTest>(host, t => t.RunAsync(postcodeArg));
+    await RunScopedCommandAsync<ZimmoSearchTest>(host, t => t.RunAsync(postcodeArg, testUrlArg));
     logger.LogInformation("[Program] Zimmo zoekpagina-diagnose voltooid. Afsluiten.");
     return;
 }

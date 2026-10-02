@@ -4,7 +4,7 @@
     → verzonden → ondertekend → gefactureerd → betaald"). Het vertrekpunt van de flow uit 29b:
       · "+ Nieuw" (één knop, vier ingangen): Offerte inlezen (→ 20c → 21c → 28a) · Leeg beginnen (→ 28b) ·
         Kopie van een wijzigingsopdracht (→ kies eenheid → 28a) · Offerte zonder omzetten (→ 20c, enkel bewaren);
-      · een offerte-rij opent 20c, "Omzetten →" opent de 21c-modal; een WO-rij opent het scherm per stap (28);
+      · een offerte-rij opent het offertescherm (zelfde scherm als de WO), "Omzetten →" de 21c-modal;
       · "···" op een WO-rij: Openen · Kopie maken · PDF.
     Eigen klassen-namespace gl-v2-co2-* (gl-v2-projecten-changeorders.css/.js) — "co2" om botsing met de
     gl-v2-co-* namespace van ChangeOrderDetailV2 te vermijden. De 21c- en kopie-modal delen hun stijl/gedrag
@@ -55,14 +55,21 @@
             <i class="ph ph-scan" aria-hidden="true"></i>
             <span class="gl-v2-menu-item-text">
                 <span class="gl-v2-menu-item-label">Offerte inlezen</span>
-                <span class="gl-v2-menu-item-sub">Foto of PDF van de leverancier → regels worden herkend, daarna omzetten.</span>
+                <span class="gl-v2-menu-item-sub">Foto of PDF van de leverancier → regels worden herkend, daarna offerte opmaken.</span>
+            </span>
+        </a>
+        <a class="gl-v2-menu-item" href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, quote = true })">
+            <i class="ph ph-pencil-simple-line" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Offerte opmaken</span>
+                <span class="gl-v2-menu-item-sub">Leeg beginnen: regels en prijzen zelf invullen, de klant krijgt ze per mail.</span>
             </span>
         </a>
         <a class="gl-v2-menu-item" href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId })">
-            <i class="ph ph-pencil-simple-line" aria-hidden="true"></i>
+            <i class="ph ph-signature" aria-hidden="true"></i>
             <span class="gl-v2-menu-item-text">
-                <span class="gl-v2-menu-item-label">Leeg beginnen</span>
-                <span class="gl-v2-menu-item-sub">Zonder offerte: regels en prijs leverancier zelf invullen.</span>
+                <span class="gl-v2-menu-item-label">Wijzigingsopdracht zonder offerte</span>
+                <span class="gl-v2-menu-item-sub">Rechtstreeks ter ondertekening, bv. wat al mondeling afgesproken is.</span>
             </span>
         </a>
         <button type="button" class="gl-v2-menu-item js-co2-copy" data-co-id="0" @(Model.OrderCount == 0 ? "disabled" : "")>
@@ -76,8 +83,8 @@
         <a class="gl-v2-menu-item" href="@Url.Action("QuoteIntakeV2", "Projecten", new { projectid = Model.ProjectId, intent = "keep" })">
             <i class="ph ph-archive-box" aria-hidden="true"></i>
             <span class="gl-v2-menu-item-text">
-                <span class="gl-v2-menu-item-label">Offerte zonder omzetten</span>
-                <span class="gl-v2-menu-item-sub">Enkel bewaren — later omzetten vanuit de lijst.</span>
+                <span class="gl-v2-menu-item-label">Offerte inlezen en bewaren</span>
+                <span class="gl-v2-menu-item-sub">Enkel bewaren — later opmaken en verzenden vanuit de lijst.</span>
             </span>
         </a>
     </div>
@@ -129,14 +136,14 @@
                 <span class="gl-v2-card-header-icon"><i class="ph ph-scan" aria-hidden="true"></i></span>
                 <h2 class="gl-v2-card-header-title">Offertes</h2>
                 <span class="gl-v2-field-divider"></span>
-                <span class="gl-v2-card-header-count">Van de leverancier — nog geen afspraak met de klant</span>
+                <span class="gl-v2-card-header-count">Aan de klant — nog geen afspraak; na akkoord omzetten naar een wijzigingsopdracht</span>
             </div>
             <div class="gl-v2-co2-table-scroll">
                 <table class="gl-v2-co2-table">
                     <thead>
                         <tr>
                             <th>Nr.</th><th>Omschrijving</th><th>Eenheid · klant</th>
-                            <th class="is-right">Kostprijs</th><th>Status</th><th>Verloop</th><th></th>
+                            <th class="is-right">Klant excl. btw</th><th>Status</th><th>Verloop</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -195,7 +202,7 @@
                 <div class="gl-v2-empty-state gl-v2-empty-state-inline">
                     <span class="gl-v2-empty-state-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-empty-state-title">Nog geen offertes of wijzigingsopdrachten</h2>
-                    <p class="gl-v2-empty-state-desc">Start met "+ Nieuw": lees een offerte van de leverancier in of begin leeg.</p>
+                    <p class="gl-v2-empty-state-desc">Start met "+ Nieuw": lees een offerte van de leverancier in, maak een offerte op voor de klant of begin rechtstreeks met een wijzigingsopdracht.</p>
                 </div>
             </div>
         </div>

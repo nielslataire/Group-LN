@@ -51,6 +51,12 @@ public abstract class BaseCrawler : IRealEstateCrawler
     /// </summary>
     protected virtual bool SearchDebugMode => false;
 
+    /// <summary>
+    /// Korte, bron-specifieke diagnose van de run voor de statuspagina (CrawlerRun.LogMessage).
+    /// Null/leeg = niets te melden. Wordt na elke run aangeroepen, ook na een fout.
+    /// </summary>
+    protected virtual string? GetRunDiagnostics() => null;
+
     public async Task<CrawlerResult> CrawlAsync(CrawlerSource source, CancellationToken cancellationToken)
     {
         var result = new CrawlerResult { StartedAt = DateTime.UtcNow };
@@ -327,6 +333,19 @@ public abstract class BaseCrawler : IRealEstateCrawler
             Logger.LogError(ex, "[{Source}] Onverwachte fout tijdens crawl.", SourceName);
             result.Success = false;
             result.ErrorMessages.Add(ex.Message);
+        }
+
+        // Bron-specifieke diagnose (bv. "zoekpagina's geblokkeerd") mee in de run-melding,
+        // zodat de reden van een lege run op de statuspagina staat en niet enkel in de serverlogs.
+        try
+        {
+            var diagnose = GetRunDiagnostics();
+            if (!string.IsNullOrWhiteSpace(diagnose))
+                result.Message = string.IsNullOrWhiteSpace(result.Message) ? diagnose : result.Message + " | " + diagnose;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "[{Source}] GetRunDiagnostics mislukt.", SourceName);
         }
 
         result.FinishedAt = DateTime.UtcNow;
