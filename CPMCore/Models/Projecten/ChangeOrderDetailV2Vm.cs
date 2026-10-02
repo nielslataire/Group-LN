@@ -1,4 +1,5 @@
 using BOCore;
+using CPMCore.Models.GlV2;
 using ServiceCore.Helpers;
 
 namespace CPMCore.Models.Projecten;
@@ -20,7 +21,10 @@ public class ChangeOrderDetailV2Vm
     public ChangeOrderStatus Status { get; set; }
     public string StatusLabel => ChangeOrderStatusHelper.DisplayName(Status);
     public bool IsQuote { get; set; }
-    public List<ChangeOrderStepV2> Steps { get; set; } = new();
+
+    /// <summary>Het Stappenplan (design-handoff punt 27, DESIGN.md "Stappenplan") bovenaan — gebouwd
+    /// door <see cref="ChangeOrderStepsBuilder.BuildDetail"/>.</summary>
+    public GlV2StepsVm Steps { get; set; } = new();
 
     // Opdracht
     public int ClientAccountId { get; set; }
@@ -60,14 +64,6 @@ public class ChangeOrderDetailV2Vm
     public FacadeCore.Signing.CaseStatusView? CompletedSigningCase { get; set; }
 
     public List<ChangeOrderHistoryItemV2> History { get; set; } = new();
-}
-
-public class ChangeOrderStepV2
-{
-    public string Label { get; set; } = "";
-    public string? Hint { get; set; }
-    /// <summary>"done" / "current" / "future".</summary>
-    public string State { get; set; } = "future";
 }
 
 public class ChangeOrderDetailRowV2

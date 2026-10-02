@@ -41,12 +41,7 @@
     <td class="is-right gl-v2-co2-tabular @(Model.Amount < 0 ? "is-negative" : "")">@Eur(Model.Amount)</td>
     <td><span class="gl-v2-badge @statusTone">@Model.StatusLabel.ToUpperInvariant()</span></td>
     <td>
-        <span class="gl-v2-co2-dots" aria-hidden="true">
-            @for (var i = 0; i < 6; i++)
-            {
-                <span class="gl-v2-co2-dot @(i == Model.DotPosition ? "is-current" : i < Model.DotPosition ? "is-done" : "")"></span>
-            }
-        </span>
+        @await Html.PartialAsync("GlV2/_Steps", Model.Steps)
     </td>
     <td class="is-right" onclick="event.stopPropagation()">
         @if (canWrite && Model.IsQuote)

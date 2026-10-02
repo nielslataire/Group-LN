@@ -196,32 +196,8 @@ namespace CPMCore.Controllers
             _ => false, // "BijSchijf" verificatie volgt in stap 5 (facturatie-integratie)
         };
 
-        private static List<ChangeOrderStepV2> BuildSteps(ChangeOrderDetailV2Vm vm, ChangeOrder co)
-        {
-            var steps = new List<ChangeOrderStepV2>();
-            string StateFor(ChangeOrderStatus at) => vm.Status == at ? "current" : vm.Status > at ? "done" : "future";
-
-            if (vm.IsQuote)
-            {
-                steps.Add(new ChangeOrderStepV2 { Label = "Offerte", State = vm.Status == ChangeOrderStatus.Verlopen ? "current" : "current", Hint = vm.Status == ChangeOrderStatus.Verlopen ? "verlopen" : null });
-            }
-            else
-            {
-                steps.Add(new ChangeOrderStepV2 { Label = "Offerte", State = "done", Hint = vm.QuoteSupplierReference });
-            }
-            steps.Add(new ChangeOrderStepV2 { Label = "Opgemaakt", State = vm.IsQuote ? "future" : StateFor(ChangeOrderStatus.Opgemaakt) });
-            steps.Add(new ChangeOrderStepV2 { Label = "Verzonden", State = vm.IsQuote ? "future" : StateFor(ChangeOrderStatus.Verzonden), Hint = co?.DateSendToClient?.ToString("dd/MM/yyyy") });
-            steps.Add(new ChangeOrderStepV2 { Label = "Ondertekend", State = vm.IsQuote ? "future" : StateFor(ChangeOrderStatus.Ondertekend), Hint = co?.DateAgreement?.ToString("dd/MM/yyyy") });
-            steps.Add(new ChangeOrderStepV2 { Label = "Factureerbaar", State = vm.IsQuote ? "future" : StateFor(ChangeOrderStatus.Factureerbaar) });
-            steps.Add(new ChangeOrderStepV2 { Label = "Gefactureerd", State = vm.IsQuote ? "future" : StateFor(ChangeOrderStatus.Gefactureerd) });
-            steps.Add(new ChangeOrderStepV2 { Label = "Betaald", State = vm.IsQuote ? "future" : StateFor(ChangeOrderStatus.Betaald) });
-
-            if (vm.Status == ChangeOrderStatus.Geweigerd || vm.Status == ChangeOrderStatus.Geannuleerd)
-            {
-                steps.Add(new ChangeOrderStepV2 { Label = vm.Status == ChangeOrderStatus.Geweigerd ? "Geweigerd" : "Geannuleerd", State = "current" });
-            }
-            return steps;
-        }
+        private static CPMCore.Models.GlV2.GlV2StepsVm BuildSteps(ChangeOrderDetailV2Vm vm, ChangeOrder co)
+            => ChangeOrderStepsBuilder.BuildDetail(vm.Status, vm.IsQuote, vm.QuoteSupplierReference, co?.DateSendToClient, co?.DateAgreement);
 
         private static List<ChangeOrderHistoryItemV2> BuildHistory(ChangeOrderDetailV2Vm vm, ChangeOrder co)
         {

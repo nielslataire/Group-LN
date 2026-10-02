@@ -22,8 +22,6 @@
     string Pct(decimal? v) => (v ?? 0).ToString("0.##", be);
 
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · offertes & wijzigingen" };
-
-    string StatusTone(CPMCore.Models.Projecten.ChangeOrderStepV2 s) => s.State switch { "done" => "is-done", "current" => "is-current", _ => "is-future" };
 }
 @section PageStyle
 {
@@ -60,25 +58,10 @@
         }
     </div>
 
-    @* ── Stepper ───────────────────────────────────────────────────────────────────────────────────── *@
+    @* ── Stepper (design-handoff punt 27, DESIGN.md "Stappenplan") ───────────────────────────────────── *@
     <div class="gl-v2-card gl-v2-co-card">
         <div class="gl-v2-card-body gl-v2-co-stepper">
-            @foreach (var step in Model.Steps)
-            {
-                <div class="gl-v2-co-step @StatusTone(step)">
-                    <span class="gl-v2-co-step-dot">
-                        @if (step.State == "done")
-                        {
-                            <i class="ph ph-check" aria-hidden="true"></i>
-                        }
-                    </span>
-                    <span class="gl-v2-co-step-label">@step.Label</span>
-                    @if (!string.IsNullOrWhiteSpace(step.Hint))
-                    {
-                        <span class="gl-v2-co-step-hint">@step.Hint</span>
-                    }
-                </div>
-            }
+            @await Html.PartialAsync("GlV2/_Steps", Model.Steps)
         </div>
     </div>
 
@@ -365,10 +348,13 @@
 
 @if (!Model.IsLocked)
 {
-    <div class="gl-v2-co-actionbar">
-        <span class="gl-v2-field-help">Na verzenden: regels aanpassen maakt een nieuwe versie en vraagt opnieuw een handtekening</span>
-        <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })">Annuleren</a>
-        <button type="submit" form="gl-v2-co-form" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-save">Opslaan</button>
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-form-actionbar-status">Na verzenden: regels aanpassen maakt een nieuwe versie en vraagt opnieuw een handtekening</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId })">Annuleren</a>
+            <button type="submit" form="gl-v2-co-form" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-save">Opslaan</button>
+        </div>
     </div>
 }
 

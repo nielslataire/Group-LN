@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#E7EDE2;font-family:'IBM Plex Sans',sans-serif}a{color:#00532D}a:hover{color:#B8935A}</style></helmet>
+<section id="t27" style="padding:40px 44px 32px">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 20px"><a href="#t27" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">27</a><span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#00532D">Stappenplan als één component — de stappenbalken uit 20d, 22d en 22h, en de budgetflow. Vier weergaven en zeven statussen, met fouten en aandachtspunten per stap</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="27a" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27a" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27a</a>Interactief — klik een stap, zet fouten aan/uit, wissel van weergave</div>
+<div style="width:1500px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid rgba(44,59,42,.08);background:#F7F9F5;flex-wrap:wrap">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">WEERGAVE</span>
+<div style="display:flex;padding:3px;border-radius:9px;background:#EDF2E8;gap:2px">
+<sc-for list="{{ variantBtns }}" as="b" hint-placeholder-count="4"><span onClick="{{ b.go }}" style="padding:5px 12px;border-radius:7px;background:{{ b.bg }};font:600 12px 'IBM Plex Sans',sans-serif;color:{{ b.col }};cursor:pointer;box-shadow:{{ b.sh }}">{{ b.n }}</span></sc-for>
+</div>
+<span style="width:1px;height:22px;background:rgba(44,59,42,.14);margin:0 6px"></span>
+<div onClick="{{ toggleErr }}" style="display:flex;align-items:center;gap:8px;cursor:pointer"><div style="width:36px;height:20px;border-radius:10px;background:{{ errTrack }};position:relative"><div style="position:absolute;top:2px;left:{{ errKnob }};width:16px;height:16px;border-radius:8px;background:#fff"></div></div><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Toon validatie</span></div>
+<div onClick="{{ toggleLock }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-left:10px"><div style="width:36px;height:20px;border-radius:10px;background:{{ lockTrack }};position:relative"><div style="position:absolute;top:2px;left:{{ lockKnob }};width:16px;height:16px;border-radius:8px;background:#fff"></div></div><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Enkel volgende stap open</span></div>
+<span style="flex:1"></span>
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">Huidig: <b style="color:#00532D">{{ curLabel }}</b></span>
+</div>
+<div style="padding:16px 20px 18px;border-bottom:1px solid rgba(44,59,42,.08)">
+<dc-import name="Stappenplan" steps="{{ liveSteps }}" current="{{ cur }}" variant="{{ liveVariant }}" lock-ahead="{{ lock }}" on-step="{{ goStep }}" hint-size="100%,60px"></dc-import>
+</div>
+<div style="padding:16px 20px;background:#F7F9F5;display:flex;gap:14px;align-items:flex-start">
+<sc-if value="{{ curHasErr }}" hint-placeholder-val="{{ false }}"><div style="flex:1;display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:#F6E4E1"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.4;stroke-linecap:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M6 6l4 4 M10 6l-4 4"></path></svg><span style="font:450 11.5px/1.55 'IBM Plex Sans',sans-serif;color:#7A2222">{{ curErrText }}</span></div></sc-if>
+<sc-if value="{{ curNoErr }}" hint-placeholder-val="{{ true }}"><span style="flex:1;font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:#5a6b58">Inhoud van stap "{{ curLabel }}". Een stap met fouten kleurt rood met een teller, en blijft zo staan als je verder klikt. Zo zie je in één oogopslag waar je nog moet terugkeren.</span></sc-if>
+<div style="display:flex;gap:8px"><div onClick="{{ prev }}" style="height:38px;padding:0 14px;border-radius:9px;border:1px solid rgba(44,59,42,.18);background:#fff;display:flex;align-items:center;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A;cursor:pointer">Vorige</div><div onClick="{{ next }}" style="height:38px;padding:0 16px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 12.5px 'IBM Plex Sans',sans-serif;cursor:pointer">{{ nextLabel }}</div></div>
+</div>
+</div>
+</div>
+
+<div id="27b" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27b" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27b</a>Chips — budgetflow in de kopbalk, met afgewerkte stappen, een fout en een aandachtspunt</div>
+<div style="width:1500px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden;display:flex;flex-direction:column">
+<sc-for list="{{ chipCases }}" as="c" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:16px;padding:12px 20px;border-top:1px solid rgba(44,59,42,.08)"><span style="width:150px;flex:none;font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ c.n }}</span><div style="flex:1;min-width:0"><dc-import name="Stappenplan" steps="{{ c.steps }}" current="{{ c.cur }}" variant="chips" hint-size="100%,36px"></dc-import></div></div>
+</sc-for>
+</div>
+</div>
+
+<div id="27c" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27c" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27c</a>Lijn — verloop van een wijzigingsopdracht (20d, 22d), met datum en wie onder elke stap</div>
+<div style="width:1500px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden">
+<div style="padding:18px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><dc-import name="Stappenplan" steps="{{ woSteps }}" current="{{ 3 }}" variant="lijn" hint-size="100%,70px"></dc-import></div>
+<div style="padding:18px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><dc-import name="Stappenplan" steps="{{ woRefused }}" current="{{ 3 }}" variant="lijn" hint-size="100%,70px"></dc-import></div>
+<div style="padding:14px 20px;width:760px"><dc-import name="Stappenplan" steps="{{ woSteps }}" current="{{ 3 }}" variant="lijn" size="sm" show-sub="{{ false }}" hint-size="100%,44px"></dc-import></div>
+</div>
+</div>
+
+<div id="27d" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27d" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27d</a>Balk — gsm (22h), status links en fouten rechts</div>
+<div style="width:390px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden">
+<div style="padding:12px 16px;border-bottom:1px solid rgba(44,59,42,.08)"><dc-import name="Stappenplan" steps="{{ woSteps }}" current="{{ 3 }}" variant="balk" status-label="VERZONDEN" status-tone="wacht" hint-size="100%,40px"></dc-import></div>
+<div style="padding:12px 16px;border-bottom:1px solid rgba(44,59,42,.08)"><dc-import name="Stappenplan" steps="{{ budgetErr }}" current="{{ 4 }}" variant="balk" status-label="CONCEPT" hint-size="100%,40px"></dc-import></div>
+<div style="padding:12px 16px"><dc-import name="Stappenplan" steps="{{ budgetDone }}" current="{{ 8 }}" variant="balk" status-label="DEFINITIEF" hint-size="100%,40px"></dc-import></div>
+</div>
+</div>
+
+<div id="27e" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27e" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27e</a>Verticaal — zijpaneel of tablet, met uitleg per stap</div>
+<div style="display:flex;gap:20px;align-items:flex-start">
+<div style="width:300px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);padding:14px 10px"><span style="display:block;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#00532D;padding:0 8px 8px">BUDGET V1</span><dc-import name="Stappenplan" steps="{{ budgetErrSub }}" current="{{ 4 }}" variant="verticaal" hint-size="100%,560px"></dc-import></div>
+<div style="width:300px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);padding:14px 10px"><span style="display:block;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#00532D;padding:0 8px 8px">VERLOOP WO-006</span><dc-import name="Stappenplan" steps="{{ woSteps }}" current="{{ 3 }}" variant="verticaal" size="sm" hint-size="100%,420px"></dc-import></div>
+</div>
+</div>
+
+<div id="27g" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27g" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27g</a>Tablet liggend — stappenplan als vast zijpaneel links, inhoud rechts · klik de stappen</div>
+<div style="width:1180px;height:820px;background:#F2F5EF;border:10px solid #1F2A1E;border-radius:28px;box-shadow:0 30px 60px -30px rgba(44,59,42,.6);overflow:hidden;display:flex;flex-direction:column;box-sizing:content-box">
+<div style="flex:none;height:60px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);display:flex;align-items:center;gap:12px;padding:0 18px">
+<div style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 18px 'Playfair Display',Georgia,serif;color:#2C3B2A">Budget V1</span><span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Villa Cauxyde · Projecten</span></div>
+<span style="padding:4px 10px;border-radius:11px;background:#D6E5CC;font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;color:#00532D">CONCEPT</span>
+<span style="flex:1"></span>
+<span style="display:flex;align-items:center;gap:6px;font:600 11.5px 'IBM Plex Sans',sans-serif;color:#8B2A2A"><span style="width:6px;height:6px;border-radius:3px;background:#8B2A2A"></span>2 stappen met fouten</span>
+</div>
+<div style="flex:1;min-height:0;display:flex">
+<div style="width:270px;flex:none;background:#fff;border-right:1px solid rgba(44,59,42,.08);display:flex;flex-direction:column">
+<div style="padding:14px 18px 6px;display:flex;align-items:baseline;gap:8px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#00532D">STAPPEN</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ tProgress }}</span></div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:0 8px"><dc-import name="Stappenplan" steps="{{ tSteps }}" current="{{ tCur }}" variant="verticaal" size="sm" on-step="{{ tGo }}" hint-size="100%,600px"></dc-import></div>
+<div style="flex:none;padding:12px 18px;border-top:1px solid rgba(44,59,42,.08);font:450 11px/1.5 'IBM Plex Sans',sans-serif;color:#7a8a78">Tik een stap om ernaar te springen. Fouten blijven zichtbaar tot ze opgelost zijn.</div>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+<div style="flex:1;min-height:0;overflow:hidden;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">STAP {{ tNum }}</span><span style="font:500 22px 'Playfair Display',Georgia,serif;color:#2C3B2A">{{ tLabel }}</span></div>
+<sc-if value="{{ tHasErr }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:#F6E4E1"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.4;stroke-linecap:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M6 6l4 4 M10 6l-4 4"></path></svg><span style="font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:#7A2222">{{ tErr }}</span></div></sc-if>
+<sc-if value="{{ tHasWarn }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:#F6EEDC"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8A6A32;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.8 14 13H2z M8 6.6v3 M8 11.4h.01"></path></svg><span style="font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:#6B4F22">Oppervlakte lot B wijkt 18 % af van het plan. Kijk na of dit klopt.</span></div></sc-if>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);padding:18px 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px">
+<sc-for list="{{ tFields }}" as="f" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:{{ f.lc }}">{{ f.l }}</span><div style="height:44px;box-sizing:border-box;border:{{ f.b }};border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13.5px 'IBM Plex Sans',sans-serif;color:{{ f.vc }}">{{ f.v }}</span></div><sc-if value="{{ f.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font:500 11px 'IBM Plex Sans',sans-serif;color:#8B2A2A">Verplicht veld</span></sc-if></div>
+</sc-for>
+</div>
+</div>
+<div style="flex:none;height:68px;background:#fff;border-top:1px solid rgba(44,59,42,.10);display:flex;align-items:center;gap:10px;padding:0 22px">
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">Automatisch opgeslagen</span><span style="flex:1"></span>
+<div onClick="{{ tPrev }}" style="height:46px;padding:0 18px;border-radius:10px;border:1px solid rgba(44,59,42,.18);display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A;cursor:pointer">Vorige</div>
+<div onClick="{{ tNext }}" style="height:46px;padding:0 20px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;cursor:pointer">{{ tNextLabel }}</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="27h" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27h" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27h</a>Tablet staand — te smal voor een vast paneel: balk bovenaan, tik erop en het paneel schuift open · tik de balk</div>
+<div style="width:820px;height:1180px;background:#F2F5EF;border:10px solid #1F2A1E;border-radius:28px;box-shadow:0 30px 60px -30px rgba(44,59,42,.6);overflow:hidden;display:flex;flex-direction:column;position:relative;box-sizing:content-box">
+<div style="flex:none;height:60px;background:#fff;display:flex;align-items:center;gap:12px;padding:0 18px">
+<div style="width:44px;height:44px;border-radius:10px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M9.6 3.6 5.2 8l4.4 4.4"></path></svg></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 18px 'Playfair Display',Georgia,serif;color:#2C3B2A">Budget V1</span><span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Villa Cauxyde · Projecten</span></div>
+</div>
+<div onClick="{{ tOpen }}" style="flex:none;background:#fff;border-bottom:1px solid rgba(44,59,42,.08);padding:4px 18px 12px;display:flex;align-items:center;gap:12px;cursor:pointer">
+<div style="flex:1;min-width:0"><dc-import name="Stappenplan" steps="{{ tSteps }}" current="{{ tCur }}" variant="balk" status-label="CONCEPT" clickable="{{ false }}" hint-size="100%,40px"></dc-import></div>
+<div style="width:44px;height:44px;flex:none;border-radius:10px;background:#EDF2E8;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:15px;height:15px;fill:none;stroke:#00532D;stroke-width:1.5;stroke-linecap:round"><path d="M2.8 4.4h10.4 M2.8 8h10.4 M2.8 11.6h10.4"></path></svg></div>
+</div>
+<div style="flex:1;min-height:0;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">STAP {{ tNum }}</span><span style="font:500 22px 'Playfair Display',Georgia,serif;color:#2C3B2A">{{ tLabel }}</span></div>
+<sc-if value="{{ tHasErr }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:#F6E4E1"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#8B2A2A;stroke-width:1.4;stroke-linecap:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M6 6l4 4 M10 6l-4 4"></path></svg><span style="font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:#7A2222">{{ tErr }}</span></div></sc-if>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 18px 40px -28px rgba(44,59,42,.4);padding:18px 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px">
+<sc-for list="{{ tFields }}" as="f" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:5px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:{{ f.lc }}">{{ f.l }}</span><div style="height:44px;box-sizing:border-box;border:{{ f.b }};border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 12px"><span style="font:500 13.5px 'IBM Plex Sans',sans-serif;color:{{ f.vc }}">{{ f.v }}</span></div></div>
+</sc-for>
+</div>
+</div>
+<div style="flex:none;height:68px;background:#fff;border-top:1px solid rgba(44,59,42,.10);display:flex;align-items:center;gap:10px;padding:0 20px">
+<div onClick="{{ tPrev }}" style="height:46px;padding:0 18px;border-radius:10px;border:1px solid rgba(44,59,42,.18);display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A;cursor:pointer">Vorige</div><span style="flex:1"></span>
+<div onClick="{{ tNext }}" style="height:46px;padding:0 20px;border-radius:10px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;cursor:pointer">{{ tNextLabel }}</div>
+</div>
+<sc-if value="{{ tDrawer }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ tClose }}" style="position:absolute;inset:0;background:rgba(31,42,30,.38)"></div>
+<div style="position:absolute;top:0;bottom:0;left:0;width:340px;background:#fff;box-shadow:20px 0 50px -20px rgba(0,0,0,.4);display:flex;flex-direction:column">
+<div style="flex:none;height:60px;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="flex:1;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#00532D">STAPPEN · {{ tProgress }}</span><div onClick="{{ tClose }}" style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#2C3B2A;stroke-width:1.6;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></div></div>
+<div style="flex:1;min-height:0;padding:10px 8px;overflow:hidden"><dc-import name="Stappenplan" steps="{{ tStepsSub }}" current="{{ tCur }}" variant="verticaal" on-step="{{ tGoClose }}" hint-size="100%,700px"></dc-import></div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div id="27f" style="flex:none;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#27f" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">27f</a>Statussen en opties</div>
+<div style="width:880px;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 30px 60px -34px rgba(44,59,42,.45);overflow:hidden">
+<div style="padding:16px 20px;border-bottom:1px solid rgba(44,59,42,.08)"><dc-import name="Stappenplan" steps="{{ legend }}" current="{{ 1 }}" variant="lijn" clickable="{{ false }}" hint-size="100%,70px"></dc-import></div>
+<div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:0">
+<sc-for list="{{ opts }}" as="o" hint-placeholder-count="8">
+<span style="padding:9px 20px;border-top:1px solid rgba(44,59,42,.06);font:500 12px 'IBM Plex Mono',monospace;color:#00532D">{{ o.k }}</span>
+<span style="padding:9px 20px 9px 0;border-top:1px solid rgba(44,59,42,.06);font:450 12px/1.5 'IBM Plex Sans',sans-serif;color:#2C3B2A;text-wrap:pretty">{{ o.v }}</span>
+</sc-for>
+</div>
+<div style="padding:12px 20px;border-top:1px solid rgba(44,59,42,.08);background:#F7F9F5;display:flex;flex-direction:column;gap:4px;font:450 11.5px/1.6 'IBM Plex Sans',sans-serif;color:#4A5B48">
+<span>· Fout staat boven alles: een stap met <span style="font-family:'IBM Plex Mono',monospace">errors</span> kleurt rood, ook als ze al afgewerkt was. De huidige stap krijgt dan een rode ring.</span>
+<span>· Elke status heeft een eigen vorm (vinkje, cijfer, !, –), zodat je kleur niet nodig hebt om ze te onderscheiden.</span>
+<span>· Klikken kan altijd terug. Vooruit kan enkel als <span style="font-family:'IBM Plex Mono',monospace">lockAhead</span> uit staat, of naar de eerstvolgende open stap.</span>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { cur: 2, variant: 'chips', err: true, lock: false, tCur: 4, drawer: true };
+  renderVals() {
+    const B = ['Gegevens','Oppervlaktes','Sanitair','Gevels','Dak & Afbraak','Activiteiten','Parameters','Verkoop','Resultaat'];
+    const issues = { 1: { warnings: 1, msg: '' }, 2: { errors: 2, msg: 'Sanitair: 2 velden ontbreken — aantal badkamers en type boiler.' }, 5: { errors: 1, msg: 'Activiteiten: lot "Elektriciteit" heeft geen eenheidsprijs.' } };
+    const { cur, err } = this.state;
+    const liveSteps = B.map((label, i) => ({ label, ...(err && issues[i] ? { errors: issues[i].errors, warnings: issues[i].warnings } : {}) }));
+    const V = [['chips','Chips'],['lijn','Lijn'],['balk','Balk'],['verticaal','Verticaal']];
+    const variantBtns = V.map(([k,n]) => { const on = this.state.variant === k; return { n, bg: on ? '#fff' : 'transparent', col: on ? '#00532D' : '#5a6b58', sh: on ? '0 1px 2px rgba(0,0,0,.08)' : 'none', go: () => this.setState({ variant: k }) }; });
+    const curIssue = err && issues[cur] && issues[cur].errors ? issues[cur].msg : '';
+    const budget = (cur, extra = {}) => B.map((label, i) => ({ label, ...(extra[i] || {}) }));
+    const sub = { 0: 'Aantallen en dimensies', 1: 'Lot A en B ingevuld', 2: 'Aantal badkamers en type boiler ontbreken', 3: 'Gevelmetselwerk 220,23 €/m²', 4: 'Bezig — afbraak bestaand dak', 5: 'Lot Elektriciteit zonder eenheidsprijs', 6: 'Commissie en marges', 7: 'Verkoopprijzen per eenheid', 8: 'Overzicht en export' };
+    const budgetErr = budget(4, { 1: { warnings: 1 }, 2: { errors: 2 }, 5: { errors: 1 } });
+    const budgetErrSub = budgetErr.map((s, i) => ({ ...s, sub: sub[i] }));
+    const budgetDone = B.map(label => ({ label, state: 'done' }));
+    const woSteps = [
+      { label: 'Offerte', sub: '02/09 · Niels' }, { label: 'Opgemaakt', sub: '04/09 · Niels' }, { label: 'Verzonden', sub: '05/09 · naar klant' },
+      { label: 'Ondertekenen', state: 'wacht', sub: '1 van 2 getekend' }, { label: 'Uitvoering' }, { label: 'Gefactureerd' }, { label: 'Betaald' }];
+    const woRefused = [{ label: 'Offerte', sub: '02/09' }, { label: 'Opgemaakt', sub: '04/09' }, { label: 'Verzonden', sub: '05/09' }, { label: 'Ondertekenen', errors: 1, sub: 'Geweigerd door Van Laeken' }, { label: 'Uitvoering', state: 'uit' }, { label: 'Gefactureerd', state: 'uit' }, { label: 'Betaald', state: 'uit' }];
+    const legend = [{ label: 'Afgewerkt', state: 'done' }, { label: 'Huidig' }, { label: 'Nog te doen' }, { label: 'In afwachting', state: 'wacht' }, { label: 'Aandacht', warnings: 1, state: 'warning' }, { label: 'Fout', errors: 2 }, { label: 'N.v.t.', state: 'uit' }];
+    const opts = [
+      { k: 'variant', v: 'chips (kopbalk budget), lijn (verloop met datum), balk (gsm), verticaal (zijpaneel/tablet)' },
+      { k: 'steps[]', v: '{ label, state?, errors?, warnings?, sub? }. Zonder state wordt de status afgeleid uit current.' },
+      { k: 'state', v: 'done · current · todo · wacht · warning · error · uit' },
+      { k: 'errors / warnings', v: 'Aantal fouten of aandachtspunten. Toont een teller en kleurt de stap.' },
+      { k: 'current', v: 'Index van de huidige stap (vanaf 0).' },
+      { k: 'size', v: 'md (desktop) of sm (in kaarten, tablet).' },
+      { k: 'onStep(i)', v: 'Wordt opgeroepen bij een klik. clickable={false} maakt het stappenplan alleen-lezen.' },
+      { k: 'lockAhead', v: 'Stappen verder dan de eerstvolgende open stap zijn niet klikbaar.' },
+      { k: 'statusLabel / Tone', v: 'Enkel bij balk: statuspil links (ok, wacht, error).' },
+      { k: 'numbers · showSub', v: 'Cijfers in de cirkels tonen of verbergen · subtekst onder de stap tonen.' }
+    ];
+    const n = B.length;
+    const tc = this.state.tCur;
+    const tErrMap = { 2: 'Sanitair: aantal badkamers en type boiler ontbreken.', 5: 'Activiteiten: lot "Elektriciteit" heeft geen eenheidsprijs.' };
+    const tSteps = budgetErr;
+    const tStepsSub = budgetErrSub;
+    const fieldSets = {
+      2: [['AANTAL BADKAMERS',''],['TYPE BOILER',''],['AANTAL TOILETTEN','3'],['AFWERKING','Standaard']],
+      5: [['LOT','Elektriciteit'],['EENHEIDSPRIJS',''],['HOEVEELHEID','1'],['EENHEID','forfait']]
+    };
+    const fs = fieldSets[tc] || [['OPPERVLAKTE','148 m²'],['TYPE','Hellend dak'],['AFBRAAK BESTAAND','Ja'],['AFVOER','Container 10 m³'],['PRIJS / M²','86,00 €'],['OPMERKING','—']];
+    const tFields = fs.map(([l, v]) => { const e = !v && !!tErrMap[tc]; return { l, v: v || 'Niet ingevuld', vc: v ? '#2C3B2A' : '#9aa898', lc: e ? '#8B2A2A' : '#5a6b58', b: e ? '1.5px solid #8B2A2A' : '1px solid rgba(44,59,42,.12)', hasErr: e }; });
+    const doneCount = tc;
+    return {
+      tSteps, tStepsSub, tCur: tc, tLabel: B[tc], tNum: tc + 1 + ' / ' + n,
+      tProgress: doneCount + ' van ' + n + ' klaar',
+      tHasErr: !!tErrMap[tc], tErr: tErrMap[tc] || '', tHasWarn: tc === 1, tFields,
+      tGo: i => this.setState({ tCur: i }),
+      tGoClose: i => this.setState({ tCur: i, drawer: false }),
+      tPrev: () => this.setState(s => ({ tCur: Math.max(0, s.tCur - 1) })),
+      tNext: () => this.setState(s => ({ tCur: Math.min(n - 1, s.tCur + 1) })),
+      tNextLabel: tc < n - 1 ? 'Volgende: ' + B[tc + 1] : 'Budget afronden',
+      tDrawer: this.state.drawer, tOpen: () => this.setState({ drawer: true }), tClose: () => this.setState({ drawer: false }),
+      liveSteps, cur, liveVariant: this.state.variant, lock: this.state.lock, variantBtns,
+      goStep: i => this.setState({ cur: i }),
+      prev: () => this.setState(s => ({ cur: Math.max(0, s.cur - 1) })),
+      next: () => this.setState(s => ({ cur: Math.min(n - 1, s.cur + 1) })),
+      nextLabel: cur < n - 1 ? 'Volgende: ' + B[cur + 1] : 'Budget afronden',
+      curLabel: B[cur], curHasErr: !!curIssue, curNoErr: !curIssue, curErrText: curIssue,
+      toggleErr: () => this.setState(s => ({ err: !s.err })), errTrack: err ? '#00532D' : '#DDE3D8', errKnob: err ? '18px' : '2px',
+      toggleLock: () => this.setState(s => ({ lock: !s.lock })), lockTrack: this.state.lock ? '#00532D' : '#DDE3D8', lockKnob: this.state.lock ? '18px' : '2px',
+      chipCases: [
+        { n: 'START', steps: B.map(label => ({ label })), cur: 0 },
+        { n: 'ONDERWEG', steps: B.map(label => ({ label })), cur: 4 },
+        { n: 'MET VALIDATIE', steps: budgetErr, cur: 4 },
+        { n: 'FOUT IN HUIDIGE STAP', steps: budget(2, { 2: { errors: 2 } }), cur: 2 }
+      ],
+      budgetErr, budgetErrSub, budgetDone, woSteps, woRefused, legend, opts
+    };
+  }
+}
+</script>
+</body>
+</html>

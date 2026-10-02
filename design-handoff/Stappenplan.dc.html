@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:100%;font-family:'IBM Plex Sans',sans-serif">
+<sc-if value="{{ isLijn }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:flex-start;width:100%">
+<sc-for list="{{ items }}" as="s" hint-placeholder-count="7">
+<div onClick="{{ s.go }}" title="{{ s.tip }}" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;cursor:{{ s.cursor }}">
+<div style="display:flex;align-items:center">
+<span style="width:{{ dim }};height:{{ dim }};flex:none;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:{{ s.bg }};border:{{ s.border }};color:{{ s.col }};font-weight:700;font-size:{{ numFs }};box-shadow:{{ s.ring }}"><sc-if value="{{ s.isCheck }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></sc-if><sc-if value="{{ s.isText }}" hint-placeholder-val="{{ true }}">{{ s.glyph }}</sc-if></span>
+<sc-if value="{{ s.hasLine }}" hint-placeholder-val="{{ true }}"><span style="flex:1;height:2px;margin:0 6px;border-radius:1px;background:{{ s.lineCol }}"></span></sc-if>
+</div>
+<div style="display:flex;align-items:center;gap:6px;padding-right:10px;min-width:0"><span style="min-width:0;font-size:{{ labFs }};font-weight:{{ s.fw }};color:{{ s.lab }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ s.deco }}">{{ s.label }}</span><sc-if value="{{ s.hasBadge }}" hint-placeholder-val="{{ false }}"><span title="{{ s.badge }}" style="flex:none;min-width:18px;height:18px;box-sizing:border-box;padding:0 5px;border-radius:9px;background:{{ s.badgeSolid }};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.count }}</span></sc-if></div>
+<sc-if value="{{ s.hasSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;color:{{ s.subCol }};padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.sub }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isChips }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:6px;width:100%;flex-wrap:wrap">
+<sc-for list="{{ items }}" as="s" hint-placeholder-count="9">
+<div style="display:flex;align-items:center;gap:6px">
+<div onClick="{{ s.go }}" title="{{ s.tip }}" style="position:relative;display:flex;align-items:center;gap:8px;height:{{ chipH }};padding:0 10px 0 6px;border-radius:9px;background:{{ s.chipBg }};cursor:{{ s.cursor }}" style-hover="background:{{ s.chipHover }}">
+<span style="width:{{ dim }};height:{{ dim }};flex:none;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:{{ s.bg }};border:{{ s.border }};color:{{ s.col }};font-weight:700;font-size:{{ numFs }}"><sc-if value="{{ s.isCheck }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></sc-if><sc-if value="{{ s.isText }}" hint-placeholder-val="{{ true }}">{{ s.glyph }}</sc-if></span>
+<span style="font-size:{{ labFs }};font-weight:{{ s.fw }};color:{{ s.lab }};white-space:nowrap;text-decoration:{{ s.deco }}">{{ s.label }}</span>
+<sc-if value="{{ s.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:18px;height:18px;box-sizing:border-box;padding:0 5px;border-radius:9px;background:{{ s.badgeSolid }};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.count }}</span></sc-if>
+</div>
+<sc-if value="{{ s.hasLine }}" hint-placeholder-val="{{ true }}"><span style="width:22px;height:1.5px;border-radius:1px;background:{{ s.lineCol }}"></span></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBalk }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:7px;width:100%">
+<div style="display:flex;align-items:center;gap:8px;min-width:0">
+<sc-if value="{{ hasStatus }}" hint-placeholder-val="{{ false }}"><span style="padding:4px 10px;border-radius:11px;background:{{ statusBg }};font-size:10px;font-weight:600;letter-spacing:.06em;color:{{ statusCol }};flex:none;white-space:nowrap">{{ statusLabel }}</span></sc-if>
+<span style="flex:1;min-width:0;font-size:11.5px;font-weight:500;color:#5a6b58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ balkText }}</span>
+<sc-if value="{{ hasIssues }}" hint-placeholder-val="{{ false }}"><span style="flex:none;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:{{ issueCol }}"><span style="width:6px;height:6px;border-radius:3px;background:{{ issueCol }}"></span>{{ issueText }}</span></sc-if>
+</div>
+<div style="display:flex;gap:3px">
+<sc-for list="{{ items }}" as="s" hint-placeholder-count="7"><span onClick="{{ s.go }}" title="{{ s.tip }}" style="flex:1;height:{{ segH }};border-radius:3px;background:{{ s.seg }};cursor:{{ s.cursor }}"></span></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVert }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;width:100%">
+<sc-for list="{{ items }}" as="s" hint-placeholder-count="7">
+<div onClick="{{ s.go }}" title="{{ s.tip }}" style="display:flex;gap:12px;cursor:{{ s.cursor }};border-radius:9px;padding:0 8px;background:{{ s.vBg }}" style-hover="background:{{ s.chipHover }}">
+<div style="display:flex;flex-direction:column;align-items:center;flex:none;padding-top:9px">
+<span style="width:{{ dim }};height:{{ dim }};flex:none;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:{{ s.bg }};border:{{ s.border }};color:{{ s.col }};font-weight:700;font-size:{{ numFs }};box-shadow:{{ s.ring }}"><sc-if value="{{ s.isCheck }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></sc-if><sc-if value="{{ s.isText }}" hint-placeholder-val="{{ true }}">{{ s.glyph }}</sc-if></span>
+<span style="flex:1;width:2px;min-height:14px;margin-top:4px;border-radius:1px;background:{{ s.vLine }}"></span>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:10px 0 12px">
+<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="flex:1;min-width:0;font-size:{{ labFs }};font-weight:{{ s.fw }};color:{{ s.lab }};text-decoration:{{ s.deco }}">{{ s.label }}</span><sc-if value="{{ s.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="flex:none;padding:1px 7px;border-radius:9px;background:{{ s.badgeBg }};color:{{ s.badgeCol }};font-size:10px;font-weight:600;white-space:nowrap">{{ s.badge }}</span></sc-if></div>
+<sc-if value="{{ s.hasSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:{{ s.subCol }};text-wrap:pretty">{{ s.sub }}</span></sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:120},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lijn&quot;,&quot;chips&quot;,&quot;balk&quot;,&quot;verticaal&quot;],&quot;default&quot;:&quot;lijn&quot;,&quot;tsType&quot;:&quot;'lijn'|'chips'|'balk'|'verticaal'&quot;},&quot;current&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:0,&quot;min&quot;:0,&quot;tsType&quot;:&quot;number&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;md&quot;,&quot;sm&quot;],&quot;default&quot;:&quot;md&quot;,&quot;tsType&quot;:&quot;'md'|'sm'&quot;},&quot;clickable&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;lockAhead&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;numbers&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showSub&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;statusLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;statusTone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ok&quot;,&quot;wacht&quot;,&quot;error&quot;],&quot;default&quot;:&quot;ok&quot;,&quot;tsType&quot;:&quot;'ok'|'wacht'|'error'&quot;},&quot;steps&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{label:string; state?:'done'|'current'|'todo'|'wacht'|'warning'|'error'|'uit'; errors?:number; warnings?:number; sub?:string}&gt;&quot;},&quot;onStep&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(index:number)=&gt;void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const G = '#00532D', R = '#8B2A2A', A = '#8A6A32', GOLD = '#C9A96E';
+    const steps = p.steps ?? ['Gegevens','Oppervlaktes','Sanitair','Gevels','Dak & Afbraak','Activiteiten','Parameters','Verkoop','Resultaat'].map(label => ({ label }));
+    const cur = p.current ?? 0;
+    const variant = p.variant ?? 'lijn';
+    const size = p.size ?? 'md';
+    const clickable = p.clickable ?? true;
+    const numbers = p.numbers ?? true;
+    const showSub = p.showSub ?? true;
+    const lockAhead = p.lockAhead ?? false;
+    const sm = size === 'sm';
+    const S = {
+      done:    { bg: G, border: '0', col: '#fff', lab: '#2C3B2A', fw: 500, seg: G, chip: 'transparent', tip: 'Afgewerkt' },
+      current: { bg: G, border: '0', col: '#fff', lab: G, fw: 700, seg: '#7A9E6E', chip: '#E2ECDA', ring: '0 0 0 3px rgba(0,83,45,.16)', tip: 'Huidige stap' },
+      todo:    { bg: '#fff', border: '1.5px solid rgba(44,59,42,.28)', col: '#5a6b58', lab: '#5a6b58', fw: 450, seg: '#E3E8DF', chip: 'transparent', tip: 'Nog te doen' },
+      wacht:   { bg: GOLD, border: '0', col: '#fff', lab: '#6B4F22', fw: 600, seg: GOLD, chip: '#F6EEDC', ring: '0 0 0 3px rgba(201,169,110,.25)', tip: 'In afwachting' },
+      warning: { bg: A, border: '0', col: '#fff', lab: '#6B4F22', fw: 600, seg: A, chip: '#F6EEDC', tip: 'Aandachtspunt' },
+      error:   { bg: R, border: '0', col: '#fff', lab: R, fw: 600, seg: R, chip: '#F6E4E1', tip: 'Bevat fouten' },
+      uit:     { bg: '#F2F5EF', border: '1.5px dashed rgba(44,59,42,.25)', col: '#9aa898', lab: '#9aa898', fw: 450, seg: '#EEF1EB', chip: 'transparent', tip: 'Niet van toepassing' }
+    };
+    const firstOpen = steps.findIndex((s, i) => i > cur && !(s.state === 'done'));
+    const items = steps.map((s0, i) => {
+      const s = typeof s0 === 'string' ? { label: s0 } : s0;
+      const errors = s.errors || 0, warnings = s.warnings || 0;
+      let st = s.state || (i < cur ? 'done' : i === cur ? 'current' : 'todo');
+      if (!s.state && i !== cur && errors) st = 'error';
+      else if (!s.state && i !== cur && warnings && st !== 'todo') st = 'warning';
+      const isCur = i === cur;
+      const t = { ...S[st] };
+      if (isCur && errors) { t.bg = R; t.lab = R; t.chip = '#F6E4E1'; t.ring = '0 0 0 3px rgba(139,42,42,.16)'; t.seg = R; }
+      else if (isCur && warnings) { t.ring = '0 0 0 3px rgba(138,106,50,.2)'; }
+      const glyph = (st === 'error' || st === 'warning' || (isCur && errors)) ? '!' : st === 'uit' ? '–' : String(i + 1);
+      const isCheck = st === 'done';
+      const locked = st === 'uit' || (lockAhead && i > cur && st === 'todo' && i !== firstOpen);
+      const can = clickable && !locked && !!p.onStep;
+      const next = steps[i + 1];
+      const nextSt = next && (next.state || (i + 1 < cur ? 'done' : i + 1 === cur ? 'current' : 'todo'));
+      const lineDone = st === 'done' || st === 'warning' || st === 'error' ? (i < cur || nextSt === 'done') : false;
+      const badge = errors ? errors + (errors > 1 ? ' fouten' : ' fout') : warnings ? warnings + (warnings > 1 ? ' aandachtspunten' : ' aandachtspunt') : '';
+      return {
+        label: s.label, sub: s.sub || '', hasSub: showSub && !!s.sub,
+        subCol: st === 'error' || (isCur && errors) ? R : st === 'warning' ? A : '#7a8a78',
+        bg: t.bg, border: t.border, col: t.col, lab: t.lab, fw: t.fw, ring: t.ring || 'none',
+        deco: st === 'uit' ? 'line-through' : 'none',
+        isCheck, isText: !isCheck, glyph: (!numbers && glyph !== '!' && glyph !== '–') ? '' : glyph,
+        hasLine: i < steps.length - 1, lineCol: lineDone ? '#7A9E6E' : '#DDE3D8',
+        vLine: i < steps.length - 1 ? (lineDone ? '#7A9E6E' : '#DDE3D8') : 'transparent',
+        chipBg: t.chip, vBg: isCur ? t.chip : 'transparent', chipHover: can ? (isCur ? t.chip : '#EDF2E8') : t.chip,
+        seg: t.seg,
+        hasBadge: !!badge, badge, count: errors || warnings,
+        badgeBg: errors ? '#F6E4E1' : '#F6EEDC', badgeCol: errors ? R : '#6B4F22', badgeSolid: errors ? R : A,
+        cursor: can ? 'pointer' : 'default',
+        tip: s.label + ' — ' + (isCur ? 'huidige stap' : t.tip.toLowerCase()) + (badge ? ' · ' + badge : ''),
+        go: () => { if (can) p.onStep(i); }
+      };
+    });
+    const errSteps = steps.filter(s => s && s.errors).length;
+    const warnSteps = steps.filter(s => s && s.warnings && !s.errors).length;
+    const curStep = steps[cur] || {};
+    return {
+      items,
+      isLijn: variant === 'lijn', isChips: variant === 'chips', isBalk: variant === 'balk', isVert: variant === 'verticaal',
+      dim: sm ? '18px' : '24px', numFs: sm ? '10px' : '11.5px', labFs: sm ? '11.5px' : '13px', chipH: sm ? '30px' : '36px', segH: sm ? '4px' : '5px',
+      balkText: 'Stap ' + (cur + 1) + ' van ' + steps.length + ' · ' + (curStep.label || ''),
+      hasStatus: !!p.statusLabel, statusLabel: p.statusLabel || '',
+      statusBg: p.statusTone === 'wacht' ? '#F6EEDC' : p.statusTone === 'error' ? '#F6E4E1' : '#D6E5CC',
+      statusCol: p.statusTone === 'wacht' ? A : p.statusTone === 'error' ? R : G,
+      hasIssues: !!(errSteps || warnSteps),
+      issueText: errSteps ? errSteps + (errSteps > 1 ? ' stappen' : ' stap') + ' met fouten' : warnSteps + ' aandachtspunt' + (warnSteps > 1 ? 'en' : ''),
+      issueCol: errSteps ? R : A
+    };
+  }
+}
+</script>
+</body>
+</html>

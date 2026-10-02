@@ -1,3 +1,4 @@
+using CPMCore.Models.GlV2;
 using ServiceCore.Helpers;
 
 namespace CPMCore.Models.Projecten;
@@ -47,10 +48,10 @@ public class ChangeOrderRowV2
     public decimal Amount { get; set; }
     public ChangeOrderStatus Status { get; set; }
     public string StatusLabel => ChangeOrderStatusHelper.DisplayName(Status);
-    /// <summary>0..5 — positie in de 6-staps verloopstrip (Offerte/Opgemaakt/Verzonden/Ondertekend/
-    /// Gefactureerd/Betaald). Factureerbaar telt visueel als "Ondertekend" — de wireframe se dot-strip
-    /// en funnelbalk hebben geen aparte stap daarvoor.</summary>
-    public int DotPosition { get; set; }
+    /// <summary>De compacte "Verloop"-strip (design-handoff punt 27, DESIGN.md "Stappenplan") — gebouwd
+    /// door <see cref="ChangeOrderStepsBuilder.BuildRow"/>, zelfde 6-stappen-positionering als voorheen
+    /// (Factureerbaar telt visueel als "Ondertekend" — geen aparte stap daarvoor).</summary>
+    public GlV2StepsVm Steps { get; set; } = new();
     public bool IsRejectedOrCancelled => Status == ChangeOrderStatus.Geweigerd || Status == ChangeOrderStatus.Geannuleerd;
     public bool CanRemind { get; set; }
     public int? SigningCaseId { get; set; }
