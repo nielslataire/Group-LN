@@ -1,0 +1,70 @@
+/* gl-v2 component — voortgangsbalk fysiek/financieel (7c).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Voortgangsbalk (design-handoff 7c, "Voortgangsbalk — fysiek en financieel, alle staten en
+   formaten") ─────────────────────────────────────────────────────────────────────────────────────
+   Generieke, projectbrede component (`Views/Shared/GlV2/_ProgressBar.cshtml` +
+   `Models/GlV2/GlV2ProgressBarVm.cs`) — niet dashboard/projectkaart-specifiek. Vier tonen op de FILL
+   (de aanroeper beslist welke, dit component vergelijkt zelf geen waarden): `.is-complete` (donkerder
+   groen + vinkje naast het cijfer, 100%), `.is-over` (rood — balk blijft zelf op 100% breedte staan
+   ongeacht de ruwe waarde, enkel het cijferlabel mag de echte >100%-waarde tonen), `.is-behind`
+   (hergebruikt --gl-v2-warning — zelfde token als de KPI/toast-warningtoon, geen apart vierde
+   statuskleur nodig, zie Do's/Don'ts "geen vierde statuskleur verzinnen"). Twee spoor-diktes ("Fijn"
+   4px, "Standaard" 8px) — een bewuste keuze per PLAATS (kaarten/tabelrijen vs. projectdetail/mobiel),
+   geen breakpoint-gestuurde omschakeling: de referentie noemt dit expliciet als een contextkeuze, niet
+   een responsive herschaling van hetzelfde gebruik. */
+.gl-v2-progress { display: flex; flex-direction: column; gap: 6px; }
+
+.gl-v2-progress-row { display: flex; align-items: baseline; gap: 6px; }
+.gl-v2-progress-label { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-progress-spacer { flex: 1; }
+.gl-v2-progress-value { display: inline-flex; align-items: center; gap: 3px; font: 700 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-progress-value i { font-size: 12px; }
+.gl-v2-progress-value.is-complete { color: #2F7A3E; }
+.gl-v2-progress-value.is-over { color: var(--gl-v2-danger); }
+.gl-v2-progress-value.is-behind { color: var(--gl-v2-warning); }
+
+/* Compacte variant: label vóór de balk i.p.v. een rij erboven (geen cijfer). Vaste kolombreedte op
+   het label — anders zou "Financieel" (langer dan "Fysiek") de balk erna een stukje verder naar
+   rechts duwen, en de twee balken zouden niet meer op dezelfde verticale lijn starten. */
+.gl-v2-progress.is-inline { flex-direction: row; align-items: center; gap: 8px; }
+.gl-v2-progress-inline-label { flex: 0 0 58px; font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-progress.is-inline .gl-v2-progress-track { flex: 1; }
+
+.gl-v2-progress-track {
+    position: relative;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(44, 59, 42, .1);
+    overflow: hidden;
+}
+.gl-v2-progress-track.is-standard { height: 8px; border-radius: 4px; }
+
+.gl-v2-progress-fill { height: 100%; border-radius: inherit; background: var(--gl-v2-primary); }
+.gl-v2-progress-fill.is-complete { background: #2F7A3E; }
+.gl-v2-progress-fill.is-over { background: var(--gl-v2-danger); }
+.gl-v2-progress-fill.is-behind { background: var(--gl-v2-warning); }
+
+/* "Met tussenstand" — waar het project NU zou moeten staan volgens planning, los van de echte
+   voortgang (design-handoff 7c: "gouden streep = waar het project zou moeten staan"). */
+.gl-v2-progress-marker {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: calc(100% + 6px);
+    background: var(--gl-v2-warning);
+}
+
+/* "Onbepaald" — bezig met laden, geen echte waarde nog gekend. */
+.gl-v2-progress-track.is-indeterminate .gl-v2-progress-fill {
+    width: 38% !important;
+    background: linear-gradient(90deg, rgba(0, 83, 45, 0), var(--gl-v2-primary), rgba(0, 83, 45, 0));
+    animation: gl-v2-progress-sweep 1.4s ease-in-out infinite;
+}
+@keyframes gl-v2-progress-sweep {
+    0% { margin-left: -38%; }
+    100% { margin-left: 100%; }
+}
+

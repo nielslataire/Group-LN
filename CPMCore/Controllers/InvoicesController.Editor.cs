@@ -2,7 +2,7 @@
 using CPMCore.Documents;
 using CPMCore.Extensions;
 using CPMCore.Models.Invoicing;
-using CPMCore.Service;
+using CPMCore.Services;
 using CPMCore.Services.Octopus;
 using CPMCore.Services.Peppol;
 using DALCore;

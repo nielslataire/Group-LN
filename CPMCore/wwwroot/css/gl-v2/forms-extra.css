@@ -1,0 +1,325 @@
+/* gl-v2 component — spinner, genummerde velden, contactvelden, zoekende dropdown, getal met eenheid, schakelaar (8f, 14d).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Spinner (generieke bezig-indicator) ────────────────────────────────────────────────────────
+   Kleine herbruikbare primitief — eerste toepassing is de btw-nummer-controleknop hieronder en de
+   "Opslaan …"-state van de nieuwe formulier-actiebalk verderop. Het bestaande .gl-v2-btn.is-loading
+   (gl-v2-shell.js) blijft ongewijzigd puur opacity/cursor, geen ring — dit is een nieuw, apart
+   opt-in onderdeel ernaast, geen retrofit van bestaand gebruik. */
+@keyframes gl-v2-spin { to { transform: rotate(360deg); } }
+.gl-v2-spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    flex: none;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .45);
+    border-top-color: #fff;
+    animation: gl-v2-spin .7s linear infinite;
+}
+.gl-v2-spinner.is-dark { border-color: rgba(44, 59, 42, .18); border-top-color: var(--gl-v2-primary); }
+
+/* ── Genummerde velden — ondernemingsnummer & btw-nummer (optie 8f, "1 · GENUMMERDE VELDEN") ─────
+   Bouwt voort op .gl-v2-field/.gl-v2-field-box (optie 4i) hierboven — geen nieuw veldcomponent,
+   enkel de extra primitieven die deze twee velden nodig hebben: een vast voorvoegsel met
+   scheidingslijntje (BE), tabelcijfers voor de gemaskerde waarde, een teller tijdens het tikken,
+   een rechter statusicoon, en — enkel voor btw — een vastgeplakte controleknop. */
+.gl-v2-field-divider { flex: none; width: 1px; height: 18px; background: var(--gl-v2-hairline); }
+.gl-v2-field-input.is-tabular { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.gl-v2-field-counter { flex: none; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); font-variant-numeric: tabular-nums; }
+
+/* Rechter statusicoon — .gl-v2-field-box had tot nu toe enkel een icoon-slot vooraan
+   (> i:first-child); dit is het eerste veld met een icoon NÁ de waarde (fout-driehoek/vinkje). */
+.gl-v2-field-icon-trailing { flex: none; font-size: 15px; color: var(--gl-v2-muted); }
+.gl-v2-field.is-error .gl-v2-field-icon-trailing { color: #8A3B2A; }
+
+/* Btw-nummer-met-knop: veld + knop als één visueel blok, radius enkel buitenom. Geen .gl-v2-btn
+   hergebruik — die is 38px/losstaand, dit moet 40px/vast-tegen-de-box zijn, dezelfde hoogtetaal
+   als .gl-v2-field-box. */
+.gl-v2-field-attached { display: flex; }
+.gl-v2-field-attached .gl-v2-field-box {
+    flex: 1;
+    min-width: 0;
+    border-radius: var(--gl-v2-radius-sm) 0 0 var(--gl-v2-radius-sm);
+    border-right: none;
+}
+.gl-v2-field-attach-btn {
+    flex: none;
+    height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 0 var(--gl-v2-radius-sm) var(--gl-v2-radius-sm) 0;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font: 600 12px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-field-attach-btn > i { font-size: 13px; }
+.gl-v2-field-attach-btn:hover { background: var(--gl-v2-primary-deep); }
+
+/* BEZIG — veld vergrijst mee zodat niemand ondertussen tikt, knop toont de spinner en wordt inert. */
+.gl-v2-field-attached.is-busy .gl-v2-field-box { background: #F7F9F5; }
+.gl-v2-field-attached.is-busy .gl-v2-field-box .gl-v2-field-input,
+.gl-v2-field-attached.is-busy .gl-v2-field-box .gl-v2-field-prefix { color: var(--gl-v2-muted); }
+.gl-v2-field-attach-btn.is-busy { background: rgba(0, 83, 45, .45); cursor: wait; pointer-events: none; }
+
+/* GECONTROLEERD — rand kleurt groen, knop wisselt naar een outline "Opnieuw"-variant. */
+.gl-v2-field-attached.is-checked .gl-v2-field-box { border-color: var(--gl-v2-accent-sage); }
+.gl-v2-field-attached.is-checked .gl-v2-field-icon-trailing { color: #2F6038; }
+.gl-v2-field-attach-btn.is-outline {
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-accent-sage);
+    border-left: none;
+    color: #2F6038;
+}
+.gl-v2-field-attach-btn.is-outline:hover { background: var(--gl-v2-hover-tint); }
+
+/* ── Contactvelden — telefoon, gsm, e-mail, website (optie 8f, "2 · TELEFOON, GSM, E-MAIL EN
+   WEBSITE") ────────────────────────────────────────────────────────────────────────────────────
+   Zelfde .gl-v2-field-box-skelet: icoon vooraan · optioneel voorvoegsel (+32, https://) achter een
+   .gl-v2-field-divider · waarde · een rechtse actie die pas verschijnt zodra de waarde geldig is
+   (e-mail-fout hergebruikt gewoon het bestaande .gl-v2-field.is-error, geen nieuwe CSS nodig). */
+.gl-v2-field-action {
+    display: none;
+    flex: none;
+    align-items: center;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: 600 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+.gl-v2-field-action > i { font-size: 14px; }
+.gl-v2-field-action:hover { text-decoration: underline; }
+/* zelfde :placeholder-shown-truc als .gl-v2-field-clear: puur CSS, geen JS-klasse om te tonen. */
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-action { display: inline-flex; }
+
+/* Bewerkbaar landcode-voorvoegsel (GlV2Telefoon.cshtml/GlV2Gsm.cshtml) — de enige native <select>
+   in dit veldsysteem: elders kiest de app altijd .gl-v2-select-trigger/paneel, maar een korte,
+   vaste landcodelijst (<12 opties, geen zoekveld/groepen nodig) hoeft dat niet, en wint zo gratis
+   de browser se eigen toetsenbord-/type-to-select-navigatie. Zelfde kleurtaal als het vorige,
+   niet-bewerkbare ".gl-v2-field-prefix"-label (leeg-grijs/ingevuld-donkerder) — hier is "ingevuld"
+   altijd waar, er staat nooit geen landcode. */
+.gl-v2-field-prefix-select {
+    flex: none;
+    max-width: 68px;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font: 500 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+}
+.gl-v2-field-prefix-select:focus,
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-prefix-select { color: var(--gl-v2-ink); }
+.gl-v2-field-box:has(.gl-v2-field-input:disabled) .gl-v2-field-prefix-select,
+.gl-v2-field-prefix-select:disabled { color: #A8B3A6; cursor: not-allowed; }
+.gl-v2-field.is-error .gl-v2-field-prefix-select { color: #8A3B2A; }
+
+/* ── Dropdown met zoekveld, groepen en suggesties (optie 8f, "3 · DROPDOWN MET ZOEKVELD, GROEPEN
+   EN SUGGESTIES") ──────────────────────────────────────────────────────────────────────────────
+   Uitbreiding van .gl-v2-select-panel-search hierboven (optie 4h) — geen nieuw paralleel
+   component, "één component voor alle keuzelijsten" is de wireframe se eigen regel. Groepen,
+   trefferstippeling, toetsenbordnavigatie, "record"-rijen met avatar+badge, en meervoudige
+   selectie als chips. Geen highlight-/groepeer-/toetsenbord-JS in deze pass, zelfde discipline als
+   de rest van dit component. */
+.gl-v2-select-group-header { display: flex; align-items: center; gap: 8px; padding: 10px 10px 6px; }
+.gl-v2-select-group-label { font: 600 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .1em; flex: none; }
+.gl-v2-select-group-rule { flex: 1; height: 1px; background: var(--gl-v2-hairline-soft); }
+.gl-v2-select-group-count { font: 450 10px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-select-group-header + .gl-v2-select-group-header { border-top: 1px solid var(--gl-v2-hairline-soft); margin-top: 6px; }
+
+.gl-v2-select-match { font-weight: 700; color: var(--gl-v2-primary); }
+
+.gl-v2-select-option.is-active { background: var(--gl-v2-hover-tint); border-left: 2.5px solid var(--gl-v2-gold); padding-left: 7.5px; }
+
+/* "Record"-rij: 28px avatar + twee tekstregels + optioneel een .gl-v2-badge rechts. Auto-hoogte
+   i.p.v. de vaste 36px zodat er ruimte is voor de tweede regel. */
+.gl-v2-select-option-2line { height: auto; padding: 9px 10px; gap: 11px; }
+.gl-v2-select-option-avatar {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 10px var(--gl-v2-font-sans);
+}
+.gl-v2-select-option-2line.is-inactive .gl-v2-select-option-avatar { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); }
+.gl-v2-select-option-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-select-option-title { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-select-option-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Leeg-staat met suggestie — vervangt de kale lijst wanneer er niets matcht; altijd een uitweg,
+   nooit enkel "geen resultaten". */
+.gl-v2-select-empty-suggestion { padding: 16px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.gl-v2-select-empty-suggestion-msg { font: 500 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-select-empty-suggestion-hint { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-select-empty-suggestion-hint b { color: var(--gl-v2-primary); font-weight: 700; }
+
+/* Inline "toevoegen"-rij — verschijnt tussen de resultaten, i.t.t. de vaste footer die
+   .gl-v2-select-panel-newitem hierboven al heeft. */
+.gl-v2-select-addnew-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 14px;
+    border: 0;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+.gl-v2-select-addnew-row-label { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-select-addnew-row-hint { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
+
+.gl-v2-select-hint-footer {
+    padding: 9px 14px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    font: 450 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+
+/* Meervoudige selectie — trigger wordt een wrap-container met chips i.p.v. één regel tekst. */
+.gl-v2-select-trigger-multi { height: auto; min-height: 40px; flex-wrap: wrap; padding: 6px 12px; cursor: text; }
+/* Chipshost was een kale <div> zonder eigen flex-opzet: de chips (hieronder, elk .gl-v2-select-chip)
+   stroomden er als inline-elementen in zonder tussenruimte, dus zaten ze zowel binnen een rij als
+   tussen rijen tegen elkaar aan. Zelf ook een flex-container maken met een gap lost beide op — geen
+   los margin-recept per chip nodig, gap dekt zowel horizontaal als bij het omwikkelen naar een
+   nieuwe rij. */
+.gl-v2-select-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.gl-v2-select-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    background: var(--gl-v2-neutral-tint);
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-select-chip-remove { border: 0; background: transparent; padding: 0; font-size: 10px; color: var(--gl-v2-muted); cursor: pointer; display: flex; }
+.gl-v2-select-trigger-multi-input { flex: 1; min-width: 40px; border: 0; outline: none; background: transparent; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-select-trigger-multi-input::placeholder { color: var(--gl-v2-muted-light); }
+
+/* Dropdown-variant van de meervoudige kiezer — geen "Zoek…"-invoerveld, gewoon een klik-en-kies-
+   lijst met alle opties direct zichtbaar. Voor velden met een kort, overzichtelijk aantal opties
+   waar tikken-om-te-zoeken overbodig/onhandig is — op verzoek toegepast op Facturatiebedrijven op
+   alle vier de formulierpagina's (Leveranciers/Klanten Edit/CreateV2); Activiteiten (enkel
+   Leveranciers) blijft de zoekende vorm, want dat veld heeft wél veel gegroepeerde opties. Zelfde
+   .gl-v2-select-trigger-multi/.gl-v2-select-chip-basis; enkel het invoerveld vervangen door een
+   statische placeholder-tekst + chevron (hergebruikt .gl-v2-select-trigger-caret se eigen
+   open/dicht-rotatie, al generiek op .gl-v2-select-trigger.is-open). */
+.gl-v2-select-trigger-multi.is-dropdown { cursor: pointer; }
+.gl-v2-select-trigger-multi-placeholder { flex: 1; min-width: 0; color: var(--gl-v2-muted-light); font: 450 13px var(--gl-v2-font-sans); }
+
+/* ── Getal met eenheid — %, dagen, € (design-handoff punt 14d "1 · GETAL MET EENHEID", zelfde
+   veldtype-catalogus als optie 8f hierboven, hier uitgebreid met wat 14c/EditContractV2 nodig
+   had). Eenheid staat als vast blok RECHTS in de box, nooit in de placeholder (14d se eigen regel)
+   — .gl-v2-field-unit bleedt tot de rand van .gl-v2-field-box (negative margin heft die box se
+   eigen padding-right op, zelfde truc als .gl-v2-field-attach-btn hierboven maar dan zonder de
+   volle knop-styling). Gebruikt door Views/Shared/EditorTemplates/GlV2NumberUnit.cshtml. ──────────── */
+.gl-v2-field-unit {
+    align-self: stretch;
+    flex: none;
+    margin: 0 -14px 0 8px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    background: var(--gl-v2-bg);
+    border-left: 1px solid var(--gl-v2-hairline);
+    border-radius: 0 var(--gl-v2-radius-sm) var(--gl-v2-radius-sm) 0;
+    font: 500 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+}
+/* INGEVULD (14d: "0,00" wordt effectief een waarde) — eenheid leest donkerder mee, zelfde
+   :placeholder-shown-truc als .gl-v2-field-prefix hierboven. */
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-unit { color: var(--gl-v2-ink); }
+.gl-v2-field-box:has(.gl-v2-field-input:disabled) .gl-v2-field-unit { background: var(--gl-v2-neutral-tint); color: #A8B3A6; }
+.gl-v2-field.is-error .gl-v2-field-unit { border-left-color: #8A3B2A; background: #F6E5E1; color: #8A3B2A; }
+
+/* ── Alleen-lezen versus uitgeschakeld (design-handoff 14d "2 · ALLEEN-LEZEN VERSUS UITGESCHAKELD")
+   — twee verschillende betekenissen, twee verschillende looks. UITGESCHAKELD is gewoon een normaal
+   .gl-v2-field-input met het disabled-attribuut (regels hierboven verzorgen dat al: gedimde tekst,
+   gedimd label). ALLEEN-LEZEN is geen input — het veld bestaat, de waarde staat vast, er wordt nooit
+   in getikt (bv. "Leverancier" op EditContractV2, eens een contract een vaste leverancier heeft).
+   Gebruikt door Views/Shared/EditorTemplates/GlV2ReadOnlyValue.cshtml. ─────────────────────────────── */
+.gl-v2-field-readonly {
+    height: 40px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-bg);
+    font: 600 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+}
+.gl-v2-field-readonly i { color: var(--gl-v2-muted); font-size: 15px; flex: none; }
+.gl-v2-field-readonly span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Schakelaar met uitleg (design-handoff 14d "5 · SCHAKELAAR MET UITLEG") — 40×22px, de hele
+   rij is klikbaar (echte <label>, geen los <input> met een <span> ernaast), voor ja/nee-FEITEN
+   ("Werfmelding ingediend") niet voor acties die meteen iets doen. UITGESCHAKELD (bv. "Contract
+   getekend" kan pas als het contract verstuurd is) is gewoon hetzelfde element met het disabled-
+   attribuut op de checkbox. Gebruikt door Views/Shared/EditorTemplates/GlV2ToggleSwitch.cshtml. ──── */
+.gl-v2-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-height: 40px;
+    cursor: pointer;
+}
+.gl-v2-toggle-row:has(input:disabled) { cursor: not-allowed; }
+.gl-v2-toggle-switch {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: #D8DED5;
+    position: relative;
+    flex: none;
+    margin: 0;
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+.gl-v2-toggle-switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    background: #fff;
+    transition: transform .15s ease;
+}
+.gl-v2-toggle-switch:checked { background: var(--gl-v2-primary); }
+.gl-v2-toggle-switch:checked::before { transform: translateX(18px); }
+.gl-v2-toggle-switch:disabled { opacity: .5; cursor: not-allowed; }
+.gl-v2-toggle-switch:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+.gl-v2-toggle-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-toggle-label { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-toggle-row:has(input:disabled) .gl-v2-toggle-label { color: var(--gl-v2-muted); }
+.gl-v2-toggle-hint { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+/* "IN EEN GROEP — DRIE NAAST ELKAAR" (14d §5) — drie/vier schakelaars in een grid i.p.v. gestapeld;
+   de rijen zelf blijven ongewijzigd, enkel de container krijgt kolommen. */
+.gl-v2-toggle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 767.98px) {
+    .gl-v2-toggle-grid { grid-template-columns: 1fr; }
+}
+

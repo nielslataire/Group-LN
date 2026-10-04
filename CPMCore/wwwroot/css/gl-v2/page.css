@@ -1,0 +1,495 @@
+/* gl-v2 component — paginabouwstenen: badges, tabbar, kaart + sectiekaart + lege staat, actiebalk, tabelrijen, schakelaar, detail-grid (8e, 8d, 8a, 4f).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Badges (optie 8e, "1 · BADGES IN DE TOPBAR") ──────────────────────────────────────────────
+   Generiek statuslabel, niet enkel voor de topbar — 6 semantische tonen. Max 3 naast elkaar +
+   "+n"-overflow is een markup-conventie (gewoon meerdere .gl-v2-badge-spans naast elkaar), geen
+   aparte containerklasse nodig. */
+.gl-v2-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--gl-v2-radius-pill);
+    font: 600 10px var(--gl-v2-font-sans);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+/* .gl-v2-badge's eigen display:inline-flex wint anders van het [hidden]-attribuut (gelijke
+   specificiteit, author-CSS wint altijd van de UA-stylesheet) — zie DESIGN.md se eigen "Don't"-regel
+   hierover. Nodig zodra een badge client-side getoond/verborgen wordt (bv. de dirty-badge). */
+.gl-v2-badge[hidden] { display: none; }
+.gl-v2-badge.is-positive { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-badge.is-neutral { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); }
+.gl-v2-badge.is-attention { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-badge.is-blocked { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-badge.is-info { background: var(--gl-v2-info-tint); color: var(--gl-v2-info); }
+.gl-v2-badge.is-inactive { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-light); text-decoration: line-through; }
+/* Vol groen — de eindtoestand van een verloop ("Betaald", design-handoff 28g/29a): het enige label dat
+   niet op een tint staat, zodat "helemaal rond" zich onderscheidt van "goedgekeurd/positief". */
+.gl-v2-badge.is-solid { background: var(--gl-v2-primary); color: #fff; }
+
+/* ── Tabbar (optie 8e, "2 · TABBAR"), altijd gepositioneerd zoals optie 8d ─────────────────────
+   Hoort als flex:none-sibling direct ná de topbar en vóór het scrollende content-blok te staan, in
+   dezelfde verticale flex-kolom die een detail-/formulierpagina al gebruikt — geen
+   position:sticky nodig, exact zoals 8d het zelf ook bouwt. Negative margin heft .gl-v2-content se
+   eigen padding op (top + zijkanten) zodat de balk zelf — achtergrond én onderrand — vlak tegen de
+   topbar en tot in beide hoeken van de kaart loopt, exact zoals 8d het tekent (de topbar/tabbar-
+   band spant daar de volle kaartbreedte, enkel de scrollende inhoud eronder krijgt padding). Eigen
+   padding-left/right houdt de tabs zelf wél op dezelfde inspringing als de inhoud eronder. */
+.gl-v2-tabbar {
+    flex: none;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    margin: calc(-1 * var(--gl-v2-content-pad-y)) calc(-1 * var(--gl-v2-content-pad-x)) 0;
+    padding: 10px var(--gl-v2-content-pad-x) 0;
+    background: var(--gl-v2-surface);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+/* <768px: "altijd zichtbaar" — position:sticky zodat de balk zelf gegarandeerd in beeld blijft
+   ongeacht welk element precies scrolt (de flex:none-plek in de kolom volstaat op desktop, maar op
+   een edge-to-edge mobiele kaart met een potentieel lange, doorscrollende tab-inhoud is deze extra
+   garantie goedkoper dan opnieuw moeten uitzoeken welke laag daar exact overloopt). Geen effect
+   wanneer er toch al niets te scrollen valt boven de balk — sticky doet dan gewoon niets. */
+@media (max-width: 767.98px) {
+    .gl-v2-tabbar { position: sticky; top: 0; z-index: 30; }
+}
+.gl-v2-tabbar-tab {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 0;
+    border-bottom: 4px solid transparent;
+    margin-bottom: -1px;
+    background: transparent;
+    font: 500 13.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+    text-decoration: none;
+}
+.gl-v2-tabbar-tab:hover { background: var(--gl-v2-bg); border-radius: 8px 8px 0 0; }
+.gl-v2-tabbar-tab.is-active { color: var(--gl-v2-ink); border-bottom-color: var(--gl-v2-gold); }
+.gl-v2-tabbar-count { color: var(--gl-v2-muted-light); }
+.gl-v2-tabbar-error-dot { width: 6px; height: 6px; border-radius: 3px; background: var(--gl-v2-danger); flex: none; }
+/* Geen rechten: niet verbergen maar uitzetten — anders lijkt de pagina bij elke rol anders. */
+.gl-v2-tabbar-tab.is-disabled { color: var(--gl-v2-disabled-fg); opacity: .8; cursor: not-allowed; pointer-events: none; }
+.gl-v2-tabbar-tab.is-empty { color: var(--gl-v2-disabled-fg); }
+.gl-v2-tabbar-spacer { flex: 1; }
+.gl-v2-tabbar-more {
+    flex: none;
+    margin-bottom: 4px;
+    padding: 6px 10px;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-pill);
+    background: transparent;
+    font: 500 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    cursor: pointer;
+}
+/* Onder 900px schuift de rij horizontaal (overflow-x hierboven regelt dat al); de actieve tab
+   automatisch in beeld houden bij openen vergt JS (scrollIntoView) — bewust niet gebouwd in deze
+   pass, zelfde discipline als de andere ongewired stukken. */
+
+/* ── Basiskaart + varianten (optie 8e, "3 · KAART — BASIS EN VARIANTEN") ──────────────────────
+   Generieke kaart, niet pagina-specifiek. De bestaande .gl-v2-kpi-card/-project-card blijven hun
+   eigen specifieke componenten — dit is de generieke basis voor toekomstige detail-/
+   formulierpagina's. */
+.gl-v2-card { background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card); overflow: hidden; }
+.gl-v2-card-header { display: flex; align-items: center; gap: 11px; padding: 14px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-card-header-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.gl-v2-card-header-title { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; }
+.gl-v2-card-header-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-card-header-spacer { flex: 1; }
+.gl-v2-card-header-action { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-card-body {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    font: 450 12.5px/1.6 var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+
+/* Lege staat — kop vergrijst, body gecentreerd met boodschap + uitweg; nooit een kale lege kaart. */
+.gl-v2-card-empty .gl-v2-card-header-icon { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-disabled-fg); }
+.gl-v2-card-empty .gl-v2-card-header-title { color: var(--gl-v2-muted); }
+.gl-v2-card-empty .gl-v2-card-body { padding: 22px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.gl-v2-card-empty-msg { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Lege staat (optie 4f "LEGE STAAT") — de standaard voor een kaart/tabel zonder inhoud, project-
+   breed herbruikbaar: 62px getinte icoonbadge, serif kop, gedempte beschrijving, actieknop(pen).
+   Was tot nu toe apart gedupliceerd in gl-v2-projecten.css / gl-v2-leveranciers.css / gl-v2-klanten.css
+   / gl-v2-invoices.css (met kleine drift tussen de kopieën — 280px vs 320px op -desc, een andere
+   -inline-variant) — nu hier, eenmalig, zodat elke gl-v2-pagina hem zonder extra CSS-load kan
+   gebruiken. Werkt zowel los in een kaart (.gl-v2-section-card/.gl-v2-card se body) als genest via
+   .gl-v2-empty-state-inline (geen eigen kaart/schaduw — zit al in een omringende kaart/tabel). */
+.gl-v2-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 44px 24px;
+    text-align: center;
+}
+.gl-v2-empty-state-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.gl-v2-empty-state-icon i { font-size: 28px; }
+.gl-v2-empty-state-title { font: 500 17px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
+.gl-v2-empty-state-desc { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 280px; margin: 0; }
+.gl-v2-empty-state-actions { display: flex; gap: 9px; padding-top: 4px; flex-wrap: wrap; justify-content: center; }
+.gl-v2-empty-state-inline { padding: 44px 24px; }
+
+/* ── Sectiekaart (optie 8e, "4 · SECTIEKAART — DE KOP VAN DICHTBIJ") ──────────────────────────
+   Bouwt voort op .gl-v2-card se kopstijl hierboven. Standaard voor detail- én formulierpagina's:
+   12-koloms raster op desktop (elk veld 3/4/5/12 kolommen breed, nooit ertussen), 6 kolommen op
+   tablet, 12 op mobiel. Een consumerende pagina die de kop op mobiel wil laten inklappen zet zelf
+   .is-collapsible + [aria-expanded] — de CSS-staat staat klaar, de klik-toggle is ongewired JS. */
+.gl-v2-section-card { background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card); overflow: hidden; }
+.gl-v2-section-card-header {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 14px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    background: transparent;
+    text-align: left;
+    cursor: default;
+}
+.gl-v2-section-card-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+/* <h2> now (was <span>, critique fix — a screen-reader user navigating by heading had nothing to
+   jump between on a normal, populated page: the only real headings were the empty-state titles,
+   exactly inverse-correlated with content). margin:0 kills the browser default h2 margin so it still
+   sits flush in the flex header row exactly as the span did. */
+.gl-v2-section-card-title { margin: 0; font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; }
+.gl-v2-section-card-desc { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-section-card-spacer { flex: 1; }
+.gl-v2-section-card-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-section-card-chevron { display: none; flex: none; font-size: 13px; color: var(--gl-v2-muted); transition: transform .15s ease; }
+
+/* max-width (design-handoff 8i/8b·B, "KAART VOLLE BREEDTE, VELDBLOK GECAPT OP 1420PX") — de kaart
+   zelf (achtergrond/kop/schaduw) mag de volle breedte van haar kolom gebruiken, enkel het VELDRASTER
+   erbinnen is gecapt: "wit is geen verspilde ruimte, het is wat de velden links leesbaar houdt". De
+   kop (.gl-v2-section-card-header) valt hier bewust buiten — 8i se eigen "de kop mag wél de volle
+   breedte gebruiken". Toegelaten in de vrijgekomen marge rechts: een vaste sectienavigatie (8b) of
+   een hulppaneel — nooit nog een kolom velden (dan is de cap zinloos). */
+.gl-v2-section-grid {
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px 16px;
+    align-content: start;
+    max-width: 1420px;
+}
+.gl-v2-col-1 { grid-column: span 1; }
+.gl-v2-col-2 { grid-column: span 2; }
+.gl-v2-col-3 { grid-column: span 3; }
+.gl-v2-col-4 { grid-column: span 4; }
+.gl-v2-col-5 { grid-column: span 5; }
+.gl-v2-col-6 { grid-column: span 6; }
+.gl-v2-col-12 { grid-column: span 12; }
+
+.gl-v2-section-card.is-collapsible .gl-v2-section-card-header { cursor: pointer; }
+.gl-v2-section-card.is-collapsible .gl-v2-section-card-chevron { display: block; }
+.gl-v2-section-card-header[aria-expanded="false"] .gl-v2-section-card-chevron { transform: rotate(-90deg); }
+.gl-v2-section-card-header[aria-expanded="false"] + .gl-v2-section-grid { display: none; }
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-col-1 { grid-column: span 3; }
+    .gl-v2-col-3, .gl-v2-col-4, .gl-v2-col-5 { grid-column: span 6; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-col-1 { grid-column: span 4; }
+    .gl-v2-col-3, .gl-v2-col-4, .gl-v2-col-5, .gl-v2-col-6 { grid-column: span 12; }
+}
+
+/* ── Actiebalk voor formulieren (optie 8e, "5 · ACTIEBALK ONDERAAN HET FORMULIER"), altijd
+   onderaan zoals optie 8d ──────────────────────────────────────────────────────────────────────
+   Hoort als laatste flex:none-child in dezelfde verticale flex-kolom als de tabbar hierboven te
+   staan — blijft daardoor "vastgeplakt" zonder position:fixed, exact zoals 8d het zelf ook bouwt.
+   Knoppen hergebruiken de bestaande .gl-v2-btn-text/-secondary/-primary-families (optie 4e) —
+   geen nieuwe knop-CSS. Kleurkeuze voor de foutstaat volgt deze component se eigen 8e·5-
+   specificatie (danger), niet de iets afwijkende tint uit het losse 8d-voorbeeld verderop in de
+   wireframe (vermoedelijk gewoon verschil tussen twee los getekende voorbeelden, geen bewuste
+   twee-staten-regel). */
+/* Zelfde randopheffing als .gl-v2-tabbar hierboven — links/rechts/onder, niet boven (de balk is het
+   LAATSTE kind, niet het eerste, dus enkel de zijkanten + de onderkant van .gl-v2-content se padding
+   moeten wijken zodat de balk tot in beide onderhoeken van de kaart loopt). Werkt ook door een
+   tussenliggende <form>-wrapper heen zolang die zelf geen eigen padding toevoegt (Leveranciers/
+   EditV2.cshtml se .gl-v2-supplier-edit-form heeft dat bewust niet). */
+.gl-v2-form-actionbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 calc(-1 * var(--gl-v2-content-pad-x)) calc(-1 * var(--gl-v2-content-pad-y));
+    /* Robuustheids-vangnet, los van de margin-shorthand hierboven (longhand na shorthand wint voor
+       deze ene zijde): duwt de balk naar de onderkant van .gl-v2-content ZONDER dat een pagina moet
+       onthouden om haar eigen scrollende inhoudswrapper flex:1;min-height:0 te geven (het patroon
+       dat Leveranciers/EditV2.cshtml se .gl-v2-supplier-edit-form/.gl-v2-supplier-edit-scroll al wél
+       correct toepast). Op een .gl-v2-body.is-full-height-pagina (ViewData["GlV2FullHeightBody"])
+       is .gl-v2-content zelf gestretcht tot de volle kaarthoogte; zonder een groeiende sibling ervoor
+       bleef de overtollige hoogte anders gewoon ONDER deze balk hangen (leeg wit vlak, balk niet
+       onderaan) i.p.v. de balk zelf naar beneden te duwen — margin-top:auto in een kolom-flex-
+       container consumeert precies die overtollige ruimte, ongeacht hoeveel/welke siblings ervoor
+       staan. Puur cosmetisch inert wanneer een pagina de flex:1-wrapper al wél zelf zet (zoals
+       Leveranciers/EditV2) — er is dan geen restruimte meer over om te consumeren. Werkt niet <768px
+       (position:fixed daar, zie de losse media query hieronder, die zet margin expliciet terug op 0
+       — bewust, een fixed-balk heeft dit trucje niet nodig). */
+    margin-top: auto;
+    padding: 0 var(--gl-v2-content-pad-x);
+    height: 64px;
+    background: var(--gl-v2-surface);
+    border-top: 1px solid var(--gl-v2-hairline);
+    box-shadow: var(--gl-v2-shadow-actionbar);
+}
+.gl-v2-form-actionbar-status { display: flex; align-items: center; gap: 7px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-form-actionbar-status > i:first-child { font-size: 14px; }
+.gl-v2-form-actionbar-status.is-error { color: var(--gl-v2-danger); }
+.gl-v2-form-actionbar-link { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-form-actionbar-spacer { flex: 1; }
+.gl-v2-form-actionbar-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+
+/* <768px (gsm/tablet-staand): "altijd zichtbaar" wordt hier letterlijk position:fixed i.p.v. enkel
+   op de flex-kolomvolgorde te vertrouwen — de mobiele card is edge-to-edge en de scrollende
+   tab-inhoud kan er ruimschoots overheen groeien, dus de balk moet zelf uit de flow gehaald en aan
+   de viewport-onderkant vastgezet worden, met env(safe-area-inset-bottom) voor een notch/home-
+   indicator. margin/padding van de desktop-randopheffing hierboven vervallen dan (position:fixed
+   negeert margin-based layout-trucs toch), links/rechts komt gewoon via 0/0 terug. */
+@media (max-width: 767.98px) {
+    .gl-v2-form-actionbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        z-index: 40;
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+        gap: 8px;
+    }
+    .gl-v2-form-actionbar-status { flex: 1 1 100%; order: -1; }
+    .gl-v2-form-actionbar-actions { flex: 1; justify-content: flex-end; }
+}
+
+/* ── Tabel: e-mail in een cel (design-handoff optie 8g, "AANBEVOLEN · GEWONE TEKST, ACTIES OP
+   HOVER") ──────────────────────────────────────────────────────────────────────────────────────
+   Generiek, niet pagina-specifiek — eerste toepassingen zijn de Leveranciers-/Klanten-tabellen.
+   Gewone tekst in de inktkleur, geen onderlijning/blauw/icoon per rij (de twee expliciete "NIET"-
+   varianten uit 8g). Nooit afbreken: één regel met "…" + de volledige waarde in de title-tooltip
+   (op het element zelf, geen extra markup). Acties (mailen/kopiëren) verschijnen pas on hover, ín
+   de cel — nooit in een aparte actiekolom. Leeg is een liggend streepje, geen leeg vak. */
+.gl-v2-table-email {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.gl-v2-table-email-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-table-email-actions { display: none; flex: none; gap: 4px; }
+.gl-v2-table-email:hover .gl-v2-table-email-actions,
+.gl-v2-table-email:focus-within .gl-v2-table-email-actions { display: flex; }
+.gl-v2-table-email-action {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-v2-primary);
+    text-decoration: none;
+    cursor: pointer;
+}
+.gl-v2-table-email-action.is-copy { color: var(--gl-v2-muted); }
+.gl-v2-table-email-action:hover,
+.gl-v2-table-email-action:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+.gl-v2-table-email-action i { font-size: 13px; }
+.gl-v2-table-email-empty { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+/* ── Tabelrij als geheel klikbaar (rij → detail, knoppen in de rij zijn de uitzondering) ─────────
+   Generiek, opt-in via data-detail-url op de <tr> — initClickableRows() (gl-v2-shell.js) negeert
+   elke klik die binnen een <a>/<button>/form-element van de rij gebeurt, dus de "···"-rijmenu-
+   knop (en de naam-link, die toevallig naar dezelfde plek gaat) blijven hun eigen actie doen. */
+tr[data-detail-url] { cursor: pointer; }
+
+/* ── Schakelaar (design-handoff 8d, "Onderneming is actief") ──────────────────────────────────
+   Generiek aan/uit-component — eerste toepassing is de Leveranciers-Edit-pagina (IsActive/
+   RequiresDigitalInvoice/AttachUblByDefault/IsCustomer), maar niet pagina-specifiek. Een echte
+   <input type="checkbox"> zit er visueel-verborgen (niet display:none, dat zou 'm ook uit de
+   toetsenbord-/formulier-volgorde halen) onder, zodat toetsenbordfocus/labelklik/formulierbinding
+   allemaal gewoon native blijven werken — de pil zelf is puur ::before/CSS, geen JS nodig om 'm te
+   laten schakelen. */
+.gl-v2-switch { position: relative; display: inline-flex; flex: none; width: 40px; height: 22px; }
+.gl-v2-switch input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+.gl-v2-switch-track {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--gl-v2-radius-pill);
+    background: var(--gl-v2-hairline);
+    transition: background-color .15s ease;
+    pointer-events: none;
+}
+.gl-v2-switch-track::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .25);
+    transition: transform .15s ease;
+}
+.gl-v2-switch input:checked ~ .gl-v2-switch-track { background: var(--gl-v2-primary); }
+.gl-v2-switch input:checked ~ .gl-v2-switch-track::before { transform: translateX(18px); }
+.gl-v2-switch input:focus-visible ~ .gl-v2-switch-track { outline: 2.5px solid var(--gl-v2-gold); outline-offset: 2px; }
+.gl-v2-switch input:disabled ~ .gl-v2-switch-track { background: var(--gl-v2-hairline-soft); cursor: not-allowed; }
+
+.gl-v2-switch-row { display: flex; align-items: center; gap: 11px; }
+.gl-v2-switch-row-label { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-switch-row-hint { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Groep van ja/nee-schakelaars in één getint blok (design-handoff 8i, "Samenwerking & facturatie" —
+   alle schakelaars horen bij elkaar i.p.v. verspreid over de kaart). Herbruikt de bestaande
+   .gl-v2-switch-row-taal, enkel het omhulsel + twee extra's zijn nieuw: een dunne scheidingslijn
+   tussen losstaande groepjes, en een ingesprongen "afhankelijke" rij (bv. UBL hangt af van digitale
+   facturatie) die enkel actief te bedienen is zolang de rij erboven aan staat. */
+.gl-v2-switch-group { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 10px; background: #F7F9F5; }
+.gl-v2-switch-group-divider { height: 1px; background: var(--gl-v2-hairline-soft); }
+.gl-v2-switch-row.is-dependent { padding-left: 22px; }
+
+/* ── Select-paneel: meervoudige variant (uitbreiding op .gl-v2-select-panel-search/-option) ──────
+   Rij toont een vinkbox i.p.v. enkel een vinkje-bij-selectie — bij meervoudige keuze blijft het
+   paneel open na een klik (togglen, niet sluiten), dus de gebruiker moet in één oogopslag zien wat
+   al aangevinkt staat zonder dat de rij zelf van kleur/gewicht wisselt zoals bij single-select. */
+.gl-v2-select-option.is-multi { gap: 10px; }
+.gl-v2-select-option.is-multi .gl-v2-select-option-check {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border-radius: 4px;
+    border: 1.5px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    font-size: 10px;
+}
+.gl-v2-select-option.is-multi.is-selected {
+    background: transparent;
+    font-weight: 450;
+    color: var(--gl-v2-ink);
+}
+.gl-v2-select-option.is-multi.is-selected .gl-v2-select-option-check {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+}
+
+/* ── Detail-grid (design-handoff 8a, regel 4/5) — read-only label/waarde-raster voor detail-
+   pagina's, het tegenhanger van .gl-v2-section-grid voor formulieren. Generiek, niet pagina-
+   specifiek (eerste toepassing: Leveranciers/DetailsV2.cshtml + Views/Shared/DisplayTemplates/
+   GlV2DetailField.cshtml, maar herbruikbaar voor een latere Klanten/DetailsV2). Vier kolommen op
+   desktop, exacte 8a-maten; lange velden (Adres, Activiteiten) overspannen kolommen via .is-wide/
+   .is-full i.p.v. een eigen rij te forceren. Leeg = gedimde "—", nooit een leeg vak (regel 5). ────
+*/
+.gl-v2-detail-grid {
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px 26px;
+    align-content: start;
+}
+.gl-v2-detail-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-detail-field.is-wide { grid-column: span 2; }
+.gl-v2-detail-field.is-full { grid-column: 1 / -1; }
+.gl-v2-detail-label {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gl-v2-detail-value { font: 500 14px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); word-break: break-word; }
+.gl-v2-detail-value.is-empty { font-weight: 450; color: var(--gl-v2-muted-light); }
+.gl-v2-detail-value a { color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-detail-value a:hover { text-decoration: underline; }
+.gl-v2-detail-value .gl-v2-badge + .gl-v2-badge { margin-left: 6px; }
+
+/* Tablet twee kolommen, mobiel één — regel 5. .is-wide/.is-full vallen dan gewoon terug op de
+   enkele beschikbare kolom, geen aparte override nodig zodra er maar één kolom is. */
+@media (max-width: 1023.98px) {
+    .gl-v2-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-detail-grid { grid-template-columns: 1fr; }
+    .gl-v2-detail-field.is-wide, .gl-v2-detail-field.is-full { grid-column: auto; }
+}
+.gl-v2-select-option.is-multi:hover { background: var(--gl-v2-hover-tint); }
+
+/* Zoekende select (GlV2SearchSelect): toetsenbordnavigatie in de resultaten — ↓/↑ verplaatsen
+   .is-active, Enter kiest de actieve (of de eerste). Dezelfde tint als hover, zodat muis en
+   toetsenbord er identiek uitzien. Gewired in elke wireSearchSelect-kopie (gl-v2-klanten-*.js,
+   gl-v2-leveranciers-form.js, gl-v2-projecten-form.js). */
+.gl-v2-select-option.is-active { background: var(--gl-v2-hover-tint); }
+

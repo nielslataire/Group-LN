@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace CPMCore.Service
+namespace CPMCore.Services
 {
     public class SmtpEmailSender : IEmailSender
     {

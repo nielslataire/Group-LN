@@ -1,0 +1,225 @@
+/* gl-v2 component — foutoverzicht (punt 24) en meldingskaders (punt 25).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   Foutoverzicht (design-handoff punt 24 "Foutoverzicht formulier") — gedeeld component, project-
+   wijd. Zie Views/Shared/GlV2/_ErrorSummaryV2.cshtml (server-rendering bij redisplay) en
+   gl-v2-error-summary.js (client-side collect/render/sticky-balk, in elk gl-v2-<pagina>.js aangeroepen
+   via window.GlV2ErrorSummary.init(...)). DESIGN.md "Foutoverzicht (punt 24) — gedeeld component"
+   beschrijft het volledige contract. ══════════════════════════════════════════════════════════ */
+.gl-v2-error-summary { border-radius: 12px; background: #FBF3F3; border: 1.5px solid rgba(139, 42, 42, .35); overflow: hidden; }
+.gl-v2-error-summary.is-warning { background: #FBF6EA; border-color: rgba(138, 106, 50, .35); }
+.gl-v2-error-summary-head { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 8px; }
+.gl-v2-error-summary.is-single .gl-v2-error-summary-head { align-items: center; padding: 12px 16px; }
+.gl-v2-error-summary-icon { width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--gl-v2-danger, #8B2A2A); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-icon { background: #8A6A32; }
+.gl-v2-error-summary-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.gl-v2-error-summary-title { font: 700 14.5px/1.3 var(--gl-v2-font-sans); color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-title { color: #6B5020; }
+.gl-v2-error-summary-sub { font: 450 12px/1.45 var(--gl-v2-font-sans); color: #4A2020; }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-sub { color: #6B5020; }
+.gl-v2-error-summary-dismiss { border: 0; background: none; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: #6B5020; cursor: pointer; flex: none; align-self: flex-start; margin-top: 2px; }
+.gl-v2-error-summary-list { list-style: none; margin: 0; padding: 0 6px 10px 48px; display: flex; flex-direction: column; }
+.gl-v2-error-summary.is-single .gl-v2-error-summary-list { display: none; }
+.gl-v2-error-summary-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; text-decoration: none; min-height: 44px; box-sizing: border-box; }
+.gl-v2-error-summary-item:hover { background: rgba(139, 42, 42, .07); }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-item:hover { background: rgba(138, 106, 50, .08); }
+.gl-v2-error-summary-dot { width: 6px; height: 6px; flex: none; border-radius: 3px; background: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-dot { background: #8A6A32; }
+.gl-v2-error-summary-msg { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font: 450 12.5px/1.45 var(--gl-v2-font-sans); color: #4A2020; }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-msg { color: #5a4520; }
+.gl-v2-error-summary-msg > .gl-v2-error-summary-field { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-danger, #8B2A2A); text-decoration: underline; text-underline-offset: 3px; }
+.gl-v2-error-summary.is-warning .gl-v2-error-summary-msg > .gl-v2-error-summary-field { color: #6B5020; }
+.gl-v2-error-summary-loc { font: 500 11px var(--gl-v2-font-sans); color: #7a5a5a; white-space: nowrap; flex: none; }
+.gl-v2-error-summary-badge { flex: none; padding: 4px 10px; border-radius: 11px; background: #F3E3E3; font: 600 10px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-danger, #8B2A2A); white-space: nowrap; }
+.gl-v2-error-summary-item > i:last-child { flex: none; font-size: 13px; color: var(--gl-v2-danger, #8B2A2A); }
+/* Opgelost tijdens het invullen (24b "blijft staan; opgeloste punten doorgestreept") — geen link meer. */
+.gl-v2-error-summary-item.is-resolved { cursor: default; }
+.gl-v2-error-summary-item.is-resolved:hover { background: transparent; }
+.gl-v2-error-summary-item.is-resolved .gl-v2-error-summary-dot { display: none; }
+.gl-v2-error-summary-item.is-resolved > i:last-child { display: none; }
+.gl-v2-error-summary-item.is-resolved .gl-v2-error-summary-field,
+.gl-v2-error-summary-item.is-resolved .gl-v2-error-summary-msg { color: #5a6b58; text-decoration: line-through; }
+.gl-v2-error-summary-item.is-resolved::before { content: "\2713"; color: var(--gl-v2-primary); font-weight: 700; font-size: 12px; flex: none; width: 14px; }
+.gl-v2-error-summary-resolved-tag { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; }
+
+/* Weggescrold — plakt bovenaan (24b): compacte balk met teller + vorige/volgende, enkel zichtbaar
+   zolang er nog blokkerende fouten zijn én het echte overzicht niet in beeld is. */
+.gl-v2-error-sticky { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%); z-index: 1200; display: none; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 14px; border-radius: 10px; background: var(--gl-v2-danger, #8B2A2A); box-shadow: 0 12px 24px -14px rgba(139, 42, 42, .7); }
+.gl-v2-error-sticky.is-visible { display: flex; }
+.gl-v2-error-sticky i.ph-warning-circle { font-size: 15px; color: #fff; flex: none; }
+.gl-v2-error-sticky-count { font: 600 12.5px var(--gl-v2-font-sans); color: #fff; flex: none; white-space: nowrap; }
+.gl-v2-error-sticky-next { font: 450 12px var(--gl-v2-font-sans); color: rgba(255, 255, 255, .85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.gl-v2-error-sticky-nav { display: flex; gap: 2px; flex: none; }
+.gl-v2-error-sticky-nav button { width: 32px; height: 32px; border: 0; border-radius: 7px; background: rgba(255, 255, 255, .14); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; }
+.gl-v2-error-sticky-nav button:hover { background: rgba(255, 255, 255, .24); }
+@media (max-width: 480px) { .gl-v2-error-sticky-next { display: none; } }
+
+/* Foutoverzicht (punt 24) — actiebalk-teller (24a "4 fouten — naar het overzicht"; 24c/24d enkel
+   "4 fouten") en de "één fout"-titel (24b: de fout zelf als titel, veldnaam als link). Gerenderd/
+   bijgehouden door gl-v2-error-summary.js (updateActionbar / render). */
+.gl-v2-form-actionbar-errors { display: inline-flex; align-items: center; gap: 7px; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-danger, #8B2A2A); text-decoration: none; white-space: nowrap; flex: none; }
+.gl-v2-form-actionbar-errors:hover { text-decoration: underline; text-underline-offset: 3px; color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-form-actionbar-errors i { font-size: 15px; }
+.gl-v2-form-actionbar-errors[hidden] { display: none; }
+@media (max-width: 1023.98px) { .gl-v2-form-actionbar-errors-suffix { display: none; } }
+.gl-v2-error-summary.is-single .gl-v2-error-summary-title { font: 450 13px/1.45 var(--gl-v2-font-sans); color: #4A2020; }
+.gl-v2-error-summary.is-single .gl-v2-error-summary-title .gl-v2-error-summary-field { font-weight: 700; color: var(--gl-v2-danger, #8B2A2A); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Meldingskaders (design-handoff punt 25, CRM Meldingskaders.dc.html) — info/succes/waarschuwing/
+   fout in drie formaten, vertrekkend van het kader in 17d (Klanten/DetailV2's "Belangrijkste
+   informatie"-kaart). Niet hetzelfde component als het Foutoverzicht hierboven (punt 24, altijd
+   fout, altijd bovenaan een FORMULIER na een mislukte submit) — dit hier is een generiek, los
+   inzetbaar berichtkader voor eender welke pagina, in vier ernstniveaus. Component-klaar, project-
+   wijd bruikbaar: .gl-v2-notice + één formaat-klasse (-compact/-expanded/-bar) + één type-klasse
+   (is-info/is-success/is-warning/is-danger) — verder fabriceert niets hier een gebruik. Zie
+   DESIGN.md "Meldingskaders (punt 25)" voor het volledige markup-contract per formaat en de vier
+   regels uit 25d: kleur nooit alleen (elk type een eigen icoonvorm), compact in kaarten/zijpanelen,
+   uitgebreid bovenaan een formulier/tab, paginabalk enkel als het de hele pagina raakt; fout en
+   waarschuwing blijven staan tot opgelost (geen sluitknop), info/succes mogen sluitbaar zijn; een
+   melding ná een actie ("Opgeslagen") hoort in een toast, nooit in een meldingskader. Sluitknop:
+   gl-v2-shell.js, gedelegeerd, verwijdert gewoon de dichtstbijzijnde .gl-v2-notice. */
+.gl-v2-notice {
+    --gl-v2-notice-bg: var(--gl-v2-notice-info-bg);
+    --gl-v2-notice-line: var(--gl-v2-notice-info-line);
+    --gl-v2-notice-icon: var(--gl-v2-notice-info-icon);
+    --gl-v2-notice-ink: var(--gl-v2-notice-info-ink);
+}
+.gl-v2-notice.is-success {
+    --gl-v2-notice-bg: var(--gl-v2-notice-success-bg);
+    --gl-v2-notice-line: var(--gl-v2-notice-success-line);
+    --gl-v2-notice-icon: var(--gl-v2-notice-success-icon);
+    --gl-v2-notice-ink: var(--gl-v2-notice-success-ink);
+}
+.gl-v2-notice.is-warning {
+    --gl-v2-notice-bg: var(--gl-v2-notice-warning-bg);
+    --gl-v2-notice-line: var(--gl-v2-notice-warning-line);
+    --gl-v2-notice-icon: var(--gl-v2-notice-warning-icon);
+    --gl-v2-notice-ink: var(--gl-v2-notice-warning-ink);
+}
+.gl-v2-notice.is-danger {
+    --gl-v2-notice-bg: var(--gl-v2-notice-danger-bg);
+    --gl-v2-notice-line: var(--gl-v2-notice-danger-line);
+    --gl-v2-notice-icon: var(--gl-v2-notice-danger-icon);
+    --gl-v2-notice-ink: var(--gl-v2-notice-danger-ink);
+}
+
+/* 25a — Compact: icoon + één zin, in kaarten en zijpanelen. align-items:center (niet flex-start met
+   een margin-top-gok, zoals het mockup se eigen SVG-versie deed) — "icoon + één zin" is meestal
+   letterlijk één regel, en op precies één regel centreert :center het icoon exact op de teksthoogte
+   ongeacht welk Phosphor-glyph er staat (elk icoon heeft een net iets andere optische zwaarte/
+   positie binnen zijn eigen bounding box, dus een vast margin-getal klopt nooit voor elk icoon).
+   Bij een langere, omslaande tekst (zeldzaam voor "één zin") centreert dit tegen het hele blok — dat
+   is hier de aanvaardbare afweging, geen apart multiline-pad. */
+.gl-v2-notice-compact {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: var(--gl-v2-notice-bg);
+}
+.gl-v2-notice-compact > i { flex: none; font-size: 15px; color: var(--gl-v2-notice-icon); }
+.gl-v2-notice-compact > span { font: 450 11.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-notice-ink); text-wrap: pretty; }
+
+/* 25b — Uitgebreid: gevulde icoonbadge + titel + uitleg + tot 2 acties + sluitknop, bovenaan een
+   formulier of tab. .gl-v2-notice-actions/-action(-secondary)/-close zijn optioneel — een kaart
+   zonder actie of zonder sluitknop laat die elementen gewoon weg, niets hier vereist ze. */
+.gl-v2-notice-expanded {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--gl-v2-notice-bg);
+    border: 1px solid var(--gl-v2-notice-line);
+}
+.gl-v2-notice-expanded-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 8px;
+    background: var(--gl-v2-notice-icon);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-notice-expanded-icon i { font-size: 16px; color: #fff; }
+.gl-v2-notice-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.gl-v2-notice-title { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-notice-ink); }
+.gl-v2-notice-text { font: 450 12px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-notice-ink); text-wrap: pretty; }
+.gl-v2-notice-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.gl-v2-notice-action {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--gl-v2-notice-icon);
+    color: #fff;
+    font: 600 12px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-notice-action:hover { filter: brightness(.92); }
+.gl-v2-notice-action-secondary {
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-notice-line);
+    color: var(--gl-v2-notice-ink);
+    filter: none;
+}
+.gl-v2-notice-action-secondary:hover { background: var(--gl-v2-hover-tint); filter: none; }
+.gl-v2-notice-close {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border: 0;
+    background: transparent;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--gl-v2-notice-ink);
+}
+.gl-v2-notice-close:hover { background: rgba(0, 0, 0, .05); }
+.gl-v2-notice-close i { font-size: 13px; }
+
+/* 25c — Paginabalk: volle breedte, vlak onder de topbar, voor iets dat de hele pagina raakt. Geen
+   eigen kaart/radius/schaduw (in tegenstelling tot -compact/-expanded) — dit hoort in de
+   paginastroom te zitten, niet in een los kaartje; een pagina plaatst 'm rechtstreeks na de topbar,
+   vóór .gl-v2-content. */
+.gl-v2-notice-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 18px;
+    background: var(--gl-v2-notice-bg);
+    border-bottom: 1px solid var(--gl-v2-notice-line);
+}
+.gl-v2-notice-bar > i { flex: none; font-size: 16px; color: var(--gl-v2-notice-icon); }
+.gl-v2-notice-bar-title { flex: none; font: 700 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-notice-ink); }
+.gl-v2-notice-bar-text {
+    flex: 1;
+    min-width: 0;
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-notice-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gl-v2-notice-bar-action {
+    flex: none;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-notice-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.gl-v2-notice-bar-action:hover { color: var(--gl-v2-notice-ink); }
+
+@media (max-width: 767.98px) {
+    .gl-v2-notice-bar { flex-wrap: wrap; }
+    .gl-v2-notice-bar-text { white-space: normal; flex-basis: 100%; order: 3; }
+}
+

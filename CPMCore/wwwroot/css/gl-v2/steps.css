@@ -1,0 +1,232 @@
+/* gl-v2 component — stappenplan: lijn, chips, balk, verticaal (punt 27).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Stappenplan (design-handoff punt 27, Stappenplan.dc.html + CRM Stappenplan.dc.html) — project-
+   wijde voortgangsindicator, vier weergaven op één statuspalet. Zelfde "component in gl-v2-shell.css,
+   geen aparte <link>" discipline als Meldingskaders (punt 25) hierboven. Render via
+   Views/Shared/GlV2/_Steps.cshtml (model CPMCore.Models.GlV2.GlV2StepsVm) — zie DESIGN.md
+   "Stappenplan" voor de volledige uitleg per variant/status. ──────────────────────────────────── */
+.gl-v2-steps {
+    --gl-v2-steps-dot: 24px;
+    --gl-v2-steps-num-fs: 11.5px;
+    --gl-v2-steps-lab-fs: 13px;
+    --gl-v2-steps-chip-h: 36px;
+    --gl-v2-steps-seg-h: 5px;
+    width: 100%;
+    font-family: var(--gl-v2-font-sans);
+}
+.gl-v2-steps.is-sm {
+    --gl-v2-steps-dot: 18px;
+    --gl-v2-steps-num-fs: 10px;
+    --gl-v2-steps-lab-fs: 11.5px;
+    --gl-v2-steps-chip-h: 30px;
+    --gl-v2-steps-seg-h: 4px;
+}
+.gl-v2-steps-list { list-style: none; margin: 0; padding: 0; }
+
+/* De bol/vinkje — identiek in lijn, chips en verticaal, vandaar gedeelde .is-*-regels i.p.v. drie
+   keer dezelfde kleurtabel. Standaard = "todo": witte bol, een zichtbare maar geen opdringerige rand. */
+.gl-v2-steps-dot {
+    width: var(--gl-v2-steps-dot);
+    height: var(--gl-v2-steps-dot);
+    flex: none;
+    box-sizing: border-box;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: var(--gl-v2-steps-num-fs);
+    background: var(--gl-v2-surface);
+    border: 1.5px solid rgba(44, 59, 42, .28);
+    color: var(--gl-v2-muted);
+    transition: background .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.gl-v2-steps-check { width: 62%; height: 62%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.gl-v2-steps-glyph { line-height: 1; }
+
+.gl-v2-steps-dot.is-done { background: var(--gl-v2-primary); border-color: transparent; color: #fff; }
+.gl-v2-steps-dot.is-current { background: var(--gl-v2-primary); border-color: transparent; color: #fff; box-shadow: 0 0 0 3px rgba(0, 83, 45, .16); }
+.gl-v2-steps-dot.is-wacht { background: var(--gl-v2-gold); border-color: transparent; color: #fff; box-shadow: 0 0 0 3px rgba(201, 169, 110, .25); }
+.gl-v2-steps-dot.is-warning { background: var(--gl-v2-warning); border-color: transparent; color: #fff; }
+.gl-v2-steps-dot.is-error { background: var(--gl-v2-danger); border-color: transparent; color: #fff; }
+.gl-v2-steps-dot.is-uit { background: var(--gl-v2-bg); border: 1.5px dashed rgba(44, 59, 42, .25); color: var(--gl-v2-muted-light); }
+/* 27f "fout staat boven alles": de HUIDIGE stap met eigen fouten kleurt vol rood, ongeacht zijn
+   onderliggende status (zelfs .is-wacht/.is-warning) — vandaar ná alle .is-*-regels, zodat deze wint.
+   Enkel aandachtspunten op de huidige stap wijzigen de kleur niet, enkel de ring (geen vol-rode bol). */
+.gl-v2-steps-dot.current-errors { background: var(--gl-v2-danger) !important; border-color: transparent !important; color: #fff !important; box-shadow: 0 0 0 3px rgba(139, 42, 42, .16) !important; }
+.gl-v2-steps-dot.current-warnings { box-shadow: 0 0 0 3px rgba(138, 106, 50, .2) !important; }
+
+/* ── Lijn (27c) — horizontaal, bol+verbindingslijn op één rij, label/badge/subtekst eronder ───── */
+.gl-v2-steps-lijn .gl-v2-steps-list { display: flex; align-items: flex-start; width: 100%; }
+.gl-v2-steps-item-wrap { flex: 1; min-width: 0; }
+.gl-v2-steps-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    margin: 0;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    text-decoration: none;
+    font: inherit;
+    color: inherit;
+}
+a.gl-v2-steps-item, button.gl-v2-steps-item { cursor: pointer; }
+.gl-v2-steps-row { display: flex; align-items: center; }
+.gl-v2-steps-connector { flex: 1; height: 2px; margin: 0 6px; border-radius: 1px; background: #DDE3D8; }
+.gl-v2-steps-connector.is-done { background: var(--gl-v2-accent-sage); }
+.gl-v2-steps-label-row { display: flex; align-items: center; gap: 6px; padding-right: 10px; min-width: 0; }
+.gl-v2-steps-label {
+    min-width: 0;
+    font-size: var(--gl-v2-steps-lab-fs);
+    font-weight: 450;
+    color: var(--gl-v2-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-v2-steps-item.is-done .gl-v2-steps-label { color: var(--gl-v2-ink); font-weight: 500; }
+.gl-v2-steps-item.is-current .gl-v2-steps-label { color: var(--gl-v2-primary); font-weight: 700; }
+.gl-v2-steps-item.is-wacht .gl-v2-steps-label,
+.gl-v2-steps-item.is-warning .gl-v2-steps-label { color: var(--gl-v2-notice-warning-ink); font-weight: 600; }
+.gl-v2-steps-item.is-error .gl-v2-steps-label { color: var(--gl-v2-danger); font-weight: 600; }
+.gl-v2-steps-item.is-uit .gl-v2-steps-label { color: var(--gl-v2-muted-light); text-decoration: line-through; }
+.gl-v2-steps-item.current-errors .gl-v2-steps-label { color: var(--gl-v2-danger); }
+.gl-v2-steps-sub {
+    font-size: 10.5px;
+    color: #7a8a78;
+    padding-right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-v2-steps-sub.is-warning { color: var(--gl-v2-notice-warning-ink); }
+.gl-v2-steps-sub.is-error { color: var(--gl-v2-notice-danger-ink); }
+
+/* Badge — rond en solide (lijn/chips), toont enkel het AANTAL; de volledige tekst staat in de tooltip. */
+.gl-v2-steps-badge-round {
+    flex: none;
+    min-width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-warning);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-steps-badge-round.is-error { background: var(--gl-v2-danger); }
+
+/* ── Chips (27b) — compacte pillen in een kopbalk (bv. een budgetflow) ─────────────────────────── */
+.gl-v2-steps-chips .gl-v2-steps-list { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gl-v2-steps-chip-wrap { display: flex; align-items: center; gap: 6px; }
+.gl-v2-steps-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--gl-v2-steps-chip-h);
+    margin: 0;
+    padding: 0 10px 0 6px;
+    border-radius: 9px;
+    background: transparent;
+    border: 0;
+    text-decoration: none;
+    font: inherit;
+    color: inherit;
+}
+a.gl-v2-steps-chip, button.gl-v2-steps-chip { cursor: pointer; }
+a.gl-v2-steps-chip:hover, button.gl-v2-steps-chip:hover { background: var(--gl-v2-hover-tint); }
+a.gl-v2-steps-chip.is-current:hover, button.gl-v2-steps-chip.is-current:hover { background: var(--gl-v2-primary-tint); }
+.gl-v2-steps-chip .gl-v2-steps-label { white-space: nowrap; overflow: visible; }
+.gl-v2-steps-chip.is-current { background: var(--gl-v2-primary-tint); }
+.gl-v2-steps-chip.is-wacht, .gl-v2-steps-chip.is-warning { background: var(--gl-v2-notice-warning-bg); }
+.gl-v2-steps-chip.is-error, .gl-v2-steps-chip.current-errors { background: var(--gl-v2-notice-danger-bg); }
+.gl-v2-steps-chip.is-current .gl-v2-steps-label { color: var(--gl-v2-primary); font-weight: 700; }
+.gl-v2-steps-chip.is-done .gl-v2-steps-label { color: var(--gl-v2-ink); font-weight: 500; }
+.gl-v2-steps-chip.is-wacht .gl-v2-steps-label, .gl-v2-steps-chip.is-warning .gl-v2-steps-label { color: var(--gl-v2-notice-warning-ink); font-weight: 600; }
+.gl-v2-steps-chip.is-error .gl-v2-steps-label, .gl-v2-steps-chip.current-errors .gl-v2-steps-label { color: var(--gl-v2-danger); font-weight: 600; }
+.gl-v2-steps-chip.is-todo .gl-v2-steps-label { color: var(--gl-v2-muted); }
+.gl-v2-steps-chip.is-uit .gl-v2-steps-label { color: var(--gl-v2-muted-light); text-decoration: line-through; }
+.gl-v2-steps-chip-connector { width: 22px; height: 1.5px; border-radius: 1px; background: #DDE3D8; flex: none; }
+.gl-v2-steps-chip-connector.is-done { background: var(--gl-v2-accent-sage); }
+
+/* ── Balk (27d) — smalle statusbalk voor gsm/kaart: optionele statuspil + tekst + fouten, segmenten
+   eronder in plaats van bollen (te weinig breedte voor cirkels + labels per stap). ─────────────── */
+.gl-v2-steps-balk-head { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 7px; }
+.gl-v2-steps-status-pill { flex: none; padding: 4px 10px; border-radius: 11px; font-size: 10px; font-weight: 600; letter-spacing: .06em; white-space: nowrap; }
+.gl-v2-steps-status-pill.is-ok { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-steps-status-pill.is-wacht { background: var(--gl-v2-notice-warning-bg); color: var(--gl-v2-warning); }
+.gl-v2-steps-status-pill.is-error { background: var(--gl-v2-notice-danger-bg); color: var(--gl-v2-danger); }
+.gl-v2-steps-balk-text { flex: 1; min-width: 0; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-steps-balk-issues { flex: none; display: flex; align-items: center; gap: 5px; font: 600 11px var(--gl-v2-font-sans); }
+.gl-v2-steps-balk-issues.is-error { color: var(--gl-v2-danger); }
+.gl-v2-steps-balk-issues.is-warning { color: var(--gl-v2-warning); }
+.gl-v2-steps-balk-issues-dot { width: 6px; height: 6px; border-radius: 3px; background: currentColor; }
+.gl-v2-steps-track { display: flex; gap: 3px; }
+.gl-v2-steps-seg { flex: 1; height: var(--gl-v2-steps-seg-h); margin: 0; border-radius: 3px; background: #E3E8DF; border: 0; padding: 0; text-decoration: none; }
+a.gl-v2-steps-seg, button.gl-v2-steps-seg { cursor: pointer; }
+.gl-v2-steps-seg.is-done { background: var(--gl-v2-primary); }
+.gl-v2-steps-seg.is-current { background: var(--gl-v2-accent-sage); }
+.gl-v2-steps-seg.is-wacht { background: var(--gl-v2-gold); }
+.gl-v2-steps-seg.is-warning { background: var(--gl-v2-warning); }
+.gl-v2-steps-seg.is-error { background: var(--gl-v2-danger); }
+.gl-v2-steps-seg.is-uit { background: #EEF1EB; }
+.gl-v2-steps-seg.current-errors { background: var(--gl-v2-danger) !important; }
+
+/* ── Verticaal (27e/27g) — zijpaneel of tablet: bol+lijn links, label/badge/uitleg rechts ──────── */
+.gl-v2-steps-verticaal .gl-v2-steps-list { display: flex; flex-direction: column; width: 100%; }
+.gl-v2-steps-vitem {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin: 0;
+    border-radius: 9px;
+    padding: 0 8px;
+    background: transparent;
+    border: 0;
+    text-decoration: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+}
+a.gl-v2-steps-vitem, button.gl-v2-steps-vitem { cursor: pointer; }
+a.gl-v2-steps-vitem:not(.is-current):hover, button.gl-v2-steps-vitem:not(.is-current):hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-steps-vitem.is-current { background: var(--gl-v2-primary-tint); }
+.gl-v2-steps-vitem.is-wacht, .gl-v2-steps-vitem.is-warning { background: var(--gl-v2-notice-warning-bg); }
+.gl-v2-steps-vitem.is-error, .gl-v2-steps-vitem.current-errors { background: var(--gl-v2-notice-danger-bg); }
+.gl-v2-steps-vrail { display: flex; flex-direction: column; align-items: center; flex: none; padding-top: 9px; }
+.gl-v2-steps-vline { flex: 1; width: 2px; min-height: 14px; margin-top: 4px; border-radius: 1px; background: #DDE3D8; }
+.gl-v2-steps-vline.is-done { background: var(--gl-v2-accent-sage); }
+.gl-v2-steps-vbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 0 12px; }
+.gl-v2-steps-vlabel-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.gl-v2-steps-vlabel-row .gl-v2-steps-label { flex: 1; min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; }
+.gl-v2-steps-vitem.is-current .gl-v2-steps-label { color: var(--gl-v2-primary); font-weight: 700; }
+.gl-v2-steps-vitem.is-done .gl-v2-steps-label { color: var(--gl-v2-ink); font-weight: 500; }
+.gl-v2-steps-vitem.is-wacht .gl-v2-steps-label, .gl-v2-steps-vitem.is-warning .gl-v2-steps-label { color: var(--gl-v2-notice-warning-ink); font-weight: 600; }
+.gl-v2-steps-vitem.is-error .gl-v2-steps-label, .gl-v2-steps-vitem.current-errors .gl-v2-steps-label { color: var(--gl-v2-danger); font-weight: 600; }
+.gl-v2-steps-vitem.is-todo .gl-v2-steps-label { color: var(--gl-v2-muted); }
+.gl-v2-steps-vitem.is-uit .gl-v2-steps-label { color: var(--gl-v2-muted-light); text-decoration: line-through; }
+.gl-v2-steps-verticaal .gl-v2-steps-sub { font-size: 11px; line-height: 1.45; color: #7a8a78; padding-right: 0; white-space: normal; overflow: visible; text-overflow: clip; }
+.gl-v2-steps-verticaal .gl-v2-steps-sub.is-warning { color: var(--gl-v2-notice-warning-ink); }
+.gl-v2-steps-verticaal .gl-v2-steps-sub.is-error { color: var(--gl-v2-notice-danger-ink); }
+
+/* Badge — zachte pil met de VOLLEDIGE tekst ("2 fouten"), enkel verticaal: hier is de ruimte breed
+   genoeg om de tekst meteen te tonen i.p.v. enkel een aantal + tooltip. */
+.gl-v2-steps-badge-soft { flex: none; padding: 1px 7px; border-radius: 9px; font-size: 10px; font-weight: 600; white-space: nowrap; background: var(--gl-v2-notice-warning-bg); color: var(--gl-v2-notice-warning-ink); }
+.gl-v2-steps-badge-soft.is-error { background: var(--gl-v2-notice-danger-bg); color: var(--gl-v2-danger); }
+
+@media (max-width: 767.98px) {
+    /* Lijn op gsm: subtekst weg (te weinig breedte), labels blijven. Kies voor een gsm-pagina expliciet
+       de Balk-variant (27d) i.p.v. op deze noodgreep te rekenen. */
+    .gl-v2-steps-lijn .gl-v2-steps-sub { display: none; }
+}

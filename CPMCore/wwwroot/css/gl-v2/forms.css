@@ -1,0 +1,513 @@
+/* gl-v2 component — formuliervelden: select/dropdown (4h), datumkiezer (14d), tekstvelden (4i).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Select / dropdown (design-handoff optie 4h) ─────────────────────────────────────────────
+   Generiek, herbruikbaar component (niet Facturen-specifiek — vandaar hier i.p.v. in
+   gl-v2-invoices.css), gebouwd voor het boekjaarfilter op de Facturen-pagina (zie gl-v2-invoices.js
+   voor de echte wiring — dat is de enige plek die 'm vandaag gebruikt, met de BASIS-paneelvariant:
+   een korte, vaste boekjarenlijst heeft geen zoekveld/"nieuw item" nodig). De twee andere
+   paneelvarianten (MET ZOEKVELD, MET ZOEKVELD + NIEUW ITEM) staan hieronder wel volledig
+   uitgewerkt als klaar-maar-nog-nergens-toegepast component — zelfde aanpak als de rail's
+   badge/disabled-states: het component bestaat, niks fabriceert een gebruik ervoor dat er nog
+   niet is. Een native <select> kan geen van deze open-paneelstijlen tonen (de browser tekent de
+   open lijst zelf, buiten CSS-bereik) — vandaar een volledig eigen trigger+paneel i.p.v. een
+   gestyled <select>, net als de rail-flyouts qua trigger+JS-gepositioneerd-paneel-patroon. ────── */
+
+/* Trigger — "GESLOTEN VELD": vier states (leeg/ingevuld/hover-focus/fout-geblokkeerd), met een
+   optioneel icoon vooraan (16px, "icoon verwijst naar het soort gegeven, niet naar de actie"). */
+.gl-v2-select { position: relative; display: inline-flex; min-width: 0; }
+
+.gl-v2-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+    text-align: left;
+}
+
+.gl-v2-select-trigger > i:first-child { font-size: 16px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-select-trigger-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-select-trigger-caret { font-size: 13px; color: var(--gl-v2-muted); flex: none; transition: transform .15s ease; }
+
+/* Wis-knop ("×") — enkel op een gevulde ENKELVOUDIGE zoekende kiezer (GlV2SearchSelect), vervangt
+   daar het chevron zodra er een waarde staat (zelf een duidelijkere weg-ermee-affordance dan een
+   kiezer heropenen om 'm leeg te maken). Standaard verborgen; enkel .is-filled toont 'm en verbergt
+   op zijn beurt het chevron. Meervoudige kiezers (.gl-v2-select-trigger-multi) hebben al hun eigen
+   per-chip ×-knopjes, dus daar blijft het chevron altijd weg (zie die regel verderop) en komt deze
+   knop nooit voor. */
+.gl-v2-select-trigger-clear {
+    display: none;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+}
+.gl-v2-select-trigger-clear i { font-size: 12px; }
+.gl-v2-select-trigger-clear:hover,
+.gl-v2-select-trigger-clear:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
+.gl-v2-select-trigger.is-filled .gl-v2-select-trigger-clear { display: flex; }
+.gl-v2-select-trigger.is-filled .gl-v2-select-trigger-caret { display: none; }
+
+/* Backdrop en sheet-header horen enkel bij de mobiele bottom-sheet-vorm (<768px, zie verderop) —
+   zonder deze basisregel zou een kale <div> op desktop/tablet gewoon als onopgemaakt blok
+   renderen i.p.v. onbestaand te lijken. */
+.gl-v2-select-backdrop,
+.gl-v2-select-sheet-header { display: none; }
+
+/* INGEVULD: een echte waarde gekozen (i.p.v. de placeholder) leest donkerder/zwaarder. */
+.gl-v2-select-trigger.is-filled {
+    font-weight: 500;
+    color: var(--gl-v2-ink);
+}
+.gl-v2-select-trigger.is-filled > i:first-child { color: var(--gl-v2-primary); }
+
+/* HOVER / FOCUS */
+.gl-v2-select-trigger:hover {
+    border-color: var(--gl-v2-primary);
+    background: #F7F9F5;
+}
+.gl-v2-select-trigger:focus-visible {
+    outline: 2.5px solid var(--gl-v2-gold);
+    outline-offset: 2px;
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-select-trigger.is-open {
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-select-trigger.is-open .gl-v2-select-trigger-caret { transform: rotate(180deg); }
+
+/* FOUT: een echte validatiefout (bv. verplicht veld leeg gelaten) — component klaar, nergens
+   toegepast vandaag (het boekjaarfilter kan nooit "fout" staan, het is een optioneel filter). */
+.gl-v2-select-trigger.is-error {
+    border-color: #8A3B2A;
+    background: #FBF4F2;
+    color: #8A3B2A;
+}
+.gl-v2-select-trigger.is-error > i:first-child,
+.gl-v2-select-trigger.is-error .gl-v2-select-trigger-caret { color: #8A3B2A; }
+
+/* GEBLOKKEERD */
+.gl-v2-select-trigger:disabled {
+    border-color: var(--gl-v2-hairline-soft);
+    background: #F2F2F0;
+    color: #A8B3A6;
+    cursor: not-allowed;
+}
+.gl-v2-select-trigger:disabled > i:first-child,
+.gl-v2-select-trigger:disabled .gl-v2-select-trigger-caret { color: #A8B3A6; }
+
+/* Paneel — "DESKTOP, 3 VARIANTEN". Basis = enkel de optielijst. JS-gepositioneerd
+   (getBoundingClientRect, zelfde aanpak als de rail-flyouts) — vandaar position:fixed hier en
+   geen top/left/right: die zet gl-v2-invoices.js per instantie. */
+.gl-v2-select-panel {
+    position: fixed;
+    width: 240px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 6px;
+    border-radius: var(--gl-v2-radius-lg);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    z-index: 99997;
+    display: none;
+}
+.gl-v2-select-panel.is-open { display: flex; flex-direction: column; gap: 1px; }
+
+/* [hidden] vs. author-display-regels: zelfde valkuil als eerder bij .gl-v2-mobile-menu/
+   .gl-v2-quickaction — hier voorkomen door display puur via .is-open te sturen i.p.v. ook nog
+   het hidden-attribuut erbij te zetten (zie gl-v2-invoices.js: enkel .is-open wordt getoggled). */
+
+.gl-v2-select-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 9px;
+    border: 0;
+    background: transparent;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    text-align: left;
+    cursor: pointer;
+}
+.gl-v2-select-option i { width: 15px; font-size: 15px; color: var(--gl-v2-primary); flex: none; visibility: hidden; }
+.gl-v2-select-option:hover,
+.gl-v2-select-option:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+/* Zelfde [hidden]-vs-author-CSS-valkuil als .gl-v2-mobile-menu/.gl-v2-badge hierboven — de
+   display:flex hierboven wint anders van het hidden-attribuut, dus zoekveld-filtering (élke
+   gl-v2-select-panel-search: multiselect, GlV2SearchSelect, en nu ook EditContractV2's "Lot
+   toevoegen") liet zonder deze regel gewoon élke rij zichtbaar staan i.p.v. de niet-matchende weg
+   te filteren. Gedeeld hier i.p.v. page-gescoped: elke .gl-v2-select-option die opt.hidden zet
+   (huidig én toekomstig) heeft 'm nodig. */
+.gl-v2-select-option[hidden] { display: none; }
+
+/* Cijfer-/codevelden (kadaster, EAN, …) — 8f: "monospace". GlV2Text se optie Mono=true. */
+.gl-v2-field-input.is-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; letter-spacing: .02em; }
+
+.gl-v2-select-option.is-selected {
+    background: var(--gl-v2-primary-tint);
+    font-weight: 600;
+    color: var(--gl-v2-primary);
+}
+.gl-v2-select-option.is-selected i { visibility: visible; }
+
+/* ── Datumkiezer (design-handoff punt 14d "6 · DATUM") ────────────────────────────────────────────
+   De trigger is gewoon .gl-v2-field-box (icoon + <input type="text">, "tikken mag altijd") — geen
+   aparte .gl-v2-select-trigger-look nodig, dat component se eigen states (leeg/gevuld/focus/fout)
+   dekken dit al. Enkel het paneel is nieuw: een .gl-v2-select-panel-variant met een vaste 252px-
+   breedte (i.p.v. de trigger se eigen breedte volgen zoals de Basis/zoekende varianten) en een
+   volledig eigen kalender-inhoud. JS: initGlV2DatePicker(), zie onderaan dit bestand — shell-breed
+   (data-gl-v2-datepicker), zelfde open/sluit-discipline als initGlV2Select() maar los ervan (eigen
+   closeAll()/eigen [data-gl-v2-dp-owned]-marker), want de trigger heeft geen .gl-v2-select-trigger-
+   klasse om op te herkennen. */
+.gl-v2-select.gl-v2-datepicker { display: flex; width: 100%; }
+.gl-v2-datepicker-panel.gl-v2-select-panel { width: 252px; padding: 10px 12px 12px; overflow: visible; display: none; flex-direction: column; gap: 8px; }
+.gl-v2-datepicker-panel.gl-v2-select-panel.is-open { display: flex; }
+.gl-v2-datepicker-nav-row { display: flex; align-items: center; gap: 8px; }
+.gl-v2-datepicker-nav {
+    flex: none; width: 22px; height: 22px; border: 0; background: transparent; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer; font-size: 12px; padding: 0;
+}
+.gl-v2-datepicker-nav:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
+.gl-v2-datepicker-month { flex: 1; text-align: center; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-transform: capitalize; }
+.gl-v2-datepicker-weekdays, .gl-v2-datepicker-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.gl-v2-datepicker-weekdays span {
+    height: 20px; display: flex; align-items: center; justify-content: center;
+    font: 600 9px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-muted);
+}
+.gl-v2-datepicker-day {
+    height: 26px; border: 0; background: transparent; border-radius: 6px; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font: 450 11.5px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; color: var(--gl-v2-ink);
+}
+.gl-v2-datepicker-day:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-datepicker-day.is-outside { color: var(--gl-v2-muted-light); }
+.gl-v2-datepicker-day.is-today { box-shadow: inset 0 0 0 1px var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-datepicker-day.is-selected { background: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+.gl-v2-datepicker-footer { display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-datepicker-footer-link { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-datepicker-footer-link.is-muted { color: var(--gl-v2-muted); }
+.gl-v2-datepicker-footer-link:hover { text-decoration: underline; }
+
+/* MET ZOEKVELD — eigen zoekbalk boven de lijst + een "N RESULTATEN"-label; component klaar,
+   nergens toegepast (zie bovenaan). */
+.gl-v2-select-panel-search { width: 260px; padding: 0; overflow: hidden; }
+.gl-v2-select-panel-search .gl-v2-select-search {
+    padding: 10px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-select-panel-search .gl-v2-select-search-field {
+    height: 36px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+}
+.gl-v2-select-panel-search .gl-v2-select-search-field i:first-child { font-size: 15px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-select-panel-search .gl-v2-select-search-field input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    font: 500 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    background: transparent;
+}
+.gl-v2-select-panel-search .gl-v2-select-search-clear { font-size: 12px; color: var(--gl-v2-muted); cursor: pointer; flex: none; }
+.gl-v2-select-panel-search .gl-v2-select-results-label {
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    padding: 6px 10px 4px;
+}
+.gl-v2-select-panel-search .gl-v2-select-options { padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+
+/* MET NIEUW ITEM — vaste voetrij buiten de scroll, stippellijn-knop zodat 'm niet als gewone
+   optie gelezen wordt; component klaar, nergens toegepast. */
+.gl-v2-select-panel-newitem .gl-v2-select-options { max-height: 196px; overflow-y: auto; }
+.gl-v2-select-newitem-footer {
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    padding: 8px;
+    background: #F7F9F5;
+}
+.gl-v2-select-newitem-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    border: 1px dashed var(--gl-v2-accent-sage);
+    background: var(--gl-v2-surface);
+    font: 600 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+
+/* ── Tablet (optie 4h "COMPACTER, GROTERE RAAKVLAKKEN") — zelfde 768–1023.98px als de userbox
+   hierboven, geen apart tablet-begrip voor dit component. Ondanks de titel zijn de rijen/trigger
+   juist GROTER (44px), niet kleiner — "compacter" slaat op het paneel als geheel, niet de
+   raakvlakken zelf. ─────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-select-trigger { height: 44px; border-radius: 9px; font-size: 13.5px; }
+    .gl-v2-select-panel { width: 300px; }
+    .gl-v2-select-option { padding: 12px 10px; font-size: 13.5px; }
+    .gl-v2-select-panel-search .gl-v2-select-search-field { height: 42px; }
+}
+
+/* ── Mobiel (optie 4h "BOTTOM SHEET") — <768px wordt het paneel een bottom sheet i.p.v. een
+   zwevend paneel: zelfde soort opbouw (backdrop + paneel met handle) als de mobiele hoofdmenu/
+   snelacties-sheet hierboven, hier specifiek voor dit component. ──────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-select-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        height: 100dvh;
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+    .gl-v2-select-backdrop.is-open { display: block; }
+
+    .gl-v2-select-panel {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: auto;
+        max-height: 70dvh;
+        border-radius: 18px 18px 0 0;
+        padding: 10px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+        z-index: 99999;
+    }
+    .gl-v2-select-panel.is-open { display: flex; flex-direction: column; }
+
+    .gl-v2-select-panel::before {
+        content: "";
+        width: 42px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-dashed);
+        align-self: center;
+        flex: none;
+        margin-bottom: 10px;
+    }
+
+    .gl-v2-select-sheet-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 16px 10px;
+        flex: none;
+    }
+    .gl-v2-select-sheet-title { font: 500 18px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+    .gl-v2-select-sheet-close {
+        margin-left: auto;
+        border: 0;
+        background: transparent;
+        font: 600 12.5px var(--gl-v2-font-sans);
+        color: var(--gl-v2-primary);
+        cursor: pointer;
+    }
+
+    .gl-v2-select-option { padding: 13px 10px; font-size: 14px; }
+    .gl-v2-select-panel .gl-v2-select-options { padding: 2px 8px; }
+
+    /* Datumkiezer op gsm: zelfde bottom sheet als elk ander paneel — de desktoprule
+       .gl-v2-datepicker-panel.gl-v2-select-panel (252px breed, eigen padding) wint anders op
+       specificiteit van .gl-v2-select-panel hierboven en gaf een smalle, tot onderaan het scherm
+       uitgerekte kalender (initGlV2DatePicker zet op gsm ook geen inline top/left meer). */
+    .gl-v2-datepicker-panel.gl-v2-select-panel {
+        width: auto;
+        max-height: 70dvh;
+        overflow-y: auto;
+        padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    }
+    .gl-v2-datepicker-panel.gl-v2-select-panel.is-open { display: flex; flex-direction: column; }
+    .gl-v2-datepicker-days { justify-items: center; }
+}
+
+/* ── Tekstvelden (design-handoff optie 4i) ────────────────────────────────────────────────────
+   Generiek, herbruikbaar component (niet pagina-specifiek — vandaar hier i.p.v. in
+   gl-v2-invoices.css), zelfde hoogte/radius-taal als de dropdown hierboven (40px/8px desktop,
+   44px/10px tablet+mobiel — hier wél in één media query, want anders dan de dropdown wordt een
+   tekstveld op telefoon geen bottom sheet). Eerste toepassing: het zoekveld op de Facturen-
+   toolbar (IndexV2.cshtml) — enkel de veld-shell (geen label/helptekst, dat past niet bij een
+   toolbar-zoekveld), de rest (label, foutmelding, meerregelig, groepen) staat klaar voor het
+   eerste echte formulier dat het nodig heeft, zelfde "bouw het hele systeem, gebruik het deel dat
+   al echt is"-aanpak als de dropdown. ─────────────────────────────────────────────────────────── */
+
+.gl-v2-field { display: flex; flex-direction: column; gap: 5px; }
+
+.gl-v2-field-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+.gl-v2-field-label-optional { color: #A8B3A6; font-weight: 450; text-transform: none; letter-spacing: normal; }
+
+/* FOCUS: :focus-within op de hele .gl-v2-field (niet enkel de box) zodat het label mee kleurt —
+   het label staat als sibling VÓÓR de box, dus een box-only :focus-within kan het label zelf niet
+   bereiken. Geen JS nodig voor deze staat. */
+.gl-v2-field:focus-within .gl-v2-field-label { color: var(--gl-v2-primary); }
+.gl-v2-field.is-error .gl-v2-field-label { color: #8A3B2A; }
+.gl-v2-field:has(.gl-v2-field-input:disabled) .gl-v2-field-label { color: #A8B3A6; }
+
+.gl-v2-field-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+}
+.gl-v2-field-box > i:first-child { font-size: 16px; color: var(--gl-v2-muted); flex: none; }
+
+.gl-v2-field-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    padding: 0;
+    background: transparent;
+    font: 450 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-field-input::placeholder { color: var(--gl-v2-muted-light); font-weight: 450; opacity: 1; }
+
+/* LEEG (optie 8f·2, "GSM — LEEG"): zolang het veld enkel de placeholder toont, dimt het vaste
+   voorvoegsel (BE/+32/https://) en het icoon mee naar dezelfde lichtere toon — zodra er een echte
+   waarde staat nemen de bestaande INGEVULD-regels verderop het weer over (icoon → primary-groen). */
+.gl-v2-field-box:has(.gl-v2-field-input:placeholder-shown) > i:first-child,
+.gl-v2-field-box:has(.gl-v2-field-input:placeholder-shown) .gl-v2-field-prefix { color: var(--gl-v2-muted-light); }
+
+/* INGEVULD: leest zwaarder/donkerder, icoon kleurt mee groen — gedreven door :placeholder-shown
+   i.p.v. een JS-gezette klasse, een tekstinput weet zelf al of 't leeg is. Vereist wel dat het veld
+   een placeholder-attribuut draagt (zonder placeholder matcht :placeholder-shown nooit, dus zou
+   :not() hier altijd waar zijn) — elk veld dat dit component gebruikt krijgt er daarom altijd een. */
+.gl-v2-field-input:not(:placeholder-shown) { font-weight: 500; color: var(--gl-v2-ink); }
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) > i:first-child { color: var(--gl-v2-primary); }
+
+.gl-v2-field-box:hover { border-color: var(--gl-v2-primary); background: #F7F9F5; }
+.gl-v2-field-box:focus-within {
+    border-color: var(--gl-v2-primary);
+    outline: 2.5px solid var(--gl-v2-gold);
+    outline-offset: 2px;
+    background: var(--gl-v2-surface);
+}
+.gl-v2-field-box:focus-within > i:first-child { color: var(--gl-v2-primary); }
+
+/* FOUT — component klaar, wordt echt zodra een formulier hier client-side validatie op wil. */
+.gl-v2-field.is-error .gl-v2-field-box { border-color: #8A3B2A; background: #FBF4F2; }
+.gl-v2-field.is-error .gl-v2-field-box > i:first-child,
+.gl-v2-field.is-error .gl-v2-field-input { color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-input::placeholder { color: #8A3B2A; opacity: .7; }
+
+/* GEBLOKKEERD — puur via het native disabled-attribuut op de <input>, geen aparte klasse op de
+   box nodig (zelfde :has()-truc als hierboven bij INGEVULD). */
+.gl-v2-field-box:has(.gl-v2-field-input:disabled) {
+    border-color: var(--gl-v2-hairline-soft);
+    background: #F2F2F0;
+}
+.gl-v2-field-box:has(.gl-v2-field-input:disabled) > i:first-child { color: #A8B3A6; }
+.gl-v2-field-input:disabled { color: #A8B3A6; cursor: not-allowed; }
+.gl-v2-field-input:disabled::placeholder { color: #A8B3A6; }
+
+.gl-v2-field-prefix { flex: none; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-field-suffix {
+    flex: none;
+    height: 32px;
+    padding: 0 12px;
+    margin-right: -10px;
+    border-radius: 6px;
+    background: var(--gl-v2-bg);
+    display: flex;
+    align-items: center;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+
+/* "×"-knop om het veld te wissen (bv. het zoekveld) — puur CSS-getoond zodra er inhoud is, zelfde
+   :placeholder-shown-truc, geen JS-klasse nodig om 'm te tonen/verbergen (enkel om de klik zelf af
+   te handelen). */
+.gl-v2-field-clear {
+    display: none;
+    flex: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+}
+.gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-clear { display: inline-flex; }
+
+.gl-v2-field-help { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-field.is-error .gl-v2-field-help { color: #8A3B2A; }
+
+/* Meerregelig — zelfde label/helptekst-opbouw, enkel de box wordt hoger en top-uitgelijnd i.p.v.
+   gecentreerd. */
+.gl-v2-field-box.gl-v2-field-box-textarea { height: 104px; align-items: flex-start; padding: 11px 14px; }
+.gl-v2-field-box-textarea .gl-v2-field-input {
+    height: 100%;
+    resize: none;
+    font: 450 13px/1.6 var(--gl-v2-font-sans);
+}
+
+/* Groep van velden op één rij (bv. straat + nummer) — zelfde hoogte als de dropdown, dus lijnen ze
+   vanzelf mee uit op één rij ernaast. */
+.gl-v2-field-group { display: flex; gap: 8px; }
+.gl-v2-field-group .gl-v2-field { flex: 1; min-width: 0; }
+.gl-v2-field-group .gl-v2-field-narrow { flex: none; width: 92px; }
+
+/* <768px: velden onder elkaar i.p.v. samengeperst op één rij — met uitzondering van bewust
+   samenhorende korte veldjes (Nr + Bus): die blijven naast elkaar via .is-compact op een geneste
+   .gl-v2-field-group (bv. Partials/_SupplierDepartmentRowV2.cshtml se Straat-rij, die Nr+Bus apart
+   groepeert van Straat). Zonder .is-compact reflowt een field-group hier gewoon volledig verticaal,
+   .gl-v2-field-narrow incluis (anders zou een alleenstaande smalle 92px-Nr/Bus-kolom er verdwaald
+   uitzien op een telefoonbreedte). */
+@media (max-width: 767.98px) {
+    .gl-v2-field-group { flex-direction: column; }
+    .gl-v2-field-group .gl-v2-field-narrow { width: auto; }
+    .gl-v2-field-group.is-compact { flex-direction: row; }
+    .gl-v2-field-group.is-compact .gl-v2-field-narrow { width: 92px; }
+}
+
+/* ── Tablet & mobiel (optie 4i "44PX") — één media query voor beide, in tegenstelling tot de
+   dropdown hierboven wordt een tekstveld op telefoon geen bottom sheet, enkel groter. ──────────── */
+@media (max-width: 1023.98px) {
+    .gl-v2-field-box { height: 44px; border-radius: 10px; }
+    .gl-v2-field-box > i:first-child { font-size: 17px; }
+    .gl-v2-field-input { font-size: 13.5px; }
+    .gl-v2-field-box.gl-v2-field-box-textarea { height: auto; min-height: 104px; }
+}
+

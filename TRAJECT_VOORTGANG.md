@@ -233,7 +233,7 @@ van de VS-sessie van de gebruiker, en MVC1000-warnings).
    `Models/Traject/DeadlinesIndexVm.cs`. Nav-item "Deadlines" toegevoegd aan beide sidebars. **Geen
    nieuwe tabel/migratie nodig** — leest bestaande `Mijlpaal`-data. Build geverifieerd (0 errors).
 2. ✅ **`DashboardType.Ontwikkelaar` (4) + `DashboardType.Verkoper` (5)** toegevoegd
-   (`CPMCore/Models/DashboardType.cs`) + geselecteerbaar gemaakt in de admin-UI
+   (`CPMCore/Models/Home/DashboardType.cs`) + geselecteerbaar gemaakt in de admin-UI
    (`Views/Instellingen/UserAdmin/Modals/_UserAdminModals.cshtml`, twee `<select id="edit-dashboard-type">`'s).
    `Views/Home/Index.cshtml` dispatcht nu ook naar `_DashboardOntwikkelaar.cshtml` (KPI-strip +
    "vergunningen in opvolging"-tabel + "projecten per fase"-funnel + keypoints/taken-widgets) en

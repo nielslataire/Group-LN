@@ -1,0 +1,112 @@
+/* gl-v2 component — contextmenu, projectbreed (⋯-paneel, bottom sheet op gsm).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Contextmenu (generiek, projectbreed) ─────────────────────────────────────────────────────────
+   Extractie van het "···"-rijmenu-patroon uit Invoices (gl-v2-invoices.css/js, .gl-v2-row-menu) —
+   dat patroon was tot nu toe 3-4x apart, Facturen-specifiek herbouwd (rij-···-menu, boekjaar-
+   dropdown-paneel, rail-flyouts, elk hun eigen trigger/positie/backdrop-code). Dit hier is de eerste
+   generieke, herbruikbare versie ervan in de gedeelde shell, gebruikt door o.a. het snooze-menu van
+   het meldingenscherm (design-handoff 7b: "zoals in invoices/index op tablet"/"eveneens zoals bij
+   invoices index" voor mobiel). Twee standen, geen aparte "desktop inline rij"-vorm zoals Invoices
+   er nog een derde bij had (hier niet nodig — de trigger is altijd een echte knop, nooit een altijd-
+   zichtbare icoonrij): een zwevend paneel (≥768px, positie via getBoundingClientRect, zie
+   initContextMenus() in gl-v2-shell.js) en een bottom sheet met scrim (<768px, CSS-only omschakeling
+   — dezelfde "JS slaat positionering gewoon over onder 768px" aanpak als de rest van gl-v2). Trigger-
+   uiterlijk is bewust NIET hier vastgelegd (elke aanroeper heeft een eigen icoon/knopstijl — het
+   klokje-icoon voor snooze ziet er b.v. niets uit als een "···"-knop); enkel het paneel/de items. */
+.gl-v2-menu-backdrop { display: none; }
+
+.gl-v2-menu {
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+    position: fixed;
+    width: 224px;
+    box-sizing: border-box;
+    padding: 6px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    z-index: 99997;
+}
+.gl-v2-menu.is-open { display: flex; }
+
+.gl-v2-menu-title {
+    padding: 7px 10px 5px;
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+}
+
+.gl-v2-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--gl-v2-ink);
+    font: 450 12.5px var(--gl-v2-font-sans);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+.gl-v2-menu-item i { font-size: 15px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-menu-item:hover,
+.gl-v2-menu-item:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); outline: none; }
+.gl-v2-menu-item:hover i,
+.gl-v2-menu-item:focus-visible i { color: var(--gl-v2-primary); }
+
+.gl-v2-menu-item.is-danger { color: #8B2A2A; font-weight: 600; }
+.gl-v2-menu-item.is-danger i { color: #8B2A2A; }
+.gl-v2-menu-item.is-danger:hover,
+.gl-v2-menu-item.is-danger:focus-visible { background: #F8EBEB; color: #8B2A2A; }
+.gl-v2-menu-item.is-danger:hover i,
+.gl-v2-menu-item.is-danger:focus-visible i { color: #8B2A2A; }
+
+.gl-v2-menu-item-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-menu-item-label { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-menu-item-sub { font: 450 10px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-menu-divider { height: 1px; background: var(--gl-v2-hairline); margin: 8px 6px; }
+
+/* Mobiel (<768px): bottom sheet met scrim, zelfde recept als elke andere gl-v2-sheet. */
+@media (max-width: 767.98px) {
+    .gl-v2-menu-backdrop.is-open {
+        display: block;
+        position: fixed;
+        inset: 0;
+        height: 100dvh;
+        background: rgba(18, 28, 18, .45);
+        z-index: 99998;
+    }
+    .gl-v2-menu.is-open {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: auto;
+        max-height: 70dvh;
+        border-radius: 18px 18px 0 0;
+        padding: 10px 10px calc(18px + env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        z-index: 99999;
+    }
+    .gl-v2-menu.is-open::before {
+        content: "";
+        width: 42px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-dashed);
+        align-self: center;
+        flex: none;
+        margin-bottom: 8px;
+    }
+    .gl-v2-menu-item { padding: 13px 10px; font-size: 13.5px; }
+    .gl-v2-menu-item i { font-size: 17px; }
+}
+

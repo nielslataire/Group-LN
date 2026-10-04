@@ -444,7 +444,7 @@ namespace CPMCore.Controllers
                     // worden vóórdat ze aan de templatetekst geplakt wordt. Zou dit pas gebeuren
                     // op de samengevoegde string, dan zou de "haal de inhoud tussen <body>/</body>
                     // op"-stap de templatetekst die vóór dat ingesloten document staat weggooien.
-                    var cleanedSignature = CPMCore.Service.WordHtmlSanitizer.Clean(signatureHtml);
+                    var cleanedSignature = CPMCore.Services.WordHtmlSanitizer.Clean(signatureHtml);
                     body += "<br/><br/>" + cleanedSignature;
                 }
             }

@@ -1,0 +1,169 @@
+/* gl-v2 component — meldingen/toasts en de blokkerende inline fout (4g).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Meldingen / toasts (design-handoff 4g, "MELDINGEN — TOASTS") ────────────────────────────────
+   Generiek, projectbreed systeem — één container, eenmalig gerenderd in _LayoutV2.cshtml
+   (#gl-v2-toast-container), gevuld/geruimd via window.GlV2Toast (gl-v2-shell.js). Vervangt de
+   PNotify-via-TempData-meldingen (het `$(window).on('load', ...)`-blok in _LayoutV2.cshtml) op elke
+   gl-v2-pagina — zie DESIGN.md-draft voor de volledige uitleg waarom en de "twee locaties, per
+   type"-regel (dit systeem is uitsluitend voor RESULTAAT-meldingen na een actie; een blokkerende
+   validatiefout krijgt een inline behandeling bij het veld/boven de tabel, geen toast — 4g's eigen
+   tekst noemt dat expliciet als uitzondering).
+
+   Eén CSS Grid-layout (icon/title/body/action/close als vlakke grid-items, geen geneste
+   tekst-wrapper) i.p.v. flexbox: op mobiel verhuist de actie-link van "naast de tekst, rechts" naar
+   "onder de tekst, in dezelfde kolom" — flexbox kan een sibling niet in een andere ouder
+   herschikken, grid-template-areas wel, puur via CSS, zonder dat gl-v2-shell.js twee keer
+   verschillende DOM hoeft te bouwen per schermformaat. */
+.gl-v2-toast-container {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 99996;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    width: 380px;
+    max-width: calc(100vw - 24px);
+    pointer-events: none;
+}
+
+.gl-v2-toast {
+    display: grid;
+    grid-template-columns: 30px 1fr auto auto;
+    grid-template-areas: "icon title action close" "icon body action close";
+    align-items: start;
+    column-gap: 11px;
+    row-gap: 3px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 20px 44px -26px rgba(44, 59, 42, .5);
+    pointer-events: auto;
+    touch-action: pan-y;
+}
+
+.gl-v2-toast-icon {
+    grid-area: icon;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-toast-icon i { font-size: 15px; }
+
+.gl-v2-toast.is-success .gl-v2-toast-icon { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-toast.is-danger .gl-v2-toast-icon { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-toast.is-warning .gl-v2-toast-icon { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-toast.is-info .gl-v2-toast-icon { background: #EDEFEB; color: var(--gl-v2-muted); }
+
+.gl-v2-toast-title { grid-area: title; align-self: end; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-toast-body { grid-area: body; align-self: start; font: 450 11.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-toast-action {
+    grid-area: action;
+    align-self: center;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    white-space: nowrap;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.gl-v2-toast-close {
+    grid-area: close;
+    align-self: start;
+    display: flex;
+    color: var(--gl-v2-muted);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+.gl-v2-toast-close i { font-size: 13px; }
+.gl-v2-toast-close:hover { color: var(--gl-v2-ink); }
+
+/* Tablet: rechtsonder, zelfde grid, groter icoon/tekst, geen kruisje ("kruisje vervalt — vegen naar
+   rechts sluit", zie GlV2Toast.enableSwipeDismiss in gl-v2-shell.js — geldt op elk formaat, maar is
+   hier de ENIGE sluitweg naast de 5-sec. auto-dismiss). */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-toast { grid-template-columns: 32px 1fr auto; grid-template-areas: "icon title action" "icon body action"; }
+    .gl-v2-toast-icon { width: 32px; height: 32px; border-radius: 16px; }
+    .gl-v2-toast-icon i { font-size: 17px; }
+    .gl-v2-toast-title { font-size: 13px; }
+    .gl-v2-toast-body { font-size: 12px; }
+    .gl-v2-toast-action { font-size: 12px; }
+}
+
+@media (max-width: 1023.98px) {
+    .gl-v2-toast-close { display: none; }
+}
+
+/* Mobiel: bovenaan onder de topbar (62px, zie .gl-v2-topbar) i.p.v. rechtsonder — de referentie
+   noemt dit expliciet als de reden: onderaan zou onder de bottom-quickactionsbar/duim vallen. Actie
+   verhuist van "naast de tekst" naar "onder de tekst" (derde grid-rij, zelfde kolom als titel/body)
+   via een tweede grid-template-areas — geen aparte markup nodig, zie de uitleg bovenaan deze sectie. */
+@media (max-width: 767.98px) {
+    .gl-v2-toast-container {
+        left: 12px;
+        right: 12px;
+        top: 72px;
+        bottom: auto;
+        width: auto;
+        max-width: none;
+        flex-direction: column;
+    }
+    .gl-v2-toast {
+        grid-template-columns: 32px 1fr;
+        grid-template-areas: "icon title" "icon body" "icon action";
+        row-gap: 4px;
+    }
+    .gl-v2-toast-icon { width: 32px; height: 32px; border-radius: 16px; }
+    .gl-v2-toast-icon i { font-size: 17px; }
+    .gl-v2-toast-action { justify-self: start; padding-top: 2px; }
+}
+
+/* ── Blokkerende fout — inline (design-handoff 4g, "PLAATSING — ADVIES") ─────────────────────────
+   De referentie is expliciet: rechtsonder-toasts zijn voor bevestigingen NA een actie; een fout die
+   een actie TEGENHOUDT (bv. een verplicht veld, of — eerste echte gebruik — Projecten/InvoicingV2's
+   eindafrekening die een niet-ondertekende WO blokkeert) hoort **inline bij het veld of boven de
+   tabel**, niet als toast en niet als modal (Niels, 2026-09-30 — dit was tot nu toe nergens gebouwd,
+   zie de eerdere "geen inline-error component" toelichting bij Meldingen hierboven). Generiek,
+   projectbreed: geen eigen JS-factory zoals GlV2Toast (een toast kan van overal vandaan komen, dit
+   hoort altijd al ergens vast in de pagina te staan) — gewoon markup + deze klassen, een pagina toont/
+   verbergt het zelf met een simpele hidden-toggle. Zelfde iconenbol/toon-vocabulaire als de toast
+   (`.is-danger`/`.is-warning`, dezelfde kleurtokens) zodat de twee visueel bij elkaar horen. */
+.gl-v2-inline-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-danger-tint);
+}
+.gl-v2-inline-error.is-warning { background: var(--gl-v2-warning-tint); }
+.gl-v2-inline-error[hidden] { display: none !important; }
+.gl-v2-inline-error-icon { flex: none; display: flex; color: var(--gl-v2-danger); font-size: 16px; margin-top: 1px; }
+.gl-v2-inline-error.is-warning .gl-v2-inline-error-icon { color: var(--gl-v2-warning); }
+.gl-v2-inline-error-text { flex: 1; min-width: 0; }
+.gl-v2-inline-error-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-danger); }
+.gl-v2-inline-error.is-warning .gl-v2-inline-error-title { color: var(--gl-v2-warning); }
+.gl-v2-inline-error-desc { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); margin-top: 2px; }
+.gl-v2-inline-error-close {
+    flex: none;
+    display: flex;
+    color: var(--gl-v2-muted);
+    background: none;
+    border: 0;
+    padding: 2px;
+    cursor: pointer;
+}
+.gl-v2-inline-error-close:hover { color: var(--gl-v2-ink); }
+.gl-v2-inline-error-close i { font-size: 13px; }
+

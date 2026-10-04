@@ -1,0 +1,188 @@
+/* gl-v2 component — KPI-kaarten (7a).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── KPI-kaarten (design-handoff 7a, "KPI-kaarten — max 8 naast elkaar op desktop, herschikt op
+   tablet en mobiel") ─────────────────────────────────────────────────────────────────────────────
+   Generieke, projectbrede dashboard-component (`Views/Shared/GlV2/_KpiStrip.cshtml` +
+   `Models/GlV2/GlV2KpiItemVm.cs`), niet Facturen/Dashboard-specifiek. Twee kaartVORMEN: "compact"
+   (icoon 24-28px + label als rij, cijfer eronder — tablet/mobiel altijd, desktop met 5-8 items) en
+   "ruim" (icoon 48px links, label+cijfer STRAK samen als één blok ernaast — enkel desktop, ≤4
+   items). De referentie bouwt dit zelf ook als twee ECHT verschillende nestingen (compact = flex-
+   kolom met een rij(icoon,label) + los cijfer eronder; ruim = flex-rij met icoon + een eigen flex-
+   kolom(label,cijfer) ernaast) — géén platte 3-item-grid-reflow-truc zoals de toast-kaart eerder in
+   dit bestand: dat werd geprobeerd en brak zichtbaar, omdat een icoon dat over twee "auto"-grid-
+   rijen (label-rij, cijfer-rij) spant die rijen verplicht optrekt tot samen minstens zijn eigen
+   hoogte — met label/cijfers veel kleinere eigen inhoud liet dat een merkbare kloof tussen titel en
+   cijfer vallen, precies de gemelde bug. Oplossing: `.gl-v2-kpi-text` bundelt label+cijfer in de DOM;
+   bij compact "lost" die wrapper op (`display:contents`) en gedragen label/cijfer zich weer als twee
+   losse grid-items van de kaart (icoon+label-rij, cijfer eronder — geen spanning-probleem, want het
+   icoon spant daar maar één rij); bij ruim wordt dezelfde wrapper een echte flex-kolom die label en
+   cijfer strak samenhoudt, en de kaart zelf schakelt van grid naar een simpele flex-rij (icoon +
+   wrapper) — exact de referentie se eigen structuur, nu bereikt vanuit één gedeelde DOM i.p.v. twee
+   los gerenderde markup-varianten.
+
+   Welke vorm wanneer: de referentie toont "ruim" enkel op DESKTOP en enkel tot en met 4 items; 5-8
+   items op desktop, en tablet/mobiel ONGEACHT aantal, krijgen altijd de compacte vorm. De partial
+   telt de items en zet `.is-compact` op de strip vanaf 5 items — de CSS hieronder leest enkel die
+   klasse, geen los aantal. Zuivere breedte-breakpoints (768px/1024px), geen apart portret/landschap-
+   onderscheid voor tablet zoals de referentie ("staand 3 per rij, liggend 4") noemt: gl-v2's eigen
+   breakpointschema is overal al breedte-gebaseerd (nooit orientation), en een liggende tablet valt
+   in dat schema toch al meestal binnen de desktop-drempel (≥1024px) — een derde, orientation-
+   gebaseerde as toevoegen enkel hiervoor zou een precedent breken dat nergens anders in gl-v2 bestaat. */
+.gl-v2-kpi-strip { display: flex; flex-direction: column; gap: 10px; }
+
+.gl-v2-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+/* Mobile-first = de compacte vorm (ook de vorm die tablet en desktop-met-5-8-items hergebruiken,
+   enkel de maten verschillen per breakpoint hieronder). .gl-v2-kpi-text is hier display:contents —
+   zie de uitleg hierboven — dus het icoon spant in deze vorm maar één rij (geen spanning-probleem). */
+.gl-v2-kpi-card {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    grid-template-areas: "icon label" "value value";
+    align-items: center;
+    /* align-content:center (niet de default "normal", dat voor grid neerkomt op stretch): de kaart
+       heeft een vaste hoogte die ruim boven wat de twee auto-rijen (icoon+label-rij, cijfer-rij) zelf
+       nodig hebben uitkomt — zonder dit rekt de browser die rijen zelf op om het verschil te vullen,
+       wat als extra witruimte tussen label en cijfer oogde. Met align-content:center blijven de rijen
+       krap op hun eigen inhoud en centreert dat hele (krappe) blok als één geheel in de kaart. */
+    align-content: center;
+    column-gap: 7px;
+    row-gap: 4px;
+    box-sizing: border-box;
+    height: 74px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    border-left: 3px solid var(--gl-v2-primary);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 14px 30px -24px rgba(44, 59, 42, .4);
+    padding: 0 11px;
+}
+.gl-v2-kpi-card.is-warning { border-left-color: var(--gl-v2-warning); }
+.gl-v2-kpi-card.is-danger { border-left-color: var(--gl-v2-danger); }
+
+.gl-v2-kpi-icon {
+    grid-area: icon;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+}
+.gl-v2-kpi-icon i { font-size: 13px; }
+.gl-v2-kpi-card.is-warning .gl-v2-kpi-icon { background: var(--gl-v2-warning); }
+.gl-v2-kpi-card.is-danger .gl-v2-kpi-icon { background: var(--gl-v2-danger); }
+
+.gl-v2-kpi-text { display: contents; }
+
+.gl-v2-kpi-label {
+    grid-area: label;
+    font: 500 9.5px/1.25 var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* line-height:1 met opzet expliciet (font-shorthand hierboven bij .gl-v2-kpi-label heeft er zelf al
+   een, /1.25) — een grote, vette "stat"-waarde krijgt altijd een krappe, expliciete line-height
+   i.p.v. op de font-default "normal" te vertrouwen (die verschilt per lettertype/gewicht en voegt
+   vaak meer lucht boven dan onder het cijfer toe). */
+.gl-v2-kpi-value { grid-area: value; font: 700 18px/1 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+/* "Toon alles" (mobiel-only, enkel gerenderd door de partial vanaf 5 items) — vier kaarten blijven
+   altijd zichtbaar, de rest schuilt achter deze knop tot .is-expanded op de strip staat (zie
+   initKpiToggle in gl-v2-shell.js). */
+.gl-v2-kpi-toggle { display: none; }
+
+/* ── Optionele derde regel op een KPI-kaart ("Hint") — design-handoff 16a/16d's eigen voetjes onder
+   het cijfer ("2 woningen · 3 bergingen en parkings", "nog niet verdeeld over de eenheden"). Een
+   eigen .has-hint-variant i.p.v. de basiskaart uitbreiden: die heeft per breakpoint een VASTE hoogte
+   met twee auto-rijen, dus een derde regel zou daar geperst worden. Met .has-hint komt er een echte
+   derde grid-rij bij en wordt de hoogte een minimum i.p.v. een maat — kaarten zonder hint blijven
+   letterlijk ongewijzigd, dus geen bestaande pagina verschuift hierdoor. */
+.gl-v2-kpi-card.has-hint {
+    grid-template-areas: "icon label" "value value" "hint hint";
+    height: auto;
+    min-height: 74px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    row-gap: 3px;
+}
+.gl-v2-kpi-hint {
+    grid-area: hint;
+    font: 450 10.5px/1.35 var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    min-width: 0;
+}
+
+/* ── Tablet (768–1023.98px) — altijd de compacte vorm, altijd 4 kolommen, ongeacht aantal items. ── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .gl-v2-kpi-card { height: 76px; column-gap: 8px; }
+    .gl-v2-kpi-card.has-hint { height: auto; min-height: 76px; }
+    .gl-v2-kpi-icon { width: 28px; height: 28px; border-radius: 14px; }
+    .gl-v2-kpi-icon i { font-size: 15px; }
+    .gl-v2-kpi-label { font-size: 10.5px; }
+    .gl-v2-kpi-value { font-size: 19px; }
+}
+
+/* ── Desktop (≥1024px) — kolomaantal komt van --gl-v2-kpi-desktop-cols (server-berekend: min(aantal,
+   8), of 4 zodra er meer dan 8 zijn zodat het wrapt i.p.v. een 9e kolom). Compacte maten zijn de
+   standaard (5-8 items); de ruime vorm hieronder overschrijft enkel wanneer de strip GEEN
+   .is-compact draagt (≤4 items) — en schakelt de kaart daarbij volledig van grid naar flex, zie de
+   sectie-intro hierboven voor waarom. ─────────────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+    .gl-v2-kpi-grid { grid-template-columns: repeat(var(--gl-v2-kpi-desktop-cols, 4), minmax(0, 1fr)); gap: 10px; }
+    .gl-v2-kpi-card { height: 78px; column-gap: 8px; }
+    .gl-v2-kpi-card.has-hint { height: auto; min-height: 78px; }
+    .gl-v2-kpi-icon { width: 26px; height: 26px; border-radius: 13px; }
+    .gl-v2-kpi-icon i { font-size: 14px; }
+    .gl-v2-kpi-label { font-size: 10px; }
+    .gl-v2-kpi-value { font-size: 19px; }
+
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-grid { gap: 14px; }
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 84px;
+        padding: 0 18px;
+    }
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-icon { width: 48px; height: 48px; border-radius: 24px; flex: none; }
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-icon i { font-size: 22px; }
+    /* Hier WEL een echte flex-kolom (niet display:contents) — dit is precies de "ruim"-vorm die
+       label+cijfer strak samen naast het icoon houdt, zie de sectie-intro. */
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-label { font-size: 12px; }
+    .gl-v2-kpi-strip:not(.is-compact) .gl-v2-kpi-value { font-size: 20px; }
+}
+
+/* ── Mobiel (<768px) — "Toon alles": kaart 5+ verborgen tot .is-expanded, knop enkel hier zichtbaar
+   (design-handoff 7a: "de vier belangrijkste eerst; de rest achter 'toon alles'"). ──────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-kpi-strip .gl-v2-kpi-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: center;
+        height: 36px;
+        padding: 0 16px;
+        border-radius: var(--gl-v2-radius-sm);
+        border: 1px solid var(--gl-v2-hairline);
+        background: var(--gl-v2-surface);
+        color: var(--gl-v2-primary);
+        font: 600 12px var(--gl-v2-font-sans);
+        cursor: pointer;
+    }
+    .gl-v2-kpi-strip:not(.is-expanded) .gl-v2-kpi-card:nth-child(n+5) { display: none; }
+}
+

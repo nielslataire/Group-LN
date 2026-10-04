@@ -5,7 +5,7 @@ using DALCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace CPMCore.Service
+namespace CPMCore.Services
 {
     public static class ServiceFactory
     {

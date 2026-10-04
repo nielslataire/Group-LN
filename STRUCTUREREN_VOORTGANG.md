@@ -7,7 +7,7 @@ onder Views zijn een chaos, niets staat meer gestructureerd"). Beslissingen (202
 onder hun module** (31 → 15 mappen rechtstreeks onder Views/). **Bijwerken na elke groep.** Reist
 mee via git: commit + push vóór je van machine wisselt.
 
-**Laatste update:** 2026-10-04 — **Projecten ✅, Instellingen ✅, clusters ✅, Klanten ✅, Invoices ✅, Leveranciers ✅** (build groen, nog
+**Laatste update:** 2026-10-04 — **Projecten ✅, Instellingen ✅, clusters ✅, Klanten ✅, Invoices ✅, Leveranciers ✅, kleine opruiming ✅, gl-v2-shell.css gesplitst ✅** (build groen, nog
 niet gecommit). Alle monolieten zijn opgesplitst; zie "Nog te doen" voor de losse eindjes.
 
 ## Twee mechanismen, allebei in `Helpers/CustomViewLocationExpander.cs`
@@ -149,9 +149,35 @@ absolute pad) en `Views/Werfportaal/ContractorInvite/`.
   klasse-sluitaccolade in het verkeerde bestand belandde (CS1513/CS1022). Controleer grensregels op inhoud
   mét inspringing (`    }` ≠ `}`), niet enkel getrimd.
 
+### Kleine opruiming ✅ (2026-10-04, analysepunt 4)
+- `Service/` (SmtpEmailSender, ServiceFactory, WordHtmlSanitizer) samengevoegd met `Services/`; namespace
+  `CPMCore.Service` → `CPMCore.Services`, usings in Program.cs, Invoices-partials, ContractorInvite/-Digest
+  en `ProjectenController.Clients.cs` aangepast.
+- Losse `Models/*.cs` (10) naar submappen, namespaces ongewijzigd: `Models/Shared/` (Breadcrumb,
+  PageHeaderModel, FormShellActionsModel, ErrorViewModel, MeldingType, PostalcodeModel),
+  `Models/Account/` (AccountViewModels), `Models/Home/` (DashboardType),
+  `Models/Instellingen/UserAdmin/` (UserAdminViewModel, PermissionViewModel — spiegelt Views/Instellingen/UserAdmin/).
+- `Extensions/testdb.cs` (ongebruikte `SqlDebugInterceptor`) verwijderd.
+
+### gl-v2-shell.css opgesplitst ✅ (2026-10-04, analysepunt 5)
+- 5.339 regels → `gl-v2-shell.css` (1.512 regels chrome: rail, flyout, topbar, body-kaart, knoppen, userbox,
+  mobiel menu, breakpoints, snelactiebalk) + 13 componentbestanden in `wwwroot/css/gl-v2/`: forms, modals,
+  toasts, kpi, contextmenu, meldingen, progress, projectcard, forms-extra, page, notices, mobile-search, steps.
+- **Aaneengesloten geknipt, niets herschikt**: `_LayoutV2.cshtml` laadt de 14 bestanden in exact de oude
+  volgorde, dus geen enkele specificiteits-/volgordeverschuiving. Geverifieerd: de stukken samengevoegd zijn
+  byte-voor-byte het origineel (diff leeg); elk bestand heeft accoladebalans 0.
+- **Bug gevonden en hersteld**: het `@media (max-width: 1023.98px)`-blok voor de dashboardkolom
+  (`.gl-v2-mc-col`, nu onderaan `mobile-search.css`) was nooit gesloten, waardoor het hele Stappenplan-blok
+  erin genest zat en op desktop (≥1024px) geen opmaak kreeg. Sluit-accolade toegevoegd.
+- Verwijstabel bovenaan `gl-v2-shell.css` en in DESIGN.md ("Waar staat gl-v2-CSS?"); vier component-
+  specifieke DESIGN.md-verwijzingen (foutoverzicht, meldingskaders, stappenplan, inline fout) omgezet. De
+  overige ~45 "gl-v2-shell.css"-vermeldingen in DESIGN.md en view-comments gaan over laadvolgorde of zijn
+  historisch; de notitie dekt ze.
+- Niet gedaan: pagina-CSS/-JS (`gl-v2-<module>-<pagina>.*`) naar een `pages/`-submap — vraagt ~60
+  href/src-wijzigingen in views; apart te beslissen.
+
 ### Nog te doen
 - [ ] Beslissing Niels: wezen `Views/Projecten/AddClient.cshtml` en `Views/Klanten/Core/DetailCO.cshtml` verwijderen?
 - [ ] Grensgevallen (niet dringend): UserAdminController 1.124 regels, ProjectIssuesController 906 regels.
-- [ ] Verdere structuurpunten uit de analyse van 2026-10-04: legacy/V2-dubbels opruimen, gl-v2-shell.css
-      (5.339 regels) opsplitsen, `Service/` + `Services/` samenvoegen, losse `Models/*.cs` in submappen,
+- [ ] Verdere structuurpunten uit de analyse van 2026-10-04: legacy/V2-dubbels opruimen,
       Program.cs-registraties per module, dode projecten uit de repo.

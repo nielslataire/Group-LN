@@ -1,0 +1,443 @@
+/* gl-v2 component — meldingenscherm, belletje in de topbar, snooze-menu (7b).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Meldingenscherm (design-handoff 7b, "Meldingenscherm — paneel op desktop, volledig scherm op
+   mobiel") ────────────────────────────────────────────────────────────────────────────────────────
+   Generieke, projectbrede dashboard-component (`Views/Shared/GlV2/_MeldingenPaneel.cshtml` +
+   `_SnoozeMenu.cshtml` + `Models/GlV2/GlV2MeldingenPanelVm.cs`). Eén DOM, drie presentaties puur via
+   CSS: mobile-first = verborgen tot `.is-open` (dan volledig scherm), tablet-override maakt
+   `.is-open` een popover (positie via window.GlV2Menu.reposition, hetzelfde mechanisme als het
+   generieke contextmenu hierboven), desktop-override toont 'm altijd, los van `.is-open` (geen open/
+   dicht-status nodig — daar zit dit gewoon vast in de dashboardkolom). Twee koppen worden allebei
+   server-side gerenderd (.gl-v2-mc-header voor desktop/tablet, .gl-v2-mc-mobile-header + filterchips
+   voor mobiel); CSS toont er telkens maar één — zelfde "twee varianten, CSS kiest" patroon als de
+   desktop-/mobiele userbox elders in gl-v2. */
+.gl-v2-mc-panel {
+    display: none;
+    flex-direction: column;
+    background: var(--gl-v2-surface);
+}
+.gl-v2-mc-panel.is-open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    z-index: 99999;
+}
+
+.gl-v2-mc-header {
+    display: none;
+    align-items: center;
+    gap: 9px;
+    padding: 15px 16px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    flex: none;
+}
+.gl-v2-mc-header > i { font-size: 17px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-mc-title { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-mc-badge {
+    min-width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--gl-v2-danger);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 10.5px var(--gl-v2-font-sans);
+    flex: none;
+}
+.gl-v2-mc-spacer { flex: 1; }
+/* "Alles gelezen": read-state-persistentie is een apart, nog niet gebouwd stuk (deze pas bouwde
+   enkel snooze) — eerlijk uitgeschakeld i.p.v. een knop te tonen die niets doet, zelfde principe als
+   de mobiele zoek-stub elders in gl-v2 (Do's/Don'ts). */
+.gl-v2-mc-allread,
+.gl-v2-mc-mobile-allread {
+    font: 600 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    background: none;
+    border: 0;
+    padding: 0;
+    opacity: .45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Zelfde hoogte/padding als .gl-v2-topbar se eigen mobiele stand (62px, 0 14px) — was voorheen een
+   eigen 12px-verticale-padding-ritme (~54px totale hoogte), zichtbaar anders dan de echte topbar
+   die elke andere gl-v2-pagina gebruikt. */
+.gl-v2-mc-mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 62px;
+    padding: 0 14px;
+    background: var(--gl-v2-primary);
+    flex: none;
+}
+.gl-v2-mc-back {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--gl-v2-surface);
+    flex: none;
+    cursor: pointer;
+}
+.gl-v2-mc-mobile-title { font: 500 17px var(--gl-v2-font-serif); color: var(--gl-v2-surface); }
+.gl-v2-mc-mobile-badge {
+    min-width: 19px;
+    height: 19px;
+    box-sizing: border-box;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 10px var(--gl-v2-font-sans);
+    flex: none;
+}
+.gl-v2-mc-mobile-allread { color: rgba(255, 255, 255, .85); }
+
+.gl-v2-mc-chips {
+    display: flex;
+    gap: 7px;
+    padding: 10px 12px;
+    background: var(--gl-v2-surface);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    flex: none;
+}
+.gl-v2-mc-chip {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 15px;
+    border: 1px solid var(--gl-v2-hairline);
+    color: var(--gl-v2-ink);
+    background: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    font: 500 11px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-mc-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+
+@media (min-width: 768px) {
+    .gl-v2-mc-header { display: flex; }
+    .gl-v2-mc-mobile-header,
+    .gl-v2-mc-chips { display: none; }
+}
+
+.gl-v2-mc-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+
+.gl-v2-mc-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 26px 18px;
+    text-align: center;
+}
+.gl-v2-mc-empty-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-mc-empty-icon i { font-size: 21px; }
+.gl-v2-mc-empty-title { font: 500 16px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-mc-empty-desc { font: 450 11.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 210px; }
+
+.gl-v2-mc-group-header { display: flex; align-items: center; gap: 8px; padding: 9px 16px; flex: none; }
+.gl-v2-mc-group-dot { width: 7px; height: 7px; border-radius: 4px; flex: none; }
+.gl-v2-mc-group-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .12em; }
+.gl-v2-mc-group-count {
+    min-width: 17px;
+    height: 17px;
+    box-sizing: border-box;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 9.5px var(--gl-v2-font-sans);
+}
+
+/* Grid i.p.v. flex, zelfde reden als de toast-/KPI-kaarten hierboven: mobiel verhuist de acties
+   (Bekijk/Snooze) van "naast de tekst, rechts" naar "onder de tekst, in dezelfde kolom als het
+   icoon eronder" — één breakpoint-afhankelijke grid-template-areas i.p.v. twee keer andere markup. */
+.gl-v2-mc-item {
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
+    grid-template-areas: "icon text actions";
+    align-items: start;
+    column-gap: 11px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-mc-item-icon { grid-area: icon; margin-top: 2px; font-size: 16px; color: var(--gl-v2-mc-accent, var(--gl-v2-muted)); }
+.gl-v2-mc-item-text { grid-area: text; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gl-v2-mc-item-body { font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-mc-item-meta { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-mc-item-actions { grid-area: actions; align-self: center; display: flex; align-items: center; gap: 9px; }
+
+.gl-v2-mc-snooze-trigger {
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    border: 1px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--gl-v2-muted);
+    cursor: pointer;
+}
+.gl-v2-mc-snooze-trigger i { font-size: 14px; }
+.gl-v2-mc-snooze-trigger:hover,
+.gl-v2-mc-snooze-trigger.is-menu-open { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
+.gl-v2-mc-snooze-trigger-label { display: none; }
+
+.gl-v2-mc-item-bekijk {
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    white-space: nowrap;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+}
+
+.gl-v2-mc-item-snoozed { background: #F7F9F5; }
+.gl-v2-mc-item-snoozed .gl-v2-mc-item-icon,
+.gl-v2-mc-item-snoozed .gl-v2-mc-item-body { color: var(--gl-v2-muted); }
+
+.gl-v2-mc-footer { display: flex; align-items: center; justify-content: center; padding: 12px 16px; flex: none; }
+.gl-v2-mc-showall { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); background: none; border: 0; cursor: pointer; }
+
+/* Mobiel: acties verhuizen onder de tekst (indent gelijk met de tekst, niet onder het icoon), Bekijk
+   staat er eerst (row-reverse i.p.v. de DOM om te wisselen — DOM/toetsenbordvolgorde blijft
+   Snooze-dan-Bekijk, zelfde "CSS draait enkel de VISUELE volgorde" aanpak als de modal-footers), en
+   de klok-trigger wordt een gewone icoon+tekst-link i.p.v. een geboorde cirkelknop. */
+@media (max-width: 767.98px) {
+    .gl-v2-mc-item {
+        grid-template-columns: 16px 1fr;
+        grid-template-areas: "icon text" ". actions";
+        row-gap: 4px;
+    }
+    .gl-v2-mc-item-actions {
+        justify-self: start;
+        flex-direction: row-reverse;
+        gap: 14px;
+        padding-top: 2px;
+    }
+    .gl-v2-mc-snooze-trigger {
+        width: auto;
+        height: auto;
+        border: 0;
+        background: none;
+        gap: 6px;
+        padding: 0;
+        color: var(--gl-v2-muted);
+    }
+    .gl-v2-mc-snooze-trigger:hover,
+    .gl-v2-mc-snooze-trigger.is-menu-open { background: none; border: 0; color: var(--gl-v2-primary); }
+    .gl-v2-mc-snooze-trigger-label { display: inline; font: 600 11.5px var(--gl-v2-font-sans); }
+    .gl-v2-mc-item-bekijk { font-size: 11.5px; }
+}
+
+/* ── Tablet (768–1023.98px): popover onder het belletje ─────────────────────────────────────────
+   360px breed, max 420px hoog — daarna scrollt .gl-v2-mc-body (design-handoff 7b's eigen regel). */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-mc-panel.is-open {
+        inset: auto;
+        height: auto;
+        width: 360px;
+        max-height: 420px;
+        border-radius: var(--gl-v2-radius-lg);
+        box-shadow: var(--gl-v2-shadow-flyout);
+        overflow: hidden;
+        z-index: 99997;
+    }
+}
+
+/* ── Desktop (≥1024px): vast paneel in de dashboardkolom, geen open/dicht-status. ───────────────── */
+@media (min-width: 1024px) {
+    .gl-v2-mc-panel {
+        display: flex;
+        position: static;
+        /* align-self:flex-start — .gl-v2-mc-panel is hier een los flex-item van Bootstrap's .row
+           rond de dashboardkolommen (geen col-*-wrapper meer omheen, zie _DashboardProjectleider.
+           cshtml), en .row's eigen align-items (nooit overschreven, dus default stretch) rekte de
+           kaart anders op tot de hoogte van haar langste buur (de Mijn Werven-kolom) — exact dezelfde
+           "kaart krimpt mee"-klasse bug als eerder bij .gl-v2-body, hier gewoon in een ander flex-
+           ouder. max-height + .gl-v2-mc-body's eigen overflow-y:auto (al bestaand, zie hierboven)
+           zorgt dat een écht lange lijst wel binnen het scherm blijft en zelf gaat scrollen i.p.v.
+           de kaart oneindig te laten meegroeien — "maximaal de hoogte van het scherm". */
+        align-self: flex-start;
+        max-height: calc(100vh - 24px);
+        width: 360px;
+        border-radius: var(--gl-v2-radius-lg);
+        background: var(--gl-v2-surface);
+        box-shadow: var(--gl-v2-shadow-card);
+        overflow: hidden;
+    }
+}
+
+/* ── Belletje in de topbar (design-handoff 7b) — enkel <1024px zichtbaar; op desktop zit het paneel
+   al vast in de dashboardkolom, geen trigger nodig. Enkel gerenderd als de pagina 'm expliciet
+   aanvraagt (ViewData["HasNotificationsBell"], zelfde optionele-topbar-slot-patroon als
+   @@section MobileQuickActions) — geen bel op een pagina zonder meldingenpaneel om te openen. ──── */
+.gl-v2-topbar-bell {
+    display: none;
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    border: 1px solid var(--gl-v2-hairline);
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+    flex: none;
+}
+.gl-v2-topbar-bell i { font-size: 17px; }
+.gl-v2-topbar-bell:hover,
+.gl-v2-topbar-bell:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); outline: none; }
+.gl-v2-topbar-bell-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 17px;
+    height: 17px;
+    box-sizing: border-box;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-danger);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 9px var(--gl-v2-font-sans);
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-topbar-bell { display: flex; }
+}
+/* Mobiel: topbar wordt vol groen (zie .gl-v2-topbar hieronder/elders) — de tablet-kleuren hierboven
+   (ink tekst, hairline-rand) zijn op die donkere achtergrond zo goed als onzichtbaar. Zelfde wit-op-
+   groen behandeling als .gl-v2-mobile-search-stub ernaast. */
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-bell { border-color: rgba(255, 255, 255, .35); color: var(--gl-v2-surface); }
+    .gl-v2-topbar-bell:hover,
+    .gl-v2-topbar-bell:focus-visible { background: rgba(255, 255, 255, .16); border-color: var(--gl-v2-surface); }
+}
+
+/* ── Snooze-menu (design-handoff 7b "SNOOZE") ────────────────────────────────────────────────────
+   Zit op .gl-v2-menu (het generieke contextmenu hierboven) — enkel de twee "pagina's" erbinnen
+   (opties-lijst / eigen-datum-kalender) zijn hier eigen. .gl-v2-snooze-page is display:none tenzij
+   .is-active; gl-v2-dashboard.js wisselt de klasse i.p.v. het menu te sluiten (zie initSnoozeMenus). */
+/* Breedte staat op de BUITENSTE .gl-v2-menu (250px, de bredere van de twee referentie-kaarten —
+   de kalenderpagina heeft die ruimte echt nodig voor 7 dagkolommen), niet op de losse pagina's:
+   .gl-v2-snooze-page-calendar had zelf ooit een eigen breedte (250px) terwijl de buitenste kaart
+   nog op 224px stond (de optiepagina's eigen maat) — CSS-breedte propageert niet omhoog naar de
+   ouder, dus de kalender liep gewoon over de kaart-achtergrond heen. De optiepagina (smallere
+   inhoud) heeft nu gewoon wat meer lucht rechts in dezelfde, bredere kaart — geen probleem. */
+.gl-v2-snooze-menu { width: 250px; }
+.gl-v2-snooze-page { display: none; flex-direction: column; gap: 1px; }
+.gl-v2-snooze-page.is-active { display: flex; }
+.gl-v2-snooze-menu .gl-v2-menu-item-sub { font: 450 10px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-snooze-page-calendar { padding: 6px; gap: 10px; }
+.gl-v2-snooze-cal-nav { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0; }
+.gl-v2-snooze-cal-arrow {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 0;
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+    flex: none;
+}
+.gl-v2-snooze-cal-arrow i { font-size: 14px; }
+.gl-v2-snooze-cal-label { font: 600 9px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .12em; }
+.gl-v2-snooze-cal-month { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+.gl-v2-snooze-cal-head,
+.gl-v2-snooze-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 0 4px; }
+.gl-v2-snooze-cal-head span {
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 8.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-snooze-cal-day {
+    height: 26px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 450 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+.gl-v2-snooze-cal-day:disabled { color: #B3BDB1; cursor: default; }
+.gl-v2-snooze-cal-day.is-today { border-color: var(--gl-v2-primary); font-weight: 700; }
+.gl-v2-snooze-cal-day.is-selected { background: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 700; }
+.gl-v2-snooze-cal-day:not(:disabled):not(.is-selected):hover { background: var(--gl-v2-hover-tint); }
+
+.gl-v2-snooze-time { display: flex; flex-direction: column; gap: 5px; padding: 9px 4px 0; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-snooze-time-chips { display: flex; gap: 6px; }
+.gl-v2-snooze-time-chip {
+    flex: 1;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--gl-v2-hairline);
+    color: var(--gl-v2-ink);
+    background: var(--gl-v2-surface);
+    font: 500 11px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-snooze-time-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+
+.gl-v2-snooze-actions { display: flex; gap: 7px; padding: 0 4px; }
+.gl-v2-snooze-back,
+.gl-v2-snooze-confirm {
+    flex: 1;
+    height: 34px;
+    border-radius: 8px;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-snooze-back { border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-ink); }
+.gl-v2-snooze-confirm { border: 0; background: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+
+@media (max-width: 767.98px) {
+    .gl-v2-snooze-menu,
+    .gl-v2-snooze-page-calendar { width: auto; }
+}
+

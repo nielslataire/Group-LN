@@ -116,6 +116,17 @@ components:
 > doen gewoon `return View(model)`: `Helpers/CustomViewLocationExpander.cs` kent de functiemappen en de
 > satellieten (een nieuwe naam hoort daar erbij). Zie `STRUCTUREREN_VOORTGANG.md`.
 
+> **Waar staat gl-v2-CSS?** `gl-v2-tokens.css` en `gl-v2-shell.css` (enkel nog de shell-chrome: rail, flyout,
+> topbar, body-kaart, knoppen, userbox, mobiel menu, breakpoints, snelactiebalk) staan in `wwwroot/css/`; de
+> projectwijde componenten zijn er in okt. 2026 uitgelicht naar `wwwroot/css/gl-v2/`: `forms` (select,
+> datumkiezer, tekstvelden), `modals`, `toasts` (+ blokkerende inline fout), `kpi`, `contextmenu`, `meldingen`
+> (meldingenscherm, bel, snooze), `progress`, `projectcard` (+ grid, pin, snelacties-kaart), `forms-extra`
+> (genummerde/contact-/zoekvelden, getal met eenheid, schakelaar), `page` (badges, tabbar, kaarten, actiebalk,
+> tabel, detail-grid), `notices` (foutoverzicht 24, meldingskaders 25), `mobile-search`, `steps` (27).
+> `_LayoutV2.cshtml` laadt ze in exact die volgorde, ná alle pagina-CSS; de regels over laadvolgorde en
+> specificiteit hieronder gelden voor de hele familie. Waar dit document "gl-v2-shell.css" zegt bij een
+> component, is dat bestand bedoeld. Pagina-eigen CSS blijft `gl-v2-<module>-<pagina>.css`.
+
 ## Overview
 
 **Creative North Star: "The Elevated Rail"**
@@ -1131,7 +1142,7 @@ field or above the table, and is **not part of this component at all** — no in
 was built here, since nothing in this pass needed one (Facturen/IndexV2's table is server-rendered
 from the initial request, so it has no "table failed to load" ajax-failure case to wire one to).
 
-**Update (2026-09-30): that component now exists** — `.gl-v2-inline-error` (`gl-v2-shell.css`, right
+**Update (2026-09-30): that component now exists** — `.gl-v2-inline-error` (`gl-v2/toasts.css`, right
 after the toast block), `.is-danger`/`.is-warning`, same color tokens and icon-circle idea as the
 toast so the two read as one family, but deliberately **no JS factory** like `GlV2Toast.show(...)`: a
 toast can originate from anywhere (any AJAX response, any page), so it needs a shared container and a
@@ -3412,7 +3423,7 @@ onderdelen, samen één contract:
       validators: [myCustomValidatorFn]                             // optioneel, zie hieronder
   });
   ```
-- **Gedeelde CSS** in `gl-v2-shell.css` (`.gl-v2-error-summary*`, `.gl-v2-error-sticky*`) — niet
+- **Gedeelde CSS** in `gl-v2/notices.css` (`.gl-v2-error-summary*`, `.gl-v2-error-sticky*`) — niet
   per-pagina herhaald. Drie visuele toestanden: **N fouten** (rode kaart, lijst, `role="alert"`),
   **1 fout** (`.is-single`: kop zonder lijst, compacter — 24b "Eén fout"), **waarschuwingen** (`.is-
   warning`: goud, `role="status"`, blokkeert niets — een pagina die dit wil, bouwt zelf een tweede
@@ -5979,7 +5990,7 @@ terugknop is een gewone `<a href>`; de geprikte hamburger stuurt zijn klik door 
 
 27: *"Stappenplan als één component — de stappenbalken uit 20d, 22d en 22h, en de budgetflow. Vier
 weergaven en zeven statussen, met fouten en aandachtspunten per stap."* Zelfde discipline als
-Meldingskaders (punt 25) hierboven: één gedeeld component in `gl-v2-shell.css` (geen aparte
+Meldingskaders (punt 25) hierboven: één gedeeld component in `gl-v2/notices.css` (geen aparte
 `<link>`), een herbruikbare partial, en hier de volledige contract-/variant-uitleg zodat een
 volgende gl-v2-pagina het meteen kan gebruiken in plaats van opnieuw een eigen stappenbalk te
 verzinnen (zoals Projecten/DetailContractsV2 se tabbar of de losse voortgangsbalken elders al deden,
@@ -5988,7 +5999,7 @@ vóór dit component bestond).
 **Bestanden**: `Views/Shared/GlV2/_Steps.cshtml` (de partial), `CPMCore/Models/GlV2/GlV2StepsVm.cs`
 (model + enums), `CPMCore/Models/GlV2/GlV2StepsResolver.cs` (de afleiding — status/cijfer/badge/
 klikbaarheid per stap, letterlijke overname van de referentiecomponent se `renderVals()`), CSS in
-`gl-v2-shell.css` (sectie "Stappenplan"), JS-aansluitpunt in `gl-v2-shell.js` (`initGlV2Steps`).
+`wwwroot/css/gl-v2/steps.css`, JS-aansluitpunt in `gl-v2-shell.js` (`initGlV2Steps`).
 Render via:
 ```razor
 @await Html.PartialAsync("GlV2/_Steps", new GlV2StepsVm {

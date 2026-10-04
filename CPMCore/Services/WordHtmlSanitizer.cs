@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CPMCore.Service
+namespace CPMCore.Services
 {
     /// <summary>
     /// Schoont Word/Outlook-HTML op (bv. een geplakte Outlook-handtekening): Outlook zelf

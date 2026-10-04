@@ -1,0 +1,453 @@
+/* gl-v2 component — projectkaart, projectgrid, pin/rangschikken, snelacties-kaart (7d, 7f).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Projectkaart (design-handoff 7d, "Projectkaart — opmaak van één kaart, met maten en
+   varianten") ─────────────────────────────────────────────────────────────────────────────────────
+   Nieuw uiterlijk voor de bestaande "werf-kaart" (`Views/Shared/GlV2/_ProjectCardV2.cshtml`, herstelt
+   dezelfde `ProjectWerfCardVM` als de legacy `_ProjectWerfCard.cshtml` — dit is puur een tweede
+   presentatielaag, geen nieuwe databron). Pin en "Rangschikken" (slepen + omhoog/omlaag) blijven
+   functioneel EXACT het bestaande systeem: de nieuwe kaart draagt dezelfde hook-klassen/-id's als de
+   legacy kaart (`.gl-werf-col`, `.gl-arrange-bar`/`.gl-drag-grip`/`.gl-arrange-up`/`.gl-arrange-down`,
+   `.gl-pin-toggle`, `data-project-id`, `#mw-werf-grid`) — de bestaande inline JS in
+   _DashboardProjectleider.cshtml (jQuery UI Sortable, PinProject/UnpinProject/ReorderProjects-AJAX)
+   werkt hier dus ONGEWIJZIGD tegen, enkel de VISUELE laag is nieuw. touch-action:none op de sleep-
+   greep is wel een echte, nieuwe fix (zie verderop) — mist voorheen, vermoedelijk de reden dat
+   slepen op touch onbetrouwbaar was ondanks dat touch-punch al overal geladen wordt.
+
+   Mobiel krijgt een STRUCTUREEL andere kaartvorm (miniatuur + tekst + twee balkjes zonder cijfers in
+   één rij, geen badges/voet), niet enkel een kleinere versie van de desktopkaart — zelfde "render
+   beide, CSS kiest" patroon als Facturen se tabel/kaartenlijst-omschakeling: de partial rendert de
+   volledige desktopkaart ÉN een compacte mobiele rij, en CSS toont er telkens maar één. */
+.gl-v2-project-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+/* .gl-v2-project-card zit op hetzelfde element als de hergebruikte hook-klasse .gl-werf-kaart, die
+   in dashboard-projectleider.css nog een eigen vierkant 4px-radius randje + hover-transform/-schaduw
+   meebrengt — dat randje piepte als een "vierkant kader" achter de veel ronder .gl-v2-project-card-
+   frame vandaan. Hier ongedaan gemaakt; de frame-div hieronder is de enige visuele rand/schaduw. */
+.gl-v2-project-card.gl-werf-kaart {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    background: transparent;
+    transition: none;
+}
+.gl-v2-project-card.gl-werf-kaart:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.gl-v2-project-photo {
+    position: relative;
+    height: 200px;
+    background: #DDE5D8;
+    overflow: hidden;
+    flex: none;
+}
+.gl-v2-project-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gl-v2-project-photo-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #4E8B4A, #00401F);
+    color: rgba(255, 255, 255, .7);
+}
+.gl-v2-project-photo-placeholder i { font-size: 34px; }
+
+.gl-v2-project-status {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    font: 700 10px var(--gl-v2-font-sans);
+    letter-spacing: .08em;
+    color: var(--gl-v2-surface);
+}
+/* Hergebruikt ProjectPhase.Chip()'s bestaande klassen (sc-groen/-donker/-rood/-geel) als modifier —
+   geen nieuwe C#-kleurenmapping nodig, één bron van waarheid voor "welke status welke kleur". */
+.gl-v2-project-status.sc-groen { background: var(--gl-v2-primary); }
+.gl-v2-project-status.sc-donker { background: #2C3B2A; }
+.gl-v2-project-status.sc-rood { background: var(--gl-v2-danger); }
+.gl-v2-project-status.sc-geel { background: var(--gl-v2-warning); }
+
+.gl-v2-project-warn {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    background: var(--gl-v2-danger);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-project-warn i { font-size: 14px; }
+
+.gl-v2-project-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.gl-v2-project-name {
+    font: 600 15px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-v2-project-loc {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .08em;
+}
+.gl-v2-project-loc i { font-size: 13px; }
+
+.gl-v2-project-progress { display: flex; flex-direction: column; }
+.gl-v2-project-progress .gl-v2-progress { padding-top: 11px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-project-progress .gl-v2-progress + .gl-v2-progress { margin-top: 10px; }
+
+.gl-v2-project-footer {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-top: 13px;
+    margin-top: 2px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    font: 450 11px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-project-footer i { font-size: 13px; flex: none; }
+.gl-v2-project-footer.is-near { color: var(--gl-v2-warning); }
+.gl-v2-project-footer.is-over { color: var(--gl-v2-danger); }
+
+/* Hover (desktop) — groene rand, diepere schaduw, titel groen; de hele kaart is al één link. */
+@media (min-width: 1024px) {
+    .gl-v2-project-card:hover,
+    .gl-v2-project-card:focus-visible {
+        outline: none;
+    }
+    .gl-v2-project-col:hover .gl-v2-project-card-frame,
+    .gl-v2-project-col:focus-within .gl-v2-project-card-frame {
+        border-color: var(--gl-v2-primary);
+        box-shadow: 0 4px 10px rgba(0, 83, 45, .1), 0 26px 50px -26px rgba(44, 59, 42, .55);
+    }
+    .gl-v2-project-col:hover .gl-v2-project-name,
+    .gl-v2-project-col:focus-within .gl-v2-project-name {
+        color: var(--gl-v2-primary);
+    }
+}
+
+.gl-v2-project-card-frame {
+    border-radius: var(--gl-v2-radius-lg);
+    background: var(--gl-v2-surface);
+    border: 1px solid transparent;
+    box-shadow: var(--gl-v2-shadow-card);
+    overflow: hidden;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mobiele compacte rij — enkel <768px zichtbaar (zie de mobiele mediaquery verderop); de volledige
+   desktopkaart blijft in de DOM (voor screenreaders/zoekfunctie) maar wordt daar verborgen. */
+.gl-v2-project-mobile-row { display: none; }
+.gl-v2-project-mobile-thumb {
+    width: 87px;
+    height: 87px;
+    border-radius: 12px;
+    background: #DDE5D8;
+    flex: none;
+    object-fit: cover;
+    display: block;
+}
+.gl-v2-project-mobile-thumb-placeholder {
+    width: 87px;
+    height: 87px;
+    border-radius: 12px;
+    background: linear-gradient(160deg, #4E8B4A, #00401F);
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, .7);
+}
+.gl-v2-project-mobile-thumb-placeholder i { font-size: 28px; }
+.gl-v2-project-mobile-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.gl-v2-project-mobile-name { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-project-mobile-loc { font: 500 9px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .08em; }
+
+/* ── Grid — projectbreed instelbaar aantal kolommen, kaart ~300px op desktop. ───────────────────────
+   Container query i.p.v. viewport-@media: "Mijn Werven" is op dit dashboard maar de helft van de
+   pagina (naast de Meldingen-kolom), dus zijn ECHTE beschikbare breedte volgt de pagina-breedte niet
+   1-op-1. Op een iPad Pro 13" staand (1032px) valt de viewport in de "desktop" @media-range, maar de
+   Mijn-Werven-kolom zelf is daar maar ~450px breed — met een viewport-@media bleef auto-fill(300px)
+   dan bij 1 kolom hangen terwijl er zichtbaar plaats is voor 2. Een container query meet de kolom
+   zélf, niet de viewport, en lost dat structureel op (ook voor toekomstige layout-wijzigingen). */
+.gl-werven-section { container-type: inline-size; }
+
+/* `.col` (_DashboardProjectleider.cshtml, "Mijn Werven"-kolom) is een flex-item met flex-basis:0% —
+   zonder min-width:0 weigert zo'n item standaard te krimpen voorbij de intrinsieke inhoudsbreedte
+   van z'n kind (hier: de CSS-grid hierboven), wat exact hetzelfde "min-width:auto"-euvel is als
+   eerder bij de mobiele factuur-kaarten (gl-v2-invoices.css) — zonder deze regel zou de kolom alsnog
+   breder proberen te blijven dan er ruimte is, en zou de rij (Meldingen/Mijn Werven/Snelacties)
+   alsnog kunnen overlopen/wrappen ondanks de flex-grow-fix zelf. */
+.gl-v2-mw-col { min-width: 0; }
+
+.gl-v2-project-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+}
+/* Tablet-breedte (en de iPad-Pro-achtige smalle helft-kolom hierboven beschreven): MAX 2 naast
+   elkaar, expliciet gevraagd. */
+@container (min-width: 540px) {
+    .gl-v2-project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Pas bij een echt brede kolom (volle desktop, geen naastliggende Meldingen-kolom die inneemt) mag
+   auto-fill zelf bepalen of er 3+ kaarten naast elkaar passen. */
+@container (min-width: 960px) {
+    .gl-v2-project-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+
+/* ── Mobiel (<768px): kaart wordt een rij ────────────────────────────────────────────────────────
+   Miniatuur links, twee balkjes zonder cijfers rechts — geen badges, geen voet (geen ruimte/noodzaak
+   in dit compacte formaat). Desktopinhoud verdwijnt, mobiele rij verschijnt (display-omschakeling,
+   niet dezelfde platte-DOM-grid-reflow-truc als de KPI-/toast-/meldingenkaarten — de mobiele vorm
+   wijkt hier te sterk af, evenveel elementen verdwijnen als verschijnen, geen simpele herschikking). */
+@media (max-width: 767.98px) {
+    .gl-v2-project-grid { grid-template-columns: 1fr; gap: 10px; }
+    .gl-v2-project-card-frame { border: 0; box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 18px 38px -28px rgba(44, 59, 42, .4); }
+    .gl-v2-project-photo,
+    .gl-v2-project-name,
+    .gl-v2-project-loc,
+    .gl-v2-project-progress,
+    .gl-v2-project-footer { display: none; }
+    .gl-v2-project-body { padding: 10px; }
+    .gl-v2-project-mobile-row { display: flex; gap: 10px; }
+}
+
+/* ── Pin/Rangschikken-chrome — bestaande hook-klassen (.gl-pin-toggle, .gl-arrange-bar,
+   .gl-drag-grip, .gl-arrange-up/-down), enkel het uiterlijk is nieuw. touch-action:none op de
+   sleep-greep is de echte functionele toevoeging (zie sectie-intro) — voorheen ontbrak dit, waardoor
+   de browser een touchmove op de greep als paginascroll kon claimen vóór touch-punch de synthetische
+   muisgebeurtenissen kon opbouwen; jquery.ui.touch-punch.js zelf was al overal geladen. ─────────── */
+.gl-v2-project-col { position: relative; }
+/* Positioneringscontext voor de pin is de wrap (pin + kaart), niet de hele kolom (die ook de
+   rangschik-balk bevat) — zie de toelichting bij .gl-v2-project-card-wrap in de partial: anders
+   bleef de pin op zijn oorspronkelijke plek hangen zodra de balk in rangschik-modus verscheen. */
+.gl-v2-project-card-wrap { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+.gl-v2-project-pin {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    z-index: 2;
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    border: 0;
+    background: rgba(44, 59, 42, .55);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.gl-v2-project-pin i { font-size: 14px; }
+.gl-v2-project-pin:hover,
+.gl-v2-project-pin:focus-visible { background: var(--gl-v2-danger); outline: none; }
+.ui-sortable-helper .gl-v2-project-pin { display: none; }
+
+.gl-v2-project-arrange-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-tile);
+    /* Op de hele balk, niet enkel de greep — zie .gl-arrange-bar in dashboard-projectleider.css. */
+    touch-action: none;
+}
+.gl-v2-project-arrange-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: none;
+}
+.gl-v2-project-arrange-btn i { font-size: 14px; }
+.gl-v2-project-arrange-btn:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-project-arrange-grip {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 26px;
+    border-radius: var(--gl-v2-radius-sm);
+    color: var(--gl-v2-muted);
+    font: 600 11px var(--gl-v2-font-sans);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Kern van de mobiele-sleep-fix: zonder dit kan een touchmove hier als paginascroll worden
+       geclaimd vóór touch-punch de synthetische muisgebeurtenissen opbouwt. */
+    touch-action: none;
+}
+.gl-v2-project-arrange-grip i { font-size: 15px; }
+/* De sortable's `start`-handler (inline script in _DashboardProjectleider.cshtml) kopieert de
+   VOLLEDIGE class-attribuut van de gesleepte kaart naar de placeholder (plus .gl-werf-placeholder)
+   — voor een gl-v2-kaart wordt dat dus ".gl-werf-col .gl-v2-project-col .gl-werf-placeholder", niet
+   een zelfverzonnen modifier-klasse. Deze regel overschrijft de legacy 7px-radius-placeholder-look
+   (dashboard-projectleider.css) met gl-v2's eigen radius/kleurtaal wanneer die combinatie voorkomt. */
+.gl-v2-project-col.gl-werf-placeholder {
+    border-radius: var(--gl-v2-radius-lg);
+    border: 2px dashed rgba(0, 83, 45, .3);
+    background: rgba(0, 83, 45, .06);
+}
+
+/* ── "Mijn Werven"-sectiekop (vastzetten-knop + Rangschikken-toggle) — bestaande hook-ids/klassen
+   (#mw-add-project, #mw-arrange-toggle, .gl-mw-add-btn, .gl-arrange-toggle) blijven ongewijzigd,
+   enkel het uiterlijk is nieuw. gl-v2-shell.css laadt sowieso enkel op gl-v2-pagina's, dus deze
+   companion-klassen op de anders-ongewijzigde legacy-markup zijn daar dode CSS. ─────────────── */
+.gl-v2-mw-kop { gap: 10px; }
+.gl-v2-mw-add-btn,
+.gl-v2-mw-arrange-toggle {
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-ink);
+    border-radius: var(--gl-v2-radius-sm);
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.gl-v2-mw-add-btn:hover,
+.gl-v2-mw-arrange-toggle:hover {
+    background: var(--gl-v2-hover-tint);
+    border-color: var(--gl-v2-primary);
+    color: var(--gl-v2-primary);
+}
+.gl-v2-mw-arrange-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 12px var(--gl-v2-font-sans);
+    padding: 0 12px;
+    height: 30px;
+}
+.gl-v2-mw-arrange-toggle[aria-pressed="true"] {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+}
+
+/* ── Snelacties-kaart herdacht (design-handoff 7f) — enkel op desktop (≥1400px, zie
+   GlV2/_SnelactiesCard.cshtml se col-xxl-2 d-none d-xxl-block-wrapper); tablet/gsm hebben de
+   balk/rail hierboven (design-handoff 7g) in de plaats. ─────────────────────────────────────────── */
+.gl-v2-snelacties-card {
+    border-radius: var(--gl-v2-radius-lg);
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.gl-v2-snelacties-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 14px 16px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    font: 500 17px var(--gl-v2-font-serif);
+}
+.gl-v2-snelacties-header i { font-size: 16px; }
+
+.gl-v2-snelacties-active { padding: 12px 12px 10px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-snelacties-active-label {
+    display: block;
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    padding-bottom: 6px;
+}
+.gl-v2-snelacties-active-picker {
+    width: 100%;
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-primary);
+    background: var(--gl-v2-bg);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+    cursor: pointer;
+    color: var(--gl-v2-ink);
+}
+.gl-v2-snelacties-active-picker > i:first-child { font-size: 16px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-snelacties-active-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; text-align: left; overflow: hidden; }
+.gl-v2-snelacties-active-name { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-snelacties-active-loc { font: 500 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .06em; }
+.gl-v2-snelacties-active-placeholder { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-snelacties-active-caret { font-size: 13px; color: var(--gl-v2-primary); flex: none; }
+
+.gl-v2-snelacties-group { padding: 10px 6px 6px; }
+.gl-v2-snelacties-group.is-bordered { border-top: 1px solid var(--gl-v2-hairline-soft); padding: 8px 6px 12px; }
+.gl-v2-snelacties-group-label {
+    display: block;
+    font: 600 9px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    letter-spacing: .12em;
+    padding: 4px 10px 6px;
+}
+
+.gl-v2-snelactie-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    text-decoration: none;
+    color: var(--gl-v2-ink);
+    font: 450 12.5px var(--gl-v2-font-sans);
+    text-align: left;
+    cursor: pointer;
+}
+.gl-v2-snelactie-row > i:first-child { font-size: 16px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-snelactie-row:hover,
+.gl-v2-snelactie-row:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+.gl-v2-snelactie-row-chevron { margin-left: auto; font: 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: none; }
+
+/* Geen actief project: de "OP DIT PROJECT"-rijen dimmen en verliezen hun groene icoon — klikken
+   erop opent eerst de kiezer i.p.v. nergens naartoe te navigeren (design-handoff 7f). */
+.gl-v2-snelactie-row.is-dimmed { opacity: .45; cursor: pointer; }
+.gl-v2-snelactie-row.is-dimmed > i:first-child { color: var(--gl-v2-muted); }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   Projectwijde componenten (design-handoff opties 8f "Veldtypes" en 8e "Onderdelen uitgewerkt").
+   Vandaag nog nergens toegepast — dit is de eerste pass waarin componenten vóór een concrete
+   verbruikende pagina gebouwd worden ("eerst definiëren, later toepassen"), zelfde "component
+   klaar, niks fabriceert een gebruik" discipline als .gl-v2-select-panel-search/-newitem hierboven.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+

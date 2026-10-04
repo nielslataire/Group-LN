@@ -1,0 +1,540 @@
+/* gl-v2 component — modals type 1 bevestiging, type 2 formulier, type 3 zoeken + projectkiezer (4j, 7e, 7f).
+   Uit gl-v2-shell.css gelicht (okt. 2026, structureren; STRUCTUREREN_VOORTGANG.md). De <link>-volgorde in
+   _LayoutV2.cshtml is exact de oude volgorde binnen gl-v2-shell.css: verplaats een bestand niet zonder de
+   volgorde-/specificiteitsafhankelijkheden na te gaan (DESIGN.md, "Vóór je nieuwe pagina-CSS schrijft"). */
+
+/* ── Modals (design-handoff optie 4j) ─────────────────────────────────────────────────────────
+   Generiek, herbruikbaar component (niet pagina-specifiek), twee types per de referentiesheet:
+   TYPE 1 "Bevestiging" (.gl-v2-modal-confirm — klein, geen invoer, drie kleurvarianten) en TYPE 2
+   "Formulier" (.gl-v2-modal-form — middelgroot, met velden). Bouwt bovenop Bootstrap's eigen
+   `.modal`/`.modal-dialog`/`.modal-content` structuur — dat blijft puur voor het BEDRAG aan reeds
+   werkend, getest gedrag dat het meebrengt (tonen/verbergen, backdrop, focus-trap, Esc, scroll-
+   lock): geen van die *structuurklassen* levert hier ook maar één pixel eigen opmaak, alles hierin
+   is opnieuw getekend onder `.gl-v2-modal-confirm`/`.gl-v2-modal-form` — geen enkele regel gaat uit
+   van een Bootstrap-standaardwaarde (padding, radius, schaduw, kleur). De ene styling die NIET
+   overschreven wordt is Bootstrap's eigen `.modal-backdrop` (de scrim): dat element wordt door
+   Bootstrap's JS als kind van <body> toegevoegd, dus BUITEN `.gl-v2` — hier zelf herstijlen zou een
+   bare, ongescoped `.modal-backdrop`-regel betekenen die ook op de niet-gl-v2-pagina's zou lezen,
+   wat expliciet niet mag (zie Do's/Don'ts "keep every new gl-v2 CSS selector scoped under .gl-v2").
+   Bootstrap's eigen `rgba(0,0,0,.5)`-scrim blijft daarom gewoon staan — dicht genoeg bij gl-v2's
+   eigen `rgba(18,28,18,.45)` om niet als een echte inconsistentie op te vallen. */
+
+/* De echte oorzaak van "de modal werkt niet / rendert plat tussen de pagina-inhoud" (Projecten/
+   EditContractV2's werfleider-modal, waarschijnlijk elke gl-v2-modal): Bootstrap's `.modal` zet
+   `z-index:var(--bs-modal-zindex)` (default 1055) — ver ONDER `.gl-v2-rail`/de topbar-elementen
+   hierboven (z-index 99996–99999, bewust hoog om de "ranked by number"-stapel van rail-flyouts/
+   mobiel menu/toasts te laten kloppen, zie de toelichting bovenaan dit bestand). Een Bootstrap-
+   modal opende dus wél degelijk (JS/backdrop/focus-trap allemaal prima), maar de floating rail EN
+   de sticky topbar bleven er letterlijk bovenop staan — vandaar "overlapt met de rest van de
+   pagina" i.p.v. een nette overlay. Via de CSS-variabele (geen specificiteitsgevecht nodig, in
+   tegenstelling tot .modal-backdrop hierboven is --bs-modal-zindex een gewone erfelijke variabele
+   die Bootstrap's eigen regel al leest) getild tot ruim boven die 99999-stapel. De backdrop (idem
+   `.modal-backdrop`, BUITEN `.gl-v2` — zie de toelichting hierboven waarom die scrim zelf niet
+   herschilderd wordt) krijgt hier WEL zijn z-index mee opgetild: dat is geen visuele restyling (de
+   kleur/opacity blijven Bootstrap's eigen `rgba(0,0,0,.5)`), enkel de stapelvolgorde, en op geen
+   enkele niet-gl-v2-pagina staat iets ook maar in de buurt van 99999 — dus geen risico op een
+   regressie daar. */
+.gl-v2-modal-confirm,
+.gl-v2-modal-form,
+.gl-v2-modal-search {
+    --bs-modal-zindex: 100001;
+}
+.modal-backdrop {
+    z-index: 100000;
+}
+
+.gl-v2-modal-confirm .modal-dialog,
+.gl-v2-modal-form .modal-dialog {
+    max-width: none;
+}
+
+/* ═══ TYPE 1 — Bevestiging ═══════════════════════════════════════════════════════════════════
+   Desktop 460px gecentreerd. Drie kleurvarianten op het icoon (de enige plek waar het type zich
+   uit): `.is-danger` (rood — destructieve acties zoals verwijderen), `.is-warning` (goud —
+   onomkeerbaar maar niet destructief, bv. een factuur nummeren/vergrendelen), `.is-success`
+   (primary-groen — bevestigt een geslaagde/positieve keuze). Het icoon-glyph zelf (welke Phosphor-
+   klasse) is aan de aanroepende pagina, enkel de kleurbehandeling zit hier vast. */
+.gl-v2-modal-confirm .modal-dialog { width: 460px; }
+
+.gl-v2-modal-confirm .modal-content {
+    border: 0;
+    border-radius: 14px;
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    overflow: hidden;
+}
+
+.gl-v2-modal-confirm .modal-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px;
+}
+
+.gl-v2-modal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+    flex: none;
+}
+.gl-v2-modal-icon i { font-size: 18px; }
+
+.gl-v2-modal-icon.is-danger { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-modal-icon.is-warning { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-modal-icon.is-success { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+
+/* Kleuraccent bovenaan de kaart (refinement, design-handoff 4j "DRIE TOONAARDEN") — enkel bij
+   warning/danger, nooit bij success: een geslaagde/positieve bevestiging krijgt geen streep, precies
+   zoals de referentie ("groen icoonvlak, primaire knop groen" — geen randvermelding) tegenover
+   "gouden streep boven"/"rode streep boven" bij de andere twee. Zelfde `is-*`-klasse als het icoon,
+   maar op `.modal-content` gezet — de aanroepende pagina zet dus twee keer dezelfde tooncode (icoon
+   + content), geen nieuwe naam om te onthouden. */
+.gl-v2-modal-confirm .modal-content.is-warning { border-top: 3px solid var(--gl-v2-warning); }
+.gl-v2-modal-confirm .modal-content.is-danger { border-top: 3px solid var(--gl-v2-danger); }
+
+.gl-v2-modal-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gl-v2-modal-title { font: 500 18px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
+.gl-v2-modal-desc { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin: 0; }
+
+.gl-v2-modal-confirm .modal-footer {
+    display: flex;
+    gap: 9px;
+    justify-content: flex-end;
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+
+/* Een submit-knop die z'n eigen POST + antiforgery-token nodig heeft (bv. Verwijderen) staat vaak in
+   een eigen <form> binnen de footer — dan is het FORMULIER de flex-item, niet de knop erin, en raken
+   `width:100%`/`flex:1` hieronder (die op `.gl-v2-btn` mikken) 'm nooit: de knop krijgt zijn 100%/
+   flex:1 t.o.v. het formulier, maar dat formulier zelf bleef content-breed, dus zichtbaar smaller dan
+   "Annuleren" ernaast. `display:contents` laat het formulier zelf geen eigen doos meer tekenen — zijn
+   kinderen (de knop, de verborgen inputs) worden zo rechtstreeks flex-items van de footer, exact
+   alsof de <form>-wrapper er niet stond; de verborgen inputs nemen sowieso geen ruimte in (UA-default
+   `display:none` op `input[type=hidden]`). Het formulier blijft wel gewoon werken (submit/token) —
+   `display:contents` raakt enkel de doos, niet het element zelf. */
+.gl-v2-modal-confirm .modal-footer form,
+.gl-v2-modal-form .modal-footer form { display: contents; }
+
+/* ── Knopstaten in de modal-footer (design-handoff 4j, "KNOPSTATEN IN DE MODAL" — refinement pass
+   op de eerder gebouwde Type 1/2). Een modal-bevestiging is altijd de hoogst-nadruk actie op het
+   scherm, dus krijgen -primary/-warning/-danger hier hun gevulde, volledige rust/hover/ingedrukt/
+   uit-reeks — bewust GESCOPEERD tot modal-footers en niet shell-wide, want -primary/-danger hebben
+   elders (rij-acties, toolbars) al hun eigen, bewust lagere-nadruk look die niet mag meeveranderen.
+   -warning heeft geen ander bestaand gebruik, dus die basisfamilie hierboven is al modal-klaar.
+   "Annuleren" blijft `.gl-v2-btn-text` (zelfde class als overal, geen nieuwe naam), maar krijgt hier
+   het matrix' neutrale, geboorde "SECUNDAIR"-uiterlijk i.p.v. de kale ghost-look — supersedeert de
+   eerdere "blijft pure ghost"-beslissing in de DESIGN.md-draft, zie de bijgewerkte tekst daar. */
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-primary,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-primary {
+    background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-primary:hover,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-primary:hover {
+    background: var(--gl-v2-primary-deep); border-color: var(--gl-v2-primary-deep);
+    box-shadow: 0 8px 18px -10px rgba(44, 59, 42, .6);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-primary:active,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-primary:active {
+    background: #00341A; border-color: #00341A; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .28);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-primary:disabled,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-primary:disabled {
+    background: #E4E8E2; border-color: #E4E8E2; color: #A8B3A6;
+}
+
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-danger,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-danger {
+    background: var(--gl-v2-danger); border-color: var(--gl-v2-danger); color: var(--gl-v2-surface);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-danger:hover,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-danger:hover {
+    background: #74201F; border-color: #74201F; box-shadow: 0 8px 18px -10px rgba(44, 59, 42, .6);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-danger:active,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-danger:active {
+    background: #5F1919; border-color: #5F1919; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .28);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-danger:disabled,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-danger:disabled {
+    background: #E4E8E2; border-color: #E4E8E2; color: #A8B3A6;
+}
+
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-text,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-text {
+    background: var(--gl-v2-surface); border: 1px solid rgba(44, 59, 42, .14); color: var(--gl-v2-ink);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-text:hover,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-text:hover {
+    background: var(--gl-v2-bg); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-text:active,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-text:active {
+    background: #E3EBDD; border-color: var(--gl-v2-primary); color: var(--gl-v2-primary);
+    box-shadow: inset 0 1px 3px rgba(44, 59, 42, .2);
+}
+.gl-v2-modal-confirm .modal-footer .gl-v2-btn-text:disabled,
+.gl-v2-modal-form .modal-footer .gl-v2-btn-text:disabled {
+    background: #F2F2F0; border-color: rgba(44, 59, 42, .08); color: #A8B3A6;
+}
+
+/* ═══ TYPE 2 — Formulier ═════════════════════════════════════════════════════════════════════
+   Desktop 500px, twee kolommen. `.gl-v2-modal-close` is een eigen 30px cirkelknop (niet Bootstrap's
+   `.btn-close`, die tekent zichzelf via een background-image i.p.v. een echt icoon-font en zou hier
+   opnieuw de hele kleur/maat-taal moeten overschrijven — simpeler om met een Phosphor-icoon
+   opnieuw op te bouwen dan `.btn-close` te bevechten). */
+.gl-v2-modal-form .modal-dialog { width: 500px; }
+
+.gl-v2-modal-form .modal-content {
+    border: 0;
+    border-radius: 14px;
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    overflow: hidden;
+}
+
+.gl-v2-modal-form .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    border-radius: 0;
+}
+.gl-v2-modal-form .modal-title { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+
+.gl-v2-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: auto;
+    border-radius: 15px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: transparent;
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+}
+.gl-v2-modal-close i { font-size: 13px; }
+.gl-v2-modal-close:hover,
+.gl-v2-modal-close:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); outline: none; }
+
+.gl-v2-modal-form .modal-body {
+    padding: 16px 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.gl-v2-modal-form .modal-body .gl-v2-field-group,
+.gl-v2-modal-form .modal-body .gl-v2-field-full { grid-column: 1 / -1; }
+
+.gl-v2-modal-form .modal-footer {
+    display: flex;
+    gap: 9px;
+    justify-content: flex-end;
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+}
+
+/* ── Tablet (768–1023.98px) ─────────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    /* Type 1: iets smaller, knoppen worden vol-breed naast elkaar i.p.v. rechts-uitgelijnd op hun
+       eigen breedte — geen apart element nodig, gewoon flex:1 op elke knop in dezelfde rij. */
+    .gl-v2-modal-confirm .modal-dialog { width: 420px; }
+    .gl-v2-modal-confirm .modal-footer { padding: 12px 18px 18px; }
+    .gl-v2-modal-confirm .modal-footer .gl-v2-btn { flex: 1; height: 44px; }
+
+    /* Type 2: één kolom i.p.v. twee, iets smaller (380px — de referentie labelde dit ooit "480px"
+       terwijl de kaart zelf altijd al 380px breed getekend was; de gebruiker corrigeerde dat label
+       deze verfijningspas, dus 380px is nu ook hier het juiste getal, niet 420px). */
+    .gl-v2-modal-form .modal-dialog { width: 380px; }
+    .gl-v2-modal-form .modal-body { grid-template-columns: 1fr; }
+    .gl-v2-modal-form .modal-close,
+    .gl-v2-modal-close { width: 36px; height: 36px; border-radius: 18px; }
+    .gl-v2-modal-form .modal-footer .gl-v2-btn { flex: 1; height: 44px; }
+}
+
+/* ── Mobiel (<768px) — de twee types wijken hier bewust uiteen: Type 1 wordt een sheet onderaan
+   (zelfde recept als het "···"-actiepaneel/boekjaar-dropdown elders in gl-v2), Type 2 wordt een
+   VOLLEDIG SCHERM i.p.v. een sheet — een sheet zou samen met het toetsenbord (bij invoervelden) het
+   beschikbare venster halveren, exact de reden die de referentiesheet zelf noemt ("geen sheet maar
+   een volledige pagina"). Voor Type 2 wordt hiervoor Bootstrap's eigen `.modal-fullscreen-md-down`-
+   hulpklasse hergebruikt (in de markup toegevoegd, niet hier) i.p.v. zelf `.modal-dialog` naar
+   100vw/100dvh te forceren — Bootstrap's eigen 768px-drempel (`md`) valt toevallig exact samen met
+   gl-v2's eigen telefoon-grens, dus geen reden om dat gedrag zelf opnieuw te bouwen. ─────────────── */
+@media (max-width: 767.98px) {
+    /* Type 1 → bottom sheet. `.modal-dialog-centered` is zelf al een flex-container
+       (`align-items:center`) — enkel die uitlijning naar onder kantelen volstaat, geen `!important`
+       nodig om Bootstrap's eigen inline `display:block` op `.modal` te overstemmen. */
+    .gl-v2-modal-confirm .modal-dialog {
+        align-items: flex-end;
+        min-height: 100%;
+        margin: 0;
+        width: 100%;
+    }
+    .gl-v2-modal-confirm .modal-content {
+        width: 100%;
+        border-radius: 18px 18px 0 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        position: relative;
+    }
+    .gl-v2-modal-confirm .modal-content::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 42px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-dashed);
+    }
+    .gl-v2-modal-confirm .modal-body { padding-top: 26px; }
+    /* Gestapeld i.p.v. naast elkaar, primaire actie bovenaan — column-reverse i.p.v. de knoppen in
+       de markup om te wisselen: Annuleren staat in de DOM nog altijd eerst (logische leesvolgorde/
+       toetsenbordnavigatie), column-reverse draait enkel de VISUELE volgorde om. */
+    .gl-v2-modal-confirm .modal-footer {
+        flex-direction: column-reverse;
+        gap: 9px;
+        padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    }
+    .gl-v2-modal-confirm .modal-footer .gl-v2-btn { width: 100%; height: 46px; }
+
+    /* Type 2 → volledig scherm, groene kop (zelfde taal als de mobiele topbar elders in gl-v2:
+       dashed-border logo-achtige kader wordt hier de sluitknop, serif titel in het wit). */
+    .gl-v2-modal-form .modal-content { border-radius: 0; height: 100%; display: flex; flex-direction: column; }
+    .gl-v2-modal-form .modal-header {
+        background: var(--gl-v2-primary);
+        border-bottom: 0;
+        padding: 12px 14px;
+        flex: none;
+    }
+    .gl-v2-modal-form .modal-title { color: var(--gl-v2-surface); font-size: 17px; }
+    .gl-v2-modal-close {
+        order: -1;
+        margin-left: 0;
+        margin-right: 4px;
+        border-color: rgba(255, 255, 255, .35);
+        color: var(--gl-v2-surface);
+    }
+    .gl-v2-modal-close:hover,
+    .gl-v2-modal-close:focus-visible { background: rgba(255, 255, 255, .16); border-color: var(--gl-v2-surface); }
+
+    .gl-v2-modal-form .modal-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        grid-template-columns: 1fr;
+        padding: 14px;
+    }
+    .gl-v2-modal-form .modal-footer {
+        flex: none;
+        flex-direction: column-reverse;
+        gap: 9px;
+        padding: 12px 14px calc(20px + env(safe-area-inset-bottom, 0px));
+    }
+    .gl-v2-modal-form .modal-footer .gl-v2-btn { width: 100%; height: 48px; }
+}
+
+/* ═══ TYPE 3 — Zoeken (design-handoff 7e, "Klant zoeken") ═══════════════════════════════════════
+   Zelfde Bootstrap-structuur-only-filosofie als Type 1/2 hierboven, eigen klasse i.p.v. hergebruik:
+   dit heeft geen icoon/tekst-kop (Type 1) en geen twee-koloms-veldengrid (Type 2), maar een
+   zoekveld+knop en vier zichtbaarheidsstaten (leeg/laden/niets gevonden/resultaten) die de partial
+   alle vier rendert — window.GlV2Dashboard.initSearchModal (gl-v2-dashboard.js) toont er telkens
+   maar één via [hidden]. Desktop 440px gecentreerd (7e's eigen maat); mobiel volledig scherm via
+   Bootstrap's `.modal-fullscreen-md-down` (zelfde reden/conventie als Type 2: een bottom sheet zou
+   samen met het toetsenbord het venster halveren). */
+.gl-v2-modal-search .modal-dialog { max-width: none; width: 440px; }
+
+.gl-v2-modal-search .modal-content {
+    border: 0;
+    border-radius: 14px;
+    background: var(--gl-v2-surface);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    overflow: hidden;
+}
+
+.gl-v2-modal-search-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px 12px;
+}
+.gl-v2-modal-search-title { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); margin: 0; }
+.gl-v2-modal-search-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: auto;
+    border-radius: 15px;
+    border: 1px solid var(--gl-v2-hairline);
+    background: transparent;
+    color: var(--gl-v2-ink);
+    flex: none;
+    cursor: pointer;
+}
+.gl-v2-modal-search-close i { font-size: 13px; }
+.gl-v2-modal-search-close:hover,
+.gl-v2-modal-search-close:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); outline: none; }
+
+.gl-v2-modal-search .modal-body { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+
+.gl-v2-modal-search-field {
+    height: 44px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    border: 1px solid var(--gl-v2-primary);
+    background: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+}
+.gl-v2-modal-search-field > i { font-size: 16px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-modal-search-input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: 500 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-modal-search-input::placeholder { color: var(--gl-v2-muted); font-weight: 450; }
+.gl-v2-modal-search-clear { border: 0; background: transparent; color: var(--gl-v2-muted); flex: none; cursor: pointer; display: flex; align-items: center; }
+
+.gl-v2-modal-search-btn {
+    height: 44px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font: 600 13.5px var(--gl-v2-font-sans);
+    cursor: pointer;
+}
+.gl-v2-modal-search-btn i { font-size: 16px; }
+.gl-v2-modal-search-btn:hover { background: var(--gl-v2-primary-deep); }
+
+.gl-v2-modal-search-empty,
+.gl-v2-modal-search-loading {
+    padding: 22px 0 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    text-align: center;
+}
+.gl-v2-modal-search-empty i { font-size: 24px; color: var(--gl-v2-dashed); }
+
+.gl-v2-modal-search-none {
+    padding: 16px 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+.gl-v2-modal-search-none-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-modal-search-none-sub { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 280px; }
+
+.gl-v2-modal-search-create {
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: 600 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    text-decoration: none;
+    margin-top: 6px;
+    width: 100%;
+}
+.gl-v2-modal-search-create.is-dashed { border: 1px dashed var(--gl-v2-accent-sage); }
+.gl-v2-modal-search-create:hover { background: var(--gl-v2-hover-tint); }
+
+.gl-v2-modal-search-results-label { display: block; font: 600 9px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .12em; padding: 2px 8px 6px; }
+.gl-v2-modal-search-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
+.gl-v2-modal-search-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    border: 0;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+.gl-v2-modal-search-row:hover,
+.gl-v2-modal-search-row:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+.gl-v2-modal-search-row-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    background: var(--gl-v2-primary-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    flex: none;
+}
+.gl-v2-modal-search-row-avatar i { font-size: 15px; }
+.gl-v2-modal-search-row-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-modal-search-row-chevron { font-size: 12px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-modal-search-row-pin { font-size: 14px; color: var(--gl-v2-primary); flex: none; }
+
+.gl-v2-modal-search-footer { border-top: 1px solid var(--gl-v2-hairline-soft); padding: 10px 18px 14px; }
+.gl-v2-modal-search-footer .gl-v2-modal-search-create { width: auto; justify-content: flex-start; margin-top: 0; }
+
+/* Projectkiezer (7f) footer — "Dit project vastzetten": een speldje + tekst, geen knop-doos zoals
+   .gl-v2-modal-search-create (die staat voor "nieuw record aanmaken", een andere actie) — eigen,
+   kleinere klasse i.p.v. de create-knop hergebruiken. */
+.gl-v2-modal-search-pin-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin: -6px -8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+.gl-v2-modal-search-pin-btn i { font-size: 14px; }
+.gl-v2-modal-search-pin-btn:hover,
+.gl-v2-modal-search-pin-btn:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+.gl-v2-modal-search-pin-btn:disabled { color: var(--gl-v2-muted); cursor: default; }
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-modal-search .modal-dialog { width: 400px; }
+}
+
+@media (max-width: 767.98px) {
+    .gl-v2-modal-search .modal-content { border-radius: 0; height: 100%; display: flex; flex-direction: column; }
+    .gl-v2-modal-search-header { background: var(--gl-v2-primary); padding: 12px 14px; flex: none; }
+    .gl-v2-modal-search-title { color: var(--gl-v2-surface); font-size: 17px; }
+    .gl-v2-modal-search-close {
+        order: -1;
+        margin-left: 0;
+        margin-right: 4px;
+        border-color: rgba(255, 255, 255, .35);
+        color: var(--gl-v2-surface);
+    }
+    .gl-v2-modal-search-close:hover,
+    .gl-v2-modal-search-close:focus-visible { background: rgba(255, 255, 255, .16); border-color: var(--gl-v2-surface); }
+    .gl-v2-modal-search .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; }
+    .gl-v2-modal-search-list { max-height: none; }
+    .gl-v2-modal-search-footer { padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+
