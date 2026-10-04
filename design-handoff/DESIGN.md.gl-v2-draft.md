@@ -410,7 +410,7 @@ built yet" signal once it's not visually dashed/marked as such, so `.gl-v2-mobil
 now `display:none` unconditionally (no mobile-breakpoint override re-enabling it). **The slot itself
 is still claimable** — unchanged, this only affects the fallback stub. `_LayoutV2.cshtml` renders
 `@@section MobileTopbarAction` in that exact position when a page defines it (same optional-slot
-pattern as `PageActions`/`MobileQuickActions`); `Views/Leveranciers/IndexV2.cshtml` puts its filter
+pattern as `PageActions`/`MobileQuickActions`); `Views/Leveranciers/Core/IndexV2.cshtml` puts its filter
 toggle there instead of a search icon — this page's search already lives in its own toolbar field,
 and on a phone the fastest-reachable action is "open filters," not "search." The pill shape (not a
 circle) is deliberate there — see "Leveranciers" below for the reasoning and the rest of the filter
@@ -424,7 +424,7 @@ green bar); `:hover`/`:focus-visible` get a faint white tint, nothing else disti
 from another — 4c itself makes no primary/secondary distinction, so gl-v2 doesn't invent one
 either. This is the mobile equivalent of a page's `PageActions` — the two present different-enough
 markup (compact topbar button vs. a full tile) that a page defines both, once each, rather than
-one shared partial trying to serve both shapes. See `Views/Invoices/IndexV2.cshtml` (2 actions,
+one shared partial trying to serve both shapes. See `Views/Invoices/Core/IndexV2.cshtml` (2 actions,
 canWriteInvoices-gated) and `Views/Home/Index.cshtml` (5 actions, Projectleider-only — see "Real
 example" below) for the reference pairing (`@@section PageActions` + `@@section
 MobileQuickActions`).
@@ -512,7 +512,7 @@ unchanged) agree there's really something to show.
 ### Table (Facturen)
 Design-handoff optie 4e ("TABEL — RIJSTATEN EN ACTIES IN DE RIJ") + optie 4a (layout/pagination) +
 optie 4f (laad-/lege staat + "TABLET — ···-MENU IN DE RIJ"). Reskins the **existing**
-`<table>`/DataTables markup in `Views/Invoices/IndexV2.cshtml` — no CSS-grid rewrite; the mockup
+`<table>`/DataTables markup in `Views/Invoices/Core/IndexV2.cshtml` — no CSS-grid rewrite; the mockup
 renders rows as `display:grid` divs, but that would mean re-implementing DataTables'
 sort/search/paging from scratch, so this stays a real `<table>` throughout, styled to look like
 the mockup's grid rows (`gl-v2-invoices.css`).
@@ -553,7 +553,7 @@ down to almost nothing depending on which items shared which track — and even 
 table-specific chrome (Bootstrap's row borders/background, DataTables' own layout rows) kept
 bleeding through a card that was never really anything but a table row in a costume. The `<table>`
 now goes `display:none` entirely below 768px, full stop — no reflow attempt. In its place,
-`Views/Invoices/IndexV2.cshtml` has one empty `<div id="gl-v2-mobile-invoice-list">` after the
+`Views/Invoices/Core/IndexV2.cshtml` has one empty `<div id="gl-v2-mobile-invoice-list">` after the
 table, and `renderMobileCards()` (`gl-v2-invoices.js`) builds real `<div class="gl-v2-invoice-card">`
 elements into it from the table's own current `<tr>`s — called on every DataTable `"draw"` (init,
 search, sort, page), so the card list always mirrors whatever the (hidden) table currently shows
@@ -695,7 +695,7 @@ mirrors it directly rather than the mockup's own simplified 4-column LADEN demo.
   `.checkbox-custom` component — `_LayoutV2.cshtml` never loads `theme.css`/`custom.css` (only the
   old `_Layout.cshtml` does), so that component's box/checkmark (`label:before`/`:after`
   pseudo-elements) simply doesn't exist on gl-v2 pages; the markup (`.checkbox-custom` div +
-  hidden input + empty `<label>`) is unchanged from `Views/Invoices/Index.cshtml`, but every pixel
+  hidden input + empty `<label>`) is unchanged from `Views/Invoices/Core/Index.cshtml`, but every pixel
   of its visual is gl-v2's own (18px, 5px radius, filled Primary-green checked state, white
   Font-Awesome checkmark glyph — same `\f00c` trick `theme.css` uses, just redirected). Checked
   always wins over disabled (declared after it in the stylesheet) — an already-booked invoice's
@@ -903,7 +903,7 @@ system, apply the part that's real" approach used elsewhere in this pilot.
   sharing the same 40/44px height as the dropdown so a row mixing a field and a dropdown still
   lines up. `.gl-v2-field-narrow` fixes one member to 92px instead of splitting the row evenly.
   Defined, not applied on any real form yet.
-- **Real example: Facturen search field.** `Views/Invoices/IndexV2.cshtml`'s toolbar search
+- **Real example: Facturen search field.** `Views/Invoices/Core/IndexV2.cshtml`'s toolbar search
   replaced Bootstrap's `.input-group`/`bx-search` markup with `.gl-v2-field` + `.gl-v2-field-box`
   (icon + input + clear button) — no `.gl-v2-field-label` here, a label above a toolbar search box
   doesn't fit that context the way it would in an actual form. `.gl-v2-toolbar-search` (page CSS,
@@ -1020,9 +1020,9 @@ dark header; the footer again goes `column-reverse` for a stacked, primary-on-to
 `env(safe-area-inset-bottom)` padding added at both breakpoints' sheets/full-screens so content
 clears the home-indicator area on notched phones.
 
-**Real example: Facturen confirmation modals.** Both of `Views/Invoices/IndexV2.cshtml`'s modals are
+**Real example: Facturen confirmation modals.** Both of `Views/Invoices/Core/IndexV2.cshtml`'s modals are
 TYPE 1. The **delete** confirmation (`.is-danger`) used to load its content into a magnific-popup/
-`.modal-block` (`Views/Invoices/Index.cshtml`'s older, non-gl-v2 pattern) — it's now a Bootstrap
+`.modal-block` (`Views/Invoices/Core/Index.cshtml`'s older, non-gl-v2 pattern) — it's now a Bootstrap
 modal (`#deleteInvoiceConfirmModal`) whose `.modal-content` is filled via the same AJAX call as
 before, just pointed at a new controller action (`InvoicesController.ModalDeleteV2`, sharing its
 row-lookup/permission logic with the original `ModalDelete` through one extracted private method) and
@@ -1432,7 +1432,7 @@ rendered with none of its legacy CSS (that stylesheet isn't loaded on `_LayoutV2
 gl-v2 user reached it, the plain-HTML "Kies een project" list that prompted this whole fix.
 
 ### Leveranciers — second application of the Facturen table (design-handoff optie 4a/4e/4f/4j)
-`Views/Leveranciers/IndexV2.cshtml`, toggled from `LeveranciersController.Index` the same one-line
+`Views/Leveranciers/Core/IndexV2.cshtml`, toggled from `LeveranciersController.Index` the same one-line
 way as Invoices (`ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index"`). Same
 `SupplierIndexViewModel`/query as `Index.cshtml` — this is presentation only, no new controller
 logic beyond the toggle itself and a `ModalDeleteV2` action mirroring `InvoicesController`'s. Title
@@ -1525,8 +1525,8 @@ row would otherwise both carry it into the DOM at once.
 delete modal.
 
 ### Leveranciers/Klanten-tabellen — e-mail (8g), klikbare rij, dynamische titel/breadcrumb
-Three small, related fixes applied to both `Views/Leveranciers/IndexV2.cshtml` and
-`Views/Klanten/IndexV2.cshtml` in the same pass, all generic/shell-level (`gl-v2-shell.css`/
+Three small, related fixes applied to both `Views/Leveranciers/Core/IndexV2.cshtml` and
+`Views/Klanten/Core/IndexV2.cshtml` in the same pass, all generic/shell-level (`gl-v2-shell.css`/
 `gl-v2-shell.js`, not page-specific) since both tables needed the identical behavior.
 
 **E-mail in a table cell (design-handoff optie 8g).** Both pages rendered e-mail as a raw

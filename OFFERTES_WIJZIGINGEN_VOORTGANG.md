@@ -88,7 +88,7 @@ bereikt.
 
 ### 3.3 20d — Wijzigingsopdracht (`ChangeOrderDetailV2`)
 `ProjectenController.ChangeOrderDetailV2.cs` (GET + `ChangeOrderDetailV2Save`/`-Convert`/`-AddRow`/
-`-AddTerm`), `ChangeOrderDetailV2Vm.cs`, `Views/Projecten/ChangeOrderDetailV2.cshtml` +
+`-AddTerm`), `ChangeOrderDetailV2Vm.cs`, `Views/Projecten/ChangeOrders/ChangeOrderDetailV2.cshtml` +
 `Partials/_ChangeOrderDetailRowV2.cshtml` + `_ChangeOrderTermRowV2.cshtml`,
 `gl-v2-projecten-changeorderdetail.css/.js`. Bevat: 7-staps stepper, Opdracht-kaart (leverancier/
 contract-dropdown hergebruikt van de legacy pagina, btw-klant vergrendeld/afgeleid uit de
@@ -99,7 +99,7 @@ werkende legacy `EditChangeOrder.cshtml`-JS), Facturatieplan-kaart (4 snelkeuzes
 `SigningAdmin/Dossier`-acties i.p.v. die knoppen een tweede keer te bouwen).
 
 ### 3.4 20b — Offertes & wijzigingen (`ChangeOrdersV2`, de hub-lijst)
-`ProjectenController.ChangeOrdersV2.cs`, `ChangeOrdersV2Vm.cs`, `Views/Projecten/ChangeOrdersV2.cshtml`
+`ProjectenController.ChangeOrdersV2.cs`, `ChangeOrdersV2Vm.cs`, `Views/Projecten/ChangeOrders/ChangeOrdersV2.cshtml`
 + `Partials/_ChangeOrdersRowV2.cshtml`, `gl-v2-projecten-changeorders.css/.js`. Tabs (Alles/Offertes/
 WO's), 6-staps funnelbalk, zoekveld + open/alles-status-filter (client-side), twee tabellen
 (Offertes/Wijzigingsopdrachten) met 6-bolletjes-verloopstrip per rij, "Omzetten →" op offerte-rijen,
@@ -109,7 +109,7 @@ hernoemd naar "Offertes & wijzigingen" en wijst nu hierheen (`_ProjectInnerMenuV
 `/Projecten/DetailsChangeOrder` blijft ongewijzigd bereikbaar.
 
 ### 3.5 20c — Offerte inlezen (`QuoteIntakeV2`, het OCR-hulpmiddel)
-`ProjectenController.QuoteIntakeV2.cs`, `QuoteIntakeV2Vm.cs`, `Views/Projecten/QuoteIntakeV2.cshtml` +
+`ProjectenController.QuoteIntakeV2.cs`, `QuoteIntakeV2Vm.cs`, `Views/Projecten/ChangeOrders/QuoteIntakeV2.cshtml` +
 `Partials/_QuoteIntakeRowV2.cshtml`, `gl-v2-projecten-quoteintake.css/.js`. Nieuw:
 `CPMCore/Services/QuoteExtraction/` (`IQuoteRegionAnalysisService`/`AzureQuoteAnalysisService`, model
 `"prebuilt-layout"` — herbruikt dezelfde `InvoiceExtractionOptions`/Azure-resource als de bestaande
@@ -187,10 +187,10 @@ CPMCore/Controllers/ProjectenController.InvoicingV2.cs (gewijzigd — bugfix)
 CPMCore/Controllers/ProjectenController.PaymentStagesV2.cs (gewijzigd — verfijningen)
 CPMCore/Models/Projecten/ChangeOrderDetailV2Vm.cs, ChangeOrdersV2Vm.cs, QuoteIntakeV2Vm.cs (nieuw)
 CPMCore/Models/Projecten/PaymentStagesV2Vm.cs (gewijzigd)
-CPMCore/Views/Projecten/ChangeOrderDetailV2.cshtml, ChangeOrdersV2.cshtml, QuoteIntakeV2.cshtml (nieuw)
+CPMCore/Views/Projecten/ChangeOrders/ChangeOrderDetailV2.cshtml, ChangeOrdersV2.cshtml, QuoteIntakeV2.cshtml (nieuw)
 CPMCore/Views/Projecten/Partials/_ChangeOrderDetailRowV2.cshtml, _ChangeOrderTermRowV2.cshtml,
   _ChangeOrdersRowV2.cshtml, _QuoteIntakeRowV2.cshtml, _InvoicingRowV2.cshtml (nieuw)
-CPMCore/Views/Projecten/PaymentStagesV2.cshtml, InvoicingV2.cshtml (gewijzigd)
+CPMCore/Views/Projecten/Invoicing/PaymentStagesV2.cshtml, InvoicingV2.cshtml (gewijzigd)
 CPMCore/Views/Projecten/Modals/_ModalPickProofPhotoV2.cshtml (nieuw)
 CPMCore/Views/Shared/GlV2/_ProjectInnerMenuV2.cshtml (gewijzigd — menu-item hernoemd/omgeleid)
 CPMCore/wwwroot/css/gl-v2-projecten-changeorderdetail.css, gl-v2-projecten-changeorders.css,

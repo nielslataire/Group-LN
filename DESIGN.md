@@ -102,6 +102,20 @@ components:
 > **melding/notice**, **stappenplan**, **select/dropdown**, **KPI-kaart**, **menu/⋯-paneel**, … —
 > zoek het woord op vóórdat je iets nieuws tekent, ook als je eigen versie "gewoon lijkt te werken."
 
+> **Waar staat een pagina?** Views/ heeft 15 modulemappen: Account, Deadlines, DocumentenCentrum,
+> Home, Instellingen, Invoices, Klanten, Leveranciers, Marktanalyse, MijnTaken, Ondertekenen, Projecten,
+> Search, Werfportaal en Shared. Binnen een module staat een pagina in een **functiemap** met dezelfde naam
+> als de controller-partial: `Views/Projecten/Budget/BudgetIndex.cshtml` ↔ `ProjectenController.Budget.cs`
+> (Projecten: Core, Clients, Units, Contracts, IncomingInvoices, ChangeOrders, Weather, Media, Docs,
+> Insurances, Sales, Coordinatie, Invoicing, Budget; Instellingen: Algemeen, Facturatie, Budget, Marktdata;
+> Klanten: Core, ClientAccount; Invoices: Core, Editor, Send; Leveranciers: Core).
+> Een **satelliet-controller** woont in de map van zijn module: `Views/Instellingen/UserAdmin/`,
+> `Views/Projecten/Issues/` (ProjectsIssuesController), `Views/Ondertekenen/SigningAdmin/`,
+> `Views/Werfportaal/ContractorPortal/`. Gedeelde stukken blijven in `…/Partials/` en `…/Modals/`,
+> projectwijde componenten in `Views/Shared/GlV2/`. Controllers en URL's veranderen hier niet door en
+> doen gewoon `return View(model)`: `Helpers/CustomViewLocationExpander.cs` kent de functiemappen en de
+> satellieten (een nieuwe naam hoort daar erbij). Zie `STRUCTUREREN_VOORTGANG.md`.
+
 ## Overview
 
 **Creative North Star: "The Elevated Rail"**
@@ -439,7 +453,7 @@ built yet" signal once it's not visually dashed/marked as such, so `.gl-v2-mobil
 now `display:none` unconditionally (no mobile-breakpoint override re-enabling it). **The slot itself
 is still claimable** — unchanged, this only affects the fallback stub. `_LayoutV2.cshtml` renders
 `@@section MobileTopbarAction` in that exact position when a page defines it (same optional-slot
-pattern as `PageActions`/`MobileQuickActions`); `Views/Leveranciers/IndexV2.cshtml` puts its filter
+pattern as `PageActions`/`MobileQuickActions`); `Views/Leveranciers/Core/IndexV2.cshtml` puts its filter
 toggle there instead of a search icon — this page's search already lives in its own toolbar field,
 and on a phone the fastest-reachable action is "open filters," not "search." The pill shape (not a
 circle) is deliberate there — see "Leveranciers" below for the reasoning and the rest of the filter
@@ -453,7 +467,7 @@ green bar); `:hover`/`:focus-visible` get a faint white tint, nothing else disti
 from another — 4c itself makes no primary/secondary distinction, so gl-v2 doesn't invent one
 either. This is the mobile equivalent of a page's `PageActions` — the two present different-enough
 markup (compact topbar button vs. a full tile) that a page defines both, once each, rather than
-one shared partial trying to serve both shapes. See `Views/Invoices/IndexV2.cshtml` (2 actions,
+one shared partial trying to serve both shapes. See `Views/Invoices/Core/IndexV2.cshtml` (2 actions,
 canWriteInvoices-gated) and `Views/Home/Index.cshtml` (5 actions, Projectleider-only — see "Real
 example" below) for the reference pairing (`@@section PageActions` + `@@section
 MobileQuickActions`).
@@ -558,7 +572,7 @@ unchanged) agree there's really something to show.
 ### Table (Facturen)
 Design-handoff optie 4e ("TABEL — RIJSTATEN EN ACTIES IN DE RIJ") + optie 4a (layout/pagination) +
 optie 4f (laad-/lege staat + "TABLET — ···-MENU IN DE RIJ"). Reskins the **existing**
-`<table>`/DataTables markup in `Views/Invoices/IndexV2.cshtml` — no CSS-grid rewrite; the mockup
+`<table>`/DataTables markup in `Views/Invoices/Core/IndexV2.cshtml` — no CSS-grid rewrite; the mockup
 renders rows as `display:grid` divs, but that would mean re-implementing DataTables'
 sort/search/paging from scratch, so this stays a real `<table>` throughout, styled to look like
 the mockup's grid rows (`gl-v2-invoices.css`).
@@ -599,7 +613,7 @@ down to almost nothing depending on which items shared which track — and even 
 table-specific chrome (Bootstrap's row borders/background, DataTables' own layout rows) kept
 bleeding through a card that was never really anything but a table row in a costume. The `<table>`
 now goes `display:none` entirely below 768px, full stop — no reflow attempt. In its place,
-`Views/Invoices/IndexV2.cshtml` has one empty `<div id="gl-v2-mobile-invoice-list">` after the
+`Views/Invoices/Core/IndexV2.cshtml` has one empty `<div id="gl-v2-mobile-invoice-list">` after the
 table, and `renderMobileCards()` (`gl-v2-invoices.js`) builds real `<div class="gl-v2-invoice-card">`
 elements into it from the table's own current `<tr>`s — called on every DataTable `"draw"` (init,
 search, sort, page), so the card list always mirrors whatever the (hidden) table currently shows
@@ -741,7 +755,7 @@ mirrors it directly rather than the mockup's own simplified 4-column LADEN demo.
   `.checkbox-custom` component — `_LayoutV2.cshtml` never loads `theme.css`/`custom.css` (only the
   old `_Layout.cshtml` does), so that component's box/checkmark (`label:before`/`:after`
   pseudo-elements) simply doesn't exist on gl-v2 pages; the markup (`.checkbox-custom` div +
-  hidden input + empty `<label>`) is unchanged from `Views/Invoices/Index.cshtml`, but every pixel
+  hidden input + empty `<label>`) is unchanged from `Views/Invoices/Core/Index.cshtml`, but every pixel
   of its visual is gl-v2's own (18px, 5px radius, filled Primary-green checked state, white
   Font-Awesome checkmark glyph — same `\f00c` trick `theme.css` uses, just redirected). Checked
   always wins over disabled (declared after it in the stylesheet) — an already-booked invoice's
@@ -949,7 +963,7 @@ system, apply the part that's real" approach used elsewhere in this pilot.
   sharing the same 40/44px height as the dropdown so a row mixing a field and a dropdown still
   lines up. `.gl-v2-field-narrow` fixes one member to 92px instead of splitting the row evenly.
   Defined, not applied on any real form yet.
-- **Real example: Facturen search field.** `Views/Invoices/IndexV2.cshtml`'s toolbar search
+- **Real example: Facturen search field.** `Views/Invoices/Core/IndexV2.cshtml`'s toolbar search
   replaced Bootstrap's `.input-group`/`bx-search` markup with `.gl-v2-field` + `.gl-v2-field-box`
   (icon + input + clear button) — no `.gl-v2-field-label` here, a label above a toolbar search box
   doesn't fit that context the way it would in an actual form. `.gl-v2-toolbar-search` (page CSS,
@@ -1066,9 +1080,9 @@ dark header; the footer again goes `column-reverse` for a stacked, primary-on-to
 `env(safe-area-inset-bottom)` padding added at both breakpoints' sheets/full-screens so content
 clears the home-indicator area on notched phones.
 
-**Real example: Facturen confirmation modals.** Both of `Views/Invoices/IndexV2.cshtml`'s modals are
+**Real example: Facturen confirmation modals.** Both of `Views/Invoices/Core/IndexV2.cshtml`'s modals are
 TYPE 1. The **delete** confirmation (`.is-danger`) used to load its content into a magnific-popup/
-`.modal-block` (`Views/Invoices/Index.cshtml`'s older, non-gl-v2 pattern) — it's now a Bootstrap
+`.modal-block` (`Views/Invoices/Core/Index.cshtml`'s older, non-gl-v2 pattern) — it's now a Bootstrap
 modal (`#deleteInvoiceConfirmModal`) whose `.modal-content` is filled via the same AJAX call as
 before, just pointed at a new controller action (`InvoicesController.ModalDeleteV2`, sharing its
 row-lookup/permission logic with the original `ModalDelete` through one extracted private method) and
@@ -1494,7 +1508,7 @@ rendered with none of its legacy CSS (that stylesheet isn't loaded on `_LayoutV2
 gl-v2 user reached it, the plain-HTML "Kies een project" list that prompted this whole fix.
 
 ### Leveranciers — second application of the Facturen table (design-handoff optie 4a/4e/4f/4j)
-`Views/Leveranciers/IndexV2.cshtml`, toggled from `LeveranciersController.Index` the same one-line
+`Views/Leveranciers/Core/IndexV2.cshtml`, toggled from `LeveranciersController.Index` the same one-line
 way as Invoices (`ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index"`). Same
 `SupplierIndexViewModel`/query as `Index.cshtml` — this is presentation only, no new controller
 logic beyond the toggle itself and a `ModalDeleteV2` action mirroring `InvoicesController`'s. Title
@@ -1587,8 +1601,8 @@ row would otherwise both carry it into the DOM at once.
 delete modal.
 
 ### Leveranciers/Klanten-tabellen — e-mail (8g), klikbare rij, dynamische titel/breadcrumb
-Three small, related fixes applied to both `Views/Leveranciers/IndexV2.cshtml` and
-`Views/Klanten/IndexV2.cshtml` in the same pass, all generic/shell-level (`gl-v2-shell.css`/
+Three small, related fixes applied to both `Views/Leveranciers/Core/IndexV2.cshtml` and
+`Views/Klanten/Core/IndexV2.cshtml` in the same pass, all generic/shell-level (`gl-v2-shell.css`/
 `gl-v2-shell.js`, not page-specific) since both tables needed the identical behavior.
 
 **E-mail in a table cell (design-handoff optie 8g).** Both pages rendered e-mail as a raw
@@ -3597,7 +3611,7 @@ DetailClients` → a client row. 12c is explicit that it's "zelfde shell, zelfde
 grid/row visual language, just for a client instead of a project. Built the same way as both invoice
 pages: real data traced field-by-field against `ClientAccountBO`/`ClientContactBO`/`UnitBO`/
 `ChangeOrderBO`/`InvoiceListItemBO` before writing a line of the view, deviations from the mockup
-documented in-file rather than fabricated (`Views/Klanten/DetailV2.cshtml`'s own top comment lists
+documented in-file rather than fabricated (`Views/Klanten/Core/DetailV2.cshtml`'s own top comment lists
 all seven).
 
 **Two backend gaps the user explicitly authorized filling in** (unlike every prior gl-v2 page this
@@ -5146,7 +5160,7 @@ rooktest rendert wel, maar is niet bekeken).
 ## Projecten/UnitFormV2 — eenheid toevoegen én bewerken (design-handoff 16b + 16c)
 
 `ProjectenController.AddUnit` en `.EditUnit` sturen in de gl-v2-lay-out door naar **één** view,
-`Views/Projecten/UnitFormV2.cshtml` — 16c's eigen regel: *"Nieuw gebruikt exact het formulier van 16b:
+`Views/Projecten/Units/UnitFormV2.cshtml` — 16c's eigen regel: *"Nieuw gebruikt exact het formulier van 16b:
 zelfde secties, zelfde volgorde, lege velden met voorbeeld-placeholders."* Wat verschilt (titel "Nieuwe
 eenheid", knoppen "Eenheid aanmaken" + "Opslaan en nog een", de kopieerkaart bovenaan) hangt aan
 `UnitFormV2Vm.IsNew`, niet aan een tweede pagina. De controllerlogica staat in een eigen
@@ -5369,7 +5383,7 @@ geen tweede, gekloonde lijst hoeft te bestaan die met filters en selectie mee zo
 
 ## Projecten/DetailDocsV2 — documenten van een project (design-handoff 17a t/m 17e)
 
-`ProjectenController.DetailDocs` schakelt in de gl-v2-lay-out door naar `Views/Projecten/DetailDocsV2.cshtml`
+`ProjectenController.DetailDocs` schakelt in de gl-v2-lay-out door naar `Views/Projecten/Docs/DetailDocsV2.cshtml`
 (actielogica in de partial `ProjectenController.DocsV2.cs`, de legacy pagina/acties blijven onaangeroerd). **Eén
 pagina voor vijf mockups**: 17a (mappen, koppelingen, revisies, delen in één scherm), 17b (uploaden als revisie,
 dezelfde kaart op elke detailpagina, wat de klant ziet), 17c (keuringen per eenheid), 17d (contracten per klant
@@ -5474,12 +5488,12 @@ POST = schrijven, "Delete"/"Remove" = verwijderen) zonder extra attributen.
 
 ### Projecten/ChangeOrderSignV2 en de publieke ondertekenpagina (sept 2026)
 Aanvulling op "Projecten/DetailDocsV2": een wijzigingsopdracht digitaal laten ondertekenen zonder klantportaal.
-- **Intern** (`ProjectenController.ChangeOrderSign.cs`, `Views/Projecten/ChangeOrderSignV2.cshtml`, gl-v2, kaarten zoals het eenheidsformulier):
+- **Intern** (`ProjectenController.ChangeOrderSign.cs`, `Views/Projecten/ChangeOrders/ChangeOrderSignV2.cshtml`, gl-v2, kaarten zoals het eenheidsformulier):
   samenvatting van de opdracht (bedragen incl. btw uit `ChangeOrderBO.Totaal` + btw-percentage van het project), lijst ondertekenaars met
   status (wacht/geopend/getekend, referentie) en "Link opnieuw sturen" (nieuwe token, de vorige vervalt), en het verzendformulier
   (naam + e-mail per ondertekenaar, meerdere mogelijk). Zodra iemand getekend heeft, kan de groep niet meer gewijzigd worden.
   Ingang: icoon "Digitaal ter ondertekening sturen" in `Klanten/Partials/ChangeOrders`; de pagina forceert de gl-v2-lay-out.
-- **Publiek** (`SigningController`, `Views/Signing/*`): bewust GEEN BaseController en geen gl-v2-shell — eigen, lichte pagina die op elk toestel
+- **Publiek** (`SigningController`, `Views/Ondertekenen/Signing/*`): bewust GEEN BaseController en geen gl-v2-shell — eigen, lichte pagina die op elk toestel
   werkt. Token in het pad (`/ondertekenen/{token}`), `no-store`/`noindex`/`no-referrer`, het PDF loopt via onze server (same-origin iframe).
   Stappen: lezen → code aanvragen (mail) → code + volledige naam + aangevinkte akkoordtekst → ondertekenen. Foutmeldingen zijn algemeen
   (geen onderscheid tussen onbekende en verlopen token buiten "verlopen").
@@ -5928,6 +5942,39 @@ aangeleverde logo van 2362x2362 px, bijgesneden op het beeldmerk, op effen wit),
   geen eigen `.gl-v2-topbar-back` heeft en niet op het dashboard: `history.back()`, anders `/`.
 - Desktop: met/zonder PWA-bestanden byte-voor-byte dezelfde screenshots op 1440x900 (3 pagina's).
 - Niet gewijzigd: pull-to-refresh/`overscroll-behavior` (overleg nodig), sessieduur, auth.
+
+### Follow-up (okt. 2026) — de standalone-topbar-fix werkte enkel op het dashboard, plus een vastgeprikte terug-/menuknop
+Gemeld: op de PWA (beginscherm-app) stond de topbar enkel op Home/Index écht onder de notch/dynamic
+island vandaan; op elke andere pagina liep ze er gewoon achter, enkel de "essentiële" iconen nog
+zichtbaar. Oorzaak: `gl-v2-pwa.css` se eigen `.gl-v2 .gl-v2-topbar { padding-top: env(safe-area-
+inset-top) }` (zie hierboven) en `gl-v2-shell.css` se `.gl-v2-topbar:has(.gl-v2-topbar-badges) {
+padding-top: 10px }` (voor `@section PageTitleBadges`, ≤1023.98px) hebben EXACT dezelfde
+specificiteit (twee klasse-equivalenten) — bij een gelijkspel wint de later geladen stylesheet, en
+`_PwaHead` (dus `gl-v2-pwa.css`) laadt vóór `gl-v2-tokens.css`/`gl-v2-shell.css` in `_LayoutV2.cshtml`.
+De aanname in de eerste regel van dit bestand ("draagt `.gl-v2` voor specificiteit boven de shell-
+regels, ongeacht laadvolgorde") klopte dus NIET voor deze ene botsing — enkel voor regels zonder een
+even-specifieke tegenhanger in shell.css. Elke pagina ZONDER badges (zoals het dashboard) miste die
+tegenhanger, dus zag enkel de juiste inset-padding. Opgelost met een extra, specifiekere regel
+(`.gl-v2 .gl-v2-topbar:has(.gl-v2-topbar-badges) { padding-top: calc(10px + env(...)) }`, drie
+klasse-equivalenten) die wint ongeacht laadvolgorde — zie "Vóór je nieuwe pagina-CSS schrijft" bovenaan
+dit bestand, dezelfde les: een bestaande regel die "zou moeten werken" alsnog expliciet controleren
+op een botsing met een even-specifieke latere regel.
+
+**Vastgeprikte terug-/menuknop op gsm.** De topbar zelf is geen `position:sticky`/`fixed` (scrollt
+gewoon mee met de pagina — geen aparte scrollcontainer, zie `.gl-v2-content` se eigen gedrag), dus
+`.gl-v2-hamburger`/`.gl-v2-topbar-back` verdwenen tot nu toe uit beeld zodra je voorbij de topbar
+scrolde. Twee nieuwe elementen (`.gl-v2-topbar-pin-back`/`.gl-v2-topbar-pin-hamburger`,
+`_LayoutV2.cshtml`, net ná `</header>`) zijn visuele duplicaten — gevulde groene cirkels met hetzelfde
+icoon, `position: fixed`, `top: calc(env(safe-area-inset-top) + 10px)` — die onzichtbaar
+(`opacity:0;pointer-events:none`) blijven tot `gl-v2-shell.js` se `initGlV2TopbarPin()` (een
+`IntersectionObserver` op `.gl-v2-topbar`, exact hetzelfde patroon als de "weggescrold"-foutenbalk
+van `gl-v2-error-summary.js`) meldt dat de echte topbar volledig uit beeld is — dan krijgen ze
+`.is-visible` en faden ze in. `aria-hidden="true"` + `tabindex="-1"`: de échte, toegankelijke knoppen
+blijven die in de topbar zelf; dit is een zuiver visuele sneltoets voor aanraakgebruikers tijdens het
+scrollen, geen tweede manier om via toetsenbord/schermlezer bij dezelfde actie te komen. De geprikte
+terugknop is een gewone `<a href>`; de geprikte hamburger stuurt zijn klik door naar de echte knop
+(`#gl-v2-hamburger-btn`) i.p.v. het open/dicht-gedrag te dupliceren.
+
 ## Stappenplan (design-handoff punt 27, `design-handoff/CRM Stappenplan.dc.html` + `Stappenplan.dc.html`) — project-wijd component
 
 27: *"Stappenplan als één component — de stappenbalken uit 20d, 22d en 22h, en de budgetflow. Vier

@@ -82,7 +82,7 @@ bevestigd de oudere versie. Vertrekpunt wordt overal A (signingmodule), niet B.
 3. **Datamodel/bewijs:** A's 8 tabellen (055/056) worden de structuur; `DocumentSignatures` (B,
    049 §5 + 054) wordt uitgefaseerd.
 4. **PDF + handtekeningblok:** QuestPDF (`ChangeOrderDocument.cs`, A) blijft de enige renderer;
-   B's handtekeningblok (`Views/Projecten/ChangeOrderPDF.cshtml`) is het inhoudelijke model voor
+   B's handtekeningblok (`Views/Projecten/ChangeOrders/ChangeOrderPDF.cshtml`) is het inhoudelijke model voor
    het QuestPDF-ondertekeningsblad. Rotativa-view + `ChangeOrderPdfService` (B) verdwijnen.
 5. **Documentenkoppeling:** `OnCaseCompletedAsync` in `ChangeOrderSigningSource.cs` (A) schrijft
    het definitieve PDF als `ProjectDocs`-revisie (zoals B deed via `AttachSignedRevision`).
@@ -94,8 +94,8 @@ bevestigd de oudere versie. Vertrekpunt wordt overal A (signingmodule), niet B.
 8. **Migraties:** nieuwe migratie om `DocumentSignatures` (+ evt. `ProjectDocs.ChangeOrderId`) echt
    te verwijderen, ná controle dat er geen data/afhankelijkheden meer op staan.
 
-**Gevolg:** `ProjectenController.ChangeOrderSign.cs`, `Views/Projecten/ChangeOrderSignV2.cshtml`,
-`ChangeOrderPdfService.cs`, `Views/Projecten/ChangeOrderPDF.cshtml` (Rotativa), `FacadeCore/ISigningService.cs`
+**Gevolg:** `ProjectenController.ChangeOrderSign.cs`, `Views/Projecten/ChangeOrders/ChangeOrderSignV2.cshtml`,
+`ChangeOrderPdfService.cs`, `Views/Projecten/ChangeOrders/ChangeOrderPDF.cshtml` (Rotativa), `FacadeCore/ISigningService.cs`
 (root) en `ServiceCore/Documents/SigningService.cs` zijn kandidaat voor verwijdering zodra hun
 functionaliteit in A herbouwd is. Niet vooraf verwijderen — pas nadat de vervangende functionaliteit
 in A werkt (anders staat de app zonder werkende signing-flow).
@@ -202,7 +202,7 @@ in A werkt (anders staat de app zonder werkende signing-flow).
 - [x] Vergrendeling: `EditChangeOrder` GET/POST en `DeleteChangeOrder` weigeren bij dossier Draft/Open
       (`ActiveSigningCaseAsync`, enkel als de module aanstaat). `DuplicateChangeOrder` blijft toegelaten:
       dupliceren wijzigt de bron niet.
-- [x] `SigningAdminController` + `Views/SigningAdmin/{Start,Dossier,Index}.cshtml`, `gl-v2-signing.css/.js`,
+- [x] `SigningAdminController` + `Views/Ondertekenen/SigningAdmin/{Start,Dossier,Index}.cshtml`, `gl-v2-signing.css/.js`,
       `Models/Signing/SigningAdminVms.cs` (incl. `SigningLabels`), kruimelpaden
 - [x] Ingang op de legacy lijst (`Klanten/Partials/ChangeOrders.cshtml`: status + icoon + slotje) en
       "Ondertekeningen" in `GlV2/_ProjectInnerMenuV2` (feature-vlag + permissie `Signing`)
@@ -210,7 +210,7 @@ in A werkt (anders staat de app zonder werkende signing-flow).
 - [x] `_LayoutV2`: `ViewData["GlV2NoProjectMenu"]` → `IgnoreSection("ProjectMenu")` (Razor kan geen `@section` in `@if`)
 - [x] DESIGN.md, DEPLOY.md, ONDERTEKENEN_VOORSTEL.md bijgewerkt; build groen; tests 31/33 (2 bestaande fouten)
 - [ ] **Browsertest** van alles hierboven (zie "Eerst te doen"); visuele controle van de PDF
-- [ ] Beslissen: `Views/Projecten/ChangeOrderPDF.cshtml` (+ `ChangeOrderFooter`-actie) verwijderen zodra de
+- [ ] Beslissen: `Views/Projecten/ChangeOrders/ChangeOrderPDF.cshtml` (+ `ChangeOrderFooter`-actie) verwijderen zodra de
       QuestPDF-versie goedgekeurd is
 
 ### Fase 2 — ondertekenpagina ✅ gebouwd + eerste browsertest gedaan (2026-09-28)
@@ -287,7 +287,7 @@ in A werkt (anders staat de app zonder werkende signing-flow).
   - **Verwarring over de twee verschillende SHA-256's** op `/verifieer/{id}`: "origineel" en
     "ondertekend document" zijn *bewust* verschillend (het ondertekende PDF heeft het
     ondertekeningsblad erachter geplakt, dat verandert de hash) — maar de pagina legde dat nergens uit.
-    Tekst op `Views/Verifieer/Index.cshtml` aangevuld: welke hash je met welke kopie vergelijkt, en
+    Tekst op `Views/Ondertekenen/Verifieer/Index.cshtml` aangevuld: welke hash je met welke kopie vergelijkt, en
     waarom ze altijd verschillen.
 - [ ] **Herbevestigen in de browser** dat alle fixes kloppen (nieuw dossier doorlopen: lettertype,
       stap-volgorde, geen audit-download, handtekeningvak verplicht + zichtbaar als stempel op het blad).
@@ -373,7 +373,7 @@ Onderdeel van de bredere Financieel-herwerking (gl-v2, design-handoff 20-22): sc
       evt. sluiten), maar aangestuurd door een beheerder via `partyId` i.p.v. de sessie van de
       ondertekenaar zelf (bv. telefonische weigering).
 - [x] `SigningAdminController`: nieuwe acties `UploadSigned` (multipart POST) en `Decline` (POST reden).
-      `Views/SigningAdmin/Dossier.cshtml`: "Getekende versie opladen" in het dossier-menu (multipart-
+      `Views/Ondertekenen/SigningAdmin/Dossier.cshtml`: "Getekende versie opladen" in het dossier-menu (multipart-
       modal), "Weigering registreren" per partij-rij (gedeelde modal, partyId via data-attributen,
       Bootstrap `relatedTarget`) — naast de al bestaande Herinneren/Nieuwe link/Annuleren.
 - [ ] Browsertest: beide nieuwe acties in `SigningAdmin/Dossier` uittesten (upload met een echte PDF,

@@ -782,6 +782,11 @@
     font-size: 20px;
 }
 
+/* Vastgeprikte terug-/menuknop (zie de phone-breakpoint hieronder voor het echte uiterlijk) —
+   gsm-only net als .gl-v2-hamburger hierboven; op desktop/tablet bestaat het element in de DOM
+   (_LayoutV2.cshtml) maar rendert het nergens. */
+.gl-v2-topbar-pin-btn { display: none; }
+
 /* Mobile-only search icon slot (see the phone breakpoint for its real styling) — hidden by
    default so it has no effect above the phone breakpoint. */
 .gl-v2-mobile-search-stub { display: none; }
@@ -1105,6 +1110,36 @@
         background: transparent;
         color: var(--gl-v2-surface);
     }
+
+    /* Vastgeprikte terug-/menuknop — twee visuele duplicaten van .gl-v2-topbar-back/.gl-v2-hamburger
+       hierboven, enkel zichtbaar zodra de echte topbar is weggescrold (gl-v2-shell.js, initGlV2TopbarPin,
+       IntersectionObserver). Zelfde ronde-witte-op-groen-taal, nu als een gevulde cirkel (i.p.v. enkel
+       een rand) zodat ze ook leesbaar blijven zwevend bóven gewone paginakaarten/-achtergrond — daar
+       is geen groene topbar-achtergrond om de witte omtrek tegen af te tekenen. */
+    .gl-v2-topbar-pin-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, .35);
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        box-shadow: 0 6px 16px -6px rgba(0, 83, 45, .55);
+        font-size: 16px;
+        text-decoration: none;
+        z-index: 30;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-6px);
+        transition: opacity .15s ease, transform .15s ease;
+    }
+    .gl-v2-topbar-pin-back { left: 14px; }
+    .gl-v2-topbar-pin-hamburger { right: 14px; font-size: 18px; }
+    #gl-v2-topbar-pin.is-visible .gl-v2-topbar-pin-btn { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
     .gl-v2-topbar {
         background: var(--gl-v2-primary);

@@ -69,7 +69,7 @@ al bestaande, gedocumenteerde conventies in `DESIGN.md` (`gl-page-header`, `gl-f
   UI-control.
 - Bestanden: `CPMCore/Controllers/TrajectSjabloonAdminController.cs` (stats + Dupliceren-actie),
   `CPMCore/Models/Traject/TrajectSjabloonAdminVm.cs` (stats-properties + `StatsSubtitle`),
-  `CPMCore/Views/TrajectSjabloonAdmin/Edit.cshtml` (herbouwd), `CPMCore/wwwroot/js/
+  `CPMCore/Views/Instellingen/TrajectSjabloonAdmin/Edit.cshtml` (herbouwd), `CPMCore/wwwroot/js/
   trajectsjabloon.admin.js` (volledig herschreven), `CPMCore/wwwroot/css/traject.css` (nieuwe
   `.gl-tsa-*`-klassen toegevoegd, bestaande klassen ongewijzigd/hergebruikt).
 - **Geen DB-migratie nodig** — geen schemawijziging, enkel presentatie/UX + twee al bestaande maar
@@ -127,7 +127,7 @@ de gebruiker had zelf al precieze, eerstehands probleembeschrijvingen aangelever
   een volledige `gl-form-shell`-migratie van deze pagina zijn expliciet **niet** meegenomen — apart, later.
 - Bestanden: `BOCore/BO/Project/Traject/VergunningChecklistDefaults.vb` (nieuw),
   `BOCore/Enum/VoortgangFase.vb` (Display-namen toegevoegd), `ServiceCore/Traject/ProjectDossierService.cs`
-  (dedup), `CPMCore/Views/TrajectSjabloonAdmin/Edit.cshtml`, `CPMCore/wwwroot/js/trajectsjabloon.admin.js`
+  (dedup), `CPMCore/Views/Instellingen/TrajectSjabloonAdmin/Edit.cshtml`, `CPMCore/wwwroot/js/trajectsjabloon.admin.js`
   (grotendeels herschreven), `CPMCore/wwwroot/css/traject.css`. Geen DB-migratie nodig — puur
   presentatie/UX over dezelfde bestaande payload-contract (BOCore-BO's ongewijzigd).
 - Build geverifieerd (0 `error CS`/`error RZ`) + JS-syntax gecontroleerd (`node --check`). **Nog niet
@@ -234,7 +234,7 @@ van de VS-sessie van de gebruiker, en MVC1000-warnings).
    nieuwe tabel/migratie nodig** — leest bestaande `Mijlpaal`-data. Build geverifieerd (0 errors).
 2. ✅ **`DashboardType.Ontwikkelaar` (4) + `DashboardType.Verkoper` (5)** toegevoegd
    (`CPMCore/Models/DashboardType.cs`) + geselecteerbaar gemaakt in de admin-UI
-   (`Views/UserAdmin/Modals/_UserAdminModals.cshtml`, twee `<select id="edit-dashboard-type">`'s).
+   (`Views/Instellingen/UserAdmin/Modals/_UserAdminModals.cshtml`, twee `<select id="edit-dashboard-type">`'s).
    `Views/Home/Index.cshtml` dispatcht nu ook naar `_DashboardOntwikkelaar.cshtml` (KPI-strip +
    "vergunningen in opvolging"-tabel + "projecten per fase"-funnel + keypoints/taken-widgets) en
    `_DashboardVerkoper.cshtml` (KPI-strip + "verkooppijplijn per eenheid"-tabel + "eenheden per

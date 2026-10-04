@@ -70,8 +70,8 @@ Dit is het grootste nieuwe onderdeel. Het koppelt velden in de budget-wizard aan
 | `CPMCore/Models/Projecten/ProjectModel.cs` | `FormulaVoorstellingen` op `BudgetGegevensModel` |
 | `CPMCore/Controllers/InstellingenController.cs` | Koppelingen laden + 2 nieuwe acties |
 | `CPMCore/Controllers/ProjectenController.cs` | `BudgetFormulaService` geïnjecteerd + gebruikt in GET |
-| `CPMCore/Views/Projecten/BudgetGegevens.cshtml` | Voorstel-badge + Overnemen-knop |
-| `CPMCore/Views/Instellingen/KostprijsMaterialen.cshtml` | Tab "Formule koppelingen" |
+| `CPMCore/Views/Projecten/Budget/BudgetGegevens.cshtml` | Voorstel-badge + Overnemen-knop |
+| `CPMCore/Views/Instellingen/Budget/KostprijsMaterialen.cshtml` | Tab "Formule koppelingen" |
 
 ### SQL uitvoeren (verplicht op nieuwe PC)
 
@@ -315,7 +315,7 @@ itsme-ondertekening (handmatig registreren), bestelbon-PDF, automatische herinne
 
 ### Ondertekenen van wijzigingsopdrachten via link (sept 2026)
 Publiek: `SigningController` (`/ondertekenen/{token}`, AllowAnonymous, eigen views in `Views/Signing`); intern:
-`ProjectenController.ChangeOrderSign.cs` + `Views/Projecten/ChangeOrderSignV2.cshtml`; logica `ServiceCore/Documents/SigningService.cs`
+`ProjectenController.ChangeOrderSign.cs` + `Views/Projecten/ChangeOrders/ChangeOrderSignV2.cshtml`; logica `ServiceCore/Documents/SigningService.cs`
 (tokens/codes enkel als SHA-256, code 10 min / 5 pogingen / 5 per uur); PDF via `CPMCore/Services/ChangeOrderPdfService.cs` (hergebruikt
 `ChangeOrderPDF.cshtml`, nu met handtekeningblok); storage via `DocStorageService`. **Migratie 054 na 049.** Juridisch: JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md.
 Vereist `App:BaseUrl` (voor de link in de mail), de e-mailconfiguratie (`IEmailSender`) en wkhtmltopdf (Rotativa) op de server.

@@ -250,6 +250,25 @@
                     </button>
                 </header>
 
+                @* Vastgeprikte terug-/menuknop (gsm) — zodra de echte topbar hierboven voorbij gescrold
+                   is, blijven deze twee ronde knoppen zweven op exact dezelfde plek (gl-v2-shell.js se
+                   initGlV2TopbarPin, IntersectionObserver op .gl-v2-topbar — zelfde patroon als de
+                   "weggescrold"-foutenbalk, gl-v2-error-summary.js). Visuele snelkoppeling, dus
+                   aria-hidden + tabindex="-1": de ECHTE, toegankelijke knoppen blijven die hierboven in
+                   de topbar zelf, dit is enkel een zichtbare duplicaat terwijl die uit beeld is. Enkel
+                   zichtbaar op gsm (CSS); op desktop/tablet bestaat het element wel maar doet niets. *@
+                <div class="gl-v2-topbar-pin" id="gl-v2-topbar-pin" aria-hidden="true">
+                    @if (ViewData["BackUrl"] is string pinBackUrl && !string.IsNullOrWhiteSpace(pinBackUrl))
+                    {
+                        <a href="@pinBackUrl" class="gl-v2-topbar-pin-btn gl-v2-topbar-pin-back" tabindex="-1">
+                            <i class="ph ph-caret-left" aria-hidden="true"></i>
+                        </a>
+                    }
+                    <button type="button" class="gl-v2-topbar-pin-btn gl-v2-topbar-pin-hamburger" id="gl-v2-topbar-pin-hamburger-btn" tabindex="-1">
+                        <i class="ph ph-list" aria-hidden="true"></i>
+                    </button>
+                </div>
+
                 @{
                     // @@section moet onvoorwaardelijk op view-toplevel staan (geen @@if eromheen),
                     // dus een view die de sectie altijd registreert maar het bepaalde tak/permissie

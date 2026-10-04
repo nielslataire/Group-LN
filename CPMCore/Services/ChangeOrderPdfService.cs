@@ -40,7 +40,7 @@ public class ChangeOrderPdfService
         model.Signatures = evidence ?? new List<SignatureEvidence>();
         model.DigitalSigningPending = pendingDigitalSigning;
 
-        var pdf = new ViewAsPdf("~/Views/Projecten/ChangeOrderPDF.cshtml", model)
+        var pdf = new ViewAsPdf("~/Views/Projecten/ChangeOrders/ChangeOrderPDF.cshtml", model)
         {
             PageOrientation = Orientation.Portrait,
             PageMargins = new Margins(10, 5, 0, 5),

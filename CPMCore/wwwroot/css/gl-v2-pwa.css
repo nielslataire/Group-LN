@@ -45,4 +45,19 @@
     .gl-v2 .gl-v2-mobile-menu-header { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
     /* Legacy-layout (geen gl-v2): hele pagina onder de statusbalk uit. */
     body:not(:has(.gl-v2)) { padding-top: env(safe-area-inset-top, 0px); }
+
+    /* Bug (okt. 2026, "topbar enkel op het dashboard volledig zichtbaar"): op elke pagina mét
+       @section PageTitleBadges wint gl-v2-shell.css se eigen
+       `.gl-v2-topbar:has(.gl-v2-topbar-badges) { padding-top: 10px; height: auto }` (≤1023.98px) van
+       de regel hierboven — exact dezelfde specificiteit (twee klasse-equivalenten), en shell.css laadt
+       NA deze stylesheet (_LayoutV2.cshtml: _PwaHead vóór de gl-v2-tokens/-shell-links), dus wint bij
+       een gelijkspel. Resultaat: een vaste 10px in plaats van de echte inset, topbar (en z'n titel)
+       zakt weg achter de notch/dynamic island/statusbalk — enkel het dashboard (zonder badges, dus
+       zonder die regel) oogde correct. Hier dezelfde badges-situatie met hogere specificiteit
+       (`.gl-v2` erbij) overschrijven lost het op, ongeacht laadvolgorde — zelfde aanpak als de regels
+       hierboven al voor zichzelf claimen maar hier voor het eerst ook echt nodig hadden. */
+    .gl-v2 .gl-v2-topbar:has(.gl-v2-topbar-badges) {
+        padding-top: calc(10px + env(safe-area-inset-top, 0px));
+        min-height: calc(62px + env(safe-area-inset-top, 0px));
+    }
 }

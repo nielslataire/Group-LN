@@ -7,6 +7,7 @@
 
     initRailFlyouts();
     initMobileMenu();
+    initGlV2TopbarPin();
     initMobileQuickActions();
     initModalButtonLoading();
     initToasts();
@@ -146,6 +147,30 @@
                 });
             });
         }
+    }
+
+    // Vastgeprikte terug-/menuknop (gsm, okt. 2026): de topbar zelf scrollt gewoon mee (geen
+    // position:sticky/fixed), dus deze twee ronde knoppen zijn een visueel duplicaat dat pas
+    // verschijnt zodra .gl-v2-topbar volledig uit beeld gescrold is — zelfde IntersectionObserver-
+    // patroon als de "weggescrold"-foutenbalk (gl-v2-error-summary.js se refreshStickyVisibility).
+    // De geprikte terugknop is een gewone <a href>, geen JS nodig; de geprikte hamburger stuurt zijn
+    // klik gewoon door naar de echte knop i.p.v. het open/dicht-gedrag hier te dupliceren.
+    function initGlV2TopbarPin() {
+        var pin = document.getElementById("gl-v2-topbar-pin");
+        var topbar = document.querySelector(".gl-v2-topbar");
+        if (!pin || !topbar) return;
+
+        var pinHamburger = document.getElementById("gl-v2-topbar-pin-hamburger-btn");
+        var realHamburger = document.getElementById("gl-v2-hamburger-btn");
+        if (pinHamburger && realHamburger) {
+            pinHamburger.addEventListener("click", function () { realHamburger.click(); });
+        }
+
+        if (!("IntersectionObserver" in window)) return;
+        var observer = new IntersectionObserver(function (entries) {
+            pin.classList.toggle("is-visible", !entries[0].isIntersecting);
+        }, { threshold: 0 });
+        observer.observe(topbar);
     }
 
     // Optie 6b: elke pagina die meer dan 4 @section MobileQuickActions-tegels meegeeft, ziet enkel

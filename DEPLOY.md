@@ -149,6 +149,14 @@ gemeenten verminderen of `Sources.Immoweb.DelayBetweenRequestsSeconds` verlagen.
 2. De inhoud van `C:\BUILDCPM` uploaden naar de site bij SmarterASP (controlepaneel of FTP).
 3. Schema-wijzigingen: het bijhorende script uit `_migrations/` handmatig uitvoeren op de live database (zie de kop van elk script; ze zijn idempotent en additief).
 
+Mappenstructuur (okt. 2026, geen gedragswijziging): Views/ heeft 15 modulemappen. Per module staan de
+acties in partials `<Controller>Controller.<Groep>.cs` en de paginaviews in `Views/<Module>/<Groep>/`;
+satelliet-controllers (UserAdmin, ProjectsIssues, SigningAdmin, ContractorPortal, …) hebben hun views in de
+map van hun module. Razor vindt dat via `Helpers/CustomViewLocationExpander.cs` (`FeatureFolders` en
+`ControllerFolders`); een nieuwe groeps- of satellietnaam hoort daar erbij. Absolute viewpaden
+(`~/Views/…`) omzeilen die expander en moeten de submap zelf noemen. Stand en patroon:
+`STRUCTUREREN_VOORTGANG.md`.
+
 ## Elektronisch ondertekenen (signingmodule)
 
 Ontwerp en fasering: `ONDERTEKENEN_VOORSTEL.md`. Uitrol gebeurt "donker": de code staat in de build,
