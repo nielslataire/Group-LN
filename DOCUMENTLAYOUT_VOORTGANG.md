@@ -49,24 +49,36 @@ de bestaande wijzigingsopdracht-smoke-test blijft bestaan maar wordt niet actief
 wijzigingsopdracht aan de beurt is, wordt dit waarschijnlijk een eigen `Kicker`/`Content`-pad binnen
 dezelfde klasse, of een eigen klasse — ter plekke te beslissen.
 
-## ExtendVertical werkt niet voor "body vult de ruimte op, blok hangt boven de voet" (2026-10-05)
-Geprobeerd voor de Voorwaarden/Voor-akkoord-sectie (punt 35a: lege ruimte groeit, het blok hangt net
-boven de voet in plaats van meteen op de totalen te volgen). Twee varianten getest, geen van beide
-werkte: (1) een lege `col.Item().ExtendVertical()`-spacer tussen het lichaam en het blok, (2)
-`ExtendVertical()` rechtstreeks op het lichaam zelf. **Bewijs via een tijdelijke rode achtergrond op
-de spacer**: die vulde wel degelijk de volledige resterende paginaruimte op — maar daardoor bleef er
-nul plaats over voor wat erna komt, en schoof het hele Voorwaarden/Akkoord-blok alsnog naar een
-volgende pagina, zelfs op een pagina met duidelijk zichtbare restruimte. Conclusie:
-`ExtendVertical()` reserveert geen ruimte voor latere, vastgroottes siblings in dezelfde `Column` —
-het claimt altijd ALLES wat rest op de huidige pagina, wat het geschikt maakt als allerlaatste
-element (zoals het label onderaan `Handtekeningvak`, dat wél werkt), maar niet om twee dingen op
-dezelfde pagina te houden mét opvulling ertussen.
+## "Body vult de ruimte op, blok hangt boven de voet" — niet gelukt, drie pogingen (2026-10-05)
+Doel (punt 35a): lege ruimte onderaan groeit mee, Voorwaarden/Voor-akkoord hangt altijd net boven de
+voet i.p.v. meteen op de totalen te volgen. Drie onafhankelijke technieken geprobeerd, **geen enkele
+werkte in deze QuestPDF-versie** (pakket `QuestPDF 2025.7.1`, zie `CPMCore.csproj`):
 
-Voorlopig: gewoon een vaste afstand (16pt) na de totalen, geen dynamische opvulling. Verdere opties
-als dit toch nodig blijkt: (a) de resterende paginahoogte zelf berekenen (paginaformaat minus
-band/kop/voet, per paginatype anders) en daarmee een expliciete `MinHeight` zetten in plaats van
-`ExtendVertical` te vertrouwen — precies, maar fragiel bij elke toekomstige maatwijziging; (b)
-aanvaarden dat het blok gewoon na de inhoud komt, zonder opvulling — simpel en robuust, wat nu staat.
+1. Lege `col.Item().ExtendVertical()`-spacer tussen lichaam en blok.
+2. `ExtendVertical()` rechtstreeks op het lichaam (`Body`) zelf.
+3. `col.Item().Extend().AlignBottom().ShowEntire().Element(VoorwaardenEnAkkoord)` — een extern
+   aangereikte aanpak (Extend() op het láátste item zelf, niet op iets ervóór), die in theorie net
+   dit probleem (geen ruimte reserveren voor wat erna komt) zou omzeilen.
+
+**Bewijs, niet enkel theorie**: bij elke poging een tijdelijke felroze achtergrond (`Background(
+"#FFCCCC")`) gezet op het element dat zogezegd zou uitrekken, dan gerenderd en bekeken.
+- Pogingen 1/2: de roze vlek vulde wél degelijk de volledige resterende paginaruimte — maar net
+  daardoor bleef er nul plaats over voor wat erna komt, en schoof het hele Voorwaarden/Akkoord-blok
+  alsnog in zijn geheel naar de volgende pagina, zelfs op een pagina met duidelijk zichtbare
+  restruimte.
+- Poging 3: de roze vlek bleef strak rond de natuurlijke inhoud (geen uitrekking te zien), zowel met
+  de achtergrond binnenin `VoorwaardenEnAkkoord` als — om een `.Element()`-grenseffect uit te
+  sluiten — met de achtergrond vóór `.Element(...)` in dezelfde keten. Extend() had hier dus
+  zichtbaar geen enkel effect.
+
+Conclusie: dit specifieke "groeiend lichaam + vastgrootte-blok op dezelfde pagina"-patroon lukt niet
+betrouwbaar in deze omgeving met de geprobeerde QuestPDF-aanroepen. Mogelijk een andere combinatie
+werkt wel (bv. een expliciete `MinHeight` berekend uit het paginaformaat in plaats van op
+Extend()/ExtendVertical() te vertrouwen), maar dat vergt per paginatype (volledige vs. compacte kop)
+een aparte berekening — niet geprobeerd, risico op evenveel fragiliteit voor weinig visuele winst.
+
+**Huidige, werkende stand**: een vaste afstand (16pt) na de totalen, geen dynamische opvulling —
+simpel, robuust, en het document blijft correct op één pagina voor een normale offerte.
 
 ## Verfijning na vergelijking met het 35d-voorbeeld (2026-10-05)
 Niels deelde een screenshot van de echte 35d-pagina uit het design-handoff-canvas; rechtstreeks
@@ -122,13 +134,13 @@ Alles hier is nieuw en onafhankelijk van `GroupLnPdfDocument`/`ChangeOrderDocume
 
 | Bestand | Inhoud |
 |---|---|
-| `GlV2PdfTheme.cs` | Kleuren (`Groen #00532D`, `Inkt`, `Gedempt`, `Licht`, `Lijn`, `VlakGroen`, `VlakGroepsrij`, `VlakWarm`, `AccentGroupLn`) en maten (zijmarge 18mm, band 6mm, logo 16/10mm) — letterlijk punt 36.1/36.2/36.4. |
+| `GlV2PdfTheme.cs` | Kleuren (`Groen #00532D`, `Inkt`, `Gedempt`, `Licht`, `Lijn`, `VlakGroen`, `VlakGroepsrij`, `VlakWarm`, `AccentGroupLn`) en maten (zijmarge 18mm, band 6mm, logo volledige kop 28mm — groter dan het ontwerp's 16mm, zie "Verfijning" — compacte kop 10mm) — letterlijk punt 36.1/36.2/36.4, logo-maat bewust aangepast. |
 | `GlV2PdfFonts.cs` | Registreert Playfair Display (enkel gewicht 500, het enige dat het ontwerp gebruikt) en IBM Plex Sans (400/500/600/700) uit `wwwroot/fonts/*.ttf`. Losstaand van `GroupLnFonts` (Avenir, legacy). |
 | `GlV2PdfFormat.cs` | Enum `A4Staand`/`A4Liggend`/`A3Staand`/`A3Liggend` → QuestPDF `PageSize`. |
 | `GlV2PdfCompanyInfo.cs` + `Configuration/GlV2PdfCompanyOptions.cs` | Bedrijfsgegevens voor kop/voet. Niet de primaire bron (zie hieronder) — enkel het laatste-redmiddel-fallback als er voor een project écht geen facturatiebedrijf te vinden is. Sectie `GlV2PdfCompany` in appsettings; `VatNumber`/`Iban`/`Phone` staan er bewust leeg in (zie "Bedrijfsgegevens" hieronder). |
-| `GlV2PdfDocumentBase.cs` | Abstracte `IDocument`-basis: groene band boven/onder, volledige kop (pagina 1) vs. compacte kop (vervolgpagina's, via QuestPDF's `ShowOnce()`/`SkipOnce()`), voet (adres · contact · rechtsvorm+btw+IBAN · "pagina x/y"), `SectionLabel`. |
-| `GlV2PdfComponents.cs` | Projectwijde bouwstenen die geen eigen documenttype hebben: `Fiche` (metadata-rooster), `Totalenblok` (78mm, groene eindbalk), `Handtekeningvak` (18mm, één vak, geen bedrijfsvak). |
-| `ChangeOrderDocumentV2.cs` | Het eerste echte document: offerte/wijzigingsopdracht, punt 35c/35d. |
+| `GlV2PdfDocumentBase.cs` | Abstracte `IDocument`-basis: groene band boven/onder, 10mm kop-inzet onder de band, volledige kop (pagina 1, enkel logo + titel/kicker/nummer) vs. compacte kop (vervolgpagina's, via QuestPDF's `ShowOnce()`/`SkipOnce()`), voet (adres · contact · rechtsvorm+btw, IBAN op een eigen regel rechts uitgelijnd · enkel "x / y" zonder "pagina"-tekst), `SectionLabel`. |
+| `GlV2PdfComponents.cs` | Projectwijde bouwstenen die geen eigen documenttype hebben: `MetaAdres` (label/waarde-rooster links + 72mm adresblok rechts, géén rand/titel — verving de eerdere `Fiche`, zie "Verfijning"), `Totalenblok` (78mm, groene eindbalk), `Handtekeningvak` (18mm, leeg vak, label onderaan, geen vooringevulde naam). |
+| `ChangeOrderDocumentV2.cs` | Het eerste echte document: offerte (35d). Wijzigingsopdracht (`IsQuote == false`) rendert nog mee via dezelfde klasse maar wordt niet actief getest (zie "Scope vanaf nu"). |
 
 **Nog te bouwen** (volgen bij het volgende document): btw-overzicht + betaalblok (factuur, 35b),
 projectfiche-rooster voor lijsten (35e/35f), kerncijfer-tegels (35g/35h), verbruiksbalk (35h, met
@@ -254,3 +266,136 @@ losstaande test dekt enkel de QuestPDF-compositie, niet de volledige HTTP/DI-ket
 5. Smoke-test met echte of realistische data vóór commit.
 6. Dit bestand bijwerken; nieuwe afwijkingen van het ontwerp hier documenteren, niet stilzwijgend
    laten passeren.
+
+## Smoke-test opnieuw aanmaken (op een andere pc of nieuwe sessie)
+Niet in git (bewust — eenmalig hulpmiddel, geen productiecode). Twee bestanden in een nieuwe map,
+bv. in de scratchpad-map van de sessie of gewoon ergens lokaal buiten de repo:
+
+**`PdfSmokeTest.csproj`**
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="VOLLEDIG_PAD_NAAR\CPMCore\CPMCore.csproj" />
+  </ItemGroup>
+</Project>
+```
+Pas `VOLLEDIG_PAD_NAAR` aan naar waar de repo op die machine staat
+(bv. `C:\Users\niels\source\repos\nielslataire\Group-LN\CPMCore\CPMCore.csproj`).
+
+**`Program.cs`**
+```csharp
+using CPMCore.Documents;
+using CPMCore.Documents.GlV2;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
+
+QuestPDF.Settings.License = LicenseType.Community;
+
+var fontsRoot = @"VOLLEDIG_PAD_NAAR\CPMCore\wwwroot\fonts";
+foreach (var f in new[] { "PlayfairDisplay-Medium.ttf", "IBMPlexSans-Regular.ttf", "IBMPlexSans-Medium.ttf", "IBMPlexSans-SemiBold.ttf", "IBMPlexSans-Bold.ttf" })
+{
+    using var s = File.OpenRead(Path.Combine(fontsRoot, f));
+    QuestPDF.Drawing.FontManager.RegisterFont(s);
+}
+
+var logoBco = File.ReadAllBytes(@"VOLLEDIG_PAD_NAAR\CPMCore\wwwroot\Img\groupln-logo.png");
+
+ChangeOrderPdfModel BuildModel(bool isQuote, int lineCount) => new()
+{
+    Id = 33,
+    PublicNumber = isQuote ? "OF-2026-014-v2" : null,
+    ProjectId = 64,
+    ClientAccountId = 174,
+    IsQuote = isQuote,
+    Date = DateOnly.FromDateTime(DateTime.Today),
+    ExpirationDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30)),
+    ProjectName = "Verkaveling Ketenhoekstraat",
+    ProjectAddressLine = "Ketenhoekstraat 12",
+    ProjectCityLine = "9000 Gent",
+    ProjectMunicipality = "Gent",
+    ClientSalutation = "Mevrouw",
+    ClientName = "Peeters Marie",
+    ClientEmail = "marie.peeters@example.be",
+    UnitsLine = "Woning Lot 3",
+    ClientStreetLine = "Kerkstraat 45",
+    ClientCityLine = "8630 Veurne",
+    Description = "Aanpassing van de keukeninrichting en toevoegen van een extra stopcontact in de woonkamer, zoals besproken tijdens het werfoverleg van vorige week. Dit omvat ook het verplaatsen van de spot boven het kookeiland.",
+    CommentHtml = "<p>Uitvoering voorzien in fase 2.</p><ul><li>Elektriciteit eerst</li><li>Dan afwerking</li></ul>",
+    Conditions = "Prijzen geldig tot de vervaldatum. Meerwerken worden gefactureerd volgens het facturatieplan van het project.",
+    VatPercentage = 21m,
+    Lines = Enumerable.Range(1, lineCount).Select(i => new ChangeOrderPdfLine
+    {
+        Description = $"Regel {i} — omschrijving van de werken die uitgevoerd worden inclusief materiaal en plaatsing",
+        UnitLabel = "m²",
+        TypeLabel = "Meerwerk",
+        Number = 3,
+        Price = 125.50m,
+        CommissionPercentage = 15m,
+    }).ToList(),
+    IssuerCompanyId = 4,
+    IssuerCompanyName = "BCO",
+    IssuerCompanyLegalLine = "BCO",
+    IssuerCompanyVatNumber = "BE0464670778",
+    IssuerCompanyIban = "BE68 0015 1882 9434",
+    IssuerCompanyStreet = "Klaverdries 53",
+    IssuerCompanyPostalCity = "9031 Drongen",
+    IssuerCompanyPhone = "09/216.49.50",
+    IssuerCompanyEmail = "info@bouwenconstructie.be",
+    IssuerCompanyWebsite = "www.bouwenconstructie.be",
+    IssuerCompanyLogoBytes = logoBco,
+};
+
+var company = new GlV2PdfCompanyInfo
+{
+    Name = "BCO",
+    Tagline = "a part of Group LN",
+    Street = "Klaverdries 53",
+    PostalCity = "9031 Drongen",
+    Phone = "09/216.49.50",
+    Email = "info@bouwenconstructie.be",
+    Website = "www.bouwenconstructie.be",
+    LegalForm = "BCO",
+    VatNumber = "BE0464670778",
+    Iban = "BE68 0015 1882 9434",
+    LogoBytes = logoBco,
+};
+
+var outDir = Path.Combine(AppContext.BaseDirectory, "out");
+Directory.CreateDirectory(outDir);
+
+void Render(string name, bool isQuote, int lineCount)
+{
+    try
+    {
+        var model = BuildModel(isQuote, lineCount);
+        var doc = new ChangeOrderDocumentV2(model, company, fontsAvailable: true);
+        var bytes = doc.GeneratePdf();
+        var path = Path.Combine(outDir, name + ".pdf");
+        File.WriteAllBytes(path, bytes);
+        var images = doc.GenerateImages(new ImageGenerationSettings { RasterDpi = 220 }).ToList();
+        for (var i = 0; i < images.Count; i++)
+            File.WriteAllBytes(Path.Combine(outDir, $"{name}_p{i + 1}.png"), images[i]);
+        Console.WriteLine($"OK  {name}: {bytes.Length} bytes, {images.Count} pagina('s) -> {path}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"FOUT {name}: {ex}");
+    }
+}
+
+Render("offerte_kort", isQuote: true, lineCount: 4);
+Render("offerte_leeg", isQuote: true, lineCount: 0);
+// Render("wijzigingsopdracht_lang", isQuote: false, lineCount: 35); // niet meer actief gevolgd, zie "Scope vanaf nu"
+
+Console.WriteLine("Klaar.");
+```
+
+Draaien: `dotnet run` in die map. Resultaat: `.pdf` + `_p1.png`/`_p2.png`/… per document in een
+`out/`-submap naast de build-output. **Lees het `.pdf`-bestand** (met de Read-tool of een PDF-viewer)
+voor de echte controle — de losse PNG's hebben een transparante achtergrond (zie "Visueel testen").

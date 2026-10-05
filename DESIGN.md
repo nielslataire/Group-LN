@@ -6240,12 +6240,18 @@ Een `appsettings`-fallback (`GlV2PdfCompanyOptions`) bestaat enkel voor het geva
 iets oplevert (zou niet mogen voorkomen); die velden staan bewust leeg tot iemand ze invult — een
 PDF naar een klant toont nooit een verzonnen btw-nummer of rekeningnummer.
 
-**Eerste document (okt. 2026): offerte/wijzigingsopdracht** (`ChangeOrderDocumentV2`, punt
-35c/35d), achter dezelfde actie als de legacy-PDF (`ProjectenController.ChangeOrders.ChangeOrderPDF`).
-Twee bekende, bewuste afwijkingen van het ontwerp (reden + volledige lijst in
-DOCUMENTLAYOUT_VOORTGANG.md): de offerte-tabel heeft geen postnummer/groepscodes (het datamodel
-draagt geen budget-activiteitcode), en "voor akkoord" is één handtekenvak voor de klant, niet één
-per mede-eigenaar (het model kent geen lijst mede-eigenaars).
+**Eerste document (okt. 2026): offerte** (`ChangeOrderDocumentV2`, punt 35d), achter dezelfde actie
+als de legacy-PDF (`ProjectenController.ChangeOrders.ChangeOrderPDF`). De wijzigingsopdracht
+(`IsQuote == false`) deelt dezelfde klasse maar wordt bewust niet meer actief gevolgd tot de offerte
+af is — die heeft volgens het ontwerp een eigen opbouw (facturatieplan, handtekenvak per
+mede-eigenaar). Visueel vergeleken met het echte design-handoff-voorbeeld: kop toont enkel het logo
+(groter dan het ontwerp, geen bedrijfsnaam ernaast), metadata-blok (`GlV2PdfComponents.MetaAdres`)
+zonder rand of titel — label/waarde links, klant + adres rechts —, voet in twee regels per kolom,
+Voorwaarden/Voor akkoord als twee kolommen naast elkaar. Volledig logboek + bekende afwijkingen
+(geen postnummer/groepscodes in de tabel, één handtekenvak i.p.v. per mede-eigenaar, geen RPR-
+vermelding) in DOCUMENTLAYOUT_VOORTGANG.md — inclusief een werkende manier om het document visueel
+te testen zonder in te loggen, en de volledige broncode van dat testprogramma om het op een andere
+pc opnieuw aan te maken.
 
 **Open punt, nog niet gebouwd** (DOCUMENTLAYOUT_VOORTGANG.md "Open punt"): voor een
 coördinatieproject zou `InvoiceableByBouwheer` (`ChangeOrderDetailV2`) eigenlijk nooit aan mogen

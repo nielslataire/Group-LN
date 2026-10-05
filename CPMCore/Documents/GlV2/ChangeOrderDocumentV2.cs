@@ -56,10 +56,11 @@ namespace CPMCore.Documents.GlV2
         {
             c.Column(col =>
             {
-                // "Body vult de ruimte op, blok hangt boven de voet" (35d): twee technieken geprobeerd,
-                // geen van beide werkt in deze QuestPDF-versie (zie DOCUMENTLAYOUT_VOORTGANG.md
-                // "ExtendVertical/Extend werken niet voor dit doel", met het diagnose-bewijs). Voorlopig
-                // gewoon een vaste afstand na de totalen.
+                // "Body vult de ruimte op, blok hangt boven de voet" (35d): drie technieken geprobeerd
+                // (ExtendVertical als spacer, ExtendVertical op Body, Extend().AlignBottom().ShowEntire()
+                // op het laatste item), geen enkele werkt in deze QuestPDF-versie — zie
+                // DOCUMENTLAYOUT_VOORTGANG.md voor het diagnose-bewijs per poging. Voorlopig gewoon een
+                // vaste afstand na de totalen.
                 col.Item().Element(Body);
                 col.Item().PaddingTop(16).Element(VoorwaardenEnAkkoord);
             });
