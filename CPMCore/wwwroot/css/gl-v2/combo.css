@@ -1,0 +1,131 @@
+/* gl-v2 — Keuzelijst met zoekveld en knop (design-handoff punt 34, "CRM Keuzelijst met invoervak"). Vervangt de
+   blauwe select2-zoeklijst én de oudere zoekende dropdown (trigger + tweede invoervak in het paneel): je tikt in
+   het veld zelf. Eén component voor het hele project (EditorTemplates/GlV2SearchSelect, _ProjectFormV2SearchSelect,
+   Partials/_GlV2ComboField en alles wat `data-gl-v2-combo` draagt); gedrag in wwwroot/js/gl-v2-combo.js.
+   Alles scoped onder .gl-v2, twee klassen diep zodat noch gl-v2-shell.css (laadt later) noch forms.css wint op een
+   gelijkspel. [hidden] krijgt overal een expliciete guard (DESIGN.md Don't-regel). */
+
+.gl-v2 .gl-v2-combo { position: relative; min-width: 0; }
+.gl-v2 .gl-v2-combo-row { display: flex; align-items: stretch; }
+
+/* ── Veld (34b: 40px, rand 1px, radius 8px; focus 1.5px primair + ring) ─────────────────────────────────────── */
+.gl-v2 .gl-v2-combo-field {
+    flex: 1; min-width: 0; height: 40px; box-sizing: border-box;
+    display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px;
+    border: 1px solid rgba(44, 59, 42, .14); border-radius: 8px; background: var(--gl-v2-surface);
+    cursor: text;
+}
+.gl-v2 .gl-v2-combo.has-new .gl-v2-combo-field { border-right: 0; border-radius: 8px 0 0 8px; }
+.gl-v2 .gl-v2-combo.is-open .gl-v2-combo-field,
+.gl-v2 .gl-v2-combo-field:focus-within {
+    border: 1.5px solid var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .10);
+}
+.gl-v2 .gl-v2-combo.has-new.is-open .gl-v2-combo-field,
+.gl-v2 .gl-v2-combo.has-new .gl-v2-combo-field:focus-within { border-right: 0; }
+
+.gl-v2 .gl-v2-combo-lead { flex: none; font-size: 15px; color: #7a8a78; }
+.gl-v2 .gl-v2-combo-input {
+    flex: 1; min-width: 0; height: 100%; padding: 0; margin: 0; border: 0; outline: 0; box-shadow: none; background: transparent;
+    font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink);
+}
+.gl-v2 .gl-v2-combo-input::placeholder { color: #9aa898; font-weight: 450; }
+.gl-v2 .gl-v2-combo-input::-webkit-search-cancel-button { display: none; }
+.gl-v2 .gl-v2-combo-clear {
+    flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent;
+    display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); font-size: 11px; cursor: pointer;
+}
+.gl-v2 .gl-v2-combo-clear:hover { background: var(--gl-v2-bg); }
+.gl-v2 .gl-v2-combo-clear[hidden] { display: none; }
+.gl-v2 .gl-v2-combo-caret { flex: none; font-size: 13px; color: var(--gl-v2-primary); transition: transform .12s; }
+.gl-v2 .gl-v2-combo.is-open .gl-v2-combo-caret { transform: rotate(180deg); }
+.gl-v2 .gl-v2-combo-spinner {
+    flex: none; width: 13px; height: 13px; box-sizing: border-box; border-radius: 50%;
+    border: 2px solid var(--gl-v2-primary-tint); border-top-color: var(--gl-v2-primary); animation: gl-v2-combo-spin .7s linear infinite;
+}
+.gl-v2 .gl-v2-combo-spinner[hidden] { display: none; }
+@keyframes gl-v2-combo-spin { to { transform: rotate(360deg); } }
+
+/* "Nieuw" plakt aan het veld (14d punt 3). */
+.gl-v2 .gl-v2-combo-new {
+    flex: none; height: 40px; box-sizing: border-box; padding: 0 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #7A9E6E; border-radius: 0 8px 8px 0; background: var(--gl-v2-surface);
+    font: 600 12px var(--gl-v2-font-sans); color: #2F6038; cursor: pointer; white-space: nowrap;
+}
+.gl-v2 .gl-v2-combo-new:hover { background: #EDF2E8; }
+.gl-v2 .gl-v2-combo-new[hidden] { display: none; }
+.gl-v2 .gl-v2-combo-new i { font-size: 13px; }
+
+/* ── Staten (34b) ───────────────────────────────────────────────────────────────────────────────────────────── */
+.gl-v2 .gl-v2-field.is-error .gl-v2-combo-field,
+.gl-v2 .gl-v2-combo.is-error .gl-v2-combo-field,
+.gl-v2 .gl-v2-combo.is-unknown .gl-v2-combo-field { border: 1.5px solid var(--gl-v2-danger); }
+.gl-v2 .gl-v2-field.is-error .gl-v2-combo.has-new .gl-v2-combo-field,
+.gl-v2 .gl-v2-combo.is-error.has-new .gl-v2-combo-field,
+.gl-v2 .gl-v2-combo.is-unknown.has-new .gl-v2-combo-field { border-right: 0; }
+.gl-v2 .gl-v2-combo.is-open .gl-v2-combo-field { border-color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-combo.is-readonly .gl-v2-combo-field {
+    background: #F7F9F5; border: 1px solid rgba(44, 59, 42, .08); cursor: default;
+}
+.gl-v2 .gl-v2-combo.is-readonly .gl-v2-combo-input { color: #4A5B48; }
+.gl-v2 .gl-v2-combo.is-readonly .gl-v2-combo-caret,
+.gl-v2 .gl-v2-combo.is-readonly .gl-v2-combo-clear { display: none; }
+.gl-v2 .gl-v2-combo.is-disabled .gl-v2-combo-field { background: var(--gl-v2-bg); border: 1px solid rgba(44, 59, 42, .08); cursor: not-allowed; }
+.gl-v2 .gl-v2-combo.is-disabled .gl-v2-combo-input { color: #9aa898; cursor: not-allowed; }
+.gl-v2 .gl-v2-combo.is-disabled .gl-v2-combo-caret { color: #C2CBBE; }
+.gl-v2 .gl-v2-combo.is-readonly .gl-v2-combo-new,
+.gl-v2 .gl-v2-combo.is-disabled .gl-v2-combo-new {
+    border-color: rgba(44, 59, 42, .08); color: #C2CBBE; background: var(--gl-v2-bg); pointer-events: none;
+}
+.gl-v2 .gl-v2-combo-help { display: block; margin-top: 5px; font: 450 10.5px/1.45 var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2 .gl-v2-combo-help[hidden] { display: none; }
+.gl-v2 .gl-v2-combo.is-unknown ~ .gl-v2-combo-help,
+.gl-v2 .gl-v2-field.is-error .gl-v2-combo-help { color: var(--gl-v2-danger); font-weight: 600; }
+
+/* ── Resultatenpaneel (34d: 4px onder het veld, radius 10px, rijen 40px) ───────────────────────────────────── */
+.gl-v2 .gl-v2-combo-panel {
+    position: fixed; z-index: 99999; box-sizing: border-box; display: none; flex-direction: column; gap: 2px;
+    padding: 6px; max-height: 340px; overflow-y: auto;
+    background: var(--gl-v2-surface); border: 1px solid rgba(44, 59, 42, .10); border-radius: 10px;
+    box-shadow: 0 14px 34px -12px rgba(44, 59, 42, .35);
+}
+.gl-v2 .gl-v2-combo-panel.is-open { display: flex; }
+.gl-v2 .gl-v2-combo-head {
+    display: flex; align-items: center; padding: 4px 10px 6px;
+    font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); text-transform: uppercase;
+}
+.gl-v2 .gl-v2-combo-head span:first-child { flex: 1; }
+.gl-v2 .gl-v2-combo-head-keys { font: 450 10.5px var(--gl-v2-font-sans); letter-spacing: 0; text-transform: none; color: #9aa898; }
+.gl-v2 .gl-v2-combo-option {
+    display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 10px; border-radius: 7px;
+    background: transparent; border: 0; width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.gl-v2 .gl-v2-combo-option.is-active { background: var(--gl-v2-bg); }
+.gl-v2 .gl-v2-combo-avatar {
+    flex: none; width: 26px; height: 26px; border-radius: 7px; background: #EDEFEB; color: #4A5B48;
+    display: flex; align-items: center; justify-content: center; font: 600 10px var(--gl-v2-font-sans);
+}
+.gl-v2 .gl-v2-combo-option.is-selected .gl-v2-combo-avatar { background: var(--gl-v2-primary); color: #fff; }
+.gl-v2 .gl-v2-combo-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2 .gl-v2-combo-name { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2 .gl-v2-combo-name b { font-weight: 700; color: var(--gl-v2-primary); background: #E2ECDA; border-radius: 3px; padding: 0 1px; }
+.gl-v2 .gl-v2-combo-sub { font: 450 10.5px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2 .gl-v2-combo-check { flex: none; font-size: 14px; color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-combo-empty,
+.gl-v2 .gl-v2-combo-hint { padding: 10px 10px 8px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-combo-sep { height: 1px; background: rgba(44, 59, 42, .08); margin: 4px 6px; flex: none; }
+.gl-v2 .gl-v2-combo-create { height: 40px; padding: 0 10px; }
+.gl-v2 .gl-v2-combo-create .gl-v2-combo-avatar { background: transparent; border: 1px dashed #7A9E6E; color: #2F6038; font-size: 12px; }
+.gl-v2 .gl-v2-combo-create .gl-v2-combo-name { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+
+/* ── Gsm: invoer ≥ 16px (iOS zoomt anders in), grotere rijen; tijdens zoekmodus (GlV2MobileSearch, kind
+   "trigger") hangt het paneel onder het bovenaan vastgezette veld en blijft boven het toetsenbord. ────────── */
+@media (max-width: 767.98px) {
+    .gl-v2 .gl-v2-combo-input { font-size: 16px; }
+    .gl-v2 .gl-v2-combo-option { min-height: 48px; }
+    .gl-v2 .gl-v2-combo-field, .gl-v2 .gl-v2-combo-new { height: 44px; }
+    .gl-v2 .gl-v2-combo-panel.is-keyboard-anchored {
+        top: var(--gl-v2-panel-top, auto); left: 8px; right: 8px; width: auto;
+        max-height: var(--gl-v2-panel-max, 50dvh); overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    }
+}

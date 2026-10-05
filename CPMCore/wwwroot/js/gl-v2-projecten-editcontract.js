@@ -156,6 +156,33 @@
                 renderChips();
                 if (filterInput) filterInput.value = "";
             },
+            // Contract toevoegen: de loten van de gekozen leverancier. items = [{id, text}], addedIds = al op het contract.
+            setOptions: function (items, addedIds) {
+                hiddenHost.innerHTML = "";
+                var host = panel.querySelector('[data-role="options"]');
+                host.innerHTML = "";
+                items.forEach(function (item) {
+                    var isAdded = addedIds.indexOf(String(item.id)) !== -1;
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "gl-v2-select-option is-multi" + (isAdded ? " is-added" : "");
+                    btn.setAttribute("data-id", item.id);
+                    btn.setAttribute("data-text", item.text);
+                    btn.hidden = isAdded;
+                    btn.innerHTML = '<span class="gl-v2-select-option-check"><i class="ph ph-check" aria-hidden="true"></i></span><span></span>';
+                    btn.lastChild.textContent = item.text;
+                    host.appendChild(btn);
+                });
+                renderChips();
+            },
+            setEnabled: function (enabled) {
+                if (filterInput) {
+                    filterInput.disabled = !enabled;
+                    filterInput.placeholder = enabled ? "Zoek een lot…" : "Kies eerst een leverancier";
+                }
+                var addBtn = document.getElementById("btnAddActivities");
+                if (addBtn) addBtn.disabled = !enabled;
+            },
             restore: function (id) {
                 var opt = optionFor(id);
                 if (opt) { opt.hidden = false; opt.classList.remove("is-added"); }
@@ -164,27 +191,19 @@
     })();
 
     $(function () {
-        if ($("#ddlCompany").length) {
-            $("#ddlCompany").select2({
-                theme: "bootstrap", minimumInputLength: 3, width: "100%",
-                placeholder: "Typ om een leverancier te zoeken...", allowClear: true, language: "nl",
-                ajax: {
-                    url: config.getCompanysUrl, type: "POST", dataType: "json", delay: 250,
-                    data: function (params) { return { term: params.term, activeOnly: true }; },
-                    processResults: function (data) { return { results: $.map(data, function (item) { return { id: item.id, text: item.text }; }) }; },
-                    cache: true
+        // Leverancier: de keuzelijst met zoekveld (punt 34, gl-v2-combo.js). Het verborgen #txtCompanyID wordt door
+        // het component zelf bijgehouden; hier enkel wat een andere leverancier met de pagina doet.
+        var companyCombo = document.querySelector("#gl-v2-ec-company-field .gl-v2-combo, .gl-v2-combo:has(#txtCompanyID)");
+        if (companyCombo) {
+            companyCombo.addEventListener("gl-v2:combo-select", function (e) {
+                var d = e.detail || {};
+                if (d.id && d.id !== "0") {
+                    LoadSiteManagers(d.id, "#ddlSiteManager");
+                    if (config.isAdd) loadCompanyLots(d.id, d.text);
+                } else {
+                    $("#ddlSiteManager").empty().append(new Option("Geen", "", false, false));
+                    if (config.isAdd) clearLots();
                 }
-            });
-            $("#ddlCompany").on("select2:select", function (e) {
-                var selected = e.params && e.params.data;
-                if (!selected || !selected.id) return;
-                $("#txtCompanyID").val(selected.id);
-                LoadSiteManagers(selected.id, "#ddlSiteManager");
-                markDirty();
-            });
-            $("#ddlCompany").on("select2:clear", function () {
-                $("#txtCompanyID").val("0");
-                $("#ddlSiteManager").empty().append(new Option("Geen", "", false, false));
                 markDirty();
             });
         }
@@ -204,6 +223,40 @@
         });
         $("#chkCashDiscount").trigger("change");
     });
+
+    // ── Contract toevoegen: loten volgen de leverancier. Bij een andere leverancier vervallen de al
+    //    toegevoegde loten (ze horen bij de vorige leverancier) — na bevestiging als er al iets staat. ──
+    var lastCompanyId = null;
+    var lastCompanyText = "";
+    function addedLotIds() {
+        return $("#ActivityRows button.deleterow").map(function () { return String($(this).data("id")); }).get();
+    }
+    function clearLots() {
+        $("#ActivityRows").empty();
+        if (lotPicker) { lotPicker.setOptions([], []); lotPicker.setEnabled(false); }
+        lastCompanyId = null;
+        lastCompanyText = "";
+    }
+    function loadCompanyLots(companyId, companyText) {
+        if (!lotPicker) return;
+        if (lastCompanyId && String(lastCompanyId) !== String(companyId) && $("#ActivityRows").children().length &&
+            !window.confirm("De loten die je al toevoegde horen bij de vorige leverancier en worden verwijderd. Doorgaan?")) {
+            var combo = document.querySelector(".gl-v2-combo:has(#txtCompanyID)");
+            if (combo && window.GlV2Combo) window.GlV2Combo.setValue(combo, String(lastCompanyId), lastCompanyText);
+            return;
+        }
+        if (lastCompanyId && String(lastCompanyId) !== String(companyId)) $("#ActivityRows").empty();
+        lastCompanyId = companyId;
+        lastCompanyText = companyText || "";
+        $.ajax({
+            type: "POST", url: config.getCompanyActivitiesUrl, data: { companyid: companyId }, dataType: "json",
+            success: function (data) {
+                lotPicker.setOptions((data || []).map(function (i) { return { id: i.id, text: i.text }; }), addedLotIds());
+                lotPicker.setEnabled(true);
+            },
+            error: function (xhr, status, error) { console.error("Fout bij ophalen activiteiten:", error); }
+        });
+    }
 
     function LoadSiteManagers(companyId, selectSelector) {
         $.ajax({
@@ -299,10 +352,33 @@
         });
     }
 
+    // Foutoverzicht (DESIGN.md punt 24) voor toevoegen én bewerken: verplichte velden via data-gl-v2-required
+    // (leverancier bij toevoegen, betaaltermijn …), loten als eigen validator.
+    function initErrorSummary() {
+        var form = document.getElementById("gl-v2-ec-form");
+        if (!form || !window.GlV2ErrorSummary) return;
+        window.GlV2ErrorSummary.init({
+            form: form,
+            container: document.getElementById("gl-v2-error-summary"),
+            validators: [function (errors) {
+                if ($("#ActivityRows").children().length === 0) {
+                    errors.push({
+                        message: "Voeg minstens één lot toe.",
+                        field: "Loten",
+                        location: "Loten & bijbestellingen",
+                        tab: null,
+                        target: document.getElementById("gl-v2-ec-lot-multiselect")
+                    });
+                }
+            }]
+        });
+    }
+
     $(document).ready(function () {
         initCurrencyMasks();
         LoadSiteManagers($("#txtCompanyID").val(), "#ddlSiteManager");
         initDirtyBadge();
         initDiscardChangesModal();
+        initErrorSummary();
     });
 })();

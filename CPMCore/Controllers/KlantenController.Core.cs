@@ -93,9 +93,10 @@ namespace CPMCore.Controllers
                     issuerCompanyId = null;
                 }
 
-                clientsQuery = clientsQuery
-                    .Where(c => c.ClientAccountIssuerCompany.Any(i => i.IssuerCompanyId == issuerCompanyId))
-                    .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
+                // Bewust GEEN .Where op issuerCompanyId meer: de pagina filtert zelf client-side (gl-v2-klanten.js,
+                // data-issuers per rij) en toont de querystring-waarde enkel als VOORGESELECTEERD filter. Vóór
+                // deze wijziging kwamen via een filterlink enkel de klanten van dat bedrijf in de pagina, en kon
+                // "Alle bedrijven"/het filter uitzetten de andere klanten nooit meer tonen (ze zaten er niet in).
             }
 
             if (!readScope.HasAllIssuers)
@@ -1157,7 +1158,15 @@ namespace CPMCore.Controllers
 
         private void UpdateIssuerCompany(ClientFormViewModel model, ClientAccount entity)
         {
-            entity.ClientAccountIssuerCompany.Clear();
+            // Diff i.p.v. Clear()+opnieuw toevoegen: bestaande koppelingen blijven staan (en dus hun
+            // OctopusRelationId — Clear() gooide die weg en vervangde elke rij door een nieuwe met dezelfde
+            // sleutel); enkel niet-meer-gekozen bedrijven worden verwijderd, enkel nieuwe toegevoegd.
+            var selected = (model.SelectedIssuerCompanyIds ?? new List<int>()).Distinct().ToHashSet();
+            foreach (var link in entity.ClientAccountIssuerCompany.Where(l => !selected.Contains(l.IssuerCompanyId)).ToList())
+            {
+                entity.ClientAccountIssuerCompany.Remove(link);
+                _db.ClientAccountIssuerCompany.Remove(link);
+            }
             AttachIssuerCompany(model, entity);
         }
 

@@ -40,7 +40,7 @@
     transition: transform .15s ease;
 }
 
-.gl-v2-skip-link:focus {
+.gl-v2-skip-link:focus-visible {
     transform: translateY(0);
     outline: 2px solid var(--gl-v2-surface);
     outline-offset: 2px;

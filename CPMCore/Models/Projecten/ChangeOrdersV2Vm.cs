@@ -37,7 +37,7 @@ public class ChangeOrderRowV2
 {
     public int Id { get; set; }
     public bool IsQuote { get; set; }
-    public string Number => IsQuote ? $"OF-{Id:000}" : $"WO-{Id:000}";
+    public string Number { get; set; } = "";
     public string ClientName { get; set; } = "";
     public string? UnitName { get; set; }
     public string Description { get; set; } = "";

@@ -105,10 +105,10 @@
                     <div class="gl-v2-field">
                         <span class="gl-v2-field-label">WO ondertekenen door</span>
                         <div class="gl-v2-kep-seg" role="radiogroup" aria-label="WO ondertekenen door">
-                            <label><input type="radio" name="@Html.NameFor(m => m.ClientAccount.DefaultSigningRule)" value="@((int)SigningRule.All)" checked="@(Model.ClientAccount.DefaultSigningRule != SigningRule.Any ? "checked" : null)" /><span>Alle eigenaars</span></label>
-                            <label><input type="radio" name="@Html.NameFor(m => m.ClientAccount.DefaultSigningRule)" value="@((int)SigningRule.Any)" checked="@(Model.ClientAccount.DefaultSigningRule == SigningRule.Any ? "checked" : null)" /><span>Eén volstaat</span></label>
+                            <label><input type="radio" name="@Html.NameFor(m => m.ClientAccount.DefaultSigningRule)" value="@((int)SigningRule.All)" checked="@(Model.ClientAccount.DefaultSigningRule.HasValue && Model.ClientAccount.DefaultSigningRule != SigningRule.Any ? "checked" : null)" /><span>Alle eigenaars</span></label>
+                            <label><input type="radio" name="@Html.NameFor(m => m.ClientAccount.DefaultSigningRule)" value="@((int)SigningRule.Any)" checked="@(!Model.ClientAccount.DefaultSigningRule.HasValue || Model.ClientAccount.DefaultSigningRule == SigningRule.Any ? "checked" : null)" /><span>Eén volstaat</span></label>
                         </div>
-                        <span class="gl-v2-field-help">Standaard voor wijzigingsopdrachten.</span>
+                        <span class="gl-v2-field-help">Standaard voor wijzigingsopdrachten. Nieuwe klanten starten met “Eén volstaat”.</span>
                     </div>
                 </div>
                 <div class="gl-v2-col-4">

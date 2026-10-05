@@ -1020,10 +1020,17 @@ namespace CPMCore.Controllers
             {
                 Parent = projectContracts
             };
-            ViewData["BreadcrumbNode"] = projectContractsAdd;
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                // DESIGN.md (One-Line Topbar Rule + Clickable-Crumb Rule): de titel "Contract toevoegen" wordt niet
+                // herhaald in het kruimelpad; het pad stopt bij "Leveranciers" en die laatste kruimel blijft een link.
+                ViewData["BreadcrumbNode"] = projectContracts;
+                ViewData["BreadcrumbLastIsLink"] = true;
+            }
+            else ViewData["BreadcrumbNode"] = projectContractsAdd;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
-            return View(model);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
         }
         [HttpPost]
         public async Task<ActionResult> AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders, IFormFile? guaranteeDoc)
@@ -1041,8 +1048,19 @@ namespace CPMCore.Controllers
             if (guaranteeDoc is { Length: > 0 } && !ValidateGuaranteeDoc(guaranteeDoc, out var guaranteeDocError))
                 ModelState.AddModelError("guaranteeDoc", guaranteeDocError);
 
+            // Server-vangnet voor het Foutoverzicht (DESIGN.md punt 24): dezelfde regels als de pagina-JS.
+            if (model.Contract?.Company == null || model.Contract.Company.ID <= 0)
+                ModelState.AddModelError("Contract.Company.ID", "Kies een leverancier.");
+            if (!(activities?.Any() ?? false))
+                ModelState.AddModelError("Activities", "Voeg minstens één lot toe.");
+
             if (!ModelState.IsValid)
             {
+                ViewData["GlV2ErrorLocations"] = new Dictionary<string, string>
+                {
+                    ["Contract.Company.ID"] = "Algemeen · Leverancier",
+                    ["Activities"] = "Loten & bijbestellingen",
+                };
                 var firstError = ModelState.Values
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
@@ -1050,7 +1068,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract toevoegen");
                 PopulateAddContractLookups(model);
-                return View(model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
             }
 
             if (guaranteeDoc is { Length: > 0 })
@@ -1061,7 +1079,7 @@ namespace CPMCore.Controllers
                     AddMessage("error", "Het waarborgdocument kon niet naar de storage geüpload worden.", "Fout!");
                     SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract toevoegen");
                     PopulateAddContractLookups(model);
-                    return View(model);
+                    return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
                 }
                 model.Contract.GuaranteeDocFilename = storedName;
                 model.Contract.GuaranteeDocUploadedAt = DateTime.Now;
@@ -1111,7 +1129,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", serviceError, "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
                 PopulateAddContractLookups(model);
-                return View(model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
             }
         }
 
@@ -1137,6 +1155,18 @@ namespace CPMCore.Controllers
             var countriesResponse = _countryService.GetVisibleCountriesForSelect();
             if (countriesResponse.Success)
                 model.Countries = countriesResponse.Values;
+
+            // Lotenkiezer: de activiteiten van de gekozen leverancier (leeg zolang er geen leverancier is).
+            var companyId = model.Contract?.Company?.ID ?? 0;
+            var companyActivities = new List<IdNameBO>();
+            if (companyId > 0)
+            {
+                var activitiesResponse = _companyService.GetCompanyActivities(companyId);
+                if (activitiesResponse.Success)
+                    companyActivities = activitiesResponse.Values.Select(a => new IdNameBO { ID = a.ID, Display = a.Name, Group = "-Bedrijfsactiviteit-" }).ToList();
+            }
+            model.Activities = companyActivities;
+            model.SiteManagers = GetSiteManagersForCompany(companyId);
 
             // Inner-menu "Leveranciers"-teller — op elk redisplay-pad opnieuw gevuld (zelfde
             // discipline als Klanten/EditProject se ProjectClientCount via FillInAddSelectListsEdit).
@@ -1242,8 +1272,12 @@ namespace CPMCore.Controllers
             if (guaranteeDoc is { Length: > 0 } && !ValidateGuaranteeDoc(guaranteeDoc, out var guaranteeDocError))
                 ModelState.AddModelError("guaranteeDoc", guaranteeDocError);
 
+            if (!(activities?.Any() ?? false))
+                ModelState.AddModelError("Activities", "Voeg minstens één lot toe.");
+
             if (!ModelState.IsValid)
             {
+                ViewData["GlV2ErrorLocations"] = new Dictionary<string, string> { ["Activities"] = "Loten & bijbestellingen" };
                 var firstError = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault();
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract bewerken");

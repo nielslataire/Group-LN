@@ -263,6 +263,11 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult PaymentStagesAddUpdate(int projectid, int groupid = 0)
         {
+            // gl-v2: het nieuwe scherm van punt 26 (nieuwe groep start via de 26a-modal op PaymentStagesV2).
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                return groupid > 0
+                    ? RedirectToAction(nameof(PaymentGroupEditV2), new { projectid, groupid })
+                    : RedirectToAction(nameof(PaymentStagesV2), new { projectid });
             var projectService = _projectService;
             var model = new ProjectPaymentStagesAddUpdateModel
             {

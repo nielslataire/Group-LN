@@ -14,8 +14,8 @@
     function $$(sel, r) { return Array.prototype.slice.call((r || document).querySelectorAll(sel)); }
 
     var tabs = document.getElementById("gl-v2-co2-tabs");
-    var search = document.getElementById("gl-v2-co2-search");
-    var statusFilter = document.getElementById("gl-v2-co2-status");
+    var search = document.getElementById("search-term");
+    var selectedStatus = "open"; // "open" (nog werk aan) of "all"
 
     // Welke rijen "open" zijn (nog werk aan) bepaalt de server (data-co2-open): een ingetrokken WO is weer
     // een concept, een gefactureerde wacht op betaling, een omgezette of verlopen offerte is afgesloten.
@@ -51,7 +51,7 @@
     function applyFilters() {
         var type = tabs ? ($(".gl-v2-tabbar-tab.is-active", tabs) || {}).getAttribute && $(".gl-v2-tabbar-tab.is-active", tabs).getAttribute("data-type") : "";
         var term = (search && search.value || "").trim().toLowerCase();
-        var onlyOpen = !statusFilter || statusFilter.value === "open";
+        var onlyOpen = selectedStatus === "open";
 
         $$(".gl-v2-co2-row").forEach(function (row) {
             var matchesType = !type || row.getAttribute("data-co2-type") === type;
@@ -65,6 +65,7 @@
             var visible = $$(".gl-v2-co2-row", section).some(function (r) { return !r.hidden; });
             section.hidden = !visible;
         });
+        if (typeof updateFilterChips === "function") updateFilterChips();
     }
 
     if (tabs) {
@@ -78,8 +79,114 @@
             applyFilters();
         });
     }
-    if (search) search.addEventListener("input", applyFilters);
-    if (statusFilter) statusFilter.addEventListener("change", applyFilters);
+    // ── Zoekveld ─────────────────────────────────────────────────────────────────────────────────
+    if (search) {
+        search.addEventListener("input", applyFilters);
+        var clearSearch = document.getElementById("search-term-clear");
+        if (clearSearch) clearSearch.addEventListener("click", function () { search.value = ""; applyFilters(); });
+    }
+
+    // ── Status-select (.gl-v2-select, zelfde component/recept als gl-v2-projecten-detailclients.js) ──
+    function initSelect(prefix, onChange) {
+        var trigger = document.getElementById(prefix + "-trigger");
+        var panel = document.getElementById(prefix + "-panel");
+        var backdrop = document.getElementById(prefix + "-backdrop");
+        var label = document.getElementById(prefix + "-label");
+        var closeBtn = document.getElementById(prefix + "-close");
+        var valueInput = document.getElementById(prefix + "-value");
+        if (!trigger || !panel) return { select: function () {} };
+
+        function closeAll() {
+            $$(".gl-v2-select-panel.is-open").forEach(function (p) { p.classList.remove("is-open"); });
+            $$(".gl-v2-select-backdrop.is-open").forEach(function (b) { b.classList.remove("is-open"); });
+            $$(".gl-v2-select-trigger[aria-expanded='true']").forEach(function (t) { t.setAttribute("aria-expanded", "false"); });
+        }
+        function selectValue(value, fire) {
+            var option = panel.querySelector('.gl-v2-select-option[data-value="' + value + '"]');
+            $$(".gl-v2-select-option", panel).forEach(function (o) { o.classList.toggle("is-selected", o === option); });
+            if (valueInput) valueInput.value = value;
+            if (label && option) label.textContent = option.getAttribute("data-label");
+            if (fire !== false && typeof onChange === "function") onChange(value);
+        }
+        trigger.addEventListener("click", function () {
+            var willOpen = !panel.classList.contains("is-open");
+            closeAll();
+            if (willOpen) {
+                panel.classList.add("is-open");
+                if (backdrop) backdrop.classList.add("is-open");
+                trigger.setAttribute("aria-expanded", "true");
+            }
+        });
+        if (backdrop) backdrop.addEventListener("click", closeAll);
+        if (closeBtn) closeBtn.addEventListener("click", closeAll);
+        $$(".gl-v2-select-option", panel).forEach(function (option) {
+            option.addEventListener("click", function () { selectValue(option.getAttribute("data-value"), true); closeAll(); });
+        });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAll(); });
+        return { select: selectValue };
+    }
+
+    // "Open" is de standaard en telt niet als actief filter; enkel een afwijking ("Alles") toont een chip
+    // en een tellertje.
+    var statusSelect = initSelect("status-select", function (value) {
+        selectedStatus = value || "open";
+        applyFilters();
+    });
+
+    function updateFilterChips() {
+        var chips = [];
+        if (selectedStatus !== "open") chips.push({ type: "status", label: "Alles, ook afgerond" });
+        var chipList = document.getElementById("filters-chip-list");
+        if (chipList) {
+            chipList.innerHTML = "";
+            chips.forEach(function (chip) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "gl-v2-filters-chip";
+                btn.setAttribute("data-filter-type", chip.type);
+                btn.innerHTML = '<span></span><i class="ph ph-x" aria-hidden="true"></i>';
+                btn.querySelector("span").textContent = chip.label;
+                chipList.appendChild(btn);
+            });
+        }
+        var count = chips.length;
+        var countEl = document.getElementById("filters-toggle-count");
+        if (countEl) { countEl.textContent = count; countEl.hidden = count === 0; }
+        var toggle = document.getElementById("filters-toggle");
+        if (toggle) toggle.classList.toggle("has-active", count > 0);
+        var clearBtn = document.getElementById("filters-clear");
+        if (clearBtn) clearBtn.hidden = count === 0;
+        var sheetBadge = document.getElementById("filters-sheet-badge");
+        if (sheetBadge) { sheetBadge.textContent = count + " actief"; sheetBadge.hidden = count === 0; }
+        var showCount = document.getElementById("filters-show-count");
+        if (showCount) showCount.textContent = $$(".gl-v2-co2-row").filter(function (r) { return !r.hidden; }).length;
+    }
+
+    document.addEventListener("click", function (e) {
+        var chip = e.target.closest(".gl-v2-filters-chip");
+        if (chip && chip.getAttribute("data-filter-type") === "status") { statusSelect.select("open"); return; }
+        if (e.target.closest(".gl-v2-filters-clear")) {
+            if (search) search.value = "";
+            statusSelect.select("open", false);
+            selectedStatus = "open";
+            applyFilters();
+        }
+    });
+
+    // ── Filters-paneel open/dicht (desktop: inklapbaar onder de zoekbalk; <768px: bottom sheet) ──────
+    var filtersToggle = document.getElementById("filters-toggle");
+    var filtersPanel = document.getElementById("filters-panel");
+    var filtersPanelBackdrop = document.getElementById("filters-panel-backdrop");
+    function setFiltersPanelOpen(isOpen) {
+        if (!filtersPanel) return;
+        filtersPanel.hidden = !isOpen;
+        if (filtersPanelBackdrop) filtersPanelBackdrop.hidden = !isOpen;
+        if (filtersToggle) { filtersToggle.classList.toggle("is-open", isOpen); filtersToggle.setAttribute("aria-expanded", isOpen.toString()); }
+    }
+    if (filtersToggle) filtersToggle.addEventListener("click", function () { setFiltersPanelOpen(filtersPanel.hidden); });
+    if (filtersPanelBackdrop) filtersPanelBackdrop.addEventListener("click", function () { setFiltersPanelOpen(false); });
+    var filtersShowBtn = document.getElementById("filters-show-btn");
+    if (filtersShowBtn) filtersShowBtn.addEventListener("click", function () { setFiltersPanelOpen(false); });
 
     applyFilters();
 })();

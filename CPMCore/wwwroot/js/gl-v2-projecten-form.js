@@ -127,8 +127,23 @@
         if (dot) dot.hidden = !has;
     }
 
+    // Punt 34: de keuzelijsten zijn het gedeelde combo-component; wat de oude choose() hier bijhield (veldfout
+    // wegnemen, tab-stip herberekenen) gebeurt nu op zijn `gl-v2:combo-select`-event.
+    document.addEventListener("gl-v2:combo-select", function (e) {
+        var root = e.target && e.target.closest ? e.target.closest("[data-gl-v2-combo]") : null;
+        if (!root) return;
+        var field = root.closest(".gl-v2-field");
+        if (field && e.detail && e.detail.id) {
+            field.classList.remove("is-error");
+            var h = field.querySelector('[data-role="help"]');
+            if (h && field.hasAttribute("data-gl-v2-required")) h.hidden = true;
+        }
+        refreshTabDot(tabKeyOf(root));
+    });
+
     // ── Zoekende keuzelijsten ───────────────────────────────────────────────────────────────────
     function wireSearchSelect(root) {
+        if (root.hasAttribute("data-gl-v2-combo")) return;   // punt 34: het gedeelde combo-component (gl-v2-combo.js) bedraadt zichzelf
         if (root.hasAttribute("data-gl-v2-wired")) return;
         var idHidden = root.querySelector('[data-role="id-hidden"]');
         var textHidden = root.querySelector('[data-role="text-hidden"]');
@@ -144,6 +159,10 @@
         var minChars = parseInt(root.getAttribute("data-min-chars") || "2", 10);
         var placeholder = root.getAttribute("data-search-placeholder") || "Zoek …";
         var timer = null;
+        // Na een keuze (of Tab) hoort de focus terug op de trigger, zodat Tab naar het volgende veld loopt; de
+        // focus-listener mag het paneel daarbij niet opnieuw openen.
+        var suppressOpen = false;
+        function refocusTrigger() { suppressOpen = true; trigger.focus(); suppressOpen = false; }
 
         panel.innerHTML =
             '<div class="gl-v2-select-search"><div class="gl-v2-select-search-field">' +
@@ -168,6 +187,7 @@
             if (field) { field.classList.remove("is-error"); trigger.classList.remove("is-error"); var h = field.querySelector('[data-role="help"]'); if (h && field.hasAttribute("data-gl-v2-required")) h.hidden = true; }
             idHidden.dispatchEvent(new Event("change", { bubbles: true }));
             closeAllPanels();
+            refocusTrigger();
             refreshTabDot(tabKeyOf(root));
         }
 
@@ -180,6 +200,7 @@
             items.forEach(function (item) {
                 var btn = document.createElement("button");
                 btn.type = "button";
+                btn.tabIndex = -1;   // Tab loopt niet door de resultaten maar naar het volgende veld
                 btn.className = "gl-v2-select-option" + (String(currentId()) === String(item.id) ? " is-selected" : "");
                 btn.innerHTML = '<i class="ph ph-check" aria-hidden="true"></i><span></span>';
                 btn.querySelector("span").textContent = item.text;
@@ -215,7 +236,15 @@
         // lopen door de zichtbare opties (.is-active), Enter kiest de actieve — of de eerste als er nog
         // geen actief is — en Escape sluit. Enter mag hier nooit het formulier indienen.
         searchInput.addEventListener("keydown", function (e) {
-            if (e.key === "Escape") { closeAllPanels(); return; }
+            if (e.key === "Escape") { closeAllPanels(); refocusTrigger(); return; }
+            if (e.key === "Tab") {
+                // Tab kiest het actieve (of het enige) resultaat en gaat dan gewoon door naar het volgende veld.
+                var tabItems = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
+                var tabActive = tabItems.filter(function (b) { return b.classList.contains("is-active"); })[0] || (tabItems.length === 1 ? tabItems[0] : null);
+                if (!e.shiftKey && tabActive) tabActive.click();
+                else { closeAllPanels(); refocusTrigger(); }
+                return;
+            }
             if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
             var items = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
             if (e.key === "Enter") e.preventDefault();
@@ -259,7 +288,7 @@
         });
         // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
         // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
-        trigger.addEventListener("focus", function () { if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThis(); } });
+        trigger.addEventListener("focus", function () { if (suppressOpen) return; if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThis(); } });
         if (clearTrigger) clearTrigger.addEventListener("click", function (e) { e.stopPropagation(); choose("", ""); });
     }
 

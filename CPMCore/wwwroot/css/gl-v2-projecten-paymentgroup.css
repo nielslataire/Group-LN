@@ -1,0 +1,218 @@
+/* gl-v2 — Betalingsgroep bewerken / Nieuwe betalingsgroep (design-handoff punt 26a-d). Eigen klassen-
+   namespace gl-v2-pg-* (bewerkpagina) en gl-v2-npg-* (26a-modal). Deze stylesheet laadt VÓÓR
+   gl-v2-shell.css: waar een shell-regel dezelfde specificiteit heeft wint de shell, dus overrides van
+   shell-componenten dragen een extra selector-niveau (DESIGN.md "gl-v2 page CSS loads BEFORE shell.css").
+   [hidden] krijgt overal een expliciete guard waar een eigen display-regel anders wint. */
+
+/* ── Pagina-opbouw (zelfde vorm als de aandelen-pagina: formulier vult de hoogte, midden scrolt) ── */
+.gl-v2-pg-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.gl-v2-pg-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-bottom: 20px; }
+.gl-v2-pg-card { flex: none; }
+.gl-v2-pg-card-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 0; }
+
+/* ── Kaart "Groep" ─────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-card-body.gl-v2-pg-group-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px 20px; align-items: start; }
+.gl-v2-pg-field-units { grid-column: 1 / -1; }
+.gl-v2-pg-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gl-v2-pg-chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 6px 0 12px;
+    border-radius: 16px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary);
+    font: 600 12px var(--gl-v2-font-sans);
+}
+.gl-v2-pg-chip[data-locked="1"] { padding-right: 12px; }
+.gl-v2-pg-chip-lock { font-size: 13px; opacity: .8; }
+.gl-v2-pg-chip-remove {
+    display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+    border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; font-size: 12px;
+}
+.gl-v2-pg-chip-remove:hover { background: rgba(0, 83, 45, .14); }
+.gl-v2-pg-chip-add {
+    display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border-radius: 16px;
+    border: 1px dashed var(--gl-v2-dashed); background: transparent; color: var(--gl-v2-muted-soft);
+    font: 600 12px var(--gl-v2-font-sans); cursor: pointer;
+}
+.gl-v2-pg-chip-add:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pg-chip-add[hidden] { display: none; }
+
+/* ── Kaart "Betalingsschijven" ─────────────────────────────────────────────────────────────────── */
+.gl-v2-pg-stages-header { flex-wrap: wrap; row-gap: 6px; }
+.gl-v2-pg-total {
+    display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 15px;
+    font: 500 12px var(--gl-v2-font-sans); white-space: nowrap;
+}
+.gl-v2-pg-total strong { font-weight: 700; font-variant-numeric: tabular-nums; }
+.gl-v2-pg-total-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.gl-v2-pg-total[data-state="ok"] { background: #E4EEDD; color: #24502E; }
+.gl-v2-pg-total[data-state="bad"] { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+
+.gl-v2-pg-selbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 20px;
+    background: var(--gl-v2-primary-tint); border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-pg-selbar[hidden] { display: none; }
+.gl-v2-pg-selbar-count { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-pg-selbar .gl-v2-btn { height: 32px; padding: 0 12px; }
+
+/* Rasterkolommen: handvat | vinkje | # | omschrijving | percentage | acties */
+.gl-v2-pg-table-head, .gl-v2-pg-row {
+    display: grid; grid-template-columns: 28px 28px 36px minmax(0, 1fr) 132px 112px; column-gap: 10px; align-items: center;
+    padding-left: 20px; padding-right: 20px;
+}
+.gl-v2-pg-table-head {
+    padding-top: 8px; padding-bottom: 8px; background: #F7F9F5; border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted);
+}
+.gl-v2-pg-table-head .gl-v2-pg-col-pct { text-align: right; }
+.gl-v2-pg-table-head .gl-v2-pg-col-actions { text-align: right; }
+.gl-v2-pg-rows { list-style: none; margin: 0; padding: 0; }
+.gl-v2-pg-row { padding-top: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--gl-v2-hairline-soft); background: var(--gl-v2-surface); }
+.gl-v2-pg-row.is-selected { background: var(--gl-v2-hover-tint); }
+.gl-v2-pg-row.is-copy { background: var(--gl-v2-gold-tint); }
+.gl-v2-pg-row.is-dragging { opacity: .45; }
+.gl-v2-pg-row.is-locked .gl-v2-pg-pct-input { color: var(--gl-v2-muted-soft); }
+
+.gl-v2-pg-col-handle { display: flex; justify-content: center; }
+.gl-v2-pg-handle {
+    display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 32px; cursor: grab;
+    color: var(--gl-v2-muted-light); border-radius: 6px; font-size: 18px;
+}
+.gl-v2-pg-handle:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-muted); }
+.gl-v2-pg-handle:active { cursor: grabbing; }
+.gl-v2-pg-lock { color: var(--gl-v2-muted-light); font-size: 16px; }
+.gl-v2-pg-col-check { display: flex; justify-content: center; }
+.gl-v2-pg-sel { width: 16px; height: 16px; accent-color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-pg-col-num { text-align: center; }
+.gl-v2-pg-num {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border-radius: 12px;
+    background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted-soft); font: 600 11px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums;
+}
+.gl-v2-pg-col-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.gl-v2-pg-col-name .gl-v2-field-box { flex: 1 1 260px; min-width: 0; height: 36px; }
+.gl-v2-pg-badge-final {
+    flex: none; padding: 3px 8px; border-radius: 10px; background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning);
+    font: 700 9px var(--gl-v2-font-sans); letter-spacing: .1em;
+}
+.gl-v2-pg-badge-final[hidden] { display: none; }
+.gl-v2-pg-row-note { flex-basis: 100%; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pg-row-note[hidden] { display: none; }
+.gl-v2-pg-row-note.is-copy-note { color: var(--gl-v2-warning); }
+.gl-v2-pg-col-pct .gl-v2-field-box { height: 36px; position: relative; }
+.gl-v2-pg-col-pct .gl-v2-pg-pct-input { text-align: right; padding-right: 30px; }
+.gl-v2-pg-pct-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); pointer-events: none; }
+.gl-v2-pg-col-actions { display: flex; justify-content: flex-end; gap: 4px; }
+.gl-v2-pg-iconbtn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 34px; height: 34px; padding: 0;
+    border: 1px solid transparent; border-radius: var(--gl-v2-radius-sm); background: transparent; color: var(--gl-v2-muted-soft);
+    font: 600 12px var(--gl-v2-font-sans); cursor: pointer; font-size: 16px;
+}
+.gl-v2-pg-iconbtn:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pg-iconbtn.is-danger { color: var(--gl-v2-danger); }
+.gl-v2-pg-iconbtn.is-danger:hover { background: var(--gl-v2-danger-tint); }
+.gl-v2-pg-iconbtn[hidden] { display: none; }
+.gl-v2-pg-iconbtn-text { display: none; }
+
+.gl-v2-pg-addbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 4px; }
+.gl-v2-pg-hint { margin: 0; padding: 8px 20px 16px; font: 450 11.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Modals: eenheden kiezen / schijven overnemen ──────────────────────────────────────────────── */
+.gl-v2-pg-modal-lead, .gl-v2-pg-pick { grid-column: 1 / -1; }
+.gl-v2-pg-modal-lead { margin: 0 0 12px; font: 450 13px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-pg-pick { display: flex; flex-direction: column; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); max-height: 340px; overflow-y: auto; }
+.gl-v2-pg-pick-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); cursor: pointer; }
+.gl-v2-pg-pick-item:last-child { border-bottom: 0; }
+.gl-v2-pg-pick-item:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pg-pick-item input { width: 18px; height: 18px; accent-color: var(--gl-v2-primary); flex: none; }
+.gl-v2-pg-pick-text { display: flex; flex-direction: column; min-width: 0; }
+.gl-v2-pg-pick-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pg-pick-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── 26a: Nieuwe betalingsgroep ────────────────────────────────────────────────────────────────── */
+/* Breed genoeg voor lijst + voorbeeld naast elkaar; modal-lg alleen is hier niet zeker genoeg. */
+.gl-v2-modal-form.gl-v2-npg-modal .modal-dialog { max-width: 860px; width: calc(100% - 32px); }
+.gl-v2-npg-header-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-npg-header-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-npg-loading { padding: 40px 0; text-align: center; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-npg-form { grid-column: 1 / -1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-npg-section-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-npg-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gl-v2-npg-mode {
+    display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-sm); cursor: pointer; min-height: 56px;
+}
+.gl-v2-npg-mode:has(input:checked) { border-color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); }
+.gl-v2-npg-mode.is-disabled { opacity: .5; cursor: not-allowed; }
+.gl-v2-npg-mode input { margin-top: 3px; accent-color: var(--gl-v2-primary); flex: none; width: 16px; height: 16px; }
+.gl-v2-npg-mode-text { display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-npg-mode-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-npg-mode-desc { font: 450 11.5px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-npg-copy { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.gl-v2-npg-copy[hidden] { display: none; }
+.gl-v2-npg-pick-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gl-v2-npg-list { border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); max-height: 300px; overflow-y: auto; }
+.gl-v2-npg-list-label { padding: 8px 14px 4px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); background: #F7F9F5; }
+.gl-v2-npg-list-label[hidden], .gl-v2-npg-list-empty[hidden], .gl-v2-npg-item[hidden] { display: none; }
+.gl-v2-npg-list-empty { padding: 18px 14px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: center; }
+.gl-v2-npg-item { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); cursor: pointer; }
+.gl-v2-npg-item:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-npg-item:has(input:checked) { background: var(--gl-v2-primary-tint); }
+.gl-v2-npg-item input { accent-color: var(--gl-v2-primary); flex: none; width: 16px; height: 16px; }
+.gl-v2-npg-item-text { display: flex; flex-direction: column; min-width: 0; }
+.gl-v2-npg-item-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-npg-item-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-npg-preview { border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); min-height: 120px; background: #FBFCFA; min-width: 0; }
+.gl-v2-npg-preview-empty { padding: 28px 16px; text-align: center; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-npg-preview-empty[hidden], .gl-v2-npg-preview-box[hidden] { display: none; }
+.gl-v2-npg-preview-head { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-npg-preview-rows { list-style: none; margin: 0; padding: 0; max-height: 252px; overflow-y: auto; }
+.gl-v2-npg-preview-rows li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; padding: 6px 14px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-npg-preview-num { color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+.gl-v2-npg-preview-pct { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--gl-v2-ink); }
+
+.gl-v2-npg-fields { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.gl-v2-npg-search .gl-v2-field-box { height: 38px; }
+.gl-v2-npg-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Gsm (26c): schijven als rijkaarten, grote knoppen, totaal vast bovenaan de lijst ─────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-pg-scroll { padding-bottom: 96px; }
+    /* Op gsm scrolt het hele document (geen eigen scrollvak), anders pint de totaal-kop aan een vak dat niet scrolt. */
+    .gl-v2-pg-scroll { overflow: visible; }
+    /* overflow:hidden van de full-height-body zou zelf het scrollvak voor sticky worden; clip knipt zonder scrollvak. */
+    .gl-v2-body.is-full-height:has(.gl-v2-pg-form) { overflow: clip; }
+    .gl-v2-card.gl-v2-pg-card { overflow: clip; }
+    .gl-v2-card-body.gl-v2-pg-group-body { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-pg-card-sub { display: none; }
+    /* Totaal blijft in beeld terwijl je door de schijven scrolt. */
+    .gl-v2-pg-stages-header { position: sticky; top: 0; z-index: 4; background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md) var(--gl-v2-radius-md) 0 0; }
+    .gl-v2-pg-total { height: 34px; }
+    .gl-v2-pg-table-head { display: none; }
+    .gl-v2-pg-selbar { display: none !important; }
+    .gl-v2-pg-rows { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+    .gl-v2-pg-row {
+        grid-template-columns: 30px minmax(0, 1fr); grid-template-areas: "num name" ". pct" "actions actions";
+        padding: 12px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-md); row-gap: 10px; align-items: start;
+    }
+    .gl-v2-pg-col-handle, .gl-v2-pg-col-check { display: none; }
+    .gl-v2-pg-col-num { grid-area: num; padding-top: 6px; }
+    .gl-v2-pg-col-name { grid-area: name; }
+    .gl-v2-pg-col-pct { grid-area: pct; max-width: 150px; }
+    .gl-v2-pg-col-actions { grid-area: actions; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .gl-v2-pg-col-name .gl-v2-field-box, .gl-v2-pg-col-pct .gl-v2-field-box { height: 44px; }
+    .gl-v2-pg-col-name .gl-v2-field-box { flex-basis: 100%; }
+    .gl-v2-pg-iconbtn {
+        width: auto; height: 44px; padding: 0 12px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); font-size: 18px;
+    }
+    .gl-v2-pg-iconbtn.is-danger { border-color: rgba(139, 42, 42, .4); }
+    .gl-v2-pg-iconbtn-text { display: inline; font-size: 13px; }
+    .gl-v2-pg-row.is-locked .gl-v2-pg-col-actions { grid-template-columns: 1fr; }
+    .gl-v2-pg-addbar { padding: 4px 12px; }
+    .gl-v2-pg-addbar .gl-v2-btn { height: 44px; flex: 1 1 100%; }
+    .gl-v2-pg-hint { padding: 8px 12px 16px; }
+    .gl-v2-pg-chip, .gl-v2-pg-chip-add { height: 38px; }
+    .gl-v2-pg-chip-remove { width: 30px; height: 30px; }
+    .gl-v2-pg-name-input, .gl-v2-pg-pct-input { font-size: 16px; }
+    .gl-v2-npg-modes, .gl-v2-npg-copy, .gl-v2-npg-fields { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-pg-pick-item, .gl-v2-npg-item { min-height: 52px; }
+}

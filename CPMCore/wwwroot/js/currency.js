@@ -3,7 +3,8 @@
 // Centrale initialisatie voor geldvelden
 // =======================================
 
-window.CurrencyMask = (function () {
+// Eén keer laden: een pagina die dit script (of de layout) dubbel insluit mag het niet opnieuw definiëren.
+if (!window.CurrencyMask) window.CurrencyMask = (function () {
 
     const defaultOptions = {
         decimalCharacter: ',',

@@ -6,6 +6,10 @@
    .modal-content-inhoud (body + footer), geen eigen .modal/.modal-dialog wrapper nodig. Verwijderen
    blijft dezelfde `DeleteClient` GET-link als de legacy modal — geen nieuw POST/antiforgery-gedrag
    hier geïntroduceerd. *@
+@{
+    var booked = ViewData["BookedInvoices"] as List<string> ?? new List<string>();
+    var unbooked = ViewData["UnbookedInvoiceCount"] as int? ?? 0;
+}
 <div class="modal-body">
     <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
     <div class="gl-v2-modal-text">
@@ -13,9 +17,26 @@
         <p class="gl-v2-modal-desc">
             U staat op het punt om <strong>@Model.Display</strong> te verwijderen. Bent u zeker dat u deze wilt verwijderen?
         </p>
+        @if (booked.Count > 0)
+        {
+            <p class="gl-v2-modal-desc" style="color:#8B2A2A" role="alert">
+                <strong>Verwijderen kan niet:</strong> @booked.Count @(booked.Count == 1 ? "factuur is" : "facturen zijn") al in Octopus geboekt
+                (@string.Join(", ", booked.Take(5))@(booked.Count > 5 ? $" en nog {booked.Count - 5}" : "")).
+            </p>
+        }
+        else if (unbooked > 0)
+        {
+            <p class="gl-v2-modal-desc" style="color:#6B4F22" role="alert">
+                <strong>Let op:</strong> aan deze klant @(unbooked == 1 ? "hangt" : "hangen") @unbooked nog niet geboekte @(unbooked == 1 ? "factuur" : "facturen").
+                Die blijven bestaan maar verliezen de koppeling met de klant.
+            </p>
+        }
     </div>
 </div>
 <div class="modal-footer">
     <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
-    <a href="@Url.Action("DeleteClient", "Klanten", new { id = Model.ID })" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</a>
+    @if (booked.Count == 0)
+    {
+        <a href="@Url.Action("DeleteClient", "Klanten", new { id = Model.ID, confirmInvoices = unbooked > 0 })" class="gl-v2-btn gl-v2-btn-danger">@(unbooked > 0 ? "Toch verwijderen" : "Verwijderen")</a>
+    }
 </div>

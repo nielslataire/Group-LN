@@ -15,6 +15,10 @@ public class ChangeOrderDetailV2Vm
     public int ChangeOrderId { get; set; }
     public bool IsNew { get; set; }
     public bool CanWrite { get; set; }
+    /// <summary>"05/10/2026 14:32" — laatste keer opgeslagen (leeg als nog nooit via dit scherm).</summary>
+    public string? SavedAtText { get; set; }
+    /// <summary>Offerte: verwijderrecht volstaat; wijzigingsopdracht: enkel admin.</summary>
+    public bool CanDelete { get; set; }
     public bool IsLocked { get; set; }
     public string? LockedReason { get; set; }
 
@@ -167,7 +171,7 @@ public class ChangeOrderDetailRowV2
 {
     public int Id { get; set; }
     public string Description { get; set; } = "";
-    public int MeasurementType { get; set; }
+    public int MeasurementType { get; set; } = (int)BOCore.MeasurementType.Vermoedelijk;
     public int MeasurementUnit { get; set; }
     public int Number { get; set; } = 1;
     public decimal Price { get; set; }

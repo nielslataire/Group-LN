@@ -17,7 +17,10 @@
 @{
     var be = CultureInfo.GetCultureInfo("nl-BE");
     var paymentGroupNames = ViewData["PaymentGroupNames"] as Dictionary<int, string>;
-    var paymentGroupName = Model.PaymentGroupId is int pgId && paymentGroupNames != null && paymentGroupNames.TryGetValue(pgId, out var pgName) ? pgName : null;
+    // De betalingsgroep van een eenheid hangt via UnitConstructionValue.PaymentGroupId (wat Betalingsschijven leest);
+    // Units.PaymentGroupId is de oudere koppeling en kan leeg zijn. Daarom eerst de oude, dan de constructiewaarden.
+    var effectiveGroupId = Model.PaymentGroupId ?? Model.ConstructionValues.Select(cv => cv.PaymentGroupId).FirstOrDefault(g => g.HasValue);
+    var paymentGroupName = effectiveGroupId is int pgId && paymentGroupNames != null && paymentGroupNames.TryGetValue(pgId, out var pgName) ? pgName : null;
     var subParts = new List<string>();
     if (!string.IsNullOrWhiteSpace(Model.Type?.Name)) subParts.Add(Model.Type.Name.ToLowerInvariant());
     if (Model.Surface is decimal surface && surface > 0) subParts.Add(surface.ToString("N0", be) + " m²");

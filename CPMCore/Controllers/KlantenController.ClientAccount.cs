@@ -968,6 +968,29 @@ namespace CPMCore.Controllers
 
 
         // KLANT VERWIJDEREN
+
+        /// <summary>Facturen die aan de klant (of zijn contactpersonen/mede-eigenaars) hangen. Een factuur die
+        /// al in Octopus geboekt is blokkeert het verwijderen; niet-geboekte facturen mogen na een
+        /// waarschuwing, ze verliezen dan enkel de koppeling (naam/adres staan als snapshot op de factuur).</summary>
+        private (List<string> Booked, int UnbookedCount) GetClientInvoiceBlockers(int clientId)
+        {
+            var contactIds = _db.ClientContacts.AsNoTracking().Where(k => k.ClientAccountId == clientId).Select(k => k.Id).ToList();
+            var invoices = _db.Invoices.AsNoTracking()
+                .Where(i => i.ClientIdClientAccount == clientId || (i.ClientIdClientContacts != null && contactIds.Contains(i.ClientIdClientContacts.Value)))
+                .Select(i => new { i.Id, i.Filename, i.Date, Booked = i.OctopusBookedAt != null || i.OctopusDocumentSequenceNr != null })
+                .ToList();
+            var booked = invoices.Where(i => i.Booked)
+                .Select(i => string.IsNullOrWhiteSpace(i.Filename) ? $"factuur van {i.Date:dd/MM/yyyy}" : $"{i.Filename} ({i.Date:dd/MM/yyyy})")
+                .ToList();
+            return (booked, invoices.Count(i => !i.Booked));
+        }
+
+        private void FillDeleteClientWarnings(int id)
+        {
+            var (booked, unbooked) = GetClientInvoiceBlockers(id);
+            ViewData["BookedInvoices"] = booked;
+            ViewData["UnbookedInvoiceCount"] = unbooked;
+        }
         [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
         public ActionResult PartialDeleteClientModal(int id)
         {
@@ -977,6 +1000,7 @@ namespace CPMCore.Controllers
                 var dservice = _clientService;
                 viewModel.Display = dservice.GetClientAccountNameById(id);
                 viewModel.ID = id;
+                FillDeleteClientWarnings(id);
             }
             return PartialView("_DeleteClientModal", viewModel);
         }
@@ -995,13 +1019,14 @@ namespace CPMCore.Controllers
                 var dservice = _clientService;
                 viewModel.Display = dservice.GetClientAccountNameById(id);
                 viewModel.ID = id;
+                FillDeleteClientWarnings(id);
             }
             return PartialView("Modals/_DeleteClientModalV2", viewModel);
         }
 
         [HttpGet]
         [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
-        public ActionResult DeleteClient(int id)
+        public ActionResult DeleteClient(int id, bool confirmInvoices = false)
         {
             var scope = ResolveCustomerIssuerScopeAsync(PermissionAccessType.Delete, HttpContext.RequestAborted)
                 .GetAwaiter()
@@ -1026,35 +1051,64 @@ namespace CPMCore.Controllers
             }
 
             string stri = Request.Headers["Referer"].ToString();
-            List<int> Idlist = new List<int>();
-            Idlist.Add(id);
-            if (id != 0)
+            if (string.IsNullOrEmpty(stri)) stri = Url.Action(nameof(Index)) ?? "/";
+            if (id == 0) return Redirect(stri);
+
+            // Eerst controleren, pas daarna iets wijzigen: een geboekte factuur blokkeert, niet-geboekte vragen
+            // bevestiging (de modal stuurt confirmInvoices=true mee nadat de waarschuwing getoond is).
+            var (booked, unbookedCount) = GetClientInvoiceBlockers(id);
+            if (booked.Count > 0)
             {
-                var uservice = _unitService;
-                var response = uservice.DeleteUnitFromClientAccountByAccountId(Idlist);
-                var dservice = _clientService;
-                if (response.Success == true)
+                var list = string.Join(", ", booked.Take(5)) + (booked.Count > 5 ? $" en nog {booked.Count - 5}" : "");
+                AddMessage("error", $"Deze klant kan niet verwijderd worden: {booked.Count} {(booked.Count == 1 ? "factuur is" : "facturen zijn")} al in Octopus geboekt ({list}).", "Niet verwijderd");
+                return Redirect(stri);
+            }
+            if (unbookedCount > 0 && !confirmInvoices)
+            {
+                AddMessage("error", $"Aan deze klant hangen {unbookedCount} nog niet geboekte {(unbookedCount == 1 ? "factuur" : "facturen")}. Bevestig het verwijderen via het venster.", "Bevestiging nodig");
+                return Redirect(stri);
+            }
+
+            // Alles of niets: faalt het verwijderen, dan blijven ook de eenheden en facturen zoals ze waren.
+            using var tx = _uow.Context.Database.BeginTransaction();
+            try
+            {
+                if (unbookedCount > 0)
                 {
-                    response = dservice.Delete(Idlist);
-                    if (response.Success == true)
-                    {
-                        AddMessage("", "De klant is verwijderd", "Geslaagd!");
-                        return Redirect(stri);
-                    }
-                    else
-                    {
-                        AddMessage("error", "De klant niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
-                        return Redirect(stri);
-                    }
+                    var contactIds = _db.ClientContacts.Where(k => k.ClientAccountId == id).Select(k => k.Id).ToList();
+                    var invoices = _db.Invoices
+                        .Where(i => i.ClientIdClientAccount == id || (i.ClientIdClientContacts != null && contactIds.Contains(i.ClientIdClientContacts.Value)))
+                        .ToList();
+                    foreach (var inv in invoices) { inv.ClientIdClientAccount = null; inv.ClientIdClientContacts = null; }
+                    _db.SaveChanges();
+                }
+
+                var idlist = new List<int> { id };
+                var response = _unitService.DeleteUnitFromClientAccountByAccountId(idlist);
+                if (response.Success) response = _clientService.Delete(idlist);
+
+                if (response.Success)
+                {
+                    tx.Commit();
+                    AddMessage("", unbookedCount > 0
+                        ? $"De klant is verwijderd. {unbookedCount} niet geboekte {(unbookedCount == 1 ? "factuur is" : "facturen zijn")} ontkoppeld van de klant."
+                        : "De klant is verwijderd", "Geslaagd!");
                 }
                 else
                 {
-                    AddMessage("error", "De klant niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
-                    return Redirect(stri);
+                    tx.Rollback();
+                    var reason = response.Messages.Where(m => m.Type == MessageType.Error).Select(m => m.Message).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+                    AddMessage("error", reason ?? "De klant is niet verwijderd, probeer opnieuw of contacteer de administrator.", "Niet verwijderd");
                 }
             }
-            else
-                return Redirect(stri);
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                _db.ChangeTracker.Clear();
+                _logger.LogError(ex, "Klant {ClientId} verwijderen mislukt", id);
+                AddMessage("error", ServiceCore.DbErrorTranslator.ToFriendlyMessage(ex), "Niet verwijderd");
+            }
+            return Redirect(stri);
         }
 
     }

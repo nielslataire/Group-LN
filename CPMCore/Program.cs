@@ -87,6 +87,7 @@ builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
     options.Filters.Add<PermissionConventionFilter>();
+    options.Filters.Add<CPMCore.Filters.DbUpdateExceptionFilter>();
 
     // Nederlandse standaardteksten voor model-binding / validatie (i.p.v. de
     // Engelse framework-defaults zoals "The value 'x' is not valid for Y").
@@ -520,10 +521,59 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
     options.Cookie.HttpOnly = true;
+    // Secure altijd (productie is https); in Development laat het http://localhost-profiel nog toe.
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    // Lax, niet Strict: Strict zou de terugkeer van Microsoft/Google na het inloggen (cross-site redirect) breken.
+    options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromDays(14);
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.SlidingExpiration = true;
+
+    // Sessie blijft bestaan na het sluiten van de app/browser (PWA!) voor medewerkers; portaalgasten
+    // (aannemers/klanten, vaker op een gedeeld of vreemd toestel) behouden de sessiecookie zoals voorheen.
+    options.Events.OnSigningIn = context =>
+    {
+        var userType = context.Principal?.FindFirst(CPMCore.Helpers.CpmClaims.UserType)?.Value ?? "internal";
+        if (userType == "internal")
+        {
+            context.Properties.IsPersistent = true;
+        }
+        return Task.CompletedTask;
+    };
+
+    // Bij elke aanvraag: (1) absolute bovengrens van 30 dagen sinds het inloggen, ook al verlengt de
+    // glijdende vervaldatum de cookie; (2) de gebruiker moet nog actief zijn — een gedeactiveerde
+    // gebruiker of verloren telefoon verliest zo binnen enkele minuten toegang i.p.v. na 14 dagen.
+    // De actief-controle wordt 2 minuten onthouden per gebruiker (geen databasequery per aanvraag).
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        var issued = context.Properties.IssuedUtc;
+        if (issued.HasValue && DateTimeOffset.UtcNow - issued.Value > TimeSpan.FromDays(30))
+        {
+            context.RejectPrincipal();
+            await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.SignOutAsync(context.HttpContext, CookieAuthenticationDefaults.AuthenticationScheme);
+            return;
+        }
+
+        if (!int.TryParse(context.Principal?.FindFirst(CPMCore.Helpers.CpmClaims.UserId)?.Value, out var userId)) return;
+
+        var cache = context.HttpContext.RequestServices.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+        var cacheKey = "cpm:user-active:" + userId;
+        bool isActive = false;
+        if (cache == null || !Microsoft.Extensions.Caching.Memory.CacheExtensions.TryGetValue<bool>(cache, cacheKey, out isActive))
+        {
+            var db = context.HttpContext.RequestServices.GetRequiredService<DALCore.Models.cpmRunningContext>();
+            isActive = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.IsActive).FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+            if (cache != null) Microsoft.Extensions.Caching.Memory.CacheExtensions.Set(cache, cacheKey, isActive, TimeSpan.FromMinutes(2));
+        }
+
+        if (!isActive)
+        {
+            context.RejectPrincipal();
+            await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.SignOutAsync(context.HttpContext, CookieAuthenticationDefaults.AuthenticationScheme);
+        }
+    };
 });
 builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {

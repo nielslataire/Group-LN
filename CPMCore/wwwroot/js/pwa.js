@@ -86,4 +86,64 @@
             }
         }
     });
+
+    // ── Downloads vanuit het browservenster ────────────────────────────────────────────────────
+    // Staat de app geïnstalleerd (ook op desktop), dan "vangt" de browser een klik op een link binnen de site
+    // en opent die in het app-venster: de download verschijnt daar en niet in het browservenster waar je
+    // klikte. Een download die via fetch + blob loopt is geen navigatie en wordt dus nooit gevangen. Enkel in een
+    // gewoon browservenster (in het app-venster zelf werkt de gewone link). HTML-antwoorden (afdrukpagina's)
+    // blijven een gewone navigatie; PDF's en afbeeldingen openen als blob in een nieuw tabblad; bijlagen worden bewaard.
+    var DOWNLOAD_RE = //(Export[A-Za-z0-9]*|Download[A-Za-z0-9]*|[A-Za-z0-9]*Pdf[A-Za-z0-9]*|[A-Za-z0-9]*Excel[A-Za-z0-9]*|[A-Za-z0-9]*Csv[A-Za-z0-9]*|[A-Za-z0-9]*Xlsx[A-Za-z0-9]*|[A-Za-z0-9]*Zip[A-Za-z0-9]*|GuaranteeDoc)(/|?|$)/i;
+
+    function filenameFrom(res, url) {
+        var cd = res.headers.get("Content-Disposition") || "";
+        var m = /filename*=UTF-8''([^;]+)/i.exec(cd);
+        if (m) { try { return decodeURIComponent(m[1].trim().replace(/"/g, "")); } catch (e) { /* val terug */ } }
+        m = /filename="?([^";]+)"?/i.exec(cd);
+        if (m) return m[1].trim();
+        var last = url.pathname.split("/").filter(Boolean).pop() || "download";
+        return last;
+    }
+
+    document.addEventListener("click", function (e) {
+        if (isStandalone() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+        if (!a || !window.fetch || !window.URL || !window.Blob) return;
+        var url;
+        try { url = new URL(a.href, window.location.href); } catch (err) { return; }
+        if (url.origin !== window.location.origin) return;
+        var wants = a.hasAttribute("data-gl-v2-download") || a.hasAttribute("download") || DOWNLOAD_RE.test(url.pathname);
+        if (!wants) return;
+
+        e.preventDefault();
+        var openInTab = a.target === "_blank";
+        fetch(url.href, { credentials: "same-origin" }).then(function (res) {
+            if (!res.ok) throw new Error("status " + res.status);
+            var type = (res.headers.get("Content-Type") || "").toLowerCase();
+            var disposition = (res.headers.get("Content-Disposition") || "").toLowerCase();
+            var isAttachment = disposition.indexOf("attachment") !== -1;
+            if (!isAttachment && type.indexOf("text/html") !== -1) {
+                // Geen bestand maar een pagina (bv. afdrukweergave): gewone navigatie.
+                if (openInTab) window.open(url.href, "_blank"); else window.location.href = url.href;
+                return null;
+            }
+            return res.blob().then(function (blob) {
+                var objectUrl = window.URL.createObjectURL(blob);
+                if (!isAttachment && (type.indexOf("pdf") !== -1 || type.indexOf("image/") !== -1)) {
+                    window.open(objectUrl, "_blank");
+                } else {
+                    var link = document.createElement("a");
+                    link.href = objectUrl;
+                    link.download = filenameFrom(res, url);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+                window.setTimeout(function () { window.URL.revokeObjectURL(objectUrl); }, 120000);
+            });
+        }).catch(function () {
+            // Lukt het ophalen niet, dan beter de gewone link dan niets.
+            if (openInTab) window.open(url.href, "_blank"); else window.location.href = url.href;
+        });
+    }, false);
 })();

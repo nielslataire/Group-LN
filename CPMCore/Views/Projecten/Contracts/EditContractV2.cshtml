@@ -93,7 +93,7 @@
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
-<span class="gl-v2-ec-required-note">Velden met <span class="gl-v2-ec-required-star">*</span> zijn verplicht · zelfde formulier voor een nieuw contract, dan met lege velden</span>
+<span class="gl-v2-ec-required-note">Velden met <span class="gl-v2-ec-required-star">*</span> zijn verplicht</span>
 
 @using (Html.BeginForm("EditContract", "Projecten", FormMethod.Post, new { @class = "gl-v2-ec-form", id = "gl-v2-ec-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
 {
@@ -105,6 +105,7 @@
     <input type="hidden" id="txtCompanyDisplay" value="@Model.Contract.Company.Display" />
 
     <div class="gl-v2-ec-scroll">
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
         <div class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-identification-card" aria-hidden="true"></i></span>
@@ -126,10 +127,22 @@
                     else
                     {
                         <div class="gl-v2-field">
-                            @Html.LabelFor(m => m.Companies, new { @class = "gl-v2-field-label" })
-                            <select id="ddlCompany" class="form-control w-100"></select>
+                            <label class="gl-v2-field-label" for="txtCompanyID_input">@Html.DisplayNameFor(m => m.Companies)</label>
+                            @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                            {
+                                Name = "Contract.Company.ID",
+                                Id = "txtCompanyID",
+                                Value = Model.Contract.Company.ID.ToString(),
+                                EmptyValue = "0",
+                                DisplayText = Model.Contract.Company.Display,
+                                Placeholder = "Zoek of kies een leverancier …",
+                                LookupUrl = Url.Action("GetCompanys", "Projecten"),
+                                MinChars = 3,
+                                Icon = "ph-buildings",
+                                Avatar = true,
+                                NewEntity = "bedrijf"
+                            })
                         </div>
-                        @Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID" })
                     }
                 </div>
                 <div class="gl-v2-field gl-v2-ec-col-12">
@@ -359,7 +372,6 @@
     <script src="~/js/theme.admin.extension.js"></script>
     <script src="~/lib/select2/js/i18n/nl.js"></script>
     <script src="~/lib/dropzone/dropzone.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
     <script src="~/js/currency.js"></script>
     <script>
         window.glV2EditContractConfig = {

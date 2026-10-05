@@ -381,6 +381,14 @@
                 toast("warning", "Nog niet te verzenden", problem);
             }
         });
+        // Zichtbaar dat er opgeslagen wordt: de knop toont een draaiertje en is niet nog eens aan te klikken. Geregistreerd
+        // ná de validatie hierboven, dus enkel bij een submit die echt vertrekt.
+        mainForm.addEventListener("submit", function (e) {
+            if (e.defaultPrevented) return;
+            var btn = e.submitter || document.getElementById("gl-v2-co-save");
+            if (btn) { btn.classList.add("is-saving"); btn.setAttribute("aria-busy", "true"); }
+            toast("info", "Bezig met opslaan …", "");
+        });
     }
 
     recomputeTotals();
@@ -433,9 +441,9 @@
         body.innerHTML = '<div class="gl-v2-co-send-loading">Laden…</div>';
         window.bootstrap.Modal.getOrCreateInstance(sendModalEl).show();
         fetch(cfg.sendModalUrl)
-            .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
+            .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.text(); })
             .then(function (html) { body.innerHTML = html; wireSend(body); })
-            .catch(function () { body.innerHTML = '<div class="gl-v2-co-send-loading">Kon het verzendformulier niet laden.</div>'; });
+            .catch(function (err) { body.innerHTML = '<div class="gl-v2-co-send-loading">Kon het verzendformulier niet laden (' + (err && err.message ? err.message : "geen verbinding") + ').</div>'; });
     }
 
     // ?send=true / ?convert=true uit de adresbalk: een herlaad of "terug" opent de modal niet opnieuw.

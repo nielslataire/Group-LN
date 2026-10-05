@@ -1,0 +1,421 @@
+@model CPMCore.Models.Projecten.PaymentGroupEditV2Vm
+@*
+    gl-v2 — Betalingsgroep bewerken / Nieuwe betalingsgroep (design-handoff punt 26b/26c/26d). Vervangt in
+    de gl-v2-ervaring het legacy PaymentStagesAddUpdate-scherm.
+
+    Eén formulier, twee kaarten (Groep + Betalingsschijven) en de vaste actiebalk. Alle schijf-
+    interacties (slepen, selecteren, dupliceren, verwijderen, schijven overnemen, totaalbolletje) leven
+    in gl-v2-projecten-paymentgroup.js; de server (SavePaymentGroupV2) herhaalt elke regel (totaal 100 %,
+    vaste schijven) zodat de UI geen enige verdediging is. De velden StageIds/StageNames/StagePercentages/
+    StageInvoicable zijn parallelle lijsten: de DOM-volgorde van de rijen IS de schijfvolgorde.
+
+    Eigen klassen-namespace gl-v2-pg-*. Op <768px worden de tabelrijen rijkaarten (26c).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Pct(decimal v) => v.ToString("0.00", be);
+    string PctShort(decimal v) => v.ToString("0.##", be);
+
+    ViewData["Title"] = Model.IsNew ? "Nieuwe betalingsgroep" : "Betalingsgroep bewerken";
+    ViewData["PageIcon"] = "ph ph-stack";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("PaymentStagesV2", "Projecten", new { projectid = Model.ProjectId });
+
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId,
+        ProjectName = Model.ProjectName,
+        ProjectSubtitle = "project · betalingsschijven",
+    };
+    var vatText = Model.VatOptions.FirstOrDefault(o => o.Id == Model.VatTypeId)?.Text ?? "Kies een btw-type";
+    var hasVat = Model.VatOptions.Any(o => o.Id == Model.VatTypeId);
+    var lastIndex = Model.Stages.Count - 1;
+    var nameError = ViewContext.ModelState.TryGetValue("Name", out var nameEntry) && nameEntry.Errors.Count > 0;
+    var vatError = ViewContext.ModelState.TryGetValue("VatTypeId", out var vatEntry) && vatEntry.Errors.Count > 0;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-paymentgroup.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-pg-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    @if (!Model.IsNew)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pg-duplicate-group" data-group-id="@Model.GroupId">
+            <i class="ph ph-copy" aria-hidden="true"></i><span>Dupliceer groep</span>
+        </button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form method="post" action="@Url.Action("SavePaymentGroupV2", "Projecten")" id="gl-v2-pg-form" class="gl-v2-pg-form" novalidate
+      data-project-id="@Model.ProjectId" data-group-id="@Model.GroupId">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+    <input type="hidden" name="GroupId" value="@Model.GroupId" />
+
+    <div class="gl-v2-pg-scroll">
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
+
+        @if (!string.IsNullOrEmpty(Model.CopiedFromName))
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-info" role="status">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-copy" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Gekopieerd uit “@Model.CopiedFromName”</span>
+                    <span class="gl-v2-notice-text">Enkel naam, btw en schijven zijn overgenomen. Eenheden koppel je hieronder. Er is nog niets opgeslagen.</span>
+                </div>
+            </div>
+        }
+
+        @* ── Groep ─────────────────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-card gl-v2-pg-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Groep</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-pg-card-sub">Naam, btw voor de klant en welke eenheden deze schijven volgen.</span>
+            </div>
+            <div class="gl-v2-card-body gl-v2-pg-group-body">
+                <div class="gl-v2-field gl-v2-pg-field-name@(nameError ? " is-error" : "")">
+                    <label class="gl-v2-field-label" for="gl-v2-pg-name">Naam betalingsgroep <span style="color:#8B2A2A">*</span></label>
+                    <div class="gl-v2-field-box">
+                        <input type="text" id="gl-v2-pg-name" name="Name" class="gl-v2-field-input" value="@Model.Name" maxlength="200" autocomplete="off" />
+                    </div>
+                </div>
+
+                <div class="gl-v2-field gl-v2-pg-field-vat@(vatError ? " is-error" : "")">
+                    <label class="gl-v2-field-label" for="gl-v2-pg-vat_trigger">Btw-type <span style="color:#8B2A2A">*</span></label>
+                    <div class="gl-v2-select" data-gl-v2-select>
+                        <input type="hidden" id="gl-v2-pg-vat" name="VatTypeId" value="@(hasVat ? Model.VatTypeId.ToString() : "")" />
+                        <div id="gl-v2-pg-vat_trigger" class="gl-v2-select-trigger@(hasVat ? " is-filled" : "")" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                            <span class="gl-v2-select-trigger-label">@vatText</span>
+                            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                        </div>
+                        <div class="gl-v2-select-panel" role="listbox">
+                            @foreach (var opt in Model.VatOptions)
+                            {
+                                <button type="button" class="gl-v2-select-option@(opt.Id == Model.VatTypeId ? " is-selected" : "")" role="option" data-value="@opt.Id">
+                                    <i class="ph ph-check" aria-hidden="true"></i><span>@opt.Text</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gl-v2-field gl-v2-pg-field-units">
+                    <span class="gl-v2-field-label">Eenheden</span>
+                    <div class="gl-v2-pg-chips" id="gl-v2-pg-chips">
+                        @foreach (var u in Model.Units)
+                        {
+                            <span class="gl-v2-pg-chip" data-unit-id="@u.UnitId" data-locked="@(u.IsLocked ? "1" : null)">
+                                <input type="hidden" name="UnitIds" value="@u.UnitId" />
+                                <span class="gl-v2-pg-chip-name">@u.Name</span>
+                                @if (u.IsLocked)
+                                {
+                                    <i class="ph ph-lock-simple gl-v2-pg-chip-lock" title="Al gefactureerd — koppeling ligt vast" aria-hidden="true"></i>
+                                }
+                                else
+                                {
+                                    <button type="button" class="gl-v2-pg-chip-remove" aria-label="Eenheid @u.Name ontkoppelen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                                }
+                            </span>
+                        }
+                        <button type="button" class="gl-v2-pg-chip-add" id="gl-v2-pg-add-unit"@(Model.OtherUnits.Count == 0 ? " hidden" : "")>
+                            <i class="ph ph-plus" aria-hidden="true"></i>eenheid
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Betalingsschijven ─────────────────────────────────────────────────────────────────── *@
+        <div class="gl-v2-card gl-v2-pg-card" id="gl-v2-pg-stages-card">
+            <div class="gl-v2-card-header gl-v2-pg-stages-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-list-numbers" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Betalingsschijven</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-pg-card-sub">Sleep om te herschikken. De laatste schijf is altijd de eindafrekening.</span>
+                <span class="gl-v2-card-header-spacer"></span>
+                <span class="gl-v2-pg-total" id="gl-v2-pg-total" data-state="ok" role="status" aria-live="polite">
+                    <span class="gl-v2-pg-total-dot" aria-hidden="true"></span>
+                    <span class="gl-v2-pg-total-label">Totaal <strong id="gl-v2-pg-total-value">@PctShort(Model.Total)</strong> % van 100 %</span>
+                </span>
+            </div>
+
+            <div class="gl-v2-pg-selbar" id="gl-v2-pg-selbar" hidden>
+                <span class="gl-v2-pg-selbar-count" id="gl-v2-pg-selbar-count">0 schijven geselecteerd</span>
+                <span class="gl-v2-card-header-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pg-sel-duplicate"><i class="ph ph-copy" aria-hidden="true"></i>Dupliceren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="gl-v2-pg-sel-delete"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pg-sel-clear">Selectie opheffen</button>
+            </div>
+
+            <div class="gl-v2-pg-table-head" aria-hidden="true">
+                <span class="gl-v2-pg-col-handle"></span>
+                <span class="gl-v2-pg-col-check"></span>
+                <span class="gl-v2-pg-col-num">#</span>
+                <span class="gl-v2-pg-col-name">Omschrijving op factuur</span>
+                <span class="gl-v2-pg-col-pct">Percentage</span>
+                <span class="gl-v2-pg-col-actions">Acties</span>
+            </div>
+
+            <ol class="gl-v2-pg-rows" id="gl-v2-pg-rows">
+                @for (var i = 0; i < Model.Stages.Count; i++)
+                {
+                    var s = Model.Stages[i];
+                    <li class="gl-v2-pg-row@(s.IsLocked ? " is-locked" : "")" data-locked="@(s.IsLocked ? "1" : "0")" data-min-pct="@(s.IsLocked ? s.Percentage.ToString("0.##", CultureInfo.InvariantCulture) : "0")">
+                        <input type="hidden" name="StageIds" value="@s.Id" />
+                        <input type="hidden" name="StageInvoicable" value="@(s.Invoicable ? "true" : "false")" />
+                        <span class="gl-v2-pg-col-handle">
+                            @if (s.IsLocked)
+                            {
+                                <i class="ph ph-lock-simple gl-v2-pg-lock" title="Gefactureerd of bereikt — ligt vast" aria-hidden="true"></i>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-pg-handle" draggable="true" role="button" tabindex="0" aria-label="Sleep om te herschikken"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></span>
+                            }
+                        </span>
+                        <span class="gl-v2-pg-col-check">
+                            <input type="checkbox" class="gl-v2-pg-sel" aria-label="Schijf selecteren" />
+                        </span>
+                        <span class="gl-v2-pg-col-num"><span class="gl-v2-pg-num">@(i + 1)</span></span>
+                        <span class="gl-v2-pg-col-name">
+                            <span class="gl-v2-field-box"><input type="text" name="StageNames" class="gl-v2-field-input gl-v2-pg-name-input" value="@s.Name" maxlength="250" autocomplete="off" aria-label="Omschrijving schijf" /></span>
+                            <span class="gl-v2-pg-badge-final"@(i == lastIndex ? "" : " hidden")>EINDAFREKENING</span>
+                            @if (s.IsLocked)
+                            {
+                                <span class="gl-v2-pg-row-note is-locked-note">Vast — gefactureerd of bereikt</span>
+                            }
+                            <span class="gl-v2-pg-row-note is-copy-note" hidden>Kopie — pas naam en percentage aan</span>
+                        </span>
+                        <span class="gl-v2-pg-col-pct">
+                            <span class="gl-v2-field-box gl-v2-pg-pct-box">
+                                <input type="text" name="StagePercentages" class="gl-v2-field-input gl-v2-pg-pct-input is-tabular" value="@Pct(s.Percentage)" inputmode="decimal" autocomplete="off" aria-label="Percentage schijf" />
+                                <span class="gl-v2-pg-pct-suffix" aria-hidden="true">%</span>
+                            </span>
+                        </span>
+                        <span class="gl-v2-pg-col-actions">
+                            <button type="button" class="gl-v2-pg-iconbtn js-pg-dup" title="Schijf dupliceren" aria-label="Schijf dupliceren"><i class="ph ph-copy" aria-hidden="true"></i><span class="gl-v2-pg-iconbtn-text">Dupliceren</span></button>
+                            <button type="button" class="gl-v2-pg-iconbtn is-danger js-pg-del" title="Schijf verwijderen" aria-label="Schijf verwijderen"@(s.IsLocked ? " hidden" : "")><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-pg-iconbtn-text">Verwijderen</span></button>
+                        </span>
+                    </li>
+                }
+            </ol>
+
+            <div class="gl-v2-pg-addbar">
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pg-add-stage"><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
+                @if (Model.OtherGroups.Count > 0)
+                {
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pg-import"><i class="ph ph-arrow-line-down" aria-hidden="true"></i>Schijven overnemen uit andere groep</button>
+                }
+            </div>
+            <p class="gl-v2-pg-hint">Schijven die al gefactureerd zijn, liggen vast en kunnen niet verwijderd of verlaagd worden. Wijzigingen gelden enkel voor schijven die nog niet bereikt zijn.</p>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        @if (Model.CanDelete)
+        {
+            @* Zelfde plek en uiterlijk als "Verwijderen" op ChangeOrderDetailV2; type=button — dit staat in het
+               opslagformulier, de bevestiging heeft haar eigen formulier (modal hieronder). *@
+            <button type="button" class="gl-v2-btn gl-v2-btn-danger" @(Model.DeleteBlockReason != null ? "disabled" : "data-bs-toggle=modal data-bs-target=#gl-v2-pg-delete-modal") @(Model.DeleteBlockReason != null ? $"title={System.Net.WebUtility.HtmlEncode(Model.DeleteBlockReason)}" : "")><i class="ph ph-trash" aria-hidden="true"></i><span>Verwijderen</span></button>
+        }
+        <span class="gl-v2-form-actionbar-status" id="gl-v2-pg-status" data-state="ok">
+            <i class="ph ph-check-circle" aria-hidden="true"></i>
+            <span id="gl-v2-pg-status-text">Totaal is 100 %</span>
+        </span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Url.Action("PaymentStagesV2", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pg-cancel-link">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pg-save">
+                <i class="ph ph-check" aria-hidden="true"></i>Betalingsgroep opslaan
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (Model.CanDelete && Model.DeleteBlockReason == null)
+{
+    @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+    {
+        Id = "gl-v2-pg-delete-modal",
+        Tone = GlV2ModalTone.Danger,
+        IconClass = "ph-trash",
+        Title = "Betalingsgroep verwijderen?",
+        Description = $"“{Model.Name}” en haar {Model.Stages.Count} {(Model.Stages.Count == 1 ? "schijf" : "schijven")} worden definitief verwijderd."
+            + (Model.DeleteUnitCount > 0 ? $" {Model.DeleteUnitCount} {(Model.DeleteUnitCount == 1 ? "eenheid wordt" : "eenheden worden")} losgekoppeld en zonder betalingsgroep achtergelaten." : "")
+            + " Dit kan niet ongedaan gemaakt worden.",
+        ConfirmLabel = "Verwijderen",
+        FormAction = Url.Action("DeletePaymentGroupV2", "Projecten") ?? "",
+        HiddenFields = new Dictionary<string, string> { { "projectId", Model.ProjectId.ToString() }, { "groupId", Model.GroupId.ToString() } },
+    })
+}
+
+@* Sjabloon voor "Schijf toevoegen" (client-side gekloond). *@
+<template id="gl-v2-pg-row-template">
+    <li class="gl-v2-pg-row" data-locked="0" data-min-pct="0">
+        <input type="hidden" name="StageIds" value="0" />
+        <input type="hidden" name="StageInvoicable" value="false" />
+        <span class="gl-v2-pg-col-handle"><span class="gl-v2-pg-handle" draggable="true" role="button" tabindex="0" aria-label="Sleep om te herschikken"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></span></span>
+        <span class="gl-v2-pg-col-check"><input type="checkbox" class="gl-v2-pg-sel" aria-label="Schijf selecteren" /></span>
+        <span class="gl-v2-pg-col-num"><span class="gl-v2-pg-num">0</span></span>
+        <span class="gl-v2-pg-col-name">
+            <span class="gl-v2-field-box"><input type="text" name="StageNames" class="gl-v2-field-input gl-v2-pg-name-input" value="" maxlength="250" autocomplete="off" aria-label="Omschrijving schijf" /></span>
+            <span class="gl-v2-pg-badge-final" hidden>EINDAFREKENING</span>
+            <span class="gl-v2-pg-row-note is-copy-note" hidden>Kopie — pas naam en percentage aan</span>
+        </span>
+        <span class="gl-v2-pg-col-pct">
+            <span class="gl-v2-field-box gl-v2-pg-pct-box">
+                <input type="text" name="StagePercentages" class="gl-v2-field-input gl-v2-pg-pct-input is-tabular" value="" inputmode="decimal" autocomplete="off" aria-label="Percentage schijf" />
+                <span class="gl-v2-pg-pct-suffix" aria-hidden="true">%</span>
+            </span>
+        </span>
+        <span class="gl-v2-pg-col-actions">
+            <button type="button" class="gl-v2-pg-iconbtn js-pg-dup" title="Schijf dupliceren" aria-label="Schijf dupliceren"><i class="ph ph-copy" aria-hidden="true"></i><span class="gl-v2-pg-iconbtn-text">Dupliceren</span></button>
+            <button type="button" class="gl-v2-pg-iconbtn is-danger js-pg-del" title="Schijf verwijderen" aria-label="Schijf verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-pg-iconbtn-text">Verwijderen</span></button>
+        </span>
+    </li>
+</template>
+
+@* Sjabloon voor een eenheid-chip. *@
+<template id="gl-v2-pg-chip-template">
+    <span class="gl-v2-pg-chip" data-unit-id="">
+        <input type="hidden" name="UnitIds" value="" />
+        <span class="gl-v2-pg-chip-name"></span>
+        <button type="button" class="gl-v2-pg-chip-remove" aria-label="Eenheid ontkoppelen"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </span>
+</template>
+
+@* "+ eenheid" — kies uit de andere eenheden van het project. *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-pg-unit-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-unit-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-pg-unit-title">Eenheid koppelen</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="gl-v2-pg-modal-lead">Kies de eenheden die deze schijven volgen. Hangt een eenheid al aan een andere groep, dan verhuist ze naar deze groep zodra je opslaat.</p>
+                <div class="gl-v2-pg-pick" id="gl-v2-pg-unit-list">
+                    @foreach (var u in Model.OtherUnits)
+                    {
+                        <label class="gl-v2-pg-pick-item" data-unit-id="@u.UnitId" data-unit-name="@u.Name">
+                            <input type="checkbox" value="@u.UnitId" />
+                            <span class="gl-v2-pg-pick-text">
+                                <span class="gl-v2-pg-pick-name">@u.Name</span>
+                                @if (!string.IsNullOrEmpty(u.CurrentGroupName))
+                                {
+                                    <span class="gl-v2-pg-pick-sub">nu in “@u.CurrentGroupName”</span>
+                                }
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pg-unit-confirm">Koppelen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* "Schijven overnemen uit andere groep" — voegt toe vóór de eindafrekening (26d). *@
+<div class="modal fade gl-v2-modal-form" id="gl-v2-pg-import-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-import-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gl-v2-pg-import-title">Schijven overnemen</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="gl-v2-pg-modal-lead">De schijven van de gekozen groep komen vóór de eindafrekening van deze groep te staan. Pas daarna de percentages aan tot het totaal 100 % is.</p>
+                <div class="gl-v2-field gl-v2-npg-search">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="search" id="gl-v2-pg-import-search" class="gl-v2-field-input" placeholder="Zoek groep, project of gemeente" autocomplete="off" aria-label="Zoek groep, project of gemeente" />
+                    </div>
+                </div>
+                <div class="gl-v2-npg-list" id="gl-v2-pg-import-list" role="radiogroup" aria-label="Groep om schijven uit over te nemen">
+                    @{
+                        var impThis = Model.OtherGroups.Where(g => g.IsThisProject).ToList();
+                        var impOthers = Model.OtherGroups.Where(g => !g.IsThisProject).ToList();
+                        ViewData["RadioName"] = "gl-v2-pg-import-source";
+                    }
+                    @if (impThis.Count > 0)
+                    {
+                        <div class="gl-v2-npg-list-label" data-npg-label>DIT PROJECT</div>
+                        @foreach (var g in impThis)
+                        {
+                            @await Html.PartialAsync("Modals/_NewPaymentGroupSourceItemV2", g, ViewData)
+                        }
+                    }
+                    @if (impOthers.Count > 0)
+                    {
+                        <div class="gl-v2-npg-list-label" data-npg-label>ANDERE PROJECTEN</div>
+                        @foreach (var g in impOthers)
+                        {
+                            @await Html.PartialAsync("Modals/_NewPaymentGroupSourceItemV2", g, ViewData)
+                        }
+                    }
+                    <div class="gl-v2-npg-list-empty" id="gl-v2-pg-import-empty" hidden>Geen groepen gevonden.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pg-import-confirm" disabled>Schijven overnemen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Zelfde "wijzigingen niet opslaan?"-bevestiging als de andere gl-v2-formulieren. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-pg-discard-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-discard-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-pg-discard-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder de betalingsgroep op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar de groep</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-pg-discard-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* 26a-modal (hergebruikt voor "Dupliceer groep"): zelfde shell als op PaymentStagesV2. *@
+@await Html.PartialAsync("Modals/_NewPaymentGroupShellV2")
+
+@section PageScripts
+{
+    <script id="gl-v2-pg-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "groupId": @Model.GroupId,
+        "newGroupModalUrl": "@Url.Action("NewPaymentGroupModal")",
+        "editUrl": "@Url.Action("PaymentGroupEditV2")"
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-paymentgroup.js" asp-append-version="true"></script>
+}

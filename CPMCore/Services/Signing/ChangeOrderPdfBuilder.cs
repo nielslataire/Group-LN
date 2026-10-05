@@ -63,6 +63,7 @@ public sealed class ChangeOrderPdfBuilder
         return new ChangeOrderPdfModel
         {
             Id = co.Id,
+            PublicNumber = co.PublicNumber,
             ProjectId = projectId,
             ClientAccountId = co.ClientAccountId,
             IsQuote = co.IsQuote,

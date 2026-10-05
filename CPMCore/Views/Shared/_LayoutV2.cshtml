@@ -89,6 +89,7 @@
     <link rel="stylesheet" href="~/css/gl-v2/notices.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/mobile-search.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/steps.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/combo.css" asp-append-version="true" />
 
     <script src="~/lib/modernizr/modernizr.js"></script>
 </head>
@@ -383,6 +384,8 @@
     @* Foutoverzicht (design-handoff punt 24) — gedeeld engine, doet niets tenzij een pagina
        window.GlV2ErrorSummary.init({...}) aanroept. Zie DESIGN.md "Foutoverzicht (punt 24)". *@
     <script src="~/js/gl-v2-error-summary.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-combo.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-leave-guard.js" asp-append-version="true"></script>
 
     @RenderSection("PageScripts", required: false)
 

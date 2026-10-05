@@ -53,7 +53,7 @@ namespace CPMCore.Controllers
             // "offerte koppelen of inlezen") werkt het op een bestaande WO: dan is er niets om te zetten.
             vm.IsQuote = co?.IsQuote ?? true;
             vm.KeepOnly = intent == "keep";
-            vm.Number = co is null ? "" : (co.IsQuote ? $"OF-{co.Id:000}" : $"WO-{co.Id:000}");
+            vm.Number = co is null ? "" : CoNo(co);
             vm.SourceFileName = co?.QuoteSourceFileName;
 
             vm.ClientAccountId = co?.ClientAccountId ?? clientid ?? 0;
@@ -82,7 +82,7 @@ namespace CPMCore.Controllers
                 {
                     Id = d.Id,
                     Description = d.Description,
-                    MeasurementType = d.MeasurementType ?? (int)MeasurementType.Forfait,
+                    MeasurementType = d.MeasurementType ?? (int)MeasurementType.Vermoedelijk,
                     MeasurementUnit = d.MeasurementUnit ?? (int)MeasurementUnit.stuk,
                     Number = d.Number,
                     Price = d.Price,

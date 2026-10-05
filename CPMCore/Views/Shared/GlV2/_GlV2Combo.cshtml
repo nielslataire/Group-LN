@@ -1,0 +1,42 @@
+@model CPMCore.Models.GlV2.GlV2ComboVm
+@*
+    gl-v2 — Keuzelijst met zoekveld en knop (design-handoff punt 34 "Keuzelijst met zoekveld en knop — vervangt de
+    blauwe zoeklijst"). Het ENIGE keuzelijst-met-zoeken-component van het project: je tikt in het veld zelf (geen
+    tweede invoervak in de lijst), × wist, ˅ opent, "Nieuw" plakt aan het veld. Rendert de volledige gesloten
+    staat; openen/zoeken/kiezen zit in wwwroot/js/gl-v2-combo.js (bedraadt elke [data-gl-v2-combo] vanzelf),
+    opmaak in wwwroot/css/gl-v2/combo.css. Bedoeld om binnen een .gl-v2-field met label te staan (zie
+    EditorTemplates/GlV2SearchSelect.cshtml en Partials/_ProjectFormV2SearchSelect.cshtml); het label hoort bij
+    "<id>_input". Contract + events: DESIGN.md "Keuzelijst met zoekveld en knop — punt 34".
+*@
+@{
+    var id = Model.Id ?? Model.Name.Replace(".", "_");
+    var hasValue = !string.IsNullOrWhiteSpace(Model.Value) && Model.Value != Model.EmptyValue;
+    var classes = "gl-v2-combo" + (Model.AllowNew ? " has-new" : "") + (Model.ReadOnly ? " is-readonly" : "") + (Model.Disabled ? " is-disabled" : "") + (Model.HasError ? " is-error" : "");
+}
+<div class="@classes" data-gl-v2-combo data-gl-v2-search-select
+     data-lookup-url="@Model.LookupUrl" data-options="@Model.OptionsJson" data-min-chars="@Model.MinChars" data-country-source="@Model.CountrySelector"
+     data-new-entity="@Model.NewEntity" data-list-label="@Model.ListLabel" data-icon="@Model.Icon" data-empty-value="@Model.EmptyValue"
+     data-avatar="@(Model.Avatar ? "initials" : null)" data-allow-new="@(Model.AllowNew ? "" : null)">
+    <input type="hidden" id="@id" name="@Model.Name" value="@(Model.Value ?? Model.EmptyValue)" data-role="id-hidden" />
+    @if (!string.IsNullOrEmpty(Model.TextName))
+    {
+        <input type="hidden" id="@(Model.TextName.Replace(".", "_"))" name="@Model.TextName" value="@Model.TextValue" data-role="text-hidden" />
+    }
+    <div class="gl-v2-combo-row">
+        <div class="gl-v2-combo-field">
+            <i class="ph @Model.Icon gl-v2-combo-lead" aria-hidden="true"></i>
+            <input type="text" id="@(id)_input" class="gl-v2-combo-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-haspopup="listbox"
+                   autocomplete="off" placeholder="@Model.Placeholder" value="@(hasValue ? Model.DisplayText : "")"
+                   readonly="@(Model.ReadOnly ? "readonly" : null)" disabled="@(Model.Disabled ? "disabled" : null)" />
+            <button type="button" class="gl-v2-combo-clear" data-role="clear" aria-label="Wissen" hidden="@(!hasValue || Model.ReadOnly || Model.Disabled)"><i class="ph ph-x" aria-hidden="true"></i></button>
+            <span class="gl-v2-combo-spinner" data-role="spinner" hidden></span>
+            <i class="ph ph-caret-down gl-v2-combo-caret" aria-hidden="true"></i>
+        </div>
+        @if (Model.AllowNew)
+        {
+            <button type="button" class="gl-v2-combo-new" data-role="new"><i class="ph ph-plus" aria-hidden="true"></i>@Model.NewLabel</button>
+        }
+    </div>
+    <div class="gl-v2-combo-panel" data-role="panel" role="listbox"></div>
+</div>
+<span class="gl-v2-combo-help" data-role="combo-help" hidden="@(string.IsNullOrWhiteSpace(Model.Help))">@Model.Help</span>

@@ -84,7 +84,8 @@ namespace CPMCore.Controllers
                 var groupUnits = units.Where(u => u.UnitConstructionValue.Any(cv => cv.PaymentGroupId == group.Id))
                     .OrderBy(u => u.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList();
-                if (groupUnits.Count == 0) continue;
+                // Een groep zonder eenheden blijft zichtbaar (kaart zonder eenheid-kolommen): anders is een
+                // net aangemaakte groep (punt 26) onvindbaar tot er een eenheid aan hangt.
 
                 var card = new PaymentGroupCardV2 { GroupId = group.Id, Name = group.Name, VatPercentage = group.VatPercentage ?? 21m };
                 foreach (var u in groupUnits)

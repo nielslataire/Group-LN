@@ -1,0 +1,18 @@
+@model CPMCore.Models.Projecten.PaymentGroupSourceV2
+@using System.Globalization
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var radioName = ViewData["RadioName"] as string ?? "npgSource";
+    var sub = Model.ProjectName + (string.IsNullOrWhiteSpace(Model.ProjectMunicipality) ? "" : " · " + Model.ProjectMunicipality) + " · " + Model.StageCount + (Model.StageCount == 1 ? " schijf" : " schijven")
+        + (Model.IsThisProject ? " · " + Model.UnitCount + (Model.UnitCount == 1 ? " eenheid" : " eenheden") : "");
+    var stagesJson = System.Text.Json.JsonSerializer.Serialize(Model.Stages.Select(s => new { n = s.Name, p = s.Percentage }));
+}
+<label class="gl-v2-npg-item" data-npg-item data-group-id="@Model.GroupId" data-name="@Model.Name"
+       data-vat-type-id="@(Model.VatTypeId?.ToString() ?? "")" data-search="@((Model.Name + " " + Model.ProjectName + " " + Model.ProjectMunicipality).ToLowerInvariant())"
+       data-stages="@stagesJson">
+    <input type="radio" name="@radioName" value="@Model.GroupId" />
+    <span class="gl-v2-npg-item-text">
+        <span class="gl-v2-npg-item-name">@Model.Name · @Model.VatPercentage.ToString("0.##", be) % btw</span>
+        <span class="gl-v2-npg-item-sub">@sub</span>
+    </span>
+</label>

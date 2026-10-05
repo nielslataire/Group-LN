@@ -388,8 +388,17 @@ namespace ServiceCore
             foreach (var id in ids)
                 _uow.ClientAccounts.DeleteObject(id);
 
-            var result = _uow.SaveChanges();
-            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
+            try
+            {
+                var result = _uow.SaveChanges();
+                response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
+            }
+            catch (DbUpdateException ex)
+            {
+                // Geen rauwe SqlException laten ontsnappen: de aanroeper toont deze boodschap aan de gebruiker.
+                _uow.Context.ChangeTracker.Clear();
+                response.AddError(DbErrorTranslator.ToFriendlyMessage(ex));
+            }
             return response;
         }
 

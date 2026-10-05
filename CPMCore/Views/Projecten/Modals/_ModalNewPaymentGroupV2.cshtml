@@ -1,0 +1,113 @@
+@model CPMCore.Models.Projecten.NewPaymentGroupModalV2Vm
+@*
+    gl-v2 — inhoud van de "Nieuwe betalingsgroep"-modal (design-handoff punt 26a), AJAX-geladen door
+    ProjectenController.NewPaymentGroupModal. Vertrek van een bestaande groep (dit project of een ander,
+    met zoekveld en voorbeeld van de schijven) of leeg. Enkel naam, btw en schijven worden gekopieerd;
+    eenheden en gefactureerde schijven komen niet mee.
+
+    Het formulier is een GET naar PaymentGroupEditV2 (sourceGroupId/name/vatTypeId): de kopie wordt pas
+    bewaard als de gebruiker op de bewerkpagina opslaat, zodat annuleren geen wees-groep achterlaat.
+*@
+@using System.Globalization
+@{
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string PctShort(decimal v) => v.ToString("0.##", be);
+    var thisProject = Model.Sources.Where(s => s.IsThisProject).ToList();
+    var others = Model.Sources.Where(s => !s.IsThisProject).ToList();
+    var hasSources = Model.Sources.Count > 0;
+    var vatSelected = Model.VatOptions.FirstOrDefault();
+    string Plural(int n, string one, string many) => n == 1 ? one : many;
+}
+<form method="get" action="@Url.Action("PaymentGroupEditV2", "Projecten")" id="gl-v2-npg-form" class="gl-v2-npg-form" novalidate
+      data-project-name="@Model.ProjectName" data-has-sources="@(hasSources ? "1" : "0")" data-preselect="@(Model.PreselectGroupId?.ToString() ?? "")">
+    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+    <input type="hidden" name="groupid" value="0" />
+    <input type="hidden" name="sourceGroupId" id="gl-v2-npg-source" value="" disabled />
+
+    <div class="gl-v2-npg-section-label">VERTREK VAN</div>
+    <div class="gl-v2-npg-modes" role="radiogroup" aria-label="Vertrek van">
+        <label class="gl-v2-npg-mode@(hasSources ? "" : " is-disabled")">
+            <input type="radio" name="npgMode" value="copy" @(hasSources ? "checked" : "disabled") />
+            <span class="gl-v2-npg-mode-text">
+                <span class="gl-v2-npg-mode-title">Bestaande groep</span>
+                <span class="gl-v2-npg-mode-desc">Kopieer schijven en btw uit dit of een ander project.</span>
+            </span>
+        </label>
+        <label class="gl-v2-npg-mode">
+            <input type="radio" name="npgMode" value="empty" @(hasSources ? "" : "checked") />
+            <span class="gl-v2-npg-mode-text">
+                <span class="gl-v2-npg-mode-title">Leeg</span>
+                <span class="gl-v2-npg-mode-desc">Begin met één schijf “Bij de voorlopige oplevering (ontvangst van de sleutels)”.</span>
+            </span>
+        </label>
+    </div>
+
+    <div class="gl-v2-npg-copy" id="gl-v2-npg-copy"@(hasSources ? "" : " hidden")>
+        <div class="gl-v2-npg-pick-col">
+            <div class="gl-v2-field gl-v2-npg-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="search" id="gl-v2-npg-search" class="gl-v2-field-input" placeholder="Zoek groep, project of gemeente" autocomplete="off" aria-label="Zoek groep, project of gemeente" />
+                </div>
+            </div>
+            <div class="gl-v2-npg-list" id="gl-v2-npg-list" role="radiogroup" aria-label="Bestaande groep">
+                @if (thisProject.Count > 0)
+                {
+                    <div class="gl-v2-npg-list-label" data-npg-label>DIT PROJECT</div>
+                    @foreach (var s in thisProject)
+                    {
+                        @await Html.PartialAsync("Modals/_NewPaymentGroupSourceItemV2", s)
+                    }
+                }
+                @if (others.Count > 0)
+                {
+                    <div class="gl-v2-npg-list-label" data-npg-label>ANDERE PROJECTEN</div>
+                    @foreach (var s in others)
+                    {
+                        @await Html.PartialAsync("Modals/_NewPaymentGroupSourceItemV2", s)
+                    }
+                }
+                <div class="gl-v2-npg-list-empty" id="gl-v2-npg-list-empty" hidden>Geen groepen gevonden.</div>
+            </div>
+        </div>
+        <div class="gl-v2-npg-preview" id="gl-v2-npg-preview" aria-live="polite">
+            <div class="gl-v2-npg-preview-empty" id="gl-v2-npg-preview-empty">Kies links een groep om de schijven te zien.</div>
+            <div class="gl-v2-npg-preview-box" id="gl-v2-npg-preview-box" hidden>
+                <div class="gl-v2-npg-preview-head">
+                    <span id="gl-v2-npg-preview-title">Voorbeeld</span>
+                    <span class="gl-v2-npg-preview-total" id="gl-v2-npg-preview-total"></span>
+                </div>
+                <ol class="gl-v2-npg-preview-rows" id="gl-v2-npg-preview-rows"></ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-npg-fields">
+        <div class="gl-v2-field gl-v2-npg-name">
+            <label class="gl-v2-field-label" for="gl-v2-npg-name">Naam nieuwe groep <span style="color:#8B2A2A">*</span></label>
+            <div class="gl-v2-field-box">
+                <input type="text" id="gl-v2-npg-name" name="name" class="gl-v2-field-input" maxlength="200" autocomplete="off" />
+            </div>
+        </div>
+        <div class="gl-v2-field gl-v2-npg-vat">
+            <label class="gl-v2-field-label" for="gl-v2-npg-vat_trigger">Btw-type <span style="color:#8B2A2A">*</span></label>
+            <div class="gl-v2-select" data-gl-v2-select>
+                <input type="hidden" id="gl-v2-npg-vat" name="vatTypeId" value="@(vatSelected?.Id.ToString() ?? "")" />
+                <div id="gl-v2-npg-vat_trigger" class="gl-v2-select-trigger@(vatSelected != null ? " is-filled" : "")" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="gl-v2-select-trigger-label">@(vatSelected?.Text ?? "Geen btw-types beschikbaar")</span>
+                    <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                </div>
+                <div class="gl-v2-select-panel" role="listbox">
+                    @foreach (var opt in Model.VatOptions)
+                    {
+                        <button type="button" class="gl-v2-select-option@(opt.Id == vatSelected?.Id ? " is-selected" : "")" role="option" data-value="@opt.Id">
+                            <i class="ph ph-check" aria-hidden="true"></i><span>@opt.Text</span>
+                        </button>
+                    }
+                </div>
+            </div>
+            <span class="gl-v2-field-help" id="gl-v2-npg-vat-help">standaard van dit project</span>
+        </div>
+    </div>
+    <p class="gl-v2-npg-note"><i class="ph ph-info" aria-hidden="true"></i>Enkel naam, btw en schijven worden gekopieerd. Eenheden en gefactureerde schijven komen niet mee — die koppel je daarna.</p>
+</form>

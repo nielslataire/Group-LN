@@ -1,0 +1,28 @@
+@*
+    gl-v2 — schil van de "Nieuwe betalingsgroep"-modal (design-handoff punt 26a). De inhoud komt via AJAX
+    (NewPaymentGroupModal → _ModalNewPaymentGroupV2) in #gl-v2-npg-body; gl-v2-projecten-paymentgroup.js
+    bedraadt openen/zoeken/voorbeeld. Staat op PaymentStagesV2 ("+ Betalingsgroep") én op de bewerkpagina
+    ("Dupliceer groep", met de groep al gekozen). De bevestigknop verstuurt het formulier in de body via
+    het form-attribuut: "Kopiëren en bewerken" is een GET naar de bewerkpagina — er wordt niets opgeslagen
+    tot de gebruiker daar "Betalingsgroep opslaan" kiest.
+*@
+<div class="modal fade gl-v2-modal-form gl-v2-npg-modal" id="gl-v2-npg-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-npg-title">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="gl-v2-npg-header-text">
+                    <h2 class="modal-title" id="gl-v2-npg-title">Nieuwe betalingsgroep</h2>
+                    <span class="gl-v2-npg-header-sub" id="gl-v2-npg-header-sub"></span>
+                </div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body" id="gl-v2-npg-body">
+                <div class="gl-v2-npg-loading">Bezig met laden…</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" form="gl-v2-npg-form" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-npg-confirm" disabled>Kopiëren en bewerken</button>
+            </div>
+        </div>
+    </div>
+</div>

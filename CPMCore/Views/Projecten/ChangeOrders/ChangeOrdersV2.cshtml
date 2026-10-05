@@ -21,6 +21,15 @@
     var be = CultureInfo.GetCultureInfo("nl-BE");
     string Eur(decimal v) => (v < 0 ? "− € " : "€ ") + Math.Abs(v).ToString("N2", be);
 
+    var kpiIcons = new[] { "ph-file-text", "ph-pencil-simple-line", "ph-paper-plane-tilt", "ph-signature", "ph-receipt", "ph-check-circle" };
+    var kpis = Model.Funnel.Select((f, i) => new GlV2KpiItemVm
+    {
+        Label = f.Label,
+        Value = f.Count.ToString(),
+        IconClass = kpiIcons[Math.Min(i, kpiIcons.Length - 1)],
+        Tone = f.IsHighlighted ? GlV2KpiTone.Warning : GlV2KpiTone.Primary,
+    }).ToList();
+
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · offertes & wijzigingen" };
 }
 @section PageStyle
@@ -43,6 +52,15 @@
     @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
     @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 }
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (gl-v2-shell.css: negatieve marge
+   die .gl-v2-content se padding opheft) — niet in een wrapper en niet na het Phone-menu, anders blijft er
+   een gat boven. Zie Klanten/Core/DetailV2.cshtml. *@
+<div class="gl-v2-tabbar" id="gl-v2-co2-tabs" role="tablist">
+    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-type="">Alles <span class="gl-v2-tabbar-count">@Model.AllCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-type="offerte">Offertes <span class="gl-v2-tabbar-count">@Model.QuoteCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-type="wo">Wijzigingsopdrachten <span class="gl-v2-tabbar-count">@Model.OrderCount</span></button>
+</div>
+
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
@@ -91,42 +109,81 @@
 }
 
 <div id="gl-v2-co2-root" data-project-id="@Model.ProjectId">
-    @* ── Tabs ──────────────────────────────────────────────────────────────────────────────────────── *@
-    <div class="gl-v2-tabbar" id="gl-v2-co2-tabs" role="tablist">
-        <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-type="">Alles <span class="gl-v2-tabbar-count">@Model.AllCount</span></button>
-        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-type="offerte">Offertes <span class="gl-v2-tabbar-count">@Model.QuoteCount</span></button>
-        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-type="wo">Wijzigingsopdrachten <span class="gl-v2-tabbar-count">@Model.OrderCount</span></button>
-    </div>
+    @* ── KPI's (design-handoff 7a): het aantal per fase van het verloop — "Verzonden" (wacht op de klant) is de
+       aandachtskaart. Gedeelde strip (GlV2/_KpiStrip), geen eigen kaartvorm. ───────────────────────────── *@
+    @await Html.PartialAsync("GlV2/_KpiStrip", kpis)
 
-    @* ── Funnelbalk ────────────────────────────────────────────────────────────────────────────────── *@
-    <div class="gl-v2-card gl-v2-co2-card">
-        <div class="gl-v2-card-body gl-v2-co2-funnel">
-            @for (var i = 0; i < Model.Funnel.Count; i++)
-            {
-                var step = Model.Funnel[i];
-                <div class="gl-v2-co2-funnel-step @(step.IsHighlighted ? "is-highlighted" : "")">
-                    <span class="gl-v2-co2-funnel-count">@step.Count</span>
-                    <span class="gl-v2-co2-funnel-label">@step.Label.ToUpperInvariant()</span>
+    @* ── Zoekveld + Filters (optie 4f, zoals Klanten/IndexV2 en Projecten/DetailClientsV2): zoekveld over de
+       volledige breedte, daarnaast de Filters-knop met tellertje die het paneel met de filters openklapt. ── *@
+    <div class="gl-v2-toolbar-card gl-v2-filters-card">
+        <div class="gl-v2-filters-row">
+            <div class="gl-v2-field gl-v2-toolbar-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" name="search-term" id="search-term" placeholder="Zoek op nummer, klant, leverancier…">
+                    <button type="button" class="gl-v2-field-clear" id="search-term-clear" aria-label="Zoekterm wissen">&times;</button>
                 </div>
-                if (i < Model.Funnel.Count - 1)
-                {
-                    <i class="ph ph-caret-right gl-v2-co2-funnel-chevron" aria-hidden="true"></i>
-                }
-            }
+            </div>
+            <button type="button" class="gl-v2-filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters-panel">
+                <i class="ph ph-funnel" aria-hidden="true"></i>
+                Filters
+                <span class="gl-v2-filters-toggle-count" id="filters-toggle-count" hidden>0</span>
+            </button>
         </div>
-    </div>
 
-    @* ── Filterbalk ────────────────────────────────────────────────────────────────────────────────── *@
-    <div class="gl-v2-co2-filterbar">
-        <div class="gl-v2-field-box gl-v2-co2-search">
-            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-            <input type="text" id="gl-v2-co2-search" placeholder="Zoek op nummer, klant, leverancier…" />
+        <div class="gl-v2-filters-panel" id="filters-panel" hidden>
+            <div class="gl-v2-filters-sheet-header">
+                <div class="gl-v2-filters-sheet-handle" aria-hidden="true"></div>
+                <div class="gl-v2-filters-sheet-title-row">
+                    <span class="gl-v2-filters-sheet-title">Filters</span>
+                    <span class="gl-v2-filters-sheet-badge" id="filters-sheet-badge" hidden>0 actief</span>
+                    <span class="gl-v2-filters-sheet-spacer"></span>
+                    <button type="button" class="gl-v2-filters-clear gl-v2-filters-sheet-clear" id="filters-sheet-clear">Wissen</button>
+                </div>
+            </div>
+            <div class="gl-v2-filters-grid">
+                <div class="gl-v2-filters-field">
+                    <span class="gl-v2-filters-field-label">Status</span>
+                    <div class="gl-v2-select gl-v2-filters-select" id="status-select">
+                        <input type="hidden" id="status-select-value" value="open" />
+                        <button type="button" class="gl-v2-select-trigger" id="status-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="status-select-panel">
+                            <span class="gl-v2-select-trigger-label" id="status-select-label">Open (nog werk aan)</span>
+                            <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+                        </button>
+                        <div class="gl-v2-select-backdrop" id="status-select-backdrop"></div>
+                        <div class="gl-v2-select-panel" id="status-select-panel" role="listbox" aria-labelledby="status-select-trigger">
+                            <div class="gl-v2-select-sheet-header">
+                                <span class="gl-v2-select-sheet-title">Status</span>
+                                <button type="button" class="gl-v2-select-sheet-close" id="status-select-close">Sluiten</button>
+                            </div>
+                            <div class="gl-v2-select-options">
+                                <button type="button" class="gl-v2-select-option is-selected" role="option" data-value="open" data-label="Open (nog werk aan)">
+                                    <i class="ph ph-check" aria-hidden="true"></i><span>Open (nog werk aan)</span>
+                                </button>
+                                <button type="button" class="gl-v2-select-option" role="option" data-value="all" data-label="Alles, ook afgerond">
+                                    <i class="ph ph-check" aria-hidden="true"></i><span>Alles, ook afgerond</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-filters-chips" id="filters-chips">
+                <div class="gl-v2-filters-chip-list" id="filters-chip-list"></div>
+                <button type="button" class="gl-v2-filters-clear" id="filters-clear">Wissen</button>
+            </div>
+
+            @* Enkel <768px zichtbaar — filters passen zichzelf al toe, dit is puur een "klaar"-knop om het sheet te sluiten. *@
+            <button type="button" class="gl-v2-filters-show-btn" id="filters-show-btn">
+                <span>Toon</span>
+                <span id="filters-show-count">0</span>
+                <span>resultaten</span>
+            </button>
         </div>
-        <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-co2-status">
-            <option value="open" selected>Status: open</option>
-            <option value="all">Status: alles</option>
-        </select></div>
     </div>
+    @* Enkel zichtbaar <768px — #filters-panel wordt daar een bottom sheet, deze scrim erachter. *@
+    <div class="gl-v2-filters-panel-backdrop" id="filters-panel-backdrop" hidden></div>
 
     @* ── Offertes ──────────────────────────────────────────────────────────────────────────────────── *@
     @if (Model.Quotes.Count > 0)

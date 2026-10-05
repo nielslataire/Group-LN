@@ -74,6 +74,7 @@ namespace CPMCore.Controllers
                 var isConverted = co.IsQuote && (convertedToId > 0 || co.QuoteConvertedAt.HasValue);
                 var row = new ChangeOrderRowV2
                 {
+                    Number = co.PublicNumber,
                     Id = co.Id,
                     IsQuote = co.IsQuote,
                     ConvertedToId = convertedToId > 0 ? convertedToId : null,
@@ -109,7 +110,7 @@ namespace CPMCore.Controllers
 
                 if (co.IsQuote)
                 {
-                    row.SubText = isConverted ? $"omgezet naar WO-{convertedToId:000}"
+                    row.SubText = isConverted ? $"omgezet naar {CoNo(convertedToId)}"
                         : status == ChangeOrderStatus.Verlopen ? $"geldig tot {co.ExpirationDate:dd/MM/yyyy} — verlopen"
                         : $"{co.ChangeOrderDetail.Count} {(co.ChangeOrderDetail.Count == 1 ? "regel" : "regels")}"
                           + (co.DateSendToClient.HasValue ? $" · gemaild {co.DateSendToClient:dd/MM/yyyy}" : "");
@@ -141,8 +142,8 @@ namespace CPMCore.Controllers
                         _ => null,
                     };
                     if (co.SourceChangeOrderId.HasValue)
-                        row.SourceReference = co.SourceKind == 3 ? $"uit OF-{co.SourceChangeOrderId:000}"
-                            : (co.SourceKind == 2 ? "versie van " : "kopie van ") + $"WO-{co.SourceChangeOrderId:000}";
+                        row.SourceReference = co.SourceKind == 3 ? $"uit {CoNo(co.SourceChangeOrderId)}"
+                            : (co.SourceKind == 2 ? "versie van " : "kopie van ") + $"{CoNo(co.SourceChangeOrderId)}";
                     row.IsOpen = status is not (ChangeOrderStatus.Betaald or ChangeOrderStatus.Geweigerd);
                     vm.Orders.Add(row);
                 }

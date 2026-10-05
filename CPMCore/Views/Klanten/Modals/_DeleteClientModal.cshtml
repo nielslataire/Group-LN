@@ -1,5 +1,9 @@
 ﻿@model BOCore.IdNameBO 
 
+@{
+    var booked = ViewData["BookedInvoices"] as List<string> ?? new List<string>();
+    var unbooked = ViewData["UnbookedInvoiceCount"] as int? ?? 0;
+}
 <section class="card">
     <div class="card-body text-center">
         <div class="modal-wrapper">
@@ -10,13 +14,24 @@
                 <h4>Verwijderen @Model.Display </h4>
                 <p>U staat op het punt om de klant @Model.Display van het project te verwijderen.</p>
                 <p>Bent u zeker dat u deze wilt verwijderen?</p>
+                @if (booked.Count > 0)
+                {
+                    <p class="text-danger"><strong>Verwijderen kan niet:</strong> @booked.Count @(booked.Count == 1 ? "factuur is" : "facturen zijn") al in Octopus geboekt.</p>
+                }
+                else if (unbooked > 0)
+                {
+                    <p class="text-warning"><strong>Let op:</strong> @unbooked nog niet geboekte @(unbooked == 1 ? "factuur" : "facturen") verliezen de koppeling met deze klant.</p>
+                }
             </div>
         </div>
     </div>
     <footer class="card-footer">
         <div class="row">
             <div class="col-md-12 text-end">
-                <a href="@Url.Action("DeleteClient", "Klanten", new {id = Model.ID})" class="btn btn-primary">Verwijderen</a>
+                @if (booked.Count == 0)
+                {
+                    <a href="@Url.Action("DeleteClient", "Klanten", new {id = Model.ID, confirmInvoices = unbooked > 0})" class="btn btn-primary">Verwijderen</a>
+                }
                 <button class="btn btn-default modal-dismiss">Annuleren</button>
             </div>
         </div>

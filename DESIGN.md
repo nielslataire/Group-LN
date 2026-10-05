@@ -5943,7 +5943,7 @@ aangeleverde logo van 2362x2362 px, bijgesneden op het beeldmerk, op effen wit),
 
 - **Service worker** (`/sw.js`, scope `/`): navigaties network-first, enkel bij een netwerkfout `offline.html`; pagina's
   en alles wat geen statisch bestand is worden NOOIT gecacheerd (geen POST, AJAX, ingelogde data). Statische assets
-  zelfde origin cache-first met versie in de cachenaam (`cpm-static-v1`); css/js enkel cache-first mét `?v=`-hash
+  zelfde origin cache-first met versie in de cachenaam (`cpm-static-v2`); css/js enkel cache-first mét `?v=`-hash
   (asp-append-version), anders zou een deploy op een oude kopie blijven hangen. Nieuwe release van de SW: `VERSION`
   ophogen; `skipWaiting` + `clients.claim` + opruimen bij `activate`.
 - **Banner**: enkel `(pointer: coarse) and (max-width: 768px)`, niet in standalone, 30 dagen rust na wegklikken
@@ -6128,3 +6128,90 @@ component in te zetten. Zodra Budget aan de beurt is in de gl-v2-migratie, is di
 opbouw: `Verticaal` als vast paneel ≥1024px, dezelfde `Verticaal`-lijst in een schuifpaneel
 (`position:absolute` overlay, zelfde recept als de project-inner-menu-sheet op gsm) onder die
 breedte, geopend door op een `Balk`-kopbalk te tikken.
+
+### Loginsessie (okt. 2026, `Program.cs`, cookie-instellingen)
+- Medewerkers (`cpm:user-type` = internal): blijvende cookie (`IsPersistent`), 14 dagen glijdend, **absolute grens 30 dagen** sinds het inloggen
+  (`IssuedUtc`, gecontroleerd in `OnValidatePrincipal`). Portaalgasten (aannemer/klant): sessiecookie zoals voorheen.
+- `OnValidatePrincipal` controleert `Users.IsActive` (2 min gecachet per gebruiker): een gedeactiveerde gebruiker verliest binnen enkele minuten toegang.
+- Cookie: `Secure` altijd (in Development `SameAsRequest`), `SameSite=Lax` (niet Strict: de terugkeer van Microsoft/Google is cross-site), `HttpOnly`.
+- Niet gewijzigd: de Microsoft-sessie zelf en `Prompt = select_account`. Bestaande ingelogde gebruikers houden hun oude sessiecookie tot ze opnieuw inloggen.
+
+## Betalingsgroep bewerken / Nieuwe betalingsgroep (design-handoff punt 26a–d, okt. 2026)
+Vervangt in gl-v2 het legacy `PaymentStagesAddUpdate`-scherm (de legacy actie stuurt in gl-v2 door; voor de oude layout blijft hij ongewijzigd).
+- **26a** — modal "Nieuwe betalingsgroep" (`_NewPaymentGroupShellV2` + AJAX-inhoud `_ModalNewPaymentGroupV2`, actie `NewPaymentGroupModal`). Vertrek van een bestaande groep (dit project eerst, dan andere projecten; zoekveld; voorbeeld met schijven en totaal) of "Leeg" (één schijf "Bij de voorlopige oplevering", 100 %). Naam standaard "<groep> (kopie)", btw-type uit de bron als dat type voor dit project bestaat. Enkel naam, btw en schijven worden gekopieerd. **"Kopiëren en bewerken" is een GET** naar de bewerkpagina: er wordt niets bewaard tot "Betalingsgroep opslaan", zodat annuleren geen wees-groep achterlaat.
+- **26b/26c** — `PaymentGroupEditV2` (+ `SavePaymentGroupV2`). Kaart Groep (naam, btw, eenheden-chips met "+ eenheid") en kaart Betalingsschijven (sleephandvat, vinkje, nummer, omschrijving, percentage, dupliceren/verwijderen per rij; selectiebalk met Dupliceren/Verwijderen/Selectie opheffen; "Schijf toevoegen", "Schijven overnemen uit andere groep"). Totaalbolletje rood bij ≠ 100 %, groen bij 100 %; de actiebalk meldt wat er nog ontbreekt en blokkeert opslaan. Op <768px worden rijen kaarten met grote knoppen (≥44px), zonder sleephandvat/selectie, en blijft de totaal-kop vastgepind (daarvoor staat `overflow: clip` op de full-height-body en de kaart — `hidden` zou het scrollvak voor `sticky` worden).
+- **26d** — dupliceren per rij zet de kopie direct eronder (gemarkeerd tot je ze aanpast); meerdere geselecteerde rijen worden als blok na de laatste geselecteerde gekopieerd. "Dupliceer groep" (alleen bestaande groep) opent 26a met die groep gekozen. Nieuwe en overgenomen schijven komen vóór de eindafrekening (tenzij die vastligt). De laatste rij draagt de EINDAFREKENING-badge.
+- **Schijfvolgorde = Id-volgorde** (geen volgorde-kolom; PaymentStagesV2, de "bereikt"-modal en facturatie sorteren allemaal op Id). Slepen/dupliceren herschikt daarom door de inhoud van NIET-vaste schijven over de bestaande vrije Id-slots te verdelen (`AssignStageSlots`); extra schijven worden achteraan ingevoegd. Vaste schijven houden hun Id. Geen migratie nodig.
+- **Vast** = gefactureerd (`InvoicesDetails` LineType "Stages"), per eenheid bereikt (`UnitPaymentStageReached`) of trigger van een wijzigingsopdracht-betaalschijf (`ChangeOrderPaymentTerm.TriggerStageId`): niet verwijderen, niet verplaatsen, percentage niet verlagen. Een nieuwe schijf kan niet vóór een vaste schijf als er geen vrij slot is — de server meldt dat expliciet.
+- **Server herhaalt elke regel** (`SavePaymentGroupV2`): naam, btw-type (uit de btw-types van de factureerder van het project), ≥1 schijf, omschrijving en 0 < % ≤ 100 per schijf, totaal exact 100 %, vaste schijven. Fouten komen in het gedeelde foutoverzicht (punt 24).
+- **Eenheden**: koppeling = `UnitConstructionValue.PaymentGroupId` (wat PaymentStagesV2 leest) plus `Units.PaymentGroupId`; een eenheid zonder constructiewaarde krijgt een lege rij. Een eenheid met een factuurregel in de groep blijft vast gekoppeld (slotje, geen ×). Een eenheid die al in een andere groep zit, verhuist bij opslaan.
+- `PaymentStagesV2` toont voortaan ook groepen zonder eenheden (anders is een nieuwe groep onvindbaar); de knop "Betalingsgroep" opent 26a, "Groep bewerken" gaat naar de nieuwe pagina.
+- Niet gedaan: "Standaard wet Breyne Sjabloon" uit de mockup (er bestaat geen sjabloonbron — het verschijnt vanzelf zodra het als betalingsgroep bestaat); touch-slepen (gsm gebruikt dupliceren/verwijderen, zoals 26c); pijltjestoetsen op het handvat verplaatsen een rij als toetsenbordalternatief.
+
+## Nummering offertes & wijzigingsopdrachten (okt. 2026, migratie 070)
+- Publiek nummer = `OF-2026-014` (offerte) / `WO-2026-006` (wijzigingsopdracht); vanaf versie 2 met suffix: `OF-2026-014-v2`. Teller **per project, per jaar, per type**; het interne Id verschijnt nergens meer. Verwijderde nummers worden niet hergebruikt (teller = max + 1).
+- "Nieuwe versie" (`SourceKind = 2`) erft jaar + teller van de eerste versie en krijgt `VersionNo + 1` (`RootChangeOrderId` = eerste versie). Een kopie (`SourceKind = 1`) en een omzetting offerte → WO (`SourceKind = 3`) krijgen een eigen nieuw nummer.
+- Toegekend in `cpmRunningContext.SaveChanges` (`DALCore/ChangeOrderNumbering`), dus voor élke plek die een ChangeOrder aanmaakt. `ChangeOrder.PublicNumber` formatteert; controllers gebruiken `CoNo(...)` voor verwijzingen op Id. PDF, ondertekendossier, mail, lijst, detail en facturatie tonen hetzelfde nummer. Migratie 070 nummert bestaande rijen achteraf (op Id-volgorde) en moet **vóór deploy** gedraaid zijn.
+- Nog niet omgezet: de oude factuur-selectietabel (`Views/Invoices/Partials/_ChangeOrderLinesTable.cshtml`, eigen code `WO-{jaar}-{id:D5}`) en reeds bestaande ondertekendossiers (houden hun oude `DocumentNumber`).
+
+## Projecten/AddContractV2 — "Contract toevoegen" (okt. 2026)
+Zelfde pagina en bouwstenen als `EditContractV2` (14c/14d; zelfde CSS `gl-v2-projecten-editcontract.css`, zelfde JS `gl-v2-projecten-editcontract.js`, `window.glV2EditContractConfig.isAdd = true` schakelt het toevoeg-gedrag in). `AddContract` GET/POST kiest `AddContractV2` in de gl-v2-ervaring; de legacy view blijft ongewijzigd.
+- **Leverancier**: zoekveld (`#ddlCompany`, select2) tenzij de pagina met `?companyid=` opent (vanuit een leverancier) — dan staat hij vast zoals bij bewerken. Een andere leverancier kiezen vervangt de lotenlijst (bevestiging als er al loten staan); de lotenkiezer blijft uitgeschakeld zonder leverancier.
+- **Foutoverzicht (punt 24)**: `_ErrorSummaryV2` bovenaan de scroll-wrapper; leverancier via `data-gl-v2-required` + locatie, "minstens één lot" als eigen validator in `GlV2ErrorSummary.init`; de server herhaalt beide (`Contract.Company.ID`, `Activities`) met `ModelState.AddModelError` + `GlV2ErrorLocations`.
+- **Kruimelpad (One-Line Topbar Rule + Clickable-Crumb Rule)**: stopt bij "Leveranciers" met `BreadcrumbLastIsLink = true`, zodat "Toevoegen" de titel niet herhaalt. Alleen in de gl-v2-tak.
+- Twee opslagknoppen: "Contract toevoegen" en "Opslaan en nog een toevoegen" (`saveAction=addAnother`). Bijbestellingen pas na opslaan (het lot bestaat nog niet).
+- `PopulateAddContractLookups` vult nu ook de leveranciersactiviteiten en werfleiders, zodat de lotenkiezer ook na een mislukte POST (Add én Edit) gevuld blijft.
+- `EditContractV2` draait nu ook op het Foutoverzicht (punt 24): dezelfde partial, dezelfde `GlV2ErrorSummary.init` (verplichte velden via `data-gl-v2-required`, "minstens één lot" als validator) en dezelfde server-regel in `EditContract` POST. De verouderde zin "zelfde formulier voor een nieuw contract" is weg (toevoegen heeft een eigen pagina).
+
+## Keuzelijst met zoekveld en knop — design-handoff punt 34 (okt. 2026) — project-wijd component
+Bron: `design-handoff/CRM Keuzelijst met invoervak.dc.html` (34a live, 34b alle staten, 34c wat verandert, 34d lijst open). **Vervangt**
+de blauwe select2-zoeklijst én de oudere zoekende dropdown (trigger + tweede invoervak in het paneel, 8f punt 3); combineert die met de
+keuzelijst-met-knop (14d punt 3). Voortaan het ENIGE keuzelijst-met-zoeken-component: je tikt in het veld zelf, geen tweede invoervak.
+
+**Onderdelen**
+- `Views/Shared/GlV2/_GlV2Combo.cshtml` (+ `Models/GlV2/GlV2ComboVm`) — de markup (volledige gesloten staat). Binnen een `.gl-v2-field` met
+  `<label for="<id>_input">`. De bestaande wrappers `EditorTemplates/GlV2SearchSelect` en `Projecten/Partials/_ProjectFormV2SearchSelect` gebruiken het
+  bewust NIET (zie "Toegepast" hieronder).
+- `wwwroot/js/gl-v2-combo.js` (`window.GlV2Combo`, geladen project-wijd in `_LayoutV2`) — bedraadt elke `[data-gl-v2-combo]` vanzelf, ook rijen die later
+  in de DOM komen (MutationObserver). Pagina-JS hoeft niets aan te roepen. De vijf pagina-kopieën van `wireSearchSelect` slaan een combo over
+  (`data-gl-v2-combo`-guard) en blijven enkel als dode code voor het oude markup staan.
+- `wwwroot/css/gl-v2/combo.css` — alles onder `.gl-v2 .gl-v2-combo…` (twee klassen diep, wint dus op gelijkspel van shell/forms), `[hidden]`-guards.
+
+**Opmaak (34b/34d)**: veld 40px, rand 1px `rgba(44,59,42,.14)`, radius 8px; focus/open 1,5px primair + ring `0 0 0 3px rgba(0,83,45,.10)`; icoon voorin (wordt een
+vergrootglas tijdens het typen), × wist (alleen met een waarde), ˅ opent (draait open), spinner tijdens een server-zoekopdracht. "Nieuw" plakt aan het veld
+(rand `#7A9E6E`, tekst `#2F6038`, radius `0 8 8 0`); zonder knop krijgt het veld rondom radius 8px ("ZONDER KNOP"). Paneel: 4px onder het veld, radius 10px, rijen
+40px (48px op gsm), actieve rij `--gl-v2-bg`, gekozen rij een vinkje (+ primair initialenvlak), zoekterm vet en groen (`#E2ECDA`), tweede regel (btw-nummer,
+gemeente) onder de naam, kop "3 GEVONDEN"/"ALLE BEDRIJVEN · n" met "↑↓ kiezen · Enter", onderaan `"…" aanmaken als nieuw <entiteit>`.
+Staten: leeg, gekozen (tweede regel als hulptekst onder het veld), typen, zoeken bezig, verplicht-leeg (rood, 1,5px), onbekende tekst (`.is-unknown`, rood, "Niet
+gevonden — kies uit de lijst of klik Nieuw"), alleen-lezen (`.is-readonly`), uitgeschakeld (`.is-disabled`).
+
+**Gedrag**: focus/klik opent; typen filtert (statisch, lokaal op naam + tweede regel) of zoekt op de server (250 ms debounce, `data-min-chars`, POST `{term, countryId}` →
+`[{id,text,sub|extra}]`); ↑↓ lopen, Enter kiest (en dient het formulier nooit in), Esc sluit en herstelt, **Tab kiest het uitdrukkelijk gekozen (of enige) resultaat en gaat
+door naar het volgende veld**; tekst zonder keuze bij blur = onbekend (id gewist); × wist en opent de lijst. Het veld houdt de focus na een keuze (mousedown in het paneel is
+onderdrukt). Tot 7 opties blijft de gewone `GlV2Select`-lijst; vanaf 8 dit veld (34c).
+
+**Contract** (data-attributen op `.gl-v2-combo`): `data-lookup-url` of `data-options` (JSON `[{id,text,sub}]`), `data-min-chars`, `data-country-source` (CSS-selector; of
+`[data-gl-v2-address-block]` + `[data-role=country-select]`), `data-allow-new` + `data-new-entity`, `data-avatar="initials"`, `data-list-label`, `data-empty-value` (`""` of `"0"`),
+`data-icon`. Events (bubbelen): `change` + `input` op de verborgen id, `gl-v2:combo-select {id,text,item}`, `gl-v2:postal-selected` (zelfde detail, voor de bestaande
+adrespagina's), `gl-v2:combo-new {term}` (de pagina opent het zijpaneel "Nieuw …" met die naam). API: `GlV2Combo.setValue(root,id,text,sub)`, `.setOptions`, `.setDisabled`, `.init(scope)`.
+Foutoverzicht (punt 24): `data-gl-v2-required` op de omhullende `.gl-v2-field` werkt ongewijzigd (de engine leest de verborgen id); `.is-error` op de `.gl-v2-field` kleurt het veld.
+
+**Gsm**: invoer 16px (iOS-zoomregel), veld 44px. Het veld is een zoekveld voor `GlV2MobileSearch` (`.gl-v2-combo-input`, kind `trigger`): tijdens het typen staat het veld
+bovenaan en hangt het paneel eronder, boven het toetsenbord (`.gl-v2-combo-panel.is-keyboard-anchored`); de Annuleer-knop sluit het paneel via de gedeelde backdrop.
+
+**Toegepast**: `Projecten/AddContractV2` + `EditContractV2` (leverancier — vervangt select2, zonder Nieuw-knop want er is geen bedrijfs-aanmaakflow in deze pagina). **Bewust NIET omgezet (beslissing Niels, okt. 2026)**: alle postcode-/gemeentevelden en het weerstation — `EditorTemplates/GlV2SearchSelect` en `Projecten/Partials/_ProjectFormV2SearchSelect` behouden hun bestaande trigger-met-paneel-opmaak (en dus ook de bedrijfsvelden die die partial gebruikt). Het combo-component is voor die plekken beschikbaar maar wordt er niet automatisch ingezet; een pagina die het wil, rendert `GlV2/_GlV2Combo` zelf. Ook niet omgezet: de meervoudige kiezers (chips), de eenhedenkiezer op AddClientAccount, de werfleider-keuzelijst, `GlV2Select`-enumlijsten (≤ 7 opties) en de select2-filters op `Leveranciers/IndexV2` en `Units/UnitFormV2`.
+
+## Verlaat-bewaking — "Wijzigingen niet opslaan?" bij élke link (okt. 2026)
+`wwwroot/js/gl-v2-leave-guard.js` (project-wijd, geladen in `_LayoutV2`) toont de eigen bevestigingsmodal i.p.v. de browserdialoog zodra een link de pagina verlaat terwijl er
+niet-opgeslagen wijzigingen zijn — dus ook via zijmenu/rail, kruimelpad, projectmenu en flyouts, niet enkel via "Annuleren"/terugpijl. Geen pagina-JS nodig: een pagina doet mee via de
+bestaande conventie — dirty-badge (id eindigt op `dirty-badge`, zichtbaar bij wijzigingen) + modal (`.modal`, id bevat `discard` en eindigt op `-modal`) met bevestigingslink (`<a>`, id
+`discard…-confirm`). De bevestigingslink krijgt de aangeklikte bestemming als `href`; bevestigen verbergt de badges zodat er geen browserwaarschuwing volgt. Genegeerd: `target=_blank`,
+downloads, `#`/`javascript:`-links, `data-bs-toggle`-links en links binnen een modal; een pagina zonder eigen modal valt terug op de browser. Dekt alle pagina's met een dirty-badge
+(Projecten Toevoegen/Edit, Klanten, Leveranciers, EditContract, UnitForm, Aandelen basisakte, Betalingsgroep). De browserdialoog blijft enkel over voor tabblad sluiten/vernieuwen.
+
+## PWA — downloads vanuit het browservenster (okt. 2026)
+Staat de app geïnstalleerd (ook op desktop), dan vangt Chrome/Edge een klik op een link binnen de scope (`/`) en opent die in het app-venster: de download of PDF verschijnt daar, niet in het browservenster waar je klikte.
+Een manifest-instelling om dat uit te zetten is er niet (stabiel). Oplossing in `wwwroot/js/pwa.js`: in een gewoon browservenster (niet standalone) loopt een klik op een downloadlink via `fetch` + blob — geen navigatie, dus niets om te vangen.
+- **Welke links**: `data-gl-v2-download`, `download`, of een pad met `Export…`, `Download…`, `…Pdf…`, `…Excel…`, `…Csv…`, `…Xlsx…`, `…Zip…`, `GuaranteeDoc`. Een nieuwe downloadlink met een andere naam krijgt `data-gl-v2-download`.
+- **Wat er met het antwoord gebeurt**: bijlage (`Content-Disposition: attachment`) → bewaard onder de bestandsnaam van de server; PDF/afbeelding inline → blob in een nieuw tabblad; HTML (bv. `PrintClientList`, een afdrukpagina) → gewone navigatie, dus die kan in het app-venster blijven openen; fout → de gewone link.
+- In het app-venster zelf (standalone) werkt de gewone link zoals voorheen.

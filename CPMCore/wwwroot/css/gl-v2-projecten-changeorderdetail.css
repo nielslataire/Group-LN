@@ -107,6 +107,9 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-table th:first-child, .gl-v2-co-table td:first-child { padding-left: 20px; }
 .gl-v2-co-table th:last-child, .gl-v2-co-table td:last-child { padding-right: 20px; }
 .gl-v2-co-table tfoot td { border-bottom: 0; padding-top: 6px; padding-bottom: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-co-table tfoot .gl-v2-co-sum-total td { font: 700 15px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 12px; padding-bottom: 12px; }
+/* Intern: kostprijs en commissie staan ná de klantregels, gedempt — ze horen niet bij wat de klant betaalt. */
+.gl-v2-co-table tfoot .gl-v2-co-sum-total ~ tr td { color: var(--gl-v2-muted); }
 .gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; padding-bottom: 14px; }
 .gl-v2-co-tabular { font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Invoervelden in een tabelcel: het gedeelde veldkader (.gl-v2-field-box), compacter dan in een
@@ -302,3 +305,9 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 @media (max-width: 767.98px) {
     .gl-v2-co-table { min-width: 640px; }
 }
+
+/* "Opgeslagen op …" in de voetbalk + laadtoestand van de opslaan-/verzendknoppen. */
+.gl-v2-co-saved { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-weight: 600; color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-form-actionbar .gl-v2-btn.is-saving { opacity: .75; pointer-events: none; }
+.gl-v2 .gl-v2-form-actionbar .gl-v2-btn.is-saving::after { content: ""; width: 12px; height: 12px; margin-left: 8px; box-sizing: border-box; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: gl-v2-co-spin .7s linear infinite; }
+@keyframes gl-v2-co-spin { to { transform: rotate(360deg); } }

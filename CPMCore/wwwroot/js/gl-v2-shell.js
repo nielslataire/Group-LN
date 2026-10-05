@@ -1101,6 +1101,7 @@
         ".gl-v2-select-search-field input",
         '.gl-v2-select-panel-search input[data-role="input"]',
         ".gl-v2-select-trigger-multi-input",
+        ".gl-v2-combo-input",
         "#gl-v2-pd-units-filter", "#gl-v2-co2-search", "#gl-v2-dd-search", "#gl-v2-du-search", "#gl-v2-dp-search",
         "#gl-v2-mobile-search", ".js-gl-v2-pm-search", "#gl-punt-search", "#gl-pin-search",
         "input[data-gl-v2-search]"
@@ -1167,7 +1168,7 @@
 
     // ── E: annuleerknop ────────────────────────────────────────────────────────────────────────
     function ensureCancel(input) {
-        var box = input.closest(".gl-v2-field-box, .gl-v2-select-search-field, .gl-v2-select-trigger-multi");
+        var box = input.closest(".gl-v2-field-box, .gl-v2-select-search-field, .gl-v2-select-trigger-multi, .gl-v2-combo-field");
         if (!box) return null;
         var btn = box.querySelector(".gl-v2-search-cancel");
         if (!btn) {
@@ -1212,7 +1213,7 @@
         if (insideFixed(input) && !panelEl && !input.closest(".modal")) kind = "static";
         else if (panelEl) kind = "panel";
         else if (input.closest(".modal")) kind = "modal";
-        else if (input.closest(".gl-v2-select-trigger-multi")) kind = "trigger";
+        else if (input.closest(".gl-v2-select-trigger-multi, .gl-v2-combo-field")) kind = "trigger";
         else kind = "page";
 
         active = { input: input, kind: kind, startWidth: window.innerWidth, hideTimer: 0 };
@@ -1228,9 +1229,9 @@
                 active.observer.observe(panelEl, { attributes: true, attributeFilter: ["class"] });
             }
         } else if (kind === "trigger") {
-            var sel = input.closest(".gl-v2-select");
-            active.panel = sel && sel.querySelector(".gl-v2-select-panel");
-            active.anchor = input.closest(".gl-v2-select-trigger") || input;
+            var sel = input.closest(".gl-v2-select, .gl-v2-combo");
+            active.panel = sel && sel.querySelector(".gl-v2-select-panel, .gl-v2-combo-panel");
+            active.anchor = input.closest(".gl-v2-select-trigger, .gl-v2-combo-field") || input;
             if (active.panel) active.panel.classList.add("is-keyboard-anchored");
         } else if (kind === "page") {
             var host = input.closest(".gl-v2-toolbar-card") || input.closest(".gl-v2-field") || input.parentElement;

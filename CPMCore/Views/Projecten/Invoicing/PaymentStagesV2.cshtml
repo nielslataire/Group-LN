@@ -32,14 +32,16 @@
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-paymentstages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-paymentgroup.css" asp-append-version="true" />
 }
 @section PageActions
 {
     @if (Model.CanWrite)
     {
-        <a href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary">
+        @* 26a: opent de "Nieuwe betalingsgroep"-modal (vertrek van een bestaande groep of leeg). *@
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-npg-open">
             <i class="ph ph-plus" aria-hidden="true"></i><span>Betalingsgroep</span>
-        </a>
+        </button>
     }
 }
 @section ProjectMenu
@@ -61,6 +63,12 @@
                     <span class="gl-v2-empty-state-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-empty-state-title">Nog geen betalingsgroepen</h2>
                     <p class="gl-v2-empty-state-desc">Dit project heeft nog geen betalingsgroep met schijven.</p>
+                    @if (Model.CanWrite)
+                    {
+                        <div class="gl-v2-empty-state-actions">
+                            <button type="button" class="gl-v2-btn gl-v2-btn-primary js-npg-open"><i class="ph ph-plus" aria-hidden="true"></i><span>Betalingsgroep</span></button>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -89,12 +97,12 @@
                     <span class="gl-v2-card-header-spacer"></span>
                     @if (Model.CanWrite)
                     {
-                        <a href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId, groupid = group.GroupId })" class="gl-v2-card-header-action">Groep bewerken</a>
+                        <a href="@Url.Action("PaymentGroupEditV2", "Projecten", new { projectid = Model.ProjectId, groupid = group.GroupId })" class="gl-v2-card-header-action">Groep bewerken</a>
                     }
                 </div>
                 <div class="gl-v2-ps-stats">
                     <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">BTW KLANT</span><span class="gl-v2-ps-stat-value">@Pct(group.VatPercentage) %</span></div>
-                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EENHEDEN</span><span class="gl-v2-ps-stat-value">@string.Join(" · ", group.Units.Select(u => u.UnitName))</span></div>
+                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EENHEDEN</span><span class="gl-v2-ps-stat-value">@(group.Units.Count == 0 ? "nog geen eenheden gekoppeld" : string.Join(" · ", group.Units.Select(u => u.UnitName)))</span></div>
                     <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">TOTAAL</span><span class="gl-v2-ps-stat-value">@Pct(group.TotalPercentage) %</span></div>
                     <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EINDAFREKENING</span><span class="gl-v2-ps-stat-value">schijf @group.LastStageNumber</span></div>
                 </div>
@@ -228,8 +236,21 @@
     </div>
 }
 
+@if (Model.CanWrite)
+{
+    @await Html.PartialAsync("Modals/_NewPaymentGroupShellV2")
+}
+
 @section PageScripts
 {
+    <script id="gl-v2-pg-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "groupId": 0,
+        "newGroupModalUrl": "@Url.Action("NewPaymentGroupModal")",
+        "editUrl": "@Url.Action("PaymentGroupEditV2")"
+    }
+    </script>
     <script id="gl-v2-ps-config" type="application/json">
     {
         "projectId": @Model.ProjectId,
@@ -241,4 +262,5 @@
     </script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-paymentstages.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-paymentgroup.js" asp-append-version="true"></script>
 }

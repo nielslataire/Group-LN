@@ -343,7 +343,7 @@ namespace CPMCore.Controllers
                 ChangeOrderId = co.Id,
                 Subtitle = string.Join(" · ", new[]
                 {
-                    $"OF-{co.Id:000}",
+                    $"{CoNo(co.Id)}",
                     co.ContractActivity?.Contract?.Company?.BedrijfsNaam,
                     $"{rows} {(rows == 1 ? "regel" : "regels")}",
                 }.Where(x => !string.IsNullOrWhiteSpace(x))),
@@ -370,7 +370,7 @@ namespace CPMCore.Controllers
             var existing = await _db.ChangeOrder.AsNoTracking()
                 .Where(c => c.SourceChangeOrderId == quote.Id && c.SourceKind == 3)
                 .Select(c => (int?)c.Id).FirstOrDefaultAsync();
-            if (existing.HasValue) return $"Deze offerte is al omgezet naar WO-{existing:000}.";
+            if (existing.HasValue) return $"Deze offerte is al omgezet naar {CoNo(existing)}.";
             return null;
         }
 
@@ -458,7 +458,7 @@ namespace CPMCore.Controllers
             await _db.SaveChangesAsync();
 
             return await AfterSaveRedirectAsync(order, model.ProjectId, model.AfterSave,
-                $"Wijzigingsopdracht WO-{order.Id:000} aangemaakt uit OF-{quote.Id:000}. De prijzen liggen vast; aantallen, omschrijvingen en het facturatieplan kan je nog aanpassen.", "Omgezet");
+                $"Wijzigingsopdracht {CoNo(order.Id)} aangemaakt uit {CoNo(quote.Id)}. De prijzen liggen vast; aantallen, omschrijvingen en het facturatieplan kan je nog aanpassen.", "Omgezet");
         }
 
         /// <summary>Waar de gebruiker na opslaan/omzetten terechtkomt: het scherm zelf, of het scherm met
@@ -563,13 +563,33 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> SendQuoteModalV2(int projectId, int changeOrderId)
         {
+            try
+            {
+                return await BuildSendQuoteModalV2Async(projectId, changeOrderId);
+            }
+            catch (Exception ex)
+            {
+                // Het formulier wordt via AJAX in een modal geladen: een rauwe 500 gaf enkel "kon niet laden". Nu staat de
+                // oorzaak in het log én (kort) in de modal zelf.
+                _logger?.LogError(ex, "Offerte-verzendformulier laden mislukt voor {ChangeOrderId}", changeOrderId);
+                return Content("<div class=\"gl-v2-co-send-loading\">Kon het verzendformulier niet laden: " + System.Net.WebUtility.HtmlEncode(ex.GetBaseException().Message) + "</div>", "text/html");
+            }
+        }
+
+        private async Task<IActionResult> BuildSendQuoteModalV2Async(int projectId, int changeOrderId)
+        {
             var co = await _db.ChangeOrder.AsNoTracking()
                 .Include(c => c.ChangeOrderDetail)
                 .Include(c => c.ChangeOrderPaymentTerm)
                 .Include(c => c.ClientAccount)
                 .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Project)
                 .FirstOrDefaultAsync(c => c.Id == changeOrderId);
-            if (co is null || !co.IsQuote) return NotFound();
+            if (co is null || !co.IsQuote)
+            {
+                // Geen kale 404 (de modal zou enkel "niet laden" tonen): zeg wat er mis is.
+                var why = co is null ? $"Offerte met id {changeOrderId} bestaat niet (meer) — sla de offerte eerst op." : $"{CoNo(co.Id)} is geen offerte maar een wijzigingsopdracht — die verstuur je via de ondertekening.";
+                return Content("<div class=\"gl-v2-co-send-loading\">" + System.Net.WebUtility.HtmlEncode(why) + "</div>", "text/html");
+            }
 
             var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
             var incl = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m) * (1 + (d.VatPercentage ?? 0m) / 100m));
@@ -578,7 +598,7 @@ namespace CPMCore.Controllers
             {
                 ProjectId = projectId,
                 ChangeOrderId = co.Id,
-                Number = $"OF-{co.Id:000}",
+                Number = $"{CoNo(co.Id)}",
                 Subtitle = string.Join(" · ", new[]
                 {
                     co.Description,
@@ -588,7 +608,7 @@ namespace CPMCore.Controllers
                 Problem = SendProblem(co),
                 Parties = await OwnerRecipientsAsync(co.ClientAccountId),
                 Senders = await QuoteSendersAsync(co),
-                Subject = $"Offerte OF-{co.Id:000}: {co.Description}" + (string.IsNullOrWhiteSpace(projectName) ? "" : $" — {projectName}"),
+                Subject = $"Offerte {CoNo(co.Id)}: {co.Description}" + (string.IsNullOrWhiteSpace(projectName) ? "" : $" — {projectName}"),
                 PdfUrl = Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = co.Id }),
                 TestRecipient = HttpContext.RequestServices.GetRequiredService<IOptions<ServiceCore.Signing.SigningOptions>>().Value.TestRecipientOverride,
             };
@@ -637,7 +657,7 @@ namespace CPMCore.Controllers
             }
             var attachment = new EmailAttachment(Services.Signing.ChangeOrderPdfBuilder.FileName(pdfModel), pdf, "application/pdf");
 
-            var subject = string.IsNullOrWhiteSpace(model.Subject) ? $"Offerte OF-{co.Id:000}: {co.Description}" : model.Subject.Trim();
+            var subject = string.IsNullOrWhiteSpace(model.Subject) ? $"Offerte {CoNo(co.Id)}: {co.Description}" : model.Subject.Trim();
             static string H(string x) => System.Net.WebUtility.HtmlEncode(x ?? "");
             var message = string.IsNullOrWhiteSpace(model.Message)
                 ? ""
@@ -653,7 +673,7 @@ namespace CPMCore.Controllers
                 // Zelfde huisstijl-omslag als de mails van de ondertekenmodule.
                 var body = ServiceCore.Signing.SigningNotifier.MailLayout($"Beste {H(r.Name)},",
                     message +
-                    $"<p>In bijlage vindt u onze offerte <strong>{H(co.Description)}</strong> (OF-{co.Id:000}), geldig tot {co.ExpirationDate:dd/MM/yyyy}.</p>" +
+                    $"<p>In bijlage vindt u onze offerte <strong>{H(co.Description)}</strong> ({CoNo(co.Id)}), geldig tot {co.ExpirationDate:dd/MM/yyyy}.</p>" +
                     "<p>Gaat u akkoord of hebt u vragen, antwoord dan gerust op deze e-mail. Na uw akkoord ontvangt u een wijzigingsopdracht ter ondertekening.</p>");
                 var address = r.Email;
                 var mailSubject = subject;
@@ -713,7 +733,7 @@ namespace CPMCore.Controllers
             {
                 ProjectId = projectId,
                 ChangeOrderId = co.Id,
-                Number = $"WO-{co.Id:000}",
+                Number = $"{CoNo(co.Id)}",
                 Subtitle = string.Join(" · ", new[]
                 {
                     co.Description,
@@ -854,7 +874,7 @@ namespace CPMCore.Controllers
             {
                 ProjectId = projectId,
                 ChangeOrderId = changeOrderId,
-                Orders = orders.Select(o => new IdNameBO { ID = o.Id, Display = $"WO-{o.Id:000} · {o.Description} · {o.Client}" }).ToList(),
+                Orders = orders.Select(o => new IdNameBO { ID = o.Id, Display = $"{CoNo(o.Id)} · {o.Description} · {o.Client}" }).ToList(),
                 Clients = await LoadClientOptionsAsync(projectId),
             };
             return PartialView("Modals/_ModalCopyChangeOrderV2", vm);
@@ -959,7 +979,7 @@ namespace CPMCore.Controllers
             await _db.SaveChangesAsync();
 
             AddMessage("success",
-                asVersion ? $"Nieuwe versie aangemaakt als WO-{copy.Id:000}. Pas aan en verzend opnieuw." : $"Kopie aangemaakt als WO-{copy.Id:000}. Regels en facturatieplan zijn overgenomen, handtekeningen niet.",
+                asVersion ? $"Nieuwe versie aangemaakt als {CoNo(copy.Id)}. Pas aan en verzend opnieuw." : $"Kopie aangemaakt als {CoNo(copy.Id)}. Regels en facturatieplan zijn overgenomen, handtekeningen niet.",
                 asVersion ? "Nieuwe versie" : "Kopie gemaakt");
             return RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = projectId, coid = copy.Id });
         }

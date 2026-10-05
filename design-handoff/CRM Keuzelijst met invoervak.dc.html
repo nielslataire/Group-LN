@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#E7EDE2;font-family:'IBM Plex Sans',sans-serif}a{color:#00532D}a:hover{color:#B8935A}input::placeholder{color:#9aa898}</style></helmet>
+<section id="t34" style="padding:40px 44px 36px">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 20px"><a href="#t34" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">34</a><span style="font:600 13px/1.3 'IBM Plex Sans',sans-serif;color:#00532D">Keuzelijst met zoekveld en knop — vervangt de blauwe zoeklijst. Combineert <a href="CRM%20Menu%20Wireframes.dc.html#8f">8f</a> punt 3 (zoekende dropdown) met <a href="CRM%20Menu%20Wireframes.dc.html#14d">14d</a> punt 3 (keuzelijst met knop): je tikt in het veld zelf, geen tweede invoervak in de lijst</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+
+<div id="34a" style="flex:none;width:720px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#34a" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">34a</a><span>Live — klik in het veld en tik, pijltjes ↑↓ en Enter werken, Esc sluit · probeer "wit" en "xyz"</span></div>
+<div style="background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);padding:22px 24px 26px;min-height:440px;display:flex;flex-direction:column;gap:5px">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">BEDRIJFSNAAM <span style="color:#8B2A2A">*</span></span>
+<div style="display:flex">
+<div onClick="{{ focusIn }}" style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:{{ fBorder }};box-shadow:{{ fRing }};border-right:none;border-radius:8px 0 0 8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;cursor:text">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="{{ leadIcon }}"></path></svg>
+<input ref="{{ inputRef }}" value="{{ inputVal }}" onChange="{{ onQ }}" onFocus="{{ onFocus }}" onBlur="{{ onBlur }}" onKeyDown="{{ onKey }}" placeholder="Zoek of kies een bedrijf …" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A"></input>
+<sc-if value="{{ hasClear }}" hint-placeholder-val="{{ false }}"><span onMouseDown="{{ clear }}" title="Wissen" style="width:22px;height:22px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#F2F5EF"><svg viewBox="0 0 16 16" style="width:11px;height:11px;fill:none;stroke:#5a6b58;stroke-width:1.8;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></span></sc-if>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transform:{{ chevRot }}"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+<div onMouseDown="{{ newFromQ }}" style="height:40px;flex:none;padding:0 12px;border:1px solid #7A9E6E;border-radius:0 8px 8px 0;display:flex;align-items:center;gap:6px;font:600 12px 'IBM Plex Sans',sans-serif;color:#2F6038;box-sizing:border-box;cursor:pointer;background:#fff" style-hover="background:#EDF2E8"><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#2F6038;stroke-width:1.6;stroke-linecap:round"><path d="M8 3.6v8.8 M3.6 8h8.8"></path></svg>Nieuw</div>
+</div>
+<sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:4px;background:#fff;border-radius:10px;border:1px solid rgba(44,59,42,.10);box-shadow:0 14px 34px -12px rgba(44,59,42,.35);padding:6px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;padding:4px 10px 6px;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span style="flex:1">{{ listHead }}</span><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:0;color:#9aa898">↑↓ kiezen · Enter</span></div>
+<sc-for list="{{ results }}" as="r" hint-placeholder-count="4">
+<div onMouseDown="{{ r.pick }}" onMouseEnter="{{ r.hover }}" style="display:flex;align-items:center;gap:10px;min-height:40px;padding:4px 10px;border-radius:7px;background:{{ r.bg }};cursor:pointer">
+<span style="width:26px;height:26px;border-radius:7px;background:{{ r.avBg }};color:{{ r.avCol }};display:flex;align-items:center;justify-content:center;font:600 10px 'IBM Plex Sans',sans-serif;flex:none">{{ r.ini }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font:450 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.pre }}<b style="font-weight:700;color:#00532D;background:#E2ECDA;border-radius:3px;padding:0 1px">{{ r.mid }}</b>{{ r.post }}</span><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ r.sub }}</span></div>
+<sc-if value="{{ r.isSel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 10px 8px;font:450 12.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Geen bedrijf gevonden voor "{{ q }}".</div></sc-if>
+<sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}"><div style="height:1px;background:rgba(44,59,42,.08);margin:4px 6px"></div><div onMouseDown="{{ newFromQ }}" style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:7px;background:{{ newBg }};cursor:pointer"><span style="width:26px;height:26px;border-radius:7px;border:1px dashed #7A9E6E;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:none;stroke:#2F6038;stroke-width:1.7;stroke-linecap:round"><path d="M8 3.6v8.8 M3.6 8h8.8"></path></svg></span><span style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#00532D">"{{ q }}" aanmaken als nieuw bedrijf</span></div></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}"><div style="margin-top:10px;display:flex;gap:9px;padding:10px 12px;border-radius:9px;background:#EDEFEB"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#4A5B48;stroke-width:1.4;stroke-linecap:round"><path d="M8 13.4A5.4 5.4 0 1 0 8 2.6a5.4 5.4 0 0 0 0 10.8z M8 7.4v3.4 M8 5.2h.01"></path></svg><span style="font:450 11.5px/1.55 'IBM Plex Sans',sans-serif;color:#3A4838">{{ toast }}</span></div></sc-if>
+<sc-if value="{{ closedHint }}" hint-placeholder-val="{{ true }}"><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ helper }}</span></sc-if>
+</div>
+</div>
+
+<div id="34b" style="flex:none;width:1080px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#34b" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">34b</a><span>Alle staten — zelfde hoogte (40px), rand en ring als de andere velden uit 14d</span></div>
+<div style="background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);padding:22px 24px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 18px;align-items:start">
+<sc-for list="{{ states }}" as="s" hint-placeholder-count="9">
+<div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ s.label }}</span>
+<div style="display:flex">
+<div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:{{ s.border }};box-shadow:{{ s.ring }};border-right:{{ s.bRight }};border-radius:{{ s.radius }};background:{{ s.bg }};display:flex;align-items:center;gap:8px;padding:0 10px 0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="{{ s.icon }}"></path></svg>
+<span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ s.vc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.v }}</span>
+<sc-if value="{{ s.spin }}" hint-placeholder-val="{{ false }}"><span style="width:13px;height:13px;flex:none;box-sizing:border-box;border-radius:7px;border:2px solid #D6E5CC;border-top-color:#00532D"></span></sc-if>
+<sc-if value="{{ s.x }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:11px;height:11px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.8;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></sc-if>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:{{ s.chev }};stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="{{ s.chevD }}"></path></svg>
+</div>
+<sc-if value="{{ s.hasBtn }}" hint-placeholder-val="{{ true }}"><div style="height:40px;flex:none;padding:0 12px;border:1px solid {{ s.btnLine }};border-radius:0 8px 8px 0;display:flex;align-items:center;gap:6px;font:600 12px 'IBM Plex Sans',sans-serif;color:{{ s.btnCol }};background:{{ s.btnBg }};box-sizing:border-box"><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:{{ s.btnCol }};stroke-width:1.6;stroke-linecap:round"><path d="M8 3.6v8.8 M3.6 8h8.8"></path></svg>Nieuw</div></sc-if>
+</div>
+<span style="font:{{ s.hw }} 10.5px/1.45 'IBM Plex Sans',sans-serif;color:{{ s.hc }}">{{ s.hint }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div id="34d" style="flex:none;width:1500px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#34d" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">34d</a><span>Resultatenlijst open — paneel 4px onder het veld, radius 10px, rijen 40px, actieve rij lichtgroen, zoekterm vet en groen</span></div>
+<div style="background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);padding:22px 24px 26px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start">
+<sc-for list="{{ panels }}" as="p" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58">{{ p.label }}</span>
+<div style="display:flex">
+<div style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1.5px solid #00532D;box-shadow:0 0 0 3px rgba(0,83,45,.10);border-right:none;border-radius:8px 0 0 8px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#7a8a78;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3"></path></svg>
+<span style="flex:1;min-width:0;font:500 13px 'IBM Plex Sans',sans-serif;color:{{ p.vc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.v }}<span style="display:inline-block;width:1.5px;height:15px;background:#00532D;vertical-align:-2px;margin-left:1px"></span></span>
+<sc-if value="{{ p.x }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:11px;height:11px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.8;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></sc-if>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#00532D;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 9.75 8 6.25l3.5 3.5"></path></svg>
+</div>
+<div style="height:40px;flex:none;padding:0 12px;border:1px solid #7A9E6E;border-radius:0 8px 8px 0;display:flex;align-items:center;gap:6px;font:600 12px 'IBM Plex Sans',sans-serif;color:#2F6038;box-sizing:border-box"><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#2F6038;stroke-width:1.6;stroke-linecap:round"><path d="M8 3.6v8.8 M3.6 8h8.8"></path></svg>Nieuw</div>
+</div>
+<div style="margin-top:4px;background:#fff;border-radius:10px;border:1px solid rgba(44,59,42,.10);box-shadow:0 14px 34px -12px rgba(44,59,42,.35);padding:6px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;padding:4px 10px 6px;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span style="flex:1">{{ p.head }}</span><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;letter-spacing:0;color:#9aa898">↑↓ · Enter</span></div>
+<sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;min-height:40px;padding:4px 10px;border-radius:7px;background:{{ r.bg }}">
+<span style="width:26px;height:26px;border-radius:7px;background:{{ r.avBg }};color:{{ r.avCol }};display:flex;align-items:center;justify-content:center;font:600 10px 'IBM Plex Sans',sans-serif;flex:none">{{ r.ini }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font:450 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.pre }}<b style="font-weight:700;color:#00532D;background:#E2ECDA;border-radius:3px;padding:0 1px">{{ r.mid }}</b>{{ r.post }}</span><span style="font:450 10.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ r.sub }}</span></div>
+<sc-if value="{{ r.isSel }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#00532D;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ p.more }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 10px;font:500 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">+ 4 meer — scrollen of verder typen</div></sc-if>
+<sc-if value="{{ p.none }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 10px 8px;font:450 12.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Geen bedrijf gevonden voor "{{ p.v }}".</div></sc-if>
+<sc-if value="{{ p.hasNew }}" hint-placeholder-val="{{ false }}"><div style="height:1px;background:rgba(44,59,42,.08);margin:4px 6px"></div><div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:7px;background:{{ p.newBg }}"><span style="width:26px;height:26px;border-radius:7px;border:1px dashed #7A9E6E;display:flex;align-items:center;justify-content:center;flex:none"><svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:none;stroke:#2F6038;stroke-width:1.7;stroke-linecap:round"><path d="M8 3.6v8.8 M3.6 8h8.8"></path></svg></span><span style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#00532D">"{{ p.v }}" aanmaken als nieuw bedrijf</span></div></sc-if>
+</div>
+<span style="font:450 10.5px/1.45 'IBM Plex Sans',sans-serif;color:#7a8a78;margin-top:6px">{{ p.hint }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div id="34c" style="flex:none;width:720px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="#34c" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">34c</a><span>Wat verandert tegenover nu</span></div>
+<div style="background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 50px -32px rgba(44,59,42,.45);padding:18px 22px;display:flex;flex-direction:column;gap:8px;font:450 12px/1.65 'IBM Plex Sans',sans-serif;color:#2C3B2A">
+<span>· <b>Eén invoervak.</b> Nu is er een veld en daaronder een tweede zoekvak. Voortaan tik je in het veld zelf; de gekozen naam wordt de zoekterm zodra je begint te typen.</span>
+<span>· <b>Geen blauwe balk.</b> De actieve rij krijgt het lichtgroene vlak (#F2F5EF), de gekozen rij een vinkje. De zoekterm staat vet en groen in elke naam.</span>
+<span>· <b>"Nieuw" plakt aan het veld</b>, zoals in 14d punt 3. In de lijst staat onderaan ook '"…" aanmaken': de zoekterm wordt de naam in het zijpaneel.</span>
+<span>· <b>× wist, ˅ opent.</b> × verschijnt alleen als er een waarde is en het veld niet verplicht-leeg is. Rijen hebben een tweede regel (btw-nummer, gemeente) zodat gelijkaardige namen te onderscheiden zijn.</span>
+<span>· Tot 7 opties: gewone lijst zonder zoeken. Vanaf 8: dit veld. Bij lange lijsten (leveranciers) eerst de laatst gebruikte, dan zoekresultaten — zie <a href="CRM%20Menu%20Wireframes.dc.html#8f">8f</a>.</span>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { q: '', open: false, sel: 0, hi: 0, typing: false, toast: '' };
+  inputRef = React.createRef();
+  data = [
+    { n: "IN 'T WIT", s: 'BE 0712.344.120 · Brugge' },
+    { n: 'PVC Buis-WITWAY WEBSHOPS', s: 'BE 0678.221.904 · Roeselare' },
+    { n: 'Studiebureau Wittouck bvba', s: 'BE 0455.870.312 · Kortrijk' },
+    { n: 'Van Hove, Wittesaele en Verhamme, geassocieerde notarissen', s: 'BE 0841.009.556 · Gent' },
+    { n: 'Bouwbedrijf Declercq', s: 'BE 0433.118.270 · Veurne' },
+    { n: 'Elektro Verhaeghe', s: 'BE 0466.502.881 · Diksmuide' },
+    { n: 'Fluvius System Operator', s: 'BE 0477.445.084 · Melle' },
+    { n: 'Sanitair De Wilde', s: 'BE 0425.663.017 · Koksijde' }
+  ];
+  renderVals() {
+    const { q, open, sel, hi, typing, toast } = this.state;
+    const term = typing ? q.trim().toLowerCase() : '';
+    const list = this.data.map((d, i) => ({ ...d, i })).filter(d => !term || d.n.toLowerCase().includes(term));
+    const shown = term ? list : list;
+    const results = shown.map((d, k) => {
+      const idx = term ? d.n.toLowerCase().indexOf(term) : -1;
+      const on = k === hi;
+      return {
+        ini: d.n.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase(),
+        pre: idx < 0 ? d.n : d.n.slice(0, idx), mid: idx < 0 ? '' : d.n.slice(idx, idx + term.length), post: idx < 0 ? '' : d.n.slice(idx + term.length),
+        sub: d.s, isSel: d.i === sel, bg: on ? '#F2F5EF' : 'transparent',
+        avBg: d.i === sel ? '#00532D' : '#EDEFEB', avCol: d.i === sel ? '#fff' : '#4A5B48',
+        pick: e => { e.preventDefault(); this.pick(d.i); },
+        hover: () => this.setState({ hi: k })
+      };
+    });
+    const hasQ = typing && !!q.trim();
+    const selName = sel != null && sel >= 0 ? this.data[sel].n : '';
+    this._shown = shown;
+    return {
+      inputRef: this.inputRef,
+      inputVal: typing ? q : selName,
+      open, results, q: q.trim(), hasQ, noResults: hasQ && !shown.length,
+      newBg: hasQ && hi >= shown.length ? '#F2F5EF' : 'transparent',
+      listHead: hasQ ? shown.length + ' gevonden' : 'ALLE BEDRIJVEN · ' + this.data.length,
+      hasClear: !!(typing ? q : selName),
+      fBorder: open ? '1.5px solid #00532D' : '1px solid rgba(44,59,42,.14)',
+      fRing: open ? '0 0 0 3px rgba(0,83,45,.10)' : 'none',
+      chevRot: open ? 'rotate(180deg)' : 'none',
+      leadIcon: open ? 'M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3' : 'M3 13.4V2.6h7v10.8 M10 6.4h3v7 M5.2 5h.8 M7.2 5h.8 M5.2 7.6h.8 M7.2 7.6h.8 M1.8 13.4h12.4',
+      hasToast: !!toast && !open, toast,
+      closedHint: !open && !toast, helper: selName ? this.data[sel].s : 'Begin te typen om te zoeken',
+      focusIn: () => this.inputRef.current && this.inputRef.current.focus(),
+      onFocus: () => this.setState({ open: true, hi: 0, toast: '' }),
+      onBlur: () => this.setState({ open: false, typing: false, q: '' }),
+      onQ: e => this.setState({ q: e.target.value, typing: true, open: true, hi: 0 }),
+      onKey: e => this.key(e),
+      clear: e => { e.preventDefault(); this.setState({ q: '', typing: true, sel: -1, hi: 0 }); },
+      newFromQ: e => { e.preventDefault(); this.newCo(); },
+      states: this.states(),
+      panels: this.panels()
+    };
+  }
+  pick(i) { this.setState({ sel: i, q: '', typing: false, open: false, toast: '' }); this.inputRef.current && this.inputRef.current.blur(); }
+  newCo() { const n = this.state.typing && this.state.q.trim() ? this.state.q.trim() : ''; this.setState({ open: false, typing: false, q: '', toast: n ? 'Zijpaneel "Nieuw bedrijf" opent met naam "' + n + '" ingevuld (zoals in 14d punt 3).' : 'Zijpaneel "Nieuw bedrijf" opent — leeg formulier.' }); this.inputRef.current && this.inputRef.current.blur(); }
+  key(e) {
+    const shown = this._shown || []; const max = shown.length + (this.state.typing && this.state.q.trim() ? 1 : 0) - 1;
+    if (e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ open: true, hi: Math.min(max, s.hi + 1) })); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ hi: Math.max(0, s.hi - 1) })); }
+    else if (e.key === 'Enter') { e.preventDefault(); const h = this.state.hi; if (h < shown.length) this.pick(shown[h].i); else this.newCo(); }
+    else if (e.key === 'Escape') { this.inputRef.current && this.inputRef.current.blur(); }
+  }
+  panels() {
+    const ini = n => n.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const row = (d, term, hi, sel) => { const i = term ? d.n.toLowerCase().indexOf(term) : -1; return { ini: ini(d.n), pre: i < 0 ? d.n : d.n.slice(0, i), mid: i < 0 ? '' : d.n.slice(i, i + term.length), post: i < 0 ? '' : d.n.slice(i + term.length), sub: d.s, bg: hi ? '#F2F5EF' : 'transparent', isSel: sel, avBg: sel ? '#00532D' : '#EDEFEB', avCol: sel ? '#fff' : '#4A5B48' }; };
+    const D = this.data;
+    const wit = D.filter(d => d.n.toLowerCase().includes('wit'));
+    return [
+      { label: 'OPEN — NOG NIETS GETYPT', v: '', vc: '#9aa898', x: false, head: 'ALLE BEDRIJVEN · 8', rows: D.slice(0, 4).map((d, k) => row(d, '', k === 1, k === 0)), more: true, none: false, hasNew: false, newBg: 'transparent', hint: "Klik in het veld: de lijst opent met de gekozen waarde aangevinkt (IN 'T WIT). Typen start meteen een zoekopdracht." },
+      { label: 'OPEN — ZOEKTERM "WIT"', v: 'wit', vc: '#2C3B2A', x: true, head: '4 GEVONDEN', rows: wit.map((d, k) => row(d, 'wit', k === 0, false)), more: false, none: false, hasNew: true, newBg: 'transparent', hint: 'Zoekt op elk deel van de naam. Eerste resultaat is actief, zodat Enter meteen kiest. Onderaan altijd "aanmaken".' },
+      { label: 'OPEN — GEEN RESULTAAT', v: 'xyz', vc: '#2C3B2A', x: true, head: '0 GEVONDEN', rows: [], more: false, none: true, hasNew: true, newBg: '#F2F5EF', hint: 'Niets gevonden: "aanmaken" wordt de actieve rij. Enter opent het zijpaneel met "xyz" als naam.' }
+    ];
+  }
+  states() {
+    const G = '#00532D', R = '#8B2A2A';
+    const bld = 'M3 13.4V2.6h7v10.8 M10 6.4h3v7 M5.2 5h.8 M7.2 5h.8 M5.2 7.6h.8 M7.2 7.6h.8 M1.8 13.4h12.4';
+    const srch = 'M7.2 11.6a4.4 4.4 0 1 0 0-8.8 4.4 4.4 0 0 0 0 8.8z M10.4 10.4l3 3';
+    const lock = 'M4.4 7.2h7.2v6H4.4z M5.8 7.2V5.4a2.2 2.2 0 0 1 4.4 0v1.8';
+    const dn = 'M4.5 6.25 8 9.75l3.5-3.5', up = 'M4.5 9.75 8 6.25l3.5 3.5';
+    const base = { border: '1px solid rgba(44,59,42,.14)', ring: 'none', bg: '#fff', icon: bld, vc: '#2C3B2A', chev: G, chevD: dn, btnLine: '#7A9E6E', btnCol: '#2F6038', btnBg: '#fff', hc: '#7a8a78', hw: 450, x: false, spin: false };
+    return [
+      { ...base, label: 'BEDRIJFSNAAM — LEEG', v: 'Zoek of kies een bedrijf …', vc: '#9aa898', hint: 'placeholder zegt wat je kan doen' },
+      { ...base, label: 'BEDRIJFSNAAM — GEKOZEN', v: "IN 'T WIT", x: true, hint: 'BE 0712.344.120 · Brugge — tweede regel als helptekst' },
+      { ...base, label: 'BEDRIJFSNAAM — TYPEN', v: 'wit', icon: srch, border: '1.5px solid ' + G, ring: '0 0 0 3px rgba(0,83,45,.10)', chevD: up, x: true, hint: 'icoon wordt een vergrootglas zolang je zoekt' },
+      { ...base, label: 'BEDRIJFSNAAM — ZOEKEN BEZIG', v: 'fluv', icon: srch, border: '1.5px solid ' + G, ring: '0 0 0 3px rgba(0,83,45,.10)', chevD: up, spin: true, hint: 'bij zoeken op de server, na 250 ms' },
+      { ...base, label: 'BEDRIJFSNAAM — VERPLICHT, LEEG', v: 'Zoek of kies een bedrijf …', vc: '#9aa898', border: '1.5px solid ' + R, hint: 'Kies een bedrijf of maak er een aan', hc: R, hw: 600 },
+      { ...base, label: 'BEDRIJFSNAAM — ONBEKENDE TEKST', v: 'Wit & Co', border: '1.5px solid ' + R, x: true, hint: 'Niet gevonden — kies uit de lijst of klik Nieuw', hc: R, hw: 600 },
+      { ...base, label: 'BEDRIJFSNAAM — ALLEEN-LEZEN', v: "IN 'T WIT", icon: lock, bg: '#F7F9F5', border: '1px solid rgba(44,59,42,.08)', vc: '#4A5B48', chev: 'transparent', btnLine: 'rgba(44,59,42,.08)', btnCol: '#C2CBBE', btnBg: '#F7F9F5', hint: 'vast gegeven, bv. na facturatie' },
+      { ...base, label: 'BEDRIJFSNAAM — UITGESCHAKELD', v: 'Kies eerst een project', bg: '#F2F5EF', border: '1px solid rgba(44,59,42,.08)', vc: '#9aa898', chev: '#C2CBBE', btnLine: 'rgba(44,59,42,.08)', btnCol: '#C2CBBE', btnBg: '#F2F5EF', hint: 'hangt af van een ander veld' },
+      { ...base, label: 'ZONDER KNOP', v: 'Fluvius System Operator', x: true, hasBtn: false, hint: 'als aanmaken hier niet mag: knop valt weg, veld krijgt rondom radius 8px' }
+    ].map(s => { const btn = s.hasBtn !== false; return { ...s, hasBtn: btn, radius: btn ? '8px 0 0 8px' : '8px', bRight: btn ? 'none' : s.border }; });
+  }
+}
+</script>
+</body>
+</html>

@@ -192,7 +192,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
                 DocumentId = existing?.Id,
                 FolderId = existing is null ? await _db.DocumentFolders.Where(f => f.Code == "contracten").Select(f => (int?)f.Id).FirstOrDefaultAsync(ct) : null,
                 Name = existing is null ? finalDoc.FileName : null,
-                Number = existing is null ? $"WO-{co.Id}" : null,
+                Number = existing is null ? co.PublicNumber : null,
                 Links = existing is null
                     ? new List<FacadeCore.DocLinkRef> { new() { Type = "client", Id = co.ClientAccountId } }
                     : new List<FacadeCore.DocLinkRef>(),

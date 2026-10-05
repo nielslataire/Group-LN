@@ -4,7 +4,7 @@
 //  - Alles anders (POST/PUT/DELETE, AJAX/JSON, API, andere origins): niet onderschept, gaat gewoon naar het netwerk.
 // Nieuwe release: verhoog VERSION → oude caches worden bij activate opgeruimd; skipWaiting + clients.claim
 // zorgen dat een nieuwe worker meteen overneemt (geen vastlopen op een oude versie).
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = "cpm-static-" + VERSION;
 const CORE_CACHE = "cpm-core-" + VERSION;
 const OFFLINE_URL = "/offline.html";
@@ -38,9 +38,13 @@ self.addEventListener("fetch", (event) => {
     if (url.origin !== self.location.origin) return;
 
     if (request.mode === "navigate") {
-        event.respondWith(
-            fetch(request).catch(() => caches.open(CORE_CACHE).then((c) => c.match(OFFLINE_URL)))
-        );
+        // Online: de service worker bemoeit zich NIET met pagina-navigaties — de browser handelt login-
+        // redirects (ook cross-origin naar Microsoft/Google), cookies en serverfouten zelf af. Enkel als er
+        // echt geen netwerk is, wordt de offline-pagina getoond. (Eerder werd elke navigatie via fetch()
+        // in de worker gestuurd en gaf een mislukte start-/loginredirect meteen "Geen verbinding", waarbij
+        // "Probeer opnieuw" dezelfde mislukking herhaalde.)
+        if (self.navigator.onLine !== false) return;
+        event.respondWith(caches.open(CORE_CACHE).then((c) => c.match(OFFLINE_URL)));
         return;
     }
 

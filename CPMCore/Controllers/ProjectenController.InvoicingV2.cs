@@ -200,7 +200,7 @@ namespace CPMCore.Controllers
                 {
                     if (!clientsById.TryGetValue(co.ClientAccountID, out var client)) continue;
                     var card = CardFor(client);
-                    var woLabel = $"WO-{co.Id}";
+                    var woLabel = CoNo(co.Id);
                     var signedSub = co.DateAgreement.HasValue ? $"ondertekend {co.DateAgreement.Value:dd/MM/yyyy}" : null;
                     foreach (var detail in co.Details.Where(d => d.Invoicable != false))
                     {
@@ -261,7 +261,7 @@ namespace CPMCore.Controllers
                     card.Rows.Add(new InvoicingPostRowV2
                     {
                         Kind = "Meerwerk",
-                        Description = $"WO-{b.Id} · {b.Description ?? "Wijzigingsopdracht"}",
+                        Description = $"{CoNo(b.Id)} · {b.Description ?? "Wijzigingsopdracht"}",
                         SubText = statusLabel,
                         Moment = "blokkeert",
                         Amount = b.Amount,

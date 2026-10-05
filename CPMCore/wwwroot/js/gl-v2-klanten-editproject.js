@@ -265,6 +265,7 @@
     }
 
     function wireSearchSelect(root) {
+        if (root.hasAttribute("data-gl-v2-combo")) return;   // punt 34: het gedeelde combo-component (gl-v2-combo.js) bedraadt zichzelf
         if (root.hasAttribute("data-gl-v2-wired")) return;
         var hidden = root.querySelector('input[type="hidden"]');
         var trigger = root.querySelector(".gl-v2-select-trigger");
@@ -275,6 +276,10 @@
         root.setAttribute("data-gl-v2-wired", "1");
 
         var debounceTimer = null;
+        // Na een keuze (of Tab) hoort de focus terug op de trigger, zodat Tab naar het volgende veld loopt; de
+        // focus-listener mag het paneel daarbij niet opnieuw openen.
+        var suppressOpen = false;
+        function refocusTrigger() { suppressOpen = true; trigger.focus(); suppressOpen = false; }
         var searchPlaceholder = root.getAttribute("data-search-placeholder") || "Zoek …";
 
         panel.innerHTML =
@@ -313,6 +318,7 @@
                 var isSelected = hidden.value && String(hidden.value) === String(item.id);
                 var btn = document.createElement("button");
                 btn.type = "button";
+                btn.tabIndex = -1;   // Tab loopt niet door de resultaten maar naar het volgende veld
                 btn.className = "gl-v2-select-option" + (isSelected ? " is-selected" : "");
                 var check = document.createElement("i");
                 check.className = "ph ph-check";
@@ -326,6 +332,7 @@
                     label.textContent = item.text;
                     trigger.classList.add("is-filled");
                     closeAllPanels();
+                    refocusTrigger();
                     markDirty();
                 });
                 results.appendChild(btn);
@@ -366,7 +373,15 @@
         // lopen door de zichtbare opties (.is-active), Enter kiest de actieve — of de eerste als er nog
         // geen actief is — en Escape sluit. Enter mag hier nooit het formulier indienen.
         searchInput.addEventListener("keydown", function (e) {
-            if (e.key === "Escape") { closeAllPanels(); return; }
+            if (e.key === "Escape") { closeAllPanels(); refocusTrigger(); return; }
+            if (e.key === "Tab") {
+                // Tab kiest het actieve (of het enige) resultaat en gaat dan gewoon door naar het volgende veld.
+                var tabItems = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
+                var tabActive = tabItems.filter(function (b) { return b.classList.contains("is-active"); })[0] || (tabItems.length === 1 ? tabItems[0] : null);
+                if (!e.shiftKey && tabActive) tabActive.click();
+                else { closeAllPanels(); refocusTrigger(); }
+                return;
+            }
             if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Enter") return;
             var items = Array.prototype.filter.call(panel.querySelectorAll(".gl-v2-select-option"), function (b) { return !b.hidden; });
             if (e.key === "Enter") e.preventDefault();
@@ -421,6 +436,7 @@
         // Focus (bv. Tab erin) opent het paneel meteen mee, zodat je meteen kan typen zonder eerst nog
         // Enter/een klik nodig te hebben — zelfde discipline als de zoekende multiselect elders al kreeg.
         trigger.addEventListener("focus", function () {
+            if (suppressOpen) return;
             if (!panel.classList.contains("is-open")) { openedAt = Date.now(); openThisPanel(); }
         });
 

@@ -259,7 +259,9 @@ namespace CPMCore.Documents
         public List<ChangeOrderPdfLine> Lines { get; set; } = new();
 
         /// <summary>Zelfde nummering als de titel van de oude PDF ("WO {datum} - {id}"), kort genoteerd.</summary>
-        public string Reference => IsQuote ? $"OF-{Id}" : $"WO-{Id}";
+        /// <summary>Publiek nummer (migratie 070, "OF-2026-014-v2"); zonder nummer het oude Id-nummer.</summary>
+        public string PublicNumber { get; set; }
+        public string Reference => !string.IsNullOrEmpty(PublicNumber) ? PublicNumber : (IsQuote ? $"OF-{Id}" : $"WO-{Id}");
 
         /// <summary>Zelfde formule als ChangeOrderBO.Totaal: som van hoeveelheid × prijs × (1 + commissie).</summary>
         public decimal TotalExcl => Lines.Sum(l => l.RowTotal);
