@@ -93,11 +93,11 @@
     // klikte. Een download die via fetch + blob loopt is geen navigatie en wordt dus nooit gevangen. Enkel in een
     // gewoon browservenster (in het app-venster zelf werkt de gewone link). HTML-antwoorden (afdrukpagina's)
     // blijven een gewone navigatie; PDF's en afbeeldingen openen als blob in een nieuw tabblad; bijlagen worden bewaard.
-    var DOWNLOAD_RE = //(Export[A-Za-z0-9]*|Download[A-Za-z0-9]*|[A-Za-z0-9]*Pdf[A-Za-z0-9]*|[A-Za-z0-9]*Excel[A-Za-z0-9]*|[A-Za-z0-9]*Csv[A-Za-z0-9]*|[A-Za-z0-9]*Xlsx[A-Za-z0-9]*|[A-Za-z0-9]*Zip[A-Za-z0-9]*|GuaranteeDoc)(/|?|$)/i;
+    var DOWNLOAD_RE = /\/(Export\w*|Download\w*|Print\w*|\w*Pdf\w*|\w*Excel\w*|\w*Csv\w*|\w*Xlsx\w*|\w*Zip\w*|GuaranteeDoc)(\/|$)/i;
 
     function filenameFrom(res, url) {
         var cd = res.headers.get("Content-Disposition") || "";
-        var m = /filename*=UTF-8''([^;]+)/i.exec(cd);
+        var m = /filename\*=UTF-8''([^;]+)/i.exec(cd);
         if (m) { try { return decodeURIComponent(m[1].trim().replace(/"/g, "")); } catch (e) { /* val terug */ } }
         m = /filename="?([^";]+)"?/i.exec(cd);
         if (m) return m[1].trim();
