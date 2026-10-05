@@ -248,10 +248,19 @@ namespace CPMCore.Documents
         public string ProjectName { get; set; } = "";
         public string ProjectAddressLine { get; set; }
         public string ProjectCityLine { get; set; }
+        /// <summary>Enkel de gemeente van het project, zonder postcode — gl-v2's "Werfadres" toont
+        /// bewust geen postcode (Niels, 2026-10-05); <see cref="ProjectCityLine"/> (postcode + gemeente)
+        /// blijft ongewijzigd voor het legacy-document.</summary>
+        public string? ProjectMunicipality { get; set; }
         public string ClientSalutation { get; set; }
         public string ClientName { get; set; } = "";
         public string ClientEmail { get; set; }
         public string UnitsLine { get; set; }
+        /// <summary>Straat + huisnummer van de klant zelf (niet het project) — gl-v2's adresblok
+        /// onder de klantnaam (Niels, 2026-10-05); legacy gebruikt deze velden niet.</summary>
+        public string? ClientStreetLine { get; set; }
+        /// <summary>Postcode + gemeente van de klant zelf.</summary>
+        public string? ClientCityLine { get; set; }
         public string Description { get; set; } = "";
         public string CommentHtml { get; set; }
         public string Conditions { get; set; }
@@ -267,6 +276,21 @@ namespace CPMCore.Documents
         public decimal TotalExcl => Lines.Sum(l => l.RowTotal);
         public decimal VatAmount => VatPercentage * TotalExcl / 100m;
         public decimal TotalIncl => TotalExcl + VatAmount;
+
+        // ── Facturatiebedrijf (ChangeOrderPdfBuilder.ResolveIssuerCompanyAsync) ──────────────────
+        // Enkel gebruikt door ChangeOrderDocumentV2 (gl-v2); ChangeOrderDocument (legacy) negeert
+        // deze velden en blijft de vaste Group LN-huisstijl van GroupLnPdfDocument tonen.
+        public int? IssuerCompanyId { get; set; }
+        public string? IssuerCompanyName { get; set; }
+        public string? IssuerCompanyLegalLine { get; set; }
+        public string? IssuerCompanyVatNumber { get; set; }
+        public string? IssuerCompanyIban { get; set; }
+        public string? IssuerCompanyStreet { get; set; }
+        public string? IssuerCompanyPostalCity { get; set; }
+        public string? IssuerCompanyPhone { get; set; }
+        public string? IssuerCompanyEmail { get; set; }
+        public string? IssuerCompanyWebsite { get; set; }
+        public byte[]? IssuerCompanyLogoBytes { get; set; }
     }
 
     public sealed class ChangeOrderPdfLine

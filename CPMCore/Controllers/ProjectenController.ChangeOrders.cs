@@ -617,6 +617,9 @@ namespace CPMCore.Controllers
         /// geladen door ChangeOrderPdfBuilder) i.p.v. de Rotativa-view ChangeOrderPDF.cshtml — hetzelfde
         /// bestand dat een klant elektronisch ondertekent, zodat papier en dossier nooit verschillen.
         /// De oude view blijft voorlopig staan als referentie; ze wordt nergens meer gerenderd.
+        /// Sinds de gl-v2-documentlayout (DOCUMENTLAYOUT_VOORTGANG.md) kiest <c>ChangeOrderPdfBuilder.Render</c>
+        /// hier op <c>ViewData["UseGlV2Layout"]</c> tussen die legacy opmaak en <c>ChangeOrderDocumentV2</c>;
+        /// de ondertekenflow (<c>ChangeOrderSigningSource</c>) blijft altijd de legacy opmaak gebruiken.
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> ChangeOrderPDF(int changeorderid)
@@ -628,7 +631,7 @@ namespace CPMCore.Controllers
             byte[] pdfBytes;
             try
             {
-                pdfBytes = builder.Render(model);
+                pdfBytes = builder.Render(model, useGlV2Layout: ViewData["UseGlV2Layout"] as bool? == true);
             }
             catch (Exception ex)
             {

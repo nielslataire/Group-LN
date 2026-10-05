@@ -6215,3 +6215,40 @@ Een manifest-instelling om dat uit te zetten is er niet (stabiel). Oplossing in 
 - **Welke links**: `data-gl-v2-download`, `download`, of een pad met `Export…`, `Download…`, `Print…` (de `Print…List`-acties leveren een PDF), `…Pdf…`, `…Excel…`, `…Csv…`, `…Xlsx…`, `…Zip…`, `GuaranteeDoc`. Een nieuwe downloadlink met een andere naam krijgt `data-gl-v2-download`.
 - **Wat er met het antwoord gebeurt**: bijlage (`Content-Disposition: attachment`) → bewaard onder de bestandsnaam van de server; PDF/afbeelding inline → blob in een nieuw tabblad; HTML (een echte afdrukpagina) → gewone navigatie, dus die kan in het app-venster blijven openen; fout → de gewone link.
 - In het app-venster zelf (standalone) werkt de gewone link zoals voorheen.
+
+## PDF-documenten (gl-v2) — design-handoff punt 35/36, `CRM Documentlayout.dc.html`
+Projectwijde QuestPDF-opmaak voor élk document (factuur, offerte/wijzigingsopdracht,
+klantenlijst, aannemerslijst, prijslijst, budget): groene band boven/onder (6mm, `#00532D`),
+18mm zijmarge, Playfair Display enkel voor de documenttitel, IBM Plex Sans voor al de rest,
+volledige kop op pagina 1 / compacte kop op vervolgpagina's, voet met adres · contact ·
+rechtsvorm+btw+IBAN · "pagina x/y". Code in `CPMCore/Documents/GlV2/`; volledig logboek
+(architectuur, bewuste afwijkingen van het ontwerp, open punten) in
+`DOCUMENTLAYOUT_VOORTGANG.md`.
+
+**Enkel gl-v2** (`ViewData["UseGlV2Layout"]`, dezelfde `gl_v2_preview`-cookie als overal): wie niet
+in gl-v2 zit, ziet de bestaande PDF-opmaak, ongewijzigd. **Raakt `ServiceCore/Invoicing/Pdf/` niet**
+— de JSON-gebaseerde LayoutA/B/HE-facturatiepipeline (per `IssuerCompanyBO.TemplateKey`
+instelbaar, gebruikt door zowel BCO als Group LN) is en blijft een apart systeem.
+
+**Bedrijfsgegevens op het document** (logo, naam, adres, btw, IBAN) komen altijd van het echte
+facturatiebedrijf van het project (`IssuerCompanyBO`, dezelfde tabel als de facturatie), nooit
+hardcoded: eerst `Project.IssuerCompanyIdBuilder` (het facturatiebedrijf-aannemingen — de
+hoofdregel voor offerte/wijzigingsopdracht), bij een coördinatieproject anders
+`Project.CoordinationIssuerCompanyId`, anders het als "externe standaard" gemarkeerde
+facturatiebedrijf — dezelfde regel als `ProjectenController.Coordinatie.EnsureSupplierIssuerLink`.
+Een `appsettings`-fallback (`GlV2PdfCompanyOptions`) bestaat enkel voor het geval geen van de drie
+iets oplevert (zou niet mogen voorkomen); die velden staan bewust leeg tot iemand ze invult — een
+PDF naar een klant toont nooit een verzonnen btw-nummer of rekeningnummer.
+
+**Eerste document (okt. 2026): offerte/wijzigingsopdracht** (`ChangeOrderDocumentV2`, punt
+35c/35d), achter dezelfde actie als de legacy-PDF (`ProjectenController.ChangeOrders.ChangeOrderPDF`).
+Twee bekende, bewuste afwijkingen van het ontwerp (reden + volledige lijst in
+DOCUMENTLAYOUT_VOORTGANG.md): de offerte-tabel heeft geen postnummer/groepscodes (het datamodel
+draagt geen budget-activiteitcode), en "voor akkoord" is één handtekenvak voor de klant, niet één
+per mede-eigenaar (het model kent geen lijst mede-eigenaars).
+
+**Open punt, nog niet gebouwd** (DOCUMENTLAYOUT_VOORTGANG.md "Open punt"): voor een
+coördinatieproject zou `InvoiceableByBouwheer` (`ChangeOrderDetailV2`) eigenlijk nooit aan mogen
+staan — het coördinatiebedrijf is dan zelf geen bouwheer — en mogelijk hoort er een vermelding op
+het document als het facturatiebedrijf niet de aannemingsfirma zelf is. Wacht op een gerichte
+beslissing (exacte tekst/gedrag) vóór dit op `ChangeOrderDetailV2` gebouwd wordt.
