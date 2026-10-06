@@ -36,7 +36,7 @@
     <div class="gl-v2-public-card-body">
         @* Ná voltooiing toont de preview het ondertekende PDF (incl. ondertekeningsblad), niet meer
            enkel het origineel — anders lijkt het alsof de handtekening nergens verschijnt. *@
-        <iframe src="@Url.Action(completed ? "Finaal" : "Bestand")" style="width:100%;height:60vh;border:1px solid var(--gl-v2-hairline);border-radius:var(--gl-v2-radius-sm)" title="@Model.Title"></iframe>
+        <iframe src="@(Url.Action(completed ? "Finaal" : "Bestand"))#navpanes=0&pagemode=none&view=FitH" style="width:100%;height:60vh;border:1px solid var(--gl-v2-hairline);border-radius:var(--gl-v2-radius-sm)" title="@Model.Title"></iframe>
     </div>
 </section>
 

@@ -200,7 +200,7 @@ public class SigningAdminController : BaseController
         try
         {
             var package = await source.BuildAsync(sourceId, User.GetCpmUserId() ?? 0, ct);
-            Response.Headers["Content-Disposition"] = $"inline; filename=\"{package.FileName}\"";
+            Response.Headers["Content-Disposition"] = CPMCore.Services.Signing.ContentDispositionHelper.Inline(package.FileName);
             return File(package.Pdf, "application/pdf");
         }
         catch (Exception ex)
@@ -404,7 +404,7 @@ public class SigningAdminController : BaseController
         if (doc is null) return NotFound();
         if (inline)
         {
-            Response.Headers["Content-Disposition"] = $"inline; filename=\"{doc.FileName}\"";
+            Response.Headers["Content-Disposition"] = CPMCore.Services.Signing.ContentDispositionHelper.Inline(doc.FileName);
             return File(doc.Content, doc.ContentType);
         }
         return File(doc.Content, doc.ContentType, doc.FileName);

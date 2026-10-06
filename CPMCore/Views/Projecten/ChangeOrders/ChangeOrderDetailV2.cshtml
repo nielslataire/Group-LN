@@ -289,7 +289,7 @@
                                 <option value="">— kies een klant —</option>
                                 @foreach (var c in Model.ClientOptions)
                                 {
-                                    <option value="@c.Id" data-vat="@c.VatPercentage.ToString(CultureInfo.InvariantCulture)" data-vat-label="@c.VatLabel">@c.Display@(string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName)</option>
+                                    <option value="@c.Id" data-vat="@c.VatPercentage.ToString(CultureInfo.InvariantCulture)" data-vat-type="@c.VatTypeId" data-vat-label="@c.VatLabel">@c.Display@(string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName)</option>
                                 }
                             </select></div>
                         }
@@ -355,6 +355,18 @@
                     <div class="gl-v2-field gl-v2-field-full">
                         @if (editable)
                         {
+                            <label class="gl-v2-field-label" for="gl-v2-co-subject">Onderwerp</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-co-subject" name="subject" maxlength="150" value="@Model.Subject" /></div>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-field-label">Onderwerp</span>
+                            <div class="gl-v2-co-readout">@(string.IsNullOrWhiteSpace(Model.Subject) ? "—" : Model.Subject)</div>
+                        }
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        @if (editable)
+                        {
                             <label class="gl-v2-field-label" for="gl-v2-co-description">Omschrijving voor de klant</label>
                             <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-textbox-sm"><textarea class="gl-v2-field-input" id="gl-v2-co-description" name="description" rows="2" maxlength="250">@Model.Description</textarea></div>
                         }
@@ -364,6 +376,23 @@
                             <div class="gl-v2-co-readout is-multiline">@(string.IsNullOrWhiteSpace(Model.Description) ? "—" : Model.Description)</div>
                         }
                     </div>
+                    @if (isQuote)
+                    {
+                        @* Bij een offerte is er geen facturatieplan-kaart; de voorwaarden staan hier, zodat ze op de offerte-PDF komen. *@
+                        <div class="gl-v2-field gl-v2-field-full">
+                            @if (editable)
+                            {
+                                <label class="gl-v2-field-label" for="gl-v2-co-conditions">Voorwaarden op het document</label>
+                                <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-textbox-sm"><textarea class="gl-v2-field-input" id="gl-v2-co-conditions" name="conditionsText" rows="2" maxlength="1000">@Model.ConditionsText</textarea></div>
+                                <span class="gl-v2-field-help">komt op de offerte-PDF, naast het vak "Voor akkoord"</span>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-field-label">Voorwaarden op het document</span>
+                                <div class="gl-v2-co-readout is-multiline">@(string.IsNullOrWhiteSpace(Model.ConditionsText) ? "—" : Model.ConditionsText)</div>
+                            }
+                        </div>
+                    }
                     <div class="gl-v2-field gl-v2-field-full">
                         <label class="gl-v2-toggle-row" for="gl-v2-co-bouwheer">
                             <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-co-bouwheer" name="invoiceableByBouwheer" value="true" @(Model.InvoiceableByBouwheer ? "checked" : "") @(editable ? "" : "disabled") />
@@ -411,7 +440,7 @@
                             <tbody id="gl-v2-co-rows-body">
                                 @for (var i = 0; i < Model.Rows.Count; i++)
                                 {
-                                    @await Html.PartialAsync("Partials/_ChangeOrderDetailRowV2", Model.Rows[i], new ViewDataDictionary(ViewData) { { "Index", i }, { "VatKlant", Model.VatKlantPercentage }, { "IsLocked", false } })
+                                    @await Html.PartialAsync("Partials/_ChangeOrderDetailRowV2", Model.Rows[i], new ViewDataDictionary(ViewData) { { "Index", i }, { "VatKlant", Model.VatKlantPercentage }, { "VatTypes", Model.VatTypes }, { "IsLocked", false } })
                                 }
                             </tbody>
                             <tfoot>
@@ -1063,6 +1092,7 @@
         "sendModalUrl": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Url.Action(isQuote ? "SendQuoteModalV2" : "SendChangeOrderModalV2", "Projecten", new { projectId = Model.ProjectId, changeOrderId = Model.ChangeOrderId }))),
         "convertModalUrl": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Url.Action("ConvertQuoteModalV2", "Projecten", new { projectId = Model.ProjectId, changeOrderId = Model.ChangeOrderId }))),
         "vatKlant": @Model.VatKlantPercentage.ToString(CultureInfo.InvariantCulture),
+        "vatKlantTypeId": @(Model.VatKlantTypeId?.ToString() ?? "null"),
         "addRowUrl": "@Url.Action("ChangeOrderDetailV2AddRow")",
         "addTermUrl": "@Url.Action("ChangeOrderDetailV2AddTerm")",
         "listUrl": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(listUrl))

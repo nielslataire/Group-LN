@@ -117,6 +117,8 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-table .gl-v2-field-box { height: 34px; padding: 0 9px; gap: 6px; border-radius: 7px; }
 .gl-v2-co-table .gl-v2-field-box .gl-v2-field-input { font-size: 12.5px; width: 100%; }
 .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox { width: 84px; margin-left: auto; }
+/* Btw-code: gesloten veld compact ("6 % · CODE"), de open lijst toont de lange tekst en mag breder zijn. */
+.gl-v2-co-table .gl-v2-field-box.gl-v2-co-vatbox { width: 96px; margin-left: auto; }
 /* Een keuzelijst in een cel mag niet tot enkel haar pijltje krimpen (de tabel verdeelt de breedte zelf). */
 .gl-v2-co-table .gl-v2-field-box:has(> select) { min-width: 96px; }
 .gl-v2-co-numbox .gl-v2-field-input { text-align: right; font-variant-numeric: tabular-nums; }

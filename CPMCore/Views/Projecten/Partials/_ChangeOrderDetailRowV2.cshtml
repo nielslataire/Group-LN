@@ -10,6 +10,10 @@
     var vatKlant = ViewData["VatKlant"] as decimal? ?? 21m;
     var isLocked = ViewData["IsLocked"] as bool? ?? false;
     var vat = Model.VatPercentage > 0 ? Model.VatPercentage : vatKlant;
+    // Btw-codes van het facturatiebedrijf (migratie 073): gekozen code, anders de eerste code met hetzelfde percentage.
+    var vatTypes = ViewData["VatTypes"] as List<CPMCore.Models.Projecten.VatTypeOptionV2> ?? new List<CPMCore.Models.Projecten.VatTypeOptionV2>();
+    var selectedVatTypeId = vatTypes.Any(t => t.Id == Model.VatTypeId) ? Model.VatTypeId
+        : vatTypes.FirstOrDefault(t => t.Percentage == vat)?.Id;
     var prefix = $"rows[{index}]";
 }
 <tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "") @(Model.PriceLocked ? "is-price-locked" : "")" data-index="@index">
@@ -57,7 +61,23 @@
     <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-price" name="@(prefix).price" value="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
     <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
     <td class="is-right gl-v2-co-tabular js-co-priceklant">—</td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
+    @if (vatTypes.Count > 0)
+    {
+        @* Btw-code van het facturatiebedrijf; het percentage (verborgen js-co-vat) volgt de gekozen code, ook server-side. *@
+        <td class="is-right">
+            <div class="gl-v2-field-box gl-v2-co-vatbox"><select class="gl-v2-field-input js-co-vattype" name="@(prefix).vatTypeId" @(isLocked || Model.PriceLocked ? "disabled" : "")>
+                @foreach (var t in vatTypes)
+                {
+                    <option value="@t.Id" data-vat="@t.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture)" selected="@(t.Id == selectedVatTypeId)" data-short="@t.ShortDisplay" data-long="@t.LongDisplay">@t.ShortDisplay</option>
+                }
+            </select></div>
+            <input type="hidden" class="js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : "") />
+        </td>
+    }
+    else
+    {
+        <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
+    }
     <td class="is-right gl-v2-co-tabular js-co-total">—</td>
     <td class="is-right">
         <input type="hidden" name="@(prefix).needsReview" class="js-co-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />

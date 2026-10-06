@@ -194,6 +194,41 @@
         });
     }
 
+    // Btw-code per regel (migratie 073): gesloten = "6 % · CODE", open lijst = "6 % - omschrijving" (zonder code).
+    // Een native select toont in beide standen dezelfde optietekst, dus de tekst wisselt bij openen/sluiten.
+    function setVatLabels(sel, attr) {
+        Array.prototype.forEach.call(sel.options, function (o) { o.textContent = o.getAttribute(attr); });
+    }
+    if (rowsBody) {
+        rowsBody.addEventListener("mousedown", function (e) {
+            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
+            if (sel) setVatLabels(sel, "data-long");
+        });
+        rowsBody.addEventListener("focusin", function (e) {
+            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
+            if (sel) setVatLabels(sel, "data-long");
+        });
+        rowsBody.addEventListener("focusout", function (e) {
+            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
+            if (sel) setVatLabels(sel, "data-short");
+        });
+    }
+
+    // Btw-code per regel (migratie 073): het verborgen percentage volgt de gekozen code.
+    if (rowsBody) {
+        rowsBody.addEventListener("change", function (e) {
+            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
+            if (!sel) return;
+            var tr = sel.closest(".js-co-row");
+            var opt = sel.options[sel.selectedIndex];
+            var input = tr ? $(".js-co-vat", tr) : null;
+            if (input && opt) input.value = opt.getAttribute("data-vat");
+            setVatLabels(sel, "data-short"); // meteen compact na de keuze
+            if (tr) recalcRow(tr);
+            recomputeTotals();
+        });
+    }
+
     // "Leeg beginnen" (28b): de klant · eenheid wordt hier gekozen — de btw klant volgt de betalingsgroep
     // van die eenheid en werkt meteen door op alle regels (en op regels die er nog bij komen).
     var clientSelect = document.getElementById("gl-v2-co-client");
@@ -202,10 +237,18 @@
             var opt = clientSelect.selectedIndex > 0 ? clientSelect.options[clientSelect.selectedIndex] : null;
             if (!opt) return;
             cfg.vatKlant = getNum({ value: opt.getAttribute("data-vat") });
+            cfg.vatKlantTypeId = opt.getAttribute("data-vat-type") || null;
             var label = document.getElementById("gl-v2-co-vat-label");
             if (label) label.textContent = opt.getAttribute("data-vat-label") || "";
             if (rowsBody) {
-                $$(".js-co-vat", rowsBody).forEach(function (input) { input.value = cfg.vatKlant; });
+                $$(".js-co-row", rowsBody).forEach(function (tr) {
+                    var input = $(".js-co-vat", tr);
+                    if (input) input.value = cfg.vatKlant;
+                    // De btw-code volgt de betalingsgroep van de gekozen klant (migratie 073).
+                    var sel = $(".js-co-vattype", tr);
+                    if (sel && cfg.vatKlantTypeId) sel.value = cfg.vatKlantTypeId;
+                    recalcRow(tr);
+                });
                 recomputeTotals();
             }
         });
@@ -216,7 +259,7 @@
         addRowBtn.addEventListener("click", function () {
             var index = $$(".js-co-row", rowsBody).length; // klopt altijd: renumberRows() houdt de reeks dicht
             var commission = defaultCommission ? getNum(defaultCommission) : 0;
-            fetch(cfg.addRowUrl + "?index=" + index + "&vatKlant=" + encodeURIComponent(cfg.vatKlant) + "&commission=" + encodeURIComponent(commission))
+            fetch(cfg.addRowUrl + "?index=" + index + "&projectId=" + encodeURIComponent(cfg.projectId) + "&vatKlantTypeId=" + encodeURIComponent(cfg.vatKlantTypeId || "") + "&vatKlant=" + encodeURIComponent(cfg.vatKlant) + "&commission=" + encodeURIComponent(commission))
                 .then(function (r) { return r.text(); })
                 .then(function (html) {
                     rowsBody.insertAdjacentHTML("beforeend", html);

@@ -50,19 +50,30 @@ namespace CPMCore.Documents.GlV2
         protected override string? CompactSubtitle => _m.ProjectName;
 
         private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
-        private string Euro(decimal value) => value.ToString("C", Culture);
+        private static string Euro(decimal value) => GlV2PdfComponents.Euro(value);
 
         protected override void Content(IContainer c)
         {
             c.Column(col =>
             {
-                // "Body vult de ruimte op, blok hangt boven de voet" (35d): drie technieken geprobeerd
-                // (ExtendVertical als spacer, ExtendVertical op Body, Extend().AlignBottom().ShowEntire()
-                // op het laatste item), geen enkele werkt in deze QuestPDF-versie — zie
-                // DOCUMENTLAYOUT_VOORTGANG.md voor het diagnose-bewijs per poging. Voorlopig gewoon een
-                // vaste afstand na de totalen.
+                // "Body vult de ruimte op, blok hangt boven de voet" (35d): Extend().AlignBottom().ShowEntire()
+                // staat op het column-item dat de volledige Row bevat (niet op een item binnen de Row);
+                // binnen de Row staat Voorwaarden bovenaan, op dezelfde hoogte als "Voor akkoord" (zoals 35d). Zie DOCUMENTLAYOUT_VOORTGANG.md.
                 col.Item().Element(Body);
-                col.Item().PaddingTop(16).Element(VoorwaardenEnAkkoord);
+                col.Item().Extend().AlignBottom().ShowEntire().Element(_m.IsQuote ? VoorwaardenEnAkkoord : VoorwaardenEnAkkoordWijziging);
+            });
+        }
+
+        /// <summary>Onderwerp (9pt 600 Inkt) + inleiding (8pt/1,5 Gedempt), 1,5mm ertussen (35d). Leeg veld = regel weggelaten.</summary>
+        private void OnderwerpEnInleiding(IContainer c)
+        {
+            c.Column(col =>
+            {
+                col.Spacing(1.5f, Unit.Millimetre);
+                if (!string.IsNullOrWhiteSpace(_m.Subject))
+                    col.Item().Text(_m.Subject).FontFamily(BodyFont).FontSize(9).SemiBold().FontColor(GlV2PdfTheme.Inkt);
+                if (!string.IsNullOrWhiteSpace(_m.Description))
+                    col.Item().Text(_m.Description).FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Gedempt).LineHeight(1.5f);
             });
         }
 
@@ -72,9 +83,7 @@ namespace CPMCore.Documents.GlV2
             {
                 col.Item().PaddingBottom(14).Element(MetaAdres);
 
-                col.Item().Element(x => SectionLabel(x, _m.IsQuote ? "Omschrijving" : "Opdracht", first: true));
-                col.Item().PaddingBottom(4).Text(string.IsNullOrWhiteSpace(_m.Description) ? "—" : _m.Description)
-                    .FontFamily(BodyFont).FontSize(8.5f).FontColor(GlV2PdfTheme.Inkt).LineHeight(1.5f);
+                col.Item().PaddingBottom(4).Element(OnderwerpEnInleiding);
 
                 col.Item().PaddingTop(10).Element(LinesTable);
 
@@ -85,20 +94,21 @@ namespace CPMCore.Documents.GlV2
                     col.Item().Text(comment).FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt).LineHeight(1.5f);
                 }
 
-                col.Item().PaddingTop(14).Element(Totals);
+                col.Item().PaddingTop(10).Element(Totals);
 
-                if (_m.IsQuote)
+                // "Bijkomende vermelding" (35b/35d): het veld "Extra factuurinfo" van de klantenaccount, onder het totaalblok.
+                if (!string.IsNullOrWhiteSpace(_m.ClientInvoiceExtra))
                 {
-                    col.Item().PaddingTop(16).Text(
-                            $"Deze offerte is geldig tot {_m.ExpirationDate.ToString("dd/MM/yyyy", Culture)}. Gaat u akkoord, laat het ons dan weten: u ontvangt daarna een wijzigingsopdracht ter ondertekening.")
-                        .FontFamily(BodyFont).FontSize(8.4f).Bold().FontColor(GlV2PdfTheme.Inkt).LineHeight(1.5f);
+                    col.Item().PaddingTop(6, Unit.Millimetre).Column(extra =>
+                    {
+                        extra.Spacing(1.4f, Unit.Millimetre);
+                        extra.Item().Text("BIJKOMENDE VERMELDING").FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.16f).FontColor(GlV2PdfTheme.Groen);
+                        extra.Item().Text(_m.ClientInvoiceExtra.Trim()).FontFamily(BodyFont).FontSize(7).FontColor(GlV2PdfTheme.Gedempt).LineHeight(1.5f);
+                    });
                 }
-                else
-                {
-                    col.Item().PaddingTop(16).Text(
-                            $"Gelieve, indien u akkoord gaat, deze wijzigingsopdracht voor akkoord ondertekend terug te bezorgen tegen ten laatste {_m.ExpirationDate.ToString("dd/MM/yyyy", Culture)}.")
-                        .FontFamily(BodyFont).FontSize(8.4f).Bold().FontColor(GlV2PdfTheme.Inkt).LineHeight(1.5f);
-                }
+
+                if (!_m.IsQuote && _m.Terms.Count > 0)
+                    col.Item().PaddingTop(7, Unit.Millimetre).Element(Facturatieplan);
             });
         }
 
@@ -108,7 +118,7 @@ namespace CPMCore.Documents.GlV2
         /// handtekenvak eronder.</summary>
         private void VoorwaardenEnAkkoord(IContainer c)
         {
-            c.Row(row =>
+            c.PaddingBottom(4, Unit.Millimetre).Row(row =>
             {
                 row.RelativeItem().Column(col =>
                 {
@@ -122,6 +132,90 @@ namespace CPMCore.Documents.GlV2
                     col.Item().Text("Voor akkoord").FontFamily(BodyFont).FontSize(7.5f).SemiBold().FontColor(GlV2PdfTheme.Inkt);
                     col.Item().PaddingTop(1.2f, Unit.Millimetre).Text("naam, datum en handtekening").FontFamily(BodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt);
                     col.Item().PaddingTop(1, Unit.Millimetre).Element(x => GlV2PdfComponents.Handtekeningvak(x, BodyFont, "handtekening · datum"));
+                });
+            });
+        }
+
+        /// <summary>Facturatieplan (35i): per termijn "<b>Voorschot</b> — na ondertekening", percentage en bedrag incl. btw
+        /// (het bedrag excl. btw wordt bewust niet vermeld — Niels, 2026-10-06). Rijen 8pt, 1,7mm, fijne lijn.</summary>
+        private void Facturatieplan(IContainer c)
+        {
+            c.Column(col =>
+            {
+                col.Spacing(2, Unit.Millimetre);
+                col.Item().Text("FACTURATIEPLAN").FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.14f).FontColor(GlV2PdfTheme.Groen);
+                col.Item().Column(rows =>
+                {
+                    foreach (var t in _m.Terms)
+                    {
+                        rows.Item().ShowEntire().BorderBottom(0.2f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn)
+                            .PaddingVertical(1.7f, Unit.Millimetre).Row(r =>
+                            {
+                                r.Spacing(3, Unit.Millimetre);
+                                r.RelativeItem().Text(x =>
+                                {
+                                    x.DefaultTextStyle(st => st.FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt));
+                                    x.Span(t.Label).Bold();
+                                    if (!string.IsNullOrWhiteSpace(t.TriggerText)) x.Span(" — " + t.TriggerText);
+                                });
+                                r.ConstantItem(16, Unit.Millimetre).AlignRight().Text(t.Percentage.HasValue ? GlV2PdfComponents.Btw(t.Percentage.Value) : "")
+                                    .FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
+                                r.ConstantItem(26, Unit.Millimetre).AlignRight().Text(Euro(_m.TermAmountIncl(t)))
+                                    .FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
+                            });
+                    }
+                });
+                col.Item().Text("bedragen incl. btw").FontFamily(BodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Licht);
+            });
+        }
+
+        /// <summary>Wijzigingsopdracht (35i): eventuele voorwaarden, dan "VOOR AKKOORD" met de ondertekeningstekst en een
+        /// handtekenvak per eigenaar die moet tekenen (naam + "eigenaar · x %"). Is er geen vast aantal (ondertekenregel "één
+        /// volstaat" of geen eigenaars gekend), dan één vak zonder naam en percentage.</summary>
+        private void VoorwaardenEnAkkoordWijziging(IContainer c)
+        {
+            var specific = _m.AllSignersRequired && _m.Signers.Count > 0;
+            var manyOwners = specific && _m.Signers.Count > 1;
+            var text = "Door te ondertekenen gaat u akkoord met de uitvoering en de facturatie zoals hierboven beschreven. "
+                + "Ondertekenen kan bij voorkeur via de link die u in de mail ontvangen heeft, indien gewenst kan u dit ook via mail ondertekend naar ons terugsturen."
+                + (manyOwners ? " Iedere vermelde eigenaar dient te ondertekenen." : "");
+
+            c.PaddingBottom(4, Unit.Millimetre).Column(col =>
+            {
+                col.Spacing(3, Unit.Millimetre);
+
+                if (!string.IsNullOrWhiteSpace(_m.Conditions))
+                    col.Item().Column(v =>
+                    {
+                        v.Spacing(1.5f, Unit.Millimetre);
+                        v.Item().Text("VOORWAARDEN").FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.14f).FontColor(GlV2PdfTheme.Groen);
+                        v.Item().Text(_m.Conditions).FontFamily(BodyFont).FontSize(7).FontColor(GlV2PdfTheme.Gedempt).LineHeight(1.55f);
+                    });
+
+                col.Item().Text("VOOR AKKOORD").FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.14f).FontColor(GlV2PdfTheme.Groen);
+                col.Item().Text(text).FontFamily(BodyFont).FontSize(7).FontColor(GlV2PdfTheme.Gedempt).LineHeight(1.5f);
+
+                col.Item().Grid(grid =>
+                {
+                    grid.Columns(12);
+                    grid.HorizontalSpacing(6, Unit.Millimetre);
+                    grid.VerticalSpacing(3, Unit.Millimetre);
+                    if (!specific)
+                    {
+                        grid.Item(6).Element(x => GlV2PdfComponents.Handtekeningvak(x, BodyFont, "handtekening · datum"));
+                        return;
+                    }
+                    foreach (var s in _m.Signers)
+                    {
+                        grid.Item(6).ShowEntire().Column(o =>
+                        {
+                            o.Spacing(1.2f, Unit.Millimetre);
+                            o.Item().Text(s.Name).FontFamily(BodyFont).FontSize(7.5f).SemiBold().FontColor(GlV2PdfTheme.Inkt);
+                            o.Item().Text("eigenaar" + (manyOwners && s.Percentage.HasValue ? " · " + GlV2PdfComponents.Btw(s.Percentage.Value) : ""))
+                                .FontFamily(BodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt);
+                            o.Item().Element(x => GlV2PdfComponents.Handtekeningvak(x, BodyFont, "handtekening · datum"));
+                        });
+                    }
                 });
             });
         }
@@ -146,69 +240,35 @@ namespace CPMCore.Documents.GlV2
             GlV2PdfComponents.MetaAdres(c, BodyFont, rows, recipientName, recipientLines);
         }
 
+        /// <summary>Regels in de standaard-typetabel (<see cref="GlV2PdfComponents.Tabel"/>, 35d) zonder de
+        /// kolom Code; groepsrijen en subtotalen komen later.</summary>
         private void LinesTable(IContainer c)
         {
-            c.Table(t =>
-            {
-                t.ColumnsDefinition(d =>
-                {
-                    d.RelativeColumn(3.6f);   // Omschrijving
-                    d.RelativeColumn(1.1f);   // Eenheid
-                    d.RelativeColumn(1.0f);   // Type
-                    d.RelativeColumn(0.9f);   // Hoev.
-                    d.RelativeColumn(1.4f);   // EH-prijs
-                    d.RelativeColumn(1.5f);   // Totaal
-                });
+            string VatKleur(decimal rate) => rate == 6m ? GlV2PdfTheme.VlakGroepsrij : GlV2PdfTheme.VlakWarm;
 
-                t.Header(h =>
+            GlV2PdfComponents.Tabel(c, BodyFont,
+                new[]
                 {
-                    void Head(string text, bool right = false)
-                    {
-                        var cell = h.Cell().Background(GlV2PdfTheme.Groen).PaddingVertical(6).PaddingHorizontal(7);
-                        var txt = cell.Text(text.ToUpperInvariant()).FontFamily(BodyFont).FontSize(6.5f).Bold().FontColor(GlV2PdfTheme.Wit).LetterSpacing(0.10f);
-                        if (right) txt.AlignRight();
-                    }
-                    Head("Omschrijving");
-                    Head("Eenheid");
-                    Head("Type");
-                    Head("Hoev.", right: true);
-                    Head("EH-prijs", right: true);
-                    Head("Totaal", right: true);
-                });
-
-                if (_m.Lines.Count == 0)
-                {
-                    t.Cell().ColumnSpan(6).PaddingVertical(8).PaddingHorizontal(7)
-                        .Text("Geen regels.").Italic().FontColor(GlV2PdfTheme.Licht);
-                    return;
-                }
-
-                foreach (var line in _m.Lines)
-                {
-                    IContainer Cell() => t.Cell().BorderBottom(0.2f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn).PaddingVertical(5).PaddingHorizontal(7);
-
-                    Cell().Text(line.Description ?? "").FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt).LineHeight(1.4f);
-                    Cell().Text(line.UnitLabel ?? "—").FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt);
-                    Cell().Text(line.TypeLabel ?? "—").FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt);
-                    Cell().AlignRight().Text(line.Number.ToString("#,##0.##", Culture)).FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt)
-                        .EnableFontFeature(FontFeatures.TabularFigures);
-                    Cell().AlignRight().Text(Euro(line.UnitPrice)).FontFamily(BodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt)
-                        .EnableFontFeature(FontFeatures.TabularFigures);
-                    Cell().AlignRight().Text(Euro(line.RowTotal)).FontFamily(BodyFont).FontSize(8).Bold().FontColor(GlV2PdfTheme.Inkt)
-                        .EnableFontFeature(FontFeatures.TabularFigures);
-                }
-            });
-        }
-
-        private void Totals(IContainer c)
-        {
-            GlV2PdfComponents.Totalenblok(c, BodyFont,
-                rows: new[]
-                {
-                    ("Totaal excl. btw", Euro(_m.TotalExcl)),
-                    ($"Btw {_m.VatPercentage.ToString("0.##", Culture)} %", Euro(_m.VatAmount)),
+                    new GlV2PdfComponents.TabelKolom("Omschrijving"),
+                    new GlV2PdfComponents.TabelKolom("Eenh.", 12),
+                    new GlV2PdfComponents.TabelKolom("Hoev.", 14, Rechts: true),
+                    new GlV2PdfComponents.TabelKolom("Eenheidspr.", 22, Rechts: true),
+                    new GlV2PdfComponents.TabelKolom("Btw", 12, Rechts: true),
+                    new GlV2PdfComponents.TabelKolom("Totaal", 24, Rechts: true),
                 },
-                grandTotal: ("Totaal incl. btw", Euro(_m.TotalIncl)));
+                _m.Lines.Select(l => (IReadOnlyList<GlV2PdfComponents.TabelCel>)new[]
+                {
+                    // l.VatPercentage ?? ... : zelfde terugval als ChangeOrderPdfModel.VatBreakdown
+                    new GlV2PdfComponents.TabelCel(l.Description ?? ""),
+                    new GlV2PdfComponents.TabelCel(l.UnitLabel ?? ""),
+                    new GlV2PdfComponents.TabelCel(l.Number.ToString("#,##0.##", Culture)),
+                    new GlV2PdfComponents.TabelCel(Euro(l.UnitPrice)),
+                    new GlV2PdfComponents.TabelCel(GlV2PdfComponents.Btw(l.VatPercentage ?? _m.VatPercentage), VatKleur(l.VatPercentage ?? _m.VatPercentage)),
+                    new GlV2PdfComponents.TabelCel(Euro(l.RowTotal)),
+                }));
         }
+
+        private void Totals(IContainer c) =>
+            GlV2PdfComponents.TotalenBtw(c, BodyFont, _m.VatBreakdown, _m.TotalExcl, _m.VatTotalByLines, _m.TotalInclByLines, _m.VatMentions);
     }
 }

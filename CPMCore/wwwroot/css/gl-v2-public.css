@@ -181,6 +181,7 @@
 
 /* Neutrale foutpagina (§5.2 stap 1): geen technische informatie, geen onderscheid tussen oorzaken. */
 .gl-v2-public-empty { padding: 48px 22px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.gl-v2-public-empty[hidden] { display: none; } /* display:flex hierboven wint anders van het hidden-attribuut (bevestiging na weigeren stond altijd zichtbaar) */
 .gl-v2-public-empty-title { margin: 0; font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
 .gl-v2-public-empty-desc { margin: 0; max-width: 460px; font: 400 13px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 

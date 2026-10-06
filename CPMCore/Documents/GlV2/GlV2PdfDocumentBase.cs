@@ -53,6 +53,10 @@ namespace CPMCore.Documents.GlV2
         /// <summary>De eigenlijke pagina-inhoud.</summary>
         protected abstract void Content(IContainer c);
 
+        /// <summary>Vast paginalabel in de voet (bv. "2 / 2" voor een bijlage die achter een ander PDF komt);
+        /// null = "x / y" van dit document zelf.</summary>
+        protected virtual string? PageLabelOverride => null;
+
         public void Compose(IDocumentContainer container)
         {
             container.Page(page =>
@@ -172,6 +176,7 @@ namespace CPMCore.Documents.GlV2
                 row.ConstantItem(16, Unit.Millimetre).AlignRight().Text(t =>
                 {
                     t.DefaultTextStyle(x => x.FontFamily(BodyFont).FontSize(6.5f).SemiBold().FontColor(GlV2PdfTheme.Inkt));
+                    if (PageLabelOverride is { } label) { t.Span(label); return; }
                     t.CurrentPageNumber();
                     t.Span(" / ");
                     t.TotalPages();

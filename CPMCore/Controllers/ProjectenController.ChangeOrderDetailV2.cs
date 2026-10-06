@@ -1,5 +1,6 @@
 using BOCore;
 using CPMCore.Configuration;
+using CPMCore.Documents;
 using CPMCore.Models.GlV2;
 using CPMCore.Models.Projecten;
 using CPMCore.Services;
@@ -75,6 +76,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(nameof(ChangeOrderDetailV2), "Projecten", vm.IsNew ? (isQuote ? "Nieuwe offerte" : "Nieuwe wijzigingsopdracht") : vm.Number) { Parent = listNode, RouteValues = new { projectid, coid } };
 
             vm.ClientAccountId = co?.ClientAccountId ?? clientid ?? 0;
+            vm.Subject = co?.Subject;
             vm.Description = IsIntakePlaceholder(co?.Description) ? "" : co?.Description ?? "";
             vm.InvoiceableByBouwheer = co?.Invoiceable ?? true;
             vm.ContractActivityId = co?.ContractActivityId ?? 0;
@@ -84,6 +86,9 @@ namespace CPMCore.Controllers
             vm.ExpirationDate = co?.ExpirationDate ?? DateOnly.FromDateTime(DateTime.Today.AddDays(30));
             vm.QuoteConvertedAt = co?.QuoteConvertedAt;
             vm.ConditionsText = co?.ChangeOrderConditions ?? "";
+            // Offerte: standaardvoorwaarden uit de vervaldatum zolang er niets eigens staat (nieuw of leeg).
+            if (isQuote && ChangeOrderStandardTexts.IsQuoteStandardOrEmpty(vm.ConditionsText))
+                vm.ConditionsText = ChangeOrderStandardTexts.QuoteConditions(co?.ExpirationDate ?? DateOnly.FromDateTime(DateTime.Today.AddDays(30)));
             vm.DateSendToClient = co?.DateSendToClient;
             vm.DateAgreement = co?.DateAgreement;
             vm.VatKlantPercentage = 21m;
@@ -94,10 +99,12 @@ namespace CPMCore.Controllers
                 vm.ClientName = clientResponse.Success ? clientResponse.Values.FirstOrDefault()?.Name ?? "" : "";
                 var vat = await ResolveVatForClientAsync(projectid, vm.ClientAccountId);
                 vm.VatKlantPercentage = vat.Percentage;
+                vm.VatKlantTypeId = vat.VatTypeId;
                 vm.VatKlantLabel = vat.Label;
                 vm.UnitName = vat.UnitName;
             }
             if (string.IsNullOrEmpty(vm.VatKlantLabel)) vm.VatKlantLabel = "volgt uit de betalingsgroep van de eenheid";
+            vm.VatTypes = await LoadVatTypeOptionsAsync(projectid, vm.VatKlantTypeId);
 
             vm.ContractActivities = _projectService.GetProjectContractActivitiesForSelect(projectid) is { Success: true } actResp
                 ? actResp.Values : new List<IdNameBO>();
@@ -139,6 +146,7 @@ namespace CPMCore.Controllers
                     Price = d.Price,
                     Commission = d.Commission,
                     VatPercentage = d.VatPercentage ?? vm.VatKlantPercentage,
+                    VatTypeId = d.VatTypeId,
                     NeedsReview = d.NeedsReview,
                     SourceImagePath = d.SourceImagePath,
                     // Uit de offerte overgenomen WO-regel: prijs, commissie en btw liggen vast (migratie 069).
@@ -710,13 +718,29 @@ namespace CPMCore.Controllers
             return items.OrderByDescending(i => i.When ?? DateTime.MaxValue).ToList();
         }
 
+        /// <summary>Btw-codes (Vattype) van het facturatiebedrijf dat de offerte/wijzigingsopdracht uitgeeft
+        /// (<see cref="Services.Signing.ChangeOrderIssuerResolver"/>); de standaardcode van de klant (uit zijn
+        /// betalingsgroep) staat er altijd bij, ook als die van een ander bedrijf zou zijn.</summary>
+        private async Task<List<VatTypeOptionV2>> LoadVatTypeOptionsAsync(int projectId, int? klantTypeId)
+        {
+            var ct = HttpContext.RequestAborted;
+            var project = await _db.Project.AsNoTracking().FirstOrDefaultAsync(p => p.ProjectId == projectId, ct);
+            var issuerId = await Services.Signing.ChangeOrderIssuerResolver.ResolveIssuerCompanyIdAsync(_db, project, ct);
+            var types = await _db.Vattype.AsNoTracking()
+                .Where(v => (issuerId.HasValue && v.IssuerCompanyId == issuerId.Value) || (klantTypeId.HasValue && v.Id == klantTypeId.Value))
+                .OrderBy(v => v.BasePercentage).ThenBy(v => v.Code)
+                .ToListAsync(ct);
+            return types.Select(v => new VatTypeOptionV2 { Id = v.Id, Code = v.Code, Description = v.Description, Percentage = v.BasePercentage }).ToList();
+        }
+
         [HttpGet]
-        public IActionResult ChangeOrderDetailV2AddRow(int index, decimal vatKlant, decimal commission = 0)
+        public async Task<IActionResult> ChangeOrderDetailV2AddRow(int index, decimal vatKlant, int projectId, int? vatKlantTypeId = null, decimal commission = 0)
         {
             ViewData["Index"] = index;
             ViewData["VatKlant"] = vatKlant;
+            ViewData["VatTypes"] = await LoadVatTypeOptionsAsync(projectId, vatKlantTypeId);
             ViewData["IsLocked"] = false;
-            var row = new ChangeOrderDetailRowV2 { Number = 1, VatPercentage = vatKlant, Commission = commission, MeasurementType = (int)MeasurementType.Vermoedelijk, MeasurementUnit = (int)MeasurementUnit.stuk };
+            var row = new ChangeOrderDetailRowV2 { Number = 1, VatPercentage = vatKlant, VatTypeId = vatKlantTypeId, Commission = commission, MeasurementType = (int)MeasurementType.Vermoedelijk, MeasurementUnit = (int)MeasurementUnit.stuk };
             return PartialView("Partials/_ChangeOrderDetailRowV2", row);
         }
 
@@ -821,20 +845,30 @@ namespace CPMCore.Controllers
             }
             if (!fromIntake)
             {
+                var subject = (model.Subject ?? "").Trim();
+                co.Subject = subject.Length == 0 ? null : (subject.Length > 150 ? subject[..150] : subject);
                 co.Invoiceable = model.InvoiceableByBouwheer;
                 co.ChangeOrderConditions = model.ConditionsText;
+                if (co.IsQuote && ChangeOrderStandardTexts.IsQuoteStandardOrEmpty(model.ConditionsText))
+                    co.ChangeOrderConditions = ChangeOrderStandardTexts.QuoteConditions(model.ExpirationDate ?? co.ExpirationDate);
                 if (model.ExpirationDate.HasValue) co.ExpirationDate = model.ExpirationDate.Value;
             }
 
             decimal intakeCommission = 0m, intakeVat = 21m;
+            int? intakeVatTypeId = null;
             if (fromIntake)
             {
                 intakeCommission = co.ChangeOrderDetail.Count > 0
                     ? co.ChangeOrderDetail.Select(d => d.Commission).FirstOrDefault()
                     : await DefaultCommissionAsync(model.ProjectId);
-                intakeVat = (await ResolveVatForClientAsync(model.ProjectId, co.ClientAccountId)).Percentage;
+                var intakeResolved = await ResolveVatForClientAsync(model.ProjectId, co.ClientAccountId);
+                intakeVat = intakeResolved.Percentage;
+                intakeVatTypeId = intakeResolved.VatTypeId;
             }
-            SyncRows(co, model.Rows ?? new List<ChangeOrderDetailRowV2>(), fromIntake, intakeCommission, intakeVat);
+            var postedVatTypeIds = (model.Rows ?? new List<ChangeOrderDetailRowV2>()).Where(r => r.VatTypeId.HasValue).Select(r => r.VatTypeId.Value).Distinct().ToList();
+            var vatTypePercentages = postedVatTypeIds.Count == 0 ? new Dictionary<int, decimal>()
+                : await _db.Vattype.AsNoTracking().Where(v => postedVatTypeIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, v => v.BasePercentage);
+            SyncRows(co, model.Rows ?? new List<ChangeOrderDetailRowV2>(), fromIntake, intakeCommission, intakeVat, vatTypePercentages, intakeVatTypeId);
             if (!fromIntake && !co.IsQuote) SyncTerms(co, model.Terms ?? new List<ChangeOrderTermV2>());
 
             co.SavedAt = DateTime.Now;
@@ -848,7 +882,8 @@ namespace CPMCore.Controllers
 
         /// <param name="preserveInternal">Vanuit 20c: de intake-rijen kennen geen commissie/btw — bestaande
         /// regels houden hun waarden, nieuwe krijgen de meegegeven standaard.</param>
-        private void SyncRows(ChangeOrder co, List<ChangeOrderDetailRowV2> posted, bool preserveInternal = false, decimal defaultCommission = 0m, decimal defaultVat = 21m)
+        private void SyncRows(ChangeOrder co, List<ChangeOrderDetailRowV2> posted, bool preserveInternal = false, decimal defaultCommission = 0m, decimal defaultVat = 21m,
+            IReadOnlyDictionary<int, decimal> vatTypePercentages = null, int? defaultVatTypeId = null)
         {
             var postedIds = posted.Where(r => r.Id > 0).Select(r => r.Id).ToHashSet();
             foreach (var stale in co.ChangeOrderDetail.Where(d => d.Id > 0 && !postedIds.Contains(d.Id)).ToList())
@@ -883,12 +918,23 @@ namespace CPMCore.Controllers
                     if (!preserveInternal)
                     {
                         entity.Commission = r.Commission;
-                        entity.VatPercentage = r.VatPercentage;
+                        // Gekozen btw-code: het percentage volgt de code (migratie 073), niet wat het formulier postte.
+                        if (r.VatTypeId is int vtid && vatTypePercentages != null && vatTypePercentages.TryGetValue(vtid, out var vtPct))
+                        {
+                            entity.VatTypeId = vtid;
+                            entity.VatPercentage = vtPct;
+                        }
+                        else
+                        {
+                            entity.VatTypeId = null;
+                            entity.VatPercentage = r.VatPercentage;
+                        }
                     }
                     else if (isNewRow)
                     {
                         entity.Commission = defaultCommission;
                         entity.VatPercentage = defaultVat;
+                        entity.VatTypeId = defaultVatTypeId;
                     }
                 }
                 entity.NeedsReview = r.NeedsReview;

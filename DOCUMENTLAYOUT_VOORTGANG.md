@@ -77,8 +77,66 @@ werkt wel (bv. een expliciete `MinHeight` berekend uit het paginaformaat in plaa
 Extend()/ExtendVertical() te vertrouwen), maar dat vergt per paginatype (volledige vs. compacte kop)
 een aparte berekening — niet geprobeerd, risico op evenveel fragiliteit voor weinig visuele winst.
 
-**Huidige, werkende stand**: een vaste afstand (16pt) na de totalen, geen dynamische opvulling —
-simpel, robuust, en het document blijft correct op één pagina voor een normale offerte.
+**Vierde poging — WERKT (2026-10-06)**: `Extend().AlignBottom().ShowEntire()` op het column-item dat
+de volledige Row (Voorwaarden + Voor akkoord) bevat, met `AlignBottom()` op het Voorwaarden-item binnen
+de Row, en 4mm `PaddingBottom` op de Row zodat het blok de voetlijn niet raakt. Visueel gecontroleerd
+op de korte offerte (1 pagina) en de lange (4 pagina's, blok onderaan de laatste pagina). Het verschil
+met poging 3: Extend() stond daar op een item mét een ander binnenwerk; nu staat de keten op het item
+dat de Row omvat. De vorige fallback (vaste 16pt afstand) is vervangen. Niet getest: een lichaam dat
+precies tegen de paginagrens zit (blok moet dan in zijn geheel naar de volgende pagina schuiven).
+
+## Tabel, voorwaarden en algemene regels (2026-10-06)
+- **Standaard-typetabel** = `GlV2PdfComponents.Tabel` (+ `TabelKolom`, `TabelCel`), algemeen voor alle
+  gl-v2-PDF's: kop zonder vlak met groene lijn 0,5mm, rijen 8pt/1,7mm/lijn 0,2mm, kolomafstand 3mm,
+  btw-tag als pil (6 % `VlakGroepsrij`, andere `VlakWarm`), `ShowEntire` per cel (rij splitst nooit),
+  kop herhaalt per pagina. Offerte gebruikt kolommen Omschrijving · Eenh. 12 · Hoev. 14 · Eenheidspr. 22 ·
+  Btw 12 · Totaal 24 mm. **Weggelaten t.o.v. 35d**: kolom Code (Niels: overbodig) en de kolom Type (staat
+  niet in 35d). **Voor later**: groepsrijen (code + titel, vlak `#EEF4EA`) en subtotaalrijen — extra rijtype
+  in `Tabel`. Btw-tag toont voorlopig het ene document-btw-tarief voor alle regels (geen btw per regel in het model).
+- **Voorwaarden/Voor akkoord**: bovenaan naast elkaar uitgelijnd, blok onderaan via
+  `Extend().AlignBottom().ShowEntire()` (zie vierde poging hierboven). Voorwaarden-tekst =
+  `ChangeOrder.ChangeOrderConditions` (veld "Voorwaarden" op ChangeOrderDetailV2, standaardtekst
+  `DefaultChangeOrderConditions`). De vaste vetgedrukte "Deze offerte is geldig tot…"-zin is verwijderd
+  (enkel offerte; die van de wijzigingsopdracht staat er nog).
+- **Onderwerp + inleiding (offerte, 35d)**: nieuw veld `ChangeOrder.Subject` (migratie `072_ChangeOrderSubject.sql`,
+  NVARCHAR(150), **vóór gebruik uitvoeren — EF selecteert de kolom, zonder migratie falen alle ChangeOrder-queries**).
+  Tekstvak "Onderwerp" op ChangeOrderDetailV2 boven "Omschrijving voor de klant"; wordt meegenomen bij
+  omzetten offerte→WO en bij kopiëren. PDF (offerte): onderwerp 9pt 600 Inkt + inleiding (= Omschrijving voor
+  de klant) 8pt/1,5 Gedempt, 1,5mm ertussen; leeg veld = regel weggelaten. WO houdt het oude "Opdracht"-blok.
+- **Btw**: per regel `ChangeOrderDetail.VatPercentage` (anders `QuoteVatPercentage`), totaalblok toont één Btw-rij
+  per tarief (`ChangeOrderPdfModel.VatBreakdown`); legacy-document blijft de projectinstelling gebruiken.
+- **Afsluitrij totalen/btw (35c + 35i)**: `GlV2PdfComponents.TotalenBtw` (verving `Totalenblok`): links BTW-VERMELDING
+  per tarief = de factuurvermelding van het facturatiebedrijf (`Vattype.InvoiceMention` van het bedrijf uit
+  `ResolveIssuerCompanyAsync`, op `BasePercentage` = tarief van de regels; niets ingesteld = geen regel, geen vaste fallbacktekst),
+  rechts 92mm: één tarief = "Totaal excl. btw" + "Btw x %" (35i), meerdere = tabel TARIEF/MAATSTAF/BTW/TOTAAL +
+  Totaal-rij (35c), beide met de groene balk "Totaal incl. btw". Visueel gecontroleerd voor beide varianten.
+- **Standaardvoorwaarden offerte**: `ChangeOrderStandardTexts.QuoteConditions(vervaldatum)` = "Deze offerte is geldig
+  tot dd/MM/yyyy. Indien u akkoord bent … ondertekenen." Prefill in het scherm voor een nieuwe/lege offerte, bij Opslaan
+  wordt een nog-standaard of lege tekst opnieuw opgemaakt met de actuele vervaldatum (een eigen aangepaste tekst blijft
+  staan), de PDF valt voor een lege offertevoorwaarde terug op dezelfde tekst. **Omzetten offerte → WO neemt de
+  offertevoorwaarden niet mee**: de WO krijgt de WO-standaardtekst (`DefaultChangeOrderConditions`).
+- **Btw-codes per regel (migratie 073, `ChangeOrderDetail.VatTypeId`)**: op ChangeOrderDetailV2 kies je per regel een btw-code
+  (Vattype) van het facturatiebedrijf (`ChangeOrderIssuerResolver`); standaard de code van de betalingsgroep van de klant
+  (`InvoicingPaymentGroup.VatTypeId`, via `ResolveVatForClientAsync`), de klantkeuze zet alle regels mee om. Het percentage
+  (`VatPercentage`) wordt server-side uit de code afgeleid. Heeft het bedrijf geen btw-codes, dan blijft het oude %-veld.
+  PDF-vermelding komt van de gekozen code (`InvoiceMention`), zonder code van alle codes met hetzelfde %. Kopiëren/omzetten
+  nemen de code mee (kopie naar andere klant: code van die klant). Niet in de browser getest.
+- **Wijzigingsopdracht (35i, 2026-10-06)**: zelfde opbouw als de offerte (titel "Wijzigingsopdracht", onderwerp + inleiding,
+  tabel, totalen/btw), plus **FACTURATIEPLAN** (`ChangeOrderPdfModel.Terms`: label + trigger, %, bedrag **incl.** btw — excl. bewust
+  niet, voetnoot "bedragen incl. btw") en een eigen onderblok `VoorwaardenEnAkkoordWijziging`: eventuele VOORWAARDEN, dan VOOR AKKOORD met
+  de tekst "Door te ondertekenen … terugsturen." (+ " Iedere vermelde eigenaar dient te ondertekenen." bij >1 eigenaar en
+  regel Alle/Volgorde) en een handtekenvak per eigenaar (naam + "eigenaar · x %"; 2 per rij). Eigenaars = klantenaccount + mede-eigenaars
+  (zelfde dedupe op e-mail als `SuggestPartiesAsync`); regel = `ClientAccount.DefaultSigningRule` ?? `SigningPolicy` (ChangeOrder) ?? Alle.
+  Regel "één volstaat" of geen eigenaars = één vak zonder naam/percentage. De oude zin "Gelieve … terug te bezorgen tegen …" is weg.
+  Het ondertekendossier (`ChangeOrderSigningSource`) rendert sinds 2026-10-06 ook de gl-v2-PDF (nieuwe dossiers; Niels akkoord). Voorwaarden blijven boven VOOR AKKOORD staan (Niels akkoord).
+- **Ondertekeningsblad (35j, 2026-10-06)**: `SigningEvidenceDocumentV2` (gl-v2, kicker "BIJLAGE · PAGINA n", intro, Document/Bedrag/Status,
+  blok per eigenaar, Echtheid controleren + QR). `SignedDocumentComposer` gebruikt het voor `ChangeOrder`-dossiers (gegevens via
+  `ChangeOrderPdfBuilder.LoadAsync` + `BuildGlV2Company`, paginatelling van het origineel via PdfSharpCore, voet toont "n / n" via
+  `PageLabelOverride`); bij een fout of ander documenttype valt het terug op het oude `SigningEvidenceDocument`. Tijdstippen in Belgische tijd.
+  SHA-256 = origineel zoals ondertekend, verificatie-ID = eerste 23 tekens van de GUID. Enkel visueel getest met testdata, niet via een echt dossier.
+- **Bedragen**: nl-BE-standaard (`€ -640,00`) bewust behouden (Niels, 2026-10-06), niet het "– € 640,00" van het ontwerp.
+- **Algemene regels punt 35/36 altijd mee lezen** (Niels, 2026-10-06). Nog niet afgedekt voor de offerte:
+  btw-overzicht + wettelijke vermelding ("zoals factuur", 35d), IBAN in groepen van 4, "6 %" met spatie (✓ in de tag).
 
 ## Verfijning na vergelijking met het 35d-voorbeeld (2026-10-05)
 Niels deelde een screenshot van de echte 35d-pagina uit het design-handoff-canvas; rechtstreeks

@@ -62,7 +62,9 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     {
         var model = await _pdf.LoadAsync(sourceEntityId, ct)
                     ?? throw new InvalidOperationException($"Wijzigingsopdracht {sourceEntityId} bestaat niet.");
-        var pdf = _pdf.Render(model);
+        // Het ondertekendossier gebruikt de gl-v2-documentlayout (Niels, 2026-10-06); buiten een HTTP-context bestaat
+        // geen cookie om op te beslissen, dus altijd gl-v2. Enkel nieuwe dossiers: bestaande blijven wat ze waren.
+        var pdf = _pdf.Render(model, useGlV2Layout: true);
 
         var parties = await SuggestPartiesAsync(model, ct);
 
@@ -71,7 +73,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
             FileName: ChangeOrderPdfBuilder.FileName(model),
             Title: $"Wijzigingsopdracht {model.Reference} — {model.ProjectName}",
             DocumentNumber: model.Reference,
-            Summary: model.Description,
+            Summary: string.IsNullOrWhiteSpace(model.Subject) ? null : model.Subject.Trim(),   // onderwerp, niet de omschrijving voor de klant
             AmountExclVat: Math.Round(model.TotalExcl, 2, MidpointRounding.AwayFromZero),
             VatAmount: Math.Round(model.VatAmount, 2, MidpointRounding.AwayFromZero),
             AmountInclVat: Math.Round(model.TotalIncl, 2, MidpointRounding.AwayFromZero),

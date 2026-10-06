@@ -17,6 +17,9 @@ public partial class ChangeOrder
     /// <summary>Laatste keer dat het scherm is opgeslagen (migratie 071).</summary>
     public DateTime? SavedAt { get; set; }
 
+    /// <summary>Onderwerpregel boven de inleiding op de PDF (migratie 072); max. 150 tekens.</summary>
+    public string Subject { get; set; }
+
     /// <summary>"OF-2026-014" / "WO-2026-006-v2" (versiesuffix vanaf versie 2).</summary>
     public string PublicNumber => ChangeOrderNumbering.Format(IsQuote, NumberYear, NumberSeq, VersionNo, Id);
 }

@@ -698,6 +698,7 @@ public partial class cpmRunningContext : DbContext
         {
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.ChangeOrderConditions).HasMaxLength(1000);
+            entity.Property(e => e.Subject).HasMaxLength(150);
             entity.Property(e => e.ClientAccountId).HasColumnName("ClientAccountID");
             entity.Property(e => e.ContractActivityId).HasColumnName("ContractActivityID");
             entity.Property(e => e.Description)

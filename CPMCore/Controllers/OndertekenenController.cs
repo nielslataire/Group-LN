@@ -105,7 +105,7 @@ public class OndertekenenController : Controller
         if (sessionId is null) return NotFound();
         var content = await _signing.GetSessionDocumentAsync(sessionId.Value, bijlage, Ctx(sessionId), ct);
         if (content is null) return NotFound();
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"{content.FileName}\"";
+        Response.Headers["Content-Disposition"] = CPMCore.Services.Signing.ContentDispositionHelper.Inline(content.FileName);
         return File(content.Content, content.ContentType);
     }
 
@@ -121,7 +121,7 @@ public class OndertekenenController : Controller
         if (content is null) return NotFound();
         // Inline (niet "attachment"): dit bestand wordt ook in de preview-iframe getoond zodra het
         // dossier voltooid is, niet enkel via de downloadknop.
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"{content.FileName}\"";
+        Response.Headers["Content-Disposition"] = CPMCore.Services.Signing.ContentDispositionHelper.Inline(content.FileName);
         return File(content.Content, content.ContentType);
     }
 

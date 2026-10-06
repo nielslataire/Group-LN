@@ -261,7 +261,11 @@ namespace CPMCore.Documents
         public string? ClientStreetLine { get; set; }
         /// <summary>Postcode + gemeente van de klant zelf.</summary>
         public string? ClientCityLine { get; set; }
+        /// <summary>"Extra factuurinfo" van de klantenaccount (ClientAccount.InvoiceExtra); enkel gl-v2 ("Bijkomende vermelding").</summary>
+        public string? ClientInvoiceExtra { get; set; }
         public string Description { get; set; } = "";
+        /// <summary>Onderwerpregel (ChangeOrder.Subject, migratie 072); enkel gl-v2.</summary>
+        public string? Subject { get; set; }
         public string CommentHtml { get; set; }
         public string Conditions { get; set; }
         public decimal VatPercentage { get; set; }
@@ -276,6 +280,32 @@ namespace CPMCore.Documents
         public decimal TotalExcl => Lines.Sum(l => l.RowTotal);
         public decimal VatAmount => VatPercentage * TotalExcl / 100m;
         public decimal TotalIncl => TotalExcl + VatAmount;
+
+        /// <summary>Btw per tarief zoals op de regels staat (gl-v2): een regel zonder eigen tarief valt terug
+        /// op <see cref="VatPercentage"/>. Het legacy-document gebruikt dit niet en blijft met
+        /// <see cref="VatAmount"/> rekenen.</summary>
+        public IReadOnlyList<(decimal Rate, decimal Base, decimal Vat)> VatBreakdown => Lines
+            .GroupBy(l => l.VatPercentage ?? VatPercentage)
+            .OrderBy(g => g.Key)
+            .Select(g => (Rate: g.Key, Base: g.Sum(l => l.RowTotal), Vat: g.Sum(l => l.RowTotal) * g.Key / 100m))
+            .ToList();
+        /// <summary>Factuurvermelding per btw-tarief van het facturatiebedrijf (Vattype.InvoiceMention); enkel gl-v2.</summary>
+        public IReadOnlyDictionary<decimal, string> VatMentions { get; set; } = new Dictionary<decimal, string>();
+        /// <summary>Facturatieplan (ChangeOrderPaymentTerm) in volgorde; enkel gl-v2 (wijzigingsopdracht).</summary>
+        public List<ChangeOrderPdfTerm> Terms { get; set; } = new();
+        /// <summary>Bedrag incl. btw van een termijn: percentage van het totaal excl. (of het vaste bedrag excl.), vermenigvuldigd
+        /// met de btw-verhouding van het document (<see cref="TotalInclByLines"/> / <see cref="TotalExcl"/>).</summary>
+        public decimal TermAmountIncl(ChangeOrderPdfTerm t)
+        {
+            var excl = t.Percentage.HasValue ? Math.Round(TotalExcl * t.Percentage.Value / 100m, 2, MidpointRounding.AwayFromZero) : (t.FixedAmount ?? 0m);
+            return TotalExcl == 0m ? excl : Math.Round(excl * TotalInclByLines / TotalExcl, 2, MidpointRounding.AwayFromZero);
+        }
+        /// <summary>Wie moet tekenen (klantenaccount = eigenaar 1, dan de mede-eigenaars); enkel gl-v2 (wijzigingsopdracht).</summary>
+        public List<ChangeOrderPdfSigner> Signers { get; set; } = new();
+        /// <summary>Ondertekenregel Alle/Volgorde (iedereen tekent); false bij "Eén volstaat" of onbekend.</summary>
+        public bool AllSignersRequired { get; set; }
+        public decimal VatTotalByLines => VatBreakdown.Sum(g => g.Vat);
+        public decimal TotalInclByLines => TotalExcl + VatTotalByLines;
 
         // ── Facturatiebedrijf (ChangeOrderPdfBuilder.ResolveIssuerCompanyAsync) ──────────────────
         // Enkel gebruikt door ChangeOrderDocumentV2 (gl-v2); ChangeOrderDocument (legacy) negeert
@@ -293,6 +323,21 @@ namespace CPMCore.Documents
         public byte[]? IssuerCompanyLogoBytes { get; set; }
     }
 
+    public sealed class ChangeOrderPdfTerm
+    {
+        public byte Kind { get; set; }
+        public string Label { get; set; } = "";
+        public string TriggerText { get; set; } = "";
+        public decimal? Percentage { get; set; }
+        public decimal? FixedAmount { get; set; }
+    }
+
+    public sealed class ChangeOrderPdfSigner
+    {
+        public string Name { get; set; } = "";
+        public decimal? Percentage { get; set; }
+    }
+
     public sealed class ChangeOrderPdfLine
     {
         public string Description { get; set; }
@@ -302,6 +347,10 @@ namespace CPMCore.Documents
         public decimal Price { get; set; }
         /// <summary>Commissie als percentage (bv. 20 voor 20 %), zoals ChangeOrderDetail.Commission.</summary>
         public decimal CommissionPercentage { get; set; }
+        /// <summary>Btw-tarief van de regel (ChangeOrderDetail.VatPercentage, anders het btw-% van de offerte); null = onbekend.</summary>
+        public decimal? VatPercentage { get; set; }
+        /// <summary>Gekozen btw-code (Vattype.Id) van het facturatiebedrijf; null = onbekend (oude regels).</summary>
+        public int? VatTypeId { get; set; }
         public decimal UnitPrice => Price + Price * CommissionPercentage / 100m;
         public decimal RowTotal => UnitPrice * Number;
     }

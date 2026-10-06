@@ -39,8 +39,13 @@ public class ChangeOrderDetailV2Vm
     /// beginnen": de btw van de regels volgt de gekozen eenheid).</summary>
     public List<ConvertClientOptionV2> ClientOptions { get; set; } = new();
     public decimal VatKlantPercentage { get; set; }
+    /// <summary>Btw-code (Vattype) van de betalingsgroep van de klant — de standaard voor nieuwe regels.</summary>
+    public int? VatKlantTypeId { get; set; }
+    /// <summary>Btw-codes van het facturatiebedrijf (Vattype) waaruit per regel gekozen wordt.</summary>
+    public List<VatTypeOptionV2> VatTypes { get; set; } = new();
     public string VatKlantLabel { get; set; } = "";
     public string Description { get; set; } = "";
+    public string? Subject { get; set; }
     public bool InvoiceableByBouwheer { get; set; }
 
     // Offerte-metadata (enkel getoond zolang/als IsQuote, of als "Bron" na Omzetten)
@@ -177,6 +182,8 @@ public class ChangeOrderDetailRowV2
     public decimal Price { get; set; }
     public decimal Commission { get; set; }
     public decimal VatPercentage { get; set; }
+    /// <summary>Gekozen btw-code (Vattype.Id, migratie 073); VatPercentage is het daaruit afgeleide percentage.</summary>
+    public int? VatTypeId { get; set; }
     public bool NeedsReview { get; set; }
     public string? SourceImagePath { get; set; }
     /// <summary>Enkel weergave (nooit vertrouwd bij het posten): een uit de offerte overgenomen WO-regel —
@@ -226,6 +233,7 @@ public class ChangeOrderDetailV2SaveModel
     public int ClientAccountId { get; set; }
     public int ContractActivityId { get; set; }
     public string Description { get; set; } = "";
+    public string? Subject { get; set; }
     public bool InvoiceableByBouwheer { get; set; }
     public string? QuoteSupplierReference { get; set; }
     public decimal? QuoteVatPercentage { get; set; }
@@ -322,12 +330,25 @@ public class QuoteSenderV2
     public string Email { get; set; } = "";
 }
 
+public class VatTypeOptionV2
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = "";
+    public string? Description { get; set; }
+    public decimal Percentage { get; set; }
+    /// <summary>Gesloten veld: "6 % · CODE" (compact).</summary>
+    public string ShortDisplay => $"{Percentage:0.##} % · {Code}";
+    /// <summary>Open lijst: "6 % - omschrijving", zonder code.</summary>
+    public string LongDisplay => string.IsNullOrWhiteSpace(Description) ? $"{Percentage:0.##} %" : $"{Percentage:0.##} % - {Description}";
+}
+
 public class ConvertClientOptionV2
 {
     public int Id { get; set; }
     public string Display { get; set; } = "";
     public string? UnitName { get; set; }
     public decimal VatPercentage { get; set; }
+    public int? VatTypeId { get; set; }
     public string VatLabel { get; set; } = "";
     public string? OwnersHint { get; set; }
 }

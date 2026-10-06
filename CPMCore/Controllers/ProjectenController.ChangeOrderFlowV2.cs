@@ -249,8 +249,11 @@ namespace CPMCore.Controllers
                 .ToListAsync(ct);
             var groups = await _db.InvoicingPaymentGroup.AsNoTracking()
                 .Where(g => g.ProjectId == projectId)
-                .Select(g => new { g.Id, g.Name, g.VatPercentage })
+                .Select(g => new { g.Id, g.Name, g.VatPercentage, g.VatTypeId })
                 .ToListAsync(ct);
+            var groupTypeIds = groups.Where(g => g.VatTypeId.HasValue).Select(g => g.VatTypeId.Value).Distinct().ToList();
+            var groupTypes = await _db.Vattype.AsNoTracking().Where(v => groupTypeIds.Contains(v.Id))
+                .Select(v => new { v.Id, v.Code, v.BasePercentage }).ToListAsync(ct);
             var accountIds = accounts.Select(a => a.ID).ToList();
             var coOwners = await _db.ClientContacts.AsNoTracking()
                 .Where(c => c.IsCoOwner && accountIds.Contains(c.ClientAccountId))
@@ -262,7 +265,8 @@ namespace CPMCore.Controllers
             {
                 var own = units.Where(u => u.ClientAccountId == a.ID).OrderBy(u => u.Name).ToList();
                 var group = own.Where(u => u.GroupId.HasValue).Select(u => groups.FirstOrDefault(g => g.Id == u.GroupId)).FirstOrDefault(g => g != null);
-                var vat = group?.VatPercentage ?? 21m;
+                var groupType = group?.VatTypeId is int gt ? groupTypes.FirstOrDefault(t => t.Id == gt) : null;
+                var vat = groupType?.BasePercentage ?? group?.VatPercentage ?? 21m;
                 var owners = coOwners.Where(c => c.ClientAccountId == a.ID)
                     .Select(c => string.Join(" ", new[] { c.Name, c.Forename }.Where(s => !string.IsNullOrWhiteSpace(s))))
                     .Where(s => s.Length > 0).ToList();
@@ -272,14 +276,15 @@ namespace CPMCore.Controllers
                     Display = a.Display,
                     UnitName = own.Count > 0 ? string.Join(", ", own.Select(u => u.Name)) : null,
                     VatPercentage = vat,
-                    VatLabel = group != null ? $"{Pct(vat)} % — {group.Name}" : "21 % — geen betalingsgroep gekoppeld",
+                    VatTypeId = groupType?.Id,
+                    VatLabel = group != null ? $"{(groupType != null ? groupType.Code + " · " : "")}{Pct(vat)} % — {group.Name}" : "21 % — geen betalingsgroep gekoppeld",
                     OwnersHint = owners.Count > 0 ? "mede-eigenaars: " + string.Join(" · ", owners) : null,
                 });
             }
             return options;
         }
 
-        private async Task<(decimal Percentage, string Label, string UnitName)> ResolveVatForClientAsync(int projectId, int clientAccountId)
+        private async Task<(decimal Percentage, string Label, string UnitName, int? VatTypeId)> ResolveVatForClientAsync(int projectId, int clientAccountId)
         {
             var unit = await _db.Units.AsNoTracking()
                 .Where(u => u.ProjectId == projectId && u.ClientAccountId == clientAccountId)
@@ -287,7 +292,7 @@ namespace CPMCore.Controllers
                 .Include(u => u.UnitConstructionValue)
                 .OrderBy(u => u.Id)
                 .ToListAsync(HttpContext.RequestAborted);
-            if (unit.Count == 0) return (21m, "onbekend — koppel een eenheid aan een betalingsgroep", "");
+            if (unit.Count == 0) return (21m, "onbekend — koppel een eenheid aan een betalingsgroep", "", null);
 
             var first = unit[0];
             var unitName = first.Type != null ? $"{first.Type.Name} {first.Name}".Trim() : first.Name;
@@ -297,11 +302,13 @@ namespace CPMCore.Controllers
                 var group = await _db.InvoicingPaymentGroup.AsNoTracking().FirstOrDefaultAsync(g => g.Id == id, HttpContext.RequestAborted);
                 if (group != null)
                 {
-                    var pct = group.VatPercentage ?? 21m;
-                    return (pct, $"{Pct(pct)} % — {group.Name}", unitName);
+                    var type = group.VatTypeId is int tid
+                        ? await _db.Vattype.AsNoTracking().FirstOrDefaultAsync(v => v.Id == tid, HttpContext.RequestAborted) : null;
+                    var pct = type?.BasePercentage ?? group.VatPercentage ?? 21m;
+                    return (pct, $"{(type != null ? type.Code + " · " : "")}{Pct(pct)} % — {group.Name}", unitName, type?.Id);
                 }
             }
-            return (21m, "onbekend — koppel een eenheid aan een betalingsgroep", unitName);
+            return (21m, "onbekend — koppel een eenheid aan een betalingsgroep", unitName, null);
         }
 
         /// <summary>Voorstel voor de commissie op een nieuwe WO: wat laatst gebruikt werd in dit project
@@ -356,7 +363,7 @@ namespace CPMCore.Controllers
                 InclTotal = incl,
                 // De voorlopige naam uit 20c ("Offerte 2025-118") is geen omschrijving voor de klant.
                 Description = IsIntakePlaceholder(co.Description) ? "" : co.Description ?? "",
-                Conditions = co.ChangeOrderConditions ?? "",
+                Conditions = DefaultChangeOrderConditions, // niet de offertevoorwaarden (zie hierboven)
                 Problem = await ConvertProblemAsync(co),
             };
             return PartialView("Modals/_ModalConvertQuoteV2", vm);
@@ -396,11 +403,13 @@ namespace CPMCore.Controllers
 
             var today = DateOnly.FromDateTime(DateTime.Today);
             var description = string.IsNullOrWhiteSpace(model.ConvertDescription) ? quote.Description ?? "" : model.ConvertDescription.Trim();
-            var conditions = string.IsNullOrWhiteSpace(model.ConvertConditions) ? quote.ChangeOrderConditions : model.ConvertConditions.Trim();
+            // De offertetekst ("Deze offerte is geldig tot…") hoort niet op de wijzigingsopdracht: standaardtekst van een WO.
+            var conditions = string.IsNullOrWhiteSpace(model.ConvertConditions) ? DefaultChangeOrderConditions : model.ConvertConditions.Trim();
             var order = new ChangeOrder
             {
                 ClientAccountId = quote.ClientAccountId,
                 Description = description.Length > 250 ? description[..250] : description,
+                Subject = quote.Subject,
                 Date = today,
                 ExpirationDate = quote.ExpirationDate >= today ? quote.ExpirationDate : today.AddDays(30),
                 Comment = quote.Comment,
@@ -427,6 +436,7 @@ namespace CPMCore.Controllers
                     Price = d.Price,
                     Commission = d.Commission,
                     VatPercentage = d.VatPercentage,
+                    VatTypeId = d.VatTypeId,
                     SourceImagePath = d.SourceImagePath,
                     SourceDetailId = d.Id,
                     SortOrder = sortOrder++,
@@ -576,6 +586,11 @@ namespace CPMCore.Controllers
             }
         }
 
+        /// <summary>Onderwerp van de offertemail: "Offerte OF-2026-014: {onderwerp}" (het onderwerp van de offerte, niet de
+        /// omschrijving voor de klant); zonder onderwerp enkel "Offerte OF-2026-014".</summary>
+        private string QuoteMailSubject(ChangeOrder co) =>
+            $"Offerte {CoNo(co)}" + (string.IsNullOrWhiteSpace(co.Subject) ? "" : ": " + co.Subject.Trim());
+
         private async Task<IActionResult> BuildSendQuoteModalV2Async(int projectId, int changeOrderId)
         {
             var co = await _db.ChangeOrder.AsNoTracking()
@@ -601,14 +616,14 @@ namespace CPMCore.Controllers
                 Number = $"{CoNo(co.Id)}",
                 Subtitle = string.Join(" · ", new[]
                 {
-                    co.Description,
+                    co.Subject?.Trim(),
                     "€ " + incl.ToString("N2", be) + " incl. btw",
                     co.ClientAccount != null ? "klantenaccount " + Services.Signing.ChangeOrderPdfBuilder.DisplayName(co.ClientAccount) : null,
                 }.Where(x => !string.IsNullOrWhiteSpace(x))),
                 Problem = SendProblem(co),
                 Parties = await OwnerRecipientsAsync(co.ClientAccountId),
                 Senders = await QuoteSendersAsync(co),
-                Subject = $"Offerte {CoNo(co.Id)}: {co.Description}" + (string.IsNullOrWhiteSpace(projectName) ? "" : $" — {projectName}"),
+                Subject = QuoteMailSubject(co) + (string.IsNullOrWhiteSpace(projectName) ? "" : $" — {projectName}"),
                 PdfUrl = Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = co.Id }),
                 TestRecipient = HttpContext.RequestServices.GetRequiredService<IOptions<ServiceCore.Signing.SigningOptions>>().Value.TestRecipientOverride,
             };
@@ -648,7 +663,8 @@ namespace CPMCore.Controllers
             var builder = HttpContext.RequestServices.GetRequiredService<Services.Signing.ChangeOrderPdfBuilder>();
             var pdfModel = await builder.LoadAsync(co.Id, ct);
             byte[] pdf;
-            try { pdf = builder.Render(pdfModel); }
+            // Altijd de gl-v2-documentlayout: offertes bestaan enkel in gl-v2, ongeacht de cookie van wie verzendt.
+            try { pdf = builder.Render(pdfModel, useGlV2Layout: true); }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Offerte-PDF genereren mislukt voor {ChangeOrderId}", co.Id);
@@ -657,7 +673,7 @@ namespace CPMCore.Controllers
             }
             var attachment = new EmailAttachment(Services.Signing.ChangeOrderPdfBuilder.FileName(pdfModel), pdf, "application/pdf");
 
-            var subject = string.IsNullOrWhiteSpace(model.Subject) ? $"Offerte {CoNo(co.Id)}: {co.Description}" : model.Subject.Trim();
+            var subject = string.IsNullOrWhiteSpace(model.Subject) ? QuoteMailSubject(co) : model.Subject.Trim();
             static string H(string x) => System.Net.WebUtility.HtmlEncode(x ?? "");
             var message = string.IsNullOrWhiteSpace(model.Message)
                 ? ""
@@ -673,7 +689,7 @@ namespace CPMCore.Controllers
                 // Zelfde huisstijl-omslag als de mails van de ondertekenmodule.
                 var body = ServiceCore.Signing.SigningNotifier.MailLayout($"Beste {H(r.Name)},",
                     message +
-                    $"<p>In bijlage vindt u onze offerte <strong>{H(co.Description)}</strong> ({CoNo(co.Id)}), geldig tot {co.ExpirationDate:dd/MM/yyyy}.</p>" +
+                    $"<p>In bijlage vindt u onze offerte {(string.IsNullOrWhiteSpace(co.Subject) ? "" : "<strong>" + H(co.Subject.Trim()) + "</strong> ")}({CoNo(co.Id)}), geldig tot {co.ExpirationDate:dd/MM/yyyy}.</p>" +
                     "<p>Gaat u akkoord of hebt u vragen, antwoord dan gerust op deze e-mail. Na uw akkoord ontvangt u een wijzigingsopdracht ter ondertekening.</p>");
                 var address = r.Email;
                 var mailSubject = subject;
@@ -736,7 +752,7 @@ namespace CPMCore.Controllers
                 Number = $"{CoNo(co.Id)}",
                 Subtitle = string.Join(" · ", new[]
                 {
-                    co.Description,
+                    co.Subject?.Trim(),
                     "€ " + incl.ToString("N2", be) + " incl. btw",
                     co.ClientAccount != null ? "klantenaccount " + Services.Signing.ChangeOrderPdfBuilder.DisplayName(co.ClientAccount) : null,
                 }.Where(x => !string.IsNullOrWhiteSpace(x))),
@@ -926,13 +942,21 @@ namespace CPMCore.Controllers
 
             var today = DateOnly.FromDateTime(DateTime.Today);
             var sameClient = targetClientId == src.ClientAccountId;
-            var vat = sameClient ? (decimal?)null : (await ResolveVatForClientAsync(projectId, targetClientId)).Percentage;
+            decimal? vat = null;
+            int? vatTypeId = null;
+            if (!sameClient)
+            {
+                var targetVat = await ResolveVatForClientAsync(projectId, targetClientId);
+                vat = targetVat.Percentage;
+                vatTypeId = targetVat.VatTypeId;
+            }
             // Een schijf-trigger hoort bij de betalingsgroep van de bron-eenheid; voor een andere eenheid
             // valt hij terug op "na ondertekening" (aan te passen in het facturatieplan van de kopie).
             var copy = new ChangeOrder
             {
                 ClientAccountId = targetClientId,
                 Description = src.Description,
+                Subject = src.Subject,
                 Date = today,
                 ExpirationDate = today.AddDays(30),
                 Comment = src.Comment,
@@ -958,6 +982,7 @@ namespace CPMCore.Controllers
                     Price = d.Price,
                     Commission = d.Commission,
                     VatPercentage = vat ?? d.VatPercentage,
+                    VatTypeId = sameClient ? d.VatTypeId : vatTypeId,
                     SourceImagePath = d.SourceImagePath,
                 });
             }

@@ -1,4 +1,5 @@
 using CPMCore.Documents;
+using CPMCore.Documents.GlV2;
 using FacadeCore.Signing;
 using PdfSharpCore.Pdf;
 using PdfSharpCore.Pdf.IO;
@@ -22,20 +23,49 @@ public sealed class SignedDocumentComposer : ISigningDocumentRenderer
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<SignedDocumentComposer> _logger;
     private readonly IEpcQrService _qr;
+    private readonly IServiceProvider _services;
 
-    public SignedDocumentComposer(IWebHostEnvironment env, ILogger<SignedDocumentComposer> logger, IEpcQrService qr)
+    public SignedDocumentComposer(IWebHostEnvironment env, ILogger<SignedDocumentComposer> logger, IEpcQrService qr, IServiceProvider services)
     {
         _env = env;
         _logger = logger;
         _qr = qr;
+        _services = services;
     }
 
-    public Task<byte[]> ComposeFinalPdfAsync(FinalDocumentInput input, CancellationToken ct = default)
+    public async Task<byte[]> ComposeFinalPdfAsync(FinalDocumentInput input, CancellationToken ct = default)
     {
-        var fontFamily = GroupLnFonts.EnsureAvenirRegistered(_env, _logger);
         var qrPng = SafeQrPng(input.VerificationUrl);
-        var evidencePdf = new SigningEvidenceDocument(input, LogoBytes(), fontFamily, qrPng).GeneratePdf();
-        return Task.FromResult(MergePdfDocuments(input.OriginalPdf, evidencePdf));
+
+        // Wijzigingsopdracht: ondertekeningsblad in de gl-v2-layout (design-handoff 35j). Lukt dat niet (of is het
+        // een ander documenttype), dan het bestaande blad — het ondertekenen mag hier nooit op stuk lopen.
+        byte[]? evidencePdf = null;
+        if (input.Case.DocumentType == ChangeOrderSigningSource.Key)
+        {
+            try { evidencePdf = await RenderChangeOrderEvidenceAsync(input, qrPng, ct); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Ondertekeningsblad (gl-v2) voor dossier {CaseId} mislukt; terugval op het standaardblad.", input.Case.CaseId); }
+        }
+
+        if (evidencePdf is null)
+        {
+            var fontFamily = GroupLnFonts.EnsureAvenirRegistered(_env, _logger);
+            evidencePdf = new SigningEvidenceDocument(input, LogoBytes(), fontFamily, qrPng).GeneratePdf();
+        }
+        return MergePdfDocuments(input.OriginalPdf, evidencePdf);
+    }
+
+    private async Task<byte[]> RenderChangeOrderEvidenceAsync(FinalDocumentInput input, byte[]? qrPng, CancellationToken ct)
+    {
+        var builder = _services.GetRequiredService<ChangeOrderPdfBuilder>();
+        var model = await builder.LoadAsync(input.Case.SourceEntityId, ct)
+                    ?? throw new InvalidOperationException($"Wijzigingsopdracht {input.Case.SourceEntityId} bestaat niet.");
+        var fontsAvailable = GlV2PdfFonts.EnsureRegistered(_env, _logger);
+        var company = builder.BuildGlV2Company(model);
+        int originalPages;
+        using (var ms = new MemoryStream(input.OriginalPdf, writable: false))
+        using (var src = PdfReader.Open(ms, PdfDocumentOpenMode.Import))
+            originalPages = src.PageCount;
+        return new SigningEvidenceDocumentV2(input, model, company, fontsAvailable, originalPages, qrPng).GeneratePdf();
     }
 
     /// <summary>QR-generatie mag het ondertekenen nooit laten mislukken — zonder QR blijft de
