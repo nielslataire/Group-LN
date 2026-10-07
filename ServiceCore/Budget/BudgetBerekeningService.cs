@@ -130,8 +130,18 @@ namespace ServiceCore.Budget
                     BasisBedrag  = grond
                 });
 
-            // E) Onvoorzien
+            // E) Onvoorzien — enkel op de bouwkost van de activiteiten (niet op erelonen of grond).
             result.Onvoorzien = totaalBouw * p.OnvoorzienPerc;
+
+            // F) Grond: de aankoopprijs is een kost zoals elke andere. Stond voordien enkel in het verkoopvoorstel
+            // ("kostprijs incl. grond"), waardoor stap 9 en het voorstel een andere kostprijs toonden.
+            if (grond != 0m)
+                result.Grond.Add(new BudgetKostenPostBO
+                {
+                    Omschrijving = "Aankoopprijs grond",
+                    Bedrag       = grond,
+                    IsPerc       = false
+                });
 
             return result;
         }
@@ -189,8 +199,9 @@ namespace ServiceCore.Budget
                 if (bestaand.StudieIRPerc  == null && ingStd  != 0m) bestaand.StudieIRPerc  = ingStd;
                 if (bestaand.DoelMargePerc  == null && doelStd  != 0m) bestaand.DoelMargePerc  = doelStd;
                 if (bestaand.GrondMargePerc == null && grondStd != 0m) bestaand.GrondMargePerc = grondStd;
-                if ((bestaand.ProjectcoordinatiePerc == 0m || bestaand.ProjectcoordinatiePerc == 0.0525m)
-                    && pcStd != 0m)
+                // Enkel een nog nooit ingevulde waarde (0) krijgt de standaard; een bewust ingevulde 5,25 % blijft staan
+                // (voordien werd 0,0525 als "oude default" gezien en telkens overschreven).
+                if (bestaand.ProjectcoordinatiePerc == 0m && pcStd != 0m)
                     bestaand.ProjectcoordinatiePerc = pcStd;
 
                 return bestaand;

@@ -30,4 +30,10 @@ Public Enum DossierKind As Integer
     <Display(Name:="Nutsafrekening")>
     Nutsafrekening = 8
 
+    <Display(Name:="Attest")>
+    Attest = 9
+
+    <Display(Name:="Keuring")>
+    Keuring = 10
+
 End Enum

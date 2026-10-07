@@ -90,11 +90,11 @@
                 <span class="gl-v2-menu-item-sub">Rechtstreeks ter ondertekening, bv. wat al mondeling afgesproken is.</span>
             </span>
         </a>
-        <button type="button" class="gl-v2-menu-item js-co2-copy" data-co-id="0" @(Model.OrderCount == 0 ? "disabled" : "")>
+        <button type="button" class="gl-v2-menu-item js-co2-copy" data-co-id="0" @(Model.AllCount == 0 ? "disabled" : "")>
             <i class="ph ph-copy" aria-hidden="true"></i>
             <span class="gl-v2-menu-item-text">
-                <span class="gl-v2-menu-item-label">Kopie van een wijzigingsopdracht</span>
-                <span class="gl-v2-menu-item-sub">Bv. dezelfde buitenkraan voor een ander lot.</span>
+                <span class="gl-v2-menu-item-label">Kopie van een offerte of wijzigingsopdracht</span>
+                <span class="gl-v2-menu-item-sub">Bv. dezelfde buitenkraan voor een ander lot, of een wijzigingsopdracht als offerte.</span>
             </span>
         </button>
         <div class="gl-v2-menu-divider"></div>
@@ -277,7 +277,7 @@
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
                     <div class="gl-v2-cq-header-text">
-                        <h2 class="modal-title" id="gl-v2-cc-title">Kopie van een wijzigingsopdracht</h2>
+                        <h2 class="modal-title" id="gl-v2-cc-title">Kopie van een offerte of wijzigingsopdracht</h2>
                         <span class="gl-v2-cq-header-sub">Zelfde werk voor een andere eenheid</span>
                     </div>
                     <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>

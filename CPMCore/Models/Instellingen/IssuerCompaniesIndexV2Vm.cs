@@ -24,4 +24,7 @@ public class IssuerCompanyListItemV2Vm
     public bool IsActive { get; set; }
     public bool IsExternalCoordinationDefault { get; set; }
     public string EditUrl { get; set; } = "#";
+
+    /// <summary>Het opgeladen logo als data-URI (zelfde bron als de bewerkpagina); null = geen logo → de gestippelde "logo"-plek.</summary>
+    public string? LogoDataUri { get; set; }
 }

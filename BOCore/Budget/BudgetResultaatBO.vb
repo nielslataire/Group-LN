@@ -18,6 +18,8 @@ Namespace Budget
         Public Property TotaalGBA As Decimal
 
         Public Property TotaalBouw As Decimal
+        ''' <summary>Grondgebonden posten die geen forfait zijn: de aankoopprijs van de grond (okt. 2026 — stond voordien nergens in de kostprijs).</summary>
+        Public Property Grond As New List(Of BudgetKostenPostBO)
         Public Property KostenOpBouw As New List(Of BudgetKostenPostBO)
         Public Property Forfaits As New List(Of BudgetKostenPostBO)
         Public Property Financiering As New List(Of BudgetKostenPostBO)
@@ -29,6 +31,7 @@ Namespace Budget
         Public ReadOnly Property TotaalKosten As Decimal
             Get
                 Return TotaalBouw _
+                    + Grond.Sum(Function(k) k.Bedrag) _
                     + KostenOpBouw.Sum(Function(k) k.Bedrag) _
                     + Forfaits.Sum(Function(k) k.Bedrag) _
                     + Financiering.Sum(Function(k) k.Bedrag) _

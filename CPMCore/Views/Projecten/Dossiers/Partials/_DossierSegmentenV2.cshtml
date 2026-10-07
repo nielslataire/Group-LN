@@ -1,0 +1,8 @@
+@model (int Gedaan, int Totaal, bool TeLaat)
+@* gl-v2 — voortgang als dunne segmenten (design 31a/31b): groen = gedaan, rood = het huidige segment van een dossier dat te laat is, grijs = nog te doen. *@
+<span class="gl-v2-dos-seg @(Model.TeLaat ? "is-late" : "")" role="img" aria-label="Stap @Model.Gedaan van @Model.Totaal">
+    @for (var i = 0; i < Model.Totaal; i++)
+    {
+        <i class="@(i < Model.Gedaan ? "is-on" : "")"></i>
+    }
+</span>

@@ -40,6 +40,15 @@ Public Class MijlpaalUpsertBO
     <StringLength(128)>
     Public Property VerantwoordelijkeUserId As String
 
+    ' Streefdatum relatief aan een andere mijlpaal van hetzelfde traject (migratie 074, design 30e).
+    Public Property RelatiefAnkerMijlpaalId As Integer?
+
+    Public Property RelatiefOffsetDagen As Integer?
+
+    ' "Plaats in de fase" (design 30e, vervangt het getalveld Volgorde): "" = niet wijzigen, "eerste", "laatste"
+    ' of "na:{mijlpaalId}". De service zet dit om naar Volgorde en hernummert de fase.
+    Public Property PlaatsInFase As String
+
     Public Property IsVerplicht As Boolean = True
 
     Public Property Opmerking As String

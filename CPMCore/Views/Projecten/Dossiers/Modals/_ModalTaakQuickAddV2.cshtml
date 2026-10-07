@@ -1,0 +1,39 @@
+@model CPMCore.Models.Traject.TaakQuickAddVm
+@*
+    gl-v2 — "Taak aanmaken" (type 2 Formulier-modal), de gl-v2-variant van Shared/_ModalTaakQuickAdd (zelfde POST naar MijnTaken/Opslaan,
+    dezelfde verborgen koppelvelden). Het vrije tekstveld "Toegewezen aan" (een rauwe gebruikers-id) is bewust weggelaten: een taak is
+    van jezelf, zoals de oude modal al zei "leeg = mezelf".
+*@
+@using CPMCore.Models.GlV2
+<div class="modal fade gl-v2-modal-form" id="@Model.ModalId" tabindex="-1" aria-hidden="true" aria-labelledby="@(Model.ModalId)-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form method="post" action="@Url.Action("Opslaan", "MijnTaken")" class="modal-content" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ProjectId" id="@(Model.ModalId)-project-id" value="@Model.ProjectId" />
+            <input type="hidden" name="UnitId" id="@(Model.ModalId)-unit-id" value="@Model.UnitId" />
+            <input type="hidden" name="MijlpaalId" id="@(Model.ModalId)-mijlpaal-id" value="@Model.MijlpaalId" />
+            <input type="hidden" name="ProjectDossierId" id="@(Model.ModalId)-dossier-id" value="@Model.ProjectDossierId" />
+            <input type="hidden" name="ConstructionIssueId" id="@(Model.ModalId)-issue-id" value="@Model.ConstructionIssueId" />
+            <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+            <div class="modal-header">
+                <h2 class="modal-title" id="@(Model.ModalId)-title">Taak aanmaken</h2>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@(Model.ModalId)-titel">Titel <span style="color:var(--gl-v2-danger)">*</span></label>
+                    <div class="gl-v2-field-box"><input type="text" name="Titel" id="@(Model.ModalId)-titel" class="gl-v2-field-input" value="@Model.DefaultTitel" required autocomplete="off" /></div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="@(Model.ModalId)-oms">Omschrijving</label>
+                    <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="Omschrijving" id="@(Model.ModalId)-oms" class="gl-v2-field-input" rows="3"></textarea></div>
+                </div>
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Vervaldatum", Id = Model.ModalId + "-vervaldatum", Label = "Vervaldatum" })
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Taak aanmaken</button>
+            </div>
+        </form>
+    </div>
+</div>

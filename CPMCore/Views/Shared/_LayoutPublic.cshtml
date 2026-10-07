@@ -25,10 +25,11 @@
     <div class="gl-v2-public-shell">
         <header class="gl-v2-public-header">
             <img src="@Url.Content("~/img/groupln-logo.png")" alt="Group LN" class="gl-v2-public-logo" width="34" height="34" />
-            <span class="gl-v2-public-brand">Group LN</span>
+            @* Naast het logo staat de naam van het uitgevende facturatiebedrijf (bv. BCO); zonder bedrijf "Group LN". *@
+            <span class="gl-v2-public-brand">@(ViewData["PublicBrand"] as string is { Length: > 0 } brand ? brand : "Group LN")</span>
             @if (ViewData["PublicKicker"] is string kicker && !string.IsNullOrWhiteSpace(kicker))
             {
-                <span class="gl-v2-public-kicker">@kicker</span>
+                <span class="gl-v2-public-kicker @(ViewData["PublicKickerPlain"] is true ? "is-plain" : "")">@if (ViewData["PublicKickerIcon"] as string == "lock") {<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.4 7.2V5.4a3.6 3.6 0 0 1 7.2 0v1.8 M3.4 7.2h9.2v6.2H3.4z"></path></svg>}@kicker</span>
             }
         </header>
         <main id="gl-v2-public-main" class="gl-v2-public-main">

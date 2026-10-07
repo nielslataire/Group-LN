@@ -1,0 +1,35 @@
+@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@*
+    gl-v2 — Bedrijf bewerken, tab "Uurtarieven & kilometers" (design-handoff 24c): "Voor tijdsregistratie en regie-facturatie." Kilometervergoeding +
+    een lijst medewerkers met hun uurprijs; toevoegen/bewerken via een modal, de lijst wordt client-side beheerd (JSON → verborgen UserRates[i].*-velden).
+    Het mockup toont ook "Geldig vanaf" per tarief — daar bestaat geen veld voor (een tarief geldt tot het aangepast wordt), dus die kolom ontbreekt.
+*@
+@using System.Text.Json
+@{
+    var ratesJson = JsonSerializer.Serialize((Model.UserRates ?? new List<CPMCore.Models.Instellingen.IssuerUserRateVM>()).Select(r => new { userId = r.UserId, name = r.UserFullName, rate = r.HourlyRate }));
+    var usersJson = JsonSerializer.Serialize((Model.AvailableUsers ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()).Select(u => new { id = u.Value, text = u.Text }));
+}
+<section class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-timer" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Uurtarieven &amp; kilometers</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Voor tijdsregistratie en regie-facturatie.</span>
+    </div>
+    <div class="gl-v2-ice-card-body">
+        <div class="gl-v2-field gl-v2-ice-km">
+            <label class="gl-v2-field-label" for="RatePerKm">Kilometervergoeding</label>
+            <div class="gl-v2-field-box gl-v2-ice-affix">
+                <span class="gl-v2-ice-affix-pre">€</span>
+                <input type="number" class="gl-v2-field-input" id="RatePerKm" name="RatePerKm" step="0.01" min="0" value="@(Model.RatePerKm?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" placeholder="0,00" />
+                <span class="gl-v2-ice-affix-post">per km</span>
+            </div>
+        </div>
+    </div>
+    <div class="gl-v2-ice-sectionbar">
+        <span class="gl-v2-ice-subhead-inline">MEDEWERKER · UURPRIJS</span>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-rate-new"><i class="ph ph-plus" aria-hidden="true"></i>Tarief toevoegen</button>
+    </div>
+    <div id="ice-rates-fields" hidden></div>
+    <ul class="gl-v2-ice-list" id="ice-rates-list" data-rates="@ratesJson" data-users="@usersJson"></ul>
+</section>

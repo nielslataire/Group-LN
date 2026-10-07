@@ -1,0 +1,215 @@
+@model CPMCore.Models.Instellingen.BudgetReferentieProjectenViewModel
+@using BOCore.Budget
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var nlBE = new System.Globalization.CultureInfo("nl-BE");
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nlBE);
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/instellingen-custom.css" />
+    <style>
+        .ref-detail td { font-size: .82rem; }
+        .ref-lot th { background: var(--lightgreen, #e8f0eb); font-size: .78rem; }
+        .ref-toggle { cursor: pointer; }
+    </style>
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Referentieprojecten (nacalc)</h1>
+            <h5 class="mb-4 mt-0">Werkelijke kost per activiteit van afgewerkte projecten. Op stap 6 van de budgetwizard kies je welke projecten je vergelijkt; de bedragen worden met de S- en I-index van de peildatum naar vandaag geïndexeerd.</h5>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <section class="card card-modern h-100">
+            <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="card-title mb-0">Uit Excel inladen</h2>
+                    <p class="text-muted small mb-0">Voor projecten van vóór de app. Kolommen <code>ActivityId</code> · <code>Activiteit</code> · <code>Bedrag</code>; matching op id, anders op naam.</p>
+                </div>
+                <a href="@Url.Action("BudgetReferentieSjabloon", "Instellingen")" class="btn btn-sm btn-light border text-nowrap"><i class="bx bx-download me-1"></i>Sjabloon downloaden</a>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-action="BudgetReferentieProjectImportExcel" asp-controller="Instellingen" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Naam referentieproject</label>
+                            <input name="naam" maxlength="200" class="form-control form-control-modern" required placeholder="bv. Residentie Keerstraat (2024)" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Peildatum</label>
+                            <input type="date" name="datum" class="form-control form-control-modern" title="Oplevering / einde uitvoering: bepaalt de index voor de omrekening naar vandaag" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Eenheden</label>
+                            <input type="number" name="aantalEenheden" min="1" class="form-control form-control-modern" required title="Woon-/commerciële eenheden: deler voor de prijs per eenheid" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">GBA m² (optioneel)</label>
+                            <input type="text" inputmode="decimal" name="oppervlakteGBA" class="form-control form-control-modern" placeholder="bewoonbare opp." />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Excel-bestand (.xlsx)</label>
+                            <input type="file" name="bestand" accept=".xlsx" class="form-control form-control-modern" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Opmerking</label>
+                            <input name="opmerking" maxlength="500" class="form-control form-control-modern" placeholder="bron van de cijfers" />
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary"><i class="bx bx-import me-1"></i>Inladen</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <section class="card card-modern h-100">
+            <div class="card-header border-0 pb-0">
+                <h2 class="card-title mb-0">Uit een project van de app</h2>
+                <p class="text-muted small mb-0">Snapshot van de inkomende facturen per activiteit (zonder facturen: de contracten). Eenheden en GBA komen uit het project.</p>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-action="BudgetReferentieProjectImportProject" asp-controller="Instellingen">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12">
+                            <label class="form-label">Project</label>
+                            <select name="projectId" class="form-control form-control-modern" required>
+                                <option value="">Kies een project…</option>
+                                @foreach (var p in Model.Projecten)
+                                {
+                                    <option value="@p.ID">@p.Display</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label">Naam (optioneel)</label>
+                            <input name="naam" maxlength="200" class="form-control form-control-modern" placeholder="standaard de projectnaam" />
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Peildatum (optioneel)</label>
+                            <input type="date" name="datum" class="form-control form-control-modern" title="Standaard de (definitieve) opleverdatum van het project" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Opmerking</label>
+                            <input name="opmerking" maxlength="500" class="form-control form-control-modern" />
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary"><i class="bx bx-camera me-1"></i>Snapshot maken</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="card card-modern">
+    <div class="card-header border-0 pb-0">
+        <h2 class="card-title mb-0">Referentieprojecten <span class="badge bg-light text-dark ms-1">@Model.Referenties.Count</span></h2>
+    </div>
+    <div class="card-body pt-2">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width:28px"></th>
+                        <th>Naam</th>
+                        <th>Bron</th>
+                        <th>Peildatum</th>
+                        <th class="text-end">Eenheden</th>
+                        <th class="text-end">GBA m²</th>
+                        <th class="text-end">Totaal</th>
+                        <th class="text-end">€/eenheid</th>
+                        <th class="text-end">€/m²</th>
+                        <th class="text-end">Activiteiten</th>
+                        <th>Index S / I</th>
+                        <th class="text-end">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Referenties.Any())
+                    {
+                        <tr><td colspan="12" class="text-muted">Nog geen referentieprojecten. Laad er een in uit Excel of maak een snapshot van een afgewerkt project.</td></tr>
+                    }
+                    @foreach (var r in Model.Referenties)
+                    {
+                        <tr class="ref-toggle" data-bs-toggle="collapse" data-bs-target="#ref-@r.Id" aria-expanded="false" title="Klik voor de bedragen per activiteit">
+                            <td><i class="bx bx-chevron-right"></i></td>
+                            <td>
+                                <strong>@r.Naam</strong>
+                                @if (!string.IsNullOrWhiteSpace(r.ProjectNaam)) { <div class="text-muted small">@r.ProjectNaam</div> }
+                                @if (!string.IsNullOrWhiteSpace(r.Opmerking)) { <div class="text-muted small">@r.Opmerking</div> }
+                            </td>
+                            <td><span class="badge @(r.Bron == "Project" ? "bg-primary" : "bg-secondary")">@r.Bron</span></td>
+                            <td>@(r.Datum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                            <td class="text-end">@r.AantalEenheden</td>
+                            <td class="text-end">@(r.OppervlakteGBA.HasValue ? r.OppervlakteGBA.Value.ToString("N0", nlBE) : "—")</td>
+                            <td class="text-end fw-semibold">@Eur0(r.TotaalBedrag)</td>
+                            <td class="text-end">@(r.PrijsPerEenheid.HasValue ? Eur0(r.PrijsPerEenheid.Value) : "—")</td>
+                            <td class="text-end">@(r.PrijsPerM2.HasValue ? Eur0(r.PrijsPerM2.Value) : "—")</td>
+                            <td class="text-end">@r.Lijnen.Count</td>
+                            <td class="text-muted small">@(r.SIndex.HasValue ? r.SIndex.Value.ToString("0.##", nlBE) : "—") / @(r.IIndex.HasValue ? r.IIndex.Value.ToString("0.##", nlBE) : "—")</td>
+                            <td class="text-end text-nowrap" onclick="event.stopPropagation();">
+                                <form method="post" asp-action="BudgetReferentieProjectDelete" asp-controller="Instellingen" class="d-inline"
+                                      onsubmit="return confirm('Referentieproject \'@r.Naam.Replace("'", "\\'")\' verwijderen? Budgetversies die het vergelijken, verliezen die vergelijking.');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <button type="submit" class="btn btn-link p-0 ms-1 me-1" title="Verwijderen"><i class="bx bx-trash fs-5 text-danger"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr class="collapse ref-detail" id="ref-@r.Id">
+                            <td></td>
+                            <td colspan="11" class="pt-0">
+                                <table class="table table-sm mb-2">
+                                    <thead class="ref-lot"><tr><th>Lot</th><th>Activiteit</th><th class="text-end">Bedrag</th><th class="text-end">€/eenheid</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var l in r.Lijnen)
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@(l.LotNummer > 0 ? $"Lot {l.LotNummer:G}" : "")</td>
+                                                <td>@l.ActivityOmschrijving</td>
+                                                <td class="text-end">@Eur0(l.Bedrag)</td>
+                                                <td class="text-end">@(r.AantalEenheden > 0 ? Eur0(l.Bedrag / r.AantalEenheden) : "—")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script>
+    document.querySelectorAll('.ref-toggle').forEach(function (tr) {
+        var target = document.querySelector(tr.getAttribute('data-bs-target'));
+        if (!target) return;
+        target.addEventListener('show.bs.collapse', function () { tr.querySelector('.bx').className = 'bx bx-chevron-down'; });
+        target.addEventListener('hide.bs.collapse', function () { tr.querySelector('.bx').className = 'bx bx-chevron-right'; });
+    });
+</script>
+}

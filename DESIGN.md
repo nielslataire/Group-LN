@@ -5834,7 +5834,16 @@ Contact & adres), **Facturatie** (standaarden + nummerreeksen + betaaltermijnen 
 **Lay-out & e-mail** (sjabloon/kleuren/footer/e-mail naast een live PDF-voorbeeld) en
 **Uurtarieven**.
 
-### Bewuste, expliciete scope-beperking van deze ronde
+### Update 07/10/2026 — alle zes tabs zijn nu gl-v2 (de scope-beperking hieronder is opgeheven)
+Facturatie, Bankrekeningen, Boekhouding, Lay-out & e-mail en Uurtarieven staan als partials (`Views/Instellingen/Partials/_Ice*V2.cshtml`) in dezelfde form als Algemeen; `wwwroot/js/gl-v2-instellingen-issuercompany-edit.js`
+doet tabs (onthouden via `?tab=`, ook na een bankrekening-/reeks-/Octopus-actie), wijzigingen per tab ("2 wijzigingen in Algemeen · 1 in Facturatie" + stip op de tab + dirty-badge voor de verlaat-bewaking), de lijst+modal-beheer van
+betaaltermijnen en uurtarieven (client-side → verborgen `PaymentTerms[i].*`/`UserRates[i].*`), het Peppol-voorstel (`0208:` + ondernemingsnummer), het EPC-QR-voorbeeld (qrcodejs), kleuren, schema-validatie van de sjabloon-JSON
+(Ajv, achter "Geavanceerd"), de e-maileditor met veld-chips (`{{Invoice.PublicId}}` ↔ chip; opslag blijft tekst met `{{…}}`) en het live PDF-voorbeeld via de bestaande preview-actie met de laatste factuur van het bedrijf.
+Nummerreeksen en bankrekeningen: modal naar de bestaande `SeriesCreate/-Edit`, `BankAccountCreate/-Edit`; verwijderen/standaard maken via een bevestigingsmodal; Octopus-knoppen blijven `formaction`-posts op de hoofd-form.
+**Belangrijk:** de POST schrijft elk veld van `IssuerCompanyVM`, dus de view post nu ook alles wat niet zichtbaar is als verborgen veld (`AddressLine2`, `PeppolEnabled`, Octopus-tokens/-json) — de eerste ronde (enkel Algemeen) zou die anders gewist hebben.
+Bewuste afwijkingen van het mockup: geen "Geldig vanaf" bij uurtarieven (geen veld in het model), "Dossier synchroniseren"/"Relaties ophalen" pas actief mét gekoppeld dossier.
+
+### (Historisch) Scope-beperking van de eerste ronde
 Enkel **Algemeen** is hier volledig herwerkt naar gl-v2 — de overige vijf tabs zijn elk zelf al een
 kleine, functionerende CRUD-toepassing binnen de bestaande 638-regels-`_IssuerCompanyForm.cshtml`
 (Octopus-wizard met live tokenstatus, bankrekeningenbeheer met een "···"-menu, nummerreeksen,
@@ -6258,3 +6267,75 @@ coördinatieproject zou `InvoiceableByBouwheer` (`ChangeOrderDetailV2`) eigenlij
 staan — het coördinatiebedrijf is dan zelf geen bouwheer — en mogelijk hoort er een vermelding op
 het document als het facturatiebedrijf niet de aannemingsfirma zelf is. Wacht op een gerichte
 beslissing (exacte tekst/gedrag) vóór dit op `ChangeOrderDetailV2` gebouwd wordt.
+
+
+## Publieke ondertekenpagina — design-handoff punt 36 (okt. 2026)
+
+`Views/Ondertekenen/Document.cshtml` volgt `design-handoff/CRM Ondertekenen portaal.dc.html` (36a–36d), stijl in `gl-v2-public.css`
+(`.gl-v2-sign-*`), gedrag in `wwwroot/js/gl-v2-tekenen.js`. Toestanden via `data-state` op `.gl-v2-sign`: **todo** (36a: akkoordkader,
+"Akkoord en ondertekenen", "Weigeren"), **processing** (36b: banner + vijf stappen, document dimt en klapt in tot een strook van 180px),
+**waiting** / **done** (36c: banner, stappen, bij done "Download ondertekende PDF" + "Echtheid controleren"), **error** (36d: rode stap +
+"Opnieuw proberen"/"Contact opnemen"), **declined** en **closed**. Bewuste afwijkingen van de handoff: geen itsme (verificatie blijft e-mail/sms-code +
+handtekeningvak, de knop heet "Akkoord en ondertekenen"); stappen 3–5 (verzegelen, ondertekeningsblad, bevestiging) staan pas op "klaar" als de
+laatste eigenaar getekend heeft — bij "waiting" blijven ze open; tijdstippen enkel waar de server ze kent; de eenheid in de ondertitel komt via `ISigningDocumentSource.GetUnitLabelAsync` → `SigningSessionView.UnitLabel`; secundaire tekst gebruikt `--gl-v2-muted` (#5a6b58) i.p.v. #7a8a78 voor contrast ≥ 4.5:1. Lettertypes: lokaal IBM Plex Sans en
+Playfair Display (dezelfde bestanden als de PDF) — de CSP laat enkel 'self' toe.
+
+**Beweging (één geschreven moment: het verzegelen).** Na "Ondertekenen" schuift het tekenvak weg (180ms), de stappen lopen na elkaar af
+(minstens 520ms per stap, nooit langer dan de echte serverantwoorden): stip vult zich + vinkje tekent zich (stroke-dashoffset), de lijn naar de volgende stap
+loopt dicht (scaleY, 420ms, exponentiële ease-out), de actieve stap pulseert zacht. Daarna herlaadt de pagina naar de server-toestand en speelt dezelfde
+stappen daar één keer snel in (sessionStorage-vlag `glSignArrived`). Overige beweging is feedback: kleurovergang van de chip (300ms), indrukken van knoppen.
+`prefers-reduced-motion`: geen beweging en kortere pauzes; kleur- en statuswissels blijven. Enkel de wrapper rond de PDF verandert van hoogte, de iframe niet.
+
+
+## Publieke verificatiepagina — design-handoff punt 37 (okt. 2026)
+
+`Views/Ondertekenen/Verifieer/Index.cshtml` (+ `NotFound.cshtml`) volgt 37a–37c van `CRM Ondertekenen portaal.dc.html`, op hetzelfde raamwerk als de
+ondertekenpagina (`.gl-v2-sign` kop/chip/banner/kaarten + `.gl-v2-ver-*` in `gl-v2-public.css`). Rechtsboven "Echtheidscontrole" met slotje. Toestanden via
+`data-state`: **done** (Voltooid: "Ondertekend · geldig", groene banner), **todo** (Ter ondertekening: neutrale banner, ondertekenaars met "Wacht"),
+**declined** (Geweigerd/Verlopen/Geannuleerd: rode banner, "Niet ondertekend"), **closed** (In voorbereiding), en `NotFound` voor een onbekend id. Secties:
+Ondertekenaars (naam + hoedanigheid, tijdstip, methode, status), Digitale vingerafdrukken (origineel en, indien voltooid, de ondertekende PDF + de uitleg
+waarom ze verschillen), Controleer je eigen bestand. De bestandscontrole (`wwwroot/js/gl-v2-verifieer.js`) rekent de SHA-256 in de browser (Web Crypto, enkel via
+https), vergelijkt met beide waarden en toont 37b (komt overeen met waarde 1 of 2) of 37c (komt niet overeen); het bestand verlaat het toestel niet. Beweging: de
+uitslag stijgt in en de berekende vingerafdruk onthult zich van links naar rechts (clip-path); `prefers-reduced-motion` schakelt dit uit.
+Afwijkingen: methode = e-mailcode/sms-code (geen itsme); geen paginatelling bij de vingerafdrukken (de service kent ze niet); de pagina toont nu namen van de
+ondertekenaars (in het ontwerp), terwijl `PublicVerificationView` er eerder bewust geen toonde — de link bevat een onraadbaar GUID, maar wie hem heeft ziet dus de namen.
+
+**Naam in de kop van de publieke pagina's (okt. 2026):** het Group LN-logo blijft staan, de naam ernaast is die van het uitgevende facturatiebedrijf
+(zelfde bron als de wijzigingsopdracht-PDF: `ChangeOrderIssuerResolver`, via `ISigningDocumentSource.GetIssuerNameAsync` →
+`SigningSessionView`/`PublicVerificationView.IssuerName`; `_LayoutPublic` leest `ViewData["PublicBrand"]`, zonder bedrijf valt het terug op "Group LN").
+(Een eerdere versie toonde het bedrijfslogo als data-URI zonder naam; die is teruggedraaid op verzoek.)
+
+
+## Projecten/Traject en Dossiers — design-handoff punt 30–33 (okt. 2026)
+
+Bron `design-handoff/CRM Traject en dossiers.dc.html`; voortgang en keuzes in `TRAJECT_VOORTGANG.md`. Beide pagina's volgen het patroon van Project bewerken (punt 19) en de
+wijzigingsopdrachten (28): `GlV2FullHeightBody`, dossiermenu (`ProjectMenu` + Phone), `.gl-v2-tabbar` met **kerncijfers rechts** (`.gl-v2-tr-stats`/`.gl-v2-tr-chip`, verborgen op gsm),
+geen KPI-strip, topbar-acties (`PageActions`) met een `MobileQuickActions`-twin op gsm.
+
+**Hergebruikte componenten (geen eigen varianten):** `GlV2/_Steps` (Chips voor de fases, Lijn voor de nutsstappen, Verticaal voor de status naast het formulier), meldingskaders 25b
+(`gl-v2-notice-expanded` met `.gl-v2-notice-bar-action` als tekstlink rechts — zo tekent het mockup "Naar dossier"), `GlV2/_SelectList`, `GlV2/_GlV2Combo` (netbeheerder),
+`GlV2/_DateField`, `GlV2/_ModalConfirm`, `.gl-v2-menu` ("+ Nieuw", ···, kolommen), modals type 2 (`gl-v2-modal-form`) en `gl-v2-section-card`/`gl-v2-form-actionbar` voor het
+nutsformulier. `GlV2DatePicker.init()` is nu idempotent (`data-gl-v2-dp-wired`) omdat modals/popovers AJAX-inhoud krijgen.
+
+**Eigen klassen** (`gl-v2-projecten-traject.css`: `gl-v2-tr-*`; `gl-v2-projecten-dossiers.css`: `gl-v2-dos-*`; beide laden vóór `gl-v2-shell.css` → `.gl-v2` extra in de selector waar een
+shell-regel overstemd wordt, en elke `[hidden]` heeft een guard):
+- **Bolletje** (`.gl-v2-tr-dot`): elke status een eigen *vorm*, niet enkel een kleur — vinkje (bereikt), uitroepteken (te laat), leeg (nog te doen), streepje gestippeld (n.v.t.), klok
+  (bezig), verbod (geblokkeerd).
+- **Fase** (`.gl-v2-tr-fase`): afgerond/gepland ingeklapt, actieve fase groen omrand, een fase met een te late mijlpaal staat open; badge "Gepland · 1 te laat".
+- **Segmentknoppen** (`.gl-v2-tr-seg`, `.gl-v2-tr-radioseg`) voor filters en korte keuzes; **selectiebalk** (`.gl-v2-tr-selbar`, donker, onderaan) voor bulkacties.
+- **Matrix** (`.gl-v2-tr-matrix` eenheid × mijlpaal, `.gl-v2-dos-matrix` eenheid × nutstype): cel = bolletje/status + datum + regel; lege cel = gestippelde "Aanvragen"-knop; popover op de cel
+  (`.gl-v2-tr-pop`, bottom sheet op gsm). Op gsm wordt de nutsmatrix een kaart per eenheid (kolomkop uit `data-label`).
+- **Voortgangssegmenten** (`.gl-v2-dos-seg`): dunne balkjes, groen = gedaan, rood = dossier te laat; nuts = 6 stappen, ander dossier = checklist of 4 (status).
+- **Werkstroom** (`.gl-v2-dos-flow`): stap-bol + datumveld per rij; de status rechts volgt uit de datums en wordt live herrenderd (`gl-v2-projecten-dossiers-form.js`).
+- **Checklist** (`.gl-v2-dos-chk`): eigen vierkant aanvinkvakje (geen browserdefault), eigen items verwijderbaar, "+ Item toevoegen".
+
+**Regels:** de status van een nutsdossier zet je nooit zelf (behalve Geannuleerd) — ze volgt uit de laatst ingevulde datum (`NutsChecklistSpiegel.BerekenStatus`/`DossierWeergave`);
+het mijlpaalformulier is één formulier voor toevoegen én bewerken; "Sync met sjabloon" toont eerst wat verandert (nieuw/gewijzigd/niet meer in sjabloon) en past enkel het aangevinkte toe,
+bereikte mijlpalen nooit; documenten van een dossier zijn gewone documenten in het documentencentrum (map "Overige", nooit gekoppeld aan eenheid/klant, dus nooit zichtbaar voor kopers
+of op de website) die via `ProjectDossierDocument` aan het dossier hangen. Formulierscherm volgt de verlaat-bewaking (dirty-badge + `gl-v2-discard-changes-modal`).
+
+### Update 07/10/2026 — IssuerCompaniesEditV2 aanpassingen
+- Facturatie: Peppol-blok verborgen zodra een Octopus-dossier gekoppeld is (waarden blijven als hidden inputs meegepost).
+- Bank: statusfilter (Alle/Actief/Standaard/Afgesloten) via het standaard filters-component; "Rekening afgesloten" in de modal zet Geldig tot = vandaag (status afgeleid uit ValidTo <= vandaag, server forceert IsDefault=false).
+- Boekhouding: Octopus-card volle breedte, stappen als kolommen; stap 2/3 `inert` + gedimd zolang het token ontbreekt/verlopen is. Daaronder 2 kolommen: Boekjaren + Veldkoppeling | Verkoop-btw-codes.
+- Lay-out & e-mail: preview-kaart even hoog als de linkerkolom; "Reset naar standaard" = `gl-v2-btn-warning`.

@@ -164,6 +164,13 @@ namespace ServiceCore.Budget
                             KostenRij(k.Omschrijving, k.Bedrag);
                     }
 
+                    if (_resultaat.Grond.Any(f => f.Bedrag != 0))
+                    {
+                        GroepHeader("Grond");
+                        foreach (var k in _resultaat.Grond.Where(f => f.Bedrag != 0))
+                            KostenRij(k.Omschrijving, k.Bedrag);
+                    }
+
                     if (_resultaat.Forfaits.Any(f => f.Bedrag > 0))
                     {
                         GroepHeader("Forfaits");

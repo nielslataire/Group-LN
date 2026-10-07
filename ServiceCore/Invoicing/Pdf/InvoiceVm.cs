@@ -15,6 +15,8 @@ public class InvoiceVm
     public IReadOnlyList<InvoiceLineVm> Lines { get; init; } = Array.Empty<InvoiceLineVm>();
     public IReadOnlyList<VatRateSummaryVm> VatSummary { get; init; } = Array.Empty<VatRateSummaryVm>();
     public IReadOnlyList<string> VatMentions { get; init; } = Array.Empty<string>();
+    /// <summary>Dezelfde factuurvermeldingen per btw-tarief (<c>Vattype.BasePercentage</c> → tekst), voor de gl-v2-layout (BTW-VERMELDING per tarief).</summary>
+    public IReadOnlyDictionary<decimal, string> VatMentionsByRate { get; init; } = new Dictionary<decimal, string>();
     public string? ExtraInfo { get; init; }
     public string? HeaderDescription { get; init; }
     public string? DetailDescription { get; init; }

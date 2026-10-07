@@ -14,8 +14,11 @@
     string Pct(decimal v) => v.ToString("0.##", be);
     string Inv(decimal v) => v.ToString(CultureInfo.InvariantCulture);
     var row = Model;
+    // Lijn van een uitklapbare wijzigingsopdracht (_InvoicingCoGroupV2): ingesprongen, standaard ingeklapt, eigen omschrijving zonder WO-nummer.
+    var childOf = ViewData["ChildOf"] as int?;
+    var isChild = childOf.HasValue;
 }
-<tr class="gl-v2-inv-row @(row.IsBlocked ? "is-blocked" : "")" data-inv-row data-kind="@row.Kind" data-amount="@Inv(row.Amount)">
+<tr class="gl-v2-inv-row @(row.IsBlocked ? "is-blocked" : "") @(isChild ? "is-child is-collapsed" : "")" data-inv-row data-kind="@row.Kind" data-amount="@Inv(row.Amount)" @(isChild ? $"data-inv-child-of={childOf}" : "")>
     <td class="is-check" data-label="">
         @if (row.IsBlocked)
         {
@@ -39,7 +42,7 @@
     </td>
     <td data-label=""><span class="gl-v2-badge @(row.Kind == "Schijf" ? "is-neutral" : row.Kind == "Minwerk" ? "is-attention" : "is-info")">@row.Kind.ToUpperInvariant()</span></td>
     <td class="gl-v2-inv-desc">
-        <span class="gl-v2-inv-desc-title">@row.Description</span>
+        <span class="gl-v2-inv-desc-title">@(isChild ? row.LineDescription ?? row.Description : row.Description)</span>
         @if (!string.IsNullOrWhiteSpace(row.UnitName) || !string.IsNullOrWhiteSpace(row.SubText) || row.IsLastStage)
         {
             <span class="gl-v2-inv-desc-sub">

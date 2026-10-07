@@ -202,7 +202,6 @@ namespace ServiceCore
             }
 
             var huidigeVersie = _uow.BudgetVersies.GetNoTracking()
-                .Include(v => v.BudgetGegevens)
                 .SingleOrDefault(v => v.BudgetMasterId == masterId && v.IsHuidig);
 
             int volgendNummer = _uow.BudgetVersies.GetNoTracking()
@@ -233,130 +232,200 @@ namespace ServiceCore
             _uow.BudgetVersies.Add(nieuweVersie);
             _uow.SaveChanges();
 
-            // Deep copy BudgetOppervlaktes
-            var bronOppervlaktes = huidigeVersie != null
-                ? _uow.BudgetOppervlaktes.GetNoTracking()
-                    .Where(o => o.BudgetVersieId == huidigeVersie.Id)
-                    .OrderBy(o => o.SortOrder)
-                    .ToList()
-                : new List<BudgetOppervlaktes>();
-
-            foreach (var src in bronOppervlaktes)
+            if (huidigeVersie != null)
             {
-                _uow.BudgetOppervlaktes.Add(new BudgetOppervlaktes
+                // Volledige kopie van de huidige versie — dezelfde helper als "Herstel als nieuwe versie" (okt. 2026:
+                // voordien gingen activiteitenlijnen, parameters en verkooplijnen hier verloren).
+                var kopie = KopieerVersieInhoud(huidigeVersie.Id, nieuweVersie.Id);
+                if (!kopie.Success) return kopie;
+            }
+            else
+            {
+                // Eerste versie van een master: lege gegevensrij met de historische startwaarden.
+                _uow.BudgetGegevens.Add(new BudgetGegevens
                 {
-                    BudgetVersieId          = nieuweVersie.Id,
-                    EenheidNaam             = src.EenheidNaam,
-                    UnitGroupTypeId         = src.UnitGroupTypeId,
-                    UnitTypeId              = src.UnitTypeId,
-                    SortOrder               = src.SortOrder,
-                    BewoonbareOpp           = src.BewoonbareOpp,
-                    Tuin                    = src.Tuin,
-                    TerrasPrefab            = src.TerrasPrefab,
-                    TerrasGelijkvloers      = src.TerrasGelijkvloers,
-                    Dakterras               = src.Dakterras,
-                    GaragesParkingsBovenGr  = src.GaragesParkingsBovenGr,
-                    GarBergOndergronds      = src.GarBergOndergronds,
-                    BergGelijkvloers        = src.BergGelijkvloers,
-                    Carports                = src.Carports,
-                    DoorritGVL              = src.DoorritGVL,
-                    Zolder                  = src.Zolder,
-                    GemeenschappelijkeDelen = src.GemeenschappelijkeDelen,
-                    Wegenis                 = src.Wegenis,
-                    Grondopp                = src.Grondopp
+                    BudgetVersieId            = nieuweVersie.Id,
+                    GevelMetselwerkPrijsPerM2 = 165m,
+                    GipswerkenPrijsPerM2      = 2759m
                 });
+                _uow.SaveChanges();
             }
-
-            // Deep copy van gegevens van de huidige versie
-            var gegevensEntity = new BudgetGegevens
-            {
-                BudgetVersieId              = nieuweVersie.Id,
-                GevelMetselwerkPrijsPerM2   = 165m,
-                GipswerkenPrijsPerM2        = 2759m
-            };
-
-            if (huidigeVersie?.BudgetGegevens != null)
-            {
-                var src = huidigeVersie.BudgetGegevens;
-                gegevensEntity.Naam                             = src.Naam;
-                gegevensEntity.Adres                            = src.Adres;
-                gegevensEntity.BouwheerCompanyId                = src.BouwheerCompanyId;
-                gegevensEntity.AantalLiften                     = src.AantalLiften;
-                gegevensEntity.AantalBinnentrappen              = src.AantalBinnentrappen;
-                gegevensEntity.AantalBovengrondseVerdiepingen   = src.AantalBovengrondseVerdiepingen;
-                gegevensEntity.AantalVerdiepingenOndergronds    = src.AantalVerdiepingenOndergronds;
-                gegevensEntity.TypePoorten                      = src.TypePoorten;
-                gegevensEntity.TypeDak                          = src.TypeDak;
-                gegevensEntity.GevelLeienSidings                = src.GevelLeienSidings;
-                gegevensEntity.OppFunderingen                   = src.OppFunderingen;
-                gegevensEntity.M3Grondwerk                      = src.M3Grondwerk;
-                gegevensEntity.LmBerlinerwanden                 = src.LmBerlinerwanden;
-                gegevensEntity.LmSecanpalen                     = src.LmSecanpalen;
-                gegevensEntity.NacalcBasisprijs                 = src.NacalcBasisprijs;
-                gegevensEntity.NacalcBasisJaar                  = src.NacalcBasisJaar;
-                gegevensEntity.SIndexStart                      = src.SIndexStart;
-                gegevensEntity.SIndexHuidig                     = src.SIndexHuidig;
-                gegevensEntity.IIndexStart                      = src.IIndexStart;
-                gegevensEntity.IIndexHuidig                     = src.IIndexHuidig;
-                gegevensEntity.GevelMetselwerkPrijsPerM2        = src.GevelMetselwerkPrijsPerM2;
-                gegevensEntity.GipswerkenPrijsPerM2             = src.GipswerkenPrijsPerM2;
-                gegevensEntity.TerrasPrijsPerM2                 = src.TerrasPrijsPerM2;
-            }
-
-            _uow.BudgetGegevens.Add(gegevensEntity);
-            _uow.SaveChanges();
-
-            // Deep copy BudgetGevelElementen
-            var bronGevel = huidigeVersie != null
-                ? _uow.BudgetGevelElementen.GetNoTracking()
-                    .Where(g => g.BudgetVersieId == huidigeVersie.Id)
-                    .OrderBy(g => g.ElementType).ThenBy(g => g.SortOrder)
-                    .ToList()
-                : new List<BudgetGevelElementen>();
-
-            foreach (var src in bronGevel)
-            {
-                _uow.BudgetGevelElementen.Add(new BudgetGevelElementen
-                {
-                    BudgetVersieId = nieuweVersie.Id,
-                    ElementType    = src.ElementType,
-                    EenheidNaam    = src.EenheidNaam,
-                    Beschrijving   = src.Beschrijving,
-                    Aantal         = src.Aantal,
-                    Breedte        = src.Breedte,
-                    Hoogte         = src.Hoogte,
-                    Lengte         = src.Lengte,
-                    SortOrder      = src.SortOrder
-                });
-            }
-
-            // Deep copy BudgetSanitair
-            var bronSanitair = huidigeVersie != null
-                ? _uow.BudgetSanitair.GetNoTracking()
-                    .Where(s => s.BudgetVersieId == huidigeVersie.Id)
-                    .OrderBy(s => s.SortOrder)
-                    .ToList()
-                : new List<BudgetSanitair>();
-
-            foreach (var src in bronSanitair)
-            {
-                _uow.BudgetSanitair.Add(new BudgetSanitair
-                {
-                    BudgetVersieId      = nieuweVersie.Id,
-                    EenheidNaam         = src.EenheidNaam,
-                    UnitTypeId          = src.UnitTypeId,
-                    SortOrder           = src.SortOrder,
-                    Badkamer            = src.Badkamer,
-                    ToiletInBadkamer    = src.ToiletInBadkamer,
-                    AfzonderlijkToilet  = src.AfzonderlijkToilet,
-                    DoucheInBadkamer    = src.DoucheInBadkamer,
-                    Douchekamer         = src.Douchekamer
-                });
-            }
-            _uow.SaveChanges();
 
             response.InsertedId = nieuweVersie.Id;
             response.AddSuccess($"Versie v{volgendNummer} aangemaakt.");
+            return response;
+        }
+
+        /// <summary>Kopieert álle inhoud van een versie naar een bestaande doelversie: gegevens (elk veld), oppervlaktes, sanitair,
+        /// gevel-/dakelementen, activiteitenlijnen (alt.-/nacalc-prijs, correctie), parameters en verkooplijnen. Nieuwe kolommen op een
+        /// van deze tabellen horen hier bij — dit is de enige plaats waar een versie gekopieerd wordt.</summary>
+        public Response KopieerVersieInhoud(int bronVersieId, int doelVersieId)
+        {
+            var response = new Response();
+            if (bronVersieId == doelVersieId)
+            {
+                response.AddError("Bron en doel zijn dezelfde versie.");
+                return response;
+            }
+
+            var g = _uow.BudgetGegevens.GetNoTracking().FirstOrDefault(x => x.BudgetVersieId == bronVersieId);
+            if (g != null && !_uow.BudgetGegevens.GetNoTracking().Any(x => x.BudgetVersieId == doelVersieId))
+            {
+                _uow.BudgetGegevens.Add(new BudgetGegevens
+                {
+                    BudgetVersieId                 = doelVersieId,
+                    Naam                           = g.Naam,
+                    Adres                          = g.Adres,
+                    BouwheerCompanyId              = g.BouwheerCompanyId,
+                    AantalLiften                   = g.AantalLiften,
+                    AantalBinnentrappen            = g.AantalBinnentrappen,
+                    AantalBovengrondseVerdiepingen = g.AantalBovengrondseVerdiepingen,
+                    AantalVerdiepingenOndergronds  = g.AantalVerdiepingenOndergronds,
+                    TypePoorten                    = g.TypePoorten,
+                    TypeDak                        = g.TypeDak,
+                    GevelLeienSidings              = g.GevelLeienSidings,
+                    OppFunderingen                 = g.OppFunderingen,
+                    M3Grondwerk                    = g.M3Grondwerk,
+                    LmBerlinerwanden               = g.LmBerlinerwanden,
+                    LmSecanpalen                   = g.LmSecanpalen,
+                    M3Onderschoeiingen             = g.M3Onderschoeiingen,
+                    AantalVeluxen                  = g.AantalVeluxen,
+                    AantalTrapzalen                = g.AantalTrapzalen,
+                    AantalToegangspoorten          = g.AantalToegangspoorten,
+                    AantalAanTeBouwenBuren         = g.AantalAanTeBouwenBuren,
+                    NacalcBasisprijs               = g.NacalcBasisprijs,
+                    NacalcBasisJaar                = g.NacalcBasisJaar,
+                    SIndexStart                    = g.SIndexStart,
+                    SIndexHuidig                   = g.SIndexHuidig,
+                    IIndexStart                    = g.IIndexStart,
+                    IIndexHuidig                   = g.IIndexHuidig,
+                    GevelMetselwerkPrijsPerM2      = g.GevelMetselwerkPrijsPerM2,
+                    GipswerkenPrijsPerM2           = g.GipswerkenPrijsPerM2,
+                    TerrasPrijsPerM2               = g.TerrasPrijsPerM2
+                });
+            }
+
+            foreach (var o in _uow.BudgetOppervlaktes.GetNoTracking().Where(x => x.BudgetVersieId == bronVersieId).OrderBy(x => x.SortOrder).ToList())
+                _uow.BudgetOppervlaktes.Add(new BudgetOppervlaktes
+                {
+                    BudgetVersieId          = doelVersieId,
+                    EenheidNaam             = o.EenheidNaam,
+                    UnitGroupTypeId         = o.UnitGroupTypeId,
+                    UnitTypeId              = o.UnitTypeId,
+                    SortOrder               = o.SortOrder,
+                    BewoonbareOpp           = o.BewoonbareOpp,
+                    Tuin                    = o.Tuin,
+                    TerrasPrefab            = o.TerrasPrefab,
+                    TerrasGelijkvloers      = o.TerrasGelijkvloers,
+                    Dakterras               = o.Dakterras,
+                    GaragesParkingsBovenGr  = o.GaragesParkingsBovenGr,
+                    GarBergOndergronds      = o.GarBergOndergronds,
+                    BergGelijkvloers        = o.BergGelijkvloers,
+                    Carports                = o.Carports,
+                    DoorritGVL              = o.DoorritGVL,
+                    Zolder                  = o.Zolder,
+                    GemeenschappelijkeDelen = o.GemeenschappelijkeDelen,
+                    Wegenis                 = o.Wegenis,
+                    Grondopp                = o.Grondopp
+                });
+
+            foreach (var s in _uow.BudgetSanitair.GetNoTracking().Where(x => x.BudgetVersieId == bronVersieId).OrderBy(x => x.SortOrder).ToList())
+                _uow.BudgetSanitair.Add(new BudgetSanitair
+                {
+                    BudgetVersieId     = doelVersieId,
+                    EenheidNaam        = s.EenheidNaam,
+                    UnitTypeId         = s.UnitTypeId,
+                    SortOrder          = s.SortOrder,
+                    Badkamer           = s.Badkamer,
+                    ToiletInBadkamer   = s.ToiletInBadkamer,
+                    AfzonderlijkToilet = s.AfzonderlijkToilet,
+                    DoucheInBadkamer   = s.DoucheInBadkamer,
+                    Douchekamer        = s.Douchekamer
+                });
+
+            foreach (var e in _uow.BudgetGevelElementen.GetNoTracking().Where(x => x.BudgetVersieId == bronVersieId).OrderBy(x => x.ElementType).ThenBy(x => x.SortOrder).ToList())
+                _uow.BudgetGevelElementen.Add(new BudgetGevelElementen
+                {
+                    BudgetVersieId = doelVersieId,
+                    ElementType    = e.ElementType,
+                    EenheidNaam    = e.EenheidNaam,
+                    Beschrijving   = e.Beschrijving,
+                    Aantal         = e.Aantal,
+                    Breedte        = e.Breedte,
+                    Hoogte         = e.Hoogte,
+                    Lengte         = e.Lengte,
+                    SortOrder      = e.SortOrder
+                });
+
+            foreach (var l in _uow.BudgetActivityLijnen.GetNoTracking().Where(x => x.BudgetVersieId == bronVersieId).ToList())
+                _uow.BudgetActivityLijnen.Add(new BudgetActivityLijnen
+                {
+                    BudgetVersieId              = doelVersieId,
+                    ActivityId                  = l.ActivityId,
+                    AlternatievePrijsPerEenheid = l.AlternatievePrijsPerEenheid,
+                    NacalcPrijsPerEenheid       = l.NacalcPrijsPerEenheid,
+                    Correctiefactor             = l.Correctiefactor,
+                    IsManueel                   = l.IsManueel,
+                    VerhogingsPerc              = l.VerhogingsPerc,
+                    Omschrijving                = l.Omschrijving
+                });
+
+            var p = _uow.BudgetParams.GetNoTracking().FirstOrDefault(x => x.BudgetVersieId == bronVersieId);
+            if (p != null && !_uow.BudgetParams.GetNoTracking().Any(x => x.BudgetVersieId == doelVersieId))
+                _uow.BudgetParams.Add(new BudgetParams
+                {
+                    BudgetVersieId            = doelVersieId,
+                    ProjectcoordinatiePerc    = p.ProjectcoordinatiePerc,
+                    ArchitectPerc             = p.ArchitectPerc,
+                    VeiligheidscoordEPBPerc   = p.VeiligheidscoordEPBPerc,
+                    VentVerslaggeverForfait   = p.VentVerslaggeverForfait,
+                    StudieIRPerc              = p.StudieIRPerc,
+                    OpmetingSonderingForfait  = p.OpmetingSonderingForfait,
+                    DecennaleGeslRuwbouwPerc  = p.DecennaleGeslRuwbouwPerc,
+                    ABRPlaatsbeschrPerc       = p.ABRPlaatsbeschrPerc,
+                    InfrastructuurForfait     = p.InfrastructuurForfait,
+                    LiftPrijsPerStuk          = p.LiftPrijsPerStuk,
+                    WetBreynePerc             = p.WetBreynePerc,
+                    WetBreyneMaanden          = p.WetBreyneMaanden,
+                    StraightloanGebouwPerc    = p.StraightloanGebouwPerc,
+                    StraightloanGebouwMaanden = p.StraightloanGebouwMaanden,
+                    StraightloanGrondPerc     = p.StraightloanGrondPerc,
+                    StraightloanGrondMaanden  = p.StraightloanGrondMaanden,
+                    AankoopprijsGrond         = p.AankoopprijsGrond,
+                    OnvoorzienPerc            = p.OnvoorzienPerc,
+                    PubliciteitForfait        = p.PubliciteitForfait,
+                    DoelMargePerc             = p.DoelMargePerc,
+                    GrondMargePerc            = p.GrondMargePerc
+                });
+
+            foreach (var v in _uow.BudgetVerkoopLijn.GetNoTracking().Where(x => x.BudgetVersieId == bronVersieId).OrderBy(x => x.SortOrder).ToList())
+                _uow.BudgetVerkoopLijn.Add(new BudgetVerkoopLijn
+                {
+                    BudgetVersieId = doelVersieId,
+                    EenheidNaam    = v.EenheidNaam,
+                    UnitId         = v.UnitId,
+                    CodeBouw       = v.CodeBouw,
+                    CodeGrond      = v.CodeGrond,
+                    OppTuin        = v.OppTuin,
+                    OppTerras      = v.OppTerras,
+                    OppDakterras   = v.OppDakterras,
+                    Grondwaarde    = v.Grondwaarde,
+                    Bouwwaarde     = v.Bouwwaarde,
+                    Vraagprijs     = v.Vraagprijs,
+                    IsRuil         = v.IsRuil,
+                    ExtraForfait   = v.ExtraForfait,
+                    BouwPrijsPerM2  = v.BouwPrijsPerM2,   // migratie 075
+                    GrondPrijsPerM2 = v.GrondPrijsPerM2,
+                    PrijsBron       = v.PrijsBron,
+                    SortOrder      = v.SortOrder
+                });
+
+            // Nacalc: dezelfde referentieprojecten vergelijken (migratie 076)
+            foreach (var r in _uow.BudgetVersieNacalcReferenties.GetNoTracking().Where(x => x.BudgetVersieId == bronVersieId).ToList())
+                _uow.BudgetVersieNacalcReferenties.Add(new BudgetVersieNacalcReferentie { BudgetVersieId = doelVersieId, ReferentieProjectId = r.ReferentieProjectId });
+
+            _uow.SaveChanges();
+            response.AddSuccess("Versie gekopieerd.");
             return response;
         }
 

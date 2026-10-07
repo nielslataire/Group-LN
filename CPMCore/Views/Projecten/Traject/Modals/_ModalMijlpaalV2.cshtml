@@ -1,0 +1,163 @@
+@model CPMCore.Models.Traject.MijlpaalModalV2Vm
+@*
+    gl-v2 — Mijlpaal toevoegen/bewerken (design-handoff 30e): één formulier voor beide. Wordt via AJAX in het lichaam van
+    #gl-v2-tr-modal geladen (ProjectTrajectController.MijlpaalModal); de koptitel komt uit data-title/data-sub op de root.
+    Wat er verandert t.o.v. de legacy Modals/_ModalMijlpaalUpsert (zie "WAT VERANDERT TEGENOVER NU" in het mockup):
+      · "Volgorde" (een getal) → "Plaats in de fase" (Als eerste / Na … / Als laatste).
+      · Status = vijf knoppen (de code kent Bezig en Geblokkeerd ook), "Bereikt op" gaat pas open bij Bereikt.
+      · "Eenheid" → "Geldt voor": projectniveau · per eenheid (één mijlpaal met een eigen datum per eenheid) · één eenheid.
+        Bij bewerken staat dit vast (read-only chip) — een mijlpaal wisselt niet van eenheid.
+      · "Of relatief": N dagen na een andere mijlpaal (migratie 074).
+*@
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@{
+    var m = Model.Bestaand;
+    var isNieuw = Model.IsNieuw;
+    var faseId = Model.FaseId ?? Model.ActieveFaseId ?? Model.Fases.FirstOrDefault()?.Id;
+    var fase = Model.Fases.FirstOrDefault(f => f.Id == faseId);
+    var status = m?.Status ?? (int)MijlpaalStatus.Open;
+    var streef = m == null ? (DateOnly?)null : (m.Doeldatum ?? m.DoeldatumBerekend);
+    string Iso(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+    string Disp(DateOnly? d) => d?.ToString("dd/MM/yyyy") ?? "";
+    var geldt = !isNieuw ? (m!.UnitId == null ? "project" : "unit") : (Model.UnitId != null ? "unit" : "project");
+    var unitCount = Model.Units.Count;
+    var types = Enum.GetValues(typeof(MijlpaalType)).Cast<MijlpaalType>().Select(x => new GlV2SelectItem { Value = ((int)x).ToString(), Text = x.GetDisplayName() }).ToList();
+    var rollen = Enum.GetValues(typeof(InterneRol)).Cast<InterneRol>().Where(r => r != InterneRol.Onbekend).Select(x => new GlV2SelectItem { Value = ((int)x).ToString(), Text = x.GetDisplayName() }).ToList();
+    var ankers = Model.Mijlpalen.Where(x => x.UnitId == null && x.Id != m?.Id)
+        .Select(x => new { id = x.Id, faseId = x.ProjecttrajectFaseId ?? 0, naam = x.Naam, volgorde = x.Volgorde }).ToList();
+    var mpJson = System.Text.Json.JsonSerializer.Serialize(Model.Mijlpalen.Where(x => x.UnitId == m?.UnitId || (m == null && x.UnitId == null))
+        .Where(x => x.Id != m?.Id).OrderBy(x => x.Volgorde).Select(x => new { id = x.Id, faseId = x.ProjecttrajectFaseId ?? 0, naam = x.Naam }));
+    var ankerItems = ankers.Select(a => new GlV2SelectItem { Value = a.id.ToString(), Text = a.naam }).ToList();
+    var vorige = ankers.Where(a => a.faseId == (faseId ?? 0)).OrderBy(a => a.volgorde).LastOrDefault();
+}
+<div id="gl-v2-tr-form-root"
+     data-title="@(isNieuw ? "Mijlpaal toevoegen" : "Mijlpaal bewerken")"
+     data-sub="@(isNieuw ? (fase != null ? "In de fase " + fase.Naam + " · zelfde formulier voor bewerken" : "Zelfde formulier voor bewerken") : (fase != null ? "In de fase " + fase.Naam : ""))"
+     data-mijlpalen='@Html.Raw(mpJson)'
+     data-nieuw="@(isNieuw ? "1" : "0")">
+    @if (!isNieuw)
+    {
+        <input type="hidden" name="Id" value="@m!.Id" />
+        <input type="hidden" name="UnitId" value="@m.UnitId" />
+        <input type="hidden" name="Code" value="@m.Code" />
+        <input type="hidden" name="Volgorde" value="@m.Volgorde" />
+    }
+    else
+    {
+        <input type="hidden" name="Volgorde" value="0" />
+    }
+
+    <section class="gl-v2-tr-fsec">
+        <h3 class="gl-v2-tr-fsec-title">MIJLPAAL</h3>
+        <div class="gl-v2-tr-fgrid">
+            <div class="gl-v2-field gl-v2-tr-f-full">
+                <label class="gl-v2-field-label" for="gl-v2-tr-f-naam">Naam <span class="gl-v2-tr-req">*</span></label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-tr-f-naam" name="Naam" maxlength="200" value="@m?.Naam" required autocomplete="off" /></div>
+                <span class="gl-v2-field-help gl-v2-tr-err" data-for="Naam" hidden>Geef de mijlpaal een naam.</span>
+            </div>
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "MijlpaalType", Id = "gl-v2-tr-f-type", Label = "Type", Value = (m?.MijlpaalType ?? 0).ToString(), Items = types })
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "ProjecttrajectFaseId", Id = "gl-v2-tr-f-fase", Label = "Fase", Value = faseId?.ToString(),
+                Items = Model.Fases.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Naam + (f.Id == Model.ActieveFaseId ? " (actief)" : "") }).ToList()
+            })
+            <div class="gl-v2-tr-f-full gl-v2-tr-plaats">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "PlaatsInFase", Id = "gl-v2-tr-f-plaats", Label = "Plaats in de fase", Value = isNieuw ? "laatste" : "",
+                    Items = new List<GlV2SelectItem> { new() { Value = isNieuw ? "laatste" : "", Text = isNieuw ? "Als laatste" : "Huidige plaats houden" } },
+                    Help = "Vervangt het veld \"Volgorde\"."
+                })
+            </div>
+            <div class="gl-v2-field gl-v2-tr-f-full">
+                <span class="gl-v2-field-label">Geldt voor</span>
+                @if (isNieuw)
+                {
+                    <div class="gl-v2-tr-radioseg" id="gl-v2-tr-f-geldt" role="radiogroup" aria-label="Geldt voor">
+                        <label><input type="radio" name="geldtVoor" value="project" @(geldt == "project" ? "checked" : "")><span>Projectniveau</span></label>
+                        <label><input type="radio" name="geldtVoor" value="alle" @(unitCount == 0 ? "disabled" : "")><span>Per eenheid (@unitCount)</span></label>
+                        <label><input type="radio" name="geldtVoor" value="unit" @(geldt == "unit" ? "checked" : "") @(unitCount == 0 ? "disabled" : "")><span>Eén eenheid…</span></label>
+                    </div>
+                    <div class="gl-v2-tr-f-unit" id="gl-v2-tr-f-unitwrap" @(geldt == "unit" ? "" : "hidden")>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "UnitId", Id = "gl-v2-tr-f-unit", Bare = true, Value = Model.UnitId?.ToString(), Placeholder = "Kies een eenheid",
+                            Items = Model.Units.Select(u => new GlV2SelectItem { Value = u.Id.ToString(), Text = u.Name }).ToList()
+                        })
+                    </div>
+                    <span class="gl-v2-field-help" id="gl-v2-tr-f-geldt-help">Per eenheid maakt één mijlpaal met een eigen datum per eenheid (zie Per eenheid).</span>
+                }
+                else
+                {
+                    <div class="gl-v2-tr-geldt-fixed"><span class="gl-v2-badge">@(m!.UnitId == null ? "Projectniveau" : (m.Unit?.Name ?? "Eén eenheid"))</span><span class="gl-v2-field-help">Een mijlpaal wisselt niet van eenheid — verwijder en maak een nieuwe aan als dat nodig is.</span></div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="gl-v2-tr-fsec">
+        <h3 class="gl-v2-tr-fsec-title">PLANNING</h3>
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label">Status</span>
+            <div class="gl-v2-tr-radioseg" id="gl-v2-tr-f-status" role="radiogroup" aria-label="Status">
+                <label><input type="radio" name="Status" value="0" @(status == 0 ? "checked" : "")><span>Nog te doen</span></label>
+                <label><input type="radio" name="Status" value="1" @(status == 1 ? "checked" : "")><span>Bezig</span></label>
+                <label><input type="radio" name="Status" value="2" @(status == 2 ? "checked" : "")><span>Bereikt</span></label>
+                <label><input type="radio" name="Status" value="4" @(status == 4 ? "checked" : "")><span>Geblokkeerd</span></label>
+                <label><input type="radio" name="Status" value="3" @(status == 3 ? "checked" : "")><span>Niet van toepassing</span></label>
+            </div>
+        </div>
+        <div class="gl-v2-tr-fgrid">
+            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Doeldatum", Id = "gl-v2-tr-f-streef", Label = "Streefdatum", IsoValue = Iso(streef), DisplayValue = Disp(streef) })
+            <div class="gl-v2-tr-f-werk" id="gl-v2-tr-f-werkwrap">
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "WerkelijkeDatum", Id = "gl-v2-tr-f-werk", Label = "Bereikt op", IsoValue = Iso(m?.WerkelijkeDatum), DisplayValue = Disp(m?.WerkelijkeDatum) })
+                <span class="gl-v2-field-help" id="gl-v2-tr-f-werk-help">Pas bij "Bereikt".</span>
+            </div>
+            <div class="gl-v2-field gl-v2-tr-f-full gl-v2-tr-rel">
+                <span class="gl-v2-field-label">Of relatief</span>
+                <div class="gl-v2-tr-rel-row">
+                    <span class="gl-v2-tr-rel-plus">+</span>
+                    <div class="gl-v2-field-box gl-v2-tr-rel-num"><input type="number" class="gl-v2-field-input" id="gl-v2-tr-f-offset" name="RelatiefOffsetDagen" min="-3650" max="3650" value="@m?.RelatiefOffsetDagen" aria-label="Aantal dagen" /></div>
+                    <span class="gl-v2-tr-rel-txt">d. na</span>
+                    <div class="gl-v2-tr-rel-anker" data-vorige="@(vorige?.id)">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "RelatiefAnkerMijlpaalId", Id = "gl-v2-tr-f-anker", Bare = true, Value = m?.RelatiefAnkerMijlpaalId?.ToString() ?? "", EmptyText = "— vaste streefdatum —",
+                            Items = ankerItems
+                        })
+                    </div>
+                </div>
+                <span class="gl-v2-field-help">Kies een mijlpaal om de streefdatum automatisch te laten meeschuiven; leeg laten voor een vaste datum.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="gl-v2-tr-fsec">
+        <h3 class="gl-v2-tr-fsec-title">VERANTWOORDELIJKHEID</h3>
+        <div class="gl-v2-tr-fgrid">
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "VerantwoordelijkeRol", Id = "gl-v2-tr-f-rol", Label = "Verantwoordelijke rol", Value = m?.VerantwoordelijkeRol?.ToString() ?? "", EmptyText = "— geen —", Items = rollen
+            })
+            <label class="gl-v2-toggle-row gl-v2-tr-f-verplicht" for="gl-v2-tr-f-verplicht">
+                <input type="checkbox" id="gl-v2-tr-f-verplicht" name="IsVerplicht" class="gl-v2-toggle-switch" value="true" @((m?.IsVerplicht ?? true) ? "checked" : "") />
+                <input type="hidden" name="IsVerplicht" value="false" />
+                <span class="gl-v2-toggle-text">
+                    <span class="gl-v2-toggle-label">Verplichte mijlpaal</span>
+                    <span class="gl-v2-toggle-hint">fase kan niet afgerond worden zonder</span>
+                </span>
+            </label>
+        </div>
+    </section>
+
+    <section class="gl-v2-tr-fsec">
+        <h3 class="gl-v2-tr-fsec-title">OPMERKING</h3>
+        <div class="gl-v2-field">
+            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" name="Opmerking" rows="3" maxlength="2000" aria-label="Opmerking">@m?.Opmerking</textarea></div>
+            <span class="gl-v2-field-help">Intern — niet zichtbaar in het klantenportaal.</span>
+        </div>
+    </section>
+</div>

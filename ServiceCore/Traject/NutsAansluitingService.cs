@@ -70,14 +70,14 @@ public class NutsAansluitingService : INutsAansluitingService
         });
         await _db.SaveChangesAsync();
 
-        foreach (var stap in NutsChecklistDefaults.Stappen)
+        foreach (var (code, naam, volgorde) in ChecklistVoorType(dto.NutsType))
         {
             _db.ProjectDossierSubstap.Add(new ProjectDossierSubstap
             {
                 ProjectDossierId = dossier.Id,
-                Code = stap.Code,
-                Naam = stap.Naam,
-                Volgorde = stap.Volgorde,
+                Code = code,
+                Naam = naam,
+                Volgorde = volgorde,
                 Status = (int)DossierSubstapStatus.NietGestart,
                 CreatedDate = DateTime.UtcNow
             });
@@ -108,9 +108,12 @@ public class NutsAansluitingService : INutsAansluitingService
                 continue;
             }
 
+            // "{eenheid}" in de titel (design 31e: "Gas — {eenheid}") wordt de eenheidsnaam; zonder token plakken we " — eenheid" erachter.
             var titel = string.IsNullOrWhiteSpace(dto.TitelPrefix)
                 ? $"{((NutsType)dto.NutsType).GetDisplayName()} — {unit.Name}"
-                : $"{dto.TitelPrefix} — {unit.Name}";
+                : dto.TitelPrefix.Contains("{eenheid}", StringComparison.OrdinalIgnoreCase)
+                    ? dto.TitelPrefix.Replace("{eenheid}", unit.Name, StringComparison.OrdinalIgnoreCase)
+                    : $"{dto.TitelPrefix} — {unit.Name}";
 
             var (ean, meternummer) = PrefillMeterdata(dto.NutsType, unit);
 
@@ -124,6 +127,7 @@ public class NutsAansluitingService : INutsAansluitingService
                 // Create() spiegelt AanvraagDatum vanuit AanvraagVerstuurdOp (zie toelichting
                 // daar) — dto.AanvraagDatum hier zou anders stil genegeerd worden.
                 AanvraagVerstuurdOp = dto.AanvraagDatum,
+                VerwachteOfferteDatum = dto.VerwachteOfferteDatum,
                 VerwachteAfhandelingDatum = dto.VerwachteAfhandelingDatum,
                 Omschrijving = dto.Omschrijving,
                 NutsType = dto.NutsType,
@@ -137,6 +141,33 @@ public class NutsAansluitingService : INutsAansluitingService
         }
 
         return result;
+    }
+
+    /// <summary>De opvolgstappen van een nieuw nutsdossier: de vijf werkstroomdatums (NutsChecklistDefaults, codes blijven
+    /// gelijk voor trajectbindingen) plus de checklist "Keuring &amp; overdracht" van design 31d, met namen naar het type.
+    /// De codes GEKEURD en OVERGEDRAGEN blijven bestaan (bestaande bindingen/sjablonen verwijzen ernaar) maar krijgen
+    /// de namen uit het ontwerp; METERSTAND en EAN_DOORGEGEVEN zijn nieuw.</summary>
+    internal static List<(string Code, string Naam, int Volgorde)> ChecklistVoorType(int nutsType)
+    {
+        var lijst = new List<(string, string, int)>();
+        foreach (var s in NutsChecklistDefaults.Stappen)
+        {
+            var naam = s.Naam;
+            if (string.Equals(s.Code, "GEKEURD", StringComparison.OrdinalIgnoreCase))
+                naam = (NutsType)nutsType switch
+                {
+                    NutsType.Elektriciteit => "AREI-keuring elektriciteit",
+                    NutsType.Gas => "Keuring gasinstallatie",
+                    NutsType.Water => "Keuring waterinstallatie",
+                    _ => "Keuring"
+                };
+            else if (string.Equals(s.Code, "OVERGEDRAGEN", StringComparison.OrdinalIgnoreCase))
+                naam = "Overdrachtsdocument getekend";
+            lijst.Add((s.Code, naam, s.Volgorde));
+        }
+        lijst.Add(("METERSTAND", "Meterstand bij overdracht", 62));
+        lijst.Add(("EAN_DOORGEGEVEN", (NutsType)nutsType == NutsType.Water ? "Meternummer doorgegeven aan koper" : "EAN doorgegeven aan koper", 64));
+        return lijst.OrderBy(x => x.Item3).ToList();
     }
 
     private static (string? Ean, string? Meternummer) PrefillMeterdata(int nutsType, Units unit) => (NutsType)nutsType switch

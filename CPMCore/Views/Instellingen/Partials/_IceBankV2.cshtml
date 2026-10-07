@@ -1,0 +1,103 @@
+@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Bedrijf bewerken, tab "Bankrekeningen" (design-handoff 24c): "Eén rekening is standaard; projectrekeningen worden gekozen op factuur
+    of project." Zoeken op naam/IBAN, "+ Nieuwe rekening", per rij Bewerk + een ···-menu ("Maak standaard" en "Verwijder" — geen drie iconen per
+    rij meer). Nieuw/bewerken = modal (#gl-v2-ice-bank-modal) die naar de bestaande BankAccountCreate/-Edit post; verwijderen/standaard maken
+    gaan via de bevestigingsmodal naar BankAccountDelete/-SetDefault. Een rekening die op een project of factuur hangt kan niet verwijderd
+    worden (de server vangt dat op en meldt het).
+*@
+@{
+    var bank = (IReadOnlyList<BOCore.IssuerBankAccountBO>?)ViewBag.BankAccounts ?? new List<BOCore.IssuerBankAccountBO>();
+    string Iban(string? v) { var s = (v ?? "").Replace(" ", ""); return string.Join(" ", Enumerable.Range(0, (s.Length + 3) / 4).Select(i => s.Substring(i * 4, Math.Min(4, s.Length - i * 4)))); }
+}
+<section class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-bank" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Bankrekeningen</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">Eén rekening is standaard; projectrekeningen worden gekozen op factuur of project.</span>
+    </div>
+    <div class="gl-v2-ice-bar gl-v2-filters-card">
+        <div class="gl-v2-filters-row">
+            <div class="gl-v2-field gl-v2-toolbar-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="ice-bank-search" placeholder="Zoek naam of IBAN" autocomplete="off" aria-label="Zoek naam of IBAN">
+                </div>
+            </div>
+            <button type="button" class="gl-v2-filters-toggle" id="ice-bank-filters-toggle" aria-expanded="false" aria-controls="ice-bank-filters-panel">
+                <i class="ph ph-funnel" aria-hidden="true"></i><span>Filters</span><span class="gl-v2-filters-toggle-count" id="ice-bank-filters-count" hidden>0</span>
+            </button>
+            @if (Model.Id > 0)
+            {
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary js-ice-bank-new"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe rekening</button>
+            }
+        </div>
+        <div class="gl-v2-filters-panel" id="ice-bank-filters-panel" hidden>
+            <div class="gl-v2-filters-grid">
+                <div class="gl-v2-filters-field" data-ice-skip>
+                    <span class="gl-v2-filters-field-label">Status</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "ice-bank-status", Id = "ice-bank-status", Bare = true, Value = "", EmptyText = "Alle",
+                        Items = new List<GlV2SelectItem> { new() { Value = "actief", Text = "Actief" }, new() { Value = "standaard", Text = "Standaard" }, new() { Value = "afgesloten", Text = "Afgesloten" } }
+                    })
+                </div>
+            </div>
+            <div class="gl-v2-filters-chips">
+                <div class="gl-v2-filters-chip-list" id="ice-bank-chips"></div>
+                <button type="button" class="gl-v2-filters-clear" id="ice-bank-filters-clear" hidden>Filters wissen</button>
+            </div>
+        </div>
+    </div>
+    @if (bank.Count == 0)
+    {
+        <p class="gl-v2-ice-empty">Nog geen bankrekeningen. Voeg er een toe — de standaardrekening komt op elke factuur.</p>
+    }
+    else
+    {
+        <div class="gl-v2-ice-tablewrap">
+            <table class="gl-v2-ice-table" id="ice-bank-table">
+                <thead><tr><th>Omschrijving</th><th>IBAN</th><th>BIC</th><th>Gebruik</th><th>Status</th><th class="is-right">Acties</th></tr></thead>
+                <tbody>
+                    @foreach (var x in bank)
+                    {
+                        var menuId = "ice-bank-menu-" + x.Id;
+                        var geldig = (x.ValidFrom.HasValue || x.ValidTo.HasValue)
+                            ? (x.ValidFrom?.ToString("dd/MM/yyyy") ?? "…") + " – " + (x.ValidTo?.ToString("dd/MM/yyyy") ?? "…")
+                            : null;
+                        var verlopen = x.ValidTo.HasValue && x.ValidTo.Value <= DateOnly.FromDateTime(DateTime.Today);
+                        var status = verlopen ? "afgesloten" : x.IsDefault ? "standaard" : "actief";
+                        <tr data-status="@status" data-search="@((x.DisplayName + " " + x.Iban + " " + x.Bic).ToLowerInvariant())">
+                            <td><b>@(string.IsNullOrWhiteSpace(x.DisplayName) ? "—" : x.DisplayName)</b></td>
+                            <td class="gl-v2-ice-mono">@Iban(x.Iban)</td>
+                            <td class="gl-v2-ice-mono">@(string.IsNullOrWhiteSpace(x.Bic) ? "—" : x.Bic)</td>
+                            <td>@(verlopen ? "Niet meer in gebruik" : x.IsDefault ? "Standaard op alle facturen" : "Projectrekening")@if (geldig != null) { <small class="gl-v2-ice-sub">geldig @geldig</small> }</td>
+                            <td><span class="gl-v2-badge @(verlopen ? "is-neutral" : x.IsDefault ? "is-positive" : "is-info")">@(verlopen ? "AFGESLOTEN" : x.IsDefault ? "STANDAARD" : "ACTIEF")</span></td>
+                            <td class="is-right gl-v2-ice-actions">
+                                <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-bank-edit" data-id="@x.Id" data-iban="@x.Iban" data-bic="@x.Bic" data-name="@x.DisplayName"
+                                        data-default="@(x.IsDefault ? "1" : "0")" data-from="@x.ValidFrom?.ToString("yyyy-MM-dd")" data-to="@x.ValidTo?.ToString("yyyy-MM-dd")">Bewerk</button>
+                                <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @(x.DisplayName ?? x.Iban)"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                                <div class="gl-v2-menu" id="@menuId">
+                                    @if (!x.IsDefault)
+                                    {
+                                        <button type="button" class="gl-v2-menu-item js-ice-post" data-url="@Url.Action("BankAccountSetDefault", "Instellingen", new { issuerId = Model.Id, id = x.Id })">
+                                            <i class="ph ph-check-circle" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Maak standaard</span></span>
+                                        </button>
+                                    }
+                                    <button type="button" class="gl-v2-menu-item is-danger js-ice-delete" data-url="@Url.Action("BankAccountDelete", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
+                                            data-title="Bankrekening verwijderen?" data-desc="@((x.DisplayName ?? x.Iban) + " wordt verwijderd. Een rekening die op een project of factuur hangt, kan niet verwijderd worden.")" data-confirm="Verwijderen">
+                                        <i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    <tr class="gl-v2-ice-none" id="ice-bank-none" hidden><td colspan="6">Geen rekening gevonden.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    }
+    <p class="gl-v2-ice-foot">"Maak standaard" en "Verwijderen" zitten in het ··· menu. Een rekening die op een project gekoppeld is, kan niet verwijderd worden.</p>
+</section>

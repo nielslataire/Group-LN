@@ -75,4 +75,14 @@ public sealed record PublicVerificationView(
     DateTime? CompletedAt,
     int SignerCount,
     string? OriginalSha256,
-    string? FinalSha256);
+    string? FinalSha256,
+    // ── Voor de verificatiepagina (design-handoff 37): titel, project, eenheid, uitgever en de ondertekenaars ──
+    string? Title = null,
+    string? ProjectName = null,
+    string? UnitLabel = null,
+    string? IssuerName = null,
+    string? VerificationMethod = null,
+    IReadOnlyList<PublicVerificationSignerView>? Signers = null);
+
+/// <summary>Een ondertekenaar op de publieke verificatiepagina: naam, hoedanigheid en wanneer (niet: e-mail, IP of ids).</summary>
+public sealed record PublicVerificationSignerView(string DisplayName, string? Capacity, bool Signed, DateTime? SignedAt);

@@ -1,14 +1,22 @@
 @model DALCore.Models.BudgetVerkoopLijn
+@using DALCore.Models
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     var ic = System.Globalization.CultureInfo.InvariantCulture;
-    string FmtDec(decimal? v) => v.HasValue ? v.Value.ToString("F2", ic) : string.Empty;
+    string F2(decimal? v) => v.HasValue ? v.Value.ToString("F2", ic) : string.Empty;
+    string F0(decimal? v) => v.HasValue ? Math.Round(v.Value, 0).ToString("F0", ic) : string.Empty;
     var unitOptions = ViewData["UnitOptions"] as List<SelectListItem> ?? new List<SelectListItem>();
+    var refBouw     = ViewData["RefBouw"]  as List<BudgetPrijsReferentie> ?? new List<BudgetPrijsReferentie>();
+    var refGrond    = ViewData["RefGrond"] as List<BudgetPrijsReferentie> ?? new List<BudgetPrijsReferentie>();
+    var bron        = Model.PrijsBron;
+    string RefTitel(BudgetPrijsReferentie r) => string.Join(" · ", new[] { r.Omschrijving, r.Datum?.ToString("dd/MM/yyyy"), r.Bron, r.ProjectId.HasValue ? "projectcode" : null }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
+@* Eén verkooplijn. De rekenregels (€/m² × oppervlakte, vraagprijs = som, bron-badge) staan in het JS van BudgetVerkoop.cshtml
+   en server-side in ServiceCore.Budget.VerkoopLijnRekenregel; oppervlaktes komen per eenheidsnaam uit stap 2. *@
 <tr class="verkoop-row">
     <td>
-        <input type="text" class="bw-cell-input eenheid-naam"
-               value="@Model.EenheidNaam" placeholder="naam eenheid" />
+        <input type="text" class="bw-cell-input eenheid-naam" value="@Model.EenheidNaam" placeholder="naam eenheid" />
+        <div class="bw-sub opp-info"></div>
     </td>
     <td>
         <select class="bw-cell-input unit-select" title="Unit van het project waarnaar grond-/bouwwaarde doorgezet wordt">
@@ -18,51 +26,70 @@
             }
         </select>
     </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num code-bouw"
-               value="@Model.CodeBouw" placeholder="code" />
-    </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num code-grond"
-               value="@Model.CodeGrond" placeholder="code" />
-    </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num opp-tuin"
-               value="@FmtDec(Model.OppTuin)" step="0.01" placeholder="0.00" />
-    </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num opp-terras"
-               value="@FmtDec(Model.OppTerras)" step="0.01" placeholder="0.00" />
-    </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num opp-dakterras"
-               value="@FmtDec(Model.OppDakterras)" step="0.01" placeholder="0.00" />
-    </td>
     <td class="text-center">
-        <div class="form-check d-flex justify-content-center">
-            <input type="checkbox" class="form-check-input is-ruil" @(Model.IsRuil ? "checked" : "") />
+        <span class="bw-bron bw-bron--@(bron ?? 0)">@ServiceCore.Budget.VerkoopLijnRekenregel.BronLabel(bron)</span>
+        <input type="hidden" class="prijs-bron" value="@bron" />
+    </td>
+
+    @* ── Grond: code → €/m² → bedrag (op grondoppervlakte) ── *@
+    <td class="bw-col-grond">
+        <select class="bw-cell-input code-grond" title="Grondprijscode uit de referentietabel: kiezen vult de €/m² in">
+            <option value="">—</option>
+            @foreach (var r in refGrond)
+            {
+                <option value="@r.Code" data-prijs="@r.PrijsPerM2.ToString("F2", ic)" title="@RefTitel(r)"
+                        selected="@(Model.CodeGrond.HasValue && Model.CodeGrond.Value == r.Code)">@r.Code · € @r.PrijsPerM2.ToString("N0")@(r.ProjectId.HasValue ? " ·P" : "")</option>
+            }
+        </select>
+    </td>
+    <td class="bw-col-grond">
+        <input type="number" class="bw-cell-input bw-cell-input--num grond-m2" value="@F2(Model.GrondPrijsPerM2)" step="0.01" placeholder="€/m²" title="Grondprijs per m² grondoppervlakte" />
+    </td>
+    <td class="bw-col-grond">
+        <input type="number" class="bw-cell-input bw-cell-input--num grondwaarde" value="@F0(Model.Grondwaarde)" step="1" placeholder="0" title="Grondwaarde (bedrag)" />
+    </td>
+
+    @* ── Bouw: code → €/m² → bedrag (op gereduceerde oppervlakte) ── *@
+    <td class="bw-col-bouw">
+        <select class="bw-cell-input code-bouw" title="Bouwprijscode uit de referentietabel: kiezen vult de €/m² in">
+            <option value="">—</option>
+            @foreach (var r in refBouw)
+            {
+                <option value="@r.Code" data-prijs="@r.PrijsPerM2.ToString("F2", ic)" title="@RefTitel(r)"
+                        selected="@(Model.CodeBouw.HasValue && Model.CodeBouw.Value == r.Code)">@r.Code · € @r.PrijsPerM2.ToString("N0")@(r.ProjectId.HasValue ? " ·P" : "")</option>
+            }
+        </select>
+    </td>
+    <td class="bw-col-bouw">
+        <input type="number" class="bw-cell-input bw-cell-input--num bouw-m2" value="@F2(Model.BouwPrijsPerM2)" step="0.01" placeholder="€/m²" title="Bouwprijs per m² gereduceerde oppervlakte" />
+    </td>
+    <td class="bw-col-bouw">
+        <input type="number" class="bw-cell-input bw-cell-input--num bouwwaarde" value="@F0(Model.Bouwwaarde)" step="1" placeholder="0" title="Bouwwaarde (bedrag)" />
+    </td>
+
+    <td class="text-center">
+        <div class="form-check d-flex justify-content-center mb-0">
+            <input type="checkbox" class="form-check-input is-ruil" title="Grondruil: grondwaarde 0, compensatie in het extra forfait" @(Model.IsRuil ? "checked" : "") />
         </div>
     </td>
     <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num extra-forfait"
-               value="@FmtDec(Model.ExtraForfait)" step="0.01" placeholder="0.00" />
+        <input type="number" class="bw-cell-input bw-cell-input--num extra-forfait" value="@F2(Model.ExtraForfait)" step="0.01" placeholder="0" title="Vast bedrag bovenop grond + bouw (ruilvergoeding, aansluitingen, …)" />
     </td>
     <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num grondwaarde"
-               value="@FmtDec(Model.Grondwaarde)" step="1" placeholder="0" />
+        <div class="bw-prijs-cell">
+            <input type="number" class="bw-cell-input bw-cell-input--num vraagprijs fw-bold" value="@F0(Model.Vraagprijs)" step="1" placeholder="0" title="Vastgelegde vraagprijs = grond + bouw + forfait; zelf overschrijven mag" />
+            <i class="fa-solid fa-triangle-exclamation min-warn" hidden aria-hidden="true"></i>
+        </div>
     </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num bouwwaarde"
-               value="@FmtDec(Model.Bouwwaarde)" step="1" placeholder="0" />
-    </td>
-    <td>
-        <input type="number" class="bw-cell-input bw-cell-input--num vraagprijs fw-bold"
-               value="@FmtDec(Model.Vraagprijs)" step="1" placeholder="0" />
-    </td>
-    <td class="text-end" style="width:56px;">
+    <td class="text-end">
         <div class="bw-row-actions">
-            <button type="button" class="bw-row-btn bw-row-btn--danger delete-verkoop-row"
-                    title="Rij verwijderen" aria-label="Rij verwijderen">
+            <button type="button" class="bw-row-btn btn-rij-voorstel" title="Voorstel overnemen (kostprijs + marge)" aria-label="Voorstel overnemen">
+                <i class="fa-solid fa-calculator" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="bw-row-btn btn-rij-markt" title="Marktprijs overnemen" aria-label="Marktprijs overnemen">
+                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="bw-row-btn bw-row-btn--danger delete-verkoop-row" title="Rij verwijderen" aria-label="Rij verwijderen">
                 <i class="fa-solid fa-trash-alt" aria-hidden="true"></i>
             </button>
         </div>

@@ -1,69 +1,184 @@
 @model FacadeCore.Signing.PublicVerificationView
 @using BOCore
+@*
+    Publieke verificatiepagina — design-handoff 37 ("Verificatiepagina — bereikbaar via de QR op het ondertekeningsblad").
+    37a: status, ondertekenaars, beide vingerafdrukken, eigen bestand controleren · 37b/37c: uitslag van de controle
+    (rekent de SHA-256 in de browser: wwwroot/js/gl-v2-verifieer.js). Toestanden van het dossier: voltooid (geldig),
+    ter ondertekening, geweigerd/verlopen/geannuleerd, in voorbereiding. Stijl: gl-v2-public.css (.gl-v2-sign-* en .gl-v2-ver-*).
+*@
 @{
     Layout = "_LayoutPublic";
+    ViewData["PublicKicker"] = "Echtheidscontrole";
+    ViewData["PublicKickerPlain"] = true;
+    ViewData["PublicKickerIcon"] = "lock";
+
     var status = (SigningCaseStatus)Model.Status;
     var completed = status == SigningCaseStatus.Completed;
-    var badgeClass = status switch
+    var state = status switch
     {
-        SigningCaseStatus.Completed => "is-positive",
-        SigningCaseStatus.Declined or SigningCaseStatus.Expired or SigningCaseStatus.Cancelled => "is-blocked",
-        SigningCaseStatus.Open => "is-attention",
-        _ => "is-neutral",
+        SigningCaseStatus.Completed => "done",
+        SigningCaseStatus.Open => "todo",
+        SigningCaseStatus.Declined or SigningCaseStatus.Expired or SigningCaseStatus.Cancelled => "declined",
+        _ => "closed",
     };
-    var statusLabel = status switch
+    var chipText = status switch
     {
-        SigningCaseStatus.Draft => "In voorbereiding",
+        SigningCaseStatus.Completed => "Ondertekend · geldig",
         SigningCaseStatus.Open => "Ter ondertekening",
-        SigningCaseStatus.Completed => "Ondertekend",
         SigningCaseStatus.Declined => "Geweigerd",
         SigningCaseStatus.Expired => "Verlopen",
         SigningCaseStatus.Cancelled => "Geannuleerd",
+        SigningCaseStatus.Draft => "In voorbereiding",
         _ => "Onbekend",
     };
+
+    var nl = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    TimeZoneInfo brussels;
+    try { brussels = TimeZoneInfo.FindSystemTimeZoneById("Europe/Brussels"); }
+    catch (TimeZoneNotFoundException) { try { brussels = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time"); } catch (TimeZoneNotFoundException) { brussels = TimeZoneInfo.Local; } }
+    DateTime Loc(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), brussels);
+
+    var allSigners = Model.Signers ?? Array.Empty<FacadeCore.Signing.PublicVerificationSignerView>();
+    // Voltooid = wie moest tekenen heeft getekend. Bij de regel "één volstaat" staan de andere eigenaars nog in het dossier,
+    // maar "Wacht" naast hun naam zou verwarren: een voltooid dossier toont enkel wie getekend heeft.
+    var signers = completed ? allSigners.Where(s => s.Signed).ToList() : allSigners.ToList();
+    var lastSigned = signers.Where(s => s.SignedAt.HasValue).Select(s => s.SignedAt!.Value).DefaultIfEmpty().Max();
+    var methodLabel = Model.VerificationMethod switch { "sms-otp" => "sms-code", "email-otp" => "e-mailcode", _ => "verificatiecode" };
+    var eyebrow = string.Join(" · ", new[] { Model.DocumentTypeLabel?.ToUpperInvariant(), Model.DocumentNumber }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var subLine = string.Join(" · ", new[] { Model.ProjectName, Model.UnitLabel, string.IsNullOrWhiteSpace(Model.IssuerName) ? null : "uitgegeven door " + Model.IssuerName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var hasOriginal = !string.IsNullOrWhiteSpace(Model.OriginalSha256);
+    var hasFinal = !string.IsNullOrWhiteSpace(Model.FinalSha256);
+
+    const string PathCheck = "M3.4 8.4l3 3 6.2-6.8";
+    const string PathCross = "M5 5l6 6 M11 5l-6 6";
+    const string PathClock = "M8 4.6V8l2.2 1.4";
+
+    var bannerTone = completed ? "is-ok" : state == "declined" ? "is-error" : "is-neutral";
+    var bannerIcon = completed ? PathCheck : state == "declined" ? PathCross : PathClock;
+    var bannerTitle = status switch
+    {
+        SigningCaseStatus.Completed => "Dit document is echt en volledig ondertekend",
+        SigningCaseStatus.Open => "Dit dossier is nog niet voltooid",
+        SigningCaseStatus.Declined => "Dit document is niet ondertekend",
+        SigningCaseStatus.Expired => "De termijn om te ondertekenen is verstreken",
+        SigningCaseStatus.Cancelled => "Dit dossier is geannuleerd",
+        _ => "Dit dossier is in voorbereiding",
+    };
+    var bannerText = status switch
+    {
+        SigningCaseStatus.Completed => $"Elektronisch ondertekend door {Model.SignerCount} ondertekenaar{(Model.SignerCount == 1 ? "" : "s")}"
+            + (Model.CompletedAt is DateTime done ? $", laatste handtekening op {Loc(done).ToString("d MMMM yyyy", nl)} om {Loc(done).ToString("HH:mm", nl)}." : "."),
+        SigningCaseStatus.Open => "Pas wanneer alle ondertekenaars getekend hebben, is het document definitief en geldig.",
+        SigningCaseStatus.Declined => "Een ondertekenaar heeft geweigerd. Er is geen geldige ondertekende versie van dit document.",
+        SigningCaseStatus.Expired => "Er is geen geldige ondertekende versie van dit document.",
+        SigningCaseStatus.Cancelled => "Er is geen geldige ondertekende versie van dit document.",
+        _ => "Er zijn nog geen uitnodigingen verstuurd.",
+    };
 }
-<section class="gl-v2-public-card">
-    <div class="gl-v2-public-card-header">
-        <h1 class="gl-v2-public-title" style="margin:0">@Model.DocumentTypeLabel@(Model.DocumentNumber is null ? "" : $" {Model.DocumentNumber}")</h1>
+<div class="gl-v2-sign" data-state="@state">
+    <div class="gl-v2-sign-head">
+        <div class="gl-v2-sign-head-text">
+            <span class="gl-v2-sign-eyebrow">@eyebrow</span>
+            <h1 class="gl-v2-sign-title">@(string.IsNullOrWhiteSpace(Model.Title) ? Model.DocumentTypeLabel : Model.Title)</h1>
+            @if (subLine != "")
+            {
+                <span class="gl-v2-sign-sub">@subLine</span>
+            }
+        </div>
+        <span class="gl-v2-sign-chip" role="status">@chipText</span>
     </div>
-    <div class="gl-v2-public-card-body">
-        <span class="gl-v2-public-badge @badgeClass">@statusLabel</span>
 
-        @if (completed)
-        {
-            <p style="margin-top:12px">
-                Dit document is elektronisch ondertekend door @Model.SignerCount ondertekenaar@(Model.SignerCount == 1 ? "" : "s")
-                @if (Model.CompletedAt is DateTime completedAt)
-                {
-                    @: op @completedAt.ToString("d MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")) om @completedAt.ToString("HH:mm").
-                }
-            </p>
-        }
-        else
-        {
-            <p style="margin-top:12px">Dit dossier is nog niet voltooid.</p>
-        }
+    <div class="gl-v2-sign-banner @bannerTone" role="status">
+        <span class="gl-v2-sign-banner-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="@bannerIcon"></path></svg></span>
+        <div class="gl-v2-sign-banner-body">
+            <span class="gl-v2-sign-banner-title">@bannerTitle</span>
+            <span class="gl-v2-sign-banner-text">@bannerText</span>
+        </div>
+    </div>
 
-        @if (!string.IsNullOrWhiteSpace(Model.OriginalSha256) || !string.IsNullOrWhiteSpace(Model.FinalSha256))
-        {
-            <div class="gl-v2-public-notice" style="margin-top:14px">
-                @if (!string.IsNullOrWhiteSpace(Model.OriginalSha256))
+    @if (signers.Count > 0)
+    {
+        <section class="gl-v2-sign-card" aria-labelledby="gl-ver-signers">
+            <div class="gl-v2-sign-card-head"><span class="gl-v2-sign-card-title" id="gl-ver-signers">Ondertekenaars</span></div>
+            <div class="gl-v2-ver-table" role="table" aria-labelledby="gl-ver-signers">
+                <div class="gl-v2-ver-row is-head" role="row">
+                    <span role="columnheader">Naam</span><span role="columnheader">Ondertekend op</span><span role="columnheader">Methode</span><span role="columnheader">Status</span>
+                </div>
+                @foreach (var s in signers)
                 {
-                    <div>SHA-256 van het document vóór ondertekening: <code>@Model.OriginalSha256</code></div>
+                    var capacity = string.IsNullOrWhiteSpace(s.Capacity) || s.Capacity is "Klant" or "Mede-eigenaar" ? "eigenaar" : s.Capacity!.ToLowerInvariant();
+                    <div class="gl-v2-ver-row" role="row">
+                        <div class="gl-v2-ver-name" role="cell"><strong>@s.DisplayName</strong><span>@capacity</span></div>
+                        <span class="gl-v2-ver-cell" role="cell">@(s.SignedAt is DateTime at ? Loc(at).ToString("dd/MM/yyyy", nl) + " · " + Loc(at).ToString("HH:mm", nl) : "—")</span>
+                        <span class="gl-v2-ver-cell" role="cell">@(s.Signed ? methodLabel : "—")</span>
+                        @if (s.Signed)
+                        {
+                            <span class="gl-v2-ver-pill" role="cell">Geverifieerd</span>
+                        }
+                        else if (status is SigningCaseStatus.Declined or SigningCaseStatus.Expired or SigningCaseStatus.Cancelled)
+                        {
+                            <span class="gl-v2-ver-pill is-off" role="cell">Niet ondertekend</span>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-ver-pill is-wait" role="cell">Wacht</span>
+                        }
+                    </div>
                 }
-                @if (!string.IsNullOrWhiteSpace(Model.FinalSha256))
-                {
-                    <div style="margin-top:4px">SHA-256 van het volledige ondertekende PDF: <code>@Model.FinalSha256</code></div>
-                }
-                <p class="gl-v2-public-help" style="margin-top:8px">
-                    Deze twee waarden verschillen altijd: het ondertekende PDF bevat het originele document plus een
-                    ondertekeningsblad erachter (naam, datum, handtekening) — dat blad voegt bytes toe, dus de hash
-                    wijzigt. Dat is geen fout. Vergelijk de eerste waarde met een hash van het document zoals u dat
-                    kreeg vóór ondertekening, en de tweede met een hash van het volledige ondertekende PDF dat u nu
-                    in bezit heeft — enkel als één van beide niet overeenkomt met de bijhorende kopie, klopt er iets
-                    niet.
-                </p>
             </div>
-        }
-    </div>
-</section>
+        </section>
+    }
+
+    @if (hasOriginal || hasFinal)
+    {
+        <section class="gl-v2-sign-card" aria-labelledby="gl-ver-hashes">
+            <div class="gl-v2-sign-card-head"><span class="gl-v2-sign-card-title" id="gl-ver-hashes">Digitale vingerafdrukken (SHA-256)</span></div>
+            <div class="gl-v2-sign-card-body">
+                <div class="gl-v2-ver-hashes">
+                    @if (hasOriginal)
+                    {
+                        <div class="gl-v2-ver-hash-row">
+                            <div class="gl-v2-ver-hash-label"><strong>1 · Origineel document</strong><span>vóór ondertekening</span></div>
+                            <div class="gl-v2-ver-hash" id="gl-ver-hash-original">@Model.OriginalSha256</div>
+                        </div>
+                    }
+                    @if (hasFinal)
+                    {
+                        <div class="gl-v2-ver-hash-row">
+                            <div class="gl-v2-ver-hash-label"><strong>2 · Ondertekende PDF</strong><span>document + ondertekeningsblad</span></div>
+                            <div class="gl-v2-ver-hash" id="gl-ver-hash-final">@Model.FinalSha256</div>
+                        </div>
+                    }
+                    @if (hasOriginal && hasFinal)
+                    {
+                        <div class="gl-v2-ver-note">
+                            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.2A6.2 6.2 0 1 0 8 1.8a6.2 6.2 0 0 0 0 12.4z M8 7.4v3.6 M8 5.1v.1"></path></svg>
+                            <p><b>Waarom twee verschillende waarden?</b> De ondertekende PDF is het origineel met een ondertekeningsblad erachter, dus de vingerafdruk wijzigt — dat is normaal. Vergelijk waarde 1 met het document dat je vóór ondertekening kreeg, en waarde 2 met de ondertekende PDF die je nu hebt. Klopt één van beide niet, dan is het bestand aangepast.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="gl-v2-sign-card" id="gl-ver-check" aria-labelledby="gl-ver-check-title"
+                 data-original="@Model.OriginalSha256" data-final="@Model.FinalSha256" data-issuer="@Model.IssuerName">
+            <div class="gl-v2-sign-card-head">
+                <span class="gl-v2-sign-card-title" id="gl-ver-check-title">Controleer je eigen bestand</span>
+                <span class="gl-v2-sign-spacer"></span>
+                <span class="gl-v2-sign-card-meta">het bestand verlaat je toestel niet</span>
+            </div>
+            <div class="gl-v2-sign-card-body">
+                <label class="gl-v2-ver-drop" id="gl-ver-drop" for="gl-ver-file">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10.6V2.8 M4.8 6 8 2.8 11.2 6 M3 10.4v2.8h10v-2.8"></path></svg>
+                    <span>Sleep je PDF hierheen of <u>kies een bestand</u></span>
+                </label>
+                <input type="file" id="gl-ver-file" class="gl-v2-ver-file" accept="application/pdf,.pdf" />
+                <div id="gl-ver-result" aria-live="polite" hidden></div>
+            </div>
+        </section>
+    }
+</div>
+
+@section PageScripts {
+    <script src="~/js/gl-v2-verifieer.js" asp-append-version="true"></script>
+}

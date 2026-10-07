@@ -264,6 +264,193 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         return toegevoegd.Count + bijgewerkt + herkoppeld;
     }
 
+    public async Task<TrajectSyncPreview?> PreviewSync(int projecttrajectId)
+    {
+        var (traject, sjabloon, unitIds) = await LoadSyncContext(projecttrajectId);
+        if (traject == null || sjabloon == null) return null;
+
+        var preview = new TrajectSyncPreview { SjabloonNaam = sjabloon.Naam, SjabloonGewijzigd = sjabloon.ModifiedDate ?? sjabloon.CreatedDate };
+        var smAlle = sjabloon.Fases.SelectMany(f => f.Mijlpalen).OrderBy(m => m.Volgorde).ToList();
+        var smById = smAlle.ToDictionary(x => x.Id);
+        var smByCode = smAlle.Where(x => !string.IsNullOrWhiteSpace(x.Code))
+            .GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        string FaseNaam(TrajectSjabloonMijlpaal sm) => sjabloon.Fases.First(f => f.Id == sm.TrajectSjabloonFaseId).Naam;
+
+        // NIEUW: sjabloonmijlpalen die (voor een of meer eenheden) nog niet in het traject staan.
+        var projectCodes = new HashSet<string>(traject.Mijlpalen.Where(m => m.UnitId == null && !string.IsNullOrWhiteSpace(m.Code)).Select(m => m.Code!), StringComparer.OrdinalIgnoreCase);
+        var perUnit = new HashSet<(string, int)>(traject.Mijlpalen.Where(m => m.UnitId != null && !string.IsNullOrWhiteSpace(m.Code)).Select(m => (m.Code!.ToUpperInvariant(), m.UnitId!.Value)));
+        foreach (var sm in smAlle)
+        {
+            var code = sm.Code ?? "";
+            bool ontbreekt = sm.Scope == (int)MijlpaalScope.PerEenheid
+                ? unitIds.Any(u => !perUnit.Contains((code.ToUpperInvariant(), u)))
+                : string.IsNullOrWhiteSpace(code) || !projectCodes.Contains(code);
+            if (!ontbreekt) continue;
+            string anker = string.IsNullOrWhiteSpace(sm.DoeldatumAnkerCode) || sm.DoeldatumAnkerCode.Equals(AnkerProjectCreated, StringComparison.OrdinalIgnoreCase)
+                ? "" : (smByCode.TryGetValue(sm.DoeldatumAnkerCode, out var am) ? " na " + am.Naam.ToLowerInvariant() : "");
+            var offset = sm.DoeldatumOffsetDagen is int o ? $" · + {o} d.{anker}" : "";
+            preview.Items.Add(new TrajectSyncItem
+            {
+                Key = "n:" + sm.Id,
+                Soort = TrajectSyncSoort.Nieuw,
+                Naam = sm.Naam,
+                Fase = FaseNaam(sm),
+                Detail = FaseNaam(sm) + offset + (sm.Scope == (int)MijlpaalScope.PerEenheid ? " · per eenheid" : "")
+            });
+        }
+
+        // GEWIJZIGD / WEG: bestaande mijlpalen die aan een sjabloonmijlpaal hangen (bereikte worden nooit gewijzigd).
+        var gezien = new HashSet<string>();
+        foreach (var m in traject.Mijlpalen.OrderBy(x => x.Volgorde))
+        {
+            TrajectSjabloonMijlpaal? sm = null;
+            if (m.SjabloonMijlpaalId is int smid) smById.TryGetValue(smid, out sm);
+            if (sm == null && !string.IsNullOrWhiteSpace(m.Code)) smByCode.TryGetValue(m.Code!, out sm);
+
+            if (sm == null)
+            {
+                // Was ooit uit het sjabloon gekomen, staat er niet meer in: enkel melden.
+                if (m.SjabloonMijlpaalId != null && gezien.Add("w:" + m.Naam))
+                    preview.Items.Add(new TrajectSyncItem
+                    {
+                        Key = "w:" + m.Id,
+                        Soort = TrajectSyncSoort.Weg,
+                        Naam = m.Naam,
+                        Detail = m.Status == (int)MijlpaalStatus.Bereikt ? "bereikt — blijft staan" : "blijft staan, staat niet meer in het sjabloon"
+                    });
+                continue;
+            }
+            if (m.Status == (int)MijlpaalStatus.Bereikt) continue;
+            var verschillen = Verschillen(m, sm);
+            if (verschillen.Count == 0) continue;
+            var detail = string.Join(" · ", verschillen);
+            if (!gezien.Add("g:" + sm.Id + detail)) continue; // eenheid-kopieen samenvouwen
+            preview.Items.Add(new TrajectSyncItem { Key = "g:" + m.Id, Soort = TrajectSyncSoort.Gewijzigd, Naam = m.Naam, Detail = detail });
+        }
+        return preview;
+    }
+
+    private static List<string> Verschillen(Mijlpaal m, TrajectSjabloonMijlpaal sm)
+    {
+        var v = new List<string>();
+        if (sm.VerantwoordelijkeRol is int r && m.VerantwoordelijkeRol != r)
+            v.Add($"verantwoordelijke: {RolNaam(m.VerantwoordelijkeRol)} → {RolNaam(r)}");
+        if (!string.Equals(m.Naam, sm.Naam, StringComparison.Ordinal)) v.Add($"naam: {m.Naam} → {sm.Naam}");
+        if (m.IsVerplicht != sm.IsVerplicht) v.Add(sm.IsVerplicht ? "wordt verplicht" : "niet meer verplicht");
+        return v;
+    }
+
+    private static string RolNaam(int? rol) =>
+        rol is int r && Enum.IsDefined(typeof(InterneRol), r) ? ((InterneRol)r).GetDisplayName() : "—";
+
+    public async Task<int> ApplySync(int projecttrajectId, IReadOnlyCollection<string> keys, string? userId)
+    {
+        var (traject, sjabloon, unitIds) = await LoadSyncContext(projecttrajectId);
+        if (traject == null || sjabloon == null || keys.Count == 0) return 0;
+
+        static HashSet<int> Ids(IReadOnlyCollection<string> k, string prefix) =>
+            k.Where(x => x.StartsWith(prefix, StringComparison.Ordinal))
+             .Select(x => int.TryParse(x.AsSpan(prefix.Length), out var i) ? i : 0).Where(i => i > 0).ToHashSet();
+        var nieuwIds = Ids(keys, "n:");
+        var gewijzigdIds = Ids(keys, "g:");
+
+        var faseByCode = traject.Fases.Where(f => !string.IsNullOrWhiteSpace(f.Code)).ToDictionary(f => f.Code!, StringComparer.OrdinalIgnoreCase);
+        var smAlle = sjabloon.Fases.SelectMany(f => f.Mijlpalen).OrderBy(m => m.Volgorde).ToList();
+        var smById = smAlle.ToDictionary(x => x.Id);
+        var smByCode = smAlle.Where(x => !string.IsNullOrWhiteSpace(x.Code)).GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        int toegepast = 0;
+
+        // GEWIJZIGD: sjabloonwaarden overnemen, ook op de eenheid-kopieen; bereikte mijlpalen nooit.
+        foreach (var m in traject.Mijlpalen.Where(x => gewijzigdIds.Contains(x.Id) && x.Status != (int)MijlpaalStatus.Bereikt).ToList())
+        {
+            TrajectSjabloonMijlpaal? sm = null;
+            if (m.SjabloonMijlpaalId is int smid) smById.TryGetValue(smid, out sm);
+            if (sm == null && !string.IsNullOrWhiteSpace(m.Code)) smByCode.TryGetValue(m.Code!, out sm);
+            if (sm == null) continue;
+            foreach (var kopie in traject.Mijlpalen.Where(x => x.Status != (int)MijlpaalStatus.Bereikt
+                         && (x.SjabloonMijlpaalId == sm.Id || (x.SjabloonMijlpaalId == null && string.Equals(x.Code, sm.Code, StringComparison.OrdinalIgnoreCase)))))
+            {
+                if (sm.VerantwoordelijkeRol is int r) kopie.VerantwoordelijkeRol = r;
+                kopie.Naam = sm.Naam;
+                kopie.IsVerplicht = sm.IsVerplicht;
+                kopie.SjabloonMijlpaalId ??= sm.Id;
+                kopie.ModifiedByUserId = userId;
+                kopie.ModifiedDate = DateTime.UtcNow;
+            }
+            toegepast++;
+        }
+
+        // NIEUW: ontbrekende fases (enkel als ze een gekozen mijlpaal krijgen) en mijlpalen toevoegen.
+        foreach (var sf in sjabloon.Fases.OrderBy(f => f.Volgorde))
+        {
+            if (string.IsNullOrWhiteSpace(sf.Code) || faseByCode.ContainsKey(sf.Code)) continue;
+            if (!sf.Mijlpalen.Any(x => nieuwIds.Contains(x.Id))) continue;
+            var fase = new ProjecttrajectFase
+            {
+                ProjecttrajectId = traject.Id, SjabloonFaseId = sf.Id, Naam = sf.Naam, Code = sf.Code,
+                Volgorde = sf.Volgorde, KleurCode = sf.KleurCode, Status = (int)FaseStatus.Gepland
+            };
+            traject.Fases.Add(fase);
+            faseByCode[sf.Code] = fase;
+        }
+        var projectCodes = new HashSet<string>(traject.Mijlpalen.Where(m => m.UnitId == null && !string.IsNullOrWhiteSpace(m.Code)).Select(m => m.Code!), StringComparer.OrdinalIgnoreCase);
+        var perUnit = new HashSet<(string, int)>(traject.Mijlpalen.Where(m => m.UnitId != null && !string.IsNullOrWhiteSpace(m.Code)).Select(m => (m.Code!.ToUpperInvariant(), m.UnitId!.Value)));
+        var toegevoegd = new List<Mijlpaal>();
+        foreach (var sm in smAlle.Where(x => nieuwIds.Contains(x.Id)))
+        {
+            var faseCode = sjabloon.Fases.First(f => f.Id == sm.TrajectSjabloonFaseId).Code;
+            faseByCode.TryGetValue(faseCode ?? "", out var fase);
+            var code = sm.Code ?? "";
+            int voor = toegevoegd.Count;
+            if (sm.Scope == (int)MijlpaalScope.PerEenheid)
+            {
+                foreach (var uid in unitIds.Where(u => !perUnit.Contains((code.ToUpperInvariant(), u))))
+                {
+                    var m = BuildMijlpaal(sm, fase, uid, userId);
+                    m.ProjecttrajectId = traject.Id;
+                    traject.Mijlpalen.Add(m);
+                    toegevoegd.Add(m);
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(code) || !projectCodes.Contains(code))
+            {
+                var m = BuildMijlpaal(sm, fase, null, userId);
+                m.ProjecttrajectId = traject.Id;
+                traject.Mijlpalen.Add(m);
+                toegevoegd.Add(m);
+            }
+            if (toegevoegd.Count > voor) toegepast++;
+        }
+
+        if (toegevoegd.Count > 0)
+            ResolveDoeldatums(traject.Mijlpalen.ToList(), smAlle, traject.GestartOp ?? DateOnly.FromDateTime(DateTime.Today));
+        await _db.SaveChangesAsync();
+        foreach (var m in toegevoegd)
+            _db.MijlpaalHistoriek.Add(new MijlpaalHistoriek
+            {
+                MijlpaalId = m.Id,
+                Actie = (int)MijlpaalHistoriekActie.Aangemaakt,
+                UserId = userId,
+                Timestamp = DateTime.UtcNow,
+                Opmerking = "Toegevoegd via sjabloon-synchronisatie"
+            });
+        if (toegevoegd.Count > 0) await _db.SaveChangesAsync();
+        await _dossiers.RelinkVergunningMijlpalen(traject.ProjectId, userId);
+        return toegepast;
+    }
+
+    private async Task<(Projecttraject? traject, TrajectSjabloon? sjabloon, List<int> unitIds)> LoadSyncContext(int projecttrajectId)
+    {
+        var traject = await _db.Projecttraject.Include(t => t.Fases).Include(t => t.Mijlpalen).ThenInclude(m => m.Triggers)
+            .FirstOrDefaultAsync(t => t.Id == projecttrajectId);
+        if (traject?.TrajectSjabloonId is not int sid) return (null, null, new List<int>());
+        var sjabloon = await _sjablonen.GetById(sid, includeDetails: true);
+        var unitIds = await _db.Units.Where(u => u.ProjectId == traject.ProjectId).OrderBy(u => u.Name).Select(u => u.Id).ToListAsync();
+        return (traject, sjabloon, unitIds);
+    }
+
     private static Mijlpaal BuildMijlpaal(TrajectSjabloonMijlpaal sm, ProjecttrajectFase? fase, int? unitId, string? userId)
     {
         var m = new Mijlpaal

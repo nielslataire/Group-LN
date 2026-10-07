@@ -111,4 +111,19 @@ public class VerkoopVoorstelServiceTests
         Assert.Equal(1_586_750m, bo.TotaalVerkoopwaarde);
         Assert.Contains(bo.Waarschuwingen, w => w.Contains("Oppervlaktes"));
     }
+
+    [Fact]
+    public void Grondpost_in_resultaat_telt_niet_dubbel()
+    {
+        // Sinds okt. 2026 zit de aankoopprijs grond ook als post in het budgetresultaat (groep Grond):
+        // TotaalKosten stijgt met 400.000, maar GrondKost/BouwKost/TotaalKostprijs blijven exact gelijk.
+        var r = Resultaat();
+        r.Grond.Add(new BudgetKostenPostBO { Omschrijving = "Aankoopprijs grond", Bedrag = 400_000m });
+        var bo = VerkoopVoorstelService.Bereken(1, r, Params(), new[] { Rij("A", 100m, 300m) });
+
+        Assert.Equal(1_400_000m, r.TotaalKosten);
+        Assert.Equal(465_000m, bo.GrondKost);
+        Assert.Equal(935_000m, bo.BouwKost);
+        Assert.Equal(r.TotaalKosten, bo.TotaalKostprijs);   // kostprijs stap 9 = kostprijs incl. grond stap 8
+    }
 }

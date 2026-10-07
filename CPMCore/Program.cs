@@ -176,6 +176,8 @@ builder.Services.AddScoped<FacadeCore.IEmailTemplateService, ServiceCore.EmailTe
 builder.Services.AddScoped<FacadeCore.IEmailSendLogService, ServiceCore.EmailSendLogService>();
 builder.Services.AddScoped<FacadeCore.IUserSignatureService, ServiceCore.UserSignatureService>();
 builder.Services.AddScoped<FacadeCore.IKostprijsService, ServiceCore.KostprijsService>();
+builder.Services.AddScoped<FacadeCore.IBudgetPrijsReferentieService, ServiceCore.Budget.BudgetPrijsReferentieService>();
+builder.Services.AddScoped<FacadeCore.IBudgetReferentieProjectService, ServiceCore.Budget.BudgetReferentieProjectService>();
 builder.Services.AddScoped<FacadeCore.IProvinceService, ServiceCore.ProvinceService>();
 builder.Services.AddScoped<FacadeCore.ICompanyService, ServiceCore.CompanyService>();
 builder.Services.AddScoped<FacadeCore.ICountryService, ServiceCore.CountryService>();
@@ -322,7 +324,8 @@ builder.Services.AddSingleton<ISectionRenderer, LegalRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, FooterRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, DefaultFooterRenderer>();
 builder.Services.AddSingleton<SectionRendererFactory>(sp => new SectionRendererFactory(sp.GetServices<ISectionRenderer>()));
-builder.Services.AddSingleton<IInvoiceTemplate>(sp => new JsonInvoiceTemplate("layoutA", sp.GetRequiredService<SectionRendererFactory>(), sp.GetRequiredService<BandsRenderer>()));
+// layoutA = de gl-v2-factuur (design-handoff 35b, okt. 2026); layoutB blijft de JSON-layout.
+builder.Services.AddSingleton<IInvoiceTemplate, CPMCore.Services.Invoicing.GlV2InvoiceTemplate>();
 builder.Services.AddSingleton<IInvoiceTemplate>(sp => new JsonInvoiceTemplate("layoutB", sp.GetRequiredService<SectionRendererFactory>(), sp.GetRequiredService<BandsRenderer>()));
 builder.Services.AddSingleton<IInvoiceTemplateRegistry, InvoiceTemplateRegistry>();
 builder.Services.AddSingleton<IEpcQrService, EpcQrService>();

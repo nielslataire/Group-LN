@@ -215,9 +215,21 @@
                                                 <td colspan="6">Wijzigingsopdrachten</td>
                                             </tr>
                                         }
-                                        @foreach (var row in otherRows)
+                                        @* Eén rij per wijzigingsopdracht (uitklapbaar naar haar lijnen); een nog niet ondertekende WO blijft één rode rij. *@
+                                        @foreach (var coGroup in otherRows.GroupBy(r => r.ChangeOrderId ?? 0))
                                         {
-                                            @await Html.PartialAsync("Partials/_InvoicingRowV2", row, new ViewDataDictionary(ViewData) { { "Account", account }, { "CanWrite", Model.CanWrite }, { "InvoicingUrl", Url.Action("InvoicingV2", new { projectid = Model.ProjectId }) } })
+                                            var coRows = coGroup.ToList();
+                                            if (coRows.Any(r => r.IsBlocked))
+                                            {
+                                                @foreach (var row in coRows)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_InvoicingRowV2", row, new ViewDataDictionary(ViewData) { { "Account", account }, { "CanWrite", Model.CanWrite }, { "InvoicingUrl", Url.Action("InvoicingV2", new { projectid = Model.ProjectId }) } })
+                                                }
+                                            }
+                                            else
+                                            {
+                                                @await Html.PartialAsync("Partials/_InvoicingCoGroupV2", coRows, new ViewDataDictionary(ViewData) { { "Account", account }, { "CanWrite", Model.CanWrite }, { "InvoicingUrl", Url.Action("InvoicingV2", new { projectid = Model.ProjectId }) } })
+                                            }
                                         }
                                     }
                                 </tbody>

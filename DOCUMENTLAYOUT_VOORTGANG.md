@@ -134,6 +134,13 @@ precies tegen de paginagrens zit (blok moet dan in zijn geheel naar de volgende 
   `ChangeOrderPdfBuilder.LoadAsync` + `BuildGlV2Company`, paginatelling van het origineel via PdfSharpCore, voet toont "n / n" via
   `PageLabelOverride`); bij een fout of ander documenttype valt het terug op het oude `SigningEvidenceDocument`. Tijdstippen in Belgische tijd.
   SHA-256 = origineel zoals ondertekend, verificatie-ID = eerste 23 tekens van de GUID. Enkel visueel getest met testdata, niet via een echt dossier.
+- **Factuur "layoutA" (35b, 2026-10-07)**: `InvoiceDocumentV2` (CPMCore/Documents/GlV2) + `GlV2InvoiceTemplate` (CPMCore/Services/Invoicing, genaamd "layoutA", in `Program.cs`
+  in de plaats van de JSON-layoutA). **layoutB blijft de bestaande JSON-pijplijn**; de JSON-instellingen van een bedrijf voor layoutA (kleuren, secties) gelden niet meer.
+  Opbouw: kop (logo, kicker VERKOOP/PROFORMA, titel, nummer), meta (Factuurdatum, Vervaldatum, Type, Project, Eenheid) + klantadres, BESCHRIJVING (`HeaderDescription` +
+  vette `DetailDescription`), typetabel (Omschrijving · Aantal · Eenheidsprijs · Btw · Totaal excl.) met groepsrijen per soort detaillijn: eenheid (Stages), "Wijzigingsopdracht — WO-… · onderwerp"
+  (ChangeOrders), "Overige", btw-vermelding per tarief (`InvoiceVm.VatMentionsByRate`) + btw-overzicht + "Te betalen", BIJKOMENDE VERMELDING (`ExtraInfo`), betaalblok met EPC-QR tegen de voet.
+  Proforma: kicker PROFORMA, geen nummer, geen "Vóór"/mededeling/QR. Nieuwe bouwstenen: `TabelRegel` (groepsrij/subtotaal/subtekst) in `GlV2PdfComponents.Tabel`, `Betaalblok`, `TotalenBtw(eindLabel)`.
+  Wijzigingsopdracht-regels op de factuur: één regel per lijn, `ChangeOrderDetailId` wordt nu bewaard (`InvoiceCommandService.CreateWithLinesAsync`). Niet gedaan: subtotalen per groep, een eigen "Klantnr.".
 - **Bedragen**: nl-BE-standaard (`€ -640,00`) bewust behouden (Niels, 2026-10-06), niet het "– € 640,00" van het ontwerp.
 - **Algemene regels punt 35/36 altijd mee lezen** (Niels, 2026-10-06). Nog niet afgedekt voor de offerte:
   btw-overzicht + wettelijke vermelding ("zoals factuur", 35d), IBAN in groepen van 4, "6 %" met spatie (✓ in de tag).

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BOCore.Budget;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CPMCore.Models.Budget
 {
@@ -43,7 +42,21 @@ namespace CPMCore.Models.Budget
             }
         }
 
-        public IEnumerable<SelectListItem> BeschikbareProjecten { get; set; } =
-            new List<SelectListItem>();
+        // ── Nacalc: referentieprojecten (okt. 2026) ──────────────────────────
+        /// <summary>Alle referentieprojecten (Instellingen › Budget › Referentieprojecten) om uit te kiezen.</summary>
+        public List<BudgetReferentieProjectBO> Referenties { get; set; } = new();
+        /// <summary>Referentieprojecten die deze versie vergelijkt.</summary>
+        public List<int> GeselecteerdeReferentieIds { get; set; } = new();
+
+        /// <summary>Er is minstens één gekozen referentieproject én minstens één activiteit met een referentieprijs.</summary>
+        public bool HeeftReferenties => GeselecteerdeReferentieIds.Count > 0 && LotGroepen.SelectMany(g => g.Lijnen).Any(l => l.HeeftReferentie);
+
+        /// <summary>Referentiekost over de activiteiten die in dit budget een bedrag hebben (dezelfde selectie als de tabel).</summary>
+        public decimal TotaalReferentie =>
+            LotGroepen.SelectMany(g => g.Lijnen).Where(l => l.TotaalAlternatief > 0 && l.HeeftReferentie).Sum(l => l.ReferentieTotaal ?? 0m);
+
+        /// <summary>Activiteiten met bedrag in dit budget waarvoor geen enkel referentieproject een bedrag heeft.</summary>
+        public int AantalZonderReferentie =>
+            LotGroepen.SelectMany(g => g.Lijnen).Count(l => l.TotaalAlternatief > 0 && !l.HeeftReferentie);
     }
 }

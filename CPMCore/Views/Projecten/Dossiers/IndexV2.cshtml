@@ -1,0 +1,482 @@
+@model CPMCore.Models.Traject.DossierIndexVm
+@*
+    gl-v2 — Dossiers (design-handoff punt 31, CRM Traject en dossiers.dc.html): nutsaanvragen als matrix, alle dossiers als lijst.
+      31a Nutsaanvragen — "+ Nieuw" bundelt de drie ingangen; elke cel toont status en stap x van 6, een lege cel = "Aanvragen".
+      31b Alle dossiers — typefilter als knoppen, voortgang per dossier, te laat in het rood.
+      31c Nieuwe nutsaansluiting — eigen scherm (NutsFormV2) i.p.v. een modal.     31d Dossierdetail — DetailsV2.
+      31e Bulk per eenheid — modal, toont per eenheid of ze aangemaakt of overgeslagen wordt (hieronder, #gl-v2-dos-bulk-modal).
+      31f Ander dossier — modal met type als tegels en koppeling aan een mijlpaal (Modals/_ModalAnderV2, inhoud via AJAX).
+    Eigen klassen-namespace gl-v2-dos-* (gl-v2-projecten-dossiers.css/.js). Gedeeld: tabbar, KPI-loze kop met cijfers rechts
+    (zelfde als Traject), gl-v2-notice-*, gl-v2-menu, modals, GlV2/_SelectList, GlV2/_GlV2Combo, GlV2/_DateField.
+*@
+@using System.Globalization
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@{
+    ViewData["Title"] = "Dossiers";
+    ViewData["PageIcon"] = "ph ph-folder-open";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · dossiers" };
+    var menuPhoneVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · dossiers", Mode = GlV2ProjectMenuMode.Phone };
+
+    var alle = Model.Dossiers;
+    var nuts = alle.Where(d => d.DossierKind == (int)DossierKind.NutsAansluiting).ToList();
+    var nutsAlgemeen = nuts.Where(d => d.UnitId == null).OrderBy(d => d.NutsAansluiting?.NutsType ?? 0).ThenBy(d => d.Titel).ToList();
+    var nutsPerEenheid = nuts.Where(d => d.UnitId != null).ToList();
+    var teLaat = alle.Count(d => DossierWeergave.IsTeLaat(d, today));
+    var nutsTeLaat = nuts.Where(d => DossierWeergave.IsTeLaat(d, today)).OrderBy(d => DossierWeergave.Verwacht(d)).ToList();
+
+    // Vaste startkolommen (de gewone per-eenheid-aansluitingen) + elk ander type zodra er minstens één per-eenheid-dossier van bestaat.
+    var kolommen = new[] { NutsType.Elektriciteit, NutsType.Gas, NutsType.Water }
+        .Concat(nutsPerEenheid.Select(d => (NutsType)(d.NutsAansluiting?.NutsType ?? 0)))
+        .Distinct().OrderBy(t => (int)t).ToList();
+    var cel = nutsPerEenheid
+        .GroupBy(d => (d.UnitId!.Value, d.NutsAansluiting?.NutsType ?? 0))
+        .ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.Status != (int)DossierStatus.Geannuleerd).ThenByDescending(d => d.CreatedDate).First());
+
+    var startTab = Model.StartTab == "alle" ? "alle" : "nuts";
+    var groepen = alle.GroupBy(DossierWeergave.Groep).ToDictionary(g => g.Key, g => g.Count());
+    string GroepNaam(string g) => g switch { "nuts" => "Nutsaansluiting", "vergunning" => "Vergunning", "attest" => "Attest", "keuring" => "Keuring", "vrij" => "Vrij", _ => "Overig" };
+    var startGroep = Model.FilterKind switch
+    {
+        (int)DossierKind.NutsAansluiting => "nuts",
+        (int)DossierKind.Omgevingsvergunning => "vergunning",
+        (int)DossierKind.Attest => "attest",
+        (int)DossierKind.Keuring => "keuring",
+        (int)DossierKind.Vrij => "vrij",
+        null => "",
+        _ => "overig"
+    };
+    var rowVd = new ViewDataDictionary(ViewData);
+    var stapNamen = DossierWeergave.NutsStapLabels;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-traject.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-dossiers.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-menu-trigger" id="gl-v2-dos-new-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dos-new-menu">
+            <i class="ph ph-plus" aria-hidden="true"></i><span>Nieuw</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+        </button>
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        <a href="@Url.Action("NutsNieuw", "ProjectDossiers", new { projectId = Model.ProjectId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+            <i class="ph ph-lightning" aria-hidden="true"></i>Nutsaansl.
+        </a>
+        <button type="button" class="gl-v2-mobile-quickaction js-dos-bulk" @(Model.ProjectUnits.Count == 0 ? "disabled" : "")>
+            <i class="ph ph-squares-four" aria-hidden="true"></i>Bulk
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction js-dos-ander">
+            <i class="ph ph-folder-open" aria-hidden="true"></i>Ander
+        </button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+<div class="gl-v2-tabbar gl-v2-dos-tabbar" id="gl-v2-dos-tabs" role="tablist" aria-label="Dossiers">
+    <button type="button" class="gl-v2-tabbar-tab @(startTab == "nuts" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "nuts" ? "true" : "false")" data-dos-tab="nuts">
+        <i class="ph ph-lightning" aria-hidden="true"></i>Nutsaanvragen <span class="gl-v2-dos-tabcount @(nutsTeLaat.Count > 0 ? "is-late" : "")">@nuts.Count</span>
+    </button>
+    <button type="button" class="gl-v2-tabbar-tab @(startTab == "alle" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "alle" ? "true" : "false")" data-dos-tab="alle">
+        <i class="ph ph-folder-open" aria-hidden="true"></i>Alle dossiers <span class="gl-v2-tabbar-count">@alle.Count</span>
+    </button>
+    <span class="gl-v2-tabbar-spacer"></span>
+    <div class="gl-v2-tr-stats" aria-label="Dossierstatus, alle dossiertypes van dit project">
+        <span class="gl-v2-tr-chip"><b>@alle.Count</b> @(alle.Count == 1 ? "dossier" : "dossiers")</span>
+        <span class="gl-v2-tr-chip"><b>@Model.AantalOpen</b> open</span>
+        <span class="gl-v2-tr-chip @(teLaat > 0 ? "is-late" : "")"><b>@teLaat</b> te laat</span>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
+
+@if (Model.CanWrite)
+{
+    @* "+ Nieuw" (31a): bundelt de drie ingangen — scherm voor een nutsaansluiting, modal voor bulk en voor een ander dossier. *@
+    <div class="gl-v2-menu gl-v2-dos-new-menu" id="gl-v2-dos-new-menu">
+        <a class="gl-v2-menu-item" href="@Url.Action("NutsNieuw", "ProjectDossiers", new { projectId = Model.ProjectId })">
+            <i class="ph ph-lightning" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Nutsaansluiting</span>
+                <span class="gl-v2-menu-item-sub">Elektriciteit, gas of water — voor één eenheid of het project.</span>
+            </span>
+        </a>
+        <button type="button" class="gl-v2-menu-item js-dos-bulk" @(Model.ProjectUnits.Count == 0 ? "disabled" : "")>
+            <i class="ph ph-squares-four" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Bulk per eenheid</span>
+                <span class="gl-v2-menu-item-sub">Hetzelfde type voor meerdere eenheden tegelijk.</span>
+            </span>
+        </button>
+        <button type="button" class="gl-v2-menu-item js-dos-ander">
+            <i class="ph ph-folder-open" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Ander dossier</span>
+                <span class="gl-v2-menu-item-sub">Omgevingsvergunning, attest, keuring of vrij dossier.</span>
+            </span>
+        </button>
+    </div>
+}
+
+<div id="gl-v2-dos-root" data-project-id="@Model.ProjectId" data-start-tab="@startTab" data-start-groep="@startGroep" data-can-write="@(Model.CanWrite ? "1" : "0")" data-highlight="@(Model.HighlightDossierId?.ToString() ?? "")">
+
+    @* ═════════ 31a · NUTSAANVRAGEN ═════════ *@
+    <div class="gl-v2-tab-panel gl-v2-dos-panel" data-dos-panel="nuts" role="tabpanel" @(startTab == "nuts" ? "" : "hidden")>
+        @foreach (var d in nutsTeLaat.Take(2))
+        {
+            var n = d.NutsAansluiting;
+            var verwacht = DossierWeergave.Verwacht(d)!.Value;
+            var eenheid = d.Unit?.Name;
+            var type = n != null ? ((NutsType)n.NutsType).GetDisplayName() : "Nutsaansluiting";
+            <div class="gl-v2-notice gl-v2-notice-expanded is-danger gl-v2-dos-notice">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">@(n != null && !n.OfferteOntvangenOp.HasValue ? "1 aanvraag wacht te lang op een offerte" : "1 dossier is te laat")</span>
+                    <span class="gl-v2-notice-text">@type@(eenheid != null ? " " + eenheid : ""): @(n != null && !n.OfferteOntvangenOp.HasValue ? "offerte" : "afhandeling") verwacht op @verwacht.ToString("dd/MM/yyyy"). @(n?.NetbeheerderCompany != null ? "Volg op bij " + n.NetbeheerderCompany.BedrijfsNaam + " of" : "Volg op of") pas de verwachte datum aan.</span>
+                </div>
+                <a class="gl-v2-notice-bar-action" href="@Url.Action("Details", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })">Naar dossier</a>
+            </div>
+        }
+        @if (nutsTeLaat.Count > 2)
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-warning gl-v2-dos-notice"><i class="ph ph-warning" aria-hidden="true"></i><span>Nog @(nutsTeLaat.Count - 2) andere nutsaanvragen zijn te laat.</span></div>
+        }
+
+        <div class="gl-v2-card gl-v2-dos-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Algemene aansluitingen</h2>
+                <span class="gl-v2-card-header-count">projectniveau — bv. gemeenschappelijke technische ruimte of lift</span>
+                <span class="gl-v2-card-header-spacer"></span>
+                @if (Model.CanWrite)
+                {
+                    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("NutsNieuw", "ProjectDossiers", new { projectId = Model.ProjectId })"><i class="ph ph-plus" aria-hidden="true"></i>Algemene aansluiting</a>
+                }
+            </div>
+            @if (nutsAlgemeen.Count == 0)
+            {
+                <p class="gl-v2-dos-empty-line">Geen algemene aansluitingen. Een appartementsgebouw heeft er meestal één voor de gemeenschappelijke delen.</p>
+            }
+            else
+            {
+                <div class="gl-v2-dos-algemeen">
+                    @foreach (var d in nutsAlgemeen)
+                    {
+                        var (gedaan, totaal) = DossierWeergave.Voortgang(d);
+                        var regel = DossierWeergave.MatrixRegel(d, today);
+                        <a class="gl-v2-dos-arow @(regel.Te_laat ? "is-late" : "")" href="@Url.Action("Details", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })">
+                            <span class="gl-v2-dos-ico"><i class="ph @DossierWeergave.KindIcon(d)" aria-hidden="true"></i></span>
+                            <span class="gl-v2-dos-arow-t"><b>@d.Titel</b><small>@regel.Tekst</small></span>
+                            <span class="gl-v2-dos-chip @(regel.Te_laat ? "is-late" : d.Status == (int)DossierStatus.Afgehandeld ? "is-done" : "")">@DossierWeergave.StatusLabel(d)</span>
+                            @await Html.PartialAsync("Partials/_DossierSegmentenV2", (gedaan, totaal, regel.Te_laat))
+                            <span class="gl-v2-dos-frac">@gedaan/@totaal</span>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="gl-v2-card gl-v2-dos-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-squares-four" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Per eenheid</h2>
+                <span class="gl-v2-card-header-count">klik een cel om het dossier te openen · een lege cel maakt er meteen één aan</span>
+                <span class="gl-v2-card-header-spacer"></span>
+                @if (Model.CanWrite && Model.ProjectUnits.Count > 0)
+                {
+                    <button type="button" class="gl-v2-tr-linkbtn js-dos-bulk"><i class="ph ph-squares-four" aria-hidden="true"></i>Bulk per eenheid</button>
+                }
+            </div>
+            @if (Model.ProjectUnits.Count == 0)
+            {
+                <p class="gl-v2-dos-empty-line">Dit project heeft nog geen eenheden. Voeg eerst eenheden toe om per eenheid nutsaanvragen op te volgen, of maak een algemene aansluiting aan.</p>
+            }
+            else
+            {
+                <div class="gl-v2-tr-table-scroll">
+                    <table class="gl-v2-dos-matrix" id="gl-v2-dos-matrix">
+                        <thead>
+                            <tr>
+                                <th class="gl-v2-dos-mx-unit">Eenheid</th>
+                                @foreach (var k in kolommen)
+                                {
+                                    Model.NetbeheerderPerType.TryGetValue((int)k, out var nb);
+                                    <th><span class="gl-v2-dos-mx-h"><i class="ph @DossierWeergave.NutsIcon((int)k)" aria-hidden="true"></i>@k.GetDisplayName().ToUpperInvariant()</span>@if (!string.IsNullOrEmpty(nb.Naam)) { <span class="gl-v2-dos-mx-nb">· @nb.Naam</span> }</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in Model.ProjectUnits)
+                            {
+                                <tr>
+                                    <th class="gl-v2-dos-mx-unit"><span class="gl-v2-dos-mx-unitname">@u.Name</span></th>
+                                    @foreach (var k in kolommen)
+                                    {
+                                        <td data-label="@k.GetDisplayName()">
+                                            @if (cel.TryGetValue((u.Id, (int)k), out var d))
+                                            {
+                                                var (gedaan, totaal) = DossierWeergave.Voortgang(d);
+                                                var regel = DossierWeergave.MatrixRegel(d, today);
+                                                <a class="gl-v2-dos-cell @(regel.Te_laat ? "is-late" : "") @(d.Status == (int)DossierStatus.Geannuleerd ? "is-cancelled" : "")" href="@Url.Action("Details", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })" data-dossier-id="@d.Id">
+                                                    <span class="gl-v2-dos-cell-top"><span class="gl-v2-dos-chip @(regel.Te_laat ? "is-late" : d.Status == (int)DossierStatus.Afgehandeld ? "is-done" : "")">@DossierWeergave.StatusLabel(d)</span><span class="gl-v2-dos-frac">@gedaan/@totaal</span></span>
+                                                    @await Html.PartialAsync("Partials/_DossierSegmentenV2", (gedaan, totaal, regel.Te_laat))
+                                                    <span class="gl-v2-dos-cell-sub">@regel.Tekst</span>
+                                                </a>
+                                            }
+                                            else if (Model.CanWrite)
+                                            {
+                                                <a class="gl-v2-dos-aanvragen" href="@Url.Action("NutsNieuw", "ProjectDossiers", new { projectId = Model.ProjectId, unitId = u.Id, type = (int)k })"><i class="ph ph-plus" aria-hidden="true"></i>Aanvragen</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="gl-v2-dos-none">—</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="gl-v2-dos-legend" aria-label="Stappen van een nutsaanvraag">
+                    <span class="gl-v2-dos-legend-h">STAPPEN</span>
+                    @for (var i = 0; i < stapNamen.Length; i++)
+                    {
+                        <span>@(i + 1) @stapNamen[i]</span>
+                        @if (i < stapNamen.Length - 1) { <i class="ph ph-caret-right" aria-hidden="true"></i> }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ═════════ 31b · ALLE DOSSIERS ═════════ *@
+    <div class="gl-v2-tab-panel gl-v2-dos-panel" data-dos-panel="alle" role="tabpanel" @(startTab == "alle" ? "" : "hidden")>
+        <div class="gl-v2-tr-toolbar">
+            <div class="gl-v2-field gl-v2-toolbar-search gl-v2-tr-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="gl-v2-dos-search" placeholder="Zoek op titel, referentie of netbeheerder" autocomplete="off">
+                    <button type="button" class="gl-v2-field-clear" id="gl-v2-dos-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                </div>
+            </div>
+            <div class="gl-v2-tr-seg" id="gl-v2-dos-typefilter" role="group" aria-label="Type">
+                <button type="button" class="is-active" data-dos-groep="">Alle <span>@alle.Count</span></button>
+                @foreach (var g in new[] { "nuts", "vergunning", "attest", "keuring", "vrij", "overig" })
+                {
+                    @if (groepen.TryGetValue(g, out var n))
+                    {
+                        <button type="button" data-dos-groep="@g">@GroepNaam(g) <span>@n</span></button>
+                    }
+                }
+            </div>
+            <div class="gl-v2-tr-seg" id="gl-v2-dos-openfilter" role="group" aria-label="Status">
+                <button type="button" data-dos-open="open">Open</button>
+                <button type="button" class="is-active" data-dos-open="alles">Alles</button>
+            </div>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dos-cols-menu">
+                <i class="ph ph-columns" aria-hidden="true"></i><span>Kolommen</span>
+            </button>
+        </div>
+        <div class="gl-v2-menu gl-v2-tr-cols-menu" id="gl-v2-dos-cols-menu">
+            <div class="gl-v2-menu-title">ZICHTBARE KOLOMMEN</div>
+            @foreach (var (key, label) in new[] { ("type", "Type"), ("eenheid", "Eenheid"), ("status", "Status"), ("voortgang", "Voortgang"), ("aanvraag", "Aanvraag"), ("verwacht", "Verwacht"), ("afgehandeld", "Afgehandeld") })
+            {
+                <label class="gl-v2-tr-col-opt"><input type="checkbox" checked data-dos-col="@key"><span>@label</span></label>
+            }
+        </div>
+
+        <div class="gl-v2-card gl-v2-tr-table-card">
+            <div class="gl-v2-tr-table-scroll">
+                <table class="gl-v2-tr-table gl-v2-dos-table" id="gl-v2-dos-table">
+                    <thead>
+                        <tr>
+                            <th>Titel</th>
+                            <th data-col="type">Type</th>
+                            <th data-col="eenheid">Eenheid</th>
+                            <th data-col="status">Status</th>
+                            <th data-col="voortgang">Voortgang</th>
+                            <th data-col="aanvraag" class="is-right">Aanvraag</th>
+                            <th data-col="verwacht" class="is-right">Verwacht</th>
+                            <th data-col="afgehandeld" class="is-right">Afgehandeld</th>
+                            <th class="gl-v2-tr-col-act"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in alle)
+                        {
+                            var (gedaan, totaal) = DossierWeergave.Voortgang(d);
+                            var late = DossierWeergave.IsTeLaat(d, today);
+                            var verwacht = DossierWeergave.Verwacht(d);
+                            var href = Url.Action("Details", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id });
+                            var netb = d.NutsAansluiting?.NetbeheerderCompany?.BedrijfsNaam ?? "";
+                            <tr class="gl-v2-tr-trow gl-v2-dos-row @(late ? "is-late" : "")" data-href="@href" data-groep="@DossierWeergave.Groep(d)" data-open="@(DossierWeergave.IsOpen(d) ? "1" : "0")" data-dossier-id="@d.Id"
+                                data-zoek="@((d.Titel + " " + d.Referentie + " " + netb + " " + d.ExterneContactNaam).ToLowerInvariant())">
+                                <td class="gl-v2-tr-col-naam"><span class="gl-v2-dos-ico"><i class="ph @DossierWeergave.KindIcon(d)" aria-hidden="true"></i></span><span class="gl-v2-tr-naam">@d.Titel</span></td>
+                                <td data-col="type">@DossierWeergave.TypeNaam(d)</td>
+                                <td data-col="eenheid" class="gl-v2-tr-muted">@(d.Unit?.Name ?? "Project")</td>
+                                <td data-col="status"><span class="gl-v2-dos-chip @(late ? "is-late" : d.Status == (int)DossierStatus.Afgehandeld ? "is-done" : "")">@DossierWeergave.StatusLabel(d)</span></td>
+                                <td data-col="voortgang">@await Html.PartialAsync("Partials/_DossierSegmentenV2", (gedaan, totaal, late))</td>
+                                <td data-col="aanvraag" class="is-right gl-v2-tr-num">@TrajectWeergave.Datum(d.AanvraagDatum)</td>
+                                <td data-col="verwacht" class="is-right gl-v2-tr-num @(late ? "is-late" : "")">@TrajectWeergave.Datum(verwacht)</td>
+                                <td data-col="afgehandeld" class="is-right gl-v2-tr-num">@TrajectWeergave.Datum(d.AfgehandeldDatum)</td>
+                                <td class="gl-v2-tr-col-act"><i class="ph ph-caret-right gl-v2-dos-go" aria-hidden="true"></i></td>
+                            </tr>
+                        }
+                        <tr class="gl-v2-tr-none" id="gl-v2-dos-none" hidden><td colspan="9">Geen dossiers voor deze filters.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="gl-v2-tr-table-foot"><span id="gl-v2-dos-count">@alle.Count @(alle.Count == 1 ? "dossier" : "dossiers")</span><span class="gl-v2-tr-foot-hint">Klik een rij om het dossier te openen</span></div>
+        </div>
+        @if (alle.Count == 0)
+        {
+            <div class="gl-v2-card gl-v2-dos-card"><div class="gl-v2-card-body">
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-folder-open" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-empty-state-title">Nog geen dossiers</h2>
+                    <p class="gl-v2-empty-state-desc">Start met "+ Nieuw": een nutsaansluiting, een bulkaanvraag per eenheid of een ander dossier zoals een omgevingsvergunning.</p>
+                </div>
+            </div></div>
+        }
+    </div>
+</div>
+
+@if (Model.CanWrite)
+{
+    @* 31e — Bulk per eenheid. De "wordt aangemaakt/overgeslagen"-staat per eenheid volgt het gekozen type (gl-v2-projecten-dossiers.js). *@
+    <div class="modal fade gl-v2-modal-form gl-v2-tr-modal gl-v2-dos-modal" id="gl-v2-dos-bulk-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dos-bulk-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" action="@Url.Action("NutsBulkAanmaken", "ProjectDossiers", new { projectId = Model.ProjectId })" id="gl-v2-dos-bulk-form" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <div class="gl-v2-tr-modal-headtext">
+                        <h2 class="modal-title" id="gl-v2-dos-bulk-title">Nutsaansluiting per eenheid</h2>
+                        <span class="gl-v2-tr-modal-sub">Maakt hetzelfde type in één keer aan voor elke aangevinkte eenheid</span>
+                    </div>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <section class="gl-v2-tr-fsec">
+                        <h3 class="gl-v2-tr-fsec-title">TYPE &amp; EENHEDEN</h3>
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Type nutsvoorziening</span>
+                            <div class="gl-v2-tr-radioseg gl-v2-dos-typeseg" id="gl-v2-dos-bulk-type" role="radiogroup" aria-label="Type nutsvoorziening">
+                                @foreach (var t in new[] { NutsType.Elektriciteit, NutsType.Gas, NutsType.Water })
+                                {
+                                    <label><input type="radio" name="NutsType" value="@((int)t)" @(t == NutsType.Elektriciteit ? "checked" : "")><span><i class="ph @DossierWeergave.NutsIcon((int)t)" aria-hidden="true"></i>@t.GetDisplayName()</span></label>
+                                }
+                            </div>
+                        </div>
+                        <div class="gl-v2-dos-bulk-units">
+                            <div class="gl-v2-dos-bulk-head">
+                                <span></span><span>EENHEID</span><span id="gl-v2-dos-bulk-eanh">EAN (UIT EENHEID)</span>
+                                <span class="gl-v2-dos-bulk-links"><button type="button" class="gl-v2-tr-linkbtn" data-bulk-all="1">Alles</button><button type="button" class="gl-v2-tr-linkbtn" data-bulk-all="0">Geen</button></span>
+                            </div>
+                            @foreach (var u in Model.ProjectUnits)
+                            {
+                                <label class="gl-v2-dos-bulk-unit" data-unit-id="@u.Id" data-ean-elek="@u.EanElektriciteit" data-ean-gas="@u.EanGas" data-meter-water="@u.WatermeterNummer">
+                                    <input type="checkbox" name="UnitIds" value="@u.Id" checked>
+                                    <span class="gl-v2-dos-bulk-name">@u.Name</span>
+                                    <span class="gl-v2-dos-bulk-ean"></span>
+                                    <span class="gl-v2-dos-bulk-state"></span>
+                                </label>
+                            }
+                        </div>
+                        <p class="gl-v2-field-help" id="gl-v2-dos-bulk-skip-note" hidden></p>
+                    </section>
+                    <section class="gl-v2-tr-fsec">
+                        <h3 class="gl-v2-tr-fsec-title">AANVRAAG</h3>
+                        <div class="gl-v2-tr-fgrid">
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-dos-bulk-nb_input">Netbeheerder</label>
+                                @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                                {
+                                    Name = "NetbeheerderCompanyId", Id = "gl-v2-dos-bulk-nb", Value = "", EmptyValue = "", Placeholder = "Zoek een netbeheerder …",
+                                    LookupUrl = Url.Action("GetCompanys", "Projecten"), MinChars = 2, Icon = "ph-buildings"
+                                })
+                            </div>
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-dos-bulk-titel">Titel</label>
+                                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dos-bulk-titel" name="TitelPrefix" value="Elektriciteit — {eenheid}" maxlength="150" autocomplete="off"></div>
+                                <span class="gl-v2-field-help" id="gl-v2-dos-bulk-titel-help"></span>
+                            </div>
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "AanvraagDatum", Id = "gl-v2-dos-bulk-aanvraag", Label = "Aanvraagdatum", IsoValue = today.ToString("yyyy-MM-dd"), DisplayValue = today.ToString("dd/MM/yyyy") })
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "VerwachteOfferteDatum", Id = "gl-v2-dos-bulk-offerte", Label = "Offerte verwacht" })
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-dos-bulk-contact">Extern contact</label>
+                                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dos-bulk-contact" name="ExterneContactNaam" placeholder="naam" maxlength="150" autocomplete="off"></div>
+                            </div>
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-dos-bulk-mail">E-mail</label>
+                                <div class="gl-v2-field-box"><input type="email" class="gl-v2-field-input" id="gl-v2-dos-bulk-mail" name="ExterneContactEmail" placeholder="e-mail" maxlength="254" autocomplete="off"></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="modal-footer">
+                    <span class="gl-v2-dos-bulk-count" id="gl-v2-dos-bulk-count"></span>
+                    <span class="gl-v2-tr-spacer"></span>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-dos-bulk-submit"><span id="gl-v2-dos-bulk-submit-label">dossiers aanmaken</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* 31f — Ander dossier: inhoud via AJAX (Modals/_ModalAnderV2). *@
+    <div class="modal fade gl-v2-modal-form gl-v2-tr-modal gl-v2-dos-modal" id="gl-v2-dos-ander-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dos-ander-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" action="@Url.Action("Opslaan", "ProjectDossiers", new { projectId = Model.ProjectId })" id="gl-v2-dos-ander-form" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <div class="gl-v2-tr-modal-headtext">
+                        <h2 class="modal-title" id="gl-v2-dos-ander-title">Ander dossier</h2>
+                        <span class="gl-v2-tr-modal-sub" id="gl-v2-dos-ander-sub">Vergunning, attest, keuring of een vrij dossier</span>
+                    </div>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body" id="gl-v2-dos-ander-body"><div class="gl-v2-tr-loading">Laden…</div></div>
+                <div class="modal-footer">
+                    <span class="gl-v2-tr-modal-req">Velden met * zijn verplicht</span>
+                    <span class="gl-v2-tr-spacer"></span>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script id="gl-v2-dos-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "anderUrl": "@Url.Action("AnderModal", "ProjectDossiers", new { projectId = Model.ProjectId })",
+        "bestaand": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.BestaandePerEenheidEnType.ToList())),
+        "netbeheerders": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NetbeheerderPerType.ToDictionary(kv => kv.Key.ToString(), kv => new { id = kv.Value.CompanyId, naam = kv.Value.Naam })))
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-dossiers-ander.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-dossiers.js" asp-append-version="true"></script>
+}

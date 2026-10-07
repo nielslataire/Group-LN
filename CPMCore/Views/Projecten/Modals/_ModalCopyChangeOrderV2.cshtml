@@ -1,6 +1,6 @@
 @model CPMCore.Models.Projecten.CopyChangeOrderModalV2Vm
 @*
-    Kopie van een wijzigingsopdracht (design-handoff 29a "+ Nieuw · Kopie van een wijzigingsopdracht" en
+    Kopie van een offerte of wijzigingsopdracht (design-handoff 29a "+ Nieuw · Kopie van een wijzigingsopdracht" en
     29b "Kopie": lijst · "···" op een rij → "Kies eenheid — regels en plan worden overgenomen,
     handtekeningen niet" → 28a met Bron = de oorspronkelijke WO). Inhoud van #gl-v2-cc-modal op de lijst
     (20b), AJAX-geladen door ProjectenController.CopyChangeOrderModalV2; het formulier post naar
@@ -10,14 +10,23 @@
 <input type="hidden" name="projectId" value="@Model.ProjectId" />
 
 <div class="gl-v2-field gl-v2-field-full">
-    <label class="gl-v2-field-label" for="gl-v2-cc-order">Wijzigingsopdracht <span class="gl-v2-cq-req">*</span></label>
+    <label class="gl-v2-field-label" for="gl-v2-cc-order">Offerte of wijzigingsopdracht <span class="gl-v2-cq-req">*</span></label>
     <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-cc-order" name="changeOrderId" required>
-        <option value="">— kies een wijzigingsopdracht —</option>
-        @foreach (var o in Model.Orders)
+        <option value="">— kies een offerte of wijzigingsopdracht —</option>
+        @foreach (var o in Model.Sources)
         {
-            <option value="@o.ID" selected="@(o.ID == Model.ChangeOrderId)">@o.Display</option>
+            <option value="@o.Id" data-quote="@(o.IsQuote ? "true" : "false")" selected="@(o.Id == Model.ChangeOrderId)">@o.Display</option>
         }
     </select></div>
+</div>
+
+<div class="gl-v2-field gl-v2-field-full">
+    <span class="gl-v2-field-label">Kopie als</span>
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="asQuote" value="true" id="gl-v2-cc-as-quote" /> Offerte</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="asQuote" value="false" id="gl-v2-cc-as-wo" checked /> Wijzigingsopdracht</label>
+    </div>
+    <span class="gl-v2-field-help" id="gl-v2-cc-as-hint">Van een offerte maak je een kopie als offerte; omzetten naar een wijzigingsopdracht doe je via “Omzetten →”.</span>
 </div>
 
 <div class="gl-v2-field gl-v2-field-full">
@@ -34,5 +43,5 @@
 
 <div class="gl-v2-notice gl-v2-notice-compact is-info gl-v2-field-full">
     <i class="ph ph-info" aria-hidden="true"></i>
-    <span>Regels en facturatieplan worden overgenomen, handtekeningen niet. De kopie start als concept; de oorspronkelijke wijzigingsopdracht blijft als bron gekoppeld.</span>
+    <span>Regels worden overgenomen, handtekeningen niet; een kopie als wijzigingsopdracht neemt ook het facturatieplan over. De kopie start als concept; het oorspronkelijke document blijft als bron gekoppeld.</span>
 </div>

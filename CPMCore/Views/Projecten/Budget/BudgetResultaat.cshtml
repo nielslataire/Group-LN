@@ -248,6 +248,20 @@
                                         }
                                     }
 
+                                    @* Grond *@
+                                    @if (Model.Resultaat.Grond.Any(f => f.Bedrag != 0))
+                                    {
+                                        <tr><th colspan="3" class="kosten-groep"><i class="fa-solid fa-map-location-dot me-1"></i>Grond</th></tr>
+                                        @foreach (var k in Model.Resultaat.Grond.Where(f => f.Bedrag != 0))
+                                        {
+                                            <tr>
+                                                <td class="ps-3">@k.Omschrijving</td>
+                                                <td class="bedrag">€ @k.Bedrag.ToString("N0")</td>
+                                                <td class="perc">@Perc(k.Bedrag)%</td>
+                                            </tr>
+                                        }
+                                    }
+
                                     @* Forfaits *@
                                     @if (Model.Resultaat.Forfaits.Any(f => f.Bedrag > 0))
                                     {

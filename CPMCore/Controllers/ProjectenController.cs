@@ -83,6 +83,8 @@ namespace CPMCore.Controllers
         private readonly BouwIndexService            _bouwIndex;
         private readonly BudgetBerekeningService     _berekeningService;
         private readonly IVerkoopVoorstelService     _verkoopVoorstelService;
+        private readonly IBudgetPrijsReferentieService _prijsReferentieService;
+        private readonly IBudgetReferentieProjectService _referentieProjectService;
         private readonly BudgetExcelService          _excelService;
         private readonly ServiceCore.Budget.BudgetFormulaService _formulaService;
         private readonly IEmailTemplateService _emailTemplateService;
@@ -97,7 +99,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IMijlpaalService mijlpaalService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, IVerkoopVoorstelService verkoopVoorstelService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, IMijlpaalService mijlpaalService, IInvoiceQueryService invoiceQueryService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, IVerkoopVoorstelService verkoopVoorstelService, IBudgetPrijsReferentieService prijsReferentieService, IBudgetReferentieProjectService referentieProjectService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
         {
             _logger = logger;
             Configuration = configuration;
@@ -121,6 +123,8 @@ namespace CPMCore.Controllers
             _bouwIndex              = bouwIndex;
             _berekeningService      = berekeningService;
             _verkoopVoorstelService = verkoopVoorstelService;
+            _prijsReferentieService = prijsReferentieService;
+            _referentieProjectService = referentieProjectService;
             _excelService           = excelService;
             _formulaService         = formulaService;
             _emailTemplateService   = emailTemplateService;
@@ -185,7 +189,43 @@ public class VergelijkRequest
 public class SaveVerkoopRequest
 {
     public int BudgetVersieId { get; set; }
-    public List<BudgetVerkoopLijn> Lijnen { get; set; } = new();
+    public List<VerkoopLijnDto> Lijnen { get; set; } = new();
+}
+
+/// <summary>Eén verkooplijn uit het JS van stap 8. Bewust geen EF-entiteit: System.Text.Json bouwt dan de hele navigatiegraaf
+/// (Unit → … → CompanyInfo) op en struikelt daar over botsende propertynamen (postCode/PostCode) → 500 vóór de actie start.</summary>
+public class VerkoopLijnDto
+{
+    public string   EenheidNaam     { get; set; }
+    public int?     UnitId          { get; set; }
+    public int?     CodeBouw        { get; set; }
+    public int?     CodeGrond       { get; set; }
+    public bool     IsRuil          { get; set; }
+    public decimal? ExtraForfait    { get; set; }
+    public decimal? Grondwaarde     { get; set; }
+    public decimal? Bouwwaarde      { get; set; }
+    public decimal? Vraagprijs      { get; set; }
+    public decimal? BouwPrijsPerM2  { get; set; }
+    public decimal? GrondPrijsPerM2 { get; set; }
+    public byte?    PrijsBron       { get; set; }
+
+    public BudgetVerkoopLijn NaarEntiteit(int versieId, int sortOrder) => new()
+    {
+        BudgetVersieId  = versieId,
+        SortOrder       = sortOrder,
+        EenheidNaam     = EenheidNaam,
+        UnitId          = UnitId > 0 ? UnitId : null,
+        CodeBouw        = CodeBouw,
+        CodeGrond       = CodeGrond,
+        IsRuil          = IsRuil,
+        ExtraForfait    = ExtraForfait,
+        Grondwaarde     = Grondwaarde,
+        Bouwwaarde      = Bouwwaarde,
+        Vraagprijs      = Vraagprijs,
+        BouwPrijsPerM2  = BouwPrijsPerM2,
+        GrondPrijsPerM2 = GrondPrijsPerM2,
+        PrijsBron       = PrijsBron
+    };
 }
 
 // ── Request DTOs voor BudgetActivityLijnen ────────────────────────────────────

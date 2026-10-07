@@ -38,6 +38,16 @@ public interface ISigningDocumentSource
     /// <summary>Projectnaam voor pagina's en mails (null als het document niet bij een project hoort).</summary>
     Task<string?> GetProjectNameAsync(int sourceEntityId, CancellationToken ct = default);
 
+    /// <summary>Eenheid waar het document over gaat (bv. "Woning Lot 2"), voor de ondertekenpagina; null als er geen is.
+    /// Standaard null, zodat bronnen die er geen hebben niets hoeven te doen.</summary>
+    Task<string?> GetUnitLabelAsync(int sourceEntityId, CancellationToken ct = default) => Task.FromResult<string?>(null);
+
+    /// <summary>Naam van het bedrijf dat het document uitgeeft (bv. "BCO"), voor de verificatiepagina; standaard null.</summary>
+    Task<string?> GetIssuerNameAsync(int sourceEntityId, CancellationToken ct = default) => Task.FromResult<string?>(null);
+
+    /// <summary>Actuele bedragen van het document (excl., btw, incl.) voor de ondertekenpagina; null = gebruik wat in het dossier staat.</summary>
+    Task<(decimal Excl, decimal Vat, decimal Incl)?> GetAmountsAsync(int sourceEntityId, CancellationToken ct = default) => Task.FromResult<(decimal Excl, decimal Vat, decimal Incl)?>(null);
+
     /// <summary>Interne e-mailadressen die verwittigd worden bij voltooiing/weigering (bv. de projectleider).</summary>
     Task<IReadOnlyList<SigningMailRecipient>> GetInternalNotificationRecipientsAsync(int sourceEntityId, CancellationToken ct = default);
 }

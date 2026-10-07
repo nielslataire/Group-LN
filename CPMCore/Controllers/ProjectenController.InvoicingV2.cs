@@ -190,6 +190,10 @@ namespace CPMCore.Controllers
                 var clientsById = clientsResp.Success ? clientsResp.Values.ToDictionary(c => c.Id) : new Dictionary<int, ClientAccountBO>();
 
                 var detailIds = respCo.Values.SelectMany(co => co.Details ?? new List<ChangeOrderDetailBO>()).Select(d => d.Id).Distinct().ToList();
+                var coIds = respCo.Values.Select(v => v.Id).Distinct().ToList();
+                var subjectsByCo = _db.ChangeOrder.AsNoTracking().Where(x => coIds.Contains(x.Id))
+                    .Select(x => new { x.Id, x.Subject }).ToList()
+                    .ToDictionary(x => x.Id, x => x.Subject);
                 var invoicedAmounts = _db.InvoicesDetails.AsNoTracking()
                     .Where(d => d.LineType == "ChangeOrders" && d.ChangeOrderDetailId.HasValue && detailIds.Contains(d.ChangeOrderDetailId.Value))
                     .GroupBy(d => d.ChangeOrderDetailId!.Value)
@@ -202,6 +206,7 @@ namespace CPMCore.Controllers
                     var card = CardFor(client);
                     var woLabel = CoNo(co.Id);
                     var signedSub = co.DateAgreement.HasValue ? $"ondertekend {co.DateAgreement.Value:dd/MM/yyyy}" : null;
+                    var coTitle = subjectsByCo.TryGetValue(co.Id, out var coSubject) && !string.IsNullOrWhiteSpace(coSubject) ? coSubject : co.Description;
                     foreach (var detail in co.Details.Where(d => d.Invoicable != false))
                     {
                         var total = detail.Totaal;
@@ -221,6 +226,9 @@ namespace CPMCore.Controllers
                             VatPercentage = detail.VatPercentage ?? 21m,
                             ChangeOrderId = co.Id,
                             ChangeOrderDetailId = detail.Id,
+                            ChangeOrderLabel = woLabel,
+                            ChangeOrderTitle = coTitle,
+                            LineDescription = detailDesc,
                         });
                     }
                 }
@@ -231,6 +239,7 @@ namespace CPMCore.Controllers
             // 20a, gewoon TUSSEN de andere posten van hetzelfde account (niet aanvinkbaar, rode rij). =====
             var blockedEntities = _db.ChangeOrder.AsNoTracking()
                 .Where(m => m.ContractActivity.Contract.ProjectId == projectid
+                    && !m.IsQuote   // een offerte blokkeert niets: enkel een wijzigingsopdracht zelf kan de facturatie blokkeren
                     && m.Invoiceable
                     && m.DateAgreement == null
                     && m.ClientAccountId > 0
@@ -239,6 +248,7 @@ namespace CPMCore.Controllers
                 {
                     m.Id,
                     m.Description,
+                    m.Subject,
                     m.ClientAccountId,
                     Amount = m.ChangeOrderDetail.Where(d => d.Invoicable != false && d.Invoiced != true)
                         .Sum(d => (d.Number * d.Price) * (1m + d.Commission / 100m))
@@ -261,7 +271,7 @@ namespace CPMCore.Controllers
                     card.Rows.Add(new InvoicingPostRowV2
                     {
                         Kind = "Meerwerk",
-                        Description = $"{CoNo(b.Id)} · {b.Description ?? "Wijzigingsopdracht"}",
+                        Description = $"{CoNo(b.Id)} · {(string.IsNullOrWhiteSpace(b.Subject) ? b.Description : b.Subject) ?? "Wijzigingsopdracht"}",
                         SubText = statusLabel,
                         Moment = "blokkeert",
                         Amount = b.Amount,
@@ -439,6 +449,9 @@ namespace CPMCore.Controllers
                     .Select(g => new { DetailId = g.Key, Amount = g.Sum(x => x.Price ?? 0m) })
                     .ToDictionary(x => x.DetailId, x => x.Amount);
 
+                var coInfo = LoadChangeOrderInvoiceInfo(request.ChangeOrders.Select(i => i.ChangeOrderId));
+                var detailVatTypeIds = LoadDetailVatTypeIds(request.ChangeOrders.Select(i => i.ChangeOrderDetailId));
+
                 foreach (var client in clientAccounts)
                 {
                     var changeOrders = new List<ChangeOrderBO>();
@@ -474,13 +487,13 @@ namespace CPMCore.Controllers
                     var coOwnerTotal = coowners.Sum(c => c.CoOwnerPercentage ?? 0m);
                     var mainOwnerShare = Math.Max(0m, 100m - coOwnerTotal);
 
-                    var mainDraft = BuildChangeOrderInvoiceDraft(issuerCompanyId, client.Id, null, mainOwnerShare, changeOrders, selectedRows, alreadyInvoicedByDetail, project);
+                    var mainDraft = BuildChangeOrderInvoiceDraft(issuerCompanyId, client.Id, null, mainOwnerShare, changeOrders, selectedRows, alreadyInvoicedByDetail, project, coInfo, detailVatTypeIds);
                     if (mainDraft != null) owners.Add(ToPreviewOwner(client.DisplayName, mainOwnerShare, mainDraft));
 
                     foreach (var co in coowners)
                     {
                         if (co.CoOwnerPercentage.GetValueOrDefault() <= 0m) continue;
-                        var coDraft = BuildChangeOrderInvoiceDraft(issuerCompanyId, null, co.Id, co.CoOwnerPercentage ?? 0m, changeOrders, selectedRows, alreadyInvoicedByDetail, project);
+                        var coDraft = BuildChangeOrderInvoiceDraft(issuerCompanyId, null, co.Id, co.CoOwnerPercentage ?? 0m, changeOrders, selectedRows, alreadyInvoicedByDetail, project, coInfo, detailVatTypeIds);
                         if (coDraft != null) owners.Add(ToPreviewOwner($"{co.Name} {co.Forename}".Trim(), co.CoOwnerPercentage ?? 0m, coDraft));
                     }
                 }
@@ -497,5 +510,24 @@ namespace CPMCore.Controllers
             Lines = draft.Lines.Select(l => new InvoicePreviewLineV2 { Text = l.Text, Amount = l.Price }).ToList(),
             Total = draft.Lines.Sum(l => l.Price),
         };
+
+        /// <summary>Titel ("WO-2026-001 · onderwerp") en omschrijving van de wijzigingsopdrachten, voor groepstitel en beschrijving op de factuur.</summary>
+        private Dictionary<int, ChangeOrderInvoiceInfo> LoadChangeOrderInvoiceInfo(IEnumerable<int> changeOrderIds)
+        {
+            var ids = changeOrderIds.Distinct().ToList();
+            return _db.ChangeOrder.AsNoTracking().Where(c => ids.Contains(c.Id)).ToList()
+                .ToDictionary(c => c.Id, c => new ChangeOrderInvoiceInfo(
+                    $"{c.PublicNumber} · {(string.IsNullOrWhiteSpace(c.Subject) ? c.Description : c.Subject)}".Trim(' ', '·'),
+                    c.Description));
+        }
+
+        /// <summary>Gekozen btw-code (<c>ChangeOrderDetail.VatTypeId</c>, migratie 073) per lijn, voor de factuurregels.</summary>
+        private Dictionary<int, int> LoadDetailVatTypeIds(IEnumerable<int> detailIds)
+        {
+            var ids = detailIds.Distinct().ToList();
+            return _db.ChangeOrderDetail.AsNoTracking().Where(d => ids.Contains(d.Id) && d.VatTypeId.HasValue)
+                .Select(d => new { d.Id, VatTypeId = d.VatTypeId!.Value }).ToList()
+                .ToDictionary(x => x.Id, x => x.VatTypeId);
+        }
     }
 }

@@ -400,6 +400,46 @@
                     </div>
                 </div>
             }
+            @if (canKostprijs)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-euro"></i></div>
+                                <h3 class="settings-card-title">Prijsreferenties verkoop</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Bouw- en grondprijscodes (€/m²) met datum en bron, voor de verkooplijnen op stap 8 van de budgetwizard.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("BudgetPrijsReferenties", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("BudgetPrijsReferenties", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (canKostprijs)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-history"></i></div>
+                                <h3 class="settings-card-title">Referentieprojecten (nacalc)</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Werkelijke kost per activiteit van afgewerkte projecten, uit de app of uit Excel, om een budget mee te vergelijken op stap 6.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("BudgetReferentieProjecten", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("BudgetReferentieProjecten", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 }

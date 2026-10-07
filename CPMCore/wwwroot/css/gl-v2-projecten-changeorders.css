@@ -138,8 +138,8 @@
 .gl-v2-co2-row:hover td { background: var(--gl-v2-bg); }
 .gl-v2-co2-row[hidden] { display: none !important; }
 .gl-v2-co2-table td { padding: 8px 10px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); border-bottom: 1px solid var(--gl-v2-hairline-soft); vertical-align: middle; }
-.gl-v2-co2-table td:first-child { padding-left: 20px; }
-.gl-v2-co2-table td:last-child { padding-right: 20px; }
+.gl-v2-co2-table th:first-child, .gl-v2-co2-table td:first-child { padding-left: 20px; }   /* kop en waarden op dezelfde lijn */
+.gl-v2-co2-table th:last-child, .gl-v2-co2-table td:last-child { padding-right: 20px; }
 .gl-v2-co2-desc { min-width: 220px; }
 .gl-v2-co2-desc-title { display: block; }
 .gl-v2-co2-desc-sub { display: block; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); margin-top: 2px; }
@@ -167,6 +167,11 @@
    (volle breedte, shell-regel) — daar niets forceren. */
 @media (min-width: 768px) {
     .gl-v2-menu.gl-v2-co2-new-menu { width: 330px; }
+}
+/* "Omzetten naar wijzigingsopdracht" past niet in de standaardbreedte van 224px; op mobiel blijft het de bottom sheet */
+@media (min-width: 768px) {
+    .gl-v2-menu.gl-v2-co2-row-menu { width: 276px; }
+    .gl-v2-menu.gl-v2-co2-row-menu .gl-v2-menu-item { white-space: nowrap; }
 }
 .gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item { align-items: flex-start; padding-top: 9px; padding-bottom: 9px; }
 .gl-v2-menu.gl-v2-co2-new-menu .gl-v2-menu-item > i { margin-top: 1px; font-size: 17px; }

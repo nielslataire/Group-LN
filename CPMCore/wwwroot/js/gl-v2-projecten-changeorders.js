@@ -30,10 +30,11 @@
         if (row && row.getAttribute("data-href")) window.location.href = row.getAttribute("data-href");
     });
 
-    // ── 21c "Omzetten →" op een offerte-rij en "Kopie maken" (rij-menu en "+ Nieuw") ────────────────
+    // ── 21c "Omzetten" (rijmenu van een offerte) en "Kopie maken" (rij-menu en "+ Nieuw") ────────────────
     document.addEventListener("click", function (e) {
         var convert = e.target.closest(".js-co2-convert");
         if (convert && window.GlV2ConvertQuote) {
+            if (window.GlV2Menu) window.GlV2Menu.closeAll();
             window.GlV2ConvertQuote.open({
                 url: cfg.convertModalUrl + "?projectId=" + encodeURIComponent(cfg.projectId) + "&changeOrderId=" + encodeURIComponent(convert.getAttribute("data-co-id")),
             });

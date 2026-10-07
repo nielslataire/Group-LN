@@ -21,7 +21,7 @@ public class ProjectDossierService : IProjectDossierService
     public Task<ProjectDossier?> GetById(int projectId, int id) =>
         _db.ProjectDossier
             .Include(d => d.Unit)
-            .Include(d => d.NutsAansluiting)
+            .Include(d => d.NutsAansluiting).ThenInclude(n => n.NetbeheerderCompany)
             .Include(d => d.Gebeurtenissen)
             .Include(d => d.Documenten)
             .Include(d => d.Substappen)
@@ -29,7 +29,7 @@ public class ProjectDossierService : IProjectDossierService
 
     public async Task<List<ProjectDossier>> Search(int projectId, DossierFilterBO f)
     {
-        var q = _db.ProjectDossier.Include(d => d.Unit).Include(d => d.NutsAansluiting).Include(d => d.Substappen)
+        var q = _db.ProjectDossier.Include(d => d.Unit).Include(d => d.NutsAansluiting).ThenInclude(n => n.NetbeheerderCompany).Include(d => d.Substappen)
             .Where(d => d.ProjectId == projectId);
 
         if (f.DossierKind.HasValue) q = q.Where(d => d.DossierKind == f.DossierKind.Value);
@@ -267,6 +267,36 @@ public class ProjectDossierService : IProjectDossierService
     public Task<List<ProjectDossierSubstap>> GetSubstappen(int projectDossierId) =>
         _db.ProjectDossierSubstap.Where(s => s.ProjectDossierId == projectDossierId)
             .OrderBy(s => s.Volgorde).ToListAsync();
+
+    public async Task<ProjectDossierSubstap?> AddChecklistItem(int projectDossierId, string naam, string? userId)
+    {
+        naam = (naam ?? "").Trim();
+        if (naam.Length == 0) return null;
+        if (naam.Length > 200) naam = naam[..200];
+        if (!await _db.ProjectDossier.AnyAsync(d => d.Id == projectDossierId)) return null;
+        var volgorde = (await _db.ProjectDossierSubstap.Where(s => s.ProjectDossierId == projectDossierId).MaxAsync(s => (int?)s.Volgorde) ?? 0) + 10;
+        var stap = new ProjectDossierSubstap
+        {
+            ProjectDossierId = projectDossierId,
+            Naam = naam,
+            Volgorde = volgorde,
+            Status = (int)DossierSubstapStatus.NietGestart,
+            CreatedDate = DateTime.UtcNow,
+            ModifiedByUserId = userId
+        };
+        _db.ProjectDossierSubstap.Add(stap);
+        await _db.SaveChangesAsync();
+        return stap;
+    }
+
+    public async Task<bool> RemoveChecklistItem(int projectDossierId, int substapId, string? userId)
+    {
+        var stap = await _db.ProjectDossierSubstap.FirstOrDefaultAsync(s => s.ProjectDossierId == projectDossierId && s.Id == substapId);
+        if (stap == null || !string.IsNullOrEmpty(stap.Code)) return false;
+        _db.ProjectDossierSubstap.Remove(stap);
+        await _db.SaveChangesAsync();
+        return true;
+    }
 
     public async Task<bool> ChangeSubstapStatus(int projectDossierId, int substapId, int status, DateOnly? datum, string? userId)
     {

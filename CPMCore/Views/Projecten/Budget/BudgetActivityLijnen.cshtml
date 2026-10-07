@@ -14,6 +14,14 @@
     var lotenMetBedrag  = Model.LotGroepen.Where(g => g.Lijnen.Any(l => l.TotaalAlternatief > 0)).ToList();
     var totaalGecorrigeerd = lotenMetBedrag.Sum(LotGecorrigeerd);
     var prijsPerM2      = Model.OppervlakteGBA == 0 ? 0m : totaalGecorrigeerd / Model.OppervlakteGBA;
+
+    // Nacalc: referentieprojecten (werkelijke kost van afgewerkte projecten, geïndexeerd) naast het budget
+    var toonRef = Model.HeeftReferenties;
+    ViewData["HeeftReferenties"] = toonRef;
+    decimal LotReferentie(BOCore.Budget.BudgetLotGroepBO g) =>
+        g.Lijnen.Where(l => l.TotaalAlternatief > 0 && l.HeeftReferentie).Sum(l => l.ReferentieTotaal ?? 0m);
+    var totaalReferentie = Model.TotaalReferentie;
+    var gekozenRefs = Model.Referenties.Where(r => Model.GeselecteerdeReferentieIds.Contains(r.Id)).ToList();
 }
 
 @section PageStyle {
@@ -85,6 +93,37 @@
     }
     .bw-actlijn tfoot strong { color: var(--primary, #0a5a3b); font-variant-numeric: tabular-nums; }
 
+    /* Nacalc-kolommen */
+    .bw-actlijn .act-row__ref { color: var(--dark, #222); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .act-row__ref-n {
+        display: inline-block; min-width: 16px; margin-left: .3rem; padding: 0 4px;
+        border-radius: 999px; background: var(--lightgray, #f1f3f7); color: var(--muted, #8590a5);
+        font-size: .66rem; line-height: 16px; text-align: center; vertical-align: middle;
+    }
+    .act-row__verschil { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .act-row__delta { display: inline-block; min-width: 58px; text-align: right; font-size: .8rem; font-weight: 600; }
+    .is-hoger { color: var(--danger, #b3452f); }
+    .is-lager { color: var(--primary, #0a5a3b); }
+    .is-gelijk { color: var(--muted, #8590a5); font-weight: 400; }
+    .act-row__overnemen {
+        vertical-align: middle; width: 22px; height: 22px; margin-left: .35rem;
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0; border: 1px solid var(--border, #e7e7e7); border-radius: 6px;
+        background: var(--white, #fff); color: var(--muted, #8590a5); font-size: .7rem; cursor: pointer;
+    }
+    .act-row__overnemen:hover { color: var(--primary, #0a5a3b); border-color: var(--primary, #0a5a3b); background: var(--lightgreen, #e8f0eb); }
+    .actlijn-lot__ref { color: var(--muted, #8590a5); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .lot-delta { font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .bw-nacalc-keuze { display: flex; flex-wrap: wrap; gap: .5rem .75rem; }
+    .bw-nacalc-keuze label {
+        display: inline-flex; align-items: center; gap: .45rem; margin: 0; padding: .3rem .65rem;
+        border: 1px solid var(--border, #e7e7e7); border-radius: 999px; background: var(--white, #fff);
+        font-size: .82rem; cursor: pointer;
+    }
+    .bw-nacalc-keuze label:has(input:checked) { border-color: var(--primary, #0a5a3b); background: var(--lightgreen, #e8f0eb); }
+    .bw-nacalc-keuze label input { margin: 0; }
+    .bw-nacalc-keuze .meta { color: var(--muted, #8590a5); font-size: .74rem; }
+
     .popover-ruwbouw           { max-width: 560px; }
     .popover-ruwbouw table     { width: auto !important; }
     .popover-ruwbouw td        { white-space: nowrap; }
@@ -137,6 +176,66 @@
                         </div>
                     </div>
                 </div>
+                @if (toonRef)
+                {
+                    <div class="gl-kpi2-tile-col">
+                        <div class="gl-kpi2-tile" style="--kpi-color: var(--primary);">
+                            <div class="gl-kpi2-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
+                            <div class="gl-kpi2-body">
+                                <div class="gl-kpi2-label">Referentie nacalc — @gekozenRefs.Count project@(gekozenRefs.Count == 1 ? "" : "en"), geïndexeerd</div>
+                                <div class="gl-kpi2-value">€ @Eur0(totaalReferentie) <span class="small fw-normal" id="kpiRefDelta"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ── Nacalc: referentieprojecten kiezen ── *@
+            @if (TempData["Message"] != null) { <div class="alert alert-success py-2 px-3 small mb-3">@TempData["Message"]</div> }
+            @if (TempData["Error"] != null)   { <div class="alert alert-danger py-2 px-3 small mb-3">@TempData["Error"]</div> }
+            <div class="bw-dt mb-4">
+                <div class="bw-dt__head">
+                    <div class="bw-dt__title">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i>Nacalculatie — vergelijken met afgewerkte projecten
+                        @if (toonRef && Model.AantalZonderReferentie > 0)
+                        {
+                            <span class="text-muted small ms-2 fw-normal">@Model.AantalZonderReferentie activiteit@(Model.AantalZonderReferentie == 1 ? "" : "en") zonder referentiebedrag</span>
+                        }
+                    </div>
+                    <div class="bw-dt__actions">
+                        <a href="@Url.Action("BudgetReferentieProjecten", "Instellingen")" class="btn btn-sm btn-light border" target="_blank" title="Referentieprojecten beheren: uit Excel inladen of een snapshot van een project maken">
+                            <i class="fa-solid fa-cog me-1"></i> Referentieprojecten beheren
+                        </a>
+                    </div>
+                </div>
+                <div class="p-3">
+                    @if (!Model.Referenties.Any())
+                    {
+                        <p class="text-muted small mb-0">Nog geen referentieprojecten. Laad in <strong>Instellingen › Budget › Referentieprojecten</strong> een afgewerkt project in (Excel of snapshot uit de app) en kies het hier; de werkelijke kost per activiteit verschijnt dan naast het budget, geïndexeerd naar vandaag.</p>
+                    }
+                    else
+                    {
+                        <form method="post" asp-action="SetNacalcReferenties" asp-controller="Projecten" class="d-flex flex-wrap align-items-center gap-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="versieId" value="@Model.BudgetVersieId" />
+                            <div class="bw-nacalc-keuze">
+                                @foreach (var r in Model.Referenties)
+                                {
+                                    <label title="@(r.Opmerking ?? "")">
+                                        <input type="checkbox" name="referentieIds" value="@r.Id" @(Model.GeselecteerdeReferentieIds.Contains(r.Id) ? "checked" : "") />
+                                        <span>@r.Naam</span>
+                                        <span class="meta">@(r.Datum?.Year.ToString() ?? "—") · @r.AantalEenheden eenh. · € @Eur0(r.TotaalBedrag)@(r.Bron == "Project" ? " · app" : " · excel")</span>
+                                    </label>
+                                }
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-primary"><i class="fa-solid fa-check me-1"></i>Toepassen</button>
+                            @if (toonRef)
+                            {
+                                <span class="text-muted small">Referentie = Σ werkelijke kost × indexfactor (peildatum → nu) ÷ Σ eenheden van de gekozen projecten, × @Model.AantalEenheden eenh. van dit budget. Verschil = gecorrigeerd budget t.o.v. referentie.</span>
+                            }
+                        </form>
+                    }
+                </div>
             </div>
 
             @* ── Overzicht: één tabel, loten als in-/uitklapbare hoofdrijen ── *@
@@ -158,6 +257,11 @@
                                     <tr>
                                         <th>Activiteit</th>
                                         <th class="bw-num" style="width:150px;">€ basis</th>
+                                        @if (toonRef)
+                                        {
+                                            <th class="bw-num" style="width:170px;" title="Werkelijke kost in de gekozen referentieprojecten, geïndexeerd en omgerekend naar dit aantal eenheden">Referentie (nacalc)</th>
+                                            <th class="bw-num" style="width:120px;" title="Gecorrigeerd budget t.o.v. de referentie">Verschil</th>
+                                        }
                                         <th class="bw-num" style="width:116px;">Correctie</th>
                                         <th class="bw-num" style="width:150px;">Gecorrigeerd</th>
                                     </tr>
@@ -167,7 +271,7 @@
                                     var lijnenMetBedrag = lot.Lijnen.Where(l => l.TotaalAlternatief > 0).ToList();
                                     <tbody class="actlijn-lot" data-lot="@lot.LotNummer.ToString("G", ic)">
                                         <tr class="actlijn-lot__head">
-                                            <th colspan="3">
+                                            <th colspan="2">
                                                 <button type="button" class="actlijn-lot__toggle" aria-expanded="true">
                                                     <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                                                     <span class="badge bg-primary">Lot @lot.LotNummer.ToString("G", ic)</span>
@@ -175,6 +279,13 @@
                                                     <span class="text-muted fw-normal ms-1">· @lijnenMetBedrag.Count</span>
                                                 </button>
                                             </th>
+                                            @if (toonRef)
+                                            {
+                                                var lotRef = LotReferentie(lot);
+                                                <th class="bw-num actlijn-lot__ref">@(lotRef > 0 ? "€ " + Eur2(lotRef) : "")</th>
+                                                <th class="bw-num lot-delta"></th>
+                                            }
+                                            <th></th>
                                             <th class="bw-num actlijn-lot__sum lot-gecorrigeerd">€ @Eur2(LotGecorrigeerd(lot))</th>
                                         </tr>
                                         @foreach (var lijn in lijnenMetBedrag)
@@ -185,7 +296,13 @@
                                 }
                                 <tfoot>
                                     <tr>
-                                        <td colspan="3">Totaal activiteiten</td>
+                                        <td colspan="2">Totaal activiteiten</td>
+                                        @if (toonRef)
+                                        {
+                                            <td class="bw-num actlijn-lot__ref">€ @Eur2(totaalReferentie)</td>
+                                            <td class="bw-num lot-delta" id="actGrandDelta"></td>
+                                        }
+                                        <td></td>
                                         <td class="bw-num"><strong id="actGrand">€ @Eur2(totaalGecorrigeerd)</strong></td>
                                     </tr>
                                 </tfoot>
@@ -236,22 +353,38 @@
         return basis * (isNaN(pct) ? 1 : pct / 100);
     }
 
+    // Verschil gecorrigeerd t.o.v. referentie, als "+8,2 %" met kleur (hoger = rood, lager = groen)
+    function zetDelta(el, bedrag, ref) {
+        if (!el) return;
+        el.classList.remove('is-hoger', 'is-lager', 'is-gelijk');
+        if (!(ref > 0)) { el.textContent = ''; return; }
+        const d = (bedrag - ref) / ref * 100;
+        el.classList.add(Math.abs(d) < 0.5 ? 'is-gelijk' : (d > 0 ? 'is-hoger' : 'is-lager'));
+        el.textContent = (d > 0 ? '+' : (d < 0 ? '\u2212' : '')) + Math.abs(d).toLocaleString('nl-BE', { maximumFractionDigits: 1 }) + ' %';
+    }
+
     // ── Herbereken: rij-bedrag → lot-subtotaal → eindtotaal + KPI ─────────
     function recalc() {
-        let grand = 0;
+        let grand = 0, grandRef = 0;
         document.querySelectorAll('.actlijn-lot').forEach(lot => {
-            let lotSum = 0;
+            let lotSum = 0, lotRef = 0;
             lot.querySelectorAll('.act-row').forEach(tr => {
                 const g = rowGecorrigeerd(tr);
                 lotSum += g;
                 tr.querySelector('.act-row__gecorrigeerd').textContent = eur2(g);
+                const ref = parseFloat(tr.dataset.refTotaal) || 0;
+                if (ref > 0) lotRef += ref;
+                zetDelta(tr.querySelector('.act-row__delta'), g, ref);
             });
-            grand += lotSum;
+            grand += lotSum; grandRef += lotRef;
             const lotEl = lot.querySelector('.lot-gecorrigeerd');
             if (lotEl) lotEl.textContent = eur2(lotSum);
+            zetDelta(lot.querySelector('.lot-delta'), lotSum, lotRef);
         });
         const grandEl = document.getElementById('actGrand');
         if (grandEl) grandEl.textContent = eur2(grand);
+        zetDelta(document.getElementById('actGrandDelta'), grand, grandRef);
+        zetDelta(document.getElementById('kpiRefDelta'), grand, grandRef);
         document.getElementById('kpiTotaal').textContent = eur0(grand);
         document.getElementById('kpiM2').textContent =
             '€ ' + (oppGBA > 0 ? grand / oppGBA : 0).toLocaleString('nl-BE', nf2);
@@ -259,6 +392,16 @@
 
     document.addEventListener('input', e => {
         if (e.target.classList.contains('corr-pct')) recalc();
+    });
+    // Referentie overnemen: correctie-% zo dat gecorrigeerd = referentie
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.act-row__overnemen');
+        if (!btn) return;
+        const tr = btn.closest('.act-row');
+        const basis = parseFloat(tr.dataset.basis) || 0, ref = parseFloat(tr.dataset.refTotaal) || 0;
+        if (!(basis > 0) || !(ref > 0)) return;
+        tr.querySelector('.corr-pct').value = Math.round(ref / basis * 1000) / 10;
+        recalc();
     });
     recalc();
 
@@ -279,7 +422,8 @@
             lijnen.push({
                 activityId:                  parseInt(tr.dataset.activityId),
                 alternatievePrijsPerEenheid: parseFloat(tr.dataset.prijs)  || 0,
-                nacalcPrijsPerEenheid:       parseFloat(tr.dataset.nacalc) || 0,
+                // nacalc = referentieprijs per eenheid (geïndexeerd) als er referenties zijn, anders de bewaarde waarde
+                nacalcPrijsPerEenheid:       parseFloat(tr.dataset.ref) || parseFloat(tr.dataset.nacalc) || 0,
                 correctiefactor:             isNaN(pct) ? 1 : pct / 100,
                 isManueel:                   tr.dataset.manueel === 'true'
             });

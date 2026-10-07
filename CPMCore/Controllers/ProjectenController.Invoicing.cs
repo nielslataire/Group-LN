@@ -644,6 +644,9 @@ namespace CPMCore.Controllers
                 .ToDictionary(x => x.DetailId, x => x.Amount);
 
 
+            var coInfo = LoadChangeOrderInvoiceInfo(request.Invoices.Select(i => i.ChangeOrderId));
+            var detailVatTypeIds = LoadDetailVatTypeIds(request.Invoices.Select(i => i.ChangeOrderDetailId));
+
             foreach (var client in clientAccounts)
             {
                 var respUnits = unitService.GetUnitsByAccountId(client.Id);
@@ -700,7 +703,7 @@ namespace CPMCore.Controllers
 
                     var mainDraft = BuildChangeOrderInvoiceDraft(
                         issuerCompanyId, client.Id, null, mainOwnerShare,
-                        changeOrders, selectedRows, alreadyInvoicedByDetail, project);
+                        changeOrders, selectedRows, alreadyInvoicedByDetail, project, coInfo, detailVatTypeIds);
                     if (mainDraft != null)
                     {
                         try { await cmd.CreateWithLinesAsync(mainDraft, issueNow: false); }
@@ -714,7 +717,7 @@ namespace CPMCore.Controllers
 
                         var coownerDraft = BuildChangeOrderInvoiceDraft(
                             issuerCompanyId, null, coowner.Id, coowner.CoOwnerPercentage ?? 0m,
-                            changeOrders, selectedRows, alreadyInvoicedByDetail, project);
+                            changeOrders, selectedRows, alreadyInvoicedByDetail, project, coInfo, detailVatTypeIds);
                         if (coownerDraft != null)
                         {
                             try { await cmd.CreateWithLinesAsync(coownerDraft, issueNow: false); }

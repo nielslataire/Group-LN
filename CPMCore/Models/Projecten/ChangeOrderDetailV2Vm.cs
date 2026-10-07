@@ -355,11 +355,19 @@ public class ConvertClientOptionV2
 
 /// <summary>Inhoud van de kopie-modal (Modals/_ModalCopyChangeOrderV2, design-handoff 29b "Kopie"):
 /// welke WO, voor welke eenheid.</summary>
+public class CopySourceV2
+{
+    public int Id { get; set; }
+    public string Display { get; set; } = "";
+    public bool IsQuote { get; set; }
+}
+
 public class CopyChangeOrderModalV2Vm
 {
     public int ProjectId { get; set; }
     public int ChangeOrderId { get; set; }
-    public List<IdNameBO> Orders { get; set; } = new();
+    /// <summary>Offertes én wijzigingsopdrachten die gekopieerd kunnen worden.</summary>
+    public List<CopySourceV2> Sources { get; set; } = new();
     public List<ConvertClientOptionV2> Clients { get; set; } = new();
 }
 

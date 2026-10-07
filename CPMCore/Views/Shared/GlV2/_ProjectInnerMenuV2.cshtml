@@ -60,7 +60,6 @@
     var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
     // Elektronisch ondertekenen (ONDERTEKENEN_VOORTGANG.md, fase 1): eigen permissiecode én de
     // feature-vlag — de module blijft onzichtbaar tot Features:EnableSigning aanstaat.
-    var canSeeSigning      = FeatureFlags.Value.EnableSigning && PermissionService.HasRead(PermissionCodes.Signing);
 
     var showPhotos   = canSeePhotos   && !Model.IsCoordinationProject;
     var showContacts = canSeeContacts && !Model.IsCoordinationProject;
@@ -116,7 +115,6 @@
     // Betalingsschijven hierboven: de oude /Projecten/DetailsChangeOrder blijft rechtstreeks bereikbaar,
     // enkel dit menu-item wijst nu naar de gl-v2-hub (Niels, 2026-09-30).
     if (canSeeChangeOrders) financieelItems.Add(("Offertes & wijzigingen", "ph-pencil-simple-line", Url.Action("ChangeOrdersV2", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailsChangeOrder") || IsHere("Projecten", "ChangeOrdersV2") || IsHere("Projecten", "ChangeOrderDetailV2") || IsHere("Projecten", "QuoteIntakeV2"), CountFor("Wijzigingsopdrachten")));
-    if (canSeeSigning) financieelItems.Add(("Ondertekeningen", "ph-signature", Url.Action("Index", "SigningAdmin", new { projectId = projectId }) ?? "#", IsHere("SigningAdmin"), CountFor("Ondertekeningen")));
     if (financieelItems.Count > 0) groups.Add(("financieel", "Financieel", financieelItems));
 
     var verkoopItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();

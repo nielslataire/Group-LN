@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#E9EDE6}a{color:#00532D}a:hover{color:#2F6038}</style>
+</helmet>
+<section id="t37" style="padding:40px 44px 48px;border-bottom:1px solid rgba(0,0,0,.08)">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 22px"><a href="#t37" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">37</a><span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#00532D">Verificatiepagina — bereikbaar via de QR op het ondertekeningsblad</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<sc-for list="{{ ver }}" as="v" hint-placeholder-count="2">
+<div id="{{ v.id }}" style="flex:none;width:980px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="{{ v.href }}" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">{{ v.id }}</a><span>{{ v.note }}</span></div>
+<div data-screen-label="{{ v.id }}" style="background:#F7F9F5;border-radius:14px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.05),0 30px 60px -32px rgba(44,59,42,.45);display:flex;flex-direction:column">
+<div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 32px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:32px;height:32px;border:1px dashed rgba(44,59,42,.3);border-radius:7px;display:flex;align-items:center;justify-content:center;font:500 9px 'IBM Plex Sans',sans-serif;color:#8A978A">logo</div>
+<span style="font:700 15px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Group LN</span>
+<span style="flex:1"></span>
+<span style="display:flex;align-items:center;gap:6px;font:500 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#5a6b58;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M4.4 7.2V5.4a3.6 3.6 0 0 1 7.2 0v1.8 M3.4 7.2h9.2v6.2H3.4z"></path></svg>Echtheidscontrole</span>
+</div>
+<div style="padding:28px 32px 26px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:flex-end;gap:20px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<span style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#00532D">WIJZIGINGSOPDRACHT · WO-2026-002</span>
+<span style="font:500 26px/1.15 'Playfair Display',Georgia,serif;color:#2C3B2A">Extra buitenkraan</span>
+<span style="font:450 13px 'IBM Plex Sans',sans-serif;color:#5a6b58">Verkaveling Keerstraat · Woning lot 2 · uitgegeven door BCO</span>
+</div>
+<span style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:14px;background:#00532D;color:#fff;font:600 11.5px 'IBM Plex Sans',sans-serif;white-space:nowrap"><span style="width:7px;height:7px;border-radius:4px;background:#fff"></span>Ondertekend · geldig</span>
+</div>
+<div style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:10px;background:#EEF4EA;border:1px solid rgba(0,83,45,.25)">
+<span style="width:28px;height:28px;flex:none;border-radius:14px;background:#00532D;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font:600 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Dit document is echt en volledig ondertekend</span><span style="font:450 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#4A5B48">Elektronisch ondertekend door 2 ondertekenaars, laatste handtekening op 7 oktober 2026 om 08:59.</span></div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42);overflow:hidden">
+<div style="height:46px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Ondertekenaars</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 110px;gap:12px;padding:8px 18px;background:#F7F9F5;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#5a6b58"><span>NAAM</span><span>ONDERTEKEND OP</span><span>METHODE</span><span>STATUS</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 110px;gap:12px;align-items:center;min-height:48px;padding:6px 18px;border-top:1px solid rgba(44,59,42,.06)"><div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Van Laere Eline</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">eigenaar</span></div><span style="font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums">06/10/2026 · 18:42</span><span style="font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">itsme</span><span style="justify-self:start;padding:3px 9px;border-radius:10px;background:#E2ECDA;font:600 10.5px 'IBM Plex Sans',sans-serif;color:#00532D">Geverifieerd</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 110px;gap:12px;align-items:center;min-height:48px;padding:6px 18px;border-top:1px solid rgba(44,59,42,.06)"><div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Van Laere Tom</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">eigenaar</span></div><span style="font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A;font-variant-numeric:tabular-nums">07/10/2026 · 08:59</span><span style="font:450 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">itsme</span><span style="justify-self:start;padding:3px 9px;border-radius:10px;background:#E2ECDA;font:600 10.5px 'IBM Plex Sans',sans-serif;color:#00532D">Geverifieerd</span></div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42);overflow:hidden">
+<div style="height:46px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Digitale vingerafdrukken (SHA-256)</span></div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:4px 16px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">1 · Origineel document</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">vóór ondertekening, 1 pagina</span></div>
+<div style="padding:9px 12px;border-radius:7px;background:#F2F5EF;font:500 12px/1.5 'IBM Plex Mono',monospace;color:#2C3B2A;overflow-wrap:anywhere">4610f9ade97020fe56f3c5d8925a57a729be8efe06b83d364c3cd0614d33b969</div>
+</div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:4px 16px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">2 · Ondertekende PDF</span><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">document + ondertekeningsblad, 2 pagina's</span></div>
+<div style="padding:9px 12px;border-radius:7px;background:#F2F5EF;font:500 12px/1.5 'IBM Plex Mono',monospace;color:#2C3B2A;overflow-wrap:anywhere">c1455e1b0c81af25968db19108ed47853021675f8448b84ebe99e855a4524332</div>
+</div>
+<div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:9px;border:1px solid rgba(44,59,42,.12)">
+<svg viewBox="0 0 16 16" style="width:16px;height:16px;flex:none;margin-top:1px;fill:none;stroke:#00532D;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 14.2A6.2 6.2 0 1 0 8 1.8a6.2 6.2 0 0 0 0 12.4z M8 7.4v3.6 M8 5.1v.1"></path></svg>
+<span style="font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:#4A5B48;text-wrap:pretty"><b style="color:#2C3B2A;font-weight:600">Waarom twee verschillende waarden?</b> De ondertekende PDF is het origineel met een ondertekeningsblad erachter, dus de vingerafdruk wijzigt — dat is normaal. Vergelijk waarde 1 met het document dat je vóór ondertekening kreeg, en waarde 2 met de ondertekende PDF die je nu hebt. Klopt één van beide niet, dan is het bestand aangepast.</span>
+</div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42);overflow:hidden">
+<div style="height:46px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Controleer je eigen bestand</span><span style="flex:1"></span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">het bestand verlaat je toestel niet</span></div>
+<div style="padding:16px 18px">
+<sc-if value="{{ v.isDrop }}" hint-placeholder-val="{{ true }}">
+<div style="height:84px;border-radius:10px;border:1.5px dashed #7A9E6E;background:#F7F9F5;display:flex;align-items:center;justify-content:center;gap:12px">
+<svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:none;stroke:#2F6038;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 10.6V2.8 M4.8 6 8 2.8 11.2 6 M3 10.4v2.8h10v-2.8"></path></svg>
+<span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Sleep je PDF hierheen of <span style="color:#00532D;font-weight:600;text-decoration:underline">kies een bestand</span></span>
+</div>
+</sc-if>
+<sc-if value="{{ v.isResult }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:10px;background:{{ v.rBg }};border:1px solid {{ v.rLine }}">
+<span style="width:28px;height:28px;flex:none;border-radius:14px;background:{{ v.rIc }};display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="{{ v.rPath }}"></path></svg></span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:600 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ v.rTitle }}</span><span style="font:450 12px/1.5 'IBM Plex Sans',sans-serif;color:#4A5B48">{{ v.rText }}</span><span style="font:500 11px 'IBM Plex Mono',monospace;color:{{ v.rHashCol }};overflow-wrap:anywhere">{{ v.rHash }}</span></div>
+<span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D;white-space:nowrap">Ander bestand</span>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+<div style="display:flex;gap:18px;padding:14px 32px;border-top:1px solid rgba(44,59,42,.08);font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78"><span>Group LN · Klaverdries 53, 9031 Drongen · info@groupln.be</span><span style="flex:1"></span><span>Beveiligde pagina — deel deze link met niemand.</span></div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+<section id="t36" style="padding:40px 44px 48px">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 22px"><a href="#t36" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">36</a><span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#00532D">Klantenportaal · ondertekenen van een wijzigingsopdracht — van "te ondertekenen" tot verwerkt</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="4">
+<div id="{{ s.id }}" style="flex:none;width:980px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="{{ s.href }}" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">{{ s.id }}</a><span>{{ s.note }}</span></div>
+<div data-screen-label="{{ s.id }}" style="background:#F7F9F5;border-radius:14px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.05),0 30px 60px -32px rgba(44,59,42,.45);display:flex;flex-direction:column">
+<div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 32px;background:#fff;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="width:32px;height:32px;border:1px dashed rgba(44,59,42,.3);border-radius:7px;display:flex;align-items:center;justify-content:center;font:500 9px 'IBM Plex Sans',sans-serif;color:#8A978A">logo</div>
+<span style="font:700 15px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Group LN</span>
+<span style="flex:1"></span>
+<span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Blanco Mariana</span>
+</div>
+<div style="padding:28px 32px 32px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:flex-end;gap:20px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<span style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#00532D">WIJZIGINGSOPDRACHT · WO-2026-003</span>
+<span style="font:500 26px/1.15 'Playfair Display',Georgia,serif;color:#2C3B2A">Pleisterwerk berging</span>
+<span style="font:450 13px 'IBM Plex Sans',sans-serif;color:#5a6b58">Verkaveling Keerstraat · Woning lot 2</span>
+</div>
+<span style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:14px;background:{{ s.chipBg }};color:{{ s.chipCol }};font:600 11.5px 'IBM Plex Sans',sans-serif;white-space:nowrap"><span style="width:7px;height:7px;border-radius:4px;background:{{ s.chipCol }}"></span>{{ s.chip }}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42)">
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border-right:1px solid rgba(44,59,42,.08)"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">TOTAAL INCL. BTW</span><span style="font:700 17px 'IBM Plex Sans',sans-serif;color:#00532D;font-variant-numeric:tabular-nums">€ 1.908,00</span></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border-right:1px solid rgba(44,59,42,.08)"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">VOOR AKKOORD DOOR</span><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Blanco Mariana</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">mede-eigenaar</span></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border-right:1px solid rgba(44,59,42,.08)"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">GELDIG TOT</span><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">06/11/2026</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">nog 30 dagen</span></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.12em;color:#5a6b58">HANDTEKENINGEN</span><span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ s.signCount }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ s.signSub }}</span></div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42);overflow:hidden">
+<div style="height:48px;display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid rgba(44,59,42,.08)">
+<span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Document</span>
+<span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ s.docName }}</span>
+<span style="flex:1"></span>
+<span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ s.pages }}</span>
+<div style="height:32px;padding:0 12px;border-radius:7px;border:1px solid #7A9E6E;display:flex;align-items:center;gap:7px;font:600 12px 'IBM Plex Sans',sans-serif;color:#2F6038"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#2F6038;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.6v7.6 M4.8 7.2 8 10.4l3.2-3.2 M3 13.2h10"></path></svg>Download PDF</div>
+</div>
+<div style="height:{{ s.docH }};background:#EDF0EA;padding:22px 0 0;display:flex;justify-content:center;overflow:hidden;opacity:{{ s.docOp }}">
+<div style="width:560px;background:#fff;box-shadow:0 2px 10px rgba(44,59,42,.12);display:flex;flex-direction:column">
+<div style="height:12px;background:#00532D"></div>
+<div style="padding:26px 38px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:flex-end"><div style="width:90px;height:34px;border:1px dashed rgba(44,59,42,.25);border-radius:4px;display:flex;align-items:center;justify-content:center;font:500 9px 'IBM Plex Sans',sans-serif;color:#8A978A">logo BCO</div><span style="flex:1"></span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font:700 7.5px 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#00532D">MEERWERK</span><span style="font:500 22px 'Playfair Display',Georgia,serif;color:#1F2A1E">Wijzigingsopdracht</span><span style="font:700 10px 'IBM Plex Sans',sans-serif;color:#00532D">WO-2026-003</span></div></div>
+<div style="display:grid;grid-template-columns:70px 1fr 1fr;gap:4px 10px;font:400 9.5px 'IBM Plex Sans',sans-serif;color:#1F2A1E"><b>Datum</b><span>07/10/2026</span><b>Dhr. Lataire Niels</b><b>Geldig tot</b><span style="color:#00532D;font-weight:700">06/11/2026</span><span>Beekstraat 13</span><b>Werfadres</b><span>Keerstraat 237, Vlekkem</span><span>8730 Oedelem</span></div>
+<div style="display:flex;flex-direction:column"><div style="display:grid;grid-template-columns:1fr 40px 40px 60px 70px;gap:8px;padding:6px 0;border-bottom:2px solid #00532D;font:700 7px 'IBM Plex Sans',sans-serif;letter-spacing:.1em;color:#1F2A1E"><span>OMSCHRIJVING</span><span>EENH.</span><span style="text-align:right">HOEV.</span><span style="text-align:right">BTW</span><span style="text-align:right">TOTAAL</span></div><div style="display:grid;grid-template-columns:1fr 40px 40px 60px 70px;gap:8px;padding:7px 0;border-bottom:1px solid rgba(31,42,30,.12);font:400 9.5px 'IBM Plex Sans',sans-serif;color:#1F2A1E"><span>Plafondpleister</span><span>m²</span><span style="text-align:right">20</span><span style="text-align:right">6 %</span><span style="text-align:right">€ 720,00</span></div><div style="display:grid;grid-template-columns:1fr 40px 40px 60px 70px;gap:8px;padding:7px 0;border-bottom:1px solid rgba(31,42,30,.12);font:400 9.5px 'IBM Plex Sans',sans-serif;color:#1F2A1E"><span>Muren</span><span>m²</span><span style="text-align:right">60</span><span style="text-align:right">6 %</span><span style="text-align:right">€ 1.080,00</span></div></div>
+<div style="align-self:flex-end;width:220px;height:30px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:700 10px 'IBM Plex Sans',sans-serif"><span>Totaal incl. btw</span><span style="font-size:13px">€ 1.908,00</span></div>
+</div>
+</div>
+</div>
+</div>
+<div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42);overflow:hidden">
+<div style="height:48px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid rgba(44,59,42,.08)"><span style="font:700 13px 'IBM Plex Sans',sans-serif;color:#00532D">Ondertekenen</span></div>
+<div style="padding:18px;display:flex;flex-direction:column;gap:16px">
+<sc-if value="{{ s.isTodo }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:10px;border:1.5px solid #00532D;background:#F2F5EF">
+<span style="width:18px;height:18px;flex:none;border-radius:4px;background:#00532D;display:flex;align-items:center;justify-content:center;margin-top:1px"><svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3.4 8.4l3 3 6.2-6.8"></path></svg></span>
+<span style="font:450 13px/1.55 'IBM Plex Sans',sans-serif;color:#2C3B2A;text-wrap:pretty">Ik bevestig dat ik dit document en de bijbehorende gegevens heb gelezen en ga akkoord met de inhoud, de uitvoering van de beschreven werken en de vermelde prijs.</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<div style="height:44px;padding:0 20px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;gap:9px;font:600 13.5px 'IBM Plex Sans',sans-serif;box-shadow:0 8px 18px -10px rgba(0,83,45,.7)">Akkoord en ondertekenen met itsme<svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><path d="M3 8h9.6 M8.8 4.2 12.6 8l-3.8 3.8"></path></svg></div>
+<div style="height:44px;padding:0 16px;border-radius:9px;border:1px solid rgba(44,59,42,.18);display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#5a6b58">Weigeren</div>
+<span style="flex:1"></span>
+<span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">Je wordt doorgestuurd naar itsme om je identiteit te bevestigen.</span>
+</div>
+</sc-if>
+<sc-if value="{{ s.hasBanner }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:10px;background:{{ s.bBg }};border:1px solid {{ s.bLine }}">
+<span style="width:28px;height:28px;flex:none;border-radius:14px;background:{{ s.bIc }};display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:14px;height:14px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="{{ s.bPath }}"></path></svg></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font:600 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ s.bTitle }}</span><span style="font:450 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#4A5B48;text-wrap:pretty">{{ s.bText }}</span></div>
+</div>
+</sc-if>
+<sc-if value="{{ s.hasSteps }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ s.steps }}" as="st" hint-placeholder-count="5">
+<div style="display:flex;gap:14px;align-items:stretch">
+<div style="width:24px;flex:none;display:flex;flex-direction:column;align-items:center">
+<span style="width:24px;height:24px;flex:none;border-radius:12px;box-sizing:border-box;background:{{ st.dotBg }};border:{{ st.dotBorder }};display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:none;stroke:{{ st.icCol }};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="{{ st.icPath }}"></path></svg></span>
+<span style="flex:1;width:2px;min-height:12px;background:{{ st.lineCol }}"></span>
+</div>
+<div style="flex:1;display:flex;align-items:flex-start;gap:12px;padding:2px 0 14px">
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:{{ st.tw }} 13px 'IBM Plex Sans',sans-serif;color:{{ st.tCol }}">{{ st.t }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ st.d }}</span></div>
+<span style="font:500 11px 'IBM Plex Mono',monospace;color:{{ st.mCol }};white-space:nowrap">{{ st.m }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ s.hasActions }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:12px;padding-top:4px;border-top:1px solid rgba(44,59,42,.08);padding-top:16px">
+<div style="height:42px;padding:0 18px;border-radius:9px;background:#00532D;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px 'IBM Plex Sans',sans-serif">{{ s.a1 }}</div>
+<div style="height:42px;padding:0 16px;border-radius:9px;border:1px solid #7A9E6E;display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2F6038">{{ s.a2 }}</div>
+<span style="flex:1"></span>
+<span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ s.aHint }}</span>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const CHECK = 'M3.4 8.4l3 3 6.2-6.8', DOT = 'M8 6.6v2.8', X = 'M5 5l6 6 M11 5l-6 6', CLOCK = 'M8 4.6V8l2.2 1.4';
+    const st = (t, d, m, k) => {
+      const done = k === 'done', act = k === 'act', err = k === 'err';
+      return { t, d, m,
+        dotBg: done ? '#00532D' : err ? '#9B2C1F' : '#fff',
+        dotBorder: done || err ? 'none' : act ? '2px solid #00532D' : '1.5px solid rgba(44,59,42,.22)',
+        icCol: done || err ? '#fff' : act ? '#00532D' : 'transparent',
+        icPath: done ? CHECK : err ? X : CLOCK,
+        lineCol: done ? '#00532D' : 'rgba(44,59,42,.14)',
+        tw: act || err ? '700' : '600', tCol: k === 'todo' ? '#9aa898' : err ? '#9B2C1F' : '#2C3B2A',
+        mCol: act ? '#00532D' : '#7a8a78' };
+    };
+    const steps = s => [
+      st('Akkoord ontvangen', 'Jouw bevestiging en tijdstip zijn vastgelegd', '14:31:52', s[0]),
+      st('Identiteit geverifieerd', 'itsme · Blanco Mariana · geboortedatum komt overeen', s[1] === 'err' ? 'mislukt' : '14:32:10', s[1]),
+      st('Document verzegeld', 'Vingerafdruk (SHA-256) berekend op de versie die je las', s[2] === 'act' ? 'bezig…' : s[2] === 'done' ? '14:32:14' : '', s[2]),
+      st('Ondertekeningsblad toegevoegd', 'Pagina 2 met handtekening en verificatie-QR', s[3] === 'done' ? '14:32:15' : '', s[3]),
+      st('Bevestiging verstuurd', 'Ondertekende PDF naar mariana.blanco@telenet.be en BCO', s[4] === 'done' ? '14:32:17' : '', s[4])
+    ];
+    const base = { docName: 'WO-2026-003 · versie 1', pages: '1 / 1', docH: '300px', docOp: 1, signCount: '0 van 2', signSub: 'Lataire Niels · Blanco Mariana', isTodo: false, hasBanner: false, hasSteps: false, hasActions: false };
+    const screens = [
+      { ...base, id: '36a', note: 'Te ondertekenen — document lezen, bevestigen en doorgaan naar itsme', chip: 'Te ondertekenen', chipBg: '#F6EEDC', chipCol: '#8A6A32', isTodo: true },
+      { ...base, id: '36b', note: 'Verwerken — na itsme terug op de pagina; de service verifieert en verwerkt stap per stap', chip: 'Wordt verwerkt', chipBg: '#E2ECDA', chipCol: '#00532D', docOp: .55, docH: '180px',
+        hasBanner: true, bBg: '#F2F5EF', bLine: 'rgba(0,83,45,.2)', bIc: '#00532D', bPath: CLOCK, bTitle: 'Je handtekening wordt verwerkt', bText: 'Sluit dit venster niet. Dit duurt meestal minder dan een minuut — je krijgt daarna ook een e-mail.',
+        hasSteps: true, steps: steps(['done', 'done', 'act', 'todo', 'todo']) },
+      { ...base, id: '36c', note: 'Ondertekend — klaar; ondertekende versie (2 pagina\'s) te downloaden, wacht nog op de andere eigenaar', chip: 'Ondertekend door jou', chipBg: '#00532D', chipCol: '#fff', docName: 'WO-2026-003 · ondertekend', pages: '1 / 2', docH: '180px', signCount: '1 van 2', signSub: 'wacht nog op Lataire Niels',
+        hasBanner: true, bBg: '#EEF4EA', bLine: 'rgba(0,83,45,.25)', bIc: '#00532D', bPath: CHECK, bTitle: 'Ondertekend op 07/10/2026 om 14:32', bText: 'Bedankt. Zodra Lataire Niels ook ondertekend heeft, wordt de wijzigingsopdracht definitief en ontvang je beiden de volledige versie.',
+        hasSteps: true, steps: steps(['done', 'done', 'done', 'done', 'done']), hasActions: true, a1: 'Download ondertekende PDF', a2: 'Echtheid controleren', aHint: 'Verificatie-ID 543a80cc' },
+      { ...base, id: '36d', note: 'Fout bij verificatie — itsme-identiteit komt niet overeen of sessie verlopen; niets is ondertekend', chip: 'Niet ondertekend', chipBg: '#F7E6E3', chipCol: '#9B2C1F', docH: '180px',
+        hasBanner: true, bBg: '#FBF1EF', bLine: 'rgba(155,44,31,.25)', bIc: '#9B2C1F', bPath: X, bTitle: 'We konden je identiteit niet bevestigen', bText: 'De gegevens van itsme komen niet overeen met Blanco Mariana. Er is niets ondertekend. Probeer opnieuw of neem contact op met Nele Lataire (0495 29 81 56).',
+        hasSteps: true, steps: steps(['done', 'err', 'todo', 'todo', 'todo']), hasActions: true, a1: 'Opnieuw proberen', a2: 'Contact opnemen', aHint: 'Foutcode ITSME-ID-MISMATCH' }
+    ].map(s => ({ ...s, href: '#' + s.id }));
+    const ver = [
+      { id: '37a', note: 'Geldig — status, ondertekenaars, beide vingerafdrukken en zelf een bestand controleren', isDrop: true, isResult: false },
+      { id: '37b', note: 'Eigen bestand gecontroleerd — komt overeen (bovenste variant) of niet (zie tekst); berekening gebeurt in de browser', isDrop: false, isResult: true,
+        rBg: '#EEF4EA', rLine: 'rgba(0,83,45,.25)', rIc: '#00532D', rPath: CHECK, rTitle: 'Komt overeen met de ondertekende PDF (waarde 2)', rText: 'WO-2026-002_ondertekend.pdf · 2 pagina\'s · niet aangepast sinds ondertekening.', rHash: 'c1455e1b0c81af25968db19108ed47853021675f8448b84ebe99e855a4524332', rHashCol: '#00532D' },
+      { id: '37c', note: 'Eigen bestand komt niet overeen — met geen van beide waarden', isDrop: false, isResult: true,
+        rBg: '#FBF1EF', rLine: 'rgba(155,44,31,.25)', rIc: '#9B2C1F', rPath: X, rTitle: 'Komt niet overeen', rText: 'Dit bestand is gewijzigd of het is een ander document. Gebruik de PDF uit je bevestigingsmail of neem contact op met BCO.', rHash: '9e02b7c4a1f05d3e88c6b2a47d19f0e6c35a8b71d2e4f6a90b1c3d5e7f8a9b0c', rHashCol: '#9B2C1F' }
+    ].map(v => ({ ...v, href: '#' + v.id }));
+    return { screens, ver };
+  }
+}
+</script>
+</body>
+</html>

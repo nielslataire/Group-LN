@@ -62,6 +62,11 @@ public partial class Mijlpaal
     /// <summary>FK naar ProjectDossier (increment 4+).</summary>
     public int? DossierId { get; set; }
 
+    /// <summary>Optioneel: streefdatum = effectieve datum van deze mijlpaal + <see cref="RelatiefOffsetDagen"/> (migratie 074).</summary>
+    public int? RelatiefAnkerMijlpaalId { get; set; }
+
+    public int? RelatiefOffsetDagen { get; set; }
+
     public bool IsVerplicht { get; set; }
 
     public string Opmerking { get; set; }

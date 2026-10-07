@@ -113,6 +113,17 @@ public partial class InstellingenController
         // geen leverancierslijst) dat een los rekening-opzoekje per rij geen probleem is.
         if (ViewData["UseGlV2Layout"] as bool? == true)
         {
+            static string LogoDataUri(byte[] bytes, string? fileName)
+            {
+                var ext = System.IO.Path.GetExtension(fileName ?? "").ToLowerInvariant();
+                var mime = ext switch { ".svg" => "image/svg+xml", ".jpg" or ".jpeg" => "image/jpeg", ".gif" => "image/gif", ".webp" => "image/webp", _ => "image/png" };
+                return $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+            }
+            // GetAllAsync laat de logo-bytes bewust weg (ook gebruikt voor keuzelijsten): de lijst haalt ze apart op, enkel voor wie er een heeft.
+            using var logoScope = HttpContext.RequestServices.CreateScope();
+            var logoDb = logoScope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
+            var logos = logoDb.IssuerCompany.AsNoTracking().Where(c => c.LogoBytes != null).Select(c => new { c.Id, c.LogoBytes }).ToList()
+                .ToDictionary(c => c.Id, c => c.LogoBytes!);
             var rows = new List<IssuerCompanyListItemV2Vm>();
             foreach (var x in list)
             {
@@ -145,7 +156,8 @@ public partial class InstellingenController
                     OctopusTone = octTone,
                     IsActive = x.IsActive,
                     IsExternalCoordinationDefault = x.IsExternalCoordinationDefault,
-                    EditUrl = Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = x.Id }) ?? "#"
+                    EditUrl = Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = x.Id }) ?? "#",
+                    LogoDataUri = logos.TryGetValue(x.Id, out var lb) && lb.Length > 0 ? LogoDataUri(lb, x.LogoPath) : null
                 });
             }
             return View("IssuerCompaniesV2", rows);
@@ -284,7 +296,7 @@ public partial class InstellingenController
 
     // GET /Admin/IssuerCompanies/Edit/5
     [HttpGet("IssuerCompanies/Edit/{id:int}")]
-    public async Task<IActionResult> IssuerCompaniesEdit(int id, CancellationToken ct, bool classic = false)
+    public async Task<IActionResult> IssuerCompaniesEdit(int id, CancellationToken ct, bool classic = false, string? tab = null)
     {
         // gl-v2 IssuerCompaniesEditV2 (punt 24c) heeft vandaag enkel de tab "Algemeen" — de vijf
         // uitgestelde tabs linken elk naar dezelfde URL met ?classic=true, wat de globale
@@ -433,6 +445,11 @@ public partial class InstellingenController
         ViewBag.OctopusMessage = TempData["OctopusMessage"] as string;
         ViewBag.OctopusMessageType = TempData["OctopusMessageType"] as string;
 
+        // gl-v2 (punt 24c): tab waar we na een actie (bankrekening, nummerreeks, Octopus) terugkomen + de laatste factuur van dit
+        // bedrijf, voor het live voorbeeld op de tab "Lay-out & e-mail".
+        ViewBag.StartTab = tab;
+        ViewBag.LastInvoiceId = db.Invoices.AsNoTracking().Where(i => i.IssuerCompanyId == id).OrderByDescending(i => i.Id).Select(i => (int?)i.Id).FirstOrDefault();
+
         //BREADCRUMBS
         var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
@@ -459,6 +476,8 @@ public partial class InstellingenController
         // ongewijzigd voor beide lay-outs.
         if (ViewData["UseGlV2Layout"] as bool? == true)
         {
+            // gl-v2: de kruimel stopt bij "Mijn bedrijven" — "{naam} bewerken" is al de paginatitel (punt 13, regel 2).
+            ViewData["BreadcrumbNode"] = InstellingenIssuer;
             return View("IssuerCompaniesEditV2", vm);
         }
 
@@ -501,6 +520,25 @@ public partial class InstellingenController
             ApplyInvoiceTemplateDefaults(vm, templates);
             await PopulateInvoiceLayoutViewDataAsync(ct);
             SetPageHeader("bx bx-cog", $"Bedrijf bewerken — {vm.Name}");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                // Zelfde schermen als de GET: ook hier de ontbrekende lijsten aanvullen en de V2-weergave tonen i.p.v. de klassieke.
+                ViewBag.OctopusBookyears = await _octopusBookyears.ListByIssuerAsync(id, ct);
+                var existingBo = await _issuers.GetAsync(id, ct);
+                if (existingBo != null) { vm.LogoBytes ??= existingBo.LogoBytes; vm.LogoPath ??= existingBo.LogoPath; }
+                using var errScope = HttpContext.RequestServices.CreateScope();
+                var errDb = errScope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
+                vm.AvailableUsers = errDb.Users.AsNoTracking().Where(u => u.IsActive && !u.UserCompanyAccess.Any())
+                    .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+                    .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = u.UserId, Text = (u.Voornaam + " " + u.Familienaam).Trim() }).ToList();
+                ViewBag.LastInvoiceId = errDb.Invoices.AsNoTracking().Where(i => i.IssuerCompanyId == id).OrderByDescending(i => i.Id).Select(i => (int?)i.Id).FirstOrDefault();
+                var errCrumb = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("IssuerCompanies", "Instellingen", "Mijn Bedrijven")
+                {
+                    Parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard") }
+                };
+                ViewData["BreadcrumbNode"] = errCrumb;
+                return View("IssuerCompaniesEditV2", vm);
+            }
             return View(vm);
         }
         if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
@@ -831,7 +869,7 @@ public partial class InstellingenController
         {
             TempData["OctopusMessage"] = "Gebruikersnaam en wachtwoord zijn verplicht.";
             TempData["OctopusMessageType"] = "danger";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
         }
 
         var bo = await _issuers.GetAsync(issuerId, ct);
@@ -858,7 +896,7 @@ public partial class InstellingenController
             TempData["OctopusMessageType"] = "danger";
         }
 
-        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/dossiers")]
@@ -873,7 +911,7 @@ public partial class InstellingenController
         {
             TempData["OctopusMessage"] = "Octopus login ontbreekt. Vul gebruikersnaam en wachtwoord in en authenticatie opnieuw.";
             TempData["OctopusMessageType"] = "warning";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
         }
 
         try
@@ -890,7 +928,7 @@ public partial class InstellingenController
             TempData["OctopusMessageType"] = "danger";
         }
 
-        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/dossier")]
@@ -923,7 +961,7 @@ public partial class InstellingenController
             TempData["OctopusMessageType"] = "danger";
         }
 
-        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/bookyears")]
@@ -963,7 +1001,7 @@ public partial class InstellingenController
             TempData["OctopusMessageType"] = "danger";
         }
 
-        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
     }
 
     [HttpGet("IssuerCompanies/{issuerId:int}/Octopus/relations/suggestions")]
@@ -980,7 +1018,7 @@ public partial class InstellingenController
         {
             TempData["OctopusMessage"] = "Geen koppelsuggesties gevonden.";
             TempData["OctopusMessageType"] = "info";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
         }
 
         TempData.Keep("OctopusRelationSuggestions");
@@ -1005,7 +1043,7 @@ public partial class InstellingenController
     {
         if (request == null)
         {
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
         }
 
         request.IssuerId = request.IssuerId == 0 ? issuerId : request.IssuerId;
@@ -1037,7 +1075,7 @@ public partial class InstellingenController
             TempData["OctopusMessageType"] = "danger";
         }
 
-        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = request.IssuerId });
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = request.IssuerId, tab = "boekhouding" });
     }
 
     private async Task<IActionResult> SyncOctopusDossierAsync(int issuerId, CancellationToken ct)
@@ -1054,7 +1092,7 @@ public partial class InstellingenController
             {
                 TempData["OctopusMessage"] = "Koppel eerst een dossier.";
                 TempData["OctopusMessageType"] = "warning";
-                return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+                return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
             }
 
             var syncResult = await _octopusTokens.SyncDossierAsync(issuerId, issuer.OctopusDossierNumber, ct);
@@ -1149,7 +1187,7 @@ public partial class InstellingenController
             TempData["OctopusMessageType"] = "danger";
         }
 
-        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId, tab = "boekhouding" });
     }
 
     private IReadOnlyList<OctopusRelationSuggestion> ReadOctopusSuggestions()
@@ -1216,13 +1254,13 @@ public partial class InstellingenController
             Iban = vm.Iban,
             Bic = vm.Bic,
             DisplayName = vm.DisplayName,
-            IsDefault = vm.IsDefault,
+            IsDefault = vm.IsDefault && !(vm.ValidTo.HasValue && vm.ValidTo.Value <= DateOnly.FromDateTime(DateTime.Today)),
             ValidFrom = vm.ValidFrom,
             ValidTo = vm.ValidTo
         };
         await _bank.CreateAsync(bo);
         AddMessage("success", "Bankrekening toegevoegd.", "Geslaagd!");
-        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "bank" });
     }
 
     [HttpGet("IssuerCompanies/{issuerId:int}/BankAccounts/Edit/{id:int}")]
@@ -1263,22 +1301,30 @@ public partial class InstellingenController
             Iban = vm.Iban,
             Bic = vm.Bic,
             DisplayName = vm.DisplayName,
-            IsDefault = vm.IsDefault,
+            IsDefault = vm.IsDefault && !(vm.ValidTo.HasValue && vm.ValidTo.Value <= DateOnly.FromDateTime(DateTime.Today)),
             ValidFrom = vm.ValidFrom,
             ValidTo = vm.ValidTo
         };
         await _bank.UpdateAsync(bo);
         AddMessage("success", "Bankrekening opgeslagen.", "Geslaagd!");
-        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "bank" });
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/BankAccounts/Delete/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BankAccountDelete(int issuerId, int id)
     {
-        await _bank.DeleteAsync(id);
-        AddMessage("success", "Bankrekening verwijderd.", "Geslaagd!");
-        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+        try
+        {
+            await _bank.DeleteAsync(id);
+            AddMessage("success", "Bankrekening verwijderd.", "Geslaagd!");
+        }
+        catch (DbUpdateException)
+        {
+            // Gekoppeld aan een project of factuur: niet verwijderbaar (zie 24c: "kan niet verwijderd worden").
+            AddMessage("danger", "Deze bankrekening is nog in gebruik (bv. op een project of factuur) en kan niet verwijderd worden.", "Niet verwijderd");
+        }
+        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "bank" });
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/BankAccounts/SetDefault/{id:int}")]
@@ -1286,7 +1332,7 @@ public partial class InstellingenController
     public async Task<IActionResult> BankAccountSetDefault(int issuerId, int id)
     {
         await _bank.SetDefaultAsync(id);
-        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "bank" });
     }
 
     // FACTUURREEKSEN BEHEREN
@@ -1309,7 +1355,7 @@ public partial class InstellingenController
         }
         await _series.CreateAsync(new InvoiceSeriesBO { IssuerCompanyId = issuerId, Code = vm.Code, Description = vm.Description, IsCreditNote = vm.IsCreditNote, IsActive = true });
         AddMessage("success", "Nummerreeks toegevoegd.", "Geslaagd!");
-        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "facturatie" });
     }
 
     // GET: /Instellingen/IssuerCompanies/{issuerId}/Series/Edit/{id}
@@ -1359,7 +1405,7 @@ public partial class InstellingenController
 
             await _series.UpdateAsync(bo);
             AddMessage("success", "Nummerreeks opgeslagen.", "Geslaagd!");
-            return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+            return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "facturatie" });
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
@@ -1387,7 +1433,7 @@ public partial class InstellingenController
             TempData["Flash"] = "Nummerreeks kon niet verwijderd worden (in gebruik). Ze is gedeactiveerd.";
         }
 
-        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
+        return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "facturatie" });
     }
 
 

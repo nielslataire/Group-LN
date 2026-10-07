@@ -40,4 +40,10 @@ public interface IProjectDossierService
     // --- Checklist-stappen (bv. omgevingsvergunning) ---
     Task<List<ProjectDossierSubstap>> GetSubstappen(int projectDossierId);
     Task<bool> ChangeSubstapStatus(int projectDossierId, int substapId, int status, DateOnly? datum, string? userId);
+
+    /// <summary>Voegt een eigen item toe aan de checklist (zonder Code: hangt aan geen datum of traject-binding).</summary>
+    Task<ProjectDossierSubstap?> AddChecklistItem(int projectDossierId, string naam, string? userId);
+
+    /// <summary>Verwijdert een zelf toegevoegd checklistitem (enkel items zonder Code).</summary>
+    Task<bool> RemoveChecklistItem(int projectDossierId, int substapId, string? userId);
 }

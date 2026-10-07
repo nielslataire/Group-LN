@@ -26,6 +26,8 @@ internal static class MijlpaalTranslator
         entity.VerantwoordelijkePartijType = bo.VerantwoordelijkePartijType;
         entity.VerantwoordelijkePartijId = bo.VerantwoordelijkePartijId;
         entity.VerantwoordelijkeUserId = bo.VerantwoordelijkeUserId;
+        entity.RelatiefAnkerMijlpaalId = bo.RelatiefAnkerMijlpaalId;
+        entity.RelatiefOffsetDagen = bo.RelatiefAnkerMijlpaalId.HasValue ? (bo.RelatiefOffsetDagen ?? 0) : null;
         entity.IsVerplicht = bo.IsVerplicht;
         entity.Opmerking = bo.Opmerking;
 

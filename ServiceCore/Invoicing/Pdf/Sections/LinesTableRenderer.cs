@@ -186,6 +186,14 @@ public sealed class LinesTableRenderer : ISectionRenderer
 
         if (string.Equals(type, "ChangeOrders", StringComparison.OrdinalIgnoreCase))
         {
+            // Nieuwe facturen (okt. 2026): één regel per lijn van de wijzigingsopdracht, met "WO-2026-001 · onderwerp" als GroupName — dat is
+            // de groepstitel en de regeltekst blijft de omschrijving van de lijn zelf. Oudere facturen ("Wijzigingsopdrachten" als GroupName en
+            // een "titel - detail"-omschrijving) behouden het splitsen op " - ".
+            if (!string.IsNullOrWhiteSpace(line.GroupName) && !string.Equals(line.GroupName.Trim(), "Wijzigingsopdrachten", StringComparison.OrdinalIgnoreCase))
+            {
+                var groupTitle = line.GroupName.Trim();
+                return ($"ChangeOrders:{groupTitle}", groupTitle, null);
+            }
             var (subtitle, detail) = SplitChangeOrderTitle(line.Description);
             var label = !string.IsNullOrWhiteSpace(subtitle) ? subtitle : line.GroupName;
             var key = !string.IsNullOrWhiteSpace(label) ? $"ChangeOrders:{label}" : null;

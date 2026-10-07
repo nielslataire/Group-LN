@@ -4,9 +4,50 @@ Doorlopend statusdocument voor de grote "trajectopvolging"-feature (werf/project
 triggers, taken). Origineel plan: `.claude`-sessie-plan (zie chatgeschiedenis) — dit bestand is de
 werkende samenvatting om een volgende sessie snel weer op te starten. Bijwerken bij elke increment.
 
-**Laatste update:** 2026-09-14 (increment 7 klaar en bevestigd; nu bezig met UX-verfijningspassen
+**Laatste update:** 2026-10-07 (gl-v2-herwerking Traject & Dossiers, zie eerste sectie hieronder); eerder 2026-09-14 (increment 7 klaar en bevestigd; nu bezig met UX-verfijningspassen
 over de bestaande admin-pagina's — twee passen op `Instellingen/Trajectsjablonen/Bewerken` deze
 sessie, zie de twee secties hieronder, nieuwste eerst).
+
+## Herwerking Traject & Dossiers naar gl-v2 — design-handoff punt 30–33 — 2026-10-07
+
+**Bron:** `design-handoff/CRM Traject en dossiers.dc.html` (30 Traject, 31 Dossiers, 32 Flow, 33 Tablet & gsm). Zelfde aanpak als de andere
+projectpagina's: nieuwe `*V2.cshtml`-views die enkel renderen bij de gl-v2-cookie (`UseGlV2Layout`); de legacy views blijven bestaan als terugval.
+
+**⚠ Vóór deploy: migratie `_migrations/074_MijlpaalRelatieveDatum.sql` draaien** (twee nullable kolommen op `Mijlpaal`: `RelatiefAnkerMijlpaalId`,
+`RelatiefOffsetDagen`). De entity kent ze al — zonder de migratie faalt élke Mijlpaal-query (traject, dashboards, deadlines). Niet door mij uitgevoerd.
+
+**Beslissingen van Niels (vragenronde):** alle 5 mijlpaalstatussen tonen in het formulier (niet de 3 van het ontwerp) · "Ander dossier" = de 4 tegels uit het
+ontwerp + een 5e tegel "Andere…" voor de overige bestaande types (Attest en Keuring zijn nieuwe `DossierKind`-waarden 9/10, geen migratie) · sync-voorbeeld,
+relatieve streefdatum en Kalender kwartaal/jaar/agenda wél bouwen · "Herinnering mailen" **niet** · legacy vervangen (V2 wordt standaard in de pilot; de oude views
+staan er nog voor wie de pilot uitzet) · documenten echt koppelen met het documentencentrum · link naar de nacalculatie-pagina (geen verdeling).
+
+**Traject (30):** `Views/Projecten/Traject/IndexV2.cshtml` (+ `Partials/_TrajectRowV2`, `Modals/_ModalMijlpaalV2`, `Modals/_ModalSyncV2`),
+`wwwroot/css/gl-v2-projecten-traject.css`, `wwwroot/js/gl-v2-projecten-traject.js`. Tijdlijn = Stappenplan (Chips) + melding + fases (afgerond/gepland dicht, actieve
+fase groen omrand, fase met te late mijlpaal open); Mijlpalen = tabel met zoek/status/fase/kolommen/sortering, bolletje = bereikt, selectiebalk (bereikt · datum ·
+andere fase · verwijderen); Per eenheid = matrix + popover op de cel; Kalender = Maand/Kwartaal/Jaar/Agenda met fasebalken (volledig client-side uit een JSON-blob).
+Nieuw backend: relatieve streefdatum (`MijlpaalRelatief`, ook in `TrajectRecalculationService`), "Plaats in de fase" i.p.v. Volgorde (`MijlpaalUpsertBO.PlaatsInFase`),
+"Geldt voor" (project · per eenheid → één mijlpaal per eenheid · één eenheid), snelle acties (`MijlpaalSnel`), bulk verwijderen, `ITrajectInstantiationService.PreviewSync/ApplySync`
+(nieuw · gewijzigd · niet meer in sjabloon; bereikte mijlpalen nooit aangepast).
+
+**Dossiers (31):** `Views/Projecten/Dossiers/IndexV2` (matrix + lijst + bulk-modal 31e), `NutsFormV2` (scherm 31c, status rechts live uit de datums), `DetailsV2` (31d),
+`Modals/_ModalAnderV2` (31f), `_ModalTaakQuickAddV2`; css `gl-v2-projecten-dossiers.css`, js `gl-v2-projecten-dossiers{,-ander,-form,-detail}.js`. Helpers:
+`CPMCore/Helpers/DossierWeergave.cs` (stap x/6, statuslabels, verwacht/te laat, matrixregel) en `TrajectWeergave.cs`. Nieuw backend: `NutsVolgendeStap` (hoofdknop),
+checklist-items toevoegen/verwijderen, `AnderModal`, `NutsNieuw/NutsBewerken`, documenten opladen (`ProjectenController.DossierDocumentUploadV2` → gewoon document in map
+"Overige" zonder eenheid-/klantkoppeling + `ProjectDossierDocument`), bulk-titel met `{eenheid}`-token en offerte-verwacht, checklist per type bij een nieuw nutsdossier.
+
+**Tegenstrijdigheden/gaten waar ik een keuze maakte (kort):**
+- De "Keuring & overdracht"-checklist hergebruikt de bestaande substap-codes `GEKEURD`/`OVERGEDRAGEN` (bindingen/sjablonen verwijzen ernaar) met de namen uit het ontwerp,
+  plus nieuwe `METERSTAND` en `EAN_DOORGEGEVEN`. Bestaande nutsdossiers houden hun oude 7 stappen; stap 6 ("Overdracht") = alle niet-datumstappen afgevinkt.
+- Titel-voorstel is "{Type} — {eenheid}" (mockup toont "Nieuwe aansluiting — Lot 2" maar zegt "voorgesteld uit type en eenheid").
+- Lijst-statuslabel voor een ander dossier: laatst afgeronde checklist-stap (vergunning), anders de status ("Aangevraagd" heet daar "Ingediend").
+- "Ander dossier": INSTANTIE = `ExterneContactNaam`, EXTERN CONTACT = `ExterneContactEmail` (het model kent geen apart instantieveld).
+- Koppelen aan een mijlpaal is additief (een vergunning koppelt er zelf meerdere); ontkoppelen per mijlpaal op het dossierdetail.
+- `_ModalTaakQuickAddV2` laat het vrije veld "Toegewezen aan" (rauwe gebruikers-id) weg.
+- Op gsm: `MobileQuickActions` voor de lijsten/detail; de matrix wordt een kaart per eenheid.
+
+**Niet browser-getest** (geen ingelogde sessie/DB-toegang hier): wel build (0 errors, Razor gecompileerd), `node --check` op alle JS, en een statische headless-Edge-render van
+tijdlijn, tabel, kalender (met de echte JS), matrix, detail, formulier en de drie modals tegen de echte CSS. Nog te doen door Niels: migratie 074, daarna klikken door
+tijdlijn → mijlpaal toevoegen/bewerken/bereikt, sync-voorbeeld, per-eenheid-popover, nutsaansluiting nieuw/bewerken/volgende stap, bulk, ander dossier, documenten opladen.
 
 ## Herwerking: sjabloon-editor naar master/detail — 2026-09-14
 

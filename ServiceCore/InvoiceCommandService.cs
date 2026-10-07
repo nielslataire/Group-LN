@@ -166,7 +166,10 @@ namespace ServiceCore
                         UtilityCost = l.UtilityCost,
                         Quantity  = l.UnitPrice.HasValue ? l.Quantity : (decimal?)null,
                         UnitPrice = l.UnitPrice,
-                        // ConstructionValued / ChangeOrderDetailId blijven null
+                        // Wijzigingsopdracht-lijn waar deze factuurregel bij hoort: de facturatiepagina (InvoicingV2) en MakeInvoicesCO rekenen
+                        // hiermee het al gefactureerde bedrag per lijn uit. Zonder dit bleef een lijn voor altijd "te factureren" staan.
+                        ChangeOrderDetailId = l.ChangeOrderDetailId,
+                        // ConstructionValued blijft null
                     });
                 }
                 var totalVat = InvoiceVatCalculator.CalculateTotalVat(netPerRate);

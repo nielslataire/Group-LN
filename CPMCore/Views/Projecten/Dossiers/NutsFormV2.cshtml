@@ -1,0 +1,322 @@
+@model CPMCore.Models.Traject.NutsFormV2Vm
+@*
+    gl-v2 — Nieuwe nutsaansluiting / bewerken (design-handoff 31c): een scherm i.p.v. een modal ("met werkstroom, kosten en status
+    is het te groot voor een modal"). Links vier kaarten — Type & locatie · Werkstroom · Kosten · Contact & omschrijving —, rechts
+    de status die uit de datums volgt (Stappenplan, Verticaal) en de koppeling met het traject. De status zet je nooit zelf
+    (enkel Geannuleerd): ze volgt uit de laatst ingevulde datum, dus de datums staan in de volgorde van de stappen.
+    Zelfde POST als de oude modal (ProjectDossiersController.NutsOpslaan) — velden heten hetzelfde (NutsAansluitingUpsertBO).
+    "Opslaan en nieuwe" bewaart en opent meteen een nieuw formulier van hetzelfde type.
+*@
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@{
+    var n = Model.Bestaand;
+    var d = Model.Dossier;
+    var isNieuw = Model.IsNieuw;
+    ViewData["Title"] = isNieuw ? "Nieuwe nutsaansluiting" : "Nutsaansluiting bewerken";
+    ViewData["PageIcon"] = "ph ph-lightning";
+    ViewData["GlV2FullHeightBody"] = true;
+    var annulerenUrl = isNieuw
+        ? Url.Action("Index", "ProjectDossiers", new { projectId = Model.ProjectId })
+        : Url.Action("Details", "ProjectDossiers", new { projectId = Model.ProjectId, id = d!.Id });
+    ViewData["BackUrl"] = annulerenUrl;
+
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · dossiers" };
+    var menuPhoneVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · dossiers", Mode = GlV2ProjectMenuMode.Phone };
+
+    int type = n?.NutsType ?? Model.DefaultType;
+    int? unitId = n?.UnitId ?? Model.DefaultUnitId;
+    var unit = Model.Units.FirstOrDefault(u => u.Id == unitId);
+    var types = new List<NutsType> { NutsType.Elektriciteit, NutsType.Gas, NutsType.Water };
+    if (!types.Contains((NutsType)type)) types.Add((NutsType)type);
+    string Iso(DateOnly? x) => x?.ToString("yyyy-MM-dd") ?? "";
+    string Disp(DateOnly? x) => x?.ToString("dd/MM/yyyy") ?? "";
+    var verwacht = n?.VerwachteOfferteDatum;
+
+    var titel = d?.Titel ?? (unit != null ? ((NutsType)type).GetDisplayName() + " — " + unit.Name : ((NutsType)type).GetDisplayName() + " — algemene aansluiting");
+    var autoTitel = isNieuw || (unit != null && titel == ((NutsType)type).GetDisplayName() + " — " + unit.Name);
+
+    var stappen = new[]
+    {
+        (Code: "AanvraagVerstuurdOp", Label: "Aanvraag verstuurd", Hint: "aan de netbeheerder", Datum: n?.AanvraagVerstuurdOp),
+        (Code: "OfferteOntvangenOp", Label: "Offerte ontvangen", Hint: "", Datum: n?.OfferteOntvangenOp),
+        (Code: "OfferteGoedgekeurdOp", Label: "Offerte goedgekeurd", Hint: "", Datum: n?.OfferteGoedgekeurdOp),
+        (Code: "UitvoeringGevraagdOp", Label: "Uitvoering gevraagd", Hint: "", Datum: n?.UitvoeringGevraagdOp),
+        (Code: "UitgevoerdOp", Label: "Uitgevoerd", Hint: "zet het dossier op Afgehandeld", Datum: n?.UitgevoerdOp),
+    };
+    var huidige = stappen.TakeWhile(s => s.Datum.HasValue).Count();
+    var overdrachtKlaar = n != null && Model.ChecklistTotaal > 0 && Model.ChecklistKlaar == Model.ChecklistTotaal && n.UitgevoerdOp.HasValue;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-traject.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-dossiers.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <span class="gl-v2-badge is-attention" id="gl-v2-dos-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+    <a href="@annulerenUrl" class="gl-v2-btn gl-v2-btn-secondary">Annuleren</a>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
+
+<form method="post" action="@Url.Action("NutsOpslaan", "ProjectDossiers", new { projectId = Model.ProjectId })" class="gl-v2-dos-form" id="gl-v2-nuts-form" novalidate
+      data-project-id="@Model.ProjectId" data-meterdata-url="@Url.Action("UnitMeterdata", "ProjectDossiers", new { projectId = Model.ProjectId, unitId = 0 })"
+      data-checklist-klaar="@(overdrachtKlaar ? "1" : "0")" data-is-nieuw="@(isNieuw ? "1" : "0")" data-auto-titel="@(autoTitel ? "1" : "0")">
+    @Html.AntiForgeryToken()
+    @if (!isNieuw)
+    {
+        <input type="hidden" name="Id" value="@d!.Id" />
+        <input type="hidden" name="VerwachteAfhandelingDatum" value="@Iso(d.VerwachteAfhandelingDatum)" />
+        <input type="hidden" name="Bedrag" value="@(d.Bedrag?.ToString(System.Globalization.CultureInfo.InvariantCulture))" />
+    }
+
+    <div class="gl-v2-dos-form-scroll">
+        <div class="gl-v2-dos-form-cols">
+            <div class="gl-v2-dos-form-main">
+
+                @* ── Type & locatie ── *@
+                <div class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-lightning" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Type &amp; locatie</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">wat, waar en bij wie</span>
+                    </div>
+                    <div class="gl-v2-dos-card-body">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Type nutsvoorziening <span class="gl-v2-tr-req">*</span></span>
+                            <div class="gl-v2-tr-radioseg gl-v2-dos-typeseg" id="gl-v2-nuts-type" role="radiogroup" aria-label="Type nutsvoorziening">
+                                @foreach (var t in types)
+                                {
+                                    <label><input type="radio" name="NutsType" value="@((int)t)" @((int)t == type ? "checked" : "")><span><i class="ph @DossierWeergave.NutsIcon((int)t)" aria-hidden="true"></i>@t.GetDisplayName()</span></label>
+                                }
+                            </div>
+                        </div>
+                        <div class="gl-v2-dos-grid">
+                            <div class="gl-v2-dos-g-5">
+                                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                                {
+                                    Name = "UnitId", Id = "gl-v2-nuts-unit", Label = "Eenheid", Value = unitId?.ToString() ?? "", EmptyText = "— projectniveau —",
+                                    Items = Model.Units.Select(u => new GlV2SelectItem { Value = u.Id.ToString(), Text = u.Name }).ToList(),
+                                    Help = "leeg = projectniveau (algemene aansluiting)"
+                                })
+                            </div>
+                            <div class="gl-v2-dos-g-7">
+                                <div class="gl-v2-field" id="gl-v2-nuts-titel-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-titel">Titel <span class="gl-v2-tr-req">*</span></label>
+                                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-nuts-titel" name="Titel" maxlength="200" value="@titel" autocomplete="off" required></div>
+                                    <span class="gl-v2-field-help" id="gl-v2-nuts-titel-help">@(autoTitel ? "voorgesteld uit type en eenheid" : "")</span>
+                                    <span class="gl-v2-field-help gl-v2-tr-err" id="gl-v2-nuts-titel-err" hidden>Geef het dossier een titel.</span>
+                                </div>
+                            </div>
+                            <div class="gl-v2-dos-g-5">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-nb_input">Netbeheerder</label>
+                                    @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                                    {
+                                        Name = "NetbeheerderCompanyId", Id = "gl-v2-nuts-nb", EmptyValue = "",
+                                        Value = (n?.NetbeheerderCompanyId ?? Model.DefaultNetbeheerderId)?.ToString() ?? "",
+                                        DisplayText = n?.NetbeheerderCompany?.BedrijfsNaam ?? Model.DefaultNetbeheerderNaam,
+                                        Placeholder = "Zoek een netbeheerder …", LookupUrl = Url.Action("GetCompanys", "Projecten"), MinChars = 2, Icon = "ph-buildings"
+                                    })
+                                </div>
+                            </div>
+                            <div class="gl-v2-dos-g-4">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-ean" id="gl-v2-nuts-ean-label">EAN</label>
+                                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input gl-v2-dos-mono" id="gl-v2-nuts-ean" name="Ean" maxlength="40" value="@n?.Ean" autocomplete="off" inputmode="numeric"></div>
+                                    <span class="gl-v2-field-help" id="gl-v2-nuts-ean-help"></span>
+                                </div>
+                            </div>
+                            <div class="gl-v2-dos-g-3">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-meter">Meternummer</label>
+                                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input gl-v2-dos-mono" id="gl-v2-nuts-meter" name="Meternummer" maxlength="60" value="@n?.Meternummer" autocomplete="off"></div>
+                                </div>
+                            </div>
+                            <div class="gl-v2-dos-g-3">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-vermogen">Vermogen</label>
+                                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-nuts-vermogen" name="GevraagdVermogen" maxlength="50" value="@n?.GevraagdVermogen" placeholder="bv. 9,2 kVA" autocomplete="off"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* ── Werkstroom ── *@
+                <div class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-chart-line-up" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Werkstroom</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">vul de datums in naarmate het dossier vordert — de status volgt vanzelf</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <label class="gl-v2-dos-refinline" for="gl-v2-nuts-ref">Referentie</label>
+                        <div class="gl-v2-field-box gl-v2-dos-refbox"><input type="text" class="gl-v2-field-input gl-v2-dos-mono" id="gl-v2-nuts-ref" name="Referentie" maxlength="100" value="@d?.Referentie" autocomplete="off"></div>
+                    </div>
+                    <div class="gl-v2-dos-flow" id="gl-v2-nuts-flow">
+                        @for (var i = 0; i < stappen.Length; i++)
+                        {
+                            var s = stappen[i];
+                            <div class="gl-v2-dos-flow-row @(s.Datum.HasValue ? "is-done" : "")" data-step="@i">
+                                <span class="gl-v2-dos-flow-dot" aria-hidden="true">@if (s.Datum.HasValue) { <i class="ph ph-check"></i> } else { <b>@(i + 1)</b> }</span>
+                                <span class="gl-v2-dos-flow-label">@s.Label
+                                    @if (i == 1)
+                                    {
+                                        <small>verwacht op <button type="button" class="gl-v2-tr-linkbtn" id="gl-v2-nuts-verwacht-btn" aria-expanded="false" aria-controls="gl-v2-nuts-verwacht-wrap">@(verwacht.HasValue ? Disp(verwacht) : "datum kiezen")</button> — pas aan indien nodig</small>
+                                        <span class="gl-v2-dos-verwacht" id="gl-v2-nuts-verwacht-wrap" hidden>
+                                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "VerwachteOfferteDatum", Id = "gl-v2-nuts-verwacht", Label = "Offerte verwacht op", IsoValue = Iso(verwacht), DisplayValue = Disp(verwacht) })
+                                        </span>
+                                    }
+                                    else if (s.Hint.Length > 0)
+                                    {
+                                        <small>@s.Hint</small>
+                                    }
+                                </span>
+                                <span class="gl-v2-dos-flow-date">
+                                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = s.Code, Id = "gl-v2-nuts-d" + i, IsoValue = Iso(s.Datum), DisplayValue = Disp(s.Datum) })
+                                </span>
+                            </div>
+                        }
+                        <div class="gl-v2-dos-flow-row is-readonly @(overdrachtKlaar ? "is-done" : "")" data-step="5">
+                            <span class="gl-v2-dos-flow-dot" aria-hidden="true">@if (overdrachtKlaar) { <i class="ph ph-check"></i> } else { <b>6</b> }</span>
+                            <span class="gl-v2-dos-flow-label">Keuring &amp; overdracht
+                                <small>@(isNieuw ? "via de checklist op de dossierpagina" : $"{Model.ChecklistKlaar} / {Model.ChecklistTotaal} afgevinkt — via de checklist op de dossierpagina")</small>
+                            </span>
+                            <span class="gl-v2-dos-flow-date gl-v2-dos-flow-ro">@(overdrachtKlaar ? "klaar" : "na “Uitgevoerd”")</span>
+                        </div>
+                        <div class="gl-v2-dos-cancel">
+                            <label class="gl-v2-toggle-row" for="gl-v2-nuts-cancel">
+                                <input type="checkbox" id="gl-v2-nuts-cancel" name="Geannuleerd" class="gl-v2-toggle-switch" value="true" @(d?.Status == (int)DossierStatus.Geannuleerd ? "checked" : "") />
+                                <input type="hidden" name="Geannuleerd" value="false" />
+                                <span class="gl-v2-toggle-text">
+                                    <span class="gl-v2-toggle-label">Dossier geannuleerd</span>
+                                    <span class="gl-v2-toggle-hint">enkel deze status zet je zelf; de rest volgt uit de datums</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gl-v2-dos-two">
+                    @* ── Kosten ── *@
+                    <div class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph ph-currency-eur" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">Kosten</h2>
+                        </div>
+                        <div class="gl-v2-dos-card-body">
+                            <div class="gl-v2-dos-grid is-two">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-raming">Raming</label>
+                                    <div class="gl-v2-field-box gl-v2-dos-eur"><span class="gl-v2-dos-eur-sign">€</span><input type="text" class="gl-v2-field-input" id="gl-v2-nuts-raming" name="AansluitkostRaming" inputmode="decimal" value="@(n?.AansluitkostRaming?.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")))" autocomplete="off"></div>
+                                </div>
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-def">Definitief</label>
+                                    <div class="gl-v2-field-box gl-v2-dos-eur"><span class="gl-v2-dos-eur-sign">€</span><input type="text" class="gl-v2-field-input" id="gl-v2-nuts-def" name="AansluitkostDefinitief" inputmode="decimal" placeholder="na de factuur" value="@(n?.AansluitkostDefinitief?.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")))" autocomplete="off"></div>
+                                </div>
+                            </div>
+                            <p class="gl-v2-field-help gl-v2-dos-costnote">Telt mee in de nutsaansluitingen van de nacalculatie en de verdeling per eenheid (<a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })">nacalculatie</a>).</p>
+                        </div>
+                    </div>
+
+                    @* ── Contact & omschrijving ── *@
+                    <div class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">Contact &amp; omschrijving</h2>
+                        </div>
+                        <div class="gl-v2-dos-card-body">
+                            <div class="gl-v2-dos-grid is-two">
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-contact">Extern contact</label>
+                                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-nuts-contact" name="ExterneContactNaam" maxlength="150" value="@d?.ExterneContactNaam" autocomplete="off"></div>
+                                </div>
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="gl-v2-nuts-mail">E-mail</label>
+                                    <div class="gl-v2-field-box"><input type="email" class="gl-v2-field-input" id="gl-v2-nuts-mail" name="ExterneContactEmail" maxlength="254" value="@d?.ExterneContactEmail" autocomplete="off"></div>
+                                </div>
+                            </div>
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-nuts-oms">Omschrijving</label>
+                                <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-nuts-oms" name="Omschrijving" rows="3" placeholder="Intern">@d?.Omschrijving</textarea></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="gl-v2-dos-form-side">
+                <div class="gl-v2-card gl-v2-dos-statuscard" id="gl-v2-nuts-status">
+                    <div class="gl-v2-dos-statuscard-h">STATUS · VOLGT UIT DE DATUMS</div>
+                    <div id="gl-v2-nuts-steps">
+                        @await Html.PartialAsync("GlV2/_Steps", new GlV2StepsVm
+                        {
+                            Id = "gl-v2-nuts-steps-list",
+                            Variant = GlV2StepsVariant.Verticaal,
+                            Size = GlV2StepsSize.Sm,
+                            Clickable = false,
+                            ShowSub = false,
+                            Current = overdrachtKlaar ? 6 : Math.Min(huidige, 5),
+                            Steps = DossierWeergave.NutsStapLabels.Select((l, i) => new GlV2StepItemVm { Label = i switch { 0 => "Aanvraag verstuurd", 1 => "Offerte ontvangen", 2 => "Offerte goedgekeurd", 3 => "Uitvoering gevraagd", 4 => "Uitgevoerd", _ => "Keuring & overdracht" } }).ToList()
+                        })
+                    </div>
+                </div>
+                <div class="gl-v2-notice gl-v2-notice-expanded is-info gl-v2-dos-sidenote">
+                    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+                    <div class="gl-v2-notice-body">
+                        <span class="gl-v2-notice-title">Mijlpaal in het traject</span>
+                        <span class="gl-v2-notice-text">"Nutsaansluiting aangevraagd" wordt bereikt zodra de aanvraagdatum van alle eenheden ingevuld is.</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-dos-req">Velden met <span class="gl-v2-tr-req">*</span> zijn verplicht</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@annulerenUrl" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+            @if (isNieuw)
+            {
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" name="opslaanEnNieuw" value="true">Opslaan en nieuwe</button>
+            }
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-nuts-submit">Opslaan</button>
+        </div>
+    </div>
+</form>
+
+@* Verlaat-bewaking (DESIGN.md "Verlaat-bewaking"): dirty-badge met id …dirty-badge + deze modal (id bevat "discard", eindigt op "-modal") met bevestigingslink. *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-discard-changes-title">Wijzigingen niet opslaan?</h2>
+                    <p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder uw wijzigingen op te slaan.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-dossiers-form.js" asp-append-version="true"></script>
+}

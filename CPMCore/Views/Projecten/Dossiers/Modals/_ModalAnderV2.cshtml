@@ -1,0 +1,142 @@
+@model CPMCore.Models.Traject.DossierAnderModalVm
+@*
+    gl-v2 — Ander dossier (design-handoff 31f): type als keuzetegels, opvolging (status, datums, bedrag), contact en de koppeling met
+    een mijlpaal. Nieuw én bewerken; inhoud via AJAX in #gl-v2-dos-ander-body (ProjectDossiersController.AnderModal) en posten naar
+    ProjectDossiersController.Opslaan (DossierUpsertBO + koppelMijlpaalId). De tegels zijn de vier uit het ontwerp; "Andere…" toont de
+    overige bestaande dossiertypes (grondverwerving, akte, verzekering, …) zodat er niets verdwijnt.
+*@
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@{
+    var d = Model.Bestaand;
+    var kind = d?.DossierKind ?? Model.DefaultKind;
+    var hoofd = new[] { DossierKind.Omgevingsvergunning, DossierKind.Attest, DossierKind.Keuring, DossierKind.Vrij };
+    var overige = Enum.GetValues(typeof(DossierKind)).Cast<DossierKind>().Where(k => !hoofd.Contains(k) && k != DossierKind.NutsAansluiting).ToList();
+    var isHoofd = hoofd.Any(k => (int)k == kind);
+    var tegels = new (DossierKind K, string Icon, string Naam, string Sub)[]
+    {
+        (DossierKind.Omgevingsvergunning, "ph-folder-open", "Omgevingsvergunning", "met vergunningschecklist"),
+        (DossierKind.Attest, "ph-seal-check", "Attest", "bv. rooilijn- of peilattest"),
+        (DossierKind.Keuring, "ph-clipboard-text", "Keuring", "bv. EPB of brandveiligheid"),
+        (DossierKind.Vrij, "ph-file-text", "Vrij dossier", "alles wat er niet bij past"),
+    };
+    string Iso(DateOnly? x) => x?.ToString("yyyy-MM-dd") ?? "";
+    string Disp(DateOnly? x) => x?.ToString("dd/MM/yyyy") ?? "";
+    var status = d?.Status ?? (int)DossierStatus.Nieuw;
+    var gekozenMijlpaal = Model.GekoppeldeMijlpaalId;
+    var gekoppeld = gekozenMijlpaal.HasValue;
+    var statusItems = new List<GlV2SelectItem>
+    {
+        new() { Value = ((int)DossierStatus.Nieuw).ToString(), Text = "Nieuw" },
+        new() { Value = ((int)DossierStatus.Aangevraagd).ToString(), Text = "Ingediend" },
+        new() { Value = ((int)DossierStatus.InBehandeling).ToString(), Text = "In behandeling" },
+        new() { Value = ((int)DossierStatus.Afgehandeld).ToString(), Text = "Afgehandeld" },
+        new() { Value = ((int)DossierStatus.Geannuleerd).ToString(), Text = "Geannuleerd" },
+    };
+    // Voorstel voor de koppeling: de mijlpaal die bij het type hoort ("… ingediend" bij een vergunning).
+    var voorstel = Model.Mijlpalen.FirstOrDefault(m => (m.Code ?? "").Equals("VERGUNNING_INGEDIEND", StringComparison.OrdinalIgnoreCase))?.Id;
+}
+<div id="gl-v2-dos-ander-root" data-title="@(Model.IsNieuw ? "Ander dossier" : "Dossier bewerken")" data-sub="@(Model.IsNieuw ? "Vergunning, attest, keuring of een vrij dossier" : d!.Titel)" data-nieuw="@(Model.IsNieuw ? "1" : "0")" data-voorstel-mijlpaal="@voorstel">
+    @if (!Model.IsNieuw)
+    {
+        <input type="hidden" name="Id" value="@d!.Id" />
+        <input type="hidden" name="VerantwoordelijkePartijType" value="@d.VerantwoordelijkePartijType" />
+        <input type="hidden" name="VerantwoordelijkePartijId" value="@d.VerantwoordelijkePartijId" />
+        <input type="hidden" name="VerantwoordelijkeUserId" value="@d.VerantwoordelijkeUserId" />
+    }
+
+    <section class="gl-v2-tr-fsec">
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label">Type</span>
+            <div class="gl-v2-dos-tiles" id="gl-v2-dos-f-tiles" role="radiogroup" aria-label="Type dossier">
+                @foreach (var t in tegels)
+                {
+                    <label class="gl-v2-dos-tile">
+                        <input type="radio" name="DossierKind" value="@((int)t.K)" @((int)t.K == kind ? "checked" : "")>
+                        <span class="gl-v2-dos-tile-body"><i class="ph @t.Icon" aria-hidden="true"></i><b>@t.Naam</b><small>@t.Sub</small></span>
+                    </label>
+                }
+                <label class="gl-v2-dos-tile">
+                    <input type="radio" name="DossierKind" value="@(isHoofd ? (int)overige.First() : kind)" id="gl-v2-dos-f-andere" @(!isHoofd ? "checked" : "")>
+                    <span class="gl-v2-dos-tile-body"><i class="ph ph-dots-three-circle" aria-hidden="true"></i><b>Andere…</b><small>grond, akte, verzekering, …</small></span>
+                </label>
+            </div>
+            <div class="gl-v2-dos-andere-select" id="gl-v2-dos-f-andere-wrap" @(isHoofd ? "hidden" : "")>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "gl-v2-dos-f-andere-kind", Id = "gl-v2-dos-f-andere-kind", Bare = true, Value = (isHoofd ? (int)overige.First() : kind).ToString(),
+                    Items = overige.Select(k => new GlV2SelectItem { Value = ((int)k).ToString(), Text = k.GetDisplayName() }).ToList()
+                })
+            </div>
+        </div>
+    </section>
+
+    <section class="gl-v2-tr-fsec">
+        <div class="gl-v2-tr-fgrid">
+            <div class="gl-v2-field gl-v2-tr-f-full">
+                <label class="gl-v2-field-label" for="gl-v2-dos-f-titel">Titel <span class="gl-v2-tr-req">*</span></label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dos-f-titel" name="Titel" maxlength="200" value="@d?.Titel" autocomplete="off" required /></div>
+                <span class="gl-v2-field-help gl-v2-tr-err" data-for="Titel" hidden>Geef het dossier een titel.</span>
+            </div>
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "UnitId", Id = "gl-v2-dos-f-unit", Label = "Eenheid", Value = d?.UnitId?.ToString() ?? "", EmptyText = "— projectniveau —",
+                Items = Model.Units.Select(u => new GlV2SelectItem { Value = u.Id.ToString(), Text = u.Name }).ToList()
+            })
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="gl-v2-dos-f-ref">Referentie</label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input gl-v2-dos-mono" id="gl-v2-dos-f-ref" name="Referentie" maxlength="100" value="@d?.Referentie" autocomplete="off" /></div>
+            </div>
+            <div class="gl-v2-field gl-v2-tr-f-full">
+                <label class="gl-v2-field-label" for="gl-v2-dos-f-instantie">Instantie</label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-dos-f-instantie" name="ExterneContactNaam" maxlength="150" value="@d?.ExterneContactNaam" placeholder="bv. Gemeente Koksijde" autocomplete="off" /></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="gl-v2-tr-fsec">
+        <h3 class="gl-v2-tr-fsec-title">OPVOLGING</h3>
+        <div class="gl-v2-tr-fgrid">
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "Status", Id = "gl-v2-dos-f-status", Label = "Status", Value = status.ToString(), Items = statusItems })
+            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "AanvraagDatum", Id = "gl-v2-dos-f-aanvraag", Label = "Aanvraagdatum", IsoValue = Iso(d?.AanvraagDatum), DisplayValue = Disp(d?.AanvraagDatum) })
+            <div>
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "VerwachteAfhandelingDatum", Id = "gl-v2-dos-f-verwacht", Label = "Verwachte afhandeling", IsoValue = Iso(d?.VerwachteAfhandelingDatum), DisplayValue = Disp(d?.VerwachteAfhandelingDatum) })
+                <span class="gl-v2-field-help" id="gl-v2-dos-f-verwacht-help"></span>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="gl-v2-dos-f-bedrag">Bedrag</label>
+                <div class="gl-v2-field-box gl-v2-dos-eur"><span class="gl-v2-dos-eur-sign">€</span><input type="text" class="gl-v2-field-input" id="gl-v2-dos-f-bedrag" name="Bedrag" inputmode="decimal" value="@(d?.Bedrag?.ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")))" autocomplete="off" /></div>
+            </div>
+            <div class="gl-v2-field gl-v2-tr-f-full">
+                <label class="gl-v2-field-label" for="gl-v2-dos-f-mail">Extern contact</label>
+                <div class="gl-v2-field-box"><input type="email" class="gl-v2-field-input" id="gl-v2-dos-f-mail" name="ExterneContactEmail" maxlength="254" value="@d?.ExterneContactEmail" placeholder="e-mailadres" autocomplete="off" /></div>
+            </div>
+            <div class="gl-v2-field gl-v2-tr-f-full">
+                <label class="gl-v2-field-label" for="gl-v2-dos-f-oms">Omschrijving</label>
+                <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-dos-f-oms" name="Omschrijving" rows="3" placeholder="Intern">@d?.Omschrijving</textarea></div>
+            </div>
+        </div>
+    </section>
+
+    @if (Model.Mijlpalen.Count > 0)
+    {
+        <section class="gl-v2-tr-fsec gl-v2-dos-koppelsec">
+            <label class="gl-v2-toggle-row" for="gl-v2-dos-f-koppel-toggle">
+                <input type="checkbox" id="gl-v2-dos-f-koppel-toggle" class="gl-v2-toggle-switch" @(gekoppeld ? "checked" : "") />
+                <span class="gl-v2-toggle-text">
+                    <span class="gl-v2-toggle-label">Koppel aan een mijlpaal van het traject</span>
+                    <span class="gl-v2-toggle-hint">de mijlpaal wordt bereikt zodra het dossier op Ingediend staat</span>
+                </span>
+            </label>
+            <div class="gl-v2-dos-koppel-pick" id="gl-v2-dos-f-koppel-pick" @(gekoppeld ? "" : "hidden")>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "koppelMijlpaalId", Id = "gl-v2-dos-f-koppel", Bare = true, Value = (gekozenMijlpaal ?? voorstel)?.ToString() ?? "", Placeholder = "Kies een mijlpaal",
+                    Items = Model.Mijlpalen.Select(m => new GlV2SelectItem { Value = m.Id.ToString(), Text = m.Naam }).ToList()
+                })
+            </div>
+        </section>
+    }
+</div>

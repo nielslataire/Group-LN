@@ -67,7 +67,7 @@ public sealed class SigningNotifier : ISigningNotifier
             $"Beste {H(to.Name)},",
             $"<p><strong>{H(d.Title)}</strong>{Number(d)}{Project(d)} is door alle betrokkenen elektronisch ondertekend.</p>" +
             (finalPdf is not null ? "<p>Het ondertekende document vindt u als bijlage.</p>" : "") +
-            (downloadUrl is not null ? Button(downloadUrl, "Ondertekend document en auditrapport downloaden") +
+            (downloadUrl is not null ? Button(downloadUrl, "Ondertekend document downloaden") +
                 $"<p style=\"color:#5a6b58;font-size:12px\">Deze downloadlink is {_options.DownloadLinkDays} dagen geldig.</p>" : ""));
         var attachments = finalPdf is null
             ? null
@@ -143,9 +143,23 @@ public sealed class SigningNotifier : ISigningNotifier
     private static string Expiry(SigningMailDocument d)
         => d.ExpiresAt is null ? "" : $"<p>U kunt ondertekenen tot <strong>{d.ExpiresAt.Value.ToLocalTime():dd/MM/yyyy}</strong>.</p>";
 
+    /// <summary>Knop die in elk mailprogramma werkt: een tabelcel met <c>bgcolor</c> én <c>background-color</c> en de opvulling op
+    /// de cel zelf. Outlook (Word-engine) en veel webviews negeren padding/achtergrond op een inline-block <c>&lt;a&gt;</c>, waardoor
+    /// enkel een gekleurde tekstbalk overbleef; de link in de cel blijft daarom kaal (kleur, lettertype, geen onderstreping).</summary>
     private static string Button(string url, string label)
-        => $"<p style=\"margin:22px 0\"><a href=\"{H(url)}\" style=\"display:inline-block;padding:12px 20px;background:#00532D;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600\">{H(label)}</a></p>" +
-           $"<p style=\"color:#5a6b58;font-size:12px\">Werkt de knop niet? Kopieer deze link in uw browser:<br/>{H(url)}</p>";
+    {
+        var href = H(url);
+        var text = H(label);
+        const string green = "#00532D";
+        const string font = "'IBM Plex Sans',Segoe UI,Helvetica,Arial,sans-serif";
+        return
+            "<table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:22px 0;border-collapse:separate\"><tr>" +
+            $"<td align=\"center\" bgcolor=\"{green}\" style=\"background-color:{green};border-radius:8px;padding:13px 24px\">" +
+            $"<a href=\"{href}\" target=\"_blank\" style=\"color:#ffffff;font-family:{font};font-size:14px;font-weight:600;line-height:20px;text-decoration:none\">" +
+            $"<font color=\"#ffffff\">{text}</font></a>" +
+            "</td></tr></table>" +
+            $"<p style=\"color:#5a6b58;font-size:12px\">Werkt de knop niet? Kopieer deze link in uw browser:<br/>{href}</p>";
+    }
 
     /// <summary>Sobere HTML-omslag in de huisstijlkleuren (gl-v2-tokens: primary #00532D, ink #2C3B2A, muted #5a6b58).</summary>
     private static string Layout(string greeting, string inner)

@@ -29,6 +29,7 @@ Public Class NutsAansluitingBulkCreateBO
 
     <DataType(DataType.Date)>
     Public Property VerwachteAfhandelingDatum As DateOnly?
+    Public Property VerwachteOfferteDatum As DateOnly?
 
     Public Property Omschrijving As String
 

@@ -1,10 +1,26 @@
+@*
+    Verificatiepagina — onbekend dossier (design-handoff 37, zelfde raamwerk als de geldige toestand). Geen onderscheid tussen
+    "bestaat niet" en "verkeerde link": de pagina verraadt niets over andere dossiers.
+*@
 @{
     Layout = "_LayoutPublic";
     ViewData["Title"] = "Niet gevonden";
+    ViewData["PublicKicker"] = "Echtheidscontrole";
+    ViewData["PublicKickerPlain"] = true;
+    ViewData["PublicKickerIcon"] = "lock";
 }
-<div class="gl-v2-public-empty">
-    <h1 class="gl-v2-public-empty-title">Dit dossier is niet gevonden</h1>
-    <p class="gl-v2-public-empty-desc">
-        Controleer of u de volledige link gebruikt hebt. Neem contact op met Group LN als het probleem blijft bestaan.
-    </p>
+<div class="gl-v2-sign" data-state="closed">
+    <div class="gl-v2-sign-head">
+        <div class="gl-v2-sign-head-text">
+            <h1 class="gl-v2-sign-title">Dit dossier is niet gevonden</h1>
+        </div>
+        <span class="gl-v2-sign-chip" role="status">Niet gevonden</span>
+    </div>
+    <div class="gl-v2-sign-banner is-neutral" role="status">
+        <span class="gl-v2-sign-banner-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6V8l2.2 1.4"></path></svg></span>
+        <div class="gl-v2-sign-banner-body">
+            <span class="gl-v2-sign-banner-title">We konden geen ondertekend document bij deze link vinden</span>
+            <span class="gl-v2-sign-banner-text">Controleer of je de volledige link of QR-code gebruikt hebt. Neem contact op met Group LN (info@groupln.be) als het probleem blijft bestaan.</span>
+        </div>
+    </div>
 </div>

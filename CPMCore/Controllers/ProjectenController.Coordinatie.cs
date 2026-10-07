@@ -923,7 +923,9 @@ namespace CPMCore.Controllers
             IEnumerable<ChangeOrderBO> changeOrders,
  IEnumerable<ClientAccountChangeOrderInvoiceBO> selectedRows,
             IDictionary<int, decimal> alreadyInvoicedByDetail,
-            ProjectBO project)
+            ProjectBO project,
+            IReadOnlyDictionary<int, ChangeOrderInvoiceInfo>? coInfo = null,
+            IReadOnlyDictionary<int, int>? detailVatTypeIds = null)
         {
             if (!issuerCompanyId.HasValue || issuerCompanyId.Value <= 0)
                 return null;
@@ -976,35 +978,23 @@ namespace CPMCore.Controllers
                         Vat: detail.VatPercentage ?? 21m));
                 }
 
-                var groupedByVat = detailRows
-                    .GroupBy(r => r.Vat)
-                    .Select(g => new
-                    {
-                        Vat = g.Key,
-                        Total = g.Sum(x => x.Amount),
-                        Details = g.ToList()
-                    })
-                    .ToList();
-
-                foreach (var vatGroup in groupedByVat)
+                // Eén factuurregel per lijn van de wijzigingsopdracht (Niels, 2026-10-07): zo is elke lijn apart zichtbaar op de factuur,
+                // en staat elke lijn met haar ChangeOrderDetailId op de factuur — de facturatiepagina rekent daarmee het gefactureerde
+                // bedrag per lijn uit (voorheen kreeg een groep van meerdere lijnen geen detail-id en bleef ze "te factureren").
+                // Titel van de groep op de factuur: "WO-2026-001 · onderwerp" (GroupName); zonder info de oude titel "Wijzigingsopdrachten".
+                var groupName = coInfo != null && coInfo.TryGetValue(order.Id, out var info) ? info.Label : "Wijzigingsopdrachten";
+                foreach (var row in detailRows)
                 {
-                    var orderDescription = string.IsNullOrWhiteSpace(order.Description)
-                        ? $"Wijzigingsopdracht #{order.Id}"
-                        : order.Description;
-                    var lineText = groupedByVat.Count == 1
-                        ? orderDescription
-                        : $"{orderDescription} ({vatGroup.Vat:0.##}% BTW)";
-
-                    var detailIds = vatGroup.Details.Select(d => d.DetailId).Distinct().ToList();
-
                     lines.Add(new InvoiceLineBO
                     {
-                        Text = lineText,
-                        Price = vatGroup.Total,
-                        VatPercentage = vatGroup.Vat,
+                        Text = row.Description,
+                        Price = row.Amount,
+                        VatPercentage = row.Vat,
                         LineType = "ChangeOrders",
-                        GroupName = "Wijzigingsopdrachten",
-                        ChangeOrderDetailId = detailIds.Count == 1 ? detailIds[0] : null
+                        GroupName = groupName,
+                        ChangeOrderDetailId = row.DetailId,
+                        // Gekozen btw-code van de lijn (migratie 073): de factuur toont zo de vermelding van díe code.
+                        VatTypeId = detailVatTypeIds != null && detailVatTypeIds.TryGetValue(row.DetailId, out var vtId) ? vtId : null
                     });
                 }
             }
@@ -1024,6 +1014,18 @@ namespace CPMCore.Controllers
                 (draft.ClientType, draft.ClientId) = ((int)InvoicePartyType.ClientAccount, clientAccountId);
             else if (clientContactId.HasValue)
                 (draft.ClientType, draft.ClientId) = ((int)InvoicePartyType.ClientContact, clientContactId);
+
+            // Beschrijvende tekst bovenaan de factuur (35b "BESCHRIJVING"): de omschrijving voor de klant van de wijzigingsopdracht(en).
+            // Eén WO: enkel haar omschrijving; meerdere: per WO "WO-nummer · onderwerp: omschrijving".
+            if (coInfo != null)
+            {
+                var used = changeOrders.Where(o => o.Details.Any(d => selectedByDetail.ContainsKey(d.Id)) && coInfo.ContainsKey(o.Id)).Select(o => coInfo[o.Id]).ToList();
+                var described = used.Where(i => !string.IsNullOrWhiteSpace(i.Description)).ToList();
+                if (described.Count == 1 && used.Count == 1)
+                    draft.HeaderDescription = described[0].Description!.Trim();
+                else if (described.Count > 0)
+                    draft.HeaderDescription = string.Join("\n", described.Select(i => $"{i.Label}: {i.Description!.Trim()}"));
+            }
 
             return draft;
         }

@@ -51,6 +51,8 @@ public partial class InstellingenController : BaseController
     private readonly IActivityService _activityService;
     private readonly IProjectService _projectService;
     private readonly IKostprijsService _kostprijsService;
+    private readonly IBudgetPrijsReferentieService _prijsReferenties;
+    private readonly IBudgetReferentieProjectService _referentieProjecten;
     private readonly ServiceCore.Budget.BouwIndexService _bouwIndex;
     private readonly ServiceCore.Budget.SIndexScraperService _sIndexScraper;
     private readonly ServiceCore.Budget.I2021SyncService _i2021Sync;
@@ -71,7 +73,7 @@ public partial class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync, CPMCore.Services.IMarketDataStatusService marketDataStatus, ServiceCore.Budget.BudgetActivityFormuleService budgetFormules)
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, IBudgetPrijsReferentieService prijsReferenties, IBudgetReferentieProjectService referentieProjecten, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync, CPMCore.Services.IMarketDataStatusService marketDataStatus, ServiceCore.Budget.BudgetActivityFormuleService budgetFormules)
     {
         _logger = logger;
         _issuers = issuers;
@@ -85,6 +87,8 @@ public partial class InstellingenController : BaseController
         _activityService = activityService;
         _projectService = projectService;
         _kostprijsService = kostprijsService;
+        _prijsReferenties = prijsReferenties;
+        _referentieProjecten = referentieProjecten;
         _bouwIndex = bouwIndex;
         _sIndexScraper = sIndexScraper;
         _i2021Sync = i2021Sync;

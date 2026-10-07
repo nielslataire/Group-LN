@@ -169,6 +169,27 @@
 .gl-v2-inv-row.is-blocked:hover td { background: #FBF3F3; }
 .gl-v2-inv-row[hidden] { display: none !important; }
 
+/* Wijzigingsopdracht als uitklapbare groep (Niels, 2026-10-07): groeprij met chevron, lijnen ingesprongen eronder. */
+.gl-v2-inv-row.is-child.is-collapsed { display: none; }
+.gl-v2-inv-row.is-group td { font-weight: 600; }
+.gl-v2-inv-row.is-group.is-open td { border-bottom-color: transparent; }
+.gl-v2-inv-row.is-child td { background: #FAFBF8; }
+.gl-v2-inv-row.is-child.is-selected td { background: var(--gl-v2-primary-tint); }
+.gl-v2-inv-row.is-child .gl-v2-inv-desc { padding-left: 38px; }
+.gl-v2-inv-row.is-child .gl-v2-inv-desc-title { font-weight: 400; }
+.gl-v2-inv-desc-line { display: flex; align-items: center; gap: 8px; }
+.gl-v2-inv-desc-sub-indent { padding-left: 28px; }
+.gl-v2-inv-chevron {
+    width: 20px; height: 20px; flex: none; padding: 0; border: 0; border-radius: 5px; background: transparent;
+    display: inline-flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+.gl-v2-inv-chevron:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
+.gl-v2-inv-chevron:focus-visible { outline: 3px solid var(--gl-v2-primary-tint); outline-offset: 1px; }
+.gl-v2-inv-chevron i { font-size: 13px; transition: transform .18s ease; }
+.gl-v2-inv-chevron[aria-expanded="true"] i { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .gl-v2-inv-chevron i { transition: none; } }
+
 /* Groepskop per betalingsschijf (Niels 2026-09-30: "group the inv-row by paymentstages") — een lichte
    sectierij, geen echte th/thead (blijft binnen tbody zodat sorteren/filteren op rijniveau blijft werken). */
 .gl-v2-inv-group-header td {

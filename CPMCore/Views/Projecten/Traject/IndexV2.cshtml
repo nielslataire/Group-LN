@@ -1,0 +1,761 @@
+@model CPMCore.Models.Traject.TrajectIndexVm
+@*
+    gl-v2 — Traject (design-handoff punt 30 "Traject — fases met mijlpalen in vier weergaven", CRM Traject en dossiers.dc.html).
+    Eén pagina, vier tabs, kerncijfers rechts in de tabbar (zelfde standaard als Project bewerken, punt 19):
+      30a Tijdlijn   — Stappenplan (Chips) van de fases · melding voor wat te laat is · afgeronde en geplande fases
+                       ingeklapt, de actieve fase groen omrand · lege fase met "Uit sjabloon halen (N)".
+      30b Mijlpalen  — tabel met zoek, statusfilter, fasefilter, kolommen, bolletje = bereikt, selectiebalk voor bulkacties.
+      30c Per eenheid — matrix eenheid × mijlpaal, popover op de cel, lege toestand.
+      30d Kalender   — fasebalken, mijlpalen als chips, Maand/Kwartaal/Jaar/Agenda, cijfers en de gekozen dag rechts.
+      30e Mijlpaal toevoegen/bewerken — één formulier in een modal (Modals/_ModalMijlpaalV2, inhoud via AJAX).
+      30f Sync met sjabloon — eerst tonen wat er verandert, dan kiezen (Modals/_ModalSyncV2, inhoud via AJAX).
+    Eigen klassen-namespace gl-v2-tr-* (gl-v2-projecten-traject.css/.js). Gedeeld: GlV2/_Steps (Stappenplan, punt 27),
+    gl-v2-notice-* (Meldingskaders, punt 25), GlV2/_ModalConfirm, het dossiermenu en de tabbar uit gl-v2/page.css.
+    De legacy Traject/Index.cshtml blijft bestaan voor wie de gl-v2-preview uitzet.
+*@
+@using System.Globalization
+@using System.Text.Json
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@{
+    ViewData["Title"] = "Traject";
+    ViewData["PageIcon"] = "ph ph-git-branch";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var t = Model.Traject;
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · traject" };
+    var menuPhoneVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · traject", Mode = GlV2ProjectMenuMode.Phone };
+
+    var startTab = Model.StartTab is "mijlpalen" or "eenheden" or "kalender" ? Model.StartTab : "tijdlijn";
+    var alle = Model.Mijlpalen;
+    var projectMijlpalen = Model.ProjectMijlpalen;
+    var eenheidMijlpalen = Model.EenheidMijlpalen;
+    var mijlpalenPerFase = projectMijlpalen.GroupBy(m => m.ProjecttrajectFaseId ?? 0).ToDictionary(g => g.Key, g => g.OrderBy(x => x.Volgorde).ThenBy(x => TrajectWeergave.Streef(x) ?? DateOnly.MaxValue).ToList());
+    var teLaatLijst = alle.Where(m => TrajectWeergave.IsTeLaat(m, today)).OrderBy(m => TrajectWeergave.Streef(m)).ToList();
+    var nogTeDoen = alle.Count(m => !TrajectWeergave.IsAfgehandeld(m));
+    var perEenheidTeLaat = eenheidMijlpalen.Count(m => TrajectWeergave.IsTeLaat(m, today));
+    var hasPerEenheid = eenheidMijlpalen.Count > 0;
+    var actieveFaseId = Model.HuidigeFase?.Id;
+    var rowVd = new ViewDataDictionary(ViewData) { { "Vm", Model }, { "Today", today } };
+    // Op gsm verdwijnen de topbar-acties; @section MobileQuickActions blijft onvoorwaardelijk geregistreerd (Razor staat geen @if eromheen
+    // toe) en rendert leeg zonder traject of schrijfrechten — de vlag voorkomt dan een lege groene balk (zie _LayoutV2).
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-traject.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (t != null && Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-tr-sync" id="gl-v2-tr-sync-btn">
+            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i><span>Sync met sjabloon</span>
+            @if (Model.SyncOpenstaand > 0)
+            {
+                <span class="gl-v2-tr-btn-count">@Model.SyncOpenstaand</span>
+            }
+        </button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-tr-add" data-fase-id="@(actieveFaseId ?? 0)">
+            <i class="ph ph-plus" aria-hidden="true"></i><span>Mijlpaal</span>
+        </button>
+    }
+    @if (t != null && Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-tr-more-menu" aria-label="Meer acties">
+            <i class="ph ph-dots-three" aria-hidden="true"></i>
+        </button>
+    }
+}
+@section MobileQuickActions
+{
+    @if (t != null && Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-tr-add" data-fase-id="@(actieveFaseId ?? 0)">
+            <i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction js-tr-sync">
+            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Sync
+        </button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@if (t == null)
+{
+    @* Nog geen traject: eerst een sjabloon kiezen. Geen tabbar (er valt niets te tonen). *@
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
+    <div class="gl-v2-card gl-v2-tr-start-card">
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-git-branch" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Nog geen traject</h2>
+                <p class="gl-v2-empty-state-desc">Maak een traject aan op basis van een sjabloon. Fases en mijlpalen worden gekopieerd en de streefdata berekend uit de startdatum.</p>
+                @if (Model.CanWrite && Model.Sjablonen.Count > 0)
+                {
+                    <form method="post" action="@Url.Action("Aanmaken", "ProjectTraject", new { projectId = Model.ProjectId })" class="gl-v2-tr-start-form">
+                        @Html.AntiForgeryToken()
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "sjabloonId", Id = "gl-v2-tr-start-sjabloon", Label = "Sjabloon",
+                            Value = (Model.VoorgesteldSjabloonId ?? Model.Sjablonen.FirstOrDefault()?.Id)?.ToString(),
+                            Items = Model.Sjablonen.Select(s => new GlV2SelectItem { Value = s.Id.ToString(), Text = s.Naam + (s.IsStandaard ? " (standaard)" : "") }).ToList()
+                        })
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "startdatum", Id = "gl-v2-tr-start-datum", Label = "Startdatum (anker)", IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Traject aanmaken</button>
+                    </form>
+                }
+                else if (Model.Sjablonen.Count == 0)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                        <i class="ph ph-warning" aria-hidden="true"></i>
+                        <span>Er zijn nog geen actieve sjablonen. Maak er eerst één aan onder Instellingen → Trajectsjablonen.</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    @* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (negatieve marge, zie ChangeOrdersV2). *@
+    <div class="gl-v2-tabbar gl-v2-tr-tabbar" id="gl-v2-tr-tabs" role="tablist" aria-label="Traject">
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "tijdlijn" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "tijdlijn" ? "true" : "false")" data-tr-tab="tijdlijn">
+            <i class="ph ph-chart-line-up" aria-hidden="true"></i>Tijdlijn
+        </button>
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "mijlpalen" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "mijlpalen" ? "true" : "false")" data-tr-tab="mijlpalen">
+            <i class="ph ph-flag" aria-hidden="true"></i>Mijlpalen <span class="gl-v2-tabbar-count">@alle.Count</span>
+        </button>
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "eenheden" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "eenheden" ? "true" : "false")" data-tr-tab="eenheden">
+            <i class="ph ph-squares-four" aria-hidden="true"></i>Per eenheid <span class="gl-v2-tabbar-count">@eenheidMijlpalen.Count</span>
+        </button>
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "kalender" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "kalender" ? "true" : "false")" data-tr-tab="kalender">
+            <i class="ph ph-calendar-blank" aria-hidden="true"></i>Kalender
+        </button>
+        <span class="gl-v2-tabbar-spacer"></span>
+        <div class="gl-v2-tr-stats" aria-label="Trajectstatus">
+            <span class="gl-v2-tr-stat-fase">Fase <b>@(Model.HuidigeFase?.Naam ?? "—")</b></span>
+            <span class="gl-v2-tr-chip"><b>@Model.AantalBereikt/@Model.AantalMijlpalen</b> bereikt</span>
+            <span class="gl-v2-tr-chip @(Model.AantalAchterstallig > 0 ? "is-late" : "")"><b>@Model.AantalAchterstallig</b> achterstallig</span>
+            <span class="gl-v2-tr-chip gl-v2-tr-chip-sec"><b>@Model.AantalBinnen14Dagen</b> binnen 14 d.</span>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
+
+    @if (Model.CanDelete)
+    {
+        <div class="gl-v2-menu" id="gl-v2-tr-more-menu">
+            <button type="button" class="gl-v2-menu-item is-danger" data-bs-toggle="modal" data-bs-target="#gl-v2-tr-delete-modal">
+                <i class="ph ph-trash" aria-hidden="true"></i>
+                <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Traject verwijderen</span></span>
+            </button>
+        </div>
+    }
+
+    <div id="gl-v2-tr-root" data-project-id="@Model.ProjectId" data-start-tab="@startTab" data-can-write="@(Model.CanWrite ? "1" : "0")" data-highlight="@(Model.HighlightMijlpaalId?.ToString() ?? "")">
+
+        @* ═════════ 30a · TIJDLIJN ═════════ *@
+        <div class="gl-v2-tab-panel gl-v2-tr-panel" id="gl-v2-tr-panel-tijdlijn" data-tr-panel="tijdlijn" role="tabpanel" @(startTab == "tijdlijn" ? "" : "hidden")>
+            <div class="gl-v2-card gl-v2-tr-steps-card">
+                @await Html.PartialAsync("GlV2/_Steps", new GlV2StepsVm
+                {
+                    Id = "gl-v2-tr-steps",
+                    Variant = GlV2StepsVariant.Chips,
+                    Current = Math.Max(0, Model.Fases.FindIndex(f => f.Id == actieveFaseId)),
+                    EmitStepEvents = true,
+                    Steps = Model.Fases.Select(f =>
+                    {
+                        mijlpalenPerFase.TryGetValue(f.Id, out var fm);
+                        fm ??= new List<Mijlpaal>();
+                        return new GlV2StepItemVm
+                        {
+                            Label = f.Naam,
+                            State = f.Status == (int)FaseStatus.Overgeslagen ? GlV2StepState.Uit
+                                  : f.Status == (int)FaseStatus.Afgerond ? GlV2StepState.Done
+                                  : f.Id == actieveFaseId ? GlV2StepState.Current : GlV2StepState.Todo,
+                            Errors = fm.Count(m => TrajectWeergave.IsTeLaat(m, today)),
+                        };
+                    }).ToList()
+                })
+            </div>
+
+            @foreach (var m in teLaatLijst.Where(x => x.UnitId == null).Take(2))
+            {
+                var dagen = TrajectWeergave.DagenTeLaat(m, today);
+                Model.DossierPerMijlpaal.TryGetValue(m.Id, out var dossier);
+                <div class="gl-v2-notice gl-v2-notice-expanded is-danger gl-v2-tr-notice">
+                    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+                    <div class="gl-v2-notice-body">
+                        <span class="gl-v2-notice-title">@m.Naam is @TrajectWeergave.Dagen(dagen) te laat</span>
+                        <span class="gl-v2-notice-text">
+                            Streefdatum was @TrajectWeergave.Datum(TrajectWeergave.Streef(m))@(m.ProjecttrajectFase != null ? $" (fase {m.ProjecttrajectFase.Naam})" : "").
+                            @if (dossier != null)
+                            {
+                                <text> Het dossier @dossier.Titel staat nog op "@DossierWeergave.StatusLabel(dossier)".</text>
+                            }
+                        </span>
+                    </div>
+                    @if (dossier != null)
+                    {
+                        <a class="gl-v2-notice-bar-action" href="@Url.Action("Details", "ProjectDossiers", new { projectId = Model.ProjectId, id = dossier.Id })">Naar dossier</a>
+                    }
+                </div>
+            }
+            @if (teLaatLijst.Count(x => x.UnitId == null) > 2 || teLaatLijst.Any(x => x.UnitId != null))
+            {
+                var extra = teLaatLijst.Count - Math.Min(2, teLaatLijst.Count(x => x.UnitId == null));
+                <div class="gl-v2-notice gl-v2-notice-compact is-warning gl-v2-tr-notice">
+                    <i class="ph ph-warning" aria-hidden="true"></i>
+                    <span>Nog @extra @(extra == 1 ? "mijlpaal" : "mijlpalen") te laat — zie de tab <button type="button" class="gl-v2-tr-linkbtn" data-tr-goto="mijlpalen" data-tr-filter="late">Mijlpalen</button>.</span>
+                </div>
+            }
+
+            <div class="gl-v2-tr-fases" id="gl-v2-tr-fases">
+                @foreach (var f in Model.Fases)
+                {
+                    mijlpalenPerFase.TryGetValue(f.Id, out var items);
+                    items ??= new List<Mijlpaal>();
+                    var bereikt = items.Count(m => m.Status == (int)MijlpaalStatus.Bereikt);
+                    var faseLate = items.Count(m => TrajectWeergave.IsTeLaat(m, today));
+                    var isActief = f.Id == actieveFaseId && f.Status != (int)FaseStatus.Afgerond;
+                    var open = isActief || faseLate > 0;
+                    var datums = items.Select(TrajectWeergave.Streef).Where(d => d.HasValue).Select(d => d!.Value).OrderBy(d => d).ToList();
+                    string bereik = datums.Count == 0 ? "" : datums[0].ToString("MM/yyyy") == datums[^1].ToString("MM/yyyy") ? datums[0].ToString("MM/yyyy") : datums[0].ToString("MM/yyyy") + " – " + datums[^1].ToString("MM/yyyy");
+                    var statusKlasse = f.Status switch { (int)FaseStatus.Afgerond => "is-afgerond", (int)FaseStatus.Actief => "is-actief", (int)FaseStatus.Overgeslagen => "is-overgeslagen", _ => "is-gepland" };
+                    var statusTekst = ((FaseStatus)f.Status).GetDisplayName() + (faseLate > 0 && f.Status != (int)FaseStatus.Afgerond && !isActief ? $" · {faseLate} te laat" : "");
+                    Model.SyncNieuwPerFaseNaam.TryGetValue(f.Naam, out var uitSjabloon);
+                    <section class="gl-v2-tr-fase @statusKlasse @(isActief ? "is-current" : "") @(open ? "is-open" : "")" id="gl-v2-tr-fase-@f.Id" data-fase-id="@f.Id">
+                        <button type="button" class="gl-v2-tr-fase-head" aria-expanded="@(open ? "true" : "false")" aria-controls="gl-v2-tr-fase-body-@f.Id">
+                            <i class="ph ph-caret-right gl-v2-tr-fase-caret" aria-hidden="true"></i>
+                            <span class="gl-v2-tr-fase-naam">@f.Naam</span>
+                            <span class="gl-v2-tr-fase-badge">@statusTekst</span>
+                            <span class="gl-v2-tr-fase-meta">
+                                @if (items.Count == 0)
+                                {
+                                    @if (isActief && f.StartWerkelijk.HasValue || (isActief && f.StartGepland.HasValue))
+                                    {
+                                        <text>0 mijlpalen · sinds @TrajectWeergave.Datum(f.StartWerkelijk ?? f.StartGepland)</text>
+                                    }
+                                    else
+                                    {
+                                        <text>geen mijlpalen</text>
+                                    }
+                                }
+                                else
+                                {
+                                    <text>@bereikt / @items.Count mijlpalen@(bereik.Length > 0 ? " · " + bereik : "")</text>
+                                }
+                            </span>
+                        </button>
+                        <div class="gl-v2-tr-fase-body" id="gl-v2-tr-fase-body-@f.Id" @(open ? "" : "hidden")>
+                            @if (items.Count == 0)
+                            {
+                                <div class="gl-v2-tr-fase-empty">
+                                    <span class="gl-v2-tr-fase-empty-icon"><i class="ph ph-flag" aria-hidden="true"></i></span>
+                                    <div class="gl-v2-tr-fase-empty-text">
+                                        <b>Nog geen mijlpalen in @(isActief ? "de actieve fase" : "deze fase")</b>
+                                        @if (uitSjabloon > 0)
+                                        {
+                                            <span>Het sjabloon heeft voor deze fase @uitSjabloon @(uitSjabloon == 1 ? "mijlpaal" : "mijlpalen") die nog niet in dit traject @(uitSjabloon == 1 ? "staat" : "staan").</span>
+                                        }
+                                    </div>
+                                    @if (Model.CanWrite)
+                                    {
+                                        <div class="gl-v2-tr-fase-empty-actions">
+                                            @if (uitSjabloon > 0)
+                                            {
+                                                <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-tr-sync"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Uit sjabloon halen (@uitSjabloon)</button>
+                                            }
+                                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-tr-add" data-fase-id="@f.Id"><i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal in deze fase</button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="gl-v2-tr-rows">
+                                    @foreach (var m in items)
+                                    {
+                                        @await Html.PartialAsync("Partials/_TrajectRowV2", m, rowVd)
+                                    }
+                                </div>
+                                @if (Model.CanWrite)
+                                {
+                                    <div class="gl-v2-tr-fase-foot">
+                                        <button type="button" class="gl-v2-tr-linkbtn js-tr-add" data-fase-id="@f.Id"><i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal in deze fase</button>
+                                        @if (uitSjabloon > 0)
+                                        {
+                                            <button type="button" class="gl-v2-tr-linkbtn js-tr-sync"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Uit sjabloon halen (@uitSjabloon)</button>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </div>
+
+        @* ═════════ 30b · MIJLPALEN ═════════ *@
+        <div class="gl-v2-tab-panel gl-v2-tr-panel" id="gl-v2-tr-panel-mijlpalen" data-tr-panel="mijlpalen" role="tabpanel" @(startTab == "mijlpalen" ? "" : "hidden")>
+            <div class="gl-v2-tr-toolbar">
+                <div class="gl-v2-field gl-v2-toolbar-search gl-v2-tr-search">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="gl-v2-tr-search" placeholder="Zoek een mijlpaal of verantwoordelijke" autocomplete="off">
+                        <button type="button" class="gl-v2-field-clear" id="gl-v2-tr-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                    </div>
+                </div>
+                <div class="gl-v2-tr-seg" id="gl-v2-tr-statusfilter" role="group" aria-label="Status">
+                    <button type="button" class="is-active" data-tr-status="all">Alle <span>@alle.Count</span></button>
+                    <button type="button" data-tr-status="todo">Nog te doen <span>@nogTeDoen</span></button>
+                    <button type="button" data-tr-status="late">Achterstallig <span>@alle.Count(m => TrajectWeergave.IsTeLaat(m, today))</span></button>
+                    <button type="button" data-tr-status="done">Bereikt <span>@alle.Count(m => m.Status == (int)MijlpaalStatus.Bereikt)</span></button>
+                </div>
+                <div class="gl-v2-tr-fasefilter">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "fasefilter", Id = "gl-v2-tr-fasefilter", Bare = true, Value = "", EmptyText = "Alle fases",
+                        Items = Model.Fases.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Naam }).ToList()
+                    })
+                </div>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-tr-cols-menu">
+                    <i class="ph ph-columns" aria-hidden="true"></i><span>Kolommen</span>
+                </button>
+            </div>
+            <div class="gl-v2-menu gl-v2-tr-cols-menu" id="gl-v2-tr-cols-menu">
+                <div class="gl-v2-menu-title">ZICHTBARE KOLOMMEN</div>
+                @foreach (var (key, label) in new[] { ("fase", "Fase"), ("type", "Type"), ("streef", "Streefdatum"), ("werk", "Werkelijk"), ("wie", "Verantwoordelijke") })
+                {
+                    <label class="gl-v2-tr-col-opt"><input type="checkbox" checked data-tr-col="@key"><span>@label</span></label>
+                }
+            </div>
+
+            <div class="gl-v2-card gl-v2-tr-table-card">
+                <div class="gl-v2-tr-table-scroll">
+                    <table class="gl-v2-tr-table" id="gl-v2-tr-table">
+                        <thead>
+                            <tr>
+                                <th class="gl-v2-tr-col-sel">@if (Model.CanWrite)
+                                {
+                                    <input type="checkbox" id="gl-v2-tr-selall" aria-label="Alles selecteren">
+                                }</th>
+                                <th class="gl-v2-tr-col-dot"></th>
+                                <th data-tr-sort="naam">Mijlpaal</th>
+                                <th data-tr-sort="fase" data-col="fase">Fase</th>
+                                <th data-tr-sort="type" data-col="type">Type</th>
+                                <th data-tr-sort="streef" data-col="streef" class="is-right is-sorted">Streefdatum <i class="ph ph-arrow-up" aria-hidden="true"></i></th>
+                                <th data-tr-sort="werk" data-col="werk" class="is-right">Werkelijk</th>
+                                <th data-tr-sort="wie" data-col="wie">Verantwoordelijke</th>
+                                <th class="gl-v2-tr-col-act"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in alle.OrderBy(x => TrajectWeergave.Streef(x) ?? DateOnly.MaxValue).ThenBy(x => x.Volgorde))
+                            {
+                                var soort = TrajectWeergave.Soort(m, today);
+                                var wie = TrajectWeergave.Verantwoordelijke(m, Model);
+                                var streef = TrajectWeergave.Streef(m);
+                                var hasTrigger = Model.TriggersPerMijlpaal.ContainsKey(m.Id);
+                                var rowMenu = "gl-v2-tr-tmenu-" + m.Id;
+                                <tr class="gl-v2-tr-trow @(soort == "late" ? "is-late" : "")" data-ms-id="@m.Id" data-soort="@soort" data-fase-id="@(m.ProjecttrajectFaseId ?? 0)"
+                                    data-naam="@m.Naam.ToLowerInvariant()" data-wie="@wie.Naam.ToLowerInvariant()"
+                                    data-sort-naam="@m.Naam.ToLowerInvariant()" data-sort-fase="@((m.ProjecttrajectFase?.Volgorde ?? 0).ToString("D4"))" data-sort-type="@TrajectWeergave.TypeNaam(m.MijlpaalType).ToLowerInvariant()"
+                                    data-sort-streef="@(streef?.ToString("yyyyMMdd") ?? "99999999")" data-sort-werk="@(m.WerkelijkeDatum?.ToString("yyyyMMdd") ?? "99999999")" data-sort-wie="@wie.Naam.ToLowerInvariant()">
+                                    <td class="gl-v2-tr-col-sel">@if (Model.CanWrite)
+                                    {
+                                        <input type="checkbox" class="js-tr-select" value="@m.Id" aria-label="Selecteer @m.Naam">
+                                    }</td>
+                                    <td class="gl-v2-tr-col-dot">
+                                        <button type="button" class="gl-v2-tr-dot is-@soort js-tr-toggle" data-ms-id="@m.Id" data-done="@(soort == "done" ? "1" : "0")" @(Model.CanWrite ? "" : "disabled")
+                                                aria-label="@(soort == "done" ? "Bereikt — terugzetten naar nog te doen" : "Markeer als bereikt")" title="@(soort == "done" ? "Bereikt — klik om terug te zetten" : "Markeer als bereikt")">
+                                            <i class="ph @(soort switch { "done" => "ph-check", "late" => "ph-exclamation-mark", "nvt" => "ph-minus", "bezig" => "ph-clock", "geblokkeerd" => "ph-prohibit", _ => "" })" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                    <td class="gl-v2-tr-col-naam">
+                                        <span class="gl-v2-tr-naam">@m.Naam</span>
+                                        @if (m.IsVerplicht) { <span class="gl-v2-tr-tag">verplicht</span> }
+                                        @if (hasTrigger) { <span class="gl-v2-tr-tag is-trigger">trigger</span> }
+                                        @if (m.UnitId != null) { <span class="gl-v2-tr-tag is-unit">@m.Unit?.Name</span> }
+                                    </td>
+                                    <td data-col="fase">@(m.ProjecttrajectFase?.Naam)</td>
+                                    <td data-col="type" class="gl-v2-tr-muted">@TrajectWeergave.TypeNaam(m.MijlpaalType)</td>
+                                    <td data-col="streef" class="is-right gl-v2-tr-num @(soort == "late" ? "is-late" : "")">@TrajectWeergave.Datum(streef)</td>
+                                    <td data-col="werk" class="is-right gl-v2-tr-num">@(m.WerkelijkeDatum.HasValue ? TrajectWeergave.Datum(m.WerkelijkeDatum) : "—")</td>
+                                    <td data-col="wie">
+                                        @if (wie.Naam.Length > 0)
+                                        {
+                                            <span class="gl-v2-tr-avatar" aria-hidden="true">@wie.Initialen</span><span class="gl-v2-tr-wie">@wie.Naam</span>
+                                        }
+                                    </td>
+                                    <td class="gl-v2-tr-col-act">
+                                        @if (Model.CanWrite)
+                                        {
+                                            <button type="button" class="gl-v2-icon-btn js-tr-edit" data-ms-id="@m.Id" aria-label="Bewerk @m.Naam" title="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@rowMenu" aria-label="Meer acties voor @m.Naam"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                                            <div class="gl-v2-menu" id="@rowMenu">
+                                                <button type="button" class="gl-v2-menu-item js-tr-edit" data-ms-id="@m.Id"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span></button>
+                                                @if (Model.CanDelete)
+                                                {
+                                                    <button type="button" class="gl-v2-menu-item is-danger js-tr-delete" data-ms-id="@m.Id" data-naam="@m.Naam"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span></button>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            <tr class="gl-v2-tr-none" id="gl-v2-tr-none" hidden><td colspan="9">Geen mijlpalen voor deze filters.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="gl-v2-tr-table-foot">
+                    <span id="gl-v2-tr-count">@alle.Count mijlpalen</span>
+                    @if (Model.CanWrite) { <span class="gl-v2-tr-foot-hint">Klik een rij om te bewerken · vink het bolletje aan om als bereikt te markeren</span> }
+                </div>
+            </div>
+
+            @if (Model.CanWrite)
+            {
+                <div class="gl-v2-tr-selbar" id="gl-v2-tr-selbar" hidden>
+                    <span class="gl-v2-tr-selbar-count"><b id="gl-v2-tr-selcount">0</b> geselecteerd</span>
+                    <span class="gl-v2-tr-selbar-sep"></span>
+                    <button type="button" data-tr-bulk="bereikt">Markeer bereikt</button>
+                    <button type="button" data-tr-bulk="datum">Verschuif datum…</button>
+                    <button type="button" data-tr-bulk="fase">Andere fase…</button>
+                    @if (Model.CanDelete) { <button type="button" class="is-danger" data-tr-bulk="verwijder">Verwijderen</button> }
+                    <button type="button" class="gl-v2-tr-selbar-x" data-tr-bulk="clear" aria-label="Selectie wissen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+            }
+        </div>
+
+        @* ═════════ 30c · PER EENHEID ═════════ *@
+        <div class="gl-v2-tab-panel gl-v2-tr-panel" id="gl-v2-tr-panel-eenheden" data-tr-panel="eenheden" role="tabpanel" @(startTab == "eenheden" ? "" : "hidden")>
+            @if (!hasPerEenheid)
+            {
+                <div class="gl-v2-card gl-v2-tr-start-card">
+                    <div class="gl-v2-card-body">
+                        <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                            <span class="gl-v2-empty-state-icon"><i class="ph ph-squares-four" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-empty-state-title">Nog geen mijlpalen per eenheid</h2>
+                            <p class="gl-v2-empty-state-desc">Markeer in het trajectsjabloon een mijlpaal als "per eenheid" en synchroniseer, of voeg er hier één toe — elke eenheid krijgt dan een eigen datum en status.</p>
+                            @if (Model.CanWrite)
+                            {
+                                <div class="gl-v2-tr-empty-actions">
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-tr-sync"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Sync met sjabloon</button>
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-primary js-tr-add" data-fase-id="@(actieveFaseId ?? 0)" data-geldt="alle"><i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal per eenheid</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                var kolommen = eenheidMijlpalen.GroupBy(m => m.Code ?? m.Naam).Select(g => g.OrderBy(x => x.Volgorde).First())
+                    .OrderBy(m => m.ProjecttrajectFase?.Volgorde ?? 0).ThenBy(m => m.Volgorde).ToList();
+                var cel = eenheidMijlpalen.GroupBy(m => (m.UnitId!.Value, m.Code ?? m.Naam)).ToDictionary(g => g.Key, g => g.First());
+                var matrixFases = kolommen.Where(k => k.ProjecttrajectFase != null).Select(k => k.ProjecttrajectFase!).DistinctBy(f => f.Id).OrderBy(f => f.Volgorde).ToList();
+                <div class="gl-v2-tr-eh-bar">
+                    <div class="gl-v2-tr-seg" id="gl-v2-tr-ehfase" role="group" aria-label="Fase">
+                        <button type="button" class="is-active" data-tr-eh-fase="">Alle fases</button>
+                        @foreach (var f in matrixFases)
+                        {
+                            <button type="button" data-tr-eh-fase="@f.Id">@f.Naam</button>
+                        }
+                    </div>
+                    <span class="gl-v2-tr-eh-hint">Mijlpalen die in het sjabloon als <b>per eenheid</b> staan, krijgen hier één kolom met een cel per eenheid.</span>
+                </div>
+                <div class="gl-v2-card gl-v2-tr-eh-card">
+                    <div class="gl-v2-card-header">
+                        <span class="gl-v2-card-header-icon"><i class="ph ph-squares-four" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-card-header-title">Per eenheid</h2>
+                        <span class="gl-v2-card-header-count">@kolommen.Count @(kolommen.Count == 1 ? "mijlpaal" : "mijlpalen") × @Model.ProjectUnits.Count @(Model.ProjectUnits.Count == 1 ? "eenheid" : "eenheden")@(perEenheidTeLaat > 0 ? $" · {perEenheidTeLaat} te laat" : "")</span>
+                        <span class="gl-v2-tr-spacer"></span>
+                        @if (Model.CanWrite)
+                        {
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-tr-add" data-fase-id="@(actieveFaseId ?? 0)" data-geldt="alle"><i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal per eenheid</button>
+                        }
+                    </div>
+                    <div class="gl-v2-tr-table-scroll">
+                        <table class="gl-v2-tr-matrix" id="gl-v2-tr-matrix">
+                            <thead>
+                                <tr>
+                                    <th class="gl-v2-tr-mx-unit">Eenheid</th>
+                                    @foreach (var k in kolommen)
+                                    {
+                                        <th data-fase-id="@(k.ProjecttrajectFaseId ?? 0)"><span class="gl-v2-tr-mx-h">@k.Naam</span><span class="gl-v2-tr-mx-sub">@k.ProjecttrajectFase?.Naam</span></th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in Model.ProjectUnits)
+                                {
+                                    var eigen = kolommen.Select(k => cel.TryGetValue((u.Id, k.Code ?? k.Naam), out var c) ? c : null).ToList();
+                                    var klaar = eigen.Count(c => c != null && c.Status == (int)MijlpaalStatus.Bereikt);
+                                    <tr>
+                                        <th class="gl-v2-tr-mx-unit"><span class="gl-v2-tr-mx-unitname">@u.Name</span><span class="gl-v2-tr-mx-sub">@klaar / @kolommen.Count bereikt</span></th>
+                                        @for (var i = 0; i < kolommen.Count; i++)
+                                        {
+                                            var c = eigen[i];
+                                            if (c == null)
+                                            {
+                                                <td data-fase-id="@(kolommen[i].ProjecttrajectFaseId ?? 0)" class="gl-v2-tr-mx-cell is-empty">—</td>
+                                                continue;
+                                            }
+                                            var soort = TrajectWeergave.Soort(c, today);
+                                            var streef = TrajectWeergave.Streef(c);
+                                            var sub = soort == "done" ? "bereikt" : soort == "late" ? TrajectWeergave.DagenTeLaat(c, today) + " d. te laat" : soort == "nvt" ? "n.v.t." : "streefdatum";
+                                            var datum = soort == "done" ? c.WerkelijkeDatum ?? streef : streef;
+                                            <td data-fase-id="@(c.ProjecttrajectFaseId ?? 0)" class="gl-v2-tr-mx-cell is-@soort">
+                                                <button type="button" class="gl-v2-tr-mx-btn js-tr-cell" data-ms-id="@c.Id" data-naam="@c.Naam" data-unit="@u.Name"
+                                                        data-streef="@(streef?.ToString("yyyy-MM-dd"))" data-werk="@(c.WerkelijkeDatum?.ToString("yyyy-MM-dd"))" data-soort="@soort" data-sub="@sub"
+                                                        @(Model.CanWrite ? "" : "disabled")>
+                                                    <span class="gl-v2-tr-dot is-@soort"><i class="ph @(soort switch { "done" => "ph-check", "late" => "ph-exclamation-mark", "nvt" => "ph-minus", "bezig" => "ph-clock", "geblokkeerd" => "ph-prohibit", _ => "" })" aria-hidden="true"></i></span>
+                                                    <span class="gl-v2-tr-mx-date">@TrajectWeergave.Datum(datum)</span>
+                                                    <span class="gl-v2-tr-mx-state">@sub</span>
+                                                </button>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                @if (Model.CanWrite)
+                {
+                    @* Popover op de cel (30c "Cel aanklikken — snel bewerken zonder modal"). Geplaatst door JS. *@
+                    <div class="gl-v2-tr-pop" id="gl-v2-tr-pop" role="dialog" aria-label="Mijlpaal bewerken" hidden>
+                        <div class="gl-v2-tr-pop-head"><b id="gl-v2-tr-pop-title"></b><span id="gl-v2-tr-pop-sub"></span></div>
+                        <div class="gl-v2-tr-pop-fields">
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "pop-streef", Id = "gl-v2-tr-pop-streef", Label = "Streefdatum" })
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "pop-werk", Id = "gl-v2-tr-pop-werk", Label = "Bereikt op" })
+                        </div>
+                        <div class="gl-v2-tr-pop-actions">
+                            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-tr-pop-today"><i class="ph ph-check" aria-hidden="true"></i>Bereikt vandaag</button>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-tr-pop-save">Opslaan</button>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-tr-pop-open">Openen</button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        @* ═════════ 30d · KALENDER ═════════ *@
+        <div class="gl-v2-tab-panel gl-v2-tr-panel" id="gl-v2-tr-panel-kalender" data-tr-panel="kalender" role="tabpanel" @(startTab == "kalender" ? "" : "hidden")>
+            <div class="gl-v2-tr-cal">
+                <div class="gl-v2-tr-cal-main">
+                    <div class="gl-v2-tr-cal-head">
+                        <div class="gl-v2-tr-cal-nav">
+                            <button type="button" class="gl-v2-icon-btn" id="gl-v2-tr-cal-prev" aria-label="Vorige"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+                            <button type="button" class="gl-v2-icon-btn" id="gl-v2-tr-cal-next" aria-label="Volgende"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-tr-cal-today">Vandaag</button>
+                        </div>
+                        <div class="gl-v2-tr-cal-title">
+                            <h2 id="gl-v2-tr-cal-title"></h2>
+                            <span id="gl-v2-tr-cal-sub"></span>
+                        </div>
+                        <div class="gl-v2-tr-seg" id="gl-v2-tr-cal-filter" role="group" aria-label="Status">
+                            <button type="button" class="is-active" data-cal-filter="all">Alles</button>
+                            <button type="button" data-cal-filter="todo">Nog te doen</button>
+                            <button type="button" data-cal-filter="late">Achterstallig</button>
+                            <button type="button" data-cal-filter="done">Bereikt</button>
+                        </div>
+                        <div class="gl-v2-tr-seg" id="gl-v2-tr-cal-view" role="group" aria-label="Weergave">
+                            <button type="button" class="is-active" data-cal-view="maand">Maand</button>
+                            <button type="button" data-cal-view="kwartaal">Kwartaal</button>
+                            <button type="button" data-cal-view="jaar">Jaar</button>
+                            <button type="button" data-cal-view="agenda">Agenda</button>
+                        </div>
+                    </div>
+                    <div class="gl-v2-tr-cal-fases" id="gl-v2-tr-cal-fases"></div>
+                    <div class="gl-v2-tr-cal-body" id="gl-v2-tr-cal-body"></div>
+                </div>
+                <aside class="gl-v2-tr-cal-side">
+                    <div class="gl-v2-card gl-v2-tr-cal-card">
+                        <div class="gl-v2-tr-cal-card-head"><b>Deze periode</b><span id="gl-v2-tr-cal-period-count"></span></div>
+                        <div class="gl-v2-tr-cal-numbers" id="gl-v2-tr-cal-numbers"></div>
+                        <div class="gl-v2-tr-cal-legend"><span class="is-done">bereikt</span><span class="is-open">nog te doen</span><span class="is-late">achterstallig</span></div>
+                    </div>
+                    <div class="gl-v2-card gl-v2-tr-cal-card" id="gl-v2-tr-cal-day-card">
+                        <div class="gl-v2-tr-cal-card-head"><b id="gl-v2-tr-cal-day-title"></b><span id="gl-v2-tr-cal-day-sub"></span></div>
+                        <div id="gl-v2-tr-cal-day-list"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.CanWrite)
+    {
+        @* 30e — Mijlpaal toevoegen/bewerken: inhoud via AJAX (Modals/_ModalMijlpaalV2). *@
+        <div class="modal fade gl-v2-modal-form gl-v2-tr-modal" id="gl-v2-tr-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-tr-modal-title">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+                <form class="modal-content" method="post" action="@Url.Action("MijlpaalUpsert", "ProjectTraject", new { projectId = Model.ProjectId })" id="gl-v2-tr-modal-form" novalidate>
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <div class="gl-v2-tr-modal-headtext">
+                            <h2 class="modal-title" id="gl-v2-tr-modal-title">Mijlpaal toevoegen</h2>
+                            <span class="gl-v2-tr-modal-sub" id="gl-v2-tr-modal-sub"></span>
+                        </div>
+                        <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="modal-body" id="gl-v2-tr-modal-body"><div class="gl-v2-tr-loading">Laden…</div></div>
+                    <div class="modal-footer">
+                        <span class="gl-v2-tr-modal-req">Velden met * zijn verplicht</span>
+                        <span class="gl-v2-tr-spacer"></span>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" name="opslaanEnNieuw" value="true" id="gl-v2-tr-modal-savenew">Opslaan en nieuwe</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-tr-modal-save">Opslaan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @* 30f — Sync met sjabloon: eerst tonen wat er verandert, dan kiezen. *@
+        <div class="modal fade gl-v2-modal-form gl-v2-tr-modal" id="gl-v2-tr-sync-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-tr-sync-title">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+                <form class="modal-content" method="post" action="@Url.Action("Sync", "ProjectTraject", new { projectId = Model.ProjectId })" id="gl-v2-tr-sync-form">
+                    @Html.AntiForgeryToken()
+                    <div id="gl-v2-tr-sync-content"><div class="modal-body"><div class="gl-v2-tr-loading">Laden…</div></div></div>
+                </form>
+            </div>
+        </div>
+
+        @* Bulk: datum / fase kiezen (30b selectiebalk) *@
+        <div class="modal fade gl-v2-modal-form gl-v2-tr-modal" id="gl-v2-tr-bulk-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-tr-bulk-title">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+                <form class="modal-content" method="post" action="@Url.Action("MijlpaalBulk", "ProjectTraject", new { projectId = Model.ProjectId })" id="gl-v2-tr-bulk-form">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <div class="gl-v2-tr-modal-headtext"><h2 class="modal-title" id="gl-v2-tr-bulk-title"></h2><span class="gl-v2-tr-modal-sub" id="gl-v2-tr-bulk-sub"></span></div>
+                        <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="gl-v2-tr-bulk-ids"></div>
+                        <div class="gl-v2-tr-bulk-field" data-bulk-field="datum" hidden>
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Doeldatum", Id = "gl-v2-tr-bulk-datum", Label = "Nieuwe streefdatum" })
+                        </div>
+                        <div class="gl-v2-tr-bulk-field" data-bulk-field="fase" hidden>
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "ProjecttrajectFaseId", Id = "gl-v2-tr-bulk-fase", Label = "Verplaats naar fase",
+                                Value = (actieveFaseId ?? Model.Fases.FirstOrDefault()?.Id)?.ToString(),
+                                Items = Model.Fases.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Naam }).ToList()
+                            })
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Toepassen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @* Verwijderen (enkel of bulk): één bevestiging, ingevuld door JS. *@
+        <div class="modal fade gl-v2-modal-confirm" id="gl-v2-tr-del-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content is-danger">
+                    <div class="modal-body">
+                        <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                        <div class="gl-v2-modal-text">
+                            <h2 class="gl-v2-modal-title" id="gl-v2-tr-del-title">Mijlpaal verwijderen?</h2>
+                            <p class="gl-v2-modal-desc" id="gl-v2-tr-del-desc">Dit kan niet ongedaan gemaakt worden.</p>
+                        </div>
+                    </div>
+                    <form action="@Url.Action("MijlpaalBulkVerwijderen", "ProjectTraject", new { projectId = Model.ProjectId })" method="post" id="gl-v2-tr-del-form">
+                        @Html.AntiForgeryToken()
+                        <div id="gl-v2-tr-del-ids"></div>
+                        <div class="modal-footer">
+                            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                            <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.CanDelete)
+    {
+        @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+        {
+            Id = "gl-v2-tr-delete-modal",
+            Tone = GlV2ModalTone.Danger,
+            IconClass = "ph-trash",
+            Title = "Traject verwijderen?",
+            Description = "Alle fases en mijlpalen van dit traject worden verwijderd. Dit kan niet ongedaan gemaakt worden.",
+            ConfirmLabel = "Verwijderen",
+            FormAction = Url.Action("Verwijderen", "ProjectTraject", new { projectId = Model.ProjectId }) ?? "",
+        })
+    }
+}
+
+@section PageScripts
+{
+    @if (t != null)
+    {
+        var kalenderData = new
+        {
+            vandaag = today.ToString("yyyy-MM-dd"),
+            mijlpalen = alle.Select(m =>
+            {
+                var streef = TrajectWeergave.Streef(m);
+                var soort = TrajectWeergave.Soort(m, today);
+                var d = m.Status == (int)MijlpaalStatus.Bereikt ? (m.WerkelijkeDatum ?? streef) : streef;
+                return new
+                {
+                    id = m.Id,
+                    naam = m.Naam + (m.Unit != null ? " · " + m.Unit.Name : ""),
+                    fase = m.ProjecttrajectFase?.Naam ?? "",
+                    faseId = m.ProjecttrajectFaseId ?? 0,
+                    datum = d?.ToString("yyyy-MM-dd"),
+                    soort,
+                    verplicht = m.IsVerplicht,
+                    wie = TrajectWeergave.Verantwoordelijke(m, Model).Naam,
+                };
+            }).Where(x => x.datum != null).ToList(),
+            fases = Model.Fases.Select(f =>
+            {
+                mijlpalenPerFase.TryGetValue(f.Id, out var fm);
+                var ds = (fm ?? new List<Mijlpaal>()).Select(TrajectWeergave.Streef).Where(x => x.HasValue).Select(x => x!.Value).OrderBy(x => x).ToList();
+                var start = f.StartWerkelijk ?? f.StartGepland ?? (ds.Count > 0 ? ds[0] : (DateOnly?)null);
+                var eind = f.EindWerkelijk ?? f.EindGepland ?? (ds.Count > 0 ? ds[^1] : (DateOnly?)null);
+                return new
+                {
+                    id = f.Id,
+                    naam = f.Naam,
+                    status = f.Status,
+                    actief = f.Id == actieveFaseId,
+                    start = start?.ToString("yyyy-MM-dd"),
+                    eind = eind?.ToString("yyyy-MM-dd"),
+                    teLaat = (fm ?? new List<Mijlpaal>()).Count(m => TrajectWeergave.IsTeLaat(m, today)),
+                };
+            }).ToList(),
+        };
+        <script id="gl-v2-tr-config" type="application/json">
+        {
+            "projectId": @Model.ProjectId,
+            "modalUrl": "@Url.Action("MijlpaalModal", "ProjectTraject", new { projectId = Model.ProjectId })",
+            "syncUrl": "@Url.Action("SyncVoorbeeld", "ProjectTraject", new { projectId = Model.ProjectId })",
+            "snelUrl": "@Url.Action("MijlpaalSnel", "ProjectTraject", new { projectId = Model.ProjectId, id = 0 })",
+            "openNieuweInFase": @(ViewBag.OpenNieuweInFase == null ? "null" : ((int)ViewBag.OpenNieuweInFase).ToString()),
+            "calendar": @Html.Raw(JsonSerializer.Serialize(kalenderData))
+        }
+        </script>
+    }
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-traject.js" asp-append-version="true"></script>
+}

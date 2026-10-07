@@ -3,8 +3,7 @@
     Offertes & wijzigingen V2 (20b/29a) — één rij van de Offertes- of Wijzigingsopdrachten-tabel. De hele
     rij (op de actiekolom na) opent het scherm van haar stap: een offerte gaat naar 20c (QuoteIntakeV2),
     wijzigingsopdracht openen hetzelfde scherm (ChangeOrderDetailV2, 28). Actiekolom: een offerte krijgt
-    "Omzetten →" (21c-modal), een omgezette offerte linkt naar haar WO, een WO krijgt een "···"-menu
-    (Openen · Kopie maken · PDF).
+    "Omzetten" in het "···"-menu (21c-modal), een omgezette offerte linkt naar haar WO, elke rij krijgt een "···"-menu (Openen · Kopie maken · PDF).
 *@
 @using System.Globalization
 @{
@@ -43,29 +42,27 @@
     <td class="is-right gl-v2-co2-actions">
         @if (Model.IsQuote)
         {
-            @if (canWrite && Model.ConvertedToId == null)
-            {
-                <button type="button" class="gl-v2-co2-action js-co2-convert" data-co-id="@Model.Id">Omzetten →</button>
-            }
-            else if (Model.ConvertedToId.HasValue)
+            @if (Model.ConvertedToId.HasValue)
             {
                 <a href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = Model.ConvertedToId })" class="gl-v2-co2-action">WO-@(Model.ConvertedToId.Value.ToString("000")) →</a>
             }
         }
-        else
-        {
+        @* "···"-menu voor offerte én wijzigingsopdracht (Openen · Kopie maken · PDF) *@
             <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @Model.Number">
                 <i class="ph ph-dots-three" aria-hidden="true"></i>
             </button>
-            <div class="gl-v2-menu" id="@menuId">
+            <div class="gl-v2-menu gl-v2-co2-row-menu" id="@menuId">
                 <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen</a>
+                @if (canWrite && Model.IsQuote && Model.ConvertedToId == null)
+                {
+                    <button type="button" class="gl-v2-menu-item js-co2-convert" data-co-id="@Model.Id"><i class="ph ph-arrow-right" aria-hidden="true"></i>Omzetten naar wijzigingsopdracht</button>
+                }
                 @if (canWrite)
                 {
                     <button type="button" class="gl-v2-menu-item js-co2-copy" data-co-id="@Model.Id"><i class="ph ph-copy" aria-hidden="true"></i>Kopie maken</button>
                 }
                 <a href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = Model.Id })" target="_blank" rel="noopener" class="gl-v2-menu-item"><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF</a>
             </div>
-        }
         <i class="ph ph-caret-right gl-v2-co2-chevron" aria-hidden="true"></i>
     </td>
 </tr>

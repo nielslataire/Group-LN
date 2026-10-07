@@ -99,6 +99,9 @@ namespace DALCore
         public GenericRepository<BouwIndex>              BouwIndex             { get; }
         public GenericRepository<BudgetVerkoopLijn>     BudgetVerkoopLijn     { get; }
         public GenericRepository<BudgetPrijsReferentie> BudgetPrijsReferentie { get; }
+        public GenericRepository<BudgetReferentieProject>      BudgetReferentieProjecten     { get; }  // migratie 076
+        public GenericRepository<BudgetReferentieProjectLijn>  BudgetReferentieProjectLijnen { get; }
+        public GenericRepository<BudgetVersieNacalcReferentie> BudgetVersieNacalcReferenties { get; }
         public GenericRepository<KmIndexType>               KmIndexTypes          { get; }
         public GenericRepository<KostprijsMateriaal>        KostprijsMaterialen   { get; }
         public GenericRepository<KostprijsFormulaKoppeling> FormulaKoppelingen    { get; }
@@ -218,6 +221,9 @@ namespace DALCore
             BouwIndex             = new GenericRepository<BouwIndex>(_context);
             BudgetVerkoopLijn     = new GenericRepository<BudgetVerkoopLijn>(_context);
             BudgetPrijsReferentie = new GenericRepository<BudgetPrijsReferentie>(_context);
+            BudgetReferentieProjecten     = new GenericRepository<BudgetReferentieProject>(_context);
+            BudgetReferentieProjectLijnen = new GenericRepository<BudgetReferentieProjectLijn>(_context);
+            BudgetVersieNacalcReferenties = new GenericRepository<BudgetVersieNacalcReferentie>(_context);
             KmIndexTypes          = new GenericRepository<KmIndexType>(_context);
             KostprijsMaterialen   = new GenericRepository<KostprijsMateriaal>(_context);
             FormulaKoppelingen    = new GenericRepository<KostprijsFormulaKoppeling>(_context);

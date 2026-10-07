@@ -1,4 +1,5 @@
 ﻿using BOCore;
+using BOCore.Budget;
 using CPMCore.Attributes;
 using CPMCore.Models;
 using CPMCore.Models.Home;
@@ -273,6 +274,130 @@ public partial class InstellingenController
     {
         SetActivityResponseMessage(_kostprijsService.BevestigUpdate(projectId), "Kostprijzen bijgewerkt.");
         return RedirectToAction("Details", "Project", new { id = projectId });
+    }
+
+    // ─── Prijsreferenties verkoop (€/m²-codes voor stap 8 budgetwizard) ───────────
+
+    [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    [Breadcrumb("Prijsreferenties verkoop")]
+    public IActionResult BudgetPrijsReferenties()
+    {
+        SetPageHeader("bx bx-euro", "Prijsreferenties verkoop");
+
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
+        ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("BudgetPrijsReferenties", "Instellingen", "Prijsreferenties verkoop") { Parent = instellingenIndex };
+
+        var projecten = _projectService.GetProjectsForList();
+        var vm = new BudgetPrijsReferentiesViewModel
+        {
+            Referenties = _prijsReferenties.GetAlle().Values ?? new(),
+            Projecten   = (projecten.Success && projecten.Values != null ? projecten.Values : new())
+                            .OrderBy(p => p.Name).Select(p => new IdNameBO { ID = p.Id, Display = p.Name }).ToList()
+        };
+        return View(vm);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public IActionResult BudgetPrijsReferentieCreate(string prijsType, int code, decimal prijsPerM2, string omschrijving, DateTime? datum, string bron, int? projectId)
+    {
+        SetActivityResponseMessage(_prijsReferenties.InsertUpdate(new BudgetPrijsReferentieBO
+        {
+            PrijsType = prijsType, Code = code, PrijsPerM2 = prijsPerM2, Omschrijving = omschrijving, Datum = datum, Bron = bron,
+            ProjectId = projectId > 0 ? projectId : null
+        }), "Prijsreferentie aangemaakt.");
+        return RedirectToAction(nameof(BudgetPrijsReferenties));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public IActionResult BudgetPrijsReferentieUpdate(int id, string prijsType, int code, decimal prijsPerM2, string omschrijving, DateTime? datum, string bron, int? projectId)
+    {
+        SetActivityResponseMessage(_prijsReferenties.InsertUpdate(new BudgetPrijsReferentieBO
+        {
+            Id = id, PrijsType = prijsType, Code = code, PrijsPerM2 = prijsPerM2, Omschrijving = omschrijving, Datum = datum, Bron = bron,
+            ProjectId = projectId > 0 ? projectId : null
+        }), "Prijsreferentie opgeslagen.");
+        return RedirectToAction(nameof(BudgetPrijsReferenties));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public IActionResult BudgetPrijsReferentieDelete(int id)
+    {
+        SetActivityResponseMessage(_prijsReferenties.Delete(id), "Prijsreferentie verwijderd.");
+        return RedirectToAction(nameof(BudgetPrijsReferenties));
+    }
+
+    // ─── Referentieprojecten voor de nacalculatie (stap 6 budgetwizard) ────────
+
+    [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    [Breadcrumb("Referentieprojecten")]
+    public async Task<IActionResult> BudgetReferentieProjecten()
+    {
+        SetPageHeader("bx bx-history", "Referentieprojecten (nacalc)");
+
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
+        ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("BudgetReferentieProjecten", "Instellingen", "Referentieprojecten") { Parent = instellingenIndex };
+
+        var projecten = _projectService.GetProjectsForList();
+        var vm = new BudgetReferentieProjectenViewModel
+        {
+            Referenties = await _referentieProjecten.GetAlleAsync(),
+            Projecten   = (projecten.Success && projecten.Values != null ? projecten.Values : new())
+                            .OrderBy(p => p.Name).Select(p => new IdNameBO { ID = p.Id, Display = p.Name }).ToList()
+        };
+        return View(vm);
+    }
+
+    [HttpGet]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public IActionResult BudgetReferentieSjabloon()
+        => File(_referentieProjecten.MaakSjabloon(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "referentieproject-sjabloon.xlsx");
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public async Task<IActionResult> BudgetReferentieProjectImportExcel(IFormFile bestand, string naam, DateTime? datum, int aantalEenheden, decimal? oppervlakteGBA, string opmerking)
+    {
+        if (bestand == null || bestand.Length == 0)
+        {
+            TempData["Error"] = "Kies een Excel-bestand (.xlsx).";
+            return RedirectToAction(nameof(BudgetReferentieProjecten));
+        }
+        await using var stream = bestand.OpenReadStream();
+        var r = await _referentieProjecten.ImportExcelAsync(stream, naam, datum, aantalEenheden, oppervlakteGBA, opmerking);
+        SetReferentieMessages(r);
+        return RedirectToAction(nameof(BudgetReferentieProjecten));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public async Task<IActionResult> BudgetReferentieProjectImportProject(int projectId, string naam, DateTime? datum, string opmerking)
+    {
+        var r = await _referentieProjecten.ImportUitProjectAsync(projectId, naam, datum, opmerking);
+        SetReferentieMessages(r);
+        return RedirectToAction(nameof(BudgetReferentieProjecten));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsKostprijsMaterialen)]
+    public async Task<IActionResult> BudgetReferentieProjectDelete(int id)
+    {
+        SetActivityResponseMessage(await _referentieProjecten.DeleteAsync(id), "Referentieproject verwijderd.");
+        return RedirectToAction(nameof(BudgetReferentieProjecten));
+    }
+
+    /// <summary>Import-resultaat: succes én waarschuwingen (niet-herkende rijen) samen tonen, fouten apart.</summary>
+    private void SetReferentieMessages(Response r)
+    {
+        var fouten = r.Messages.Where(m => m.Type == MessageType.Error).Select(m => m.Message).ToList();
+        var rest   = r.Messages.Where(m => m.Type != MessageType.Error).Select(m => m.Message).ToList();
+        if (fouten.Count > 0) TempData["Error"]   = string.Join(" ", fouten);
+        if (rest.Count   > 0) TempData["Message"] = string.Join(" ", rest);
     }
 
     // ─── Bouwindexen ────────────────────────────────────────────────────────────

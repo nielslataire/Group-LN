@@ -1,5 +1,6 @@
 using BOCore;
 using CPMCore.Configuration;
+using CPMCore.Documents;
 using CPMCore.Helpers;
 using CPMCore.Models.Projecten;
 using CPMCore.Services;
@@ -881,37 +882,50 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> CopyChangeOrderModalV2(int projectId, int changeOrderId = 0)
         {
             var orders = await _db.ChangeOrder.AsNoTracking()
-                .Where(c => c.ContractActivity.Contract.ProjectId == projectId && !c.IsQuote)
+                .Where(c => c.ContractActivity.Contract.ProjectId == projectId)
                 .OrderByDescending(c => c.Id)
-                .Select(c => new { c.Id, c.Description, Client = c.ClientAccount.Name })
+                .Select(c => new { c.Id, c.Description, c.Subject, c.IsQuote, Client = c.ClientAccount.Name })
                 .ToListAsync();
 
             var vm = new CopyChangeOrderModalV2Vm
             {
                 ProjectId = projectId,
                 ChangeOrderId = changeOrderId,
-                Orders = orders.Select(o => new IdNameBO { ID = o.Id, Display = $"{CoNo(o.Id)} · {o.Description} · {o.Client}" }).ToList(),
+                Sources = orders.Select(o => new CopySourceV2
+                {
+                    Id = o.Id,
+                    IsQuote = o.IsQuote,
+                    Display = $"{CoNo(o.Id)} · {(string.IsNullOrWhiteSpace(o.Subject) ? o.Description : o.Subject)} · {o.Client}",
+                }).ToList(),
                 Clients = await LoadClientOptionsAsync(projectId),
             };
             return PartialView("Modals/_ModalCopyChangeOrderV2", vm);
         }
 
-        /// <summary>Kopie voor een andere eenheid (asVersion=false: "Regels en plan worden overgenomen,
+        /// <summary>Kopie van een offerte of wijzigingsopdracht, als offerte (<c>asQuote</c>) of als wijzigingsopdracht.
+        /// Een offerte kopieer je enkel naar een offerte (naar een wijzigingsopdracht gaat via "Omzetten →").
+        /// Kopie voor een andere eenheid (asVersion=false: "Regels en plan worden overgenomen,
         /// handtekeningen niet") of een nieuwe versie van dezelfde WO (asVersion=true: "Versie 2 neemt alles
         /// over als nieuw concept" — een nog lopende ondertekening van de bron wordt dan ingetrokken).</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangeOrderCopyV2(int projectId, int changeOrderId, int clientAccountId = 0, bool asVersion = false)
+        public async Task<IActionResult> ChangeOrderCopyV2(int projectId, int changeOrderId, int clientAccountId = 0, bool asVersion = false, bool asQuote = false)
         {
             var src = await _db.ChangeOrder.AsNoTracking()
                 .Include(c => c.ChangeOrderDetail)
                 .Include(c => c.ChangeOrderPaymentTerm)
                 .FirstOrDefaultAsync(c => c.Id == changeOrderId);
-            if (src is null || src.IsQuote)
+            if (src is null)
             {
-                AddMessage("error", "Kies een wijzigingsopdracht om te kopiëren.", "Kon niet kopiëren");
+                AddMessage("error", "Kies een offerte of wijzigingsopdracht om te kopiëren.", "Kon niet kopiëren");
                 return RedirectToAction(nameof(ChangeOrdersV2), new { projectid = projectId });
             }
+            if (src.IsQuote && !asQuote)
+            {
+                AddMessage("error", "Een offerte zet je om via “Omzetten →”. Een kopie van een offerte is weer een offerte.", "Kon niet kopiëren");
+                return RedirectToAction(nameof(ChangeOrdersV2), new { projectid = projectId });
+            }
+            if (src.IsQuote) asVersion = false;   // "nieuwe versie" bestaat enkel voor een wijzigingsopdracht (lopende ondertekening)
 
             var targetClientId = asVersion ? src.ClientAccountId : clientAccountId;
             if (targetClientId <= 0)
@@ -962,8 +976,12 @@ namespace CPMCore.Controllers
                 Comment = src.Comment,
                 Invoiceable = src.Invoiceable,
                 ContractActivityId = src.ContractActivityId,
-                ChangeOrderConditions = src.ChangeOrderConditions,
-                IsQuote = false,
+                // Offerte: standaardvoorwaarden met de nieuwe vervaldatum, tenzij de bronofferte een eigen tekst had;
+                // de voorwaarden van een wijzigingsopdracht horen niet op een offerte.
+                ChangeOrderConditions = !asQuote ? src.ChangeOrderConditions
+                    : src.IsQuote && !ChangeOrderStandardTexts.IsQuoteStandardOrEmpty(src.ChangeOrderConditions) ? src.ChangeOrderConditions
+                    : ChangeOrderStandardTexts.QuoteConditions(today.AddDays(30)),
+                IsQuote = asQuote,
                 QuoteSupplierReference = src.QuoteSupplierReference,
                 QuoteVatPercentage = src.QuoteVatPercentage,
                 SourceChangeOrderId = src.Id,
@@ -986,7 +1004,8 @@ namespace CPMCore.Controllers
                     SourceImagePath = d.SourceImagePath,
                 });
             }
-            foreach (var t in src.ChangeOrderPaymentTerm.OrderBy(t => t.SortOrder))
+            // Een offerte heeft geen facturatieplan.
+            foreach (var t in asQuote ? Enumerable.Empty<ChangeOrderPaymentTerm>() : src.ChangeOrderPaymentTerm.OrderBy(t => t.SortOrder))
             {
                 var keepStage = sameClient || t.Kind == 3;
                 copy.ChangeOrderPaymentTerm.Add(new ChangeOrderPaymentTerm
@@ -1004,7 +1023,9 @@ namespace CPMCore.Controllers
             await _db.SaveChangesAsync();
 
             AddMessage("success",
-                asVersion ? $"Nieuwe versie aangemaakt als {CoNo(copy.Id)}. Pas aan en verzend opnieuw." : $"Kopie aangemaakt als {CoNo(copy.Id)}. Regels en facturatieplan zijn overgenomen, handtekeningen niet.",
+                asVersion ? $"Nieuwe versie aangemaakt als {CoNo(copy.Id)}. Pas aan en verzend opnieuw."
+                    : asQuote ? $"Kopie aangemaakt als offerte {CoNo(copy.Id)}. De regels zijn overgenomen; pas de offerte aan en verzend ze."
+                    : $"Kopie aangemaakt als {CoNo(copy.Id)}. Regels en facturatieplan zijn overgenomen, handtekeningen niet.",
                 asVersion ? "Nieuwe versie" : "Kopie gemaakt");
             return RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = projectId, coid = copy.Id });
         }

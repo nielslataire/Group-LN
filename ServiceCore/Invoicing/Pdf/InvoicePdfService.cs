@@ -238,6 +238,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
             },
             VatSummary = BuildVatSummary(dto),
             VatMentions = BuildVatMentions(dto),
+            VatMentionsByRate = BuildVatMentionsByRate(dto),
             ExtraInfo = dto.ExtraInfo,
             HeaderDescription = dto.HeaderDescription,
             DetailDescription = dto.DetailDescription,
@@ -402,6 +403,30 @@ public sealed class InvoicePdfService : IInvoicePdfService
         }
 
         return summaries;
+    }
+
+    /// <summary>Per gebruikt btw-tarief de factuurvermelding(en) van het facturatiebedrijf (zelfde selectie als <see cref="BuildVatMentions"/>).</summary>
+    private static IReadOnlyDictionary<decimal, string> BuildVatMentionsByRate(InvoiceDto dto)
+    {
+        var result = new Dictionary<decimal, string>();
+        if (dto?.VatTypes == null || dto.VatTypes.Count == 0 || dto.Lines == null || dto.Lines.Count == 0)
+            return result;
+
+        // Per gebruikt tarief één vermelding. Draagt een regel een btw-code (VatTypeId), dan telt enkel de vermelding van díe code — niet die
+        // van alle codes die toevallig hetzelfde percentage hebben (dat gaf meerdere vermeldingen). Pas voor regels zonder code valt het terug
+        // op de eerste code met dat percentage die een vermelding heeft.
+        foreach (var rate in dto.Lines.Select(l => l.Vat).Distinct())
+        {
+            var usedTypeIds = dto.Lines.Where(l => Math.Abs(l.Vat - rate) < 0.0001m && l.VatTypeId.HasValue).Select(l => l.VatTypeId!.Value).ToHashSet();
+            var texts = usedTypeIds.Count > 0
+                ? dto.VatTypes.Where(v => usedTypeIds.Contains(v.Id)).OrderBy(v => v.Id)
+                    .Select(v => v.InvoiceMention?.Trim()).Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                : dto.VatTypes.Where(v => Math.Abs(v.BasePercentage - rate) < 0.0001m).OrderBy(v => v.Id)
+                    .Select(v => v.InvoiceMention?.Trim()).Where(t => !string.IsNullOrWhiteSpace(t)).Take(1).ToList();
+            if (texts.Count > 0) result[rate] = string.Join(" ", texts!);
+        }
+        return result;
     }
 
     private static IReadOnlyList<string> BuildVatMentions(InvoiceDto dto)

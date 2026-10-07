@@ -11,9 +11,41 @@ Namespace Budget
         Public Property GroupId As Integer
 
         Public Property AlternatievePrijsPerEenheid As Decimal
+        ''' <summary>Nacalc-referentie per eenheid zoals bewaard bij de lijn: al geïndexeerd naar de huidige index van de versie
+        ''' (gevuld bij opslaan vanuit <see cref="ReferentiePrijsPerEenheid"/>).</summary>
         Public Property NacalcPrijsPerEenheid As Decimal
         Public Property Correctiefactor As Decimal = 1D
         Public Property IsManueel As Boolean
+
+        ' ── Nacalc-referentie (okt. 2026): gemiddelde werkelijke kost van de gekozen referentieprojecten, niet opgeslagen ──
+        ''' <summary>Geïndexeerde referentieprijs per eenheid uit de gekozen referentieprojecten; leeg zonder referentie.</summary>
+        Public Property ReferentiePrijsPerEenheid As Decimal?
+        Public Property ReferentiePrijsPerM2 As Decimal?
+        Public Property ReferentieAantalProjecten As Integer
+        Public Property ReferentieMinPerEenheid As Decimal?
+        Public Property ReferentieMaxPerEenheid As Decimal?
+
+        Public ReadOnly Property HeeftReferentie As Boolean
+            Get
+                Return ReferentiePrijsPerEenheid.HasValue AndAlso ReferentiePrijsPerEenheid.Value > 0D
+            End Get
+        End Property
+
+        ''' <summary>Referentiekost voor dit project = referentie per eenheid × aantal eenheden.</summary>
+        Public ReadOnly Property ReferentieTotaal As Decimal?
+            Get
+                If HeeftReferentie Then Return ReferentiePrijsPerEenheid.Value * AantalEenheden
+                Return Nothing
+            End Get
+        End Property
+
+        ''' <summary>Budget t.o.v. referentie als fractie (+0,08 = budget ligt 8 % boven de referentie).</summary>
+        Public ReadOnly Property ReferentieVerschilPerc As Decimal?
+            Get
+                If ReferentieTotaal.HasValue AndAlso ReferentieTotaal.Value > 0D Then Return (TotaalAlternatief - ReferentieTotaal.Value) / ReferentieTotaal.Value
+                Return Nothing
+            End Get
+        End Property
 
         Public Property SIndexStart As Decimal
         Public Property SIndexHuidig As Decimal
@@ -55,10 +87,11 @@ Namespace Budget
             End Get
         End Property
 
+        ''' <summary>De bewaarde nacalc is al geïndexeerd naar de huidige index van de versie (zie NacalcPrijsPerEenheid);
+        ''' er wordt dus niet nog eens met de start→huidig-factor vermenigvuldigd.</summary>
         Public ReadOnly Property NacalcGeindexeerd As Decimal
             Get
-                Dim factor As Decimal = If(GewogenIndexFactor = 0, 1D, GewogenIndexFactor)
-                Return NacalcPrijsPerEenheid * Correctiefactor * factor
+                Return NacalcPrijsPerEenheid
             End Get
         End Property
 

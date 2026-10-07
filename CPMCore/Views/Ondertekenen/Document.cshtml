@@ -1,129 +1,293 @@
 @model FacadeCore.Signing.SigningSessionView
 @using BOCore
+@*
+    Publieke ondertekenpagina — design-handoff 36 ("Klantenportaal · ondertekenen van een wijzigingsopdracht").
+    Toestanden (data-state op .gl-v2-sign): todo (36a) · processing (36b, enkel client-side tijdens het verwerken) ·
+    waiting / done (36c) · declined / closed. Verificatie blijft de bestaande: e-mail/sms-code + handtekeningvak
+    (geen itsme). Stijl: gl-v2-public.css; bewegingsverhaal: gl-v2-tekenen.js ("verzegelen" van het document).
+*@
 @{
     Layout = "_LayoutPublic";
     var caseStatus = (SigningCaseStatus)Model.CaseStatus;
     var partyStatus = (SigningPartyStatus)Model.PartyStatus;
     var completed = caseStatus == SigningCaseStatus.Completed;
+    var declined = partyStatus == SigningPartyStatus.Declined;
     var closedWithoutSigning = partyStatus is SigningPartyStatus.Declined or SigningPartyStatus.Expired or SigningPartyStatus.Revoked;
     var waitingOnOthers = partyStatus == SigningPartyStatus.Signed && !completed;
     var readyToSign = !completed && !closedWithoutSigning && !waitingOnOthers;
+    var state = completed ? "done" : declined ? "declined" : closedWithoutSigning ? "closed" : waitingOnOthers ? "waiting" : "todo";
+
+    var nl = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    TimeZoneInfo brussels;
+    try { brussels = TimeZoneInfo.FindSystemTimeZoneById("Europe/Brussels"); }
+    catch (TimeZoneNotFoundException) { try { brussels = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time"); } catch (TimeZoneNotFoundException) { brussels = TimeZoneInfo.Local; } }
+    DateTime Loc(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), brussels);
+
+    var allParties = Model.Parties ?? Array.Empty<FacadeCore.Signing.SigningSessionPartyView>();
+    // Voltooid: enkel wie getekend heeft (bij "één volstaat" blijven de andere eigenaars anders als "0 van 2" verwarren).
+    var parties = completed ? allParties.Where(p => p.Signed).ToList() : allParties.ToList();
+    var signedCount = parties.Count(p => p.Signed);
+    var others = parties.Where(p => !p.IsCurrent && !p.Signed).Select(p => p.DisplayName).ToList();
+    var title = !string.IsNullOrWhiteSpace(Model.Summary) ? Model.Summary : Model.Title;
+    var eyebrow = string.Join(" · ", new[] { Model.DocumentTypeLabel?.ToUpperInvariant(), Model.DocumentNumber }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var chipText = state switch
+    {
+        "done" => "Volledig ondertekend",
+        "waiting" => "Ondertekend door jou",
+        "declined" => "Geweigerd",
+        "closed" => "Niet meer beschikbaar",
+        _ => "Te ondertekenen",
+    };
+    string daysLeft = "";
+    if (Model.ExpiresAt is DateTime exp)
+    {
+        var d = (Loc(exp).Date - Loc(DateTime.UtcNow).Date).Days;
+        daysLeft = d < 0 ? "verlopen" : d == 0 ? "vandaag" : d == 1 ? "nog 1 dag" : $"nog {d} dagen";
+    }
+    var finalUrl = Url.Action("Finaal");
+    var fileUrl = Url.Action("Bestand");
+    var verifyUrl = Model.PublicVerificationId == Guid.Empty ? null : Url.Content("~/verifieer/" + Model.PublicVerificationId.ToString("D"));
+    var otpMethodLabel = Model.VerificationMethod switch { "sms-otp" => "sms-code", "email-otp" => "e-mailcode", _ => "verificatiecode" };
+
+    const string PathCheck = "M3.4 8.4l3 3 6.2-6.8";
+    const string PathCross = "M5 5l6 6 M11 5l-6 6";
+    const string PathClock = "M8 4.6V8l2.2 1.4";
+
+    // De vijf stappen van het verzegelen (design 36b). Status per toestand; tijdstippen enkel waar we ze echt kennen.
+    string StepState(int i) => state switch
+    {
+        "done" => "done",
+        "waiting" => i <= 2 ? "done" : "todo",
+        _ => "todo",
+    };
+    string StepTime(int i) => state switch
+    {
+        "done" or "waiting" when i == 1 && Model.SignedAt is DateTime sa => Loc(sa).ToString("HH:mm:ss", nl),
+        "done" or "waiting" when i == 2 && Model.VerifiedAt is DateTime va => Loc(va).ToString("HH:mm:ss", nl),
+        "done" when i >= 3 && Model.CompletedAt is DateTime ca => Loc(ca).ToString("HH:mm:ss", nl),
+        _ => "",
+    };
+    var steps = new (string Title, string Desc)[]
+    {
+        ("Akkoord ontvangen", "Je bevestiging en het tijdstip zijn vastgelegd"),
+        ("Identiteit geverifieerd", string.IsNullOrWhiteSpace(Model.VerificationDestinationMasked) ? "Bevestigd met je verificatiecode" : $"{char.ToUpper(otpMethodLabel[0])}{otpMethodLabel[1..]} naar {Model.VerificationDestinationMasked}"),
+        ("Document verzegeld", "Vingerafdruk (SHA-256) berekend op de versie die je las"),
+        ("Ondertekeningsblad toegevoegd", "Bijlage met de handtekeningen en een QR-code om de echtheid te controleren"),
+        ("Bevestiging verstuurd", "De ondertekende PDF gaat per e-mail naar alle ondertekenaars"),
+    };
+
+    var bannerTone = state == "declined" ? "is-error" : state == "closed" ? "is-neutral" : "is-ok";
+    var bannerIcon = state == "declined" ? PathCross : state == "closed" ? PathClock : PathCheck;
+    string bannerTitle = state switch
+    {
+        "done" => Model.CompletedAt is DateTime c1 ? $"Volledig ondertekend op {Loc(c1).ToString("dd/MM/yyyy", nl)} om {Loc(c1).ToString("HH:mm", nl)}" : "Volledig ondertekend",
+        "waiting" => Model.SignedAt is DateTime s1 ? $"Ondertekend op {Loc(s1).ToString("dd/MM/yyyy", nl)} om {Loc(s1).ToString("HH:mm", nl)}" : "Je handtekening is geregistreerd",
+        "declined" => "Je hebt geweigerd te ondertekenen",
+        "closed" => "Deze link is niet meer beschikbaar",
+        _ => "",
+    };
+    string bannerText = state switch
+    {
+        "done" => "De wijzigingsopdracht is definitief. Download hieronder de ondertekende versie, met het ondertekeningsblad erbij.",
+        "waiting" => others.Count > 0
+            ? $"Bedankt. Zodra {string.Join(" en ", others)} ook ondertekend {(others.Count == 1 ? "heeft" : "hebben")}, wordt de wijzigingsopdracht definitief en ontvangen jullie de volledige versie."
+            : "Bedankt. Zodra alle betrokkenen ondertekend hebben, wordt de wijzigingsopdracht definitief en ontvang je de volledige versie.",
+        "declined" => "Group LN neemt hierover contact met je op. Je kan deze pagina nu sluiten.",
+        "closed" => "Neem contact op met Group LN als je denkt dat dit niet klopt.",
+        _ => "",
+    };
 }
-<section class="gl-v2-public-card">
-    <div class="gl-v2-public-card-header">
-        <h1 class="gl-v2-public-title" style="margin:0">@Model.Title</h1>
-    </div>
-    <div class="gl-v2-public-card-body">
-        <span class="gl-v2-public-badge @(completed ? "is-positive" : closedWithoutSigning ? "is-blocked" : waitingOnOthers ? "is-attention" : "is-neutral")" id="gl-tekenen-status-badge">
-            @(completed ? "Voltooid" : closedWithoutSigning ? "Niet meer beschikbaar" : waitingOnOthers ? "Wacht op andere ondertekenaar(s)" : "Te ondertekenen")
-        </span>
-        @if (!string.IsNullOrWhiteSpace(Model.Summary))
-        {
-            <p style="margin-top:12px">@Model.Summary</p>
-        }
-        @if (Model.AmountInclVat is decimal total)
-        {
-            <p class="gl-v2-public-help">Totaal incl. btw: @total.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("nl-BE"))</p>
-        }
-        <p class="gl-v2-public-help">Voor akkoord door @Model.SignerName@(string.IsNullOrWhiteSpace(Model.SignerCapacity) ? "" : $" ({Model.SignerCapacity})")</p>
-    </div>
-</section>
+<div class="gl-v2-sign" id="gl-sign" data-state="@state"
+     data-otp-required="@(Model.OtpRequired ? "1" : "0")"
+     data-destination="@(Model.VerificationDestinationMasked ?? "je e-mailadres")"
+     data-method="@otpMethodLabel"
+     data-verify-url="@verifyUrl" data-final-url="@finalUrl">
 
-<section class="gl-v2-public-card">
-    <div class="gl-v2-public-card-header">
-        <h2 class="gl-v2-public-card-title">Document</h2>
+    <div class="gl-v2-sign-head">
+        <div class="gl-v2-sign-head-text">
+            <span class="gl-v2-sign-eyebrow">@eyebrow</span>
+            <h1 class="gl-v2-sign-title">@title</h1>
+            @{ var subLine = string.Join(" · ", new[] { Model.ProjectName, Model.UnitLabel }.Where(x => !string.IsNullOrWhiteSpace(x))); }
+            @if (subLine != "")
+            {
+                <span class="gl-v2-sign-sub">@subLine</span>
+            }
+        </div>
+        <span class="gl-v2-sign-chip" id="gl-tekenen-status-badge" role="status">@chipText</span>
     </div>
-    <div class="gl-v2-public-card-body">
-        @* Ná voltooiing toont de preview het ondertekende PDF (incl. ondertekeningsblad), niet meer
-           enkel het origineel — anders lijkt het alsof de handtekening nergens verschijnt. *@
-        <iframe src="@(Url.Action(completed ? "Finaal" : "Bestand"))#navpanes=0&pagemode=none&view=FitH" style="width:100%;height:60vh;border:1px solid var(--gl-v2-hairline);border-radius:var(--gl-v2-radius-sm)" title="@Model.Title"></iframe>
-    </div>
-</section>
 
-@if (completed)
-{
-    <section class="gl-v2-public-card">
-        <div class="gl-v2-public-card-header"><h2 class="gl-v2-public-card-title">Voltooid</h2></div>
-        <div class="gl-v2-public-card-body" style="display:flex;gap:10px;flex-wrap:wrap">
-            <a class="gl-v2-public-btn is-primary" href="@Url.Action("Finaal")">Ondertekend document downloaden</a>
+    <div class="gl-v2-sign-kpis">
+        <div class="gl-v2-sign-kpi">
+            <span class="gl-v2-sign-kpi-label">Totaal incl. btw</span>
+            <span class="gl-v2-sign-kpi-value is-amount">@(Model.AmountInclVat is decimal total ? total.ToString("C", nl) : "—")</span>
+        </div>
+        <div class="gl-v2-sign-kpi">
+            <span class="gl-v2-sign-kpi-label">Voor akkoord door</span>
+            <span class="gl-v2-sign-kpi-value">@Model.SignerName</span>
+            @if (!string.IsNullOrWhiteSpace(Model.SignerCapacity))
+            {
+                <span class="gl-v2-sign-kpi-sub">@Model.SignerCapacity.ToLowerInvariant()</span>
+            }
+        </div>
+        <div class="gl-v2-sign-kpi">
+            <span class="gl-v2-sign-kpi-label">Geldig tot</span>
+            <span class="gl-v2-sign-kpi-value">@(Model.ExpiresAt is DateTime e1 ? Loc(e1).ToString("dd/MM/yyyy", nl) : "—")</span>
+            @if (daysLeft != "")
+            {
+                <span class="gl-v2-sign-kpi-sub">@daysLeft</span>
+            }
+        </div>
+        <div class="gl-v2-sign-kpi">
+            <span class="gl-v2-sign-kpi-label">Handtekeningen</span>
+            <span class="gl-v2-sign-kpi-value" id="gl-sign-count" data-total="@parties.Count" data-signed="@signedCount">@signedCount van @Math.Max(parties.Count, 1)</span>
+            @if (parties.Count > 0)
+            {
+                <span class="gl-v2-sign-kpi-sub">@string.Join(" · ", parties.Select(p => p.DisplayName))</span>
+            }
+        </div>
+    </div>
+
+    <section class="gl-v2-sign-card" aria-labelledby="gl-sign-doc-title">
+        <div class="gl-v2-sign-card-head">
+            <span class="gl-v2-sign-card-title" id="gl-sign-doc-title">Document</span>
+            <span class="gl-v2-sign-card-meta">@(string.IsNullOrWhiteSpace(Model.DocumentNumber) ? Model.Title : Model.DocumentNumber + (completed ? " · ondertekend" : ""))</span>
+            <span class="gl-v2-sign-spacer"></span>
+            <button type="button" class="gl-v2-sign-tool is-text" id="gl-sign-doc-toggle" aria-expanded="false" @(state == "todo" ? "hidden" : "")>Toon volledig</button>
+            <a class="gl-v2-sign-tool" href="@(completed ? finalUrl : fileUrl)" download>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.6v7.6 M4.8 7.2 8 10.4l3.2-3.2 M3 13.2h10"></path></svg>Download PDF
+            </a>
+        </div>
+        @* Ná voltooiing toont de preview het ondertekende PDF (incl. ondertekeningsblad), niet enkel het origineel. *@
+        <div class="gl-v2-sign-docclip">
+            <iframe src="@(completed ? finalUrl : fileUrl)#navpanes=0&pagemode=none&view=FitH" title="@Model.Title"></iframe>
         </div>
     </section>
-}
-else if (closedWithoutSigning)
-{
-    <div class="gl-v2-public-empty">
-        <h2 class="gl-v2-public-empty-title">Deze link is niet meer beschikbaar</h2>
-        <p class="gl-v2-public-empty-desc">Neem contact op met Group LN als u denkt dat dit niet klopt.</p>
-    </div>
-}
-else if (waitingOnOthers)
-{
-    <div class="gl-v2-public-empty">
-        <h2 class="gl-v2-public-empty-title">Uw handtekening is geregistreerd</h2>
-        <p class="gl-v2-public-empty-desc">We wachten nog op de handtekening van de andere betrokkene(n). U ontvangt een bevestiging zodra alles ondertekend is.</p>
-    </div>
-}
-else
-{
-    <section class="gl-v2-public-card" id="gl-tekenen-actiekaart"
-              data-otp-required="@(Model.OtpRequired ? "1" : "0")"
-              data-destination="@(Model.VerificationDestinationMasked ?? "uw e-mailadres")">
-        <div class="gl-v2-public-card-header"><h2 class="gl-v2-public-card-title">Ondertekenen</h2></div>
-        <div class="gl-v2-public-card-body">
-            @Html.AntiForgeryToken()
-            <div id="gl-tekenen-melding"></div>
 
-            @* Stap 1: eerst een keuze — akkoord of weigeren. Nog geen code, nog geen handtekeningvak. *@
-            <div id="gl-tekenen-stap1">
-                <p class="gl-v2-public-help">@Model.ConsentText</p>
-                <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-                    <button type="button" id="gl-tekenen-akkoord" class="gl-v2-public-btn is-primary">Akkoord met deze wijzigingsopdracht</button>
-                    <button type="button" id="gl-tekenen-weiger" class="gl-v2-public-btn is-text">Weigeren</button>
-                </div>
-            </div>
-
-            @* Stap 2: pas na "Akkoord" — verificatiecode (indien nodig) en het handtekeningvak. *@
-            <div id="gl-tekenen-stap2" style="display:none">
-                <div id="gl-tekenen-otp" style="display:none">
-                    <p class="gl-v2-public-help">
-                        Er is een verificatiecode gestuurd. Vul de code hieronder in.
-                        <button type="button" id="gl-tekenen-opnieuw-code" class="gl-v2-public-btn is-text" style="padding:0;height:auto;font-size:inherit">Geen code ontvangen? Opnieuw versturen</button>
-                    </p>
-                    <div class="gl-v2-public-field" style="max-width:160px">
-                        <label class="gl-v2-public-label" for="gl-tekenen-code-input">Code</label>
-                        <input class="gl-v2-public-input" id="gl-tekenen-code-input" maxlength="10" autocomplete="one-time-code" inputmode="numeric" />
+    @if (state == "closed" || state == "declined")
+    {
+        <section class="gl-v2-sign-card" id="gl-tekenen-actiekaart" data-otp-required="0">
+            <div class="gl-v2-sign-card-body">
+                <div class="gl-v2-sign-banner @bannerTone" role="status">
+                    <span class="gl-v2-sign-banner-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="@bannerIcon"></path></svg></span>
+                    <div class="gl-v2-sign-banner-body">
+                        <span class="gl-v2-sign-banner-title">@bannerTitle</span>
+                        <span class="gl-v2-sign-banner-text">@bannerText</span>
                     </div>
                 </div>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="gl-v2-sign-card" id="gl-tekenen-actiekaart"
+                 data-otp-required="@(Model.OtpRequired ? "1" : "0")"
+                 data-destination="@(Model.VerificationDestinationMasked ?? "je e-mailadres")">
+            <div class="gl-v2-sign-card-head"><span class="gl-v2-sign-card-title">Ondertekenen</span></div>
+            <div class="gl-v2-sign-card-body">
+                @Html.AntiForgeryToken()
+                <div id="gl-tekenen-melding" aria-live="polite"></div>
 
-                <div class="gl-v2-public-field" style="margin-top:14px">
-                    <label class="gl-v2-public-label">Handtekening</label>
-                    <p class="gl-v2-public-help" style="margin:0 0 4px">Teken hieronder uw volledige handtekening.</p>
-                    <canvas id="gl-tekenen-canvas" width="600" height="180"
-                            style="border:1px solid var(--gl-v2-hairline);border-radius:var(--gl-v2-radius-sm);touch-action:none;width:100%;max-width:600px;height:180px;background:#fff"></canvas>
-                    <button type="button" id="gl-tekenen-wis" class="gl-v2-public-btn is-text" style="align-self:flex-start;padding-left:0">Handtekening wissen</button>
-                </div>
+                @if (readyToSign)
+                {
+                    @* 36a — stap 1: lezen, bevestigen en doorgaan. Nog geen code of handtekeningvak in beeld. *@
+                    <div id="gl-tekenen-stap1" class="gl-v2-sign-todo">
+                        <div class="gl-v2-sign-consent">
+                            <span class="gl-v2-sign-consent-box"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="@PathCheck"></path></svg></span>
+                            <span class="gl-v2-sign-consent-text">@Model.ConsentText</span>
+                        </div>
+                        <div class="gl-v2-sign-actions" style="margin-top:16px">
+                            <button type="button" id="gl-tekenen-akkoord" class="gl-v2-sign-btn is-primary">
+                                Akkoord en ondertekenen
+                                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9.6 M8.8 4.2 12.6 8l-3.8 3.8"></path></svg>
+                            </button>
+                            <button type="button" id="gl-tekenen-weiger" class="gl-v2-sign-btn is-quiet">Weigeren</button>
+                            <span class="gl-v2-sign-spacer"></span>
+                            <span class="gl-v2-sign-hint">@(Model.OtpRequired ? "Hierna bevestig je met een verificatiecode en zet je je handtekening." : "Hierna zet je je handtekening.")</span>
+                        </div>
+                    </div>
 
-                <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-                    <button type="button" id="gl-tekenen-teken" class="gl-v2-public-btn is-primary" disabled>Ondertekenen</button>
+                    @* Stap 2: pas na "Akkoord" — verificatiecode (indien nodig) en het handtekeningvak. *@
+                    <div id="gl-tekenen-stap2" class="gl-v2-sign-sign" hidden>
+                        <div id="gl-tekenen-otp" hidden>
+                            <p class="gl-v2-public-help" style="margin:0 0 10px">
+                                Er is een verificatiecode gestuurd. Vul de code hieronder in.
+                                <button type="button" id="gl-tekenen-opnieuw-code" class="gl-v2-public-btn is-text" style="padding:0;min-height:0;height:auto;font-size:inherit">Geen code ontvangen? Opnieuw versturen</button>
+                            </p>
+                            <div class="gl-v2-public-field" style="max-width:180px">
+                                <label class="gl-v2-public-label" for="gl-tekenen-code-input">Code</label>
+                                <input class="gl-v2-public-input" id="gl-tekenen-code-input" maxlength="10" autocomplete="one-time-code" inputmode="numeric" />
+                            </div>
+                        </div>
+
+                        <div class="gl-v2-public-field">
+                            <label class="gl-v2-public-label" for="gl-tekenen-canvas">Handtekening</label>
+                            <p class="gl-v2-public-help" style="margin:0 0 4px">Teken hieronder je volledige handtekening.</p>
+                            <canvas id="gl-tekenen-canvas" class="gl-v2-sign-canvas" width="600" height="180" aria-label="Handtekeningvak"></canvas>
+                            <button type="button" id="gl-tekenen-wis" class="gl-v2-public-btn is-text" style="align-self:flex-start;padding-left:0">Handtekening wissen</button>
+                        </div>
+
+                        <div class="gl-v2-sign-actions">
+                            <button type="button" id="gl-tekenen-teken" class="gl-v2-sign-btn is-primary" disabled>Ondertekenen</button>
+                        </div>
+                    </div>
+                }
+
+                @* 36b/36c/36d — resultaat: banner + stappen + acties. Voor een nieuwe sessie leeg en verborgen; het script vult en toont het. *@
+                <div id="gl-sign-result" @(readyToSign ? "hidden" : "")>
+                    <div class="gl-v2-sign-banner @bannerTone" id="gl-sign-banner" role="status">
+                        <span class="gl-v2-sign-banner-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path id="gl-sign-banner-path" d="@bannerIcon"></path></svg></span>
+                        <div class="gl-v2-sign-banner-body">
+                            <span class="gl-v2-sign-banner-title" id="gl-sign-banner-title">@bannerTitle</span>
+                            <span class="gl-v2-sign-banner-text" id="gl-sign-banner-text">@bannerText</span>
+                        </div>
+                    </div>
+
+                    <ol class="gl-v2-sign-steps" id="gl-sign-steps" style="margin-top:16px">
+                        @for (var i = 1; i <= steps.Length; i++)
+                        {
+                            <li class="gl-v2-sign-step" data-s="@StepState(i)" data-step="@i">
+                                <div class="gl-v2-sign-step-rail">
+                                    <span class="gl-v2-sign-step-dot">
+                                        <svg viewBox="0 0 16 16" aria-hidden="true"><path class="p-check" d="@PathCheck"></path><path class="p-cross" d="@PathCross"></path><path class="p-clock" d="@PathClock"></path></svg>
+                                    </span>
+                                    <span class="gl-v2-sign-step-line"></span>
+                                </div>
+                                <div class="gl-v2-sign-step-main">
+                                    <div class="gl-v2-sign-step-text">
+                                        <span class="gl-v2-sign-step-title">@steps[i - 1].Title</span>
+                                        <span class="gl-v2-sign-step-desc">@steps[i - 1].Desc</span>
+                                    </div>
+                                    <span class="gl-v2-sign-step-time">@StepTime(i)</span>
+                                </div>
+                            </li>
+                        }
+                    </ol>
+
+                    <div class="gl-v2-sign-actions has-rule" id="gl-sign-actions" style="margin-top:4px" @(completed || readyToSign ? "" : "hidden")>
+                        @if (completed)
+                        {
+                            <a class="gl-v2-sign-btn is-solid" href="@finalUrl">Download ondertekende PDF</a>
+                            @if (verifyUrl is not null)
+                            {
+                                <a class="gl-v2-sign-btn is-outline" href="@verifyUrl" target="_blank" rel="noopener">Echtheid controleren</a>
+                                <span class="gl-v2-sign-spacer"></span>
+                                <span class="gl-v2-sign-hint">Verificatie-ID @Model.PublicVerificationId.ToString("N").Substring(0, 8)</span>
+                            }
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+    }
+</div>
 
-    @* Bevestiging na weigeren: geen reload — de sessie/token wordt bij weigeren meteen ingetrokken
-       (DeclineAsync roept RevokeTokens aan), dus een herlaad-poging zou altijd op de neutrale
-       "sessie verlopen"-pagina uitkomen i.p.v. een echte bevestiging. Deze blok staat er al, verborgen,
-       en de JS toont 'm rechtstreeks met wat de server net teruggaf. *@
-    <div class="gl-v2-public-empty" id="gl-tekenen-geweigerd-bevestiging" hidden>
-        <h2 class="gl-v2-public-empty-title">U hebt geweigerd te ondertekenen</h2>
-        <p class="gl-v2-public-empty-desc">Group LN neemt hierover contact met u op. U kan deze pagina nu sluiten.</p>
-    </div>
-
+@if (readyToSign)
+{
     <div class="gl-v2-public-modal-backdrop" id="gl-tekenen-weiger-modal" hidden>
         <div class="gl-v2-public-modal is-warning" role="dialog" aria-modal="true" aria-labelledby="gl-tekenen-weiger-titel">
             <div class="gl-v2-public-modal-body">
                 <h2 class="gl-v2-public-modal-title" id="gl-tekenen-weiger-titel">Weigeren te ondertekenen</h2>
-                <p class="gl-v2-public-modal-desc">Geef kort aan waarom u niet akkoord gaat. Group LN neemt hierover contact met u op.</p>
+                <p class="gl-v2-public-modal-desc">Geef kort aan waarom je niet akkoord gaat. Group LN neemt hierover contact met je op.</p>
             </div>
             <div class="gl-v2-public-modal-field">
                 <div class="gl-v2-public-field">

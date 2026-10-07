@@ -308,8 +308,11 @@ namespace ServiceCore.Budget
                 .Where(f => (f.Omschrijving ?? "").StartsWith("Straight loan grond", StringComparison.OrdinalIgnoreCase))
                 .Sum(f => f.Bedrag);
 
+            // De aankoopprijs zit sinds okt. 2026 ook in resultaat.TotaalKosten (groep Grond): daar weer uithalen, zodat
+            // GrondKost + BouwKost = TotaalKosten blijft kloppen en de grond niet dubbel telt.
+            decimal grondInResultaat = resultaat.Grond.Sum(g => g.Bedrag);
             bo.GrondKost = grondAankoop + grondForfaits + slGrond;
-            bo.BouwKost  = resultaat.TotaalKosten - grondForfaits - slGrond;
+            bo.BouwKost  = resultaat.TotaalKosten - grondInResultaat - grondForfaits - slGrond;
             if (bo.BouwKost < 0m) bo.BouwKost = 0m;
 
             bo.Grondwaarde = Math.Round(bo.GrondKost * (1m + bo.GrondMargePerc), 2);

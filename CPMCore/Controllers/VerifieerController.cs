@@ -48,6 +48,7 @@ public class VerifieerController : Controller
             return View("NotFound");
         }
         ViewData["Title"] = view.DocumentTypeLabel;
+        ViewData["PublicBrand"] = view.IssuerName;
         return View(view);
     }
 }

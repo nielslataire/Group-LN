@@ -38,8 +38,27 @@ namespace CPMCore.Documents.GlV2
         /// QuestPDF-tabellen kennen geen "gap": elke kolom is de ontwerpbreedte + 3mm, de 3mm zit als
         /// rechterpadding in de cel (de laatste kolom heeft die niet).</summary>
         public static void Tabel(IContainer c, string bodyFont, IReadOnlyList<TabelKolom> kolommen,
-            IEnumerable<IReadOnlyList<TabelCel>> rijen, string legeTekst = "Geen regels.")
+            IEnumerable<IReadOnlyList<TabelCel>> rijen, string legeTekst = "Geen regels.") =>
+            Tabel(c, bodyFont, kolommen, rijen.Select(r => TabelRegel.Rij(r)), legeTekst);
+
+        /// <summary>Soort regel in de typetabel: gewone rij, groepsrij (35b: "Woning Lot 1", "Wijzigingsopdrachten", "Overige")
+        /// of subtotaalrij (35d).</summary>
+        public enum TabelRegelSoort { Rij, Groep, Subtotaal }
+
+        /// <summary>Eén regel van de typetabel. <c>SubTekst</c> staat onder de eerste cel (6,8pt gedempt: "ondertekend 02/09/2026").</summary>
+        public record TabelRegel(TabelRegelSoort Soort, string? Titel = null, IReadOnlyList<TabelCel>? Cellen = null, string? SubTekst = null, string? Waarde = null)
         {
+            public static TabelRegel Rij(IReadOnlyList<TabelCel> cellen, string? subTekst = null) => new(TabelRegelSoort.Rij, null, cellen, subTekst);
+            public static TabelRegel Groep(string titel) => new(TabelRegelSoort.Groep, titel);
+            public static TabelRegel Subtotaal(string label, string waarde) => new(TabelRegelSoort.Subtotaal, label, null, null, waarde);
+        }
+
+        /// <summary>De typetabel met groepsrijen en subtotalen (design 35b/35d). Groepsrij: 7,5pt 700 groen, 2,6mm boven / 1mm onder;
+        /// subtotaal: 8pt 700 met de waarde in de laatste kolom.</summary>
+        public static void Tabel(IContainer c, string bodyFont, IReadOnlyList<TabelKolom> kolommen,
+            IEnumerable<TabelRegel> regels, string legeTekst = "Geen regels.", string? accent = null)
+        {
+            var kleur = accent ?? GlV2PdfTheme.Groen;
             const float Gap = 3f;
             var laatste = kolommen.Count - 1;
 
@@ -60,7 +79,7 @@ namespace CPMCore.Documents.GlV2
                     for (var i = 0; i < kolommen.Count; i++)
                     {
                         var k = kolommen[i];
-                        var txt = h.Cell().BorderBottom(0.5f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Groen)
+                        var txt = h.Cell().BorderBottom(0.5f, Unit.Millimetre).BorderColor(kleur)
                             .PaddingBottom(1.6f, Unit.Millimetre).PaddingRight(i == laatste ? 0 : Gap, Unit.Millimetre)
                             .Text(k.Kop.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6.5f).Bold()
                             .FontColor(GlV2PdfTheme.Inkt).LetterSpacing(0.10f);
@@ -69,12 +88,31 @@ namespace CPMCore.Documents.GlV2
                 });
 
                 var leeg = true;
-                foreach (var rij in rijen)
+                foreach (var regel in regels)
                 {
                     leeg = false;
+
+                    if (regel.Soort == TabelRegelSoort.Groep)
+                    {
+                        t.Cell().ColumnSpan((uint)kolommen.Count).PaddingTop(2.6f, Unit.Millimetre).PaddingBottom(1, Unit.Millimetre)
+                            .ShowEntire().Text(regel.Titel).FontFamily(bodyFont).FontSize(7.5f).Bold().FontColor(kleur);
+                        continue;
+                    }
+
+                    if (regel.Soort == TabelRegelSoort.Subtotaal)
+                    {
+                        t.Cell().ColumnSpan((uint)Math.Max(1, kolommen.Count - 1)).PaddingVertical(1.7f, Unit.Millimetre).PaddingRight(Gap, Unit.Millimetre)
+                            .Text(regel.Titel).FontFamily(bodyFont).FontSize(8).Bold().FontColor(GlV2PdfTheme.Gedempt);
+                        t.Cell().PaddingVertical(1.7f, Unit.Millimetre).AlignRight()
+                            .Text(regel.Waarde).FontFamily(bodyFont).FontSize(8).Bold().FontColor(GlV2PdfTheme.Inkt)
+                            .EnableFontFeature(FontFeatures.TabularFigures);
+                        continue;
+                    }
+
+                    var cellen = regel.Cellen ?? Array.Empty<TabelCel>();
                     for (var i = 0; i < kolommen.Count; i++)
                     {
-                        var cel = i < rij.Count ? rij[i] : new TabelCel("");
+                        var cel = i < cellen.Count ? cellen[i] : new TabelCel("");
                         var cell = t.Cell().BorderBottom(0.2f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn)
                             .PaddingVertical(1.7f, Unit.Millimetre).PaddingRight(i == laatste ? 0 : Gap, Unit.Millimetre)
                             .ShowEntire() // rij nooit splitsen over twee pagina's (36 · 7 Regels)
@@ -87,6 +125,15 @@ namespace CPMCore.Documents.GlV2
                                 .PaddingHorizontal(1.4f, Unit.Millimetre).PaddingVertical(0.3f, Unit.Millimetre)
                                 .Text(cel.Tekst).FontFamily(bodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Inkt)
                                 .EnableFontFeature(FontFeatures.TabularFigures);
+                        }
+                        else if (i == 0 && !string.IsNullOrWhiteSpace(regel.SubTekst))
+                        {
+                            cell.Column(col =>
+                            {
+                                col.Spacing(0.4f, Unit.Millimetre);
+                                col.Item().Text(cel.Tekst).FontFamily(bodyFont).FontSize(8).FontColor(GlV2PdfTheme.Inkt);
+                                col.Item().Text(regel.SubTekst).FontFamily(bodyFont).FontSize(6.8f).FontColor(GlV2PdfTheme.Gedempt);
+                            });
                         }
                         else
                         {
@@ -142,8 +189,10 @@ namespace CPMCore.Documents.GlV2
         /// TARIEF/MAATSTAF/BTW/TOTAAL (groene kop, rij per tarief, "Totaal"-rij). Beide eindigen met de groene
         /// balk "Totaal incl. btw" (8pt 600 + 12pt 700, 1,5mm eronder). 4mm boven, 8mm tussen de kolommen.</summary>
         public static void TotalenBtw(IContainer c, string bodyFont, IReadOnlyList<(decimal Rate, decimal Base, decimal Vat)> tarieven,
-            decimal totalExcl, decimal totalVat, decimal totalIncl, IReadOnlyDictionary<decimal, string> btwVermeldingen)
+            decimal totalExcl, decimal totalVat, decimal totalIncl, IReadOnlyDictionary<decimal, string> btwVermeldingen,
+            string eindLabel = "Totaal incl. btw", string? accent = null)
         {
+            var kleur = accent ?? GlV2PdfTheme.Groen;
             var vermeldingen = tarieven
                 .Where(t => btwVermeldingen.TryGetValue(t.Rate, out var m) && !string.IsNullOrWhiteSpace(m))
                 .Select(t => (t.Rate, Tekst: btwVermeldingen[t.Rate])).ToList();
@@ -156,7 +205,7 @@ namespace CPMCore.Documents.GlV2
                 {
                     if (vermeldingen.Count == 0) return;
                     col.Spacing(1.4f, Unit.Millimetre);
-                    col.Item().Text("BTW-VERMELDING").FontFamily(bodyFont).FontSize(6.5f).Bold().LetterSpacing(0.16f).FontColor(GlV2PdfTheme.Groen);
+                    col.Item().Text("BTW-VERMELDING").FontFamily(bodyFont).FontSize(6.5f).Bold().LetterSpacing(0.16f).FontColor(kleur);
                     col.Item().Column(list =>
                     {
                         list.Spacing(1.6f, Unit.Millimetre);
@@ -174,7 +223,7 @@ namespace CPMCore.Documents.GlV2
                 {
                     if (tarieven.Count > 1)
                     {
-                        col.Item().Background(GlV2PdfTheme.Groen).PaddingVertical(1.5f, Unit.Millimetre).PaddingHorizontal(3, Unit.Millimetre).Row(r =>
+                        col.Item().Background(kleur).PaddingVertical(1.5f, Unit.Millimetre).PaddingHorizontal(3, Unit.Millimetre).Row(r =>
                         {
                             r.Spacing(2, Unit.Millimetre);
                             void Kop(IContainer x, string t, bool rechts) { var tx = x.Text(t).FontFamily(bodyFont).FontSize(6).Bold().LetterSpacing(0.10f).FontColor(GlV2PdfTheme.Wit); if (rechts) tx.AlignRight(); }
@@ -199,10 +248,10 @@ namespace CPMCore.Documents.GlV2
                         Regel(tarieven.Count == 1 ? $"Btw {Btw(tarieven[0].Rate)}" : "Btw", Euro(totalVat));
                     }
 
-                    col.Item().PaddingTop(1.5f, Unit.Millimetre).Background(GlV2PdfTheme.Groen)
+                    col.Item().PaddingTop(1.5f, Unit.Millimetre).Background(kleur)
                         .PaddingVertical(2.6f, Unit.Millimetre).PaddingHorizontal(3, Unit.Millimetre).Row(r =>
                         {
-                            r.RelativeItem().AlignMiddle().Text("Totaal incl. btw").FontFamily(bodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Wit);
+                            r.RelativeItem().AlignMiddle().Text(eindLabel).FontFamily(bodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Wit);
                             r.AutoItem().AlignMiddle().Text(Euro(totalIncl)).FontFamily(bodyFont).FontSize(12).Bold()
                                 .FontColor(GlV2PdfTheme.Wit).EnableFontFeature(FontFeatures.TabularFigures);
                         });
@@ -227,6 +276,49 @@ namespace CPMCore.Documents.GlV2
                     Cel(r.RelativeItem(), btw, true, vet ? 2 : 0);
                     Cel(r.RelativeItem(), totaal, true, vet ? 2 : 0);
                 });
+        }
+
+        /// <summary>Betaalblok (35b "BETALINGSGEGEVENS"): vlak #F3F7F0, radius 1,5mm, 4mm binnenmarge; velden in 3 kolommen (label 6pt 600
+        /// gedempt, waarde 8,5pt 700 groen of 500 inkt), QR 24mm rechts met "scan met je bankapp". Velden zonder waarde vervallen.</summary>
+        public static void Betaalblok(IContainer c, string bodyFont,
+            IReadOnlyList<(string Label, string? Waarde, bool Groen)> velden, string? toelichting, byte[]? qrPng, string? accent = null)
+        {
+            var kleur = accent ?? GlV2PdfTheme.Groen;
+            var vlak = accent is null ? GlV2PdfTheme.VlakGroen : GlV2PdfTheme.Tint(accent, 0.06);
+            var zichtbaar = velden.Where(v => !string.IsNullOrWhiteSpace(v.Waarde)).ToList();
+            c.Background(vlak).CornerRadius(1.5f, Unit.Millimetre).Padding(4, Unit.Millimetre).Row(row =>
+            {
+                row.Spacing(5, Unit.Millimetre);
+                row.RelativeItem().Column(col =>
+                {
+                    col.Spacing(2.4f, Unit.Millimetre);
+                    col.Item().Text("BETALINGSGEGEVENS").FontFamily(bodyFont).FontSize(6.5f).Bold().LetterSpacing(0.16f).FontColor(kleur);
+                    col.Item().Grid(grid =>
+                    {
+                        grid.Columns(3);
+                        grid.HorizontalSpacing(5, Unit.Millimetre);
+                        grid.VerticalSpacing(2.6f, Unit.Millimetre);
+                        foreach (var v in zichtbaar)
+                            grid.Item().Column(f =>
+                            {
+                                f.Spacing(0.6f, Unit.Millimetre);
+                                f.Item().Text(v.Label.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6).SemiBold().LetterSpacing(0.12f).FontColor(GlV2PdfTheme.Gedempt);
+                                var t = f.Item().Text(v.Waarde).FontFamily(bodyFont).FontSize(8.5f).FontColor(v.Groen ? kleur : GlV2PdfTheme.Inkt)
+                                    .EnableFontFeature(FontFeatures.TabularFigures);
+                                if (v.Groen) t.Bold(); else t.Medium();
+                            });
+                    });
+                    if (!string.IsNullOrWhiteSpace(toelichting))
+                        col.Item().Text(toelichting).FontFamily(bodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt);
+                });
+                if (qrPng is { Length: > 0 })
+                    row.ConstantItem(24, Unit.Millimetre).Column(q =>
+                    {
+                        q.Spacing(1, Unit.Millimetre);
+                        q.Item().Height(24, Unit.Millimetre).Background(GlV2PdfTheme.Wit).Image(qrPng).FitArea();
+                        q.Item().AlignCenter().Text("scan met je bankapp").FontFamily(bodyFont).FontSize(5.5f).FontColor(GlV2PdfTheme.Gedempt);
+                    });
+            });
         }
 
         /// <summary>Eén handtekenvak: 18mm hoog, hairline-rand (afgerond 1mm), label onderaan — letterlijk

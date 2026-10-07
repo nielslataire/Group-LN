@@ -513,6 +513,20 @@ public sealed class SigningService : ISigningService
 
         var source = _registry.TrySource(signingCase.DocumentType);
         var projectName = source is null ? null : await SafeProjectNameAsync(source, signingCase.SourceEntityId, ct);
+        var unitLabel = source is null ? null : await SafeUnitLabelAsync(source, signingCase.SourceEntityId, ct);
+        string? issuerName = null;
+        if (source is not null)
+        {
+            try { issuerName = await source.GetIssuerNameAsync(signingCase.SourceEntityId, ct); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Uitgever ophalen faalde voor {DocumentType}/{SourceId}.", source.DocumentType, signingCase.SourceEntityId); }
+        }
+        // Bedragen live uit de bron (btw per regel); zo toont de pagina ook voor een al geopend dossier het juiste bedrag.
+        (decimal Excl, decimal Vat, decimal Incl)? liveAmounts = null;
+        if (source is not null)
+        {
+            try { liveAmounts = await source.GetAmountsAsync(signingCase.SourceEntityId, ct); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Bedragen ophalen faalde voor {DocumentType}/{SourceId}.", source.DocumentType, signingCase.SourceEntityId); }
+        }
         var provider = _registry.Provider(signingCase.SignatureMethod);
 
         var latest = await _db.SigningVerification.AsNoTracking()
@@ -539,7 +553,7 @@ public sealed class SigningService : ISigningService
             signingCase.Id, party.Id, signingCase.Status, party.Status,
             source?.DisplayName ?? signingCase.DocumentType,
             signingCase.Title, signingCase.DocumentNumber, signingCase.Summary, projectName,
-            signingCase.AmountExclVat, signingCase.VatAmount, signingCase.AmountInclVat,
+            liveAmounts?.Excl ?? signingCase.AmountExclVat, liveAmounts?.Vat ?? signingCase.VatAmount, liveAmounts?.Incl ?? signingCase.AmountInclVat,
             party.DisplayName, party.Capacity,
             party.ConsentTextSnapshot ?? signingCase.ConsentTextSnapshot ?? string.Empty,
             signingCase.OtpRequired, signingCase.VerificationMethod, destinationMasked,
@@ -548,7 +562,15 @@ public sealed class SigningService : ISigningService
             provider.Capabilities.HostedUi, null,
             attachments,
             token.Purpose == (int)SigningTokenPurpose.Download,
-            signingCase.FinalDocumentId is not null);
+            signingCase.FinalDocumentId is not null,
+            signingCase.PublicVerificationId,
+            party.SignedAt,
+            signingCase.CompletedAt,
+            party.VerifiedAt,
+            signingCase.Parties.OrderBy(p => p.SortOrder).ThenBy(p => p.Id)
+                .Select(p => new SigningSessionPartyView(p.DisplayName, p.Capacity, p.Status == (int)SigningPartyStatus.Signed, p.Id == party.Id))
+                .ToList(),
+            unitLabel, issuerName);
     }
 
     public async Task<SigningDocumentContent?> GetSessionDocumentAsync(Guid sessionId, int? attachmentDocumentId, SigningRequestContext ctx, CancellationToken ct = default)
@@ -905,10 +927,23 @@ public sealed class SigningService : ISigningService
         var c = await QueryCases().FirstOrDefaultAsync(x => x.PublicVerificationId == publicVerificationId, ct);
         if (c is null) return null;
         var source = _registry.TrySource(c.DocumentType);
+        string? projectName = null, unitLabel = null, issuerName = null;
+        if (source is not null)
+        {
+            projectName = await SafeProjectNameAsync(source, c.SourceEntityId, ct);
+            unitLabel = await SafeUnitLabelAsync(source, c.SourceEntityId, ct);
+            try { issuerName = await source.GetIssuerNameAsync(c.SourceEntityId, ct); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Uitgever ophalen faalde voor {DocumentType}/{SourceId}.", source.DocumentType, c.SourceEntityId); }
+        }
         return new PublicVerificationView(
             source?.DisplayName ?? c.DocumentType, c.DocumentNumber, c.Status, c.CompletedAt,
             c.Parties.Count(p => p.Status == (int)SigningPartyStatus.Signed),
-            c.OriginalDocument?.Sha256, c.FinalDocument?.Sha256);
+            c.OriginalDocument?.Sha256, c.FinalDocument?.Sha256,
+            string.IsNullOrWhiteSpace(c.Summary) ? c.Title : c.Summary,
+            projectName, unitLabel, issuerName, c.VerificationMethod,
+            c.Parties.OrderBy(p => p.SortOrder).ThenBy(p => p.Id)
+                .Select(p => new PublicVerificationSignerView(p.DisplayName, p.Capacity, p.Status == (int)SigningPartyStatus.Signed, p.SignedAt))
+                .ToList());
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -1329,6 +1364,12 @@ public sealed class SigningService : ISigningService
     {
         try { return await source.GetProjectNameAsync(sourceEntityId, ct); }
         catch (Exception ex) { _logger.LogWarning(ex, "Projectnaam ophalen faalde voor {DocumentType}/{SourceId}.", source.DocumentType, sourceEntityId); return null; }
+    }
+
+    private async Task<string?> SafeUnitLabelAsync(ISigningDocumentSource source, int sourceEntityId, CancellationToken ct)
+    {
+        try { return await source.GetUnitLabelAsync(sourceEntityId, ct); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Eenheid ophalen faalde voor {DocumentType}/{SourceId}.", source.DocumentType, sourceEntityId); return null; }
     }
 
     private async Task<IReadOnlyList<SigningMailRecipient>> SafeInternalRecipientsAsync(ISigningDocumentSource source, int sourceEntityId, CancellationToken ct)

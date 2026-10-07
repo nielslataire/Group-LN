@@ -95,7 +95,18 @@ public sealed record SigningSessionView(
     string? ProviderRedirectUrl,
     IReadOnlyList<SigningAttachmentView> Attachments,
     bool DownloadOnly,
-    bool HasFinalDocument);
+    bool HasFinalDocument,
+    // ── Voor de portaalpagina (design-handoff 36): wie nog meetekent, wanneer en de verificatiepagina ──
+    Guid PublicVerificationId = default,
+    DateTime? SignedAt = null,
+    DateTime? CompletedAt = null,
+    DateTime? VerifiedAt = null,
+    IReadOnlyList<SigningSessionPartyView>? Parties = null,
+    string? UnitLabel = null,
+    string? IssuerName = null);
+
+/// <summary>Een ondertekenaar zoals de portaalpagina hem toont ("0 van 2 · Lataire Niels · Blanco Mariana").</summary>
+public sealed record SigningSessionPartyView(string DisplayName, string? Capacity, bool Signed, bool IsCurrent);
 
 public sealed record VerificationRequestResult(bool Success, string? DestinationMasked, DateTime? ExpiresAt, string? Error);
 

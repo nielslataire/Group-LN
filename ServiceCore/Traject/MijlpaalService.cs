@@ -64,6 +64,7 @@ public class MijlpaalService : IMijlpaalService
         entity.ModifiedDate = DateTime.UtcNow;
         _db.Mijlpaal.Add(entity);
         await _db.SaveChangesAsync();
+        await PlaatsEnRelatiefVerwerken(entity, dto.PlaatsInFase);
         await AddHistory(entity.Id, (int)MijlpaalHistoriekActie.Aangemaakt, userId, null,
             JsonSerializer.Serialize(Snapshot(entity)), "Mijlpaal aangemaakt");
         return entity;
@@ -80,6 +81,7 @@ public class MijlpaalService : IMijlpaalService
         entity.ModifiedByUserId = userId;
         entity.ModifiedDate = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await PlaatsEnRelatiefVerwerken(entity, dto.PlaatsInFase);
         await AddHistory(id, (int)MijlpaalHistoriekActie.Bijgewerkt, userId, old,
             JsonSerializer.Serialize(Snapshot(entity)), "Mijlpaal bijgewerkt");
         return entity;
@@ -101,9 +103,41 @@ public class MijlpaalService : IMijlpaalService
         entity.ModifiedByUserId = userId;
         entity.ModifiedDate = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await PlaatsEnRelatiefVerwerken(entity, null);
         await AddHistory(entity.Id, (int)MijlpaalHistoriekActie.Statuswijziging, userId,
             old.ToString(), dto.NieuweStatus.ToString(), dto.Opmerking);
         return true;
+    }
+
+    /// <summary>Zet "Plaats in de fase" ("eerste" / "laatste" / "na:{id}") om naar een hernummerde Volgorde
+    /// binnen de fase (design 30e) en herberekent mijlpalen met een relatieve streefdatum (migratie 074).</summary>
+    private async Task PlaatsEnRelatiefVerwerken(Mijlpaal entity, string? plaats)
+    {
+        bool dirty = false;
+        if (!string.IsNullOrWhiteSpace(plaats) && entity.ProjecttrajectFaseId is int faseId)
+        {
+            var reeks = await _db.Mijlpaal
+                .Where(m => m.ProjecttrajectId == entity.ProjecttrajectId && m.ProjecttrajectFaseId == faseId
+                            && m.UnitId == entity.UnitId && m.Id != entity.Id)
+                .OrderBy(m => m.Volgorde).ThenBy(m => m.Id).ToListAsync();
+            int index = reeks.Count;
+            if (plaats == "eerste") index = 0;
+            else if (plaats.StartsWith("na:", StringComparison.Ordinal) && int.TryParse(plaats.AsSpan(3), out var naId))
+            {
+                var pos = reeks.FindIndex(m => m.Id == naId);
+                if (pos >= 0) index = pos + 1;
+            }
+            reeks.Insert(Math.Min(index, reeks.Count), entity);
+            for (int i = 0; i < reeks.Count; i++)
+                if (reeks[i].Volgorde != (i + 1) * 10) { reeks[i].Volgorde = (i + 1) * 10; dirty = true; }
+        }
+
+        if (await _db.Mijlpaal.AnyAsync(m => m.ProjecttrajectId == entity.ProjecttrajectId && m.RelatiefAnkerMijlpaalId != null))
+        {
+            var alle = await _db.Mijlpaal.Where(m => m.ProjecttrajectId == entity.ProjecttrajectId).ToListAsync();
+            if (MijlpaalRelatief.Herbereken(alle) > 0) dirty = true;
+        }
+        if (dirty) await _db.SaveChangesAsync();
     }
 
     public async Task<bool> AssignResponsible(int projecttrajectId, int id, int? rol, int? partijType, int? partijId, string? userId, string? assignedUserId)
@@ -147,6 +181,7 @@ public class MijlpaalService : IMijlpaalService
                 JsonSerializer.Serialize(Snapshot(m)), "Bulk-bijwerking");
         }
         await _db.SaveChangesAsync();
+        if (items.Count > 0) await PlaatsEnRelatiefVerwerken(items[0], null);
         return items.Count;
     }
 

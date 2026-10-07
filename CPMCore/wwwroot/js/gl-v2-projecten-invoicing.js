@@ -83,6 +83,18 @@
             if (tr) tr.classList.toggle("is-selected", b.checked);
         });
 
+        // Wijzigingsopdracht-groepen (Niels, 2026-10-07): het groepsvinkje volgt zijn lijnen (alles / gedeeltelijk / niets) en
+        // is uitgeschakeld zodra alle lijnen vergrendeld zijn (eindafrekening). Enkel de lijnen tellen mee in de selectie.
+        $$(".js-inv-co-group").forEach(function (g) {
+            var lines = $$('.js-inv-co[data-co-id="' + g.getAttribute("data-group") + '"]');
+            var on = lines.filter(function (b) { return b.checked; });
+            g.checked = lines.length > 0 && on.length === lines.length;
+            g.indeterminate = on.length > 0 && on.length < lines.length;
+            g.disabled = lines.length > 0 && lines.every(function (b) { return b.disabled; });
+            var tr = g.closest("tr");
+            if (tr) tr.classList.toggle("is-selected", g.checked);
+        });
+
         // "Alles"-checkbox per account bijhouden (indeterminate/volledig).
         $$(".js-inv-account-all").forEach(function (all) {
             var card = all.closest(".gl-v2-inv-card");
@@ -136,12 +148,30 @@
             if (accountCard) applyLastStageLock(accountCard);
             updateSelection();
         }
+        if (e.target.classList.contains("js-inv-co-group")) {
+            var groupCard = e.target.closest(".gl-v2-inv-card");
+            $$('.js-inv-co[data-co-id="' + e.target.getAttribute("data-group") + '"]').forEach(function (b) { if (!b.disabled) b.checked = e.target.checked; });
+            if (groupCard) applyLastStageLock(groupCard);
+            updateSelection();
+        }
         if (e.target.classList.contains("js-inv-account-all")) {
             var card = e.target.closest(".gl-v2-inv-card");
             $$(".js-inv-post", card).forEach(function (b) { if (!b.disabled) b.checked = e.target.checked; });
             applyLastStageLock(card);
             updateSelection();
         }
+    });
+
+    // Chevron op een wijzigingsopdracht: de lijnen tonen/verbergen. Ingeklapt = CSS-klasse (niet het hidden-attribuut: de
+    // filterpillen zetten dat al op elke rij en zouden de uitklapstand anders overschrijven).
+    document.addEventListener("click", function (e) {
+        var toggle = e.target.closest(".js-inv-co-toggle");
+        if (!toggle) return;
+        var open = toggle.getAttribute("aria-expanded") === "true";
+        toggle.setAttribute("aria-expanded", open ? "false" : "true");
+        var head = toggle.closest("tr");
+        if (head) head.classList.toggle("is-open", !open);
+        $$('[data-inv-child-of="' + toggle.getAttribute("data-group") + '"]').forEach(function (r) { r.classList.toggle("is-collapsed", open); });
     });
 
     var clearBtn = document.getElementById("gl-v2-inv-sel-clear");

@@ -1,3 +1,5 @@
+using System;
+using System.Text.RegularExpressions;
 namespace CPMCore.Documents.GlV2
 {
     /// <summary>
@@ -28,6 +30,18 @@ namespace CPMCore.Documents.GlV2
         public const string VlakWarm = "#F6EEDC";        // btw-tag 21%, aandachtspunt
         public const string AccentGroupLn = "#5DA935";   // uitsluitend de tagline onder het logo
         public const string Wit = "#FFFFFF";
+
+        /// <summary>Geldige #RRGGBB-kleur? (bedrijfskleur uit de factuurinstellingen).</summary>
+        public static bool IsHex(string? c) => !string.IsNullOrWhiteSpace(c) && Regex.IsMatch(c.Trim(), "^#[0-9a-fA-F]{6}$");
+
+        /// <summary>Lichte tint van een kleur (mengen met wit): voor vlakken en tags in de huiskleur van een bedrijf.
+        /// <paramref name="aandeel"/> = hoeveel van de kleur overblijft (0.08 ≈ #EEF4EA bij het standaardgroen).</summary>
+        public static string Tint(string hex, double aandeel)
+        {
+            var c = hex.Trim().TrimStart('#');
+            int Mix(int i) => (int)Math.Round(255 - (255 - Convert.ToInt32(c.Substring(i, 2), 16)) * aandeel);
+            return $"#{Mix(0):X2}{Mix(2):X2}{Mix(4):X2}";
+        }
 
         // Enkel bij de bedrijfsnaam naast het logo (punt 35b): eigen, iets lossere grijstint —
         // bewust niet "Gedempt", dat is specifiek voor labels/voet.

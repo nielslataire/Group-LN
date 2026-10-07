@@ -1,0 +1,247 @@
+@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@*
+    gl-v2 — Bedrijf bewerken, tab "Boekhouding" (design-handoff 24c): Octopus-koppeling in 3 stappen (Aanmelden · Dossier · Import), Boekjaren &
+    dagboeken (enkel lezen), Veldkoppeling (Octopus-veld → factuurveld) en Verkoop-btw-codes (enkel de factuurvermelding is te wijzigen).
+    De Octopus-knoppen posten de hoofd-form naar de bestaande acties (formaction, zoals op de klassieke pagina) en komen terug op déze tab.
+    Eerst het bedrijf bewaren om tokens op te halen (knoppen zijn uit zolang Id ≤ 0).
+*@
+@using CPMCore.Models.GlV2
+@{
+    var octopusDossiers = ViewBag.OctopusDossiers as IReadOnlyList<CPMCore.Services.Octopus.OctopusDossierItem> ?? new List<CPMCore.Services.Octopus.OctopusDossierItem>();
+    var octopusMessage = ViewBag.OctopusMessage as string;
+    var octopusMessageType = ViewBag.OctopusMessageType as string;
+    var bookyears = ViewBag.OctopusBookyears as IReadOnlyList<BOCore.OctopusBookyearBO> ?? new List<BOCore.OctopusBookyearBO>();
+    var vatTypes = Model.VatTypes ?? new List<CPMCore.Models.Invoicing.VatTypeVM>();
+    var customFields = Model.CustomFieldMappings ?? new List<CPMCore.Models.Instellingen.OctopusCustomFieldMappingVM>();
+    var fieldOptions = ViewBag.InvoiceFieldOptions as IReadOnlyList<KeyValuePair<string, string>> ?? new List<KeyValuePair<string, string>>();
+    var canAct = Model.Id > 0;
+    var tokenOk = !string.IsNullOrWhiteSpace(Model.OctopusAuthenticateToken) && (Model.OctopusAuthenticateTokenValidUntil == null || Model.OctopusAuthenticateTokenValidUntil > DateTime.Now);
+    var dossierOk = !string.IsNullOrWhiteSpace(Model.OctopusDossierNumber);
+    string Tone(string t) => t == "danger" || t == "error" ? "is-danger" : t == "warning" ? "is-warning" : t == "success" ? "is-success" : "is-info";
+    var recent = bookyears.OrderByDescending(b => b.StartDate).ToList();
+    var shown = recent.Take(3).ToList();
+    var older = recent.Skip(3).ToList();
+    string Fmt(DateTime? d) => d?.ToString("dd/MM HH:mm") ?? "onbekend";
+}
+<section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-plugs-connected" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Octopus-koppeling</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Drie stappen, elk met eigen status. Is het token verlopen, doorloop dan eerst stap 1 opnieuw.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" formaction="@Url.Action("IssuerCompanyOctopusSync", "Instellingen", new { issuerId = Model.Id })" formmethod="post" formnovalidate @(canAct && tokenOk && dossierOk ? "" : "disabled")>
+                    <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Dossier synchroniseren
+                </button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" formaction="@Url.Action("IssuerCompanyOctopusRelations", "Instellingen", new { issuerId = Model.Id })" formmethod="post" formnovalidate @(canAct && tokenOk && dossierOk ? "" : "disabled")>
+                    <i class="ph ph-users" aria-hidden="true"></i>Relaties ophalen
+                </button>
+            </div>
+            <div class="gl-v2-ice-card-body">
+                @if (!canAct)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Bewaar eerst het bedrijf om tokens te kunnen ophalen.</span></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(octopusMessage))
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact @Tone(octopusMessageType ?? "info")"><i class="ph ph-info" aria-hidden="true"></i><span>@octopusMessage</span></div>
+                }
+
+                <div class="gl-v2-ice-steps">
+                <div class="gl-v2-ice-step @(tokenOk ? "" : "is-current")">
+                    <div class="gl-v2-ice-step-head">
+                        <span class="gl-v2-ice-step-n @(tokenOk ? "is-done" : "")">@if (tokenOk) { <i class="ph ph-check" aria-hidden="true"></i> } else { <b>1</b> }</span>
+                        <b>Aanmelden</b>
+                        <span class="gl-v2-ice-step-state @(tokenOk ? "is-ok" : "is-todo")">@(tokenOk ? "token tot " + Fmt(Model.OctopusAuthenticateTokenValidUntil) : (string.IsNullOrWhiteSpace(Model.OctopusAuthenticateToken) ? "nog geen token" : "token verlopen"))</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-6">@Html.EditorFor(m => m.OctopusUsername, "GlV2Text", new { Label = "Gebruikersnaam", Placeholder = "Octopus-gebruiker" })</div>
+                        <div class="gl-v2-col-6">
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="OctopusPassword">Wachtwoord</label>
+                                <div class="gl-v2-field-box"><input type="password" class="gl-v2-field-input" id="OctopusPassword" name="OctopusPassword" value="@Model.OctopusPassword" autocomplete="new-password" /></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-ice-step-actions">
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" formaction="@Url.Action("IssuerCompanyOctopusAuthenticate", "Instellingen", new { issuerId = Model.Id })" formmethod="post" formnovalidate @(canAct ? "" : "disabled")>
+                            <i class="ph ph-key" aria-hidden="true"></i>@(tokenOk ? "Token vernieuwen" : "Token ophalen")
+                        </button>
+                    </div>
+                </div>
+
+                <div class="gl-v2-ice-step @(tokenOk ? "" : "is-locked")" @(tokenOk ? "" : "inert") @(tokenOk ? "" : "aria-disabled=true")>
+                    <div class="gl-v2-ice-step-head">
+                        <span class="gl-v2-ice-step-n @(dossierOk ? "is-done" : "")">@if (dossierOk) { <i class="ph ph-check" aria-hidden="true"></i> } else { <b>2</b> }</span>
+                        <b>Dossier</b>
+                        <span class="gl-v2-ice-step-state @(dossierOk ? "is-ok" : "is-todo")">@(dossierOk ? "gekoppeld" : "geen dossier gekoppeld")</span>
+                    </div>
+                    <div class="gl-v2-ice-dossier-row">
+                        <div class="gl-v2-ice-dossier-select">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "DossierNumber", Id = "ice-octopus-dossier", Label = "Dossier", Value = Model.OctopusDossierNumber ?? "", EmptyText = "— kies dossier —", Disabled = !canAct,
+                                Items = (!string.IsNullOrWhiteSpace(Model.OctopusDossierNumber) && !octopusDossiers.Any(d => d.Number == Model.OctopusDossierNumber)
+                                            ? new List<GlV2SelectItem> { new() { Value = Model.OctopusDossierNumber!, Text = "Huidig: " + Model.OctopusDossierNumber } }
+                                            : new List<GlV2SelectItem>())
+                                        .Concat(octopusDossiers.Select(d => new GlV2SelectItem { Value = d.Number, Text = d.Number + " — " + d.Name })).ToList()
+                            })
+                        </div>
+                        <button type="submit" class="gl-v2-icon-btn" title="Dossiers ophalen" aria-label="Dossiers ophalen" formaction="@Url.Action("IssuerCompanyOctopusDossiers", "Instellingen", new { issuerId = Model.Id })" formmethod="post" formnovalidate @(canAct ? "" : "disabled")>
+                            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+                        </button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ice-octopus-connect" formaction="@Url.Action("IssuerCompanyOctopusConnect", "Instellingen", new { issuerId = Model.Id })" formmethod="post" formnovalidate @(canAct ? "" : "disabled")>
+                            <i class="ph ph-link" aria-hidden="true"></i>Koppelen
+                        </button>
+                    </div>
+                    <p class="gl-v2-field-help">Ander dossier kiezen koppelt meteen om; bestaande boekingen blijven staan.@if (dossierOk) { <text> Dossiertoken geldig tot @Fmt(Model.OctopusDossierTokenValidUntil).</text> }</p>
+                </div>
+
+                <div class="gl-v2-ice-step @(tokenOk ? "" : "is-locked")" @(tokenOk ? "" : "inert") @(tokenOk ? "" : "aria-disabled=true")>
+                    <div class="gl-v2-ice-step-head">
+                        <span class="gl-v2-ice-step-n"><b>3</b></span>
+                        <b>Import</b>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-12">@Html.EditorFor(m => m.OctopusPurchaseJournalKeyPrefix, "GlV2Text", new { Label = "Aankoopdagboek prefix", Placeholder = "bv. A", MaxLength = 20, Help = "Enkel dagboeken die met deze letter beginnen worden inkomende facturen (A → A1, A2 …). Leeg = alles." })</div>
+                        <div class="gl-v2-col-12">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "OctopusDownloadLinkCustomFieldKeyId", Id = "ice-octopus-dl", Label = "Downloadlink-veld", Value = Model.OctopusDownloadLinkCustomFieldKeyId?.ToString() ?? "", EmptyText = "— kies —",
+                                Disabled = !customFields.Any(),
+                                Help = customFields.Any() ? "Het Octopus-veld dat de beveiligde downloadlink van de factuur ontvangt." : "Geen velden geladen — synchroniseer het dossier om ze op te halen.",
+                                Items = customFields.Select(f => new GlV2SelectItem { Value = f.CustomFieldKeyId.ToString(), Text = f.DisplayName ?? f.CustomFieldKeyId.ToString() }).ToList()
+                            })
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </section>
+
+<div class="gl-v2-ice-cols">
+    <div class="gl-v2-ice-col">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-calendar-blank" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Boekjaren &amp; dagboeken</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">uit Octopus · alleen lezen</span>
+            </div>
+            @if (bookyears.Count == 0)
+            {
+                <p class="gl-v2-ice-empty">Nog geen boekjaren. Synchroniseer het dossier om ze op te halen.</p>
+            }
+            else
+            {
+                <ul class="gl-v2-ice-list">
+                    @foreach (var y in shown)
+                    {
+                        <li>
+                            <span class="gl-v2-ice-list-t"><b>@y.BookyearDescription</b><small>@y.StartDate.ToString("dd/MM/yyyy") – @y.EndDate.ToString("dd/MM/yyyy") · @(y.Periods?.Count ?? 0) periodes · @(y.Journals?.Count ?? 0) dagboeken@((y.Journals?.Any() ?? false) ? " (" + string.Join(", ", y.Journals!.Select(j => j.JournalKey)) + ")" : "")</small></span>
+                            <span class="gl-v2-badge @(y.Closed ? "is-neutral" : "is-positive")">@(y.Closed ? "AFGESLOTEN" : "OPEN")</span>
+                        </li>
+                    }
+                </ul>
+                @if (older.Count > 0)
+                {
+                    <button type="button" class="gl-v2-ice-more" id="ice-bookyears-more" aria-expanded="false">+ @older.Count oudere boekjaren (@older.Min(o => o.StartDate.Year)–@older.Max(o => o.EndDate.Year))</button>
+                    <ul class="gl-v2-ice-list" id="ice-bookyears-old" hidden>
+                        @foreach (var y in older)
+                        {
+                            <li>
+                                <span class="gl-v2-ice-list-t"><b>@y.BookyearDescription</b><small>@y.StartDate.ToString("dd/MM/yyyy") – @y.EndDate.ToString("dd/MM/yyyy") · @(y.Periods?.Count ?? 0) periodes · @(y.Journals?.Count ?? 0) dagboeken</small></span>
+                                <span class="gl-v2-badge @(y.Closed ? "is-neutral" : "is-positive")">@(y.Closed ? "AFGESLOTEN" : "OPEN")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-arrows-left-right" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Veldkoppeling</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Octopus-veld → factuurveld</span>
+            </div>
+            @if (customFields.Count == 0)
+            {
+                <p class="gl-v2-ice-empty">Geen custom velden geladen. Synchroniseer het dossier om ze op te halen.</p>
+            }
+            else
+            {
+                <ul class="gl-v2-ice-list gl-v2-ice-map">
+                    @for (var i = 0; i < customFields.Count; i++)
+                    {
+                        var f = customFields[i];
+                        <li>
+                            <span class="gl-v2-ice-list-t"><b>@f.DisplayName</b><small>@f.TemplateCode</small></span>
+                            <i class="ph ph-arrow-right gl-v2-ice-arrow" aria-hidden="true"></i>
+                            <input type="hidden" name="CustomFieldMappings[@i].CustomFieldKeyId" value="@f.CustomFieldKeyId" />
+                            <input type="hidden" name="CustomFieldMappings[@i].TemplateCode" value="@f.TemplateCode" />
+                            <input type="hidden" name="CustomFieldMappings[@i].DescriptionNl" value="@f.DescriptionNl" />
+                            <input type="hidden" name="CustomFieldMappings[@i].DescriptionFr" value="@f.DescriptionFr" />
+                            <input type="hidden" name="CustomFieldMappings[@i].DescriptionEn" value="@f.DescriptionEn" />
+                            <input type="hidden" name="CustomFieldMappings[@i].DescriptionDe" value="@f.DescriptionDe" />
+                            <div class="gl-v2-ice-map-select">
+                                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                                {
+                                    Name = $"CustomFieldMappings[{i}].InvoiceField", Id = $"ice-map-{i}", Bare = true, Value = f.InvoiceField ?? "", EmptyText = "— kies —",
+                                    Items = fieldOptions.Select(o => new GlV2SelectItem { Value = o.Key, Text = o.Value }).ToList()
+                                })
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+
+    <div class="gl-v2-ice-col">
+<section class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-percent" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">Verkoop-btw-codes</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">enkel de factuurvermelding is hier te wijzigen</span>
+    </div>
+    @if (vatTypes.Count == 0)
+    {
+        <p class="gl-v2-ice-empty">Geen verkoop-btw-codes gesynchroniseerd.</p>
+    }
+    else
+    {
+        <div class="gl-v2-ice-tablewrap">
+            <table class="gl-v2-ice-table">
+                <thead><tr><th>Code</th><th>Omschrijving</th><th class="is-right">%</th><th>Rekening</th><th>Vermelding op factuur</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < vatTypes.Count; i++)
+                    {
+                        var c = vatTypes[i];
+                        <tr>
+                            <td class="gl-v2-ice-mono">
+                                @c.Code
+                                <input type="hidden" name="VatTypes[@i].Id" value="@c.Id" />
+                                <input type="hidden" name="VatTypes[@i].Code" value="@c.Code" />
+                                <input type="hidden" name="VatTypes[@i].Type" value="@c.Type" />
+                                <input type="hidden" name="VatTypes[@i].Description" value="@c.Description" />
+                                <input type="hidden" name="VatTypes[@i].BasePercentage" value="@c.BasePercentage.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                <input type="hidden" name="VatTypes[@i].DefaultSellBookingAccountNr" value="@c.DefaultSellBookingAccountNr" />
+                            </td>
+                            <td>@c.Description<small class="gl-v2-ice-sub">@(c.Type == 2 ? "Verkoop" : c.Type == 4 ? "Verkoop credit" : "Type " + c.Type)</small></td>
+                            <td class="is-right gl-v2-ice-mono">@c.BasePercentage.ToString("0.##")%</td>
+                            <td class="gl-v2-ice-mono">@(c.DefaultSellBookingAccountNr?.ToString() ?? "—")</td>
+                            <td>
+                                <div class="gl-v2-field-box"><input class="gl-v2-field-input" name="VatTypes[@i].InvoiceMention" value="@c.InvoiceMention" placeholder="Vermelding op factuur" aria-label="Vermelding op factuur voor @c.Code" /></div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+    </div>
+</div>

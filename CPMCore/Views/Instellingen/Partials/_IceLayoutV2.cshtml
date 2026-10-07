@@ -1,0 +1,180 @@
+@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@*
+    gl-v2 — Bedrijf bewerken, tab "Lay-out & e-mail" (design-handoff 24c): sjabloon, lettertype, kleuren, juridische footer en de e-mail bij een factuur,
+    naast een live PDF-voorbeeld. De sjabloon-JSON zit achter "Geavanceerd". Het voorbeeld gebruikt de bestaande preview-actie
+    (Admin/InvoiceLayout/Preview) met de laatste factuur van dit bedrijf en de waarden uit het formulier — dus zonder eerst te bewaren.
+    E-mailonderwerp/-bericht: velden als chips i.p.v. codes ({{Invoice.PublicId}}); op submit wordt alles terug tekst met {{…}} (zelfde opslag als vroeger).
+*@
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@{
+    var templates = Model.InvoiceTemplates;
+    var lastInvoiceId = ViewBag.LastInvoiceId as int?;
+    var primary = string.IsNullOrWhiteSpace(Model.BrandPrimaryColor) ? "#01532d" : Model.BrandPrimaryColor!;
+    var secondary = string.IsNullOrWhiteSpace(Model.BrandSecondaryColor) ? "#000000" : Model.BrandSecondaryColor!;
+    var tokens = new[]
+    {
+        ("Factuurnummer", "Invoice.PublicId"), ("Factuurdatum", "Invoice.IssueDate:dd/MM/yyyy"), ("Vervaldatum", "Payment.DueDateDisplay"),
+        ("Totaal incl.", "Invoice.TotalIncl:C"), ("Totaal excl.", "Invoice.TotalExcl:C"), ("Btw-bedrag", "Invoice.TotalVat:C"),
+        ("Klantnaam", "Client.Name"), ("Bedrijfsnaam", "Issuer.Name"), ("Rekeningnummer", "Payment.BankAccount"),
+        ("Mededeling", "Payment.StructuredMessage"), ("Contact e-mail", "Issuer.Email"), ("Contact telefoon", "Issuer.Phone")
+    };
+    var tokenJson = JsonSerializer.Serialize(tokens.Select(t => new { label = t.Item1, expr = t.Item2 }));
+}
+<div class="gl-v2-ice-layout" id="ice-layout-root" data-invoice-id="@lastInvoiceId" data-issuer-id="@Model.Id" data-preview-url="@Url.Content("~/Admin/InvoiceLayout/Preview")" data-tokens="@tokenJson">
+    <div class="gl-v2-ice-col">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-layout" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Factuurlay-out</h2>
+            </div>
+            <div class="gl-v2-section-grid">
+                <div class="gl-v2-col-12">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "TemplateKey", Id = "ice-template-key", Label = "Sjabloon", Value = Model.TemplateKey ?? "",
+                        Help = null,
+                        Items = templates.Select(t => new GlV2SelectItem { Value = t.Key, Text = t.Name }).ToList()
+                    })
+                    <span class="gl-v2-field-help">Beheer sjablonen in <a href="@Url.Action("InvoiceTemplates", "Instellingen")">Factuurtemplates</a>.</span>
+                </div>
+                <div class="gl-v2-col-12">@Html.EditorFor(m => m.FontFamily, "GlV2Text", new { Label = "Lettertype", Placeholder = "standaard van sjabloon" })</div>
+                <div class="gl-v2-col-6">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="BrandPrimaryColor">Primaire kleur</label>
+                        <div class="gl-v2-field-box gl-v2-ice-color">
+                            <input type="color" class="gl-v2-ice-swatch" value="@primary" aria-label="Primaire kleur kiezen" data-ice-color-for="BrandPrimaryColor" />
+                            <input type="text" class="gl-v2-field-input gl-v2-ice-mono" id="BrandPrimaryColor" name="BrandPrimaryColor" value="@primary" maxlength="7" pattern="^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-6">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="BrandSecondaryColor">Secundaire kleur</label>
+                        <div class="gl-v2-field-box gl-v2-ice-color">
+                            <input type="color" class="gl-v2-ice-swatch" value="@secondary" aria-label="Secundaire kleur kiezen" data-ice-color-for="BrandSecondaryColor" />
+                            <input type="text" class="gl-v2-field-input gl-v2-ice-mono" id="BrandSecondaryColor" name="BrandSecondaryColor" value="@secondary" maxlength="7" pattern="^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$" autocomplete="off" />
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-12">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="FooterLegalText">Juridische footer</label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="FooterLegalText" name="FooterLegalText" rows="3" placeholder="bv. RPR Gent · algemene voorwaarden op www.bouwenconstructie.be">@Model.FooterLegalText</textarea></div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-12">
+                    <button type="button" class="gl-v2-ice-adv-toggle" id="ice-adv-toggle" aria-expanded="false" aria-controls="ice-adv">
+                        <i class="ph ph-caret-right" aria-hidden="true"></i><b>Geavanceerd — sjabloon-JSON</b><span>voor wie de QuestPDF-structuur wil aanpassen</span>
+                    </button>
+                    <div class="gl-v2-ice-adv" id="ice-adv" hidden>
+                        <div class="gl-v2-field">
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-ice-json"><textarea class="gl-v2-field-input gl-v2-ice-mono" id="TemplateJson" name="TemplateJson" rows="16" spellcheck="false" aria-label="Sjabloon-JSON">@Model.TemplateJson</textarea></div>
+                            <span class="gl-v2-field-help">Kleuren komen uit het bedrijf, niet uit het sjabloon. Valideert lokaal met het schema.</span>
+                        </div>
+                        <div class="gl-v2-notice gl-v2-notice-compact is-danger" id="ice-json-error" hidden><i class="ph ph-x-circle" aria-hidden="true"></i><span></span></div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="InvoiceFooterHtml">Voettekst (HTML)</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input gl-v2-ice-mono" id="InvoiceFooterHtml" name="InvoiceFooterHtml" rows="4">@Model.InvoiceFooterHtml</textarea></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">E-mail bij factuur</h2>
+                <span class="gl-v2-section-card-spacer"></span>
+                <div class="gl-v2-ice-seg" role="tablist" aria-label="Soort factuur">
+                    <button type="button" class="is-active" role="tab" aria-selected="true" data-ice-mail="open">Open factuur</button>
+                    <button type="button" role="tab" aria-selected="false" data-ice-mail="paid">Reeds betaald</button>
+                </div>
+            </div>
+            <div class="gl-v2-ice-card-body">
+                <div class="gl-v2-field">
+                    <span class="gl-v2-field-label" id="ice-subject-label">Onderwerp</span>
+                    <div class="gl-v2-field-box gl-v2-ice-rte-box">
+                        <div class="gl-v2-ice-rte is-line" contenteditable="true" role="textbox" aria-labelledby="ice-subject-label" data-rte="line" data-target="EmailSubjectTemplate" data-placeholder="Factuur {{Invoice.PublicId}}"></div>
+                    </div>
+                    <input type="hidden" name="EmailSubjectTemplate" value="@Model.EmailSubjectTemplate" />
+                </div>
+                <div class="gl-v2-field" data-ice-mail-panel="open">
+                    <span class="gl-v2-field-label" id="ice-body-label">Bericht</span>
+                    <div class="gl-v2-ice-rte-wrap">
+                        <div class="gl-v2-ice-rte-bar" role="toolbar" aria-label="Opmaak">
+                            <button type="button" data-cmd="bold" aria-label="Vet"><b>B</b></button>
+                            <button type="button" data-cmd="italic" aria-label="Cursief"><i>I</i></button>
+                            <button type="button" data-cmd="underline" aria-label="Onderstreept"><u>U</u></button>
+                            <span class="gl-v2-ice-rte-sep"></span>
+                            <button type="button" data-cmd="insertUnorderedList">• Lijst</button>
+                            <button type="button" data-cmd="link">Link</button>
+                            <span class="gl-v2-ice-spacer"></span>
+                            <button type="button" class="js-gl-v2-menu-trigger gl-v2-ice-rte-insert" aria-haspopup="true" aria-expanded="false" aria-controls="ice-token-menu-open">+ Veld invoegen</button>
+                        </div>
+                        <div class="gl-v2-ice-rte is-body" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="ice-body-label" data-rte="body" data-target="EmailBodyTemplate" data-menu="ice-token-menu-open" data-placeholder="Leeg laten voor de standaardtekst"></div>
+                    </div>
+                    <input type="hidden" name="EmailBodyTemplate" value="@Model.EmailBodyTemplate" />
+                </div>
+                <div class="gl-v2-field" data-ice-mail-panel="paid" hidden>
+                    <span class="gl-v2-field-label" id="ice-paid-label">Bericht — reeds betaalde factuur</span>
+                    <div class="gl-v2-ice-rte-wrap">
+                        <div class="gl-v2-ice-rte-bar" role="toolbar" aria-label="Opmaak">
+                            <button type="button" data-cmd="bold" aria-label="Vet"><b>B</b></button>
+                            <button type="button" data-cmd="italic" aria-label="Cursief"><i>I</i></button>
+                            <button type="button" data-cmd="underline" aria-label="Onderstreept"><u>U</u></button>
+                            <span class="gl-v2-ice-rte-sep"></span>
+                            <button type="button" data-cmd="insertUnorderedList">• Lijst</button>
+                            <button type="button" data-cmd="link">Link</button>
+                            <span class="gl-v2-ice-spacer"></span>
+                            <button type="button" class="js-gl-v2-menu-trigger gl-v2-ice-rte-insert" aria-haspopup="true" aria-expanded="false" aria-controls="ice-token-menu-paid">+ Veld invoegen</button>
+                        </div>
+                        <div class="gl-v2-ice-rte is-body" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="ice-paid-label" data-rte="body" data-target="EmailPaidBodyTemplate" data-menu="ice-token-menu-paid" data-placeholder="Leeg laten voor het standaard e-mailsjabloon"></div>
+                    </div>
+                    <input type="hidden" name="EmailPaidBodyTemplate" value="@Model.EmailPaidBodyTemplate" />
+                </div>
+                <p class="gl-v2-field-help">Velden als chips in plaats van codes als Invoice.PublicId — leeg laten = standaardtekst.</p>
+            </div>
+        </section>
+    </div>
+
+    <div class="gl-v2-ice-col gl-v2-ice-previewcol">
+        <section class="gl-v2-section-card gl-v2-ice-preview">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-eye" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Voorbeeld</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">laatste factuur</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ice-preview-open" disabled><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Open PDF</button>
+            </div>
+            <div class="gl-v2-ice-preview-body" id="ice-preview-body">
+                @if (lastInvoiceId == null || Model.Id <= 0)
+                {
+                    <div class="gl-v2-ice-preview-empty"><i class="ph ph-file-pdf" aria-hidden="true"></i><b>Nog geen voorbeeld</b><span>Dit bedrijf heeft nog geen factuur om als voorbeeld te tonen. Maak eerst een factuur aan.</span></div>
+                }
+                else
+                {
+                    <div class="gl-v2-ice-preview-empty" id="ice-preview-state"><i class="ph ph-spinner-gap gl-v2-spin" aria-hidden="true"></i><b>Voorbeeld laden…</b></div>
+                    <iframe id="ice-preview-frame" title="Voorbeeld van de factuur" hidden></iframe>
+                }
+            </div>
+            <div class="gl-v2-ice-preview-foot">
+                <span>Werkt live bij bij elke wijziging links.</span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-warning" id="ice-layout-reset"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Reset naar standaard</button>
+            </div>
+        </section>
+    </div>
+</div>
+
+@foreach (var which in new[] { "open", "paid" })
+{
+    <div class="gl-v2-menu gl-v2-ice-token-menu" id="ice-token-menu-@which">
+        <div class="gl-v2-menu-title">VELD INVOEGEN</div>
+        @foreach (var t in tokens)
+        {
+            <button type="button" class="gl-v2-menu-item js-ice-token" data-expr="@t.Item2" data-label="@t.Item1"><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">@t.Item1</span></span></button>
+        }
+    </div>
+}

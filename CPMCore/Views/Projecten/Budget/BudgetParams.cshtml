@@ -115,8 +115,9 @@
                                 <span class="params-preview" id="prevArchitect">—</span>
                             </div>
                             <div class="gl-field">
-                                <label for="Params_VeiligheidscoordEPBPerc">Veiligheidscoörd. + EPB (%)</label>
-                                @Html.TextBoxFor(m => m.Params.VeiligheidscoordEPBPerc, new { @class = "form-control form-control-modern perc-input text-end", type = "number", step = "0.0001" })
+                                <label for="pctVeiligheid">Veiligheidscoörd. + EPB (%)</label>
+                                <input name="pctVeiligheid" id="pctVeiligheid" value="@Pct(Model.Params.VeiligheidscoordEPBPerc)"
+                                       class="form-control form-control-modern perc-input perc-pct text-end" type="number" step="0.01" placeholder="0,00" />
                                 <span class="params-preview" id="prevVeiligheid">—</span>
                             </div>
                             <div class="gl-field">
@@ -149,13 +150,15 @@
                         </div>
                         <div class="gl-field-grid">
                             <div class="gl-field">
-                                <label for="Params_DecennaleGeslRuwbouwPerc">Decennale gesloten ruwbouw (%)</label>
-                                @Html.TextBoxFor(m => m.Params.DecennaleGeslRuwbouwPerc, new { @class = "form-control form-control-modern perc-input text-end", type = "number", step = "0.0001" })
+                                <label for="pctDecennale">Decennale gesloten ruwbouw (%)</label>
+                                <input name="pctDecennale" id="pctDecennale" value="@Pct(Model.Params.DecennaleGeslRuwbouwPerc)"
+                                       class="form-control form-control-modern perc-input perc-pct text-end" type="number" step="0.01" placeholder="0,00" />
                                 <span class="params-preview" id="prevDecennale">—</span>
                             </div>
                             <div class="gl-field">
-                                <label for="Params_ABRPlaatsbeschrPerc">ABR + plaatsbeschrijving (%)</label>
-                                @Html.TextBoxFor(m => m.Params.ABRPlaatsbeschrPerc, new { @class = "form-control form-control-modern perc-input text-end", type = "number", step = "0.0001" })
+                                <label for="pctABR">ABR + plaatsbeschrijving (%)</label>
+                                <input name="pctABR" id="pctABR" value="@Pct(Model.Params.ABRPlaatsbeschrPerc)"
+                                       class="form-control form-control-modern perc-input perc-pct text-end" type="number" step="0.01" placeholder="0,00" />
                                 <span class="params-preview" id="prevABR">—</span>
                             </div>
                         </div>
@@ -202,27 +205,30 @@
                         </div>
                         <div class="gl-field-grid">
                             <div class="gl-field">
-                                <label for="Params_WetBreynePerc">Wet Breyne</label>
+                                <label for="pctWetBreyne">Wet Breyne</label>
                                 <div class="bw-dual">
-                                    @Html.TextBoxFor(m => m.Params.WetBreynePerc, new { @class = "form-control form-control-modern text-end", type = "number", step = "0.0001" })
+                                    <input name="pctWetBreyne" id="pctWetBreyne" value="@Pct(Model.Params.WetBreynePerc)"
+                                       class="form-control form-control-modern  text-end" type="number" step="0.01" placeholder="1,00" />
                                     <span>%</span>
                                     @Html.TextBoxFor(m => m.Params.WetBreyneMaanden, new { @class = "form-control form-control-modern text-end", type = "number", step = "1" })
                                     <span>mnd</span>
                                 </div>
                             </div>
                             <div class="gl-field">
-                                <label for="Params_StraightloanGebouwPerc">Straight loan gebouw</label>
+                                <label for="pctSlGebouw">Straight loan gebouw</label>
                                 <div class="bw-dual">
-                                    @Html.TextBoxFor(m => m.Params.StraightloanGebouwPerc, new { @class = "form-control form-control-modern text-end", type = "number", step = "0.0001" })
+                                    <input name="pctSlGebouw" id="pctSlGebouw" value="@Pct(Model.Params.StraightloanGebouwPerc)"
+                                       class="form-control form-control-modern  text-end" type="number" step="0.01" placeholder="1,25" />
                                     <span>%</span>
                                     @Html.TextBoxFor(m => m.Params.StraightloanGebouwMaanden, new { @class = "form-control form-control-modern text-end", type = "number", step = "1" })
                                     <span>mnd</span>
                                 </div>
                             </div>
                             <div class="gl-field">
-                                <label for="Params_StraightloanGrondPerc">Straight loan grond</label>
+                                <label for="pctSlGrond">Straight loan grond</label>
                                 <div class="bw-dual">
-                                    @Html.TextBoxFor(m => m.Params.StraightloanGrondPerc, new { @class = "form-control form-control-modern text-end", type = "number", step = "0.0001" })
+                                    <input name="pctSlGrond" id="pctSlGrond" value="@Pct(Model.Params.StraightloanGrondPerc)"
+                                       class="form-control form-control-modern  text-end" type="number" step="0.01" placeholder="1,25" />
                                     <span>%</span>
                                     @Html.TextBoxFor(m => m.Params.StraightloanGrondMaanden, new { @class = "form-control form-control-modern text-end", type = "number", step = "1" })
                                     <span>mnd</span>
@@ -233,8 +239,9 @@
                                 @Html.TextBoxFor(m => m.Params.AankoopprijsGrond, new { @class = "form-control form-control-modern text-end", type = "number", step = "0.01" })
                             </div>
                             <div class="gl-field">
-                                <label for="Params_OnvoorzienPerc">Onvoorzien (%)</label>
-                                @Html.TextBoxFor(m => m.Params.OnvoorzienPerc, new { @class = "form-control form-control-modern perc-input text-end", type = "number", step = "0.0001", placeholder = "0,0200" })
+                                <label for="pctOnvoorzien">Onvoorzien (%)</label>
+                                <input name="pctOnvoorzien" id="pctOnvoorzien" value="@Pct(Model.Params.OnvoorzienPerc)"
+                                       class="form-control form-control-modern perc-input perc-pct text-end" type="number" step="0.01" placeholder="2,00" />
                                 <span class="params-preview" id="prevOnvoorzien">—</span>
                             </div>
                         </div>
@@ -298,12 +305,7 @@
     }
 
     function updatePreviews() {
-        // fractie-velden (0,05) : bedrag = perc × bouwkost
-        function percBedrag(selector, prevId) {
-            var perc = parseFloat($(selector).val()) || 0;
-            $('#' + prevId).text(fmtEuro(totaalBouw * perc));
-        }
-        // procentpunt-velden (5,25) : bedrag = perc/100 × bouwkost
+        // alle percentages in procentpunten (5,25) : bedrag = perc/100 × bouwkost
         function pctBedrag(selector, prevId) {
             var perc = parseFloat($(selector).val()) || 0;
             $('#' + prevId).text(fmtEuro(totaalBouw * perc / 100));
@@ -311,10 +313,10 @@
         pctBedrag('#pctProjectcoord',  'prevProjectcoord');
         pctBedrag('#pctArchitect',     'prevArchitect');
         pctBedrag('#pctIngenieur',     'prevStudieIR');
-        percBedrag('[name="Params.VeiligheidscoordEPBPerc"]', 'prevVeiligheid');
-        percBedrag('[name="Params.DecennaleGeslRuwbouwPerc"]','prevDecennale');
-        percBedrag('[name="Params.ABRPlaatsbeschrPerc"]',     'prevABR');
-        percBedrag('[name="Params.OnvoorzienPerc"]',          'prevOnvoorzien');
+        pctBedrag('#pctVeiligheid',    'prevVeiligheid');
+        pctBedrag('#pctDecennale',     'prevDecennale');
+        pctBedrag('#pctABR',           'prevABR');
+        pctBedrag('#pctOnvoorzien',    'prevOnvoorzien');
 
         var liftPrijs = parseFloat($('[name="Params.LiftPrijsPerStuk"]').val()) || 0;
         $('#prevLiften').text(fmtEuro(aantalLiften * liftPrijs) + ' (' + aantalLiften + ' st.)');

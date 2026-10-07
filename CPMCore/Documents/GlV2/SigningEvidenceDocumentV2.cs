@@ -205,16 +205,18 @@ namespace CPMCore.Documents.GlV2
         /// <summary>Vlak #F3F7F0 met QR (24mm, wit) en de uitleg + verificatielink (35j).</summary>
         private void Echtheid(IContainer c)
         {
-            var link = _input.VerificationUrl.Replace("https://", "").Replace("http://", "");
+            var url = _input.VerificationUrl;
+            var link = url.Replace("https://", "").Replace("http://", "");
             c.Background(GlV2PdfTheme.VlakGroen).CornerRadius(1.5f, Unit.Millimetre).Padding(4, Unit.Millimetre).Row(row =>
             {
                 row.Spacing(5, Unit.Millimetre);
-                row.ConstantItem(24, Unit.Millimetre).Height(24, Unit.Millimetre).Background(GlV2PdfTheme.Wit).Image(_qrPng!).FitArea();
+                row.ConstantItem(24, Unit.Millimetre).Height(24, Unit.Millimetre).Background(GlV2PdfTheme.Wit).Hyperlink(url).Image(_qrPng!).FitArea();
                 row.RelativeItem().AlignMiddle().Column(col =>
                 {
                     col.Spacing(1.4f, Unit.Millimetre);
                     col.Item().Text("Scan de code of ga naar de verificatiepagina").FontFamily(BodyFont).FontSize(8.5f).SemiBold().FontColor(GlV2PdfTheme.Inkt);
-                    col.Item().Text(link).FontFamily(BodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Groen);
+                    // Echte, klikbare link (PDF-annotatie), niet enkel tekst: wie het blad op een scherm leest klikt gewoon door.
+                    col.Item().Hyperlink(url).Text(link).FontFamily(BodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Groen).Underline();
                     col.Item().Text("De SHA-256-vingerafdruk is berekend op het document zoals ondertekend. Elke wijziging achteraf geeft een andere vingerafdruk — zo zie je dat het document echt is.")
                         .FontFamily(BodyFont).FontSize(7).FontColor(GlV2PdfTheme.Gedempt).LineHeight(1.5f);
                 });

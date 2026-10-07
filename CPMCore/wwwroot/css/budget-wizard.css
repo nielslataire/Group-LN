@@ -1139,3 +1139,59 @@ select.bw-cell-input {
     font-weight: 700;
     color: var(--primary, #0a5a3b);
 }
+
+/* ── Stap 8 Verkoop: verkooplijnen per m² (okt. 2026) ────────────────
+   Bron-badge per lijn, kolomgroepen Grond/Bouw, waarschuwing onder het
+   minimum en de samenvattingsregel onder de tabel. */
+.bw-bron {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: var(--lightgray, #f1f3f7);
+    color: var(--muted, #6b7280);
+}
+.bw-bron--1 { background: #e6f2ec; color: var(--primary, #0a5a3b); }       /* voorstel */
+.bw-bron--2 { background: #e8eef9; color: #2f4f8f; }                        /* markt */
+.bw-bron--3 { background: #efe9f7; color: #5b3d8f; }                        /* referentiecode */
+.bw-bron--4, .bw-bron--5 { background: #fbf1df; color: #8a5a10; }           /* manueel */
+.bw-sub { font-size: 0.72rem; color: var(--muted, #8590a5); margin-top: 2px; white-space: nowrap; }
+.bw-table th.bw-th-group {
+    text-align: center;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted, #8590a5);
+    padding-bottom: 2px;
+    border-bottom: 0;
+}
+.bw-table th.bw-th-group--grond, .bw-table td.bw-col-grond { background: rgba(10, 90, 59, 0.025); }
+.bw-table th.bw-th-group--bouw,  .bw-table td.bw-col-bouw  { background: rgba(47, 79, 143, 0.03); }
+.bw-prijs-cell { position: relative; }
+.bw-prijs-cell .min-warn {
+    position: absolute;
+    right: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--danger, #b3452f);
+    font-size: 0.8rem;
+}
+.verkoop-row.is-onder-min .vraagprijs { border-color: var(--danger, #b3452f); color: var(--danger, #b3452f); }
+.verkoop-row.is-ruil .bw-col-grond .bw-cell-input { background: var(--lightgray, #f8f9fc); color: var(--muted, #8590a5); }
+.bw-verkoop-samenvatting {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.75rem;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid var(--border, #e7e7e7);
+    font-size: 0.84rem;
+    color: var(--dark, #222);
+}
+.bw-verkoop-samenvatting .lbl { color: var(--muted, #8590a5); margin-right: 0.35rem; }
+.bw-verkoop-samenvatting .pos { color: var(--primary, #0a5a3b); font-weight: 600; }
+.bw-verkoop-samenvatting .neg { color: var(--danger, #b3452f); font-weight: 600; }
+.bw-ref-form .bw-cell-input { height: 30px; font-size: 0.8rem; padding: 2px 8px; }

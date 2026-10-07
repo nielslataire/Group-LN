@@ -18,6 +18,9 @@ namespace FacadeCore
         GetResponse<BudgetVersieBO> GetActiefVersie(int masterId);
         Response CreateNieuweVersie(int masterId, string versieNaam, string notitie, int userId);
         Response ActiveerVersie(int versieId);
+        /// <summary>Kopieert de volledige inhoud van een versie (gegevens, oppervlaktes, sanitair, gevels, activiteitenlijnen,
+        /// parameters, verkooplijnen) naar een al bestaande, lege doelversie.</summary>
+        Response KopieerVersieInhoud(int bronVersieId, int doelVersieId);
 
         // BudgetGegevens
         GetResponse<BudgetGegevensBO> GetBudgetGegevens(int versieId);

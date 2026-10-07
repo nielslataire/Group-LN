@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using DALCore.Models;
 
 namespace CPMCore.Models.Budget
@@ -24,7 +25,25 @@ namespace CPMCore.Models.Budget
         /// <summary>Units van het project, om een verkooplijn aan een Unit te koppelen (doorzetten).</summary>
         public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> UnitOptions { get; set; } = new();
 
+        /// <summary>Per eenheid (naam uit stap 2) de oppervlaktes en voorstelbedragen waarmee de verkooplijnen rekenen (JS op stap 8).</summary>
+        public Dictionary<string, VerkoopEenheidInfo> EenhedenInfo { get; set; } = new();
+
         public decimal? VraagprijzenLijnen =>
             Lijnen.Any(l => l.Vraagprijs is > 0m) ? Lijnen.Where(l => l.Vraagprijs is > 0m).Sum(l => l.Vraagprijs.Value) : null;
+    }
+
+    /// <summary>Rekenbasis van één eenheid voor de verkooplijnen: bouw op gereduceerde oppervlakte, grond op grondoppervlakte.</summary>
+    public class VerkoopEenheidInfo
+    {
+        public decimal  OppGereduceerd  { get; set; }
+        public decimal  Grondopp        { get; set; }
+        public decimal  BewoonbareOpp   { get; set; }
+        public decimal  VoorstelGrond   { get; set; }
+        public decimal  VoorstelBouw    { get; set; }
+        /// <summary>Minimale verkoopprijs (kost + marge) = VoorstelGrond + VoorstelBouw.</summary>
+        public decimal  Minimum         { get; set; }
+        /// <summary>Marktprijs (mediaan €/m² × bewoonbare opp.), null zonder referentie.</summary>
+        public decimal? Markt           { get; set; }
+        public decimal? MarktPerM2      { get; set; }
     }
 }

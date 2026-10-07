@@ -75,8 +75,9 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
             DocumentNumber: model.Reference,
             Summary: string.IsNullOrWhiteSpace(model.Subject) ? null : model.Subject.Trim(),   // onderwerp, niet de omschrijving voor de klant
             AmountExclVat: Math.Round(model.TotalExcl, 2, MidpointRounding.AwayFromZero),
-            VatAmount: Math.Round(model.VatAmount, 2, MidpointRounding.AwayFromZero),
-            AmountInclVat: Math.Round(model.TotalIncl, 2, MidpointRounding.AwayFromZero),
+            // Btw per regel (ChangeOrderDetail.VatPercentage/btw-code), net als op de PDF — niet de projectinstelling (die was 0).
+            VatAmount: Math.Round(model.VatTotalByLines, 2, MidpointRounding.AwayFromZero),
+            AmountInclVat: Math.Round(model.TotalInclByLines, 2, MidpointRounding.AwayFromZero),
             ProjectId: model.ProjectId > 0 ? model.ProjectId : null,
             ClientAccountId: model.ClientAccountId,
             SuggestedParties: parties,
@@ -263,6 +264,47 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
             .Where(c => c.Id == sourceEntityId)
             .Select(c => c.ContractActivity.Contract.Project.ProjectName)
             .FirstOrDefaultAsync(ct);
+
+    /// <summary>Het facturatiebedrijf dat de wijzigingsopdracht uitgeeft (zelfde regel als de PDF: <see cref="ChangeOrderIssuerResolver"/>).</summary>
+    public async Task<string?> GetIssuerNameAsync(int sourceEntityId, CancellationToken ct = default)
+    {
+        var project = await _db.ChangeOrder.AsNoTracking()
+            .Where(c => c.Id == sourceEntityId)
+            .Select(c => c.ContractActivity.Contract.Project)
+            .FirstOrDefaultAsync(ct);
+        var issuerId = await ChangeOrderIssuerResolver.ResolveIssuerCompanyIdAsync(_db, project!, ct);
+        if (issuerId is null) return null;
+        return await _db.IssuerCompany.AsNoTracking().Where(i => i.Id == issuerId.Value).Select(i => i.Name).FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>Actuele bedragen (excl., btw, incl.) met de btw per regel, voor de ondertekenpagina — ook voor dossiers die met de
+    /// oude (foute) btw-berekening geopend werden.</summary>
+    public async Task<(decimal Excl, decimal Vat, decimal Incl)?> GetAmountsAsync(int sourceEntityId, CancellationToken ct = default)
+    {
+        var model = await _pdf.LoadAsync(sourceEntityId, ct);
+        if (model is null) return null;
+        return (Math.Round(model.TotalExcl, 2, MidpointRounding.AwayFromZero),
+                Math.Round(model.VatTotalByLines, 2, MidpointRounding.AwayFromZero),
+                Math.Round(model.TotalInclByLines, 2, MidpointRounding.AwayFromZero));
+    }
+
+    /// <summary>Eenheid(en) van de klant in het project, zoals op de PDF (<c>ChangeOrderPdfBuilder.LoadAsync</c>: "Woning Lot 2 - Garage 3").</summary>
+    public async Task<string?> GetUnitLabelAsync(int sourceEntityId, CancellationToken ct = default)
+    {
+        var co = await _db.ChangeOrder.AsNoTracking()
+            .Where(c => c.Id == sourceEntityId)
+            .Select(c => new { c.ClientAccountId, ProjectId = (int?)c.ContractActivity.Contract.ProjectId })
+            .FirstOrDefaultAsync(ct);
+        if (co?.ProjectId is not int projectId) return null;
+
+        var units = await _db.Units.AsNoTracking()
+            .Where(u => u.ClientAccountId == co.ClientAccountId && u.ProjectId == projectId && u.Type != null && u.Type.Selectable == true)
+            .OrderBy(u => u.Type!.GroupId).ThenBy(u => u.Name)
+            .Select(u => new { TypeName = u.Type!.Name, u.Name })
+            .ToListAsync(ct);
+        var label = string.Join(" - ", units.Select(u => $"{u.TypeName} {u.Name}".Trim()));
+        return string.IsNullOrWhiteSpace(label) ? null : label;
+    }
 
     /// <summary>De verkoopverantwoordelijke van het project, anders de projectverantwoordelijke
     /// (Project.AspNetUser). Zonder e-mail: lege lijst — de service logt dat als NotificationFailed.</summary>

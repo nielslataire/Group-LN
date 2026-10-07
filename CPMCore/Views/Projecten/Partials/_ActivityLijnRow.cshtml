@@ -3,17 +3,29 @@
     var inv  = System.Globalization.CultureInfo.InvariantCulture;
     var nlBE = new System.Globalization.CultureInfo("nl-BE");
     string Eur(decimal v) => v.ToString("N2", nlBE);
+    string Eur0(decimal v) => v.ToString("N0", nlBE);
 
     var basis        = Model.TotaalAlternatief;                              // € basis = €/eenheid × aantal eenheden
     var corr         = Model.Correctiefactor <= 0 ? 1m : Model.Correctiefactor;
     var pct          = corr * 100m;
     var gecorrigeerd = basis * corr;
+
+    // Nacalc-referentie (gekozen referentieprojecten, geïndexeerd); kolommen enkel als de pagina referenties heeft
+    var toonRef   = ViewData["HeeftReferenties"] is true;
+    var refTotaal = Model.ReferentieTotaal;
+    var refTitel  = Model.HeeftReferentie
+        ? $"{Model.ReferentieAantalProjecten} referentieproject(en) · € {Eur0(Model.ReferentiePrijsPerEenheid!.Value)}/eenheid"
+          + (Model.ReferentieMinPerEenheid.HasValue && Model.ReferentieAantalProjecten > 1 ? $" (van € {Eur0(Model.ReferentieMinPerEenheid.Value)} tot € {Eur0(Model.ReferentieMaxPerEenheid ?? 0m)})" : "")
+          + (Model.ReferentiePrijsPerM2.HasValue ? $" · € {Eur0(Model.ReferentiePrijsPerM2.Value)}/m² GBA" : "")
+        : "Geen referentieproject met een bedrag voor deze activiteit";
 }
 <tr class="act-row"
     data-activity-id="@Model.ActivityId"
     data-basis="@basis.ToString(inv)"
     data-prijs="@Model.AlternatievePrijsPerEenheid.ToString(inv)"
     data-nacalc="@Model.NacalcPrijsPerEenheid.ToString(inv)"
+    data-ref="@((Model.ReferentiePrijsPerEenheid ?? 0m).ToString(inv))"
+    data-ref-totaal="@((refTotaal ?? 0m).ToString(inv))"
     data-manueel="@Model.IsManueel.ToString().ToLowerInvariant()">
 
     <td class="act-row__naam">
@@ -81,6 +93,30 @@
     </td>
 
     <td class="bw-num act-row__basis">€ @Eur(basis)</td>
+
+    @if (toonRef)
+    {
+        <td class="bw-num act-row__ref" title="@refTitel">
+            @if (Model.HeeftReferentie)
+            {
+                <span>€ @Eur(refTotaal!.Value)</span>
+                <span class="act-row__ref-n">@Model.ReferentieAantalProjecten</span>
+            }
+            else
+            {
+                <span class="text-muted">—</span>
+            }
+        </td>
+        <td class="bw-num act-row__verschil">
+            @if (Model.HeeftReferentie)
+            {
+                <span class="act-row__delta"></span>
+                <button type="button" class="act-row__overnemen" title="Correctie zetten zodat het gecorrigeerde bedrag gelijk is aan de referentie" aria-label="Referentie overnemen als correctie">
+                    <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i>
+                </button>
+            }
+        </td>
+    }
 
     <td class="bw-num">
         <div class="act-row__pct">

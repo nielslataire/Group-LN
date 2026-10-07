@@ -95,6 +95,9 @@ public class TrajectRecalculationService : ITrajectRecalculationService
         changed += HerberekenDoeldatums(traject.Mijlpalen.ToList(), ankerBySjabloonId,
             traject.GestartOp ?? vandaag);
 
+        // 2b. relatieve streefdata (migratie 074): anker + N dagen, na de sjabloonankers zodat ketens kloppen
+        changed += MijlpaalRelatief.Herbereken(traject.Mijlpalen.ToList());
+
         // 3. fase-status bijwerken
         HerberekenFases(traject, vandaag);
 

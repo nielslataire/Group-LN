@@ -1,0 +1,174 @@
+@model CPMCore.Models.Instellingen.BudgetPrijsReferentiesViewModel
+@using BOCore.Budget
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    var types = new[] { ("Bouw", "Bouwprijscodes", "€/m² gereduceerde oppervlakte (wegingsconventie van het tabblad Oppervlaktes)"),
+                        ("Grond", "Grondprijscodes", "€/m² grondoppervlakte van de eenheid") };
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/instellingen-custom.css" />
+    <style>
+        .currency-input { text-align: right; }
+        .ref-badge-p { font-size: 0.65rem; }
+    </style>
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Prijsreferenties verkoop</h1>
+            <h5 class="mb-4 mt-0">Bouw- en grondprijscodes (€/m²) voor de verkooplijnen op stap 8 van de budgetwizard. Algemene codes gelden voor elk project; een code met project is enkel daar zichtbaar.</h5>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    @foreach (var (type, titel, _) in types)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(type == "Bouw" ? "active" : "")" data-bs-toggle="tab" href="#tab-@type.ToLower()" role="tab">
+                <i class="fa-solid @(type == "Bouw" ? "fa-building" : "fa-map-location-dot") me-1"></i> @titel
+                <span class="badge bg-light text-dark ms-1">@Model.Referenties.Count(r => r.PrijsType == type)</span>
+            </a>
+        </li>
+    }
+</ul>
+
+<div class="tab-content">
+@foreach (var (type, titel, basis) in types)
+{
+    var refs = Model.Referenties.Where(r => r.PrijsType == type).ToList();
+    <div class="tab-pane fade @(type == "Bouw" ? "show active" : "")" id="tab-@type.ToLower()" role="tabpanel">
+
+        <section class="card card-modern mb-4">
+            <div class="card-header border-0 pb-0">
+                <h2 class="card-title mb-0">@titel toevoegen</h2>
+                <p class="text-muted small mb-0">Basis: @basis. Datum en bron maken een manueel opgezochte referentie herleidbaar (bv. "verkoop Keerstraat lot 3, 06/2026").</p>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-action="BudgetPrijsReferentieCreate" asp-controller="Instellingen">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="prijsType" value="@type" />
+                    <div class="row g-3 align-items-end">
+                        <div class="col-lg-1">
+                            <label class="form-label">Code</label>
+                            <input type="number" name="code" min="1" class="form-control form-control-modern" required />
+                        </div>
+                        <div class="col-lg-3">
+                            <label class="form-label">Omschrijving</label>
+                            <input name="omschrijving" maxlength="200" class="form-control form-control-modern" />
+                        </div>
+                        <div class="col-lg-2">
+                            <label class="form-label">Prijs per m²</label>
+                            <div class="input-group">
+                                <span class="input-group-text">€</span>
+                                <input type="number" step="0.01" min="0.01" name="prijsPerM2" class="form-control form-control-modern currency-input" required />
+                            </div>
+                        </div>
+                        <div class="col-lg-2">
+                            <label class="form-label">Datum</label>
+                            <input type="date" name="datum" class="form-control form-control-modern" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-lg-2">
+                            <label class="form-label">Bron</label>
+                            <input name="bron" maxlength="200" class="form-control form-control-modern" placeholder="verkoop, schatting, markt…" />
+                        </div>
+                        <div class="col-lg-2">
+                            <label class="form-label">Project (optioneel)</label>
+                            <select name="projectId" class="form-control form-control-modern">
+                                <option value="">Algemeen (alle projecten)</option>
+                                @foreach (var p in Model.Projecten)
+                                {
+                                    <option value="@p.ID">@p.Display</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-lg-2">
+                            <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="card card-modern">
+            <div class="card-header border-0 pb-0">
+                <h2 class="card-title mb-0">@titel</h2>
+            </div>
+            <div class="card-body pt-2">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width:90px">Code</th>
+                                <th>Omschrijving</th>
+                                <th style="width:150px">Prijs per m²</th>
+                                <th style="width:150px">Datum</th>
+                                <th>Bron</th>
+                                <th style="width:220px">Project</th>
+                                <th class="text-end">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!refs.Any())
+                            {
+                                <tr><td colspan="7" class="text-muted">Nog geen @titel.ToLower().</td></tr>
+                            }
+                            @foreach (var r in refs)
+                            {
+                                <tr>
+                                    <form method="post" asp-action="BudgetPrijsReferentieUpdate" asp-controller="Instellingen">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@r.Id" />
+                                        <input type="hidden" name="prijsType" value="@type" />
+                                        <td><input type="number" name="code" min="1" value="@r.Code" class="form-control form-control-sm" style="width:75px" /></td>
+                                        <td><input name="omschrijving" maxlength="200" value="@r.Omschrijving" class="form-control form-control-sm" style="min-width:180px" /></td>
+                                        <td>
+                                            <div class="input-group input-group-sm" style="width:130px">
+                                                <span class="input-group-text">€</span>
+                                                <input type="number" step="0.01" min="0.01" name="prijsPerM2" value="@r.PrijsPerM2.ToString("F2", ic)" class="form-control form-control-sm currency-input" />
+                                            </div>
+                                        </td>
+                                        <td><input type="date" name="datum" value="@(r.Datum?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" style="width:140px" /></td>
+                                        <td><input name="bron" maxlength="200" value="@r.Bron" class="form-control form-control-sm" style="min-width:160px" /></td>
+                                        <td>
+                                            <select name="projectId" class="form-control form-control-sm">
+                                                <option value="">Algemeen</option>
+                                                @foreach (var p in Model.Projecten)
+                                                {
+                                                    <option value="@p.ID" selected="@(r.ProjectId == p.ID ? "selected" : null)">@p.Display</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td class="actions text-end text-nowrap">
+                                            <button type="submit" class="btn btn-link p-0 ms-1 me-1" title="Opslaan"><i class="bx bx-save fs-5"></i></button>
+                                            <button type="submit" formmethod="post"
+                                                    formaction="@Url.Action("BudgetPrijsReferentieDelete", "Instellingen", new { id = r.Id })"
+                                                    class="btn btn-link p-0 ms-1 me-1" title="Verwijderen"
+                                                    onclick="return confirm('Code @r.Code verwijderen? De €/m² die al op verkooplijnen staat, blijft daar staan.');">
+                                                <i class="bx bx-trash fs-5 text-danger"></i>
+                                            </button>
+                                        </td>
+                                    </form>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+}
+</div>

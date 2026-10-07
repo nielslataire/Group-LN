@@ -47,4 +47,24 @@ public class TrajectIndexVm
     /// kalender (_Kalender.cshtml). MijlpaalService.Search() include't Triggers niet (andere
     /// callers hebben dat niet nodig), dus apart geladen in de controller.</summary>
     public Dictionary<int, List<MijlpaalTrigger>> TriggersPerMijlpaal { get; set; } = new();
+
+    // ── gl-v2 (design-handoff 30) ───────────────────────────────────────────────────────────────
+    public bool CanWrite { get; set; }
+    public bool CanDelete { get; set; }
+
+    /// <summary>Aantal toepasbare wijzigingen uit het sjabloon (nieuw + gewijzigd) — "Sync met sjabloon" toont dit.</summary>
+    public int SyncOpenstaand { get; set; }
+
+    /// <summary>Aantal mijlpalen die het sjabloon nog heeft voor een fase maar die nog niet in het traject staan, per faseNaam.</summary>
+    public Dictionary<string, int> SyncNieuwPerFaseNaam { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Open dossier(s) dat aan een mijlpaal hangt, per MijlpaalId — voor "Naar dossier" in de melding.</summary>
+    public Dictionary<int, ProjectDossier> DossierPerMijlpaal { get; set; } = new();
+
+    /// <summary>Tab die bij het laden open moet staan (tijdlijn|mijlpalen|eenheden|kalender) en de mijlpaal die kort oplicht na opslaan.</summary>
+    public string? StartTab { get; set; }
+    public int? HighlightMijlpaalId { get; set; }
+
+    /// <summary>Verantwoordelijke gebruiker per UserId → (volledige naam, initialen), voor de avatar naast een mijlpaal.</summary>
+    public Dictionary<string, (string Naam, string Initialen)> Gebruikers { get; set; } = new();
 }

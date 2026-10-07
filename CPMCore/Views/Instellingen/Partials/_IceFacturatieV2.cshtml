@@ -1,0 +1,191 @@
+@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@*
+    gl-v2 — Bedrijf bewerken, tab "Facturatie" (design-handoff 24c): Standaarden voor nieuwe facturen · Nummerreeksen · Betaaltermijnen ·
+    EPC-betaal-QR · Peppol / e-invoicing. Alles post met de hoofd-form (dezelfde veldnamen als de klassieke pagina); nummerreeksen hebben een
+    eigen modal die naar de bestaande SeriesCreate/SeriesEdit post, de betaaltermijnen worden client-side beheerd (JSON → verborgen
+    PaymentTerms[i].*-velden, gl-v2-instellingen-issuercompany-edit.js).
+*@
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@{
+    var terms = (IReadOnlyList<BOCore.PaymentTermOptionBO>?)ViewBag.PaymentTerms ?? new List<BOCore.PaymentTermOptionBO>();
+    var series = (IReadOnlyList<BOCore.InvoiceSeriesBO>?)ViewBag.InvoiceSeries ?? new List<BOCore.InvoiceSeriesBO>();
+    var vatCodes = (IReadOnlyList<FacadeCore.VatTypeBO>?)ViewBag.OctopusVatCodes ?? new List<FacadeCore.VatTypeBO>();
+    var paymentTerms = Model.PaymentTerms ?? new List<CPMCore.Models.Instellingen.PaymentTermVM>();
+    var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+
+    List<GlV2SelectItem> WithCurrent(IEnumerable<(string v, string t)> options, string? current)
+    {
+        var list = options.Select(o => new GlV2SelectItem { Value = o.v, Text = o.t }).ToList();
+        if (!string.IsNullOrWhiteSpace(current) && list.All(i => i.Value != current)) list.Add(new GlV2SelectItem { Value = current, Text = current });
+        return list;
+    }
+    var termsJson = JsonSerializer.Serialize(paymentTerms.Select(t => new
+    {
+        id = t.Id, name = t.Name ?? "", termType = (int)t.TermType, days = t.Days, displayMode = (int)t.DisplayMode,
+        displayText = t.DisplayText ?? "", description = t.Description ?? ""
+    }));
+    var peppolOn = Model.EInvoiceEnabled;
+}
+<div class="gl-v2-ice-cols">
+    <div class="gl-v2-ice-col">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Standaarden voor nieuwe facturen</h2>
+            </div>
+            <div class="gl-v2-section-grid">
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "DefaultPaymentTermId", Id = "ice-default-term", Label = "Standaard betaaltermijn", Value = Model.DefaultPaymentTermId?.ToString() ?? "", EmptyText = "— kies —",
+                        Items = terms.Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Label }).ToList()
+                    })
+                </div>
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "DefaultVatTypeId", Id = "ice-default-vat", Label = "Standaard btw-code", Value = Model.DefaultVatTypeId?.ToString() ?? "", EmptyText = "— kies —",
+                        Disabled = !vatCodes.Any(),
+                        Help = vatCodes.Any() ? null : "Synchroniseer het dossier (tab Boekhouding) om btw-codes op te halen.",
+                        Items = vatCodes.Select(v => new GlV2SelectItem { Value = v.Id.ToString(), Text = $"{v.Code} — {v.Description} ({v.BasePercentage:0.##}%)" }).ToList()
+                    })
+                </div>
+                <div class="gl-v2-col-4">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "DefaultLanguage", Id = "ice-default-lang", Label = "Taal", Value = Model.DefaultLanguage ?? "", EmptyText = "— standaard —",
+                        Items = WithCurrent(new[] { ("nl-BE", "Nederlands (BE)"), ("fr-BE", "Frans (BE)"), ("en-GB", "Engels"), ("de-DE", "Duits") }, Model.DefaultLanguage)
+                    })
+                </div>
+                <div class="gl-v2-col-3">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "DefaultCurrency", Id = "ice-default-cur", Label = "Valuta", Value = Model.DefaultCurrency ?? "", EmptyText = "— standaard —",
+                        Items = WithCurrent(new[] { ("EUR", "EUR"), ("USD", "USD"), ("GBP", "GBP") }, Model.DefaultCurrency)
+                    })
+                </div>
+                <div class="gl-v2-col-5">@Html.EditorFor(m => m.InvoiceNumberPattern, "GlV2Text", new { Label = "Nummerpatroon", Placeholder = "{num:0000}-{date:MM-yyyy}", Mono = true, Help = "bv. {num:0000}-{date:MM-yyyy}" })</div>
+            </div>
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-list-numbers" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Nummerreeksen</h2>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (Model.Id > 0)
+                {
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-series-new"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe reeks</button>
+                }
+            </div>
+            @if (series.Count == 0)
+            {
+                <p class="gl-v2-ice-empty">Nog geen nummerreeksen. Maak er een aan om facturen te kunnen nummeren.</p>
+            }
+            else
+            {
+                <div class="gl-v2-ice-tablewrap">
+                    <table class="gl-v2-ice-table">
+                        <thead><tr><th>Code</th><th>Omschrijving</th><th>Credit</th><th>Status</th><th class="is-right"></th></tr></thead>
+                        <tbody>
+                            @foreach (var s in series)
+                            {
+                                var menuId = "ice-series-menu-" + s.Id;
+                                <tr>
+                                    <td class="gl-v2-ice-mono">@s.Code</td>
+                                    <td>@s.Description</td>
+                                    <td>@(s.IsCreditNote ? "Ja" : "Nee")</td>
+                                    <td><span class="gl-v2-badge @(s.IsActive ? "is-positive" : "is-neutral")">@(s.IsActive ? "ACTIEF" : "INACTIEF")</span></td>
+                                    <td class="is-right">
+                                        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor reeks @s.Code"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                                        <div class="gl-v2-menu" id="@menuId">
+                                            <button type="button" class="gl-v2-menu-item js-ice-series-edit" data-id="@s.Id" data-code="@s.Code" data-description="@s.Description" data-credit="@(s.IsCreditNote ? "1" : "0")" data-active="@(s.IsActive ? "1" : "0")">
+                                                <i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span>
+                                            </button>
+                                            <a class="gl-v2-menu-item" href="@Url.Action("Sequences", "Instellingen", new { seriesId = s.Id, issuerId = Model.Id })">
+                                                <i class="ph ph-list-numbers" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Sequenties per jaar</span></span>
+                                            </a>
+                                            <button type="button" class="gl-v2-menu-item is-danger js-ice-delete" data-url="@Url.Action("SeriesDelete", "Instellingen", new { issuerId = Model.Id, id = s.Id })"
+                                                    data-title="Nummerreeks @s.Code verwijderen?" data-desc="Een reeks die al in gebruik is, wordt gedeactiveerd i.p.v. verwijderd." data-confirm="Verwijderen">
+                                                <i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-clock" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Betaaltermijnen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Kiesbaar op facturen van dit bedrijf.</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-term-new"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+            </div>
+            <div id="ice-terms-fields" hidden></div>
+            <ul class="gl-v2-ice-list" id="ice-terms-list" data-terms="@termsJson"></ul>
+        </section>
+    </div>
+
+    <div class="gl-v2-ice-col">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-qr-code" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">EPC-betaal-QR</h2>
+            </div>
+            <div class="gl-v2-ice-epc">
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12 gl-v2-ice-toggles is-first">@Html.EditorFor(m => m.EpcQrEnabled, "GlV2ToggleSwitch", new { Label = "QR-code op de factuur", Hint = "klanten betalen met één scan in hun bankapp" })</div>
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.EpcBeneficiaryName, "GlV2Text", new { Label = "Naam begunstigde", Placeholder = "Juridische naam" })</div>
+                    <div class="gl-v2-col-8">@Html.EditorFor(m => m.EpcIban, "GlV2Text", new { Label = "IBAN", Placeholder = "BE…", Mono = true, Help = "leeg = IBAN van de standaardrekening" })</div>
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.EpcBic, "GlV2Text", new { Label = "BIC", Placeholder = "optioneel", Mono = true })</div>
+                    <div class="gl-v2-col-5">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "EpcRemittanceType", Id = "ice-epc-type", Label = "Mededeling", Value = Model.EpcRemittanceType ?? "", EmptyText = "— kies —",
+                            Items = new List<GlV2SelectItem> { new() { Value = "CHAR", Text = "Vrije mededeling (CHAR)" }, new() { Value = "SCOR", Text = "Gestructureerd (SCOR)" } }
+                        })
+                    </div>
+                    <div class="gl-v2-col-7">@Html.EditorFor(m => m.EpcRemittanceTemplate, "GlV2Text", new { Label = "Sjabloon mededeling", Placeholder = "Factuur {PublicId}", Mono = true })</div>
+                </div>
+                <div class="gl-v2-ice-qr" id="ice-qr-preview" data-default-iban="@(((IReadOnlyList<BOCore.IssuerBankAccountBO>?)ViewBag.BankAccounts)?.FirstOrDefault(b => b.IsDefault)?.Iban ?? ((IReadOnlyList<BOCore.IssuerBankAccountBO>?)ViewBag.BankAccounts)?.FirstOrDefault()?.Iban)" hidden>
+                    <div class="gl-v2-ice-qr-box" id="ice-qr-box" aria-hidden="true"></div>
+                    <div class="gl-v2-ice-qr-text"><b>QR-voorbeeld</b><span>zo staat hij op de factuur (voorbeeldbedrag € 123,45)</span></div>
+                </div>
+            </div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(Model.OctopusDossierNumber))
+        {
+            @* Gekoppeld aan Octopus: Octopus regelt het Peppol-gegeven, dus geen eigen blok. De waarden blijven meegepost zodat ze niet gewist worden. *@
+            <input type="hidden" name="EInvoiceEnabled" value="@(Model.EInvoiceEnabled ? "true" : "false")" />
+            <input type="hidden" name="PeppolParticipantId" value="@Model.PeppolParticipantId" />
+            <input type="hidden" name="UblAttachPdf" value="@(Model.UblAttachPdf ? "true" : "false")" />
+        }
+        else
+        {
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-share-network" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Peppol / e-invoicing</h2>
+                <span class="gl-v2-section-card-spacer"></span>
+                <span class="gl-v2-badge @(peppolOn ? "is-positive" : "is-neutral")" id="ice-peppol-badge">@(peppolOn ? "AAN" : "UIT")</span>
+            </div>
+            <div class="gl-v2-ice-card-body">
+                <p class="gl-v2-ice-intro">Sinds 2026 is e-facturatie tussen Belgische bedrijven verplicht. Vul het Participant ID in en zet e-invoicing aan.</p>
+                @Html.EditorFor(m => m.EInvoiceEnabled, "GlV2ToggleSwitch", new { Label = "E-invoicing actief" })
+                <div class="gl-v2-field-spacer"></div>
+                @Html.EditorFor(m => m.PeppolParticipantId, "GlV2Text", new { Label = "Peppol Participant ID", Placeholder = "0208:0123456789", Mono = true, Help = "voorgesteld uit het ondernemingsnummer" })
+                @Html.EditorFor(m => m.UblAttachPdf, "GlV2ToggleSwitch", new { Label = "PDF bijvoegen in UBL" })
+            </div>
+        </section>
+        }
+    </div>
+</div>

@@ -93,11 +93,13 @@ public sealed class ChangeOrderPdfBuilder
                 var usedTypeIds = co.ChangeOrderDetail
                     .Where(d => d.VatTypeId.HasValue && (d.VatPercentage ?? co.QuoteVatPercentage ?? vat) == rate)
                     .Select(d => d.VatTypeId.Value).ToHashSet();
-                var candidates = usedTypeIds.Count > 0
-                    ? types.Where(t => usedTypeIds.Contains(t.Id))
-                    : types.Where(t => t.BasePercentage == rate);
-                var texts = candidates.Select(t => t.InvoiceMention?.Trim()).Where(t => !string.IsNullOrEmpty(t))
-                    .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                // Eén vermelding per tarief: met gekozen btw-code(s) enkel die van die code(s); zonder code de eerste code met dat percentage die een
+                // vermelding heeft (niet alle codes met hetzelfde percentage — dat gaf meerdere vermeldingen naast elkaar).
+                var texts = (usedTypeIds.Count > 0
+                        ? types.Where(t => usedTypeIds.Contains(t.Id)).Select(t => t.InvoiceMention?.Trim()).Where(t => !string.IsNullOrEmpty(t))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                        : types.Where(t => t.BasePercentage == rate).Select(t => t.InvoiceMention?.Trim()).Where(t => !string.IsNullOrEmpty(t)).Take(1))
+                    .ToList();
                 if (texts.Count > 0) vatMentions[rate] = string.Join(" ", texts);
             }
         }

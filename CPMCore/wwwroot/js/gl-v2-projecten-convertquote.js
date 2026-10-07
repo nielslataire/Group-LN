@@ -92,6 +92,20 @@
             .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
             .then(function (html) {
                 body.innerHTML = html;
+                // Soort van de kopie: een offerte kopieer je enkel als offerte (omzetten gaat via "Omzetten →");
+                // een wijzigingsopdracht kan als offerte of als wijzigingsopdracht, standaard dezelfde soort.
+                var source = $("#gl-v2-cc-order", body);
+                var asQuote = $("#gl-v2-cc-as-quote", body);
+                var asWo = $("#gl-v2-cc-as-wo", body);
+                function applySource() {
+                    var opt = source && source.selectedIndex > 0 ? source.options[source.selectedIndex] : null;
+                    var isQuote = !!opt && opt.getAttribute("data-quote") === "true";
+                    if (!asQuote || !asWo) return;
+                    asWo.disabled = isQuote;
+                    if (isQuote) asQuote.checked = true;
+                    else if (opt) asWo.checked = true;
+                }
+                if (source) { source.addEventListener("change", applySource); applySource(); }
                 var client = $("#gl-v2-cc-client", body);
                 var hint = $("#gl-v2-cc-client-hint", body);
                 if (client && hint) {

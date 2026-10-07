@@ -108,6 +108,12 @@ public class InvoicingPostRowV2
     public int? StageId { get; set; }
     public int? ChangeOrderId { get; set; }
     public int? ChangeOrderDetailId { get; set; }
+    /// <summary>"WO-2026-001" — voor de groepsrij van een wijzigingsopdracht (enkel WO-lijnen).</summary>
+    public string? ChangeOrderLabel { get; set; }
+    /// <summary>Onderwerp (anders omschrijving) van de wijzigingsopdracht — titel van de groepsrij.</summary>
+    public string? ChangeOrderTitle { get; set; }
+    /// <summary>Omschrijving van deze lijn zelf, zonder het WO-nummer ervoor (<see cref="Description"/> bevat dat wel).</summary>
+    public string? LineDescription { get; set; }
     public bool IsStage => StageId.HasValue;
     /// <summary>De structureel laatste schijf van haar groep (hoogste positie, "schijf N van N") — bij
     /// het aanvinken hiervan trekt de pagina alle nog niet gefactureerde meerwerken/minwerken van
@@ -123,6 +129,10 @@ public class InvoicingPostRowV2
     /// een link naar "Ondertekening starten" (SigningAdmin/Start).</summary>
     public bool HasActiveCase => SigningCaseId.HasValue;
 }
+
+/// <summary>Titel en omschrijving van een wijzigingsopdracht voor de factuur (<c>BuildChangeOrderInvoiceDraft</c>): Label = "WO-2026-001 · onderwerp"
+/// (titel van de groep op de factuur), Description = omschrijving voor de klant (beschrijvende tekst bovenaan).</summary>
+public sealed record ChangeOrderInvoiceInfo(string Label, string? Description);
 
 public class InvoicingInvoiceRowV2
 {

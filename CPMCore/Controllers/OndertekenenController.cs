@@ -93,7 +93,9 @@ public class OndertekenenController : Controller
             return View("Expired");
         }
         ViewData["Title"] = session.Title;
-        ViewData["PublicKicker"] = session.DocumentTypeLabel;
+        ViewData["PublicKicker"] = session.SignerName;
+        ViewData["PublicKickerPlain"] = true;
+        ViewData["PublicBrand"] = session.IssuerName;   // design-handoff 36: rechtsboven de naam van wie tekent, niet de documentsoort
         return View(session);
     }
 

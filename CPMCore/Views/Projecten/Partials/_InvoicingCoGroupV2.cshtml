@@ -1,0 +1,43 @@
+@model IReadOnlyList<CPMCore.Models.Projecten.InvoicingPostRowV2>
+@*
+    Facturatie V2 — één wijzigingsopdracht als uitklapbare groep (Niels, 2026-10-07): één rij per WO met een chevron; de losse
+    lijnen (ChangeOrderDetail) staan eronder, standaard ingeklapt, en zijn elk apart aan te vinken. Het vinkje op de groeprij
+    selecteert alle lijnen (en toont "gedeeltelijk" als maar een deel is aangevinkt). Enkel de lijn-vinkjes (.js-inv-co) tellen mee in
+    de selectie; de groep zelf (.js-inv-co-group) is alleen een bediening.
+*@
+@using System.Globalization
+@{
+    var account = (CPMCore.Models.Projecten.InvoicingAccountCardV2)ViewData["Account"]!;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", be);
+    string Inv(decimal v) => v.ToString(CultureInfo.InvariantCulture);
+    var first = Model[0];
+    var coId = first.ChangeOrderId!.Value;
+    var total = Model.Sum(r => r.Amount);
+    var kind = Model.All(r => r.Kind == "Minwerk") ? "Minwerk" : "Meerwerk";
+    var title = $"{first.ChangeOrderLabel} · {first.ChangeOrderTitle}";
+    var sub = string.Join(" · ", new[] { first.SubText, Model.Count + (Model.Count == 1 ? " lijn" : " lijnen") }.Where(s => !string.IsNullOrWhiteSpace(s)));
+}
+<tr class="gl-v2-inv-row is-group" data-inv-row data-inv-group="@coId" data-kind="@kind" data-amount="@Inv(total)">
+    <td class="is-check" data-label="">
+        <span class="gl-v2-inv-check">
+            <input type="checkbox" class="js-inv-co-group" id="gl-v2-inv-cogroup-@coId" data-group="@coId" data-account-id="@account.ClientAccountId" aria-label="Alle lijnen van @title selecteren" />
+            <label for="gl-v2-inv-cogroup-@coId"></label>
+        </span>
+    </td>
+    <td data-label=""><span class="gl-v2-badge @(kind == "Minwerk" ? "is-attention" : "is-info")">@kind.ToUpperInvariant()</span></td>
+    <td class="gl-v2-inv-desc">
+        <span class="gl-v2-inv-desc-line">
+            <button type="button" class="gl-v2-inv-chevron js-inv-co-toggle" data-group="@coId" aria-expanded="false" aria-label="Lijnen van @first.ChangeOrderLabel tonen of verbergen"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+            <span class="gl-v2-inv-desc-title">@title</span>
+        </span>
+        <span class="gl-v2-inv-desc-sub gl-v2-inv-desc-sub-indent">@sub</span>
+    </td>
+    <td class="gl-v2-inv-muted" data-label="Moment">@first.Moment</td>
+    <td class="is-right gl-v2-inv-tabular" data-label="%"></td>
+    <td class="is-right gl-v2-inv-tabular" data-label="Excl. btw">@Eur(total)</td>
+</tr>
+@foreach (var line in Model)
+{
+    @await Html.PartialAsync("Partials/_InvoicingRowV2", line, new ViewDataDictionary(ViewData) { { "ChildOf", coId } })
+}

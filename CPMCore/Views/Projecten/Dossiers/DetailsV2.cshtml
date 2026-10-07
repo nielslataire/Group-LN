@@ -1,0 +1,527 @@
+@model CPMCore.Models.Traject.DossierDetailsVm
+@*
+    gl-v2 — Dossierdetail (design-handoff 31d): stappenbalk, volgende stap als hoofdknop, checklist keuring & overdracht,
+    koppeling met mijlpaal en nacalculatie. Dezelfde pagina voor elk dossiertype: een nutsaansluiting krijgt de zes stappen
+    uit de werkstroomdatums, een omgevingsvergunning de stappen van haar checklist, een attest/keuring/vrij dossier enkel de
+    gegevens. Bewerken: nutsaansluiting → scherm (NutsFormV2), ander dossier → de modal van 31f.
+    Wat bewust anders is dan het mockup: geen "Herinnering mailen" (staat nog niet in deze ronde), "Taak aanmaken" blijft
+    beschikbaar in het ···-menu (bestond al op de oude pagina).
+*@
+@using BOCore
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@{
+    var d = Model.Dossier;
+    var n = Model.Nuts;
+    var isNuts = d.DossierKind == (int)DossierKind.NutsAansluiting && n != null;
+    var isVergunning = d.DossierKind == (int)DossierKind.Omgevingsvergunning;
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    ViewData["Title"] = d.Titel;
+    ViewData["PageIcon"] = "ph " + DossierWeergave.KindIcon(d);
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Index", "ProjectDossiers", new { projectId = Model.ProjectId });
+
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · dossiers" };
+    var menuPhoneVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · dossiers", Mode = GlV2ProjectMenuMode.Phone };
+
+    var statusLabel = DossierWeergave.StatusLabel(d);
+    var late = DossierWeergave.IsTeLaat(d, today);
+    var typeBadge = isNuts ? ((NutsType)n!.NutsType).GetDisplayName() : DossierWeergave.TypeNaam(d);
+    string D(DateOnly? x) => x?.ToString("dd/MM/yyyy") ?? "—";
+    string Eur(decimal? v) => v.HasValue ? "€ " + v.Value.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")) : "—";
+
+    // Checklist: nutsdossier = enkel wat niet aan een werkstroomdatum hangt; vergunning/overig = alle stappen.
+    var alleStappen = d.Substappen.OrderBy(s => s.Volgorde).ToList();
+    var checklist = isNuts ? DossierWeergave.ChecklistItems(alleStappen).ToList() : alleStappen;
+    var klaar = checklist.Count(s => s.Status == (int)DossierSubstapStatus.Afgerond || s.Status == (int)DossierSubstapStatus.NietVanToepassing);
+    var checklistTitel = isNuts ? "Keuring & overdracht" : isVergunning ? "Vergunningschecklist" : "Checklist";
+    var checklistHint = isNuts ? "na “Uitgevoerd” — vink af wat gebeurd is" : isVergunning ? "vink af wat afgerond is" : "vink af wat gebeurd is";
+    string ItemHint(ProjectDossierSubstap s) => (s.Code ?? "").ToUpperInvariant() switch
+    {
+        "GEKEURD" => "keuringsverslag opladen in Documenten",
+        "METERSTAND" => "dag en nacht",
+        "EAN_DOORGEGEVEN" => "via het klantenportaal",
+        "OVERGEDRAGEN" => "door koper en ontwikkelaar",
+        _ => ""
+    };
+
+    // Stappenbalk
+    var stap = isNuts ? DossierWeergave.NutsStap(n, d.Substappen) : 0;
+    GlV2StepsVm? steps = null;
+    if (isNuts)
+    {
+        var datums = new DateOnly?[] { n!.AanvraagVerstuurdOp, n.OfferteOntvangenOp, n.OfferteGoedgekeurdOp, n.UitvoeringGevraagdOp, n.UitgevoerdOp, null };
+        var subs = new[] { "aanvraag", "offerte", "goedkeuring", "uitvoering", "uitgevoerd", "keuring & overdracht" };
+        var labels = new[] { "Aanvraag verstuurd", "Offerte ontvangen", "Offerte goedgekeurd", "Uitvoering gevraagd", "Uitgevoerd", "Keuring & overdracht" };
+        steps = new GlV2StepsVm
+        {
+            Id = "gl-v2-dos-steps", Variant = GlV2StepsVariant.Lijn, Clickable = false, Current = Math.Min(stap, 5),
+            Steps = labels.Select((l, i) => new GlV2StepItemVm
+            {
+                Label = l,
+                Sub = i < 5 ? (datums[i].HasValue ? datums[i]!.Value.ToString("dd/MM/yyyy") : null) : (checklist.Count > 0 ? $"{klaar} / {checklist.Count} afgevinkt" : null),
+                State = d.Status == (int)DossierStatus.Geannuleerd ? GlV2StepState.Uit : i == 1 && late && !datums[1].HasValue && stap <= 1 ? GlV2StepState.Error : GlV2StepState.Auto,
+                Errors = 0
+            }).ToList()
+        };
+        if (stap >= 6) steps.Current = 6;
+    }
+    else if (isVergunning && alleStappen.Count > 0)
+    {
+        var huidig = alleStappen.FindIndex(s => s.Status != (int)DossierSubstapStatus.Afgerond);
+        steps = new GlV2StepsVm
+        {
+            Id = "gl-v2-dos-steps", Variant = GlV2StepsVariant.Chips, Clickable = false, Current = huidig < 0 ? alleStappen.Count : huidig,
+            Steps = alleStappen.Select(s => new GlV2StepItemVm { Label = s.Naam }).ToList()
+        };
+    }
+
+    // Volgende stap = hoofdknop
+    string? volgendeLabel = null;
+    if (isNuts && d.Status != (int)DossierStatus.Geannuleerd)
+        volgendeLabel = ProjectDossiersControllerNext(n!) switch
+        {
+            "AANVRAAG" => "Aanvraag verstuurd",
+            "OFFERTE_ONTVANGEN" => "Offerte ontvangen",
+            "OFFERTE_GOEDGEKEURD" => "Offerte goedgekeurd",
+            "UITVOERINGSDATUM_DOORGEGEVEN" => "Uitvoering gevraagd",
+            "UITGEVOERD" => "Uitgevoerd",
+            _ => null
+        };
+    var nextSubstap = isVergunning ? alleStappen.FirstOrDefault(s => s.Status != (int)DossierSubstapStatus.Afgerond && s.Status != (int)DossierSubstapStatus.NietVanToepassing) : null;
+
+    var verwacht = DossierWeergave.Verwacht(d);
+    var teLaatDagen = late && verwacht.HasValue ? today.DayNumber - verwacht.Value.DayNumber : 0;
+    var netb = n?.NetbeheerderCompany?.BedrijfsNaam;
+    var verdeeld = d.UnitId != null ? (Model.EenheidKlant ?? d.Unit?.Name ?? "eenheid") + " · 100 %" : "alle eenheden";
+    var kosten = isNuts ? (n!.AansluitkostRaming, n.AansluitkostDefinitief) : ((decimal?)d.Bedrag, (decimal?)null);
+    var traject = Model.GekoppeldeMijlpalen.OrderBy(m => m.Volgorde).ToList();
+    var editHref = isNuts ? Url.Action("NutsBewerken", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id }) : "#";
+}
+@functions {
+    static string ProjectDossiersControllerNext(DALCore.Models.ProjectNutsAansluiting n) => CPMCore.Controllers.ProjectDossiersController.NutsVolgendeStapCode(n) ?? "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-traject.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-dossiers.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">@typeBadge.ToUpperInvariant()</span>
+    <span class="gl-v2-badge @(late ? "is-attention" : d.Status == (int)DossierStatus.Afgehandeld ? "is-positive" : "is-neutral")">@statusLabel.ToUpperInvariant()</span>
+}
+@section PageActions
+{
+    @if (Model.CanWrite || Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-dos-more-menu" aria-label="Meer acties">
+            <i class="ph ph-dots-three" aria-hidden="true"></i>
+        </button>
+    }
+    @if (Model.CanWrite)
+    {
+        @if (isNuts)
+        {
+            <a href="@editHref" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span>Bewerken</span></a>
+        }
+        else
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-dos-edit-ander" data-dossier-id="@d.Id"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span>Bewerken</span></button>
+        }
+        @if (volgendeLabel != null)
+        {
+            <form method="post" id="gl-v2-dos-next-form" action="@Url.Action("NutsVolgendeStap", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })" class="gl-v2-dos-next-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" title="Zet de datum van vandaag in"><i class="ph ph-check" aria-hidden="true"></i><span>@volgendeLabel</span></button>
+            </form>
+        }
+        else if (nextSubstap != null)
+        {
+            <form method="post" id="gl-v2-dos-next-form" action="@Url.Action("SubstapStatus", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, substapId = nextSubstap.Id })" class="gl-v2-dos-next-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="nieuweStatus" value="@((int)DossierSubstapStatus.Afgerond)" />
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" title="Markeert deze stap als afgerond met de datum van vandaag"><i class="ph ph-check" aria-hidden="true"></i><span>@nextSubstap.Naam</span></button>
+            </form>
+        }
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        @if (volgendeLabel != null || nextSubstap != null)
+        {
+            <button type="submit" form="gl-v2-dos-next-form" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+                <i class="ph ph-check" aria-hidden="true"></i>@(volgendeLabel ?? nextSubstap!.Naam)
+            </button>
+        }
+        @if (isNuts)
+        {
+            <a href="@editHref" class="gl-v2-mobile-quickaction"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+        }
+        else
+        {
+            <button type="button" class="gl-v2-mobile-quickaction js-dos-edit-ander" data-dossier-id="@d.Id"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</button>
+        }
+        <button type="button" class="gl-v2-mobile-quickaction" data-bs-toggle="modal" data-bs-target="#gl-v2-dos-taak-modal"><i class="ph ph-list-checks" aria-hidden="true"></i>Taak</button>
+    }
+    @if (Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction" data-bs-toggle="modal" data-bs-target="#gl-v2-dos-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
+
+@if (Model.CanWrite || Model.CanDelete)
+{
+    <div class="gl-v2-menu" id="gl-v2-dos-more-menu">
+        @if (Model.CanWrite)
+        {
+            <button type="button" class="gl-v2-menu-item" data-bs-toggle="modal" data-bs-target="#gl-v2-dos-taak-modal">
+                <i class="ph ph-list-checks" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Taak aanmaken</span></span>
+            </button>
+        }
+        @if (Model.CanDelete)
+        {
+            <button type="button" class="gl-v2-menu-item is-danger" data-bs-toggle="modal" data-bs-target="#gl-v2-dos-delete-modal">
+                <i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Dossier verwijderen</span></span>
+            </button>
+        }
+    </div>
+}
+
+<div class="gl-v2-dos-detail" id="gl-v2-dos-detail" data-project-id="@Model.ProjectId" data-dossier-id="@d.Id" data-can-write="@(Model.CanWrite ? "1" : "0")">
+    @if (steps != null)
+    {
+        <div class="gl-v2-card gl-v2-dos-stepband">@await Html.PartialAsync("GlV2/_Steps", steps)</div>
+    }
+
+    <div class="gl-v2-dos-detail-cols">
+        <div class="gl-v2-dos-detail-main">
+            @if (late)
+            {
+                <div class="gl-v2-notice gl-v2-notice-expanded is-danger">
+                    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+                    <div class="gl-v2-notice-body">
+                        <span class="gl-v2-notice-title">@(isNuts && !n!.OfferteOntvangenOp.HasValue ? "Offerte " : "Dossier ")@DossierWeergave.LangeDuur(teLaatDagen) te laat</span>
+                        <span class="gl-v2-notice-text">Verwacht op @D(verwacht). @(netb != null ? "Volg op bij " + netb + " of pas" : "Volg op of pas") de verwachte datum aan.@(isNuts && !n!.OfferteOntvangenOp.HasValue ? " “Offerte ontvangen” bovenaan vult de datum van vandaag in." : "")</span>
+                    </div>
+                    @if (Model.CanWrite)
+                    {
+                        @if (isNuts) { <a class="gl-v2-notice-bar-action" href="@editHref">Datum aanpassen</a> }
+                        else { <button type="button" class="gl-v2-notice-bar-action gl-v2-dos-notice-btn js-dos-edit-ander" data-dossier-id="@d.Id">Datum aanpassen</button> }
+                    }
+                </div>
+            }
+
+            @* ── Gegevens ── *@
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph @DossierWeergave.KindIcon(d)" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Gegevens</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    @if (Model.CanWrite)
+                    {
+                        @if (isNuts) { <a class="gl-v2-tr-linkbtn" href="@editHref">Bewerken</a> }
+                        else { <button type="button" class="gl-v2-tr-linkbtn js-dos-edit-ander" data-dossier-id="@d.Id">Bewerken</button> }
+                    }
+                </div>
+                <dl class="gl-v2-dos-kv">
+                    @if (isNuts)
+                    {
+                        <div><dt>NETBEHEERDER</dt><dd>@(netb ?? "—")</dd></div>
+                        <div><dt>REFERENTIE</dt><dd class="gl-v2-dos-mono">@(d.Referentie ?? "—")</dd></div>
+                        <div><dt>EAN</dt><dd class="gl-v2-dos-mono">@(n!.Ean ?? "—")</dd></div>
+                        <div><dt>METERNUMMER</dt><dd class="gl-v2-dos-mono">@(n.Meternummer ?? "—")</dd></div>
+                        <div><dt>VERMOGEN</dt><dd>@(n.GevraagdVermogen ?? "—")</dd></div>
+                        <div><dt>AANVRAAG</dt><dd>@D(n.AanvraagVerstuurdOp)</dd></div>
+                        <div><dt>OFFERTE VERWACHT</dt><dd class="@(late ? "is-late" : "")">@D(n.VerwachteOfferteDatum)</dd></div>
+                        <div><dt>CONTACT</dt><dd>@if (!string.IsNullOrWhiteSpace(d.ExterneContactEmail)) { <a href="mailto:@d.ExterneContactEmail">@d.ExterneContactEmail</a> } else { <span>@(d.ExterneContactNaam ?? "—")</span> }</dd></div>
+                    }
+                    else
+                    {
+                        <div><dt>REFERENTIE</dt><dd class="gl-v2-dos-mono">@(d.Referentie ?? "—")</dd></div>
+                        <div><dt>INSTANTIE</dt><dd>@(d.ExterneContactNaam ?? "—")</dd></div>
+                        <div><dt>EENHEID</dt><dd>@(d.Unit?.Name ?? "Project")</dd></div>
+                        <div><dt>STATUS</dt><dd>@statusLabel</dd></div>
+                        <div><dt>AANVRAAG</dt><dd>@D(d.AanvraagDatum)</dd></div>
+                        <div><dt>VERWACHT</dt><dd class="@(late ? "is-late" : "")">@D(d.VerwachteAfhandelingDatum)</dd></div>
+                        <div><dt>AFGEHANDELD</dt><dd>@D(d.AfgehandeldDatum)</dd></div>
+                        <div><dt>CONTACT</dt><dd>@if (!string.IsNullOrWhiteSpace(d.ExterneContactEmail)) { <a href="mailto:@d.ExterneContactEmail">@d.ExterneContactEmail</a> } else { <span>—</span> }</dd></div>
+                    }
+                </dl>
+                @if (!string.IsNullOrWhiteSpace(d.Omschrijving))
+                {
+                    <p class="gl-v2-dos-oms">@d.Omschrijving</p>
+                }
+            </div>
+
+            @* ── Checklist ── *@
+            @if (checklist.Count > 0 || (Model.CanWrite && (isNuts || isVergunning)))
+            {
+                <div class="gl-v2-section-card" id="gl-v2-dos-checklist">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-check-circle" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">@checklistTitel</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">@checklistHint</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <span class="gl-v2-section-card-meta" id="gl-v2-dos-chk-count">@klaar / @checklist.Count</span>
+                    </div>
+                    <ul class="gl-v2-dos-chk">
+                        @foreach (var s in checklist)
+                        {
+                            var done = s.Status == (int)DossierSubstapStatus.Afgerond;
+                            var nvt = s.Status == (int)DossierSubstapStatus.NietVanToepassing;
+                            var hint = ItemHint(s);
+                            <li class="gl-v2-dos-chk-item @(done ? "is-done" : "") @(nvt ? "is-nvt" : "")">
+                                <label class="gl-v2-dos-chk-label">
+                                    <input type="checkbox" class="gl-v2-dos-chk-box js-dos-chk" data-substap-id="@s.Id" @(done ? "checked" : "") @(Model.CanWrite ? "" : "disabled")>
+                                    <span class="gl-v2-dos-chk-text"><b>@s.Naam</b>@if (hint.Length > 0) { <small>@hint</small> } else if (done && s.Datum.HasValue) { <small>@D(s.Datum)</small> } else if (isVergunning && s.Datum.HasValue) { <small>@D(s.Datum)</small> }</span>
+                                </label>
+                                @if (Model.CanWrite && string.IsNullOrEmpty(s.Code))
+                                {
+                                    <form method="post" action="@Url.Action("ChecklistVerwijderen", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, substapId = s.Id })" class="gl-v2-dos-chk-del">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="gl-v2-icon-btn" aria-label="Item verwijderen" title="Item verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                                    </form>
+                                }
+                            </li>
+                        }
+                    </ul>
+                    @if (Model.CanWrite)
+                    {
+                        <form method="post" action="@Url.Action("ChecklistToevoegen", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })" class="gl-v2-dos-chk-add" id="gl-v2-dos-chk-add">
+                            @Html.AntiForgeryToken()
+                            <button type="button" class="gl-v2-tr-linkbtn" id="gl-v2-dos-chk-add-btn"><i class="ph ph-plus" aria-hidden="true"></i>Item toevoegen</button>
+                            <span class="gl-v2-dos-chk-add-row" hidden>
+                                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="naam" maxlength="200" placeholder="Naam van het item" aria-label="Naam van het item" autocomplete="off"></div>
+                                <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Toevoegen</button>
+                                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-dos-chk-add-cancel">Annuleren</button>
+                            </span>
+                        </form>
+                    }
+                </div>
+            }
+
+            @* ── Documenten (documentencentrum) ── *@
+            @if (Model.CanSeeDocs)
+            {
+                <div class="gl-v2-section-card" id="gl-v2-dos-docs">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Documenten</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">gedeeld met het documentencentrum</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        @if (Model.CanUploadDocs)
+                        {
+                            <button type="button" class="gl-v2-tr-linkbtn" id="gl-v2-dos-upload-btn"><i class="ph ph-plus" aria-hidden="true"></i>Opladen</button>
+                            <input type="file" id="gl-v2-dos-upload-input" hidden>
+                        }
+                    </div>
+                    @if (Model.Documenten.Count == 0)
+                    {
+                        <p class="gl-v2-dos-empty-line">Nog geen documenten. Laad bv. het aanvraagformulier of het keuringsverslag op — ze verschijnen ook in het documentencentrum.</p>
+                    }
+                    else
+                    {
+                        <ul class="gl-v2-dos-docs">
+                            @foreach (var doc in Model.Documenten)
+                            {
+                                <li>
+                                    <span class="gl-v2-dos-docicon">@(string.IsNullOrEmpty(doc.Extensie) ? "DOC" : doc.Extensie.ToUpperInvariant())</span>
+                                    <span class="gl-v2-dos-doc-t">
+                                        <a href="@Url.Action("DocumentFileV2", "Projecten", new { projectid = Model.ProjectId, revisionId = doc.RevisionId })" target="_blank" rel="noopener"><b>@doc.Naam</b></a>
+                                        <small>@(doc.Datum?.ToString("dd/MM/yyyy"))@(doc.Grootte.HasValue ? " · " + (doc.Grootte.Value >= 1048576 ? (doc.Grootte.Value / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")) + " MB" : Math.Max(1, doc.Grootte.Value / 1024) + " kB") : "")</small>
+                                    </span>
+                                    <a class="gl-v2-icon-btn" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId })" title="Openen in het documentencentrum" aria-label="Openen in het documentencentrum"><i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+        </div>
+
+        <aside class="gl-v2-dos-detail-side">
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-currency-eur" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Kosten</h2>
+                </div>
+                <dl class="gl-v2-dos-rows">
+                    <div><dt>@(isNuts ? "Raming" : "Bedrag")</dt><dd>@Eur(kosten.Item1)</dd></div>
+                    @if (isNuts) { <div><dt>Definitief</dt><dd>@Eur(kosten.Item2)</dd></div> }
+                    @if (isNuts) { <div><dt>Verdeeld op</dt><dd>@verdeeld</dd></div> }
+                </dl>
+                @if (isNuts)
+                {
+                    <a class="gl-v2-dos-sidelink" href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })">Naar verdeling nutsaansluitingen <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+                }
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-link-simple" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Gekoppeld</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    @if (Model.CanWrite && Model.BeschikbareMijlpalen.Count > 0)
+                    {
+                        <button type="button" class="gl-v2-tr-linkbtn" id="gl-v2-dos-koppel-btn" aria-expanded="false" aria-controls="gl-v2-dos-koppel-form"><i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal</button>
+                    }
+                </div>
+                <ul class="gl-v2-dos-linked">
+                    @foreach (var m in traject)
+                    {
+                        var soort = TrajectWeergave.Soort(m, today);
+                        <li>
+                            <i class="ph ph-flag" aria-hidden="true"></i>
+                            <a class="gl-v2-dos-linked-t" href="@Url.Action("Index", "ProjectTraject", new { projectId = Model.ProjectId, tab = "mijlpalen", hl = m.Id })"><small>Mijlpaal</small><b>@m.Naam</b></a>
+                            <span class="gl-v2-dos-linked-s @(soort == "late" ? "is-late" : "")">@(soort == "late" ? TrajectWeergave.DagenTeLaat(m, today) + " d. te laat" : soort == "done" ? "bereikt" : "")</span>
+                            @if (Model.CanWrite)
+                            {
+                                <form method="post" action="@Url.Action("OntkoppelMijlpaal", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, mijlpaalId = m.Id })" class="gl-v2-dos-unlink">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="gl-v2-icon-btn" aria-label="Ontkoppelen van @m.Naam" title="Ontkoppelen"><i class="ph ph-x" aria-hidden="true"></i></button>
+                                </form>
+                            }
+                        </li>
+                    }
+                    @if (traject.Count == 0)
+                    {
+                        <li class="is-empty"><i class="ph ph-flag" aria-hidden="true"></i><span>Geen mijlpaal gekoppeld.</span></li>
+                    }
+                    @if (d.UnitId != null)
+                    {
+                        <li><i class="ph ph-house-line" aria-hidden="true"></i><span class="gl-v2-dos-linked-t"><small>Eenheid</small><b>@(Model.EenheidKlant ?? d.Unit?.Name)</b></span></li>
+                    }
+                    @if (isNuts)
+                    {
+                        <li><i class="ph ph-currency-eur" aria-hidden="true"></i><a class="gl-v2-dos-linked-t" href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })"><small>Nacalculatie</small><b>Nutsaansluitingen</b></a></li>
+                    }
+                </ul>
+                @if (Model.CanWrite && Model.BeschikbareMijlpalen.Count > 0)
+                {
+                    <form method="post" action="@Url.Action("KoppelMijlpaal", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })" class="gl-v2-dos-koppel" id="gl-v2-dos-koppel-form" hidden>
+                        @Html.AntiForgeryToken()
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "mijlpaalId", Id = "gl-v2-dos-koppel-select", Bare = true, Placeholder = "Kies een mijlpaal",
+                            Items = Model.BeschikbareMijlpalen.Select(m => new GlV2SelectItem { Value = m.Id.ToString(), Text = m.Naam }).ToList()
+                        })
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary">Koppel</button>
+                    </form>
+                }
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Historiek</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    @if (Model.CanWrite)
+                    {
+                        <button type="button" class="gl-v2-tr-linkbtn" id="gl-v2-dos-note-btn" aria-expanded="false" aria-controls="gl-v2-dos-note-form"><i class="ph ph-plus" aria-hidden="true"></i>Opmerking</button>
+                    }
+                </div>
+                @if (Model.CanWrite)
+                {
+                    <form method="post" action="@Url.Action("Gebeurtenis", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id })" class="gl-v2-dos-note" id="gl-v2-dos-note-form" hidden>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Type" value="@((int)DossierGebeurtenisType.Opmerking)" />
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="Titel" maxlength="200" placeholder="Wat is er gebeurd?" aria-label="Opmerking" autocomplete="off" required></div>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Toevoegen</button>
+                    </form>
+                }
+                <ul class="gl-v2-dos-hist">
+                    @foreach (var g in d.Gebeurtenissen.OrderByDescending(x => x.Datum))
+                    {
+                        var wie = g.UserId != null && Model.Gebruikers.TryGetValue(g.UserId, out var vn) && vn.Length > 0 ? vn : null;
+                        <li class="@(g == d.Gebeurtenissen.OrderByDescending(x => x.Datum).First() ? "is-first" : "")">
+                            <span class="gl-v2-dos-hist-dot" aria-hidden="true"></span>
+                            <span class="gl-v2-dos-hist-t"><b>@g.Titel</b><small>@g.Datum.ToLocalTime().ToString("dd/MM/yyyy")@(wie != null ? " · " + wie : "")@(!string.IsNullOrWhiteSpace(g.Tekst) ? " · " + g.Tekst : "")</small></span>
+                        </li>
+                    }
+                    @if (d.Gebeurtenissen.Count == 0)
+                    {
+                        <li class="is-empty"><span>Nog geen gebeurtenissen.</span></li>
+                    }
+                </ul>
+            </div>
+        </aside>
+    </div>
+</div>
+
+@if (Model.CanWrite)
+{
+    @* "Ander dossier" bewerken (31f) — inhoud via AJAX *@
+    @if (!isNuts)
+    {
+        <div class="modal fade gl-v2-modal-form gl-v2-tr-modal gl-v2-dos-modal" id="gl-v2-dos-ander-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-dos-ander-title">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+                <form class="modal-content" method="post" action="@Url.Action("Opslaan", "ProjectDossiers", new { projectId = Model.ProjectId })" id="gl-v2-dos-ander-form" novalidate>
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <div class="gl-v2-tr-modal-headtext">
+                            <h2 class="modal-title" id="gl-v2-dos-ander-title">Dossier bewerken</h2>
+                            <span class="gl-v2-tr-modal-sub" id="gl-v2-dos-ander-sub"></span>
+                        </div>
+                        <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="modal-body" id="gl-v2-dos-ander-body"><div class="gl-v2-tr-loading">Laden…</div></div>
+                    <div class="modal-footer">
+                        <span class="gl-v2-tr-modal-req">Velden met * zijn verplicht</span>
+                        <span class="gl-v2-tr-spacer"></span>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+    @await Html.PartialAsync("Modals/_ModalTaakQuickAddV2", new CPMCore.Models.Traject.TaakQuickAddVm
+    {
+        ModalId = "gl-v2-dos-taak-modal",
+        ProjectId = Model.ProjectId,
+        ProjectDossierId = d.Id,
+        DefaultTitel = $"Opvolgen: {d.Titel}"
+    })
+}
+@if (Model.CanDelete)
+{
+    @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+    {
+        Id = "gl-v2-dos-delete-modal",
+        Tone = GlV2ModalTone.Danger,
+        IconClass = "ph-trash",
+        Title = "Dossier verwijderen?",
+        Description = "Dit dossier en alles wat eraan hangt (checklist, tijdlijn) wordt verwijderd. Documenten in het documentencentrum blijven bestaan. Dit kan niet ongedaan gemaakt worden.",
+        ConfirmLabel = "Verwijderen",
+        FormAction = Url.Action("Verwijderen", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id }) ?? ""
+    })
+}
+
+@section PageScripts
+{
+    <script id="gl-v2-dos-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "dossierId": @d.Id,
+        "anderUrl": "@Url.Action("AnderModal", "ProjectDossiers", new { projectId = Model.ProjectId })",
+        "uploadUrl": "@Url.Action("DossierDocumentUploadV2", "Projecten", new { projectid = Model.ProjectId, dossierId = d.Id })",
+        "substapUrl": "@Url.Action("SubstapStatus", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, substapId = 0 })"
+    }
+    </script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-dossiers-ander.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-dossiers-detail.js" asp-append-version="true"></script>
+}

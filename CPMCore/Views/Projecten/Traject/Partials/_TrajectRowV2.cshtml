@@ -1,0 +1,74 @@
+@model DALCore.Models.Mijlpaal
+@*
+    gl-v2 — één mijlpaalrij in de tijdlijn (design-handoff 30a): bolletje (bereikt / te laat / nog te doen), naam met
+    "verplicht"- en "trigger"-chip, type, verantwoordelijke met avatar, streefdatum met "N dagen te laat", knop
+    "Bereikt", "gekoppeld aan sjabloon"-icoon en het ···-menu. De hele rij opent het formulier (30e).
+    Context via ViewData: Vm (TrajectIndexVm) en Today.
+*@
+@using BOCore
+@using CPMCore.Helpers
+@{
+    var vm = (CPMCore.Models.Traject.TrajectIndexVm)ViewData["Vm"]!;
+    var today = (DateOnly)ViewData["Today"]!;
+    var m = Model;
+    var soort = TrajectWeergave.Soort(m, today);
+    var wie = TrajectWeergave.Verantwoordelijke(m, vm);
+    var streef = TrajectWeergave.Streef(m);
+    var dagen = TrajectWeergave.DagenTeLaat(m, today);
+    var hasTrigger = vm.TriggersPerMijlpaal.ContainsKey(m.Id);
+    var menuId = "gl-v2-tr-rmenu-" + m.Id;
+    var eenheid = m.Unit?.Name;
+    var puntenAantal = vm.PuntenPerMijlpaal.TryGetValue(m.Id, out var pn) ? pn : 0;
+}
+<div class="gl-v2-tr-ms is-@soort" id="gl-v2-tr-ms-@m.Id" data-ms-id="@m.Id" data-soort="@soort" @(vm.CanWrite ? "data-editable=1" : "")>
+    <button type="button" class="gl-v2-tr-dot is-@soort js-tr-toggle" data-ms-id="@m.Id" data-done="@(soort == "done" ? "1" : "0")" @(vm.CanWrite ? "" : "disabled")
+            aria-label="@(soort == "done" ? "Bereikt — terugzetten naar nog te doen" : "Markeer als bereikt")" title="@(soort == "done" ? "Bereikt — klik om terug te zetten" : "Markeer als bereikt")">
+        <i class="ph @(soort switch { "done" => "ph-check", "late" => "ph-exclamation-mark", "nvt" => "ph-minus", "bezig" => "ph-clock", "geblokkeerd" => "ph-prohibit", _ => "" })" aria-hidden="true"></i>
+    </button>
+    <div class="gl-v2-tr-ms-naam">
+        <span class="gl-v2-tr-naam">@m.Naam</span>
+        @if (m.IsVerplicht) { <span class="gl-v2-tr-tag">verplicht</span> }
+        @if (hasTrigger) { <span class="gl-v2-tr-tag is-trigger">trigger</span> }
+        @if (eenheid != null) { <span class="gl-v2-tr-tag is-unit">@eenheid</span> }
+        @if (puntenAantal > 0) { <span class="gl-v2-tr-tag is-punt" title="Gekoppelde punten"><i class="ph ph-warning-circle" aria-hidden="true"></i>@puntenAantal</span> }
+        @if (soort == "nvt") { <span class="gl-v2-tr-tag">niet van toepassing</span> }
+        @if (soort == "geblokkeerd") { <span class="gl-v2-tr-tag is-blocked">geblokkeerd</span> }
+    </div>
+    <span class="gl-v2-tr-ms-type">@TrajectWeergave.TypeNaam(m.MijlpaalType)</span>
+    <span class="gl-v2-tr-ms-wie">
+        @if (wie.Naam.Length > 0)
+        {
+            <span class="gl-v2-tr-avatar" aria-hidden="true">@wie.Initialen</span><span class="gl-v2-tr-wie">@wie.Naam</span>
+        }
+    </span>
+    <span class="gl-v2-tr-ms-datum">
+        <b class="@(soort == "late" ? "is-late" : "")">@TrajectWeergave.Datum(soort == "done" ? (m.WerkelijkeDatum ?? streef) : streef)</b>
+        @if (soort == "late") { <small class="is-late">@TrajectWeergave.Dagen(dagen) te laat</small> }
+        else if (soort == "done") { <small>bereikt</small> }
+    </span>
+    <span class="gl-v2-tr-ms-acties">
+        @if (vm.CanWrite && soort != "done" && soort != "nvt")
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-tr-bereikt-btn js-tr-toggle" data-ms-id="@m.Id" data-done="0">Bereikt</button>
+        }
+        @if (m.SjabloonMijlpaalId != null)
+        {
+            <span class="gl-v2-tr-linked" title="Gekoppeld aan het sjabloon"><i class="ph ph-link-simple" aria-hidden="true"></i></span>
+        }
+        @if (vm.CanWrite)
+        {
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @m.Naam"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+            <div class="gl-v2-menu" id="@menuId">
+                <button type="button" class="gl-v2-menu-item js-tr-edit" data-ms-id="@m.Id"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span></button>
+                @if (soort == "done")
+                {
+                    <button type="button" class="gl-v2-menu-item js-tr-toggle" data-ms-id="@m.Id" data-done="1"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Terug naar nog te doen</span></span></button>
+                }
+                @if (vm.CanDelete)
+                {
+                    <button type="button" class="gl-v2-menu-item is-danger js-tr-delete" data-ms-id="@m.Id" data-naam="@m.Naam"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span></button>
+                }
+            </div>
+        }
+    </span>
+</div>

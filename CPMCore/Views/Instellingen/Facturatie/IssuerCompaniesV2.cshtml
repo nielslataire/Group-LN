@@ -36,7 +36,14 @@
     {
         <div class="gl-v2-ic-row" data-detail-url="@c.EditUrl">
             <div class="gl-v2-ic-name">
-                <span class="gl-v2-ic-logo">logo</span>
+                @if (!string.IsNullOrEmpty(c.LogoDataUri))
+                {
+                    <span class="gl-v2-ic-logo has-image"><img src="@c.LogoDataUri" alt="Logo van @c.Name" loading="lazy" /></span>
+                }
+                else
+                {
+                    <span class="gl-v2-ic-logo">logo</span>
+                }
                 <span class="gl-v2-ic-name-text">
                     <strong>@c.Name</strong>
                     @if (!string.IsNullOrEmpty(c.Sub))

@@ -300,6 +300,9 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<BouwIndex>               BouwIndex               { get; set; }
     public virtual DbSet<BudgetVerkoopLijn>       BudgetVerkoopLijn       { get; set; }
     public virtual DbSet<BudgetPrijsReferentie>   BudgetPrijsReferentie   { get; set; }
+    public virtual DbSet<BudgetReferentieProject>      BudgetReferentieProject      { get; set; }  // migratie 076
+    public virtual DbSet<BudgetReferentieProjectLijn>  BudgetReferentieProjectLijn  { get; set; }
+    public virtual DbSet<BudgetVersieNacalcReferentie> BudgetVersieNacalcReferentie { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -3513,6 +3516,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Grondwaarde).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Bouwwaarde).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Vraagprijs).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.BouwPrijsPerM2).HasColumnType("decimal(18, 2)");   // migratie 075
+            entity.Property(e => e.GrondPrijsPerM2).HasColumnType("decimal(18, 2)");  // migratie 075
             entity.Property(e => e.IsRuil).HasDefaultValue(false);
             entity.Property(e => e.SortOrder).HasDefaultValue(0);
 
@@ -3534,11 +3539,66 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.PrijsType).IsRequired().HasMaxLength(10);
             entity.Property(e => e.PrijsPerM2).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Omschrijving).HasMaxLength(200);
+            entity.Property(e => e.Datum).HasColumnType("date");  // migratie 075
+            entity.Property(e => e.Bron).HasMaxLength(200);       // migratie 075
 
             entity.HasOne(d => d.Project).WithMany()
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_BudgetPrijsRef_Project");
+        });
+
+        // ── Nacalculatie budgetwizard: referentieprojecten (migratie 076) ──
+        modelBuilder.Entity<BudgetReferentieProject>(entity =>
+        {
+            entity.ToTable("BudgetReferentieProject");
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Datum).HasColumnType("date");
+            entity.Property(e => e.OppervlakteGBA).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.SIndex).HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.IIndex).HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.Bron).IsRequired().HasMaxLength(50).HasDefaultValue("Excel");
+            entity.Property(e => e.Opmerking).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2(0)").HasDefaultValueSql("SYSDATETIME()");
+
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetRefProject_Project");
+        });
+
+        modelBuilder.Entity<BudgetReferentieProjectLijn>(entity =>
+        {
+            entity.ToTable("BudgetReferentieProjectLijn");
+            entity.Property(e => e.Bedrag).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Opmerking).HasMaxLength(200);
+            entity.HasIndex(e => new { e.ReferentieProjectId, e.ActivityId }).IsUnique().HasDatabaseName("UQ_BudgetRefProjectLijn_Activiteit");
+
+            entity.HasOne(d => d.ReferentieProject).WithMany(p => p.Lijnen)
+                .HasForeignKey(d => d.ReferentieProjectId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetRefProjectLijn_RefProject");
+
+            entity.HasOne(d => d.Activity).WithMany()
+                .HasForeignKey(d => d.ActivityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BudgetRefProjectLijn_Activity");
+        });
+
+        modelBuilder.Entity<BudgetVersieNacalcReferentie>(entity =>
+        {
+            entity.ToTable("BudgetVersieNacalcReferentie");
+            entity.HasKey(e => new { e.BudgetVersieId, e.ReferentieProjectId });
+
+            entity.HasOne(d => d.BudgetVersie).WithMany()
+                .HasForeignKey(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetVersieNacalcRef_Versie");
+
+            entity.HasOne(d => d.ReferentieProject).WithMany()
+                .HasForeignKey(d => d.ReferentieProjectId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetVersieNacalcRef_RefProject");
         });
 
         OnModelCreatingPartial(modelBuilder);

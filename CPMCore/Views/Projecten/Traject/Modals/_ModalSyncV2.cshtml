@@ -1,0 +1,75 @@
+@model FacadeCore.TrajectSyncPreview
+@*
+    gl-v2 — Sync met sjabloon (design-handoff 30f): eerst tonen wat er verandert, dan kiezen. Wordt via AJAX in
+    #gl-v2-tr-sync-content geladen; het formulier (#gl-v2-tr-sync-form) post de aangevinkte sleutels als keys[].
+    "Bereikte mijlpalen worden nooit aangepast. Mijlpalen die je zelf toevoegde, blijven staan." — "Niet meer in sjabloon"
+    is enkel informatief (geen vinkje).
+*@
+@{
+    var nieuw = Model.Items.Where(i => i.Soort == FacadeCore.TrajectSyncSoort.Nieuw).ToList();
+    var gewijzigd = Model.Items.Where(i => i.Soort == FacadeCore.TrajectSyncSoort.Gewijzigd).ToList();
+    var weg = Model.Items.Where(i => i.Soort == FacadeCore.TrajectSyncSoort.Weg).ToList();
+    var toepasbaar = nieuw.Count + gewijzigd.Count;
+    var versie = Model.SjabloonGewijzigd?.ToString("dd/MM/yyyy");
+}
+<div class="modal-header">
+    <div class="gl-v2-tr-modal-headtext">
+        <h2 class="modal-title" id="gl-v2-tr-sync-title">Synchroniseren met sjabloon</h2>
+        <span class="gl-v2-tr-modal-sub">Sjabloon "@Model.SjabloonNaam"@(versie != null ? " · laatst gewijzigd op " + versie : "")</span>
+    </div>
+    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+</div>
+<div class="modal-body">
+    <div class="gl-v2-notice gl-v2-notice-compact is-info">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span><b>Je kiest wat er verandert.</b> Bereikte mijlpalen worden nooit aangepast. Mijlpalen die je zelf toevoegde, blijven staan.</span>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="gl-v2-empty-state gl-v2-empty-state-inline gl-v2-tr-sync-empty">
+            <span class="gl-v2-empty-state-icon"><i class="ph ph-check-circle" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-empty-state-title">Het traject is in lijn met het sjabloon</h2>
+            <p class="gl-v2-empty-state-desc">Er is niets nieuw of gewijzigd.</p>
+        </div>
+    }
+
+    @foreach (var (titel, lijst, klasse) in new[] { ("NIEUW IN SJABLOON", nieuw, "is-nieuw"), ("GEWIJZIGD", gewijzigd, "is-gewijzigd") })
+    {
+        @if (lijst.Count > 0)
+        {
+            <div class="gl-v2-tr-sync-group">
+                <div class="gl-v2-tr-sync-head"><span>@titel</span><span class="gl-v2-tr-sync-n">@lijst.Count</span></div>
+                @foreach (var i in lijst)
+                {
+                    <label class="gl-v2-tr-sync-item @klasse">
+                        <input type="checkbox" name="keys" value="@i.Key" checked class="js-tr-sync-key" />
+                        <span class="gl-v2-tr-sync-text"><b>@i.Naam</b><small>@i.Detail</small></span>
+                    </label>
+                }
+            </div>
+        }
+    }
+
+    @if (weg.Count > 0)
+    {
+        <div class="gl-v2-tr-sync-group">
+            <div class="gl-v2-tr-sync-head"><span>NIET MEER IN SJABLOON</span><span class="gl-v2-tr-sync-n">@weg.Count</span></div>
+            @foreach (var i in weg)
+            {
+                <div class="gl-v2-tr-sync-item is-weg">
+                    <span class="gl-v2-tr-sync-lock"><i class="ph ph-lock-simple" aria-hidden="true"></i></span>
+                    <span class="gl-v2-tr-sync-text"><b>@i.Naam</b><small>@i.Detail</small></span>
+                </div>
+            }
+        </div>
+    }
+</div>
+<div class="modal-footer">
+    <span class="gl-v2-tr-sync-count"><b id="gl-v2-tr-sync-sel">@toepasbaar</b> @(toepasbaar == 1 ? "wijziging" : "wijzigingen") geselecteerd</span>
+    <span class="gl-v2-tr-spacer"></span>
+    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-tr-sync-apply" @(toepasbaar == 0 ? "disabled" : "")>
+        <span id="gl-v2-tr-sync-apply-label">@toepasbaar @(toepasbaar == 1 ? "wijziging" : "wijzigingen") toepassen</span>
+    </button>
+</div>

@@ -831,6 +831,10 @@
             var errorEl = root.querySelector('[data-role="field-error"]');
             var fieldEl = root.closest(".gl-v2-field");
             if (!box || !textInput || !hiddenInput || !panel || !daysHost) return;
+            // Idempotent: window.GlV2DatePicker.init() wordt ook aangeroepen nadat een modal/popover AJAX-inhoud kreeg (Traject,
+            // Dossiers, wijzigingsopdrachten) — dan mag een veld dat al bedraad is niet nogmaals zijn luisteraars krijgen.
+            if (root.hasAttribute("data-gl-v2-dp-wired")) return;
+            root.setAttribute("data-gl-v2-dp-wired", "");
             panel.setAttribute("data-gl-v2-dp-owned", "");
 
             var today = new Date();

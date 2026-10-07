@@ -906,7 +906,18 @@ namespace CPMCore.Controllers
                 .Where(o => o.BudgetVersieId == versieId)
                 .Sum(o => (decimal?)o.BewoonbareOpp) ?? 0m;
 
-            var beschikbareProjecten = await _budgetActivityService.GetProjectenVoorNacalcAsync();
+            // Nacalc: referentieprijs per activiteit uit de gekozen referentieprojecten (geïndexeerd naar de huidige index van de versie)
+            var referentieIds = await _referentieProjectService.GetReferentieIdsVoorVersieAsync(versieId);
+            var referentie    = await _referentieProjectService.BerekenReferentieAsync(versieId);
+            foreach (var lijn in lotGroepen.SelectMany(g => g.Lijnen))
+            {
+                if (!referentie.TryGetValue(lijn.ActivityId, out var r)) continue;
+                lijn.ReferentiePrijsPerEenheid = r.PrijsPerEenheid;
+                lijn.ReferentiePrijsPerM2      = r.PrijsPerM2;
+                lijn.ReferentieAantalProjecten = r.AantalProjecten;
+                lijn.ReferentieMinPerEenheid   = r.MinPerEenheid;
+                lijn.ReferentieMaxPerEenheid   = r.MaxPerEenheid;
+            }
 
             var model = new BudgetActivityLijnenModel
             {
@@ -926,7 +937,8 @@ namespace CPMCore.Controllers
                 SIndexHuidig         = versie.BudgetGegevens?.SIndexHuidig ?? 0m,
                 IIndexStart          = versie.BudgetGegevens?.IIndexStart  ?? 0m,
                 IIndexHuidig         = versie.BudgetGegevens?.IIndexHuidig ?? 0m,
-                BeschikbareProjecten = beschikbareProjecten
+                Referenties          = await _referentieProjectService.GetAlleAsync(),
+                GeselecteerdeReferentieIds = referentieIds
             };
 
             ViewData["Referrer"] = Request.Headers["Referer"].ToString();
@@ -955,10 +967,15 @@ namespace CPMCore.Controllers
             return Json(new { success = response.Success, message = response.Messages.FirstOrDefault()?.Message });
         }
 
+        // POST /Projecten/SetNacalcReferenties — welke referentieprojecten deze versie vergelijkt op stap 6.
         [HttpPost]
-        public IActionResult ImportNacalcVanProject(int bronProjectId, int doelVersieId)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetNacalcReferenties(int versieId, int[] referentieIds)
         {
-            return Json(new { success = false, message = "Nog niet geïmplementeerd." });
+            if (!_uow.BudgetVersies.GetNoTracking().Any(v => v.Id == versieId)) return NotFound();
+            var r = await _referentieProjectService.SetReferentiesVoorVersieAsync(versieId, referentieIds ?? Array.Empty<int>());
+            TempData[r.Success ? "Message" : "Error"] = string.Join(" ", r.Messages.Select(m => m.Message));
+            return RedirectToAction(nameof(BudgetActivityLijnen), new { versieId });
         }
 
         [HttpGet]
@@ -1022,8 +1039,22 @@ namespace CPMCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BudgetParams(BudgetParamsModel model,
             decimal? pctProjectcoord, decimal? pctArchitect, decimal? pctIngenieur,
-            decimal? pctDoelmarge, decimal? pctGrondmarge)
+            decimal? pctDoelmarge, decimal? pctGrondmarge,
+            decimal? pctVeiligheid, decimal? pctDecennale, decimal? pctABR, decimal? pctOnvoorzien,
+            decimal? pctWetBreyne, decimal? pctSlGebouw, decimal? pctSlGrond)
         {
+            // Alle percentages worden in procentpunten ingevoerd (2,00) en als fractie bewaard (0,02) — voordien stond de ene helft
+            // in procentpunten en de andere helft als fractie, wat tot tienvoudige fouten leidde (okt. 2026).
+            static decimal Fractie(decimal? pct) => Math.Round((pct ?? 0m) / 100m, 6);
+            static decimal? FractieOfNull(decimal? pct) => pct.GetValueOrDefault() == 0m ? (decimal?)null : Fractie(pct);
+            model.Params.VeiligheidscoordEPBPerc  = FractieOfNull(pctVeiligheid);
+            model.Params.DecennaleGeslRuwbouwPerc = FractieOfNull(pctDecennale);
+            model.Params.ABRPlaatsbeschrPerc      = FractieOfNull(pctABR);
+            model.Params.OnvoorzienPerc           = Fractie(pctOnvoorzien);
+            model.Params.WetBreynePerc            = Fractie(pctWetBreyne);
+            model.Params.StraightloanGebouwPerc   = Fractie(pctSlGebouw);
+            model.Params.StraightloanGrondPerc    = Fractie(pctSlGrond);
+
             // Projectcoördinatie / Architect / Ingenieur worden in procentpunten (5,25)
             // ingevoerd maar als fractie bewaard. Leeg of 0 bij architect/ingenieur =
             // "niet overschreven" (null) → blijft de standaard uit Instellingen volgen.
@@ -1099,10 +1130,20 @@ namespace CPMCore.Controllers
             var unitOptions = BuildVerkoopUnitOptions(versie.ProjectId);
             ViewData["UnitOptions"] = unitOptions;
 
+            var refBouw = await _db.BudgetPrijsReferentie
+                .Where(p => p.PrijsType == "Bouw" && (p.ProjectId == null || p.ProjectId == versie.ProjectId))
+                .OrderBy(p => p.Code).ThenBy(p => p.ProjectId.HasValue).ToListAsync();
+            var refGrond = await _db.BudgetPrijsReferentie
+                .Where(p => p.PrijsType == "Grond" && (p.ProjectId == null || p.ProjectId == versie.ProjectId))
+                .OrderBy(p => p.Code).ThenBy(p => p.ProjectId.HasValue).ToListAsync();
+            ViewData["RefBouw"]  = refBouw;
+            ViewData["RefGrond"] = refGrond;
+
             var model = new BudgetVerkoopModel
             {
                 Voorstel              = voorstel,
                 UnitOptions           = unitOptions,
+                EenhedenInfo          = BuildVerkoopEenhedenInfo(voorstel),
                 BudgetVersieId        = versieId,
                 ProjectId             = versie.ProjectId,
                 ProjectName           = projectNaam,
@@ -1113,19 +1154,36 @@ namespace CPMCore.Controllers
                                             : $"v{versie.Versienummer} • {versie.VersieNaam}",
                 VersieStatus          = versie.Status,
                 Lijnen                = lijnen,
-                PrijsReferentiesBouw  = await _db.BudgetPrijsReferentie
-                                            .Where(p => p.PrijsType == "Bouw" &&
-                                                       (p.ProjectId == null || p.ProjectId == versie.ProjectId))
-                                            .OrderBy(p => p.Code).ToListAsync(),
-                PrijsReferentiesGrond = await _db.BudgetPrijsReferentie
-                                            .Where(p => p.PrijsType == "Grond" &&
-                                                       (p.ProjectId == null || p.ProjectId == versie.ProjectId))
-                                            .OrderBy(p => p.Code).ToListAsync(),
+                PrijsReferentiesBouw  = refBouw,
+                PrijsReferentiesGrond = refGrond,
                 BeschikbareEenheden   = eenheden
             };
 
             SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetVerkoop), "Verkoop", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             return View(model);
+        }
+
+        /// <summary>Oppervlaktes en voorstelbedragen per eenheid (sleutel = naam, hoofdletterongevoelig) voor de rekenregels op stap 8.</summary>
+        private static Dictionary<string, VerkoopEenheidInfo> BuildVerkoopEenhedenInfo(BOCore.Budget.BudgetVerkoopVoorstelBO voorstel)
+        {
+            var info = new Dictionary<string, VerkoopEenheidInfo>(StringComparer.OrdinalIgnoreCase);
+            if (voorstel?.Eenheden == null) return info;
+            foreach (var e in voorstel.Eenheden)
+            {
+                if (string.IsNullOrWhiteSpace(e.EenheidNaam)) continue;
+                info[e.EenheidNaam.Trim()] = new VerkoopEenheidInfo
+                {
+                    OppGereduceerd = e.OppGereduceerd,
+                    Grondopp       = e.Grondopp,
+                    BewoonbareOpp  = e.BewoonbareOpp,
+                    VoorstelGrond  = Math.Round(e.Grondwaarde, 0),
+                    VoorstelBouw   = Math.Round(e.Bouwwaarde, 0),
+                    Minimum        = Math.Round(e.MinimumVerkoopprijs, 0),
+                    Markt          = e.MarktPrijs,
+                    MarktPerM2     = e.MarktMediaanPerM2
+                };
+            }
+            return info;
         }
 
         [HttpPost]
@@ -1137,15 +1195,25 @@ namespace CPMCore.Controllers
                     .Where(l => l.BudgetVersieId == req.BudgetVersieId).ToListAsync();
                 _db.BudgetVerkoopLijn.RemoveRange(bestaand);
 
+                // Server-kant van de rekenregels (zelfde als het JS op de pagina): €/m² × oppervlakte of omgekeerd, vraagprijs = som.
+                var oppResp = _budgetService.GetBudgetOppervlaktes(req.BudgetVersieId);
+                var oppervlaktes = (oppResp.Success && oppResp.Values != null ? oppResp.Values : new List<BOCore.BudgetOppervlaktesBO>())
+                    .Where(o => !string.IsNullOrWhiteSpace(o.EenheidNaam))
+                    .GroupBy(o => o.EenheidNaam.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+                var nieuw = new List<BudgetVerkoopLijn>();
                 for (int i = 0; i < req.Lijnen.Count; i++)
                 {
-                    req.Lijnen[i].Id             = 0;
-                    req.Lijnen[i].BudgetVersieId = req.BudgetVersieId;
-                    req.Lijnen[i].SortOrder      = i;
-                    req.Lijnen[i].BudgetVersie   = null;
-                    req.Lijnen[i].Unit           = null;
+                    var lijn = req.Lijnen[i].NaarEntiteit(req.BudgetVersieId, i);
+                    var naam = (lijn.EenheidNaam ?? "").Trim();
+                    if (oppervlaktes.TryGetValue(naam, out var opp))
+                        ServiceCore.Budget.VerkoopLijnRekenregel.Herbereken(lijn, opp.OppGereduceerd, opp.Grondopp);
+                    else
+                        ServiceCore.Budget.VerkoopLijnRekenregel.Herbereken(lijn, 0m, 0m);
+                    nieuw.Add(lijn);
                 }
-                _db.BudgetVerkoopLijn.AddRange(req.Lijnen);
+                _db.BudgetVerkoopLijn.AddRange(nieuw);
                 await _db.SaveChangesAsync();
                 return Json(new { success = true });
             }
@@ -1161,6 +1229,10 @@ namespace CPMCore.Controllers
             var projectId = _uow.BudgetVersies.GetNoTracking()
                 .Where(v => v.Id == versieId).Select(v => (int?)v.ProjectId).FirstOrDefault();
             ViewData["UnitOptions"] = projectId.HasValue ? BuildVerkoopUnitOptions(projectId.Value) : new List<SelectListItem>();
+            ViewData["RefBouw"]  = _db.BudgetPrijsReferentie.AsNoTracking()
+                .Where(p => p.PrijsType == "Bouw" && (p.ProjectId == null || p.ProjectId == projectId)).OrderBy(p => p.Code).ToList();
+            ViewData["RefGrond"] = _db.BudgetPrijsReferentie.AsNoTracking()
+                .Where(p => p.PrijsType == "Grond" && (p.ProjectId == null || p.ProjectId == projectId)).OrderBy(p => p.Code).ToList();
 
             var lijn = new BudgetVerkoopLijn
             {
@@ -1168,6 +1240,37 @@ namespace CPMCore.Controllers
                 EenheidNaam    = eenheidNaam
             };
             return PartialView("Partials/_VerkoopRij", lijn);
+        }
+
+        // POST /Projecten/BudgetPrijsReferentieToevoegen — projectspecifieke prijscode (€/m²) vanaf stap 8; algemene codes via Instellingen › Budget.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BudgetPrijsReferentieToevoegen(int versieId, string prijsType, int code, decimal prijsPerM2, string omschrijving, DateTime? datum, string bron)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking().FirstOrDefault(v => v.Id == versieId);
+            if (versie == null) return NotFound();
+
+            var r = _prijsReferentieService.InsertUpdate(new BOCore.Budget.BudgetPrijsReferentieBO
+            {
+                ProjectId = versie.ProjectId, PrijsType = prijsType, Code = code, PrijsPerM2 = prijsPerM2,
+                Omschrijving = omschrijving, Datum = datum, Bron = bron
+            });
+            TempData[r.Success ? "Message" : "Error"] = string.Join(" ", r.Messages.Select(m => m.Message));
+            return RedirectToAction(nameof(BudgetVerkoop), new { versieId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BudgetPrijsReferentieVerwijderen(int versieId, int id)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking().FirstOrDefault(v => v.Id == versieId);
+            if (versie == null) return NotFound();
+            // Enkel codes van dit project; algemene codes worden in Instellingen beheerd.
+            var eigen = _db.BudgetPrijsReferentie.AsNoTracking().Any(p => p.Id == id && p.ProjectId == versie.ProjectId);
+            var r = eigen ? _prijsReferentieService.Delete(id) : new Response();
+            if (!eigen) r.AddError("Alleen projectspecifieke codes kunnen hier verwijderd worden.");
+            TempData[r.Success ? "Message" : "Error"] = string.Join(" ", r.Messages.Select(m => m.Message));
+            return RedirectToAction(nameof(BudgetVerkoop), new { versieId });
         }
 
         private List<SelectListItem> BuildVerkoopUnitOptions(int projectId)
@@ -1212,10 +1315,9 @@ namespace CPMCore.Controllers
             // Lijnprijzen zijn per woon-/commerciële eenheid
             var aantalEenh = await _budgetActivityService.GetAantalWoonCommEenhedenAsync(versieId);
 
-            var altBouw = _uow.BudgetActivityLijnen.GetNoTracking()
-                .Where(l => l.BudgetVersieId == versieId)
-                .AsEnumerable()
-                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalEenh);
+            // Dezelfde bouwkost als in de kostprijs (gecorrigeerde bedragen, incl. voorstellen van nog niet opgeslagen lijnen) —
+            // voordien telde deze KPI de ruwe alt.-prijzen zonder correctie, waardoor twee verschillende "bouwkosten" op één pagina stonden.
+            var altBouw = resultaat.TotaalBouw;
 
             var nacBouw = _uow.BudgetActivityLijnen.GetNoTracking()
                 .Where(l => l.BudgetVersieId == versieId)
@@ -1252,7 +1354,8 @@ namespace CPMCore.Controllers
                 BudgetMasterId       = versie.BudgetMasterId,
                 Resultaat            = resultaat,
                 TotaalBouwAlternatief = altBouw,
-                TotaalBouwNacalc     = nacBouw * gewogen,
+                // De bewaarde nacalc per lijn is al geïndexeerd naar de huidige index (stap 6, referentieprojecten): niet nog eens indexeren.
+                TotaalBouwNacalc     = nacBouw,
                 GewogenFactor        = gewogen,
                 AndereVersies        = andereVersies
             };
@@ -1331,168 +1434,11 @@ namespace CPMCore.Controllers
             _db.BudgetVersie.Add(nieuw);
             await _db.SaveChangesAsync();
 
-            // Gegevens
-            if (bron.BudgetGegevens != null)
-            {
-                var g = bron.BudgetGegevens;
-                _db.BudgetGegevens.Add(new BudgetGegevens
-                {
-                    BudgetVersieId                 = nieuw.Id,
-                    Naam                           = g.Naam,
-                    Adres                          = g.Adres,
-                    SIndexStart                    = g.SIndexStart,
-                    SIndexHuidig                   = g.SIndexHuidig,
-                    IIndexStart                    = g.IIndexStart,
-                    IIndexHuidig                   = g.IIndexHuidig,
-                    NacalcBasisprijs               = g.NacalcBasisprijs,
-                    NacalcBasisJaar                = g.NacalcBasisJaar,
-                    AantalLiften                   = g.AantalLiften,
-                    AantalBinnentrappen            = g.AantalBinnentrappen,
-                    AantalBovengrondseVerdiepingen = g.AantalBovengrondseVerdiepingen,
-                    AantalVerdiepingenOndergronds  = g.AantalVerdiepingenOndergronds,
-                    TypePoorten                    = g.TypePoorten,
-                    TypeDak                        = g.TypeDak,
-                    GevelLeienSidings              = g.GevelLeienSidings,
-                    OppFunderingen                 = g.OppFunderingen,
-                    M3Grondwerk                    = g.M3Grondwerk,
-                    LmBerlinerwanden               = g.LmBerlinerwanden,
-                    LmSecanpalen                   = g.LmSecanpalen,
-                    GevelMetselwerkPrijsPerM2      = g.GevelMetselwerkPrijsPerM2,
-                    GipswerkenPrijsPerM2           = g.GipswerkenPrijsPerM2,
-                    TerrasPrijsPerM2               = g.TerrasPrijsPerM2
-                });
-            }
+            // Volledige kopie via dezelfde helper als "Nieuwe versie" (okt. 2026): elk veld van elke budgettabel.
+            var kopie = _budgetService.KopieerVersieInhoud(versieId, nieuw.Id);
+            if (!kopie.Success)
+                return Json(new { success = false, message = kopie.Messages.FirstOrDefault()?.Message ?? "Kopiëren mislukt." });
 
-            // Oppervlaktes
-            var oppLijnen = await _db.BudgetOppervlaktes
-                .Where(o => o.BudgetVersieId == versieId).ToListAsync();
-            foreach (var o in oppLijnen)
-                _db.BudgetOppervlaktes.Add(new BudgetOppervlaktes
-                {
-                    BudgetVersieId          = nieuw.Id,
-                    EenheidNaam             = o.EenheidNaam,
-                    UnitGroupTypeId         = o.UnitGroupTypeId,
-                    UnitTypeId              = o.UnitTypeId,
-                    SortOrder               = o.SortOrder,
-                    BewoonbareOpp           = o.BewoonbareOpp,
-                    Tuin                    = o.Tuin,
-                    TerrasPrefab            = o.TerrasPrefab,
-                    TerrasGelijkvloers      = o.TerrasGelijkvloers,
-                    Dakterras               = o.Dakterras,
-                    GaragesParkingsBovenGr  = o.GaragesParkingsBovenGr,
-                    GarBergOndergronds      = o.GarBergOndergronds,
-                    BergGelijkvloers        = o.BergGelijkvloers,
-                    Carports                = o.Carports,
-                    DoorritGVL              = o.DoorritGVL,
-                    Zolder                  = o.Zolder,
-                    GemeenschappelijkeDelen = o.GemeenschappelijkeDelen,
-                    Wegenis                 = o.Wegenis,
-                    Grondopp                = o.Grondopp
-                });
-
-            // Sanitair
-            var sanitairLijnen = await _db.BudgetSanitair
-                .Where(s => s.BudgetVersieId == versieId).ToListAsync();
-            foreach (var s in sanitairLijnen)
-                _db.BudgetSanitair.Add(new BudgetSanitair
-                {
-                    BudgetVersieId       = nieuw.Id,
-                    EenheidNaam          = s.EenheidNaam,
-                    UnitTypeId           = s.UnitTypeId,
-                    SortOrder            = s.SortOrder,
-                    Badkamer             = s.Badkamer,
-                    ToiletInBadkamer     = s.ToiletInBadkamer,
-                    AfzonderlijkToilet   = s.AfzonderlijkToilet,
-                    DoucheInBadkamer     = s.DoucheInBadkamer,
-                    Douchekamer          = s.Douchekamer
-                });
-
-            // Gevelelementen
-            var gevelLijnen = await _db.BudgetGevelElementen
-                .Where(g => g.BudgetVersieId == versieId).ToListAsync();
-            foreach (var g in gevelLijnen)
-                _db.BudgetGevelElementen.Add(new BudgetGevelElementen
-                {
-                    BudgetVersieId = nieuw.Id,
-                    ElementType    = g.ElementType,
-                    EenheidNaam    = g.EenheidNaam,
-                    Beschrijving   = g.Beschrijving,
-                    Aantal         = g.Aantal,
-                    Breedte        = g.Breedte,
-                    Hoogte         = g.Hoogte,
-                    Lengte         = g.Lengte,
-                    SortOrder      = g.SortOrder
-                });
-
-            // Activiteitslijnen
-            var actLijnen = await _db.BudgetActivityLijnen
-                .Where(l => l.BudgetVersieId == versieId).ToListAsync();
-            foreach (var l in actLijnen)
-                _db.BudgetActivityLijnen.Add(new BudgetActivityLijnen
-                {
-                    BudgetVersieId              = nieuw.Id,
-                    ActivityId                  = l.ActivityId,
-                    AlternatievePrijsPerEenheid = l.AlternatievePrijsPerEenheid,
-                    NacalcPrijsPerEenheid       = l.NacalcPrijsPerEenheid,
-                    Correctiefactor             = l.Correctiefactor,
-                    IsManueel                   = l.IsManueel,
-                    VerhogingsPerc              = l.VerhogingsPerc,
-                    Omschrijving                = l.Omschrijving
-                });
-
-            // Params
-            var bronParams = await _db.BudgetParams
-                .FirstOrDefaultAsync(p => p.BudgetVersieId == versieId);
-            if (bronParams != null)
-                _db.BudgetParams.Add(new BudgetParams
-                {
-                    BudgetVersieId          = nieuw.Id,
-                    ProjectcoordinatiePerc  = bronParams.ProjectcoordinatiePerc,
-                    ArchitectPerc           = bronParams.ArchitectPerc,
-                    VeiligheidscoordEPBPerc = bronParams.VeiligheidscoordEPBPerc,
-                    VentVerslaggeverForfait = bronParams.VentVerslaggeverForfait,
-                    StudieIRPerc            = bronParams.StudieIRPerc,
-                    OpmetingSonderingForfait= bronParams.OpmetingSonderingForfait,
-                    DecennaleGeslRuwbouwPerc= bronParams.DecennaleGeslRuwbouwPerc,
-                    ABRPlaatsbeschrPerc     = bronParams.ABRPlaatsbeschrPerc,
-                    InfrastructuurForfait   = bronParams.InfrastructuurForfait,
-                    LiftPrijsPerStuk        = bronParams.LiftPrijsPerStuk,
-                    WetBreynePerc           = bronParams.WetBreynePerc,
-                    WetBreyneMaanden        = bronParams.WetBreyneMaanden,
-                    StraightloanGebouwPerc  = bronParams.StraightloanGebouwPerc,
-                    StraightloanGebouwMaanden = bronParams.StraightloanGebouwMaanden,
-                    StraightloanGrondPerc   = bronParams.StraightloanGrondPerc,
-                    StraightloanGrondMaanden= bronParams.StraightloanGrondMaanden,
-                    AankoopprijsGrond       = bronParams.AankoopprijsGrond,
-                    OnvoorzienPerc          = bronParams.OnvoorzienPerc,
-                    PubliciteitForfait      = bronParams.PubliciteitForfait,
-                    DoelMargePerc           = bronParams.DoelMargePerc,
-                    GrondMargePerc          = bronParams.GrondMargePerc
-                });
-
-            // Verkooplijnen
-            var verkoopLijnen = await _db.BudgetVerkoopLijn
-                .Where(v => v.BudgetVersieId == versieId).ToListAsync();
-            foreach (var v in verkoopLijnen)
-                _db.BudgetVerkoopLijn.Add(new BudgetVerkoopLijn
-                {
-                    BudgetVersieId = nieuw.Id,
-                    EenheidNaam    = v.EenheidNaam,
-                    UnitId         = v.UnitId,
-                    CodeBouw       = v.CodeBouw,
-                    CodeGrond      = v.CodeGrond,
-                    OppTuin        = v.OppTuin,
-                    OppTerras      = v.OppTerras,
-                    OppDakterras   = v.OppDakterras,
-                    Grondwaarde    = v.Grondwaarde,
-                    Bouwwaarde     = v.Bouwwaarde,
-                    Vraagprijs     = v.Vraagprijs,
-                    IsRuil         = v.IsRuil,
-                    ExtraForfait   = v.ExtraForfait,
-                    SortOrder      = v.SortOrder
-                });
-
-            await _db.SaveChangesAsync();
             return Json(new { success = true, nieuweVersieId = nieuw.Id, versienummer = nieuw.Versienummer });
         }
 

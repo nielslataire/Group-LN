@@ -92,6 +92,12 @@ namespace ServiceCore.Budget
                 foreach (var k in resultaat.KostenOpBouw) SetKostenRij(rij++, k.Omschrijving, k.Bedrag);
             }
 
+            if (resultaat.Grond.Any(f => f.Bedrag != 0))
+            {
+                SetGroepHeader(rij++, "Grond");
+                foreach (var k in resultaat.Grond.Where(f => f.Bedrag != 0)) SetKostenRij(rij++, k.Omschrijving, k.Bedrag);
+            }
+
             if (resultaat.Forfaits.Any(f => f.Bedrag > 0))
             {
                 SetGroepHeader(rij++, "Forfaits");

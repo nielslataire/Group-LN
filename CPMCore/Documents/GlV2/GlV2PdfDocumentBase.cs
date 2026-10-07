@@ -42,6 +42,10 @@ namespace CPMCore.Documents.GlV2
         /// Lijsten/overzichten gebruiken de compacte kop vanaf pagina 1. (Punt 35a/36.4.)</summary>
         protected virtual bool CompactHeaderFromFirstPage => false;
 
+        /// <summary>Huiskleur van het document: banden, kicker, nummer, sectielabels (standaard het gl-v2-groen). Een document kan hem
+        /// overschrijven met de kleur van het uitgevende bedrijf (factuur: <c>BrandPrimaryColor</c>).</summary>
+        protected virtual string Accent => GlV2PdfTheme.Groen;
+
         protected abstract string DocumentTitle { get; }
         /// <summary>Kicker boven de titel, bv. "MEERWERK"/"RENOVATIE" (punt 35b/35c/35d); optioneel.</summary>
         protected virtual string? Kicker => null;
@@ -67,7 +71,7 @@ namespace CPMCore.Documents.GlV2
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Height(GlV2PdfTheme.BandHoogteMm, Unit.Millimetre).Background(GlV2PdfTheme.Groen);
+                    col.Item().Height(GlV2PdfTheme.BandHoogteMm, Unit.Millimetre).Background(Accent);
                     col.Item().PaddingHorizontal(GlV2PdfTheme.ZijMargeMm, Unit.Millimetre).PaddingTop(10, Unit.Millimetre).Column(head =>
                     {
                         if (CompactHeaderFromFirstPage)
@@ -91,7 +95,7 @@ namespace CPMCore.Documents.GlV2
                 {
                     col.Item().PaddingHorizontal(GlV2PdfTheme.ZijMargeMm, Unit.Millimetre).Element(Footer);
                     col.Item().Height(4, Unit.Millimetre);
-                    col.Item().Height(GlV2PdfTheme.BandHoogteMm, Unit.Millimetre).Background(GlV2PdfTheme.Groen);
+                    col.Item().Height(GlV2PdfTheme.BandHoogteMm, Unit.Millimetre).Background(Accent);
                 });
             });
         }
@@ -110,10 +114,10 @@ namespace CPMCore.Documents.GlV2
                 row.ConstantItem(90, Unit.Millimetre).AlignRight().Column(title =>
                 {
                     if (!string.IsNullOrWhiteSpace(Kicker))
-                        title.Item().AlignRight().Text(Kicker!.ToUpperInvariant()).FontFamily(BodyFont).FontSize(7).Bold().LetterSpacing(0.18f).FontColor(GlV2PdfTheme.Groen);
+                        title.Item().AlignRight().Text(Kicker!.ToUpperInvariant()).FontFamily(BodyFont).FontSize(7).Bold().LetterSpacing(0.18f).FontColor(Accent);
                     title.Item().AlignRight().Text(DocumentTitle).FontFamily(TitleFont).FontSize(22).FontColor(GlV2PdfTheme.Inkt);
                     if (!string.IsNullOrWhiteSpace(DocumentNumber))
-                        title.Item().AlignRight().Text(DocumentNumber!).FontFamily(BodyFont).FontSize(9).SemiBold().FontColor(GlV2PdfTheme.Groen)
+                        title.Item().AlignRight().Text(DocumentNumber!).FontFamily(BodyFont).FontSize(9).SemiBold().FontColor(Accent)
                             .EnableFontFeature(FontFeatures.TabularFigures);
                 });
             });
@@ -139,13 +143,13 @@ namespace CPMCore.Documents.GlV2
                     {
                         title.Item().AlignRight().Text(DocumentTitle).FontFamily(TitleFont).FontSize(18).FontColor(GlV2PdfTheme.Inkt);
                         if (!string.IsNullOrWhiteSpace(CompactSubtitle))
-                            title.Item().AlignRight().Text(CompactSubtitle!).FontFamily(BodyFont).FontSize(8.5f).Bold().FontColor(GlV2PdfTheme.Groen);
+                            title.Item().AlignRight().Text(CompactSubtitle!).FontFamily(BodyFont).FontSize(8.5f).Bold().FontColor(Accent);
                         else if (!string.IsNullOrWhiteSpace(DocumentNumber))
-                            title.Item().AlignRight().Text(DocumentNumber!).FontFamily(BodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Groen)
+                            title.Item().AlignRight().Text(DocumentNumber!).FontFamily(BodyFont).FontSize(8).SemiBold().FontColor(Accent)
                                 .EnableFontFeature(FontFeatures.TabularFigures);
                     });
                 });
-                col.Item().PaddingTop(4, Unit.Millimetre).BorderBottom(0.6f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Groen);
+                col.Item().PaddingTop(4, Unit.Millimetre).BorderBottom(0.6f, Unit.Millimetre).BorderColor(Accent);
             });
         }
 
@@ -191,7 +195,7 @@ namespace CPMCore.Documents.GlV2
         protected void SectionLabel(IContainer c, string text, bool first = false)
         {
             c.PaddingTop(first ? 0 : 10).PaddingBottom(3).Text(text.ToUpperInvariant())
-                .FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.16f).FontColor(GlV2PdfTheme.Groen);
+                .FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.16f).FontColor(Accent);
         }
     }
 }
