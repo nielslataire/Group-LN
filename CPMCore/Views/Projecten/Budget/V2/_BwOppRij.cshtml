@@ -1,0 +1,56 @@
+@model BOCore.BudgetOppervlaktesBO
+@using CPMCore.Models.GlV2
+@using Microsoft.AspNetCore.Mvc.Rendering
+@*
+    gl-v2 — Budgetflow stap 2, één eenheidsrij (design-handoff 39c). Kolomgroepen (Bewoonbaar · Buitenruimtes · Parkeren & berging · Overige ·
+    Grond) dragen data-group zodat de pagina ze kan tonen/verbergen; de gereduceerde m² wordt client-side herrekend met de factoren van de
+    versie (data-factoren op de tabel) en server-side bevestigd bij het opslaan (BudgetOppervlaktesRijOpslaan). Hoofd-/subtype zijn
+    GlV2/_SelectList-keuzelijsten (Bare); het subtype volgt het hoofdtype via GlV2Select.setItems.
+*@
+@{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var groupTypes = ViewData["GroupTypes"] as List<SelectListItem> ?? new();
+    var allTypes = ViewData["AllTypes"] as List<BOCore.UnitTypeBO> ?? new();
+    string F(decimal v) => v.ToString("F2", nl);
+    var velden = new (string Field, string Group, decimal Val)[]
+    {
+        ("bewoonbareOpp", "bew", Model.BewoonbareOpp),
+        ("tuin", "buiten", Model.Tuin), ("terrasPrefab", "buiten", Model.TerrasPrefab), ("terrasGelijkvloers", "buiten", Model.TerrasGelijkvloers), ("dakterras", "buiten", Model.Dakterras),
+        ("garagesParkingsBovenGr", "park", Model.GaragesParkingsBovenGr), ("garBergOndergronds", "park", Model.GarBergOndergronds), ("bergGelijkvloers", "park", Model.BergGelijkvloers), ("carports", "park", Model.Carports),
+        ("doorritGVL", "overig", Model.DoorritGVL), ("zolder", "overig", Model.Zolder), ("gemeenschappelijkeDelen", "overig", Model.GemeenschappelijkeDelen), ("wegenis", "overig", Model.Wegenis),
+        ("grondopp", "grond", Model.Grondopp),
+    };
+    var isWoning = (Model.GroupTypeName ?? "").Contains("woon", StringComparison.OrdinalIgnoreCase);
+    var zonderGrond = isWoning && Model.Grondopp <= 0m;
+    var subItems = allTypes.Where(t => Model.UnitGroupTypeId.HasValue && t.GroupId == Model.UnitGroupTypeId.Value).Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Name }).ToList();
+}
+<tr class="bw-opp-rij @(zonderGrond ? "is-warn" : "")" data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-group-type="@Model.UnitGroupTypeId" data-unit-type="@Model.UnitTypeId">
+    <td class="is-muted bw-rijnr is-num" style="width:36px">@Model.SortOrder</td>
+    <td style="min-width:150px">
+        <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input opp-naam" value="@Model.EenheidNaam" placeholder="bv. Lot 10" data-field="eenheidNaam" aria-label="Naam eenheid" /></div></div>
+    </td>
+    <td style="min-width:160px">
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "grp-" + Model.Id, Id = "bw-opp-grp-" + Model.Id, Bare = true, Placeholder = "— hoofdtype —", Value = Model.UnitGroupTypeId?.ToString() ?? "", Items = groupTypes.Select(g => new GlV2SelectItem { Value = g.Value, Text = g.Text }).ToList() })
+    </td>
+    <td style="min-width:150px">
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "sub-" + Model.Id, Id = "bw-opp-sub-" + Model.Id, Bare = true, Placeholder = Model.UnitGroupTypeId.HasValue ? "— subtype —" : "— eerst hoofdtype —", Value = Model.UnitTypeId?.ToString() ?? "", Items = subItems })
+    </td>
+    @foreach (var (field, group, val) in velden)
+    {
+        var leeg = field == "grondopp" && zonderGrond;
+        <td class="is-num" data-group="@group" style="min-width:86px">
+            <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box @(leeg ? "is-error" : "")">
+                <input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular opp-input" data-field="@field" value="@(val == 0m && field == "grondopp" && isWoning ? "" : F(val))" placeholder="@(leeg ? "—" : "0,00")" aria-label="@field" title="@(leeg ? "Deze woning heeft geen grondoppervlakte" : "")" />
+            </div></div>
+        </td>
+    }
+    <td class="is-num is-strong opp-gered-cell" style="min-width:96px" title="@Model.FormulaOppGereduceerd">
+        <span class="opp-gered-value">@F(Model.OppGereduceerd)</span>
+        <span class="gl-v2-bw-calc gl-v2-bw-hint opp-formule" style="display:none">@Model.FormulaOppGereduceerd</span>
+    </td>
+    <td class="col-actions">
+        <button type="button" class="gl-v2-row-action btn-dup-rij" data-bw-edit title="Rij dupliceren" aria-label="Rij dupliceren"><i class="ph ph-copy" aria-hidden="true"></i><span class="gl-v2-row-action-label">Dupliceren</span></button>
+        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger btn-del-rij" data-bw-edit title="Rij verwijderen" aria-label="Rij verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+    </td>
+</tr>

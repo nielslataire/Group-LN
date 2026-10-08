@@ -1,0 +1,48 @@
+@model CPMCore.Models.Budget.BudgetWizardChromeVm
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Budgetflow, Stappenplan (design-handoff 39 + punt 27b/27h): chips onder de topbar op desktop; onder 1024px één balk
+    "Stap 4 van 9 · Dak & afbraak" met een uitklapbaar paneel (verticaal stappenplan). Bij een definitieve versie volgt een
+    meldingsbalk (25c) met de actie om ze weer bewerkbaar te maken. Het eerste script zet de binnenkomstrichting vóór de inhoud
+    getekend wordt (sessionStorage), zodat de pagina uit de richting van het traject binnenkomt zonder flits.
+*@
+@{
+    var chips = new GlV2StepsVm { Id = "bw-steps-chips", Variant = GlV2StepsVariant.Chips, Current = Model.Step - 1, Steps = Model.Steps, ShowSub = false, Numbers = true };
+    var verticaal = new GlV2StepsVm { Id = "bw-steps-panel", Variant = GlV2StepsVariant.Verticaal, Size = GlV2StepsSize.Sm, Current = Model.Step - 1, Steps = Model.Steps, ShowSub = false };
+    var resolved = GlV2StepsResolver.Resolve(chips);
+    var hrefs = System.Text.Json.JsonSerializer.Serialize(Model.Steps.Select(s => s.Href));
+}
+<script>(function(){try{var d=sessionStorage.getItem("bw-dir");if(d){document.documentElement.setAttribute("data-bw-dir",d);sessionStorage.removeItem("bw-dir");}}catch(e){}})();</script>
+@Html.AntiForgeryToken()
+@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwBevestigModal.cshtml")
+<nav class="gl-v2-bw-stappen" id="gl-v2-bw-stappen" aria-label="Stappen van het budget" data-step="@Model.Step" data-steps="@Model.Steps.Count" data-hrefs="@hrefs">
+    <div class="gl-v2-bw-chips">
+        @await Html.PartialAsync("GlV2/_Steps", chips)
+    </div>
+    <div class="gl-v2-bw-balk">
+        <button type="button" class="gl-v2-bw-balk-btn" aria-expanded="false" aria-controls="gl-v2-bw-panel">
+            <span class="t">@resolved.BalkText</span>
+            @if (resolved.HasIssues)
+            {
+                <span class="gl-v2-badge @(resolved.IssuesAreErrors ? "is-blocked" : "is-attention")">@resolved.IssueText</span>
+            }
+            <i class="ph ph-caret-down i" aria-hidden="true"></i>
+        </button>
+        <div class="gl-v2-bw-panel" id="gl-v2-bw-panel" data-open="false">
+            @await Html.PartialAsync("GlV2/_Steps", verticaal)
+        </div>
+    </div>
+</nav>
+@if (Model.IsLocked)
+{
+    <div class="gl-v2-notice gl-v2-notice-bar is-info gl-v2-bw-lock" role="status">
+        <i class="ph ph-lock-key" aria-hidden="true"></i>
+        <span class="gl-v2-notice-bar-title">Definitief budget</span>
+        <span>Vastgezet op @(Model.VastgezetOp?.ToString("dd/MM/yyyy") ?? "—")@(string.IsNullOrWhiteSpace(Model.VastgezetDoor) ? "" : " door " + Model.VastgezetDoor) · alleen-lezen · basis voor facturen &amp; contracten.</span>
+        <form method="post" asp-action="BudgetVersieOntgrendelen" asp-controller="Projecten" data-bw-bevestig="Versie weer bewerkbaar maken?" data-bw-desc="Ze is dan niet langer het definitieve budget en facturen en contracten verliezen hun vaste basis." data-bw-ok="Niet-definitief maken" data-bw-tone="warning" data-bw-icon="ph-lock-key-open">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="versieId" value="@Model.VersieId" />
+            <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" data-bw-keep>Niet-definitief maken</button>
+        </form>
+    </div>
+}

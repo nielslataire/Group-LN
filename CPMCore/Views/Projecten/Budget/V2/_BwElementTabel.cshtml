@@ -1,0 +1,56 @@
+@model CPMCore.Models.Projecten.DakSectieVM
+@*
+    gl-v2 — Budgetflow stap 4/5, één elementtabel per type (design-handoff 39e/39f): sectiekaart met titel, subtotaal in de kop, rijen, subtotaalregel
+    en een toevoegrij. ViewData: Title, Desc (optioneel), Empty (tekst lege staat), ColA/ColB (koplabels eerste twee kolommen), Hoogte (bool), LengteAlleen (bool).
+    De tabel draagt data-type zodat gl-v2-budget-elementen.js (inline in de pagina) hem bedient.
+*@
+@{
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var hoogte = ViewData["Hoogte"] as bool? ?? false;
+    var lengteAlleen = ViewData["LengteAlleen"] as bool? ?? false;
+    var eenh = lengteAlleen ? "lm" : "m²";
+    var colA = ViewData["ColA"] as string ?? "Eenheid";
+    var colB = ViewData["ColB"] as string ?? "Geveldeel";
+    var titel = ViewData["SectieTitel"] as string ?? Model.ElementType;
+    var desc = ViewData["Desc"] as string;
+    var empty = ViewData["Empty"] as string ?? "Nog geen rijen.";
+    var icon = ViewData["Icon"] as string ?? "ph-wall";
+}
+<section class="gl-v2-section-card bw-el-sectie" data-type="@Model.ElementType" data-hoogte="@(hoogte ? "1" : "0")" data-lengte-alleen="@(lengteAlleen ? "1" : "0")">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph @icon" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-section-card-title">@titel</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc"><strong class="el-subtotaal" data-eenh="@eenh">@Model.Subtotaal.ToString("N2", nl) @eenh</strong>@(string.IsNullOrEmpty(desc) ? "" : " · " + desc)</span>
+    </div>
+    <div class="gl-v2-bw-table-wrap">
+        <table class="gl-v2-bw-table bw-el-tabel">
+            <thead>
+                <tr>
+                    <th>@colA</th><th>@colB</th><th class="is-num">Aantal</th>
+                    <th class="is-num">@(lengteAlleen ? "" : "Breedte (m)")</th>
+                    <th class="is-num">@(hoogte ? "Hoogte (m)" : "Lengte (m)")</th>
+                    <th class="is-num">@eenh.ToUpperInvariant()</th>
+                    <th class="col-actions"></th>
+                </tr>
+            </thead>
+            <tbody class="el-body">
+                @foreach (var rij in Model.Rijen)
+                {
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwGevelRij.cshtml", rij)
+                }
+            </tbody>
+            <tfoot>
+                <tr class="el-leeg" @(Model.Rijen.Count > 0 ? "hidden" : "")>
+                    <td colspan="7"><div class="gl-v2-bw-empty" style="border-top:0;padding:18px"><span class="t">@empty</span><span class="s">@(ViewData["EmptySub"] as string ?? "")</span></div></td>
+                </tr>
+                <tr class="gl-v2-bw-addrow" data-bw-edit>
+                    <td><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-add-naam" placeholder="bv. @(ViewData["PlaceholderA"] ?? "L1")" aria-label="@colA" /></div></div></td>
+                    <td><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-add-besch" placeholder="bv. @(ViewData["PlaceholderB"] ?? "VG")" aria-label="@colB" /></div></div></td>
+                    <td colspan="4"></td>
+                    <td class="col-actions"><button type="button" class="gl-v2-btn gl-v2-btn-primary el-add" style="height:34px;padding:0 12px"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>

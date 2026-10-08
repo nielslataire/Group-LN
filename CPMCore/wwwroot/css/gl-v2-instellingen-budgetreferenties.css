@@ -1,0 +1,155 @@
+/* gl-v2 — Instellingen › Prijsreferenties verkoop (38a/38b), Referentieprojecten (38c) en Controle import (38d).
+   Alles wat hier staat is paginaspecifiek; velden, tabbar, sectiekaart, badges, meldingskaders, actiebalk en
+   knoppen komen uit gl-v2-shell.css. Let op de laadvolgorde: page-CSS laadt VÓÓR de shell, dus elke regel die
+   een shell-regel moet overschrijven staat onder een extra pagina-klasse (.gl-v2-bref …). */
+
+/* ── Schil: tabbar bovenaan, scrollend lichaam (zelfde opbouw als IssuerCompaniesEditV2) ── */
+.gl-v2-bref { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-bref-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 0 20px; display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-bref-scroll > .gl-v2-tab-panel { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-bref-scroll > .gl-v2-tab-panel[hidden] { display: none; }
+.gl-v2-bref-intro { font: 450 12.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 900px; text-wrap: pretty; }
+.gl-v2-bref-intro code { font: 500 11.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); }
+
+/* ── Formulierraster in een sectiekaart (38a: code · omschrijving · prijs · datum · bron · project · knop) ── */
+.gl-v2-bref-form { padding: 18px 20px 20px; display: grid; gap: 16px; align-items: end; }
+.gl-v2-bref-form--prijs { grid-template-columns: 110px minmax(0, 1.6fr) 160px 160px minmax(0, 1.2fr) minmax(0, 1.1fr) auto; }
+.gl-v2-bref-form--excel { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 100px minmax(0, 1fr); }
+.gl-v2-bref-form--project { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }   /* start i.p.v. end: de hulptekst onder GBA mag Eenheden niet omlaag duwen */
+.gl-v2-bref-form .gl-v2-field { min-width: 0; }
+/* Een <input> heeft een eigen intrinsieke breedte (±20 tekens); in een smal rasterkolom duwde die de datumbox over het
+   veld ernaast heen. Alle velden in deze formulieren vullen exact hun kolom. */
+.gl-v2-bref .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; }
+.gl-v2-bref .gl-v2-field-box > input.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
+.gl-v2-bref .gl-v2-select.gl-v2-datepicker { width: 100%; min-width: 0; }
+.gl-v2-bref-span2 { grid-column: span 2; }
+.gl-v2-bref-span4 { grid-column: 1 / -1; }
+.gl-v2-bref-optioneel { font-weight: 450; letter-spacing: 0; color: #7a8a78; text-transform: none; }
+.gl-v2-bref-code-prefix { font: 500 12.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); padding-right: 2px; }
+.gl-v2-bref-card-foot { margin-top: auto; padding: 0 20px 18px; display: flex; align-items: center; gap: 12px; }
+.gl-v2-bref-card-foot .gl-v2-bref-hint { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-bref-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.gl-v2-bref-cards > .gl-v2-section-card { display: flex; flex-direction: column; }
+
+/* Uploadvak (38c "Sleep je .xlsx hierheen of kies een bestand") — zelfde taal als de foto-dropzone van Projecten/EditV2 */
+.gl-v2-bref-drop {
+    height: 64px; border-radius: 9px; border: 1.5px dashed var(--gl-v2-accent-sage); background: #F7F9F5;
+    display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
+    font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); transition: background .12s ease, border-color .12s ease;
+}
+.gl-v2-bref-drop:hover, .gl-v2-bref-drop.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-bref-drop > i { font-size: 20px; color: var(--gl-v2-primary); }
+.gl-v2-bref-drop u { color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-bref-drop.has-file { border-style: solid; }
+.gl-v2-bref-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+/* Preview van het project vóór de snapshot (38c): vier waarden als alleen-lezen tegels */
+.gl-v2-bref-preview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; grid-column: 1 / -1; }
+.gl-v2-bref-preview-tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gl-v2-bref-preview-tile .lbl { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-bref-preview-tile .val { height: 40px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; background: var(--gl-v2-neutral-tint); font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bref-preview-tile .val.is-empty { color: var(--gl-v2-muted-light); font-weight: 450; }
+
+/* ── Lijsttoolbar in de kaart: zoekveld · projectfilter · schakelaar · sortering ── */
+.gl-v2-bref-toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+.gl-v2-bref-toolbar .gl-v2-bref-search { width: 300px; max-width: 100%; }
+.gl-v2-bref-toolbar .gl-v2-bref-search .gl-v2-field-box { height: 40px; }
+.gl-v2-bref-toolbar .gl-v2-bref-filter { width: 220px; }
+.gl-v2-bref-toolbar .gl-v2-bref-filter .gl-v2-field { margin: 0; }
+.gl-v2-bref-switch { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; user-select: none; }
+.gl-v2-bref-toolbar-spacer { flex: 1; }
+.gl-v2-bref-sort { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; }
+
+/* ── Rasterlijst (38a/38c): kop 34px, rijen ≥46px, kolommen per lijst ── */
+.gl-v2-bref-head, .gl-v2-bref-row { display: grid; gap: 10px; align-items: center; padding: 0 20px; }
+/* Kop: het gedocumenteerde tabelkop-recept (DESIGN.md "Table (Facturen)": wit, primair-groen 11px, hairline) — op het
+   mockup-tintje #F7F9F5 was de kop niet te onderscheiden van de paginakleur. */
+.gl-v2-bref-head { height: 36px; background: var(--gl-v2-surface); font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); text-transform: uppercase; border-bottom: 1px solid var(--gl-v2-hairline); }
+.gl-v2-bref-row { min-height: 46px; padding-top: 4px; padding-bottom: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-bref-head + [data-bref-rows] > .gl-v2-bref-row:first-child, .gl-v2-bref-head + .gl-v2-bref-row { border-top: 0; }
+.gl-v2-bref-row:hover { background: #FAFBF8; }
+.gl-v2-bref-row.is-archived > :not(.gl-v2-bref-actions) { opacity: .55; }
+.gl-v2-bref-row[hidden], .gl-v2-bref-row.is-filtered { display: none; }
+.gl-v2-bref-grid--prijs { grid-template-columns: 80px minmax(0, 1.4fr) 160px 140px minmax(0, 1fr) minmax(0, 1fr) 120px 64px; }
+.gl-v2-bref-grid--ref { grid-template-columns: minmax(0, 1.6fr) 100px 100px 70px 80px 120px 100px 80px 100px 110px 64px; }
+.gl-v2-bref-grid--controle { grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr) 120px 150px; }
+.gl-v2-bref-right { text-align: right; }
+.gl-v2-bref-mono { font: 500 12px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); }
+.gl-v2-bref-mono.is-muted { color: var(--gl-v2-muted-light); }
+.gl-v2-bref-strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-bref-cell { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-bref-cell.is-muted { color: var(--gl-v2-muted); font-size: 12px; }
+.gl-v2-bref-num { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-bref-num small { font-weight: 450; color: #7a8a78; font-size: 12.5px; }
+.gl-v2-bref-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-bref-name .sub { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bref-name .sub.is-warning { color: var(--gl-v2-warning); }
+.gl-v2-bref-actions { display: flex; gap: 2px; justify-content: flex-end; }
+.gl-v2-bref-actions form { display: contents; }
+/* Rij-acties: het gedocumenteerde recept (DESIGN.md "Table (Facturen)", optie 4e): 26×26, bare in rust; primair = bewerken,
+   danger = verwijderen, de rest neutraal. Elke knop draagt een .gl-v2-row-action-label (visueel verborgen). */
+.gl-v2-bref .gl-v2-row-action {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px;
+    border: 1px solid transparent; background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer; text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.gl-v2-bref .gl-v2-row-action i { font-size: 15px; }
+.gl-v2-bref .gl-v2-row-action:hover, .gl-v2-bref .gl-v2-row-action:focus-visible { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
+.gl-v2-bref .gl-v2-row-action-primary:hover, .gl-v2-bref .gl-v2-row-action-primary:focus-visible { background: #006638; border-color: #006638; color: var(--gl-v2-surface); }
+.gl-v2-bref .gl-v2-row-action-danger:hover, .gl-v2-bref .gl-v2-row-action-danger:focus-visible { background: #F8EBEB; border-color: #8B2A2A; color: #8B2A2A; }
+.gl-v2-bref .gl-v2-row-action:disabled { color: #C0CABE; pointer-events: none; }
+.gl-v2-bref .gl-v2-row-action-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.gl-v2-bref-row.is-edit { background: #FAFBF8; align-items: end; }
+.gl-v2-bref-row.is-edit .gl-v2-field { margin: 0; }
+.gl-v2-bref-row.is-edit .gl-v2-field-label { display: none; }
+.gl-v2-bref-row.is-edit .gl-v2-field-box { height: 40px; }
+.gl-v2-bref-row.is-unmatched { background: #FBF6EA; }
+.gl-v2-bref-row.is-manual { background: transparent; }
+.gl-v2-bref-empty { padding: 26px 20px; text-align: center; border-top: 1px solid rgba(44, 59, 42, .06); }
+.gl-v2-bref-empty .t { display: block; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-bref-empty .s { display: block; margin-top: 3px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-bref-empty button { background: none; border: 0; padding: 0; color: var(--gl-v2-primary); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.gl-v2-bref-foot { padding: 14px 20px; border-top: 1px solid rgba(44, 59, 42, .06); }
+.gl-v2-bref-foot .gl-v2-notice { margin: 0; }
+.gl-v2-bref-detail { padding: 6px 20px 14px 20px; border-top: 1px solid rgba(44, 59, 42, .06); background: #FAFBF8; }
+.gl-v2-bref-detail[hidden] { display: none; }
+.gl-v2-bref-detail-grid { display: grid; grid-template-columns: 90px minmax(0, 1fr) 140px 120px 100px; gap: 10px; align-items: center; padding: 0; }
+.gl-v2-bref-detail-grid.head { height: 30px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-bref-detail-grid.row { min-height: 32px; border-top: 1px solid rgba(44, 59, 42, .06); }
+.gl-v2-bref-more { padding: 10px 20px; border-top: 1px solid rgba(44, 59, 42, .06); }
+
+/* ── Controle import (38d): KPI-tegels en actiebalk ── */
+.gl-v2-bref-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.gl-v2-bref-kpi { background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card); padding: 14px 18px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-bref-kpi .lbl { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-bref-kpi .val { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bref-status { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); }
+.gl-v2-bref-status.is-ok { color: var(--gl-v2-primary); }
+
+/* ── Tablet / gsm ── */
+@media (max-width: 1199.98px) {
+    .gl-v2-bref-form--prijs { grid-template-columns: 110px minmax(0, 1fr) 150px 150px; }
+    .gl-v2-bref-form--prijs > :nth-child(5), .gl-v2-bref-form--prijs > :nth-child(6) { grid-column: span 2; }
+    .gl-v2-bref-grid--prijs { grid-template-columns: 70px minmax(0, 1.4fr) 140px 110px minmax(0, 1fr) 110px 64px; }
+    .gl-v2-bref-grid--prijs > :nth-child(5) { display: none; }   /* bron */
+    .gl-v2-bref-grid--ref { grid-template-columns: minmax(0, 1.6fr) 90px 90px 60px 110px 100px 80px 64px; }
+    .gl-v2-bref-grid--ref > :nth-child(5), .gl-v2-bref-grid--ref > :nth-child(9), .gl-v2-bref-grid--ref > :nth-child(10) { display: none; }   /* GBA, activiteiten, index */
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-bref-cards { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-bref-form, .gl-v2-bref-form--prijs, .gl-v2-bref-form--excel, .gl-v2-bref-form--project { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-bref-form--prijs > *, .gl-v2-bref-span2, .gl-v2-bref-preview { grid-column: 1 / -1; }
+    .gl-v2-bref-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-bref-head { display: none; }
+    .gl-v2-bref-grid--prijs, .gl-v2-bref-grid--ref, .gl-v2-bref-grid--controle { grid-template-columns: minmax(0, 1fr) auto; }
+    .gl-v2-bref-row > * { grid-column: 1; }
+    .gl-v2-bref-row > .gl-v2-bref-actions { grid-column: 2; grid-row: 1 / span 3; align-self: start; }
+    .gl-v2-bref-grid--prijs > :nth-child(4), .gl-v2-bref-grid--prijs > :nth-child(5), .gl-v2-bref-grid--prijs > :nth-child(6) { display: none; }
+    .gl-v2-bref-grid--ref > :nth-child(n+4):not(.gl-v2-bref-actions) { display: none; }
+    .gl-v2-bref-num { text-align: left; }
+    .gl-v2-bref-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-bref-scroll { padding-bottom: 140px; }
+    .gl-v2-bref-toolbar .gl-v2-bref-search, .gl-v2-bref-toolbar .gl-v2-bref-filter { width: 100%; }
+}

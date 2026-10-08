@@ -77,6 +77,16 @@ namespace CPMCore.Models.Projecten
         public int ProjectId { get; set; }
         public string ProjectName { get; set; }
         public List<BudgetMasterBO> BudgetMasters { get; set; } = new();
+
+        // gl-v2 overzicht (design-handoff 39a)
+        /// <summary>De ene definitieve versie van het project, of null.</summary>
+        public BudgetVersieBO DefinitiefVersie { get; set; }
+        /// <summary>Totale kostprijs per versie (enkel berekend voor afgeronde/definitieve versies en de huidige).</summary>
+        public Dictionary<int, decimal?> Totalen { get; set; } = new();
+        /// <summary>Aantal eenheden (stap 2) van de huidige versie per budget.</summary>
+        public Dictionary<int, int> EenhedenPerMaster { get; set; } = new();
+        /// <summary>Versies van alle projecten om een nieuw budget als kopie van te starten (ID = versieId, Display, Group = project · budget).</summary>
+        public List<IdNameBO> KopieerOpties { get; set; } = new();
     }
 
     public class BudgetMasterAanmakenModel
@@ -88,6 +98,9 @@ namespace CPMCore.Models.Projecten
         public string Naam { get; set; }
 
         public string Omschrijving { get; set; }
+
+        /// <summary>gl-v2 39a: versie waarvan de inhoud gekopieerd wordt (leeg = leeg budget).</summary>
+        public int? KopieVanVersieId { get; set; }
     }
 
     public class BudgetOppervlaktesModel

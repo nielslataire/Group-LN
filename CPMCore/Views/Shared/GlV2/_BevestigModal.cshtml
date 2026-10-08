@@ -1,0 +1,61 @@
+@*
+    Herbruikbare TYPE 1 "Bevestiging" (DESIGN.md 4j, .gl-v2-modal-confirm) voor formulieren die een bevestiging vragen zonder eigen modal-markup.
+    Eén keer per pagina plaatsen (de bijhorende script staat inline onderaan, dus geen apart bestand om te laden). Een formulier vraagt dan bevestiging via
+    data-bv-titel="..." data-bv-tekst="..." data-bv-ok="Verwijderen" data-bv-tone="danger|warning|success" data-bv-icon="ph-trash".
+    Vervangt het kale browser-confirm().
+*@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-bevestig" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-bevestig-titel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="gl-v2-bevestig-titel"></h2>
+                    <p class="gl-v2-modal-desc"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" data-bv-ok>Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+/** Custom bevestigingsmodal (DESIGN.md TYPE 1) i.p.v. window.confirm — markup: Views/Shared/GlV2/_BevestigModal.cshtml.
+ *  Formulieren met data-bv-titel (+ data-bv-tekst, data-bv-ok, data-bv-tone, data-bv-icon) vragen eerst bevestiging.
+ *  Ook als functie: GlV2Bevestig({ title, desc, ok, tone, icon }) -> Promise<boolean>. */
+(function () {
+    "use strict";
+    var TONES = { danger: ["is-danger", "gl-v2-btn-danger", "ph-trash"], warning: ["is-warning", "gl-v2-btn-warning", "ph-warning"], success: ["is-success", "gl-v2-btn-primary", "ph-check-circle"] };
+
+    function bevestig(o) {
+        return new Promise(function (resolve) {
+            var el = document.getElementById("gl-v2-bevestig");
+            if (!el || !window.bootstrap || !window.bootstrap.Modal) { resolve(window.confirm(o.title)); return; }
+            var t = TONES[o.tone] || TONES.danger, content = el.querySelector(".modal-content"), icon = el.querySelector(".gl-v2-modal-icon"), ok = el.querySelector("[data-bv-ok]");
+            ["is-danger", "is-warning", "is-success"].forEach(function (c) { content.classList.remove(c); icon.classList.remove(c); });
+            content.classList.add(t[0]); icon.classList.add(t[0]);
+            icon.querySelector("i").className = "ph " + (o.icon || t[2]);
+            el.querySelector(".gl-v2-modal-title").textContent = o.title || "";
+            el.querySelector(".gl-v2-modal-desc").textContent = o.desc || "";
+            ok.className = "gl-v2-btn " + t[1]; ok.textContent = o.ok || "Bevestigen";
+            var modal = window.bootstrap.Modal.getOrCreateInstance(el), klaar = false;
+            function sluit(r) { if (klaar) return; klaar = true; ok.removeEventListener("click", ja); el.removeEventListener("hidden.bs.modal", nee); resolve(r); }
+            function ja() { modal.hide(); sluit(true); }
+            function nee() { sluit(false); }
+            ok.addEventListener("click", ja); el.addEventListener("hidden.bs.modal", nee);
+            modal.show();
+        });
+    }
+    window.GlV2Bevestig = bevestig;
+
+    document.addEventListener("submit", async function (e) {
+        var f = e.target;
+        if (!f.hasAttribute || !f.hasAttribute("data-bv-titel") || f.dataset.bvOk) return;
+        e.preventDefault();
+        var ok = await bevestig({ title: f.getAttribute("data-bv-titel"), desc: f.getAttribute("data-bv-tekst"), ok: f.getAttribute("data-bv-ok"), tone: f.getAttribute("data-bv-tone"), icon: f.getAttribute("data-bv-icon") });
+        if (ok) { f.dataset.bvOk = "1"; f.submit(); }
+    }, true);
+})();
+</script>

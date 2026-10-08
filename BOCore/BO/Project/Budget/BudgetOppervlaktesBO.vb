@@ -248,40 +248,44 @@ Public Class BudgetOppervlaktesBO
 
     ' ── Berekende eigenschappen ───────────────────────────────────────────────
 
+    ''' <summary>VMSW-reductiefactoren van de budgetversie (standaard als niet ingesteld); gezet door de service bij het laden.</summary>
+    Public Property Factoren As Budget.VmswFactorenBO = Budget.VmswFactorenBO.Standaard
+
     Public ReadOnly Property OppGereduceerd() As Decimal
         Get
-            Return (_bewoonbareOpp * 1.0D) +
-                   (_tuin * 0.05D) +
-                   (_terrasPrefab * 1.0D) +
-                   (_terrasGelijkvloers * 0.1D) +
-                   (_dakterras * 0.33D) +
-                   (_garagesParkingsBovenGr * 0.9D) +
-                   (_garBergOndergronds * 0.5D) +
-                   (_bergGelijkvloers * 0.4D) +
-                   (_carports * 0.3D) +
-                   (_doorritGVL * 0.6D) +
-                   (_zolder * 0.3D) +
-                   (_gemeenschappelijkeDelen * 1.0D) +
-                   (_wegenis * 0.1D)
+            Dim f = Factoren
+            Return (_bewoonbareOpp * f.Bewoonbaar) +
+                   (_tuin * f.Tuin) +
+                   (_terrasPrefab * f.TerrasPrefab) +
+                   (_terrasGelijkvloers * f.TerrasGelijkvloers) +
+                   (_dakterras * f.Dakterras) +
+                   (_garagesParkingsBovenGr * f.GaragesBovengronds) +
+                   (_garBergOndergronds * f.GarBergOndergronds) +
+                   (_bergGelijkvloers * f.BergGelijkvloers) +
+                   (_carports * f.Carports) +
+                   (_doorritGVL * f.DoorritGvl) +
+                   (_zolder * f.Zolder) +
+                   (_gemeenschappelijkeDelen * f.GemeenschappelijkeDelen) +
+                   (_wegenis * f.Wegenis)
         End Get
     End Property
 
     Public ReadOnly Property FormulaOppGereduceerd() As String
         Get
             Dim parts As New List(Of String)
-            If _bewoonbareOpp <> 0 Then parts.Add($"{_bewoonbareOpp:F2}×1,0")
-            If _tuin <> 0 Then parts.Add($"{_tuin:F2}×0,05")
-            If _terrasPrefab <> 0 Then parts.Add($"{_terrasPrefab:F2}×1,0")
-            If _terrasGelijkvloers <> 0 Then parts.Add($"{_terrasGelijkvloers:F2}×0,1")
-            If _dakterras <> 0 Then parts.Add($"{_dakterras:F2}×0,33")
-            If _garagesParkingsBovenGr <> 0 Then parts.Add($"{_garagesParkingsBovenGr:F2}×0,9")
-            If _garBergOndergronds <> 0 Then parts.Add($"{_garBergOndergronds:F2}×0,5")
-            If _bergGelijkvloers <> 0 Then parts.Add($"{_bergGelijkvloers:F2}×0,4")
-            If _carports <> 0 Then parts.Add($"{_carports:F2}×0,3")
-            If _doorritGVL <> 0 Then parts.Add($"{_doorritGVL:F2}×0,6")
-            If _zolder <> 0 Then parts.Add($"{_zolder:F2}×0,3")
-            If _gemeenschappelijkeDelen <> 0 Then parts.Add($"{_gemeenschappelijkeDelen:F2}×1,0")
-            If _wegenis <> 0 Then parts.Add($"{_wegenis:F2}×0,1")
+            If _bewoonbareOpp <> 0 Then parts.Add($"{_bewoonbareOpp:F2}×{Factoren.Bewoonbaar:0.##}")
+            If _tuin <> 0 Then parts.Add($"{_tuin:F2}×{Factoren.Tuin:0.##}")
+            If _terrasPrefab <> 0 Then parts.Add($"{_terrasPrefab:F2}×{Factoren.TerrasPrefab:0.##}")
+            If _terrasGelijkvloers <> 0 Then parts.Add($"{_terrasGelijkvloers:F2}×{Factoren.TerrasGelijkvloers:0.##}")
+            If _dakterras <> 0 Then parts.Add($"{_dakterras:F2}×{Factoren.Dakterras:0.##}")
+            If _garagesParkingsBovenGr <> 0 Then parts.Add($"{_garagesParkingsBovenGr:F2}×{Factoren.GaragesBovengronds:0.##}")
+            If _garBergOndergronds <> 0 Then parts.Add($"{_garBergOndergronds:F2}×{Factoren.GarBergOndergronds:0.##}")
+            If _bergGelijkvloers <> 0 Then parts.Add($"{_bergGelijkvloers:F2}×{Factoren.BergGelijkvloers:0.##}")
+            If _carports <> 0 Then parts.Add($"{_carports:F2}×{Factoren.Carports:0.##}")
+            If _doorritGVL <> 0 Then parts.Add($"{_doorritGVL:F2}×{Factoren.DoorritGvl:0.##}")
+            If _zolder <> 0 Then parts.Add($"{_zolder:F2}×{Factoren.Zolder:0.##}")
+            If _gemeenschappelijkeDelen <> 0 Then parts.Add($"{_gemeenschappelijkeDelen:F2}×{Factoren.GemeenschappelijkeDelen:0.##}")
+            If _wegenis <> 0 Then parts.Add($"{_wegenis:F2}×{Factoren.Wegenis:0.##}")
             If parts.Count = 0 Then Return "0,00"
             Return String.Join(" + ", parts) & $" = {OppGereduceerd:F2}"
         End Get

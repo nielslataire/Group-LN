@@ -23,5 +23,8 @@ public partial class ConstructionIssueHistory
 
     public string Comment { get; set; }
 
+    /// <summary>Bericht enkel intern (niet zichtbaar in het aannemersportaal).</summary>
+    public bool IsInternal { get; set; }
+
     public virtual ConstructionIssue Issue { get; set; }
 }

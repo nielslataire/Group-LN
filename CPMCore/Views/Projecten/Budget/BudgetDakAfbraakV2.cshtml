@@ -1,0 +1,152 @@
+@model CPMCore.Models.Projecten.BudgetGevelsDakModel
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Budget
+@using CPMCore.Models.Projecten
+@using BOCore
+@*
+    gl-v2 — Budgetflow stap 5 · Dak & afbraak (design-handoff 39f): de zes types als schakelaars bovenaan (met subtotaal); enkel een actief type
+    (= heeft rijen, of net aangezet) krijgt een kaart. Uitzetten met rijen vraagt bevestiging en verwijdert de rijen. Veluxen is een losse teller
+    (BudgetAantalVeluxenOpslaan). Elementtabellen uit V2/_BwElementTabel (aantal × breedte × lengte), autosave via gl-v2-budget-elementen.js.
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-house-line";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string N2(decimal v) => v.ToString("N2", nl);
+    var t = Model.Totaal;
+    List<BudgetGevelElementBO> Rows(string type) => Model.Elementen.GetValueOrDefault(type) ?? new List<BudgetGevelElementBO>();
+    var types = new (string Type, string Label, string Icon, decimal Tot, string Kpi, string Empty)[]
+    {
+        ("PlatDak", "Plat dak", "ph-square", t.TotaalPlatDak, "totaalPlatDak", "Nog geen plat dak"),
+        ("HellendDak", "Hellend dak", "ph-triangle", t.TotaalHellendDak, "totaalHellendDak", "Nog geen hellend dak"),
+        ("GroenDak", "Groen dak", "ph-plant", t.TotaalGroenDak, "totaalGroenDak", "Nog geen groen dak"),
+        ("Dakoversteken", "Dakoversteken", "ph-arrows-out-line-horizontal", t.TotaalDakoversteken, "totaalDakoversteken", "Nog geen dakoversteken"),
+        ("OnderkantDoorrit", "Onderkant doorrit", "ph-garage", t.TotaalOnderkantDoorrit, "totaalOnderkantDoorrit", "Nog geen doorrit"),
+        ("Afbraak", "Afbraak", "ph-hammer", t.TotaalAfbraak, "totaalAfbraak", "Nog geen afbraak"),
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-dak-switches { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+        .bw-dak-switch { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 14px; background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card); cursor: pointer; user-select: none; border: 1px solid transparent; transition: border-color .12s ease; }
+        .bw-dak-switch:has(input:checked) { border-color: var(--gl-v2-accent-sage); }
+        .bw-dak-switch:has(input:focus-visible) { outline: 2px solid var(--gl-v2-primary); outline-offset: 2px; }
+        .bw-dak-switch .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+        .bw-dak-switch .t { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+        .bw-dak-switch .s { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; font-variant-numeric: tabular-nums; }
+        .bw-dak-switch:has(input:not(:checked)) .s { visibility: hidden; }
+        .bw-dak-velux { display: flex; align-items: center; gap: 14px; }
+        .bw-dak-velux .gl-v2-field-box { width: 120px; }
+        .bw-el-sectie[hidden] { display: none; }
+        .bw-dak-cols { display: flex; flex-direction: column; gap: 16px; }
+        @@media (min-width: 1200px) { .bw-dak-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+@section PageActions
+{
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwTopbar.cshtml", ch)
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-dak" data-versie="@Model.VersieId" data-url-velux="@Url.Action("BudgetAantalVeluxenOpslaan", "Projecten")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        <div class="bw-dak-switches" role="group" aria-label="Daktypes">
+            @foreach (var ty in types)
+            {
+                var actief = Rows(ty.Type).Count > 0;
+                <label class="bw-dak-switch" title="@ty.Label aan- of uitzetten">
+                    <input type="checkbox" class="gl-v2-toggle-switch" data-dak-type="@ty.Type" data-bw-keep @(actief ? "checked" : "") />
+                    <span class="txt"><span class="t">@ty.Label</span><span class="s" data-kpi="@ty.Kpi" data-unit=" m²">@N2(ty.Tot) m²</span></span>
+                </label>
+            }
+        </div>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-sun" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Veluxen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">aantal dakvensters · telt mee in de dakbedekking (stap 6) en in stap 1</span>
+                <span class="gl-v2-section-card-meta bw-dak-velux" style="margin-left:auto">
+                    <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bw-velux" class="gl-v2-field-input is-num is-tabular" value="@(Model.AantalVeluxen ?? 0)" aria-label="Aantal veluxen" /><span class="gl-v2-field-unit">st</span></div></div>
+                </span>
+            </div>
+        </section>
+
+        <div class="bw-dak-cols">
+        @foreach (var ty in types)
+        {
+            var rows = Rows(ty.Type);
+            ViewData["SectieTitel"] = ty.Label; ViewData["Icon"] = ty.Icon; ViewData["Hoogte"] = false; ViewData["LengteAlleen"] = false; ViewData["Desc"] = null;
+            ViewData["Empty"] = ty.Empty; ViewData["EmptySub"] = "Voeg een regel toe: locatie, beschrijving, aantal × breedte × lengte."; ViewData["ColA"] = "Locatie"; ViewData["ColB"] = "Beschrijving"; ViewData["PlaceholderA"] = "W1"; ViewData["PlaceholderB"] = ty.Type == "PlatDak" ? "EPDM" : "beschrijving";
+            <div data-dak-sectie="@ty.Type" @(rows.Count > 0 ? "" : "hidden")>
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", new DakSectieVM { ElementType = ty.Type, Rijen = rows, VersieId = Model.VersieId, Subtotaal = ty.Tot })
+            </div>
+        }
+        </div>
+        <div class="gl-v2-notice gl-v2-notice-compact is-info" id="bw-dak-leeg" @(types.Any(ty => Rows(ty.Type).Count > 0) ? "hidden" : "")><i class="ph ph-info" aria-hidden="true"></i><span>Zet hierboven een daktype aan om er regels voor in te vullen.</span></div>
+    </div>
+
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwActiebalk.cshtml", ch)
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script src="~/js/gl-v2-budget-elementen.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var root = document.getElementById('bw-dak'), versieId = parseInt(root.getAttribute('data-versie'));
+    var nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function kpi(k, v) { var el = root.querySelector('[data-kpi="' + k + '"]'); if (el) el.textContent = nf.format(v) + (el.getAttribute('data-unit') || ''); }
+    var map = { PlatDak: 'totaalPlatDak', HellendDak: 'totaalHellendDak', GroenDak: 'totaalGroenDak', Dakoversteken: 'totaalDakoversteken', OnderkantDoorrit: 'totaalOnderkantDoorrit', Afbraak: 'totaalAfbraak' };
+    GlV2BudgetElementen.init({
+        versieId: versieId,
+        urls: { save: '@Url.Action("BudgetGevelElementOpslaan", "Projecten")', add: '@Url.Action("BudgetGevelElementToevoegen", "Projecten")', del: '@Url.Action("BudgetGevelElementVerwijderen", "Projecten")' },
+        onSubtotaal: function (type, s) { if (map[type]) kpi(map[type], s); },
+        onTotaal: function (t) { Object.keys(t).forEach(function (k) { if (root.querySelector('[data-kpi="' + k + '"]')) kpi(k, t[k]); }); }
+    });
+    function leegCheck() { var any = Array.prototype.some.call(root.querySelectorAll('[data-dak-sectie]'), function (s) { return !s.hidden; }); document.getElementById('bw-dak-leeg').hidden = any; }
+    root.querySelectorAll('[data-dak-type]').forEach(function (cb) {
+        cb.addEventListener('change', async function () {
+            var sectie = root.querySelector('[data-dak-sectie="' + cb.getAttribute('data-dak-type') + '"]');
+            if (cb.checked) { sectie.hidden = false; sectie.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); leegCheck(); return; }
+            var rows = sectie.querySelectorAll('.el-body tr');
+            if (rows.length && !await GlV2Budget.bevestig({ title: 'Dit type uitzetten?', desc: 'Dit verwijdert de ' + rows.length + ' regel' + (rows.length === 1 ? '' : 's') + ' van dit type.', ok: 'Uitzetten en verwijderen' })) { cb.checked = true; return; }
+            for (var i = 0; i < rows.length; i++) {
+                var r = await GlV2Budget.post('@Url.Action("BudgetGevelElementVerwijderen", "Projecten")', { elementId: rows[i].getAttribute('data-element-id'), versieId: versieId }, false);
+                if (r.success) { rows[i].remove(); if (r.totaal) Object.keys(r.totaal).forEach(function (k) { if (root.querySelector('[data-kpi="' + k + '"]')) kpi(k, r.totaal[k]); }); }
+            }
+            sectie.hidden = true; leegCheck();
+        });
+    });
+    // Veluxen: autosave
+    var velux = document.getElementById('bw-velux'), vt = null;
+    velux.addEventListener('input', function () {
+        GlV2Budget.markDirty(); clearTimeout(vt);
+        vt = setTimeout(async function () {
+            GlV2Budget.setStatus('saving');
+            var r = await GlV2Budget.post(root.getAttribute('data-url-velux'), { versieId: versieId, aantalVeluxen: parseInt(velux.value.replace(/\D/g, '')) || 0 }, false);
+            if (r.success) GlV2Budget.saved(); else GlV2Budget.setStatus('error');
+        }, 600);
+    });
+})();
+</script>
+}

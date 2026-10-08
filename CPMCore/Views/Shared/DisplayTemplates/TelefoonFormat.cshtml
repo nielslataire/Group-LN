@@ -3,7 +3,13 @@
     if (!string.IsNullOrWhiteSpace(Model) && Model.Length >= 8)
     {
         var formatted = string.Format("{0:###/##.##.## x}{1}", Model.Substring(0, 8), Model.Length > 8 ? Model.Substring(8) : "");
-        if (long.TryParse(Model.Replace("/", "").Replace(".", "").Replace(" ", "").Replace("x", ""), out var phonedigits))
+        // Nummers uit de V2-formulieren staan internationaal opgeslagen (+32496733202 / 0032…): landcode en voorloopnul eraf,
+        // anders wordt het landcodecijfer als deel van het nummer (en de rest als "extensie") gelezen.
+        var rawDigits = new string(Model.Where(char.IsDigit).ToArray());
+        if (Model.TrimStart().StartsWith("+32") || rawDigits.StartsWith("0032")) { rawDigits = rawDigits.StartsWith("0032") ? rawDigits.Substring(4) : rawDigits.Substring(2); rawDigits = rawDigits.TrimStart('0'); }
+        else if (rawDigits.StartsWith("32") && rawDigits.Length >= 10 && rawDigits.Length <= 11) { rawDigits = rawDigits.Substring(2); }
+        else if (rawDigits.StartsWith("0") && rawDigits.Length >= 9 && rawDigits.Length <= 10) { rawDigits = rawDigits.TrimStart('0'); }
+        if (long.TryParse(rawDigits, out var phonedigits))
         {
             string cleanPhoneDigits = phonedigits.ToString();
             int digitCount = cleanPhoneDigits.Length;

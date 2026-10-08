@@ -1,0 +1,261 @@
+@model CPMCore.Models.Budget.BudgetActivityLijnenModel
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Budget
+@using BOCore.Budget
+@*
+    gl-v2 — Budgetflow stap 6 · Activiteiten (design-handoff 39g): KPI-tegels (totaal gecorrigeerd, per m² GBA, referentie nacalc), paneel
+    "Nacalculatie — vergelijken met afgewerkte projecten" (chips per referentieproject), activiteiten per lot als in-/uitklapbare groepen met
+    € basis · referentie · verschil · correctie · gecorrigeerd, filter "Enkel afwijking > 25 %", "Alles open". Opslaan via SaveActivityLijnen
+    (één POST voor alle lijnen) — de actiebalk toont "Niet opgeslagen — n correcties · Opslaan"; de volgende-knop slaat eerst op.
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    string Eur2(decimal v) => "€ " + v.ToString("N2", nl);
+    decimal Corr(BudgetActivityLijnBO l) => l.Correctiefactor <= 0 ? 1m : l.Correctiefactor;
+    var loten = Model.LotGroepen.Where(g => g.Lijnen.Any(l => l.TotaalAlternatief > 0)).ToList();
+    var totaalGecorrigeerd = loten.Sum(g => g.Lijnen.Where(l => l.TotaalAlternatief > 0).Sum(l => l.TotaalAlternatief * Corr(l)));
+    var prijsPerM2 = Model.OppervlakteGBA == 0 ? 0m : totaalGecorrigeerd / Model.OppervlakteGBA;
+    var toonRef = Model.HeeftReferenties;
+    ViewData["HeeftReferenties"] = toonRef;
+    var totaalRef = Model.TotaalReferentie;
+    var gekozen = Model.Referenties.Where(r => Model.GeselecteerdeReferentieIds.Contains(r.Id)).ToList();
+    var aantalGroot = loten.SelectMany(g => g.Lijnen).Count(l => l.TotaalAlternatief > 0 && l.ReferentieVerschilPerc.HasValue && Math.Abs(l.ReferentieVerschilPerc.Value) > 0.25m);
+    var kolommen = toonRef ? 6 : 4;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-act-tabel td { height: 40px; }
+        .bw-act-naam { min-width: 220px; }
+        .bw-act-lot th { background: var(--gl-v2-bg, #F2F5EF); color: var(--gl-v2-ink); font: 600 12.5px var(--gl-v2-font-sans); text-transform: none; letter-spacing: 0; height: 40px; border-top: 1px solid var(--gl-v2-hairline-soft); cursor: pointer; }
+        .bw-act-lot th:first-child { padding-left: 10px; }
+        .bw-act-lot .lot-toggle { display: inline-flex; align-items: center; gap: 8px; }
+        .bw-act-lot .lot-toggle i { font-size: 12px; transition: transform .18s var(--bw-ease, ease); }
+        .bw-act-lot.is-dicht .lot-toggle i { transform: rotate(-90deg); }
+        .bw-act-lot .lot-n { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+        .bw-act-lot .lot-delta, .bw-act-delta { font: 600 12px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+        tbody.is-dicht .bw-act-rij { display: none; }
+        .bw-act-n { display: inline-block; min-width: 16px; margin-left: 6px; padding: 0 4px; border-radius: 999px; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); font: 600 10px/16px var(--gl-v2-font-sans); text-align: center; vertical-align: middle; }
+        .bw-act-verschil { white-space: nowrap; }
+        .bw-act-verschil .gl-v2-row-action { margin-left: 4px; vertical-align: middle; }
+        .is-hoger { color: #8B2A2A; } .is-lager { color: var(--gl-v2-primary); } .is-gelijk { color: var(--gl-v2-muted); font-weight: 450; }
+        .bw-act-rij.is-groot td.bw-act-verschil { background: #FBF6EA; }
+        .bw-act-filter .bw-act-rij:not(.is-groot) { display: none; }
+        .bw-act-filter .bw-act-lot:not(.has-groot) { display: none; }
+        .bw-act-refs { display: flex; flex-wrap: wrap; gap: 8px; }
+        .bw-act-refs label { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; user-select: none; }
+        .bw-act-refs label:has(input:checked) { border-color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+        .bw-act-refs label input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .bw-act-refs label:has(input:focus-visible) { outline: 2px solid var(--gl-v2-primary); outline-offset: 2px; }
+        .bw-act-refs .m { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+        .bw-act-refs label:has(input:checked) .m { color: var(--gl-v2-primary); opacity: .8; }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+@section PageActions
+{
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwTopbar.cshtml", ch)
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-act" data-versie="@Model.BudgetVersieId" data-url-save="@Url.Action("SaveActivityLijnen", "Projecten")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        <div class="gl-v2-bw-tiles">
+            <div class="gl-v2-bw-tile"><span class="lbl">Totaal activiteiten · gecorrigeerd</span><span class="val" id="bw-act-kpi-tot">@Eur0(totaalGecorrigeerd)</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Per m² GBA</span><span class="val" id="bw-act-kpi-m2">@Eur2(prijsPerM2)</span><span class="sub">@Model.OppervlakteGBA.ToString("N0", nl) m² · @Model.AantalEenheden eenheden</span></div>
+            @if (toonRef)
+            {
+                <div class="gl-v2-bw-tile"><span class="lbl">Referentie nacalc</span><span class="val">@Eur0(totaalRef) <span class="bw-act-delta" id="bw-act-kpi-delta" style="font-size:12px"></span></span><span class="sub">@gekozen.Count project@(gekozen.Count == 1 ? "" : "en"), geïndexeerd</span></div>
+            }
+        </div>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Nacalculatie</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">vergelijken met afgewerkte projecten@(toonRef && Model.AantalZonderReferentie > 0 ? $" · {Model.AantalZonderReferentie} activiteit{(Model.AantalZonderReferentie == 1 ? "" : "en")} zonder referentie" : "")</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    <a href="@Url.Action("BudgetReferentieProjecten", "Instellingen")" class="gl-v2-btn gl-v2-btn-text" target="_blank" data-bw-plain><i class="ph ph-gear" aria-hidden="true"></i>Referentieprojecten</a>
+                </span>
+            </div>
+            <div style="padding:14px 20px 18px">
+                @if (!Model.Referenties.Any())
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Nog geen referentieprojecten. Laad in Instellingen › Budget › Referentieprojecten een afgewerkt project in (Excel of snapshot) en kies het hier.</span></div>
+                }
+                else
+                {
+                    <form method="post" asp-action="SetNacalcReferenties" asp-controller="Projecten" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="versieId" value="@Model.BudgetVersieId" />
+                        <div class="bw-act-refs">
+                            @foreach (var r in Model.Referenties)
+                            {
+                                <label title="@(r.Opmerking ?? "")"><input type="checkbox" name="referentieIds" value="@r.Id" data-bw-edit @(Model.GeselecteerdeReferentieIds.Contains(r.Id) ? "checked" : "") /><span>@r.Naam</span><span class="m">@(r.Datum?.Year.ToString() ?? "—") · @r.AantalEenheden eenh. · @Eur0(r.TotaalBedrag)</span></label>
+                            }
+                        </div>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" data-bw-edit>Toepassen</button>
+                        @if (toonRef) { <span class="gl-v2-bw-hint">referentie = Σ werkelijke kost × indexfactor ÷ Σ eenheden × @Model.AantalEenheden</span> }
+                    </form>
+                }
+            </div>
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Activiteiten per lot</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@loten.Count lot@(loten.Count == 1 ? "" : "en") · @loten.Sum(g => g.Lijnen.Count(l => l.TotaalAlternatief > 0)) activiteiten met bedrag</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto;gap:12px">
+                    @if (toonRef)
+                    {
+                        <label class="gl-v2-bw-calcswitch"><input type="checkbox" class="gl-v2-toggle-switch" id="bw-act-filter" data-bw-keep /> Enkel afwijking &gt; 25 % <span class="gl-v2-tabbar-count" id="bw-act-groot">@aantalGroot</span></label>
+                    }
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-act-alles" data-bw-keep data-open="true">Alles dicht</button>
+                </span>
+            </div>
+            <div class="gl-v2-bw-table-wrap">
+                <table class="gl-v2-bw-table bw-act-tabel" id="bw-act-tabel">
+                    <thead>
+                        <tr>
+                            <th>Activiteit</th><th class="is-num">€ basis</th>
+                            @if (toonRef) { <th class="is-num" title="Werkelijke kost in de gekozen referentieprojecten, geïndexeerd en omgerekend naar dit aantal eenheden">Referentie</th><th class="is-num" title="Gecorrigeerd budget t.o.v. de referentie">Verschil</th> }
+                            <th class="is-num">Correctie</th><th class="is-num">Gecorrigeerd</th>
+                        </tr>
+                    </thead>
+                    @foreach (var lot in loten)
+                    {
+                        var lijnen = lot.Lijnen.Where(l => l.TotaalAlternatief > 0).ToList();
+                        var lotRef = lijnen.Where(l => l.HeeftReferentie).Sum(l => l.ReferentieTotaal ?? 0m);
+                        var hasGroot = lijnen.Any(l => l.ReferentieVerschilPerc.HasValue && Math.Abs(l.ReferentieVerschilPerc.Value) > 0.25m);
+                        <tbody class="bw-act-lot @(hasGroot ? "has-groot" : "")" data-lot="@lot.LotNummer.ToString("G", inv)">
+                            <tr>
+                                <th colspan="2"><button type="button" class="lot-toggle" style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer" aria-expanded="true"><i class="ph ph-caret-down" aria-hidden="true"></i><span>Lot @lot.LotNummer.ToString("G", inv) @lot.LotNaam</span><span class="lot-n">· @lijnen.Count</span></button></th>
+                                @if (toonRef) { <th class="is-num lot-ref" data-ref="@lotRef.ToString(inv)">@(lotRef > 0 ? Eur2(lotRef) : "")</th><th class="is-num lot-delta"></th> }
+                                <th></th>
+                                <th class="is-num lot-som">@Eur2(lijnen.Sum(l => l.TotaalAlternatief * Corr(l)))</th>
+                            </tr>
+                            @foreach (var lijn in lijnen)
+                            {
+                                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwActiviteitRij.cshtml", lijn)
+                            }
+                        </tbody>
+                    }
+                    <tfoot>
+                        <tr>
+                            <td colspan="2">Totaal activiteiten</td>
+                            @if (toonRef) { <td class="is-num">@Eur2(totaalRef)</td><td class="is-num bw-act-delta" id="bw-act-tot-delta"></td> }
+                            <td></td>
+                            <td class="is-num" id="bw-act-tot">@Eur2(totaalGecorrigeerd)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @if (!loten.Any())
+            {
+                <div class="gl-v2-bw-empty"><span class="t">Nog geen activiteiten met een bedrag</span><span class="s">De bedragen komen uit de formules (Instellingen › Budgetformules) op basis van stap 1 t/m 5.</span></div>
+            }
+        </section>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <a href="@ch.PrevUrl" class="gl-v2-btn gl-v2-btn-text" data-bw-nav="back"><i class="ph ph-caret-left" aria-hidden="true"></i>@ch.PrevLabel</a>
+        <span class="gl-v2-bw-status" data-bw-status data-state="@(ch.IsLocked ? "locked" : "saved")" aria-live="polite">@(ch.IsLocked ? "Definitief — alleen-lezen" : "Alle wijzigingen opgeslagen")</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-act-save" data-bw-edit>Opslaan</button>
+            <a href="@ch.NextUrl" class="gl-v2-btn gl-v2-btn-primary" data-bw-nav="next" data-bw-keep>@ch.NextLabel<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var root = document.getElementById('bw-act'), tabel = document.getElementById('bw-act-tabel'), versieId = parseInt(root.getAttribute('data-versie'));
+    var locked = root.classList.contains('is-locked'), oppGBA = @Model.OppervlakteGBA.ToString("F2", inv);
+    var nf2 = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), nf0 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 0 });
+    function num(v) { v = String(v == null ? '' : v).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); var n = parseFloat(v); return isNaN(n) ? NaN : n; }
+    var wijzigingen = 0, origineel = {};
+    tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) { origineel[tr.getAttribute('data-activity-id')] = tr.querySelector('.corr-pct').value; });
+
+    function delta(el, bedrag, ref) {
+        if (!el) return; el.classList.remove('is-hoger', 'is-lager', 'is-gelijk');
+        if (!(ref > 0)) { el.textContent = ''; return; }
+        var d = (bedrag - ref) / ref * 100; el.classList.add(Math.abs(d) < 0.5 ? 'is-gelijk' : d > 0 ? 'is-hoger' : 'is-lager');
+        el.textContent = (d > 0 ? '+' : d < 0 ? '−' : '') + Math.abs(d).toLocaleString('nl-BE', { maximumFractionDigits: 1 }) + ' %';
+    }
+    function rij(tr) { var b = parseFloat(tr.getAttribute('data-basis')) || 0, p = num(tr.querySelector('.corr-pct').value); return b * (isNaN(p) ? 1 : p / 100); }
+    function recalc() {
+        var tot = 0, totRef = 0, groot = 0;
+        tabel.querySelectorAll('.bw-act-lot').forEach(function (lot) {
+            var som = 0, ref = 0, lotGroot = false;
+            lot.querySelectorAll('.bw-act-rij').forEach(function (tr) {
+                var g = rij(tr), r = parseFloat(tr.getAttribute('data-ref-totaal')) || 0;
+                tr.querySelector('.bw-act-gecorrigeerd').textContent = '€ ' + nf2.format(g);
+                som += g; if (r > 0) ref += r; delta(tr.querySelector('.bw-act-delta'), g, r);
+                var isGroot = r > 0 && Math.abs((g - r) / r) > 0.25; tr.classList.toggle('is-groot', isGroot); if (isGroot) { groot++; lotGroot = true; }
+            });
+            lot.querySelector('.lot-som').textContent = '€ ' + nf2.format(som); delta(lot.querySelector('.lot-delta'), som, ref); lot.classList.toggle('has-groot', lotGroot);
+            tot += som; totRef += ref;
+        });
+        document.getElementById('bw-act-tot').textContent = '€ ' + nf2.format(tot);
+        document.getElementById('bw-act-kpi-tot').textContent = '€ ' + nf0.format(tot);
+        document.getElementById('bw-act-kpi-m2').textContent = '€ ' + nf2.format(oppGBA > 0 ? tot / oppGBA : 0);
+        delta(document.getElementById('bw-act-tot-delta'), tot, totRef); delta(document.getElementById('bw-act-kpi-delta'), tot, totRef);
+        var gb = document.getElementById('bw-act-groot'); if (gb) gb.textContent = groot;
+        wijzigingen = 0; tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) { if (tr.querySelector('.corr-pct').value !== origineel[tr.getAttribute('data-activity-id')]) wijzigingen++; });
+        if (wijzigingen > 0 && !locked) GlV2Budget.setStatus('dirty', 'Niet opgeslagen — ' + wijzigingen + ' correctie' + (wijzigingen === 1 ? '' : 's'));
+    }
+    async function opslaan() {
+        var lijnen = [];
+        tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) {
+            var p = num(tr.querySelector('.corr-pct').value);
+            lijnen.push({ activityId: parseInt(tr.getAttribute('data-activity-id')), alternatievePrijsPerEenheid: parseFloat(tr.getAttribute('data-prijs')) || 0,
+                nacalcPrijsPerEenheid: parseFloat(tr.getAttribute('data-ref')) || parseFloat(tr.getAttribute('data-nacalc')) || 0, correctiefactor: isNaN(p) ? 1 : p / 100, isManueel: tr.getAttribute('data-manueel') === 'true' });
+        });
+        GlV2Budget.setStatus('saving');
+        var r = await GlV2Budget.post(root.getAttribute('data-url-save'), { budgetVersieId: versieId, lijnen: lijnen }, true);
+        if (!r.success) { GlV2Budget.setStatus('error', r.message || 'Opslaan mislukt'); return false; }
+        tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) { origineel[tr.getAttribute('data-activity-id')] = tr.querySelector('.corr-pct').value; });
+        wijzigingen = 0; GlV2Budget.saved(); return true;
+    }
+    GlV2Budget.register({ save: opslaan, dirty: function () { return wijzigingen > 0; } });
+    tabel.addEventListener('input', function (e) { if (e.target.classList.contains('corr-pct')) { GlV2Budget.markDirty(); recalc(); } });
+    tabel.addEventListener('click', function (e) {
+        var o = e.target.closest('.bw-act-overnemen');
+        if (o) { var tr = o.closest('tr'), b = parseFloat(tr.getAttribute('data-basis')) || 0, r = parseFloat(tr.getAttribute('data-ref-totaal')) || 0; if (b > 0 && r > 0) { tr.querySelector('.corr-pct').value = (Math.round(r / b * 1000) / 10).toLocaleString('nl-BE'); GlV2Budget.markDirty(); recalc(); } return; }
+        var t = e.target.closest('.lot-toggle');
+        if (t) { var lot = t.closest('.bw-act-lot'), dicht = lot.classList.toggle('is-dicht'); t.setAttribute('aria-expanded', dicht ? 'false' : 'true'); }
+    });
+    document.getElementById('bw-act-save').addEventListener('click', async function () { if (await opslaan()) GlV2Budget.toast('success', 'Activiteiten', 'Correcties opgeslagen.'); });
+    var alles = document.getElementById('bw-act-alles');
+    alles.addEventListener('click', function () { var open = alles.getAttribute('data-open') !== 'true'; tabel.querySelectorAll('.bw-act-lot').forEach(function (l) { l.classList.toggle('is-dicht', !open); l.querySelector('.lot-toggle').setAttribute('aria-expanded', open ? 'true' : 'false'); }); alles.setAttribute('data-open', open ? 'true' : 'false'); alles.textContent = open ? 'Alles dicht' : 'Alles open'; });
+    var filter = document.getElementById('bw-act-filter'); if (filter) filter.addEventListener('change', function () { tabel.classList.toggle('bw-act-filter', filter.checked); });
+    recalc(); if (!locked) GlV2Budget.saved();
+})();
+</script>
+}

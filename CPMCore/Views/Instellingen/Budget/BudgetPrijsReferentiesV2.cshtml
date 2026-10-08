@@ -1,0 +1,296 @@
+@model CPMCore.Models.Instellingen.BudgetPrijsReferentiesViewModel
+@using BOCore.Budget
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Instellingen/Prijsreferenties verkoop (design-handoff punt 38a/38b, "CRM Instellingen.dc.html"): tabbar Bouw/Grond met
+    aantal, per tab een sectiekaart "… toevoegen" (velden 40px, label in hoofdletters, eenheid €/m² als blok rechts, datum met
+    icoon, projectkeuze) en een sectiekaart met de lijst: zoekveld, projectfilter, schakelaar "enkel ouder dan 12 maanden",
+    kolommen code · omschrijving · prijs · datum · bron · project · actualiteit, bewerken per rij (rij wordt een formulier),
+    archiveren/verwijderen, lege staat na filter en een infokader onderaan. Codes die in een budget gebruikt zijn, kunnen enkel
+    gearchiveerd worden (migratie 077). Filteren/zoeken is client-side; sorteren is vast op datum (nieuwste eerst), zoals 38a.
+*@
+@{
+    ViewData["Title"] = "Prijsreferenties verkoop";
+    ViewData["PageIcon"] = "ph ph-currency-eur";
+    ViewData["GlV2FullHeightBody"] = true;
+    var nlBE = new System.Globalization.CultureInfo("nl-BE");
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    string Eur2(decimal v) => v.ToString("N2", nlBE);
+    var projectItems = Model.Projecten.Select(p => new GlV2SelectItem { Value = p.ID.ToString(), Text = p.Display }).ToList();
+    var startTab = Model.StartTab == "Grond" ? "Grond" : "Bouw";
+    var tabs = new (string Key, string Label, string Icon, string Basis, string Voorbeeld, int Count, int Volgende)[]
+    {
+        ("Bouw",  "Bouwprijscodes",  "ph-buildings", "Basis: €/m² gereduceerde oppervlakte — wegingsconventie van tabblad Oppervlaktes.", "bv. Halfopen woning – afwerking standaard", Model.Bouw.Count(),  Model.VolgendeCodeBouw),
+        ("Grond", "Grondprijscodes", "ph-map-pin",   "Basis: €/m² grondoppervlakte van de eenheid.",                                       "bv. Bouwgrond Vlekkem – centrum",            Model.Grond.Count(), Model.VolgendeCodeGrond)
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-budgetreferenties.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-bref" id="gl-v2-bref" data-start-tab="@startTab">
+    <div class="gl-v2-tabbar" role="tablist">
+        @foreach (var t in tabs)
+        {
+            <button type="button" class="gl-v2-tabbar-tab @(t.Key == startTab ? "is-active" : "")" role="tab" aria-selected="@(t.Key == startTab ? "true" : "false")" data-bref-tab="@t.Key">
+                @t.Label <span class="gl-v2-tabbar-count" data-bref-count="@t.Key">@t.Count</span>
+            </button>
+        }
+    </div>
+
+    <div class="gl-v2-bref-scroll">
+        <span class="gl-v2-bref-intro">Bouw- en grondprijscodes (€/m²) voor de verkooplijnen op stap 8 van de budgetwizard. Algemene codes gelden voor elk project; een code met project is enkel daar zichtbaar.</span>
+
+        @foreach (var t in tabs)
+        {
+            var letter = t.Key == "Grond" ? "G" : "B";
+            var rows = (t.Key == "Grond" ? Model.Grond : Model.Bouw).ToList();
+            var algemeen = rows.Count(r => r.IsAlgemeen);
+            var meta = rows.Count == 0 ? "nog geen codes" : $"{rows.Count} code{(rows.Count == 1 ? "" : "s")} · {algemeen} algemeen, {rows.Count - algemeen} projectgebonden";
+            <div class="gl-v2-tab-panel" data-tab-panel="@t.Key" @(t.Key == startTab ? "" : "hidden")>
+
+                @* ── Toevoegen ── *@
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-plus-circle" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">@(t.Key == "Grond" ? "Grondprijscode" : "Bouwprijscode") toevoegen</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">@t.Basis</span>
+                    </div>
+                    <form method="post" asp-action="BudgetPrijsReferentieCreate" asp-controller="Instellingen" class="gl-v2-bref-form gl-v2-bref-form--prijs" autocomplete="off">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="PrijsType" value="@t.Key" />
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="bref-@t.Key-code">Code</label>
+                            <div class="gl-v2-field-box">
+                                <span class="gl-v2-bref-code-prefix">@letter-</span><span class="gl-v2-field-divider"></span>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" id="bref-@t.Key-code" name="Code" class="gl-v2-field-input is-tabular" value="@t.Volgende" required />
+                            </div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="bref-@t.Key-oms">Omschrijving</label>
+                            <div class="gl-v2-field-box"><input type="text" id="bref-@t.Key-oms" name="Omschrijving" class="gl-v2-field-input" placeholder="@t.Voorbeeld" maxlength="200" /></div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="bref-@t.Key-prijs">Prijs</label>
+                            <div class="gl-v2-field-box">
+                                <input type="text" inputmode="decimal" id="bref-@t.Key-prijs" name="PrijsPerM2" class="gl-v2-field-input is-tabular" placeholder="0,00" required />
+                                <span class="gl-v2-field-unit">€/m²</span>
+                            </div>
+                        </div>
+                        <div class="gl-v2-field">
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-" + t.Key + "-datum", Label = "Datum", IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="bref-@t.Key-bron">Bron</label>
+                            <div class="gl-v2-field-box"><input type="text" id="bref-@t.Key-bron" name="Bron" class="gl-v2-field-input" placeholder="verkoop, schatting, markt…" maxlength="200" /></div>
+                        </div>
+                        <div class="gl-v2-field">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "ProjectId", Id = "bref-" + t.Key + "-project", Label = "Project · optioneel", Value = "", EmptyText = "Algemeen (alle projecten)", Items = projectItems
+                            })
+                        </div>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                    </form>
+                </section>
+
+                @* ── Lijst ── *@
+                <section class="gl-v2-section-card" data-bref-list="@t.Key">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph @t.Icon" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">@t.Label</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc" data-bref-meta>@meta</span>
+                        <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                            <a href="@Url.Action("BudgetPrijsReferentiesExport", "Instellingen", new { prijsType = t.Key })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-download-simple" aria-hidden="true"></i>Exporteren</a>
+                        </span>
+                    </div>
+                    <div class="gl-v2-bref-toolbar">
+                        <div class="gl-v2-field gl-v2-bref-search">
+                            <div class="gl-v2-field-box">
+                                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                                <input type="text" class="gl-v2-field-input" data-bref-search placeholder="Zoek op code, omschrijving of bron" autocomplete="off" />
+                                <button type="button" class="gl-v2-field-clear" data-bref-search-clear aria-label="Zoekterm wissen">&times;</button>
+                            </div>
+                        </div>
+                        <div class="gl-v2-bref-filter">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "filter-project-" + t.Key, Id = "bref-" + t.Key + "-filter", Value = "", EmptyText = "Alle projecten", Bare = true, Icon = "ph-funnel",
+                                Items = new List<GlV2SelectItem> { new() { Value = "algemeen", Text = "Enkel algemene codes" } }.Concat(projectItems).ToList()
+                            })
+                        </div>
+                        <label class="gl-v2-bref-switch"><input type="checkbox" class="gl-v2-toggle-switch" data-bref-oud /> Enkel ouder dan 12 maanden</label>
+                        <span class="gl-v2-bref-toolbar-spacer"></span>
+                        <span class="gl-v2-bref-sort">sorteer: datum ↓</span>
+                    </div>
+                    <div class="gl-v2-bref-head gl-v2-bref-grid--prijs">
+                        <span>Code</span><span>Omschrijving</span><span class="gl-v2-bref-right">Prijs</span><span>Datum</span><span>Bron</span><span>Project</span><span>Actualiteit</span><span></span>
+                    </div>
+                    <div data-bref-rows>
+                        @foreach (var r in rows)
+                        {
+                            var zoek = (r.CodeLabel + " " + r.Omschrijving + " " + r.Bron).ToLowerInvariant();
+                            <div class="gl-v2-bref-row gl-v2-bref-grid--prijs @(r.Gearchiveerd ? "is-archived" : "")" data-bref-row data-search="@zoek" data-project="@(r.ProjectId?.ToString() ?? "algemeen")" data-oud="@(r.IsOuderDan12Maanden ? "1" : "0")">
+                                <span class="gl-v2-bref-mono">@r.CodeLabel</span>
+                                <span class="gl-v2-bref-strong" title="@r.Omschrijving">@(string.IsNullOrWhiteSpace(r.Omschrijving) ? "—" : r.Omschrijving)</span>
+                                <span class="gl-v2-bref-num">€ @Eur2(r.PrijsPerM2) <small>/m²</small></span>
+                                <span class="gl-v2-bref-cell">@(r.Datum?.ToString("dd/MM/yyyy") ?? "—")</span>
+                                <span class="gl-v2-bref-cell is-muted" title="@r.Bron">@(string.IsNullOrWhiteSpace(r.Bron) ? "—" : r.Bron)</span>
+                                <span class="gl-v2-bref-cell">@(r.ProjectNaam ?? "Algemeen")</span>
+                                @if (r.Gearchiveerd)
+                                {
+                                    <span class="gl-v2-badge is-inactive" title="Niet meer kiesbaar op stap 8">Gearchiveerd</span>
+                                }
+                                else if (r.IsOuderDan12Maanden)
+                                {
+                                    <span class="gl-v2-badge is-attention" title="@(r.Datum.HasValue ? "Datum ouder dan 12 maanden" : "Geen datum")">Ouder dan 12 m.</span>
+                                }
+                                else
+                                {
+                                    <span class="gl-v2-badge is-positive">Actueel</span>
+                                }
+                                <div class="gl-v2-bref-actions">
+                                    <button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-bref-edit title="Bewerken" aria-label="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Bewerken</span></button>
+                                    @if (r.IsInGebruik || r.Gearchiveerd)
+                                    {
+                                        <form method="post" asp-action="BudgetPrijsReferentieArchiveer" asp-controller="Instellingen">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="prijsType" value="@t.Key" /><input type="hidden" name="gearchiveerd" value="@(r.Gearchiveerd ? "false" : "true")" />
+                                            <button type="submit" class="gl-v2-row-action" title="@(r.Gearchiveerd ? "Herstellen (opnieuw kiesbaar op stap 8)" : "Archiveren — in gebruik in een budget, dus niet verwijderbaar")" aria-label="@(r.Gearchiveerd ? "Herstellen" : "Archiveren")">
+                                                <i class="ph @(r.Gearchiveerd ? "ph-arrow-counter-clockwise" : "ph-archive")" aria-hidden="true"></i><span class="gl-v2-row-action-label">@(r.Gearchiveerd ? "Herstellen" : "Archiveren")</span>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-action="BudgetPrijsReferentieDelete" asp-controller="Instellingen" data-bv-titel="Code @r.CodeLabel verwijderen?" data-bv-tekst="De €/m² die al op verkooplijnen staat, blijft daar staan." data-bv-ok="Verwijderen">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="prijsType" value="@t.Key" />
+                                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                            @* Dezelfde rij in bewerking (38a "rij B-04 in bewerking"): zelfde kolommen, velden i.p.v. tekst, opslaan/annuleren rechts. *@
+                            <form method="post" asp-action="BudgetPrijsReferentieUpdate" asp-controller="Instellingen" class="gl-v2-bref-row gl-v2-bref-grid--prijs is-edit" data-bref-editrow hidden autocomplete="off">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="Id" value="@r.Id" /><input type="hidden" name="PrijsType" value="@t.Key" />
+                                <div class="gl-v2-field"><div class="gl-v2-field-box"><span class="gl-v2-bref-code-prefix">@letter-</span><span class="gl-v2-field-divider"></span><input type="text" inputmode="numeric" name="Code" class="gl-v2-field-input is-tabular" value="@r.Code" required aria-label="Code" /></div></div>
+                                <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="Omschrijving" class="gl-v2-field-input" value="@r.Omschrijving" maxlength="200" aria-label="Omschrijving" /></div></div>
+                                <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" name="PrijsPerM2" class="gl-v2-field-input is-tabular" value="@r.PrijsPerM2.ToString("0.00", nlBE)" required aria-label="Prijs per m²" /><span class="gl-v2-field-unit">€/m²</span></div></div>
+                                <div class="gl-v2-field">
+                                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-edit-" + r.Id + "-datum", Label = "Datum", IsoValue = r.Datum?.ToString("yyyy-MM-dd") ?? "", DisplayValue = r.Datum?.ToString("dd/MM/yyyy") ?? "" })
+                                </div>
+                                <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="Bron" class="gl-v2-field-input" value="@r.Bron" maxlength="200" aria-label="Bron" /></div></div>
+                                <div class="gl-v2-field">
+                                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "ProjectId", Id = "bref-edit-" + r.Id + "-project", Value = r.ProjectId?.ToString() ?? "", EmptyText = "Algemeen", Bare = true, Items = projectItems })
+                                </div>
+                                <span></span>
+                                <div class="gl-v2-bref-actions">
+                                    <button type="submit" class="gl-v2-row-action gl-v2-row-action-primary" title="Opslaan" aria-label="Opslaan"><i class="ph ph-check" aria-hidden="true"></i><span class="gl-v2-row-action-label">Opslaan</span></button>
+                                    <button type="button" class="gl-v2-row-action" data-bref-cancel title="Annuleren" aria-label="Annuleren"><i class="ph ph-x" aria-hidden="true"></i><span class="gl-v2-row-action-label">Annuleren</span></button>
+                                </div>
+                            </form>
+                        }
+                    </div>
+                    <div class="gl-v2-bref-empty" data-bref-empty hidden>
+                        <span class="t">Geen codes voor dit filter</span>
+                        <span class="s">Voeg hierboven een code toe of <button type="button" data-bref-reset>wis de filter <q data-bref-filterlabel></q></button>.</span>
+                    </div>
+                    @if (rows.Count == 0)
+                    {
+                        <div class="gl-v2-bref-empty">
+                            <span class="t">Nog geen @t.Label.ToLowerInvariant()</span>
+                            <span class="s">Voeg hierboven een eerste code toe; ze verschijnt dan in de keuzelijst op stap 8.</span>
+                        </div>
+                    }
+                    <div class="gl-v2-bref-foot">
+                        <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                            <i class="ph ph-info" aria-hidden="true"></i>
+                            <span>Codes die in een budget gebruikt zijn, kan je niet verwijderen — wel archiveren. Een prijswijziging past bestaande budgetten niet aan.</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        }
+    </div>
+</div>
+
+@section PageScripts
+{
+<script>
+(function () {
+    var root = document.getElementById('gl-v2-bref');
+    if (!root) return;
+
+    // Tabs (zelfde gedrag als IssuerCompaniesEditV2: panelen tonen/verbergen, niets herladen)
+    root.querySelectorAll('[data-bref-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var key = btn.getAttribute('data-bref-tab');
+            root.querySelectorAll('[data-bref-tab]').forEach(function (b) { var on = b === btn; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+            root.querySelectorAll('[data-tab-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-tab-panel') !== key; });
+            try { history.replaceState(null, '', '?tab=' + key); } catch (e) { }
+        });
+    });
+
+    // Per lijst: zoeken, projectfilter, schakelaar "ouder dan 12 maanden", lege staat, teller in de kaartkop
+    root.querySelectorAll('[data-bref-list]').forEach(function (list) {
+        var search = list.querySelector('[data-bref-search]');
+        var clear  = list.querySelector('[data-bref-search-clear]');
+        var oud    = list.querySelector('[data-bref-oud]');
+        var filterInput = list.querySelector('.gl-v2-bref-filter input[type="hidden"]');
+        var empty  = list.querySelector('[data-bref-empty]');
+        var label  = list.querySelector('[data-bref-filterlabel]');
+        var rows   = list.querySelectorAll('[data-bref-row]');
+
+        function pas() {
+            var q = (search.value || '').trim().toLowerCase();
+            var proj = filterInput ? filterInput.value : '';
+            var enkelOud = oud.checked;
+            var zichtbaar = 0;
+            rows.forEach(function (row) {
+                var ok = (!q || row.getAttribute('data-search').indexOf(q) >= 0)
+                      && (!proj || row.getAttribute('data-project') === proj)
+                      && (!enkelOud || row.getAttribute('data-oud') === '1');
+                row.classList.toggle('is-filtered', !ok);
+                var edit = row.nextElementSibling;
+                if (edit && edit.hasAttribute('data-bref-editrow') && !ok) { edit.hidden = true; row.hidden = false; }
+                if (ok) zichtbaar++;
+            });
+            var actief = q || proj || enkelOud;
+            empty.hidden = !(rows.length > 0 && zichtbaar === 0);
+            var omschrijving = q ? '"' + q + '"' : (proj ? (proj === 'algemeen' ? 'enkel algemene codes' : (filterInput.closest('.gl-v2-select').querySelector('.gl-v2-select-trigger-label').textContent.trim())) : 'ouder dan 12 maanden');
+            label.textContent = actief ? omschrijving : '';
+        }
+        search.addEventListener('input', pas);
+        clear.addEventListener('click', function () { search.value = ''; pas(); search.focus(); });
+        oud.addEventListener('change', pas);
+        if (filterInput) filterInput.addEventListener('change', pas);
+        list.querySelector('[data-bref-reset]').addEventListener('click', function () {
+            search.value = ''; oud.checked = false;
+            if (filterInput && window.GlV2Select && window.GlV2Select.setValue) window.GlV2Select.setValue(filterInput.closest('.gl-v2-select'), '');
+            else if (filterInput) { filterInput.value = ''; var lbl = filterInput.closest('.gl-v2-select').querySelector('.gl-v2-select-trigger-label'); if (lbl) lbl.textContent = 'Alle projecten'; }
+            pas();
+        });
+
+        // Rij bewerken: de weergaverij wisselt met de formulierrij eronder
+        list.addEventListener('click', function (e) {
+            var edit = e.target.closest('[data-bref-edit]');
+            if (edit) {
+                var row = edit.closest('[data-bref-row]'); var form = row.nextElementSibling;
+                list.querySelectorAll('[data-bref-editrow]:not([hidden])').forEach(function (f) { f.hidden = true; f.previousElementSibling.hidden = false; });
+                row.hidden = true; form.hidden = false;
+                var first = form.querySelector('input[name="Omschrijving"]'); if (first) first.focus();
+            }
+            var cancel = e.target.closest('[data-bref-cancel]');
+            if (cancel) { var form2 = cancel.closest('[data-bref-editrow]'); form2.hidden = true; form2.previousElementSibling.hidden = false; }
+        });
+    });
+})();
+</script>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")

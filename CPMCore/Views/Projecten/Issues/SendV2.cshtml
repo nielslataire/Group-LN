@@ -1,0 +1,144 @@
+@model CPMCore.Models.Issues.PuntenSendV2Vm
+@*
+    gl-v2 — Punten: Goedkeuren & doorsturen (design-handoff 40d). Per aannemer de punten die meegaan, met rechts een voorbeeld van de mail
+    die de aannemer krijgt. Concept / Ter goedkeuring worden bij het versturen goedgekeurd (status Doorgestuurd); wat al bij de aannemer
+    ligt, gaat opnieuw mee als "nog open". Verzenden = PDF + e-mail met portaallink via IConstructionIssueReportService.SendSelectedIssues.
+    Namespace gl-v2-ps-* (gl-v2-projecten-punten-send.css/.js).
+*@
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = "Goedkeuren & doorsturen";
+    ViewData["PageIcon"] = "ph ph-paper-plane-tilt";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Index", "ProjectsIssues", new { projectId = Model.ProjectId });
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · punten" };
+    var data = Model.Groups.Select(g => new { key = g.Key, name = g.Name, email = g.Email, issues = g.Issues.Select(i => new { id = i.Id, nr = i.Nr, title = i.Title, where = i.Where, due = i.Due, isNew = i.IsNew }) });
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-punten-send.css" asp-append-version="true" />
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="submit" form="ps-form" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Verzenden</button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form method="post" action="@Url.Action("SendV2Post", "ProjectsIssues", new { projectId = Model.ProjectId })" class="gl-v2-ps-form" id="ps-form" data-project-name="@Model.ProjectName">
+    @Html.AntiForgeryToken()
+    @foreach (var id in Model.OnlyIds) { <input type="hidden" name="issueIds" value="@id" /> }
+    <div class="gl-v2-ps-scroll">
+        <div class="gl-v2-ps-head">
+            <h1>Goedkeuren &amp; doorsturen</h1>
+            <p>@Model.PendingApproval ter goedkeuring · @Model.OpenAtContractors open bij aannemers</p>
+        </div>
+
+        @if (Model.PendingApproval > 0)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                <i class="ph ph-hourglass-medium" aria-hidden="true"></i>
+                <div class="gl-v2-ps-notice-text"><b>@Model.PendingApproval punten wachten op goedkeuring</b><span>Ze worden goedgekeurd zodra je verstuurt; kies "Enkel reeds goedgekeurd" om ze nog niet mee te sturen.</span></div>
+            </div>
+        }
+        @if (Model.OnlyIds.Count > 0)
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Beperkt tot de @Model.OnlyIds.Count punten die je selecteerde. <a href="@Url.Action("SendV2", "ProjectsIssues", new { projectId = Model.ProjectId })">Alle punten tonen</a></span></div>
+        }
+        @if (Model.WithoutContractor > 0)
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-warning"><i class="ph ph-warning" aria-hidden="true"></i><span>@Model.WithoutContractor punten hebben nog geen aannemer en kunnen niet verstuurd worden.</span></div>
+        }
+
+        <div class="gl-v2-ps-grid">
+            <div class="gl-v2-ps-main">
+                <section class="gl-v2-card">
+                    <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Wat versturen</h2></div>
+                    <div class="gl-v2-card-body gl-v2-ps-options">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "scope", Id = "ps-scope", Label = "Welke punten", Value = "all",
+                            Items = new List<GlV2SelectItem>
+                            {
+                                new() { Value = "all", Text = "Nieuw + nog open" },
+                                new() { Value = "new", Text = "Enkel nieuw (goed te keuren)" },
+                                new() { Value = "approved", Text = "Enkel reeds goedgekeurd (nog open)" }
+                            }
+                        })
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Vorm</span>
+                            <div class="gl-v2-ps-static"><i class="ph ph-envelope-simple" aria-hidden="true"></i>E-mail met link naar aannemersportaal + PDF</div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-ps-wide">
+                            <label class="gl-v2-field-label" for="ps-message">Bericht (optioneel)</label>
+                            <div class="gl-v2-field-box gl-v2-ps-textarea"><textarea class="gl-v2-field-input" id="ps-message" name="message" rows="2" placeholder="Voeg een bericht toe…"></textarea></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="gl-v2-card">
+                    <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-hard-hat" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Aannemers</h2><span class="gl-v2-field-divider"></span><span class="gl-v2-card-header-count">kies naar wie</span></div>
+                    <div class="gl-v2-ps-scrollx">
+                        <table class="gl-v2-ps-table" id="ps-table">
+                            <thead><tr><th class="gl-v2-ps-check"><input type="checkbox" id="ps-all" aria-label="Alle aannemers" checked></th><th>AANNEMER</th><th class="is-num">PUNTEN</th><th class="is-num">NIEUW</th></tr></thead>
+                            <tbody id="ps-body">
+                                @foreach (var g in Model.Groups)
+                                {
+                                    <tr class="gl-v2-ps-row @(g.Email == null ? "is-noemail" : "")" data-key="@g.Key">
+                                        <td class="gl-v2-ps-check"><input type="checkbox" name="groups" value="@g.Key" class="js-ps-group" aria-label="@g.Name" @(g.Email == null ? "disabled" : "checked")></td>
+                                        <td><b>@g.Name</b><small>@(g.Email ?? "geen e-mailadres — niet te versturen")</small></td>
+                                        <td class="is-num js-ps-total"></td>
+                                        <td class="is-num js-ps-new"></td>
+                                    </tr>
+                                }
+                                @if (Model.Groups.Count == 0)
+                                {
+                                    <tr><td colspan="4" class="gl-v2-ps-empty">Er zijn geen punten om door te sturen.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="gl-v2-ps-side">
+                <section class="gl-v2-card">
+                    <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-envelope-open" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title" id="ps-prev-title">Voorbeeld</h2><span class="gl-v2-field-divider"></span><span class="gl-v2-card-header-count">e-mail + portaal</span></div>
+                    <div class="gl-v2-card-body gl-v2-ps-preview" id="ps-preview">
+                        <p class="gl-v2-ps-empty">Kies een aannemer om het voorbeeld te zien.</p>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-ps-summary" id="ps-summary" aria-live="polite"></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Url.Action("Index", "ProjectsIssues", new { projectId = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+            @if (Model.CanWrite)
+            {
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ps-send"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Verzenden</span></button>
+            }
+        </div>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script id="ps-data" type="application/json">@Html.Raw(JsonSerializer.Serialize(data))</script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-punten-send.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,252 @@
+@model CPMCore.Models.Projecten.BudgetIndexModel
+@using CPMCore.Models.GlV2
+@using BOCore
+@*
+    gl-v2 — Budgetten, overzicht (design-handoff 39a): bovenaan het definitieve budget (één per project — vastgezet op/door, alleen-lezen,
+    basis voor facturen & contracten; de tegels Gecontracteerd/Gefactureerd/Verwacht verschil zijn placeholders tot de koppeling met
+    contracten en facturen, zoals afgesproken), daaronder één kaart per budget met zijn versies (versie · naam · datum · status · totaal ·
+    Open), "Nieuwe versie op basis van de huidige" en "Nieuw budget — leeg of als kopie". Status: Concept · stap x van 9 / Afgerond / Definitief.
+*@
+@{
+    ViewData["Title"] = "Budgetten";
+    ViewData["PageIcon"] = "ph ph-table";
+    ViewData["GlV2FullHeightBody"] = true; // bodycard vult het scherm als de inhoud korter is (DESIGN.md: GlV2FullHeightBody)
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · budgetten", Mode = GlV2ProjectMenuMode.Outer };
+    var def = Model.DefinitiefVersie;
+    var defMaster = def == null ? null : Model.BudgetMasters.FirstOrDefault(m => m.Id == def.BudgetMasterId);
+    string StatusLabel(BudgetVersieBO v) => v.Status == "Definitief" ? "Definitief" : v.Status == "Afgerond" ? "Afgerond" : (v.IsHuidig ? "Huidig · " : "") + "concept" + (v.LaatsteStap is > 0 and < 9 ? $" stap {v.LaatsteStap} van 9" : "");
+    string StatusKlasse(BudgetVersieBO v) => v.Status == "Definitief" ? "is-positive" : v.Status == "Afgerond" ? "is-neutral" : v.IsHuidig ? "is-attention" : "is-inactive";
+    var alleVersies = Model.BudgetMasters.SelectMany(m => m.Versies.Select(v => (Master: m, Versie: v))).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-ix-def { border: 1px solid var(--gl-v2-primary-tint); }
+        .bw-ix-def .gl-v2-section-card-header { background: var(--gl-v2-primary-tint); }
+        .bw-ix-def-body { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 16px; padding: 16px 20px 18px; align-items: start; }
+        .bw-ix-def-naam { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+        .bw-ix-def-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin-top: 4px; }
+        .bw-ix-def-tot { font: 600 22px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; margin-top: 8px; }
+        .bw-ix-acties { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 20px 18px; }
+        .bw-ix-kaarten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+        @@media (min-width: 1200px) { .bw-ix-kaarten { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .bw-ix-kaart .gl-v2-section-card-header { flex-wrap: wrap; row-gap: 6px; }
+        .bw-ix-kaart .gl-v2-section-card-title { font-family: var(--gl-v2-font-serif); font-weight: 500; font-size: 16px; text-transform: none; letter-spacing: 0; }
+        .bw-ix-versie { cursor: pointer; }
+        .bw-ix-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+        .bw-ix-ph { color: var(--gl-v2-muted-light); font-weight: 450; }
+        @@media (max-width: 1199.98px) { .bw-ix-def-body { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @@media (max-width: 767.98px) { .bw-ix-def-body { grid-template-columns: minmax(0, 1fr); } }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageActions
+{
+    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-ix-nieuw"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw budget</button>
+}
+
+<p class="gl-v2-bw-intro">Meerdere budgetten per project, elk met genummerde versies. <strong>Huidig</strong> is de versie waaraan je werkt; <strong>definitief</strong> is per project één vastgezette versie — die wordt gebruikt voor de vergelijking met facturen en contracten.</p>
+
+@if (def != null)
+{
+    <section class="gl-v2-section-card bw-ix-def">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-lock-key" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Definitief budget</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">basis voor facturen &amp; contracten</span>
+        </div>
+        <div class="bw-ix-def-body">
+            <div>
+                <div class="bw-ix-def-naam">@defMaster?.Naam · v@(def.Versienummer)@(string.IsNullOrWhiteSpace(def.VersieNaam) ? "" : " · " + def.VersieNaam)</div>
+                <div class="bw-ix-def-tot">@(Model.Totalen.TryGetValue(def.Id, out var dt) && dt.HasValue ? Eur0(dt.Value) : "—")</div>
+                <div class="bw-ix-def-sub">Vastgezet op @(def.VastgezetOp?.ToString("dd/MM/yyyy") ?? "—")@(string.IsNullOrWhiteSpace(def.VastgezetDoor) ? "" : " door " + def.VastgezetDoor) · alleen-lezen</div>
+            </div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Gecontracteerd</span><span class="val bw-ix-ph">—</span><span class="sub">nog niet gekoppeld aan contracten</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Gefactureerd</span><span class="val bw-ix-ph">—</span><span class="sub">nog niet gekoppeld aan facturen</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Verwacht verschil</span><span class="val bw-ix-ph">—</span><span class="sub">volgt na de koppeling</span></div>
+        </div>
+        <div class="bw-ix-acties">
+            <a href="@Url.Action("BudgetResultaat", "Projecten", new { versieId = def.Id })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-chart-bar" aria-hidden="true"></i>Vergelijking openen</a>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-ix-ander-def"><i class="ph ph-arrows-left-right" aria-hidden="true"></i>Andere versie definitief maken…</button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Nog geen definitief budget. Rond een versie af op stap 9 en kies "Afronden &amp; definitief maken"; die versie wordt dan de basis voor facturen en contracten.</span></div>
+}
+
+@if (!Model.BudgetMasters.Any())
+{
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-bw-empty" style="border:0"><span class="t">Nog geen budgetten voor dit project</span><span class="s">Maak een eerste budget aan om de berekening te starten — leeg, of als kopie van een budget van een ander project.</span></div>
+    </section>
+}
+<div class="bw-ix-kaarten">
+    @foreach (var m in Model.BudgetMasters)
+    {
+        var eenh = Model.EenhedenPerMaster.TryGetValue(m.Id, out var e) ? e : 0;
+        var laatst = m.Versies.Any() ? m.Versies.Max(v => v.GewijzigdOp ?? v.CreatedAt) : m.CreatedAt;
+        var huidig = m.Versies.FirstOrDefault(v => v.IsHuidig) ?? m.Versies.OrderByDescending(v => v.Versienummer).FirstOrDefault();
+        <section class="gl-v2-section-card bw-ix-kaart">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-table" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">@m.Naam</h2>
+                <button type="button" class="gl-v2-row-action gl-v2-row-action-primary bw-ix-hernoem" data-master="@m.Id" data-naam="@m.Naam" data-oms="@m.Omschrijving"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Budget hernoemen</span></button>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@eenh eenhe@(eenh == 1 ? "id" : "den") · laatst gewijzigd @laatst.ToString("dd/MM/yyyy HH:mm")</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    @if (m.IsActief) { <span class="gl-v2-badge is-positive">Actief budget</span> }
+                    else
+                    {
+                        <form method="post" asp-action="BudgetMasterActiveren" asp-controller="Projecten" style="display:contents">@Html.AntiForgeryToken()<input type="hidden" name="masterId" value="@m.Id" /><input type="hidden" name="projectId" value="@Model.ProjectId" /><button type="submit" class="gl-v2-btn gl-v2-btn-text" style="height:30px">Maak actief</button></form>
+                    }
+                </span>
+            </div>
+            <div class="gl-v2-bw-table-wrap">
+                <table class="gl-v2-bw-table">
+                    <thead><tr><th>Versie</th><th>Naam</th><th>Laatst gewijzigd</th><th>Status</th><th class="is-num">Totaal</th><th class="col-actions" style="width:120px"></th></tr></thead>
+                    <tbody>
+                        @foreach (var v in m.Versies.OrderByDescending(x => x.Versienummer))
+                        {
+                            var url = Url.Action(v.Status == "Definitief" || v.Status == "Afgerond" || v.LaatsteStap >= 9 ? "BudgetResultaat" : "BudgetGegevens", "Projecten", new { versieId = v.Id });
+                            <tr class="bw-ix-versie" data-detail-url="@url">
+                                <td class="is-strong">v@(v.Versienummer)</td>
+                                <td>@(string.IsNullOrWhiteSpace(v.VersieNaam) ? "—" : v.VersieNaam)</td>
+                                <td class="is-muted">@((v.GewijzigdOp ?? v.CreatedAt).ToString("dd/MM/yyyy HH:mm"))</td>
+                                <td><span class="gl-v2-badge @StatusKlasse(v)">@StatusLabel(v)</span></td>
+                                <td class="is-num is-strong">@(Model.Totalen.TryGetValue(v.Id, out var t) && t.HasValue ? Eur0(t.Value) : "")</td>
+                                <td class="col-actions"><button type="button" class="gl-v2-row-action bw-ix-versie-hernoem" data-versie="@v.Id" data-naam="@v.VersieNaam" data-notitie="@v.Notitie"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Versie hernoemen</span></button> <a href="@url" class="gl-v2-row-action gl-v2-row-action-primary"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><span class="gl-v2-row-action-label">Open versie</span></a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="bw-ix-foot">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text bw-ix-nieuwe-versie" data-master="@m.Id" data-van="@(huidig?.Versienummer ?? 0)"><i class="ph ph-git-branch" aria-hidden="true"></i>Nieuwe versie op basis van de huidige</button>
+                <span class="gl-v2-bw-hint">@m.Versies.Count versie@(m.Versies.Count == 1 ? "" : "s")</span>
+            </div>
+        </section>
+    }
+</div>
+
+@* Nieuw budget *@
+<div class="modal fade gl-v2-modal-form" id="bw-ix-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-modal-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form method="post" asp-action="BudgetMasterAanmaken" asp-controller="Projecten" class="modal-content" autocomplete="off">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ProjectId" value="@Model.ProjectId" /><input type="hidden" name="ProjectName" value="@Model.ProjectName" />
+            <div class="modal-header"><h2 class="modal-title" id="bw-ix-modal-title">Nieuw budget</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-ix-naam">Naam <span style="color:#8B2A2A">*</span></label><div class="gl-v2-field-box"><input type="text" id="bw-ix-naam" name="Naam" class="gl-v2-field-input" placeholder="bv. 8 woningen" required maxlength="200" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-ix-oms">Omschrijving <span class="gl-v2-bw-hint">· optioneel</span></label><div class="gl-v2-field-box"><input type="text" id="bw-ix-oms" name="Omschrijving" class="gl-v2-field-input" placeholder="korte toelichting" maxlength="500" /></div></div>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "KopieVanVersieId", Id = "bw-ix-kopie", Label = "Starten als", EmptyText = "Leeg budget", Value = "",
+                    Items = Model.KopieerOpties.Select(o => new GlV2SelectItem { Value = o.ID.ToString(), Text = o.Display, Group = o.Group }).ToList()
+                })
+                <span class="gl-v2-field-help">Een kopie neemt alle stappen over (gegevens, oppervlaktes, activiteiten, parameters, verkooplijnen); de status wordt Concept.</span>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Budget aanmaken</button></div>
+        </form>
+    </div>
+</div>
+
+@* Budget hernoemen *@
+<div class="modal fade gl-v2-modal-form" id="bw-ix-hernoem-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-hernoem-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form method="post" asp-action="BudgetMasterHernoemen" asp-controller="Projecten" class="modal-content" autocomplete="off">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="masterId" id="bw-hn-master" /><input type="hidden" name="projectId" value="@Model.ProjectId" />
+            <div class="modal-header"><h2 class="modal-title" id="bw-ix-hernoem-title">Budget hernoemen</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-hn-naam">Naam <span style="color:#8B2A2A">*</span></label><div class="gl-v2-field-box"><input type="text" id="bw-hn-naam" name="naam" class="gl-v2-field-input" required maxlength="200" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-hn-oms">Omschrijving <span class="gl-v2-bw-hint">· optioneel</span></label><div class="gl-v2-field-box"><input type="text" id="bw-hn-oms" name="omschrijving" class="gl-v2-field-input" maxlength="500" /></div></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button></div>
+        </form>
+    </div>
+</div>
+
+@* Versie hernoemen *@
+<div class="modal fade gl-v2-modal-form" id="bw-ix-vhernoem-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-vhernoem-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form method="post" asp-action="BudgetVersieHernoemen" asp-controller="Projecten" class="modal-content" autocomplete="off">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="versieId" id="bw-vh-versie" /><input type="hidden" name="projectId" value="@Model.ProjectId" />
+            <div class="modal-header"><h2 class="modal-title" id="bw-ix-vhernoem-title">Versie hernoemen</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-vh-naam">Naam</label><div class="gl-v2-field-box"><input type="text" id="bw-vh-naam" name="versieNaam" class="gl-v2-field-input" maxlength="200" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-vh-notitie">Notitie</label><div class="gl-v2-field-box"><input type="text" id="bw-vh-notitie" name="notitie" class="gl-v2-field-input" maxlength="500" /></div></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button></div>
+        </form>
+    </div>
+</div>
+
+@* Nieuwe versie *@
+<div class="modal fade gl-v2-modal-form" id="bw-ix-versie-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-versie-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title" id="bw-ix-versie-title">Nieuwe versie</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span id="bw-ix-versie-uitleg">Kopie van de huidige versie; de nieuwe versie wordt de huidige.</span></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-ix-vnaam">Naam <span class="gl-v2-bw-hint">· optioneel</span></label><div class="gl-v2-field-box"><input type="text" id="bw-ix-vnaam" class="gl-v2-field-input" placeholder="bv. Na nacalc-correctie" maxlength="200" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-ix-vnotitie">Notitie <span class="gl-v2-bw-hint">· optioneel</span></label><div class="gl-v2-field-box"><input type="text" id="bw-ix-vnotitie" class="gl-v2-field-input" maxlength="500" /></div></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-ix-versie-ok">Versie aanmaken</button></div>
+        </div>
+    </div>
+</div>
+
+@* Andere versie definitief maken *@
+<div class="modal fade gl-v2-modal-form" id="bw-ix-def-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-def-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form method="post" asp-action="BudgetVersieDefinitief" asp-controller="Projecten" class="modal-content">
+            @Html.AntiForgeryToken()
+            <div class="modal-header"><h2 class="modal-title" id="bw-ix-def-title">Andere versie definitief maken</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "versieId", Id = "bw-ix-def-versie", Label = "Versie", Placeholder = "Kies een versie…", Required = true,
+                    Items = alleVersies.Where(x => x.Versie.Status != "Definitief").Select(x => new GlV2SelectItem { Value = x.Versie.Id.ToString(), Text = $"v{x.Versie.Versienummer}" + (string.IsNullOrWhiteSpace(x.Versie.VersieNaam) ? "" : " · " + x.Versie.VersieNaam) + $" ({x.Versie.Status})", Group = x.Master.Naam }).ToList()
+                })
+                <div class="gl-v2-notice gl-v2-notice-compact is-warning"><i class="ph ph-warning" aria-hidden="true"></i><span>De huidige definitieve versie wordt weer bewerkbaar ("Afgerond"); de gekozen versie wordt alleen-lezen.</span></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-lock-key" aria-hidden="true"></i>Definitief maken</button></div>
+        </form>
+    </div>
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var nieuw = document.getElementById('bw-ix-nieuw'); if (nieuw) nieuw.addEventListener('click', function () { bootstrap.Modal.getOrCreateInstance(document.getElementById('bw-ix-modal')).show(); setTimeout(function () { document.getElementById('bw-ix-naam').focus(); }, 300); });
+    var ander = document.getElementById('bw-ix-ander-def'); if (ander) ander.addEventListener('click', function () { bootstrap.Modal.getOrCreateInstance(document.getElementById('bw-ix-def-modal')).show(); });
+    function modal(id) { return bootstrap.Modal.getOrCreateInstance(document.getElementById(id)); }
+    document.querySelectorAll('.bw-ix-hernoem').forEach(function (b) { b.addEventListener('click', function () { document.getElementById('bw-hn-master').value = b.dataset.master; document.getElementById('bw-hn-naam').value = b.dataset.naam || ''; document.getElementById('bw-hn-oms').value = b.dataset.oms || ''; modal('bw-ix-hernoem-modal').show(); }); });
+    document.querySelectorAll('.bw-ix-versie-hernoem').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); document.getElementById('bw-vh-versie').value = b.dataset.versie; document.getElementById('bw-vh-naam').value = b.dataset.naam || ''; document.getElementById('bw-vh-notitie').value = b.dataset.notitie || ''; modal('bw-ix-vhernoem-modal').show(); }); });
+    var masterId = 0, vm = document.getElementById('bw-ix-versie-modal');
+    document.querySelectorAll('.bw-ix-nieuwe-versie').forEach(function (b) { b.addEventListener('click', function () { masterId = parseInt(b.getAttribute('data-master')); document.getElementById('bw-ix-versie-uitleg').textContent = 'Kopie van v' + b.getAttribute('data-van') + '; de nieuwe versie wordt de huidige.'; bootstrap.Modal.getOrCreateInstance(vm).show(); }); });
+    document.getElementById('bw-ix-versie-ok').addEventListener('click', async function () {
+        var ok = this; ok.disabled = true;
+        var r = await GlV2Budget.post('@Url.Action("BudgetNieuweVersie", "Projecten")', { masterId: masterId, versieNaam: document.getElementById('bw-ix-vnaam').value, notitie: document.getElementById('bw-ix-vnotitie').value }, false);
+        if (r.success) { GlV2Budget.toast('success', 'Versie v' + r.versienummer + ' aangemaakt', 'De versie opent op stap 1.'); setTimeout(function () { window.location.href = '@Url.Action("BudgetGegevens", "Projecten")?versieId=' + r.newVersieId; }, 500); }
+        else { GlV2Budget.toast('danger', 'Niet gelukt', r.message || ''); ok.disabled = false; }
+    });
+})();
+</script>
+}

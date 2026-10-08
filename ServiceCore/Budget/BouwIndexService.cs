@@ -11,6 +11,8 @@ namespace ServiceCore.Budget
     public class BouwIndexService
     {
         private readonly UnitOfWorkCore _uow;
+        // Scoped service: één opzoeking per (type, jaar, maand) per request i.p.v. 2 queries per materiaal in BudgetFormulaService.BuildContextAsync.
+        private readonly Dictionary<(string, int, int), decimal?> _opDatumCache = new();
 
         public BouwIndexService(UnitOfWorkCore uow)
         {
@@ -38,6 +40,15 @@ namespace ServiceCore.Budget
 
         // Geeft de indexwaarde terug die het dichtst bij de opgegeven datum ligt (meest recente <= datum, anders vroegste)
         public async Task<decimal?> GetIndexOpDatumAsync(string indexType, DateTime datum)
+        {
+            var key = (indexType, datum.Year, datum.Month);
+            if (_opDatumCache.TryGetValue(key, out var cached)) return cached;
+            var waarde = await GetIndexOpDatumUitDbAsync(indexType, datum);
+            _opDatumCache[key] = waarde;
+            return waarde;
+        }
+
+        private async Task<decimal?> GetIndexOpDatumUitDbAsync(string indexType, DateTime datum)
         {
             var query = _uow.BouwIndex.GetNoTracking()
                 .Where(x => x.IndexType == indexType && x.Jaar != null && x.Maand != null);

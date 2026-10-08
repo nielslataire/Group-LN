@@ -148,6 +148,21 @@ public partial class InstellingenController
                     Description = "Bewerk de voorstel-formules per activiteit voor de budgetwizard, met parameters uit budget en materialen.",
                     Href = Url.Action("BudgetFormules", "Instellingen") ?? "#"
                 });
+                calculatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-currency-eur",
+                    Title = "Prijsreferenties verkoop",
+                    Description = "Bouw- en grondprijscodes (€/m²) met datum en bron, voor de verkooplijnen op stap 8 van de budgetwizard.",
+                    Href = Url.Action("BudgetPrijsReferenties", "Instellingen") ?? "#"
+                });
+                calculatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-clock-counter-clockwise",
+                    Title = "Referentieprojecten (nacalc)",
+                    Description = "Werkelijke kost per activiteit van afgewerkte projecten, uit de app of uit Excel, om een budget mee te vergelijken op stap 6.",
+                    Href = Url.Action("BudgetReferentieProjecten", "Instellingen") ?? "#",
+                    Chips = { new SettingsChipVm { Label = "Excel-sjabloon", Href = Url.Action("BudgetReferentieSjabloon", "Instellingen") ?? "#" } }
+                });
             }
             if (calculatie.Items.Count > 0) vm.Groups.Add(calculatie);
 

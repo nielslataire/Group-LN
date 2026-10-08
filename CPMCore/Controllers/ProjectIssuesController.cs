@@ -25,7 +25,7 @@ namespace CPMCore.Controllers;
 
 [Authorize]
 [Route("Projects/{projectId:int}/Issues")]
-public class ProjectsIssuesController : BaseController
+public partial class ProjectsIssuesController : BaseController
 {
     private readonly IConstructionIssueService _service;
     private readonly IConstructionIssueReportService _reportService;
@@ -51,7 +51,7 @@ public class ProjectsIssuesController : BaseController
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters)
+    public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters, bool classic = false)
     {
         var projectName = await _db.Project
            .Where(x => x.ProjectId == projectId)
@@ -76,6 +76,7 @@ public class ProjectsIssuesController : BaseController
 
 
         SetPageHeader("bx bx-error-circle", $"{projectName} - Punten");
+        if (UseGlV2 && !classic) return View("IndexV2", await BuildIndexV2(projectId, projectName));
         filters ??= new ConstructionIssueFilterBO();
         var hasExplicitStatusFilter = Request.Query.ContainsKey("status");
         // Don't set a default server-side status filter — all issues are loaded so the
@@ -250,7 +251,7 @@ public class ProjectsIssuesController : BaseController
 
 
     [HttpGet("Details/{id:int}")]
-    public async Task<IActionResult> Details(int projectId, int id)
+    public async Task<IActionResult> Details(int projectId, int id, bool classic = false)
     {
         var issue = await _service.GetById(projectId, id);
         if (issue == null) return NotFound();
@@ -263,6 +264,7 @@ public class ProjectsIssuesController : BaseController
             Notifications = await _service.GetNotifications(projectId, id),
             MediaUrls = media.ToDictionary(x => x.Id, x => GetSignedAssetUrlByFileName(x.FileId, "pictures"))
         };
+        if (UseGlV2 && !classic) return View("DetailsV2", await BuildDetailV2(projectId, issue));
         SetPageHeader("bx bx-error-circle", issue.Title);
         return View(vm);
     }
@@ -455,7 +457,7 @@ public class ProjectsIssuesController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SendPreview(int projectId, [FromForm] IssueSendPreviewRequest request)
     {
-        var activeStatuses = new[] { 0, 2, 3, 7 }; // Open, Gepland, WaitingInspection, Reopened
+        var activeStatuses = new[] { 0, 2, 3, 7, 10 }; // Open, Gepland, WaitingInspection, Reopened
 
         var query = _db.ConstructionIssue
             .AsNoTracking()
@@ -863,7 +865,7 @@ public class ProjectsIssuesController : BaseController
         return new ConstructionIssueFormVm
         {
             ProjectId = projectId,
-            Input = dto ?? new ConstructionIssueUpsertBO { Status = (int)ConstructionIssueStatus.Open, Priority = (int)ConstructionIssuePriority.Normal, ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor },
+            Input = dto ?? new ConstructionIssueUpsertBO { Status = (int)ConstructionIssueStatus.Concept, Priority = (int)ConstructionIssuePriority.Normal, ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor },
             Categories = await _service.GetCategories(),
             Units = await _service.GetProjectUnits(projectId),
             ResponsibleContractors = await _db.Contract

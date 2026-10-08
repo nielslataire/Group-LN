@@ -87,7 +87,7 @@
     form.addEventListener("input", function (e) { if (e.target.name) track(e.target); });
     form.addEventListener("change", function (e) { if (e.target.name) track(e.target); });
     function isDirty() { return Object.keys(dirty).some(function (k) { return Object.keys(dirty[k]).length > 0; }); }
-    function warn(e) { if (isDirty()) { e.preventDefault(); e.returnValue = ""; } }
+    function warn(e) { var db = document.getElementById("ice-dirty-badge"); /* verborgen = de eigen bevestigingsmodal is al doorlopen (gl-v2-leave-guard.js) */ if (isDirty() && !(db && db.hidden)) { e.preventDefault(); e.returnValue = ""; } }
     window.addEventListener("beforeunload", warn);
 
     // ── Logo: sleepvak + voorbeeld ────────────────────────────────────────────────────────────────

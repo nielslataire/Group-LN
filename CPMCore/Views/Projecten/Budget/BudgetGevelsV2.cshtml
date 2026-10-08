@@ -1,0 +1,147 @@
+@model CPMCore.Models.Projecten.BudgetGevelsDakModel
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Budget
+@using CPMCore.Models.Projecten
+@using BOCore
+@*
+    gl-v2 — Budgetflow stap 4 · Gevels & ramen (design-handoff 39e): KPI-tegels, tabbar (Gevels · Ramen · Balustrades & zichtschermen · Leien) met
+    het subtotaal in de tab, per tab nieuwbouw en bestaand naast elkaar, elementtabellen uit V2/_BwElementTabel (autosave per rij via
+    gl-v2-budget-elementen.js). Een negatieve regel ("Ramen aftrek" uit oudere budgetten) kleurt rood; het meldingskader legt uit dat ramen
+    onder de tab Ramen horen. Berekeningslogica is ongewijzigd (BudgetGevelElementBO).
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-wall";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string N2(decimal v) => v.ToString("N2", nl);
+    var t = Model.Totaal;
+    List<BudgetGevelElementBO> Rows(string type) => Model.Elementen.GetValueOrDefault(type) ?? new List<BudgetGevelElementBO>();
+    DakSectieVM Sectie(string type, decimal sub) => new() { ElementType = type, Rijen = Rows(type), VersieId = Model.VersieId, Subtotaal = sub };
+    var tabs = new (string Key, string Label, decimal Tot, string Eenh)[]
+    {
+        ("gevels", "Gevels", t.TotaalGevelCombineerd, "m²"), ("ramen", "Ramen", t.TotaalRaamCombineerd, "m²"),
+        ("ballust", "Balustrades & zichtschermen", t.TotaalBallustrade + t.TotaalZichtscherm, "lm"), ("leien", "Leien", t.TotaalLeien, "m²")
+    };
+    var aftrekRijen = Rows("GevelNieuwbouw").Count(r => r.ResultaatM2 < 0m) + Rows("GevelBestaand").Count(r => r.ResultaatM2 < 0m);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-gev-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+        /* vrijstaande tabbar op de paginakleur: geen kaart, geen achtergrond, enkel de hairline eronder */
+        .gl-v2-bw .bw-gev-tabs { flex: none; margin: 0; padding: 0; background: transparent; border-radius: 0; overflow-y: hidden; }
+        @@media (max-width: 767.98px) { .gl-v2-bw .bw-gev-tabs { position: static; } }
+        @@media (max-width: 1199.98px) { .bw-gev-cols { grid-template-columns: minmax(0, 1fr); } }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+@section PageActions
+{
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwTopbar.cshtml", ch)
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-gev" data-versie="@Model.VersieId">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        <div class="gl-v2-bw-tiles">
+            <div class="gl-v2-bw-tile"><span class="lbl">Gevels nieuwbouw</span><span class="val" data-kpi="totaalGevelNieuwbouw" data-unit=" m²">@N2(t.TotaalGevelNieuwbouw) m²</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Gevels bestaand</span><span class="val" data-kpi="totaalGevelBestaand" data-unit=" m²">@N2(t.TotaalGevelBestaand) m²</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Ramen nieuwbouw</span><span class="val" data-kpi="totaalRaamNieuwbouw" data-unit=" m²">@N2(t.TotaalRaamNieuwbouw) m²</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Ramen bestaand</span><span class="val" data-kpi="totaalRaamBestaand" data-unit=" m²">@N2(t.TotaalRaamBestaand) m²</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Balustrades</span><span class="val" data-kpi="totaalBallustrade" data-unit=" lm">@N2(t.TotaalBallustrade) lm</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Zichtschermen</span><span class="val" data-kpi="totaalZichtscherm" data-unit=" lm">@N2(t.TotaalZichtscherm) lm</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Leien</span><span class="val" data-kpi="totaalLeien" data-unit=" m²">@N2(t.TotaalLeien) m²</span></div>
+        </div>
+
+        <div class="gl-v2-tabbar bw-gev-tabs" role="tablist">
+            @foreach (var tab in tabs)
+            {
+                <button type="button" class="gl-v2-tabbar-tab @(tab.Key == "gevels" ? "is-active" : "")" role="tab" aria-selected="@(tab.Key == "gevels" ? "true" : "false")" data-gev-tab="@tab.Key">
+                    @tab.Label <span class="gl-v2-tabbar-count" data-tabtot="@tab.Key" data-eenh="@tab.Eenh">@N2(tab.Tot) @tab.Eenh</span>
+                </button>
+            }
+        </div>
+
+        <div class="gl-v2-tab-panel" data-tab-panel="gevels">
+            <div class="bw-gev-cols">
+                @{ ViewData["SectieTitel"] = "Gevels nieuwbouw"; ViewData["Desc"] = null; ViewData["Hoogte"] = true; ViewData["LengteAlleen"] = false; ViewData["Icon"] = "ph-wall"; ViewData["Empty"] = "Nog geen gevels"; ViewData["EmptySub"] = "Voeg per eenheid en geveldeel een regel toe (aantal × breedte × hoogte)."; ViewData["ColA"] = "Eenheid"; ViewData["ColB"] = "Geveldeel"; }
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("GevelNieuwbouw", t.TotaalGevelNieuwbouw))
+                @{ ViewData["SectieTitel"] = "Gevels bestaand"; ViewData["Icon"] = "ph-house-line"; ViewData["Empty"] = "Geen bestaande gevels"; ViewData["EmptySub"] = "Alleen invullen bij renovatie of afbraak en heropbouw."; }
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("GevelBestaand", t.TotaalGevelBestaand))
+            </div>
+            <div class="gl-v2-notice gl-v2-notice-compact @(aftrekRijen > 0 ? "is-warning" : "is-info")" style="margin-top:16px">
+                <i class="ph @(aftrekRijen > 0 ? "ph-warning" : "ph-info")" aria-hidden="true"></i>
+                <span><strong>Ramen aftrekken?</strong> Vul de ramen in onder de tab Ramen — ze worden dan automatisch van de gevels afgetrokken, zonder negatieve regel.@(aftrekRijen > 0 ? $" Deze versie heeft nog {aftrekRijen} negatieve regel{(aftrekRijen == 1 ? "" : "s")} (rood) uit een ouder budget." : "")</span>
+            </div>
+        </div>
+        <div class="gl-v2-tab-panel" data-tab-panel="ramen" hidden>
+            <div class="bw-gev-cols">
+                @{ ViewData["SectieTitel"] = "Ramen nieuwbouw"; ViewData["Icon"] = "ph-app-window"; ViewData["Empty"] = "Nog geen ramen"; ViewData["EmptySub"] = "Raamopeningen per eenheid (aantal × breedte × hoogte); ze worden van de gevels afgetrokken."; ViewData["ColB"] = "Raam"; ViewData["PlaceholderB"] = "R1"; }
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("RaamNieuwbouw", t.TotaalRaamNieuwbouw))
+                @{ ViewData["SectieTitel"] = "Ramen bestaand"; ViewData["Empty"] = "Geen bestaande ramen"; ViewData["EmptySub"] = "Alleen bij renovatie."; }
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("RaamBestaand", t.TotaalRaamBestaand))
+            </div>
+        </div>
+        <div class="gl-v2-tab-panel" data-tab-panel="ballust" hidden>
+            <div class="bw-gev-cols">
+                @{ ViewData["SectieTitel"] = "Balustrades"; ViewData["Icon"] = "ph-steps"; ViewData["Hoogte"] = false; ViewData["LengteAlleen"] = true; ViewData["Empty"] = "Nog geen balustrades"; ViewData["EmptySub"] = "Lopende meter per eenheid (aantal × lengte)."; ViewData["ColB"] = "Beschrijving"; ViewData["PlaceholderB"] = "terras"; }
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("Ballustrade", t.TotaalBallustrade))
+                @{ ViewData["SectieTitel"] = "Zichtschermen"; ViewData["Icon"] = "ph-columns"; ViewData["Empty"] = "Nog geen zichtschermen"; }
+                @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("Zichtscherm", t.TotaalZichtscherm))
+            </div>
+        </div>
+        <div class="gl-v2-tab-panel" data-tab-panel="leien" hidden>
+            @{ ViewData["SectieTitel"] = "Leien"; ViewData["Icon"] = "ph-stack"; ViewData["Hoogte"] = true; ViewData["LengteAlleen"] = false; ViewData["Empty"] = "Geen leien"; ViewData["EmptySub"] = "Gevelbekleding in leien of sidings (aantal × breedte × hoogte)."; ViewData["ColB"] = "Geveldeel"; ViewData["PlaceholderB"] = "VG"; }
+            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwElementTabel.cshtml", Sectie("Leien", t.TotaalLeien))
+        </div>
+    </div>
+
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwActiebalk.cshtml", ch)
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script src="~/js/gl-v2-budget-elementen.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var root = document.getElementById('bw-gev');
+    var nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var tabOf = { GevelNieuwbouw: 'gevels', GevelBestaand: 'gevels', RaamNieuwbouw: 'ramen', RaamBestaand: 'ramen', Ballustrade: 'ballust', Zichtscherm: 'ballust', Leien: 'leien' };
+    var sub = {};
+    function kpi(k, v, unit) { var el = root.querySelector('[data-kpi="' + k + '"]'); if (el) el.textContent = nf.format(v) + (unit || el.getAttribute('data-unit') || ''); }
+    function tabTotalen() {
+        var per = {}; Object.keys(sub).forEach(function (type) { var tb = tabOf[type]; per[tb] = (per[tb] || 0) + sub[type]; });
+        root.querySelectorAll('[data-tabtot]').forEach(function (el) { var k = el.getAttribute('data-tabtot'); if (k in per) el.textContent = nf.format(per[k]) + ' ' + el.getAttribute('data-eenh'); });
+    }
+    GlV2BudgetElementen.init({
+        versieId: parseInt(root.getAttribute('data-versie')),
+        urls: { save: '@Url.Action("BudgetGevelElementOpslaan", "Projecten")', add: '@Url.Action("BudgetGevelElementToevoegen", "Projecten")', del: '@Url.Action("BudgetGevelElementVerwijderen", "Projecten")' },
+        onSubtotaal: function (type, s) { sub[type] = s; var map = { GevelNieuwbouw: 'totaalGevelNieuwbouw', GevelBestaand: 'totaalGevelBestaand', RaamNieuwbouw: 'totaalRaamNieuwbouw', RaamBestaand: 'totaalRaamBestaand', Ballustrade: 'totaalBallustrade', Zichtscherm: 'totaalZichtscherm', Leien: 'totaalLeien' }; kpi(map[type], s); tabTotalen(); },
+        onTotaal: function (t) { Object.keys(t).forEach(function (k) { if (root.querySelector('[data-kpi="' + k + '"]')) kpi(k, t[k]); }); }
+    });
+    root.querySelectorAll('[data-gev-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var key = btn.getAttribute('data-gev-tab');
+            root.querySelectorAll('[data-gev-tab]').forEach(function (b) { var on = b === btn; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+            root.querySelectorAll('[data-tab-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-tab-panel') !== key; });
+        });
+    });
+})();
+</script>
+}

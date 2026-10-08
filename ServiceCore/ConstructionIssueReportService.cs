@@ -91,7 +91,10 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             (int)ConstructionIssueStatus.Open,
             (int)ConstructionIssueStatus.Assigned,
             (int)ConstructionIssueStatus.InProgress,
-            (int)ConstructionIssueStatus.Reopened
+            (int)ConstructionIssueStatus.Reopened,
+            (int)ConstructionIssueStatus.Forwarded,
+            (int)ConstructionIssueStatus.Rejected,
+            (int)ConstructionIssueStatus.OnHold
         };
         var items = await _db.ConstructionIssueReportItem
             .Where(x => x.ReportId == reportId)
@@ -895,7 +898,12 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             ConstructionIssueStatus.Resolved => ("Opgelost", "#0f766e", "#ffffff"),
             ConstructionIssueStatus.Rejected => ("Afgewezen", "#ef4444", "#ffffff"),
             ConstructionIssueStatus.Reopened => ("Heropend", "#a855f7", "#ffffff"),
-            ConstructionIssueStatus.Closed => ("Afgerond", "#01532d", "#ffffff"),
+            ConstructionIssueStatus.Closed => ("Afgesloten", "#01532d", "#ffffff"),
+            ConstructionIssueStatus.Concept => ("Concept", "#e5e7eb", "#374151"),
+            ConstructionIssueStatus.PendingApproval => ("Ter goedkeuring", "#fde68a", "#713f12"),
+            ConstructionIssueStatus.Forwarded => ("Doorgestuurd", "#cfe3d8", "#15322b"),
+            ConstructionIssueStatus.Reported => ("Gemeld uitgevoerd", "#8fbea5", "#ffffff"),
+            ConstructionIssueStatus.OnHold => ("In de wacht", "#e5e7eb", "#713f12"),
             _ => ("Onbekend", "#e5e7eb", "#374151")
         };
     }

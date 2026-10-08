@@ -1,0 +1,50 @@
+@model CPMCore.Models.Budget.BwVerkoopDetailVm
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Budgetflow stap 8, detailregel per eenheid (design-handoff 39i + de per-m²-functie): grond en bouw elk als code → €/m² → bedrag,
+    bron-badge, ruil, extra forfait en de Unit-koppeling. De JS (gl-v2-budget-verkoop.js) rekent per zijde: code/€/m² → bedrag = €/m² × opp.,
+    bedrag → €/m² afgeleid; vraagprijs in de hoofdrij = grond + bouw + forfait tenzij zelf overschreven.
+*@
+@{
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string F0(decimal? v) => v.HasValue ? Math.Round(v.Value, 0).ToString("F0", nl) : "";
+    string F2(decimal? v) => v.HasValue ? v.Value.ToString("F2", nl) : "";
+    var l = Model.Lijn;
+    var bron = l?.PrijsBron;
+    var bronLabel = ServiceCore.Budget.VerkoopLijnRekenregel.BronLabel(bron);
+}
+<tr class="bw-vk-detail" data-detail-for="@Model.Naam" hidden>
+    <td colspan="11">
+        <div class="bw-vk-detail-grid">
+            <div class="bw-vk-zijde" data-zijde="grond">
+                <span class="k">Grond · €/m² grondoppervlakte</span>
+                <span class="gl-v2-bw-hint">Code</span>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "code-grond-" + Model.Rij, Id = "bw-vk-cg-" + Model.Rij, Bare = true, Placeholder = "—", EmptyText = "— geen code —", Value = l?.CodeGrond?.ToString() ?? "", Items = Model.RefGrond })
+                <span class="gl-v2-bw-hint">€/m²</span>
+                <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular grond-m2" value="@F2(l?.GrondPrijsPerM2)" placeholder="€/m²" aria-label="Grondprijs per m²" /></div></div>
+                <span class="gl-v2-bw-hint">Grondwaarde</span>
+                <div class="gl-v2-field gl-v2-field-bare" style="grid-column:span 3"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular grondwaarde" value="@F0(l?.Grondwaarde)" placeholder="0" aria-label="Grondwaarde" /></div></div>
+            </div>
+            <div class="bw-vk-zijde" data-zijde="bouw">
+                <span class="k">Bouw · €/m² gereduceerde oppervlakte</span>
+                <span class="gl-v2-bw-hint">Code</span>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "code-bouw-" + Model.Rij, Id = "bw-vk-cb-" + Model.Rij, Bare = true, Placeholder = "—", EmptyText = "— geen code —", Value = l?.CodeBouw?.ToString() ?? "", Items = Model.RefBouw })
+                <span class="gl-v2-bw-hint">€/m²</span>
+                <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular bouw-m2" value="@F2(l?.BouwPrijsPerM2)" placeholder="€/m²" aria-label="Bouwprijs per m²" /></div></div>
+                <span class="gl-v2-bw-hint">Bouwwaarde</span>
+                <div class="gl-v2-field gl-v2-field-bare" style="grid-column:span 3"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular bouwwaarde" value="@F0(l?.Bouwwaarde)" placeholder="0" aria-label="Bouwwaarde" /></div></div>
+            </div>
+            <div class="bw-vk-extra">
+                <span><span class="gl-v2-bw-hint">Bron </span><span class="bw-bron bw-bron--@(bron ?? 0)">@bronLabel</span><input type="hidden" class="prijs-bron" value="@bron" /></span>
+                <label class="gl-v2-bw-calcswitch"><input type="checkbox" class="gl-v2-toggle-switch is-ruil" @(l?.IsRuil == true ? "checked" : "") /> Grondruil <span class="gl-v2-bw-hint">(grondwaarde 0, compensatie in het forfait)</span></label>
+                <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular extra-forfait" value="@F2(l?.ExtraForfait)" placeholder="extra forfait" aria-label="Extra forfait" /><span class="gl-v2-field-unit">forfait</span></div></div>
+                <div style="min-width:220px">@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "unit-" + Model.Rij, Id = "bw-vk-unit-" + Model.Rij, Bare = true, Placeholder = "Unit koppelen (doorzetten)", EmptyText = "— geen unit —", Value = l?.UnitId?.ToString() ?? "", Items = Model.Units })</div>
+                <span class="gl-v2-bw-hint opp-info"></span>
+                <span style="margin-left:auto;display:inline-flex;gap:6px">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text btn-rij-voorstel" data-bw-edit style="height:30px"><i class="ph ph-calculator" aria-hidden="true"></i>Voorstel</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text btn-rij-markt" data-bw-edit style="height:30px"><i class="ph ph-scales" aria-hidden="true"></i>Markt</button>
+                </span>
+            </div>
+        </div>
+    </td>
+</tr>

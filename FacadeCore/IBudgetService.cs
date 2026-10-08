@@ -22,6 +22,20 @@ namespace FacadeCore
         /// parameters, verkooplijnen) naar een al bestaande, lege doelversie.</summary>
         Response KopieerVersieInhoud(int bronVersieId, int doelVersieId);
 
+        // Versiestatus Concept → Afgerond → Definitief (design-handoff 39a/39j, migratie 078)
+        /// <summary>Afronden: status "Afgerond" (blijft bewerkbaar). Faalt op een definitieve versie.</summary>
+        Response AfrondenVersie(int versieId);
+        /// <summary>Definitief maken: één per project (een eerdere definitieve versie wordt "Afgerond"); alleen-lezen vanaf nu.</summary>
+        Response MaakDefinitief(int versieId, string door);
+        /// <summary>Terug naar bewerkbaar ("Afgerond"), enkel voor een definitieve versie — nodig om een andere versie definitief te maken.</summary>
+        Response OntgrendelDefinitief(int versieId);
+        bool IsVergrendeld(int versieId);
+        /// <summary>Onthoudt de hoogste bereikte stap (1-9) voor "Concept · stap 6 van 9" in het overzicht.</summary>
+        void RegistreerStap(int versieId, int stap);
+        Response SetVmswFactoren(int versieId, BOCore.Budget.VmswFactorenBO factoren);
+        BOCore.Budget.VmswFactorenBO GetVmswFactoren(int versieId);
+        Response BevestigWaarschuwing(int versieId, string sleutel, bool bevestigd);
+
         // BudgetGegevens
         GetResponse<BudgetGegevensBO> GetBudgetGegevens(int versieId);
         Response SaveBudgetGegevens(BudgetGegevensBO bo, int versieId);

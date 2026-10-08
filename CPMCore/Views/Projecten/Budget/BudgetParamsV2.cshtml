@@ -1,0 +1,205 @@
+@model CPMCore.Models.Budget.BudgetParamsModel
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Budget
+@*
+    gl-v2 — Budgetflow stap 7 · Parameters (design-handoff 39h): elk percentage toont meteen het bedrag eronder (× bouwkost activiteiten), nul bij
+    de verplichte decennale is een waarschuwingskader met "Bevestigen" (= elders gedekt, bewaard op de versie), sectiekaarten Erelonen & studies ·
+    Verzekeringen · Infrastructuur & liften · Financiering · Verkoop (marges). Dezelfde POST als de klassieke pagina (BudgetParams: procentpunten
+    in, fracties opgeslagen); de volgende-knop is de submit van het formulier ("Opslaan & volgende"), autosave ervóór via BudgetParamsOpslaan.
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-sliders-horizontal";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var p = Model.Params;
+    string Pct(decimal? f) => ((f ?? 0m) * 100m).ToString("0.00", nl);
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    var decennaleBevestigd = ViewData["DecennaleBevestigd"] as bool? == true;
+    var decennaleNul = (p.DecennaleGeslRuwbouwPerc ?? 0m) <= 0m;
+    BwNumVm PctVeld(string name, string label, decimal? f, string prev, string hint = null) => new() { Name = name, Label = label, Value = (f ?? 0m) * 100m, Unit = "%", Decimals = 2, Placeholder = "0,00", Help = hint, Attrs = $"data-pct=\"{prev}\"" };
+    BwNumVm EurVeld(string name, string label, decimal? v, string hint = null, string attrs = null) => new() { Name = name, Label = label, Value = v, Prefix = "€", Decimals = 2, Placeholder = "0,00", Help = hint, Attrs = attrs };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-par-prev { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+        .bw-par-prev.is-warn { color: var(--gl-v2-warning); }
+        .bw-par-dual { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; align-items: end; }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-par" data-versie="@Model.BudgetVersieId" data-url-bevestig="@Url.Action("BudgetWaarschuwingBevestigen", "Projecten")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <form id="bw-form" method="post" asp-action="BudgetParams" asp-controller="Projecten" class="gl-v2-bw-form" autocomplete="off" data-save-url="@Url.Action("BudgetParamsOpslaan", "Projecten")">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="BudgetVersieId" value="@Model.BudgetVersieId" />
+        <input type="hidden" name="Params.Id" value="@p.Id" />
+        <input type="hidden" name="Params.BudgetVersieId" value="@Model.BudgetVersieId" />
+
+        <div class="gl-v2-bw-scroll">
+            <div class="gl-v2-bw-tiles">
+                <div class="gl-v2-bw-tile"><span class="lbl">Bouwkost activiteiten</span><span class="val">@Eur0(Model.TotaalBouw)</span><span class="sub">gecorrigeerd</span></div>
+                <div class="gl-v2-bw-tile"><span class="lbl">Aantal eenheden</span><span class="val">@Model.AantalEenheden</span></div>
+                <div class="gl-v2-bw-tile"><span class="lbl">Liften</span><span class="val">@Model.AantalLiften</span><span class="sub">uit stap 1 · Gegevens</span></div>
+                <div class="gl-v2-bw-tile"><span class="lbl">Totaal parameters</span><span class="val" id="bw-par-tot">—</span><span class="sub" id="bw-par-tot-pct"></span></div>
+            </div>
+
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning" id="bw-par-decennale" @(decennaleNul && !decennaleBevestigd ? "" : "hidden")>
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Verzekeringen staan op 0 %</span>
+                    <span class="gl-v2-notice-text">Decennale is verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig dat ze elders gedekt is.</span>
+                    <div class="gl-v2-notice-actions"><button type="button" class="gl-v2-notice-action" id="bw-par-bevestig" data-bw-edit>Bevestigen</button></div>
+                </div>
+            </div>
+            <div class="gl-v2-notice gl-v2-notice-compact is-info" id="bw-par-decennale-ok" @(decennaleNul && decennaleBevestigd ? "" : "hidden")>
+                <i class="ph ph-check-circle" aria-hidden="true"></i><span>Decennale staat op 0 % — bevestigd als elders gedekt. <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-par-onbevestig" data-bw-edit style="height:24px;padding:0 6px">Intrekken</button></span>
+            </div>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-user-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Erelonen &amp; studies</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">standaard uit Instellingen › Bouwkost %, hier per budget aan te passen</span>
+                </div>
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctProjectcoord", "Projectcoördinatie", p.ProjectcoordinatiePerc, "projectcoord"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctArchitect", "Architect", p.ArchitectPerc, "architect", "leeg = standaard uit Instellingen"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctVeiligheid", "Veiligheidscoörd. + EPB", p.VeiligheidscoordEPBPerc, "veiligheid"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctIngenieur", "Ingenieur", p.StudieIRPerc, "ingenieur", "leeg = standaard uit Instellingen"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.VentVerslaggeverForfait", "Ventilatieverslaggever", p.VentVerslaggeverForfait, "forfait"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.OpmetingSonderingForfait", "Opmeting + sondering", p.OpmetingSonderingForfait, "forfait"))
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verzekeringen</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">decennale en plaatsbeschrijving</span>
+                </div>
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctDecennale", "Decennale gesloten ruwbouw", p.DecennaleGeslRuwbouwPerc, "decennale"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctABR", "ABR + plaatsbeschrijving", p.ABRPlaatsbeschrPerc, "abr"))
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Infrastructuur &amp; liften</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">vaste kosten infrastructuur en liften per stuk</span>
+                </div>
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.InfrastructuurForfait", "Infrastructuur", p.InfrastructuurForfait, "forfait"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.LiftPrijsPerStuk", "Lift per stuk", p.LiftPrijsPerStuk, null, "data-lift"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.PubliciteitForfait", "Publiciteit", p.PubliciteitForfait, "forfait"))
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-bank" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Financiering</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Wet Breyne en straight loan</span>
+                </div>
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                    <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctWetBreyne", Label = "Wet Breyne", Value = p.WetBreynePerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.WetBreyneMaanden", Label = "Looptijd", Value = p.WetBreyneMaanden, Unit = "mnd", Decimals = 0 })</div>
+                    <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctSlGebouw", Label = "Straight loan gebouw", Value = p.StraightloanGebouwPerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.StraightloanGebouwMaanden", Label = "Looptijd", Value = p.StraightloanGebouwMaanden, Unit = "mnd", Decimals = 0 })</div>
+                    <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctSlGrond", Label = "Straight loan grond", Value = p.StraightloanGrondPerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.StraightloanGrondMaanden", Label = "Looptijd", Value = p.StraightloanGrondMaanden, Unit = "mnd", Decimals = 0 })</div>
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctOnvoorzien", "Onvoorzien", p.OnvoorzienPerc, "onvoorzien"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.AankoopprijsGrond", "Aankoopprijs grond", p.AankoopprijsGrond, (p.AankoopprijsGrond ?? 0m) == 0m ? "leeg — grondwaarde wordt 0 in stap 8" : null, "data-grond"))
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-tag" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verkoop — marges</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">bouwwaarde = bouwkost × (1 + doelmarge), grondwaarde = grondkost × (1 + grondmarge) · leeg = standaard</span>
+                </div>
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctDoelmarge", "Doelmarge op bouwkost", p.DoelMargePerc, "doelmarge"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctGrondmarge", "Marge op grondkost", p.GrondMargePerc, "grondmarge"))
+                </div>
+            </section>
+        </div>
+
+        <div class="gl-v2-form-actionbar">
+            <a href="@ch.PrevUrl" class="gl-v2-btn gl-v2-btn-text" data-bw-nav="back"><i class="ph ph-caret-left" aria-hidden="true"></i>@ch.PrevLabel</a>
+            <span class="gl-v2-bw-status" data-bw-status data-state="@(ch.IsLocked ? "locked" : "saved")" aria-live="polite">@(ch.IsLocked ? "Definitief — alleen-lezen" : "Alle wijzigingen opgeslagen")</span>
+            <span class="gl-v2-form-actionbar-spacer"></span>
+            <div class="gl-v2-form-actionbar-actions">
+                @if (ch.IsLocked)
+                {
+                    <a href="@ch.NextUrl" class="gl-v2-btn gl-v2-btn-primary" data-bw-nav="next" data-bw-keep>Volgende: Verkoop<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+                }
+                else
+                {
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="bw-par-next" data-bw-keep>Opslaan &amp; volgende: Verkoop<i class="ph ph-caret-right" aria-hidden="true"></i></button>
+                }
+            </div>
+        </div>
+    </form>
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var root = document.getElementById('bw-par'), form = document.getElementById('bw-form'), versieId = parseInt(root.getAttribute('data-versie'));
+    var bouw = @Model.TotaalBouw.ToString("F2", inv), liften = @Model.AantalLiften;
+    var nf0 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 0 });
+    function num(el) { if (!el) return 0; var v = String(el.value || '').replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+    function help(inp) { var f = inp.closest('.gl-v2-field'); var h = f.querySelector('.gl-v2-field-help'); if (!h) { h = document.createElement('span'); h.className = 'gl-v2-field-help'; f.appendChild(h); } return h; }
+    function live() {
+        var tot = 0;
+        form.querySelectorAll('[data-pct]').forEach(function (inp) {
+            var key = inp.getAttribute('data-pct'), pct = num(inp), h = help(inp);
+            if (key === 'grondmarge') { var g = num(form.querySelector('[data-grond]')); h.innerHTML = '<span class="bw-par-prev">= ' + '€ ' + nf0.format(g * pct / 100) + '</span> op aankoopprijs grond'; return; }
+            if (key === 'doelmarge') { h.innerHTML = '<span class="bw-par-prev">= € ' + nf0.format(bouw * pct / 100) + '</span> op de bouwkost'; return; }
+            var bedrag = bouw * pct / 100; tot += bedrag;
+            var warn = key === 'decennale' && pct <= 0;
+            h.innerHTML = '<span class="bw-par-prev' + (warn ? ' is-warn' : '') + '">' + (warn ? 'verplicht — nu € 0' : '= € ' + nf0.format(bedrag)) + '</span>' + ((key === 'architect' || key === 'ingenieur') && pct <= 0 ? ' · leeg = standaard uit Instellingen' : '');
+        });
+        var lift = form.querySelector('[data-lift]'); if (lift) { var lb = num(lift) * liften; tot += lb; help(lift).innerHTML = '× ' + liften + ' liften = <span class="bw-par-prev">€ ' + nf0.format(lb) + '</span>'; }
+        ['Params.VentVerslaggeverForfait', 'Params.OpmetingSonderingForfait', 'Params.InfrastructuurForfait', 'Params.PubliciteitForfait'].forEach(function (n) { tot += num(form.querySelector('[name="' + n + '"]')); });
+        document.getElementById('bw-par-tot').textContent = '€ ' + nf0.format(tot);
+        document.getElementById('bw-par-tot-pct').textContent = bouw > 0 ? (tot / bouw * 100).toLocaleString('nl-BE', { maximumFractionDigits: 1 }) + ' % op bouwkost' : '';
+        var dec = num(form.querySelector('[name="pctDecennale"]')), w = document.getElementById('bw-par-decennale'), ok = document.getElementById('bw-par-decennale-ok');
+        if (dec > 0) { w.hidden = true; ok.hidden = true; } else if (w.getAttribute('data-bevestigd') === 'true') { w.hidden = true; ok.hidden = false; } else { w.hidden = false; ok.hidden = true; }
+    }
+    document.getElementById('bw-par-decennale').setAttribute('data-bevestigd', '@(decennaleBevestigd ? "true" : "false")');
+    form.addEventListener('input', live); live();
+    async function bevestig(b) { var r = await GlV2Budget.post(root.getAttribute('data-url-bevestig'), { versieId: versieId, sleutel: 'decennale', bevestigd: b ? 'true' : 'false' }, false); if (r.success) { document.getElementById('bw-par-decennale').setAttribute('data-bevestigd', b ? 'true' : 'false'); live(); GlV2Budget.toast('success', 'Decennale', b ? 'Bevestigd als elders gedekt — het aandachtspunt verdwijnt uit het stappenplan na het herladen.' : 'Bevestiging ingetrokken.'); } }
+    document.getElementById('bw-par-bevestig').addEventListener('click', function () { bevestig(true); });
+    document.getElementById('bw-par-onbevestig').addEventListener('click', function () { bevestig(false); });
+    // Autosave (zelfde velden) + submit = Opslaan & volgende met de overgang
+    GlV2Budget.autosave(form, async function () { var r = await GlV2Budget.post(form.getAttribute('data-save-url'), new FormData(form), false); return !!r.success; }, 900);
+    form.addEventListener('submit', function () { GlV2Budget.setStatus('saving'); document.querySelector('.gl-v2-bw').classList.add('is-leaving'); try { sessionStorage.setItem('bw-dir', 'next'); sessionStorage.setItem('bw-progress-from', String(7 / 9)); } catch (e) { } });
+})();
+</script>
+}

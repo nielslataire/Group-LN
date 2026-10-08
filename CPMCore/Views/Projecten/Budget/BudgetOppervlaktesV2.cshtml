@@ -1,0 +1,355 @@
+@model CPMCore.Models.Projecten.BudgetOppervlaktesModel
+@using CPMCore.Models.Budget
+@using CPMCore.Models.GlV2
+@using BOCore.Budget
+@*
+    gl-v2 — Budgetflow stap 2 · Oppervlaktes (design-handoff 39c): KPI-tegels, uitklapbare (en per versie aanpasbare) VMSW-reductiefactoren,
+    kolomgroepen aan/uit i.p.v. 17 kolommen tegelijk, één rij per eenheid met autosave per rij (dezelfde JSON-actie als de klassieke pagina),
+    toevoegen onderaan de tabel, een woning zonder grond valt op (rij in waarschuwingskleur). "Toon berekeningen" (topbar) toont de formule
+    van de gereduceerde m² onder elke waarde. Factoren: BOCore.Budget.VmswFactorenBO per versie (migratie 078, BudgetVmswFactorenOpslaan).
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    var f = ViewData["Factoren"] as VmswFactorenBO ?? VmswFactorenBO.Standaard;
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-ruler";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    ViewData["GroupTypes"] = Model.GroupTypes.Skip(1).ToList();
+    ViewData["AllTypes"] = Model.AllTypes;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string M2(decimal v) => v.ToString("N2", nl) + " m²";
+    var t = Model.Totalen;
+    var zonderGrond = Model.Rijen.Count(r => (r.GroupTypeName ?? "").Contains("woon", StringComparison.OrdinalIgnoreCase) && r.Grondopp <= 0m);
+    var woningen = Model.Rijen.Count(r => (r.GroupTypeName ?? "").Contains("woon", StringComparison.OrdinalIgnoreCase));
+    var garages = Model.Rijen.Count - woningen;
+    var factorenJson = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        bewoonbareOpp = f.Bewoonbaar, tuin = f.Tuin, terrasPrefab = f.TerrasPrefab, terrasGelijkvloers = f.TerrasGelijkvloers, dakterras = f.Dakterras,
+        garagesParkingsBovenGr = f.GaragesBovengronds, garBergOndergronds = f.GarBergOndergronds, bergGelijkvloers = f.BergGelijkvloers, carports = f.Carports,
+        doorritGVL = f.DoorritGvl, zolder = f.Zolder, gemeenschappelijkeDelen = f.GemeenschappelijkeDelen, wegenis = f.Wegenis
+    });
+    var groepen = new (string Key, string Label, string[] Kols, bool Open)[]
+    {
+        ("bew",    "Bewoonbaar",          new[] { "Bew. m²" }, true),
+        ("buiten", "Buitenruimtes",       new[] { "Tuin", "T. prefab", "T. gvl.", "Dakt." }, Model.Rijen.Any(r => r.Tuin + r.TerrasPrefab + r.TerrasGelijkvloers + r.Dakterras > 0)),
+        ("park",   "Parkeren & berging",  new[] { "Gar. bgr.", "Berg. ond.", "Berg. gvl.", "Carport" }, Model.Rijen.Any(r => r.GaragesParkingsBovenGr + r.GarBergOndergronds + r.BergGelijkvloers + r.Carports > 0)),
+        ("overig", "Overige",             new[] { "Doorrit", "Zolder", "Gem. delen", "Wegenis" }, Model.Rijen.Any(r => r.DoorritGVL + r.Zolder + r.GemeenschappelijkeDelen + r.Wegenis > 0)),
+        ("grond",  "Grond",               new[] { "Grond m²" }, true),
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-opp-tabel td[data-group][hidden], .bw-opp-tabel th[data-group][hidden] { display: none; }
+        .bw-opp-groepen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .bw-opp-groep { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; user-select: none; transition: background .12s ease, color .12s ease, border-color .12s ease; }
+        .bw-opp-groep input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .bw-opp-groep:has(input:checked) { background: var(--gl-v2-primary-tint); border-color: transparent; color: var(--gl-v2-primary); }
+        .bw-opp-groep:has(input:focus-visible) { outline: 2px solid var(--gl-v2-primary); outline-offset: 2px; }
+        .bw-opp-groep i { font-size: 13px; }
+        .bw-opp-groep:has(input:not(:checked)) i.ph-check { display: none; }
+        .bw-opp-groep:has(input:checked) i.ph-plus { display: none; }
+        .bw-opp-factoren { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 16px; padding: 14px 20px 18px; }
+        .bw-opp-factor { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+        .bw-opp-factor .gl-v2-field-box { width: 84px; height: 32px; padding: 0 8px; }
+        .bw-opp-factor .gl-v2-field-input { text-align: right; }
+        .bw-opp-factor.is-afwijkend .gl-v2-field-box { border-color: var(--gl-v2-gold, #C9A96E); }
+        .bw-opp-factoren-foot { display: flex; gap: 10px; align-items: center; padding: 0 20px 16px; }
+        [data-open="false"] > .bw-opp-factoren, [data-open="false"] > .bw-opp-factoren-foot { display: none; }
+        .bw-opp-tabel thead th[data-group] { border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+        .bw-opp-tabel thead tr.groepen th { height: 26px; font-size: 9.5px; letter-spacing: .1em; color: var(--gl-v2-muted); text-align: center; background: #FAFBF8; }
+        .bw-opp-tabel .opp-formule { display: none; font-size: 10.5px; }
+        body.bw-show-calc .bw-opp-tabel .opp-formule { display: block; }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+@section PageActions
+{
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwTopbar.cshtml", ch)
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-opp" data-versie="@Model.VersieId"
+     data-url-save="@Url.Action("BudgetOppervlaktesRijOpslaan", "Projecten")" data-url-add="@Url.Action("BudgetOppervlaktesRijToevoegen", "Projecten")"
+     data-url-del="@Url.Action("BudgetOppervlaktesRijVerwijderen", "Projecten")" data-url-factoren="@Url.Action("BudgetVmswFactorenOpslaan", "Projecten")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        <div class="gl-v2-bw-tiles" id="bw-opp-kpis">
+            <div class="gl-v2-bw-tile"><span class="lbl">Wooneenheden</span><span class="val" data-kpi="aantalWooneenheden">@t.AantalWooneenheden</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Parkeerplaatsen</span><span class="val" data-kpi="aantalParkeerplaatsen">@t.AantalParkeerplaatsen</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Commercieel</span><span class="val" data-kpi="aantalCommercieel">@t.AantalCommercieel</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Totaal bewoonbaar</span><span class="val" data-kpi="totaalBewoonbaar" data-unit=" m²">@M2(t.TotaalBewoonbaar)</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Gereduceerd</span><span class="val" data-kpi="totaalGereduceerd" data-unit=" m²">@M2(t.TotaalGereduceerd)</span><span class="sub">VMSW-factoren@(f.IsAangepast ? " · aangepast" : "")</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Gem. / eenheid</span><span class="val" data-kpi="gemiddeldeM2PerEenheid" data-unit=" m²">@M2(t.GemiddeldeM2PerEenheid)</span></div>
+            <div class="gl-v2-bw-tile @(zonderGrond > 0 ? "is-warn" : "")" id="bw-opp-grond-tile"><span class="lbl">Grondopp.</span><span class="val" data-kpi="totaalGrondopp" data-unit=" m²">@M2(t.TotaalGrondopp)</span><span class="sub" id="bw-opp-zondergrond">@(zonderGrond > 0 ? $"{zonderGrond} eenhe{(zonderGrond == 1 ? "id" : "den")} zonder grond" : "")</span></div>
+        </div>
+
+        <section class="gl-v2-section-card" id="bw-opp-factoren" data-open="false">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-percent" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Reductiefactoren VMSW</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc" id="bw-opp-factoren-desc">13 factoren · @(f.IsAangepast ? "aangepast voor deze versie" : "standaard VMSW, niet aangepast") — standaard verborgen</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-opp-factoren-toggle" aria-expanded="false" aria-controls="bw-opp-factoren" data-bw-keep>Toon factoren <i class="ph ph-caret-down" aria-hidden="true"></i></button>
+                </span>
+            </div>
+            <form class="bw-opp-factoren" id="bw-opp-factoren-form" autocomplete="off">
+                @foreach (var fac in f.Lijst())
+                {
+                    var std = VmswFactorenBO.Standaard.Lijst().First(x => x.Item1 == fac.Item1).Item3;
+                    <label class="bw-opp-factor @(fac.Item3 != std ? "is-afwijkend" : "")" title="Standaard VMSW: ×@std.ToString("0.##", nl)">
+                        <span>@fac.Item2</span>
+                        <span class="gl-v2-field-box"><span class="gl-v2-field-prefix">×</span><input type="text" inputmode="decimal" class="gl-v2-field-input is-tabular" name="@fac.Item1" value="@fac.Item3.ToString("0.##", nl)" data-std="@std.ToString("0.##", nl)" /></span>
+                    </label>
+                }
+            </form>
+            <div class="bw-opp-factoren-foot">
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-opp-factoren-save" data-bw-edit>Factoren toepassen</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-opp-factoren-reset" data-bw-edit>Standaard VMSW herstellen</button>
+                <span class="gl-v2-bw-hint">Een factor weegt de oppervlakte in de gereduceerde m² (bv. tuin ×0,05). Geldt enkel voor deze versie; het verkoopvoorstel op stap 8 rekent ermee.</span>
+            </div>
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Eenheden</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc" id="bw-opp-count">@Model.Rijen.Count rij@(Model.Rijen.Count == 1 ? "" : "en") · @woningen woning@(woningen == 1 ? "" : "en"), @garages overige</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    <div class="bw-opp-groepen" role="group" aria-label="Kolommen">
+                        <span class="gl-v2-bw-hint">Kolommen</span>
+                        @foreach (var g in groepen)
+                        {
+                            <label class="bw-opp-groep" title="Kolomgroep @g.Label tonen of verbergen"><input type="checkbox" data-bw-keep data-groep="@g.Key" @(g.Open ? "checked" : "") /><i class="ph ph-check" aria-hidden="true"></i><i class="ph ph-plus" aria-hidden="true"></i>@g.Label</label>
+                        }
+                    </div>
+                </span>
+            </div>
+            <div class="gl-v2-bw-table-wrap">
+                <table class="gl-v2-bw-table bw-opp-tabel" id="bw-opp-tabel" data-factoren='@Html.Raw(factorenJson)'>
+                    <thead>
+                        <tr class="groepen">
+                            <th colspan="4"></th>
+                            @foreach (var g in groepen) { <th colspan="@g.Kols.Length" data-group="@g.Key">@g.Label</th> }
+                            <th colspan="2"></th>
+                        </tr>
+                        <tr>
+                            <th class="is-num">#</th><th>Naam</th><th>Hoofdtype</th><th>Subtype</th>
+                            @foreach (var g in groepen) { foreach (var k in g.Kols) { <th class="is-num" data-group="@g.Key">@k</th> } }
+                            <th class="is-num" title="Berekend met de reductiefactoren van deze versie">Gered. m²</th>
+                            <th class="col-actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bw-opp-body">
+                        @foreach (var rij in Model.Rijen)
+                        {
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwOppRij.cshtml", rij)
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4">Totaal</td>
+                            <td class="is-num" data-group="bew" id="bw-opp-ft-bew">@t.TotaalBewoonbaar.ToString("N2", nl)</td>
+                            <td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td>
+                            <td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td>
+                            <td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td>
+                            <td class="is-num" data-group="grond" id="bw-opp-ft-grond">@t.TotaalGrondopp.ToString("N2", nl)</td>
+                            <td class="is-num" id="bw-opp-ft-gered">@t.TotaalGereduceerd.ToString("N2", nl)</td>
+                            <td></td>
+                        </tr>
+                        <tr class="gl-v2-bw-addrow" data-bw-edit>
+                            <td></td>
+                            <td><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="bw-opp-add-naam" placeholder="bv. Lot 10" aria-label="Naam nieuwe eenheid" /></div></div></td>
+                            <td>@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "add-grp", Id = "bw-opp-add-grp", Bare = true, Placeholder = "— hoofdtype —", Items = Model.GroupTypes.Skip(1).Select(g => new GlV2SelectItem { Value = g.Value, Text = g.Text }).ToList() })</td>
+                            <td>@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "add-sub", Id = "bw-opp-add-sub", Bare = true, Disabled = true, Placeholder = "— eerst hoofdtype —", Items = new List<GlV2SelectItem>() })</td>
+                            <td data-group="bew"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="grond"></td><td></td>
+                            <td class="col-actions"><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-opp-add" style="height:34px;padding:0 12px"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @if (Model.Rijen.Count == 0)
+            {
+                <div class="gl-v2-bw-empty" id="bw-opp-empty"><span class="t">Nog geen eenheden</span><span class="s">Voeg hierboven de eerste eenheid toe — naam, hoofdtype en subtype; de oppervlaktes vul je daarna per rij in.</span></div>
+            }
+        </section>
+    </div>
+
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwActiebalk.cshtml", ch)
+</div>
+
+<script id="bw-opp-types" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllTypes.Select(x => new { value = x.Id.ToString(), text = x.Name, groupId = x.GroupId })))</script>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var root = document.getElementById('bw-opp'), body = document.getElementById('bw-opp-body'), tabel = document.getElementById('bw-opp-tabel');
+    var versieId = parseInt(root.getAttribute('data-versie')), locked = root.classList.contains('is-locked');
+    var factoren = JSON.parse(tabel.getAttribute('data-factoren'));
+    var allTypes = JSON.parse(document.getElementById('bw-opp-types').textContent);
+    var nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function num(v) { v = String(v == null ? '' : v).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+    function fmt(n) { return nf.format(n); }
+
+    // ── Kolomgroepen ─────────────────────────────────────────────────────────────────────────
+    function pasGroepen() {
+        root.querySelectorAll('[data-groep]').forEach(function (cb) {
+            var on = cb.checked;
+            tabel.querySelectorAll('[data-group="' + cb.getAttribute('data-groep') + '"]').forEach(function (el) { el.hidden = !on; });
+        });
+    }
+    root.querySelectorAll('[data-groep]').forEach(function (cb) { cb.addEventListener('change', pasGroepen); });
+    pasGroepen();
+
+    // ── Gereduceerde m² client-side ───────────────────────────────────────────────────────────
+    function rijData(tr) {
+        var d = { rijId: parseInt(tr.getAttribute('data-rij-id')), versieId: versieId, eenheidNaam: tr.querySelector('.opp-naam').value };
+        tr.querySelectorAll('.opp-input').forEach(function (inp) { d[inp.getAttribute('data-field')] = num(inp.value); });
+        d.unitGroupTypeId = parseInt(tr.querySelector('input[name^="grp-"]').value) || null;
+        d.unitTypeId = parseInt(tr.querySelector('input[name^="sub-"]').value) || null;
+        return d;
+    }
+    function gered(d) { var s = 0; Object.keys(factoren).forEach(function (k) { s += (d[k] || 0) * factoren[k]; }); return s; }
+    function formule(d) {
+        var parts = []; Object.keys(factoren).forEach(function (k) { if (d[k]) parts.push(fmt(d[k]) + '×' + String(factoren[k]).replace('.', ',')); });
+        return parts.length ? parts.join(' + ') + ' = ' + fmt(gered(d)) : '0,00';
+    }
+    function herbereken(tr) {
+        var d = rijData(tr), g = gered(d);
+        tr.querySelector('.opp-gered-value').textContent = fmt(g);
+        var fo = tr.querySelector('.opp-formule'); fo.textContent = formule(d); tr.querySelector('.opp-gered-cell').title = fo.textContent;
+        var grpTxt = (tr.querySelector('input[name^="grp-"]').closest('.gl-v2-select').querySelector('.gl-v2-select-trigger-label') || {}).textContent || '';
+        var woning = /woon/i.test(grpTxt), zonder = woning && d.grondopp <= 0;
+        tr.classList.toggle('is-warn', zonder);
+        tr.querySelector('[data-field="grondopp"]').closest('.gl-v2-field-box').classList.toggle('is-error', zonder);
+        return d;
+    }
+    function totalen() {
+        var bew = 0, grond = 0, ger = 0, zonder = 0, n = 0;
+        body.querySelectorAll('tr').forEach(function (tr, i) {
+            tr.querySelector('.bw-rijnr').textContent = i + 1; n++;
+            var d = rijData(tr); bew += d.bewoonbareOpp; grond += d.grondopp; ger += gered(d); if (tr.classList.contains('is-warn')) zonder++;
+        });
+        document.getElementById('bw-opp-ft-bew').textContent = fmt(bew); document.getElementById('bw-opp-ft-grond').textContent = fmt(grond); document.getElementById('bw-opp-ft-gered').textContent = fmt(ger);
+        document.getElementById('bw-opp-zondergrond').textContent = zonder ? zonder + ' eenhe' + (zonder === 1 ? 'id' : 'den') + ' zonder grond' : '';
+        document.getElementById('bw-opp-grond-tile').classList.toggle('is-warn', zonder > 0);
+        var e = document.getElementById('bw-opp-empty'); if (e) e.hidden = n > 0;
+    }
+    function zetKpis(t) {
+        if (!t) return;
+        root.querySelectorAll('[data-kpi]').forEach(function (el) {
+            var k = el.getAttribute('data-kpi'), v = t[k]; if (v === undefined) return;
+            el.textContent = (typeof v === 'number' && el.getAttribute('data-unit')) ? fmt(v) + el.getAttribute('data-unit') : String(v);
+        });
+    }
+
+    // ── Opslaan per rij (debounce), subtype volgt hoofdtype ──────────────────────────────────
+    var timers = {};
+    async function bewaar(tr) {
+        var d = rijData(tr);
+        tr.classList.add('is-saving'); GlV2Budget.setStatus('saving');
+        try {
+            var r = await GlV2Budget.post(root.getAttribute('data-url-save'), d, true);
+            tr.classList.remove('is-saving');
+            if (!r.success) { tr.classList.add('is-error'); GlV2Budget.setStatus('error', r.message || r.error || 'Opslaan mislukt'); return; }
+            tr.classList.remove('is-error'); zetKpis(r.totalen); GlV2Budget.saved();
+        } catch (e) { tr.classList.remove('is-saving'); tr.classList.add('is-error'); GlV2Budget.setStatus('error'); }
+    }
+    function plan(tr) { if (locked) return; herbereken(tr); totalen(); GlV2Budget.markDirty(); var id = tr.getAttribute('data-rij-id'); clearTimeout(timers[id]); timers[id] = setTimeout(function () { bewaar(tr); }, 500); }
+    GlV2Budget.register({
+        save: async function () { var open = Object.keys(timers); for (var i = 0; i < open.length; i++) { clearTimeout(timers[open[i]]); } var rows = body.querySelectorAll('tr'); for (var j = 0; j < rows.length; j++) { if (rows[j].classList.contains('is-error') || GlV2Budget.isDirty()) await bewaar(rows[j]); } return true; },
+        dirty: function () { return false; }
+    });
+    body.addEventListener('input', function (e) { var tr = e.target.closest('tr'); if (tr && (e.target.classList.contains('opp-input') || e.target.classList.contains('opp-naam'))) plan(tr); });
+    body.addEventListener('change', function (e) {
+        var tr = e.target.closest('tr'); if (!tr) return;
+        if (e.target.matches('input[name^="grp-"]')) {
+            var gid = parseInt(e.target.value) || 0, sub = tr.querySelector('input[name^="sub-"]').closest('.gl-v2-select');
+            GlV2Select.setItems(sub, allTypes.filter(function (x) { return x.groupId === gid; }), '', null);
+            sub.setAttribute('data-placeholder', gid ? '— subtype —' : '— eerst hoofdtype —');
+            tr.setAttribute('data-group-type', e.target.value); plan(tr);
+        } else if (e.target.matches('input[name^="sub-"]')) { tr.setAttribute('data-unit-type', e.target.value); plan(tr); }
+    });
+
+    // ── Toevoegen, dupliceren, verwijderen ───────────────────────────────────────────────────
+    var addGrp = document.getElementById('bw-opp-add-grp'), addSub = document.getElementById('bw-opp-add-sub');
+    function subAan(aan) { var tr = addSub.closest('.gl-v2-select').querySelector('.gl-v2-select-trigger'); tr.setAttribute('aria-disabled', aan ? 'false' : 'true'); tr.setAttribute('tabindex', aan ? '0' : '-1'); }
+    addGrp.addEventListener('change', function () {
+        subAan(!!(parseInt(addGrp.value) || 0));
+        var gid = parseInt(addGrp.value) || 0;
+        GlV2Select.setItems(addSub.closest('.gl-v2-select'), allTypes.filter(function (x) { return x.groupId === gid; }), '', null);
+        addSub.closest('.gl-v2-select').setAttribute('data-placeholder', gid ? '— subtype —' : '— eerst hoofdtype —');
+    });
+    async function voegToe(naam, grp, sub) {
+        var fd = new URLSearchParams({ versieId: versieId, eenheidNaam: naam || '', groupTypeId: grp || '', typeId: sub || '', v2: 'true' });
+        var r = await fetch(root.getAttribute('data-url-add'), { method: 'POST', credentials: 'same-origin', headers: { 'RequestVerificationToken': GlV2Budget.token(), 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }, body: fd.toString() });
+        if (!r.ok) { GlV2Budget.toast('danger', 'Toevoegen mislukt', 'De rij kon niet aangemaakt worden.'); return null; }
+        var tmp = document.createElement('tbody'); tmp.innerHTML = await r.text();
+        var tr = tmp.querySelector('tr'); if (!tr) return null;
+        body.appendChild(tr); GlV2Select.init(tr); herbereken(tr); totalen();
+        tr.querySelector('.opp-naam').focus();
+        return tr;
+    }
+    document.getElementById('bw-opp-add').addEventListener('click', async function () {
+        var naam = document.getElementById('bw-opp-add-naam').value.trim();
+        if (!addGrp.value) { GlV2Budget.toast('warning', 'Kies een hoofdtype', 'Een eenheid heeft minstens een hoofdtype nodig.'); return; }
+        await voegToe(naam, addGrp.value, addSub.value);
+        document.getElementById('bw-opp-add-naam').value = '';
+        GlV2Select.setItems(addGrp.closest('.gl-v2-select'), JSON.parse(JSON.stringify(Array.prototype.map.call(addGrp.closest('.gl-v2-select').querySelectorAll('.gl-v2-select-option'), function (o) { return { value: o.getAttribute('data-value'), text: o.textContent.trim() }; }))), '', null);
+        GlV2Select.setItems(addSub.closest('.gl-v2-select'), [], '', null); subAan(false);
+    });
+    body.addEventListener('click', async function (e) {
+        var tr = e.target.closest('tr'); if (!tr) return;
+        if (e.target.closest('.btn-del-rij')) {
+            if (!await GlV2Budget.bevestig({ title: 'Eenheid verwijderen?', desc: 'Deze eenheid wordt uit de oppervlaktetabel verwijderd en de totalen worden herberekend.', ok: 'Verwijderen' })) return;
+            var r = await GlV2Budget.post(root.getAttribute('data-url-del'), { rijId: tr.getAttribute('data-rij-id'), versieId: versieId }, false);
+            if (r.success) { tr.remove(); totalen(); zetKpis(r.totalen); GlV2Budget.saved(); }
+        }
+        if (e.target.closest('.btn-dup-rij')) {
+            var d = rijData(tr);
+            var nieuw = await voegToe((d.eenheidNaam || '') + ' (kopie)', tr.getAttribute('data-group-type'), tr.getAttribute('data-unit-type'));
+            if (!nieuw) return;
+            nieuw.querySelectorAll('.opp-input').forEach(function (inp) { var v = d[inp.getAttribute('data-field')]; inp.value = v ? fmt(v) : ''; });
+            plan(nieuw);
+        }
+    });
+
+    // ── Reductiefactoren ─────────────────────────────────────────────────────────────────────
+    var fCard = document.getElementById('bw-opp-factoren'), fToggle = document.getElementById('bw-opp-factoren-toggle');
+    fToggle.addEventListener('click', function () { var open = fCard.getAttribute('data-open') !== 'true'; fCard.setAttribute('data-open', open ? 'true' : 'false'); fToggle.setAttribute('aria-expanded', open ? 'true' : 'false'); fToggle.innerHTML = (open ? 'Verberg factoren ' : 'Toon factoren ') + '<i class="ph ph-caret-' + (open ? 'up' : 'down') + '" aria-hidden="true"></i>'; });
+    document.getElementById('bw-opp-factoren-form').addEventListener('input', function (e) { var l = e.target.closest('.bw-opp-factor'); if (l) l.classList.toggle('is-afwijkend', num(e.target.value) !== num(e.target.getAttribute('data-std'))); });
+    async function factorenOpslaan(herstel) {
+        var fd = new URLSearchParams({ versieId: versieId, herstel: herstel ? 'true' : 'false' });
+        var form = document.getElementById('bw-opp-factoren-form');
+        form.querySelectorAll('input[name]').forEach(function (inp) { fd.append('factoren[' + inp.name + ']', herstel ? inp.getAttribute('data-std') : inp.value); if (herstel) inp.value = inp.getAttribute('data-std'); });
+        var r = await GlV2Budget.post(root.getAttribute('data-url-factoren'), fd, false);
+        if (!r.success) { GlV2Budget.toast('danger', 'Niet opgeslagen', r.message || ''); return; }
+        form.querySelectorAll('input[name]').forEach(function (inp) { var key = inp.name; factoren[key === 'bewoonbaar' ? 'bewoonbareOpp' : key === 'garagesBovengronds' ? 'garagesParkingsBovenGr' : key === 'doorritGvl' ? 'doorritGVL' : key] = num(inp.value); inp.closest('.bw-opp-factor').classList.toggle('is-afwijkend', num(inp.value) !== num(inp.getAttribute('data-std'))); });
+        body.querySelectorAll('tr').forEach(herbereken); totalen();
+        document.getElementById('bw-opp-factoren-desc').textContent = '13 factoren · ' + (r.aangepast ? 'aangepast voor deze versie' : 'standaard VMSW, niet aangepast') + ' — standaard verborgen';
+        GlV2Budget.toast('success', 'Reductiefactoren', r.message || 'Opgeslagen.');
+    }
+    document.getElementById('bw-opp-factoren-save').addEventListener('click', function () { factorenOpslaan(false); });
+    document.getElementById('bw-opp-factoren-reset').addEventListener('click', function () { factorenOpslaan(true); });
+
+    body.querySelectorAll('tr').forEach(herbereken); totalen();
+})();
+</script>
+}

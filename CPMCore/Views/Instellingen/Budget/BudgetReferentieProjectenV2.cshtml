@@ -1,0 +1,305 @@
+@model CPMCore.Models.Instellingen.BudgetReferentieProjectenViewModel
+@using BOCore.Budget
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Instellingen/Referentieprojecten (nacalc) (design-handoff punt 38c, "CRM Instellingen.dc.html"): geen tabbar (één
+    recordtype). Twee sectiekaarten naast elkaar om in te laden — "Uit Excel inladen" (velden, uploadvak, knop "Inladen en
+    controleren" → controlestap 38d) en "Uit een project van de app" (projectkeuze met preview van eenheden/GBA/facturen/status
+    vóór "Snapshot maken") — en daaronder de lijst met zoekveld: naam · bron · peildatum · eenh. · GBA · totaal · €/eenheid ·
+    €/m² · activiteiten · index S/I (factor peildatum → nu), per rij uitklappen (bedragen per activiteit) en verwijderen.
+    Infokader onderaan: zonder GBA geen €/m². Meldingen na een POST komen via TempData als toast (_LayoutV2).
+*@
+@{
+    ViewData["Title"] = "Referentieprojecten (nacalc)";
+    ViewData["PageIcon"] = "ph ph-clock-counter-clockwise";
+    var nlBE = new System.Globalization.CultureInfo("nl-BE");
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nlBE);
+    string Factor(decimal? idx, decimal huidig) => idx is > 0m && huidig > 0m ? (huidig / idx.Value).ToString("0.000", nlBE) : "—";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-budgetreferenties.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-bref" id="gl-v2-bref-ref" data-preview-url="@Url.Action("BudgetReferentieProjectPreview", "Instellingen")">
+    <span class="gl-v2-bref-intro">Werkelijke kost per activiteit van afgewerkte projecten. Op stap 6 van de budgetwizard kies je welke projecten je vergelijkt; de bedragen worden met de S- en I-index van de peildatum naar vandaag geïndexeerd.</span>
+
+    <div class="gl-v2-bref-cards">
+        @* ── Uit Excel ── *@
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-file-xls" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Uit Excel inladen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">projecten van vóór de app</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    <a href="@Url.Action("BudgetReferentieSjabloon", "Instellingen")" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-download-simple" aria-hidden="true"></i>Sjabloon</a>
+                </span>
+            </div>
+            <form method="post" asp-action="BudgetReferentieProjectImportExcel" asp-controller="Instellingen" enctype="multipart/form-data" id="bref-excel-form" autocomplete="off" style="display:contents">
+                @Html.AntiForgeryToken()
+                <div class="gl-v2-bref-form gl-v2-bref-form--excel">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-x-naam">Naam referentieproject</label>
+                        <div class="gl-v2-field-box"><input type="text" id="bref-x-naam" name="Naam" class="gl-v2-field-input" placeholder="bv. Residentie Keerstraat (2024)" maxlength="200" required /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-x-datum", Label = "Peildatum" })
+                        <span class="gl-v2-field-help">datum van de prijzen</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-x-eenh">Eenheden</label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bref-x-eenh" name="AantalEenheden" class="gl-v2-field-input is-tabular" placeholder="0" required /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-x-gba">GBA <span class="gl-v2-bref-optioneel">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="decimal" id="bref-x-gba" name="OppervlakteGBA" class="gl-v2-field-input is-tabular" placeholder="0" /><span class="gl-v2-field-unit">m²</span></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-bref-span2">
+                        <span class="gl-v2-field-label">Excel-bestand</span>
+                        <label class="gl-v2-bref-drop" id="bref-x-drop" for="bref-x-file">
+                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                            <span id="bref-x-drop-text">Sleep je .xlsx hierheen of <u>kies een bestand</u></span>
+                            <input type="file" id="bref-x-file" name="bestand" accept=".xlsx" required />
+                        </label>
+                        <span class="gl-v2-field-help">kolommen ActivityId · Activiteit · Bedrag — matching op id, anders op naam</span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-bref-span2">
+                        <label class="gl-v2-field-label" for="bref-x-opm">Opmerking <span class="gl-v2-bref-optioneel">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" id="bref-x-opm" name="Opmerking" class="gl-v2-field-input" placeholder="bron van de cijfers" maxlength="500" /></div>
+                    </div>
+                </div>
+                <div class="gl-v2-bref-card-foot">
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-list-checks" aria-hidden="true"></i>Inladen en controleren</button>
+                </div>
+            </form>
+        </section>
+
+        @* ── Uit een project van de app ── *@
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-camera" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Uit een project van de app</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">inkomende facturen per activiteit (zonder meerwerken voor klanten), anders contracten</span>
+            </div>
+            <form method="post" asp-action="BudgetReferentieProjectImportProject" asp-controller="Instellingen" id="bref-project-form" autocomplete="off" style="display:contents">
+                @Html.AntiForgeryToken()
+                <div class="gl-v2-bref-form gl-v2-bref-form--project">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-p-project_input">Project <span style="color:#8B2A2A">*</span></label>
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                        {
+                            Name = "ProjectId", Id = "bref-p-project", Placeholder = "Zoek of kies een project…", Icon = "ph-buildings", ListLabel = "Projecten",
+                            OptionsJson = System.Text.Json.JsonSerializer.Serialize(Model.Projecten.Select(x => new { id = x.ID, text = x.Display, sub = x.Group ?? "" }))
+                        })
+                    </div>
+                    <div class="gl-v2-field">
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-p-datum", Label = "Peildatum · optioneel" })
+                        <span class="gl-v2-field-help" id="bref-p-datum-help">standaard de opleverdatum van het project</span>
+                    </div>
+                    <div class="gl-v2-bref-preview" id="bref-p-preview">
+                        <div class="gl-v2-bref-preview-tile"><span class="lbl">Eenheden</span><span class="val is-empty" data-pv="eenheden">—</span></div>
+                        <div class="gl-v2-bref-preview-tile"><span class="lbl">GBA</span><span class="val is-empty" data-pv="gba">—</span></div>
+                        <div class="gl-v2-bref-preview-tile"><span class="lbl" data-pv-lbl="basis">Facturen</span><span class="val is-empty" data-pv="basis">—</span></div>
+                        <div class="gl-v2-bref-preview-tile"><span class="lbl">Status</span><span class="val is-empty" data-pv="status">—</span></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-p-eenh">Eenheden <span class="gl-v2-bref-optioneel">· enkel als het project geen units heeft</span></label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bref-p-eenh" name="AantalEenheden" class="gl-v2-field-input is-tabular" placeholder="uit het project" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-p-gba">GBA <span class="gl-v2-bref-optioneel">· bewoonbare opp., enkel als het project geen budget heeft</span></label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="decimal" id="bref-p-gba" name="OppervlakteGBA" class="gl-v2-field-input is-tabular" placeholder="uit het laatste budget" /><span class="gl-v2-field-unit">m²</span></div>
+                        <span class="gl-v2-field-help" id="bref-p-gba-help">leeg = de som van de bewoonbare oppervlaktes op stap 2 van het laatste budget</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-p-naam">Naam <span class="gl-v2-bref-optioneel">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" id="bref-p-naam" name="Naam" class="gl-v2-field-input" placeholder="standaard de projectnaam" maxlength="200" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-p-opm">Opmerking <span class="gl-v2-bref-optioneel">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" id="bref-p-opm" name="Opmerking" class="gl-v2-field-input" maxlength="500" /></div>
+                    </div>
+                </div>
+                <div class="gl-v2-bref-card-foot">
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="bref-p-submit" disabled><i class="ph ph-camera" aria-hidden="true"></i>Snapshot maken</button>
+                    <span class="gl-v2-bref-hint" id="bref-p-hint">enkel afgewerkte projecten</span>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    @* ── Lijst ── *@
+    <section class="gl-v2-section-card" id="bref-ref-list">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Referentieprojecten</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">bedragen tegen peildatum — op stap 6 geïndexeerd met S- en I-index</span>
+        </div>
+        <div class="gl-v2-bref-toolbar">
+            <div class="gl-v2-field gl-v2-bref-search" style="width:280px">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="bref-ref-search" placeholder="Zoek een referentieproject" autocomplete="off" />
+                    <button type="button" class="gl-v2-field-clear" id="bref-ref-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                </div>
+            </div>
+            <span class="gl-v2-bref-toolbar-spacer"></span>
+            <span class="gl-v2-bref-sort">@Model.Referenties.Count project@(Model.Referenties.Count == 1 ? "" : "en") · sorteer: peildatum ↓</span>
+        </div>
+        <div class="gl-v2-bref-head gl-v2-bref-grid--ref">
+            <span>Naam</span><span>Bron</span><span>Peildatum</span><span class="gl-v2-bref-right">Eenh.</span><span class="gl-v2-bref-right">GBA m²</span><span class="gl-v2-bref-right">Totaal</span><span class="gl-v2-bref-right">€ / eenheid</span><span class="gl-v2-bref-right">€ / m²</span><span class="gl-v2-bref-right">Activiteiten</span><span class="gl-v2-bref-right">Index S / I</span><span></span>
+        </div>
+        <div id="bref-ref-rows">
+            @foreach (var r in Model.Referenties)
+            {
+                var isSnapshot = r.Bron == "Project";
+                var sub = r.AantalNietGematcht > 0
+                    ? $"{r.AantalNietGematcht} activiteit{(r.AantalNietGematcht == 1 ? "" : "en")} niet gematcht"
+                    : (isSnapshot ? "snapshot" : "Excel") + " · " + (string.IsNullOrWhiteSpace(r.CreatedBy) ? "" : r.CreatedBy + ", ") + r.CreatedAt.ToString("dd/MM/yyyy");
+                <div class="gl-v2-bref-row gl-v2-bref-grid--ref" data-ref-row data-search="@((r.Naam + " " + r.ProjectNaam + " " + r.Opmerking).ToLowerInvariant())">
+                    <div class="gl-v2-bref-name">
+                        <span class="gl-v2-bref-strong" title="@r.Naam">@r.Naam</span>
+                        <span class="sub @(r.AantalNietGematcht > 0 ? "is-warning" : "")" title="@(r.Opmerking ?? "")">@sub</span>
+                    </div>
+                    <span class="gl-v2-badge @(isSnapshot ? "is-positive" : "is-neutral")">@(isSnapshot ? "Snapshot" : "Excel")</span>
+                    <span class="gl-v2-bref-cell">@(r.Datum?.ToString("dd/MM/yyyy") ?? "—")</span>
+                    <span class="gl-v2-bref-cell gl-v2-bref-right">@r.AantalEenheden</span>
+                    <span class="gl-v2-bref-cell gl-v2-bref-right">@(r.OppervlakteGBA.HasValue ? r.OppervlakteGBA.Value.ToString("N0", nlBE) : "—")</span>
+                    <span class="gl-v2-bref-num">@Eur0(r.TotaalBedrag)</span>
+                    <span class="gl-v2-bref-cell gl-v2-bref-right">@(r.PrijsPerEenheid.HasValue ? Eur0(r.PrijsPerEenheid.Value) : "—")</span>
+                    <span class="gl-v2-bref-cell gl-v2-bref-right">@(r.PrijsPerM2.HasValue ? Eur0(r.PrijsPerM2.Value) : "—")</span>
+                    <span class="gl-v2-bref-cell gl-v2-bref-right">@r.AantalGematcht</span>
+                    <span class="gl-v2-bref-cell is-muted gl-v2-bref-right" title="Indexfactor peildatum → vandaag (S-index · I2021), zoals op stap 6 toegepast">@Factor(r.SIndex, Model.HuidigeSIndex) / @Factor(r.IIndex, Model.HuidigeIIndex)</span>
+                    <div class="gl-v2-bref-actions">
+                        <button type="button" class="gl-v2-row-action" data-ref-toggle="ref-detail-@r.Id" title="Bedragen per activiteit" aria-label="Bedragen per activiteit" aria-expanded="false"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Bedragen per activiteit</span></button>
+                        <form method="post" asp-action="BudgetReferentieProjectDelete" asp-controller="Instellingen" data-bv-titel="Referentieproject @r.Naam verwijderen?" data-bv-tekst="Budgetversies die dit project vergelijken, verliezen die vergelijking. Dit kan niet ongedaan gemaakt worden." data-bv-ok="Verwijderen"'", "\\'")\' verwijderen? Budgetversies die het vergelijken, verliezen die vergelijking.');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@r.Id" />
+                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+                        </form>
+                    </div>
+                </div>
+                <div class="gl-v2-bref-detail" id="ref-detail-@r.Id" hidden>
+                    <div class="gl-v2-bref-detail-grid head"><span>Lot</span><span>Activiteit</span><span class="gl-v2-bref-right">Bedrag</span><span class="gl-v2-bref-right">€ / eenheid</span><span>Match</span></div>
+                    @foreach (var l in r.Lijnen)
+                    {
+                        <div class="gl-v2-bref-detail-grid row">
+                            <span class="gl-v2-bref-mono @(l.ActivityId.HasValue ? "" : "is-muted")">@(l.ActivityId.HasValue && l.LotNummer > 0 ? $"Lot {l.LotNummer:G}" : "—")</span>
+                            <span class="gl-v2-bref-cell">@(l.ActivityOmschrijving ?? l.ExcelNaam)@if (l.ActivityId.HasValue && !string.IsNullOrWhiteSpace(l.ExcelNaam) && !string.Equals(l.ExcelNaam, l.ActivityOmschrijving, StringComparison.OrdinalIgnoreCase)) { <span class="is-muted"> · in Excel: @l.ExcelNaam</span> }</span>
+                            <span class="gl-v2-bref-num">@Eur0(l.Bedrag)</span>
+                            <span class="gl-v2-bref-cell gl-v2-bref-right">@(r.AantalEenheden > 0 ? Eur0(l.Bedrag / r.AantalEenheden) : "—")</span>
+                            @if (!l.ActivityId.HasValue)
+                            {
+                                <span class="gl-v2-badge is-attention">Niet gematcht</span>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-badge is-positive">@(l.Match switch { "id" => "Op id", "naam" => "Op naam", "manueel" => "Manueel", _ => (isSnapshot ? "Snapshot" : "Gekoppeld") })</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="gl-v2-bref-empty" id="bref-ref-empty" hidden>
+            <span class="t">Geen referentieproject gevonden</span>
+            <span class="s">Probeer een andere zoekterm of <button type="button" id="bref-ref-reset">wis de zoekopdracht</button>.</span>
+        </div>
+        @if (!Model.Referenties.Any())
+        {
+            <div class="gl-v2-bref-empty">
+                <span class="t">Nog geen referentieprojecten</span>
+                <span class="s">Laad er hierboven een in uit Excel of maak een snapshot van een afgewerkt project.</span>
+            </div>
+        }
+        <div class="gl-v2-bref-foot">
+            <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                <i class="ph ph-info" aria-hidden="true"></i>
+                <span>Zonder GBA geen €/m² — dat project telt op stap 6 enkel mee voor € per eenheid.</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section PageScripts
+{
+<script>
+(function () {
+    var root = document.getElementById('gl-v2-bref-ref');
+    if (!root) return;
+    var nf0 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 0 });
+
+    // Uploadvak: bestandsnaam tonen, sleepstaat
+    var drop = document.getElementById('bref-x-drop'), file = document.getElementById('bref-x-file'), dropText = document.getElementById('bref-x-drop-text');
+    function toonBestand() {
+        var f = file.files && file.files[0];
+        drop.classList.toggle('has-file', !!f);
+        dropText.innerHTML = f ? '<strong>' + f.name.replace(/</g, '&lt;') + '</strong> · <u>ander bestand kiezen</u>' : 'Sleep je .xlsx hierheen of <u>kies een bestand</u>';
+    }
+    file.addEventListener('change', toonBestand);
+    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-drag-over'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('is-drag-over'); }); });
+    drop.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files.length) { file.files = e.dataTransfer.files; toonBestand(); } });
+
+    // Preview van het gekozen project vóór de snapshot (38c): eenheden, GBA, facturen/contracten, status
+    var projInput = document.getElementById('bref-p-project'), submit = document.getElementById('bref-p-submit'), hint = document.getElementById('bref-p-hint');
+    var tiles = {}; root.querySelectorAll('[data-pv]').forEach(function (el) { tiles[el.getAttribute('data-pv')] = el; });
+    var basisLbl = root.querySelector('[data-pv-lbl="basis"]');
+    function zet(key, tekst, leeg) { tiles[key].textContent = tekst; tiles[key].classList.toggle('is-empty', !!leeg); }
+    function leegmaken(msg) { ['eenheden', 'gba', 'basis', 'status'].forEach(function (k) { zet(k, '—', true); }); basisLbl.textContent = 'Facturen'; submit.disabled = true; hint.textContent = msg || 'enkel afgewerkte projecten'; }
+    if (projInput) projInput.addEventListener('change', function () {
+        var id = parseInt(projInput.value);
+        if (!id) { leegmaken(); return; }
+        ['eenheden', 'gba', 'basis', 'status'].forEach(function (k) { zet(k, '…', true); });
+        fetch(root.getAttribute('data-preview-url') + '?projectId=' + id, { credentials: 'same-origin' })
+            .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function (p) {
+                zet('eenheden', p.aantalEenheden ? String(p.aantalEenheden) : '0', !p.aantalEenheden);
+                zet('gba', p.oppervlakteGBA ? nf0.format(p.oppervlakteGBA) + ' m²' : 'ontbreekt — vul ze hieronder in', !p.oppervlakteGBA);
+                var gbaHelp = document.getElementById('bref-p-gba-help'), gbaInput = document.getElementById('bref-p-gba');
+                if (gbaHelp) gbaHelp.textContent = p.oppervlakteGBA ? 'leeg = ' + nf0.format(p.oppervlakteGBA) + ' m² uit het laatste budget van dit project' : 'dit project heeft geen budget: vul de bewoonbare oppervlakte zelf in, anders geen €/m²';
+                if (gbaInput && !p.oppervlakteGBA) gbaInput.focus();
+                var eenhInput = document.getElementById('bref-p-eenh'); if (eenhInput) eenhInput.placeholder = p.aantalEenheden ? String(p.aantalEenheden) + ' uit het project' : 'geen units: zelf invullen';
+                var fact = p.basis === 'facturen';
+                basisLbl.textContent = fact ? 'Facturen' : 'Contracten';
+                var n = fact ? p.aantalFacturen : p.aantalContractActiviteiten, tot = fact ? p.totaalFacturen : p.totaalContracten;
+                zet('basis', n ? n + ' · € ' + (tot >= 1000000 ? (tot / 1000000).toLocaleString('nl-BE', { maximumFractionDigits: 2 }) + ' mln' : nf0.format(tot)) : 'geen', !n);
+                zet('status', p.statusNaam || '—', !p.statusNaam);
+                var ok = p.aantalActiviteiten > 0;
+                submit.disabled = !ok;
+                hint.textContent = !p.aantalActiviteiten ? 'geen facturen of contracten met een bedrag per activiteit' : (!p.aantalEenheden ? 'project zonder units: vul het aantal eenheden zelf in' : (p.statusNaam && /opgeleverd|afgewerkt/i.test(p.statusNaam) ? 'afgewerkt project — klaar voor een snapshot' : 'nog niet opgeleverd: de bedragen zijn mogelijk onvolledig'));
+                var help = document.getElementById('bref-p-datum-help'); if (help) help.textContent = p.opleverdatum ? 'standaard de opleverdatum: ' + p.opleverdatum : 'geen opleverdatum: standaard vandaag';
+            })
+            .catch(function () { leegmaken('preview niet beschikbaar'); });
+    });
+
+    // Zoeken in de lijst + uitklappen per rij
+    var search = document.getElementById('bref-ref-search'), rows = root.querySelectorAll('[data-ref-row]'), empty = document.getElementById('bref-ref-empty');
+    function pas() {
+        var q = (search.value || '').trim().toLowerCase(), n = 0;
+        rows.forEach(function (row) {
+            var ok = !q || row.getAttribute('data-search').indexOf(q) >= 0;
+            row.classList.toggle('is-filtered', !ok);
+            var det = row.nextElementSibling; if (det && !ok) det.hidden = true;
+            if (ok) n++;
+        });
+        empty.hidden = !(rows.length > 0 && n === 0);
+    }
+    search.addEventListener('input', pas);
+    document.getElementById('bref-ref-search-clear').addEventListener('click', function () { search.value = ''; pas(); search.focus(); });
+    document.getElementById('bref-ref-reset').addEventListener('click', function () { search.value = ''; pas(); });
+    root.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-ref-toggle]'); if (!t) return;
+        var det = document.getElementById(t.getAttribute('data-ref-toggle')); if (!det) return;
+        det.hidden = !det.hidden;
+        t.setAttribute('aria-expanded', det.hidden ? 'false' : 'true');
+        t.querySelector('i').className = det.hidden ? 'ph ph-caret-down' : 'ph ph-caret-up';
+    });
+})();
+</script>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")

@@ -7,7 +7,7 @@
 //   data-options         JSON [{id, text, sub}]                              (statische lijst, filtert lokaal)
 //   data-min-chars       minimum tekens voor een server-zoekopdracht (standaard 2; statisch: 0)
 //   data-country-source  CSS-selector van een landveld (of `[data-gl-v2-address-block]` + `[data-role=country-select]`)
-//   data-allow-new       toont "Nieuw" + de "… aanmaken"-rij; klik → event `gl-v2:combo-new` {term}
+//   data-allow-new="true"  toont "Nieuw" + de "… aanmaken"-rij; klik → event `gl-v2:combo-new` {term}
 //   data-new-entity      woord in "… aanmaken als nieuw <bedrijf>"
 //   data-avatar          "initials" → initialen-vlakje per rij
 //   data-list-label      kop boven een statische lijst zonder zoekterm ("ALLE BEDRIJVEN")
@@ -60,7 +60,7 @@
         root.setAttribute("data-gl-v2-wired", "1");
 
         var url = root.getAttribute("data-lookup-url");
-        var allowNew = root.hasAttribute("data-allow-new");
+        var allowNew = root.getAttribute("data-allow-new") === "true";   // expliciet "true": een leeg of afwezig attribuut betekent nooit "Nieuw"
         var newEntity = root.getAttribute("data-new-entity") || "item";
         var avatar = root.getAttribute("data-avatar") === "initials";
         var listLabel = root.getAttribute("data-list-label") || "";

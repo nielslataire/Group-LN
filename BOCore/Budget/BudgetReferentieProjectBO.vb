@@ -22,12 +22,26 @@ Namespace Budget
         Public Property Bron As String
         Public Property Opmerking As String
         Public Property CreatedAt As Date
+        Public Property CreatedBy As String
 
         Public Property Lijnen As New List(Of BudgetReferentieLijnBO)
 
+        ''' <summary>Alle regels, ook de niet-gematchte (38d: die tellen mee in het totaal, niet per activiteit).</summary>
         Public ReadOnly Property TotaalBedrag As Decimal
             Get
                 Return Lijnen.Sum(Function(l) l.Bedrag)
+            End Get
+        End Property
+
+        Public ReadOnly Property AantalGematcht As Integer
+            Get
+                Return Lijnen.Where(Function(l) l.ActivityId.HasValue).Count()
+            End Get
+        End Property
+
+        Public ReadOnly Property AantalNietGematcht As Integer
+            Get
+                Return Lijnen.Where(Function(l) Not l.ActivityId.HasValue).Count()
             End Get
         End Property
 
@@ -48,13 +62,54 @@ Namespace Budget
 
     Public Class BudgetReferentieLijnBO
         Public Property Id As Integer
-        Public Property ActivityId As Integer
+        ''' <summary>Leeg = niet aan een activiteit gekoppeld (enkel mogelijk bij Excel-import).</summary>
+        Public Property ActivityId As Integer?
         Public Property ActivityOmschrijving As String
         Public Property LotNummer As Decimal
         Public Property LotNaam As String
         ''' <summary>Werkelijke kost van de activiteit in het referentieproject (excl. btw, niet geïndexeerd).</summary>
         Public Property Bedrag As Decimal
         Public Property Opmerking As String
+        ''' <summary>Activiteitsnaam zoals ze in de Excel stond.</summary>
+        Public Property ExcelNaam As String
+        ''' <summary>"id", "naam", "manueel" of leeg.</summary>
+        Public Property Match As String
+    End Class
+
+    ''' <summary>Eén ingelezen Excel-regel vóór het opslaan (38d "Controle na Excel-import").</summary>
+    Public Class ReferentieImportRijBO
+        ''' <summary>ActivityId-kolom uit de Excel, als die er was.</summary>
+        Public Property ExcelId As Integer?
+        Public Property ExcelNaam As String
+        Public Property Bedrag As Decimal
+        ''' <summary>Gekoppelde activiteit; leeg = niet gematcht (de gebruiker kan ze in de controle nog kiezen).</summary>
+        Public Property ActivityId As Integer?
+        Public Property ActivityOmschrijving As String
+        ''' <summary>"id", "naam", "manueel" of leeg.</summary>
+        Public Property Match As String
+
+        Public ReadOnly Property IsGematcht As Boolean
+            Get
+                Return ActivityId.HasValue
+            End Get
+        End Property
+    End Class
+
+    ''' <summary>Wat een snapshot uit een project van de app zou opleveren, vóór hij gemaakt wordt (38c "preview vóór de snapshot").</summary>
+    Public Class ReferentieProjectPreviewBO
+        Public Property ProjectId As Integer
+        Public Property ProjectNaam As String
+        Public Property StatusNaam As String
+        Public Property Opleverdatum As Date?
+        Public Property AantalEenheden As Integer
+        Public Property OppervlakteGBA As Decimal?
+        Public Property AantalFacturen As Integer
+        Public Property TotaalFacturen As Decimal
+        Public Property AantalContractActiviteiten As Integer
+        Public Property TotaalContracten As Decimal
+        ''' <summary>"facturen" of "contracten": waarop de snapshot gebaseerd zou worden.</summary>
+        Public Property Basis As String
+        Public Property AantalActiviteiten As Integer
     End Class
 
     ''' <summary>

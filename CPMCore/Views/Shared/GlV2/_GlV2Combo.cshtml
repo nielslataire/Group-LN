@@ -16,7 +16,7 @@
 <div class="@classes" data-gl-v2-combo data-gl-v2-search-select
      data-lookup-url="@Model.LookupUrl" data-options="@Model.OptionsJson" data-min-chars="@Model.MinChars" data-country-source="@Model.CountrySelector"
      data-new-entity="@Model.NewEntity" data-list-label="@Model.ListLabel" data-icon="@Model.Icon" data-empty-value="@Model.EmptyValue"
-     data-avatar="@(Model.Avatar ? "initials" : null)" data-allow-new="@(Model.AllowNew ? "" : null)">
+     data-avatar="@(Model.Avatar ? "initials" : null)" data-allow-new="@(Model.AllowNew ? "true" : "false")">
     <input type="hidden" id="@id" name="@Model.Name" value="@(Model.Value ?? Model.EmptyValue)" data-role="id-hidden" />
     @if (!string.IsNullOrEmpty(Model.TextName))
     {

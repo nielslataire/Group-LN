@@ -1,0 +1,253 @@
+/* gl-v2 — Budgetflow (design-handoff punt 39, "CRM Budgetflow.dc.html"): overzicht en de negen wizardstappen.
+   Eén stylesheet voor het hele traject; velden, tabbar, sectiekaarten, badges, meldingskaders, knoppen en de actiebalk komen uit de
+   gl-v2-shell/forms/page/notices-bestanden. Alles hier is `.gl-v2-bw-*`.
+   Laadvolgorde: page-CSS laadt VÓÓR de shell → een regel die een shell-regel moet overschrijven staat onder `.gl-v2-bw …`.
+
+   Beweging (impeccable animate, "operate"-modus: routine overgangen snel, geen wachttijd door choreografie):
+   · Focal moment = stap → stap. De kaart blijft staan, de bladzijde draait: de inhoud verlaat de pagina in 140 ms met een korte zijwaartse
+     beweging in de richting van het traject (vooruit = naar links, terug = naar rechts); de nieuwe pagina komt in 280 ms uit de tegenovergestelde
+     kant binnen en de kaarten schuiven met max. 4 × 40 ms vertraging na. De voortgangslijn onder de chips loopt van de vorige naar de nieuwe stap
+     (de vorige waarde reist mee via sessionStorage), zodat de overgang één ononderbroken beweging is.
+   · Laden: pas na 400 ms verschijnt er iets (een gouden voortgangsstreep + gedimde inhoud) — snelle pagina's tonen geen loader.
+   · Alles staat standaard zichtbaar; `prefers-reduced-motion` laat enkel opacity-overgangen en de statuskleur over. */
+
+.gl-v2-bw {
+    --bw-ease: cubic-bezier(.16, 1, .3, 1);
+    --bw-ease-in: cubic-bezier(.4, 0, 1, 1);
+    --bw-shift: 14px;
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+}
+.gl-v2-bw-form { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0; }
+
+/* ── Stappenplan-balk (chips op desktop, balk + paneel op tablet/gsm) ─────────────────────────────── */
+.gl-v2-bw-stappen {
+    flex: none; position: relative;
+    margin: calc(-1 * var(--gl-v2-content-pad-y)) calc(-1 * var(--gl-v2-content-pad-x)) 0;
+    padding: 12px var(--gl-v2-content-pad-x) 14px;
+    background: var(--gl-v2-surface);
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-bw-stappen .gl-v2-steps-chips .gl-v2-steps-list { gap: 4px; }
+.gl-v2-bw-balk, .gl-v2-bw-panel { display: none; }
+
+/* Voortgangslijn: 2px goud onder de chips; --bw-from → --bw-to (0-1) */
+.gl-v2-bw-stappen::after {
+    content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%;
+    background: var(--gl-v2-gold, #C9A96E);
+    transform-origin: left center;
+    transform: scaleX(var(--bw-to, 0));
+    animation: bw-progress .5s var(--bw-ease) both;
+}
+@keyframes bw-progress { from { transform: scaleX(var(--bw-from, 0)); } to { transform: scaleX(var(--bw-to, 0)); } }
+.gl-v2-bw-stappen.is-leaving::after { transform: scaleX(var(--bw-leave, var(--bw-to, 0))); transition: transform .26s var(--bw-ease); animation: none; }
+.gl-v2-bw-stappen.is-loading::after {
+    animation: none; transform: none; width: 100%;
+    background: linear-gradient(90deg, transparent 0, var(--gl-v2-gold, #C9A96E) 40%, var(--gl-v2-gold, #C9A96E) 60%, transparent 100%);
+    background-size: 40% 100%; background-repeat: no-repeat; background-color: rgba(201, 169, 110, .22);
+    animation: bw-loading 1.1s linear infinite;
+}
+@keyframes bw-loading { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+
+/* Definitief-melding (Meldingskader 25c) direct onder de stappen */
+.gl-v2-bw-lock { flex: none; margin: 0 calc(-1 * var(--gl-v2-content-pad-x)); }
+.gl-v2-bw-lock form { display: contents; margin-left: auto; }
+.gl-v2-bw-lock .gl-v2-btn { margin-left: auto; }
+
+/* ── Scrollend lichaam ────────────────────────────────────────────────────────────────────────────── */
+.gl-v2-bw-scroll {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 18px 0 20px;
+    display: flex; flex-direction: column; gap: 16px;
+}
+.gl-v2-bw-intro { font: 450 12.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 900px; text-wrap: pretty; margin: 0; }
+.gl-v2-bw-note { display: flex; align-items: center; gap: 8px; font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin: 0; }
+.gl-v2-bw-note a { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; }
+.gl-v2-bw-scroll.is-loading { opacity: .55; pointer-events: none; transition: opacity .2s ease; }
+
+/* Binnenkomst: de inhoud komt uit de richting van het traject */
+html[data-bw-dir="next"] { --bw-in: var(--bw-shift); }
+html[data-bw-dir="prev"] { --bw-in: calc(-1 * var(--bw-shift)); }
+.gl-v2-bw-scroll > * { animation: bw-in .28s var(--bw-ease) backwards; /* backwards, niet both: een vastgehouden transform-animatie maakt van de kaart een containing block en knipt position:fixed-dropdowns af */ animation-delay: calc(var(--bw-i, 0) * 40ms); }
+.gl-v2-bw-scroll > *:nth-child(1) { --bw-i: 0; }
+.gl-v2-bw-scroll > *:nth-child(2) { --bw-i: 1; }
+.gl-v2-bw-scroll > *:nth-child(3) { --bw-i: 2; }
+.gl-v2-bw-scroll > *:nth-child(n+4) { --bw-i: 3; }
+@keyframes bw-in { from { opacity: 0; transform: translateX(var(--bw-in, 0px)) translateY(var(--bw-rise, 6px)); } to { opacity: 1; transform: none; } }
+html:not([data-bw-dir]) .gl-v2-bw-scroll > * { --bw-rise: 8px; }
+
+/* Vertrek: kort en iets versneld (exit sneller dan entrance) */
+.gl-v2-bw.is-leaving .gl-v2-bw-scroll > * {
+    animation: none; opacity: 0; transform: translateX(calc(var(--bw-out, -1) * var(--bw-shift)));
+    transition: opacity .14s var(--bw-ease-in), transform .14s var(--bw-ease-in);
+}
+.gl-v2-bw.is-leaving[data-bw-leave="prev"] { --bw-out: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-v2-bw-scroll > * { animation: bw-fade .2s linear backwards; animation-delay: 0ms; }
+    @keyframes bw-fade { from { opacity: 0; } to { opacity: 1; } }
+    .gl-v2-bw.is-leaving .gl-v2-bw-scroll > * { transform: none; transition: opacity .1s linear; }
+    .gl-v2-bw-stappen::after { animation: none; }
+    .gl-v2-bw-stappen.is-leaving::after { transition: none; }
+    .gl-v2-bw-stappen.is-loading::after { animation: none; background: rgba(201, 169, 110, .6); }
+}
+
+/* ── Actiebalk: links terug, midden opslagstaat, rechts volgende ──────────────────────────────────── */
+.gl-v2-bw .gl-v2-form-actionbar { gap: 14px; }
+.gl-v2-bw-status { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.gl-v2-bw-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gl-v2-accent-sage); flex: none; transition: background-color .2s ease; }
+.gl-v2-bw-status[data-state="dirty"] { color: var(--gl-v2-warning); }
+.gl-v2-bw-status[data-state="dirty"]::before { background: var(--gl-v2-warning); }
+.gl-v2-bw-status[data-state="saving"]::before { background: var(--gl-v2-gold, #C9A96E); animation: bw-pulse 1s ease-in-out infinite; }
+.gl-v2-bw-status[data-state="error"] { color: #8B2A2A; }
+.gl-v2-bw-status[data-state="error"]::before { background: #8B2A2A; }
+.gl-v2-bw-status[data-state="locked"]::before { background: var(--gl-v2-muted-light); }
+@keyframes bw-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .gl-v2-bw-status[data-state="saving"]::before { animation: none; } }
+
+/* ── Kaartopbouw die elke stap deelt ──────────────────────────────────────────────────────────────── */
+.gl-v2-bw .gl-v2-section-card-meta { display: inline-flex; align-items: center; gap: 8px; color: var(--gl-v2-muted); }
+.gl-v2-bw-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.gl-v2-bw-tile { background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card); padding: 14px 18px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-bw-tile .lbl { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-bw-tile .val { font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bw-tile .sub { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bw-tile.is-warn .val { color: var(--gl-v2-warning); }
+.gl-v2-bw-tile.is-neg .val { color: #8B2A2A; }
+.gl-v2-bw-tile.is-pos .val { color: var(--gl-v2-primary); }
+.gl-v2-bw-grid { padding: 18px 20px 20px; display: grid; gap: 16px 20px; align-items: end; }
+.gl-v2-bw-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gl-v2-bw-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gl-v2-bw-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gl-v2-bw-grid .gl-v2-field { min-width: 0; }
+.gl-v2-bw .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; }
+.gl-v2-bw .gl-v2-field-box > input.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
+.gl-v2-bw .gl-v2-select { width: 100%; min-width: 0; }
+.gl-v2-bw .gl-v2-field-attached .gl-v2-field-box { width: auto; }
+.gl-v2-bw.is-locked .gl-v2-field-attach-btn { display: none; }
+.gl-v2-bw-span2 { grid-column: span 2; }
+.gl-v2-bw-subhead { grid-column: 1 / -1; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .12em; color: var(--gl-v2-muted); text-transform: uppercase; padding-top: 4px; }
+.gl-v2-bw-subhead:first-child { padding-top: 0; }
+.gl-v2-bw-hint { font: 450 10.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-bw-live { background: var(--gl-v2-neutral-tint); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-bw-live-row { display: flex; justify-content: space-between; gap: 12px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-bw-live-row strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gl-v2-bw-live-formula { font: 450 11px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-muted); }
+
+/* Tweekoloms: formulier + live berekening (39b) */
+.gl-v2-bw-cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.gl-v2-bw-cols > aside { position: sticky; top: 0; }
+
+/* Berekeningen verbergen/tonen (topbar-schakelaar "Toon berekeningen") */
+.gl-v2-bw-calc { display: none; }
+body.bw-show-calc .gl-v2-bw-calc { display: block; }
+body.bw-show-calc span.gl-v2-bw-calc, body.bw-show-calc .gl-v2-bw-calc.is-inline { display: inline; }
+.gl-v2-bw-calcswitch { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; user-select: none; white-space: nowrap; }
+
+/* ── Tabellen (stap 2, 3, 4, 5, 6, 8, 9): kop en rijen volgens het Facturen-recept ───────────────────── */
+.gl-v2-bw-table-wrap { overflow-x: auto; }
+.gl-v2-bw-table { width: 100%; border-collapse: collapse; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-bw-table thead th {
+    height: 36px; padding: 0 10px; text-align: left; white-space: nowrap;
+    font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-primary);
+    background: var(--gl-v2-surface); border-bottom: 1px solid var(--gl-v2-hairline);
+}
+.gl-v2-bw-table thead th.is-num, .gl-v2-bw-table td.is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-bw-table tbody td { height: 46px; padding: 3px 10px; border-top: 1px solid var(--gl-v2-hairline-soft); vertical-align: middle; }
+.gl-v2-bw-table tbody tr:first-child td { border-top: 0; }
+.gl-v2-bw-table tbody tr:hover td { background: #FAFBF8; }
+.gl-v2-bw-table tfoot td { height: 44px; padding: 0 10px; border-top: 1px solid var(--gl-v2-hairline); font-weight: 700; background: #FAFBF8; font-variant-numeric: tabular-nums; }
+.gl-v2-bw-table .gl-v2-field-box { height: 34px; padding: 0 10px; }
+.gl-v2-bw-table .gl-v2-field-input.is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-bw-table .gl-v2-select-trigger { height: 34px; }
+.gl-v2-bw-table td.is-center, .gl-v2-bw-table thead th.is-center, .gl-v2-bw-table tfoot td.is-center { text-align: center; }
+.gl-v2-bw-table .is-muted { color: var(--gl-v2-muted-light); }
+.gl-v2-bw-table .is-strong { font-weight: 600; }
+.gl-v2-bw-table .is-neg { color: #8B2A2A; }
+.gl-v2-bw-table tr.is-warn td { background: #FBF6EA; }
+.gl-v2-bw-table tr.is-saving td:first-child { box-shadow: inset 2px 0 0 var(--gl-v2-gold, #C9A96E); }
+.gl-v2-bw-table tr.is-error td:first-child { box-shadow: inset 2px 0 0 #8B2A2A; }
+.gl-v2-bw-table .col-actions { width: 64px; text-align: right; white-space: nowrap; }
+.gl-v2-bw-table .col-actions .gl-v2-row-action { margin-left: 2px; }
+/* toevoegrij: zelfde ruimte rond de velden als een gegevensrij (de tfoot-regel geeft anders 0 verticale padding) */
+.gl-v2-bw-table .gl-v2-bw-addrow td { height: 58px; padding: 10px 10px; background: #FAFBF8; font-weight: 400; border-top: 1px solid var(--gl-v2-hairline); }
+.gl-v2-bw-empty { padding: 26px 20px; text-align: center; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-bw-empty .t { display: block; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-bw-empty .s { display: block; margin-top: 3px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Rij-acties: het Facturen-recept (DESIGN.md "Table (Facturen)") */
+.gl-v2-bw .gl-v2-row-action {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; position: relative;
+    border: 1px solid transparent; background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer; text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.gl-v2-bw .gl-v2-row-action i { font-size: 15px; }
+.gl-v2-bw .gl-v2-row-action:hover, .gl-v2-bw .gl-v2-row-action:focus-visible { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
+.gl-v2-bw .gl-v2-row-action-primary:hover, .gl-v2-bw .gl-v2-row-action-primary:focus-visible { background: #006638; border-color: #006638; color: var(--gl-v2-surface); }
+.gl-v2-bw .gl-v2-row-action-danger:hover, .gl-v2-bw .gl-v2-row-action-danger:focus-visible { background: #F8EBEB; border-color: #8B2A2A; color: #8B2A2A; }
+.gl-v2-bw .gl-v2-row-action:disabled { color: #C0CABE; pointer-events: none; }
+.gl-v2-bw .gl-v2-row-action-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Overzicht (39a) staat niet in .gl-v2-bw: zelfde rij-actierecept voor de potloden */
+.bw-ix-kaarten .gl-v2-row-action {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; position: relative;
+    border: 1px solid transparent; background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer; text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.bw-ix-kaarten .gl-v2-row-action i { font-size: 15px; }
+.bw-ix-kaarten .gl-v2-row-action:hover, .bw-ix-kaarten .gl-v2-row-action:focus-visible { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
+.bw-ix-kaarten .gl-v2-row-action-primary:hover, .bw-ix-kaarten .gl-v2-row-action-primary:focus-visible { background: #006638; border-color: #006638; color: var(--gl-v2-surface); }
+.bw-ix-kaarten .gl-v2-row-action-danger:hover, .bw-ix-kaarten .gl-v2-row-action-danger:focus-visible { background: #F8EBEB; border-color: #8B2A2A; color: #8B2A2A; }
+.bw-ix-kaarten .gl-v2-row-action:disabled { color: #C0CABE; pointer-events: none; }
+.bw-ix-kaarten .gl-v2-row-action-label { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+
+.gl-v2-bw-table td.is-num, .gl-v2-bw-table th.is-num { white-space: nowrap; }
+/* Alleen-lezen (definitieve versie) */
+.gl-v2-bw.is-locked .gl-v2-field-box { background: var(--gl-v2-bg, #F2F5EF); }
+.gl-v2-bw.is-locked [data-bw-edit] { display: none !important; }
+
+/* ── Tablet / gsm (impeccable adapt) ───────────────────────────────────────────────────────────────── */
+@media (max-width: 1199.98px) {
+    .gl-v2-bw-cols { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-bw-cols > aside { position: static; }
+    .gl-v2-bw-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1023.98px) {
+    /* Chips passen niet meer: één balk "Stap 4 van 9 · Dak & afbraak" die het volledige paneel opent (27h) */
+    .gl-v2-bw-chips { display: none; }
+    .gl-v2-bw-balk { display: block; }
+    .gl-v2-bw-balk-btn {
+        width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--gl-v2-ink);
+    }
+    .gl-v2-bw-balk-btn .t { flex: 1; min-width: 0; font: 600 13.5px var(--gl-v2-font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-bw-balk-btn .i { font-size: 16px; color: var(--gl-v2-muted); transition: transform .2s var(--bw-ease, ease); }
+    .gl-v2-bw-balk-btn[aria-expanded="true"] .i { transform: rotate(180deg); }
+    /* uitklappen via grid-template-rows 0fr -> 1fr (geen layout-animatie van height/max-height) */
+    .gl-v2-bw-panel { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .3s var(--bw-ease, ease), visibility 0s linear .3s; }
+    .gl-v2-bw-panel[data-open="true"] { grid-template-rows: 1fr; visibility: visible; transition-delay: 0s; }
+    .gl-v2-bw-panel > * { min-height: 0; overflow: hidden; }
+    .gl-v2-bw-panel .gl-v2-steps { padding: 6px 0 4px; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-bw-grid, .gl-v2-bw-grid--4, .gl-v2-bw-grid--3, .gl-v2-bw-grid--2 { grid-template-columns: minmax(0, 1fr); padding: 14px 16px 16px; }
+    .gl-v2-bw-span2 { grid-column: auto; }
+    .gl-v2-bw-scroll { padding-bottom: 150px; }
+    .gl-v2-bw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-bw-status { flex: 1 1 100%; order: -1; }
+    /* actiebalk in twee regels: status · vorige + knoppen (wrappend, laatste knop vult de rest) */
+    .gl-v2-bw .gl-v2-form-actionbar { flex-wrap: wrap; gap: 10px 12px; }
+    .gl-v2-bw .gl-v2-form-actionbar-spacer { display: none; }
+    .gl-v2-bw .gl-v2-form-actionbar-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
+    .gl-v2-bw .gl-v2-form-actionbar-actions .gl-v2-btn-primary { flex: 1 1 100%; justify-content: center; }
+    .gl-v2-bw .gl-v2-form-actionbar .gl-v2-btn { min-height: 44px; }
+    .gl-v2-bw-table td.is-num, .gl-v2-bw-table th.is-num { white-space: nowrap; }
+    .gl-v2-bw-stappen { position: sticky; top: 0; z-index: 30; }
+}
+@media (hover: none) and (pointer: coarse) {
+    .gl-v2-bw .gl-v2-row-action { width: 40px; height: 40px; }
+}
+
+/* getalvelden: rechts uitgelijnd, tabelcijfers */
+.gl-v2-bw .gl-v2-field-input.is-num { text-align: right; }
+.gl-v2-bw .gl-v2-field-help a { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; }
+
+.gl-v2-bw .gl-v2-notice[hidden] { display: none; }

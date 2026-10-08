@@ -104,6 +104,18 @@ Public Class BudgetVersieBO
         End Set
     End Property
 
+    Public Property GewijzigdOp As DateTime?
+    Public Property VastgezetOp As DateTime?
+    Public Property VastgezetDoor As String
+    Public Property LaatsteStap As Integer?
+    Public Property WaarschuwingenBevestigd As String
+
+    Public ReadOnly Property IsDefinitief As Boolean
+        Get
+            Return String.Equals(Status, "Definitief", StringComparison.OrdinalIgnoreCase)
+        End Get
+    End Property
+
     Public ReadOnly Property VersieLabel() As String
         Get
             If Not String.IsNullOrWhiteSpace(_versieNaam) Then

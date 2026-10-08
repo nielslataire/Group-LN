@@ -1,0 +1,43 @@
+@model BOCore.BudgetGevelElementBO
+@*
+    gl-v2 — Budgetflow stap 4/5, één element-rij (design-handoff 39e/39f): eenheid/locatie · geveldeel/beschrijving · aantal · breedte ·
+    hoogte óf lengte · resultaat. Welke maten gelden, volgt uit het type (BudgetGevelElementBO.HeeftHoogte / HeeftLengteAlleen).
+    Een negatief resultaat (de "Ramen aftrek"-regel van vroeger) kleurt rood. Autosave per rij via BudgetGevelElementOpslaan.
+*@
+@{
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string F2(decimal v) => v.ToString("F2", nl);
+    string F3(decimal? v) => v.HasValue ? v.Value.ToString("F3", nl) : "";
+    var res = Model.HeeftLengteAlleen ? Model.ResultaatLm : Model.ResultaatM2;
+    var isAftrek = res < 0m;
+}
+<tr class="bw-el-rij" data-element-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-element-type="@Model.ElementType" data-hoogte="@(Model.HeeftHoogte ? "1" : "0")" data-lengte-alleen="@(Model.HeeftLengteAlleen ? "1" : "0")">
+    <td style="min-width:100px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-input" data-field="eenheidNaam" value="@Model.EenheidNaam" placeholder="bv. L1" aria-label="Eenheid" /></div></div></td>
+    <td style="min-width:130px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-input" data-field="beschrijving" value="@Model.Beschrijving" placeholder="bv. VG" aria-label="Beschrijving" /></div></div></td>
+    <td class="is-num" style="min-width:80px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular el-input" data-field="aantal" value="@F2(Model.Aantal)" aria-label="Aantal" /></div></div></td>
+    <td class="is-num" style="min-width:96px">
+        @if (!Model.HeeftLengteAlleen)
+        {
+            <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular el-input" data-field="breedte" value="@F3(Model.Breedte)" placeholder="0,000" aria-label="Breedte" /></div></div>
+        }
+        else { <span class="is-muted">—</span> }
+    </td>
+    <td class="is-num" style="min-width:96px">
+        @if (Model.HeeftHoogte)
+        {
+            <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular el-input" data-field="hoogte" value="@F3(Model.Hoogte)" placeholder="0,000" aria-label="Hoogte" /></div></div>
+        }
+        else
+        {
+            <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular el-input" data-field="lengte" value="@F3(Model.Lengte)" placeholder="0,000" aria-label="Lengte" /></div></div>
+        }
+    </td>
+    <td class="is-num is-strong el-res @(isAftrek ? "is-neg" : "")" style="min-width:100px" title="@Model.FormulaResultaat">
+        <span class="el-res-value">@F2(res)</span> <span class="is-muted" style="font-weight:450">@Model.EenheidLabel</span>
+        <span class="gl-v2-bw-calc gl-v2-bw-hint el-formule" style="display:none">@Model.FormulaResultaat</span>
+    </td>
+    <td class="col-actions">
+        <button type="button" class="gl-v2-row-action btn-dup-el" data-bw-edit title="Rij dupliceren" aria-label="Rij dupliceren"><i class="ph ph-copy" aria-hidden="true"></i><span class="gl-v2-row-action-label">Dupliceren</span></button>
+        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger btn-del-el" data-bw-edit title="Rij verwijderen" aria-label="Rij verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+    </td>
+</tr>

@@ -96,7 +96,7 @@
 
     var budgetItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     budgetItems.Add(("Budgetten", "ph-table", Url.Action("BudgetIndex", "Projecten", new { projectId = projectId }) ?? "#",
-        IsHere("Projecten", "BudgetIndex") || IsHere("Projecten", "BudgetGegevens") || IsHere("Projecten", "BudgetMasterAanmaken"), CountFor("Budgetten")));
+        (string.Equals(currentController, "Projecten", StringComparison.OrdinalIgnoreCase) && (currentAction ?? "").StartsWith("Budget", StringComparison.OrdinalIgnoreCase)), CountFor("Budgetten")));
     if (canSeePostCalc) budgetItems.Add(("Nacalculatie", "ph-calculator", Url.Action("Recalculation", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "Recalculation"), CountFor("Nacalculatie")));
     if (budgetItems.Count > 0) groups.Add(("budget", "Budget", budgetItems));
 

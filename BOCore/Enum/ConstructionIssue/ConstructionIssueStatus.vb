@@ -26,4 +26,19 @@ Public Enum ConstructionIssueStatus As Integer
     <Display(Name:="Heropend")>
     Reopened = 7
 
+    <Display(Name:="Concept")>
+    Concept = 8
+
+    <Display(Name:="Ter goedkeuring")>
+    PendingApproval = 9
+
+    <Display(Name:="Doorgestuurd")>
+    Forwarded = 10
+
+    <Display(Name:="Gemeld uitgevoerd")>
+    Reported = 11
+
+    <Display(Name:="In de wacht")>
+    OnHold = 12
+
 End Enum

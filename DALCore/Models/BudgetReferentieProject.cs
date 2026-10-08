@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace DALCore.Models;
 
-// Migratie 076_BudgetReferentieProjecten.sql: referentieprojecten voor de nacalculatie in de budgetwizard (stap 6).
+// Migratie 076_BudgetReferentieProjecten.sql (+ 077_BudgetReferentiesBeheer.sql): referentieprojecten voor de nacalculatie in de budgetwizard (stap 6).
 public partial class BudgetReferentieProject
 {
     public int Id { get; set; }
@@ -34,6 +34,9 @@ public partial class BudgetReferentieProject
 
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>Migratie 077: naam van wie het inlaadde ("Excel · Niels, 02/10/2026").</summary>
+    public string CreatedBy { get; set; }
+
     public virtual Project Project { get; set; }
 
     public virtual ICollection<BudgetReferentieProjectLijn> Lijnen { get; set; } = new List<BudgetReferentieProjectLijn>();
@@ -45,12 +48,19 @@ public partial class BudgetReferentieProjectLijn
 
     public int ReferentieProjectId { get; set; }
 
-    public int ActivityId { get; set; }
+    /// <summary>NULL (migratie 077) = Excel-regel die aan geen activiteit gekoppeld is: telt mee in het totaal, niet per activiteit.</summary>
+    public int? ActivityId { get; set; }
 
     /// <summary>Werkelijke kost van de activiteit (excl. btw, niet geïndexeerd).</summary>
     public decimal Bedrag { get; set; }
 
     public string Opmerking { get; set; }
+
+    /// <summary>Migratie 077: de activiteitsnaam zoals ze in de Excel stond.</summary>
+    public string ExcelNaam { get; set; }
+
+    /// <summary>Migratie 077: hoe de regel gekoppeld werd: "id", "naam", "manueel" of NULL (niet gematcht / snapshot).</summary>
+    public string Match { get; set; }
 
     public virtual BudgetReferentieProject ReferentieProject { get; set; }
 

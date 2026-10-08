@@ -1,0 +1,182 @@
+@model CPMCore.Models.Instellingen.ReferentieImportControleVm
+@using BOCore.Budget
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Instellingen/Referentieprojecten/Controle import (design-handoff punt 38d): na het inlezen van een Excel komen
+    de regels hier, niet-gematcht bovenaan, elk met een keuzelijst om alsnog een activiteit te kiezen. Waarschuwingskader
+    (Meldingskaders 25b), vier KPI-tegels, sectiekaart "Regels", en een vaste actiebalk onderaan (links de staat, rechts
+    Annuleren / Opslaan als referentie). Opslaan mag met open regels: die tellen enkel mee in het totaal (migratie 077,
+    ActivityId NULL). Alle regels gaan als verborgen velden mee terug (Rijen[i].…) — er is geen serverstaat tussen de twee stappen.
+    Bedragen worden nl-BE geformatteerd ("142300,00") zodat de modelbinder (nl-BE, FlexibleDecimalModelBinder) ze juist leest.
+*@
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.Naam) ? "Controle import" : Model.Naam;
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("BudgetReferentieProjecten", "Instellingen");
+    var nlBE = new System.Globalization.CultureInfo("nl-BE");
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nlBE);
+    var rijen = Model.Rijen ?? new();
+    var nietGematcht = rijen.Where(r => !r.ActivityId.HasValue).ToList();
+    var gematcht = rijen.Where(r => r.ActivityId.HasValue).ToList();
+    var opId = gematcht.Count(r => r.Match == "id");
+    var opNaam = gematcht.Count(r => r.Match == "naam");
+    var totaal = rijen.Sum(r => r.Bedrag);
+    var actItems = Model.Activiteiten.Select(a => new GlV2SelectItem { Value = a.ActivityId?.ToString() ?? "", Text = a.ActivityOmschrijving, Group = a.LotNummer > 0 ? $"Lot {a.LotNummer:G} – {a.LotNaam}" : (a.LotNaam ?? "Overige") }).ToList();
+    const int ToonGematcht = 3;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-budgetreferenties.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-neutral">Excel</span>
+}
+
+<form method="post" asp-action="BudgetReferentieProjectOpslaanUitControle" asp-controller="Instellingen" class="gl-v2-bref" id="gl-v2-bref-controle" autocomplete="off">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Bestandsnaam" value="@Model.Bestandsnaam" />
+    <input type="hidden" name="Naam" value="@Model.Naam" />
+    <input type="hidden" name="Datum" value="@(Model.Datum?.ToString("yyyy-MM-dd"))" />
+    <input type="hidden" name="AantalEenheden" value="@Model.AantalEenheden" />
+    <input type="hidden" name="OppervlakteGBA" value="@(Model.OppervlakteGBA?.ToString("0.00", nlBE))" />
+    <input type="hidden" name="Opmerking" value="@Model.Opmerking" />
+
+    <div class="gl-v2-bref-scroll">
+        <span class="gl-v2-bref-intro">@Model.Bestandsnaam · peildatum @(Model.Datum?.ToString("dd/MM/yyyy") ?? "—") · @Model.AantalEenheden eenhe@(Model.AantalEenheden == 1 ? "id" : "den")</span>
+
+        @if (nietGematcht.Count > 0)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning" id="bref-c-warning">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title" id="bref-c-warning-title">@nietGematcht.Count van @rijen.Count regels niet gematcht — samen @Eur0(nietGematcht.Sum(r => r.Bedrag))</span>
+                    <span class="gl-v2-notice-text">Kies een activiteit of laat ze leeg: niet-gematchte regels tellen mee in het totaal, maar niet per activiteit.</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-success">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-check-circle" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Alle @rijen.Count regels gematcht</span>
+                    <span class="gl-v2-notice-text">Controleer de bedragen en sla het referentieproject op.</span>
+                </div>
+            </div>
+        }
+
+        <div class="gl-v2-bref-kpis">
+            <div class="gl-v2-bref-kpi"><span class="lbl">Regels</span><span class="val">@rijen.Count</span></div>
+            <div class="gl-v2-bref-kpi"><span class="lbl">Gematcht</span><span class="val" id="bref-c-kpi-gematcht">@gematcht.Count · @opId op id, @opNaam op naam</span></div>
+            <div class="gl-v2-bref-kpi"><span class="lbl">Totaal</span><span class="val">@Eur0(totaal)</span></div>
+            <div class="gl-v2-bref-kpi"><span class="lbl">GBA</span><span class="val">@(Model.OppervlakteGBA is > 0m ? Model.OppervlakteGBA.Value.ToString("N0", nlBE) + " m² — " + Eur0(totaal / Model.OppervlakteGBA.Value) + "/m²" : "ontbreekt — €/m² niet berekend")</span></div>
+        </div>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-rows" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Regels</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">niet-gematcht bovenaan</span>
+            </div>
+            <div class="gl-v2-bref-head gl-v2-bref-grid--controle">
+                <span>ActivityId</span><span>Activiteit in Excel</span><span>Activiteit in de app</span><span class="gl-v2-bref-right">Bedrag</span><span>Match</span>
+            </div>
+            @{ int i = 0; }
+            @foreach (var r in nietGematcht)
+            {
+                <div class="gl-v2-bref-row gl-v2-bref-grid--controle is-unmatched" data-c-row data-c-open>
+                    <input type="hidden" name="Rijen[@i].ExcelId" value="@r.ExcelId" />
+                    <input type="hidden" name="Rijen[@i].ExcelNaam" value="@r.ExcelNaam" />
+                    <input type="hidden" name="Rijen[@i].Bedrag" value="@r.Bedrag.ToString("0.00", nlBE)" />
+                    <input type="hidden" name="Rijen[@i].Match" value="" />
+                    <span class="gl-v2-bref-mono is-muted">@(r.ExcelId?.ToString() ?? "—")</span>
+                    <span class="gl-v2-bref-cell" title="@r.ExcelNaam">@r.ExcelNaam</span>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = $"Rijen[{i}].ActivityId", Id = $"bref-c-act-{i}", Value = "", Placeholder = "Kies een activiteit…", EmptyText = "— laat leeg —", Bare = true, Items = actItems })
+                    </div>
+                    <span class="gl-v2-bref-num">@Eur0(r.Bedrag)</span>
+                    <span class="gl-v2-badge is-attention" data-c-badge>Niet gematcht</span>
+                </div>
+                i++;
+            }
+            @{ int g = 0; }
+            @foreach (var r in gematcht)
+            {
+                <div class="gl-v2-bref-row gl-v2-bref-grid--controle" data-c-row data-c-matched @(g >= ToonGematcht ? "hidden" : "")>
+                    <input type="hidden" name="Rijen[@i].ExcelId" value="@r.ExcelId" />
+                    <input type="hidden" name="Rijen[@i].ExcelNaam" value="@r.ExcelNaam" />
+                    <input type="hidden" name="Rijen[@i].Bedrag" value="@r.Bedrag.ToString("0.00", nlBE)" />
+                    <input type="hidden" name="Rijen[@i].ActivityId" value="@r.ActivityId" />
+                    <input type="hidden" name="Rijen[@i].Match" value="@r.Match" />
+                    <span class="gl-v2-bref-mono">@(r.ExcelId?.ToString() ?? "—")</span>
+                    <span class="gl-v2-bref-cell" title="@r.ExcelNaam">@r.ExcelNaam</span>
+                    <span class="gl-v2-bref-strong" title="@r.ActivityOmschrijving">@r.ActivityOmschrijving</span>
+                    <span class="gl-v2-bref-num">@Eur0(r.Bedrag)</span>
+                    <span class="gl-v2-badge is-positive">@(r.Match == "id" ? "Op id" : "Op naam")</span>
+                </div>
+                i++; g++;
+            }
+            @if (gematcht.Count > ToonGematcht)
+            {
+                <div class="gl-v2-bref-more">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bref-c-more" data-more="+ @(gematcht.Count - ToonGematcht) gematchte regels tonen" data-less="Minder tonen">+ @(gematcht.Count - ToonGematcht) gematchte regels tonen</button>
+                </div>
+            }
+        </section>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-bref-status @(nietGematcht.Count == 0 ? "is-ok" : "")" id="bref-c-status" aria-live="polite" data-open="@nietGematcht.Count" data-total="@rijen.Count"></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Url.Action("BudgetReferentieProjecten", "Instellingen")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan als referentie</button>
+        </div>
+    </div>
+</form>
+
+@section PageScripts
+{
+<script>
+(function () {
+    var form = document.getElementById('gl-v2-bref-controle');
+    if (!form) return;
+    var status = document.getElementById('bref-c-status'), warnTitle = document.getElementById('bref-c-warning-title'), kpi = document.getElementById('bref-c-kpi-gematcht');
+    var total = parseInt(status.getAttribute('data-total')) || 0;
+    var opId = @opId, opNaam = @opNaam;
+
+    function update() {
+        var open = 0, manueel = 0;
+        form.querySelectorAll('[data-c-open]').forEach(function (row) {
+            var inp = row.querySelector('input[type="hidden"][name$=".ActivityId"]');
+            var gekozen = inp && inp.value;
+            var badge = row.querySelector('[data-c-badge]');
+            row.classList.toggle('is-unmatched', !gekozen);
+            row.classList.toggle('is-manual', !!gekozen);
+            badge.className = 'gl-v2-badge ' + (gekozen ? 'is-positive' : 'is-attention');
+            badge.textContent = gekozen ? 'Manueel' : 'Niet gematcht';
+            var m = row.querySelector('input[name$=".Match"]'); if (m) m.value = gekozen ? 'manueel' : '';
+            if (gekozen) manueel++; else open++;
+        });
+        status.classList.toggle('is-ok', open === 0);
+        status.textContent = open === 0
+            ? 'Alle regels gekoppeld — klaar om op te slaan'
+            : open + ' regel' + (open === 1 ? '' : 's') + ' nog te koppelen — opslaan mag, ' + (open === 1 ? 'ze telt' : 'ze tellen') + ' dan enkel mee in het totaal';
+        if (warnTitle && open === 0) warnTitle.textContent = 'Alle regels gekoppeld';
+        if (kpi) kpi.textContent = (total - open) + ' · ' + opId + ' op id, ' + opNaam + ' op naam' + (manueel ? ', ' + manueel + ' manueel' : '');
+    }
+    form.addEventListener('change', function (e) { if (e.target.matches('input[type="hidden"][name$=".ActivityId"]')) update(); });
+    update();
+
+    var more = document.getElementById('bref-c-more');
+    if (more) more.addEventListener('click', function () {
+        var open = more.textContent.trim() === more.getAttribute('data-more');
+        form.querySelectorAll('[data-c-matched]').forEach(function (row, idx) { if (idx >= @ToonGematcht) row.hidden = !open; });
+        more.textContent = open ? more.getAttribute('data-less') : more.getAttribute('data-more');
+    });
+})();
+</script>
+}

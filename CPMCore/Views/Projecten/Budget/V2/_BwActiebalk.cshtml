@@ -1,0 +1,17 @@
+@model CPMCore.Models.Budget.BudgetWizardChromeVm
+@*
+    gl-v2 — Budgetflow, actiebalk (design-handoff 39b-39i, 8e·5 / 27): links terug, midden de opslagstaat (data-bw-status — gl-v2-budget.js),
+    rechts de volgende stap. data-bw-nav laat de link eerst opslaan (de pagina registreert haar save-handler) en dan de overgang spelen.
+    Een pagina die extra knoppen nodig heeft (stap 9) rendert haar eigen balk met dezelfde klassen.
+*@
+<div class="gl-v2-form-actionbar">
+    <a href="@Model.PrevUrl" class="gl-v2-btn gl-v2-btn-text" data-bw-nav="back"><i class="ph ph-caret-left" aria-hidden="true"></i>@Model.PrevLabel</a>
+    <span class="gl-v2-bw-status" data-bw-status data-state="@(Model.IsLocked ? "locked" : "saved")" aria-live="polite">@(Model.IsLocked ? "Definitief — alleen-lezen" : "Alle wijzigingen opgeslagen")</span>
+    <span class="gl-v2-form-actionbar-spacer"></span>
+    @if (!string.IsNullOrEmpty(Model.NextUrl))
+    {
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Model.NextUrl" class="gl-v2-btn gl-v2-btn-primary" data-bw-nav="next" data-bw-keep>@Model.NextLabel<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        </div>
+    }
+</div>

@@ -3,10 +3,80 @@
 Doorlopend statusdocument voor de budgetwizard (Projecten › Budgetten, 9 stappen). Hoe het gebouwd is staat in
 DEVNOTES.md §3, §5 en §7; dit bestand houdt bij wat af is, wat open staat en welke beslissingen genomen zijn.
 
-**Laatste update:** 2026-10-07 — doorlichting van de volledige flow + eerste reeks fixes (versiebeheer, consistente
-kostprijs, stap 7 in procentpunten) én "verkoop manueel per m²" gebouwd (stap 8 herbouwd, referentiebeheer).
-Niets gecommit. **Migratie `_migrations/075_BudgetVerkoopPrijsPerM2.sql` uitvoeren vóór de app start** (naast 072/073).
-Niets in de browser getest: stap 8 en Instellingen › Prijsreferenties eerst doorlopen.
+**Laatste update:** 2026-10-08 — de volledige budgetflow (overzicht + 9 stappen) staat in gl-v2 volgens design-handoff
+punt 39, met versiestatus Concept/Afgerond/Definitief (deel 5). Niets gecommit, niets browser-getest.
+**Migraties 075 → 078 uitvoeren vóór de app start** (`_migrations/078_BudgetVersieStatus.sql` is nieuw).
+
+## OVERDRACHT — stand van zaken (08/10/2026, einde sessie)
+
+**Branch `layout-experiment`, niets gecommit** (veel gewijzigde en nieuwe bestanden; commit eerst voor je van pc wisselt). Build slaagt.
+**Niets is in een draaiende app/browser getest** (enkel statische headless-renders van stap 9). Eerst doen op de andere pc:
+1. Migraties uitvoeren op de DB: `078_BudgetVersieStatus.sql` en `080_BudgetVersieGewijzigd.sql` (079 is van Punten). Daarvóór ook 075–077 als die nog niet liepen.
+2. App herstarten/rebuilden en de flow doorlopen met de gl-v2-cookie: overzicht → stap 1…9 → Afronden / Definitief → Niet-definitief.
+
+**Wat gebouwd is (deel 5 + opvolging):** volledige budgetflow in gl-v2 (overzicht + 9 stappen), versiestatus Concept/Afgerond/Definitief, hernoemen van budget/versie,
+"Laatst gewijzigd" (`GewijzigdOp`) en bewaarde totale kostprijs (`TotaalKosten`, lui herberekend na elke wijziging), tabbar/meldingskaders/dropdowns volgens DESIGN.md,
+eigen bevestigingsmodal i.p.v. `confirm()` (budgetflow: `V2/_BwBevestigModal` + `GlV2Budget.bevestig`; Instellingen V2: `GlV2/_BevestigModal` met `data-bv-titel`).
+Projectbreed aangepast: dropdown-chevron blijft zichtbaar na keuze (`gl-v2/forms.css`), uitgeschakelde dropdown-stijl, combo `data-allow-new` nu expliciet "true"/"false",
+entranceanimatie met fill-mode `backwards` (anders knippen fixed dropdown-panelen af, zie memory).
+
+**Nog te controleren / open:**
+- Dropdowns hoofdtype/subtype op Oppervlaktes: oorzaak (animatie-fill-mode) gefixt maar niet in de echte app bevestigd.
+- Bevestigingsmodal op Referentieprojecten: script nu inline in de partial; controleren dat hij verschijnt.
+- Projectkiezer op Referentieprojecten: "nieuw item"-rij zou weg moeten zijn; zo niet, schermafbeelding nemen.
+- Traagheid: opgelost zijn de projectlading (14 includes) en N+1 indexqueries; nog open: `BudgetActivityService.GetLotGroepenAsync` meermaals per pagina (stap 6/9), mogelijk DB-indexen.
+- Overige Instellingen › Budget-pagina's (kostprijsmaterialen, formules, bouwindexen, kostprijs-update) en de klassieke pagina's gebruiken nog `confirm()`/`alert()`.
+- Placeholders tot de koppeling: tegels Gecontracteerd/Gefactureerd/Verwacht verschil op het overzicht.
+- Volgende grote stappen: koppeling budget ↔ contracten/facturen; budget-PDF/Excel (35h); nacalculatie van het lopende project (menu-item "Nacalculatie").
+- Werkwijze: DESIGN.md sectie "Budgetflow — design-handoff punt 39" beschrijft componenten, beweging en schermen.
+
+## Gedaan op 2026-10-08 (deel 5: budgetflow in gl-v2, design-handoff punt 39)
+
+**Migratie `_migrations/078_BudgetVersieStatus.sql` uitvoeren** (BudgetVersie: VastgezetOp/-Door, LaatsteStap, VmswFactoren,
+WaarschuwingenBevestigd). Niets browser-getest — de klassieke pagina's blijven ongewijzigd bereikbaar zonder de gl-v2-cookie.
+
+- **Versiestatus** (keuze Niels): *Concept* → *Afgerond* (blijft bewerkbaar, stap 9 "Afronden") → *Definitief* (alleen-lezen,
+  **één per project**; "Afronden & definitief maken"; een eerdere definitieve versie valt terug op Afgerond). Op een definitieve
+  versie blokkeert `BudgetVersieVergrendeldFilter` elke POST (behalve status wijzigen/kopiëren/downloaden) en zet de gl-v2-JS alle
+  velden uit; "Niet-definitief maken" staat in de vergrendelbalk. `IBudgetService`: `AfrondenVersie`, `MaakDefinitief`,
+  `OntgrendelDefinitief`, `IsVergrendeld`, `RegistreerStap`, `Get/SetVmswFactoren`, `BevestigWaarschuwing`.
+- **Overzicht 39a** (`BudgetIndexV2`): kaart "Definitief budget" (tegels Gecontracteerd/Gefactureerd/Verwacht verschil zijn
+  **placeholders** tot de koppeling budget ↔ contracten/facturen — keuze Niels), per budget een kaart met versies
+  (status "Concept · stap x van 9" via `LaatsteStap`), "Maak actief" (`BudgetMasterActiveren`), "Nieuwe versie op basis van de
+  huidige" (modal → `BudgetNieuweVersie`), "Nieuw budget" (modal; **leeg of als kopie** van een versie van eender welk project:
+  `BudgetMasterAanmakenModel.KopieVanVersieId` → `KopieerVersieInhoud`), "Andere versie definitief maken".
+- **Stappen 1–9** (`Budget…V2.cshtml` + partials in `Views/Projecten/Budget/V2/`): gedeelde chrome `BudgetWizardChromeVm`
+  (`PrepareWizardV2` in `ProjectenController.BudgetV2.cs`: stappen met fouten/aandachtspunten, vorige/volgende, menu, lock),
+  `_BwStappen` (chips, onder 1024px balk + paneel), `_BwActiebalk` met opslagstatus, autosave per veld/rij (`GlV2Budget` in
+  `gl-v2-budget.js`), berekeningen uitklapbaar ("Toon berekeningen", onthouden in localStorage).
+  Stap 2: **VMSW-reductiefactoren aanpasbaar per versie** (kaart, `BudgetVmswFactorenOpslaan`, keuze Niels); stap 7: autosave via
+  `BudgetParamsOpslaan`, waarschuwing "decennale 0 %" wegklikbaar (`BudgetWaarschuwingBevestigen`); stap 8: rij volgens het
+  mockup + uitklapbare €/m²-regel (`_BwVerkoopDetail`); stap 9: waarschuwingenlijst met link naar de stap, KPI-tegels,
+  kostenoverzicht, per eenheid, bouwkost t.o.v. nacalc, Kopie als nieuwe versie / Afronden / definitief maken.
+- **Waarschuwingen per stap** (`BerekenStapWaarschuwingenAsync`): stap 1 poorten zonder type, stap 2 woning zonder grond,
+  stap 7 decennale 0 % (tenzij bevestigd), stap 8 vraagprijs onder minimum. Fouten blokkeren "definitief maken", waarschuwingen niet.
+- **Na eerste test (08/10)**: inner-menu-CSS + telefoonmenu op alle V2-pagina's; `v@(…)` Razor-fout in de versielijst; **hernoemen** van budget en versie vanuit het overzicht (potlood); **Laatst gewijzigd** is nu echt: kolom `BudgetVersie.GewijzigdOp` (**migratie `080_BudgetVersieGewijzigd.sql`**), bijgewerkt door `BudgetVersieVergrendeldFilter` na elke geslaagde schrijvende actie (voorheen toonde het de aanmaakdatum); overzicht krijgt `GlV2FullHeightBody`.
+- **Traagheid**: elke budgetpagina laadde het volledige project (14 includes incl. documenten en foto's) enkel voor de naam, en `BuildContextAsync` deed 2 indexqueries per materiaal (N+1, ook per versie in het overzicht). Nu `GetProjectNameById` en een per-request cache in `BouwIndexService`. Eerstvolgende kandidaten: het overzicht rekent per versie de volledige kostprijs uit; `BudgetActivityService.GetLotGroepenAsync` wordt meermaals per pagina uitgevoerd.
+- Documentatie: DESIGN.md "Budgetflow — design-handoff punt 39".
+
+## Gedaan op 2026-10-08 (deel 4: beheerpagina's in gl-v2, design-handoff punt 38)
+
+**Migratie `_migrations/077_BudgetReferentiesBeheer.sql` uitvoeren** (na 075/076). Niets browser-getest.
+
+- **Prijsreferenties verkoop** (`BudgetPrijsReferentiesV2.cshtml`, 38a/38b): tabbar Bouw/Grond, toevoegen-kaart met volgende
+  vrije code, lijst met zoeken/projectfilter/"ouder dan 12 maanden", actualiteit-badge, **bewerken per rij**, export .xlsx,
+  **archiveren** i.p.v. verwijderen als een code in een verkooplijn gebruikt wordt (`Gearchiveerd`, niet meer kiesbaar op stap 8).
+  Codes heten nu `B-01`/`G-07` (`CodeLabel`).
+- **Referentieprojecten** (`BudgetReferentieProjectenV2.cshtml`, 38c): Excel-kaart met uploadvak en sjabloon, project-kaart met
+  **preview** (eenheden, GBA, facturen/contracten, status) vóór de snapshot, lijst met index-factor S/I en uitklapbare bedragen.
+- **Controle na Excel-import** (`BudgetReferentieImportControleV2.cshtml`, 38d, enkel gl-v2): niet-gematchte regels bovenaan met
+  keuzelijst per regel; opslaan mag met open regels — die worden bewaard met `ActivityId NULL` (tellen in het totaal, niet per
+  activiteit; stap 6 negeert ze). `ExcelNaam`/`Match` bewaren hoe een regel binnenkwam. De klassieke pagina importeert nog direct.
+- **Snapshot uit de app telt geen "Meerwerk voor klant" (factuurtype 3)** meer mee — dezelfde splitsing als Gefactureerd /
+  Meerwerken klanten op Contracts/Recalculation. Snapshots van vóór 08/10 opnieuw maken. Op stap 6 staat de referentie
+  geïndexeerd (peildatum → huidige index van de versie): daarom wijkt het bedrag daar af van de lijst in Instellingen.
+- **Correctie (09/10)**: eerder stond hier een "bug" over `type="number"` en de nl-BE-binder ("2150.5" → 21505). Dat klopt niet: `FlexibleDecimalModelBinder` kent geen duizendtalscheiding en valt terug op invariant, dus "2150.5" wordt 2150,5. De prijsvelden zijn wel tekstvelden met komma (consistent met de gl-v2-velden), maar dat was geen bugfix. Let wel: de binder rondt op 2 decimalen af (3-decimaal-velden gaan daarom via JSON).
+- Documentatie: DESIGN.md "Instellingen/Prijsreferenties verkoop en Referentieprojecten — punt 38".
 
 ## Gedaan op 2026-10-07 (deel 3: nacalculatie in stap 6)
 
@@ -94,9 +164,9 @@ Gebouwd zodat Niels er zijn design-handoff op kan maken. **Migratie `_migrations
 3. **Dode invoer**: gevelelement "Afbraak" en de sanitairtotalen komen in geen vaste formule voor (geen `@opp_afbraak`).
 4. **Budget ↔ contracten ↔ facturen**: het wizardbudget staat los van het oude `ProjectBudget` (prijs per activiteit) dat de
    contracten en de projectdetail-KPI gebruiken. Nodig voor 35h (Budget A3: besteld/gefactureerd/verbruik) en voor "% van budget".
-5. **Validatie per stap** (design-handoff 27b/27g: chips met fouten/aandachtspunten) — enkel het poorten-icoon bestaat.
-6. **gl-v2-opmaak** van de 9 wizardpagina's en de budget-PDF/Excel (35h).
-7. **Versiestatus** blijft altijd "Concept"; geen definitief/vergrendelen.
+5. ~~**Validatie per stap**~~ — gebouwd (deel 5): vier controles; uitbreiden per stap kan in `BerekenStapWaarschuwingenAsync`.
+6. ~~**gl-v2-opmaak** van de 9 wizardpagina's~~ — gebouwd (deel 5). Nog open: de budget-PDF/Excel (35h).
+7. ~~**Versiestatus**~~ — gebouwd (deel 5): Concept/Afgerond/Definitief, migratie 078.
 8. Klein: GET-acties maken een parameterrij aan; AJAX-POSTs zonder antiforgery; "Per eenheid" deelt door alle rijen incl. garages;
    geen tests voor `BudgetBerekeningService`/`BudgetActivityService`.
 9. DEVNOTES "Te doen" is deels verouderd: de voorstel-badges voor gevelmetselwerk en gipswerken bestaan al op stap 1.

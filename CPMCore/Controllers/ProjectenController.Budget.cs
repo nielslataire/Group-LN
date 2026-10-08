@@ -114,36 +114,39 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public IActionResult BudgetIndex(int projectId)
+        public async Task<IActionResult> BudgetIndex(int projectId)
         {
-            var projectResponse = _projectService.GetProjectByID(projectId);
-            if (!projectResponse.Success)
-                return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(projectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             var mastersResponse = _budgetService.GetBudgetMasters(projectId);
 
             var model = new BudgetIndexModel
             {
                 ProjectId    = projectId,
-                ProjectName  = projectResponse.Value?.Name,
+                ProjectName  = projectNaamLite,
                 BudgetMasters = mastersResponse.Success ? mastersResponse.Values : new List<BudgetMasterBO>()
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetIndex), "Budgetten");
+            if (GebruikGlV2)
+            {
+                await VulBudgetIndexV2Async(model);
+                return View("BudgetIndexV2", model);
+            }
             return View(model);
         }
 
         [HttpGet]
         public IActionResult BudgetMasterAanmaken(int projectId)
         {
-            var projectResponse = _projectService.GetProjectByID(projectId);
-            if (!projectResponse.Success)
-                return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(projectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             var model = new BudgetMasterAanmakenModel
             {
                 ProjectId   = projectId,
-                ProjectName = projectResponse.Value?.Name
+                ProjectName = projectNaamLite
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetMasterAanmaken), "Nieuw budget", new { projectId = model.ProjectId });
@@ -174,8 +177,16 @@ namespace CPMCore.Controllers
             {
                 foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
                     ModelState.AddModelError(string.Empty, msg.Message);
+                if (GebruikGlV2) { TempData["Error"] = string.Join(" ", response.Messages.Select(m => m.Message)); return RedirectToAction(nameof(BudgetIndex), new { projectId = model.ProjectId }); }
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetmaster aanmaken");
                 return View(model);
+            }
+
+            // 39a "Nieuw budget — leeg of als kopie van een bestaand budget": versie 1 krijgt de volledige inhoud van de gekozen versie.
+            if (model.KopieVanVersieId is > 0)
+            {
+                var kopie = _budgetService.KopieerVersieInhoud(model.KopieVanVersieId.Value, response.InsertedId);
+                if (!kopie.Success) TempData["Error"] = "Budget aangemaakt, maar de kopie mislukte: " + kopie.Messages.FirstOrDefault()?.Message;
             }
 
             return RedirectToAction(nameof(BudgetGegevens), new { versieId = response.InsertedId });
@@ -192,9 +203,8 @@ namespace CPMCore.Controllers
             if (versieEntity == null)
                 return NotFound();
 
-            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
-            if (!projectResponse.Success)
-                return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(versieEntity.ProjectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             var gegevensResponse = _budgetService.GetBudgetGegevens(versieId);
             var gegevens = gegevensResponse.Success ? gegevensResponse.Value : new BudgetGegevensBO();
@@ -234,7 +244,7 @@ namespace CPMCore.Controllers
                 VersieId      = versieId,
                 MasterId      = versieEntity.BudgetMasterId,
                 ProjectId     = versieEntity.ProjectId,
-                ProjectName   = projectResponse.Value?.Name,
+                ProjectName   = projectNaamLite,
                 VersieLabel   = versieBO.VersieLabel,
                 VersieStatus  = versieEntity.Status,
                 MasterNaam    = versieEntity.BudgetMaster?.Naam,
@@ -254,6 +264,24 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetGegevens), "Gegevens", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2)
+            {
+                await PrepareWizardV2(versieId, 1);
+                // Peildatum + bron van de gekozen indexwaarde (39b: "peildatum 01/09/2026 · bron FOD Economie")
+                string IndexInfo(string type, decimal? waarde)
+                {
+                    if (!waarde.HasValue) return "";
+                    var rij = _uow.BouwIndex.GetNoTracking().Where(x => x.IndexType == type && x.IndexWaarde == waarde.Value)
+                        .OrderByDescending(x => x.Jaar).ThenByDescending(x => x.Maand).FirstOrDefault();
+                    if (rij == null) return "handmatig ingevuld";
+                    var peil = rij.GeldigVanaf?.ToString("dd/MM/yyyy") ?? (rij.Jaar.HasValue ? (rij.Maand.HasValue ? $"{rij.Maand:00}/{rij.Jaar}" : rij.Jaar.ToString()) : null);
+                    return string.Join(" · ", new[] { peil != null ? "peildatum " + peil : null, string.IsNullOrWhiteSpace(rij.Bron) ? null : "bron " + rij.Bron }.Where(x => x != null));
+                }
+                ViewData["SIndexInfo"] = IndexInfo("S", gegevens.SIndexHuidig);
+                ViewData["IIndexInfo"] = IndexInfo("I2021", gegevens.IIndexHuidig);
+                ViewData["PoortWaarschuwing"] = await HttpContext.RequestServices.GetRequiredService<ServiceCore.Budget.BudgetActivityFormuleService>().IsPoortWaarschuwingAsync(versieId);
+                return View("BudgetGegevensV2", model);
+            }
             return View(model);
         }
 
@@ -296,7 +324,7 @@ namespace CPMCore.Controllers
         // ── BudgetOppervlaktes ────────────────────────────────────────────────
 
         [HttpGet]
-        public IActionResult BudgetOppervlaktes(int versieId)
+        public async Task<IActionResult> BudgetOppervlaktes(int versieId)
         {
             var versieEntity = _uow.BudgetVersies.GetNoTracking()
                 .Where(v => v.Id == versieId)
@@ -305,8 +333,8 @@ namespace CPMCore.Controllers
 
             if (versieEntity == null) return NotFound();
 
-            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
-            if (!projectResponse.Success) return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(versieEntity.ProjectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             var rijResp     = _budgetService.GetBudgetOppervlaktes(versieId);
             var totaalResp  = _budgetService.GetBudgetOppervlaktesTotaal(versieId);
@@ -342,7 +370,7 @@ namespace CPMCore.Controllers
                 VersieId    = versieId,
                 MasterId    = versieEntity.BudgetMasterId,
                 ProjectId   = versieEntity.ProjectId,
-                ProjectName = projectResponse.Value?.Name,
+                ProjectName = projectNaamLite,
                 VersieLabel = versieBO.VersieLabel,
                 MasterNaam  = versieEntity.BudgetMaster?.Naam,
                 Rijen       = rijResp.Success ? rijResp.Values : new List<BudgetOppervlaktesBO>(),
@@ -361,11 +389,17 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetOppervlaktes), "Oppervlaktes", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2)
+            {
+                await PrepareWizardV2(versieId, 2);
+                ViewData["Factoren"] = _budgetService.GetVmswFactoren(versieId);
+                return View("BudgetOppervlaktesV2", model);
+            }
             return View(model);
         }
 
         [HttpPost]
-        public IActionResult BudgetOppervlaktesRijToevoegen(int versieId, string eenheidNaam, int? groupTypeId, int? typeId)
+        public IActionResult BudgetOppervlaktesRijToevoegen(int versieId, string eenheidNaam, int? groupTypeId, int? typeId, bool v2 = false)
         {
             var rij = new BudgetOppervlaktesBO
             {
@@ -392,6 +426,13 @@ namespace CPMCore.Controllers
                 return BadRequest(response.Messages.FirstOrDefault()?.Message);
 
             rij.Id = response.InsertedId;
+            if (v2)
+            {
+                rij.Factoren = _budgetService.GetVmswFactoren(versieId);
+                ViewData["GroupTypes"] = _uow.UnitGroupTypes.GetNoTracking().Where(g => g.Selectable).OrderBy(g => g.Name == "Wooneenheid" ? 0 : 1).ThenBy(g => g.Name).Select(g => new SelectListItem(g.Name, g.Id.ToString())).ToList();
+                ViewData["AllTypes"] = _uow.UnitTypes.GetNoTracking().Where(t => t.Selectable != false).Select(t => new UnitTypeBO { Id = t.Id, Name = t.Name, Shortcode = t.Shortcode, GroupId = t.GroupId }).ToList();
+                return PartialView("~/Views/Projecten/Budget/V2/_BwOppRij.cshtml", rij);
+            }
             return PartialView("Partials/_BudgetOppervlaktesRij", rij);
         }
 
@@ -508,7 +549,7 @@ namespace CPMCore.Controllers
         // ── BudgetSanitair ────────────────────────────────────────────────────
 
         [HttpGet]
-        public IActionResult BudgetSanitair(int versieId)
+        public async Task<IActionResult> BudgetSanitair(int versieId)
         {
             var versieEntity = _uow.BudgetVersies.GetNoTracking()
                 .Where(v => v.Id == versieId)
@@ -517,8 +558,8 @@ namespace CPMCore.Controllers
 
             if (versieEntity == null) return NotFound();
 
-            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
-            if (!projectResponse.Success) return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(versieEntity.ProjectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             _budgetService.SyncSanitairVanOppervlaktes(versieId);
 
@@ -542,7 +583,7 @@ namespace CPMCore.Controllers
                 VersieId    = versieId,
                 MasterId    = versieEntity.BudgetMasterId,
                 ProjectId   = versieEntity.ProjectId,
-                ProjectName = projectResponse.Value?.Name,
+                ProjectName = projectNaamLite,
                 VersieLabel = versieBO.VersieLabel,
                 MasterNaam  = versieEntity.BudgetMaster?.Naam,
                 Rijen       = rijResp.Success ? rijResp.Values : new List<BudgetSanitairBO>(),
@@ -559,6 +600,7 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetSanitair), "Sanitair", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2) { await PrepareWizardV2(versieId, 3); return View("BudgetSanitairV2", model); }
             return View(model);
         }
 
@@ -648,7 +690,7 @@ namespace CPMCore.Controllers
         private static readonly string[] GevelTypes = { "GevelNieuwbouw", "GevelBestaand", "RaamNieuwbouw", "RaamBestaand", "Ballustrade", "Zichtscherm", "Leien" };
 
         [HttpGet]
-        public IActionResult BudgetGevels(int versieId)
+        public async Task<IActionResult> BudgetGevels(int versieId)
         {
             var versieEntity = _uow.BudgetVersies.GetNoTracking()
                 .Where(v => v.Id == versieId)
@@ -657,8 +699,8 @@ namespace CPMCore.Controllers
 
             if (versieEntity == null) return NotFound();
 
-            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
-            if (!projectResponse.Success) return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(versieEntity.ProjectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             var elementenResp = _budgetService.GetBudgetGevelElementen(versieId);
             var totaalResp    = _budgetService.GetBudgetGevelTotaal(versieId);
@@ -680,7 +722,7 @@ namespace CPMCore.Controllers
                 VersieId    = versieId,
                 MasterId    = versieEntity.BudgetMasterId,
                 ProjectId   = versieEntity.ProjectId,
-                ProjectName = projectResponse.Value?.Name,
+                ProjectName = projectNaamLite,
                 VersieLabel = versieBO.VersieLabel,
                 MasterNaam  = versieEntity.BudgetMaster?.Naam,
                 Elementen   = elementen,
@@ -697,6 +739,7 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetGevels), "Gevels & ramen", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2) { await PrepareWizardV2(versieId, 4); return View("BudgetGevelsV2", model); }
             return View(model);
         }
 
@@ -705,7 +748,7 @@ namespace CPMCore.Controllers
         private static readonly string[] DakAfbraakTypes = { "PlatDak", "HellendDak", "GroenDak", "Dakoversteken", "OnderkantDoorrit", "Afbraak" };
 
         [HttpGet]
-        public IActionResult BudgetDakAfbraak(int versieId)
+        public async Task<IActionResult> BudgetDakAfbraak(int versieId)
         {
             var versieEntity = _uow.BudgetVersies.GetNoTracking()
                 .Where(v => v.Id == versieId)
@@ -714,8 +757,8 @@ namespace CPMCore.Controllers
 
             if (versieEntity == null) return NotFound();
 
-            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
-            if (!projectResponse.Success) return NotFound();
+            var projectNaamLite = _projectService.GetProjectNameById(versieEntity.ProjectId);
+            if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
 
             var elementenResp = _budgetService.GetBudgetGevelElementen(versieId);
             var totaalResp    = _budgetService.GetBudgetGevelTotaal(versieId);
@@ -740,7 +783,7 @@ namespace CPMCore.Controllers
                 VersieId      = versieId,
                 MasterId      = versieEntity.BudgetMasterId,
                 ProjectId     = versieEntity.ProjectId,
-                ProjectName   = projectResponse.Value?.Name,
+                ProjectName   = projectNaamLite,
                 VersieLabel   = versieBO.VersieLabel,
                 MasterNaam    = versieEntity.BudgetMaster?.Naam,
                 Elementen     = elementen,
@@ -758,12 +801,13 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetDakAfbraak), "Dak & afbraak", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2) { await PrepareWizardV2(versieId, 5); return View("BudgetDakAfbraakV2", model); }
             return View(model);
         }
 
         [HttpPost]
         public IActionResult BudgetGevelElementToevoegen(int versieId, string elementType,
-            string eenheidNaam, string beschrijving)
+            string eenheidNaam, string beschrijving, bool v2 = false)
         {
             var bo = new BudgetGevelElementBO
             {
@@ -780,6 +824,7 @@ namespace CPMCore.Controllers
 
             bo.Id = response.InsertedId;
             ViewBag.VersieId = versieId;
+            if (v2) return PartialView("~/Views/Projecten/Budget/V2/_BwGevelRij.cshtml", bo);
             return PartialView("Partials/_BudgetGevelRij", bo);
         }
 
@@ -895,7 +940,7 @@ namespace CPMCore.Controllers
 
             if (versie == null) return NotFound();
 
-            var projectResp = _projectService.GetProjectByID(versie.BudgetMaster.ProjectId);
+            var projectNaamLite = _projectService.GetProjectNameById(versie.BudgetMaster.ProjectId);
 
             var lotGroepen = await _budgetActivityService.GetLotGroepenAsync(versieId);
 
@@ -923,7 +968,7 @@ namespace CPMCore.Controllers
             {
                 BudgetVersieId       = versieId,
                 ProjectId            = versie.BudgetMaster.ProjectId,
-                ProjectName          = projectResp.Success ? projectResp.Value?.Name : string.Empty,
+                ProjectName          = projectNaamLite,
                 BudgetNaam           = versie.BudgetMaster.Naam,
                 Versienummer         = versie.Versienummer,
                 VersieLabel          = string.IsNullOrWhiteSpace(versie.VersieNaam)
@@ -944,6 +989,7 @@ namespace CPMCore.Controllers
             ViewData["Referrer"] = Request.Headers["Referer"].ToString();
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetActivityLijnen), "Activiteiten", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2) { await PrepareWizardV2(versieId, 6); return View("BudgetActivityLijnenV2", model); }
             return View(model);
         }
 
@@ -1032,6 +1078,12 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetParams), "Parameters", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2)
+            {
+                await PrepareWizardV2(versieId, 7);
+                ViewData["DecennaleBevestigd"] = (versie.WaarschuwingenBevestigd ?? "").Split(',').Contains("decennale");
+                return View("BudgetParamsV2", model);
+            }
             return View(model);
         }
 
@@ -1131,10 +1183,10 @@ namespace CPMCore.Controllers
             ViewData["UnitOptions"] = unitOptions;
 
             var refBouw = await _db.BudgetPrijsReferentie
-                .Where(p => p.PrijsType == "Bouw" && (p.ProjectId == null || p.ProjectId == versie.ProjectId))
+                .Where(p => p.PrijsType == "Bouw" && !p.Gearchiveerd && (p.ProjectId == null || p.ProjectId == versie.ProjectId))
                 .OrderBy(p => p.Code).ThenBy(p => p.ProjectId.HasValue).ToListAsync();
             var refGrond = await _db.BudgetPrijsReferentie
-                .Where(p => p.PrijsType == "Grond" && (p.ProjectId == null || p.ProjectId == versie.ProjectId))
+                .Where(p => p.PrijsType == "Grond" && !p.Gearchiveerd && (p.ProjectId == null || p.ProjectId == versie.ProjectId))
                 .OrderBy(p => p.Code).ThenBy(p => p.ProjectId.HasValue).ToListAsync();
             ViewData["RefBouw"]  = refBouw;
             ViewData["RefGrond"] = refGrond;
@@ -1160,6 +1212,14 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetVerkoop), "Verkoop", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2)
+            {
+                // Waarschuwing stap 8 (vraagprijs onder minimum) kent enkel deze pagina
+                var minima = (voorstel?.Eenheden ?? new List<BOCore.Budget.BudgetVerkoopVoorstelEenheidBO>()).ToDictionary(e => (e.EenheidNaam ?? "").Trim(), e => Math.Round(e.MinimumVerkoopprijs, 0), StringComparer.OrdinalIgnoreCase);
+                var onder = lijnen.Count(l => l.Vraagprijs is > 0m && minima.TryGetValue((l.EenheidNaam ?? "").Trim(), out var mn) && l.Vraagprijs < mn);
+                await PrepareWizardV2(versieId, 8, new Dictionary<int, (int, int)> { [8] = (0, onder) });
+                return View("BudgetVerkoopV2", model);
+            }
             return View(model);
         }
 
@@ -1230,9 +1290,9 @@ namespace CPMCore.Controllers
                 .Where(v => v.Id == versieId).Select(v => (int?)v.ProjectId).FirstOrDefault();
             ViewData["UnitOptions"] = projectId.HasValue ? BuildVerkoopUnitOptions(projectId.Value) : new List<SelectListItem>();
             ViewData["RefBouw"]  = _db.BudgetPrijsReferentie.AsNoTracking()
-                .Where(p => p.PrijsType == "Bouw" && (p.ProjectId == null || p.ProjectId == projectId)).OrderBy(p => p.Code).ToList();
+                .Where(p => p.PrijsType == "Bouw" && !p.Gearchiveerd && (p.ProjectId == null || p.ProjectId == projectId)).OrderBy(p => p.Code).ToList();
             ViewData["RefGrond"] = _db.BudgetPrijsReferentie.AsNoTracking()
-                .Where(p => p.PrijsType == "Grond" && (p.ProjectId == null || p.ProjectId == projectId)).OrderBy(p => p.Code).ToList();
+                .Where(p => p.PrijsType == "Grond" && !p.Gearchiveerd && (p.ProjectId == null || p.ProjectId == projectId)).OrderBy(p => p.Code).ToList();
 
             var lijn = new BudgetVerkoopLijn
             {
@@ -1361,6 +1421,14 @@ namespace CPMCore.Controllers
             };
 
             SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetResultaat), "Resultaat", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
+            if (GebruikGlV2)
+            {
+                var vkLijnen = _uow.BudgetVerkoopLijn.GetNoTracking().Where(l => l.BudgetVersieId == versieId).ToList();
+                var minima = (voorstel?.Eenheden ?? new List<BOCore.Budget.BudgetVerkoopVoorstelEenheidBO>()).ToDictionary(e => (e.EenheidNaam ?? "").Trim(), e => Math.Round(e.MinimumVerkoopprijs, 0), StringComparer.OrdinalIgnoreCase);
+                var onder = vkLijnen.Count(l => l.Vraagprijs is > 0m && minima.TryGetValue((l.EenheidNaam ?? "").Trim(), out var mn) && l.Vraagprijs < mn);
+                await PrepareWizardV2(versieId, 9, new Dictionary<int, (int, int)> { [8] = (0, onder) });
+                return View("BudgetResultaatV2", model);
+            }
             return View(model);
         }
 

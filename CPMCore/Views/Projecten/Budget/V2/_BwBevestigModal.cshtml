@@ -1,0 +1,22 @@
+@*
+    Budgetflow: herbruikbare TYPE 1 "Bevestiging" (DESIGN.md 4j, .gl-v2-modal-confirm) die door GlV2Budget.bevestig({...}) wordt gevuld;
+    vervangt elk kaal browser-confirm() in de wizard. Eén keer per pagina (via _BwStappen). Formulieren kunnen ook
+    data-bw-bevestig="titel" data-bw-desc="..." data-bw-ok="Label" data-bw-tone="danger|warning|success" data-bw-icon="ph-trash" dragen.
+*@
+<div class="modal fade gl-v2-modal-confirm" id="bw-bevestig" tabindex="-1" aria-hidden="true" aria-labelledby="bw-bevestig-titel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="bw-bevestig-titel"></h2>
+                    <p class="gl-v2-modal-desc"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal" data-bw-keep>Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" data-bw-ok data-bw-keep>Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>

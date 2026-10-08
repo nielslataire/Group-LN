@@ -53,6 +53,7 @@ public class ConstructionIssueService : IConstructionIssueService
             throw new InvalidOperationException($"ConstructionIssue translation failed: {createTranslate}");
         entity.LastUpdatedByUserId = userId;
         entity.LastUpdatedDate = DateTime.UtcNow;
+        entity.PuntNr = (await _db.ConstructionIssue.Where(x => x.ProjectId == projectId).MaxAsync(x => x.PuntNr) ?? 0) + 1;
         _db.ConstructionIssue.Add(entity);
         await _db.SaveChangesAsync();
         await AddHistory(entity.Id, (int)ConstructionIssueHistoryAction.Created, userId, null, JsonSerializer.Serialize(BuildIssueHistorySnapshot(entity)), "Punt aangemaakt");
@@ -85,8 +86,52 @@ public class ConstructionIssueService : IConstructionIssueService
         if (newStatus == (int)ConstructionIssueStatus.Resolved) entity.ResolvedDate = DateTime.UtcNow;
         if (newStatus == (int)ConstructionIssueStatus.Closed) entity.ClosedDate = DateTime.UtcNow;
         if (newStatus == (int)ConstructionIssueStatus.InProgress) entity.PlannedDate = plannedDate;
+        if (old == (int)ConstructionIssueStatus.OnHold && newStatus != (int)ConstructionIssueStatus.OnHold) ResumeDeadline(entity);
         await _db.SaveChangesAsync();
         await AddHistory(id, (int)ConstructionIssueHistoryAction.StatusChanged, userId, old.ToString(), newStatus.ToString(), optionalComment);
+        return true;
+    }
+
+    // ── In de wacht (design-handoff 40o): de deadline loopt niet door zolang het punt wacht ──────────────
+    private static void ResumeDeadline(ConstructionIssue entity)
+    {
+        if (entity.OnHoldSince.HasValue && entity.DueDate.HasValue)
+        {
+            var days = (int)Math.Max(0, (DateTime.UtcNow.Date - entity.OnHoldSince.Value.Date).TotalDays);
+            entity.DueDate = entity.DueDate.Value.AddDays(days);
+        }
+        entity.OnHoldSince = null;
+        entity.OnHoldReason = null;
+        entity.FollowUpDate = null;
+    }
+
+    public async Task<bool> PutOnHold(int projectId, int id, string? reason, DateOnly? followUp, string? userId)
+    {
+        var entity = await _db.ConstructionIssue.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == id);
+        if (entity == null) return false;
+        var old = entity.Status;
+        if (old != (int)ConstructionIssueStatus.OnHold) entity.OnHoldSince = DateTime.UtcNow;
+        entity.Status = (int)ConstructionIssueStatus.OnHold;
+        entity.OnHoldReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        entity.FollowUpDate = followUp;
+        entity.LastUpdatedByUserId = userId;
+        entity.LastUpdatedDate = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await AddHistory(id, (int)ConstructionIssueHistoryAction.StatusChanged, userId, old.ToString(), entity.Status.ToString(),
+            (entity.OnHoldReason ?? "") + (followUp.HasValue ? " · opvolgen " + followUp.Value.ToString("dd/MM") : ""));
+        return true;
+    }
+
+    public async Task<bool> AddMessage(int projectId, int id, string text, bool isInternal, string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        if (!await _db.ConstructionIssue.AnyAsync(x => x.ProjectId == projectId && x.Id == id)) return false;
+        _db.ConstructionIssueHistory.Add(new ConstructionIssueHistory
+        {
+            IssueId = id, Action = (int)ConstructionIssueHistoryAction.CommentAdded, UserId = userId, Timestamp = DateTime.UtcNow,
+            Comment = text.Trim(), IsInternal = isInternal
+        });
+        await _db.SaveChangesAsync();
         return true;
     }
 

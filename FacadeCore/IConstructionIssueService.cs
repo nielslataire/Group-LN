@@ -10,6 +10,10 @@ public interface IConstructionIssueService
     Task<ConstructionIssue> Create(int projectId, ConstructionIssueUpsertBO dto, string? userId);
     Task<ConstructionIssue?> Update(int projectId, int id, ConstructionIssueUpsertBO dto, string? userId);
     Task<bool> ChangeStatus(int projectId, int id, int newStatus, string? optionalComment, string? userId, DateOnly? plannedDate = null);
+    /// <summary>Zet het punt "In de wacht": de deadline pauzeert, optioneel met reden en opvolgdatum.</summary>
+    Task<bool> PutOnHold(int projectId, int id, string? reason, DateOnly? followUp, string? userId);
+    /// <summary>Bericht in de historiek (intern of zichtbaar voor de aannemer).</summary>
+    Task<bool> AddMessage(int projectId, int id, string text, bool isInternal, string? userId);
     Task<bool> AssignResponsible(int projectId, int id, int responsiblePartyType, int? responsiblePartyId, string? otherName, string? otherEmail, string? userId);
     Task AddHistory(int issueId, int action, string? userId, string? oldValueJson, string? newValueJson, string? comment);
     Task<int> BulkUpdate(int projectId, ConstructionIssueBulkUpdateBO dto, string? userId);

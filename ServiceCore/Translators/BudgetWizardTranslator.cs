@@ -48,6 +48,11 @@ namespace ServiceCore.Translators
             bo.Notitie          = entity.Notitie;
             bo.CreatedAt        = entity.CreatedAt;
             bo.CreatedByUserId  = entity.CreatedByUserId;
+            bo.GewijzigdOp      = entity.GewijzigdOp;
+            bo.VastgezetOp      = entity.VastgezetOp;
+            bo.VastgezetDoor    = entity.VastgezetDoor;
+            bo.LaatsteStap      = entity.LaatsteStap;
+            bo.WaarschuwingenBevestigd = entity.WaarschuwingenBevestigd;
 
             return bo;
         }

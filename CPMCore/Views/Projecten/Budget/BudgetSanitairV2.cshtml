@@ -1,0 +1,148 @@
+@model CPMCore.Models.Projecten.BudgetSanitairModel
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Budget
+@*
+    gl-v2 — Budgetflow stap 3 · Sanitair (design-handoff 39d): de eenheden komen uit stap 2 (SyncSanitairVanOppervlaktes, enkel eenheden met
+    bewoonbare oppervlakte — garages zonder sanitair verschijnen niet), dus geen toevoegen/verwijderen hier. Vijf tellers per eenheid, totaal
+    per rij en per kolom, KPI-tegels, "Eerste rij naar alle rijen". Autosave per rij via BudgetSanitairRijOpslaan (zelfde actie als de klassieke pagina).
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-bathtub";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var t = Model.Totaal;
+    var kolommen = new (string Field, string Label, string Kpi, int Tot)[]
+    {
+        ("badkamer", "Badkamer", "totaalBadkamers", t.TotaalBadkamers),
+        ("toiletInBadkamer", "Toilet in BK", "totaalToilettenInBadkamer", t.TotaalToilettenInBadkamer),
+        ("afzonderlijkToilet", "Afz. toilet", "totaalAfzonderlijkeToiletten", t.TotaalAfzonderlijkeToiletten),
+        ("doucheInBadkamer", "Douche in BK", "totaalDouchesInBadkamer", t.TotaalDouchesInBadkamer),
+        ("douchekamer", "Douchekamer", "totaalDouchekamers", t.TotaalDouchekamers),
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+@section PageActions
+{
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwTopbar.cshtml", ch)
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-san" data-versie="@Model.VersieId" data-url-save="@Url.Action("BudgetSanitairRijOpslaan", "Projecten")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        <div class="gl-v2-bw-tiles">
+            @foreach (var k in kolommen)
+            {
+                <div class="gl-v2-bw-tile"><span class="lbl">@(k.Label == "Badkamer" ? "Badkamers" : k.Label == "Douchekamer" ? "Douchekamers" : k.Label == "Afz. toilet" ? "Afz. toiletten" : k.Label == "Toilet in BK" ? "Toiletten in BK" : "Douches in BK")</span><span class="val" data-kpi="@k.Kpi">@k.Tot</span></div>
+            }
+        </div>
+
+        <div class="gl-v2-notice gl-v2-notice-compact is-info">
+            <i class="ph ph-info" aria-hidden="true"></i>
+            <span>Eenheden synchroniseren automatisch met stap 2 — Oppervlaktes. <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })" data-bw-nav="back" style="color:var(--gl-v2-primary);font-weight:600">Eenheden aanpassen</a></span>
+        </div>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-bathtub" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Sanitair per eenheid</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@Model.Rijen.Count woning@(Model.Rijen.Count == 1 ? "" : "en")</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-san-copy" data-bw-edit title="Zet de waarden van de eerste rij in alle andere rijen" @(Model.Rijen.Count < 2 ? "disabled" : "")><i class="ph ph-rows" aria-hidden="true"></i>Eerste rij naar alle rijen</button>
+                </span>
+            </div>
+            <div class="gl-v2-bw-table-wrap">
+                <table class="gl-v2-bw-table" id="bw-san-tabel">
+                    <thead>
+                        <tr>
+                            <th class="is-num">#</th><th>Eenheid</th>
+                            @foreach (var k in kolommen) { <th class="is-num is-center">@k.Label</th> }
+                            <th class="is-num is-center">Totaal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bw-san-body">
+                        @foreach (var rij in Model.Rijen)
+                        {
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwSanitairRij.cshtml", rij)
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td></td><td>Totaal</td>
+                            @foreach (var k in kolommen) { <td class="is-num is-center" data-tot="@k.Field">@k.Tot</td> }
+                            <td class="is-num is-center" id="bw-san-tot">@(t.TotaalBadkamers + t.TotaalToilettenInBadkamer + t.TotaalAfzonderlijkeToiletten + t.TotaalDouchesInBadkamer + t.TotaalDouchekamers)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @if (Model.Rijen.Count == 0)
+            {
+                <div class="gl-v2-bw-empty"><span class="t">Nog geen eenheden met bewoonbare oppervlakte</span><span class="s">Vul eerst op stap 2 per eenheid de bewoonbare oppervlakte in; de rijen verschijnen hier vanzelf.</span></div>
+            }
+        </section>
+    </div>
+
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwActiebalk.cshtml", ch)
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var root = document.getElementById('bw-san'), body = document.getElementById('bw-san-body'), versieId = parseInt(root.getAttribute('data-versie')), locked = root.classList.contains('is-locked');
+    var velden = ['badkamer', 'toiletInBadkamer', 'afzonderlijkToilet', 'doucheInBadkamer', 'douchekamer'], timers = {};
+    function val(inp) { var n = parseInt(String(inp.value).replace(/\D/g, ''), 10); return isNaN(n) ? 0 : Math.min(n, 99); }
+    function data(tr) {
+        var d = { rijId: parseInt(tr.getAttribute('data-rij-id')), versieId: versieId, eenheidNaam: tr.getAttribute('data-eenheid-naam'), unitTypeId: parseInt(tr.getAttribute('data-unit-type-id')) || null };
+        tr.querySelectorAll('.san-input').forEach(function (inp) { d[inp.getAttribute('data-field')] = val(inp); });
+        return d;
+    }
+    function totalen() {
+        var tot = {}, alles = 0; velden.forEach(function (f) { tot[f] = 0; });
+        body.querySelectorAll('tr').forEach(function (tr, i) {
+            tr.querySelector('.bw-rijnr').textContent = i + 1; var rij = 0;
+            tr.querySelectorAll('.san-input').forEach(function (inp) { var v = val(inp); tot[inp.getAttribute('data-field')] += v; rij += v; });
+            tr.querySelector('.san-totaal').textContent = rij; alles += rij;
+        });
+        velden.forEach(function (f) { root.querySelector('[data-tot="' + f + '"]').textContent = tot[f]; });
+        document.getElementById('bw-san-tot').textContent = alles;
+        var map = { badkamer: 'totaalBadkamers', toiletInBadkamer: 'totaalToilettenInBadkamer', afzonderlijkToilet: 'totaalAfzonderlijkeToiletten', doucheInBadkamer: 'totaalDouchesInBadkamer', douchekamer: 'totaalDouchekamers' };
+        velden.forEach(function (f) { var el = root.querySelector('[data-kpi="' + map[f] + '"]'); if (el) el.textContent = tot[f]; });
+    }
+    async function bewaar(tr) {
+        tr.classList.add('is-saving'); GlV2Budget.setStatus('saving');
+        try { var r = await GlV2Budget.post(root.getAttribute('data-url-save'), data(tr), true); tr.classList.remove('is-saving'); if (!r.success) { tr.classList.add('is-error'); GlV2Budget.setStatus('error', r.error || 'Opslaan mislukt'); return; } tr.classList.remove('is-error'); GlV2Budget.saved(); }
+        catch (e) { tr.classList.remove('is-saving'); tr.classList.add('is-error'); GlV2Budget.setStatus('error'); }
+    }
+    function plan(tr) { if (locked) return; totalen(); GlV2Budget.markDirty(); var id = tr.getAttribute('data-rij-id'); clearTimeout(timers[id]); timers[id] = setTimeout(function () { bewaar(tr); }, 500); }
+    GlV2Budget.register({ save: async function () { var rows = body.querySelectorAll('tr.is-error, tr.is-saving'); for (var i = 0; i < rows.length; i++) await bewaar(rows[i]); return true; }, dirty: function () { return false; } });
+    body.addEventListener('input', function (e) { var tr = e.target.closest('tr'); if (tr && e.target.classList.contains('san-input')) plan(tr); });
+    document.getElementById('bw-san-copy').addEventListener('click', async function () {
+        var rows = body.querySelectorAll('tr'); if (rows.length < 2) return;
+        if (!await GlV2Budget.bevestig({ title: 'Eerste rij naar alle rijen kopiëren?', desc: 'De bestaande waarden van de andere ' + (rows.length - 1) + ' rijen worden overschreven door die van ' + (rows[0].getAttribute('data-eenheid-naam') || 'de eerste rij') + '.', ok: 'Overschrijven', tone: 'warning', icon: 'ph-rows' })) return;
+        var eerste = data(rows[0]);
+        rows.forEach(function (tr, i) { if (i === 0) return; tr.querySelectorAll('.san-input').forEach(function (inp) { inp.value = eerste[inp.getAttribute('data-field')]; }); plan(tr); });
+        GlV2Budget.toast('success', 'Sanitair', 'De waarden van ' + eerste.eenheidNaam + ' staan nu in alle ' + (rows.length - 1) + ' andere rijen.');
+    });
+    totalen();
+})();
+</script>
+}

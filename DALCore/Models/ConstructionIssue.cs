@@ -69,6 +69,16 @@ public partial class ConstructionIssue
 
     public DateOnly? PlannedDate { get; set; }
 
+    /// <summary>P-0xx: volgnummer binnen het project.</summary>
+    public int? PuntNr { get; set; }
+
+    /// <summary>Sinds wanneer het punt "In de wacht" staat; de deadline loopt dan niet door.</summary>
+    public DateTime? OnHoldSince { get; set; }
+
+    public string OnHoldReason { get; set; }
+
+    public DateOnly? FollowUpDate { get; set; }
+
     public virtual ConstructionIssueCategory Category { get; set; }
 
     public virtual ICollection<ConstructionIssueHistory> ConstructionIssueHistory { get; set; } = new List<ConstructionIssueHistory>();

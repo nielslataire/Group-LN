@@ -57,7 +57,7 @@ public class ContractorPortalController : BaseController
             .OrderByDescending(i => i.CreatedDate)
             .ToListAsync(ct);
 
-        var openStatuses = new[] { (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Reopened };
+        var openStatuses = new[] { (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Reopened, (int)ConstructionIssueStatus.Forwarded, (int)ConstructionIssueStatus.Rejected, (int)ConstructionIssueStatus.OnHold };
         var openIssues = issues.Where(i => openStatuses.Contains(i.Status)).ToList();
 
         // Progress: average of project voortgang for contractor's projects
@@ -76,7 +76,7 @@ public class ContractorPortalController : BaseController
             .Include(p => p.PostalCode)
             .ToListAsync(ct);
 
-        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Rejected };
+        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Reported, (int)ConstructionIssueStatus.Closed };
 
         var activeProjects = projects
             .Where(p => p.StatusId != (int)ProjectStatusType.Opgeleverd)
@@ -118,7 +118,7 @@ public class ContractorPortalController : BaseController
             CompanyName              = companyName,
             TotalOpen                = issues.Count(i => openStatuses.Contains(i.Status)),
             TotalOverdue             = openIssues.Count(i => i.DueDate.HasValue && i.DueDate.Value < today),
-            TotalWaitingInspection   = issues.Count(i => i.Status == (int)ConstructionIssueStatus.WaitingInspection),
+            TotalWaitingInspection   = issues.Count(i => (i.Status == (int)ConstructionIssueStatus.WaitingInspection || i.Status == (int)ConstructionIssueStatus.Reported)),
             TotalThisWeek            = openIssues.Count(i => i.DueDate.HasValue && i.DueDate.Value >= today && i.DueDate.Value <= weekEnd),
             OverallProgressPct       = (decimal)Math.Round(avgProgress, 1),
             ActiveProjects           = activeProjects,
@@ -161,8 +161,8 @@ public class ContractorPortalController : BaseController
             .Where(v => projectIds.Contains(v.ProjectId))
             .ToListAsync(ct);
 
-        var openStatuses = new[] { (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Reopened };
-        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Rejected };
+        var openStatuses = new[] { (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Reopened, (int)ConstructionIssueStatus.Forwarded, (int)ConstructionIssueStatus.Rejected, (int)ConstructionIssueStatus.OnHold };
+        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Reported, (int)ConstructionIssueStatus.Closed };
 
         var cards = projects.Select(p =>
         {
@@ -239,8 +239,8 @@ public class ContractorPortalController : BaseController
             .ToListAsync(ct);
 
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var openStatuses = new[] { (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Reopened };
-        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Rejected };
+        var openStatuses = new[] { (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Reopened, (int)ConstructionIssueStatus.Forwarded, (int)ConstructionIssueStatus.Rejected, (int)ConstructionIssueStatus.OnHold };
+        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Reported, (int)ConstructionIssueStatus.Closed };
 
         var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
 
@@ -263,7 +263,7 @@ public class ContractorPortalController : BaseController
         var historyComments = issueIds.Any()
             ? await _db.ConstructionIssueHistory
                 .AsNoTracking()
-                .Where(h => issueIds.Contains(h.IssueId) && h.Action == (int)ConstructionIssueHistoryAction.CommentAdded)
+                .Where(h => issueIds.Contains(h.IssueId) && h.Action == (int)ConstructionIssueHistoryAction.CommentAdded && !h.IsInternal)
                 .OrderBy(h => h.Timestamp)
                 .ToListAsync(ct)
             : new List<ConstructionIssueHistory>();
@@ -382,7 +382,7 @@ public class ContractorPortalController : BaseController
             ProgressPct            = vg?.FysiekeVoortgangPct ?? 0m,
             OpenCount              = allIssues.Count(i => openStatuses.Contains(i.Status)),
             InProgressCount        = allIssues.Count(i => i.Status == (int)ConstructionIssueStatus.InProgress),
-            WaitingInspectionCount = allIssues.Count(i => i.Status == (int)ConstructionIssueStatus.WaitingInspection),
+            WaitingInspectionCount = allIssues.Count(i => (i.Status == (int)ConstructionIssueStatus.WaitingInspection || i.Status == (int)ConstructionIssueStatus.Reported)),
             ResolvedCount          = allIssues.Count(i => doneStatuses.Contains(i.Status)),
             IssueGroups            = groups,
             StorageBaseUrl         = baseUrl
@@ -407,7 +407,7 @@ public class ContractorPortalController : BaseController
 
         var userId = User.GetCpmUserCode();
         var ok = await _issueService.ChangeStatus(projectId, issueId,
-            (int)ConstructionIssueStatus.WaitingInspection, null, userId);
+            (int)ConstructionIssueStatus.Reported, null, userId);
 
         return Json(new { ok });
     }

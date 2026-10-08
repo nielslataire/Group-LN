@@ -1,0 +1,258 @@
+@model CPMCore.Models.Issues.PuntDetailV2Vm
+@*
+    gl-v2 — Punt, detail (design-handoff 40o): foto's en beschrijving, historiek met berichten (intern of naar de aannemer),
+    details, aannemer en plan; "In de wacht" met reden en opvolgdatum (de deadline loopt dan niet door).
+    Eigen klassen-namespace gl-v2-pd-* (gl-v2-projecten-punt-detail.css/.js). Het legacy Details.cshtml blijft bestaan (?classic=true).
+    Nog niet in deze fase: Bewerken-paneel (40c), plan met pin (40b), spraakbericht (41).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = Model.NrLabel;
+    ViewData["PageIcon"] = "ph ph-warning-circle";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Index", "ProjectsIssues", new { projectId = Model.ProjectId });
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var onHold = Model.Status == (int)BOCore.ConstructionIssueStatus.OnHold;
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · punten" };
+    string Ago(DateTime t) => t.ToString("dd/MM · HH:mm", be);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-punt-detail.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @Model.StatusTone">@Model.StatusLabel</span>
+    @if (Model.Priority == 3) { <span class="gl-v2-badge is-blocked">KRITIEK</span> }
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        @if (onHold)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary js-pd-status" data-status="10"><i class="ph ph-play" aria-hidden="true"></i><span>Hervatten</span></button>
+        }
+        @if (Model.NextStatuses.Count > 0)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="pd-status-menu"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i><span>Status</span><i class="ph ph-caret-down" aria-hidden="true"></i></button>
+        }
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite && onHold)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pd-status" data-status="10"><i class="ph ph-play" aria-hidden="true"></i>Hervatten</button>
+    }
+    <a class="gl-v2-mobile-quickaction" href="@ViewData["BackUrl"]"><i class="ph ph-list" aria-hidden="true"></i>Alle punten</a>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (Model.CanWrite && Model.NextStatuses.Count > 0)
+{
+    <div class="gl-v2-menu" id="pd-status-menu">
+        <div class="gl-v2-menu-title">STATUS WIJZIGEN NAAR</div>
+        @foreach (var s in Model.NextStatuses)
+        {
+            var danger = s.Status == (int)BOCore.ConstructionIssueStatus.Rejected;
+            <button type="button" class="gl-v2-menu-item @(danger ? "is-danger" : "") js-pd-status" data-status="@s.Status">
+                <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">@s.Label</span></span>
+            </button>
+        }
+    </div>
+}
+
+<div class="gl-v2-pd-head">
+    <h1 class="gl-v2-pd-title">@Model.Title</h1>
+    <p class="gl-v2-pd-sub">@Model.Subtitle</p>
+</div>
+
+<div class="gl-v2-pd-grid" id="gl-v2-pd-root" data-project-id="@Model.ProjectId" data-issue-id="@Model.Id">
+    <div class="gl-v2-pd-main">
+        @if (onHold)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning gl-v2-pd-notice">
+                <i class="ph ph-pause-circle" aria-hidden="true"></i>
+                <div class="gl-v2-pd-notice-text">
+                    <b>In de wacht@(Model.OnHoldSince.HasValue ? " sinds " + Model.OnHoldSince.Value.ToString("dd/MM", be) : "")@(string.IsNullOrWhiteSpace(Model.OnHoldReason) ? "" : " — " + Model.OnHoldReason)</b>
+                    <span>@(Model.FollowUpDate.HasValue ? "Opvolgen op " + Model.FollowUpDate.Value.ToString("dd/MM", be) + " (herinnering). " : "")De deadline telt niet door zolang het punt in de wacht staat; de aannemer ziet "in de wacht" in zijn portaal.</span>
+                </div>
+                @if (Model.CanWrite)
+                {
+                    <div class="gl-v2-pd-notice-actions">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-pd-hold">Reden wijzigen</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-pd-status" data-status="10">Hervatten</button>
+                    </div>
+                }
+            </div>
+        }
+
+        <section class="gl-v2-card gl-v2-pd-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Foto's &amp; beschrijving</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-card-header-count">@Model.Photos.Count foto's</span>
+            </div>
+            <div class="gl-v2-card-body">
+                @if (Model.Photos.Count > 0)
+                {
+                    <div class="gl-v2-pd-photos">
+                        @foreach (var p in Model.Photos)
+                        {
+                            <a class="gl-v2-pd-photo" href="@p.Url" target="_blank" rel="noopener"><img src="@p.Url" alt="Foto bij @Model.NrLabel" loading="lazy" /></a>
+                        }
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="gl-v2-pd-desc">@Model.Description</p>
+                }
+                else if (Model.Photos.Count == 0)
+                {
+                    <p class="gl-v2-pd-empty">Nog geen foto's of beschrijving.</p>
+                }
+            </div>
+        </section>
+
+        <section class="gl-v2-card gl-v2-pd-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-chats-circle" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-card-header-title">Historiek &amp; communicatie</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-card-header-count">met aannemer en intern</span>
+            </div>
+            <div class="gl-v2-card-body">
+                <ol class="gl-v2-pd-history">
+                    @foreach (var h in Model.History)
+                    {
+                        <li class="gl-v2-pd-item is-@h.Kind @(h.IsInternal ? "is-internal" : "")">
+                            <span class="gl-v2-pd-avatar @(h.FromContractor ? "is-contractor" : "")" aria-hidden="true">@h.Initials</span>
+                            <div class="gl-v2-pd-item-body">
+                                <div class="gl-v2-pd-item-head"><b>@h.Author</b><span>@Ago(h.Timestamp)</span>@if (h.IsInternal) { <span class="gl-v2-pd-internal">intern</span> }</div>
+                                <div class="gl-v2-pd-item-text">
+                                    @if (h.Kind == "status" && h.StatusLabel != null)
+                                    {
+                                        <text>Status gewijzigd naar </text><span class="gl-v2-badge @h.StatusTone">@h.StatusLabel</span>@if (!string.IsNullOrWhiteSpace(h.Text)) { <text> — @h.Text</text> }
+                                    }
+                                    else { @h.Text }
+                                </div>
+                            </div>
+                        </li>
+                    }
+                    @if (Model.History.Count == 0) { <li class="gl-v2-pd-empty">Nog geen historiek.</li> }
+                </ol>
+                @if (Model.CanWrite)
+                {
+                    <form method="post" action="@Url.Action("MessageV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = Model.Id })" class="gl-v2-pd-composer" id="pd-composer">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="internalOnly" id="pd-internal" value="true" />
+                        <div class="gl-v2-field gl-v2-field-full"><div class="gl-v2-field-box gl-v2-pd-textarea"><textarea class="gl-v2-field-input" name="text" id="pd-text" rows="2" placeholder="Schrijf een bericht…" aria-label="Bericht"></textarea></div></div>
+                        <div class="gl-v2-pd-composer-row">
+                            <div class="gl-v2-segment gl-v2-pd-seg" role="group" aria-label="Zichtbaarheid">
+                                <button type="button" class="gl-v2-pd-seg-btn is-active" data-internal="true">Intern</button>
+                                <button type="button" class="gl-v2-pd-seg-btn" data-internal="false">Naar aannemer</button>
+                            </div>
+                            <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Versturen</button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </section>
+    </div>
+
+    <aside class="gl-v2-pd-side">
+        <section class="gl-v2-card gl-v2-pd-card">
+            <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Details</h2></div>
+            <dl class="gl-v2-pd-dl">
+                <div><dt>Eenheid</dt><dd>@Model.UnitName</dd></div>
+                <div><dt>Kamer / zone</dt><dd>@(string.IsNullOrWhiteSpace(Model.Zone) ? "—" : Model.Zone)</dd></div>
+                <div><dt>Fase</dt><dd>@Model.PhaseLabel</dd></div>
+                <div><dt>Categorie</dt><dd>@(string.IsNullOrWhiteSpace(Model.CategoryName) ? "—" : Model.CategoryName)</dd></div>
+                <div><dt>Type</dt><dd>@Model.TypeLabel</dd></div>
+                <div><dt>Prioriteit</dt><dd>@Model.PriorityLabel</dd></div>
+                <div><dt>Deadline</dt><dd>@(Model.DueDate.HasValue ? Model.DueDate.Value.ToString("dd/MM/yyyy", be) : "—")@if (Model.DuePaused) { <span class="gl-v2-pd-paused"> · gepauzeerd</span> }</dd></div>
+                <div><dt>Verstuurd</dt><dd>@(Model.Reminders == 0 ? "nog niet" : Model.Reminders + " ×")</dd></div>
+            </dl>
+        </section>
+
+        <section class="gl-v2-card gl-v2-pd-card">
+            <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-hard-hat" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Aannemer</h2></div>
+            <div class="gl-v2-card-body gl-v2-pd-contractor">
+                @if (string.IsNullOrWhiteSpace(Model.ContractorName))
+                {
+                    <p class="gl-v2-pd-empty">Nog geen aannemer gekozen.</p>
+                }
+                else
+                {
+                    <b>@Model.ContractorName</b>
+                    @if (!string.IsNullOrWhiteSpace(Model.ContractorContact)) { <span>@Model.ContractorContact</span> }
+                    @if (!string.IsNullOrWhiteSpace(Model.ContractorEmail)) { <a href="mailto:@Model.ContractorEmail">@Model.ContractorEmail</a> }
+                    @if (!string.IsNullOrWhiteSpace(Model.ContractorPhone)) { <a href="tel:@Model.ContractorPhone">@Model.ContractorPhone</a> }
+                }
+            </div>
+        </section>
+
+        @if (Model.HasPlan)
+        {
+            <section class="gl-v2-card gl-v2-pd-card">
+                <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Op plan</h2></div>
+                <div class="gl-v2-card-body"><p class="gl-v2-pd-empty">Dit punt is op een plan aangeduid.</p></div>
+            </section>
+        }
+    </aside>
+</div>
+
+@if (Model.CanWrite)
+{
+    @* Statuswissel (formulier buiten de modals zodat er geen geneste forms ontstaan) *@
+    <form method="post" id="pd-status-form" action="@Url.Action("ChangeStatus", "ProjectsIssues", new { projectId = Model.ProjectId })" hidden>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" /><input type="hidden" name="newStatus" id="pd-status-value" /><input type="hidden" name="comment" id="pd-status-comment" />
+    </form>
+
+    <div class="modal fade gl-v2-modal-form" id="pd-hold-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pd-hold-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" action="@Url.Action("HoldV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = Model.Id })">
+                @Html.AntiForgeryToken()
+                <div class="modal-header"><h2 class="modal-title" id="pd-hold-title">Punt in de wacht zetten</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pd-hold-reason">Reden</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pd-hold-reason" name="reason" maxlength="300" value="@Model.OnHoldReason" placeholder="bv. wacht op levering vervangplanchetten" autocomplete="off" /></div></div>
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "followUp", Id = "pd-hold-follow", Label = "Opvolgen op (herinnering)", IsoValue = Model.FollowUpDate?.ToString("yyyy-MM-dd") ?? "", DisplayValue = Model.FollowUpDate?.ToString("dd/MM/yyyy") ?? "" })
+                    <p class="gl-v2-field-help">De deadline telt niet door zolang het punt in de wacht staat.</p>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-warning">In de wacht zetten</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade gl-v2-modal-form" id="pd-reject-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pd-reject-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="pd-reject-title">Punt afwijzen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pd-reject-reason">Reden voor de aannemer</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pd-reject-reason" maxlength="300" placeholder="Wat is er nog niet in orde?" autocomplete="off" /></div></div>
+                    <p class="gl-v2-field-help">Het punt gaat terug naar de aannemer met deze reden.</p>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-danger" id="pd-reject-confirm">Afwijzen</button></div>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-punt-detail.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,50 @@
+@model BOCore.Budget.BudgetActivityLijnBO
+@*
+    gl-v2 — Budgetflow stap 6, één activiteit (design-handoff 39g): € basis · referentie (nacalc) · verschil · correctie-% · gecorrigeerd.
+    Grote afwijkingen (> 25 %) kleuren; de knop "referentie overnemen" zet de correctie zo dat gecorrigeerd = referentie.
+    data-ref = geïndexeerde referentieprijs per eenheid (wordt als nacalc bewaard), data-ref-totaal = × aantal eenheden.
+*@
+@{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string Eur(decimal v) => "€ " + v.ToString("N2", nl);
+    var basis = Model.TotaalAlternatief;
+    var corr = Model.Correctiefactor <= 0 ? 1m : Model.Correctiefactor;
+    var refTotaal = Model.ReferentieTotaal;
+    var toonRef = ViewData["HeeftReferenties"] is true;
+    var afw = Model.ReferentieVerschilPerc;
+    var groot = afw.HasValue && Math.Abs(afw.Value) > 0.25m;
+    var refTitel = Model.HeeftReferentie
+        ? $"{Model.ReferentieAantalProjecten} referentieproject(en) · € {Model.ReferentiePrijsPerEenheid!.Value.ToString("N0", nl)}/eenheid"
+          + (Model.ReferentieMinPerEenheid.HasValue && Model.ReferentieAantalProjecten > 1 ? $" (van € {Model.ReferentieMinPerEenheid.Value.ToString("N0", nl)} tot € {(Model.ReferentieMaxPerEenheid ?? 0m).ToString("N0", nl)})" : "")
+          + (Model.ReferentiePrijsPerM2.HasValue ? $" · € {Model.ReferentiePrijsPerM2.Value.ToString("N0", nl)}/m² GBA" : "")
+        : "Geen referentieproject met een bedrag voor deze activiteit";
+}
+<tr class="bw-act-rij @(groot ? "is-groot" : "")" data-activity-id="@Model.ActivityId" data-basis="@basis.ToString(inv)" data-prijs="@Model.AlternatievePrijsPerEenheid.ToString(inv)"
+    data-nacalc="@Model.NacalcPrijsPerEenheid.ToString(inv)" data-ref="@((Model.ReferentiePrijsPerEenheid ?? 0m).ToString(inv))" data-ref-totaal="@((refTotaal ?? 0m).ToString(inv))" data-manueel="@Model.IsManueel.ToString().ToLowerInvariant()">
+    <td class="bw-act-naam">
+        @Model.ActivityOmschrijving
+        @if (Model.HeeftVoorstel)
+        {
+            <span class="gl-v2-bw-calc gl-v2-bw-hint is-inline" title="Voorstel: € @((Model.VoorgesteldePrijsPerEenheid ?? 0m).ToString("N2", nl))/eenheid">· voorstel € @((Model.VoorgesteldePrijsPerEenheid ?? 0m).ToString("N0", nl))/eenh.</span>
+        }
+    </td>
+    <td class="is-num is-muted">@Eur(basis)</td>
+    @if (toonRef)
+    {
+        <td class="is-num bw-act-ref" title="@refTitel">
+            @if (Model.HeeftReferentie) { <span>@Eur(refTotaal!.Value)</span><span class="bw-act-n">@Model.ReferentieAantalProjecten</span> } else { <span class="is-muted">—</span> }
+        </td>
+        <td class="is-num bw-act-verschil">
+            @if (Model.HeeftReferentie)
+            {
+                <span class="bw-act-delta"></span>
+                <button type="button" class="gl-v2-row-action bw-act-overnemen" data-bw-edit title="Correctie zetten zodat het gecorrigeerde bedrag gelijk is aan de referentie" aria-label="Referentie overnemen"><i class="ph ph-arrow-line-right" aria-hidden="true"></i><span class="gl-v2-row-action-label">Referentie overnemen</span></button>
+            }
+        </td>
+    }
+    <td class="is-num">
+        <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:96px;margin-left:auto"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular corr-pct" value="@((corr * 100m).ToString("0.##", nl))" aria-label="Correctie in procent" /><span class="gl-v2-field-unit">%</span></div></div>
+    </td>
+    <td class="is-num is-strong bw-act-gecorrigeerd">@Eur(basis * corr)</td>
+</tr>

@@ -1,0 +1,261 @@
+@model CPMCore.Models.Projecten.BudgetGegevensModel
+@using CPMCore.Models.Budget
+@using CPMCore.Models.GlV2
+@using ServiceCore.Budget
+@*
+    gl-v2 — Budgetflow stap 1 · Gegevens (design-handoff 39b): aantallen, dimensies en indexering in sectiekaarten met velden met eenheid,
+    rechts de live berekening van de geïndexeerde materiaalprijzen. Opslaan gebeurt automatisch (gl-v2-budget.js: debounce + flush bij
+    navigeren) via dezelfde actie als de klassieke pagina (BudgetGegevensOpslaan); de basisprijzen komen nog steeds uit de gekoppelde
+    kostprijsmaterialen (BudgetActivityFormuleService). Wat nieuw is t.o.v. de klassieke pagina: Grondwerk heeft eenheid m³ (was m²),
+    peildatum + bron onder de S- en I-index, "leeg — grondwerken worden niet berekend" als hint.
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-info";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var g = Model.Gegevens;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var poort = ViewData["PoortWaarschuwing"] as bool? == true;
+
+    Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.NacalcRuwbouwBasis, out var fRuwbouw);
+    Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.BovenbouwGevelmetselwerk, out var fGevel);
+    Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.BovenbouwGipsblokken, out var fGips);
+    Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.BovenbouwTerras, out var fTerras);
+    var materialen = new[]
+    {
+        (Key: "ruwbouw", Label: "Ruwbouw",          Name: "Gegevens.NacalcBasisprijs",          Value: g.NacalcBasisprijs,          Unit: "/m²", F: fRuwbouw),
+        (Key: "gevel",   Label: "Gevelmetselwerk",  Name: "Gegevens.GevelMetselwerkPrijsPerM2", Value: g.GevelMetselwerkPrijsPerM2, Unit: "/m²", F: fGevel),
+        (Key: "gips",    Label: "Gipsblokken",      Name: "Gegevens.GipswerkenPrijsPerM2",      Value: g.GipswerkenPrijsPerM2,      Unit: "/st", F: fGips),
+        (Key: "terras",  Label: "Terras",           Name: "Gegevens.TerrasPrijsPerM2",          Value: g.TerrasPrijsPerM2,          Unit: "/m²", F: fTerras),
+    };
+    string Dec(decimal? v) => v.HasValue ? v.Value.ToString("F4", inv) : "null";
+    var dakItems = Model.TypeDakOptions.Select(o => new GlV2SelectItem { Value = o.Value, Text = o.Text }).ToList();
+    var poortItems = Model.TypePoortenOptions.Select(o => new GlV2SelectItem { Value = o.Value, Text = o.Text }).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <form id="bw-form" method="post" asp-action="BudgetGegevens" asp-controller="Projecten" class="gl-v2-bw-form" autocomplete="off"
+          data-save-url="@Url.Action("BudgetGegevensOpslaan", "Projecten")">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="VersieId" value="@Model.VersieId" />
+        <input type="hidden" name="MasterId" value="@Model.MasterId" />
+        <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+        <input type="hidden" name="ProjectName" value="@Model.ProjectName" />
+        <input type="hidden" name="MasterNaam" value="@Model.MasterNaam" />
+        <input type="hidden" name="VersieLabel" value="@Model.VersieLabel" />
+        <input type="hidden" name="VersieStatus" value="@Model.VersieStatus" />
+
+        <div class="gl-v2-bw-scroll">
+            <div class="gl-v2-bw-cols">
+                <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+                    <section class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">Projectgegevens</h2>
+                            <span class="gl-v2-field-divider"></span>
+                            <span class="gl-v2-section-card-desc">deze waarden voeden alle volgende stappen</span>
+                        </div>
+                        <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                            <span class="gl-v2-bw-subhead">Aantallen</span>
+                            <div class="gl-v2-notice gl-v2-notice-compact is-info" style="grid-column:1/-1"><i class="ph ph-info" aria-hidden="true"></i><span>Aantal en samenstelling van de eenheden komen uit stap 2 — Oppervlaktes. <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })" data-bw-nav="next">Naar stap 2</a></span></div>
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalLiften", "Liften", g.AantalLiften, "st", 0))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalBinnentrappen", "Binnentrappen", g.AantalBinnentrappen, "st", 0))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalTrapzalen", "Trapzalen", g.AantalTrapzalen, "st", 0))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalToegangspoorten", "Toegangspoorten", g.AantalToegangspoorten, "st", 0))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalAanTeBouwenBuren", "Aan te bouwen buren", g.AantalAanTeBouwenBuren, "st", 0))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalBovengrondseVerdiepingen", "Bovengrondse verdiepingen", g.AantalBovengrondseVerdiepingen, "st", 0))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.AantalVerdiepingenOndergronds", "Ondergrondse verdiepingen", g.AantalVerdiepingenOndergronds, "st", 0))
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "Gegevens.TypePoorten", Id = "bw-typepoorten", Label = "Type poorten", Value = g.TypePoorten ?? "", Items = poortItems, Placeholder = "Kies type poorten…",
+                                Error = poort ? "De poorten moeten geselecteerd worden." : null
+                            })
+
+                            <span class="gl-v2-bw-subhead">Dimensies</span>
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.OppFunderingen", "Oppervlakte funderingen", g.OppFunderingen, "m²"))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.M3Grondwerk", "Grondwerk", g.M3Grondwerk, "m³"))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.LmBerlinerwanden", "Berlinerwanden", g.LmBerlinerwanden, "lm"))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.LmSecanpalen", "Secanspalen", g.LmSecanpalen, "lm"))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.M3Onderschoeiingen", "Onderschoeiingen", g.M3Onderschoeiingen, "m³"))
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "Gegevens.TypeDak", Id = "bw-typedak", Label = "Type dak", Value = g.TypeDak ?? "", Items = dakItems, Placeholder = "Kies type dak…" })
+                        </div>
+                    </section>
+
+                    <section class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph ph-chart-line-up" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">Bouwkostindexering (S/I)</h2>
+                            <span class="gl-v2-field-divider"></span>
+                            <span class="gl-v2-section-card-desc">nacalc-basisprijs per materiaal, gekoppeld aan een activiteit</span>
+                        </div>
+                        <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                            @foreach (var m in materialen)
+                            {
+                                var basis = m.F?.MateriaalPrijs;
+                                var koppelHelp = basis.HasValue
+                                    ? $"basisprijs {m.Label}: € {basis.Value.ToString("N2", nl)}{m.Unit}" + (m.F!.MNaam != null ? " · " + m.F.MNaam : "")
+                                    : (m.F != null ? "geen materiaal gekoppeld — stel in via Instellingen › Kostprijzen materialen" : null);
+                                <div class="gl-v2-field">
+                                    <label class="gl-v2-field-label" for="inp-@m.Key">@m.Label</label>
+                                    <div class="gl-v2-field-box">
+                                        <span class="gl-v2-field-prefix">€</span>
+                                        <input type="text" inputmode="decimal" id="inp-@m.Key" name="@m.Name" value="@(m.Value.HasValue ? m.Value.Value.ToString("F2", nl) : "")" placeholder="0,00" autocomplete="off"
+                                               class="gl-v2-field-input is-num is-tabular" data-bw-live data-base="@(basis.HasValue ? basis.Value.ToString("F2", nl) : "")" />
+                                        <span class="gl-v2-field-unit">@m.Unit</span>
+                                    </div>
+                                    <span class="gl-v2-field-help">
+                                        @koppelHelp
+                                        @if (basis.HasValue)
+                                        {
+                                            <button type="button" class="gl-v2-btn gl-v2-btn-text" style="height:24px;padding:0 6px;margin-left:4px" data-bw-edit data-bw-take="inp-@m.Key" title="Basisprijs overnemen uit de gekoppelde kostprijsmaterialen">Overnemen</button>
+                                        }
+                                    </span>
+                                </div>
+                            }
+                            <span class="gl-v2-bw-subhead">S-index (lonen) &amp; I-index (materialen)</span>
+                            <div class="gl-v2-field gl-v2-bw-span2">
+                                <label class="gl-v2-field-label" for="bw-sindex">S-index (lonen)</label>
+                                <div class="gl-v2-field-attached">
+                                    <div class="gl-v2-field-box">
+                                        <input type="text" inputmode="decimal" id="bw-sindex" name="Gegevens.SIndexHuidig" value="@(g.SIndexHuidig.HasValue ? g.SIndexHuidig.Value.ToString("F4", nl) : "")" placeholder="bv. 119,1000" autocomplete="off" class="gl-v2-field-input is-num is-tabular" data-bw-live />
+                                    </div>
+                                    <button type="button" class="gl-v2-field-attach-btn" data-bw-edit data-bw-pick="S" aria-label="Kies S-index uit historiek"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i><span>Historiek</span></button>
+                                </div>
+                                <span class="gl-v2-field-help">@ViewData["SIndexInfo"]</span>
+                            </div>
+                            <div class="gl-v2-field gl-v2-bw-span2">
+                                <label class="gl-v2-field-label" for="bw-iindex">I2021-index (materialen)</label>
+                                <div class="gl-v2-field-attached">
+                                    <div class="gl-v2-field-box">
+                                        <input type="text" inputmode="decimal" id="bw-iindex" name="Gegevens.IIndexHuidig" value="@(g.IIndexHuidig.HasValue ? g.IIndexHuidig.Value.ToString("F4", nl) : "")" placeholder="bv. 123,5000" autocomplete="off" class="gl-v2-field-input is-num is-tabular" data-bw-live />
+                                    </div>
+                                    <button type="button" class="gl-v2-field-attach-btn" data-bw-edit data-bw-pick="I2021" aria-label="Kies I2021-index uit historiek"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i><span>Historiek</span></button>
+                                </div>
+                                <span class="gl-v2-field-help">@ViewData["IIndexInfo"]</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <aside>
+                    <section class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph ph-calculator" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">Live berekening</h2>
+                            <span class="gl-v2-section-card-meta" style="margin-left:auto"><span class="gl-v2-badge is-positive">LIVE</span></span>
+                        </div>
+                        <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px">
+                            <div class="gl-v2-bw-live">
+                                @foreach (var m in materialen)
+                                {
+                                    <div class="gl-v2-bw-live-row"><span>@m.Label @m.Unit geïnd.</span><strong id="live-@m.Key">—</strong></div>
+                                }
+                            </div>
+                            <span class="gl-v2-bw-live-formula">(I/I₀)×0,40 + (S/S₀)×0,40 + 0,20</span>
+                        </div>
+                    </section>
+                </aside>
+            </div>
+        </div>
+    </form>
+
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwActiebalk.cshtml", ch)
+</div>
+
+@* Indexwaarde kiezen uit de historiek *@
+<div class="modal fade gl-v2-modal-form" id="bw-index-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-index-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title" id="bw-index-title">Kies indexwaarde</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
+            <div class="modal-body">@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "bw-index-pick", Id = "bw-index-pick", Label = "Indexwaarde", Placeholder = "Kies een indexwaarde…", Items = new List<GlV2SelectItem>() })</div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-index-ok">Overnemen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var form = document.getElementById('bw-form');
+    var refs = {
+        ruwbouw: { i: @(Dec(fRuwbouw?.MateriaalIRef ?? 100m)), s: @(Dec(fRuwbouw?.MateriaalSRef ?? 100m)) },
+        gevel:   { i: @(Dec(fGevel?.MateriaalIRef ?? 100m)),   s: @(Dec(fGevel?.MateriaalSRef ?? 100m)) },
+        gips:    { i: @(Dec(fGips?.MateriaalIRef ?? 100m)),    s: @(Dec(fGips?.MateriaalSRef ?? 100m)) },
+        terras:  { i: @(Dec(fTerras?.MateriaalIRef ?? 100m)),  s: @(Dec(fTerras?.MateriaalSRef ?? 100m)) }
+    };
+    var nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function num(el) { if (!el) return 0; var v = String(el.value || '').replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+    function live() {
+        var s = num(document.getElementById('bw-sindex')), i = num(document.getElementById('bw-iindex')), ok = s > 0 && i > 0;
+        Object.keys(refs).forEach(function (k) {
+            var p = num(document.getElementById('inp-' + k));
+            var f = ok ? (i / refs[k].i) * 0.40 + (s / refs[k].s) * 0.40 + 0.20 : 1;
+            document.getElementById('live-' + k).textContent = p > 0 ? '€ ' + nf.format(p * f) : '—';
+        });
+    }
+    form.addEventListener('input', function (e) { if (e.target.matches('[data-bw-live]')) live(); });
+    live();
+
+    // Basisprijs overnemen uit het gekoppelde materiaal
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-bw-take]'); if (!b) return;
+        var inp = document.getElementById(b.getAttribute('data-bw-take')); if (!inp) return;
+        inp.value = inp.getAttribute('data-base'); live(); inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    // Leeg veld → de gekoppelde basisprijs als startwaarde (zoals de klassieke pagina)
+    ['ruwbouw', 'gevel', 'gips', 'terras'].forEach(function (k) {
+        var inp = document.getElementById('inp-' + k);
+        if (inp && num(inp) === 0 && inp.getAttribute('data-base')) { inp.value = inp.getAttribute('data-base'); }
+    });
+    live();
+
+    // Opslaan: automatisch (debounce) en vóór elke navigatie
+    GlV2Budget.autosave(form, async function () {
+        var r = await GlV2Budget.post(form.getAttribute('data-save-url'), new FormData(form), false);
+        return !!r.success;
+    }, 900);
+
+    // Indexwaarde uit de historiek
+    var modalEl = document.getElementById('bw-index-modal'), target = null, modal = null;
+    document.addEventListener('click', async function (e) {
+        var b = e.target.closest('[data-bw-pick]'); if (!b) return;
+        target = b.getAttribute('data-bw-pick');
+        var data = await (await fetch('@Url.Action("GetBouwIndexen", "Projecten")?type=' + encodeURIComponent(target), { credentials: 'same-origin' })).json();
+        var items = data.map(function (d) { return { value: String(d.indexWaarde), text: d.jaar + (d.maand ? '/' + String(d.maand).padStart(2, '0') : '') + ' — ' + String(d.indexWaarde).replace('.', ',') }; });
+        GlV2Select.setItems(document.getElementById('bw-index-pick_select'), items, items.length ? items[0].value : '', null);
+        modal = modal || bootstrap.Modal.getOrCreateInstance(modalEl); modal.show();
+    });
+    document.getElementById('bw-index-ok').addEventListener('click', function () {
+        var v = document.getElementById('bw-index-pick'); if (!v || !v.value) return;
+        var inp = document.getElementById(target === 'S' ? 'bw-sindex' : 'bw-iindex');
+        inp.value = String(v.value).replace('.', ','); live(); inp.dispatchEvent(new Event('input', { bubbles: true })); modal.hide();
+    });
+})();
+</script>
+}

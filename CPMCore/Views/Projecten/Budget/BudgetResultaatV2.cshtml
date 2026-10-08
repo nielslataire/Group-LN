@@ -1,0 +1,231 @@
+@model CPMCore.Models.Budget.BudgetResultaatModel
+@using CPMCore.Models.Budget
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Budgetflow stap 9 · Resultaat (design-handoff 39j): waarschuwingen uit de flow (met link naar de stap), KPI-tegels (totale kostprijs,
+    per eenheid, per m² GBA, min. verkoopwaarde, vastgelegde vraagprijzen, t.o.v. nacalc), kostenoverzicht, per eenheid en bouwkost t.o.v. nacalc.
+    Acties in de topbar: versies vergelijken, PDF, Excel. Actiebalk: Kopie als nieuwe versie (HerstelVersie) · Afronden · Afronden & definitief maken
+    (BudgetVersieAfronden / BudgetVersieDefinitief). Een definitieve versie toont de vergrendelbalk met "Niet-definitief maken".
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-chart-bar";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    string PctS(decimal f) => (f >= 0 ? "+" : "") + (f * 100m).ToString("0.#", nl) + " %";
+    var r = Model.Resultaat;
+    decimal totaal = r.TotaalKosten;
+    string Perc(decimal b) => totaal > 0 ? (b / totaal * 100m).ToString("0.#", nl) + " %" : "—";
+    int n = r.AantalEenheden;
+    string PerE(decimal v) => n > 0 ? Eur0(v / n) : "—";
+    var vs = Model.Voorstel;
+    var vk = r.Verkoop;
+    var nacalcDelta = Model.TotaalBouwNacalc > 0 ? (Model.TotaalBouwAlternatief - Model.TotaalBouwNacalc) / Model.TotaalBouwNacalc : (decimal?)null;
+    var issues = ch.Steps.Select((s, i) => (Step: i + 1, s.Label, s.Errors, s.Warnings, s.Href)).Where(x => x.Errors + x.Warnings > 0).ToList();
+    var stapHint = new Dictionary<int, string> { [1] = "type poorten nog niet gekozen", [2] = "woning zonder grondoppervlakte", [7] = "decennale verzekering staat op 0 %", [8] = "vraagprijs onder de minimale verkoopprijs" };
+    var statusTekst = ch.IsLocked ? "Definitief" : ch.IsAfgerond ? "Afgerond" : "Concept";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-res-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+        .bw-res-groep th { background: var(--gl-v2-bg, #F2F5EF); color: var(--gl-v2-primary); font: 700 11.5px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; height: 34px; padding: 0 10px; text-align: left; border-top: 1px solid var(--gl-v2-hairline-soft); }
+        .bw-res-tabel td.is-pad { padding-left: 22px; }
+        .bw-res-tabel tr.is-totaal td { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font-weight: 700; font-size: 14px; }
+        .bw-res-rij { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); }
+        .bw-res-rij:first-child { border-top: 0; }
+        .bw-res-rij strong { font-variant-numeric: tabular-nums; }
+        .bw-res-rij.is-tot { font-weight: 700; font-size: 14px; color: var(--gl-v2-primary); }
+        .bw-res-balk { height: 10px; border-radius: 999px; background: var(--gl-v2-primary); transition: width .5s var(--bw-ease, ease); }
+        .bw-res-balk.is-nacalc { background: var(--gl-v2-gold, #C9A96E); }
+        .bw-res-issues li { margin: 4px 0; }
+        .bw-res-issues a { color: inherit; font-weight: 600; text-decoration: underline; }
+        @@media (max-width: 1199.98px) { .bw-res-cols { grid-template-columns: minmax(0, 1fr); } }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : ch.IsAfgerond ? "is-positive" : "is-neutral")">@ch.BadgeTekst</span>
+}
+@section PageActions
+{
+    <a href="@Url.Action("BudgetVergelijken", "Projecten", new { masterId = Model.BudgetMasterId })" class="gl-v2-btn gl-v2-btn-secondary" data-bw-plain><i class="ph ph-git-diff" aria-hidden="true"></i>Versies vergelijken</a>
+    <a href="@Url.Action("DownloadBudgetPDF", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-secondary" target="_blank" data-bw-plain><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF</a>
+    <a href="@Url.Action("DownloadBudgetExcel", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-secondary" data-bw-plain><i class="ph ph-file-xls" aria-hidden="true"></i>Excel</a>
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-res" data-versie="@Model.BudgetVersieId">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        @if (issues.Any())
+        {
+            var errs = issues.Sum(i => i.Errors); var warns = issues.Sum(i => i.Warnings);
+            <div class="gl-v2-notice gl-v2-notice-expanded @(errs > 0 ? "is-danger" : "is-warning")">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph @(errs > 0 ? "ph-x-circle" : "ph-warning")" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">@(errs > 0 ? $"{errs} fout{(errs == 1 ? "" : "en")}" : $"{warns} waarschuwing{(warns == 1 ? "" : "en")}") in de flow</span>
+                    <ul class="gl-v2-notice-text bw-res-issues" style="margin:4px 0 0;padding-left:18px">
+                        @foreach (var i in issues)
+                        {
+                            <li>@i.Label: @(stapHint.TryGetValue(i.Step, out var h) ? h : (i.Errors > 0 ? $"{i.Errors} fout(en)" : $"{i.Warnings} aandachtspunt(en)")). <a href="@i.Href" data-bw-nav="back">Naar stap @i.Step</a></li>
+                        }
+                    </ul>
+                    <span class="gl-v2-notice-text">@(errs > 0 ? "Los de fouten op vóór je afrondt." : "Je kan afronden, maar de waarschuwing blijft zichtbaar op de versie.")</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-success"><i class="ph ph-check-circle" aria-hidden="true"></i><span>Geen open aandachtspunten in de flow.</span></div>
+        }
+
+        <div class="gl-v2-bw-tiles">
+            <div class="gl-v2-bw-tile is-pos"><span class="lbl">Totale kostprijs</span><span class="val">@Eur0(totaal)</span><span class="sub">incl. grond</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Per eenheid</span><span class="val">@Eur0(r.TotaalPerEenheid)</span><span class="sub">@n eenheden</span></div>
+            <div class="gl-v2-bw-tile"><span class="lbl">Per m² GBA</span><span class="val">@Eur0(r.TotaalPerM2GBA)</span><span class="sub">@r.TotaalGBA.ToString("N0", nl) m²</span></div>
+            @if (vs is not null)
+            {
+                <div class="gl-v2-bw-tile"><span class="lbl">Min. verkoopwaarde</span><span class="val">@Eur0(vs.TotaalVerkoopwaarde)</span><span class="sub">kost + marge</span></div>
+            }
+            @if (vk is { VraagprijzenLijnen: not null })
+            {
+                <div class="gl-v2-bw-tile @(vk.Marge >= 0 ? "is-pos" : "is-neg")"><span class="lbl">Vastgelegde vraagprijzen</span><span class="val">@Eur0(vk.Opbrengst)</span><span class="sub">@vk.AantalLijnenMetVraagprijs lijnen · marge @((vk.MargePerc * 100m).ToString("0.#", nl)) %</span></div>
+            }
+            @if (nacalcDelta.HasValue)
+            {
+                <div class="gl-v2-bw-tile @(nacalcDelta.Value <= 0 ? "is-pos" : "is-neg")"><span class="lbl">T.o.v. nacalc</span><span class="val">@PctS(nacalcDelta.Value)</span><span class="sub">@Eur0(Model.TotaalBouwNacalc) geïndexeerd</span></div>
+            }
+        </div>
+
+        <div class="bw-res-cols">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-list-numbers" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Kostenoverzicht</h2>
+                </div>
+                <div class="gl-v2-bw-table-wrap">
+                    <table class="gl-v2-bw-table bw-res-tabel">
+                        <thead><tr><th>Kostenpost</th><th class="is-num">Bedrag</th><th class="is-num">% totaal</th></tr></thead>
+                        <tbody>
+                            <tr class="bw-res-groep"><th colspan="3">Bouwkost (activiteiten)</th></tr>
+                            <tr><td class="is-pad">Totaal bouwkost</td><td class="is-num is-strong">@Eur0(r.TotaalBouw)</td><td class="is-num is-muted">@Perc(r.TotaalBouw)</td></tr>
+                            @foreach (var (titel, posten) in new[] { ("Erelonen & studies", r.KostenOpBouw), ("Grond", r.Grond.Where(g => g.Bedrag != 0).ToList()), ("Forfaits", r.Forfaits.Where(f => f.Bedrag > 0).ToList()), ("Financiering", r.Financiering.Where(f => f.Bedrag > 0).ToList()) })
+                            {
+                                if (!posten.Any()) { continue; }
+                                <tr class="bw-res-groep"><th colspan="3">@titel</th></tr>
+                                foreach (var k in posten)
+                                {
+                                    <tr><td class="is-pad">@k.Omschrijving @if (k.IsPerc) { <span class="gl-v2-bw-hint">@((k.Percentage * 100m).ToString("0.00", nl)) % van @Eur0(k.BasisBedrag)</span> }</td><td class="is-num is-strong">@Eur0(k.Bedrag)</td><td class="is-num is-muted">@Perc(k.Bedrag)</td></tr>
+                                }
+                            }
+                            @if (r.Onvoorzien > 0)
+                            {
+                                <tr class="bw-res-groep"><th colspan="3">Onvoorzien</th></tr>
+                                <tr><td class="is-pad">Onvoorzien</td><td class="is-num is-strong">@Eur0(r.Onvoorzien)</td><td class="is-num is-muted">@Perc(r.Onvoorzien)</td></tr>
+                            }
+                            <tr class="is-totaal"><td>Totale kostprijs</td><td class="is-num">@Eur0(totaal)</td><td class="is-num">100 %</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-house" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Per eenheid</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">@n eenheden</span>
+                    </div>
+                    <div style="padding:6px 20px 14px">
+                        <div class="bw-res-rij"><span>Bouwkost</span><strong>@PerE(r.TotaalBouw)</strong></div>
+                        <div class="bw-res-rij"><span>Erelonen &amp; studies</span><strong>@PerE(r.KostenOpBouw.Sum(k => k.Bedrag))</strong></div>
+                        @if (r.Grond.Any(g => g.Bedrag != 0)) { <div class="bw-res-rij"><span>Grond</span><strong>@PerE(r.Grond.Sum(k => k.Bedrag))</strong></div> }
+                        <div class="bw-res-rij"><span>Onvoorzien</span><strong>@PerE(r.Onvoorzien)</strong></div>
+                        <div class="bw-res-rij"><span>Financiering</span><strong>@PerE(r.Financiering.Sum(k => k.Bedrag))</strong></div>
+                        <div class="bw-res-rij is-tot"><span>Totaal / eenheid</span><strong>@Eur0(r.TotaalPerEenheid)</strong></div>
+                    </div>
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Bouwkost t.o.v. nacalc</h2>
+                    </div>
+                    <div style="padding:6px 20px 16px;display:flex;flex-direction:column;gap:10px">
+                        @{ var max = Math.Max(Model.TotaalBouwAlternatief, Model.TotaalBouwNacalc); var pa = max > 0 ? Model.TotaalBouwAlternatief / max * 100m : 0m; var pn = max > 0 ? Model.TotaalBouwNacalc / max * 100m : 0m; }
+                        <div class="bw-res-rij" style="border:0;padding:6px 0 2px"><span>Alternatief</span><strong>@Eur0(Model.TotaalBouwAlternatief)</strong></div>
+                        <div class="bw-res-balk" style="width:@pa.ToString("F1", inv)%"></div>
+                        <div class="bw-res-rij" style="border:0;padding:6px 0 2px"><span>Nacalc <span class="gl-v2-bw-hint">· geïndexeerd</span></span><strong>@(Model.TotaalBouwNacalc > 0 ? Eur0(Model.TotaalBouwNacalc) : "—")</strong></div>
+                        <div class="bw-res-balk is-nacalc" style="width:@pn.ToString("F1", inv)%"></div>
+                        @if (Model.TotaalBouwNacalc <= 0) { <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Nog geen referentie: kies op stap 6 een of meer referentieprojecten.</span></div> }
+                    </div>
+                </section>
+
+                @if (Model.AndereVersies.Any())
+                {
+                    <section class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph ph-git-branch" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">Andere versies</h2>
+                        </div>
+                        <div style="padding:10px 20px 16px;display:flex;flex-wrap:wrap;gap:8px">
+                            @foreach (var v in Model.AndereVersies)
+                            {
+                                <a href="@Url.Action("BudgetResultaat", "Projecten", new { versieId = v.Id })" class="gl-v2-badge @(v.Status == "Definitief" ? "is-positive" : "is-neutral")" data-bw-plain>v@(v.Versienummer) @(string.IsNullOrWhiteSpace(v.VersieNaam) ? "" : "— " + v.VersieNaam)</a>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <a href="@ch.PrevUrl" class="gl-v2-btn gl-v2-btn-text" data-bw-nav="back"><i class="ph ph-caret-left" aria-hidden="true"></i>@ch.PrevLabel</a>
+        <span class="gl-v2-bw-status" data-bw-status data-state="@(ch.IsLocked ? "locked" : issues.Any() ? "dirty" : "saved")">@statusTekst@(issues.Any() ? $" · {issues.Sum(i => i.Errors + i.Warnings)} aandachtspunt{(issues.Sum(i => i.Errors + i.Warnings) == 1 ? "" : "en")} open" : "")</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-res-kopie" data-bw-keep><i class="ph ph-copy" aria-hidden="true"></i>Kopie als nieuwe versie</button>
+            @if (!ch.IsLocked)
+            {
+                <form method="post" asp-action="BudgetVersieAfronden" asp-controller="Projecten" style="display:contents">@Html.AntiForgeryToken()<input type="hidden" name="versieId" value="@Model.BudgetVersieId" /><button type="submit" class="gl-v2-btn gl-v2-btn-secondary" @(ch.IsAfgerond ? "disabled" : "")>@(ch.IsAfgerond ? "Afgerond" : "Afronden")</button></form>
+                <form method="post" asp-action="BudgetVersieDefinitief" asp-controller="Projecten" style="display:contents" data-bw-bevestig="Deze versie definitief maken?" data-bw-desc="Ze wordt alleen-lezen en de basis voor facturen en contracten. Een eerdere definitieve versie van dit project wordt weer bewerkbaar." data-bw-ok="Definitief maken" data-bw-tone="warning" data-bw-icon="ph-lock-key">@Html.AntiForgeryToken()<input type="hidden" name="versieId" value="@Model.BudgetVersieId" /><button type="submit" class="gl-v2-btn gl-v2-btn-primary" @(issues.Any(i => i.Errors > 0) ? "disabled" : "")><i class="ph ph-lock-key" aria-hidden="true"></i>@(ch.IsAfgerond ? "Definitief maken" : "Afronden & definitief maken")</button></form>
+            }
+            else
+            {
+                <a href="@ch.OverviewUrl" class="gl-v2-btn gl-v2-btn-primary" data-bw-plain>Naar het overzicht<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+            }
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script>
+(function () {
+    var btn = document.getElementById('bw-res-kopie');
+    btn.addEventListener('click', async function () {
+        if (!await GlV2Budget.bevestig({ title: 'Kopie als nieuwe versie?', desc: 'Er wordt een nieuwe versie aangemaakt als kopie van v@(Model.Versienummer). De nieuwe versie is een concept.', ok: 'Kopie maken', tone: 'success', icon: 'ph-copy' })) return;
+        btn.disabled = true;
+        var r = await GlV2Budget.post('@Url.Action("HerstelVersie", "Projecten")', { versieId: @Model.BudgetVersieId }, false);
+        if (r.success) { GlV2Budget.toast('success', 'Versie ' + r.versienummer + ' aangemaakt', 'De kopie opent nu.'); setTimeout(function () { window.location.href = '@Url.Action("BudgetResultaat", "Projecten")?versieId=' + r.nieuweVersieId; }, 600); }
+        else { GlV2Budget.toast('danger', 'Kopiëren mislukt', r.message || ''); btn.disabled = false; }
+    });
+})();
+</script>
+}

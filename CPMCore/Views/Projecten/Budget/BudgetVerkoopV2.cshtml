@@ -1,0 +1,273 @@
+@model CPMCore.Models.Budget.BudgetVerkoopModel
+@using CPMCore.Models.Budget
+@using CPMCore.Models.GlV2
+@using DALCore.Models
+@*
+    gl-v2 — Budgetflow stap 8 · Verkoop (design-handoff 39i): prijscodes compact bovenaan (bouw/grond, projectcode toevoegen), verkoopvoorstel met
+    marges en markt, één tabel per eenheid (type · bewoonbaar · grond · kostprijs · bouwwaarde · min. prijs · markt €/m² · marktprijs · VRAAGPRIJS).
+    Per rij een chevron die de regel "€/m² instellen" opent: code → €/m² → bedrag voor grond en bouw, bron, ruil, forfait, unit (de per-m²-functie
+    van 2026-10-07, rekenregel VerkoopLijnRekenregel in JS én C#). Een vraagprijs onder de minimale verkoopprijs valt op (rij + waarschuwingsregel).
+    Opslaan: SaveBudgetVerkoop (alle lijnen in één POST), autosave na wijziging; "Opslaan & volgende" slaat op en gaat naar stap 9.
+*@
+@{
+    var ch = (BudgetWizardChromeVm)ViewData["Chrome"];
+    ViewData["Title"] = ch.StepTitle;
+    ViewData["PageIcon"] = "ph ph-tag";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = ch.OverviewUrl;
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    string Pct(decimal f) => (f * 100m).ToString("0.#", nl) + " %";
+    string PctS(decimal f) => (f >= 0 ? "+" : "") + (f * 100m).ToString("0.#", nl) + " %";
+    string F0(decimal? v) => v.HasValue ? Math.Round(v.Value, 0).ToString("F0", nl) : "";
+    string F2(decimal? v) => v.HasValue ? v.Value.ToString("F2", nl) : "";
+    var vs = Model.Voorstel;
+    var markt = vs?.Markt;
+    var heeftMarkt = vs?.Eenheden.Any(e => e.MarktPrijs.HasValue) == true;
+    var lijnenOpNaam = Model.Lijnen.GroupBy(l => (l.EenheidNaam ?? "").Trim(), StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+    var eenheden = (vs?.Eenheden ?? new List<BOCore.Budget.BudgetVerkoopVoorstelEenheidBO>()).ToList();
+    var losseLijnen = Model.Lijnen.Where(l => !eenheden.Any(e => string.Equals(e.EenheidNaam?.Trim(), (l.EenheidNaam ?? "").Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+    var onderMin = eenheden.Count(e => lijnenOpNaam.TryGetValue(e.EenheidNaam?.Trim() ?? "", out var l) && l.Vraagprijs is > 0m && l.Vraagprijs < Math.Round(e.MinimumVerkoopprijs, 0));
+    var extra = new Dictionary<int, (int, int)> { [8] = (0, onderMin) };
+    string RefTitel(BudgetPrijsReferentie r) => string.Join(" · ", new[] { r.Omschrijving, r.Datum?.ToString("dd/MM/yyyy"), r.Bron, r.ProjectId.HasValue ? "projectcode" : null }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    List<GlV2SelectItem> RefItems(List<BudgetPrijsReferentie> refs) => refs.Select(r => new GlV2SelectItem { Value = r.Code.ToString(), Text = $"{(r.PrijsType == "Grond" ? "G" : "B")}-{r.Code:00} · € {r.PrijsPerM2.ToString("N0", nl)}" + (r.ProjectId.HasValue ? " ·P" : ""), Sub = RefTitel(r) }).ToList();
+    var refBouwItems = RefItems(Model.PrijsReferentiesBouw); var refGrondItems = RefItems(Model.PrijsReferentiesGrond);
+    var unitItems = Model.UnitOptions.Where(o => !string.IsNullOrEmpty(o.Value)).Select(o => new GlV2SelectItem { Value = o.Value, Text = o.Text }).ToList();
+    var refPrijzen = System.Text.Json.JsonSerializer.Serialize(new { bouw = Model.PrijsReferentiesBouw.ToDictionary(r => r.Code.ToString(), r => r.PrijsPerM2), grond = Model.PrijsReferentiesGrond.ToDictionary(r => r.Code.ToString(), r => r.PrijsPerM2) });
+    int rij = 0;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+    <style>
+        .bw-vk-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        .bw-vk-codes .gl-v2-bw-table td { height: 36px; }
+        .bw-vk-code-add { display: grid; grid-template-columns: 90px minmax(0, 1fr) 120px 150px minmax(0, 1fr) auto; gap: 8px; align-items: end; padding: 10px 20px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+        .bw-vk-code-add .gl-v2-field-label { display: none; }
+        .bw-vk-code-add .gl-v2-field-box { height: 34px; }
+        .bw-vk-rij.is-onder-min td { background: #FBF6EA; }
+        .bw-vk-rij.is-onder-min .vraagprijs { border-color: #8B2A2A; }
+        .bw-vk-detail td { background: #FAFBF8; padding: 10px 10px 14px 46px; }
+        .bw-vk-detail[hidden] { display: none; }
+        .bw-vk-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
+        .bw-vk-zijde { display: grid; grid-template-columns: 110px minmax(0, 1fr) 110px minmax(0, 1fr); gap: 8px 10px; align-items: center; }
+        .bw-vk-zijde .k { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); grid-column: 1 / -1; }
+        .bw-vk-zijde .gl-v2-field-box { height: 34px; }
+        .bw-vk-extra { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+        .bw-vk-extra .gl-v2-field { min-width: 160px; }
+        .bw-vk-extra .gl-v2-field-box { height: 34px; }
+        .bw-bron { display: inline-block; padding: 2px 8px; border-radius: 999px; font: 600 10px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); white-space: nowrap; }
+        .bw-bron--1 { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); } .bw-bron--2 { background: #E8EEF9; color: #2F4F8F; } .bw-bron--3 { background: #EFE9F7; color: #5B3D8F; } .bw-bron--4, .bw-bron--5 { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+        .bw-vk-toggle i { transition: transform .18s var(--bw-ease, ease); } .bw-vk-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+        .bw-vk-rij .vraagprijs { font-weight: 600; }
+        .bw-vk-meer td { background: #FAFBF8; text-align: center; }
+        .bw-vk-waarsch { color: var(--gl-v2-warning); font: 500 12px var(--gl-v2-font-sans); }
+        @@media (max-width: 1199.98px) { .bw-vk-codes, .bw-vk-detail-grid { grid-template-columns: minmax(0, 1fr); } }
+    </style>
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", ch.Menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = ch.Menu.ProjectId, ProjectName = ch.Menu.ProjectName, ProjectSubtitle = ch.Menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @(ch.IsLocked ? "is-blocked" : "is-neutral")">@ch.BadgeTekst</span>
+}
+
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-vk" data-versie="@Model.BudgetVersieId" data-url-save="@Url.Action("SaveBudgetVerkoop", "Projecten")" data-url-doorzetten="@Url.Action("DoorzettenVerkoopNaarUnits", "Projecten")">
+    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
+
+    <div class="gl-v2-bw-scroll">
+        @* ── Prijscodes ── *@
+        <div class="bw-vk-codes">
+            @foreach (var (type, titel, icoon, refs, letter) in new[] { ("Bouw", "Bouwprijscodes", "ph-buildings", Model.PrijsReferentiesBouw, "B"), ("Grond", "Grondprijscodes", "ph-map-pin", Model.PrijsReferentiesGrond, "G") })
+            {
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph @icoon" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">@titel</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">€/m² @(type == "Bouw" ? "gereduceerd" : "grond")</span>
+                        <span class="gl-v2-section-card-meta" style="margin-left:auto"><a href="@Url.Action("BudgetPrijsReferenties", "Instellingen", new { tab = type })" class="gl-v2-btn gl-v2-btn-text" target="_blank" data-bw-plain>Algemene codes</a></span>
+                    </div>
+                    <div class="gl-v2-bw-table-wrap">
+                        <table class="gl-v2-bw-table">
+                            <thead><tr><th>Code</th><th>Omschrijving</th><th class="is-num">€/m²</th><th>Datum</th><th class="col-actions"></th></tr></thead>
+                            <tbody>
+                                @if (!refs.Any()) { <tr><td colspan="5" class="is-muted">Nog geen codes — voeg hieronder een projectcode toe of beheer de algemene codes.</td></tr> }
+                                @foreach (var r in refs)
+                                {
+                                    <tr title="@RefTitel(r)">
+                                        <td class="is-strong">@letter-@r.Code.ToString("00")@(r.ProjectId.HasValue ? " ·P" : "")</td><td>@r.Omschrijving</td><td class="is-num">€ @r.PrijsPerM2.ToString("N2", nl)</td><td class="is-muted">@(r.Datum?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                        <td class="col-actions">
+                                            @if (r.ProjectId.HasValue)
+                                            {
+                                                <form method="post" asp-action="BudgetPrijsReferentieVerwijderen" asp-controller="Projecten" style="display:inline" data-bw-bevestig="Projectcode @($"{letter}-{r.Code:00}") verwijderen?" data-bw-desc="De code verdwijnt uit de lijst van dit project. Een code die in een verkooplijn gebruikt wordt, kan je enkel archiveren." data-bw-ok="Verwijderen">
+                                                    @Html.AntiForgeryToken()<input type="hidden" name="versieId" value="@Model.BudgetVersieId" /><input type="hidden" name="id" value="@r.Id" />
+                                                    <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" data-bw-edit title="Projectcode verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <form method="post" asp-action="BudgetPrijsReferentieToevoegen" asp-controller="Projecten" class="bw-vk-code-add" autocomplete="off" data-bw-edit>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="versieId" value="@Model.BudgetVersieId" /><input type="hidden" name="prijsType" value="@type" />
+                        <div class="gl-v2-field"><label class="gl-v2-field-label">Code</label><div class="gl-v2-field-box"><span class="gl-v2-field-prefix" style="font-family:var(--gl-v2-font-mono,monospace)">@letter-</span><input type="text" inputmode="numeric" name="code" class="gl-v2-field-input is-tabular" placeholder="nr" required /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label">Omschrijving</label><div class="gl-v2-field-box"><input type="text" name="omschrijving" class="gl-v2-field-input" placeholder="projectcode: omschrijving" maxlength="200" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label">€/m²</label><div class="gl-v2-field-box"><input type="text" inputmode="decimal" name="prijsPerM2" class="gl-v2-field-input is-num is-tabular" placeholder="€/m²" required /></div></div>
+                        <div class="gl-v2-field">@await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "datum", Id = "bw-vk-" + type + "-datum", Label = "Datum", IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })</div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label">Bron</label><div class="gl-v2-field-box"><input type="text" name="bron" class="gl-v2-field-input" placeholder="bron" maxlength="200" /></div></div>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" style="height:34px">Toevoegen</button>
+                    </form>
+                </section>
+            }
+        </div>
+
+        @* ── Voorstel ── *@
+        @if (vs is not null)
+        {
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-calculator" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verkoopvoorstel</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">kostprijs + marge · bouwwaarde op @vs.VerdeelsleutelBouw, grondwaarde op @vs.VerdeelsleutelGrond</span>
+                    <span class="gl-v2-section-card-meta" style="margin-left:auto;gap:8px">
+                        <a href="@Url.Action("BudgetParams", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-text" data-bw-nav="back"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i>Marges</a>
+                        @if (vs.HeeftEenheden)
+                        {
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-vk-alles-voorstel" data-bw-edit title="Zet grond- en bouwwaarde uit het voorstel in elke eenheid">Voorstel overnemen</button>
+                            if (heeftMarkt) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-vk-alles-markt" data-bw-edit title="Marktprijs als vraagprijs; zonder marktreferentie het voorstel">Markt overnemen</button> }
+                        }
+                    </span>
+                </div>
+                <div style="padding:16px 20px 18px;display:flex;flex-direction:column;gap:12px">
+                    <div class="gl-v2-bw-tiles">
+                        <div class="gl-v2-bw-tile"><span class="lbl">Kostprijs incl. grond</span><span class="val">@Eur0(vs.TotaalKostprijs)</span></div>
+                        <div class="gl-v2-bw-tile @(vs.GrondKost <= 0 ? "is-warn" : "")"><span class="lbl">Grondwaarde · @Pct(vs.GrondMargePerc)</span><span class="val">@Eur0(vs.Grondwaarde)</span>@if ((vs.GrondKost) <= 0) { <span class="sub">aankoopprijs ontbreekt</span> }</div>
+                        <div class="gl-v2-bw-tile"><span class="lbl">Bouwwaarde · @Pct(vs.DoelMargePerc)</span><span class="val">@Eur0(vs.Bouwwaarde)</span></div>
+                        <div class="gl-v2-bw-tile is-pos"><span class="lbl">Min. verkoopwaarde</span><span class="val">@Eur0(vs.TotaalVerkoopwaarde)</span></div>
+                        <div class="gl-v2-bw-tile"><span class="lbl">Marge</span><span class="val">@Eur0(vs.MargeBedrag)</span><span class="sub">@Pct(vs.MargePerc)</span></div>
+                        @if (vs.MarktTotaal.HasValue && vs.MinimumTotaalMetMarkt is > 0)
+                        {
+                            var d = (vs.MarktTotaal.Value - vs.MinimumTotaalMetMarkt.Value) / vs.MinimumTotaalMetMarkt.Value;
+                            <div class="gl-v2-bw-tile @(d >= 0 ? "is-pos" : "is-neg")"><span class="lbl">Marktwaarde</span><span class="val">@Eur0(vs.MarktTotaal.Value)</span><span class="sub">mediaan @vs.AantalEenhedenMetMarkt/@vs.AantalEenheden eenh. · @PctS(d)</span></div>
+                        }
+                    </div>
+                    @foreach (var w in vs.Waarschuwingen)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-compact is-warning"><i class="ph ph-warning" aria-hidden="true"></i><span>@w @if (w.Contains("grond", StringComparison.OrdinalIgnoreCase)) { <a href="@Url.Action("BudgetParams", "Projecten", new { versieId = Model.BudgetVersieId })" data-bw-nav="back" style="color:inherit;font-weight:600">Naar stap 7</a> }</span></div>
+                    }
+                    @if (markt is not null && markt.HeeftData)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-map-pin" aria-hidden="true"></i><span><strong>Markt @markt.GemeenteNaam</strong> · laatste @markt.PeriodeMaanden maanden: @markt.AantalTeKoop te koop, @markt.VerkochtInPeriode verkocht · mediaan €/m² te koop @(markt.MediaanPrijsPerM2TeKoop.HasValue ? Eur0(markt.MediaanPrijsPerM2TeKoop.Value) : "—"), verkocht @(markt.MediaanPrijsPerM2Verkocht.HasValue ? Eur0(markt.MediaanPrijsPerM2Verkocht.Value) : "—") · doorlooptijd @(markt.MediaanDoorlooptijdDagen?.ToString() ?? "—") dagen.@if (markt.EigenVerkopen > 0) { <text> Eigen verkopen in @markt.Postcode: @markt.EigenVerkopen, mediaan @(markt.MediaanPrijsPerM2EigenVerkoop.HasValue ? Eur0(markt.MediaanPrijsPerM2EigenVerkoop.Value) : "—")/m².</text> } <a href="@Url.Action("Gemeenteanalyse", "Marktanalyse", new { geoMunicipalityId = markt.GeoMunicipalityId, aanbod = "Alles" })" target="_blank" data-bw-plain>Gemeenteanalyse</a></span></div>
+                    }
+                </div>
+            </section>
+        }
+
+        @* ── Per eenheid ── *@
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-house" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Per eenheid</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc" id="bw-vk-desc">@eenheden.Count eenheden · vraagprijs onder het minimum valt op</span>
+                <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-vk-doorzetten" data-bw-edit title="Slaat op en schrijft grond-/bouwwaarde naar de gekoppelde Units (verkochte units worden overgeslagen)"><i class="ph ph-share-fat" aria-hidden="true"></i>Doorzetten naar units</button>
+                </span>
+            </div>
+            <div class="gl-v2-bw-table-wrap">
+                <table class="gl-v2-bw-table" id="bw-vk-tabel" data-refprijzen='@Html.Raw(refPrijzen)'>
+                    <thead>
+                        <tr>
+                            <th style="width:28px"></th><th>Eenheid</th><th>Type</th><th class="is-num">Bew.</th><th class="is-num">Grond</th><th class="is-num">Kostprijs</th><th class="is-num">Bouwwaarde</th><th class="is-num" title="Grondwaarde + bouwwaarde (kost + marge)">Min. prijs</th>
+                            <th class="is-num" title="Mediaan €/m² van vergelijkbare units (aantal)">Markt €/m²</th><th class="is-num" title="Mediaan €/m² × bewoonbare opp.">Marktprijs</th><th class="is-num" style="min-width:140px">Vraagprijs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bw-vk-body">
+                        @foreach (var e in eenheden)
+                        {
+                            lijnenOpNaam.TryGetValue(e.EenheidNaam?.Trim() ?? "", out var l);
+                            var naam = e.EenheidNaam ?? "";
+                            var min = Math.Round(e.MinimumVerkoopprijs, 0);
+                            rij++;
+                            <tr class="bw-vk-rij" data-naam="@naam" data-info="1" data-gered="@e.OppGereduceerd.ToString(inv)" data-grondopp="@e.Grondopp.ToString(inv)" data-min="@min.ToString(inv)" data-vgrond="@Math.Round(e.Grondwaarde, 0).ToString(inv)" data-vbouw="@Math.Round(e.Bouwwaarde, 0).ToString(inv)" data-markt="@(e.MarktPrijs?.ToString(inv) ?? "")" data-bron="@(l?.PrijsBron?.ToString() ?? "")">
+                                <td><button type="button" class="gl-v2-row-action bw-vk-toggle" aria-expanded="false" title="€/m² instellen, bron, ruil, forfait, unit" aria-label="Details"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Details</span></button></td>
+                                <td class="is-strong">@naam</td>
+                                <td class="is-muted">@(string.IsNullOrEmpty(e.TypeName) ? e.GroupTypeName : e.TypeName)</td>
+                                <td class="is-num">@e.BewoonbareOpp.ToString("N0", nl) m²</td>
+                                <td class="is-num">@(e.Grondopp > 0 ? e.Grondopp.ToString("N0", nl) : "—")</td>
+                                <td class="is-num">@Eur0(e.Kostprijs)</td>
+                                <td class="is-num">@Eur0(e.Bouwwaarde)</td>
+                                <td class="is-num is-strong" style="color:var(--gl-v2-primary)">@Eur0(min)</td>
+                                <td class="is-num" title="@(e.MarktAantal > 0 ? e.MarktVergelijking + ", basis: " + e.MarktBasis : "Te weinig vergelijkbare units")">@(e.MarktMediaanPerM2.HasValue ? Eur0(e.MarktMediaanPerM2.Value) + " (" + e.MarktAantal + ")" : "—")</td>
+                                <td class="is-num">@(e.MarktPrijs.HasValue ? Eur0(e.MarktPrijs.Value) : "—")@if (e.MarktVerschilPerc.HasValue) { <span class="@(e.MarktVerschilPerc.Value >= 0 ? "is-lager" : "is-hoger")" style="font-size:11px;margin-left:4px;color:@(e.MarktVerschilPerc.Value >= 0 ? "var(--gl-v2-primary)" : "#8B2A2A")">@PctS(e.MarktVerschilPerc.Value)</span> }</td>
+                                <td class="is-num"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:140px;margin-left:auto"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular vraagprijs" value="@F0(l?.Vraagprijs)" placeholder="@min.ToString("N0", nl)" aria-label="Vraagprijs @naam" /></div></div></td>
+                            </tr>
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVerkoopDetail.cshtml", new BwVerkoopDetailVm { Naam = naam, Lijn = l, RefBouw = refBouwItems, RefGrond = refGrondItems, Units = unitItems, Rij = rij })
+                            if (l?.Vraagprijs is > 0m && l.Vraagprijs < min)
+                            {
+                                <tr class="bw-vk-waarsch-rij"><td></td><td colspan="10" class="bw-vk-waarsch"><i class="ph ph-warning" aria-hidden="true"></i> @naam: vraagprijs @Eur0(l.Vraagprijs.Value) ligt @Eur0(min - l.Vraagprijs.Value) onder de minimale verkoopprijs.</td></tr>
+                            }
+                        }
+                        @foreach (var l in losseLijnen)
+                        {
+                            rij++;
+                            <tr class="bw-vk-rij" data-naam="@l.EenheidNaam" data-info="0" data-gered="0" data-grondopp="0" data-min="0" data-vgrond="" data-vbouw="" data-markt="" data-bron="@(l.PrijsBron?.ToString() ?? "")">
+                                <td><button type="button" class="gl-v2-row-action bw-vk-toggle" aria-expanded="false" title="Details" aria-label="Details"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Details</span></button></td>
+                                <td class="is-strong">@l.EenheidNaam <span class="gl-v2-bw-hint">niet op stap 2</span></td>
+                                <td class="is-muted" colspan="7">vrije lijn — geen voorstel</td>
+                                <td></td>
+                                <td class="is-num"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:140px;margin-left:auto"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular vraagprijs" value="@F0(l.Vraagprijs)" aria-label="Vraagprijs" /></div></div></td>
+                            </tr>
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVerkoopDetail.cshtml", new BwVerkoopDetailVm { Naam = l.EenheidNaam, Lijn = l, RefBouw = refBouwItems, RefGrond = refGrondItems, Units = unitItems, Rij = rij })
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5">Totaal</td>
+                            <td class="is-num">@Eur0(vs?.TotaalKostprijs ?? 0m)</td>
+                            <td class="is-num">@Eur0(vs?.Bouwwaarde ?? 0m)</td>
+                            <td class="is-num" style="color:var(--gl-v2-primary)">@Eur0(vs?.TotaalVerkoopwaarde ?? 0m)</td>
+                            <td></td>
+                            <td class="is-num">@(vs?.MarktTotaal.HasValue == true ? Eur0(vs.MarktTotaal.Value) : "—")</td>
+                            <td class="is-num" id="bw-vk-tot">—</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="gl-v2-bw-note" style="padding:12px 20px 16px;justify-content:space-between" id="bw-vk-samenvatting" data-minimum="@((vs?.TotaalVerkoopwaarde ?? 0m).ToString("F0", inv))">
+                <span><span class="gl-v2-bw-hint">Vraagprijzen</span> <strong id="bw-vk-sum">—</strong> <span class="gl-v2-bw-hint">· minimale verkoopwaarde</span> <strong>@Eur0(vs?.TotaalVerkoopwaarde ?? 0m)</strong> <span class="gl-v2-bw-hint">· verschil</span> <strong id="bw-vk-marge">—</strong></span>
+                <span id="bw-vk-onder" class="bw-vk-waarsch" hidden></span>
+            </div>
+            @if (!eenheden.Any() && !losseLijnen.Any())
+            {
+                <div class="gl-v2-bw-empty"><span class="t">Nog geen eenheden</span><span class="s">Vul eerst de eenheden in op stap 2 — het voorstel en de verkooplijnen volgen daaruit.</span></div>
+            }
+        </section>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <a href="@ch.PrevUrl" class="gl-v2-btn gl-v2-btn-text" data-bw-nav="back"><i class="ph ph-caret-left" aria-hidden="true"></i>@ch.PrevLabel</a>
+        <span class="gl-v2-bw-status" data-bw-status data-state="@(ch.IsLocked ? "locked" : "saved")" aria-live="polite">@(ch.IsLocked ? "Definitief — alleen-lezen" : "Alle wijzigingen opgeslagen")</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@ch.NextUrl" class="gl-v2-btn gl-v2-btn-primary" data-bw-nav="next" data-bw-keep>@(ch.IsLocked ? "Volgende: Resultaat" : "Opslaan & volgende: Resultaat")<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script src="~/js/gl-v2-budget-verkoop.js" asp-append-version="true"></script>
+}

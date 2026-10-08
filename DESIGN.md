@@ -6339,3 +6339,124 @@ of op de website) die via `ProjectDossierDocument` aan het dossier hangen. Formu
 - Bank: statusfilter (Alle/Actief/Standaard/Afgesloten) via het standaard filters-component; "Rekening afgesloten" in de modal zet Geldig tot = vandaag (status afgeleid uit ValidTo <= vandaag, server forceert IsDefault=false).
 - Boekhouding: Octopus-card volle breedte, stappen als kolommen; stap 2/3 `inert` + gedimd zolang het token ontbreekt/verlopen is. Daaronder 2 kolommen: Boekjaren + Veldkoppeling | Verkoop-btw-codes.
 - Lay-out & e-mail: preview-kaart even hoog als de linkerkolom; "Reset naar standaard" = `gl-v2-btn-warning`.
+
+### Update 08/10/2026 — Eén "niet-opgeslagen wijzigingen"-vraag
+- Een formulierpagina toont enkel de eigen modal "Wijzigingen niet opslaan?" (gl-v2-leave-guard.js); de standaard browserdialoog ("Site verlaten?") mag er nooit náást verschijnen.
+- Een `beforeunload`-handler op een pagina blijft alleen voor sluiten/herladen/adresbalk; hij moet stilvallen zodra de dirty-badge verborgen is (de leave-guard verbergt die na bevestiging) en vóór elke eigen submit/redirect worden verwijderd.
+
+## Instellingen/Prijsreferenties verkoop en Referentieprojecten — design-handoff punt 38 (08/10/2026)
+Twee beheerpagina's van de budgetwizard, opgebouwd uit bestaande componenten (tabbar en sectiekaart 8e, velden 19/4i,
+zoekveld 34, meldingskaders 25, actiebalk 8e·5). `InstellingenController.Budget.cs` vertakt via de gebruikelijke
+`UseGlV2Layout`-ternary naar `BudgetPrijsReferentiesV2`, `BudgetReferentieProjectenV2` en (enkel gl-v2) de controlestap
+`BudgetReferentieImportControleV2`. Page-CSS: `gl-v2-instellingen-budgetreferenties.css` (klassen `.gl-v2-bref-*`; de
+shell-overrides staan onder `.gl-v2-bref …`, laadvolgorderegel). Migratie 077 (archiveren, niet-gematchte regels, CreatedBy).
+
+**38a/38b Prijsreferenties.** `.gl-v2-tabbar` Bouw/Grond met `.gl-v2-tabbar-count`; per tab een sectiekaart "… toevoegen"
+(raster `110px · 1.6fr · 160px · 150px · 1.2fr · 1.1fr · auto`: code met vaste prefix "B-"/"G-" achter een
+`.gl-v2-field-divider`, prijs met eenheidblok `€/m²`, `GlV2/_DateField`, `GlV2/_SelectList` voor het optionele project) en een
+sectiekaart met de lijst: toolbar (zoekveld, projectfilter als bare `_SelectList`, `.gl-v2-toggle-switch` "Enkel ouder dan 12
+maanden", "sorteer: datum ↓"), rasterrijen `80px · 1.4fr · 160px · 140px · 1fr · 1fr · 120px · 64px`, actualiteit als
+`.gl-v2-badge` (`is-positive` Actueel · `is-attention` Ouder dan 12 m. · `is-inactive` Gearchiveerd), rij-acties volgens het
+Facturen-recept (`.gl-v2-row-action` 26×26 bare; `-primary` = bewerken, `-danger` = verwijderen, archiveren/herstellen
+neutraal; elk met een visueel verborgen `.gl-v2-row-action-label`). De tabelkop volgt ook het Facturen-recept (wit,
+primair-groen 11px, hairline) en niet het mockup-tintje `#F7F9F5` — dat was niet te onderscheiden van de paginakleur.
+Alle velden in deze rasters krijgen `width:100%; min-width:0` (een `<input>` heeft een intrinsieke breedte van ±20 tekens
+en duwde het datumveld anders over "Bron" heen). **Bewerken per rij** = de weergaverij wisselt met een verborgen formulierrij eronder (zelfde raster,
+velden zonder label, ✓/✕ rechts) — geen modal. Lege staat na filter met "wis de filter "…"". Infokader (25a compact) onderaan.
+Codes tonen als `B-01`/`G-07` (`BudgetPrijsReferentieBO.CodeLabel`); export als .xlsx. Het codeveld stelt de eerstvolgende
+vrije code voor. Filteren/zoeken is client-side; na een POST opent de tab van het bewerkte type (TempData).
+
+**38c Referentieprojecten.** Geen tabbar. Twee sectiekaarten in `.gl-v2-bref-cards`: *Uit Excel inladen* (sjabloonknop in de
+kaartkop, uploadvak `.gl-v2-bref-drop` in de taal van de foto-dropzone van Projecten/EditV2, knop "Inladen en controleren") en
+*Uit een project van de app* (projectkeuze als `GlV2/_GlV2Combo` met statische `OptionsJson` — punt 34, zoeken in de lijst zelf —
+→ `BudgetReferentieProjectPreview` vult vier alleen-lezen tegels: eenheden, GBA, facturen of contracten, status; "Snapshot
+maken" pas actief als er bedragen zijn; GBA en eenheden zijn optioneel zelf in te vullen voor een project zonder budget/units).
+Lijst met zoekveld, raster `1.6fr · 100 · 100 · 70 · 80 · 120 · 100 · 80 · 100 · 110 · 64px`, bron als badge (Snapshot
+`is-positive` / Excel `is-neutral`), tweede regel onder de naam ("Excel · Niels, 02/10/2026" of in warning-kleur "3 activiteiten
+niet gematcht"), kolom "Index S / I" = factor peildatum → vandaag. Uitklappen per rij toont de bedragen per activiteit met
+match-badge. Infokader: zonder GBA geen €/m².
+
+**38d Controle na Excel-import.** Eigen pagina (`ViewData["GlV2FullHeightBody"]`, `BackUrl`), `<form>` als flexkolom met
+scrollend lichaam en `.gl-v2-form-actionbar` onderaan (links de staat "n regels nog te koppelen — opslaan mag…", rechts
+Annuleren / Opslaan als referentie). Volgorde: `.gl-v2-notice-expanded is-warning` (of `is-success` als alles matcht), vier
+KPI-tegels (`.gl-v2-bref-kpi`: regels, gematcht "28 · 25 op id, 3 op naam", totaal, GBA), sectiekaart "Regels — niet-gematcht
+bovenaan" met raster `90px · 1fr · 1fr · 120px · 150px`; een niet-gematchte rij (tint `#FBF6EA`) heeft een bare `_SelectList`
+gegroepeerd per lot; kiezen maakt de badge "Manueel" en telt live af. Gematchte rijen: de eerste drie, de rest achter
+"+ n gematchte regels tonen". Geen serverstaat tussen de twee stappen: elke regel reist als `Rijen[i].…`-hidden fields;
+bedragen nl-BE geformatteerd (komma), zoals de gl-v2-velden; `FlexibleDecimalModelBinder` leest zowel "2150,5" als "2150.5" juist en rondt af op 2 decimalen.
+
+**Bewust anders dan het mockup.** Geen "Niels" bij Excel-import vóór migratie 077 (CreatedBy pas vanaf nu gevuld); de
+projectkeuzelijst toont alle projecten met de status als tweede regel i.p.v. enkel afgewerkte (een snapshot van een lopend
+project is zinvol als vergelijking, de hint waarschuwt); sorteren is vast (datum ↓), geen sorteerkeuze.
+
+## Budgetflow — design-handoff punt 39 (08/10/2026)
+Overzicht (39a) en de negen stappen (39b–39j) van de budgetwizard in gl-v2. `ProjectenController.Budget.cs` vertakt per GET via
+`GebruikGlV2` naar `Budget…V2.cshtml`; alles wat enkel gl-v2 nodig heeft staat in `ProjectenController.BudgetV2.cs`
+(`PrepareWizardV2`, statusacties, autosave stap 7, reductiefactoren, "Maak actief"). Page-CSS `gl-v2-budget.css`
+(klassen `.gl-v2-bw-*`, shell-overrides onder `.gl-v2-bw …`, laadvolgorderegel), JS `gl-v2-budget.js` (gedeeld),
+`gl-v2-budget-elementen.js` (stap 4/5), `gl-v2-budget-verkoop.js` (stap 8). Migratie 078.
+
+**Chrome van elke stap.** `BudgetWizardChromeVm` (`ViewData["Chrome"]`) voedt drie partials in `Views/Projecten/Budget/V2/`:
+`_BwStappen` (punt 27b chips, edge-to-edge onder de topbar met een goudkleurige voortgangslijn `::after` die van
+`--bw-from` naar `--bw-to` animeert; onder 1024px de balk "Stap 4 van 9 · Dak & afbraak" met uitklappaneel 27h), `_BwTopbar`
+(badge "Budget v2 · Concept" in `PageTitleBadges`, schakelaar "Toon berekeningen" = `body.bw-show-calc`, onthouden in
+localStorage) en `_BwActiebalk` (`.gl-v2-form-actionbar`: links "‹ Vorige" + opslagstatus `.gl-v2-bw-status[data-state]`
+met stip — saved/dirty/saving/error/locked —, rechts "Volgende ›" of "Opslaan & volgende"). De body is `GlV2FullHeightBody`:
+`.gl-v2-bw` is een flexkolom (stappen · scrollend `.gl-v2-bw-scroll` · actiebalk).
+
+**Bewegingstaal (impeccable animate, operate-modus).** Eén focaal moment: de paginawissel. Klik op Volgende/Vorige/een chip →
+eerst opslaan (`GlV2Budget.register({save})`), dan `.is-leaving` (inhoud glijdt 12px weg in de reisrichting, 180 ms), richting
+en voortgang gaan via sessionStorage mee; de nieuwe pagina zet `html[data-bw-dir]` vóór de eerste paint en laat de kinderen van
+`.gl-v2-bw-scroll` gestaffeld (40 ms) uit die richting binnenkomen; de voortgangslijn loopt door van de vorige naar de nieuwe
+stap. Een laadindicator (shimmer op de stappenbalk) pas na 400 ms. Al het andere is routine en snel: statusstip 150 ms,
+rij-opslag met `tr.is-saving` (tint) → `is-saved` flits, uitklapregels 200 ms. `prefers-reduced-motion` zet alles op fade.
+
+**Velden en tabellen.** Numeriek veld = partial `_BwNum` (`BwNumVm`): `.gl-v2-field-box` met optioneel `.gl-v2-field-prefix` (€)
+en `.gl-v2-field-unit` (m², %, €/m²), waarde nl-BE, `inputmode="decimal"`, autosave op change. Tabellen `.gl-v2-bw-table`
+(kop volgens het Facturen-recept, `.is-num` tabulair rechts, `.is-strong`, `.is-muted`, `.is-neg`, groepkoppen als `th` over de
+volle breedte, totaalrij in `--gl-v2-primary-tint`), invoervelden in cellen als bare `.gl-v2-field-box`, rij-acties volgens het
+rij-actierecept, toevoegrij `.gl-v2-bw-addrow` onderaan. KPI-tegels `.gl-v2-bw-tiles` (`auto-fit minmax(150px)`,
+`.is-pos/.is-neg/.is-warn` kleuren enkel de waarde). Lay-out met zijkolom: `.gl-v2-bw-cols` (formulier + 320px aside met de
+live berekening, onder 1200px eronder). Uitklapbare berekening: `.gl-v2-bw-calc` (enkel zichtbaar met `body.bw-show-calc`).
+
+**Per stap.** 39b Gegevens: twee kaarten (project/indexen met index-kiezer in een modal; aantallen) + aside met de live
+samenstelling. 39c Oppervlaktes: tabel met kolomgroepen (data-group), per rij "gereduceerd" live, kaart *Reductiefactoren VMSW*
+(13 factoren, per versie aanpasbaar, "Herstel standaard"). 39d Sanitair: tabel + totalen. 39e Gevels: tabbar gevels/ramen/
+balustrades/leien, per tab `_BwElementTabel` (lengte · hoogte · opp, dupliceren/verwijderen). 39f Dak & afbraak: typekeuze als
+tegels `[data-dak-type]`, secties per type, veluxen. 39g Activiteiten: tabel per lot met basis/alternatief/nacalc-referentie/
+verschil/correctie, referentieprojecten kiezen in de kaartkop, eigen opslaan-knop (`#bw-act-save`, JSON). 39h Parameters: vier
+kaarten met %-velden (procentpunten in de UI, fracties in de DB), waarschuwing "decennale 0 %" als wegklikbaar meldkader (25a).
+39i Verkoop: rij per eenheid zoals het mockup (naam · info · gereduceerd · min. · vraagprijs · marge · bron-badge) met een
+uitklapbare €/m²-regel (`_BwVerkoopDetail`: grond/bouw-prijscode of manueel, extra forfait, ruil), "Doorzetten naar units".
+39j Resultaat: meldkader met de open fouten/waarschuwingen per stap (link "Naar stap n"), zes tegels, kostenoverzicht met
+groepkoppen, per eenheid, bouwkost t.o.v. nacalc (twee balken, goud = nacalc), andere versies; actiebalk Kopie als nieuwe versie ·
+Afronden · Afronden & definitief maken (uit zolang er fouten zijn). Topbar: Versies vergelijken, PDF, Excel.
+
+**39a Overzicht** (`BudgetIndexV2`, buitenmenu-modus): intro, kaart *Definitief budget* (naam, totaal, vastgezet op/door, drie
+tegels Gecontracteerd/Gefactureerd/Verwacht verschil **als placeholder "—" tot de koppeling met contracten en facturen**),
+daaronder `.bw-ix-kaarten` (auto-fill 460px) met per budget een sectiekaart: kop met naam, eenheden, laatst gewijzigd, badge
+"Actief budget" of knop "Maak actief"; tabel versie · naam · datum · status (`is-attention` Huidig · concept stap x van 9,
+`is-inactive` concept, `is-neutral` Afgerond, `is-positive` Definitief) · totaal · Open; voet "Nieuwe versie op basis van de
+huidige" (modal met naam/notitie). Topbar: "Nieuw budget" (modal: naam, omschrijving, "Starten als" = leeg of kopie van een
+versie — gegroepeerd per project · budget). Klikbare rijen (`data-detail-url`).
+
+**Vergrendeling.** Definitieve versie: `.gl-v2-bw.is-locked` + meldingsbalk 25c "Definitief budget — vastgezet op … door … ·
+alleen-lezen" met "Niet-definitief maken"; JS zet alle velden uit behalve `[data-bw-keep]`, verbergt `[data-bw-edit]`; server-
+side blokkeert `BudgetVersieVergrendeldFilter` elke POST die een versieId draagt.
+
+**Schermen (impeccable adapt).** ≥1200: zoals het mockup. 1024–1199: aside onder het formulier, tegels 3 per rij.
+<1024: chips → balk + paneel, kolomgroepen scrollen horizontaal (`.gl-v2-bw-table-wrap`), kaarten één kolom.
+<768: tegels 2 per rij, actiebalk twee regels (status boven de knoppen), modals schermvullend (`modal-fullscreen-md-down`),
+knoppen volle breedte. Coarse pointer: rij-acties en toggles 40–44px.
+
+**Bewust anders dan het mockup.** De KPI's gecontracteerd/gefactureerd zijn placeholders (koppeling volgt); de tabelkoppen
+volgen het Facturen-recept en niet het tintje uit het mockup (zelfde reden als punt 38); "Afgerond" blijft bewerkbaar, enkel
+"Definitief" is alleen-lezen (keuze Niels); reductiefactoren zijn per versie aanpasbaar (keuze Niels).
+
+### Update 08/10/2026 — Punten (design-handoff punt 40/41), fase 1
+- `Projecten/Issues/IndexV2` (40a + 40n): KPI-strip per fase, zoek + Filters (Status standaard "Open", Eenheid, Aannemer, Fase, Deadline, Prioriteit, Op plan), sorteerbare tabel, ··· menu per rij, donkere selectiebalk (Goedkeuren, Status…, Deadline…, Aannemer…, Verwijderen) met paneeltjes erboven. Namespace `gl-v2-pt-*`.
+- `Projecten/Issues/DetailsV2` (40o): foto's & beschrijving, historiek met berichten intern/naar aannemer, "In de wacht" (reden + opvolgdatum, deadline pauzeert tot hervatten), details/aannemer. Namespace `gl-v2-pd-*`.
+- Statusreeks: Concept 8 · Ter goedkeuring 9 · Doorgestuurd 10 · Gemeld uitgevoerd 11 · Afgesloten 5 · Afgewezen 6 · In de wacht 12; legacy waarden (0–4, 7) worden door migratie 079 omgezet en via `PuntenWeergave.Canon` ook zonder migratie goed getoond. Nieuwe punten starten als Concept.
+- Nog te bouwen: Punt toevoegen-paneel (40c), Goedkeuren & doorsturen (40d), Op plan/tablet (40b/40k), Verslagen (40i/40l), gsm-flows (41), spraak/rondgang (41c/d, 40f–h).
+
+**Dropdown: chevron altijd zichtbaar (08/10/2026).** `.gl-v2-select-trigger.is-filled .gl-v2-select-trigger-caret { display:none }` is verwijderd uit `gl-v2/forms.css`: na een keuze verdween de chevron en leek de dropdown een tekstveld. Projectbreed; een wis-knop (`.gl-v2-select-trigger-clear`) verschijnt desgewenst naast de chevron.

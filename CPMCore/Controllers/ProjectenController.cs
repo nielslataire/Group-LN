@@ -59,6 +59,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 namespace CPMCore.Controllers
 {
     [Authorize]
+    [TypeFilter(typeof(CPMCore.Filters.BudgetVersieVergrendeldFilter))]
     public partial class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;

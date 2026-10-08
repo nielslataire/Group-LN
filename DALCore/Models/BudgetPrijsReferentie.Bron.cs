@@ -11,4 +11,7 @@ public partial class BudgetPrijsReferentie
 
     /// <summary>Waar de €/m² vandaan komt, bv. "verkoop Keerstraat lot 3, 06/2026" of "mediaan markt Gent".</summary>
     public string Bron { get; set; }
+
+    /// <summary>Migratie 077: een code die in een budget gebruikt is, kan niet verwijderd worden — wel gearchiveerd (niet meer kiesbaar op stap 8).</summary>
+    public bool Gearchiveerd { get; set; }
 }

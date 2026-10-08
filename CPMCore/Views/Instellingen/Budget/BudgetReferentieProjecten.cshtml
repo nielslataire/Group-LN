@@ -84,7 +84,7 @@
         <section class="card card-modern h-100">
             <div class="card-header border-0 pb-0">
                 <h2 class="card-title mb-0">Uit een project van de app</h2>
-                <p class="text-muted small mb-0">Snapshot van de inkomende facturen per activiteit (zonder facturen: de contracten). Eenheden en GBA komen uit het project.</p>
+                <p class="text-muted small mb-0">Snapshot van de inkomende facturen per activiteit, zonder meerwerken voor klanten (zonder facturen: de contracten). Eenheden en GBA komen uit het project.</p>
             </div>
             <div class="card-body">
                 <form method="post" asp-action="BudgetReferentieProjectImportProject" asp-controller="Instellingen">
@@ -107,6 +107,14 @@
                         <div class="col-md-5">
                             <label class="form-label">Peildatum (optioneel)</label>
                             <input type="date" name="datum" class="form-control form-control-modern" title="Standaard de (definitieve) opleverdatum van het project" />
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Eenheden (optioneel)</label>
+                            <input type="number" min="1" name="aantalEenheden" class="form-control form-control-modern" placeholder="uit het project" title="Enkel als het project geen units heeft" />
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label">GBA m² (optioneel)</label>
+                            <input type="text" inputmode="decimal" name="oppervlakteGBA" class="form-control form-control-modern" placeholder="uit het laatste budget" title="Bewoonbare oppervlakte; enkel nodig als het project geen budget heeft" />
                         </div>
                         <div class="col-12">
                             <label class="form-label">Opmerking</label>
@@ -166,7 +174,7 @@
                             <td class="text-end fw-semibold">@Eur0(r.TotaalBedrag)</td>
                             <td class="text-end">@(r.PrijsPerEenheid.HasValue ? Eur0(r.PrijsPerEenheid.Value) : "—")</td>
                             <td class="text-end">@(r.PrijsPerM2.HasValue ? Eur0(r.PrijsPerM2.Value) : "—")</td>
-                            <td class="text-end">@r.Lijnen.Count</td>
+                            <td class="text-end">@r.AantalGematcht@(r.AantalNietGematcht > 0 ? $" (+{r.AantalNietGematcht} niet gematcht)" : "")</td>
                             <td class="text-muted small">@(r.SIndex.HasValue ? r.SIndex.Value.ToString("0.##", nlBE) : "—") / @(r.IIndex.HasValue ? r.IIndex.Value.ToString("0.##", nlBE) : "—")</td>
                             <td class="text-end text-nowrap" onclick="event.stopPropagation();">
                                 <form method="post" asp-action="BudgetReferentieProjectDelete" asp-controller="Instellingen" class="d-inline"
@@ -186,8 +194,8 @@
                                         @foreach (var l in r.Lijnen)
                                         {
                                             <tr>
-                                                <td class="text-muted">@(l.LotNummer > 0 ? $"Lot {l.LotNummer:G}" : "")</td>
-                                                <td>@l.ActivityOmschrijving</td>
+                                                <td class="text-muted">@(l.ActivityId.HasValue && l.LotNummer > 0 ? $"Lot {l.LotNummer:G}" : "")</td>
+                                                <td>@(l.ActivityOmschrijving ?? l.ExcelNaam)@if (!l.ActivityId.HasValue) { <span class="badge bg-warning text-dark ms-1">niet gematcht</span> }</td>
                                                 <td class="text-end">@Eur0(l.Bedrag)</td>
                                                 <td class="text-end">@(r.AantalEenheden > 0 ? Eur0(l.Bedrag / r.AantalEenheden) : "—")</td>
                                             </tr>

@@ -1,0 +1,14 @@
+@model BOCore.BudgetSanitairBO
+@* gl-v2 — Budgetflow stap 3, één eenheid (design-handoff 39d): vijf tellers + totaal; de eenheden komen uit stap 2 (geen toevoegen/verwijderen hier). *@
+@{
+    var velden = new (string Field, int Val)[] { ("badkamer", Model.Badkamer), ("toiletInBadkamer", Model.ToiletInBadkamer), ("afzonderlijkToilet", Model.AfzonderlijkToilet), ("doucheInBadkamer", Model.DoucheInBadkamer), ("douchekamer", Model.Douchekamer) };
+}
+<tr class="bw-san-rij" data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-eenheid-naam="@Model.EenheidNaam" data-unit-type-id="@Model.UnitTypeId">
+    <td class="is-muted is-num bw-rijnr" style="width:36px">@(Model.SortOrder + 1)</td>
+    <td class="is-strong">@Model.EenheidNaam</td>
+    @foreach (var (field, val) in velden)
+    {
+        <td class="is-num is-center" style="min-width:90px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:72px;margin:0 auto"><input type="text" inputmode="numeric" pattern="[0-9]*" class="gl-v2-field-input is-num is-tabular san-input" data-field="@field" value="@val" aria-label="@field" /></div></div></td>
+    }
+    <td class="is-num is-center is-strong san-totaal">@Model.TotaalElementen</td>
+</tr>

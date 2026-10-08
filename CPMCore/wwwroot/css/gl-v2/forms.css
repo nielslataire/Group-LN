@@ -58,11 +58,13 @@
     color: var(--gl-v2-muted);
     cursor: pointer;
 }
+.gl-v2-select-trigger[aria-disabled="true"] { background: var(--gl-v2-bg, #F2F5EF); color: var(--gl-v2-muted-light); cursor: not-allowed; }
+.gl-v2-select-trigger[aria-disabled="true"] .gl-v2-select-trigger-label, .gl-v2-select-trigger[aria-disabled="true"] .gl-v2-select-trigger-caret { color: var(--gl-v2-muted-light); }
 .gl-v2-select-trigger-clear i { font-size: 12px; }
 .gl-v2-select-trigger-clear:hover,
 .gl-v2-select-trigger-clear:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
 .gl-v2-select-trigger.is-filled .gl-v2-select-trigger-clear { display: flex; }
-.gl-v2-select-trigger.is-filled .gl-v2-select-trigger-caret { display: none; }
+/* De chevron blijft ook na een keuze zichtbaar (anders lijkt een gekozen dropdown een gewoon tekstveld); een eventuele wis-knop komt ernaast. */
 
 /* Backdrop en sheet-header horen enkel bij de mobiele bottom-sheet-vorm (<768px, zie verderop) —
    zonder deze basisregel zou een kale <div> op desktop/tablet gewoon als onopgemaakt blok

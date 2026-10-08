@@ -268,6 +268,16 @@ namespace ServiceCore
                 return response;
             }
 
+            // Aanpasbare VMSW-factoren en bevestigde aandachtspunten reizen mee (migratie 078); status/vastzetting niet.
+            var bronVersie = _uow.BudgetVersies.GetNoTracking().FirstOrDefault(x => x.Id == bronVersieId);
+            var doelVersie = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == doelVersieId);
+            if (bronVersie != null && doelVersie != null)
+            {
+                doelVersie.VmswFactoren = bronVersie.VmswFactoren;
+                doelVersie.WaarschuwingenBevestigd = bronVersie.WaarschuwingenBevestigd;
+                doelVersie.LaatsteStap = bronVersie.LaatsteStap;
+            }
+
             var g = _uow.BudgetGegevens.GetNoTracking().FirstOrDefault(x => x.BudgetVersieId == bronVersieId);
             if (g != null && !_uow.BudgetGegevens.GetNoTracking().Any(x => x.BudgetVersieId == doelVersieId))
             {
@@ -429,6 +439,102 @@ namespace ServiceCore
             return response;
         }
 
+        // ── Versiestatus (migratie 078) ───────────────────────────────────────
+
+        public bool IsVergrendeld(int versieId)
+            => _uow.BudgetVersies.GetNoTracking().Any(v => v.Id == versieId && v.Status == BudgetVersie.StatusDefinitief);
+
+        public Response AfrondenVersie(int versieId)
+        {
+            var response = new Response();
+            var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
+            if (v == null) { response.AddError("Versie niet gevonden."); return response; }
+            if (v.Status == BudgetVersie.StatusDefinitief) { response.AddError("Een definitieve versie is al afgerond en vergrendeld."); return response; }
+            v.Status = BudgetVersie.StatusAfgerond;
+            v.LaatsteStap = 9;
+            _uow.SaveChanges();
+            response.AddSuccess($"Versie v{v.Versienummer} afgerond.");
+            return response;
+        }
+
+        public Response MaakDefinitief(int versieId, string door)
+        {
+            var response = new Response();
+            var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
+            if (v == null) { response.AddError("Versie niet gevonden."); return response; }
+
+            // Eén definitieve versie per project (ook over budgetten heen): een eerdere wordt weer "Afgerond" en bewerkbaar.
+            foreach (var andere in _uow.BudgetVersies.GetNormal().Where(x => x.ProjectId == v.ProjectId && x.Id != versieId && x.Status == BudgetVersie.StatusDefinitief).ToList())
+            {
+                andere.Status = BudgetVersie.StatusAfgerond;
+                andere.VastgezetOp = null;
+                andere.VastgezetDoor = null;
+            }
+            v.Status = BudgetVersie.StatusDefinitief;
+            v.VastgezetOp = DateTime.Now;
+            v.VastgezetDoor = door;
+            v.LaatsteStap = 9;
+            _uow.SaveChanges();
+            response.AddSuccess($"Versie v{v.Versienummer} is nu het definitieve budget: alleen-lezen en basis voor facturen en contracten.");
+            return response;
+        }
+
+        public Response OntgrendelDefinitief(int versieId)
+        {
+            var response = new Response();
+            var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
+            if (v == null) { response.AddError("Versie niet gevonden."); return response; }
+            if (v.Status != BudgetVersie.StatusDefinitief) { response.AddInfo("Deze versie is niet definitief."); return response; }
+            v.Status = BudgetVersie.StatusAfgerond;
+            v.VastgezetOp = null;
+            v.VastgezetDoor = null;
+            _uow.SaveChanges();
+            response.AddSuccess($"Versie v{v.Versienummer} is niet langer definitief en weer bewerkbaar.");
+            return response;
+        }
+
+        public void RegistreerStap(int versieId, int stap)
+        {
+            if (stap < 1 || stap > 9) return;
+            var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
+            if (v == null || v.Status == BudgetVersie.StatusDefinitief) return;
+            if ((v.LaatsteStap ?? 0) >= stap) return;
+            v.LaatsteStap = (byte)stap;
+            _uow.SaveChanges();
+        }
+
+        public BOCore.Budget.VmswFactorenBO GetVmswFactoren(int versieId)
+        {
+            var json = _uow.BudgetVersies.GetNoTracking().Where(v => v.Id == versieId).Select(v => v.VmswFactoren).FirstOrDefault();
+            return BOCore.Budget.VmswFactorenBO.VanJson(json);
+        }
+
+        public Response SetVmswFactoren(int versieId, BOCore.Budget.VmswFactorenBO factoren)
+        {
+            var response = new Response();
+            var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
+            if (v == null) { response.AddError("Versie niet gevonden."); return response; }
+            if (factoren == null) factoren = BOCore.Budget.VmswFactorenBO.Standaard;
+            if (factoren.Lijst().Any(f => f.Item3 < 0m || f.Item3 > 2m)) { response.AddError("Een reductiefactor ligt tussen 0 en 2."); return response; }
+            v.VmswFactoren = factoren.NaarJson();   // NULL als alles standaard is
+            _uow.SaveChanges();
+            response.AddSuccess(factoren.IsAangepast ? "Reductiefactoren aangepast voor deze versie." : "Standaard VMSW-factoren hersteld.");
+            return response;
+        }
+
+        public Response BevestigWaarschuwing(int versieId, string sleutel, bool bevestigd)
+        {
+            var response = new Response();
+            var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
+            if (v == null) { response.AddError("Versie niet gevonden."); return response; }
+            var set = (v.WaarschuwingenBevestigd ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToHashSet();
+            if (bevestigd) set.Add(sleutel); else set.Remove(sleutel);
+            v.WaarschuwingenBevestigd = set.Count == 0 ? null : string.Join(",", set);
+            _uow.SaveChanges();
+            response.AddSuccess("Opgeslagen.");
+            return response;
+        }
+
         public Response ActiveerVersie(int versieId)
         {
             var response = new Response();
@@ -516,8 +622,13 @@ namespace ServiceCore
                 .OrderBy(o => o.SortOrder)
                 .ToList();
 
+            var factoren = GetVmswFactoren(versieId);
             foreach (var e in entities)
-                response.AddValue(BudgetWizardTranslator.TranslateOppervlaktesToBO(e));
+            {
+                var bo = BudgetWizardTranslator.TranslateOppervlaktesToBO(e);
+                bo.Factoren = factoren;
+                response.AddValue(bo);
+            }
 
             return response;
         }

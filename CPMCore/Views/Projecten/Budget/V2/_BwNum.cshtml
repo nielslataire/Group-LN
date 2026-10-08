@@ -1,0 +1,12 @@
+@model CPMCore.Models.Budget.BwNumVm
+@* gl-v2 — getalveld met eenheid-blok rechts (design-handoff 39b/39h, 19 "velden met eenheid"). Zelfde .gl-v2-field/.gl-v2-field-box-skelet als GlV2NumberUnit. *@
+<div class="gl-v2-field">
+    <label class="gl-v2-field-label" for="@Model.ElementId">@Model.Label@if (Model.Required) { <span style="color:#8B2A2A">*</span> }</label>
+    <div class="gl-v2-field-box">
+        @if (!string.IsNullOrEmpty(Model.Prefix)) { <span class="gl-v2-field-prefix">@Model.Prefix</span> }
+        <input type="text" inputmode="@(Model.Integer ? "numeric" : "decimal")" id="@Model.ElementId" name="@Model.Name" value="@Model.Text" placeholder="@Model.Placeholder"
+               autocomplete="off" class="gl-v2-field-input is-num is-tabular" @Html.Raw(Model.Attrs) />
+        @if (!string.IsNullOrEmpty(Model.Unit)) { <span class="gl-v2-field-unit">@Model.Unit</span> }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Help)) { <span class="gl-v2-field-help">@Model.Help</span> }
+</div>

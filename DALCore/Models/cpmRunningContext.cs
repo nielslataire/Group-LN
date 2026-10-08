@@ -3541,6 +3541,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Omschrijving).HasMaxLength(200);
             entity.Property(e => e.Datum).HasColumnType("date");  // migratie 075
             entity.Property(e => e.Bron).HasMaxLength(200);       // migratie 075
+            entity.Property(e => e.Gearchiveerd).HasDefaultValue(false);  // migratie 077
 
             entity.HasOne(d => d.Project).WithMany()
                 .HasForeignKey(d => d.ProjectId)
@@ -3560,6 +3561,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Bron).IsRequired().HasMaxLength(50).HasDefaultValue("Excel");
             entity.Property(e => e.Opmerking).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasColumnType("datetime2(0)").HasDefaultValueSql("SYSDATETIME()");
+            entity.Property(e => e.CreatedBy).HasMaxLength(100);  // migratie 077
 
             entity.HasOne(d => d.Project).WithMany()
                 .HasForeignKey(d => d.ProjectId)
@@ -3572,7 +3574,10 @@ public partial class cpmRunningContext : DbContext
             entity.ToTable("BudgetReferentieProjectLijn");
             entity.Property(e => e.Bedrag).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Opmerking).HasMaxLength(200);
-            entity.HasIndex(e => new { e.ReferentieProjectId, e.ActivityId }).IsUnique().HasDatabaseName("UQ_BudgetRefProjectLijn_Activiteit");
+            entity.Property(e => e.ExcelNaam).HasMaxLength(200);  // migratie 077
+            entity.Property(e => e.Match).HasMaxLength(10);
+            entity.HasIndex(e => new { e.ReferentieProjectId, e.ActivityId }).IsUnique().HasFilter("[ActivityId] IS NOT NULL")
+                .HasDatabaseName("UX_BudgetRefProjectLijn_Activiteit");
 
             entity.HasOne(d => d.ReferentieProject).WithMany(p => p.Lijnen)
                 .HasForeignKey(d => d.ReferentieProjectId)

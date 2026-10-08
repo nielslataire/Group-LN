@@ -85,8 +85,8 @@ public class ContractorPortalDigestService : IContractorPortalDigestService
         var historyEntries = await _db.ConstructionIssueHistory
             .AsNoTracking()
             .Where(h => h.Timestamp >= since && (
-                (h.Action == ActionCommentAdded && h.Comment != null && h.Comment != "") ||
-                (h.Action == ActionStatusChanged && h.NewValueJson == StatusWaitingInspection.ToString())
+                (h.Action == ActionCommentAdded && !h.IsInternal && h.Comment != null && h.Comment != "") ||
+                (h.Action == ActionStatusChanged && (h.NewValueJson == StatusWaitingInspection.ToString() || h.NewValueJson == "11"))
             ))
             .ToListAsync(ct);
 
