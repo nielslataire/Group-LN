@@ -133,9 +133,9 @@
     async function bewaar() {
         clearTimeout(saveTimer); GlV2Budget.setStatus("saving");
         try { var r = await GlV2Budget.post(root.getAttribute("data-url-save"), { budgetVersieId: versieId, lijnen: verzamel() }, true); if (!r.success) { GlV2Budget.setStatus("error", r.message || "Opslaan mislukt"); return false; } GlV2Budget.saved(); return true; }
-        catch (e) { GlV2Budget.setStatus("error"); return false; }
+        catch (e) { GlV2Budget.setStatus("error", "Opslaan mislukt: " + ((e && e.message) || e)); return false; }
     }
-    GlV2Budget.register({ save: bewaar, dirty: function () { return GlV2Budget.isDirty(); } });
+    GlV2Budget.register({ save: bewaar });   // geen dirty-callback: die riep GlV2Budget.isDirty() aan, dat dezelfde callback weer aanriep (oneindige lus → de knop deed niets)
     var dz = document.getElementById("bw-vk-doorzetten");
     if (dz) dz.addEventListener("click", async function () {
         var gekoppeld = Array.prototype.filter.call(body.querySelectorAll(".bw-vk-detail"), function (d) { var u = hidden(".bw-vk-extra .gl-v2-select", d); return u && parseInt(u.value) > 0; }).length;

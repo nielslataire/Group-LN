@@ -47,8 +47,10 @@
         .bw-vk-code-add { display: grid; grid-template-columns: 90px minmax(0, 1fr) 120px 150px minmax(0, 1fr) auto; gap: 8px; align-items: end; padding: 10px 20px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); }
         .bw-vk-code-add .gl-v2-field-label { display: none; }
         .bw-vk-code-add .gl-v2-field-box { height: 34px; }
-        .bw-vk-rij.is-onder-min td { background: #FBF6EA; }
-        .bw-vk-rij.is-onder-min .vraagprijs { border-color: #8B2A2A; }
+        .bw-vk-rij.is-onder-min td { background: #FBF6EA; }   /* onder het minimum is een WAARSCHUWING (mag verder) */
+        .bw-vk-rij.is-onder-min .gl-v2-field-box:has(.vraagprijs) { border: 1.5px solid #C9A96E; box-shadow: 0 0 0 3px rgba(201, 169, 110, .16); }
+        .bw-vk-rij.is-warn td { background: #FBF6EA; }
+        .bw-vk-label { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font: 500 11px var(--gl-v2-font-sans); color: #8A6A32; }
         .bw-vk-detail td { background: #FAFBF8; padding: 10px 10px 14px 46px; }
         .bw-vk-detail[hidden] { display: none; }
         .bw-vk-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
@@ -63,7 +65,7 @@
         .bw-vk-toggle i { transition: transform .18s var(--bw-ease, ease); } .bw-vk-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
         .bw-vk-rij .vraagprijs { font-weight: 600; }
         .bw-vk-meer td { background: #FAFBF8; text-align: center; }
-        .bw-vk-waarsch { color: var(--gl-v2-warning); font: 500 12px var(--gl-v2-font-sans); }
+        .bw-vk-waarsch { color: #8A6A32; font: 500 12px var(--gl-v2-font-sans); }
         @@media (max-width: 1199.98px) { .bw-vk-codes, .bw-vk-detail-grid { grid-template-columns: minmax(0, 1fr); } }
     </style>
 }
@@ -82,6 +84,7 @@
     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
 
     <div class="gl-v2-bw-scroll">
+        @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwKaders.cshtml", ch)
         @* ── Prijscodes ── *@
         <div class="bw-vk-codes">
             @foreach (var (type, titel, icoon, refs, letter) in new[] { ("Bouw", "Bouwprijscodes", "ph-buildings", Model.PrijsReferentiesBouw, "B"), ("Grond", "Grondprijscodes", "ph-map-pin", Model.PrijsReferentiesGrond, "G") })
@@ -200,9 +203,11 @@
                             var naam = e.EenheidNaam ?? "";
                             var min = Math.Round(e.MinimumVerkoopprijs, 0);
                             rij++;
-                            <tr class="bw-vk-rij" data-naam="@naam" data-info="1" data-gered="@e.OppGereduceerd.ToString(inv)" data-grondopp="@e.Grondopp.ToString(inv)" data-min="@min.ToString(inv)" data-vgrond="@Math.Round(e.Grondwaarde, 0).ToString(inv)" data-vbouw="@Math.Round(e.Bouwwaarde, 0).ToString(inv)" data-markt="@(e.MarktPrijs?.ToString(inv) ?? "")" data-bron="@(l?.PrijsBron?.ToString() ?? "")">
+                            var rijMld = l == null ? null : ch.Voor(8).Where(m => m.Sleutel == l.Id.ToString() && !m.Genegeerd && m.Plaats == "rij").OrderByDescending(m => (int)m.Type).FirstOrDefault();
+                            var labels = l == null ? new List<ServiceCore.Budget.BudgetMelding>() : ch.Voor(8).Where(m => m.Sleutel == l.Id.ToString() && m.Plaats == "label" && !m.Genegeerd).ToList();
+                            <tr class="bw-vk-rij @(rijMld != null ? "is-warn" : "")" data-naam="@naam" data-info="1" data-gered="@e.OppGereduceerd.ToString(inv)" data-grondopp="@e.Grondopp.ToString(inv)" data-min="@min.ToString(inv)" data-vgrond="@Math.Round(e.Grondwaarde, 0).ToString(inv)" data-vbouw="@Math.Round(e.Bouwwaarde, 0).ToString(inv)" data-markt="@(e.MarktPrijs?.ToString(inv) ?? "")" data-bron="@(l?.PrijsBron?.ToString() ?? "")">
                                 <td><button type="button" class="gl-v2-row-action bw-vk-toggle" aria-expanded="false" title="€/m² instellen, bron, ruil, forfait, unit" aria-label="Details"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Details</span></button></td>
-                                <td class="is-strong">@naam</td>
+                                <td class="is-strong">@naam @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", rijMld)@foreach (var lb in labels) { <span class="bw-vk-label" title="@lb.Tekst"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i>@lb.Tekst</span> }</td>
                                 <td class="is-muted">@(string.IsNullOrEmpty(e.TypeName) ? e.GroupTypeName : e.TypeName)</td>
                                 <td class="is-num">@e.BewoonbareOpp.ToString("N0", nl) m²</td>
                                 <td class="is-num">@(e.Grondopp > 0 ? e.Grondopp.ToString("N0", nl) : "—")</td>

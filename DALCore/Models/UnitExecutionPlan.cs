@@ -9,7 +9,10 @@ public partial class UnitExecutionPlan
 {
     public int Id { get; set; }
 
-    public int UnitId { get; set; }
+    /// <summary>NULL = algemeen plan van het project (inplantingsplan, gevels …), zie ProjectId.</summary>
+    public int? UnitId { get; set; }
+
+    public int? ProjectId { get; set; }
 
     public string Name { get; set; }
 

@@ -19,6 +19,8 @@ Public Class SitemapController
         AddUrl(urlset, "/", "daily", "1.0")
         AddUrl(urlset, "/over-ons", "monthly", "0.6")
         AddUrl(urlset, "/team", "monthly", "0.5")
+        AddUrl(urlset, "/projectbegeleiding", "monthly", "0.6")
+        AddUrl(urlset, "/grond-of-pand-aanbieden", "monthly", "0.6")
         AddUrl(urlset, "/contacteer-ons", "monthly", "0.5")
         AddUrl(urlset, "/woonprojecten", "weekly", "0.9")
         AddUrl(urlset, "/commerciele-projecten", "weekly", "0.8")

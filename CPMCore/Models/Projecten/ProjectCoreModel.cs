@@ -279,6 +279,11 @@ namespace CPMCore.Models.Projecten
         [ValidateNever]
         public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new List<ProjectHourlyRateVM>();
 
+        // Website-inhoud (publieke projectpagina): locatie, titel, subtitel, inleiding, eigen kerncijfers.
+        // Eigen tabellen (ProjectWebsite/ProjectWebsiteKpi); Website.Present = true wanneer het formulier ze meestuurt.
+        [ValidateNever]
+        public FacadeCore.ProjectWebsiteDto Website { get; set; } = new FacadeCore.ProjectWebsiteDto();
+
         // Beschikbare gebruikers voor uurtarieven
         [ValidateNever]
         public List<IdNameBO> AvailableUsers { get; set; } = new List<IdNameBO>();
@@ -695,5 +700,21 @@ namespace CPMCore.Models.Projecten
         public string StatusVariant { get; set; }
         public string KlantNaam { get; set; }
         public int? ClientId { get; set; }
+    }
+}
+
+namespace CPMCore.Models.Projecten
+{
+    // Eén rij in de lijsten van de tab "SEO & website" (verhaalbeeld, quote, detail) — zie Views/Projecten/Core/_WebsiteRow.cshtml.
+    public class WebsiteRowVm
+    {
+        public string Kind { get; set; }          // "story" | "quote" | "detail"
+        public string Prefix { get; set; }        // bv. "Website.StoryItems"
+        public string Index { get; set; }         // rijnummer of "__i__" voor de template
+        public string ImageName { get; set; }
+        public string ImageBase { get; set; }
+        public string Title { get; set; }
+        public string Text { get; set; }
+        public string Person { get; set; }
     }
 }

@@ -17,10 +17,11 @@
     var hasValue = selected != null || emptyChosen;
     var triggerText = selected?.Text ?? (emptyChosen ? Model.EmptyText : Model.Placeholder);
     var hasError = !string.IsNullOrEmpty(Model.Error);
+    var hasWarning = !hasError && !string.IsNullOrEmpty(Model.Warning);
     var dataAttrs = string.Join(" ", Model.Data.Select(kv => kv.Key + "=\"" + System.Net.WebUtility.HtmlEncode(kv.Value) + "\""));
     string lastGroup = "\u0000";
 }
-<div class="gl-v2-field@(hasError ? " is-error" : "")@(Model.Bare ? " gl-v2-field-bare" : "")">
+<div class="gl-v2-field@(hasError ? " is-error" : hasWarning ? " is-warning" : "")@(Model.Bare ? " gl-v2-field-bare" : "")">
     @if (!Model.Bare && !string.IsNullOrWhiteSpace(Model.Label))
     {
         <label class="gl-v2-field-label" for="@(id)_trigger">
@@ -32,7 +33,7 @@
         </label>
     }
     <div class="gl-v2-select" data-gl-v2-select id="@(id)_select" data-placeholder="@Model.Placeholder" @Html.Raw(dataAttrs)><input type="hidden" id="@id" name="@Model.Name" value="@current" />
-        <div id="@(id)_trigger" class="gl-v2-select-trigger@(hasValue ? " is-filled" : "")@(hasError ? " is-error" : "")" role="button" tabindex="@(Model.Disabled ? -1 : 0)" aria-haspopup="listbox" aria-expanded="false" aria-disabled="@(Model.Disabled ? "true" : null)">
+        <div id="@(id)_trigger" class="gl-v2-select-trigger@(hasValue ? " is-filled" : "")@(hasError ? " is-error" : hasWarning ? " is-warning" : "")" role="button" tabindex="@(Model.Disabled ? -1 : 0)" aria-haspopup="listbox" aria-expanded="false" aria-disabled="@(Model.Disabled ? "true" : null)">
             @if (!string.IsNullOrWhiteSpace(Model.Icon))
             {
                 <i class="ph @Model.Icon" aria-hidden="true"></i>
@@ -66,6 +67,10 @@
     @if (hasError)
     {
         <span class="gl-v2-field-help">@Model.Error</span>
+    }
+    else if (hasWarning)
+    {
+        <span class="gl-v2-field-help">@Model.Warning</span>
     }
     else if (!string.IsNullOrWhiteSpace(Model.Help))
     {

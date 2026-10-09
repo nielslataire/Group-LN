@@ -3095,6 +3095,254 @@ namespace ServiceCore
             return response;
         }
 
+        // ── Website-inhoud per project ─────────────────────────────────────────
+
+        public GetResponse<ProjectWebsiteDto> GetProjectWebsite(int projectId)
+        {
+            var response = new GetResponse<ProjectWebsiteDto>();
+            var web = _uow.ProjectWebsites.GetNoTracking().FirstOrDefault(w => w.ProjectId == projectId);
+            var dto = new ProjectWebsiteDto
+            {
+                ProjectId = projectId,
+                Location = web?.Location,
+                Title = web?.Title,
+                Subtitle = web?.Subtitle,
+                IntroText = web?.IntroText,
+                AerialImageName = web?.AerialImageName,
+                HomesTitle = web?.HomesTitle,
+                HomesIntro = web?.HomesIntro,
+                ShowBrochure = web?.ShowBrochure ?? false,
+                StoryTitle = web?.StoryTitle,
+                StoryText = web?.StoryText,
+                ArchEyebrow = web?.ArchEyebrow,
+                ArchTitle = web?.ArchTitle,
+                ArchText = web?.ArchText,
+                Present = true
+            };
+            dto.LotShapes = _uow.ProjectWebsiteLots.GetNoTracking()
+                .Where(l => l.ProjectId == projectId)
+                .OrderBy(l => l.UnitId)
+                .Select(l => new ProjectWebsiteLotDto { UnitId = l.UnitId, Polygon = l.Polygon, LabelX = l.LabelX, LabelY = l.LabelY })
+                .ToList();
+            dto.StoryItems = _uow.ProjectWebsiteStoryItems.GetNoTracking()
+                .Where(i => i.ProjectId == projectId).OrderBy(i => i.SortOrder).ThenBy(i => i.Id)
+                .Select(i => new ProjectWebsiteStoryItemDto { ImageName = i.ImageName, Text = i.Text }).ToList();
+            dto.Quotes = _uow.ProjectWebsiteQuotes.GetNoTracking()
+                .Where(q => q.ProjectId == projectId).OrderBy(q => q.SortOrder).ThenBy(q => q.Id)
+                .Select(q => new ProjectWebsiteQuoteDto { Text = q.Text, Person = q.Person }).ToList();
+            dto.Details = _uow.ProjectWebsiteDetails.GetNoTracking()
+                .Where(d => d.ProjectId == projectId).OrderBy(d => d.SortOrder).ThenBy(d => d.Id)
+                .Select(d => new ProjectWebsiteDetailDto { ImageName = d.ImageName, Title = d.Title, Text = d.Text }).ToList();
+            var hasStory = !string.IsNullOrWhiteSpace(dto.StoryTitle) || !string.IsNullOrWhiteSpace(dto.StoryText) || dto.StoryItems.Count > 0;
+            var hasArch = !string.IsNullOrWhiteSpace(dto.ArchTitle) || !string.IsNullOrWhiteSpace(dto.ArchText) || dto.Quotes.Count > 0 || dto.Details.Count > 0;
+            dto.Blocks = NormalizeBlocks(web?.BlocksJson, hasStory, hasArch);
+            dto.Kpis = _uow.ProjectWebsiteKpis.GetNoTracking()
+                .Where(k => k.ProjectId == projectId)
+                .OrderBy(k => k.SortOrder).ThenBy(k => k.Id)
+                .Select(k => new ProjectWebsiteKpiDto { Id = k.Id, Title = k.Title, Text = k.Text })
+                .ToList();
+            response.AddValue(dto);
+            return response;
+        }
+
+        public Response SaveProjectWebsite(int projectId, ProjectWebsiteDto website)
+        {
+            var response = new Response();
+            if (website == null) return response;
+
+            string Clean(string v, int max)
+            {
+                v = v?.Trim();
+                if (string.IsNullOrEmpty(v)) return null;
+                return v.Length > max ? v.Substring(0, max) : v;
+            }
+
+            var web = _uow.ProjectWebsites.GetNormal().FirstOrDefault(w => w.ProjectId == projectId);
+            if (web == null)
+            {
+                web = new ProjectWebsite { ProjectId = projectId };
+                _uow.ProjectWebsites.Add(web);
+            }
+            web.Location = Clean(website.Location, 200);
+            web.Title = Clean(website.Title, 200);
+            web.Subtitle = Clean(website.Subtitle, 250);
+            web.IntroText = string.IsNullOrWhiteSpace(website.IntroText) ? null : website.IntroText.Trim();
+            web.AerialImageName = Clean(website.AerialImageName, 260);
+            web.HomesTitle = Clean(website.HomesTitle, 200);
+            web.HomesIntro = string.IsNullOrWhiteSpace(website.HomesIntro) ? null : website.HomesIntro.Trim();
+            web.ShowBrochure = website.ShowBrochure;
+            web.StoryTitle = Clean(website.StoryTitle, 250);
+            web.StoryText = string.IsNullOrWhiteSpace(website.StoryText) ? null : website.StoryText.Trim();
+            web.ArchEyebrow = Clean(website.ArchEyebrow, 200);
+            web.ArchTitle = Clean(website.ArchTitle, 250);
+            web.ArchText = string.IsNullOrWhiteSpace(website.ArchText) ? null : website.ArchText.Trim();
+            if (website.BlocksJson != null)
+            {
+                var blocks = ParseBlocks(website.BlocksJson);
+                web.BlocksJson = System.Text.Json.JsonSerializer.Serialize(
+                    NormalizeBlocks(System.Text.Json.JsonSerializer.Serialize(blocks.Select(b => new { key = b.Key, visible = b.Visible })), true, true)
+                        .Select(b => new { key = b.Key, visible = b.Visible }));
+            }
+            web.UpdatedOn = DateTime.Now;
+
+            // Verhaal, quotes en details: volledig vervangen door de lijsten uit het formulier (positie = volgorde).
+            foreach (var e in _uow.ProjectWebsiteStoryItems.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteStoryItems.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteQuotes.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteQuotes.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteDetails.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteDetails.DeleteObject(e);
+            var so = 0;
+            foreach (var i in website.StoryItems ?? new List<ProjectWebsiteStoryItemDto>())
+            {
+                var img = Clean(i.ImageName, 260); var txt = Clean(i.Text, 1000);
+                if (img == null && txt == null) continue;
+                _uow.ProjectWebsiteStoryItems.Add(new ProjectWebsiteStoryItem { ProjectId = projectId, ImageName = img, Text = txt, SortOrder = so++ });
+            }
+            so = 0;
+            foreach (var q in website.Quotes ?? new List<ProjectWebsiteQuoteDto>())
+            {
+                var txt = Clean(q.Text, 600);
+                if (txt == null) continue;
+                _uow.ProjectWebsiteQuotes.Add(new ProjectWebsiteQuote { ProjectId = projectId, Text = txt, Person = Clean(q.Person, 200), SortOrder = so++ });
+            }
+            so = 0;
+            foreach (var d in website.Details ?? new List<ProjectWebsiteDetailDto>())
+            {
+                var title = Clean(d.Title, 200);
+                if (title == null) continue;
+                _uow.ProjectWebsiteDetails.Add(new ProjectWebsiteDetail { ProjectId = projectId, ImageName = Clean(d.ImageName, 260), Title = title, Text = Clean(d.Text, 1000), SortOrder = so++ });
+            }
+
+            // Projectkaart: omtrekken per eenheid vervangen door de lijst uit het formulier.
+            if (website.LotShapesJson != null)
+            {
+                var shapes = ParseLotShapes(website.LotShapesJson);
+                var validUnitIds = _uow.Units.GetNoTracking().Where(u => u.ProjectId == projectId).Select(u => u.Id).ToHashSet();
+                var existingLots = _uow.ProjectWebsiteLots.GetNormal().Where(l => l.ProjectId == projectId).ToList();
+                foreach (var l in existingLots)
+                    _uow.ProjectWebsiteLots.DeleteObject(l);
+                // Eerst verwijderingen wegschrijven: UnitId is uniek en dezelfde eenheid wordt opnieuw toegevoegd.
+                _uow.SaveChanges();
+                foreach (var sh in shapes.Where(x => validUnitIds.Contains(x.UnitId)).GroupBy(x => x.UnitId).Select(g => g.First()))
+                {
+                    _uow.ProjectWebsiteLots.Add(new ProjectWebsiteLot
+                    {
+                        ProjectId = projectId,
+                        UnitId = sh.UnitId,
+                        Polygon = sh.Polygon,
+                        LabelX = sh.LabelX,
+                        LabelY = sh.LabelY
+                    });
+                }
+            }
+
+            // Kerncijfers: volledig vervangen door de lijst uit het formulier (positie = volgorde).
+            var existing = _uow.ProjectWebsiteKpis.GetNormal().Where(k => k.ProjectId == projectId).ToList();
+            foreach (var e in existing)
+                _uow.ProjectWebsiteKpis.DeleteObject(e);
+
+            var order = 0;
+            foreach (var k in (website.Kpis ?? new List<ProjectWebsiteKpiDto>()))
+            {
+                var title = Clean(k.Title, 80);
+                var text = Clean(k.Text, 200);
+                if (title == null || text == null) continue; // onvolledige rijen overslaan
+                _uow.ProjectWebsiteKpis.Add(new ProjectWebsiteKpi
+                {
+                    ProjectId = projectId,
+                    Title = title,
+                    Text = text,
+                    SortOrder = order++
+                });
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Website-inhoud opgeslagen", "Website-inhoud niet opgeslagen");
+            return response;
+        }
+
+        // Sorteerbare blokken van de projectpagina (intro en contact staan vast en komen hier niet in voor).
+        private static readonly (string Key, string Label)[] WebsiteBlockKeys =
+        {
+            ("story", "Verhaal"),
+            ("architecture", "Architectuur"),
+            ("homes", "De woningen"),
+            ("buy", "Zo verloopt de aankoop"),
+        };
+
+        private static List<ProjectWebsiteBlockDto> ParseBlocks(string json)
+        {
+            var list = new List<ProjectWebsiteBlockDto>();
+            if (string.IsNullOrWhiteSpace(json)) return list;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return list;
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    if (!el.TryGetProperty("key", out var k) || k.ValueKind != System.Text.Json.JsonValueKind.String) continue;
+                    var visible = el.TryGetProperty("visible", out var v) && v.ValueKind == System.Text.Json.JsonValueKind.True;
+                    list.Add(new ProjectWebsiteBlockDto { Key = k.GetString(), Visible = visible });
+                }
+            }
+            catch (System.Text.Json.JsonException) { }
+            return list;
+        }
+
+        // Geldige, volledige lijst: enkel bekende sleutels, geen dubbels, ontbrekende blokken achteraan met standaardwaarde
+        // (verhaal/architectuur zichtbaar zodra er inhoud is; woningen en aankoop standaard zichtbaar).
+        private static List<ProjectWebsiteBlockDto> NormalizeBlocks(string json, bool hasStory, bool hasArch)
+        {
+            var known = WebsiteBlockKeys.ToDictionary(b => b.Key, b => b.Label);
+            var result = new List<ProjectWebsiteBlockDto>();
+            foreach (var b in ParseBlocks(json))
+            {
+                if (!known.ContainsKey(b.Key) || result.Any(r => r.Key == b.Key)) continue;
+                result.Add(new ProjectWebsiteBlockDto { Key = b.Key, Label = known[b.Key], Visible = b.Visible });
+            }
+            foreach (var (key, label) in WebsiteBlockKeys)
+            {
+                if (result.Any(r => r.Key == key)) continue;
+                var visible = key switch { "story" => hasStory, "architecture" => hasArch, _ => true };
+                result.Add(new ProjectWebsiteBlockDto { Key = key, Label = label, Visible = visible });
+            }
+            return result;
+        }
+
+        // Zet de JSON van de kaarteditor om naar geldige omtrekken: minstens 3 punten, coördinaten in 0-100,
+        // afgerond op 2 decimalen. Ongeldige of onleesbare invoer wordt overgeslagen i.p.v. de hele save te breken.
+        private static List<ProjectWebsiteLotDto> ParseLotShapes(string json)
+        {
+            var result = new List<ProjectWebsiteLotDto>();
+            if (string.IsNullOrWhiteSpace(json)) return result;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return result;
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    if (!el.TryGetProperty("unitId", out var u) || !u.TryGetInt32(out var unitId)) continue;
+                    if (!el.TryGetProperty("polygon", out var pEl) || pEl.ValueKind != System.Text.Json.JsonValueKind.String) continue;
+                    var pts = new List<(decimal X, decimal Y)>();
+                    foreach (var pair in pEl.GetString().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var xy = pair.Split(',');
+                        if (xy.Length != 2) continue;
+                        if (!decimal.TryParse(xy[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x)) continue;
+                        if (!decimal.TryParse(xy[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y)) continue;
+                        pts.Add((Math.Round(Math.Min(100m, Math.Max(0m, x)), 2), Math.Round(Math.Min(100m, Math.Max(0m, y)), 2)));
+                    }
+                    if (pts.Count < 3) continue;
+                    var poly = string.Join(" ", pts.Select(pt => pt.X.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "," + pt.Y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)));
+                    if (poly.Length > 1000) continue;
+                    decimal lx = Math.Round(pts.Average(pt => pt.X), 2), ly = Math.Round(pts.Average(pt => pt.Y), 2);
+                    if (el.TryGetProperty("labelX", out var lxEl) && lxEl.TryGetDecimal(out var lxv)) lx = Math.Round(Math.Min(100m, Math.Max(0m, lxv)), 2);
+                    if (el.TryGetProperty("labelY", out var lyEl) && lyEl.TryGetDecimal(out var lyv)) ly = Math.Round(Math.Min(100m, Math.Max(0m, lyv)), 2);
+                    result.Add(new ProjectWebsiteLotDto { UnitId = unitId, Polygon = poly, LabelX = lx, LabelY = ly });
+                }
+            }
+            catch (System.Text.Json.JsonException) { }
+            return result;
+        }
+
         // ── Coordinatieproject: regie-uren (tijdregistratie) ──────────────────
 
         public GetResponse<ProjectRegieUurBO> GetRegieUren(int projectId)

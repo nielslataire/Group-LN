@@ -6460,3 +6460,50 @@ volgen het Facturen-recept en niet het tintje uit het mockup (zelfde reden als p
 - Nog te bouwen: Punt toevoegen-paneel (40c), Goedkeuren & doorsturen (40d), Op plan/tablet (40b/40k), Verslagen (40i/40l), gsm-flows (41), spraak/rondgang (41c/d, 40f–h).
 
 **Dropdown: chevron altijd zichtbaar (08/10/2026).** `.gl-v2-select-trigger.is-filled .gl-v2-select-trigger-caret { display:none }` is verwijderd uit `gl-v2/forms.css`: na een keuze verdween de chevron en leek de dropdown een tekstveld. Projectbreed; een wis-knop (`.gl-v2-select-trigger-clear`) verschijnt desgewenst naast de chevron.
+
+## Veldstaten fout en waarschuwing — design-handoff punt 14d (09/10/2026)
+Projectwijd voor elk gl-v2-veld (`.gl-v2-field`), bron: CRM Menu Wireframes 14d "1 · Getal met eenheid" en "1B · Waarschuwing naast fout".
+
+| Staat | Rand | Icoon (15px, rechts in het veld) | Hulptekst (11px, onder het veld) | Gedrag |
+|---|---|---|---|---|
+| Fout `.is-error` | 1,5px `#8B2A2A` | cirkel met uitroepteken, `#8B2A2A` | zelfde kleur, zegt wat er mis is ("Maximaal 100 %.") | blokkeert opslaan |
+| Waarschuwing `.is-warning` | 1,5px `#C9A96E` (goud) + ring 3px `rgba(201,169,110,.16)` | driehoek, `#8A6A32` | zelfde kleur, zelfde zin als in het meldingskader ("0 % — klopt dit?") | opslaan mag; telt mee in het Stappenplan; verdwijnt zodra de waarde in orde is of met "Negeren" |
+
+Een fout wint van een waarschuwing (`.is-warning:not(.is-error)`). De foutkleur is overal `#8B2A2A`; eerdere `#8A3B2A`-waarden in `gl-v2/forms.css` en `forms-extra.css` zijn gelijkgetrokken.
+Implementatie: CSS in `gl-v2/forms.css` (`.gl-v2-field.is-warning`, `.gl-v2-field-state-icon.is-w/.is-e`, `.gl-v2-select-trigger.is-warning`). De templates renderen beide statusiconen en laten de klasse op `.gl-v2-field` kiezen welk zichtbaar is, dus een pagina-JS hoeft enkel de klasse te togglen (zoals stap 7 doet voor de decennale).
+Aanroepen: `GlV2NumberUnit` leest `ViewData["Warning"]` naast de bestaande ModelState-fout; `GlV2SelectListVm` kreeg `Warning` naast `Error`; `BwNumVm` kreeg `Warning` en `Error`. Toegepast op Budgetflow stap 7: decennale 0 % is een veldwaarschuwing én het waarschuwingskader met "Bevestigen".
+
+## Budgetflow — meldingen per stap, design-handoff punt 39k (09/10/2026)
+Alle fouten en waarschuwingen van de budgetwizard komen uit één plaats: `ServiceCore/Budget/BudgetControleService` (`BudgetMelding`: stap, type, code, tekst, plaats, sleutel). De controller cachet het resultaat per versie (`GetMeldingenAsync`, sleutel = GewijzigdOp + genegeerde codes + status; de filter wist ze bij elke geslaagde schrijvende actie) en zet ze in `BudgetWizardChromeVm.Meldingen`. Het Stappenplan telt `IsOpen` (type ≠ Info, niet genegeerd, `Telt`): rood = fouten (blokkeren Afronden/Definitief, ook server-side), goud = waarschuwingen. Veldstaat volgt 14d (zie "Veldstaten fout en waarschuwing").
+
+| Stap | Type | Wanneer | Plaats |
+|---|---|---|---|
+| 1 Gegevens | Waarschuwing | index zonder peildatum of ouder dan 6 maanden | veld + kader |
+| | Waarschuwing | grondwerk of funderingen leeg terwijl er eenheden zijn | veld |
+| | Fout | geen daktype gekozen, wel dakoppervlakte in stap 5 | veld |
+| | Waarschuwing | garages zonder type poorten (bestaand) | veld |
+| 2 Oppervlaktes | Waarschuwing | woning zonder grond of zonder bewoonbare oppervlakte | rij + veld |
+| | Fout | naam van een eenheid komt twee keer voor | rij + veld |
+| | Waarschuwing | aantal eenheden ≠ aantal in het project | kader |
+| 3 Sanitair | Waarschuwing | woning zonder badkamer of zonder toilet | rij |
+| 4 Gevels | Fout | negatieve regel (gebruik tabblad Ramen) | rij |
+| | Fout | ramen groter dan de geveloppervlakte (nieuwbouw / bestaand) | kader |
+| 5 Dak & afbraak | Fout | geen enkel daktype aangezet (plat, hellend of groen) | kader |
+| | Waarschuwing | veluxen bij een plat dak | veld |
+| 6 Activiteiten | Waarschuwing | afwijking > 50 % tegenover de referentie | rij |
+| | Waarschuwing | correctie ≠ 100 % zonder opmerking | veld (opmerking onder de activiteit) |
+| | Info | activiteit op € 0 | rij (grijs) |
+| 7 Parameters | Waarschuwing | decennale op 0 % | veld + kader (bestaand) |
+| | Waarschuwing | percentage wijkt > 50 % af van Instellingen | veld |
+| | Fout | Breyne / straight loan zonder aantal maanden | veld |
+| | Waarschuwing | aankoopprijs grond leeg | veld |
+| 8 Verkoop | Waarschuwing | vraagprijs onder de minimumprijs (keuze Niels 09/10: geen fout, je mag verder) | rij + veld |
+| | Waarschuwing | eenheid zonder vraagprijs | rij |
+| | Waarschuwing | prijscode ouder dan 12 maanden | label onder de eenheid |
+| 9 Resultaat | Waarschuwing | alle open waarschuwingen, per stap, met link | kader |
+| | Fout | marge negatief | kader |
+| | Waarschuwing | marge meer dan 5 procentpunt lager dan het definitieve budget | kader |
+
+**Plaatsen.** *Veld*: `_BwNum`, `_SelectList` en de custom velden lezen de melding op hun veldnaam (`BudgetWizardChromeVm.Op(sleutel)`) en tonen rand, icoon en hulptekst volgens 14d. *Rij*: `tr.is-warn` (goud) of `tr.is-fout` (rood) plus `_BwRijIcoon` (driehoek of cirkel met de tekst als tooltip); `tr.is-info-rij` is grijs. *Kader*: `V2/_BwKaders` bovenaan de stap, één per onderwerp (`gl-v2-notice-compact is-danger|is-warning`). *Label*: kleine gouden tekst bij het element.
+**Negeren.** Enkel waarschuwingen: knop "Negeren" in het kader of op stap 9; `BudgetWaarschuwingBevestigen` bewaart per code `code~naam~datum` in `BudgetVersie.WaarschuwingenBevestigd`; de waarschuwing telt dan niet meer en staat grijs met "Terugzetten".
+**Afronden.** `BudgetVersieAfronden`/`BudgetVersieDefinitief` weigeren zolang er een open fout is; de knop "Afronden & definitief maken" staat dan ook uit.

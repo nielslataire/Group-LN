@@ -243,6 +243,8 @@ public class ActivityLijnUpdateDto
     public decimal? NacalcPrijsPerEenheid       { get; set; }
     public decimal  Correctiefactor             { get; set; } = 1m;
     public bool     IsManueel                   { get; set; }
+    /// <summary>Opmerking bij de correctie (39k); null = niet meegestuurd.</summary>
+    public string   Opmerking                   { get; set; }
 }
 
 // Payloads voor herberekenen

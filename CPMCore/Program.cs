@@ -262,6 +262,7 @@ builder.Services.AddHttpClient("I2021Sync").ConfigurePrimaryHttpMessageHandler((
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityFormuleService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetBerekeningService>();
+builder.Services.AddScoped<ServiceCore.Budget.BudgetControleService>();
 builder.Services.AddScoped<FacadeCore.IVerkoopVoorstelService, ServiceCore.Budget.VerkoopVoorstelService>();
 builder.Services.AddScoped<FacadeCore.IMarktReferentieService, CPMCore.Services.MarktReferentieService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetExcelService>();

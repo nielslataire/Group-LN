@@ -186,3 +186,15 @@
     .gl-v2-kpi-strip:not(.is-expanded) .gl-v2-kpi-card:nth-child(n+5) { display: none; }
 }
 
+
+/* Hint naast het cijfer (GlV2KpiItemVm.HintInline): cijfer en subtitel op één regel, op de basislijn uitgelijnd. De kaart houdt zijn
+   normale (vaste) hoogte — er komt geen derde regel bij. */
+.gl-v2-kpi-valuerow { grid-area: value; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.gl-v2-kpi-valuerow .gl-v2-kpi-value { flex: none; }
+.gl-v2-kpi-valuerow .gl-v2-kpi-hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Klikbare KPI-kaart (optioneel via GlV2KpiItemVm.FilterKey): werkt als filter van de pagina. */
+.gl-v2-kpi-card.is-filter { cursor: pointer; transition: box-shadow .15s, background .15s; }
+.gl-v2-kpi-card.is-filter:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-kpi-card.is-filter:focus-visible { outline: 2px solid var(--gl-v2-primary); outline-offset: 2px; }
+.gl-v2-kpi-card.is-filter.is-active { background: var(--gl-v2-primary-tint); box-shadow: inset 0 0 0 1.5px var(--gl-v2-primary), 0 1px 2px rgba(0, 83, 45, .06); }

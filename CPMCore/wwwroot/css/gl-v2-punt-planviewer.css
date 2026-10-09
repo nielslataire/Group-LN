@@ -1,0 +1,28 @@
+/* gl-v2 — planweergave voor Punten (design-handoff 40b/40c/40k). Namespace gl-v2-pv-*. Laadt vóór gl-v2-shell.css. */
+.gl-v2-pv { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--gl-v2-hairline-soft); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-bg); overflow: hidden; }
+.gl-v2-pv-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--gl-v2-surface); border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pv-spacer { flex: 1; }
+.gl-v2-pv-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--gl-v2-hairline); border-radius: 7px; background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); cursor: pointer; }
+.gl-v2-pv-btn:hover:not(:disabled) { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-pv-btn:disabled { opacity: .4; cursor: default; }
+.gl-v2-pv-page, .gl-v2-pv-zoom { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+.gl-v2-pv-scroll { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.gl-v2-pv-stage { position: relative; margin: 0 auto; background: #fff; box-shadow: 0 0 0 1px rgba(44, 59, 42, .08); }
+.gl-v2-pv-canvas { display: block; }
+.gl-v2-pv-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pv-msg[hidden] { display: none; }
+.gl-v2-pv-pins { position: absolute; inset: 0; pointer-events: none; }
+.gl-v2-pv-pin, .gl-v2-pv-marker { position: absolute; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(18, 28, 18, .45); padding: 0; pointer-events: auto; background: var(--gl-v2-muted); }
+.gl-v2-pv-pin { cursor: pointer; }
+.gl-v2-pv-pin.is-selected { width: 24px; height: 24px; box-shadow: 0 0 0 3px var(--gl-v2-primary), 0 2px 6px rgba(18, 28, 18, .5); z-index: 2; }
+.gl-v2-pv-marker { background: var(--gl-v2-primary); width: 22px; height: 22px; pointer-events: none; animation: gl-v2-pv-pop .2s ease-out; }
+@keyframes gl-v2-pv-pop { from { transform: translate(-50%, -50%) scale(.4); } to { transform: translate(-50%, -50%) scale(1); } }
+/* pinkleur = statuskleur (zelfde tonen als de status-badges) */
+.gl-v2-pv-pin[data-status="8"] { background: #7a8a78; }
+.gl-v2-pv-pin[data-status="9"] { background: #C9A96E; }
+.gl-v2-pv-pin[data-status="13"] { background: #8FBF9A; }
+.gl-v2-pv-pin[data-status="10"] { background: #3F6FB5; }
+.gl-v2-pv-pin[data-status="11"] { background: #6BA67A; }
+.gl-v2-pv-pin[data-status="5"] { background: var(--gl-v2-primary); }
+.gl-v2-pv-pin[data-status="6"] { background: var(--gl-v2-danger); }
+.gl-v2-pv-pin[data-status="12"] { background: #A8B3A6; }

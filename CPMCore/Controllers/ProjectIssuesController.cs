@@ -82,7 +82,7 @@ public partial class ProjectsIssuesController : BaseController
         // Don't set a default server-side status filter — all issues are loaded so the
         // client-side DataTable filter can switch statuses without a page reload.
         // The view pre-selects "Open" in the dropdown when no explicit filter is active.
-        ViewBag.DefaultStatusValue = !hasExplicitStatusFilter ? (int)ConstructionIssueStatus.Open : (int?)null;
+        ViewBag.DefaultStatusValue = !hasExplicitStatusFilter ? (int)ConstructionIssueStatus.Forwarded : (int?)null;
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
         var formVm = await BuildVm(projectId);
         var vm = new ConstructionIssueIndexVm
@@ -457,7 +457,7 @@ public partial class ProjectsIssuesController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SendPreview(int projectId, [FromForm] IssueSendPreviewRequest request)
     {
-        var activeStatuses = new[] { 0, 2, 3, 7, 10 }; // Open, Gepland, WaitingInspection, Reopened
+        var activeStatuses = new[] { 0, 2, 3, 7, 10, 13, 6, 12 }; // Open, Gepland, WaitingInspection, Reopened
 
         var query = _db.ConstructionIssue
             .AsNoTracking()

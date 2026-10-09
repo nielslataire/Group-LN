@@ -92,6 +92,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             (int)ConstructionIssueStatus.Assigned,
             (int)ConstructionIssueStatus.InProgress,
             (int)ConstructionIssueStatus.Reopened,
+            (int)ConstructionIssueStatus.Approved,
             (int)ConstructionIssueStatus.Forwarded,
             (int)ConstructionIssueStatus.Rejected,
             (int)ConstructionIssueStatus.OnHold
@@ -904,6 +905,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             ConstructionIssueStatus.Forwarded => ("Doorgestuurd", "#cfe3d8", "#15322b"),
             ConstructionIssueStatus.Reported => ("Gemeld uitgevoerd", "#8fbea5", "#ffffff"),
             ConstructionIssueStatus.OnHold => ("In de wacht", "#e5e7eb", "#713f12"),
+            ConstructionIssueStatus.Approved => ("Goedgekeurd", "#cfe3d8", "#15322b"),
             _ => ("Onbekend", "#e5e7eb", "#374151")
         };
     }

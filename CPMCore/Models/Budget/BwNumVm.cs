@@ -15,6 +15,10 @@ namespace CPMCore.Models.Budget
         public string Prefix { get; set; }
         public int Decimals { get; set; } = 2;
         public string Help { get; set; }
+        /// <summary>Waarschuwing (14d · 1B): gouden rand + driehoek + hulptekst in #8A6A32; opslaan mag.</summary>
+        public string Warning { get; set; }
+        /// <summary>Fout (14d): rode rand + icoon + tekst; blokkeert opslaan.</summary>
+        public string Error { get; set; }
         public string Placeholder { get; set; } = "0";
         public bool Required { get; set; }
         public bool Integer => Decimals == 0;

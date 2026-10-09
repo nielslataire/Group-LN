@@ -205,6 +205,10 @@ namespace FacadeCore
         GetResponse<ProjectHourlyRateBO> GetProjectHourlyRates(int projectId);
         Response SaveProjectHourlyRates(int projectId, List<ProjectHourlyRateBO> rates);
 
+        // Website-inhoud per project (locatie, titel, subtitel, inleiding, eigen kerncijfers)
+        GetResponse<ProjectWebsiteDto> GetProjectWebsite(int projectId);
+        Response SaveProjectWebsite(int projectId, ProjectWebsiteDto website);
+
         // Coordinatieproject - regie-uren (tijdregistratie)
         GetResponse<ProjectRegieUurBO> GetRegieUren(int projectId);
         GetResponse<ProjectRegieUurBO> AddRegieUur(ProjectRegieUurBO bo);

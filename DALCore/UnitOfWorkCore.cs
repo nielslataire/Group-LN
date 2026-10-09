@@ -85,6 +85,12 @@ namespace DALCore
         public GenericRepository<PlanningTaak>     PlanningTasks     { get; }
         public GenericRepository<ProjectContractSlice> ProjectContractSlices { get; }
         public GenericRepository<ProjectHourlyRate>    ProjectHourlyRates    { get; }
+        public GenericRepository<ProjectWebsite>       ProjectWebsites       { get; }
+        public GenericRepository<ProjectWebsiteKpi>    ProjectWebsiteKpis    { get; }
+        public GenericRepository<ProjectWebsiteLot>    ProjectWebsiteLots    { get; }
+        public GenericRepository<ProjectWebsiteStoryItem> ProjectWebsiteStoryItems { get; }
+        public GenericRepository<ProjectWebsiteQuote>  ProjectWebsiteQuotes  { get; }
+        public GenericRepository<ProjectWebsiteDetail> ProjectWebsiteDetails { get; }
         public GenericRepository<ProjectRegieUur>      ProjectRegieUren      { get; }
         public GenericRepository<IssuerCompanyUserRate> IssuerCompanyUserRates { get; }
         public GenericRepository<ProjectMediaSection> ProjectMediaSections { get; }
@@ -207,6 +213,12 @@ namespace DALCore
             PlanningTasks     = new GenericRepository<PlanningTaak>(_context);
             ProjectContractSlices  = new GenericRepository<ProjectContractSlice>(_context);
             ProjectHourlyRates     = new GenericRepository<ProjectHourlyRate>(_context);
+            ProjectWebsites        = new GenericRepository<ProjectWebsite>(_context);
+            ProjectWebsiteKpis     = new GenericRepository<ProjectWebsiteKpi>(_context);
+            ProjectWebsiteLots     = new GenericRepository<ProjectWebsiteLot>(_context);
+            ProjectWebsiteStoryItems = new GenericRepository<ProjectWebsiteStoryItem>(_context);
+            ProjectWebsiteQuotes   = new GenericRepository<ProjectWebsiteQuote>(_context);
+            ProjectWebsiteDetails  = new GenericRepository<ProjectWebsiteDetail>(_context);
             ProjectRegieUren       = new GenericRepository<ProjectRegieUur>(_context);
             IssuerCompanyUserRates = new GenericRepository<IssuerCompanyUserRate>(_context);
             ProjectMediaSections   = new GenericRepository<ProjectMediaSection>(_context);

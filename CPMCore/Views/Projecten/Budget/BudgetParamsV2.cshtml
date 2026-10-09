@@ -21,6 +21,7 @@
     var decennaleBevestigd = ViewData["DecennaleBevestigd"] as bool? == true;
     var decennaleNul = (p.DecennaleGeslRuwbouwPerc ?? 0m) <= 0m;
     BwNumVm PctVeld(string name, string label, decimal? f, string prev, string hint = null) => new() { Name = name, Label = label, Value = (f ?? 0m) * 100m, Unit = "%", Decimals = 2, Placeholder = "0,00", Help = hint, Attrs = $"data-pct=\"{prev}\"" };
+    BwNumVm WarnVeld(BwNumVm v, string warning) { v.Warning = warning; return v; }
     BwNumVm EurVeld(string name, string label, decimal? v, string hint = null, string attrs = null) => new() { Name = name, Label = label, Value = v, Prefix = "€", Decimals = 2, Placeholder = "0,00", Help = hint, Attrs = attrs };
 }
 @section PageStyle
@@ -29,8 +30,7 @@
     <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
     <style>
         .bw-par-prev { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
-        .bw-par-prev.is-warn { color: var(--gl-v2-warning); }
-        .bw-par-dual { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; align-items: end; }
+        .bw-par-dual { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }   /* percentage en looptijd even breed: de foutmelding onder de maanden heeft ruimte nodig */
     </style>
 }
 @section ProjectMenu
@@ -54,6 +54,7 @@
         <input type="hidden" name="Params.BudgetVersieId" value="@Model.BudgetVersieId" />
 
         <div class="gl-v2-bw-scroll">
+        @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwKaders.cshtml", ch)
             <div class="gl-v2-bw-tiles">
                 <div class="gl-v2-bw-tile"><span class="lbl">Bouwkost activiteiten</span><span class="val">@Eur0(Model.TotaalBouw)</span><span class="sub">gecorrigeerd</span></div>
                 <div class="gl-v2-bw-tile"><span class="lbl">Aantal eenheden</span><span class="val">@Model.AantalEenheden</span></div>
@@ -98,7 +99,7 @@
                     <span class="gl-v2-section-card-desc">decennale en plaatsbeschrijving</span>
                 </div>
                 <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctDecennale", "Decennale gesloten ruwbouw", p.DecennaleGeslRuwbouwPerc, "decennale"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", WarnVeld(PctVeld("pctDecennale", "Decennale gesloten ruwbouw", p.DecennaleGeslRuwbouwPerc, "decennale"), decennaleNul && !decennaleBevestigd ? "0 % — verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig." : null))
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctABR", "ABR + plaatsbeschrijving", p.ABRPlaatsbeschrPerc, "abr"))
                 </div>
             </section>
@@ -182,8 +183,9 @@
             if (key === 'grondmarge') { var g = num(form.querySelector('[data-grond]')); h.innerHTML = '<span class="bw-par-prev">= ' + '€ ' + nf0.format(g * pct / 100) + '</span> op aankoopprijs grond'; return; }
             if (key === 'doelmarge') { h.innerHTML = '<span class="bw-par-prev">= € ' + nf0.format(bouw * pct / 100) + '</span> op de bouwkost'; return; }
             var bedrag = bouw * pct / 100; tot += bedrag;
-            var warn = key === 'decennale' && pct <= 0;
-            h.innerHTML = '<span class="bw-par-prev' + (warn ? ' is-warn' : '') + '">' + (warn ? 'verplicht — nu € 0' : '= € ' + nf0.format(bedrag)) + '</span>' + ((key === 'architect' || key === 'ingenieur') && pct <= 0 ? ' · leeg = standaard uit Instellingen' : '');
+            var warn = key === 'decennale' && pct <= 0 && document.getElementById('bw-par-decennale').getAttribute('data-bevestigd') !== 'true';
+            if (key === 'decennale') { inp.closest('.gl-v2-field').classList.toggle('is-warning', warn); if (warn) { h.textContent = '0 % — verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig.'; return; } }
+            h.innerHTML = '<span class="bw-par-prev">' + '= € ' + nf0.format(bedrag) + '</span>' + ((key === 'architect' || key === 'ingenieur') && pct <= 0 ? ' · leeg = standaard uit Instellingen' : '');
         });
         var lift = form.querySelector('[data-lift]'); if (lift) { var lb = num(lift) * liften; tot += lb; help(lift).innerHTML = '× ' + liften + ' liften = <span class="bw-par-prev">€ ' + nf0.format(lb) + '</span>'; }
         ['Params.VentVerslaggeverForfait', 'Params.OpmetingSonderingForfait', 'Params.InfrastructuurForfait', 'Params.PubliciteitForfait'].forEach(function (n) { tot += num(form.querySelector('[name="' + n + '"]')); });

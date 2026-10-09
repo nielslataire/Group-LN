@@ -1,0 +1,111 @@
+@model CPMCore.Models.Issues.PuntenIndexV2Vm
+@*
+    gl-v2 — Punten: zijpaneel "Nieuw punt" / "Punt bewerken" / "Punt dupliceren" (design-handoff 40c, op een plan 40k). Gedeeld door de lijst
+    en de plan-pagina; gedrag in wwwroot/js/gl-v2-punt-panel.js (window.PuntPanel), posten via fetch naar CreateV2 / EditV2.
+*@
+@using CPMCore.Models.GlV2
+@* Snel ingeven (40c): zijpaneel met enkel titel, eenheid, zone en aannemer; de rest onder "Meer". Posten gebeurt via fetch naar CreateV2. *@
+<div class="gl-v2-pt-panel-backdrop" id="pt-panel-backdrop" hidden></div>
+<aside class="gl-v2-pt-panel" id="pt-panel" role="dialog"
+       data-edit-url="@Url.Action("EditV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })"
+       data-edit-data-url="@Url.Action("EditData", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })"
+       data-plans-url="@Url.Action("PlansV2", "ProjectsIssues", new { projectId = Model.ProjectId })" aria-modal="true" aria-labelledby="pt-panel-title" hidden>
+    <form id="pt-new-form" method="post" action="@Url.Action("CreateV2", "ProjectsIssues", new { projectId = Model.ProjectId })" enctype="multipart/form-data" novalidate>
+        @Html.AntiForgeryToken()
+        <header class="gl-v2-pt-panel-head">
+            <div><h2 id="pt-panel-title">Nieuw punt</h2><p id="pt-panel-sub">Enter = opslaan &amp; volgende</p></div>
+            <button type="button" class="gl-v2-modal-close js-pt-panel-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+        </header>
+        <div class="gl-v2-pt-panel-body">
+            <div class="gl-v2-notice gl-v2-notice-compact is-success" id="pt-new-saved" hidden><i class="ph ph-check-circle" aria-hidden="true"></i><span></span></div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pt-new-title">Titel <span class="gl-v2-pt-req">*</span></label>
+                <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pt-new-title" name="title" maxlength="200" placeholder="Wat moet er gebeuren?" autocomplete="off" /></div>
+                <span class="gl-v2-field-help" id="pt-new-title-help">kort en concreet — wat moet er gebeuren</span>
+            </div>
+            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+            {
+                Name = "unitId", Id = "pt-new-unit", Label = "Eenheid", Value = "0",
+                Items = new[] { new GlV2SelectItem { Value = "0", Text = "Algemeen" } }.Concat(Model.Units.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value })).ToList()
+            })
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pt-new-zone">Kamer / zone</label>
+                <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pt-new-zone" name="zone" maxlength="100" list="pt-zones" placeholder="bv. badkamer" autocomplete="off" /></div>
+                <datalist id="pt-zones">@foreach (var z in Model.RecentZones) { <option value="@z"></option> }</datalist>
+                @if (Model.RecentZones.Count > 0)
+                {
+                    <div class="gl-v2-pt-chiprow">
+                        @foreach (var z in Model.RecentZones.Take(6)) { <button type="button" class="gl-v2-pt-zonechip js-pt-zone" data-zone="@z">@z</button> }
+                    </div>
+                }
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pt-new-contractor_input">Aannemer</label>
+                @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                {
+                    Name = "contractorId", Id = "pt-new-contractor", Placeholder = "Zoek een aannemer van de werf…", Icon = "ph-hard-hat", EmptyValue = "", MinChars = 0,
+                    ListLabel = "Aannemers met een contract voor deze werf", Help = "Pas na goedkeuring gaat het punt naar de aannemer.",
+                    OptionsJson = System.Text.Json.JsonSerializer.Serialize(Model.ProjectContractors.Select(c => new { id = c.Key.ToString(), text = c.Value, sub = "" }))
+                })
+            </div>
+            <div class="gl-v2-field" id="pt-plan-field">
+                <span class="gl-v2-field-label">Locatie op plan</span>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "planKey", Id = "pt-new-plan", Bare = true, Value = "", EmptyText = "Geen plan", Items = new List<GlV2SelectItem>() })
+                <input type="hidden" name="planId" id="pt-plan-id" /><input type="hidden" name="planPage" id="pt-plan-page" />
+                <input type="hidden" name="planX" id="pt-plan-x" /><input type="hidden" name="planY" id="pt-plan-y" />
+                <input type="hidden" name="clearPlan" id="pt-plan-clear-flag" value="false" />
+                <div class="gl-v2-pt-planbox" id="pt-plan-box" hidden>
+                    <div id="pt-plan-viewer"></div>
+                    <div class="gl-v2-pt-planbox-foot"><span id="pt-plan-hint">Tik op het plan om het punt te plaatsen.</span><button type="button" class="gl-v2-pt-linkbtn" id="pt-plan-remove" hidden>Locatie wissen</button></div>
+                </div>
+                <span class="gl-v2-field-help" id="pt-plan-help">Plan kiest zich op basis van de eenheid; tik om te verplaatsen.</span>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pt-new-files">Foto's</label>
+                <label class="gl-v2-pt-filebtn" for="pt-new-files"><i class="ph ph-camera" aria-hidden="true"></i><span id="pt-new-files-label">Foto's toevoegen</span></label>
+                <input type="file" id="pt-new-files" name="mediaFiles" accept="image/*" multiple hidden />
+            </div>
+            <button type="button" class="gl-v2-pt-more" id="pt-new-more" aria-expanded="false"><i class="ph ph-caret-right" aria-hidden="true"></i>Meer: beschrijving, categorie, type, fase, prioriteit, deadline</button>
+            <div class="gl-v2-pt-more-body" id="pt-new-more-body" hidden>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="pt-new-desc">Beschrijving</label>
+                    <div class="gl-v2-field-box gl-v2-pt-textarea"><textarea class="gl-v2-field-input" id="pt-new-desc" name="description" rows="3"></textarea></div>
+                </div>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "categoryId", Id = "pt-new-cat", Label = "Categorie", Value = Model.Categories.FirstOrDefault().Key.ToString(),
+                    Items = Model.Categories.Select(c => new GlV2SelectItem { Value = c.Key.ToString(), Text = c.Value }).ToList()
+                })
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "issueType", Id = "pt-new-type", Label = "Type", Value = "0",
+                    Items = Model.Types.Select(t => new GlV2SelectItem { Value = t.Key.ToString(), Text = t.Value }).ToList()
+                })
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "phase", Id = "pt-new-phase", Label = "Fase", Value = "0",
+                    Items = Model.Phases.Select(t => new GlV2SelectItem { Value = t.Key.ToString(), Text = t.Value }).ToList()
+                })
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "priority", Id = "pt-new-priority", Label = "Prioriteit", Value = "1",
+                    Items = new List<GlV2SelectItem> { new() { Value = "0", Text = "Laag" }, new() { Value = "1", Text = "Normaal" }, new() { Value = "2", Text = "Hoog" }, new() { Value = "3", Text = "Kritiek" } }
+                })
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "dueDate", Id = "pt-new-due", Label = "Deadline" })
+            </div>
+        </div>
+        <footer class="gl-v2-pt-panel-foot">
+            <label class="gl-v2-toggle-row" for="pt-new-approve" id="pt-approve-row">
+                    <input type="checkbox" id="pt-new-approve" name="approve" value="true" class="gl-v2-toggle-switch" />
+                    <input type="hidden" name="approve" value="false" />
+                    <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Meteen goedkeuren</span><span class="gl-v2-toggle-hint">het punt gaat 's avonds naar de aannemer</span></span>
+                </label>
+                <p class="gl-v2-pt-panel-note" id="pt-panel-note">Bewaard als <b>concept</b> — pas na goedkeuring gaat het naar de aannemer.</p>
+            <div class="gl-v2-pt-panel-actions">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text js-pt-panel-close">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="pt-new-save">Opslaan</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="pt-new-save-next">Opslaan &amp; volgende</button>
+            </div>
+        </footer>
+    </form>
+</aside>

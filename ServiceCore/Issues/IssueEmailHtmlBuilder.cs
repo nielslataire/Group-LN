@@ -403,6 +403,8 @@ public static class IssueEmailHtmlBuilder
         1 => "Toegewezen",
         2 => "Gepland",
         3 => "Wacht op controle",
+        11 => "Wacht op controle",
+        6 => "Afgewezen",
         7 => "Heropend",
         _ => "Open"
     };
@@ -414,7 +416,8 @@ public static class IssueEmailHtmlBuilder
             0 => ("#fdeaee", "#b9243a"),
             1 => ("#fff8df", "#b67800"),
             2 => ("#dbeafe", "#1e40af"),
-            3 => ("#f3f4f6", "#374151"),
+            3 or 11 => ("#f3f4f6", "#374151"),
+            6 => ("#fce7f3", "#9d174d"),
             7 => ("#fce7f3", "#9d174d"),
             _ => ("#fdeaee", "#b9243a")
         };

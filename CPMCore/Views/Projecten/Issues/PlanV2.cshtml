@@ -1,0 +1,127 @@
+@model CPMCore.Models.Issues.PuntenPlanV2Vm
+@*
+    gl-v2 — Punten, Op plan (design-handoff 40b): plannen per eenheid links, het plan met de punten als pins in statuskleur in het midden,
+    het detail van de gekozen pin rechts. Klik op het plan = nieuw punt op die plek (zelfde zijpaneel als de lijst, plan en eenheid al
+    ingevuld — 40k "tablet: op het plan tikken plaatst een punt"). Plannen zijn PDF's (pdf.js); een plan kan meerdere pagina's hebben.
+    Namespace gl-v2-pp-* (gl-v2-projecten-punten-plan.css/.js); viewer: gl-v2-punt-planviewer.js.
+*@
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Issues
+@{
+    var idx = Model.Index;
+    ViewData["Title"] = "Punten · Op plan";
+    ViewData["PageIcon"] = "ph ph-warning-circle";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = idx.ProjectId });
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = idx.ProjectId, ProjectName = idx.ProjectName, ProjectSubtitle = "project · punten" };
+    var data = new
+    {
+        projectId = idx.ProjectId,
+        canWrite = idx.CanWrite,
+        selectedKey = Model.SelectedKey,
+        selectedIssueId = Model.SelectedIssueId,
+        plans = Model.Plans.Select(p => new { key = p.Key, unitId = p.UnitId, unitName = p.UnitName, planId = p.PlanId, name = p.Name, url = p.Url }),
+        pins = Model.Pins.Select(p => new { id = p.Id, nr = p.Nr, title = p.Title, planKey = p.PlanKey, page = p.Page, x = p.X, y = p.Y, status = p.Status, statusLabel = p.StatusLabel, statusTone = p.StatusTone, closed = p.Closed, unit = p.Unit, zone = p.Zone, contractor = p.Contractor, due = p.Due, photos = p.Photos, url = p.Url })
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punt-planviewer.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-punten.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-punten-plan.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (idx.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="pp-upload-open"><i class="ph ph-upload-simple" aria-hidden="true"></i><span>Plan uploaden</span></button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-pt-new"><i class="ph ph-plus" aria-hidden="true"></i><span>Punt toevoegen</span></button>
+    }
+}
+@section MobileQuickActions
+{
+    @if (idx.CanWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pt-new"><i class="ph ph-plus" aria-hidden="true"></i>Punt</button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@await Html.PartialAsync("Partials/_PuntTabsV2", new PuntTabsV2Vm { ProjectId = idx.ProjectId, Active = "plan", ListCount = idx.Rows.Count, PlanCount = Model.Plans.Count })
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div class="gl-v2-pp-grid" id="gl-v2-pp-root" data-change-status-url="@Url.Action("ChangeStatus", "ProjectsIssues", new { projectId = idx.ProjectId })">
+    <aside class="gl-v2-card gl-v2-pp-list">
+        <div class="gl-v2-pp-list-head">
+            <div class="gl-v2-field gl-v2-toolbar-search">
+                <div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="pp-search" placeholder="Zoek plan" autocomplete="off" aria-label="Zoek plan"></div>
+            </div>
+        </div>
+        <div class="gl-v2-pp-list-body" id="pp-list"></div>
+        @if (idx.CanWrite)
+        {
+            <button type="button" class="gl-v2-pp-upload" id="pp-upload-open-2"><i class="ph ph-plus" aria-hidden="true"></i>Plan uploaden (PDF, meerdere pagina's)</button>
+        }
+    </aside>
+
+    <section class="gl-v2-card gl-v2-pp-main">
+        <header class="gl-v2-pp-main-head">
+            <div><h2 id="pp-title">Op plan</h2><p id="pp-sub"></p></div>
+            <div class="gl-v2-pp-legend" aria-label="Legende">
+                <span><i data-status="8"></i>Concept</span><span><i data-status="9"></i>Ter goedkeuring</span><span><i data-status="13"></i>Goedgekeurd</span><span><i data-status="10"></i>Doorgestuurd</span>
+                <span><i data-status="11"></i>Gemeld uitgevoerd</span><span><i data-status="5"></i>Afgesloten</span><span><i data-status="6"></i>Afgewezen</span>
+            </div>
+        </header>
+        <div class="gl-v2-pp-viewer" id="pp-viewer"></div>
+        <p class="gl-v2-pp-hint" id="pp-hint">@(idx.CanWrite ? "Klik op het plan = nieuw punt hier" : "")</p>
+    </section>
+
+    <aside class="gl-v2-card gl-v2-pp-detail" id="pp-detail"></aside>
+</div>
+
+@if (idx.CanWrite)
+{
+    @await Html.PartialAsync("Partials/_PuntPanelV2", idx)
+
+    <form method="post" id="pp-status-form" action="@Url.Action("ChangeStatus", "ProjectsIssues", new { projectId = idx.ProjectId })" hidden>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="pp-status-id" /><input type="hidden" name="newStatus" id="pp-status-value" /><input type="hidden" name="comment" value="" />
+    </form>
+
+    <div class="modal fade gl-v2-modal-form" id="pp-upload-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pp-upload-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" id="pp-upload-form" method="post" action="@Url.Action("UploadPlanV2", "ProjectsIssues", new { projectId = idx.ProjectId })" enctype="multipart/form-data" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="modal-header"><h2 class="modal-title" id="pp-upload-title">Plan uploaden</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "unitId", Id = "pp-upload-unit", Label = "Bij welke eenheid hoort het plan?", Value = "0",
+                        Items = new[] { new GlV2SelectItem { Value = "0", Text = "Algemeen (inplantingsplan, gevels …)" } }.Concat(idx.Units.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value })).ToList()
+                    })
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pp-upload-name">Naam van het plan</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pp-upload-name" name="planName" maxlength="200" placeholder="bv. Gelijkvloers" autocomplete="off" /></div></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pp-upload-file">PDF-bestand</label><input type="file" id="pp-upload-file" name="planFile" accept="application/pdf,.pdf" class="gl-v2-pp-file" /><span class="gl-v2-field-help gl-v2-pp-err" id="pp-upload-err" hidden></span></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="pp-upload-submit">Uploaden</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script id="pp-data" type="application/json">@Html.Raw(JsonSerializer.Serialize(data))</script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-planviewer.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-panel.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-punten-plan.js" asp-append-version="true"></script>
+}

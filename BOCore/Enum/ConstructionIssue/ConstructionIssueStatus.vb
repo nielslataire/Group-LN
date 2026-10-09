@@ -41,4 +41,7 @@ Public Enum ConstructionIssueStatus As Integer
     <Display(Name:="In de wacht")>
     OnHold = 12
 
+    <Display(Name:="Goedgekeurd")>
+    Approved = 13
+
 End Enum

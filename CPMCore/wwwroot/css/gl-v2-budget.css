@@ -163,6 +163,12 @@ body.bw-show-calc span.gl-v2-bw-calc, body.bw-show-calc .gl-v2-bw-calc.is-inline
 .gl-v2-bw-table .is-strong { font-weight: 600; }
 .gl-v2-bw-table .is-neg { color: #8B2A2A; }
 .gl-v2-bw-table tr.is-warn td { background: #FBF6EA; }
+.gl-v2-bw-table tr.is-fout td { background: #FBF4F2; }
+.gl-v2-bw-table tr.is-info-rij td { color: var(--gl-v2-muted-light); }
+/* statusicoon in een rij (39k) */
+.bw-rij-icoon { font-size: 15px; vertical-align: -2px; margin-left: 4px; }
+.bw-rij-icoon.is-w { color: #8A6A32; }
+.bw-rij-icoon.is-e { color: #8B2A2A; }
 .gl-v2-bw-table tr.is-saving td:first-child { box-shadow: inset 2px 0 0 var(--gl-v2-gold, #C9A96E); }
 .gl-v2-bw-table tr.is-error td:first-child { box-shadow: inset 2px 0 0 #8B2A2A; }
 .gl-v2-bw-table .col-actions { width: 64px; text-align: right; white-space: nowrap; }
@@ -251,3 +257,8 @@ body.bw-show-calc span.gl-v2-bw-calc, body.bw-show-calc .gl-v2-bw-calc.is-inline
 .gl-v2-bw .gl-v2-field-help a { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; }
 
 .gl-v2-bw .gl-v2-notice[hidden] { display: none; }
+
+/* Foutvenster: lijst met wat er aangepast moet worden */
+.gl-v2-modal-lijst { margin: 10px 0 0; padding-left: 18px; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: left; }
+.gl-v2-modal-lijst li { margin: 3px 0; }
+.gl-v2-modal-lijst a { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; }

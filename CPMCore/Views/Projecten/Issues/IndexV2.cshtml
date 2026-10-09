@@ -12,6 +12,7 @@
 @using BOCore
 @using CPMCore.Helpers
 @using CPMCore.Models.GlV2
+@using CPMCore.Models.Issues
 @{
     ViewData["Title"] = "Punten";
     ViewData["PageIcon"] = "ph ph-warning-circle";
@@ -25,12 +26,13 @@
     var openCount = rows.Count(r => !r.IsClosed);
     var kpis = new List<GlV2KpiItemVm>
     {
-        new() { Label = "Concept", Value = Count(ConstructionIssueStatus.Concept).ToString(), Hint = "nog niet ingediend", IconClass = "ph-pencil-simple-line" },
-        new() { Label = "Ter goedkeuring", Value = Count(ConstructionIssueStatus.PendingApproval).ToString(), Hint = "wacht op werfleider", IconClass = "ph-hourglass-medium", Tone = GlV2KpiTone.Warning },
-        new() { Label = "Doorgestuurd", Value = Count(ConstructionIssueStatus.Forwarded).ToString(), Hint = "bij " + rows.Where(r => PuntenWeergave.Canon(r.Status) == (int)ConstructionIssueStatus.Forwarded && r.ContractorId.HasValue).Select(r => r.ContractorId).Distinct().Count() + " aannemers", IconClass = "ph-paper-plane-tilt" },
-        new() { Label = "Gemeld uitgevoerd", Value = Count(ConstructionIssueStatus.Reported).ToString(), Hint = "te controleren", IconClass = "ph-check-circle" },
-        new() { Label = "Afgesloten", Value = Count(ConstructionIssueStatus.Closed).ToString(), Hint = "totaal", IconClass = "ph-seal-check" },
-        new() { Label = "Kritiek", Value = critical.Count.ToString(), Hint = overdue + " over deadline", IconClass = "ph-warning", Tone = GlV2KpiTone.Danger },
+        new() { Label = "Concept", HintInline = true, FilterKey = "status:8", Value = Count(ConstructionIssueStatus.Concept).ToString(), Hint = "nog niet ingediend", IconClass = "ph-pencil-simple-line" },
+        new() { Label = "Ter goedkeuring", HintInline = true, FilterKey = "status:9", Value = Count(ConstructionIssueStatus.PendingApproval).ToString(), Hint = "wacht op werfleider", IconClass = "ph-hourglass-medium", Tone = GlV2KpiTone.Warning },
+        new() { Label = "Goedgekeurd", HintInline = true, FilterKey = "status:13", Value = Count(ConstructionIssueStatus.Approved).ToString(), Hint = "gaat 's avonds mee", IconClass = "ph-check" },
+        new() { Label = "Doorgestuurd", HintInline = true, FilterKey = "status:10", Value = Count(ConstructionIssueStatus.Forwarded).ToString(), Hint = "bij " + rows.Where(r => PuntenWeergave.Canon(r.Status) == (int)ConstructionIssueStatus.Forwarded && r.ContractorId.HasValue).Select(r => r.ContractorId).Distinct().Count() + " aannemers", IconClass = "ph-paper-plane-tilt" },
+        new() { Label = "Gemeld uitgevoerd", HintInline = true, FilterKey = "status:11", Value = Count(ConstructionIssueStatus.Reported).ToString(), Hint = "te controleren", IconClass = "ph-check-circle" },
+        new() { Label = "Afgesloten", HintInline = true, FilterKey = "status:5", Value = Count(ConstructionIssueStatus.Closed).ToString(), Hint = "totaal", IconClass = "ph-seal-check" },
+        new() { Label = "Kritiek", HintInline = true, FilterKey = "critical", Value = critical.Count.ToString(), Hint = overdue + " over deadline", IconClass = "ph-warning", Tone = GlV2KpiTone.Danger },
     };
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · punten" };
     var be = CultureInfo.GetCultureInfo("nl-BE");
@@ -44,6 +46,7 @@
 {
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punt-planviewer.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punten.css" asp-append-version="true" />
 }
 @section PageActions
@@ -68,10 +71,13 @@
     @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 }
 
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (zie ChangeOrdersV2). *@
+@await Html.PartialAsync("Partials/_PuntTabsV2", new PuntTabsV2Vm { ProjectId = Model.ProjectId, Active = "lijst", ListCount = Model.Rows.Count, PlanCount = Model.PlanCount })
+
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
-<div id="gl-v2-pt-root" data-send-url="@Url.Action("SendV2", "ProjectsIssues", new { projectId = Model.ProjectId })" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")">
+<div id="gl-v2-pt-root" data-send-url="@Url.Action("SendV2", "ProjectsIssues", new { projectId = Model.ProjectId })" data-edit-url="@Url.Action("EditV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })" data-edit-data-url="@Url.Action("EditData", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")">
     @await Html.PartialAsync("GlV2/_KpiStrip", (IReadOnlyList<GlV2KpiItemVm>)kpis)
 
     <div class="gl-v2-toolbar-card gl-v2-filters-card">
@@ -93,7 +99,7 @@
                     @await Html.PartialAsync("GlV2/_SelectList", Filter("pt-f-status", "", new[]
                     {
                         new GlV2SelectItem { Value = "open", Text = "Open (alle behalve afgesloten)" }, new GlV2SelectItem { Value = "all", Text = "Alle statussen" },
-                        new GlV2SelectItem { Value = "8", Text = "Concept" }, new GlV2SelectItem { Value = "9", Text = "Ter goedkeuring" }, new GlV2SelectItem { Value = "10", Text = "Doorgestuurd" },
+                        new GlV2SelectItem { Value = "8", Text = "Concept" }, new GlV2SelectItem { Value = "9", Text = "Ter goedkeuring" }, new GlV2SelectItem { Value = "13", Text = "Goedgekeurd" }, new GlV2SelectItem { Value = "10", Text = "Doorgestuurd" },
                         new GlV2SelectItem { Value = "11", Text = "Gemeld uitgevoerd" }, new GlV2SelectItem { Value = "12", Text = "In de wacht" }, new GlV2SelectItem { Value = "6", Text = "Afgewezen" }, new GlV2SelectItem { Value = "5", Text = "Afgesloten" }
                     }, "open"))
                 </div>
@@ -118,6 +124,9 @@
                         new GlV2SelectItem { Value = "3", Text = "Kritiek" }, new GlV2SelectItem { Value = "2", Text = "Hoog" }, new GlV2SelectItem { Value = "1", Text = "Normaal" }, new GlV2SelectItem { Value = "0", Text = "Laag" }
                     }))
                 </div>
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Verslag</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("pt-f-verslag", "Alle verslagen", Model.Verslagen.Select(v => new GlV2SelectItem { Value = v.Id.ToString(), Text = v.Naam })))
+                </div>
                 <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Op plan</span>
                     @await Html.PartialAsync("GlV2/_SelectList", Filter("pt-f-plan", "Maakt niet uit", new[] { new GlV2SelectItem { Value = "yes", Text = "Op plan aangeduid" }, new GlV2SelectItem { Value = "no", Text = "Niet op plan" } }))
                 </div>
@@ -129,20 +138,20 @@
         </div>
     </div>
 
-    <div class="gl-v2-table-card gl-v2-pt-card">
-      <div class="datatables-header-footer-wrapper">
+    <div class="gl-v2-card gl-v2-detail-table-card gl-v2-pt-card">
+      <div class="gl-v2-card-body">
         <div class="table-responsive-md">
-            <table class="table table-hover mb-0 w-100" id="datatable-punten">
+            <table class="table table-hover mb-0 w-100 gl-v2-detail-table" id="datatable-punten">
                 <thead>
                     <tr>
                         <th class="gl-v2-pt-check no-sort"><input type="checkbox" id="pt-check-all" aria-label="Alles selecteren" @(Model.CanWrite ? "" : "hidden")></th>
-                        <th>PUNT</th>
-                        <th>EENHEID</th>
-                        <th>KAMER / ZONE</th>
-                        <th>FASE</th>
-                        <th>AANNEMER</th>
-                        <th>STATUS</th>
-                        <th>DEADLINE</th>
+                        <th>Punt</th>
+                        <th>Eenheid</th>
+                        <th>Kamer / zone</th>
+                        <th>Fase</th>
+                        <th>Aannemer</th>
+                        <th>Status</th>
+                        <th>Deadline</th>
                         <th class="no-sort"></th>
                     </tr>
                 </thead>
@@ -154,17 +163,19 @@
                         var word = PuntenWeergave.PriorityWord(r.Priority);
                         <tr class="gl-v2-pt-row @(r.IsClosed ? "is-closed" : "")" data-id="@r.Id" data-nr="@r.Nr" data-status="@canon" data-closed="@(r.IsClosed ? 1 : 0)"
                             data-unit="@(r.UnitId ?? 0)" data-unitname="@r.UnitName" data-contractor="@(r.ContractorId ?? 0)" data-phase="@r.Phase"
-                            data-due="@r.DueDate?.ToString("yyyy-MM-dd")" data-overdue="@(r.Overdue ? 1 : 0)" data-priority="@r.Priority" data-plan="@(r.HasPlan ? 1 : 0)"
+                            data-due="@r.DueDate?.ToString("yyyy-MM-dd")" data-overdue="@(r.Overdue ? 1 : 0)" data-priority="@r.Priority" data-plan="@(r.HasPlan ? 1 : 0)" data-verslagen="@r.VerslagIds"
                             data-href="@Url.Action("Details", "ProjectsIssues", new { projectId = Model.ProjectId, id = r.Id })"
                             data-search="@((r.Title + " " + r.NrLabel + " " + r.UnitName + " " + r.Zone + " " + r.Contractor).ToLowerInvariant())">
                             <td class="gl-v2-pt-check"><input type="checkbox" class="js-pt-check" value="@r.Id" aria-label="Selecteer @r.NrLabel" @(Model.CanWrite ? "" : "hidden")></td>
                             <td class="gl-v2-pt-title" data-order="@r.Nr">
                                 <span class="gl-v2-pt-title-main">@r.Title</span>
-                                <span class="gl-v2-pt-title-sub">
-                                    @r.NrLabel
-                                    @if (word != "") { <span class="gl-v2-pt-tag @(r.Priority == 3 ? "is-critical" : "")">@word</span> }
-                                    @if (r.HasPlan) { <span class="gl-v2-pt-tag is-plan">op plan</span> }
-                                </span>
+                                @if (word != "" || r.HasPlan)
+                                {
+                                    <span class="gl-v2-pt-title-sub">
+                                        @if (word != "") { <span class="gl-v2-pt-tag @(r.Priority == 3 ? "is-critical" : "")">@word</span> }
+                                        @if (r.HasPlan) { <span class="gl-v2-pt-tag is-plan">op plan</span> }
+                                    </span>
+                                }
                             </td>
                             <td>@r.UnitName</td>
                             <td class="gl-v2-pt-muted">@(string.IsNullOrWhiteSpace(r.Zone) ? "—" : r.Zone)</td>
@@ -173,14 +184,17 @@
                             <td data-order="@canon"><span class="gl-v2-badge @r.StatusTone">@r.StatusLabel</span></td>
                             <td class="gl-v2-pt-due @(r.Overdue ? "is-overdue" : "")" data-order="@(r.DueDate?.ToString("yyyy-MM-dd") ?? "9999-12-31")">@(r.DueDate.HasValue ? r.DueDate.Value.ToString("dd/MM", be) : "—")</td>
                             <td class="gl-v2-pt-actions">
-                                @if (r.Sent > 0) { <span class="gl-v2-pt-sent" title="Aantal keer verstuurd">@r.Sent ×</span> }
-                                <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @r.NrLabel"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
-                                <div class="gl-v2-menu" id="@menuId">
-                                    <a class="gl-v2-menu-item" href="@Url.Action("Details", "ProjectsIssues", new { projectId = Model.ProjectId, id = r.Id })"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Openen</span></span></a>
+                                <i class="ph ph-caret-right gl-v2-pt-chev" aria-hidden="true"></i>
+                                <div class="gl-v2-pt-rowacts">
+                                    <a class="gl-v2-icon-btn" href="@Url.Action("Details", "ProjectsIssues", new { projectId = Model.ProjectId, id = r.Id })" title="Openen" aria-label="Openen @r.NrLabel"><i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+                                    @if (Model.CanWrite)
+                                    {
+                                        <button type="button" class="gl-v2-icon-btn js-pt-edit" data-id="@r.Id" title="Bewerken" aria-label="Bewerken @r.NrLabel"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-icon-btn js-pt-dup" data-id="@r.Id" title="Dupliceren" aria-label="Dupliceren @r.NrLabel"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                    }
                                     @if (Model.CanDelete)
                                     {
-                                        <div class="gl-v2-menu-divider"></div>
-                                        <button type="button" class="gl-v2-menu-item is-danger js-pt-delete" data-id="@r.Id" data-title="@r.NrLabel · @r.Title"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span></button>
+                                        <button type="button" class="gl-v2-icon-btn is-danger js-pt-delete" data-id="@r.Id" data-title="@r.Title" title="Verwijderen" aria-label="Verwijderen @r.NrLabel"><i class="ph ph-trash" aria-hidden="true"></i></button>
                                     }
                                 </div>
                             </td>
@@ -200,8 +214,10 @@
         <span class="gl-v2-pt-selbar-count"><b id="pt-sel-n">0</b> geselecteerd</span>
         <span class="gl-v2-pt-selbar-spacer"></span>
         <button type="button" class="gl-v2-pt-selbar-action" data-op="approve"><i class="ph ph-check" aria-hidden="true"></i>Goedkeuren</button>
+        <button type="button" class="gl-v2-pt-selbar-action" data-op="send"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Doorsturen…</button>
         <button type="button" class="gl-v2-pt-selbar-action js-pt-pop" data-pop="pt-pop-status"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Status…</button>
         <button type="button" class="gl-v2-pt-selbar-action js-pt-pop" data-pop="pt-pop-deadline"><i class="ph ph-calendar" aria-hidden="true"></i>Deadline…</button>
+        <button type="button" class="gl-v2-pt-selbar-action js-pt-pop" data-pop="pt-pop-verslag"><i class="ph ph-notebook" aria-hidden="true"></i>Aan verslag…</button>
         <button type="button" class="gl-v2-pt-selbar-action js-pt-pop" data-pop="pt-pop-contractor"><i class="ph ph-hard-hat" aria-hidden="true"></i>Aannemer…</button>
         @if (Model.CanDelete)
         {
@@ -212,7 +228,7 @@
 
         <div class="gl-v2-pt-pop" id="pt-pop-status" hidden>
             <div class="gl-v2-pt-pop-title">STATUS VOOR <span class="js-pt-sel-n"></span> PUNTEN</div>
-            @foreach (var s in new[] { (9, "Ter goedkeuring"), (10, "Doorgestuurd"), (11, "Gemeld uitgevoerd"), (5, "Afgesloten"), (6, "Afgewezen") })
+            @foreach (var s in new[] { (9, "Ter goedkeuring"), (13, "Goedgekeurd"), (10, "Doorgestuurd"), (11, "Gemeld uitgevoerd"), (5, "Afgesloten"), (6, "Afgewezen") })
             {
                 <button type="button" class="gl-v2-pt-pop-item js-pt-do" data-op="status" data-status="@s.Item1">@s.Item2</button>
             }
@@ -222,6 +238,14 @@
             <div class="gl-v2-pt-pop-title">DEADLINE VOOR <span class="js-pt-sel-n"></span> PUNTEN</div>
             @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "pt-due-input", Id = "pt-due-input", Label = "Nieuwe deadline" })
             <div class="gl-v2-pt-pop-actions"><button type="button" class="gl-v2-btn gl-v2-btn-text js-pt-pop-close">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary js-pt-do" data-op="deadline">Toepassen</button></div>
+        </div>
+        <div class="gl-v2-pt-pop" id="pt-pop-verslag" hidden>
+            <div class="gl-v2-pt-pop-title">AAN VERSLAG TOEVOEGEN (<span class="js-pt-sel-n"></span> PUNTEN)</div>
+            @foreach (var v in Model.Verslagen.Where(v => v.Open))
+            {
+                <button type="button" class="gl-v2-pt-pop-item js-pt-do" data-op="verslag" data-verslag="@v.Id"><span>@v.Naam</span><small>concept — nog open</small></button>
+            }
+            @if (!Model.Verslagen.Any(v => v.Open)) { <div class="gl-v2-pt-pop-note">Er is geen lopend verslag. Start er eerst één onder Verslagen.</div> }
         </div>
         <div class="gl-v2-pt-pop" id="pt-pop-contractor" hidden>
             <div class="gl-v2-pt-pop-title">AANNEMER VOOR <span class="js-pt-sel-n"></span> PUNTEN</div>
@@ -237,7 +261,7 @@
     <form method="post" id="pt-bulk-form" action="@Url.Action("BulkV2", "ProjectsIssues", new { projectId = Model.ProjectId })" hidden>
         @Html.AntiForgeryToken()
         <input type="hidden" name="op" id="pt-bulk-op" /><input type="hidden" name="status" id="pt-bulk-status" />
-        <input type="hidden" name="dueDate" id="pt-bulk-due" /><input type="hidden" name="contractorId" id="pt-bulk-contractor" />
+        <input type="hidden" name="dueDate" id="pt-bulk-due" /><input type="hidden" name="contractorId" id="pt-bulk-contractor" /><input type="hidden" name="verslagId" id="pt-bulk-verslag" />
         <div id="pt-bulk-ids"></div>
     </form>
 }
@@ -251,88 +275,7 @@
 }
 @if (Model.CanWrite)
 {
-    @* Snel ingeven (40c): zijpaneel met enkel titel, eenheid, zone en aannemer; de rest onder "Meer". Posten gebeurt via fetch naar CreateV2. *@
-    <div class="gl-v2-pt-panel-backdrop" id="pt-panel-backdrop" hidden></div>
-    <aside class="gl-v2-pt-panel" id="pt-panel" role="dialog" aria-modal="true" aria-labelledby="pt-panel-title" hidden>
-        <form id="pt-new-form" method="post" action="@Url.Action("CreateV2", "ProjectsIssues", new { projectId = Model.ProjectId })" enctype="multipart/form-data" novalidate>
-            @Html.AntiForgeryToken()
-            <header class="gl-v2-pt-panel-head">
-                <div><h2 id="pt-panel-title">Nieuw punt</h2><p>Enter = opslaan &amp; volgende</p></div>
-                <button type="button" class="gl-v2-modal-close js-pt-panel-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
-            </header>
-            <div class="gl-v2-pt-panel-body">
-                <div class="gl-v2-notice gl-v2-notice-compact is-success" id="pt-new-saved" hidden><i class="ph ph-check-circle" aria-hidden="true"></i><span></span></div>
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="pt-new-title">Titel <span class="gl-v2-pt-req">*</span></label>
-                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pt-new-title" name="title" maxlength="200" placeholder="Wat moet er gebeuren?" autocomplete="off" /></div>
-                    <span class="gl-v2-field-help" id="pt-new-title-help">kort en concreet — wat moet er gebeuren</span>
-                </div>
-                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                {
-                    Name = "unitId", Id = "pt-new-unit", Label = "Eenheid", Value = "0",
-                    Items = new[] { new GlV2SelectItem { Value = "0", Text = "Algemeen" } }.Concat(Model.Units.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value })).ToList()
-                })
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="pt-new-zone">Kamer / zone</label>
-                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pt-new-zone" name="zone" maxlength="100" list="pt-zones" placeholder="bv. badkamer" autocomplete="off" /></div>
-                    <datalist id="pt-zones">@foreach (var z in Model.RecentZones) { <option value="@z"></option> }</datalist>
-                    @if (Model.RecentZones.Count > 0)
-                    {
-                        <div class="gl-v2-pt-chiprow">
-                            @foreach (var z in Model.RecentZones.Take(6)) { <button type="button" class="gl-v2-pt-zonechip js-pt-zone" data-zone="@z">@z</button> }
-                        </div>
-                    }
-                </div>
-                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                {
-                    Name = "contractorId", Id = "pt-new-contractor", Label = "Aannemer", Value = "", EmptyText = "Nog niet gekozen",
-                    Help = "Pas na goedkeuring gaat het punt naar de aannemer.",
-                    Items = Model.ProjectContractors.Select(c => new GlV2SelectItem { Value = c.Key.ToString(), Text = c.Value }).ToList()
-                })
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="pt-new-files">Foto's</label>
-                    <label class="gl-v2-pt-filebtn" for="pt-new-files"><i class="ph ph-camera" aria-hidden="true"></i><span id="pt-new-files-label">Foto's toevoegen</span></label>
-                    <input type="file" id="pt-new-files" name="mediaFiles" accept="image/*" multiple hidden />
-                </div>
-                <button type="button" class="gl-v2-pt-more" id="pt-new-more" aria-expanded="false"><i class="ph ph-caret-right" aria-hidden="true"></i>Meer: beschrijving, categorie, type, fase, prioriteit, deadline</button>
-                <div class="gl-v2-pt-more-body" id="pt-new-more-body" hidden>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="pt-new-desc">Beschrijving</label>
-                        <div class="gl-v2-field-box gl-v2-pt-textarea"><textarea class="gl-v2-field-input" id="pt-new-desc" name="description" rows="3"></textarea></div>
-                    </div>
-                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                    {
-                        Name = "categoryId", Id = "pt-new-cat", Label = "Categorie", Value = Model.Categories.FirstOrDefault().Key.ToString(),
-                        Items = Model.Categories.Select(c => new GlV2SelectItem { Value = c.Key.ToString(), Text = c.Value }).ToList()
-                    })
-                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                    {
-                        Name = "issueType", Id = "pt-new-type", Label = "Type", Value = "0",
-                        Items = Model.Types.Select(t => new GlV2SelectItem { Value = t.Key.ToString(), Text = t.Value }).ToList()
-                    })
-                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                    {
-                        Name = "phase", Id = "pt-new-phase", Label = "Fase", Value = "0",
-                        Items = Model.Phases.Select(t => new GlV2SelectItem { Value = t.Key.ToString(), Text = t.Value }).ToList()
-                    })
-                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                    {
-                        Name = "priority", Id = "pt-new-priority", Label = "Prioriteit", Value = "1",
-                        Items = new List<GlV2SelectItem> { new() { Value = "0", Text = "Laag" }, new() { Value = "1", Text = "Normaal" }, new() { Value = "2", Text = "Hoog" }, new() { Value = "3", Text = "Kritiek" } }
-                    })
-                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "dueDate", Id = "pt-new-due", Label = "Deadline" })
-                </div>
-            </div>
-            <footer class="gl-v2-pt-panel-foot">
-                <p class="gl-v2-pt-panel-note">Bewaard als <b>concept</b> — pas na goedkeuring gaat het naar de aannemer.</p>
-                <div class="gl-v2-pt-panel-actions">
-                    <button type="button" class="gl-v2-btn gl-v2-btn-text js-pt-panel-close">Annuleren</button>
-                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="pt-new-save">Opslaan</button>
-                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="pt-new-save-next">Opslaan &amp; volgende</button>
-                </div>
-            </footer>
-        </form>
-    </aside>
+    @await Html.PartialAsync("Partials/_PuntPanelV2", Model)
 }
 
 <form method="post" id="pt-print-form" action="@Url.Action("DownloadPdf", "ProjectsIssues", new { projectId = Model.ProjectId })" hidden>
@@ -344,5 +287,8 @@
 {
     <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="~/js/gl-v2-punt-planviewer.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-panel.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-punten.js" asp-append-version="true"></script>
 }

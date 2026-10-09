@@ -47,3 +47,5 @@
 .gl-v2-pd-contractor a:hover { text-decoration: underline; }
 
 @media (max-width: 1023.98px) { .gl-v2-pd-grid { grid-template-columns: 1fr; } .gl-v2-pd-notice { flex-wrap: wrap; } }
+
+#pd-plan .gl-v2-pv-scroll { height: 260px; }

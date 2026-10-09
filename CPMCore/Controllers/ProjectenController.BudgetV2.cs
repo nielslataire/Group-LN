@@ -8,6 +8,7 @@ using CPMCore.Models.GlV2;
 using DALCore.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CPMCore.Controllers
@@ -44,7 +45,8 @@ namespace CPMCore.Controllers
                 versie.LaatsteStap = (byte)Math.Max(versie.LaatsteStap ?? 0, step);
             }
 
-            var waarsch = await BerekenStapWaarschuwingenAsync(versie);
+            var meldingen = await GetMeldingenAsync(versie);
+            var waarsch = meldingen.Where(m => m.IsOpen).GroupBy(m => m.Stap).ToDictionary(x => x.Key, x => (Errors: x.Count(m => m.Type == ServiceCore.Budget.MeldingType.Fout), Warnings: x.Count(m => m.Type == ServiceCore.Budget.MeldingType.Waarschuwing)));
             if (extra != null) foreach (var kv in extra) waarsch[kv.Key] = kv.Value;
 
             var bereikt = versie.LaatsteStap ?? 0;
@@ -73,6 +75,7 @@ namespace CPMCore.Controllers
                 Steps = stappen,
                 OverviewUrl = Url.Action(nameof(BudgetIndex), "Projecten", new { projectId = versie.ProjectId }) ?? "#",
                 AantalWaarschuwingen = waarsch.Values.Sum(v => v.Errors + v.Warnings),
+                Meldingen = meldingen,
                 Menu = new GlV2ProjectMenuVm { ProjectId = versie.ProjectId, ProjectName = projectNaam, ProjectSubtitle = "project · budget", Mode = GlV2ProjectMenuMode.Outer }
             };
 
@@ -89,25 +92,18 @@ namespace CPMCore.Controllers
             return chrome;
         }
 
-        /// <summary>Aandachtspunten per stap (1-based) die we goedkoop kunnen afleiden. Stap 8 (vraagprijs onder minimum) kent enkel de verkooppagina zelf.</summary>
-        private async Task<Dictionary<int, (int Errors, int Warnings)>> BerekenStapWaarschuwingenAsync(BudgetVersie versie)
+        /// <summary>Alle meldingen van de versie (39k). Gecached zolang de versie niet wijzigt (de filter zet bij elke schrijvende actie GewijzigdOp);
+        /// ook de genegeerde waarschuwingen zitten in de sleutel, zodat "Negeren" meteen doorwerkt.</summary>
+        private async Task<List<ServiceCore.Budget.BudgetMelding>> GetMeldingenAsync(BudgetVersie versie)
         {
-            var res = new Dictionary<int, (int, int)>();
-            var bevestigd = (versie.WaarschuwingenBevestigd ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-            // Stap 1: type poorten nog niet gekozen
-            var formules = HttpContext.RequestServices.GetRequiredService<ServiceCore.Budget.BudgetActivityFormuleService>();
-            if (await formules.IsPoortWaarschuwingAsync(versie.Id)) res[1] = (0, 1);
-
-            // Stap 2: woningen zonder grondoppervlakte
-            var zonderGrond = await _uow.BudgetOppervlaktes.GetNoTracking().Include(o => o.UnitGroupType)
-                .CountAsync(o => o.BudgetVersieId == versie.Id && o.Grondopp <= 0m && o.UnitGroupType != null && o.UnitGroupType.Name.Contains("woon"));
-            if (zonderGrond > 0) res[2] = (0, 1);
-
-            // Stap 7: decennale verzekering staat op 0 % (verplicht bij gesloten ruwbouw) en is niet bevestigd als elders gedekt
-            var p = await _uow.BudgetParams.GetNoTracking().FirstOrDefaultAsync(x => x.BudgetVersieId == versie.Id);
-            if (p != null && (p.DecennaleGeslRuwbouwPerc ?? 0m) <= 0m && !bevestigd.Contains("decennale")) res[7] = (0, 1);
-            return res;
+            var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+            var vers = await _db.BudgetVersie.AsNoTracking().Where(v => v.Id == versie.Id).Select(v => new { v.GewijzigdOp, v.WaarschuwingenBevestigd, v.Status }).FirstAsync();
+            var key = $"bwm:{versie.Id}:{vers.GewijzigdOp?.Ticks ?? 0}:{vers.WaarschuwingenBevestigd}:{vers.Status}";
+            if (cache.TryGetValue(key, out List<ServiceCore.Budget.BudgetMelding> bestaand)) return bestaand;
+            var service = HttpContext.RequestServices.GetRequiredService<ServiceCore.Budget.BudgetControleService>();
+            var nieuw = await service.BerekenAsync(versie.Id);
+            cache.Set(key, nieuw, TimeSpan.FromMinutes(10));
+            return nieuw;
         }
 
         // ── Statusacties ──────────────────────────────────────────────────────
@@ -120,16 +116,28 @@ namespace CPMCore.Controllers
             return RedirectToAction(terugActie, new { versieId });
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
-        public IActionResult BudgetVersieAfronden(int versieId)
+        /// <summary>39k: fouten blokkeren "Afronden" (waarschuwingen niet). Geeft de melding terug als er open fouten zijn.</summary>
+        private async Task<string> FoutenBlokkerenAsync(int versieId)
         {
+            var versie = await _db.BudgetVersie.AsNoTracking().FirstOrDefaultAsync(v => v.Id == versieId);
+            if (versie == null) return null;
+            var fouten = (await GetMeldingenAsync(versie)).Where(m => m.IsOpen && m.Type == ServiceCore.Budget.MeldingType.Fout).ToList();
+            if (fouten.Count == 0) return null;
+            return $"Afronden kan niet: er {(fouten.Count == 1 ? "staat nog 1 fout" : $"staan nog {fouten.Count} fouten")} open (stap {string.Join(", ", fouten.Select(f => f.Stap).Distinct().OrderBy(x => x))}). Los ze op en probeer opnieuw.";
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BudgetVersieAfronden(int versieId)
+        {
+            var blok = await FoutenBlokkerenAsync(versieId); if (blok != null) return StatusResultaat(false, blok, versieId, nameof(BudgetResultaat));
             var r = _budgetService.AfrondenVersie(versieId);
             return StatusResultaat(r.Success, r.Messages.FirstOrDefault()?.Message ?? "", versieId, nameof(BudgetResultaat));
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public IActionResult BudgetVersieDefinitief(int versieId)
+        public async Task<IActionResult> BudgetVersieDefinitief(int versieId)
         {
+            var blok = await FoutenBlokkerenAsync(versieId); if (blok != null) return StatusResultaat(false, blok, versieId, nameof(BudgetResultaat));
             var r = _budgetService.MaakDefinitief(versieId, User?.Identity?.Name);
             return StatusResultaat(r.Success, r.Messages.FirstOrDefault()?.Message ?? "", versieId, nameof(BudgetResultaat));
         }
@@ -145,7 +153,7 @@ namespace CPMCore.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public IActionResult BudgetWaarschuwingBevestigen(int versieId, string sleutel, bool bevestigd = true)
         {
-            var r = _budgetService.BevestigWaarschuwing(versieId, sleutel, bevestigd);
+            var r = _budgetService.BevestigWaarschuwing(versieId, sleutel, bevestigd, User?.Identity?.Name);
             return Json(new { success = r.Success });
         }
 

@@ -21,6 +21,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punt-planviewer.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punt-detail.css" asp-append-version="true" />
 }
 @section PageTitleBadges
@@ -207,8 +208,11 @@
         @if (Model.HasPlan)
         {
             <section class="gl-v2-card gl-v2-pd-card">
-                <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Op plan</h2></div>
-                <div class="gl-v2-card-body"><p class="gl-v2-pd-empty">Dit punt is op een plan aangeduid.</p></div>
+                <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Op plan</h2><span class="gl-v2-field-divider"></span><span class="gl-v2-card-header-count">@Model.PlanName</span></div>
+                <div class="gl-v2-card-body">
+                    <div id="pd-plan" data-url="@Model.PlanUrl" data-page="@Model.PlanPage" data-x="@Model.PlanX.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-y="@Model.PlanY.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-status="@Model.Status"></div>
+                    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("PlanV2", "ProjectsIssues", new { projectId = Model.ProjectId, issue = Model.Id })"><i class="ph ph-map-trifold" aria-hidden="true"></i>Openen op plan</a>
+                </div>
             </section>
         }
     </aside>
@@ -254,5 +258,10 @@
 @section PageScripts
 {
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    @if (Model.HasPlan)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+        <script src="~/js/gl-v2-punt-planviewer.js" asp-append-version="true"></script>
+    }
     <script src="~/js/gl-v2-projecten-punt-detail.js" asp-append-version="true"></script>
 }

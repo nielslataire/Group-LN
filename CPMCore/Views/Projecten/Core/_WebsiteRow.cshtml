@@ -1,0 +1,41 @@
+﻿@model CPMCore.Models.Projecten.WebsiteRowVm
+@*
+    Eén rij van de lijsten op de tab "SEO & website": verhaalbeeld, quote of detail. Gebruikt voor de bestaande rijen
+    én (met index "__i__") als <template> voor "toevoegen"; gl-v2-projecten-website-blocks.js hernummert de namen.
+*@
+@{
+    var n = $"{Model.Prefix}[{Model.Index}]";
+    var thumb = string.IsNullOrWhiteSpace(Model.ImageName) ? null : Model.ImageBase + "pictures/447/" + Model.ImageName;
+}
+<div class="gl-v2-pf-row web-rep-row web-rep-@Model.Kind">
+    <span class="gl-v2-pf-handle" title="Sleep om te herschikken" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span>
+    @if (Model.Kind != "quote")
+    {
+        <div class="web-pick-cell">
+            <input type="hidden" name="@(n + ".ImageName")" value="@Model.ImageName" />
+            <button type="button" class="web-pick@(thumb == null ? " is-empty" : "")" aria-label="Foto kiezen" title="Foto kiezen">
+                <img src="@(thumb ?? "")" alt="" @(thumb == null ? "hidden" : "") />
+                <i class="ph ph-image" aria-hidden="true"></i>
+            </button>
+        </div>
+    }
+    @if (Model.Kind == "story")
+    {
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="@(n + ".Text")" rows="2" maxlength="1000" class="gl-v2-field-input" placeholder="Tekst bij het beeld" aria-label="Tekst bij het beeld">@Model.Text</textarea></div></div>
+    }
+    else if (Model.Kind == "quote")
+    {
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="@(n + ".Text")" rows="2" maxlength="600" class="gl-v2-field-input" placeholder="Quote" aria-label="Quote">@Model.Text</textarea></div></div>
+        <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Person")" value="@Model.Person" maxlength="200" class="gl-v2-field-input" placeholder="Persoon" autocomplete="off" aria-label="Persoon" /></div></div>
+    }
+    else
+    {
+        <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Title")" value="@Model.Title" maxlength="200" class="gl-v2-field-input" placeholder="Titel" autocomplete="off" aria-label="Titel" /></div></div>
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="@(n + ".Text")" rows="2" maxlength="1000" class="gl-v2-field-input" placeholder="Tekst" aria-label="Tekst">@Model.Text</textarea></div></div>
+    }
+    <div class="gl-v2-pf-row-actions">
+        <button type="button" class="gl-v2-icon-btn web-rep-up" aria-label="Omhoog" title="Omhoog"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+        <button type="button" class="gl-v2-icon-btn web-rep-down" aria-label="Omlaag" title="Omlaag"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+        <button type="button" class="gl-v2-icon-btn is-danger web-rep-remove" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+    </div>
+</div>

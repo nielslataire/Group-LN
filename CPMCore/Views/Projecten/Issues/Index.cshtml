@@ -1,4 +1,5 @@
 ﻿@using BOCore
+@using CPMCore.Helpers
 @using DALCore.Models
 @using System.Text.Json
 
@@ -7,18 +8,23 @@
     var projectId = Model.ProjectId;
     var filters = Model.Filters;
     var today = DateOnly.FromDateTime(DateTime.Today);
-    var openCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.Open);
-    var waitingInspectionCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.WaitingInspection);
-    var resolvedCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.Resolved);
-    var criticalCount = Model.Issues.Count(i => i.DueDate.HasValue && i.DueDate.Value < today);
+    int CountStatus(params ConstructionIssueStatus[] st) => Model.Issues.Count(i => st.Contains((ConstructionIssueStatus)PuntenWeergave.Canon(i.Status)));
+    var toApproveCount = CountStatus(ConstructionIssueStatus.Concept, ConstructionIssueStatus.PendingApproval);
+    var approvedCount = CountStatus(ConstructionIssueStatus.Approved);
+    var forwardedCount = CountStatus(ConstructionIssueStatus.Forwarded);
+    var reportedCount = CountStatus(ConstructionIssueStatus.Reported);
+    var closedCount = CountStatus(ConstructionIssueStatus.Closed);
+    var criticalCount = Model.Issues.Count(i => !PuntenWeergave.IsClosed(i.Status) && i.Status != (int)ConstructionIssueStatus.OnHold && i.DueDate.HasValue && i.DueDate.Value < today);
     var visibleStatuses = new[]
     {
-        ConstructionIssueStatus.Open,
-        ConstructionIssueStatus.InProgress,
-        ConstructionIssueStatus.WaitingInspection,
-        ConstructionIssueStatus.Resolved,
+        ConstructionIssueStatus.Concept,
+        ConstructionIssueStatus.PendingApproval,
+        ConstructionIssueStatus.Approved,
+        ConstructionIssueStatus.Forwarded,
+        ConstructionIssueStatus.Reported,
+        ConstructionIssueStatus.OnHold,
         ConstructionIssueStatus.Rejected,
-        ConstructionIssueStatus.Reopened
+        ConstructionIssueStatus.Closed
     };
 }
 @section PageStyle {
@@ -58,8 +64,36 @@
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Open </h4>
-                                        <h2 class="mt-0 color-primary">@openCount</h2>
+                                        <h4 class="title">Te keuren</h4>
+                                        <h2 class="mt-0 color-primary">@toApproveCount</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <h4 class="title">Goedgekeurd</h4>
+                                        <h2 class="mt-0 color-primary">@approvedCount</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <h4 class="title">Doorgestuurd</h4>
+                                        <h2 class="mt-0 color-primary">@forwardedCount</h2>
                                     </div>
                                 </div>
                             </div>
@@ -72,8 +106,8 @@
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title"><span class="issue-status-label-desktop">Wachten op controle</span><span class="issue-status-label-mobile">Controle</span></h4>
-                                        <h2 class="mt-0 color-primary">@waitingInspectionCount</h2>
+                                        <h4 class="title"><span class="issue-status-label-desktop">Gemeld uitgevoerd</span><span class="issue-status-label-mobile">Controle</span></h4>
+                                        <h2 class="mt-0 color-primary">@reportedCount</h2>
                                     </div>
                                 </div>
                             </div>
@@ -86,8 +120,8 @@
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Opgelost</h4>
-                                        <h2 class="mt-0 color-primary">@resolvedCount</h2>
+                                        <h4 class="title">Afgesloten</h4>
+                                        <h2 class="mt-0 color-primary">@closedCount</h2>
                                     </div>
                                 </div>
                             </div>
@@ -100,7 +134,7 @@
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Kritiek</h4>
+                                        <h4 class="title">Over deadline</h4>
                                         <h2 class="mt-0 color-primary">@criticalCount</h2>
                                     </div>
                                 </div>
@@ -115,7 +149,7 @@
                     <h4 class="mb-3">Bulk acties</h4>
                     <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="row g-2 align-items-end">
                         @Html.AntiForgeryToken()
-                        <div class="col-md-4"><label>Status</label><select name="Status" class="form-control form-control-modern"><option value="">-</option>@foreach (var s in Enum.GetValues<ConstructionIssueStatus>()){
+                        <div class="col-md-4"><label>Status</label><select name="Status" class="form-control form-control-modern"><option value="">-</option>@foreach (var s in visibleStatuses){
                         <option value="@((int)s)">@s</option>
                                                 }
 </select></div>
@@ -346,7 +380,7 @@
                                 <tbody>
                                     @foreach (var i in Model.Issues)
                                     {
-                                           <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)" data-status="@i.Status">
+                                           <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)" data-status="@PuntenWeergave.Canon(i.Status)">
                                             <td class="col-check">
                                                 <div class="checkbox-custom checkbox-default d-inline-block">
                                                     <input type="checkbox" class="issue-check" value="@i.Id" id="issue_@i.Id" />
@@ -361,7 +395,7 @@
                                                     <td class="room-place-cell">@(string.IsNullOrWhiteSpace(i.RoomOrZone) ? "-" : i.RoomOrZone)</td>
                                                 <td>@(((ConstructionIssuePhase)i.IssuePhase).GetDisplayName())</td>
                                                 <td>@(Model.Form.ResponsibleContractors.FirstOrDefault(c => c.ID == i.ResponsiblePartyId)?.Display ?? (string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? "-" : i.ResponsibleOtherName))</td>
-                                                <td>@(((ConstructionIssueStatus)i.Status).GetDisplayName())</td>
+                                                <td>@PuntenWeergave.Label(i.Status)</td>
                                             <td>@(i.PlannedDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                                             <td class="actions text-end">
                                                 <a href="@Url.Action("DetailData", "ProjectsIssues", new { projectId, id = i.Id })"
@@ -405,11 +439,11 @@
                                 @foreach (var i in Model.Issues)
                                 {
                                     var responsibleDisplay = Model.Form.ResponsibleContractors.FirstOrDefault(c => c.ID == i.ResponsiblePartyId)?.Display;
-                                    var mobileStatusDisplay = ((ConstructionIssueStatus)i.Status).GetDisplayName();
+                                    var mobileStatusDisplay = PuntenWeergave.Label(i.Status);
                                     var mobileRoomDisplay = string.IsNullOrWhiteSpace(i.RoomOrZone) ? null : i.RoomOrZone;
                                     var mobileLocationDisplay = string.IsNullOrWhiteSpace(i.LocationText) ? null : i.LocationText;
                                     var mobileDeadlineDisplay = i.DueDate?.ToString("dd/MM/yyyy");
-                                    if (i.Status == (int)ConstructionIssueStatus.WaitingInspection)
+                                    if (PuntenWeergave.Canon(i.Status) == (int)ConstructionIssueStatus.Reported)
                                     {
                                         mobileStatusDisplay = "Controle";
                                     }
@@ -418,7 +452,7 @@
                                         responsibleDisplay = string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? null : i.ResponsibleOtherName;
                                     }
 
-                                    <article class="issue-item-card" data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)" data-status="@i.Status">
+                                    <article class="issue-item-card" data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)" data-status="@PuntenWeergave.Canon(i.Status)">
                                         <div class="issue-item-top">
                                             <div class="checkbox-custom checkbox-default d-inline-block mt-1">
                                                 <input type="checkbox" class="issue-check" value="@i.Id" id="issue_mobile_@i.Id" />
@@ -774,7 +808,7 @@
                    const phaseSelect = filterForm.querySelector('[name="phase"]');
 
                    if (textInput) textInput.value = '';
-                   if (statusSelect) statusSelect.value = String(@((int)ConstructionIssueStatus.Open));
+                   if (statusSelect) statusSelect.value = String(@((int)ConstructionIssueStatus.Forwarded));
                    if (responsibleSelect) responsibleSelect.value = '';
                    if (unitSelect) unitSelect.value = '';
                    if (overdueSelect) overdueSelect.value = '';

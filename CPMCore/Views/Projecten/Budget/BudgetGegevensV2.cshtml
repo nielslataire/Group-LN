@@ -18,7 +18,10 @@
     var g = Model.Gegevens;
     var nl = new System.Globalization.CultureInfo("nl-BE");
     var inv = System.Globalization.CultureInfo.InvariantCulture;
-    var poort = ViewData["PoortWaarschuwing"] as bool? == true;
+    var poortMld = ch.Op("Gegevens.TypePoorten", "veld");
+    var dakMld = ch.Op("Gegevens.TypeDak", "veld");
+    var sMld = ch.Op("Gegevens.SIndexHuidig", "veld");
+    var iMld = ch.Op("Gegevens.IIndexHuidig", "veld");
 
     Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.NacalcRuwbouwBasis, out var fRuwbouw);
     Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.BovenbouwGevelmetselwerk, out var fGevel);
@@ -66,6 +69,7 @@
         <input type="hidden" name="VersieStatus" value="@Model.VersieStatus" />
 
         <div class="gl-v2-bw-scroll">
+        @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwKaders.cshtml", ch)
             <div class="gl-v2-bw-cols">
                 <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
                     <section class="gl-v2-section-card">
@@ -88,7 +92,7 @@
                             @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
                             {
                                 Name = "Gegevens.TypePoorten", Id = "bw-typepoorten", Label = "Type poorten", Value = g.TypePoorten ?? "", Items = poortItems, Placeholder = "Kies type poorten…",
-                                Error = poort ? "De poorten moeten geselecteerd worden." : null
+                                Warning = poortMld?.Type == ServiceCore.Budget.MeldingType.Waarschuwing ? poortMld.Tekst : null, Error = poortMld?.Type == ServiceCore.Budget.MeldingType.Fout ? poortMld.Tekst : null
                             })
 
                             <span class="gl-v2-bw-subhead">Dimensies</span>
@@ -97,7 +101,7 @@
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.LmBerlinerwanden", "Berlinerwanden", g.LmBerlinerwanden, "lm"))
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.LmSecanpalen", "Secanspalen", g.LmSecanpalen, "lm"))
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.M3Onderschoeiingen", "Onderschoeiingen", g.M3Onderschoeiingen, "m³"))
-                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "Gegevens.TypeDak", Id = "bw-typedak", Label = "Type dak", Value = g.TypeDak ?? "", Items = dakItems, Placeholder = "Kies type dak…" })
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "Gegevens.TypeDak", Id = "bw-typedak", Label = "Type dak", Value = g.TypeDak ?? "", Items = dakItems, Placeholder = "Kies type dak…", Error = dakMld?.Type == ServiceCore.Budget.MeldingType.Fout ? dakMld.Tekst : null })
                         </div>
                     </section>
 
@@ -133,7 +137,7 @@
                                 </div>
                             }
                             <span class="gl-v2-bw-subhead">S-index (lonen) &amp; I-index (materialen)</span>
-                            <div class="gl-v2-field gl-v2-bw-span2">
+                            <div class="gl-v2-field gl-v2-bw-span2@(sMld != null ? " is-warning" : "")">
                                 <label class="gl-v2-field-label" for="bw-sindex">S-index (lonen)</label>
                                 <div class="gl-v2-field-attached">
                                     <div class="gl-v2-field-box">
@@ -141,9 +145,9 @@
                                     </div>
                                     <button type="button" class="gl-v2-field-attach-btn" data-bw-edit data-bw-pick="S" aria-label="Kies S-index uit historiek"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i><span>Historiek</span></button>
                                 </div>
-                                <span class="gl-v2-field-help">@ViewData["SIndexInfo"]</span>
+                                <span class="gl-v2-field-help">@(sMld != null ? sMld.Tekst : ViewData["SIndexInfo"])</span>
                             </div>
-                            <div class="gl-v2-field gl-v2-bw-span2">
+                            <div class="gl-v2-field gl-v2-bw-span2@(iMld != null ? " is-warning" : "")">
                                 <label class="gl-v2-field-label" for="bw-iindex">I2021-index (materialen)</label>
                                 <div class="gl-v2-field-attached">
                                     <div class="gl-v2-field-box">
@@ -151,7 +155,7 @@
                                     </div>
                                     <button type="button" class="gl-v2-field-attach-btn" data-bw-edit data-bw-pick="I2021" aria-label="Kies I2021-index uit historiek"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i><span>Historiek</span></button>
                                 </div>
-                                <span class="gl-v2-field-help">@ViewData["IIndexInfo"]</span>
+                                <span class="gl-v2-field-help">@(iMld != null ? iMld.Tekst : ViewData["IIndexInfo"])</span>
                             </div>
                         </div>
                     </section>

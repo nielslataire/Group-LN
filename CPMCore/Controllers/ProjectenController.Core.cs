@@ -593,6 +593,8 @@ namespace CPMCore.Controllers
             };
 
             ViewData["BreadcrumbNode"] = projectenIndex;
+            // "Projecten" is de laatste kruimel (het pad herhaalt de titel niet, punt 13) maar niet de huidige pagina: dus klikbaar naar de projectenlijst.
+            ViewData["BreadcrumbLastIsLink"] = true;
 
             SetPageHeader("bx bx-building-house", model.Project.Name);
 
@@ -666,6 +668,7 @@ namespace CPMCore.Controllers
             }
 
             model.Project = response.Value;
+            model.Website = service.GetProjectWebsite(projectid).Value ?? new FacadeCore.ProjectWebsiteDto { ProjectId = projectid, Present = true };
             model.Docs = service.GetProjectDocs(projectid).Values;
             model.Project.Postalcode.Country.CountryId = model.Project.Postalcode.Country.CountryId == 0 ? 19 : model.Project.Postalcode.Country.CountryId;
             model.Project.Postalcode.Country.ISOCode = string.IsNullOrWhiteSpace(model.Project.Postalcode.Country.ISOCode) ? "BE" : model.Project.Postalcode.Country.ISOCode;
@@ -717,6 +720,7 @@ namespace CPMCore.Controllers
             // "Gegevens bewerken"-blad toe te voegen dat de titel herhaalt.
             ViewData["BreadcrumbNode"] = ViewData["UseGlV2Layout"] as bool? == true ? bcDetail : bcEdit;
             ViewData["ProjectUnitCount"] = _db.Set<DALCore.Models.Units>().Count(u => u.ProjectId == projectid);
+            ViewData["WebsiteUnits"] = LoadWebsiteUnits(projectid);
 
             SetPageHeader("bx bx-building-house", $"{model.Project.Name} — gegevens bewerken");
 
@@ -781,6 +785,10 @@ namespace CPMCore.Controllers
                     Percentage = s.Percentage
                 }).ToList() ?? new List<ProjectContractSliceBO>());
 
+                // Website-inhoud (enkel wanneer het formulier ze meestuurt: het oude scherm wist ze niet)
+                if (model.Website?.Present == true)
+                    service.SaveProjectWebsite(projectId, model.Website);
+
                 // Sla uurtarieven op
                 service.SaveProjectHourlyRates(projectId, model.HourlyRates?.Select(r => new ProjectHourlyRateBO
                 {
@@ -815,10 +823,19 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = pid }
             };
             ViewData["ProjectUnitCount"] = _db.Set<DALCore.Models.Units>().Count(u => u.ProjectId == pid);
+            ViewData["WebsiteUnits"] = LoadWebsiteUnits(pid);
             model.Docs = _projectService.GetProjectDocs(pid).Values;
             var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProject = ps.HasWrite(PermissionCodes.ProjectsDetail);
         }
+        // Woningen (eenheidstype 2) van het project voor de projectkaart-editor (omtrek per eenheid).
+        private List<IdNameBO> LoadWebsiteUnits(int projectId) =>
+            _db.Set<DALCore.Models.Units>()
+                .Where(u => u.ProjectId == projectId && u.TypeId == 2)
+                .OrderBy(u => u.Name)
+                .Select(u => new IdNameBO { ID = u.Id, Display = u.Name })
+                .ToList();
+
         private async Task<string?> ProcessStandardFotoUploadAsync(IFormFile file)
         {
             if (file == null || file.Length == 0) return null;

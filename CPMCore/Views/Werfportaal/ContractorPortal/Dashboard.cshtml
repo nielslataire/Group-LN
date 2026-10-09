@@ -130,6 +130,8 @@
                         {
                             (int)ConstructionIssueStatus.InProgress        => "gl-cp-comm-dot--prog",
                             (int)ConstructionIssueStatus.WaitingInspection => "gl-cp-comm-dot--check",
+                            (int)ConstructionIssueStatus.Reported          => "gl-cp-comm-dot--check",
+                            (int)ConstructionIssueStatus.Closed            => "gl-cp-comm-dot--done",
                             (int)ConstructionIssueStatus.Resolved          => "gl-cp-comm-dot--done",
                             (int)ConstructionIssueStatus.Rejected          => "gl-cp-comm-dot--done",
                             _                                               => "gl-cp-comm-dot--open"
@@ -138,6 +140,9 @@
                         {
                             (int)ConstructionIssueStatus.InProgress        => "Gepland",
                             (int)ConstructionIssueStatus.WaitingInspection => "Wacht op controle",
+                            (int)ConstructionIssueStatus.Reported          => "Gemeld uitgevoerd",
+                            (int)ConstructionIssueStatus.OnHold            => "In de wacht",
+                            (int)ConstructionIssueStatus.Closed            => "Afgesloten",
                             (int)ConstructionIssueStatus.Resolved          => "Opgelost",
                             (int)ConstructionIssueStatus.Rejected          => "Afgekeurd",
                             (int)ConstructionIssueStatus.Reopened          => "Heropend",

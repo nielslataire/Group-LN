@@ -21,6 +21,8 @@ public class GlV2SelectListVm
     public string? EmptyText { get; set; }
     public string? Help { get; set; }
     public string? Error { get; set; }
+    /// <summary>Waarschuwing (14d · 1B): gouden rand + hulptekst #8A6A32; opslaan mag. Een Error wint.</summary>
+    public string? Warning { get; set; }
     public bool Disabled { get; set; }
     /// <summary>Zonder label/wrapper — voor een cel in een tabelrij.</summary>
     public bool Bare { get; set; }

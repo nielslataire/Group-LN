@@ -522,14 +522,13 @@ namespace ServiceCore
             return response;
         }
 
-        public Response BevestigWaarschuwing(int versieId, string sleutel, bool bevestigd)
+        public Response BevestigWaarschuwing(int versieId, string sleutel, bool bevestigd, string door = null)
         {
             var response = new Response();
             var v = _uow.BudgetVersies.GetNormal().FirstOrDefault(x => x.Id == versieId);
             if (v == null) { response.AddError("Versie niet gevonden."); return response; }
-            var set = (v.WaarschuwingenBevestigd ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToHashSet();
-            if (bevestigd) set.Add(sleutel); else set.Remove(sleutel);
-            v.WaarschuwingenBevestigd = set.Count == 0 ? null : string.Join(",", set);
+            // 39k "Negeren bewaart naam en datum": formaat code~naam~yyyy-MM-dd (zie BudgetControleService.ZetGenegeerd)
+            v.WaarschuwingenBevestigd = Budget.BudgetControleService.ZetGenegeerd(v.WaarschuwingenBevestigd, sleutel, bevestigd, door);
             _uow.SaveChanges();
             response.AddSuccess("Opgeslagen.");
             return response;
@@ -585,9 +584,21 @@ namespace ServiceCore
             return response;
         }
 
+        private decimal? SnapIndex(string type, decimal? waarde)
+        {
+            if (!waarde.HasValue || waarde.Value == 0m) return waarde;
+            var rij = Budget.BudgetControleService.ZoekIndexRij(_uow.BouwIndex.GetNoTracking().Where(x => x.IndexType == type).ToList(), waarde.Value);
+            return rij != null ? rij.IndexWaarde : waarde;
+        }
+
         public Response SaveBudgetGegevens(BudgetGegevensBO bo, int versieId)
         {
             var response = new Response();
+
+            // De modelbinder rondt af op 2 decimalen; een gekozen indexwaarde uit de historiek (4 decimalen) wordt hier weer
+            // op de exacte rij gezet, zodat de peildatum terugvindbaar blijft en de berekening niet afwijkt.
+            bo.SIndexHuidig = SnapIndex("S", bo.SIndexHuidig);
+            bo.IIndexHuidig = SnapIndex("I2021", bo.IIndexHuidig);
 
             var entity = _uow.BudgetGegevens.GetNoTracking()
                 .SingleOrDefault(g => g.BudgetVersieId == versieId);

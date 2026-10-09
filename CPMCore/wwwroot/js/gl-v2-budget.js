@@ -27,7 +27,9 @@
     function nu() { var d = new Date(); return p2(d.getHours()) + ":" + p2(d.getMinutes()); }
 
     // ── Opslagstaat ─────────────────────────────────────────────────────────────────────────────
+    var laatsteFout = "";
     function setStatus(state, text) {
+        if (state === "error") laatsteFout = text || "";
         if (!statusEl) return;
         var t = text;
         if (!t) t = state === "saving" ? "Opslaan…" : state === "dirty" ? "Niet-opgeslagen wijzigingen" : state === "error" ? "Opslaan mislukt — probeer opnieuw"
@@ -37,7 +39,12 @@
     }
     function saved() { dirtyFlag = false; setStatus("saved", "Opgeslagen " + nu()); }
     function markDirty() { dirtyFlag = true; setStatus("dirty"); }
-    function isDirty() { return dirtyFlag || (handler.dirty ? !!handler.dirty() : false); }
+    var inDirtyCheck = false;
+    function isDirty() {
+        if (dirtyFlag) return true;
+        if (!handler.dirty || inDirtyCheck) return false;   // een callback die isDirty() zelf aanroept mag nooit een oneindige lus geven
+        inDirtyCheck = true; try { return !!handler.dirty(); } finally { inDirtyCheck = false; }
+    }
 
     // ── Debounced autosave van een formulier ─────────────────────────────────────────────────────
     function autosave(form, saveFn, delay) {
@@ -79,8 +86,17 @@
         var dir = a.getAttribute("data-bw-nav") === "back" ? "prev" : a.getAttribute("data-bw-nav") === "next" ? "next" : (doel && doel < step ? "prev" : "next");
         if (handler.save && isDirty()) {
             setStatus("saving");
-            var ok = true; try { ok = await handler.save(); } catch (e) { ok = false; }
-            if (ok === false) { setStatus("error"); busy = false; return; }
+            var ok = true;
+            try {
+                ok = await Promise.race([handler.save(), new Promise(function (res) { setTimeout(function () { laatsteFout = "Het opslaan duurt te lang (geen antwoord van de server na 20 seconden)."; res(false); }, 20000); })]);
+            } catch (e) { ok = false; laatsteFout = (e && e.message) || String(e); }
+            if (ok === false) {
+                var reden = laatsteFout; setStatus("error", reden || undefined); busy = false;
+                var fouten = openFouten();
+                fout({ title: "Opslaan lukt niet", desc: reden ? "De wijzigingen konden niet bewaard worden: " + reden : "De wijzigingen konden niet bewaard worden. Je blijft op deze stap zodat er niets verloren gaat.",
+                       items: fouten.length ? fouten.map(function (f) { return { tekst: f.label + ": " + f.tekst, href: f.href, label: "Naar stap " + f.stap }; }) : [] });
+                return;
+            }
         }
         try { sessionStorage.setItem(KEY_DIR, dir); sessionStorage.setItem(KEY_FROM, String(step / total)); } catch (e) { }
         if (wrap) { wrap.setAttribute("data-bw-leave", dir); wrap.classList.add("is-leaving"); }
@@ -98,6 +114,19 @@
         e.preventDefault();
         navigeer(a);
     });
+    // Stappenplan: een klik op een chip gaat altijd naar die stap (via de bestemming uit data-hrefs, ook als de chip geen echte link is), in de
+    // capture-fase zodat geen ander script de klik kan inslikken. Eerst opslaan (navigeer), terugkeren naar een eerdere stap werkt hetzelfde.
+    if (stappen) stappen.addEventListener("click", function (e) {
+        var item = e.target.closest(".gl-v2-steps-item"); if (!item) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+        var li = item.closest("li"), lijst = li && li.parentElement; if (!lijst) return;
+        var idx = Array.prototype.indexOf.call(lijst.children, li), href = item.getAttribute("href") || hrefs[idx];
+        e.preventDefault();
+        if (!href || idx < 0 || idx === step - 1) return;
+        e.stopPropagation();
+        var tmp = document.createElement("a"); tmp.href = href; tmp.setAttribute("data-bw-step", String(idx + 1)); tmp.setAttribute("data-bw-nav", idx + 1 < step ? "back" : "next");
+        navigeer(tmp);
+    }, true);
     window.addEventListener("pageshow", function (e) { if (e.persisted) stopLoader(); });
 
     // Binnenkomst: de vorige voortgang reist mee zodat de lijn van daar naar de nieuwe stap loopt
@@ -144,8 +173,14 @@
         else { var fd = data instanceof FormData ? data : new URLSearchParams(data || {}); if (!(fd instanceof FormData)) fd.append("__RequestVerificationToken", token()); else if (!fd.has("__RequestVerificationToken")) fd.append("__RequestVerificationToken", token()); opts.body = fd; }
         var r = await fetch(url, opts);
         var j = null; try { j = await r.json(); } catch (e) { }
-        if (!r.ok && !j) throw new Error("HTTP " + r.status);
-        return j || { success: r.ok };
+        if (!r.ok) {
+            // Een mislukte aanvraag geeft altijd een leesbare reden terug (validatiefouten, serverfout, sessie verlopen, ...)
+            var reden = j && (j.message || j.title) ? (j.message || j.title) : "HTTP " + r.status;
+            if (j && j.errors) { try { reden += ": " + Object.keys(j.errors).map(function (k) { return k + " — " + [].concat(j.errors[k]).join(" "); }).join("; "); } catch (e) { } }
+            if (r.status === 401 || r.status === 403) reden = "Je sessie is verlopen of je hebt geen rechten (HTTP " + r.status + "). Herlaad de pagina.";
+            return { success: false, message: reden, status: r.status };
+        }
+        return j || { success: true };
     }
 
     var BEV_TONES = { danger: ["is-danger", "gl-v2-btn-danger", "ph-trash"], warning: ["is-warning", "gl-v2-btn-warning", "ph-warning"], success: ["is-success", "gl-v2-btn-primary", "ph-check-circle"] };
@@ -169,11 +204,42 @@
             modal.show();
         });
     }
+    /** Foutvenster (zelfde TYPE 1-modal): wat er mislukt is en wat je moet aanpassen. o = { title, desc, items: [{ tekst, href, label }] }. */
+    function fout(o) {
+        return new Promise(function (resolve) {
+            var el = document.getElementById("bw-bevestig");
+            if (!el || !window.bootstrap || !window.bootstrap.Modal) { window.alert((o.title || "") + " — " + (o.desc || "")); resolve(); return; }
+            var content = el.querySelector(".modal-content"), icon = el.querySelector(".gl-v2-modal-icon"), ok = el.querySelector("[data-bw-ok]"), annuleer = el.querySelector("[data-bs-dismiss]"), lijst = el.querySelector(".gl-v2-modal-lijst");
+            ["is-danger", "is-warning", "is-success"].forEach(function (c) { content.classList.remove(c); icon.classList.remove(c); });
+            content.classList.add("is-danger"); icon.classList.add("is-danger"); icon.querySelector("i").className = "ph ph-warning-circle";
+            el.querySelector(".gl-v2-modal-title").textContent = o.title || "";
+            el.querySelector(".gl-v2-modal-desc").textContent = o.desc || "";
+            lijst.innerHTML = ""; (o.items || []).forEach(function (it) { var li = document.createElement("li"); li.appendChild(document.createTextNode(it.tekst + " ")); if (it.href) { var a = document.createElement("a"); a.href = it.href; a.setAttribute("data-bw-plain", ""); a.textContent = it.label || "Openen"; li.appendChild(a); } lijst.appendChild(li); });
+            lijst.hidden = !(o.items && o.items.length);
+            annuleer.hidden = true; ok.className = "gl-v2-btn gl-v2-btn-primary"; ok.textContent = "Sluiten";
+            var modal = window.bootstrap.Modal.getOrCreateInstance(el);
+            function klaar() { el.removeEventListener("hidden.bs.modal", klaar); ok.removeEventListener("click", sluit); annuleer.hidden = false; lijst.hidden = true; resolve(); }
+            function sluit() { modal.hide(); }
+            ok.addEventListener("click", sluit); el.addEventListener("hidden.bs.modal", klaar);
+            modal.show();
+        });
+    }
+    /** Open fouten van de versie (uit het Stappenplan: data-fouten) als lijst met link naar de stap. */
+    function openFouten() { try { return JSON.parse((document.getElementById("gl-v2-bw-stappen") || {}).getAttribute("data-fouten") || "[]"); } catch (e) { return []; } }
+
     // Formulieren met data-bw-bevestig vragen eerst bevestiging
     document.addEventListener("submit", async function (e) {
         var f = e.target; if (!f.hasAttribute || !f.hasAttribute("data-bw-bevestig") || f.dataset.bwOk) return;
         e.preventDefault();
         if (await bevestig({ title: f.getAttribute("data-bw-bevestig"), desc: f.getAttribute("data-bw-desc"), ok: f.getAttribute("data-bw-ok"), tone: f.getAttribute("data-bw-tone"), icon: f.getAttribute("data-bw-icon") })) { f.dataset.bwOk = "1"; f.submit(); }
     }, true);
-    window.GlV2Budget = { bevestig: bevestig, register: register, autosave: autosave, markDirty: markDirty, saved: saved, setStatus: setStatus, isDirty: isDirty, toast: toast, post: post, token: token, step: step };
+    // 39k "Negeren" / "Terugzetten" van een waarschuwing (per code); de pagina herlaadt zodat tellers en kaders kloppen.
+    document.addEventListener("click", async function (e) {
+        var b = e.target.closest("[data-bw-negeer-url]"); if (!b) return;
+        e.preventDefault(); b.disabled = true;
+        var herstel = b.hasAttribute("data-bw-herstel");
+        var r = await post(b.getAttribute("data-bw-negeer-url"), { versieId: b.getAttribute("data-bw-versie"), sleutel: b.getAttribute("data-bw-code"), bevestigd: herstel ? "false" : "true" }, false);
+        if (r && r.success) window.location.reload(); else { b.disabled = false; toast("danger", "Niet gelukt", "De waarschuwing kon niet aangepast worden."); }
+    });
+    window.GlV2Budget = { fout: fout, bevestig: bevestig, register: register, autosave: autosave, markDirty: markDirty, saved: saved, setStatus: setStatus, isDirty: isDirty, toast: toast, post: post, token: token, step: step };
 })();

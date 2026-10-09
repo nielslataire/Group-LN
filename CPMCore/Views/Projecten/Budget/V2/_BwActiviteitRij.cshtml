@@ -14,16 +14,21 @@
     var toonRef = ViewData["HeeftReferenties"] is true;
     var afw = Model.ReferentieVerschilPerc;
     var groot = afw.HasValue && Math.Abs(afw.Value) > 0.25m;
+    var chrome = ViewData["Chrome"] as CPMCore.Models.Budget.BudgetWizardChromeVm;   // 39k
+    var rijMld = chrome?.Voor(6).FirstOrDefault(m => m.Sleutel == Model.ActivityId.ToString() && m.Plaats == "rij" && !m.Genegeerd);
+    var corrMld = chrome?.Voor(6).FirstOrDefault(m => m.Sleutel == Model.ActivityId.ToString() && m.Plaats == "veld" && !m.Genegeerd);
+    var nulRij = rijMld?.Type == ServiceCore.Budget.MeldingType.Info;
+    var toonOpm = corrMld != null || !string.IsNullOrWhiteSpace(Model.Opmerking) || corr != 1m;
     var refTitel = Model.HeeftReferentie
         ? $"{Model.ReferentieAantalProjecten} referentieproject(en) · € {Model.ReferentiePrijsPerEenheid!.Value.ToString("N0", nl)}/eenheid"
           + (Model.ReferentieMinPerEenheid.HasValue && Model.ReferentieAantalProjecten > 1 ? $" (van € {Model.ReferentieMinPerEenheid.Value.ToString("N0", nl)} tot € {(Model.ReferentieMaxPerEenheid ?? 0m).ToString("N0", nl)})" : "")
           + (Model.ReferentiePrijsPerM2.HasValue ? $" · € {Model.ReferentiePrijsPerM2.Value.ToString("N0", nl)}/m² GBA" : "")
         : "Geen referentieproject met een bedrag voor deze activiteit";
 }
-<tr class="bw-act-rij @(groot ? "is-groot" : "")" data-activity-id="@Model.ActivityId" data-basis="@basis.ToString(inv)" data-prijs="@Model.AlternatievePrijsPerEenheid.ToString(inv)"
+<tr class="bw-act-rij @(groot ? "is-groot" : "") @(rijMld?.Type == ServiceCore.Budget.MeldingType.Waarschuwing ? "is-warn" : nulRij ? "is-info-rij" : "")" data-activity-id="@Model.ActivityId" data-basis="@basis.ToString(inv)" data-prijs="@Model.AlternatievePrijsPerEenheid.ToString(inv)"
     data-nacalc="@Model.NacalcPrijsPerEenheid.ToString(inv)" data-ref="@((Model.ReferentiePrijsPerEenheid ?? 0m).ToString(inv))" data-ref-totaal="@((refTotaal ?? 0m).ToString(inv))" data-manueel="@Model.IsManueel.ToString().ToLowerInvariant()">
     <td class="bw-act-naam">
-        @Model.ActivityOmschrijving
+        @Model.ActivityOmschrijving @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", rijMld)
         @if (Model.HeeftVoorstel)
         {
             <span class="gl-v2-bw-calc gl-v2-bw-hint is-inline" title="Voorstel: € @((Model.VoorgesteldePrijsPerEenheid ?? 0m).ToString("N2", nl))/eenheid">· voorstel € @((Model.VoorgesteldePrijsPerEenheid ?? 0m).ToString("N0", nl))/eenh.</span>

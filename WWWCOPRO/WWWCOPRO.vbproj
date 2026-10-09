@@ -268,6 +268,9 @@
     <Compile Include="Models\Home\HeroSearchOptionsModel.vb" />
     <Compile Include="Models\Home\HomeHeroFeaturedModel.vb" />
     <Compile Include="Models\Projects\ProjectModel.vb" />
+    <Compile Include="Models\Projects\ProjectPageV4Model.vb" />
+    <Compile Include="Models\Projects\ProjectPageV4Provider.vb" />
+    <Compile Include="Models\Projects\ProjectWebsiteReader.vb" />
     <Compile Include="Models\References\ReferencesModel.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
@@ -318,6 +321,7 @@
     <Content Include="Content\img\team\ignace.jpg" />
     <Content Include="Content\PATTERN-dark.png" />
     <Content Include="Content\project-detail.css" />
+    <Content Include="Content\project-detail-v4.css" />
     <Content Include="Content\project-inschrijving.css" />
     <Content Include="Content\home-hero.css" />
     <Content Include="Content\home-sections.css" />
@@ -404,6 +408,7 @@
     <Content Include="Scripts\bootstrap.esm.js" />
     <Content Include="Scripts\bootstrap.esm.min.js" />
     <Content Include="Scripts\bootstrap.js" />
+    <Content Include="Scripts\project-detail-v4.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\examples.mediagallery.js" />
     <Content Include="Scripts\examples.modals.js" />
@@ -520,6 +525,7 @@
     <Content Include="Views\Projects\Index.vbhtml" />
     <Content Include="Views\References\Index.vbhtml" />
     <Content Include="Views\Projects\Detail.vbhtml" />
+    <Content Include="Views\Projects\DetailV4.vbhtml" />
     <Content Include="Views\Projects\Adressblock.vbhtml" />
     <Content Include="Views\References\Detail.vbhtml" />
     <Content Include="Views\References\Adressblock.vbhtml" />

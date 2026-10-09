@@ -1,0 +1,26 @@
+@model CPMCore.Models.Budget.BudgetWizardChromeVm
+@*
+    Budgetflow (design-handoff 39k): meldingskaders van de huidige stap, één kader per onderwerp (meerdere velden of rijen met hetzelfde probleem = één kader).
+    Fout = rood, blokkeert Afronden · Waarschuwing = goud, mag verder, met "Negeren" (naam en datum worden bewaard) · een genegeerde waarschuwing wordt
+    een grijs infokader met "Terugzetten". Veld- en rijmeldingen staan op de pagina zelf; hier komen alleen de meldingen met plaats "kader".
+*@
+@{
+    var kaders = Model.Hier("kader").GroupBy(m => (m.Code, m.Type)).Select(g => g.First()).OrderByDescending(m => (int)m.Type).ToList();
+    var url = Url.Action("BudgetWaarschuwingBevestigen", "Projecten");
+}
+@foreach (var m in kaders.Where(m => m.Genegeerd))
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-info" data-bw-kader="@m.Code">
+        <i class="ph ph-eye-slash" aria-hidden="true"></i>
+        <span>@m.Tekst — genegeerd door @(string.IsNullOrWhiteSpace(m.GenegeerdDoor) ? "een gebruiker" : m.GenegeerdDoor)@(m.GenegeerdOp.HasValue ? " op " + m.GenegeerdOp.Value.ToString("dd/MM/yyyy") : "").
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bw-keep data-bw-negeer-url="@url" data-bw-versie="@Model.VersieId" data-bw-code="@m.Code" data-bw-herstel>Terugzetten</button></span>
+    </div>
+}
+@foreach (var m in kaders.Where(m => !m.Genegeerd && m.Type != ServiceCore.Budget.MeldingType.Info))
+{
+    var fout = m.Type == ServiceCore.Budget.MeldingType.Fout;
+    <div class="gl-v2-notice gl-v2-notice-compact @(fout ? "is-danger" : "is-warning")" data-bw-kader="@m.Code">
+        <i class="ph @(fout ? "ph-x-circle" : "ph-warning")" aria-hidden="true"></i>
+        <span>@m.Tekst@if (!fout && !Model.IsLocked) { <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bw-keep data-bw-negeer-url="@url" data-bw-versie="@Model.VersieId" data-bw-code="@m.Code">Negeren</button> }</span>
+    </div>
+}

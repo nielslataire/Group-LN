@@ -97,12 +97,15 @@
 /* FOUT: een echte validatiefout (bv. verplicht veld leeg gelaten) — component klaar, nergens
    toegepast vandaag (het boekjaarfilter kan nooit "fout" staan, het is een optioneel filter). */
 .gl-v2-select-trigger.is-error {
-    border-color: #8A3B2A;
+    border-color: #8B2A2A;
+    border-width: 1.5px;
     background: #FBF4F2;
-    color: #8A3B2A;
+    color: #8B2A2A;
 }
+.gl-v2-select-trigger.is-warning:not(.is-error) { border-color: #C9A96E; border-width: 1.5px; box-shadow: 0 0 0 3px rgba(201, 169, 110, .16); }
+.gl-v2-select-trigger.is-warning:not(.is-error) .gl-v2-select-trigger-caret { color: #8A6A32; }
 .gl-v2-select-trigger.is-error > i:first-child,
-.gl-v2-select-trigger.is-error .gl-v2-select-trigger-caret { color: #8A3B2A; }
+.gl-v2-select-trigger.is-error .gl-v2-select-trigger-caret { color: #8B2A2A; }
 
 /* GEBLOKKEERD */
 .gl-v2-select-trigger:disabled {
@@ -378,7 +381,7 @@
    het label staat als sibling VÓÓR de box, dus een box-only :focus-within kan het label zelf niet
    bereiken. Geen JS nodig voor deze staat. */
 .gl-v2-field:focus-within .gl-v2-field-label { color: var(--gl-v2-primary); }
-.gl-v2-field.is-error .gl-v2-field-label { color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-label { color: #8B2A2A; }
 .gl-v2-field:has(.gl-v2-field-input:disabled) .gl-v2-field-label { color: #A8B3A6; }
 
 .gl-v2-field-box {
@@ -428,10 +431,20 @@
 .gl-v2-field-box:focus-within > i:first-child { color: var(--gl-v2-primary); }
 
 /* FOUT — component klaar, wordt echt zodra een formulier hier client-side validatie op wil. */
-.gl-v2-field.is-error .gl-v2-field-box { border-color: #8A3B2A; background: #FBF4F2; }
+.gl-v2-field.is-error .gl-v2-field-box { border-color: #8B2A2A; border-width: 1.5px; background: #FBF4F2; }
+
+/* WAARSCHUWING (design-handoff 14d · 1B): rand 1,5px #C9A96E + ring 3px, driehoek 15px rechts in het veld en hulptekst 11px eronder, beide #8A6A32.
+   Opslaan mag (een FOUT blokkeert), de waarschuwing telt mee in het Stappenplan en verdwijnt zodra de waarde in orde is. Een fout wint van een waarschuwing. */
+.gl-v2-field.is-warning:not(.is-error) .gl-v2-field-box { border-color: #C9A96E; border-width: 1.5px; box-shadow: 0 0 0 3px rgba(201, 169, 110, .16); }
+.gl-v2-field.is-warning:not(.is-error) .gl-v2-field-help { color: #8A6A32; }
+/* Statusicoon in het veld: de template rendert beide, de staat op .gl-v2-field kiest welke zichtbaar is */
+/* .gl-v2-field ervoor: Phosphor's `.ph { display:inline-block }` laadt later en won anders van een enkele klasse */
+.gl-v2-field .gl-v2-field-state-icon, .gl-v2-field-box .gl-v2-field-state-icon { display: none; flex: none; font-size: 15px; }
+.gl-v2-field.is-warning:not(.is-error) .gl-v2-field-state-icon.is-w { display: inline-block; color: #8A6A32; }
+.gl-v2-field.is-error .gl-v2-field-state-icon.is-e { display: inline-block; color: #8B2A2A; }
 .gl-v2-field.is-error .gl-v2-field-box > i:first-child,
-.gl-v2-field.is-error .gl-v2-field-input { color: #8A3B2A; }
-.gl-v2-field.is-error .gl-v2-field-input::placeholder { color: #8A3B2A; opacity: .7; }
+.gl-v2-field.is-error .gl-v2-field-input { color: #8B2A2A; }
+.gl-v2-field.is-error .gl-v2-field-input::placeholder { color: #8B2A2A; opacity: .7; }
 
 /* GEBLOKKEERD — puur via het native disabled-attribuut op de <input>, geen aparte klasse op de
    box nodig (zelfde :has()-truc als hierboven bij INGEVULD). */
@@ -474,7 +487,7 @@
 .gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-clear { display: inline-flex; }
 
 .gl-v2-field-help { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-field.is-error .gl-v2-field-help { color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-help { color: #8B2A2A; }
 
 /* Meerregelig — zelfde label/helptekst-opbouw, enkel de box wordt hoger en top-uitgelijnd i.p.v.
    gecentreerd. */

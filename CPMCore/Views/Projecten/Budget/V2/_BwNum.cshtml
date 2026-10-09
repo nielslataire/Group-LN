@@ -1,12 +1,22 @@
 @model CPMCore.Models.Budget.BwNumVm
+@{
+    // 39k: een melding op dit veld (sleutel = veldnaam) wordt automatisch een veldstaat — tenzij de aanroeper zelf Warning/Error meegaf.
+    var mld = (ViewData["Chrome"] as CPMCore.Models.Budget.BudgetWizardChromeVm)?.Op(Model.Name, "veld");
+    if (mld != null && string.IsNullOrEmpty(Model.Error) && string.IsNullOrEmpty(Model.Warning))
+    {
+        if (mld.Type == ServiceCore.Budget.MeldingType.Fout) Model.Error = mld.Tekst; else if (mld.Type == ServiceCore.Budget.MeldingType.Waarschuwing) Model.Warning = mld.Tekst;
+    }
+}
 @* gl-v2 — getalveld met eenheid-blok rechts (design-handoff 39b/39h, 19 "velden met eenheid"). Zelfde .gl-v2-field/.gl-v2-field-box-skelet als GlV2NumberUnit. *@
-<div class="gl-v2-field">
+<div class="gl-v2-field@(!string.IsNullOrEmpty(Model.Error) ? " is-error" : !string.IsNullOrEmpty(Model.Warning) ? " is-warning" : "")">
     <label class="gl-v2-field-label" for="@Model.ElementId">@Model.Label@if (Model.Required) { <span style="color:#8B2A2A">*</span> }</label>
     <div class="gl-v2-field-box">
         @if (!string.IsNullOrEmpty(Model.Prefix)) { <span class="gl-v2-field-prefix">@Model.Prefix</span> }
         <input type="text" inputmode="@(Model.Integer ? "numeric" : "decimal")" id="@Model.ElementId" name="@Model.Name" value="@Model.Text" placeholder="@Model.Placeholder"
                autocomplete="off" class="gl-v2-field-input is-num is-tabular" @Html.Raw(Model.Attrs) />
+        <i class="ph ph-warning gl-v2-field-state-icon is-w" aria-hidden="true"></i><i class="ph ph-warning-circle gl-v2-field-state-icon is-e" aria-hidden="true"></i>
         @if (!string.IsNullOrEmpty(Model.Unit)) { <span class="gl-v2-field-unit">@Model.Unit</span> }
     </div>
-    @if (!string.IsNullOrWhiteSpace(Model.Help)) { <span class="gl-v2-field-help">@Model.Help</span> }
+    @{ var hulp = !string.IsNullOrEmpty(Model.Error) ? Model.Error : !string.IsNullOrEmpty(Model.Warning) ? Model.Warning : Model.Help; }
+    @if (!string.IsNullOrWhiteSpace(hulp)) { <span class="gl-v2-field-help">@hulp</span> }
 </div>

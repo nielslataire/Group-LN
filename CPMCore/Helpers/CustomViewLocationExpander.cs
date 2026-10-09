@@ -48,6 +48,7 @@ namespace CPMCore.Helpers
             ["ProjectDossiers"]        = "Projecten/Dossiers",
             ["ProjectTraject"]         = "Projecten/Traject",
             ["ProjectsIssues"]         = "Projecten/Issues",
+            ["ProjectVerslagen"]       = "Projecten/Verslagen",
             ["Pdf"]                    = "Projecten/Contracts",
             // Ondertekenen (twee implementaties, bewust apart gehouden — zie ONDERTEKENEN_VOORTGANG.md)
             ["Signing"]                = "Ondertekenen/Signing",

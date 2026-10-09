@@ -10,9 +10,10 @@
     string F3(decimal? v) => v.HasValue ? v.Value.ToString("F3", nl) : "";
     var res = Model.HeeftLengteAlleen ? Model.ResultaatLm : Model.ResultaatM2;
     var isAftrek = res < 0m;
+    var mld = (ViewData["Chrome"] as CPMCore.Models.Budget.BudgetWizardChromeVm)?.Op(Model.Id.ToString(), "veld");   // 39k: negatieve regel
 }
-<tr class="bw-el-rij" data-element-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-element-type="@Model.ElementType" data-hoogte="@(Model.HeeftHoogte ? "1" : "0")" data-lengte-alleen="@(Model.HeeftLengteAlleen ? "1" : "0")">
-    <td style="min-width:100px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-input" data-field="eenheidNaam" value="@Model.EenheidNaam" placeholder="bv. L1" aria-label="Eenheid" /></div></div></td>
+<tr class="bw-el-rij @(mld?.Type == ServiceCore.Budget.MeldingType.Fout ? "is-fout" : mld != null ? "is-warn" : "")" data-element-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-element-type="@Model.ElementType" data-hoogte="@(Model.HeeftHoogte ? "1" : "0")" data-lengte-alleen="@(Model.HeeftLengteAlleen ? "1" : "0")">
+    <td style="min-width:100px">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", mld)<div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-input" data-field="eenheidNaam" value="@Model.EenheidNaam" placeholder="bv. L1" aria-label="Eenheid" /></div></div></td>
     <td style="min-width:130px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input el-input" data-field="beschrijving" value="@Model.Beschrijving" placeholder="bv. VG" aria-label="Beschrijving" /></div></div></td>
     <td class="is-num" style="min-width:80px"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular el-input" data-field="aantal" value="@F2(Model.Aantal)" aria-label="Aantal" /></div></div></td>
     <td class="is-num" style="min-width:96px">

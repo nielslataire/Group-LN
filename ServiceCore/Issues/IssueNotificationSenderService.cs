@@ -18,15 +18,22 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
     private readonly IResendInviteUrlBuilder? _resendUrlBuilder;
 
     // Statuses always included in reminder emails (regardless of planned date)
-    private static readonly int[] ReminderStatuses = { 0, 3, 7 };
-    // 0=Open, 3=WaitingInspection, 7=Reopened
+    // Nieuwe statusreeks (migratie 079): 10=Doorgestuurd, 11=Gemeld uitgevoerd, 6=Afgewezen (terug naar de aannemer); legacy 0/3/7 blijven
+    // meegenomen tot de migratie overal gedraaid heeft. Concept (8), Ter goedkeuring (9), In de wacht (12) en Afgesloten (5) gaan nooit mee.
+    private static readonly int[] ReminderStatuses = { 0, 3, 7, 10, 11, 6 };
+    // Werk dat de aannemer nog moet doen (voor de "minstens één echt open punt"-regel)
+    private static readonly int[] OpenForContractorStatuses = { 0, 7, 10, 6, 13 };
+    // 13 = Goedgekeurd: klaar om te versturen. Enkel de avondupdate neemt die mee (en zet ze daarna op Doorgestuurd); een herinnering niet.
+    private const int StatusApproved = 13;
+    private const int StatusForwarded = 10;
     // Status 2=Gepland is included only when PlannedDate is in the past (see query below)
 
     // Statuses excluded from evening update emails
-    private static readonly int[] EveningExcludeStatuses = { 2, 4, 6 };
+    private static readonly int[] EveningExcludeStatuses = { 2, 4 };
     // 2=Gepland, 4=Resolved, 6=Rejected
 
     private const int StatusWaitingInspection = 3;
+    private const int StatusReported = 11;
     private const int PriorityHigh = 2;
     private const int PriorityCritical = 3;
 
@@ -54,7 +61,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.ConstructionIssue
             .Where(x => !x.DoNotAutoNotify && (
-                ReminderStatuses.Contains(x.Status) ||
+                ReminderStatuses.Contains(x.Status) || (eveningOnly && x.Status == StatusApproved) ||
                 (x.Status == 2 && x.PlannedDate.HasValue && x.PlannedDate < today)  // Gepland maar vervallen
             ));
 
@@ -67,8 +74,11 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
         if (eveningOnly)
         {
             var todayDt = DateTime.UtcNow.Date;
+            // Elke update van vandaag wordt 's avonds gemeld. De eerste mail gaat nu bij "Goedkeuren & doorsturen" (LastSentDate gevuld):
+            // een punt dat daarna niet meer gewijzigd werd (LastUpdatedDate <= LastSentDate) is dus al gemeld en wordt niet nog eens gemaild.
             query = query
                 .Where(x => !EveningExcludeStatuses.Contains(x.Status))
+                .Where(x => x.LastSentDate == null || (x.LastUpdatedDate != null && x.LastUpdatedDate > x.LastSentDate))
                 .Where(x =>
                     x.CreatedDate.Date == todayDt ||
                     (x.LastUpdatedDate != null && x.LastUpdatedDate.Value.Date == todayDt));
@@ -143,11 +153,11 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             var groupIssues = group.ToList();
 
             // 3. Skip if ALL issues are WaitingInspection — aannemer hoeft niets te doen
-            if (groupIssues.All(x => x.Status == StatusWaitingInspection))
+            if (groupIssues.All(x => x.Status == StatusWaitingInspection || x.Status == StatusReported))
                 continue;
 
             // For reminders (non-evening): only send if there is at least 1 truly open issue
-            if (!eveningOnly && !groupIssues.Any(x => x.Status == 0))
+            if (!eveningOnly && !groupIssues.Any(x => OpenForContractorStatuses.Contains(x.Status)))
                 continue;
 
             // 4. Resolve company + contact email
@@ -180,7 +190,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             var reportIdsByIssue = new Dictionary<int, int>();
 
             var pdfIssueIds = groupIssues
-                .Where(x => x.Status != StatusWaitingInspection)
+                .Where(x => x.Status != StatusWaitingInspection && x.Status != StatusReported)
                 .Select(x => x.Id)
                 .ToList();
 
@@ -266,6 +276,16 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             foreach (var issue in groupIssues)
             {
                 issue.LastSentDate = sentDate;
+                if (issue.Status == StatusApproved)
+                {
+                    // eerste mail: het punt is nu echt doorgestuurd
+                    issue.Status = StatusForwarded;
+                    _db.ConstructionIssueHistory.Add(new ConstructionIssueHistory
+                    {
+                        IssueId = issue.Id, Action = (int)ConstructionIssueHistoryAction.StatusChanged, Timestamp = sentDate,
+                        OldValueJson = StatusApproved.ToString(), NewValueJson = StatusForwarded.ToString(), Comment = "Doorgestuurd via de avondmelding"
+                    });
+                }
                 reportIdsByIssue.TryGetValue(issue.Id, out var reportId);
 
                 _db.ConstructionIssueNotification.Add(new ConstructionIssueNotification

@@ -35,7 +35,7 @@
         ("planning",    new[] { "Project.StartDateConstruction", "Project.ExecutionDays", "Project.DeliveryDate", "Project.DeliveryDateDef", "Project.WheaterStation" }),
         ("partners",    new[] { "Project.Architect", "Project.Engineer", "Project.SecurityCoordinator", "Project.EpbReporter", "Project.Notary", "Project.SalesResponsibleUserID" }),
         ("documenten",  new[] { "Project.Doc" }),
-        ("seo",         new[] { "Project.Seo", "Project.CommercialTitleNL", "Project.CommercialTextNL" }),
+        ("seo",         new[] { "Project.Seo", "Project.CommercialTitleNL", "Project.CommercialTextNL", "Website" }),
         ("coordinatie", new[] { "Project.Coordination", "Project.ContractType", "Project.IsCoordinationProject", "Project.IsOnlyCoordinationProject", "Project.KmAllowance", "ContractSlices", "HourlyRates" }),
     };
 }
@@ -418,12 +418,295 @@
 
         @* ── Tab 6 · SEO & website ────────────────────────────────────────────────────────────── *@
         <div class="gl-v2-tab-panel" data-tab-panel="seo" hidden>
+            @* ── Projectpagina op de website (eigen tabellen ProjectWebsite/ProjectWebsiteKpi) ── *@
+            @{
+                var web = Model.Website ?? new FacadeCore.ProjectWebsiteDto { ProjectId = project.Id };
+                var webKpis = web.Kpis ?? new List<FacadeCore.ProjectWebsiteKpiDto>();
+            }
+            <div class="gl-v2-section-card" id="websitePageCard">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-layout" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Projectpagina op de website</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">De vaste kop van de publieke projectpagina. De foto's links blijven altijd staan.</span>
+                </div>
+                <input type="hidden" name="Website.Present" value="true" />
+                <input type="hidden" name="Website.ProjectId" value="@project.Id" />
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.Location, "GlV2Text", new { Label = "Locatie", Placeholder = "bv. Vlekkem · Erpe-Mere · Oost-Vlaanderen", MaxLength = 200, Help = "kleine tekst boven de titel — laat leeg om niets te tonen" })</div>
+                    <div class="gl-v2-col-6">@Html.EditorFor(m => m.Website.Title, "GlV2Text", new { Label = "Titel", Placeholder = "bv. Vier nieuwbouwwoningen,", MaxLength = 200 })</div>
+                    <div class="gl-v2-col-6">@Html.EditorFor(m => m.Website.Subtitle, "GlV2Text", new { Label = "Subtitel", Placeholder = "bv. waar de rust begint.", MaxLength = 250, Help = "wordt cursief en groen getoond, achter de titel" })</div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Website_IntroText">Inleidende tekst</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea">
+                                <textarea name="Website.IntroText" id="Website_IntroText" rows="7" class="gl-v2-field-input" placeholder=" ">@web.IntroText</textarea>
+                            </div>
+                            <span class="gl-v2-field-help">een lege regel start een nieuwe alinea — schrijf antwoordgericht: wie, wat, waar, prijs en oplevering</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteKpiCard">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Kerncijfers</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Eigen kerncijfers onder de inleiding, bv. “Oplevering — Voorjaar 2027”.</span>
+                </div>
+                <div class="gl-v2-pf-rows">
+                    <div id="websiteKpiContainer">
+                        @for (int i = 0; i < webKpis.Count; i++)
+                        {
+                            <div class="gl-v2-pf-row gl-v2-pf-kpirow web-kpi-row">
+                                <input type="hidden" name="Website.Kpis[@i].Id" value="@webKpis[i].Id" />
+                                <span class="gl-v2-pf-handle" title="Sleep om te herschikken" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span>
+                                <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="Website.Kpis[@i].Title" value="@webKpis[i].Title" maxlength="80" class="gl-v2-field-input" placeholder=" " autocomplete="off" aria-label="Titel kerncijfer" /></div></div>
+                                <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="Website.Kpis[@i].Text" value="@webKpis[i].Text" maxlength="200" class="gl-v2-field-input" placeholder=" " autocomplete="off" aria-label="Tekst kerncijfer" /></div></div>
+                                <div class="gl-v2-pf-row-actions">
+                                    <button type="button" class="gl-v2-icon-btn move-kpi-up" aria-label="Kerncijfer omhoog" title="Omhoog"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+                                    <button type="button" class="gl-v2-icon-btn move-kpi-down" aria-label="Kerncijfer omlaag" title="Omlaag"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+                                    <button type="button" class="gl-v2-icon-btn is-danger remove-kpi" aria-label="Kerncijfer verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" id="addWebKpi" class="gl-v2-select-newitem-btn"><i class="ph ph-plus" aria-hidden="true"></i>Kerncijfer toevoegen</button>
+                        <span class="gl-v2-field-help">titel en tekst zijn allebei nodig — onvolledige rijen worden niet bewaard · de volgorde is de volgorde op de website</span>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Blokken: volgorde + zichtbaarheid, verhaal en architectuur ── *@
+            @{
+                var webPhotos = (project.Pictures ?? new List<ProjectPictureBO>())
+                    .Where(pc => !string.IsNullOrWhiteSpace(pc.Name) && !new[] { ".mp4", ".webm", ".mov", ".avi" }.Contains(System.IO.Path.GetExtension(pc.Name).ToLowerInvariant()))
+                    .OrderByDescending(pc => pc.DateTimeUploaded).ToList();
+                var webBlocks = (web.Blocks != null && web.Blocks.Count > 0) ? web.Blocks : new List<FacadeCore.ProjectWebsiteBlockDto>();
+                var webBlocksJson = System.Text.Json.JsonSerializer.Serialize(webBlocks.Select(b => new { key = b.Key, visible = b.Visible }));
+                var photoBase = imgBase ?? "";
+            }
+            <div class="gl-v2-section-card" id="websiteBlocksCard" data-image-base="@photoBase">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blokken op de pagina</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Zet blokken aan of uit en bepaal de volgorde.</span>
+                </div>
+                <div class="gl-v2-pf-rows">
+                    <input type="hidden" name="Website.BlocksJson" id="Website_BlocksJson" value="@webBlocksJson" />
+                    <div class="web-block-fixed"><i class="ph ph-lock-simple" aria-hidden="true"></i> Kop met locatie, titel, inleiding en kerncijfers <span>vast bovenaan</span></div>
+                    <div id="webBlocksList" class="web-blocks">
+                        @foreach (var wb in webBlocks)
+                        {
+                            <div class="web-block-row" data-key="@wb.Key">
+                                <span class="gl-v2-pf-handle" title="Sleep om te herschikken" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span>
+                                <label class="gl-v2-toggle-row web-block-toggle">
+                                    <input type="checkbox" class="gl-v2-toggle-switch web-block-visible" checked="@(wb.Visible ? "checked" : null)" />
+                                    <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">@wb.Label</span></span>
+                                </label>
+                                <div class="gl-v2-pf-row-actions">
+                                    <button type="button" class="gl-v2-icon-btn web-block-up" aria-label="@wb.Label omhoog" title="Omhoog"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+                                    <button type="button" class="gl-v2-icon-btn web-block-down" aria-label="@wb.Label omlaag" title="Omlaag"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="web-block-fixed"><i class="ph ph-lock-simple" aria-hidden="true"></i> Contactformulier <span>vast onderaan</span></div>
+                    <span class="gl-v2-field-help">een aangevinkt blok verschijnt enkel als er inhoud voor is · de foto’s links blijven altijd staan</span>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteStoryCard">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-book-open-text" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Verhaal”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Titel, tekst en beelden met een korte tekst.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.StoryTitle, "GlV2Text", new { Label = "Titel", Placeholder = "bv. Waar het dorp ophoudt en de velden beginnen.", MaxLength = 250 })</div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Website_StoryText">Tekst</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="Website.StoryText" id="Website_StoryText" rows="5" class="gl-v2-field-input" placeholder=" ">@web.StoryText</textarea></div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.ShowBrochure, "GlV2ToggleSwitch", new { Label = "Brochure-blok tonen", Hint = "het groene blok “Stuur mij de brochure” onder het verhaal" })</div>
+                </div>
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.StoryItems">
+                    <span class="gl-v2-field-label">Beelden</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.StoryItems.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "story", Prefix = "Website.StoryItems", Index = i.ToString(), ImageName = web.StoryItems[i].ImageName, ImageBase = photoBase, Text = web.StoryItems[i].Text })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "story", Prefix = "Website.StoryItems", Index = "__i__", ImageBase = photoBase })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Beeld toevoegen</button>
+                        <span class="gl-v2-field-help">de volgorde is de volgorde op de website — beelden komen onder elkaar met hun tekst</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteArchCard">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Architectuur”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Boventitel, titel, tekst, quotes en details met foto.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6">@Html.EditorFor(m => m.Website.ArchEyebrow, "GlV2Text", new { Label = "Boventitel", Placeholder = "bv. Architectuur door TARCH", MaxLength = 200, Help = "kleine tekst boven de titel — verschijnt in hoofdletters" })</div>
+                    <div class="gl-v2-col-6">@Html.EditorFor(m => m.Website.ArchTitle, "GlV2Text", new { Label = "Titel", Placeholder = "bv. Strak en doordacht. Warm waar je het aanraakt.", MaxLength = 250 })</div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Website_ArchText">Tekst</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="Website.ArchText" id="Website_ArchText" rows="5" class="gl-v2-field-input" placeholder=" ">@web.ArchText</textarea></div>
+                            <span class="gl-v2-field-help">een lege regel start een nieuwe alinea</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.Quotes">
+                    <span class="gl-v2-field-label">Quotes</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.Quotes.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "quote", Prefix = "Website.Quotes", Index = i.ToString(), Text = web.Quotes[i].Text, Person = web.Quotes[i].Person })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "quote", Prefix = "Website.Quotes", Index = "__i__" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Quote toevoegen</button>
+                    </div>
+                </div>
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.Details">
+                    <span class="gl-v2-field-label">Details</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.Details.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "detail", Prefix = "Website.Details", Index = i.ToString(), ImageName = web.Details[i].ImageName, ImageBase = photoBase, Title = web.Details[i].Title, Text = web.Details[i].Text })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "detail", Prefix = "Website.Details", Index = "__i__", ImageBase = photoBase })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Detail toevoegen</button>
+                        <span class="gl-v2-field-help">bv. “Lichte gevelsteen” met een foto en een korte uitleg — een detail heeft een titel nodig</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="webPhotoPop" class="web-photo-pop" hidden role="dialog" aria-label="Foto kiezen">
+                <button type="button" class="web-photo-none">Geen foto</button>
+                <div class="web-photo-grid">
+                    @foreach (var wp in webPhotos)
+                    {
+                        <button type="button" class="web-photo-opt" data-name="@wp.Name" title="@(string.IsNullOrWhiteSpace(wp.Caption) ? wp.Name : wp.Caption)"><img src="@(photoBase)pictures/447/@wp.Name" alt="" loading="lazy" /></button>
+                    }
+                </div>
+                @if (webPhotos.Count == 0)
+                {
+                    <span class="gl-v2-field-help">Dit project heeft nog geen foto’s.</span>
+                }
+            </div>
+
+            @* ── Projectkaart: foto kiezen + per eenheid een omtrek tekenen (blok "De woningen") ── *@
+            @{
+                var websiteUnits = ViewData["WebsiteUnits"] as List<IdNameBO> ?? new List<IdNameBO>();
+                var mapPhotos = (project.Pictures ?? new List<ProjectPictureBO>())
+                    .Where(pc => !string.IsNullOrWhiteSpace(pc.Name) && !new[] { ".mp4", ".webm", ".mov", ".avi" }.Contains(System.IO.Path.GetExtension(pc.Name).ToLowerInvariant()))
+                    .OrderByDescending(pc => pc.DateTimeUploaded).ToList();
+                var shapesJson = System.Text.Json.JsonSerializer.Serialize((web.LotShapes ?? new List<FacadeCore.ProjectWebsiteLotDto>())
+                    .Select(l => new { unitId = l.UnitId, polygon = l.Polygon, labelX = l.LabelX, labelY = l.LabelY }));
+            }
+            <div class="gl-v2-section-card" id="websiteMapCard" data-image-base="@(imgBase + "pictures/")">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-map-trifold" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Projectkaart (woningen)</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Kies een foto en duid per eenheid de omtrek aan. Op de website kan de bezoeker erop klikken.</span>
+                </div>
+                <div class="gl-v2-pf-rows">
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.HomesTitle, "GlV2Text", new { Label = "Titel van het blok", Placeholder = "De woningen", MaxLength = 200, Help = "leeg = “De woningen”" })</div>
+                        <div class="gl-v2-col-12">
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="Website_HomesIntro">Omschrijving</label>
+                                <div class="gl-v2-field-box gl-v2-field-box-textarea">
+                                    <textarea name="Website.HomesIntro" id="Website_HomesIntro" rows="3" class="gl-v2-field-input" placeholder=" ">@web.HomesIntro</textarea>
+                                </div>
+                                <span class="gl-v2-field-help">tekst onder de titel van het blok — leeg = standaardtekst</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="Website.AerialImageName" id="Website_AerialImageName" value="@web.AerialImageName" />
+                    <input type="hidden" name="Website.LotShapesJson" id="Website_LotShapesJson" value="@shapesJson" />
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">Foto</span>
+                        @if (mapPhotos.Count == 0)
+                        {
+                            <span class="gl-v2-field-help">Dit project heeft nog geen foto’s. Laad ze eerst op bij “Foto’s &amp; video’s”.</span>
+                        }
+                        <div class="gl-v2-wm-photos" id="wmPhotos" role="radiogroup" aria-label="Foto voor de projectkaart">
+                            @foreach (var pc in mapPhotos)
+                            {
+                                <button type="button" class="gl-v2-wm-photo" role="radio" aria-checked="@(pc.Name == web.AerialImageName ? "true" : "false")" data-name="@pc.Name" title="@(string.IsNullOrWhiteSpace(pc.Caption) ? pc.Name : pc.Caption)">
+                                    <img src="@(imgBase)pictures/447/@pc.Name" alt="@(string.IsNullOrWhiteSpace(pc.Caption) ? pc.Name : pc.Caption)" loading="lazy" />
+                                </button>
+                            }
+                        </div>
+                        <span class="gl-v2-field-help">klik nogmaals op de gekozen foto om ze te wissen — het beste werkt een luchtfoto of render van boven, met de straat bovenaan</span>
+                    </div>
+                    <div class="gl-v2-wm" id="websiteMapEditor" hidden>
+                        <div class="gl-v2-wm-side">
+                            <span class="gl-v2-field-label">Eenheden</span>
+                            <div id="wmUnits" class="gl-v2-wm-units">
+                                @if (websiteUnits.Count == 0)
+                                {
+                                    <span class="gl-v2-field-help">Geen woningen in dit project.</span>
+                                }
+                                @foreach (var wu in websiteUnits)
+                                {
+                                    <div class="gl-v2-wm-unit" data-unit="@wu.ID" data-name="@wu.Display">
+                                        <div class="gl-v2-wm-unit-main"><b>@wu.Display</b><span class="gl-v2-wm-unit-state"></span></div>
+                                        <div class="gl-v2-wm-unit-actions">
+                                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-btn-sm" data-act="draw">Tekenen</button>
+                                            <button type="button" class="gl-v2-icon-btn is-danger" data-act="clear" aria-label="Omtrek van @wu.Display wissen" title="Omtrek wissen" hidden><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="gl-v2-wm-drawbar">
+                                <button type="button" id="wmFinish" class="gl-v2-btn gl-v2-btn-primary gl-v2-btn-sm">Afronden</button>
+                                <button type="button" id="wmCancel" class="gl-v2-btn gl-v2-btn-secondary gl-v2-btn-sm">Annuleren</button>
+                            </div>
+                        </div>
+                        <div class="gl-v2-wm-main">
+                            <div class="gl-v2-wm-stage" id="wmStage">
+                                <img id="wmImg" alt="Foto van het project" draggable="false" />
+                                <svg id="wmSvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                    <g id="wmPolys"></g>
+                                    <polyline id="wmDraft" class="gl-v2-wm-draft" points=""></polyline>
+                                </svg>
+                                <div id="wmLabels" class="gl-v2-wm-labels"></div>
+                                <div id="wmHandles" class="gl-v2-wm-handles"></div>
+                                <span id="wmSnap" class="gl-v2-wm-snap" hidden></span>
+                            </div>
+                            <span class="gl-v2-field-help" id="wmHint" aria-live="polite"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="gl-v2-section-card">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-browser" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Website-presentatie</h2>
                     <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-section-card-desc">Commerciële titel en tekst zoals op de publieke website.</span>
+                    <span class="gl-v2-section-card-desc">Oude commerciële titel en tekst — wordt op de website gebruikt zolang de velden hierboven leeg zijn.</span>
                 </div>
                 <div class="gl-v2-section-grid">
                     <div class="gl-v2-col-12">@Html.EditorFor(m => m.Project.CommercialTitleNL, "GlV2Text", new { Label = "Titel" })</div>
@@ -654,4 +937,7 @@
         };
     </script>
     <script src="~/js/gl-v2-projecten-form.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-website.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-website-map.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-website-blocks.js" asp-append-version="true"></script>
 }

@@ -3,8 +3,9 @@
 @{
     var velden = new (string Field, int Val)[] { ("badkamer", Model.Badkamer), ("toiletInBadkamer", Model.ToiletInBadkamer), ("afzonderlijkToilet", Model.AfzonderlijkToilet), ("doucheInBadkamer", Model.DoucheInBadkamer), ("douchekamer", Model.Douchekamer) };
 }
-<tr class="bw-san-rij" data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-eenheid-naam="@Model.EenheidNaam" data-unit-type-id="@Model.UnitTypeId">
-    <td class="is-muted is-num bw-rijnr" style="width:36px">@(Model.SortOrder + 1)</td>
+@{ var mld = (ViewData["Chrome"] as CPMCore.Models.Budget.BudgetWizardChromeVm)?.Op(Model.Id.ToString(), "rij"); }
+<tr class="bw-san-rij @(mld?.Type == ServiceCore.Budget.MeldingType.Fout ? "is-fout" : mld != null ? "is-warn" : "")" data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-eenheid-naam="@Model.EenheidNaam" data-unit-type-id="@Model.UnitTypeId">
+    <td class="is-muted is-num bw-rijnr" style="width:36px">@(Model.SortOrder + 1) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", mld)</td>
     <td class="is-strong">@Model.EenheidNaam</td>
     @foreach (var (field, val) in velden)
     {

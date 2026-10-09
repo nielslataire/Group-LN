@@ -89,6 +89,7 @@
     if (canSeeTraject) opvolgingItems.Add(("Traject", "ph-flow-arrow", Url.Action("Index", "ProjectTraject", new { projectId = projectId }) ?? "#", IsHere("ProjectTraject"), CountFor("Traject")));
     if (canSeeDossiers) opvolgingItems.Add(("Dossiers", "ph-folder-open", Url.Action("Index", "ProjectDossiers", new { projectId = projectId }) ?? "#", IsHere("ProjectDossiers"), CountFor("Dossiers")));
     if (canSeeIssues) opvolgingItems.Add(("Punten", "ph-list-checks", Url.Action("Index", "ProjectsIssues", new { projectId = projectId }) ?? "#", IsHere("ProjectsIssues"), CountFor("Punten")));
+    if (canSeeIssues) opvolgingItems.Add(("Verslagen", "ph-notebook", Url.Action("Index", "ProjectVerslagen", new { projectId = projectId }) ?? "#", IsHere("ProjectVerslagen"), CountFor("Verslagen")));
     if (canSeeDocs) opvolgingItems.Add(("Documenten", "ph-folder", Url.Action("DetailDocs", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailDocs"), CountFor("Documenten")));
     if (canSeeInsurances) opvolgingItems.Add(("Verzekeringen", "ph-shield-check", Url.Action("DetailInsurances", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailInsurances"), CountFor("Verzekeringen")));
     opvolgingItems.Add(("Coördinatie", "ph-users-three", Url.Action("DetailCoordinatie", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailCoordinatie"), CountFor("Coördinatie")));

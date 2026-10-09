@@ -34,7 +34,7 @@ namespace FacadeCore
         void RegistreerStap(int versieId, int stap);
         Response SetVmswFactoren(int versieId, BOCore.Budget.VmswFactorenBO factoren);
         BOCore.Budget.VmswFactorenBO GetVmswFactoren(int versieId);
-        Response BevestigWaarschuwing(int versieId, string sleutel, bool bevestigd);
+        Response BevestigWaarschuwing(int versieId, string sleutel, bool bevestigd, string door = null);
 
         // BudgetGegevens
         GetResponse<BudgetGegevensBO> GetBudgetGegevens(int versieId);

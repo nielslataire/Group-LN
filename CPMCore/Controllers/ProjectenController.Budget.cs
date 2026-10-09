@@ -271,8 +271,7 @@ namespace CPMCore.Controllers
                 string IndexInfo(string type, decimal? waarde)
                 {
                     if (!waarde.HasValue) return "";
-                    var rij = _uow.BouwIndex.GetNoTracking().Where(x => x.IndexType == type && x.IndexWaarde == waarde.Value)
-                        .OrderByDescending(x => x.Jaar).ThenByDescending(x => x.Maand).FirstOrDefault();
+                    var rij = ServiceCore.Budget.BudgetControleService.ZoekIndexRij(_uow.BouwIndex.GetNoTracking().Where(x => x.IndexType == type).ToList(), waarde.Value);
                     if (rij == null) return "handmatig ingevuld";
                     var peil = rij.GeldigVanaf?.ToString("dd/MM/yyyy") ?? (rij.Jaar.HasValue ? (rij.Maand.HasValue ? $"{rij.Maand:00}/{rij.Jaar}" : rij.Jaar.ToString()) : null);
                     return string.Join(" · ", new[] { peil != null ? "peildatum " + peil : null, string.IsNullOrWhiteSpace(rij.Bron) ? null : "bron " + rij.Bron }.Where(x => x != null));
@@ -1005,7 +1004,8 @@ namespace CPMCore.Controllers
                 AlternatievePrijsPerEenheid = dto.AlternatievePrijsPerEenheid ?? 0m,
                 NacalcPrijsPerEenheid       = dto.NacalcPrijsPerEenheid       ?? 0m,
                 Correctiefactor             = dto.Correctiefactor,
-                IsManueel                   = dto.IsManueel
+                IsManueel                   = dto.IsManueel,
+                Opmerking                   = dto.Opmerking
             }).ToList() ?? new List<BudgetActivityLijnBO>();
 
             var response = await _budgetActivityService.SaveLijnenAsync(request.BudgetVersieId, lijnen);
@@ -1081,7 +1081,7 @@ namespace CPMCore.Controllers
             if (GebruikGlV2)
             {
                 await PrepareWizardV2(versieId, 7);
-                ViewData["DecennaleBevestigd"] = (versie.WaarschuwingenBevestigd ?? "").Split(',').Contains("decennale");
+                ViewData["DecennaleBevestigd"] = ServiceCore.Budget.BudgetControleService.ParseGenegeerd(versie.WaarschuwingenBevestigd).ContainsKey("decennale");
                 return View("BudgetParamsV2", model);
             }
             return View(model);
@@ -1214,10 +1214,7 @@ namespace CPMCore.Controllers
             SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetVerkoop), "Verkoop", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             if (GebruikGlV2)
             {
-                // Waarschuwing stap 8 (vraagprijs onder minimum) kent enkel deze pagina
-                var minima = (voorstel?.Eenheden ?? new List<BOCore.Budget.BudgetVerkoopVoorstelEenheidBO>()).ToDictionary(e => (e.EenheidNaam ?? "").Trim(), e => Math.Round(e.MinimumVerkoopprijs, 0), StringComparer.OrdinalIgnoreCase);
-                var onder = lijnen.Count(l => l.Vraagprijs is > 0m && minima.TryGetValue((l.EenheidNaam ?? "").Trim(), out var mn) && l.Vraagprijs < mn);
-                await PrepareWizardV2(versieId, 8, new Dictionary<int, (int, int)> { [8] = (0, onder) });
+                await PrepareWizardV2(versieId, 8);
                 return View("BudgetVerkoopV2", model);
             }
             return View(model);
@@ -1423,10 +1420,7 @@ namespace CPMCore.Controllers
             SetBudgetPageContext(model.ProjectId, projectNaam, nameof(BudgetResultaat), "Resultaat", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
             if (GebruikGlV2)
             {
-                var vkLijnen = _uow.BudgetVerkoopLijn.GetNoTracking().Where(l => l.BudgetVersieId == versieId).ToList();
-                var minima = (voorstel?.Eenheden ?? new List<BOCore.Budget.BudgetVerkoopVoorstelEenheidBO>()).ToDictionary(e => (e.EenheidNaam ?? "").Trim(), e => Math.Round(e.MinimumVerkoopprijs, 0), StringComparer.OrdinalIgnoreCase);
-                var onder = vkLijnen.Count(l => l.Vraagprijs is > 0m && minima.TryGetValue((l.EenheidNaam ?? "").Trim(), out var mn) && l.Vraagprijs < mn);
-                await PrepareWizardV2(versieId, 9, new Dictionary<int, (int, int)> { [8] = (0, onder) });
+                await PrepareWizardV2(versieId, 9);
                 return View("BudgetResultaatV2", model);
             }
             return View(model);

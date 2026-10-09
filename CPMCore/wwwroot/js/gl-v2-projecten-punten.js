@@ -1,6 +1,6 @@
 // gl-v2 — Punten, lijst (design-handoff 40a) + selectiebalk (40n).
 // Echte DataTable (zelfde recept als Leveranciers/Facturen): sortering + paginering van DataTables, paginagrootte uit de
-// beschikbare schermhoogte. Filters/zoeken zijn een $.fn.dataTable.ext.search op de data-* van de rijen (alle punten van het
+// beschikbare schermhoogte. Filters/zoeken zijn een window.jQuery.fn.dataTable.ext.search op de data-* van de rijen (alle punten van het
 // project zijn al geladen); de selectiebalk post naar ProjectsIssues/BulkV2 (status, deadline, aannemer, goedkeuren, verwijderen).
 (function () {
     "use strict";
@@ -25,7 +25,8 @@
         phase: { el: $("#pt-f-phase"), def: "", name: "Fase" },
         due: { el: $("#pt-f-due"), def: "", name: "Deadline" },
         priority: { el: $("#pt-f-priority"), def: "", name: "Prioriteit" },
-        plan: { el: $("#pt-f-plan"), def: "", name: "Op plan" }
+        plan: { el: $("#pt-f-plan"), def: "", name: "Op plan" },
+        verslag: { el: $("#pt-f-verslag"), def: "", name: "Verslag" }
     };
     var sortKey = "", sortDir = 1;
 
@@ -46,6 +47,7 @@
         if (val("contractor") !== "" && tr.dataset.contractor !== val("contractor")) return false;
         if (val("phase") !== "" && tr.dataset.phase !== val("phase")) return false;
         if (val("priority") !== "" && tr.dataset.priority !== val("priority")) return false;
+        if (val("verslag") !== "" && ("," + (tr.dataset.verslagen || "") + ",").indexOf("," + val("verslag") + ",") < 0) return false;
         var pl = val("plan"); if (pl === "yes" && tr.dataset.plan !== "1") return false; if (pl === "no" && tr.dataset.plan === "1") return false;
         var due = val("due"), d = tr.dataset.due || "";
         if (due === "over" && tr.dataset.overdue !== "1") return false;
@@ -54,7 +56,7 @@
         if (q && tr.dataset.search.indexOf(q) < 0) return false;
         return true;
     }
-    $.fn.dataTable.ext.search.push(function (settings, data, idx) {
+    window.jQuery.fn.dataTable.ext.search.push(function (settings, data, idx) {
         if (settings.nTable !== tableEl) return true;
         var tr = settings.aoData[idx] && settings.aoData[idx].nTr;
         return tr ? rowVisible(tr, search.value.trim().toLowerCase()) : true;
@@ -75,7 +77,36 @@
             chips.appendChild(c);
         });
         clearBtn.hidden = active.length === 0;
+        syncKpis();
     }
+    // ── KPI-kaarten als filter (7a): status:N zet het statusfilter, critical = open + prioriteit kritiek; nogmaals klikken wist ──
+    function kpiActiveKey() {
+        var st = val("status"), pr = val("priority");
+        var others = ["unit", "contractor", "phase", "due", "plan", "verslag"].some(function (k) { return val(k) !== filters[k].def; });
+        if (others) return "";
+        if (pr === "3" && st === "open") return "critical";
+        if (pr === "" && /^\d+$/.test(st)) return "status:" + st;
+        return "";
+    }
+    function syncKpis() {
+        var key = kpiActiveKey();
+        $$("[data-kpi-filter]").forEach(function (c) {
+            var on = c.dataset.kpiFilter === key;
+            c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+    }
+    function clickKpi(card) {
+        var key = card.dataset.kpiFilter, on = kpiActiveKey() === key;
+        Object.keys(filters).forEach(function (k) { if (val(k) !== filters[k].def) setFilter(k, filters[k].def); });
+        if (on) return;
+        if (key === "critical") setFilter("priority", "3");
+        else if (key.indexOf("status:") === 0) setFilter("status", key.slice(7));
+    }
+    document.addEventListener("click", function (e) { var c = e.target.closest("[data-kpi-filter]"); if (c) clickKpi(c); });
+    document.addEventListener("keydown", function (e) {
+        if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-kpi-filter]")) { e.preventDefault(); clickKpi(e.target); }
+    });
+
     function apply() {
         // verborgen rijen mogen niet geselecteerd blijven
         allRows().forEach(function (tr) {
@@ -106,7 +137,7 @@
     // ── Rij openen ──
     body.addEventListener("click", function (e) {
         var tr = e.target.closest(".gl-v2-pt-row"); if (!tr) return;
-        if (e.target.closest("input, button, a, .gl-v2-menu, .gl-v2-pt-actions")) return;
+        if (e.target.closest("input, button, a, .gl-v2-menu, .gl-v2-pt-rowacts")) return;
         window.location.href = tr.dataset.href;
     });
 
@@ -151,7 +182,7 @@
         var ids = selected().map(function (tr) { return tr.dataset.id; });
         if (!ids.length) return;
         $("#pt-bulk-op").value = op;
-        $("#pt-bulk-status").value = extra.status || ""; $("#pt-bulk-due").value = extra.due || ""; $("#pt-bulk-contractor").value = extra.contractor || "";
+        $("#pt-bulk-status").value = extra.status || ""; $("#pt-bulk-due").value = extra.due || ""; $("#pt-bulk-contractor").value = extra.contractor || ""; $("#pt-bulk-verslag").value = extra.verslag || "";
         var holder = $("#pt-bulk-ids"); holder.innerHTML = "";
         ids.forEach(function (id) { var i = document.createElement("input"); i.type = "hidden"; i.name = "issueIds"; i.value = id; holder.appendChild(i); });
         $("#pt-bulk-form").submit();
@@ -160,12 +191,14 @@
         bar.addEventListener("click", function (e) {
             var b = e.target.closest("[data-op]"); if (!b) return;
             var op = b.dataset.op;
-            if (op === "approve") {
+            if (op === "approve") submitBulk("approve", {});
+            else if (op === "send") {
                 var q = selected().map(function (tr) { return "ids=" + tr.dataset.id; }).join("&");
                 window.location.href = (root.dataset.sendUrl || "") + (q ? "?" + q : "");
             }
             else if (op === "status") submitBulk("status", { status: b.dataset.status });
             else if (op === "contractor") submitBulk("contractor", { contractor: b.dataset.contractor });
+            else if (op === "verslag") submitBulk("verslag", { verslag: b.dataset.verslag });
             else if (op === "deadline") { var d = $("#pt-due-input").value; if (d) submitBulk("deadline", { due: d }); }
         });
         var del = $("#pt-sel-delete");
@@ -210,67 +243,8 @@
         $("#pt-print-form").submit();
     });
 
-    // ── Snel ingeven (40c) ──
-    var panelEl = $("#pt-panel"), backdrop = $("#pt-panel-backdrop"), newForm = $("#pt-new-form");
-    var savedCount = 0, saving = false;
-    function openPanel() {
-        if (!panelEl) return;
-        panelEl.hidden = false; backdrop.hidden = false;
-        setTimeout(function () { $("#pt-new-title").focus(); }, 30);
-    }
-    function closePanel() {
-        if (!panelEl) return;
-        panelEl.hidden = true; backdrop.hidden = true;
-        if (savedCount > 0) window.location.reload();
-    }
-    function setSelect(id, v) {
-        var wrap = document.getElementById(id + "_select");
-        var opt = wrap && wrap.querySelector('.gl-v2-select-option[data-value="' + v + '"]');
-        if (opt) opt.click();
-    }
-    function savePoint(next) {
-        if (saving) return;
-        var title = $("#pt-new-title"), help = $("#pt-new-title-help");
-        if (!title.value.trim()) { title.closest(".gl-v2-field").classList.add("is-error"); help.textContent = "Geef een titel in."; title.focus(); return; }
-        title.closest(".gl-v2-field").classList.remove("is-error");
-        saving = true;
-        [$("#pt-new-save"), $("#pt-new-save-next")].forEach(function (b) { b.disabled = true; });
-        fetch(newForm.action, { method: "POST", body: new FormData(newForm), credentials: "same-origin" })
-            .then(function (r) { return r.json(); })
-            .then(function (j) {
-                if (!j.ok) { help.textContent = j.error || "Opslaan mislukt."; title.closest(".gl-v2-field").classList.add("is-error"); return; }
-                savedCount++;
-                if (!next) { closePanel(); return; }
-                title.value = ""; $("#pt-new-desc").value = ""; $("#pt-new-files").value = ""; $("#pt-new-files-label").textContent = "Foto's toevoegen";
-                help.textContent = "kort en concreet — wat moet er gebeuren";
-                var note = $("#pt-new-saved"); note.hidden = false; $("span", note).textContent = j.nr + " bewaard als concept. Eenheid, zone en aannemer blijven staan.";
-                title.focus();
-            })
-            .catch(function () { help.textContent = "Opslaan mislukt. Controleer je verbinding."; title.closest(".gl-v2-field").classList.add("is-error"); })
-            .then(function () { saving = false; [$("#pt-new-save"), $("#pt-new-save-next")].forEach(function (b) { b.disabled = false; }); });
-    }
-    if (panelEl) {
-        document.addEventListener("click", function (e) {
-            if (e.target.closest(".js-pt-new")) { openPanel(); return; }
-            if (e.target.closest(".js-pt-panel-close") || e.target === backdrop) { closePanel(); return; }
-            var z = e.target.closest(".js-pt-zone"); if (z) { $("#pt-new-zone").value = z.dataset.zone; return; }
-        });
-        $("#pt-new-save").addEventListener("click", function () { savePoint(false); });
-        $("#pt-new-save-next").addEventListener("click", function () { savePoint(true); });
-        $("#pt-new-title").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); savePoint(true); } });
-        document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !panelEl.hidden && !document.querySelector(".gl-v2-select-panel.is-open")) closePanel(); });
-        var more = $("#pt-new-more");
-        more.addEventListener("click", function () {
-            var open = more.getAttribute("aria-expanded") !== "true";
-            more.setAttribute("aria-expanded", open ? "true" : "false"); $("#pt-new-more-body").hidden = !open;
-        });
-        $("#pt-new-files").addEventListener("change", function (e) {
-            var n = e.target.files.length; $("#pt-new-files-label").textContent = n ? n + (n === 1 ? " foto gekozen" : " foto's gekozen") : "Foto's toevoegen";
-        });
-    }
-
     // ── DataTable + paginagrootte uit de beschikbare hoogte (zelfde rekenwerk als Leveranciers/Facturen) ──
-    var card = $(".gl-v2-table-card");
+    var card = $(".gl-v2-pt-card");
     table = new DataTable("#datatable-punten", {
         order: [[1, "desc"]],
         autoWidth: false,
@@ -286,10 +260,10 @@
             return (end - start + 1) + " van " + total + " punten" + (total !== max ? " · gefilterd" : "");
         }
     });
-    $(".dt-search").hide();
+    var dtSearch = document.querySelector(".dt-search"); if (dtSearch) dtSearch.style.display = "none";
     table.on("draw", function () { updateSelection(); });
 
-    var ROW_HEIGHT = 54; // in sync met gl-v2-projecten-punten.css tbody td { height }
+    var ROW_HEIGHT = 55; // in sync met gl-v2-projecten-punten.css tbody td { height + rand }
     function syncPageLength() {
         if (!table) return;
         var contentEl = document.querySelector(".gl-v2-content"), thead = $("#datatable-punten thead"), dtc = tableEl.closest(".dt-container");
@@ -297,7 +271,7 @@
         var footer = dtc.querySelector(".dt-layout-row:last-child");
         var cs = getComputedStyle(contentEl);
         var top = card.getBoundingClientRect().top - contentEl.getBoundingClientRect().top + contentEl.scrollTop;
-        var available = contentEl.clientHeight - (parseFloat(cs.paddingBottom) || 0) - top - thead.offsetHeight - (footer ? footer.offsetHeight : 48) - 16;
+        var available = contentEl.clientHeight - (parseFloat(cs.paddingBottom) || 0) - top - thead.offsetHeight - (footer ? footer.offsetHeight + 4 : 52) - 8;
         var maxRows = Math.max(Math.floor(available / ROW_HEIGHT), 5);
         var n = table.rows({ search: "applied" }).count();
         var len = n ? Math.min(maxRows, Math.max(n, 5)) : maxRows;

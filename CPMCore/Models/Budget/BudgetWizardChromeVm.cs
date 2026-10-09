@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CPMCore.Models.GlV2;
+using ServiceCore.Budget;
 
 namespace CPMCore.Models.Budget
 {
@@ -11,6 +13,15 @@ namespace CPMCore.Models.Budget
     /// </summary>
     public class BudgetWizardChromeVm
     {
+        /// <summary>Alle meldingen van de versie (39k), over alle stappen; ook genegeerde en infomeldingen.</summary>
+        public List<BudgetMelding> Meldingen { get; set; } = new();
+        /// <summary>Meldingen voor één stap.</summary>
+        public IEnumerable<BudgetMelding> Voor(int stap) => Meldingen.Where(m => m.Stap == stap);
+        /// <summary>Meldingen van de huidige stap op een bepaalde plaats ("veld", "rij", "kader", "label").</summary>
+        public IEnumerable<BudgetMelding> Hier(string plaats = null) => Voor(Step).Where(m => plaats == null || m.Plaats == plaats);
+        /// <summary>Melding voor een veld of rij van de huidige stap (open fouten eerst, dan waarschuwingen, dan info); genegeerde waarschuwingen tellen niet.</summary>
+        public BudgetMelding Op(string sleutel, string plaats = null) => Voor(Step).Where(m => m.Sleutel == sleutel && (plaats == null || m.Plaats == plaats) && !m.Genegeerd).OrderByDescending(m => (int)m.Type).FirstOrDefault();
+
         public int VersieId { get; set; }
         public int MasterId { get; set; }
         public int ProjectId { get; set; }

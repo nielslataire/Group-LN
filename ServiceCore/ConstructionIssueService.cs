@@ -228,6 +228,8 @@ public class ConstructionIssueService : IConstructionIssueService
         var notifications = await _db.ConstructionIssueNotification.Where(x => x.IssueId == issueId).ToListAsync();
         var media = await _db.ConstructionIssueMedia.Where(x => x.IssueId == issueId).ToListAsync();
         var history = await _db.ConstructionIssueHistory.Where(x => x.IssueId == issueId).ToListAsync();
+        var verslagPunten = await _db.WerfverslagPunt.Where(x => x.IssueId == issueId).ToListAsync();
+        if (verslagPunten.Count > 0) _db.WerfverslagPunt.RemoveRange(verslagPunten);
 
         if (reportItems.Count > 0) _db.ConstructionIssueReportItem.RemoveRange(reportItems);
         if (notifications.Count > 0) _db.ConstructionIssueNotification.RemoveRange(notifications);

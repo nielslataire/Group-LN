@@ -1,0 +1,7 @@
+@model ServiceCore.Budget.BudgetMelding
+@* 39k: statusicoon in een tabelrij (driehoek = waarschuwing, cirkel = fout); de tekst staat in de tooltip en voor schermlezers. *@
+@if (Model != null && Model.Type != ServiceCore.Budget.MeldingType.Info)
+{
+    var fout = Model.Type == ServiceCore.Budget.MeldingType.Fout;
+    <i class="ph @(fout ? "ph-warning-circle bw-rij-icoon is-e" : "ph-warning bw-rij-icoon is-w")" title="@Model.Tekst" role="img" aria-label="@Model.Tekst"></i>
+}

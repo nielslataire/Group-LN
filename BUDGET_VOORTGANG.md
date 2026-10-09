@@ -7,6 +7,26 @@ DEVNOTES.md §3, §5 en §7; dit bestand houdt bij wat af is, wat open staat en 
 punt 39, met versiestatus Concept/Afgerond/Definitief (deel 5). Niets gecommit, niets browser-getest.
 **Migraties 075 → 078 uitvoeren vóór de app start** (`_migrations/078_BudgetVersieStatus.sql` is nieuw).
 
+## STAND 09/10/2026 — alles gebouwd en door Niels getest; enkel nog open punten en grotere stappen
+
+De budgetflow in gl-v2 (overzicht + 9 stappen, versiestatus, meldingen 39k, veldstaten 14d, bevestigingsmodals, foutvenster bij mislukt opslaan) werkt volgens Niels.
+Niets meer te verifiëren van wat eerder genoteerd stond. Resteert:
+
+**Open punten**
+- `confirm()`/`alert()` vervangen door de eigen bevestigingsmodal in: Instellingen › Budget (kostprijsmaterialen, formules, bouwindexen, kostprijs-update) en de klassieke pagina's.
+- Trage budgetpagina's: `BudgetActivityService.GetLotGroepenAsync` draait meermaals per pagina (stap 6/9); eventueel databse-indexen. Eerst opnieuw meten.
+- Overzicht (39a): tegels Gecontracteerd / Gefactureerd / Verwacht verschil blijven placeholders tot de koppeling hieronder bestaat.
+- Infolabel "Marktprijs op …" (39k, stap 8) niet gebouwd: de marktdata heeft geen datum.
+- Marge-waarschuwing "5 % t.o.v. definitief" (39j) is geïnterpreteerd als meer dan 5 procentpunt onder de marge van het definitieve budget; bevestigen bij gelegenheid.
+- Veldwaarschuwing (14d) staat in de gedeelde stijl maar wordt enkel gebruikt waar een melding bestaat; op andere pagina's per veld koppelen indien gewenst.
+
+**Grotere stappen (in deze volgorde)**
+1. Koppeling budget ↔ contracten ↔ facturen (vult de tegels op het overzicht en 35h).
+2. Budget-PDF en -Excel (design-handoff 35h).
+3. Nacalculatie van het lopende project (menu-item "Nacalculatie", los van het budget).
+
+Nog steeds: niets gecommit op branch `layout-experiment`; migraties 078 en 080 uitvoeren op elke omgeving.
+
 ## OVERDRACHT — stand van zaken (08/10/2026, einde sessie)
 
 **Branch `layout-experiment`, niets gecommit** (veel gewijzigde en nieuwe bestanden; commit eerst voor je van pc wisselt). Build slaagt.
@@ -29,6 +49,14 @@ entranceanimatie met fill-mode `backwards` (anders knippen fixed dropdown-panele
 - Placeholders tot de koppeling: tegels Gecontracteerd/Gefactureerd/Verwacht verschil op het overzicht.
 - Volgende grote stappen: koppeling budget ↔ contracten/facturen; budget-PDF/Excel (35h); nacalculatie van het lopende project (menu-item "Nacalculatie").
 - Werkwijze: DESIGN.md sectie "Budgetflow — design-handoff punt 39" beschrijft componenten, beweging en schermen.
+
+## Gedaan op 2026-10-09 (deel 6: meldingen per stap, design-handoff punt 39k)
+
+Geen nieuwe migratie. `BudgetControleService` berekent alle fouten/waarschuwingen/infomeldingen van de flow, de pagina's tonen ze als veld, rij, kader of label,
+het Stappenplan telt ze en fouten blokkeren Afronden. Zie DESIGN.md "Budgetflow — meldingen per stap, punt 39k" voor de volledige tabel. Niet browser-getest.
+- Stap 6 heeft nu een **opmerking** per activiteit (bewaard in `BudgetActivityLijnen.Omschrijving`, verschijnt zodra de correctie ≠ 100 % is).
+- Bewuste keuzes: "marge 5 % t.o.v. definitief" = meer dan 5 procentpunt onder de marge van het definitieve budget; "geen enkel daktype" = geen plat/hellend/groen-regel; negeren werkt per code.
+- Niet gebouwd: het infolabel "Marktprijs op …" (de marktdata heeft geen datum).
 
 ## Gedaan op 2026-10-08 (deel 5: budgetflow in gl-v2, design-handoff punt 39)
 

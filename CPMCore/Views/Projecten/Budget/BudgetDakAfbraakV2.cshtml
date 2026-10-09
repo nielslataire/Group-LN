@@ -67,6 +67,7 @@
     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
 
     <div class="gl-v2-bw-scroll">
+        @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwKaders.cshtml", ch)
         <div class="bw-dak-switches" role="group" aria-label="Daktypes">
             @foreach (var ty in types)
             {
@@ -85,7 +86,8 @@
                 <span class="gl-v2-field-divider"></span>
                 <span class="gl-v2-section-card-desc">aantal dakvensters · telt mee in de dakbedekking (stap 6) en in stap 1</span>
                 <span class="gl-v2-section-card-meta bw-dak-velux" style="margin-left:auto">
-                    <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bw-velux" class="gl-v2-field-input is-num is-tabular" value="@(Model.AantalVeluxen ?? 0)" aria-label="Aantal veluxen" /><span class="gl-v2-field-unit">st</span></div></div>
+                    @{ var veluxMld = ch.Op("bw-velux", "veld"); }
+                    <div class="gl-v2-field gl-v2-field-bare@(veluxMld != null ? " is-warning" : "")" title="@veluxMld?.Tekst"><div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bw-velux" class="gl-v2-field-input is-num is-tabular" value="@(Model.AantalVeluxen ?? 0)" aria-label="Aantal veluxen" /><i class="ph ph-warning gl-v2-field-state-icon is-w" aria-hidden="true"></i><span class="gl-v2-field-unit">st</span></div></div>
                 </span>
             </div>
         </section>

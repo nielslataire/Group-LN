@@ -18,7 +18,15 @@ public class GlV2KpiItemVm
     /// dus geen enkele bestaande pagina verandert hierdoor van hoogte of opbouw.</summary>
     public string? Hint { get; set; }
 
+    /// <summary>De Hint staat naast het cijfer (op dezelfde regel, "0 nog niet ingediend" — Punten, design-handoff 40a) i.p.v. op een
+    /// eigen derde regel eronder (16a/16d). Standaard onder het cijfer, dus bestaande pagina's veranderen niet.</summary>
+    public bool HintInline { get; set; }
+
     /// <summary>Phosphor-klasse zonder "ph "-prefix, bv. "ph-buildings".</summary>
     public string IconClass { get; set; } = "ph-chart-bar";
     public GlV2KpiTone Tone { get; set; } = GlV2KpiTone.Primary;
+
+    /// <summary>Optioneel: maakt de kaart klikbaar als filter van de pagina (rendert <c>data-kpi-filter</c>, role="button",
+    /// tabindex). De pagina-JS beslist wat de sleutel doet en zet <c>.is-active</c> op de gekozen kaart. Leeg = gewone kaart.</summary>
+    public string? FilterKey { get; set; }
 }

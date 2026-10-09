@@ -34,8 +34,9 @@
         ? (masked ? Model.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : Model.Value.ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture))
         : "";
     var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
+    var warning = ViewData["Warning"] as string;   // 14d · 1B: opslaan mag, een fout wint
 }
-<div class="gl-v2-field@(hasError ? " is-error" : "")@(bare ? " gl-v2-field-bare" : "")">
+<div class="gl-v2-field@(hasError ? " is-error" : !string.IsNullOrWhiteSpace(warning) ? " is-warning" : "")@(bare ? " gl-v2-field-bare" : "")">
     @if (!bare)
     {
         <label class="gl-v2-field-label" for="@id">
@@ -49,6 +50,7 @@
     <div class="gl-v2-field-box">
         <input type="text" id="@id" name="@name" value="@value" placeholder="@placeholder" autocomplete="off"
                inputmode="decimal" class="gl-v2-field-input is-tabular@(masked ? " Currencymask" : "")" />
+        <i class="ph ph-warning gl-v2-field-state-icon is-w" aria-hidden="true"></i><i class="ph ph-warning-circle gl-v2-field-state-icon is-e" aria-hidden="true"></i>
         @if (!string.IsNullOrWhiteSpace(unit))
         {
             <span class="gl-v2-field-unit">@unit</span>
@@ -57,6 +59,10 @@
     @if (hasError)
     {
         <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(warning))
+    {
+        <span class="gl-v2-field-help">@warning</span>
     }
     else if (!string.IsNullOrWhiteSpace(maxHint))
     {

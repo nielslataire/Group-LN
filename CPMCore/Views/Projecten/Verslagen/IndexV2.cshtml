@@ -1,0 +1,158 @@
+@model CPMCore.Models.Verslagen.VerslagIndexV2Vm
+@*
+    gl-v2 — Verslagen (design-handoff 40i): werfverslagen en opleveringen bundelen de punten van één bezoek. Lijst met segmenten
+    (Alle · Werfverslagen · Opleveringen) en rechts de samenvatting van het gekozen verslag. "Werfbezoek nr. N starten" neemt het vorige
+    verslag over (40l, EditV2). Namespace gl-v2-vs-* (gl-v2-projecten-verslagen.css/.js).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = "Verslagen";
+    ViewData["PageIcon"] = "ph ph-notebook";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · verslagen" };
+    var sel = Model.Selected;
+    var werf = Model.Rows.Count(r => r.Type == 0);
+    var oplev = Model.Rows.Count(r => r.Type == 1);
+    var startLabel = Model.LopendConceptId.HasValue ? "Werfbezoek hervatten" : $"Werfbezoek nr. {Model.VolgendNummer} starten";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-verslagen.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="vs-oplev-open"><i class="ph ph-key" aria-hidden="true"></i><span>Oplevering starten</span></button>
+        <button type="submit" form="vs-start-form" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i><span>@startLabel</span></button>
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="submit" form="vs-start-form" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary"><i class="ph ph-plus" aria-hidden="true"></i>Verslag</button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+@if (Model.CanWrite)
+{
+    <form method="post" id="vs-start-form" action="@Url.Action("Start", "ProjectVerslagen", new { projectId = Model.ProjectId })" hidden>
+        @Html.AntiForgeryToken()<input type="hidden" name="type" value="0" />
+    </form>
+}
+
+<div class="gl-v2-vs-head">
+    <h1>Verslagen</h1>
+    <p>punten horen bij een verslag; een verslag bundelt de punten van één bezoek</p>
+</div>
+
+<div class="gl-v2-vs-grid" id="gl-v2-vs-root">
+    <section class="gl-v2-card gl-v2-vs-list">
+        <div class="gl-v2-vs-segments" role="tablist">
+            <button type="button" class="gl-v2-vs-seg is-active" data-type="">Alle <b>@Model.Rows.Count</b></button>
+            <button type="button" class="gl-v2-vs-seg" data-type="0">Werfverslagen <b>@werf</b></button>
+            <button type="button" class="gl-v2-vs-seg" data-type="1">Opleveringen <b>@oplev</b></button>
+        </div>
+        <div class="gl-v2-vs-scroll">
+            <table class="gl-v2-vs-table">
+                <thead><tr><th>Datum</th><th>Verslag</th><th>Type</th><th class="is-num">Punten</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr class="gl-v2-vs-row @(sel?.Id == r.Id ? "is-active" : "")" data-type="@r.Type" data-href="@Url.Action("Index", "ProjectVerslagen", new { projectId = Model.ProjectId, id = r.Id })">
+                            <td class="gl-v2-vs-date">@r.Datum.ToString("dd/MM/yyyy", be)</td>
+                            <td><b>@r.Naam</b>@if (r.AanwezigenTekst != "") { <small>aanwezig: @r.AanwezigenTekst</small> }</td>
+                            <td>@r.TypeLabel</td>
+                            <td class="is-num">@r.Punten</td>
+                            <td><span class="gl-v2-badge @(r.Status == 1 ? "is-positive" : "is-attention")">@r.StatusLabel</span></td>
+                            <td class="gl-v2-vs-chev"><i class="ph ph-caret-right" aria-hidden="true"></i></td>
+                        </tr>
+                    }
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="6" class="gl-v2-vs-empty">Nog geen verslagen. Start het eerste werfbezoek: alle open punten komen dan meteen mee.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <aside class="gl-v2-card gl-v2-vs-detail">
+        @if (sel == null)
+        {
+            <p class="gl-v2-vs-empty">Kies een verslag om de samenvatting te zien.</p>
+        }
+        else
+        {
+            <header class="gl-v2-vs-d-head">
+                <div><h2>@sel.Naam</h2><p>@sel.Datum.ToString("dd/MM/yyyy", be) · @(sel.Status == 1 ? "verstuurd" : "concept")</p></div>
+                <span class="gl-v2-badge @(sel.Status == 1 ? "is-positive" : "is-attention")">@(sel.Status == 1 ? "Verstuurd" : "Concept")</span>
+            </header>
+            <dl class="gl-v2-vs-dl">
+                <div><dt>Aanwezig</dt><dd>@(sel.AanwezigenTekst == "" ? "—" : sel.AanwezigenTekst)</dd></div>
+                <div><dt>Weer</dt><dd>@(string.IsNullOrWhiteSpace(sel.Weer) ? "—" : sel.Weer)</dd></div>
+                <div><dt>Algemene opmerkingen</dt><dd>@(string.IsNullOrWhiteSpace(sel.Opmerkingen) ? "—" : sel.Opmerkingen)</dd></div>
+                <div><dt>Nieuwe punten</dt><dd>@sel.NieuweTotaal@(sel.NieuweTeKeuren > 0 ? " — " + sel.NieuweTeKeuren + " nog ter goedkeuring" : "")</dd></div>
+                <div><dt>Openstaande punten vorig verslag</dt><dd>@sel.OpenTotaal@(sel.OpenGemeld > 0 ? " — " + sel.OpenGemeld + " gemeld uitgevoerd" : "")</dd></div>
+                <div><dt>Volgend bezoek</dt><dd>@(sel.VolgendBezoek.HasValue ? sel.VolgendBezoek.Value.ToString("dd/MM/yyyy HH:mm", be) : "—")</dd></div>
+            </dl>
+            <p class="gl-v2-vs-note">Bij versturen: verslag als PDF naar alle aanwezigen met een e-mailadres; nieuwe punten gaan na goedkeuring naar de aannemers.</p>
+            <div class="gl-v2-vs-d-actions">
+                <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Pdf", "ProjectVerslagen", new { projectId = Model.ProjectId, id = sel.Id })" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>Voorbeeld PDF</a>
+                <a class="gl-v2-btn gl-v2-btn-primary" href="@Url.Action("Edit", "ProjectVerslagen", new { projectId = Model.ProjectId, id = sel.Id })">@(sel.Status == 1 ? "Openen" : "Verder werken")</a>
+                @if (sel.Status == 0 ? Model.CanWrite : Model.IsAdmin)
+                {
+                    <button type="button" class="gl-v2-btn gl-v2-btn-danger" data-bs-toggle="modal" data-bs-target="#vs-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+                }
+            </div>
+        }
+    </aside>
+</div>
+
+@if (Model.CanWrite)
+{
+    <div class="modal fade gl-v2-modal-form" id="vs-oplev-modal" tabindex="-1" aria-hidden="true" aria-labelledby="vs-oplev-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" action="@Url.Action("Start", "ProjectVerslagen", new { projectId = Model.ProjectId })">
+                @Html.AntiForgeryToken()<input type="hidden" name="type" value="1" />
+                <div class="modal-header"><h2 class="modal-title" id="vs-oplev-title">Oplevering starten</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="vs-oplev-naam">Naam van de oplevering</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vs-oplev-naam" name="naam" maxlength="150" placeholder="bv. Voorlopige oplevering Lot 4" autocomplete="off" /></div></div>
+                    <p class="gl-v2-field-help">Alle open punten komen mee om ter plaatse na te kijken.</p>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Starten</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (sel != null && (sel.Status == 0 ? Model.CanWrite : Model.IsAdmin))
+{
+    @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+    {
+        Id = "vs-delete-modal", Tone = GlV2ModalTone.Danger, IconClass = "ph-trash", Title = $"{sel.Naam} verwijderen?",
+        Description = sel.Status == 1
+            ? "Dit verstuurde verslag wordt definitief verwijderd. De punten zelf blijven bestaan; de PDF die de aanwezigen al kregen blijft bij hen."
+            : "Dit conceptverslag wordt verwijderd, samen met de nieuwe punten die nog concept zijn en enkel voor dit verslag werden aangemaakt.",
+        ConfirmLabel = "Verwijderen", FormAction = Url.Action("Delete", "ProjectVerslagen", new { projectId = Model.ProjectId, id = sel.Id })!
+    })
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-verslagen.js" asp-append-version="true"></script>
+}

@@ -99,6 +99,8 @@
                         {
                             (int)ConstructionIssueStatus.InProgress        => "gl-cp-badge--prog",
                             (int)ConstructionIssueStatus.WaitingInspection => "gl-cp-badge--check",
+                            (int)ConstructionIssueStatus.Reported          => "gl-cp-badge--check",
+                            (int)ConstructionIssueStatus.Closed            => "gl-cp-badge--done",
                             (int)ConstructionIssueStatus.Resolved          => "gl-cp-badge--done",
                             (int)ConstructionIssueStatus.Rejected          => "gl-cp-badge--reject",
                             (int)ConstructionIssueStatus.Reopened          => "gl-cp-badge--reopen",
@@ -108,6 +110,9 @@
                         {
                             (int)ConstructionIssueStatus.InProgress        => "Gepland",
                             (int)ConstructionIssueStatus.WaitingInspection => "Controle",
+                            (int)ConstructionIssueStatus.Reported          => "Gemeld uitgevoerd",
+                            (int)ConstructionIssueStatus.OnHold            => "In de wacht",
+                            (int)ConstructionIssueStatus.Closed            => "Afgesloten",
                             (int)ConstructionIssueStatus.Resolved          => "Opgelost",
                             (int)ConstructionIssueStatus.Rejected          => "Afgekeurd",
                             (int)ConstructionIssueStatus.Reopened          => "Heropend",
@@ -117,9 +122,13 @@
                         var isPlanned  = issue.Status == (int)ConstructionIssueStatus.InProgress && issue.PlannedDate.HasValue;
                         var canResolve = issue.Status == (int)ConstructionIssueStatus.Open
                                       || issue.Status == (int)ConstructionIssueStatus.InProgress
-                                      || issue.Status == (int)ConstructionIssueStatus.Reopened;
+                                      || issue.Status == (int)ConstructionIssueStatus.Reopened
+                                      || issue.Status == (int)ConstructionIssueStatus.Forwarded
+                                      || issue.Status == (int)ConstructionIssueStatus.Rejected;
                         var prevStatusIsOpen = issue.Status == (int)ConstructionIssueStatus.Open
-                                           || issue.Status == (int)ConstructionIssueStatus.Reopened;
+                                           || issue.Status == (int)ConstructionIssueStatus.Reopened
+                                           || issue.Status == (int)ConstructionIssueStatus.Forwarded
+                                           || issue.Status == (int)ConstructionIssueStatus.Rejected;
 
                         <div class="gl-cp-issue" id="issue-@issue.Id"
                              data-prev-status="@(prevStatusIsOpen ? "open" : "inprogress")"

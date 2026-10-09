@@ -25,8 +25,12 @@
     var vs = Model.Voorstel;
     var vk = r.Verkoop;
     var nacalcDelta = Model.TotaalBouwNacalc > 0 ? (Model.TotaalBouwAlternatief - Model.TotaalBouwNacalc) / Model.TotaalBouwNacalc : (decimal?)null;
-    var issues = ch.Steps.Select((s, i) => (Step: i + 1, s.Label, s.Errors, s.Warnings, s.Href)).Where(x => x.Errors + x.Warnings > 0).ToList();
-    var stapHint = new Dictionary<int, string> { [1] = "type poorten nog niet gekozen", [2] = "woning zonder grondoppervlakte", [7] = "decennale verzekering staat op 0 %", [8] = "vraagprijs onder de minimale verkoopprijs" };
+    // 39k/39j: alle open meldingen (fouten blokkeren Afronden, waarschuwingen niet), gegroepeerd per stap en onderwerp; genegeerde apart.
+    var openM = ch.Meldingen.Where(m => m.IsOpen).ToList();
+    var issues = openM.GroupBy(m => m.Stap).OrderBy(g => g.Key).Select(g => (Step: g.Key, Label: ch.Steps[g.Key - 1].Label, Errors: g.Count(m => m.Type == ServiceCore.Budget.MeldingType.Fout), Warnings: g.Count(m => m.Type == ServiceCore.Budget.MeldingType.Waarschuwing), Href: ch.Steps[g.Key - 1].Href)).ToList();
+    var lijst = openM.GroupBy(m => (m.Stap, m.Code, m.Type)).OrderBy(g => g.Key.Stap).ThenByDescending(g => (int)g.Key.Type).Select(g => (g.Key.Stap, g.Key.Code, g.Key.Type, Aantal: g.Count(), Tekst: g.First().Tekst, Plaats: g.First().Plaats)).ToList();
+    var negeerUrl = Url.Action("BudgetWaarschuwingBevestigen", "Projecten");
+    var genegeerdLijst = ch.Meldingen.Where(m => m.Genegeerd && m.Type == ServiceCore.Budget.MeldingType.Waarschuwing && m.Telt).GroupBy(m => m.Code).Select(g => g.First()).ToList();
     var statusTekst = ch.IsLocked ? "Definitief" : ch.IsAfgerond ? "Afgerond" : "Concept";
 }
 @section PageStyle
@@ -45,6 +49,12 @@
         .bw-res-balk { height: 10px; border-radius: 999px; background: var(--gl-v2-primary); transition: width .5s var(--bw-ease, ease); }
         .bw-res-balk.is-nacalc { background: var(--gl-v2-gold, #C9A96E); }
         .bw-res-issues li { margin: 4px 0; }
+        #bw-res-warn .bw-res-issues { list-style: none; margin: 0; padding: 4px 20px 14px; }
+        #bw-res-warn .bw-res-issues li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); }
+        #bw-res-warn .bw-res-issues li:first-child { border-top: 0; }
+        #bw-res-warn .is-genegeerd { color: var(--gl-v2-muted); }
+        .bw-res-warn-acties { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+        [data-open="false"] > .bw-res-warn-body { display: none; }
         .bw-res-issues a { color: inherit; font-weight: 600; text-decoration: underline; }
         @@media (max-width: 1199.98px) { .bw-res-cols { grid-template-columns: minmax(0, 1fr); } }
     </style>
@@ -70,26 +80,59 @@
     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
 
     <div class="gl-v2-bw-scroll">
-        @if (issues.Any())
+        @{
+            var foutLijst = lijst.Where(i => i.Type == ServiceCore.Budget.MeldingType.Fout).ToList();
+            var warnLijst = lijst.Where(i => i.Type == ServiceCore.Budget.MeldingType.Waarschuwing).ToList();
+            var errs = openM.Count(m => m.Type == ServiceCore.Budget.MeldingType.Fout);
+            var warns = openM.Count(m => m.Type == ServiceCore.Budget.MeldingType.Waarschuwing);
+        }
+        @* 39j: de foutenkaart toont enkel fouten (die blokkeren Afronden); waarschuwingen staan in een eigen, standaard ingeklapte kaart eronder. *@
+        @if (errs > 0)
         {
-            var errs = issues.Sum(i => i.Errors); var warns = issues.Sum(i => i.Warnings);
-            <div class="gl-v2-notice gl-v2-notice-expanded @(errs > 0 ? "is-danger" : "is-warning")">
-                <span class="gl-v2-notice-expanded-icon"><i class="ph @(errs > 0 ? "ph-x-circle" : "ph-warning")" aria-hidden="true"></i></span>
+            <div class="gl-v2-notice gl-v2-notice-expanded is-danger">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
                 <div class="gl-v2-notice-body">
-                    <span class="gl-v2-notice-title">@(errs > 0 ? $"{errs} fout{(errs == 1 ? "" : "en")}" : $"{warns} waarschuwing{(warns == 1 ? "" : "en")}") in de flow</span>
+                    <span class="gl-v2-notice-title">@errs fout@(errs == 1 ? "" : "en") in de flow — afronden kan pas als ze opgelost zijn</span>
                     <ul class="gl-v2-notice-text bw-res-issues" style="margin:4px 0 0;padding-left:18px">
-                        @foreach (var i in issues)
+                        @foreach (var i in foutLijst)
                         {
-                            <li>@i.Label: @(stapHint.TryGetValue(i.Step, out var h) ? h : (i.Errors > 0 ? $"{i.Errors} fout(en)" : $"{i.Warnings} aandachtspunt(en)")). <a href="@i.Href" data-bw-nav="back">Naar stap @i.Step</a></li>
+                            <li>@ch.Steps[i.Stap - 1].Label: @i.Tekst@(i.Aantal > 1 ? $" ({i.Aantal}×)" : ""). @if (i.Stap < 9) { <a href="@ch.Steps[i.Stap - 1].Href" data-bw-nav="back">Naar stap @i.Stap</a> }</li>
                         }
                     </ul>
-                    <span class="gl-v2-notice-text">@(errs > 0 ? "Los de fouten op vóór je afrondt." : "Je kan afronden, maar de waarschuwing blijft zichtbaar op de versie.")</span>
                 </div>
             </div>
         }
-        else
+        else if (warns == 0 && !genegeerdLijst.Any())
         {
             <div class="gl-v2-notice gl-v2-notice-compact is-success"><i class="ph ph-check-circle" aria-hidden="true"></i><span>Geen open aandachtspunten in de flow.</span></div>
+        }
+        @if (warns > 0 || genegeerdLijst.Any())
+        {
+            <section class="gl-v2-section-card" id="bw-res-warn" data-open="false">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Waarschuwingen</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">@warns open@(genegeerdLijst.Any() ? $" · {genegeerdLijst.Count} genegeerd" : "") — je kan afronden, maar ze blijven zichtbaar op de versie</span>
+                    <span class="gl-v2-section-card-meta" style="margin-left:auto">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-res-warn-toggle" aria-expanded="false" aria-controls="bw-res-warn" data-bw-keep>Toon waarschuwingen <i class="ph ph-caret-down" aria-hidden="true"></i></button>
+                    </span>
+                </div>
+                <div class="bw-res-warn-body">
+                    <ul class="bw-res-issues">
+                        @foreach (var i in warnLijst)
+                        {
+                            <li><span class="bw-res-warn-tekst"><i class="ph ph-warning bw-rij-icoon is-w" aria-hidden="true"></i> <strong>@ch.Steps[i.Stap - 1].Label</strong>: @i.Tekst@(i.Aantal > 1 ? $" ({i.Aantal}×)" : "")</span>
+                                <span class="bw-res-warn-acties">@if (i.Stap < 9) { <a href="@ch.Steps[i.Stap - 1].Href" data-bw-nav="back">Naar stap @i.Stap</a> }@if (!ch.IsLocked) { <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bw-keep data-bw-negeer-url="@negeerUrl" data-bw-versie="@ch.VersieId" data-bw-code="@i.Code">Negeren</button> }</span></li>
+                        }
+                        @foreach (var gm in genegeerdLijst)
+                        {
+                            <li class="is-genegeerd"><span class="bw-res-warn-tekst"><i class="ph ph-eye-slash bw-rij-icoon" aria-hidden="true"></i> Genegeerd: @gm.Tekst — door @(string.IsNullOrWhiteSpace(gm.GenegeerdDoor) ? "een gebruiker" : gm.GenegeerdDoor)@(gm.GenegeerdOp.HasValue ? " op " + gm.GenegeerdOp.Value.ToString("dd/MM/yyyy") : "")</span>
+                                <span class="bw-res-warn-acties"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bw-keep data-bw-negeer-url="@negeerUrl" data-bw-versie="@ch.VersieId" data-bw-code="@gm.Code" data-bw-herstel>Terugzetten</button></span></li>
+                        }
+                    </ul>
+                </div>
+            </section>
         }
 
         <div class="gl-v2-bw-tiles">
@@ -218,6 +261,8 @@
 <script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
 <script>
 (function () {
+    var wk = document.getElementById('bw-res-warn'), wt = document.getElementById('bw-res-warn-toggle');
+    if (wk && wt) wt.addEventListener('click', function () { var open = wk.getAttribute('data-open') !== 'true'; wk.setAttribute('data-open', open ? 'true' : 'false'); wt.setAttribute('aria-expanded', open ? 'true' : 'false'); wt.firstChild.textContent = open ? 'Verberg waarschuwingen ' : 'Toon waarschuwingen '; });
     var btn = document.getElementById('bw-res-kopie');
     btn.addEventListener('click', async function () {
         if (!await GlV2Budget.bevestig({ title: 'Kopie als nieuwe versie?', desc: 'Er wordt een nieuwe versie aangemaakt als kopie van v@(Model.Versienummer). De nieuwe versie is een concept.', ok: 'Kopie maken', tone: 'success', icon: 'ph-copy' })) return;

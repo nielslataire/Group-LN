@@ -7,15 +7,17 @@
     getekend wordt (sessionStorage), zodat de pagina uit de richting van het traject binnenkomt zonder flits.
 *@
 @{
-    var chips = new GlV2StepsVm { Id = "bw-steps-chips", Variant = GlV2StepsVariant.Chips, Current = Model.Step - 1, Steps = Model.Steps, ShowSub = false, Numbers = true };
-    var verticaal = new GlV2StepsVm { Id = "bw-steps-panel", Variant = GlV2StepsVariant.Verticaal, Size = GlV2StepsSize.Sm, Current = Model.Step - 1, Steps = Model.Steps, ShowSub = false };
+    var chips = new GlV2StepsVm { Id = "bw-steps-chips", Variant = GlV2StepsVariant.Chips, Current = Model.Step - 1, Steps = Model.Steps, ShowSub = false, Numbers = true, Clickable = true };
+    var verticaal = new GlV2StepsVm { Id = "bw-steps-panel", Variant = GlV2StepsVariant.Verticaal, Size = GlV2StepsSize.Sm, Current = Model.Step - 1, Steps = Model.Steps, ShowSub = false, Clickable = true };
     var resolved = GlV2StepsResolver.Resolve(chips);
     var hrefs = System.Text.Json.JsonSerializer.Serialize(Model.Steps.Select(s => s.Href));
+    // Open fouten (39k) voor het foutvenster dat verschijnt als opslaan/navigeren niet lukt: wat moet je aanpassen en waar.
+    var fouten = System.Text.Json.JsonSerializer.Serialize(Model.Meldingen.Where(m => m.IsOpen && m.Type == ServiceCore.Budget.MeldingType.Fout).GroupBy(m => (m.Stap, m.Code)).Select(g => new { stap = g.Key.Stap, label = Model.Steps[g.Key.Stap - 1].Label, tekst = g.First().Tekst, href = Model.Steps[g.Key.Stap - 1].Href }));
 }
 <script>(function(){try{var d=sessionStorage.getItem("bw-dir");if(d){document.documentElement.setAttribute("data-bw-dir",d);sessionStorage.removeItem("bw-dir");}}catch(e){}})();</script>
 @Html.AntiForgeryToken()
 @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwBevestigModal.cshtml")
-<nav class="gl-v2-bw-stappen" id="gl-v2-bw-stappen" aria-label="Stappen van het budget" data-step="@Model.Step" data-steps="@Model.Steps.Count" data-hrefs="@hrefs">
+<nav class="gl-v2-bw-stappen" id="gl-v2-bw-stappen" aria-label="Stappen van het budget" data-step="@Model.Step" data-steps="@Model.Steps.Count" data-hrefs="@hrefs" data-fouten="@fouten">
     <div class="gl-v2-bw-chips">
         @await Html.PartialAsync("GlV2/_Steps", chips)
     </div>

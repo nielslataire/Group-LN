@@ -23,12 +23,16 @@
     };
     var isWoning = (Model.GroupTypeName ?? "").Contains("woon", StringComparison.OrdinalIgnoreCase);
     var zonderGrond = isWoning && Model.Grondopp <= 0m;
+    var mld = (ViewData["Chrome"] as CPMCore.Models.Budget.BudgetWizardChromeVm)?.Op(Model.Id.ToString(), "rij");   // 39k
+    var fout = mld?.Type == ServiceCore.Budget.MeldingType.Fout;
+    var dubbel = mld?.Code == "dubbele-naam";
+    var opp0 = mld?.Code == "woning-zonder-opp";
     var subItems = allTypes.Where(t => Model.UnitGroupTypeId.HasValue && t.GroupId == Model.UnitGroupTypeId.Value).Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Name }).ToList();
 }
-<tr class="bw-opp-rij @(zonderGrond ? "is-warn" : "")" data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-group-type="@Model.UnitGroupTypeId" data-unit-type="@Model.UnitTypeId">
-    <td class="is-muted bw-rijnr is-num" style="width:36px">@Model.SortOrder</td>
+<tr class="bw-opp-rij @(fout ? "is-fout" : mld != null ? "is-warn" : "")" data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId" data-group-type="@Model.UnitGroupTypeId" data-unit-type="@Model.UnitTypeId">
+    <td class="is-muted bw-rijnr is-num" style="width:36px">@Model.SortOrder @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", mld)</td>
     <td style="min-width:150px">
-        <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input opp-naam" value="@Model.EenheidNaam" placeholder="bv. Lot 10" data-field="eenheidNaam" aria-label="Naam eenheid" /></div></div>
+        <div class="gl-v2-field gl-v2-field-bare@(dubbel ? " is-error" : "")"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input opp-naam" value="@Model.EenheidNaam" placeholder="bv. Lot 10" data-field="eenheidNaam" aria-label="Naam eenheid" /></div></div>
     </td>
     <td style="min-width:160px">
         @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "grp-" + Model.Id, Id = "bw-opp-grp-" + Model.Id, Bare = true, Placeholder = "— hoofdtype —", Value = Model.UnitGroupTypeId?.ToString() ?? "", Items = groupTypes.Select(g => new GlV2SelectItem { Value = g.Value, Text = g.Text }).ToList() })
@@ -38,9 +42,9 @@
     </td>
     @foreach (var (field, group, val) in velden)
     {
-        var leeg = field == "grondopp" && zonderGrond;
+        var leeg = opp0 && ((field == "grondopp" && Model.Grondopp <= 0m) || (field == "bewoonbareOpp" && Model.BewoonbareOpp <= 0m));
         <td class="is-num" data-group="@group" style="min-width:86px">
-            <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box @(leeg ? "is-error" : "")">
+            <div class="gl-v2-field gl-v2-field-bare@(leeg ? " is-warning" : "")"><div class="gl-v2-field-box">
                 <input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular opp-input" data-field="@field" value="@(val == 0m && field == "grondopp" && isWoning ? "" : F(val))" placeholder="@(leeg ? "—" : "0,00")" aria-label="@field" title="@(leeg ? "Deze woning heeft geen grondoppervlakte" : "")" />
             </div></div>
         </td>

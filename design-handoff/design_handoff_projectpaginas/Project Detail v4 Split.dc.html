@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Verkaveling Keerstraat — 4 nieuwbouwwoningen in Vlekkem (Erpe-Mere) | Group LN</title>
+<meta name="description" content="Vier energiezuinige nieuwbouwwoningen in Vlekkem, Erpe-Mere. Lot 3 (halfopen, 200 m², 3 slaapkamers) beschikbaar vanaf € 567.000.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./keerstraat.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Book.woff2') format('woff2');font-weight:400}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Heavy.woff2') format('woff2');font-weight:700}
+html{scroll-behavior:smooth}
+body{margin:0;background:#F2F5EF;font-family:'Avenir','Open Sans',sans-serif;color:#2C3B2A;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#00532D;text-decoration:none}a:hover{color:#006638}
+input[type=range]{accent-color:#00532D;width:100%}
+.leaflet-tile-pane{filter:grayscale(0.85) sepia(0.12) brightness(1.04) contrast(0.92)}
+.leaflet-container{font-family:'Avenir',sans-serif;background:#EEF1EA}
+</style>
+</helmet>
+
+<div style="display:flex;flex-direction:column;min-width:0">
+<header style="position:sticky;top:0;z-index:1200;background:#00532D;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 clamp(20px,3vw,48px)">
+  <a href="#" style="display:flex;align-items:center;gap:12px"><img src="WWWCOPRO/Content/img/logo.png" alt="Group LN" style="height:40px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:23px;font-weight:700;color:#fff;line-height:0.85;text-transform:uppercase">Group LN</span><span style="font-size:10px;color:rgba(255,255,255,0.75);text-transform:uppercase">Projectontwikkeling</span></span></a>
+  <div style="display:flex;align-items:center;gap:28px;min-width:0;flex:1;justify-content:flex-end">
+    <nav style="display:{{ navDisp }};gap:26px;white-space:nowrap;overflow:hidden;min-width:0"><a href="Woonprojecten v2.dc.html" style="text-transform:uppercase;letter-spacing:0.5px;font-size:13px;font-weight:700;color:#C9A96E">Woonprojecten</a><a href="#" style="text-transform:uppercase;letter-spacing:0.5px;font-size:13px;font-weight:700;color:#fff">Grond aanbieden</a><a href="#" style="text-transform:uppercase;letter-spacing:0.5px;font-size:13px;font-weight:700;color:#fff">Blog</a><a href="#" style="text-transform:uppercase;letter-spacing:0.5px;font-size:13px;font-weight:700;color:#fff">Contact</a></nav>
+    <span style="width:44px;height:44px;border-radius:50%;background:#C9A96E;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="display:flex;flex-direction:column;gap:4px;width:19px"><span style="height:2.5px;background:#2C3B2A"></span><span style="height:2.5px;background:#2C3B2A"></span><span style="height:2.5px;background:#2C3B2A"></span></span></span>
+  </div>
+</header>
+
+<div style="display:grid;grid-template-columns:{{ layout.cols }};align-items:start">
+  <!-- LINKS: sticky beeld -->
+  <aside style="position:{{ layout.pos }};top:{{ layout.top }};height:{{ layout.h }};min-height:520px;overflow:hidden;background:#1d2a1f">
+    <sc-for list="{{ media }}" as="m" hint-placeholder-count="1">
+      <div style="position:absolute;inset:0;opacity:{{ m.op }};transition:opacity 0.6s ease"><image-slot id="{{ m.slot }}" shape="rect" src="{{ m.src }}" placeholder="{{ m.ph }}"></image-slot></div>
+    </sc-for>
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,20,10,0.35) 0%,rgba(0,20,10,0) 25%,rgba(0,20,10,0) 50%,rgba(0,20,10,0.82) 100%);pointer-events:none"></div>
+    <div style="position:absolute;left:0;right:0;top:0;padding:24px clamp(20px,3vw,48px);display:flex;justify-content:space-between;pointer-events:none">
+      <span style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#fff;white-space:nowrap">{{ mediaLabel }}</span>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;padding:clamp(24px,3vw,48px);display:flex;flex-direction:column;gap:18px;color:#fff;pointer-events:none">
+      <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:#fff;color:#2C3B2A;font-size:12px;font-weight:700;padding:7px 13px;border-radius:20px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:#3B6D11"></span>{{ ov.badge }}</span>
+      <div style="font-family:'Playfair Display',Georgia,serif;font-size:clamp(34px,3.6vw,54px);line-height:1.05">Verkaveling Keerstraat</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,0.3);padding-top:18px">
+        <div><div style="font-size:12px;color:rgba(255,255,255,0.75)">{{ ov.line }}</div><div style="font-family:'Playfair Display',Georgia,serif;font-size:28px;white-space:nowrap">{{ ov.price }}</div></div>
+        <a href="#contact" style="pointer-events:auto;background:#fff;color:#2C3B2A;padding:15px 24px;border-radius:4px;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;box-shadow:0 10px 30px rgba(0,0,0,0.28);white-space:nowrap" style-hover="background:#C9A96E;color:#2C3B2A">Informatie aanvragen</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RECHTS: scrollverhaal -->
+  <main style="min-width:0">
+    <section data-media="0" data-screen-label="Intro" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px)">
+      <p style="margin:0 0 20px;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#00532D">Vlekkem · Erpe-Mere · Oost-Vlaanderen</p>
+      <h1 style="margin:0 0 24px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(26px,4vw,64px);line-height:1.08;text-wrap:balance;overflow-wrap:break-word">Vier nieuwbouwwoningen, <em style="font-weight:400;color:#00532D">waar de rust begint.</em></h1>
+      <p style="margin:0 0 18px;font-size:18px;line-height:1.75;color:#5a6b58;max-width:600px">Verkaveling Keerstraat is een kleinschalig nieuwbouwproject van Group LN in Vlekkem, een landelijke deelgemeente van Erpe-Mere in Oost-Vlaanderen. Op de site aan de Keerstraat 237 bouwen we vier energiezuinige woningen, ontworpen door TARCH Architectenbureau.</p>
+      <p style="margin:0 0 40px;font-size:16px;line-height:1.8;color:#5a6b58;max-width:600px">Aan de straat staan drie woningen: twee halfopen en één gesloten, op percelen van 404 tot 467 m². Achteraan, bereikbaar via een private oprit, ligt een vrijstaande woning op een perceel van 2.081 m². Lot 3, een halfopen woning van 200 m² met drie slaapkamers, is nog beschikbaar vanaf € 567.000. De oplevering is gepland in het voorjaar van 2027.</p>
+      <dl style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 28px">
+        <sc-for list="{{ facts }}" as="f" hint-placeholder-count="6"><div style="border-top:1px solid rgba(0,83,45,0.15);padding:14px 0 16px"><dt style="font-size:12px;color:#5a6b58">{{ f.k }}</dt><dd style="margin:4px 0 0;font-family:'Playfair Display',Georgia,serif;font-size:21px">{{ f.v }}</dd></div></sc-for>
+      </dl>
+      <div style="margin-top:32px;display:flex;gap:12px;flex-wrap:wrap">
+        <a href="#contact" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;background:#00532D;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#006638;color:#fff"><span>Informatie aanvragen</span></a>
+        <a href="#prijslijst" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;background:#fff;color:#2C3B2A;border:1.5px solid #2C3B2A;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#00532D;color:#fff;border-color:#00532D"><span>Bekijk de prijzen</span></a>
+      </div>
+    </section>
+
+    <section id="verhaal" data-media="1" data-screen-label="Verhaal" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px);background:#fff">
+      <h2 style="margin:0 0 20px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px);line-height:1.12;text-wrap:balance">Waar het dorp ophoudt en de velden beginnen.</h2>
+      <p style="margin:0 0 40px;font-size:17px;line-height:1.8;color:#5a6b58;max-width:600px">Vlekkem ontdek je pas als je er bent. Een kerk, een school, een bakker. En aan de rand, waar de Keerstraat uitkijkt over het open land, vier nieuwe woningen — bewust bescheiden van schaal, zodat ze in het dorp passen in plaats van het te overstemmen.</p>
+      <div style="display:flex;flex-direction:column;gap:48px">
+        <sc-for list="{{ story }}" as="st" hint-placeholder-count="2">
+          <figure style="margin:0;display:flex;flex-direction:column;gap:18px">
+            <div style="aspect-ratio:3/2;border-radius:4px;overflow:hidden;background:#dfe5da"><image-slot id="{{ st.slot }}" shape="rect" src="{{ st.src }}" placeholder="{{ st.ph }}"></image-slot></div>
+            <figcaption style="font-size:16px;line-height:1.8;color:#5a6b58;max-width:600px">{{ st.tekst }}</figcaption>
+          </figure>
+        </sc-for>
+      </div>
+      <div style="margin-top:56px;background:#00532D;border-radius:6px;padding:clamp(22px,2.4vw,32px);display:flex;flex-direction:column;gap:14px;color:#fff">
+        <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#C9A96E">Brochure</p>
+        <h3 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(22px,2vw,28px);line-height:1.25;color:#fff;text-wrap:balance">Alle plannen, materialen en prijzen in één document.</h3>
+        <sc-if value="{{ notBro }}" hint-placeholder-val="{{ true }}">
+          <form style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px"><input type="email" aria-label="E-mailadres" placeholder="jouw@email.be" style="flex:1 1 200px;min-width:0;min-height:48px;font:inherit;font-size:15px;padding:0 14px;border-radius:4px;border:none;color:#2C3B2A"><button type="button" onClick="{{ sendBro }}" style="min-height:48px;padding:0 20px;background:#C9A96E;color:#2C3B2A;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#B8935A">Stuur mij de brochure</button></form>
+        </sc-if>
+        <sc-if value="{{ bro }}" hint-placeholder-val="{{ false }}"><p style="margin:4px 0 0;font-size:15px;color:#fff">✓ De brochure is onderweg naar je mailbox.</p></sc-if>
+      </div>
+    </section>
+
+    <section id="architectuur" data-media="7" data-screen-label="Architectuur" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px)">
+      <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#00532D">Architectuur door TARCH</p>
+      <h2 style="margin:0 0 20px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px);line-height:1.12;text-wrap:balance">Strak en doordacht. Warm waar je het aanraakt.</h2>
+      <p style="margin:0 0 16px;font-size:16px;line-height:1.8;color:#5a6b58;max-width:600px">TARCH Architectenbureau tekende vier woningen die de schaal en het ritme van de Keerstraat respecteren. Zadeldaken en een rustige gevelopbouw sluiten aan bij de landelijke omgeving; grote raampartijen en een open plan maken ze eigentijds.</p>
+      <p style="margin:0 0 40px;font-size:16px;line-height:1.8;color:#5a6b58;max-width:600px">De materialen zijn gekozen om mooi te verouderen en weinig onderhoud te vragen. Elke woning heeft een eigen oriëntatie, zodat leefruimte en tuin het beste licht van de dag krijgen.</p>
+      <blockquote style="margin:0 0 48px;padding-left:24px;border-left:1px solid rgba(0,83,45,0.3);max-width:560px"><p style="margin:0 0 8px;font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:21px;line-height:1.5">“Woningen die niet om aandacht vragen, maar die je elke dag opnieuw aangenaam verrassen.”</p><footer style="font-size:13px;color:#5a6b58">Group LN over Keerstraat</footer></blockquote>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:32px 20px">
+        <sc-for list="{{ materials }}" as="mt" hint-placeholder-count="3">
+          <figure style="margin:0;display:flex;flex-direction:column;gap:16px">
+            <div style="aspect-ratio:4/5;border-radius:4px;overflow:hidden;background:#EEF1EA"><image-slot id="{{ mt.slot }}" shape="rect" src="{{ mt.src }}" placeholder="{{ mt.ph }}"></image-slot></div>
+            <figcaption style="display:flex;flex-direction:column;gap:8px">
+              <h3 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:21px">{{ mt.titel }}</h3>
+              <p style="margin:0;font-size:15px;line-height:1.8;color:#5a6b58">{{ mt.tekst }}</p>
+            </figcaption>
+          </figure>
+        </sc-for>
+      </div>
+      <h3 style="margin:64px 0 8px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:26px">Comfort en energie</h3>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.8;color:#5a6b58;max-width:600px">Alle woningen halen een E-peil van E20 of lager. Ze zijn klaar voor een toekomst zonder fossiele brandstoffen.</p>
+      <dl style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 28px">
+        <sc-for list="{{ tech }}" as="t" hint-placeholder-count="6"><div style="border-top:1px solid rgba(0,83,45,0.15);padding:14px 0 16px"><dt style="font-size:15px;font-weight:700;color:#2C3B2A">{{ t.k }}</dt><dd style="margin:4px 0 0;font-size:14px;line-height:1.65;color:#5a6b58">{{ t.v }}</dd></div></sc-for>
+      </dl>
+      <div style="margin-top:40px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:20px 22px;background:#fff;border:1px solid rgba(0,83,45,0.12);border-radius:6px">
+        <div style="min-width:0;flex:1 1 240px"><strong style="display:block;font-size:16px">Alle technische details</strong><span style="display:block;font-size:14px;line-height:1.6;color:#5a6b58">Het lastenboek beschrijft materialen, technieken en afwerking per woning.</span></div>
+        <a href="#" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;background:#fff;color:#2C3B2A;border:1.5px solid #2C3B2A;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#00532D;color:#fff;border-color:#00532D"><span>⤓ Lastenboek</span></a>
+      </div>
+    </section>
+
+    <section id="woningen" data-media="2" data-screen-label="Woningen" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px)">
+      <h2 style="margin:0 0 12px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px);line-height:1.12">De woningen</h2>
+      <p style="margin:0 0 24px;font-size:16px;line-height:1.75;color:#5a6b58;max-width:600px">Vier woningen op vier percelen. Kies een lot op de projectkaart of hieronder om in te zoomen.</p>
+      <div role="tablist" aria-label="Kies een lot" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:14px;padding-bottom:2px">
+        <sc-for list="{{ lotTabs }}" as="t" hint-placeholder-count="4">
+          <button role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" style="flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};font-family:inherit;font-size:14px;font-weight:700;cursor:pointer"><span style="width:8px;height:8px;border-radius:50%;background:{{ t.dot }}"></span>{{ t.lot }}</button>
+        </sc-for>
+      </div>
+      <div style="position:relative;width:100%;aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:#cfd8c8;isolation:isolate">
+        <div style="position:absolute;inset:0;transform-origin:0 0;transform:{{ stage.tf }};transition:transform 0.7s cubic-bezier(.2,.7,.2,1)">
+          <image-slot id="s4-aerial" shape="rect" placeholder="Luchtfoto / vogelperspectief-render van het terrein (straat bovenaan)"></image-slot>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+            <rect x="0" y="0" width="100" height="100" fill="transparent" onClick="{{ closeLot }}"></rect>
+            <sc-for list="{{ zones }}" as="z" hint-placeholder-count="4">
+              <polygon points="{{ z.pts }}" onClick="{{ z.pick }}" onMouseEnter="{{ z.enter }}" onMouseLeave="{{ z.leave }}" style="cursor:pointer;fill:{{ z.fill }};fill-opacity:{{ z.fo }};stroke:{{ z.stroke }};stroke-width:{{ z.sw }};vector-effect:non-scaling-stroke;transition:fill-opacity .25s"></polygon>
+            </sc-for>
+          </svg>
+          <sc-for list="{{ zones }}" as="z" hint-placeholder-count="4">
+            <span style="position:absolute;left:{{ z.lx }}%;top:{{ z.ly }}%;transform:translate(-50%,-50%) scale({{ stage.inv }});transition:transform 0.7s, opacity .3s;opacity:{{ z.lo }};pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="background:{{ z.tagBg }};color:{{ z.tagFg }};font-size:13px;font-weight:700;padding:6px 12px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,0.2);white-space:nowrap">{{ z.lot }}</span>
+              <span style="font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.6);white-space:nowrap">{{ z.sub }}</span>
+            </span>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}">
+          <span style="position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(255,255,255,0.94);color:#2C3B2A;font-size:13px;font-weight:700;padding:8px 14px;border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,0.15);pointer-events:none;white-space:nowrap">{{ hint }}</span>
+        </sc-if>
+        <sc-if value="{{ cardInMap }}" hint-placeholder-val="{{ false }}">
+          <div role="dialog" aria-label="{{ sel.lot }}" style="position:absolute;left:12px;right:12px;bottom:12px;max-width:520px;background:#fff;border-radius:8px;box-shadow:0 12px 36px rgba(0,0,0,0.25);padding:18px 20px;display:flex;flex-direction:column;gap:14px;z-index:2">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+              <div style="flex:1;min-width:0"><div style="font-size:12px;color:#5a6b58;white-space:nowrap">{{ sel.type }}</div><h3 style="margin:2px 0 0;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:28px;line-height:1">{{ sel.lot }}</h3></div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;background:{{ sel.pillBg }};color:{{ sel.pillFg }};white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ sel.status }}</span>
+                <button onClick="{{ closeLot }}" aria-label="Sluiten" style="width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,83,45,0.2);background:#fff;cursor:pointer;font-size:18px;color:#2C3B2A;display:flex;align-items:center;justify-content:center">✕</button>
+              </div>
+            </div>
+            <dl style="margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ sel.key }}" as="sp" hint-placeholder-count="4"><div><dt style="font-size:11px;color:#5a6b58">{{ sp.k }}</dt><dd style="margin:2px 0 0;font-family:'Playfair Display',Georgia,serif;font-size:18px;white-space:nowrap">{{ sp.v }}</dd></div></sc-for>
+            </dl>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(0,83,45,0.12);padding-top:14px">
+              <span style="font-family:'Playfair Display',Georgia,serif;font-size:24px;color:{{ sel.priceCol }};white-space:nowrap">{{ sel.price }}</span>
+              <div style="display:flex;gap:8px;flex-wrap:nowrap">
+                <a href="#" style="display:{{ sel.gpDisp }};border:1.5px solid #2C3B2A;color:#2C3B2A;padding:11px 14px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap">Grondplan ⤓</a>
+                <a href="#prijslijst" onClick="{{ closeLot }}" style="background:#00532D;color:#fff;padding:12px 16px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap" style-hover="background:#006638;color:#fff">{{ sel.cta }}</a>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ cardSheet }}" hint-placeholder-val="{{ false }}">
+        <div role="dialog" aria-label="{{ sel.lot }}" style="position:fixed;left:0;right:0;bottom:0;z-index:1300;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,0.25);padding:10px 20px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px">
+          <span style="align-self:center;width:40px;height:4px;border-radius:2px;background:#D6E5CC"></span>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+              <div style="flex:1;min-width:0"><div style="font-size:12px;color:#5a6b58;white-space:nowrap">{{ sel.type }}</div><h3 style="margin:2px 0 0;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:28px;line-height:1">{{ sel.lot }}</h3></div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;background:{{ sel.pillBg }};color:{{ sel.pillFg }};white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>{{ sel.status }}</span>
+                <button onClick="{{ closeLot }}" aria-label="Sluiten" style="width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,83,45,0.2);background:#fff;cursor:pointer;font-size:18px;color:#2C3B2A;display:flex;align-items:center;justify-content:center">✕</button>
+              </div>
+            </div>
+            <dl style="margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ sel.key }}" as="sp" hint-placeholder-count="4"><div><dt style="font-size:11px;color:#5a6b58">{{ sp.k }}</dt><dd style="margin:2px 0 0;font-family:'Playfair Display',Georgia,serif;font-size:18px;white-space:nowrap">{{ sp.v }}</dd></div></sc-for>
+            </dl>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(0,83,45,0.12);padding-top:14px">
+              <span style="font-family:'Playfair Display',Georgia,serif;font-size:24px;color:{{ sel.priceCol }};white-space:nowrap">{{ sel.price }}</span>
+              <div style="display:flex;gap:8px;flex-wrap:nowrap">
+                <a href="#" style="display:{{ sel.gpDisp }};border:1.5px solid #2C3B2A;color:#2C3B2A;padding:11px 14px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap">Grondplan ⤓</a>
+                <a href="#prijslijst" onClick="{{ closeLot }}" style="background:#00532D;color:#fff;padding:12px 16px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap" style-hover="background:#006638;color:#fff">{{ sel.cta }}</a>
+              </div>
+            </div>
+        </div>
+      </sc-if>
+      <div id="prijslijst" style="margin-top:72px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+          <div>
+            <h3 style="margin:0 0 6px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(26px,2.4vw,34px)">Prijslijst</h3>
+            <p style="margin:0;font-size:14px;color:#5a6b58">Prijzen excl. btw, registratie- en notariskosten. Bijgewerkt op 22 september 2026.</p>
+          </div>
+          <div role="radiogroup" aria-label="Filter" style="display:flex;background:#fff;border:1px solid rgba(0,83,45,0.15);border-radius:24px;padding:3px">
+            <sc-for list="{{ listTabs }}" as="t" hint-placeholder-count="2"><button role="radio" aria-checked="{{ t.on }}" onClick="{{ t.pick }}" style="min-height:40px;padding:0 16px;border-radius:20px;border:none;background:{{ t.bg }};color:{{ t.fg }};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">{{ t.label }}</button></sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ asTable }}" hint-placeholder-val="{{ true }}">
+          <div role="table" aria-label="Prijslijst Verkaveling Keerstraat" style="border-radius:4px;overflow:hidden;border:1px solid rgba(0,83,45,0.12)">
+            <div role="row" style="display:grid;grid-template-columns:{{ gridCols }};gap:12px;align-items:center;min-height:52px;padding:0 20px;background:#00532D">
+              <span role="columnheader" style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.75)">Lot</span>
+              <span role="columnheader" style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.75);text-align:right">Bewoonbaar</span>
+              <span role="columnheader" style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.75);text-align:right">Grond</span>
+              <span role="columnheader" style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.75)">Slpk</span>
+              <span role="columnheader" style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.75);text-align:right">Prijs</span>
+              <span role="columnheader" style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.75);text-align:center">Plan</span>
+            </div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="4">
+              <div role="row" style="display:grid;grid-template-columns:{{ gridCols }};gap:12px;align-items:center;min-height:64px;padding:12px 20px;background:{{ r.rowBg }};border-top:1px solid rgba(0,83,45,0.08)">
+                <span role="cell" style="min-width:0"><span style="display:block;font-size:15px;font-weight:700;color:{{ r.lotCol }}">{{ r.lot }}</span><span style="display:block;font-size:12px;color:#7A9E6E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.type }}</span></span>
+                <span role="cell" style="text-align:right;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums;color:{{ r.col }}">{{ r.bew }}</span>
+                <span role="cell" style="text-align:right;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums;color:{{ r.col }}">{{ r.grond }}</span>
+                <span role="cell" aria-label="{{ r.skLabel }}" style="display:flex;align-items:center;gap:4px"><sc-for list="{{ r.dots }}" as="d" hint-placeholder-count="4"><span style="width:7px;height:7px;border-radius:50%;background:{{ d.bg }};border:1px solid {{ d.bd }}"></span></sc-for><span style="font-size:12px;color:#5a6b58;margin-left:4px">{{ r.sk }}</span></span>
+                <span role="cell" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+                  <sc-if value="{{ r.sold }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 11px;border-radius:20px;background:#ECEEEA;color:#6b736a;white-space:nowrap"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Verkocht</span></sc-if>
+                  <sc-for list="{{ r.priceLines }}" as="p" hint-placeholder-count="1"><span style="display:flex;align-items:baseline;gap:8px;white-space:nowrap"><span style="font-size:11px;color:#5a6b58">{{ p.label }}</span><span style="font-family:'Playfair Display',Georgia,serif;font-size:{{ p.size }};color:#00532D;font-variant-numeric:tabular-nums">{{ p.v }}</span></span></sc-for>
+                  <sc-if value="{{ r.avail }}" hint-placeholder-val="{{ true }}"><button onClick="{{ r.toCalc }}" title="Bereken je maandlast" style="background:none;border:none;padding:2px 0;cursor:pointer;font-family:inherit;font-size:11px;color:#00532D;text-decoration:underline;text-underline-offset:2px;white-space:nowrap">≈ {{ r.maand }} / maand</button></sc-if>
+                </span>
+                <span role="cell" style="display:flex;justify-content:center">
+                  <sc-if value="{{ r.avail }}" hint-placeholder-val="{{ true }}"><a href="#" aria-label="{{ r.planLabel }}" title="{{ r.planLabel }}" style="width:36px;height:36px;border-radius:4px;border:1px solid rgba(0,83,45,0.25);background:#fff;display:flex;align-items:center;justify-content:center;color:#00532D" style-hover="border-color:#00532D;background:#F2F5EF"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"></path></svg></a></sc-if>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+          <dl style="margin:12px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));background:#fff;border:1px solid rgba(0,83,45,0.12);border-radius:4px">
+            <sc-for list="{{ sumCells }}" as="c" hint-placeholder-count="5">
+              <div style="padding:16px 18px;border-right:1px solid rgba(0,83,45,0.08)"><dt style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#7A9E6E">{{ c.k }}</dt><dd style="margin:6px 0 0;font-family:'Playfair Display',Georgia,serif;font-size:19px;white-space:nowrap">{{ c.v }}</dd><dd style="margin:2px 0 0;font-size:12px;color:#5a6b58">{{ c.s }}</dd></div>
+            </sc-for>
+          </dl>
+        </sc-if>
+
+        <sc-if value="{{ asCards }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+              <article style="background:{{ r.cardBg }};border:1px solid rgba(0,83,45,0.12);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;color:{{ r.col }}">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+                  <h4 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:22px;white-space:nowrap;flex-shrink:0">{{ r.lot }}</h4>
+                  <sc-if value="{{ r.single }}" hint-placeholder-val="{{ true }}"><span style="font-size:17px;font-weight:700;white-space:nowrap;color:{{ r.priceCol }}">{{ r.singlePrice }}</span></sc-if>
+                </div>
+                <p style="margin:-6px 0 0;font-size:13px;color:#5a6b58">{{ r.sub }} · {{ r.bew }}</p>
+                <sc-if value="{{ r.multi }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;border-top:1px solid rgba(0,83,45,0.1)">
+                    <sc-for list="{{ r.opts }}" as="o" hint-placeholder-count="2"><div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,83,45,0.06);font-size:14px"><span>{{ o.t }}</span><strong style="white-space:nowrap">{{ o.p }}</strong></div></sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.avail }}" hint-placeholder-val="{{ true }}"><button onClick="{{ r.toCalc }}" style="align-self:flex-start;background:none;border:none;padding:4px 0;cursor:pointer;font-family:inherit;font-size:13px;color:#00532D;text-decoration:underline;text-underline-offset:2px">≈ {{ r.maand }} / maand · bereken</button></sc-if>
+                <sc-if value="{{ r.avail }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;gap:8px">
+                    <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:6px;border:1px solid rgba(0,83,45,0.25);color:#2C3B2A;font-size:13px;font-weight:700"><span>⤓ Grondplan</span></a>
+                    <a href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:6px;border:1px solid rgba(0,83,45,0.25);color:#2C3B2A;font-size:13px;font-weight:700"><span>⤓ Lastenboek</span></a>
+                  </div>
+                </sc-if>
+              </article>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div id="maandlast" style="margin-top:48px;border:1px solid rgba(0,83,45,0.12);border-radius:6px;overflow:hidden;background:#fff">
+          <div style="padding:clamp(20px,2.2vw,28px);display:flex;flex-direction:column;gap:20px">
+            <div>
+              <h3 style="margin:0 0 6px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(24px,2.2vw,30px)">Wat betaal je per maand?</h3>
+              <p style="margin:0;font-size:14px;line-height:1.6;color:#5a6b58">Kies een woning en stel de lening in naar jouw situatie.</p>
+            </div>
+            <div role="radiogroup" aria-label="Kies een woning" style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ calcChips }}" as="c" hint-placeholder-count="2"><button role="radio" aria-checked="{{ c.on }}" onClick="{{ c.pick }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:52px;padding:8px 14px;border-radius:6px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};font-family:inherit;cursor:pointer;text-align:left"><span style="font-size:14px;font-weight:700;color:#2C3B2A;white-space:nowrap">{{ c.label }}</span><span style="font-size:12px;color:#5a6b58;white-space:nowrap">{{ c.sub }}</span></button></sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px 24px">
+              <label style="display:flex;flex-direction:column;gap:8px"><span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#5a6b58">Eigen inbreng<strong style="color:#2C3B2A;font-variant-numeric:tabular-nums">{{ calc.inbrengTxt }}</strong></span><input type="range" min="0" max="400000" step="5000" value="{{ calc.inbreng }}" onChange="{{ onInbreng }}"></label>
+              <label style="display:flex;flex-direction:column;gap:8px"><span style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#5a6b58">Rentevoet<strong style="color:#2C3B2A;font-variant-numeric:tabular-nums">{{ calcRes.rente }}</strong></span><input type="range" min="1.5" max="5.5" step="0.05" value="{{ calcRes.renteVal }}" onChange="{{ onRente }}"></label>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:#5a6b58">Looptijd</span>
+              <div style="display:flex;gap:6px;max-width:420px"><sc-for list="{{ jaarOpts }}" as="j" hint-placeholder-count="4"><button onClick="{{ j.pick }}" style="flex:1;min-height:44px;border-radius:4px;border:1px solid #00532D;background:{{ j.bg }};color:{{ j.fg }};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">{{ j.label }}</button></sc-for></div>
+            </div>
+          </div>
+          <div style="background:#00532D;color:#fff;padding:clamp(20px,2.2vw,28px);display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+              <div><div style="font-size:13px;color:rgba(255,255,255,0.8);margin-bottom:6px">Geschatte maandlast · {{ calcRes.title }}</div><div style="font-family:'Playfair Display',Georgia,serif;font-size:clamp(44px,4.4vw,64px);line-height:1;font-variant-numeric:tabular-nums">{{ calcRes.maand }}</div></div>
+              <div style="font-size:13px;line-height:1.6;color:rgba(255,255,255,0.85);text-align:right">Lening {{ calcRes.lening }}<br>{{ calcRes.jaren }} jaar aan {{ calcRes.rente }}</div>
+            </div>
+            <div style="display:flex;gap:12px 16px;flex-wrap:wrap;align-items:center;border-top:1px solid rgba(255,255,255,0.2);padding-top:18px">
+              <button onClick="{{ calcCta }}" style="min-height:48px;padding:0 20px;background:#C9A96E;color:#2C3B2A;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#B8935A">Vraag een persoonlijke simulatie</button>
+              <span style="font-size:13px;color:rgba(255,255,255,0.85)">Vrijblijvend · antwoord binnen één werkdag</span>
+            </div>
+          </div>
+          <p style="margin:0;padding:12px clamp(20px,2.2vw,28px);font-size:12px;line-height:1.6;color:#5a6b58;background:#F7F9F5">Indicatieve berekening, geen kredietaanbod. Excl. btw-, registratie- en notariskosten.</p>
+        </div>
+
+        <h3 style="margin:56px 0 16px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(22px,2vw,28px)">Documenten</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px">
+          <sc-for list="{{ docs }}" as="d" hint-placeholder-count="4">
+            <a href="#" style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:#fff;border:1px solid rgba(0,83,45,0.12);border-radius:6px;color:#2C3B2A" style-hover="border-color:#00532D;color:#2C3B2A">
+              <span style="width:40px;height:48px;flex-shrink:0;border-radius:3px;background:#F2F5EF;border:1px solid rgba(0,83,45,0.15);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font-size:9px;font-weight:900;letter-spacing:0.5px;color:#00532D">PDF</span>
+              <span style="flex:1;min-width:0"><span style="display:block;font-size:15px;font-weight:700">{{ d.t }}</span><span style="display:block;font-size:12px;color:#5a6b58">{{ d.m }}</span></span>
+              <span style="font-size:18px;color:#00532D">⤓</span>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section id="ligging" data-media="3" data-screen-label="Ligging" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px);background:#fff">
+      <h2 style="margin:0 0 12px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px);line-height:1.12">Ligging</h2>
+      <p style="margin:0 0 28px;font-size:16px;line-height:1.8;color:#5a6b58;max-width:600px">Vlekkem is een van de acht deelgemeenten van Erpe-Mere, tussen Aalst en Oosterzele. Het is landelijk, maar niet afgelegen: school en bakker te voet, station Erpe-Mere met de fiets, de E40 binnen tien minuten.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px 32px;margin-bottom:36px">
+        <sc-for list="{{ gids }}" as="g" hint-placeholder-count="4"><div><h3 style="margin:0 0 6px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:20px">{{ g.t }}</h3><p style="margin:0;font-size:15px;line-height:1.75;color:#5a6b58">{{ g.p }}</p></div></sc-for>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="6"><button onClick="{{ c.toggle }}" style="min-height:40px;padding:0 15px;border-radius:20px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">{{ c.label }}</button></sc-for>
+      </div>
+      <div style="position:relative;height:440px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,83,45,0.12);isolation:isolate"><div ref="{{ mapRef }}" style="position:absolute;inset:0"></div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:20px">
+        <sc-for list="{{ travel }}" as="t" hint-placeholder-count="4"><div style="background:#F2F5EF;border-radius:4px;padding:14px 16px"><div style="font-size:12px;color:#5a6b58">{{ t.to }}</div><div style="font-family:'Playfair Display',Georgia,serif;font-size:22px">{{ t.min }}</div></div></sc-for>
+      </div>
+      <div style="margin-top:32px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:20px 22px;background:#F2F5EF;border-radius:6px">
+        <div style="min-width:0;flex:1 1 240px"><strong style="display:block;font-size:16px">Wil je weten of Vlekkem bij je past?</strong><span style="display:block;font-size:14px;line-height:1.6;color:#5a6b58">We kennen de buurt en vertellen je er graag meer over.</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><a href="#" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;background:#fff;color:#2C3B2A;border:1.5px solid #2C3B2A;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap"><span>Bel ons</span></a><button onClick="{{ goVraag }}" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;background:#00532D;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#006638">Stel je vraag</button></div>
+      </div>
+    </section>
+
+    <section id="bouwfase" data-media="4" data-screen-label="Bouwfase" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+        <h2 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px)">Bouwfase</h2>
+        <span style="font-family:'Playfair Display',Georgia,serif;font-size:44px;color:#00532D">72%</span>
+      </div>
+      <div style="height:6px;background:#D6E5CC;border-radius:3px;overflow:hidden;margin-bottom:28px"><div style="width:72%;height:100%;background:#00532D"></div></div>
+      <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="6">
+        <div style="display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid rgba(0,83,45,0.1);color:{{ t.col }}"><span style="font-size:15px;font-weight:{{ t.fw }}">{{ t.titel }}</span><span style="font-size:14px">{{ t.datum }}</span></div>
+      </sc-for>
+      <div style="margin-top:32px;padding:20px 22px;background:#fff;border:1px solid rgba(0,83,45,0.12);border-radius:6px;display:flex;flex-direction:column;gap:12px">
+        <div><strong style="display:block;font-size:16px">Volg de werf</strong><span style="display:block;font-size:14px;line-height:1.6;color:#5a6b58">Ontvang maandelijks een korte update met foto's van de bouw.</span></div>
+        <sc-if value="{{ notUpd }}" hint-placeholder-val="{{ true }}"><form style="display:flex;gap:10px;flex-wrap:wrap"><input type="email" aria-label="E-mailadres" placeholder="jouw@email.be" style="flex:1 1 200px;min-width:0;min-height:48px;font:inherit;font-size:15px;padding:0 14px;border-radius:4px;border:1px solid rgba(0,83,45,0.22);color:#2C3B2A"><button type="button" onClick="{{ sendUpd }}" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;background:#00532D;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#006638">Hou mij op de hoogte</button></form></sc-if>
+        <sc-if value="{{ upd }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:15px;color:#00532D">✓ Je ontvangt de volgende werfupdate.</p></sc-if>
+      </div>
+    </section>
+
+    <section id="kopen" data-media="5" data-screen-label="Kopen" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px);background:#fff">
+      <h2 style="margin:0 0 18px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px)">Zo verloopt de aankoop</h2>
+            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:18px 1fr;gap:16px;padding:12px 0"><span style="width:10px;height:10px;border-radius:50%;background:#00532D;margin-top:8px"></span><div><strong style="font-size:15px">{{ s.t }}</strong><span style="font-size:15px;color:#5a6b58"> — {{ s.p }}</span></div></div>
+      </sc-for>
+      <div style="margin-top:28px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-top:1px solid rgba(0,83,45,0.15);padding-top:24px">
+        <p style="margin:0;font-size:16px;color:#2C3B2A">De eerste stap is een vrijblijvend gesprek.</p>
+        <button onClick="{{ goKennis }}" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;background:#00532D;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#006638">Vraag een kennismaking</button>
+      </div>
+    </section>
+
+    <section id="vragen" data-media="5" data-screen-label="Vragen" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px)">
+      <h2 style="margin:0 0 24px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px)">Vragen</h2>
+      <div style="border-top:1px solid rgba(0,83,45,0.15)">
+        <sc-for list="{{ faqs }}" as="q" hint-placeholder-count="6">
+          <div style="border-bottom:1px solid rgba(0,83,45,0.15)">
+            <button onClick="{{ q.toggle }}" aria-expanded="{{ q.open }}" style="width:100%;display:flex;justify-content:space-between;gap:20px;padding:20px 0;background:none;border:none;cursor:pointer;text-align:left;font-family:'Playfair Display',Georgia,serif;font-size:19px;color:#2C3B2A"><span>{{ q.q }}</span><span style="color:#00532D">{{ q.sign }}</span></button>
+            <sc-if value="{{ q.open }}" hint-placeholder-val="{{ false }}"><p style="margin:0 0 22px;font-size:15px;line-height:1.8;color:#5a6b58">{{ q.a }}</p></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:28px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <p style="margin:0;font-size:16px;color:#2C3B2A">Staat je vraag er niet bij?</p>
+        <button onClick="{{ goVraag }}" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;background:#fff;color:#2C3B2A;border:1.5px solid #2C3B2A;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:#00532D;color:#fff;border-color:#00532D">Stel je vraag</button>
+      </div>
+    </section>
+
+    <section id="contact" data-media="6" data-screen-label="Contact" style="padding:clamp(48px,6vw,96px) clamp(24px,4vw,80px);background:#00532D;color:#fff">
+      <h2 style="margin:0 0 12px;font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(30px,3vw,44px);color:#fff;text-wrap:balance">{{ contactTitle }}</h2>
+      <p style="margin:0 0 28px;font-size:16px;line-height:1.75;color:rgba(255,255,255,0.85);max-width:560px">Je ontvangt de brochure, plannen en prijslijst binnen één werkdag. Je contactpersoon belt je enkel als je dat wil.</p>
+      <sc-if value="{{ notSent }}" hint-placeholder-val="{{ true }}">
+        <form style="background:#fff;border-radius:6px;padding:clamp(20px,2.4vw,32px);display:flex;flex-direction:column;gap:18px;color:#2C3B2A">
+          <fieldset style="border:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px">
+            <legend style="font-size:13px;font-weight:700;margin-bottom:8px;padding:0">Ik heb interesse in</legend>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ interestOpts }}" as="o" hint-placeholder-count="2"><button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height:40px;padding:0 14px;border-radius:20px;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">{{ o.label }}</button></sc-for>
+            </div>
+          </fieldset>
+          <div style="display:grid;grid-template-columns:{{ formCols }};gap:14px">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#2C3B2A">Voornaam<input autocomplete="given-name" style="min-height:50px;font:inherit;font-size:15px;font-weight:400;padding:0 14px;border:1px solid rgba(0,83,45,0.22);border-radius:4px;color:#2C3B2A;background:#fff"></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#2C3B2A">Naam<input autocomplete="family-name" style="min-height:50px;font:inherit;font-size:15px;font-weight:400;padding:0 14px;border:1px solid rgba(0,83,45,0.22);border-radius:4px;color:#2C3B2A;background:#fff"></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#2C3B2A">E-mail<input type="email" autocomplete="email" placeholder="naam@voorbeeld.be" style="min-height:50px;font:inherit;font-size:15px;font-weight:400;padding:0 14px;border:1px solid rgba(0,83,45,0.22);border-radius:4px;color:#2C3B2A;background:#fff"></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#2C3B2A">Gsm<input type="tel" autocomplete="tel" placeholder="+32 4…" style="min-height:50px;font:inherit;font-size:15px;font-weight:400;padding:0 14px;border:1px solid rgba(0,83,45,0.22);border-radius:4px;color:#2C3B2A;background:#fff"></label>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:#2C3B2A"><span>Bericht <span style="font-weight:400;color:#5a6b58">(optioneel)</span></span><textarea rows="3" value="{{ msg }}" onChange="{{ onMsg }}" style="font:inherit;font-size:15px;font-weight:400;padding:12px 14px;border:1px solid rgba(0,83,45,0.22);border-radius:4px;color:#2C3B2A;resize:vertical"></textarea></label>
+          <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;color:#5a6b58;cursor:pointer"><input type="checkbox" style="width:18px;height:18px;margin:1px 0 0;accent-color:#00532D;flex-shrink:0">Ik ga akkoord dat Group LN mijn gegevens gebruikt om mij over dit project te contacteren.</label>
+          <button type="button" onClick="{{ send }}" style="min-height:54px;background:#00532D;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:13px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;cursor:pointer" style-hover="background:#006638">Verstuur aanvraag</button>
+        </form>
+      </sc-if>
+      <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border-radius:6px;padding:32px;color:#2C3B2A;display:flex;flex-direction:column;gap:8px"><strong style="font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:26px">Bedankt, we hebben je aanvraag.</strong><span style="font-size:15px;color:#5a6b58">De documenten zitten binnen één werkdag in je mailbox.</span></div>
+      </sc-if>
+      <p style="margin:20px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">Liever meteen iemand spreken? Bel <a href="#" style="color:#fff;font-weight:700">+32 (0)9 216 49 50</a></p>
+    </section>
+  </main>
+  <sc-if value="{{ showBar }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:1250;background:#fff;border-top:1px solid rgba(0,83,45,0.15);box-shadow:0 -6px 20px rgba(0,0,0,0.08);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px">
+      <span style="flex:1;min-width:0;font-size:13px;line-height:1.3;color:#2C3B2A"><strong style="display:block">{{ barLine }}</strong><span style="color:#5a6b58">Verkaveling Keerstraat</span></span>
+      <a href="#" aria-label="Bel ons" style="width:48px;height:48px;flex-shrink:0;border-radius:4px;border:1.5px solid #00532D;display:flex;align-items:center;justify-content:center;color:#00532D;font-size:18px">✆</a>
+      <a href="#contact" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;background:#00532D;color:#fff;border:none;border-radius:4px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap"><span>Info aanvragen</span></a>
+    </div>
+  </sc-if>
+</div>
+
+<footer data-screen-label="Footer" style="position:relative;z-index:2;background:#003D21;padding-top:72px;color:#fff">
+  <div style="max-width:1680px;margin:0 auto;padding:0 clamp(20px,4vw,72px)">
+    <p style="font-family:'Playfair Display',Georgia,serif;font-weight:500;font-size:clamp(28px,3vw,38px);line-height:1.25;color:#fff;max-width:720px;margin:0 0 40px">Bouwen aan plekken waar mensen graag thuiskomen.</p>
+    <div style="height:1px;background:rgba(255,255,255,0.15);margin:0 0 48px"></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:32px;padding-bottom:64px">
+      <div style="display:flex;align-items:center;gap:12px;align-self:start"><img src="WWWCOPRO/Content/img/logo.png" alt="" style="height:40px"><span><span style="display:block;font-size:27px;font-weight:700;line-height:1;text-transform:uppercase">Group LN</span><span style="font-size:11px;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.04em">Projectontwikkeling</span></span></div>
+      <div><div style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:20px">Projecten</div><div style="display:flex;flex-direction:column;gap:12px;font-size:13px;color:rgba(255,255,255,0.7)"><a href="Woonprojecten v2.dc.html" style="color:inherit">Woonprojecten</a><span>Commercieel</span><span>Realisaties</span></div></div>
+      <div><div style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:20px">Group LN</div><div style="display:flex;flex-direction:column;gap:12px;font-size:13px;color:rgba(255,255,255,0.7)"><span>Over ons</span><span>Blog</span><span>Contact</span></div></div>
+      <address style="font-style:normal"><div style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:20px">Gegevens</div><div style="display:flex;flex-direction:column;gap:12px;font-size:13px;color:rgba(255,255,255,0.7)"><span>Klaverdries 53</span><span>9031 Drongen</span><span>+32 (0)9 216 49 50</span><span>info@groupln.be</span></div></address>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,0.15);padding:18px clamp(20px,4vw,72px)"><div style="max-width:1680px;margin:0 auto;display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,0.65)"><span style="margin-right:auto">© 2026 Group LN · Projectontwikkeling</span><span>Privacybeleid</span><span>Cookiebeleid</span><span>Algemene voorwaarden</span></div></div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;beschikbaar&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;1&quot;,&quot;2&quot;,&quot;3&quot;],&quot;default&quot;:&quot;1&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Simulatie&quot;}}">
+const MEDIA = [
+  { label: 'Keerstraat, Vlekkem', slot: 's4-m0', ph: 'Hoofdbeeld — gevel bij avondlicht', src: '' },
+  { label: 'Een dag aan de Keerstraat', slot: 's4-m1', ph: 'Sfeer — interieur', src: 'WWWCOPRO/Content/img/about.webp' },
+  { label: 'De woningen', slot: 's4-m2', ph: 'Render lot 3', src: '' },
+  { label: 'Ligging', slot: 's4-m3', ph: 'Luchtfoto / velden', src: '' },
+  { label: 'Bouwfase', slot: 's4-m4', ph: 'Werffoto', src: 'WWWCOPRO/Content/img/grondverwerving/bouwgrond.webp' },
+  { label: 'Kopen', slot: 's4-m5', ph: 'Interieur — leefruimte', src: '' },
+  { label: 'Contact', slot: 's4-m6', ph: 'Portret team', src: '' },
+  { label: 'Architectuur', slot: 's4-m7', ph: 'Gevel — detail materialen', src: '' },
+  { label: 'Lot 1', slot: 's4-lot1', ph: 'Render lot 1', src: '' },
+  { label: 'Lot 2', slot: 's4-lot2', ph: 'Render lot 2', src: '' },
+  { label: 'Lot 3', slot: 's4-lot3', ph: 'Render lot 3', src: '' },
+  { label: 'Lot 4', slot: 's4-lot4', ph: 'Render lot 4', src: '' }
+];
+const STORY = [
+  { slot: 's4-st1', ph: 'Straatbeeld Keerstraat met de velden', src: '', tekst: 'Geen doorgaand verkeer, geen buren op je bord. Achter de tuinen begint het open land, voor de deur het dorp.' },
+  { slot: 's4-st2', ph: 'Interieur — licht en hout', src: 'WWWCOPRO/Content/img/about.webp', tekst: 'Binnen draait alles om licht. Grote ramen openen de leefruimte naar de tuin, zodat je de seizoenen elke dag meekrijgt.' }
+];
+const MATERIALS = [
+  { titel: 'Lichte gevelsteen', tekst: 'Een zachte, lichtgrijze handvormsteen die met de jaren mooier wordt. Hij past in het landelijke straatbeeld en vraagt nauwelijks onderhoud.', slot: 's4-mat1', ph: 'Detail gevelsteen', src: '' },
+  { titel: 'Houten lamellen', tekst: 'Verticale lamellen rond ramen en garagepoort geven privacy en warmte. In de zomer temperen ze de zon, zodat het binnen aangenaam koel blijft.', slot: 's4-mat2', ph: 'Detail houten lamellen', src: '' },
+  { titel: 'Grote raampartijen', tekst: 'Aluminium schrijnwerk met driedubbele beglazing. De leefruimtes openen zich naar de tuin: veel daglicht en een directe band met buiten.', slot: 's4-mat3', ph: 'Interieur — raampartij naar de tuin', src: 'WWWCOPRO/Content/img/about.webp' }
+];
+const TECH = [
+  { k: 'Warmtepomp', v: 'Lucht-waterwarmtepomp voor verwarming en sanitair warm water.' },
+  { k: 'Vloerverwarming', v: 'Op gelijkvloers en verdieping, voor gelijkmatige warmte.' },
+  { k: 'Ventilatie D', v: 'Mechanische ventilatie met warmterecuperatie.' },
+  { k: 'Zonnepanelen', v: 'Dak en bekabeling zijn voorbereid voor PV-panelen.' },
+  { k: 'Isolatie', v: 'Hoogwaardige isolatie van dak, muren en vloer; luchtdicht gebouwd.' },
+  { k: 'Regenwater', v: 'Regenwaterput voor toilet, wasmachine en tuin.' }
+];
+const GIDS = [
+  { t: 'Dorpsleven', p: 'Een kerk, een basisschool, een bakker en een café. Klein en hecht: na een paar weken word je bij naam begroet.' },
+  { t: 'Natuur', p: 'Achter het project openen zich de velden. Wandel- en fietsroutes langs de Molenbeekvallei starten zowat aan je voordeur.' },
+  { t: 'Onderwijs', p: 'Basisschool Vlekkem ligt op 350 m. Secundaire scholen vind je in Erpe en Aalst, vlot bereikbaar met de fiets of de bus.' },
+  { t: 'Bereikbaarheid', p: 'Station Erpe-Mere (lijn Gent–Brussel) op 2,5 km. Met de auto ben je in 12 minuten in Aalst en in een half uur in Gent.' }
+];
+const AFW = {
+  1: [['Volledig afgewerkt', 545000, 'Instapklaar, afwerking naar keuze binnen budget'], ['Casco', 489000, 'Zonder binnenafwerking, technieken voorzien']],
+  2: [['Volledig afgewerkt', 589000, 'Instapklaar, afwerking naar keuze binnen budget']],
+  3: [['Volledig afgewerkt', 567000, 'Instapklaar, afwerking naar keuze binnen budget'], ['Casco', 512000, 'Zonder binnenafwerking, technieken voorzien']],
+  4: [['Volledig afgewerkt', 795000, 'Instapklaar, afwerking naar keuze binnen budget']]
+};
+const ZONES = {
+  1: { pts: '6,20 30,18 31,48 7,50', lx: 18.5, ly: 34, desc: 'Halfopen woning aan de straat, met een tuin op het zuidwesten.' },
+  2: { pts: '31,18 52,17 53,47 31,48', lx: 41.8, ly: 32.5, desc: 'Gesloten bebouwing in het midden van het straatfront, met vier slaapkamers.' },
+  3: { pts: '53,17 74,16 75,46 53,47', lx: 63.8, ly: 31.5, desc: 'De laatste vrije woning. Halfopen, met een tuin op het zuidoosten en ochtendzon op het terras.' },
+  4: { pts: '22,58 92,55 94,92 24,95', lx: 58, ly: 75, desc: 'Open bebouwing achteraan, bereikbaar via een private oprit, op een perceel van ruim 2.000 m².' }
+};
+class Component extends DCLogic {
+  state = { calcOpt: null, rente: 3.2, msg: '', bro: false, upd: false, calcOpen: false, sent: false, interest: [], listF: 'alle', narrow: window.innerWidth < 1000, phone: window.innerWidth < 640, media: 0, sel: 0, hover: 0, layers: ['school', 'shop', 'ov', 'groen'], faq: 0, inbreng: 120000, jaren: 25 };
+  mapRef = React.createRef();
+  componentDidMount() {
+    this._rs = () => { const n = window.innerWidth < 1000, p = window.innerWidth < 640; if (n !== this.state.narrow || p !== this.state.phone) this.setState({ narrow: n, phone: p }); };
+    this._esc = e => { if (e.key === 'Escape' && this.state.sel) this.setState({ sel: 0 }); };
+    window.addEventListener('keydown', this._esc);
+    window.addEventListener('resize', this._rs);
+    this.io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) this.setState({ media: +e.target.getAttribute('data-media') }); });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    const hook = () => { const els = document.querySelectorAll('[data-media]'); if (!els.length) { this._h = setTimeout(hook, 150); return; } els.forEach(el => this.io.observe(el)); };
+    hook();
+    const go = () => {
+      const D = window.KEERSTRAAT;
+      if (!D || !window.L || !this.mapRef.current) { this._t = setTimeout(go, 120); return; }
+      D.injectLd('ld-ks-4');
+      if (!this.api) this.api = D.initMap(this.mapRef.current, { layers: this.state.layers });
+      this.forceUpdate();
+    };
+    go();
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._rs); window.removeEventListener('keydown', this._esc); clearTimeout(this._t); clearTimeout(this._h); this.io && this.io.disconnect(); if (this.api) this.api.destroy(); const s = document.getElementById('ld-ks-4'); if (s) s.remove(); }
+  goTo(id, patch) {
+    this.setState(patch || {}, () => { const el = document.getElementById(id); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 84, behavior: 'smooth' }); });
+  }
+  renderVals() {
+    const D = window.KEERSTRAAT, s = this.state;
+    const shown = s.media === 2 && s.sel && !s.narrow ? 7 + s.sel : s.media;
+    const base = {
+      media: MEDIA.map((m, i) => ({ ...m, op: i === shown ? 1 : 0 })),
+      ov: { badge: '', line: '', price: '' }, mediaLabel: MEDIA[shown].label + (shown >= 8 ? ' — render' : ''), mapRef: this.mapRef, story: STORY, materials: MATERIALS, tech: TECH, gids: GIDS,
+      layout: s.narrow ? { cols: 'minmax(0,1fr)', pos: 'relative', h: '70vh', top: '0' } : { cols: 'minmax(0,1fr) minmax(0,1fr)', pos: 'sticky', h: 'calc(100vh - 72px)', top: '72px' },
+      navDisp: s.narrow ? 'none' : 'flex',
+      onInbreng: e => this.setState({ inbreng: +e.target.value }), onJaren: e => this.setState({ jaren: +e.target.value })
+    };
+    if (!D) return base;
+    const nVrij = +(this.props.beschikbaar ?? 1), extra = { 1: 545000, 4: 795000 };
+    const U = {}; [1, 2, 3, 4].forEach(id => { U[id] = { ...D.units[id] }; });
+    if (nVrij >= 2) { U[1].prijs = extra[1]; U[1].status = 'Beschikbaar'; }
+    if (nVrij >= 3) { U[4].prijs = extra[4]; U[4].status = 'Beschikbaar'; }
+    const avail = [1, 2, 3, 4].map(id => U[id]).filter(u => u.prijs != null);
+    const minP = Math.min(...avail.map(u => u.prijs)), bews = avail.map(u => u.bew), types = [...new Set(avail.map(u => u.type.toLowerCase()))];
+    const ov = avail.length === 1
+      ? { badge: 'Laatste woning beschikbaar', line: avail[0].lot + ' · ' + avail[0].type.toLowerCase() + ' · ' + avail[0].bew + ' m²', price: 'Vanaf ' + D.eur(minP) }
+      : { badge: 'Nog ' + avail.length + ' van 4 woningen vrij', line: avail.length + ' woningen · ' + types.join(' & ') + ' · ' + Math.min(...bews) + (Math.max(...bews) > Math.min(...bews) ? '–' + Math.max(...bews) : '') + ' m²', price: 'Vanaf ' + D.eur(minP) };
+    const u3 = U[avail[0].id] || U[3], r = 0.032 / 12, n = s.jaren * 12, lening = Math.max(0, u3.prijs - s.inbreng);
+    const maand = lening ? lening * r / (1 - Math.pow(1 + r, -n)) : 0;
+    return {
+      ...base, ov,
+      facts: [{ k: 'Beschikbaar', v: avail.length + ' van 4' }, { k: 'Vanaf', v: D.eur(minP) }, { k: 'Oplevering', v: 'Voorjaar 2027' }, { k: 'Bewoonbaar', v: '200–241 m²' }, { k: 'Percelen', v: '404–2.081 m²' }, { k: 'E-peil', v: '≤ E20' }],
+      ...(() => {
+        const sel = s.sel, z = sel ? ZONES[sel] : null;
+        const k = sel ? (sel === 4 ? 1.25 : 2.1) : 1;
+        const cy = s.phone ? 50 : (sel === 4 ? 28 : 34);
+        const clamp = (v, k) => Math.min(0, Math.max(100 - 100 * k, v));
+        const tx = sel ? clamp(50 - z.lx * k, k) : 0, ty = sel ? (s.phone ? clamp(cy - z.ly * k, k) : Math.min(0, cy - z.ly * k)) : 0;
+        const pick = id => () => this.setState(st => ({ sel: st.sel === id ? 0 : id, hover: 0 }));
+        const u = sel ? U[sel] : U[3], av = u.prijs != null;
+        return {
+          stage: { tf: 'translate(' + tx + '%,' + ty + '%) scale(' + k + ')', inv: (1 / k).toFixed(3) },
+          noSel: !sel, hint: s.narrow ? 'Tik op een perceel' : 'Klik op een perceel',
+          cardInMap: !!sel && !s.phone, cardSheet: !!sel && s.phone,
+          closeLot: () => this.setState({ sel: 0 }),
+          zones: [1, 2, 3, 4].map(id => {
+            const x = U[id], zz = ZONES[id], a = x.prijs != null, on = sel === id, hv = s.hover === id;
+            return {
+              pts: zz.pts, lx: zz.lx, ly: zz.ly, lot: x.lot, sub: a ? 'Beschikbaar' : 'Verkocht',
+              fill: a ? '#C9A96E' : '#ffffff', fo: on ? 0.5 : sel ? 0.08 : hv ? 0.45 : a ? 0.32 : 0.18,
+              stroke: on ? '#ffffff' : a ? '#C9A96E' : 'rgba(255,255,255,0.8)', sw: on ? 3 : 1.5,
+              tagBg: on ? '#00532D' : a ? '#C9A96E' : '#fff', tagFg: on ? '#fff' : '#2C3B2A', lo: sel && !on ? 0 : 1,
+              pick: pick(id), enter: () => this.setState({ hover: id }), leave: () => this.setState({ hover: 0 })
+            };
+          }),
+          lotTabs: [1, 2, 3, 4].map(id => { const x = U[id], a = x.prijs != null, on = sel === id; return { lot: x.lot, on, pick: pick(id), bg: on ? '#00532D' : '#fff', fg: on ? '#fff' : '#2C3B2A', bd: on ? '#00532D' : 'rgba(0,83,45,0.2)', dot: a ? '#C9A96E' : '#b9c1b8' }; }),
+          listTabs: [['vrij', 'Beschikbaar'], ['alle', 'Alle woningen']].map(([k, label]) => ({ label, on: s.listF === k, bg: s.listF === k ? '#00532D' : 'transparent', fg: s.listF === k ? '#fff' : '#2C3B2A', pick: () => this.setState({ listF: k }) })),
+          ...(() => {
+            const ids = [1, 2, 3, 4].filter(id => s.listF === 'alle' || U[id].prijs != null);
+            const r = s.rente / 100 / 12, n = s.jaren * 12;
+            const pm = p => { const l = Math.max(0, p - s.inbreng); return l ? l * r / (1 - Math.pow(1 + r, -n)) : 0; };
+            const all = [1, 2, 3, 4].map(id => U[id]), av = all.filter(x => x.prijs != null);
+            const rng = (a, suf) => { const lo = Math.min(...a), hi = Math.max(...a); return (lo === hi ? lo.toLocaleString('nl-BE') : lo.toLocaleString('nl-BE') + '–' + hi.toLocaleString('nl-BE')) + (suf || ''); };
+            const avPrices = av.flatMap(x => AFW[x.id].map(a => a[1]));
+            return {
+              asTable: !s.phone, asCards: s.phone,
+              gridCols: 'minmax(0,1fr) 84px 80px 76px 150px 44px',
+              rows: ids.map(id => {
+                const x = U[id], a = x.prijs != null, opts = a ? AFW[id] : [], multi = opts.length > 1;
+                return {
+                  lot: x.lot, type: x.type + ' bebouwing', bew: x.bew + ' m²', grond: x.grond.toLocaleString('nl-BE') + ' m²', sk: x.sk, skLabel: x.sk + ' slaapkamers',
+                  dots: [1, 2, 3, 4].map(i => ({ bg: i <= x.sk ? '#3D7A4E' : 'transparent', bd: i <= x.sk ? '#3D7A4E' : '#9cbf8e' })),
+                  avail: a, sold: !a, rowBg: a ? '#fff' : '#F5F7F2', col: a ? '#2C3B2A' : '#9aa39a', lotCol: '#00532D',
+                  priceLines: opts.map(([t, p]) => ({ label: multi ? (t === 'Casco' ? 'Casco' : 'Afgewerkt') : '', v: D.eur(p), size: multi ? '16px' : '19px' })),
+                  maand: a ? D.eur(pm(opts[0][1])) : '', toCalc: () => this.goTo('maandlast', { calcOpt: id + '|0' }), planLabel: 'Grondplan ' + x.lot + ' downloaden (PDF)',
+                  sub: x.type + ' · ' + x.sk + ' slpk · perceel ' + x.grond.toLocaleString('nl-BE') + ' m²', cardBg: a ? '#fff' : '#F7F9F5',
+                  multi, single: !multi, singlePrice: a ? D.eur(opts[0][1]) : 'Verkocht', priceCol: a ? '#00532D' : '#8a948a',
+                  opts: opts.map(([t, p]) => ({ t, p: D.eur(p) }))
+                };
+              }),
+              sumCells: [
+                { k: 'Woningen', v: '4', s: av.length + ' beschikbaar' },
+                { k: 'Bewoonbaar', v: rng(all.map(x => x.bew), ' m²'), s: 'per woning' },
+                { k: 'Grond', v: rng(all.map(x => x.grond), ' m²'), s: 'per perceel' },
+                { k: 'Slaapkamers', v: rng(all.map(x => x.sk)), s: 'per woning' },
+                { k: 'Prijsrange', v: avPrices.length ? (Math.min(...avPrices) === Math.max(...avPrices) ? D.eur(avPrices[0]) : 'vanaf ' + D.eur(Math.min(...avPrices))) : '—', s: 'beschikbare loten' }
+              ],
+              calcOpen: s.calcOpen, toggleCalc: () => this.setState(st => ({ calcOpen: !st.calcOpen })),
+              calcToggleLabel: s.calcOpen ? 'Sluiten' : 'Aanpassen',
+              calcSummary: D.eur(s.inbreng) + ' eigen inbreng, ' + s.jaren + ' jaar aan 3,2 %',
+              jaarOpts: [15, 20, 25, 30].map(j => ({ label: j + ' j', bg: s.jaren === j ? '#00532D' : '#fff', fg: s.jaren === j ? '#fff' : '#00532D', pick: () => this.setState({ jaren: j }) })),
+              interestOpts: [...av.map(x => x.lot), 'Algemene info'].map(l => { const on = s.interest.includes(l); return { label: l, on, bg: on ? '#00532D' : '#fff', fg: on ? '#fff' : '#2C3B2A', bd: on ? '#00532D' : 'rgba(0,83,45,0.25)', pick: () => this.setState(st => ({ interest: on ? st.interest.filter(z => z !== l) : [...st.interest, l] })) }; }),
+              contactTitle: (() => {
+                const picked = av.map(x => x.lot).filter(l => s.interest.includes(l));
+                if (picked.length === 1) return picked[0] + ' kan de jouwe zijn.';
+                if (picked.length > 1) return picked.slice(0, -1).join(', ') + ' of ' + picked[picked.length - 1].toLowerCase() + ' — welke wordt de jouwe?';
+                return av.length === 1 ? av[0].lot + ' kan de jouwe zijn.' : 'Welke woning wordt de jouwe?';
+              })(),
+              ...(() => {
+                const copts = av.flatMap(x => AFW[x.id].map((a, i) => ({ key: x.id + '|' + i, lot: x.lot, afw: a[0], p: a[1], multi: AFW[x.id].length > 1 })));
+                const cur = copts.find(o => o.key === s.calcOpt) || copts[0] || { lot: '—', afw: '', p: 0, multi: false };
+                const afwTxt = o => o.multi ? ' · ' + (o.afw === 'Casco' ? 'casco' : 'afgewerkt') : '';
+                const renteTxt = s.rente.toFixed(2).replace('.', ',') + ' %';
+                const minP = Math.min(...avPrices);
+                return {
+                  calcChips: copts.map(o => { const on = o.key === cur.key; return { label: o.lot + afwTxt(o), sub: D.eur(o.p), on, bg: on ? '#F2F5EF' : '#fff', bd: on ? '#00532D' : 'rgba(0,83,45,0.2)', pick: () => this.setState({ calcOpt: o.key }) }; }),
+                  calcRes: { title: cur.lot + afwTxt(cur), maand: D.eur(pm(cur.p)), lening: D.eur(Math.max(0, cur.p - s.inbreng)), jaren: s.jaren, rente: renteTxt, renteVal: s.rente },
+                  calcCta: () => this.goTo('contact', { interest: [cur.lot], msg: 'Ik wil graag een persoonlijke simulatie voor ' + cur.lot + (cur.multi ? ' (' + cur.afw.toLowerCase() + ')' : '') + ' aan ' + D.eur(cur.p) + ', met ' + D.eur(s.inbreng) + ' eigen inbreng over ' + s.jaren + ' jaar.' }),
+                  onRente: e => this.setState({ rente: +e.target.value }),
+                  goVraag: () => this.goTo('contact', { interest: ['Algemene info'] }),
+                  goKennis: () => this.goTo('contact', { msg: 'Ik wil graag een vrijblijvend kennismakingsgesprek.' }),
+                  msg: s.msg, onMsg: e => this.setState({ msg: e.target.value }),
+                  bro: s.bro, notBro: !s.bro, sendBro: () => this.setState({ bro: true }),
+                  upd: s.upd, notUpd: !s.upd, sendUpd: () => this.setState({ upd: true }),
+                  showBar: s.narrow && s.media !== 6 && !(s.phone && s.sel),
+                  barLine: av.length === 1 ? av[0].lot + ' · vanaf ' + D.eur(minP) : av.length + ' woningen vrij · vanaf ' + D.eur(minP)
+                };
+              })(),
+              formCols: s.phone ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))',
+              sent: s.sent, notSent: !s.sent, send: () => this.setState({ sent: true })
+            };
+          })(),
+          docs: [{ t: 'Brochure', m: 'Project & woningen · 12 MB' }, { t: 'Lastenboek volledig afgewerkt', m: 'Materialen & technieken · 3 MB' }, { t: 'Lastenboek casco', m: 'Wat wel en niet inbegrepen is · 2 MB' }, { t: 'Inplantingsplan', m: 'Percelen & oprit · 1 MB' }],
+          lotRows: [1, 2, 3, 4].map(id => { const x = U[id], a = x.prijs != null; return { lot: x.lot, type: x.type, bew: x.bew + ' m²', grond: x.grond.toLocaleString('nl-BE') + ' m²', prijs: a ? D.eur(x.prijs) : 'Verkocht', col: a ? '#2C3B2A' : '#8a948a', bg: sel === id ? '#fff' : 'transparent', pick: pick(id) }; }),
+          sel: {
+            lot: u.lot, type: u.type + ' bebouwing', status: u.status, avail: av, gpDisp: av ? 'inline-flex' : 'none',
+            pillBg: av ? '#EAF3DE' : '#ECEEEA', pillFg: av ? '#3B6D11' : '#6b736a',
+            key: [{ k: 'Woning', v: u.bew + ' m²' }, { k: 'Perceel', v: u.grond.toLocaleString('nl-BE') + ' m²' }, { k: 'Slpk', v: u.sk }, { k: 'Tuin', v: u.tuin }],
+            price: av ? 'Vanaf ' + D.eur(u.prijs) : 'Verkocht', priceCol: av ? '#00532D' : '#8a948a',
+            cta: av ? 'Prijs & documenten' : 'Gelijkaardige woning?'
+          }
+        };
+      })(),
+      chips: D.cats.map(c => { const on = s.layers.includes(c.id); return { label: c.label, bg: on ? '#00532D' : '#fff', fg: on ? '#fff' : '#2C3B2A', bd: on ? '#00532D' : 'rgba(0,83,45,0.2)', toggle: () => this.setState(st => ({ layers: on ? st.layers.filter(x => x !== c.id) : [...st.layers, c.id] }), () => this.api && this.api.set(this.state.layers)) }; }),
+      travel: D.travel,
+      timeline: D.timeline.map(t => ({ ...t, col: t.st === 'next' ? '#8a948a' : t.st === 'now' ? '#00532D' : '#2C3B2A', fw: t.st === 'now' ? 700 : 400, titel: (t.st === 'done' ? '✓ ' : t.st === 'now' ? '● ' : '○ ') + t.titel })),
+      calc: { maand: D.eur(maand), lening: D.eur(lening), jaren: s.jaren, rente: '3,2 %', inbreng: s.inbreng, inbrengTxt: D.eur(s.inbreng) },
+      steps: D.steps,
+      faqs: D.faq.map((f, i) => ({ ...f, open: s.faq === i, sign: s.faq === i ? '−' : '+', toggle: () => this.setState(st => ({ faq: st.faq === i ? -1 : i })) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

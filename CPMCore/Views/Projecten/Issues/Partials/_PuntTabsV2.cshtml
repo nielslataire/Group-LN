@@ -1,0 +1,6 @@
+@model CPMCore.Models.Issues.PuntTabsV2Vm
+@* gl-v2 — tabs boven Punten (design-handoff 40a/40b): Lijst en Op plan zijn twee pagina's, de tabs zijn gewone links. *@
+<div class="gl-v2-tabbar" role="tablist">
+    <a class="gl-v2-tabbar-tab @(Model.Active == "lijst" ? "is-active" : "")" role="tab" aria-selected="@(Model.Active == "lijst" ? "true" : "false")" href="@Url.Action("Index", "ProjectsIssues", new { projectId = Model.ProjectId })">Lijst <span class="gl-v2-tabbar-count">@Model.ListCount</span></a>
+    <a class="gl-v2-tabbar-tab @(Model.Active == "plan" ? "is-active" : "")" role="tab" aria-selected="@(Model.Active == "plan" ? "true" : "false")" href="@Url.Action("PlanV2", "ProjectsIssues", new { projectId = Model.ProjectId })">Op plan <span class="gl-v2-tabbar-count">@Model.PlanCount @(Model.PlanCount == 1 ? "plan" : "plannen")</span></a>
+</div>

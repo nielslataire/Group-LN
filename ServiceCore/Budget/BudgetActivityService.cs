@@ -288,6 +288,7 @@ namespace ServiceCore.Budget
                             bo.NacalcPrijsPerEenheid       = lijn.NacalcPrijsPerEenheid       ?? 0m;
                             bo.Correctiefactor             = lijn.Correctiefactor;
                             bo.IsManueel                   = lijn.IsManueel;
+                            bo.Opmerking                   = lijn.Omschrijving;
                         }
 
                         bool viaFormule = formuleEvaluaties.TryGetValue(activity.ActivityId, out var fEval)
@@ -501,6 +502,8 @@ namespace ServiceCore.Budget
                     bestaande.NacalcPrijsPerEenheid       = bo.NacalcPrijsPerEenheid;
                     bestaande.Correctiefactor             = bo.Correctiefactor;
                     bestaande.IsManueel                   = bo.IsManueel;
+                    if (bo.Opmerking != null)   // null = niet meegestuurd (klassieke pagina): bestaande opmerking blijft
+                    bestaande.Omschrijving                = string.IsNullOrWhiteSpace(bo.Opmerking) ? null : (bo.Opmerking.Trim().Length > 200 ? bo.Opmerking.Trim()[..200] : bo.Opmerking.Trim());
                 }
                 else
                 {
@@ -512,6 +515,7 @@ namespace ServiceCore.Budget
                         NacalcPrijsPerEenheid       = bo.NacalcPrijsPerEenheid,
                         Correctiefactor             = bo.Correctiefactor,
                         IsManueel                  = bo.IsManueel,
+                        Omschrijving               = string.IsNullOrWhiteSpace(bo.Opmerking) ? null : (bo.Opmerking.Trim().Length > 200 ? bo.Opmerking.Trim()[..200] : bo.Opmerking.Trim()),
                         VerhogingsPerc             = 0m
                     });
                 }

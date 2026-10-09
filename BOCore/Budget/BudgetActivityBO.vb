@@ -16,6 +16,8 @@ Namespace Budget
         Public Property NacalcPrijsPerEenheid As Decimal
         Public Property Correctiefactor As Decimal = 1D
         Public Property IsManueel As Boolean
+        ''' <summary>Opmerking bij de correctie (39k: correctie ≠ 100 % zonder opmerking is een waarschuwing); bewaard in BudgetActivityLijnen.Omschrijving.</summary>
+        Public Property Opmerking As String
 
         ' ── Nacalc-referentie (okt. 2026): gemiddelde werkelijke kost van de gekozen referentieprojecten, niet opgeslagen ──
         ''' <summary>Geïndexeerde referentieprijs per eenheid uit de gekozen referentieprojecten; leeg zonder referentie.</summary>

@@ -31,8 +31,10 @@ namespace DALCore.Models
 );
             ConfigureKostprijsMaterialenEntities(modelBuilder);
             ConfigureHomeHeroProjectEntities(modelBuilder);
+            ConfigureProjectWebsiteEntities(modelBuilder);
             ConfigureTrajectEntities(modelBuilder);
             ConfigureDossierEntities(modelBuilder);
+            ConfigureWerfverslagEntities(modelBuilder);
             ConfigureDocumentenEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);
             ConfigureMeldingSnoozeEntities(modelBuilder);

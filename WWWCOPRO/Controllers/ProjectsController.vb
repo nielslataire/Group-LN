@@ -223,6 +223,51 @@ Namespace Controllers
             Return RenderProjectDetail(data, service)
         End Function
 
+        ' Nieuw ontwerp "Project Detail v4 Split" — losstaande view naast de bestaande Detail.
+        ' Alle inhoud (zichtbare blokken, teksten, beelden, loten) komt uit ProjectPageV4Model.
+        <Route("projectpagina-v4/{slug?}", Name:="ProjectV4")>
+        Function ProjectV4(Optional slug As String = Nothing) As ActionResult
+            ' Zonder slug: voorbeeldinhoud uit de design-handoff (handig om het ontwerp te bekijken).
+            If String.IsNullOrWhiteSpace(slug) Then
+                Dim sample = ProjectPageV4Provider.Load(Nothing)
+                ViewData("Title") = sample.MetaTitle
+                ViewData("MetaDescription") = sample.MetaDescription
+                ViewData("canonical") = sample.CanonicalUrl
+                ViewData("ogtitle") = sample.MetaTitle
+                ViewData("ogdescription") = sample.MetaDescription
+                ViewData("ogurl") = sample.CanonicalUrl
+                Return View("DetailV4", sample)
+            End If
+
+            ' Met slug: echte projectdata, dezelfde bronnen als /woonprojecten/{slug}.
+            Dim service = ServiceFactory.GetProjectService
+            Dim response = service.GetProjectBySlug(slug)
+            Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
+            If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
+
+            data.Pictures = data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).OrderByDescending(Function(m) m.DateTimeUploaded).ToList
+
+            Dim units As New List(Of UnitWithDetailsBO)
+            Dim unitsResponse = ServiceFactory.GetUnitService.GetUnitsWithDetailsByProjectId(data.Id)
+            If unitsResponse.Success Then units = unitsResponse.Values
+
+            Dim settings = service.GetSalesSettings(data.Id).Value
+            If settings Is Nothing Then
+                settings = New ProjectSalesSettingsBO
+                settings.SaleVisible = False
+            End If
+
+            LoadProjectSeoFields(data)
+            SetProjectSeoViewData(data)
+            ApplyRecaptchaSettings()
+
+            Dim canonical As String = "https://www.groupln.be/woonprojecten/" & If(data.Slug, "").ToLowerInvariant()
+            Dim imageBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
+            Dim web = ProjectWebsiteReader.Load(data.Id)
+            Dim model = ProjectPageV4Provider.FromProject(data, units, settings, imageBase, canonical, web)
+            Return View("DetailV4", model)
+        End Function
+
         <Route("commerciele-projecten/{slug}", Name:="CommercieelBySlug")>
         Function CommercieelBySlug(slug As String) As ActionResult
 

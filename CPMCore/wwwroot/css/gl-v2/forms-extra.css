@@ -33,7 +33,7 @@
 /* Rechter statusicoon — .gl-v2-field-box had tot nu toe enkel een icoon-slot vooraan
    (> i:first-child); dit is het eerste veld met een icoon NÁ de waarde (fout-driehoek/vinkje). */
 .gl-v2-field-icon-trailing { flex: none; font-size: 15px; color: var(--gl-v2-muted); }
-.gl-v2-field.is-error .gl-v2-field-icon-trailing { color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-icon-trailing { color: #8B2A2A; }
 
 /* Btw-nummer-met-knop: veld + knop als één visueel blok, radius enkel buitenom. Geen .gl-v2-btn
    hergebruik — die is 38px/losstaand, dit moet 40px/vast-tegen-de-box zijn, dezelfde hoogtetaal
@@ -120,7 +120,7 @@
 .gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-prefix-select { color: var(--gl-v2-ink); }
 .gl-v2-field-box:has(.gl-v2-field-input:disabled) .gl-v2-field-prefix-select,
 .gl-v2-field-prefix-select:disabled { color: #A8B3A6; cursor: not-allowed; }
-.gl-v2-field.is-error .gl-v2-field-prefix-select { color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-prefix-select { color: #8B2A2A; }
 
 /* ── Dropdown met zoekveld, groepen en suggesties (optie 8f, "3 · DROPDOWN MET ZOEKVELD, GROEPEN
    EN SUGGESTIES") ──────────────────────────────────────────────────────────────────────────────
@@ -248,7 +248,7 @@
    :placeholder-shown-truc als .gl-v2-field-prefix hierboven. */
 .gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-unit { color: var(--gl-v2-ink); }
 .gl-v2-field-box:has(.gl-v2-field-input:disabled) .gl-v2-field-unit { background: var(--gl-v2-neutral-tint); color: #A8B3A6; }
-.gl-v2-field.is-error .gl-v2-field-unit { border-left-color: #8A3B2A; background: #F6E5E1; color: #8A3B2A; }
+.gl-v2-field.is-error .gl-v2-field-unit { border-left-color: #8B2A2A; background: #F6E5E1; color: #8B2A2A; }
 
 /* ── Alleen-lezen versus uitgeschakeld (design-handoff 14d "2 · ALLEEN-LEZEN VERSUS UITGESCHAKELD")
    — twee verschillende betekenissen, twee verschillende looks. UITGESCHAKELD is gewoon een normaal

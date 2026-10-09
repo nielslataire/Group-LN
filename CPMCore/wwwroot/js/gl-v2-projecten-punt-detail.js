@@ -29,6 +29,14 @@
             $("#pd-internal").value = seg.dataset.internal;
         }
     });
+    // plan met de pin van dit punt (alleen lezen)
+    var planEl = document.getElementById("pd-plan");
+    if (planEl && window.PuntPlanViewer) {
+        var x = parseFloat(planEl.dataset.x), y = parseFloat(planEl.dataset.y), pg = parseInt(planEl.dataset.page, 10) || 1;
+        var v = window.PuntPlanViewer.create(planEl, {});
+        v.setPins([{ id: 0, page: pg, x: x, y: y, status: parseInt(planEl.dataset.status, 10) || 10, label: "Dit punt", selected: true }]);
+        v.load(planEl.dataset.url, pg);
+    }
     var rc = $("#pd-reject-confirm");
     if (rc) rc.addEventListener("click", function () {
         var reason = $("#pd-reject-reason").value.trim();

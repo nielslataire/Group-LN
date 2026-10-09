@@ -46,6 +46,7 @@
     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
 
     <div class="gl-v2-bw-scroll">
+        @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwKaders.cshtml", ch)
         <div class="gl-v2-bw-tiles">
             @foreach (var k in kolommen)
             {

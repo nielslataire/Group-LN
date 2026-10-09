@@ -26,6 +26,8 @@ public class PuntRowV2
     public int PhotoCount { get; set; }
     public string? FirstPhotoUrl { get; set; }
     public string NrLabel => "P-" + Nr.ToString("000");
+    /// <summary>Id's van de verslagen waar dit punt in zit, komma-gescheiden (filter "Verslag").</summary>
+    public string VerslagIds { get; set; } = "";
 }
 
 public class PuntenIndexV2Vm
@@ -46,6 +48,19 @@ public class PuntenIndexV2Vm
     public List<KeyValuePair<int, string>> Categories { get; set; } = new();
     public List<KeyValuePair<int, string>> Types { get; set; } = new();
     public List<string> RecentZones { get; set; } = new();
+    /// <summary>Aantal plannen van het project (tab "Op plan").</summary>
+    public int PlanCount { get; set; }
+    public List<(int Id, string Naam, bool Open)> Verslagen { get; set; } = new();
+}
+
+/// <summary>De tabs boven Punten (lijst / op plan) — gewone links tussen de twee pagina's.</summary>
+public class PuntTabsV2Vm
+{
+    public int ProjectId { get; set; }
+    /// <summary>lijst | plan</summary>
+    public string Active { get; set; } = "lijst";
+    public int ListCount { get; set; }
+    public int PlanCount { get; set; }
 }
 
 /// <summary>Een bericht/gebeurtenis in "Historiek &amp; communicatie" (40o).</summary>
@@ -96,6 +111,10 @@ public class PuntDetailV2Vm
     public List<(int Id, string Url)> Photos { get; set; } = new();
     public bool HasPlan { get; set; }
     public string? PlanName { get; set; }
+    public string? PlanUrl { get; set; }
+    public int PlanPage { get; set; } = 1;
+    public double PlanX { get; set; }
+    public double PlanY { get; set; }
     public List<PuntHistoriekItemV2> History { get; set; } = new();
     public int Reminders { get; set; }
     /// <summary>Statussen waar de werfleider het punt vanuit de huidige status naartoe kan zetten.</summary>
@@ -133,4 +152,46 @@ public class PuntenSendV2Vm
     /// <summary>Gevuld als de pagina vanuit de selectiebalk geopend werd: enkel deze punten.</summary>
     public List<int> OnlyIds { get; set; } = new();
     public List<PuntSendGroupV2> Groups { get; set; } = new();
+}
+
+/// <summary>Een plan (PDF) van een eenheid of een algemeen plan van het project. PlanId 0 = het hoofdplan van de eenheid.</summary>
+public class PuntPlanV2
+{
+    public string Key { get; set; } = "";
+    public int? UnitId { get; set; }
+    public string UnitName { get; set; } = "Algemeen";
+    public int PlanId { get; set; }
+    public string Name { get; set; } = "";
+    public string Url { get; set; } = "";
+}
+
+public class PuntPinV2
+{
+    public int Id { get; set; }
+    public string Nr { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string PlanKey { get; set; } = "";
+    public int Page { get; set; } = 1;
+    public double X { get; set; }
+    public double Y { get; set; }
+    /// <summary>Canonieke status (8 concept … 12 in de wacht), voor de pinkleur.</summary>
+    public int Status { get; set; }
+    public string StatusLabel { get; set; } = "";
+    public string StatusTone { get; set; } = "is-neutral";
+    public bool Closed { get; set; }
+    public string Unit { get; set; } = "";
+    public string Zone { get; set; } = "";
+    public string Contractor { get; set; } = "";
+    public string? Due { get; set; }
+    public List<string> Photos { get; set; } = new();
+    public string Url { get; set; } = "";
+}
+
+public class PuntenPlanV2Vm
+{
+    public PuntenIndexV2Vm Index { get; set; } = new();
+    public List<PuntPlanV2> Plans { get; set; } = new();
+    public List<PuntPinV2> Pins { get; set; } = new();
+    public string? SelectedKey { get; set; }
+    public int? SelectedIssueId { get; set; }
 }
