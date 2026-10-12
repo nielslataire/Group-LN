@@ -141,6 +141,17 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
+    ''' <summary>JSON [{omschrijving, aantal, oppervlakte}] - herleidbare opbouw van de oppervlakte funderingen (migratie 089).</summary>
+    Public Property FunderingLijnenJson As String
+    ''' <summary>Totale oppervlakte van alle ondergrondse verdiepingen in m2 (leeg = aantal x oppervlakte funderingen).</summary>
+    Public Property OppOndergronds As Decimal?
+    ''' <summary>JSON [{omschrijving, aantal, oppervlakte}] - herleidbare opbouw van OppOndergronds.</summary>
+    Public Property OndergrondsLijnenJson As String
+    ''' <summary>Diepte gewone fundering in cm (leeg = 40).</summary>
+    Public Property DiepteFunderingCm As Decimal?
+    ''' <summary>Diepte per ondergrondse verdieping in cm (leeg = 300).</summary>
+    Public Property DiepteOndergrondsCm As Decimal?
+
     Private _m3Grondwerk As Decimal?
     <Display(Name:="Grondwerk (m³)")>
     Public Property M3Grondwerk() As Decimal?

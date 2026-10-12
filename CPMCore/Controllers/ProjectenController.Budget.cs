@@ -454,6 +454,7 @@ namespace CPMCore.Controllers
                 GarBergOndergronds      = model.GarBergOndergronds,
                 BergGelijkvloers        = model.BergGelijkvloers,
                 Carports                = model.Carports,
+                Poorten                 = (int)Math.Max(0m, Math.Round(model.Poorten)),
                 DoorritGVL              = model.DoorritGVL,
                 Zolder                  = model.Zolder,
                 GemeenschappelijkeDelen = model.GemeenschappelijkeDelen,

@@ -143,6 +143,23 @@
         try { calc.checked = localStorage.getItem("bw-show-calc") === "1"; } catch (e) { }
         var zet = function () { document.body.classList.toggle("bw-show-calc", calc.checked); try { localStorage.setItem("bw-show-calc", calc.checked ? "1" : "0"); } catch (e) { } };
         calc.addEventListener("change", zet); zet();
+        // De schakelaar blijft zichtbaar bij het scrollen: zodra zijn plek in de topbar uit beeld schuift, zweeft hij als pil rechtsboven.
+        // Eén vaste waarnemer op een onzichtbare ankerplek (niet op de schakelaar zelf: die is zwevend altijd zichtbaar en zou terugschakelen).
+        var label = calc.closest("label");
+        if (label && "IntersectionObserver" in window) {
+            var anker = document.createElement("span");
+            anker.setAttribute("aria-hidden", "true");
+            anker.style.cssText = "display:inline-block;width:1px;height:" + Math.max(label.offsetHeight, 24) + "px;margin-left:-1px;visibility:hidden;pointer-events:none;flex:none";
+            label.parentNode.insertBefore(anker, label.nextSibling);
+            var thuis = label.parentNode, zweeft = false;
+            function zweef(aan) {
+                if (aan === zweeft) return;
+                zweeft = aan;
+                if (aan) { anker.style.width = label.offsetWidth + "px"; document.body.appendChild(label); label.classList.add("is-zwevend"); }
+                else { label.classList.remove("is-zwevend"); thuis.insertBefore(label, anker); anker.style.width = "1px"; }
+            }
+            new IntersectionObserver(function (items) { zweef(!items[items.length - 1].isIntersecting); }, { threshold: 0 }).observe(anker);
+        }
     }
 
     // ── Tablet-paneel met alle stappen ──────────────────────────────────────────────────────────

@@ -26,6 +26,8 @@
         var cleaned = String(text).trim();
         if (!cleaned) return null;
         if (cleaned.indexOf(",") !== -1) cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+        // "1.050" is hier één duizend vijftig (nl-BE), geen 1,05: een punt gevolgd door precies drie cijfers.
+        else if (/^\d{1,3}(\.\d{3})+$/.test(cleaned)) cleaned = cleaned.replace(/\./g, "");
         var value = parseFloat(cleaned);
         return isNaN(value) ? null : value;
     }

@@ -7,6 +7,47 @@ DEVNOTES.md §3, §5 en §7; dit bestand houdt bij wat af is, wat open staat en 
 punt 39, met versiestatus Concept/Afgerond/Definitief (deel 5). Niets gecommit, niets browser-getest.
 **Migraties 075 → 078 uitvoeren vóór de app start** (`_migrations/078_BudgetVersieStatus.sql` is nieuw).
 
+## TE DOEN — nog na te kijken door Niels (genoteerd 12/10/2026)
+
+Inhoudelijke controles op de berekeningen (geen bouwwerk, wel nakijken en bijsturen waar nodig):
+1. **Nacalculatiebedragen bekijken** (stap 6): kloppen de referentiebedragen, de indexering naar de huidige index en het verschil per activiteit met wat je verwacht?
+2. **Percentages bij Parameters bekijken** (stap 7): standaardwaarden uit Instellingen › Bouwkost %, de voorstellen per rubriek en de afwijkingswaarschuwing (> 50 % t.o.v. Instellingen).
+3. **Afbraak invullen** (stap 5, Dak & afbraak): het type Afbraak is nog niet ingevuld voor de testbudgetten; nagaan of de afbraakkost daarna correct doorstroomt naar stap 6/9.
+4. **Alle berekeningen bij Parameters nakijken** (stap 7): bedrag onder elk percentage, totaal parameters en het percentage t.o.v. de bouwkost; financiering (Wet Breyne, straight loan), onvoorzien en forfaits.
+5. **Verkoop nakijken** (stap 8): grond- en bouwwaarde, minimumprijs, marges, prijscodes (B-/G-), marktprijs en de vraagprijs per eenheid, incl. garages en poorten.
+6. **Resultaat nakijken** (stap 9): kostenoverzicht, per eenheid, bouwkost t.o.v. nacalc, marge en de waarschuwingen/fouten.
+
+## 12/10/2026 — Stap 1: herleidbare funderingsoppervlakte + automatisch grondwerk (migratie 089)
+
+`_migrations/089_BudgetGegevensGrondwerk.sql` uitvoeren (BudgetGegevens: FunderingLijnen, DiepteFunderingCm, DiepteOndergrondsCm). Niet browser-getest.
+- Oppervlakte funderingen kan nu per type opgebouwd worden (knop "Berekening" naast het veld: omschrijving · aantal · m² per stuk); de som is het veld (read-only zodra er regels zijn), de regels blijven bewaard.
+- Grondwerk (m³) is automatisch = oppervlakte funderingen × diepte fundering / 100 + oppervlakte ondergrondse verdiepingen × diepte per verdieping / 100; standaard 40 cm en 300 cm, per versie aanpasbaar. De oppervlakte van de ondergrondse verdiepingen is een eigen veld (totaal van alle ondergrondse verdiepingen, eveneens herleidbaar via een berekening); leeg = aantal verdiepingen × oppervlakte funderingen. Server (`GrondwerkRekenregel`, in `SaveBudgetGegevens`) en JS rekenen hetzelfde. Kolommen `OppOndergronds`/`OndergrondsLijnen` zitten ook in migratie 089.
+- Oppervlaktes: een nieuw toegevoegde eenheid respecteert nu de aan/uit-staat van de kolomgroepen.
+
+## 12/10/2026 — Stap 6: formulestrook per activiteit ("Toon berekeningen", 39g)
+
+Onder elke activiteit met een voorstel staat (als "Toon berekeningen" aanstaat) de berekening als chips: `[Oppervlakte funderingen 548,10 m²] × [Eenheidsprijs 100,55 €/m²] × [Index S 1,094] = € 60.290,80 · bron: stap 1 · Gegevens · Formule ›`.
+- Formule-activiteiten (Instellingen › Budgetformules): `BudgetActivityFormuleService.BouwStrook` ontleedt de formule in termen en factoren; materiaalprijzen tonen basisprijs én indexfactor apart; de bron komt uit de "tab …"-vermelding van de gebruikte parameters; link "Formule ›".
+- Overige voorstellen (ruwbouw, enkelvoudig prijs × hoeveelheid, gevelsluiting, dak): `BudgetActivityService.BouwStrookUitVoorstel`; bron per activiteit uit een kleine lijst (aanvullen waar nodig).
+- Grondwerken (activiteit 173) en de formuleparameter `m3_grondwerken` gebruiken nu het automatische grondwerk van stap 1 (oude vaste 0,30/3,50-regel vervangen).
+- Niet browser-getest.
+
+## 12/10/2026 — Overige aanpassingen (na de formulestrook)
+
+- **Rijtotalen volgen de formule**: een niet-handmatige activiteitenlijn gebruikt altijd het actuele voorstel/formuleresultaat; het bewaarde bedrag per eenheid telt alleen nog voor `IsManueel`-lijnen (`BudgetActivityService`, alle vijf de plekken). Voorheen bleef een eerder bewaard bedrag staan nadat een materiaalprijs wijzigde.
+- **Ramen worden van gevels afgetrokken**: formuleparameter `opp_gevels` = netto (per soort, nooit < 0); nieuwe `opp_gevels_bruto`. Het gevelmetselwerk-voorstel gebruikt ook netto. Een formule die ramen al zelf aftrok, telt nu dubbel — nakijken in Instellingen › Budgetformules.
+- **"Toon berekeningen" zweeft** rechtsboven zodra de topbar uit beeld scrolt (`gl-v2-budget.js`, één vaste waarnemer op een ankerplek). Sleutel in localStorage is nog `bw-show-calc`.
+- **Stappenplan**: een klik op een chip gaat altijd naar die stap (capture-handler met `data-hrefs`); een kapotte "dirty"-callback op Verkoop (oneindige lus) is weggehaald.
+- **Foutvenster bij mislukt opslaan** toont de reden en de open fouten met link; `post()` geeft altijd een leesbare reden terug.
+- **Index zonder peildatum**: opzoeken met tolerantie 0,005 (de binder rondt af op 2 decimalen) en bij het opslaan terugzetten op de exacte indexrij.
+- **Grondwerken-activiteit en `m3_grondwerken`** gebruiken het automatische grondwerk van stap 1.
+- **Open, niet opgelost**: het tabblad Budgetactiviteiten liep eenmalig vast met "Toon berekeningen" aan (na een materiaalprijswijziging); oorzaak niet gevonden, een nieuw venster werkte wel. Een extra beveiliging staat in de formulestrook (max. 24 onderdelen, fouten ingeslikt). Als het terugkomt: noteren wat er net gebeurde (schakelaar, prijs, vernieuwen).
+
+## 12/10/2026 — Garagepoorten per rij (migratie 090)
+
+`_migrations/090_BudgetOppervlaktesPoorten.sql` uitvoeren. Stap 2 heeft in de groep "Parkeren & berging" een kolom **Poorten** (aantal garagepoorten per rij). Ingebouwde garage = poorten op de woning-rij (geen oppervlakte); apart bijgebouwd = ook oppervlakte in "Gar. bgr."; apart verkochte garage = eigen garage-rij (zoals voorheen).
+Formuleparameters `aantal_poorten_sectionaal/_kantel` = som van de kolom Poorten, plus 1 per garage-rij met 0 poorten (bestaande budgetten veranderen niet). De poortwaarschuwing op stap 1 kijkt nu ook naar die kolom.
+
 ## STAND 09/10/2026 — alles gebouwd en door Niels getest; enkel nog open punten en grotere stappen
 
 De budgetflow in gl-v2 (overzicht + 9 stappen, versiestatus, meldingen 39k, veldstaten 14d, bevestigingsmodals, foutvenster bij mislukt opslaan) werkt volgens Niels.

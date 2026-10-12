@@ -59,25 +59,35 @@ public class HelpTreeGroupVm
     public string Name { get; set; } = "";
     public bool IsOpen { get; set; }
     public int Count { get; set; }
-    public List<HelpTreeArticleVm> Articles { get; set; } = new();
-    /// <summary>Slug van het eerste artikel van dit topic (zelfde volgorde als de boom zelf) —
-    /// maakt een ingeklapt topic-item in de boom klikbaar. Null bij een leeg topic.</summary>
-    public string FirstArticleSlug { get; set; }
+    /// <summary>Alle artikels van het topic als boom (willekeurig diep). Altijd volledig meegegeven:
+    /// elk niveau is openklapbaar in de browser, de server bepaalt enkel wat bij het laden openstaat.</summary>
+    public List<HelpTreeNodeVm> Nodes { get; set; } = new();
 }
 
-public class HelpTreeArticleVm
+public class HelpTreeNodeVm
 {
     public string Slug { get; set; } = "";
     public string Title { get; set; } = "";
+    /// <summary>Dit is het artikel dat nu open staat.</summary>
     public bool IsActive { get; set; }
-    /// <summary>true voor een kind-artikel (bv. "Project bewerken" onder "Het projectdossier
-    /// lezen") — toont extra ingesprongen in de boom, zelfde niveau-aanpak als 41c.</summary>
-    public bool IsChild { get; set; }
+    /// <summary>Open bij het laden: het actieve artikel zelf (als het kinderen heeft) of een bovenliggend
+    /// artikel van het actieve artikel. Alle andere knopen staan dicht.</summary>
+    public bool IsOpen { get; set; }
+    public List<HelpTreeNodeVm> Children { get; set; } = new();
+}
+
+/// <summary>Een knoop plus zijn diepte (0 = direct onder het topic), voor de recursieve partial _HelpTreeNode.</summary>
+public class HelpTreeNodeRenderVm
+{
+    public HelpTreeNodeVm Node { get; set; } = null!;
+    public int Depth { get; set; }
 }
 
 public class HelpTocItemVm
 {
     public string Text { get; set; } = "";
+    /// <summary>Id van het blok in de artikeltekst waar dit punt naartoe springt (zonder #).</summary>
+    public string TargetId { get; set; } = "";
     public bool IsActive { get; set; }
 }
 

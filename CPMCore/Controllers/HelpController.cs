@@ -130,29 +130,21 @@ public class HelpController : BaseController
         var tree = _help.Topics.Select(t =>
         {
             var topicArticles = _help.GetByTopic(t.Slug);
-            var isCurrentTopic = t.Slug == article.TopicSlug;
-            var slugs = topicArticles.Select(a => a.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var firstTopLevel = topicArticles
-                .Where(a => string.IsNullOrEmpty(a.ParentSlug) || !slugs.Contains(a.ParentSlug))
-                .OrderBy(a => a.TreeOrder ?? int.MaxValue).ThenBy(a => a.Title)
-                .FirstOrDefault();
             return new HelpTreeGroupVm
             {
                 Name = t.Name,
-                IsOpen = isCurrentTopic,
+                IsOpen = t.Slug == article.TopicSlug,
                 Count = topicArticles.Count,
-                Articles = isCurrentTopic
-                    ? BuildTreeArticles(topicArticles, article.Slug)
-                    : new List<HelpTreeArticleVm>(),
-                FirstArticleSlug = firstTopLevel?.Slug,
+                Nodes = BuildTreeNodes(topicArticles, article.Slug),
             };
         }).ToList();
 
         var toc = new List<HelpTocItemVm>();
-        if (!string.IsNullOrWhiteSpace(article.BeforeHtml)) toc.Add(new HelpTocItemVm { Text = "Voor je begint" });
-        if (article.Steps.Count > 0) toc.Add(new HelpTocItemVm { Text = "Zo werkt het" });
-        toc.AddRange(article.Steps.Select(s => new HelpTocItemVm { Text = $"{s.Number} · {s.Title}" }));
-        if (article.Faq.Count > 0) toc.Add(new HelpTocItemVm { Text = "Veelgestelde vragen" });
+        // De TargetId's staan ook als id op de blokken in ArtikelV2.cshtml (toc-before, toc-steps, toc-step-N, toc-faq).
+        if (!string.IsNullOrWhiteSpace(article.BeforeHtml)) toc.Add(new HelpTocItemVm { Text = "Voor je begint", TargetId = "toc-before" });
+        if (article.Steps.Count > 0) toc.Add(new HelpTocItemVm { Text = "Zo werkt het", TargetId = "toc-steps" });
+        toc.AddRange(article.Steps.Select((s, i) => new HelpTocItemVm { Text = $"{s.Number} · {s.Title}", TargetId = $"toc-step-{i + 1}" }));
+        if (article.Faq.Count > 0) toc.Add(new HelpTocItemVm { Text = "Veelgestelde vragen", TargetId = "toc-faq" });
 
         var related = article.RelatedSlugs
             .Select(s => _help.GetBySlug(s))
@@ -236,25 +228,36 @@ public class HelpController : BaseController
         return Json(new { ok = true });
     }
 
-    /// <summary>Hoofdartikel gevolgd door haar kinderen (41c-boom, één niveau diep). Een artikel
-    /// met een <c>parent:</c> die niet in hetzelfde topic bestaat valt terug op hoofdartikel —
-    /// nooit een kind dat in de boom nergens onder hangt.</summary>
-    private static List<HelpTreeArticleVm> BuildTreeArticles(IReadOnlyList<HelpArticle> topicArticles, string activeSlug)
+    /// <summary>Boom van een topic (41c), willekeurig diep: elk artikel hangt onder zijn <c>parent:</c>.
+    /// Een artikel met een <c>parent:</c> die niet in hetzelfde topic bestaat valt terug op hoofdartikel,
+    /// nooit een kind dat in de boom nergens onder hangt. Een knoop staat open als hij het actieve
+    /// artikel is of er (diep) boven hangt; zo staat bij het laden enkel het pad naar het huidige artikel open.</summary>
+    private static List<HelpTreeNodeVm> BuildTreeNodes(IReadOnlyList<HelpArticle> topicArticles, string activeSlug)
     {
         var slugs = topicArticles.Select(a => a.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
         bool HasValidParent(HelpArticle a) => !string.IsNullOrEmpty(a.ParentSlug) && slugs.Contains(a.ParentSlug);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var result = new List<HelpTreeArticleVm>();
-        var topLevel = topicArticles.Where(a => !HasValidParent(a))
-            .OrderBy(a => a.TreeOrder ?? int.MaxValue).ThenBy(a => a.Title);
-        foreach (var top in topLevel)
+        IEnumerable<HelpArticle> Ordered(IEnumerable<HelpArticle> list)
+            => list.OrderBy(a => a.TreeOrder ?? int.MaxValue).ThenBy(a => a.Title);
+
+        HelpTreeNodeVm Build(HelpArticle a)
         {
-            result.Add(new HelpTreeArticleVm { Slug = top.Slug, Title = top.TreeLabel ?? top.Title, IsActive = top.Slug == activeSlug });
-            var children = topicArticles.Where(a => string.Equals(a.ParentSlug, top.Slug, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(a => a.TreeOrder ?? int.MaxValue).ThenBy(a => a.Title);
-            foreach (var child in children)
-                result.Add(new HelpTreeArticleVm { Slug = child.Slug, Title = child.TreeLabel ?? child.Title, IsActive = child.Slug == activeSlug, IsChild = true });
+            visited.Add(a.Slug);
+            var node = new HelpTreeNodeVm
+            {
+                Slug = a.Slug,
+                Title = string.IsNullOrWhiteSpace(a.TreeLabel) ? a.Title : a.TreeLabel,
+                IsActive = string.Equals(a.Slug, activeSlug, StringComparison.OrdinalIgnoreCase),
+            };
+            // visited voorkomt een eindeloze lus bij een parent-cyclus in de frontmatter.
+            foreach (var child in Ordered(topicArticles.Where(c => string.Equals(c.ParentSlug, a.Slug, StringComparison.OrdinalIgnoreCase)
+                                                                   && !visited.Contains(c.Slug))))
+                node.Children.Add(Build(child));
+            node.IsOpen = node.Children.Count > 0 && (node.IsActive || node.Children.Any(c => c.IsActive || c.IsOpen));
+            return node;
         }
-        return result;
+
+        return Ordered(topicArticles.Where(a => !HasValidParent(a))).Select(Build).ToList();
     }
 }

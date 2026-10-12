@@ -108,3 +108,62 @@ het nieuwe punt 43 (`CRM Paginatypes.dc.html`, 11 vaste paginatypes — Help-art
 - Playwright draait met een eigen automatiseringsprofiel, nooit het echte profiel van Niels — Edge
   weigert remote-debugging op het default-profielpad (anti-hijack-bescherming, niet te omzeilen).
 - Screenshots altijd uitsnijden tot de relevante kaart/sectie, nooit een volle paginascreenshot.
+
+## 12/10/2026 — bestaande artikels herschreven volgens HELP_SCHRIJFGIDS.md
+- Alle 9 artikels herschreven: taaktitels, je-vorm, korte zinnen, geen gedachtestreepjes, knoppen in
+  **vet**, genummerde stappen waar de volgorde telt. Slugs/`screens`/`related`/afbeeldingen ongewijzigd.
+- Waar een gevolg of regel niet uit de code blijkt, staat `[VRAAG: ...]` in de tekst (ook in 2
+  FAQ-antwoorden). Alle open vragen moeten door Niels beantwoord worden; daarna verhuist het antwoord
+  naar de woordenlijst/bedrijfslogica in `HELP_SCHRIJFGIDS.md` en verdwijnt de markering.
+- Vaste opbouw (taakartikel) is nog niet overal toegepast: `projecten-algemeen`, `project-bewerken` en
+  `project-detail-overzicht` zijn schermuitleg en zouden per taak gesplitst kunnen worden.
+- Titelwijzigingen: "Projecten — het overzicht" → "Een project zoeken en openen", "Het projectdossier
+  lezen" → "De stand van een project bekijken", "Je eerste budget in 9 stappen" → "Een budget opmaken
+  met de budgetwizard", enz. Artikels verwijzen elkaar in de tekst bij titel, controleer die verwijzingen.
+
+## 12/10/2026 (vervolg) — antwoorden van Niels verwerkt, projectartikels per taak gesplitst
+- Verwerkt in gids + artikels: Gepubliceerd = zichtbaar op de website; Opgeleverd = volledig project
+  voorlopig opgeleverd; weerstation berekent weerverletdagen; project verwijderen enkel door een
+  beheerder (geen archivering); concept-punt moet door de projectleider goedgekeurd worden, maker krijgt geen
+  melding; projectcode = dossiernummer-maand-jaar startdatum (handmatig); herziening definitief budget enkel
+  na bedrijfsbeslissingen die het budget beïnvloeden.
+- Bevestigd door Niels: de dashboardmelding "punten goed te keuren" voor de projectleider bestaat nog niet (te bouwen). Zodra ze er is: artikel `punt-met-spraakbericht` aanpassen.
+- Nieuwe structuur Projecten (boom): Overzicht(+Aanmaken) / De stand bekijken (+Vraagt actie, Traject & eenheden,
+  Team/budget/facturen) / Project bewerken (+Bedrijven & werfmelding, Status & planning, Publiceren,
+  Partners & documenten, Coördinatie). Bestaande screenshots verhuisd naar de map van hun nieuwe artikel.
+- Screenshots gemaakt voor Status & foto, Planning, SEO & website en Coördinatie (Playwright met eigen profiel,
+  ingelogd door Niels, enkel gelezen, niets opgeslagen; uitgesneden tot de kaart, geen persoonsgegevens op beeld).
+  Veldnamen in de artikels gecorrigeerd naar het echte scherm (Aanvangsdatum, Uitvoeringstermijn, Totale
+  grondaandelen, Heeft coördinatie, SEO-titel, Meta-omschrijving).
+- Mogelijke UI-bug: op het tabblad Coördinatie staat de schakelaar "Heeft coördinatie" visueel nog uit nadat hij
+  aangezet is (checkbox wel true, kaarten verschijnen). Nog te onderzoeken.
+- De scripts staan in de scratchpad (niet in de repo). Om opnieuw screenshots te maken: nieuw inlogvenster nodig.
+
+## 12/10/2026 (vervolg 2) — artikel grondaandelen + bugfix Aandelen basisakte
+- Nieuw artikel `projecten/grondaandelen-verdelen.md` (basisakte, Aandeel basisakte per eenheid, meldingen op de
+  eenhedenlijst, scherm Aandelen basisakte) met 2 anonieme screenshots van project 60. Opslaan wordt niet
+  geblokkeerd bij een foute som (Niels bevestigd).
+- Bug gevonden tijdens het screenshotten en opgelost: het scherm Aandelen basisakte toonde "1.050" (nl-BE) maar las
+  het terug als 1,05 (JS `parseAmount` + `ParseAmountV2`), zodat de som 539,47 i.p.v. 10.000 toonde en opslaan de
+  aandelen kapot zou maken. Fix: punt + exact drie cijfers = duizendtalscheiding, enkel voor dit scherm
+  (`gl-v2-projecten-landshares.js` + nieuwe `ParseLandshareV2` in `ProjectenController.Units.cs`).
+  JS-kant gecontroleerd in de browser (som 10.000, 10,5 %), serverkant bewust niet getest (zou echte data
+  overschrijven). Herstart nodig voor de controller.
+- Knop "Aandelen verdelen" toegevoegd bovenaan de eenhedenlijst (DetailUnitsV2, enkel bij basisakte en schrijfrecht;
+  tablet via het ⋯-menu, gsm via snelle actie "Aandelen"). Herstart nodig, nog niet in de browser bekeken.
+
+## 12/10/2026 (vervolg 3) — helpboom openklapbaar
+- Boom links op de artikelpagina is nu volledig openklapbaar (chevrons, willekeurig diep), bij laden enkel het pad naar
+  het huidige artikel open. Kolom 340px vanaf 1600px breed. Tooltip met de volledige titel als die is afgeknot.
+  Bestanden: `HelpController.BuildTreeNodes`, `HelpVm.cs`, `Views/Help/_HelpTreeNode.cshtml`, `ArtikelV2.cshtml`,
+  `gl-v2-help.css`, `gl-v2-help.js`. Gebouwd (0 fouten), nog NIET in de browser bekeken: herstart nodig (views + controller).
+
+## 12/10/2026 (vervolg 4) — "Op deze pagina": meescrollen, actief punt, klikbaar
+- Boom: enkel hoofditems vet, 24px inspringing per niveau (ook eerste niveau t.o.v. het onderwerp), boomkolom 500px en
+  toc 360px vanaf 1800px (340/240 vanaf 1600px).
+- Toc meescrollen: oorzaak gevonden, `.gl-v2-body` heeft `overflow: hidden` in de shell, wat `position: sticky` stil
+  uitschakelt. Fix enkel op deze pagina: `.gl-v2-body:has(.gl-v2-help-article-layout) { overflow: clip; }`. Live in de
+  browser getest (toc blijft op 20px na 700px scrollen).
+- Toc klikbaar + actief punt (41c: vet, groen, groene lijn): `HelpTocItemVm.TargetId`, ids `toc-before`, `toc-steps`,
+  `toc-step-N`, `toc-faq` op de blokken, scroll-spy in `gl-v2-help.js` (lijn op 120px, onderaan = laatste punt actief,
+  klik scrolt smooth en zet `#` in de url). Gebouwd (0 fouten), nog NIET getest: herstart nodig (view + controller).

@@ -96,8 +96,70 @@
                             })
 
                             <span class="gl-v2-bw-subhead">Dimensies</span>
-                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.OppFunderingen", "Oppervlakte funderingen", g.OppFunderingen, "m²"))
-                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.M3Grondwerk", "Grondwerk", g.M3Grondwerk, "m³"))
+                            @{
+                                // Herleidbare oppervlaktes (lijnen) en automatisch grondwerk — migratie 089
+                                var fundLijnen = ServiceCore.Budget.GrondwerkRekenregel.Lees(g.FunderingLijnenJson);
+                                var onderLijnen = ServiceCore.Budget.GrondwerkRekenregel.Lees(g.OndergrondsLijnenJson);
+                                var fundWaarde = g.OppFunderingen; var onderWaarde = g.OppOndergronds;
+                                var fundMld = ch.Op("Gegevens.OppFunderingen", "veld"); var onderMld = ch.Op("Gegevens.OppOndergronds", "veld");
+                                var dF = g.DiepteFunderingCm ?? ServiceCore.Budget.GrondwerkRekenregel.StandaardDiepteFunderingCm;
+                                var dV = g.DiepteOndergrondsCm ?? ServiceCore.Budget.GrondwerkRekenregel.StandaardDiepteOndergrondsCm;
+                                string LijnJson(List<ServiceCore.Budget.GrondwerkRekenregel.Lijn> l) => System.Text.Json.JsonSerializer.Serialize(l.Select(x => new { omschrijving = x.Omschrijving, aantal = x.Aantal, oppervlakte = x.Oppervlakte }));
+                                var fundJson = LijnJson(fundLijnen); var onderJson = LijnJson(onderLijnen);
+                            }
+                            <div class="gl-v2-field@(fundMld?.Type == ServiceCore.Budget.MeldingType.Fout ? " is-error" : fundMld != null ? " is-warning" : "")">
+                                <label class="gl-v2-field-label" for="bw-oppfund">Oppervlakte funderingen</label>
+                                <div class="gl-v2-field-attached">
+                                    <div class="gl-v2-field-box">
+                                        <input type="text" inputmode="decimal" id="bw-oppfund" name="Gegevens.OppFunderingen" value="@(fundWaarde.HasValue ? fundWaarde.Value.ToString("F2", nl) : "")" placeholder="0,00" autocomplete="off" class="gl-v2-field-input is-num is-tabular" @(fundLijnen.Count > 0 ? "readonly" : "") />
+                                        <i class="ph ph-warning gl-v2-field-state-icon is-w" aria-hidden="true"></i><i class="ph ph-warning-circle gl-v2-field-state-icon is-e" aria-hidden="true"></i>
+                                        <span class="gl-v2-field-unit">m²</span>
+                                    </div>
+                                    <button type="button" class="gl-v2-field-attach-btn" id="bw-fund-toggle" aria-expanded="false" aria-controls="bw-fund-panel" data-bw-keep><i class="ph ph-calculator" aria-hidden="true"></i><span>Berekening</span></button>
+                                </div>
+                                <span class="gl-v2-field-help" id="bw-fund-help">@(fundMld != null ? fundMld.Tekst : fundLijnen.Count > 0 ? $"som van {fundLijnen.Count} regel{(fundLijnen.Count == 1 ? "" : "s")}" : "rechtstreeks ingevuld — open de berekening om per type op te tellen")</span>
+                            </div>
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Gegevens.DiepteFunderingCm", Label = "Diepte fundering", Value = dF, Unit = "cm", Decimals = 0, Help = "standaard 40 cm" })
+                            <div class="gl-v2-field@(onderMld?.Type == ServiceCore.Budget.MeldingType.Fout ? " is-error" : onderMld != null ? " is-warning" : "")">
+                                <label class="gl-v2-field-label" for="bw-opponder">Oppervlakte ondergrondse verdiepingen</label>
+                                <div class="gl-v2-field-attached">
+                                    <div class="gl-v2-field-box">
+                                        <input type="text" inputmode="decimal" id="bw-opponder" name="Gegevens.OppOndergronds" value="@(onderWaarde.HasValue ? onderWaarde.Value.ToString("F2", nl) : "")" placeholder="0,00" autocomplete="off" class="gl-v2-field-input is-num is-tabular" @(onderLijnen.Count > 0 ? "readonly" : "") />
+                                        <i class="ph ph-warning gl-v2-field-state-icon is-w" aria-hidden="true"></i><i class="ph ph-warning-circle gl-v2-field-state-icon is-e" aria-hidden="true"></i>
+                                        <span class="gl-v2-field-unit">m²</span>
+                                    </div>
+                                    <button type="button" class="gl-v2-field-attach-btn" id="bw-onder-toggle" aria-expanded="false" aria-controls="bw-onder-panel" data-bw-keep><i class="ph ph-calculator" aria-hidden="true"></i><span>Berekening</span></button>
+                                </div>
+                                <span class="gl-v2-field-help" id="bw-onder-help">@(onderMld != null ? onderMld.Tekst : onderLijnen.Count > 0 ? $"som van {onderLijnen.Count} regel{(onderLijnen.Count == 1 ? "" : "s")}" : "totaal van alle ondergrondse verdiepingen — leeg = aantal × oppervlakte funderingen")</span>
+                            </div>
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Gegevens.DiepteOndergrondsCm", Label = "Diepte per ondergrondse verdieping", Value = dV, Unit = "cm", Decimals = 0, Help = "standaard 300 cm" })
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Gegevens.M3Grondwerk", Id = "bw-grondwerk", Label = "Grondwerk (automatisch)", Value = g.M3Grondwerk, Unit = "m³", Attrs = "readonly tabindex=\"-1\"", Help = "oppervlakte × diepte" })
+                            <div class="bw-fund-panel" id="bw-fund-panel" hidden>
+                                <div class="bw-fund-head"><i class="ph ph-calculator" aria-hidden="true"></i><strong>Berekening oppervlakte funderingen</strong><span class="gl-v2-bw-hint">per type: aantal × oppervlakte per stuk; de som is de oppervlakte funderingen</span></div>
+                                <div class="gl-v2-bw-table-wrap">
+                                    <table class="gl-v2-bw-table">
+                                        <thead><tr><th>Omschrijving</th><th class="is-num">Aantal</th><th class="is-num">m² per stuk</th><th class="is-num">Totaal m²</th><th class="col-actions"></th></tr></thead>
+                                        <tbody id="bw-fund-body"></tbody>
+                                        <tfoot><tr><td colspan="3">Totaal</td><td class="is-num" id="bw-fund-tot">0,00</td><td></td></tr></tfoot>
+                                    </table>
+                                </div>
+                                <div class="bw-fund-foot"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-fund-add" data-bw-edit><i class="ph ph-plus" aria-hidden="true"></i>Regel toevoegen</button></div>
+                            </div>
+                            <div class="bw-fund-panel" id="bw-onder-panel" hidden>
+                                <div class="bw-fund-head"><i class="ph ph-calculator" aria-hidden="true"></i><strong>Berekening oppervlakte ondergrondse verdiepingen</strong><span class="gl-v2-bw-hint">per verdieping of type: aantal × oppervlakte; de som is het totaal van alle ondergrondse verdiepingen</span></div>
+                                <div class="gl-v2-bw-table-wrap">
+                                    <table class="gl-v2-bw-table">
+                                        <thead><tr><th>Omschrijving</th><th class="is-num">Aantal</th><th class="is-num">m² per stuk</th><th class="is-num">Totaal m²</th><th class="col-actions"></th></tr></thead>
+                                        <tbody id="bw-onder-body"></tbody>
+                                        <tfoot><tr><td colspan="3">Totaal</td><td class="is-num" id="bw-onder-tot">0,00</td><td></td></tr></tfoot>
+                                    </table>
+                                </div>
+                                <div class="bw-fund-foot"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-onder-add" data-bw-edit><i class="ph ph-plus" aria-hidden="true"></i>Regel toevoegen</button></div>
+                            </div>
+                            <input type="hidden" name="Gegevens.FunderingLijnenJson" id="bw-fund-json" value="@fundJson" />
+                            <input type="hidden" name="Gegevens.OndergrondsLijnenJson" id="bw-onder-json" value="@onderJson" />
+                            <script type="application/json" id="bw-fund-data">@Html.Raw(fundJson)</script>
+                            <script type="application/json" id="bw-onder-data">@Html.Raw(onderJson)</script>
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.LmBerlinerwanden", "Berlinerwanden", g.LmBerlinerwanden, "lm"))
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.LmSecanpalen", "Secanspalen", g.LmSecanpalen, "lm"))
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", BwNumVm.Maak("Gegevens.M3Onderschoeiingen", "Onderschoeiingen", g.M3Onderschoeiingen, "m³"))
@@ -224,6 +286,70 @@
         });
     }
     form.addEventListener('input', function (e) { if (e.target.matches('[data-bw-live]')) live(); });
+
+    // ── Herleidbare oppervlaktes (lijnen) en grondwerk (automatisch) ─────────────────────────────────────────
+    (function () {
+        var nfm = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        function getal(v) { v = String(v == null ? '' : v).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+        function rond(n) { return Math.round(n * 100) / 100; }
+        function veld(cls, val, ph, breed) { return '<div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"' + (breed ? ' style="width:' + breed + 'px;margin-left:auto"' : '') + '><input type="text" class="gl-v2-field-input ' + (breed ? 'is-num is-tabular ' : '') + cls + '" value="' + val + '" placeholder="' + ph + '" autocomplete="off"' + (breed ? ' inputmode="decimal"' : ' maxlength="80"') + ' /></div></div>'; }
+        var g3 = document.getElementById('bw-grondwerk'), lijsten = [];
+        function maak(pf, leegTekst) {
+            var panel = document.getElementById('bw-' + pf + '-panel'), body = document.getElementById('bw-' + pf + '-body'), toggle = document.getElementById('bw-' + pf + '-toggle'), json = document.getElementById('bw-' + pf + '-json');
+            var opp = document.getElementById('bw-opp' + pf), help = document.getElementById('bw-' + pf + '-help'), tot = document.getElementById('bw-' + pf + '-tot');
+            if (!panel || !opp) return null;
+            function rij(l) {
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td style="min-width:200px">' + veld('lj-o', (l.omschrijving || '').replace(/"/g, '&quot;'), 'bv. Woningen type A') + '</td><td class="is-num">' + veld('lj-a', l.aantal ? String(l.aantal).replace('.', ',') : '', '1', 90) + '</td><td class="is-num">' + veld('lj-m', l.oppervlakte ? nfm.format(l.oppervlakte) : '', '0,00', 110) + '</td><td class="is-num is-strong lj-t">0,00</td><td class="col-actions"><button type="button" class="gl-v2-row-action gl-v2-row-action-danger lj-del" data-bw-edit title="Regel verwijderen" aria-label="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button></td>';
+                body.appendChild(tr); return tr;
+            }
+            function lees() {
+                var l = [];
+                body.querySelectorAll('tr').forEach(function (tr) {
+                    var o = tr.querySelector('.lj-o').value.trim(), a = getal(tr.querySelector('.lj-a').value), m = getal(tr.querySelector('.lj-m').value);
+                    tr.querySelector('.lj-t').textContent = nfm.format(rond(a * m));
+                    if (o || a || m) l.push({ omschrijving: o, aantal: a, oppervlakte: m });
+                });
+                return l;
+            }
+            function herreken() {
+                var l = lees(), heeft = l.length > 0, som = rond(l.reduce(function (t, x) { return t + x.aantal * x.oppervlakte; }, 0));
+                json.value = JSON.stringify(l); tot.textContent = nfm.format(som);
+                if (heeft) { opp.value = nfm.format(som); opp.readOnly = true; help.textContent = 'som van ' + l.length + ' regel' + (l.length === 1 ? '' : 's'); }
+                else { opp.readOnly = false; help.textContent = leegTekst; }
+            }
+            function wijzig() { herreken(); grond(); json.dispatchEvent(new Event('input', { bubbles: true })); }
+            var data = []; try { data = JSON.parse(document.getElementById('bw-' + pf + '-data').textContent || '[]'); } catch (e) { }
+            data.forEach(rij); herreken();
+            if (data.length) { panel.hidden = false; toggle.setAttribute('aria-expanded', 'true'); }
+            toggle.addEventListener('click', function () { var open = panel.hidden; panel.hidden = !open; toggle.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+            document.getElementById('bw-' + pf + '-add').addEventListener('click', function () {
+                // Het eerste regeltje neemt een eerder rechtstreeks ingevuld getal over, zodat het niet verloren gaat
+                if (!body.children.length && getal(opp.value) > 0) rij({ omschrijving: 'Eerder ingevuld', aantal: 1, oppervlakte: getal(opp.value) });
+                var tr = rij({ aantal: 1 }); wijzig(); tr.querySelector('.lj-o').focus();
+            });
+            body.addEventListener('click', function (e) { var b = e.target.closest('.lj-del'); if (!b) return; b.closest('tr').remove(); wijzig(); });
+            return { herreken: herreken, opp: opp };
+        }
+        function grond() {
+            var fund = document.getElementById('bw-oppfund'), onder = document.getElementById('bw-opponder');
+            var f = form.elements['Gegevens.DiepteFunderingCm'].value, v = form.elements['Gegevens.DiepteOndergrondsCm'].value, n = parseInt(form.elements['Gegevens.AantalVerdiepingenOndergronds'].value, 10) || 0;
+            var dF = String(f).trim() === '' ? 40 : getal(f), dV = String(v).trim() === '' ? 300 : getal(v), a1 = getal(fund.value);
+            var leegOnder = String(onder.value).trim() === '', a2 = leegOnder ? n * a1 : getal(onder.value);
+            g3.value = nfm.format(rond((a1 * dF + a2 * dV) / 100));
+            var gw = g3.closest('.gl-v2-field'); if (gw) gw.classList.remove('is-warning', 'is-error');   // automatisch veld: nooit zelf in waarschuwing
+            if (a1 > 0) { var fw = fund.closest('.gl-v2-field'); if (fw) fw.classList.remove('is-warning'); }   // de waarschuwing 'funderingen leeg' verdwijnt meteen
+            var gh = g3.closest('.gl-v2-field').querySelector('.gl-v2-field-help');
+            if (gh) gh.textContent = '= ' + nfm.format(a1) + ' m² × ' + nfm.format(dF / 100) + ' m' + (a2 > 0 ? ' + ' + nfm.format(a2) + ' m² × ' + nfm.format(dV / 100) + ' m' : '');
+        }
+        if (g3) {
+            lijsten.push(maak('fund', 'rechtstreeks ingevuld — open de berekening om per type op te tellen'));
+            lijsten.push(maak('onder', 'totaal van alle ondergrondse verdiepingen — leeg = aantal × oppervlakte funderingen'));
+            grond();
+            form.addEventListener('input', function () { lijsten.forEach(function (l) { if (l) l.herreken(); }); grond(); });
+        }
+    })();
+
     live();
 
     // Basisprijs overnemen uit het gekoppelde materiaal

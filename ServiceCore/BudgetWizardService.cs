@@ -296,6 +296,11 @@ namespace ServiceCore
                     GevelLeienSidings              = g.GevelLeienSidings,
                     OppFunderingen                 = g.OppFunderingen,
                     M3Grondwerk                    = g.M3Grondwerk,
+                    FunderingLijnen                = g.FunderingLijnen,
+                    OppOndergronds                 = g.OppOndergronds,
+                    OndergrondsLijnen              = g.OndergrondsLijnen,
+                    DiepteFunderingCm              = g.DiepteFunderingCm,
+                    DiepteOndergrondsCm            = g.DiepteOndergrondsCm,
                     LmBerlinerwanden               = g.LmBerlinerwanden,
                     LmSecanpalen                   = g.LmSecanpalen,
                     M3Onderschoeiingen             = g.M3Onderschoeiingen,
@@ -332,6 +337,7 @@ namespace ServiceCore
                     GarBergOndergronds      = o.GarBergOndergronds,
                     BergGelijkvloers        = o.BergGelijkvloers,
                     Carports                = o.Carports,
+                    Poorten                 = o.Poorten,
                     DoorritGVL              = o.DoorritGVL,
                     Zolder                  = o.Zolder,
                     GemeenschappelijkeDelen = o.GemeenschappelijkeDelen,
@@ -602,6 +608,24 @@ namespace ServiceCore
 
             var entity = _uow.BudgetGegevens.GetNoTracking()
                 .SingleOrDefault(g => g.BudgetVersieId == versieId);
+
+            // Grondwerk (migratie 089): oppervlakte funderingen = som van de lijnen (indien er lijnen zijn) en m3 = oppervlakte x diepte. Een pagina die de
+            // lijnen/dieptes niet meestuurt (klassieke pagina) laat de bewaarde waarden ongemoeid.
+            if (entity != null)
+            {
+                bo.FunderingLijnenJson ??= entity.FunderingLijnen;
+                bo.OndergrondsLijnenJson ??= entity.OndergrondsLijnen;
+                if (bo.OndergrondsLijnenJson == null) bo.OppOndergronds ??= entity.OppOndergronds;
+                bo.DiepteFunderingCm ??= entity.DiepteFunderingCm;
+                bo.DiepteOndergrondsCm ??= entity.DiepteOndergrondsCm;
+            }
+            var fLijnen = Budget.GrondwerkRekenregel.Lees(bo.FunderingLijnenJson);
+            if (fLijnen.Count > 0) bo.OppFunderingen = Budget.GrondwerkRekenregel.Som(fLijnen);
+            var oLijnen = Budget.GrondwerkRekenregel.Lees(bo.OndergrondsLijnenJson);
+            if (oLijnen.Count > 0) bo.OppOndergronds = Budget.GrondwerkRekenregel.Som(oLijnen);
+            bo.DiepteFunderingCm ??= Budget.GrondwerkRekenregel.StandaardDiepteFunderingCm;
+            bo.DiepteOndergrondsCm ??= Budget.GrondwerkRekenregel.StandaardDiepteOndergrondsCm;
+            bo.M3Grondwerk = Budget.GrondwerkRekenregel.M3(bo.OppFunderingen ?? 0m, bo.DiepteFunderingCm, bo.OppOndergronds, bo.AantalVerdiepingenOndergronds, bo.DiepteOndergrondsCm);
 
             if (entity == null)
             {

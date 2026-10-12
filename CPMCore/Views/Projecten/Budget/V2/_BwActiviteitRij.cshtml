@@ -53,3 +53,23 @@
     </td>
     <td class="is-num is-strong bw-act-gecorrigeerd">@Eur(basis * corr)</td>
 </tr>
+@if (Model.FormuleDelen is { Count: > 0 })
+{
+    @* 39g "Toon berekeningen": de berekening van het voorstel als strook onder de activiteit (chips + operatoren, bron, link naar de formule) *@
+    <tr class="bw-act-formule">
+        <td colspan="@(toonRef ? 6 : 4)">
+            <div class="bw-fm">
+                <div class="bw-fm-delen">
+                    @foreach (var d in Model.FormuleDelen)
+                    {
+                        if (d.Soort == "op") { <span class="bw-fm-op">@d.Tekst</span> }
+                        else if (d.Soort == "totaal") { <span class="bw-fm-tot">@d.Tekst</span> }
+                        else { <span class="bw-fm-chip" title="@d.Titel">@if (!string.IsNullOrEmpty(d.Label)) { <span class="l">@d.Label</span> }<span class="v">@d.Tekst@(string.IsNullOrEmpty(d.Eenheid) ? "" : " " + d.Eenheid)</span></span> }
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.FormuleBron)) { <span class="bw-fm-bron">bron: @Model.FormuleBron</span> }
+                @if (Model.FormuleViaDb) { <a class="bw-fm-link" href="@Url.Action("BudgetFormules", "Instellingen")" target="_blank" rel="noopener" data-bw-plain>Formule <i class="ph ph-caret-right" aria-hidden="true"></i></a> }
+            </div>
+        </td>
+    </tr>
+}

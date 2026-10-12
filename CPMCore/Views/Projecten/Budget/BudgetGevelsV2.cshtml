@@ -87,7 +87,7 @@
             </div>
             <div class="gl-v2-notice gl-v2-notice-compact @(aftrekRijen > 0 ? "is-warning" : "is-info")" style="margin-top:16px">
                 <i class="ph @(aftrekRijen > 0 ? "ph-warning" : "ph-info")" aria-hidden="true"></i>
-                <span><strong>Ramen aftrekken?</strong> Vul de ramen in onder de tab Ramen — ze worden dan automatisch van de gevels afgetrokken, zonder negatieve regel.@(aftrekRijen > 0 ? $" Deze versie heeft nog {aftrekRijen} negatieve regel{(aftrekRijen == 1 ? "" : "s")} (rood) uit een ouder budget." : "")</span>
+                <span><strong>Ramen aftrekken?</strong> Vul de ramen in onder de tab Ramen — ze worden dan automatisch van de gevels afgetrokken (per soort: ramen nieuwbouw van gevels nieuwbouw, ramen bestaand van gevels bestaand), zonder negatieve regel. Netto gevel nu: <strong>@N2(Math.Max(0m, t.TotaalGevelNieuwbouw - t.TotaalRaamNieuwbouw) + Math.Max(0m, t.TotaalGevelBestaand - t.TotaalRaamBestaand)) m²</strong> — dat is de formuleparameter <code>@@opp_gevels</code> (<code>@@opp_gevels_bruto</code> = zonder aftrek).@(aftrekRijen > 0 ? $" Deze versie heeft nog {aftrekRijen} negatieve regel{(aftrekRijen == 1 ? "" : "s")} (rood) uit een ouder budget." : "")</span>
             </div>
         </div>
         <div class="gl-v2-tab-panel" data-tab-panel="ramen" hidden>

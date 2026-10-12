@@ -1,44 +1,45 @@
 ---
-title: Projecten — het overzicht
+title: Een project zoeken en openen
 topic: projecten
 treeOrder: 1
 treeLabel: Overzicht
 role: Projectleider
 device: Desktop · tablet
 minutes: 3
-updated: 2026-10-11
+updated: 2026-10-12
 screens: projecten-algemeen
 synonyms: projectenlijst, alle projecten, zoeken, filters
 newsTag: Nieuw
 description: zoeken, filteren en een nieuw project starten
 related: project-aanmaken, project-detail-overzicht
 intro: |
-  "Projecten" (het huisje-icoon in de rail) toont elk project waar je toegang toe hebt, als
-  kaarten. Dit is het startpunt om een bestaand project te openen of een nieuw project te starten.
+  Via **Projecten** (het huisje in de rail) zie je alle projecten waar je toegang toe hebt, als
+  kaarten. Hier zoek je een project om te openen, of start je een nieuw project.
 faq:
   - q: Waarom zie ik niet meteen alle projecten?
-    a: De lijst laadt de eerste 30 (gesorteerd op fase, van start tot einde) en toont onderaan "Laad meer" — klik daarop om de volgende reeks bij te laden, of zoek/filter om meteen te versmallen.
-  - q: Wat betekent een project zonder opleverdatum?
-    a: "Geen opleverdatum" verschijnt zolang er geen uitvoeringstermijn/startdatum bouw is ingevuld bij Project bewerken → Planning.
+    a: De lijst toont eerst 30 projecten, gesorteerd op fase. Klik onderaan op **Laad meer** voor de volgende reeks, of zoek en filter om sneller te vinden wat je nodig hebt.
+  - q: Waarom staat er Geen opleverdatum op een kaart?
+    a: Er is nog geen aanvangsdatum of uitvoeringstermijn ingevuld. Vul die in bij **Project bewerken**, tabblad **Planning**.
+  - q: Ik mis een project in de lijst. Waar is het?
+    a: Je ziet enkel projecten waar je toegang toe hebt. [VRAAG: wie geeft toegang tot een project, en waar stelt een beheerder dat in?]
 ---
 ## Zoeken en filteren
 
 ![Zoekveld en Filters-knop](/img/help/projecten/projecten-algemeen/1-toolbar.png)
 
-Het zoekveld zoekt op projectnaam of gemeente. "Filters" klapt een paneel open met een
-statusfilter (bv. enkel "In uitvoering" of "Opgeleverd") — beide werken meteen, zonder aparte
-"Toepassen"-knop.
+Het zoekveld zoekt op projectnaam of gemeente. **Filters** opent een paneel met een statusfilter,
+bijvoorbeeld enkel **In uitvoering** of **Opgeleverd**. Zoeken en filteren werken meteen, je hoeft
+niets te bevestigen.
 
-## De projectkaarten
+## Een kaart lezen
 
 ![Twee voorbeeldkaarten](/img/help/projecten/projecten-algemeen/2-projectkaarten.png)
 
-Elke kaart toont de projectfoto, de status als badge (Opstart, In uitvoering, Afgewerkt,
-Opgeleverd), de gemeente, en — zolang het project niet opgeleverd is — de fysieke en financiële
-voortgang (zelfde twee cijfers als op de projectpagina zelf, zie "Het projectdossier lezen").
-Onderaan de kaart staat de opleverdatum, of "Geen opleverdatum" als die nog niet vaststaat. Klik
-op een kaart om naar dat project se eigen projectpagina te gaan.
+Elke kaart toont de projectfoto, de status, de gemeente en de opleverdatum. Is het project nog niet
+opgeleverd, dan zie je ook de fysieke en de financiële voortgang. Dat zijn dezelfde cijfers als op
+de projectpagina zelf. Klik op een kaart om die projectpagina te openen.
 
 ## Een nieuw project starten
 
-Klik op "+ Project toevoegen" rechtsboven — zie "Een project aanmaken" voor het formulier zelf.
+Klik rechtsboven op **+ Project toevoegen**. Het formulier zelf staat uitgelegd in "Een project
+aanmaken".

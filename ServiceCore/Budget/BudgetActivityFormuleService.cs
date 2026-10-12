@@ -50,6 +50,8 @@ public class ActivityLotInfo
 
 public class FormuleEvaluatieResultaat
 {
+    public List<FormuleDeelBO> Delen { get; set; } = new();
+    public string Bron { get; set; }
     public decimal Totaal         { get; set; }
     public string  Label          { get; set; }
     public string  DetailRowsHtml { get; set; }
@@ -120,7 +122,8 @@ public class BudgetActivityFormuleService
         ("opp_carports",             "Carports (kolomtotaal tab Oppervlaktes)",                                 "m²",   "Oppervlaktes"),
         ("opp_wegenis",              "Wegenis (kolomtotaal tab Oppervlaktes)",                                  "m²",   "Oppervlaktes"),
         ("opp_grondopp",             "Grondoppervlakte (kolomtotaal tab Oppervlaktes)",                         "m²",   "Oppervlaktes"),
-        ("opp_gevels",               "Gevels (nieuwbouw + bestaand)",                                           "m²",   "Oppervlaktes"),
+        ("opp_gevels",               "Gevels netto: nieuwbouw + bestaand, min de ramen (tab Gevels)",         "m²",   "Oppervlaktes"),
+        ("opp_gevels_bruto",         "Gevels bruto: nieuwbouw + bestaand, zonder ramen af te trekken",        "m²",   "Oppervlaktes"),
         ("opp_platdak",              "Platdak",                                                                 "m²",   "Oppervlaktes"),
         ("opp_hellend_dak",          "Hellend dak (horizontale projectie)",                                     "m²",   "Oppervlaktes"),
         ("opp_groendak",             "Groendak",                                                                "m²",   "Oppervlaktes"),
@@ -148,7 +151,7 @@ public class BudgetActivityFormuleService
         ("aantal_douchekamers",        "Totaal douchekamers (kolomtotaal tab Sanitair)",                        "st",   "Sanitair"),
 
         ("m3_onderschoeiingen",      "Onderschoeiingen (tab Gegevens)",                                         "m³",   "Volumes"),
-        ("m3_grondwerken",           "Grondwerken: opp funderingen × 0,30 + verd. ondergronds × 3,50 × garage/berging ondergronds", "m³", "Volumes"),
+        ("m3_grondwerken",           "Grondwerk (automatisch, tab Gegevens): opp. funderingen × diepte + opp. ondergrondse verdiepingen × diepte", "m³", "Volumes"),
 
         ("prijs_ruwbouw_basis",      "Nacalc basisprijs ruwbouw uit budget, geïndexeerd",                       "€/m²", "Prijzen budget (geïndexeerd)"),
         ("prijs_gevelmetselwerk",    "Gevelmetselwerkprijs uit budget, geïndexeerd",                            "€/m²", "Prijzen budget (geïndexeerd)"),
@@ -202,7 +205,9 @@ public class BudgetActivityFormuleService
 
     // Berekent alle parameterwaarden voor één budgetversie.
     // Zelfde aggregaties als in BudgetActivityService.GetLotGroepenAsync.
-    public async Task<Dictionary<string, decimal>> BuildParameterWaardenAsync(int budgetVersieId)
+    public async Task<Dictionary<string, decimal>> BuildParameterWaardenAsync(int budgetVersieId) => await BuildParameterWaardenAsync(budgetVersieId, null);
+
+    private async Task<Dictionary<string, decimal>> BuildParameterWaardenAsync(int budgetVersieId, Dictionary<string, (decimal Basis, decimal Factor, string Code)> matDetail)
     {
         var versie = await _uow.BudgetVersies.GetNoTracking()
             .Include(v => v.BudgetGegevens)
@@ -292,7 +297,8 @@ public class BudgetActivityFormuleService
 
         var aantalGaragesBovengronds = opps.Count(o => IsGarageType(o, "boven"));
         var aantalGaragesOndergronds = opps.Count(o => IsGarageType(o, "onder"));
-        var aantalPoorten            = aantalGaragesBovengronds + aantalGaragesOndergronds;
+        // Poorten: de kolom "Poorten" op Oppervlaktes (ingebouwde garage = poorten op de woning-rij); een garage-rij met 0 poorten telt voor 1
+        var aantalPoorten            = opps.Sum(o => o.Poorten > 0 ? o.Poorten : (IsGarageType(o, "boven") || IsGarageType(o, "onder") ? 1 : 0));
         var typePoorten               = dbGeg?.TypePoorten;
 
         var waarden = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
@@ -330,7 +336,9 @@ public class BudgetActivityFormuleService
             ["opp_carports"]             = opps.Sum(o => o.Carports),
             ["opp_wegenis"]              = opps.Sum(o => o.Wegenis),
             ["opp_grondopp"]             = opps.Sum(o => o.Grondopp),
-            ["opp_gevels"]               = GevelM2Type("GevelNieuwbouw", "GevelBestaand"),
+            // Ramen worden automatisch van de gevels afgetrokken (per soort: ramen nieuwbouw van gevels nieuwbouw, ramen bestaand van gevels bestaand; nooit onder 0)
+            ["opp_gevels"]               = Math.Max(0m, GevelM2Type("GevelNieuwbouw") - GevelM2Type("RaamNieuwbouw")) + Math.Max(0m, GevelM2Type("GevelBestaand") - GevelM2Type("RaamBestaand")),
+            ["opp_gevels_bruto"]         = GevelM2Type("GevelNieuwbouw", "GevelBestaand"),
             ["opp_platdak"]              = totaalPlatDak,
             ["opp_hellend_dak"]          = GevelM2Type("HellendDak"),
             ["opp_groendak"]             = GevelM2Type("GroenDak"),
@@ -358,8 +366,7 @@ public class BudgetActivityFormuleService
             ["aantal_douchekamers"]        = sanitairRijen.Sum(s => s.Douchekamer),
 
             ["m3_onderschoeiingen"]      = gegevensBO.M3Onderschoeiingen ?? 0m,
-            ["m3_grondwerken"]           = m2Funder * 0.3m
-                                         + gegevensBO.AantalVerdiepingenOndergronds * 3.5m * totaalGarBerg,
+            ["m3_grondwerken"]           = GrondwerkRekenregel.M3(m2Funder, dbGeg?.DiepteFunderingCm, dbGeg?.OppOndergronds, gegevensBO.AantalVerdiepingenOndergronds, dbGeg?.DiepteOndergrondsCm),
 
             ["prijs_ruwbouw_basis"]      = (gegevensBO.NacalcBasisprijs          ?? 0m) * ctx.MIndexFactor(FormulaSleutels.NacalcRuwbouwBasis),
             ["prijs_gevelmetselwerk"]    = (gegevensBO.GevelMetselwerkPrijsPerM2 ?? 0m) * ctx.MIndexFactor(FormulaSleutels.BovenbouwGevelmetselwerk),
@@ -381,6 +388,7 @@ public class BudgetActivityFormuleService
             waarden["mat_" + sleutel] = ctx.HeeftMateriaal(sleutel)
                 ? ctx.M(sleutel) * ctx.MIndexFactor(sleutel)
                 : 0m;
+            if (matDetail != null && ctx.HeeftMateriaal(sleutel)) matDetail["mat_" + sleutel] = (ctx.M(sleutel), ctx.MIndexFactor(sleutel), ctx.MIndexCode(sleutel));
         }
 
         return waarden;
@@ -400,7 +408,8 @@ public class BudgetActivityFormuleService
             .Select(o => o.UnitType.Name)
             .ToListAsync();
 
-        var heeftGarages = unitTypeNamen.Any(n => n.Contains("garage", StringComparison.OrdinalIgnoreCase));
+        var heeftGarages = unitTypeNamen.Any(n => n.Contains("garage", StringComparison.OrdinalIgnoreCase))
+            || await _uow.BudgetOppervlaktes.GetNoTracking().AnyAsync(o => o.BudgetVersieId == budgetVersieId && o.Poorten > 0);
 
         return heeftGarages && (string.IsNullOrWhiteSpace(typePoorten) || typePoorten == "Geen");
     }
@@ -578,7 +587,9 @@ public class BudgetActivityFormuleService
             .ToListAsync();
         if (formules.Count == 0) return resultaten;
 
-        var waarden = await BuildParameterWaardenAsync(budgetVersieId);
+        var matDetail = new Dictionary<string, (decimal Basis, decimal Factor, string Code)>(StringComparer.OrdinalIgnoreCase);
+        var waarden = await BuildParameterWaardenAsync(budgetVersieId, matDetail);
+        var catalogus = (await GetParametersAsync(null)).ToDictionary(p => p.Naam, p => p, StringComparer.OrdinalIgnoreCase);
 
         foreach (var f in formules)
         {
@@ -593,7 +604,9 @@ public class BudgetActivityFormuleService
             {
                 Totaal         = totaal,
                 Label          = string.IsNullOrWhiteSpace(f.Omschrijving) ? f.Activity.Omschrijving : f.Omschrijving,
-                DetailRowsHtml = BouwDetailRowsHtml(termen)
+                DetailRowsHtml = BouwDetailRowsHtml(termen),
+                Delen          = VeiligStrook(node, waarden, catalogus, matDetail, totaal),
+                Bron           = VeiligBron(node, catalogus)
             };
         }
         return resultaten;
@@ -644,6 +657,106 @@ public class BudgetActivityFormuleService
                 };
             })
             .ToList();
+    }
+
+
+
+    // De strook is een weergave-extra: een ongebruikelijke formule mag de pagina nooit blokkeren of laten falen.
+    private static List<FormuleDeelBO> VeiligStrook(FormuleNode node, Dictionary<string, decimal> waarden, Dictionary<string, FormuleParameterInfo> catalogus,
+                                                    Dictionary<string, (decimal Basis, decimal Factor, string Code)> matDetail, decimal totaal)
+    {
+        try
+        {
+            var delen = BouwStrook(node, waarden, catalogus, matDetail, totaal);
+            if (delen.Count > 24) return new List<FormuleDeelBO> { new FormuleDeelBO { Soort = "chip", Label = "Berekening", Tekst = "te uitgebreid voor een strook — zie de formule" }, new FormuleDeelBO { Soort = "op", Tekst = "=" }, new FormuleDeelBO { Soort = "totaal", Tekst = "€ " + F(totaal) } };
+            foreach (var d in delen) if (d.Titel != null && d.Titel.Length > 160) d.Titel = d.Titel[..160] + "…";
+            return delen;
+        }
+        catch { return new List<FormuleDeelBO>(); }
+    }
+
+    private static string VeiligBron(FormuleNode node, Dictionary<string, FormuleParameterInfo> catalogus)
+    {
+        try { return BouwBron(node, catalogus); } catch { return null; }
+    }
+
+    // ── Formulestrook (39g "Toon berekeningen") ─────────────────────────────────────────────────────────
+    private static readonly Dictionary<string, string> TabNaarStap = new(StringComparer.OrdinalIgnoreCase)
+    { ["Gegevens"] = "stap 1 · Gegevens", ["Oppervlaktes"] = "stap 2 · Oppervlaktes", ["Sanitair"] = "stap 3 · Sanitair", ["Gevels"] = "stap 4 · Gevels", ["Dak & afbraak"] = "stap 5 · Dak & afbraak" };
+
+    private static string KortLabel(string naam, string omschrijving)
+    {
+        if (naam.Equals("gewogen_factor", StringComparison.OrdinalIgnoreCase)) return "Index";
+        var t = omschrijving ?? naam;
+        foreach (var scheider in new[] { " (", " — ", ": ", ", " }) { var i = t.IndexOf(scheider, StringComparison.Ordinal); if (i > 0) t = t[..i]; }
+        t = t.Replace("Totale ", "").Replace("Aantal ", "Aantal ").Trim();
+        return t.Length > 26 ? t[..25] + "…" : t;
+    }
+
+    private static string BouwBron(FormuleNode node, Dictionary<string, FormuleParameterInfo> catalogus)
+    {
+        var stappen = new List<string>();
+        foreach (var naam in FormuleParser.GetParameterNamen(node))
+        {
+            if (!catalogus.TryGetValue(naam, out var p) || naam.StartsWith("mat_", StringComparison.OrdinalIgnoreCase) || naam.StartsWith("prijs_", StringComparison.OrdinalIgnoreCase)) continue;
+            var m = System.Text.RegularExpressions.Regex.Match(p.Omschrijving ?? "", @"tab\s+([A-Za-z& ]+?)(?:\)|,|$)");
+            if (m.Success && TabNaarStap.TryGetValue(m.Groups[1].Value.Trim(), out var stap) && !stappen.Contains(stap)) stappen.Add(stap);
+        }
+        return stappen.Count == 0 ? null : string.Join(", ", stappen.OrderBy(x => x));
+    }
+
+    private static List<FormuleDeelBO> BouwStrook(FormuleNode root, Dictionary<string, decimal> waarden, Dictionary<string, FormuleParameterInfo> catalogus,
+                                                  Dictionary<string, (decimal Basis, decimal Factor, string Code)> matDetail, decimal totaal)
+    {
+        var delen = new List<FormuleDeelBO>();
+        void Op(string t) => delen.Add(new FormuleDeelBO { Soort = "op", Tekst = t });
+        void Chip(string label, string tekst, string eenheid, string titel = null) => delen.Add(new FormuleDeelBO { Soort = "chip", Label = label, Tekst = tekst, Eenheid = eenheid, Titel = titel });
+
+        void Factor(FormuleNode n)
+        {
+            if (n is HaakjesNode h && h.Kind is ParameterNode or GetalNode) { Factor(h.Kind); return; }
+            if (n is ParameterNode pn)
+            {
+                waarden.TryGetValue(pn.Naam, out var w);
+                catalogus.TryGetValue(pn.Naam, out var p);
+                var eenheid = p?.Eenheid ?? "";
+                if (matDetail != null && matDetail.TryGetValue(pn.Naam, out var md))
+                {
+                    // Materiaalprijs: basisprijs én indexfactor apart tonen (geïndexeerd = basis × index)
+                    Chip("Eenheidsprijs", F(md.Basis), eenheid, p?.Omschrijving);
+                    Op("×");
+                    var code = (md.Code ?? "").StartsWith("I", StringComparison.OrdinalIgnoreCase) ? "I" : (md.Code ?? "").StartsWith("S", StringComparison.OrdinalIgnoreCase) ? "S" : (md.Code ?? "S/I");
+                    Chip("Index " + code, md.Factor.ToString("0.000", NlBe), "", "Indexfactor van dit materiaal t.o.v. de referentiedatum");
+                    return;
+                }
+                var kort = pn.Naam.StartsWith("prijs_", StringComparison.OrdinalIgnoreCase) ? "Eenheidsprijs" : KortLabel(pn.Naam, p?.Omschrijving);
+                Chip(kort, eenheid == "" ? w.ToString("0.###", NlBe) : F(w), eenheid, p?.Omschrijving);
+                return;
+            }
+            if (n is GetalNode g) { Chip("", g.Evaluate(waarden).ToString("0.###", NlBe), ""); return; }
+            Chip("Berekening", F(n.Evaluate(waarden)), "", n.ToDisplay(x => "@" + x));
+        }
+        void Product(FormuleNode n)
+        {
+            if (n is BinaryNode b && b.Op is '*' or '/')
+            {
+                Product(b.Links);
+                Op(b.Op == '*' ? "×" : "÷");
+                Factor(b.Rechts);
+            }
+            else Factor(n);
+        }
+
+        var termen = FormuleParser.GetTermen(root);
+        for (int i = 0; i < termen.Count; i++)
+        {
+            if (i > 0) Op(termen[i].Teken < 0 ? "−" : "+");
+            else if (termen[i].Teken < 0) Op("−");
+            Product(termen[i].Node);
+        }
+        Op("=");
+        delen.Add(new FormuleDeelBO { Soort = "totaal", Tekst = "€ " + F(totaal) });
+        return delen;
     }
 
     // Detailregels in dezelfde stijl als de bestaande VoorstelEnkelDetail-rijen.

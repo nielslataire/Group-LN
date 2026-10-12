@@ -53,6 +53,51 @@ namespace ServiceCore.Budget
             return n == 0 ? opps.Count : n;
         }
 
+
+        private static readonly Dictionary<int, string> StrookBron = new()
+        {
+            [ActivityIdGrondwerken] = "stap 1 · Gegevens", [ActivityIdBuitenschrijnwerk] = "stap 4 · Gevels · Ramen", [ActivityIdLeien] = "stap 4 · Gevels",
+            [ActivityIdKelderRuwbouw] = "stap 2 · Oppervlaktes", [ActivityIdDakBedekking] = "stap 5 · Dak & afbraak", [ActivityIdGevelsluitingCombi] = "stap 4 · Gevels"
+        };
+
+        /// <summary>Gestructureerde berekening (formulestrook) voor voorstellen die niet uit een formule komen: prijs × hoeveelheid = totaal.</summary>
+        private static void BouwStrookUitVoorstel(BudgetActivityLijnBO bo, int activityId)
+        {
+            var nl = new System.Globalization.CultureInfo("nl-BE");
+            string F(decimal v) => v.ToString("N2", nl);
+            void Chip(string label, string tekst, string eenheid) => bo.FormuleDelen.Add(new FormuleDeelBO { Soort = "chip", Label = label, Tekst = tekst, Eenheid = eenheid });
+            void Op(string t) => bo.FormuleDelen.Add(new FormuleDeelBO { Soort = "op", Tekst = t });
+            bo.FormuleDelen = new List<FormuleDeelBO>();
+            if (bo.VoorstelRuwbouwPrijs.HasValue)
+            {
+                var delen = new (string Label, decimal Prijs, decimal Hoev, string Eenh)[]
+                {
+                    ("Ruwbouwopp.", bo.VoorstelRuwbouwPrijs ?? 0m, bo.VoorstelRuwbouwOpp ?? 0m, "m²"),
+                    ("Terras", bo.VoorstelTerrasPrijs ?? 0m, bo.VoorstelTerrasOpp ?? 0m, "m²"),
+                    ("Gevels", bo.VoorstelGevelPrijs ?? 0m, bo.VoorstelGevelOpp ?? 0m, "m²"),
+                    ("Gipsblokken", bo.VoorstelGipsPrijs ?? 0m, (int)(bo.VoorstelGipsOpp ?? 0m), "eenh."),
+                };
+                var eerste = true; decimal tot = 0m;
+                foreach (var d in delen.Where(x => x.Prijs * x.Hoev != 0m))
+                {
+                    if (!eerste) Op("+"); eerste = false;
+                    Chip(d.Label, d.Hoev.ToString("N2", nl), d.Eenh); Op("×"); Chip("Eenheidsprijs", F(d.Prijs), "€/" + d.Eenh); tot += d.Prijs * d.Hoev;
+                }
+                if (eerste) { bo.FormuleDelen = new List<FormuleDeelBO>(); return; }
+                Op("="); bo.FormuleDelen.Add(new FormuleDeelBO { Soort = "totaal", Tekst = "€ " + F(tot) });
+                bo.FormuleBron = "stap 2 · Oppervlaktes";
+                return;
+            }
+            if ((bo.VoorstelEnkelPrijs ?? 0m) > 0m && (bo.VoorstelEnkelHoeveelheid ?? 0m) > 0m)
+            {
+                var prijs = bo.VoorstelEnkelPrijs.Value; var hoev = bo.VoorstelEnkelHoeveelheid.Value; var eenh = bo.VoorstelEnkelEenheid ?? "";
+                Chip(string.IsNullOrWhiteSpace(bo.VoorstelEnkelLabel) ? bo.ActivityOmschrijving : bo.VoorstelEnkelLabel, hoev.ToString("N2", nl), eenh);
+                Op("×"); Chip("Eenheidsprijs", F(prijs), "€/" + eenh);
+                Op("="); bo.FormuleDelen.Add(new FormuleDeelBO { Soort = "totaal", Tekst = "€ " + F(prijs * hoev) });
+                bo.FormuleBron = StrookBron.TryGetValue(activityId, out var b) ? b : null;
+            }
+        }
+
         public async Task<int> GetAantalWoonCommEenhedenAsync(int budgetVersieId)
         {
             var opps = await _uow.BudgetOppervlaktes.GetNoTracking()
@@ -132,7 +177,10 @@ namespace ServiceCore.Budget
                 OppFunderingen                  = dbGeg?.OppFunderingen,
                 AantalVerdiepingenOndergronds   = dbGeg?.AantalVerdiepingenOndergronds ?? 0,
                 M3Onderschoeiingen              = dbGeg?.M3Onderschoeiingen,
-                AantalVeluxen                   = dbGeg?.AantalVeluxen
+                AantalVeluxen                   = dbGeg?.AantalVeluxen,
+                OppOndergronds                  = dbGeg?.OppOndergronds,
+                DiepteFunderingCm               = dbGeg?.DiepteFunderingCm,
+                DiepteOndergrondsCm             = dbGeg?.DiepteOndergrondsCm
             };
             var formulaCtx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
 
@@ -175,8 +223,8 @@ namespace ServiceCore.Budget
             var m2Funder       = gegevensBO.OppFunderingen      ?? 0m;
             var m3Onderschoei  = gegevensBO.M3Onderschoeiingen  ?? 0m;
             var totaalGarBerg  = opps.Sum(o => o.GarBergOndergronds);
-            var m3Grondwerk    = m2Funder * 0.3m
-                               + gegevensBO.AantalVerdiepingenOndergronds * 3.5m * totaalGarBerg;
+            // Grondwerk automatisch (stap 1): opp. funderingen × diepte + opp. ondergrondse verdiepingen × diepte (zie GrondwerkRekenregel)
+            var m3Grondwerk    = GrondwerkRekenregel.M3(m2Funder, gegevensBO.DiepteFunderingCm, gegevensBO.OppOndergronds, gegevensBO.AantalVerdiepingenOndergronds, gegevensBO.DiepteOndergrondsCm);
 
             var totOppRuwbouw = opps.Sum(o =>
                 o.BewoonbareOpp + o.GaragesParkingsBovenGr + o.GarBergOndergronds +
@@ -187,9 +235,9 @@ namespace ServiceCore.Budget
             var gevelRijen = await _uow.BudgetGevelElementen.GetNoTracking()
                 .Where(g => g.BudgetVersieId == budgetVersieId)
                 .ToListAsync();
-            var totaalGevels  = gevelRijen
-                .Where(g => g.ElementType == "GevelNieuwbouw" || g.ElementType == "GevelBestaand")
-                .Sum(g => GevelM2(g));
+            // Gevels netto: ramen (per soort) worden automatisch afgetrokken, nooit onder 0
+            decimal GevelSom(string t) => gevelRijen.Where(g => g.ElementType == t).Sum(g => GevelM2(g));
+            var totaalGevels  = Math.Max(0m, GevelSom("GevelNieuwbouw") - GevelSom("RaamNieuwbouw")) + Math.Max(0m, GevelSom("GevelBestaand") - GevelSom("RaamBestaand"));
             var totaalPlatDak = gevelRijen
                 .Where(g => g.ElementType == "PlatDak")
                 .Sum(g => GevelM2(g));
@@ -302,8 +350,11 @@ namespace ServiceCore.Budget
                             bo.VoorstelEnkelEenheid        = "eenh.";
                             bo.VoorstelEnkelLabel          = fEval.Label;
                             bo.VoorstelEnkelDetail         = fEval.DetailRowsHtml;
+                            bo.FormuleDelen                = fEval.Delen;
+                            bo.FormuleBron                 = fEval.Bron;
+                            bo.FormuleViaDb                = true;
                             bo.VoorstelAantalEenheden      = aantalWoonComm;
-                            if (!heeftBestaandeLijn)
+                            if (!heeftBestaandeLijn || !bo.IsManueel)
                                 bo.AlternatievePrijsPerEenheid = fPerEenheid;
                         }
 
@@ -320,7 +371,7 @@ namespace ServiceCore.Budget
                             bo.VoorstelGipsOpp              = aantalWoonComm;
                             bo.VoorstelGipsAantalEenheden   = aantalWoonComm;
                             bo.VoorstelAantalEenheden       = aantalWoonComm;
-                            if (!heeftBestaandeLijn)
+                            if (!heeftBestaandeLijn || !bo.IsManueel)
                                 bo.AlternatievePrijsPerEenheid = ruwbouwVoorstelPerEenheid;
                         }
 
@@ -365,7 +416,7 @@ namespace ServiceCore.Budget
                                     $"<td style='text-align:right'>€ {F3(zichtschermenPrijsGeind)}/lm</td>" +
                                     $"<td style='padding-left:8px;text-align:right'>= € {F3(zichtDeel)}</td></tr>";
                                 bo.VoorstelAantalEenheden = aantalWoonComm;
-                                if (!heeftBestaandeLijn)
+                                if (!heeftBestaandeLijn || !bo.IsManueel)
                                     bo.AlternatievePrijsPerEenheid = ePerEenheid;
                             }
                         }
@@ -434,7 +485,7 @@ namespace ServiceCore.Budget
                                 bo.VoorstelEnkelLabel          = dakLabel;
                                 bo.VoorstelEnkelDetail         = dakDetail;
                                 bo.VoorstelAantalEenheden      = aantalWoonComm;
-                                if (!heeftBestaandeLijn)
+                                if (!heeftBestaandeLijn || !bo.IsManueel)
                                     bo.AlternatievePrijsPerEenheid = ePerEenheid;
                             }
                         }
@@ -450,30 +501,32 @@ namespace ServiceCore.Budget
                             bo.VoorstelEnkelEenheid        = enkel.eenh;
                             bo.VoorstelEnkelLabel          = enkel.label;
                             bo.VoorstelAantalEenheden      = aantalWoonComm;
-                            if (!heeftBestaandeLijn)
+                            if (!heeftBestaandeLijn || !bo.IsManueel)
                                 bo.AlternatievePrijsPerEenheid = ePerEenheid;
 
                             if (activity.ActivityId == ActivityIdGrondwerken)
                             {
                                 var nlBE = new System.Globalization.CultureInfo("nl-BE");
                                 string F(decimal v) => v.ToString("N2", nlBE);
-                                var funderDeel = m2Funder * 0.3m;
-                                var ondergDeel = (decimal)gegevensBO.AantalVerdiepingenOndergronds * 3.5m * totaalGarBerg;
+                                var dFund = gegevensBO.DiepteFunderingCm ?? GrondwerkRekenregel.StandaardDiepteFunderingCm;
+                                var dOnd  = gegevensBO.DiepteOndergrondsCm ?? GrondwerkRekenregel.StandaardDiepteOndergrondsCm;
+                                var oppOnd = gegevensBO.OppOndergronds ?? gegevensBO.AantalVerdiepingenOndergronds * m2Funder;
                                 bo.VoorstelEnkelDetail =
                                     $"<tr style='font-size:.75rem;color:#6c757d'>" +
                                     $"<td>Funderingen</td><td style='padding:0 6px;text-align:right'>{F(m2Funder)} m²</td>" +
-                                    $"<td style='text-align:right'>× 0,30</td>" +
-                                    $"<td style='padding-left:8px;text-align:right'>= {F(funderDeel)} m³</td></tr>" +
+                                    $"<td style='text-align:right'>× {F(dFund / 100m)} m</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= {F(m2Funder * dFund / 100m)} m³</td></tr>" +
                                     $"<tr style='font-size:.75rem;color:#6c757d'>" +
-                                    $"<td>Ondergronds</td><td style='padding:0 6px;text-align:right'>{gegevensBO.AantalVerdiepingenOndergronds} verd. × {F(totaalGarBerg)} m²</td>" +
-                                    $"<td style='text-align:right'>× 3,50</td>" +
-                                    $"<td style='padding-left:8px;text-align:right'>= {F(ondergDeel)} m³</td></tr>" +
+                                    $"<td>Ondergronds</td><td style='padding:0 6px;text-align:right'>{F(oppOnd)} m²</td>" +
+                                    $"<td style='text-align:right'>× {F(dOnd / 100m)} m</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= {F(oppOnd * dOnd / 100m)} m³</td></tr>" +
                                     $"<tr style='font-size:.75rem;color:#6c757d;border-bottom:1px dashed #ccc'>" +
                                     $"<td colspan='3'>Volume totaal</td>" +
                                     $"<td style='padding-left:8px;text-align:right'>= {F(enkel.hoev)} m³</td></tr>";
                             }
                         }
 
+                        if (!viaFormule) BouwStrookUitVoorstel(bo, activity.ActivityId);
                         groep.Lijnen.Add(bo);
                     }
 

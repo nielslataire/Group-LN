@@ -31,34 +31,35 @@
 
 <div class="gl-v2-help-article-layout">
     <aside class="gl-v2-help-tree" aria-label="Help-onderwerpen">
+        @* Elk onderwerp en elk artikel met kinderen klapt open en dicht (chevron). Bij het laden staat enkel
+           het pad naar het huidige artikel open; de rest klap je zelf open. *@
         @foreach (var g in Model.Tree)
         {
-            @* Design-handoff punt 43i/41c — een ingeklapt topic (elk topic behalve het huidige)
-               moet je naar zijn eerste artikel kunnen brengen, niet enkel tonen: anders is de boom
-               een doodlopend overzicht i.p.v. navigatie. Leeg topic (geen FirstArticleSlug) blijft
-               niet-klikbaar — er is nergens heen te gaan. *@
-            if (g.FirstArticleSlug != null)
-            {
-                <a class="gl-v2-help-tree-group @(g.IsOpen ? "is-open" : "")" href="@Url.Action("Artikel", "Help", new { slug = g.FirstArticleSlug })">
-                    <span class="gl-v2-help-tree-group-title">@g.Name</span>
-                    <span class="gl-v2-help-tree-group-count">@g.Count</span>
-                </a>
-            }
-            else
-            {
-                <div class="gl-v2-help-tree-group is-empty">
-                    <span class="gl-v2-help-tree-group-title">@g.Name</span>
-                    <span class="gl-v2-help-tree-group-count">@g.Count</span>
-                </div>
-            }
-            @if (g.IsOpen)
-            {
-                @foreach (var a in g.Articles)
+            var hasNodes = g.Nodes.Count > 0;
+            <div class="gl-v2-help-tree-node gl-v2-help-tree-topic@(hasNodes ? " has-children" : " is-empty")@(g.IsOpen && hasNodes ? " is-open" : "")" data-tree-node>
+                @if (hasNodes)
                 {
-                    <a class="gl-v2-help-tree-item @(a.IsActive ? "is-active" : "") @(a.IsChild ? "is-child" : "")"
-                       href="@Url.Action("Artikel", "Help", new { slug = a.Slug })">@a.Title</a>
+                    <button type="button" class="gl-v2-help-tree-group" data-tree-toggle aria-expanded="@(g.IsOpen ? "true" : "false")">
+                        <i class="ph ph-caret-right gl-v2-help-tree-chevron-icon" aria-hidden="true"></i>
+                        <span class="gl-v2-help-tree-group-title gl-v2-help-tree-label" data-tree-label>@g.Name</span>
+                        <span class="gl-v2-help-tree-group-count">@g.Count</span>
+                    </button>
+                    <div class="gl-v2-help-tree-children" data-tree-children @(g.IsOpen ? null : "hidden")>
+                        @foreach (var n in g.Nodes)
+                        {
+                            @await Html.PartialAsync("_HelpTreeNode", new CPMCore.Models.Help.HelpTreeNodeRenderVm { Node = n, Depth = 0 })
+                        }
+                    </div>
                 }
-            }
+                else
+                {
+                    <div class="gl-v2-help-tree-group is-empty">
+                        <span class="gl-v2-help-tree-chevron-icon is-spacer" aria-hidden="true"></span>
+                        <span class="gl-v2-help-tree-group-title gl-v2-help-tree-label">@g.Name</span>
+                        <span class="gl-v2-help-tree-group-count">@g.Count</span>
+                    </div>
+                }
+            </div>
         }
     </aside>
 
@@ -100,7 +101,7 @@
 
         @if (!string.IsNullOrWhiteSpace(Model.Article.BeforeHtml))
         {
-            <div class="gl-v2-notice gl-v2-notice-compact">
+            <div class="gl-v2-notice gl-v2-notice-compact" id="toc-before">
                 <i class="ph ph-info" aria-hidden="true"></i>
                 <span><b>Voor je begint:</b> @Html.Raw(Model.Article.BeforeHtml)</span>
             </div>
@@ -108,10 +109,11 @@
 
         @if (Model.Article.Steps.Count > 0)
         {
-            <span class="gl-v2-help-section-title">Zo werkt het</span>
-            @foreach (var step in Model.Article.Steps)
+            <span class="gl-v2-help-section-title" id="toc-steps">Zo werkt het</span>
+            @for (var si = 0; si < Model.Article.Steps.Count; si++)
             {
-                <div class="gl-v2-help-step">
+                var step = Model.Article.Steps[si];
+                <div class="gl-v2-help-step" id="toc-step-@(si + 1)">
                     <span class="gl-v2-help-step-num">@step.Number</span>
                     <div class="gl-v2-help-step-body">
                         <span class="gl-v2-help-step-title">@step.Title</span>
@@ -143,7 +145,7 @@
 
         @if (Model.Article.Faq.Count > 0)
         {
-            <span class="gl-v2-help-section-title">Veelgestelde vragen</span>
+            <span class="gl-v2-help-section-title" id="toc-faq">Veelgestelde vragen</span>
             <div class="gl-v2-help-faq" data-help-faq>
                 @for (var i = 0; i < Model.Article.Faq.Count; i++)
                 {
@@ -188,7 +190,7 @@
         <span class="gl-v2-help-section-label">Op deze pagina</span>
         @foreach (var o in Model.Toc)
         {
-            <span class="gl-v2-help-toc-item">@o.Text</span>
+            <a class="gl-v2-help-toc-item" href="#@o.TargetId" data-toc-link>@o.Text</a>
         }
         @if (Model.Article.Screens.Count > 0)
         {

@@ -141,6 +141,8 @@ namespace CPMCore.Models.Projecten
         public decimal GarBergOndergronds { get; set; }
         public decimal BergGelijkvloers { get; set; }
         public decimal Carports { get; set; }
+        /// <summary>Aantal garagepoorten (geheel getal; als decimal binnengekomen zodat JSON met komma/punt nooit faalt).</summary>
+        public decimal Poorten { get; set; }
         public decimal DoorritGVL { get; set; }
         public decimal Zolder { get; set; }
         public decimal GemeenschappelijkeDelen { get; set; }

@@ -180,6 +180,9 @@ Public Class BudgetOppervlaktesBO
         End Set
     End Property
 
+    ''' <summary>Aantal garagepoorten van deze rij (geen oppervlakte; telt niet mee in de gereduceerde m2).</summary>
+    Public Property Poorten As Integer
+
     Private _carports As Decimal
     <Display(Name:="Carport")>
     Public Property Carports() As Decimal

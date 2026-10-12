@@ -114,7 +114,7 @@ namespace ServiceCore.Budget
 
                 if (opps.Count > 0)
                 {
-                    if ((g.M3Grondwerk ?? 0m) == 0m) Add(1, MeldingType.Waarschuwing, "grondwerk-leeg", "Grondwerk is leeg — grondwerken worden niet berekend.", "veld", "Gegevens.M3Grondwerk");
+                    // Grondwerk is automatisch (oppervlakte x diepte): een leeg grondwerk komt enkel van een lege oppervlakte funderingen, die hieronder al gemeld wordt.
                     if ((g.OppFunderingen ?? 0m) == 0m) Add(1, MeldingType.Waarschuwing, "funderingen-leeg", "Oppervlakte funderingen is leeg.", "veld", "Gegevens.OppFunderingen");
                 }
                 var dakRijen = elementen.Where(e => DakTypes.Contains(e.ElementType)).ToList();
@@ -241,7 +241,7 @@ namespace ServiceCore.Budget
         private async Task<bool> PoortenOntbreektAsync(int versieId)
         {
             var typePoorten = await _uow.BudgetGegevens.GetNoTracking().Where(g => g.BudgetVersieId == versieId).Select(g => g.TypePoorten).SingleOrDefaultAsync();
-            var heeftGarage = await _uow.BudgetOppervlaktes.GetNoTracking().AnyAsync(o => o.BudgetVersieId == versieId && o.UnitType != null && o.UnitType.Name.Contains("garage"));
+            var heeftGarage = await _uow.BudgetOppervlaktes.GetNoTracking().AnyAsync(o => o.BudgetVersieId == versieId && (o.Poorten > 0 || (o.UnitType != null && o.UnitType.Name.Contains("garage"))));
             return heeftGarage && (string.IsNullOrWhiteSpace(typePoorten) || typePoorten == "Geen");
         }
     }

@@ -133,6 +133,8 @@ components:
 > `parent:`/`treeOrder`/`treeLabel` voor de boom, `screens:` om het "?"-zijpaneel te koppelen).
 > Geen losse to-do-lijst bijhouden — dit document is de ene plek waar "nog te schrijven" artikels
 > instaan (zie "Nog te bouwen"/"Bewuste vereenvoudiging" onder Helpcentrum).
+> **Lees vóór het schrijven altijd `HELP_SCHRIJFGIDS.md`** (toon, vaste opbouw, woordenlijst,
+> bedrijfslogica, `[VRAAG: ...]`-regel). Het stappenplan hieronder gaat over de techniek, die gids over de inhoud.
 
 ## Overview
 
@@ -6647,7 +6649,26 @@ Niels wees een reeks echte problemen aan op screenshot, niet enkel in tekst:
   hoofdartikel-gevolgd-door-haar-kinderen i.p.v. een platte, alfabetische lijst;
   `.gl-v2-help-tree-item.is-child` (44px inspringing) toont het niveau.
 
+### Follow-up (12/10/2026) — boom openklapbaar, willekeurig diep
+De helpboom (links op de artikelpagina) is niet langer plat of twee niveaus diep. `HelpController.BuildTreeNodes`
+bouwt per topic een recursieve boom (`HelpTreeNodeVm.Children`, elk artikel hangt onder zijn `parent:`; een
+parent-cyclus wordt afgevangen met een `visited`-set). Elk onderwerp en elk artikel met kinderen heeft een chevron
+(`ph-caret-right`, draait 90° bij open) en klapt open/dicht in de browser (`gl-v2-help.js`, `data-tree-toggle`).
+Bij het laden staat enkel het pad naar het huidige artikel open (`IsOpen` = actief artikel met kinderen, of een
+bovenliggend artikel); de server geeft altijd de volledige boom mee zodat klappen geen herlaad kost. Het
+weergavegedeelte is de recursieve partial `Views/Help/_HelpTreeNode.cshtml`; inspringing via `--depth` per rij.
+Op schermen vanaf 1600px is de boomkolom 340px, vanaf 1800px 500px (anders 280px); de kolom "Op deze pagina" is dan 360px breed (anders 220px, 240px vanaf 1600px). Is een titel afgeknot, dan toont hover de volledige
+tekst (`title`, op het moment van hover gemeten). Enkel de onderwerpen staan vet; artikels en subartikels niet (ook het actieve niet, dat valt op door kleur en groene balk). Inspringing 24px per niveau. Het actieve artikel
+krijgt de groene balk links.
+De kolom "Op deze pagina" (`.gl-v2-help-toc`) scrolt mee (sticky, top 20px), de punten zijn ankerlinks naar de blokken
+(`toc-before`, `toc-steps`, `toc-step-N`, `toc-faq`) en het punt dat je ziet staat actief (41c: vet, groen, groene lijn).
+Sticky vereist dat geen voorouder `overflow:hidden` heeft; `.gl-v2-body` heeft dat in de shell, daarom zet
+`gl-v2-help.css` op deze pagina `overflow: clip` via `:has(.gl-v2-help-article-layout)`. Gebruik dezelfde aanpak als een andere
+gl-v2-pagina een sticky kolom nodig heeft, i.p.v. de shell zelf te wijzigen.
+
 ### Een nieuw help-artikel schrijven — stappenplan
+Inhoud, toon, woordenlijst en `[VRAAG: ...]`-regel: zie `HELP_SCHRIJFGIDS.md` (eerst lezen).
+
 1. **Bestand**: `CPMCore/HelpContent/<topic-slug>/<artikel-slug>.md`. De acht topic-slugs liggen
    vast in `HelpContentService.FixedTopics` (`aan-de-slag`, `projecten`, `budget`,
    `facturatie-wijzigingen`, `punten-verslagen`, `traject-dossiers`, `documenten`,

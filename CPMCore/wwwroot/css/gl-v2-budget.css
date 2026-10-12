@@ -262,3 +262,32 @@ body.bw-show-calc span.gl-v2-bw-calc, body.bw-show-calc .gl-v2-bw-calc.is-inline
 .gl-v2-modal-lijst { margin: 10px 0 0; padding-left: 18px; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: left; }
 .gl-v2-modal-lijst li { margin: 3px 0; }
 .gl-v2-modal-lijst a { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; }
+
+/* Berekening oppervlakte funderingen (stap 1) */
+.bw-fund-panel { grid-column: 1 / -1; border: 1px solid var(--gl-v2-hairline-soft); border-radius: 10px; background: var(--gl-v2-surface); overflow: hidden; }
+.bw-fund-panel[hidden] { display: none; }
+.bw-fund-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #FAFBF8; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex-wrap: wrap; }
+.bw-fund-head i { color: var(--gl-v2-primary); font-size: 16px; }
+.bw-fund-foot { padding: 10px 16px 14px; }
+.gl-v2-bw .gl-v2-field-box:has(input[readonly]) { background: #F7F9F5; }
+
+/* Formulestrook onder een activiteit (39g "Toon berekeningen") */
+.bw-act-formule { display: none; }
+body.bw-show-calc tbody:not(.is-dicht) .bw-act-formule { display: table-row; }
+.bw-act-filter .bw-act-rij:not(.is-groot) + .bw-act-formule { display: none !important; }
+.gl-v2-bw-table tbody .bw-act-formule td { height: auto; padding: 0 10px 9px 22px; border-top: 0; background: transparent; }
+.bw-fm { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
+.bw-fm-delen { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bw-fm-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 2px 8px; border: 1px solid var(--gl-v2-hairline); border-radius: 6px; background: var(--gl-v2-surface); font: 500 11px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; color: var(--gl-v2-ink); }
+.bw-fm-chip .l { font: 600 8.5px var(--gl-v2-font-sans); letter-spacing: .07em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.bw-fm-op { color: var(--gl-v2-muted); font: 500 12px var(--gl-v2-font-sans); }
+.bw-fm-tot { font: 700 11.5px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; color: var(--gl-v2-primary); }
+.bw-fm-bron { font: 450 10.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.bw-fm-link { margin-left: auto; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.bw-fm-link:hover { text-decoration: underline; }
+
+/* "Toon berekeningen" zweeft als pil rechtsboven zodra de topbar uit beeld is gescrold */
+.gl-v2-bw-calcswitch.is-zwevend { position: fixed; top: 14px; right: 24px; z-index: 70; padding: 8px 14px; background: var(--gl-v2-surface); border: 1px solid var(--gl-v2-hairline); border-radius: 999px; box-shadow: var(--gl-v2-shadow-card, 0 4px 14px rgba(44, 59, 42, .14)); animation: bw-calc-in .18s var(--bw-ease, ease) both; }
+@keyframes bw-calc-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 767.98px) { .gl-v2-bw-calcswitch.is-zwevend { top: 8px; right: 12px; } }
+@media (prefers-reduced-motion: reduce) { .gl-v2-bw-calcswitch.is-zwevend { animation: none; } }

@@ -76,6 +76,11 @@ namespace ServiceCore.Translators
             bo.GevelLeienSidings                = entity.GevelLeienSidings;
             bo.OppFunderingen                   = entity.OppFunderingen;
             bo.M3Grondwerk                      = entity.M3Grondwerk;
+            bo.FunderingLijnenJson              = entity.FunderingLijnen;
+            bo.OppOndergronds                   = entity.OppOndergronds;
+            bo.OndergrondsLijnenJson            = entity.OndergrondsLijnen;
+            bo.DiepteFunderingCm                = entity.DiepteFunderingCm;
+            bo.DiepteOndergrondsCm              = entity.DiepteOndergrondsCm;
             bo.LmBerlinerwanden                 = entity.LmBerlinerwanden;
             bo.LmSecanpalen                     = entity.LmSecanpalen;
             bo.M3Onderschoeiingen               = entity.M3Onderschoeiingen;
@@ -111,6 +116,11 @@ namespace ServiceCore.Translators
             entity.GevelLeienSidings                = bo.GevelLeienSidings;
             entity.OppFunderingen                   = bo.OppFunderingen;
             entity.M3Grondwerk                      = bo.M3Grondwerk;
+            entity.FunderingLijnen                  = bo.FunderingLijnenJson;
+            entity.OppOndergronds                   = bo.OppOndergronds;
+            entity.OndergrondsLijnen                = bo.OndergrondsLijnenJson;
+            entity.DiepteFunderingCm                = bo.DiepteFunderingCm;
+            entity.DiepteOndergrondsCm              = bo.DiepteOndergrondsCm;
             entity.LmBerlinerwanden                 = bo.LmBerlinerwanden;
             entity.LmSecanpalen                     = bo.LmSecanpalen;
             entity.M3Onderschoeiingen               = bo.M3Onderschoeiingen;
@@ -150,6 +160,7 @@ namespace ServiceCore.Translators
             bo.GarBergOndergronds       = entity.GarBergOndergronds;
             bo.BergGelijkvloers         = entity.BergGelijkvloers;
             bo.Carports                 = entity.Carports;
+            bo.Poorten                  = entity.Poorten;
             bo.DoorritGVL               = entity.DoorritGVL;
             bo.Zolder                   = entity.Zolder;
             bo.GemeenschappelijkeDelen  = entity.GemeenschappelijkeDelen;
@@ -178,6 +189,7 @@ namespace ServiceCore.Translators
             entity.GarBergOndergronds       = bo.GarBergOndergronds;
             entity.BergGelijkvloers         = bo.BergGelijkvloers;
             entity.Carports                 = bo.Carports;
+            entity.Poorten                  = bo.Poorten;
             entity.DoorritGVL               = bo.DoorritGVL;
             entity.Zolder                   = bo.Zolder;
             entity.GemeenschappelijkeDelen  = bo.GemeenschappelijkeDelen;

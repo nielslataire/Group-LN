@@ -1,0 +1,35 @@
+@model CPMCore.Models.Help.HelpTreeNodeRenderVm
+@* Eén knoop van de helpboom (41c/43i), recursief. Met kinderen: chevron-knop (klapt open/dicht, enkel in de
+   browser) + de artikellink. Zonder kinderen: een lege plek op de plaats van de chevron zodat de teksten
+   uitgelijnd blijven. De server bepaalt enkel wat bij het laden openstaat (Node.IsOpen = pad naar het
+   huidige artikel); gl-v2-help.js doet het open- en dichtklappen en de tooltip bij afgeknotte tekst. *@
+@{
+    var node = Model.Node;
+    var hasChildren = node.Children.Count > 0;
+}
+<div class="gl-v2-help-tree-node@(hasChildren ? " has-children" : "")@(node.IsOpen ? " is-open" : "")" data-tree-node>
+    <div class="gl-v2-help-tree-row" style="--depth:@Model.Depth">
+        @if (hasChildren)
+        {
+            <button type="button" class="gl-v2-help-tree-chevron" data-tree-toggle aria-expanded="@(node.IsOpen ? "true" : "false")" aria-label="@(node.Title) uit- of inklappen">
+                <i class="ph ph-caret-right" aria-hidden="true"></i>
+            </button>
+        }
+        else
+        {
+            <span class="gl-v2-help-tree-chevron is-spacer" aria-hidden="true"></span>
+        }
+        <a class="gl-v2-help-tree-item@(node.IsActive ? " is-active" : "")" href="@Url.Action("Artikel", "Help", new { slug = node.Slug })"@(node.IsActive ? " aria-current=page" : "")>
+            <span class="gl-v2-help-tree-label" data-tree-label>@node.Title</span>
+        </a>
+    </div>
+    @if (hasChildren)
+    {
+        <div class="gl-v2-help-tree-children" data-tree-children @(node.IsOpen ? null : "hidden")>
+            @foreach (var child in node.Children)
+            {
+                @await Html.PartialAsync("_HelpTreeNode", new CPMCore.Models.Help.HelpTreeNodeRenderVm { Node = child, Depth = Model.Depth + 1 })
+            }
+        </div>
+    }
+</div>

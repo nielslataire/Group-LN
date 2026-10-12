@@ -168,6 +168,12 @@
     <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-du-topbar-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-du-export-menu">
         <i class="ph ph-export" aria-hidden="true"></i>Exporteren
     </button>
+    @if (canWrite && vm.HasBasisakte)
+    {
+        <a href="@Url.Action("Landshares", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary gl-v2-du-topbar-btn">
+            <i class="ph ph-scales" aria-hidden="true"></i>Aandelen verdelen
+        </a>
+    }
     @if (canWrite)
     {
         <a href="@Url.Action("AddUnit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-btn gl-v2-btn-primary gl-v2-du-topbar-btn">
@@ -183,6 +189,12 @@
     <a href="@Url.Action("ExportUnitsExcel", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-mobile-quickaction">
         <i class="ph ph-file-xls" aria-hidden="true"></i>Excel
     </a>
+    @if (canWrite && vm.HasBasisakte)
+    {
+        <a href="@Url.Action("Landshares", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-mobile-quickaction">
+            <i class="ph ph-scales" aria-hidden="true"></i>Aandelen
+        </a>
+    }
     @if (canWrite)
     {
         <a href="@Url.Action("AddUnit", "Projecten", new { projectid = vm.ProjectId })" class="gl-v2-mobile-quickaction">

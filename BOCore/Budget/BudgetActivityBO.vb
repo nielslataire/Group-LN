@@ -1,5 +1,16 @@
 Namespace Budget
 
+    ''' <summary>Eén onderdeel van de formulestrook onder een activiteit (39g "Toon berekeningen"): een chip (label + waarde + eenheid) of een operator (x, +, -, =).</summary>
+    Public Class FormuleDeelBO
+        ''' <summary>"chip", "op" of "totaal".</summary>
+        Public Property Soort As String
+        Public Property Label As String
+        Public Property Tekst As String
+        Public Property Eenheid As String
+        ''' <summary>Tooltip (volledige omschrijving van de parameter).</summary>
+        Public Property Titel As String
+    End Class
+
     Public Class BudgetActivityLijnBO
 
         Public Property Id As Integer
@@ -82,6 +93,13 @@ Namespace Budget
         Public Property VoorstelEnkelEenheid As String
         Public Property VoorstelEnkelLabel As String
         Public Property VoorstelEnkelDetail As String
+
+        ''' <summary>Gestructureerde berekening van het voorstel voor de formulestrook (leeg = geen voorstel). Niet opgeslagen.</summary>
+        Public Property FormuleDelen As New List(Of FormuleDeelBO)
+        ''' <summary>Waar de invoer vandaan komt, bv. "stap 1 · Gegevens".</summary>
+        Public Property FormuleBron As String
+        ''' <summary>true = de strook komt uit een formule uit Instellingen › Budgetformules (link "Formule").</summary>
+        Public Property FormuleViaDb As Boolean
 
         Public ReadOnly Property HeeftVoorstel As Boolean
             Get

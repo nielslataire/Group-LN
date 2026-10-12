@@ -817,6 +817,19 @@ namespace CPMCore.Controllers
             return string.Join(" · ", parts);
         }
 
+        /// <summary>Leest een aandeel uit het scherm "Aandelen basisakte". Dat scherm toont aandelen in nl-BE-notatie
+        /// ("1.050"); ParseAmountV2 leest een getal zonder komma als decimaal en zou 1.050 als 1,05 bewaren.
+        /// Een punt gevolgd door precies drie cijfers is hier dus een duizendtalscheiding. Komma-notatie en
+        /// platte getallen ("1050", "539,47") lopen gewoon door ParseAmountV2.</summary>
+        private static decimal? ParseLandshareV2(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var text = raw.Trim();
+            if (!text.Contains(',') && System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,3}(\.\d{3})+$"))
+                text = text.Replace(".", "");
+            return ParseAmountV2(text);
+        }
+
         /// <summary>Bedragen tolerant inlezen ("1.234,56" én "1234.56"). De gl-v2-geldvelden posten via
         /// AutoNumeric (unformatOnSubmit) een punt als decimaalteken, terwijl de request-cultuur nl-BE de
         /// punt als duizendscheiding leest — daarom niet op één cultuur vertrouwen maar beide vormen
@@ -1483,7 +1496,7 @@ namespace CPMCore.Controllers
             // zodat een eenheid die nog niet verdeeld is, verschilt van een eenheid die bewust 0 krijgt.
             var byUnitId = new Dictionary<int, decimal?>();
             for (int i = 0; i < unitIds.Length; i++)
-                byUnitId[unitIds[i]] = ParseAmountV2(landshares[i]);
+                byUnitId[unitIds[i]] = ParseLandshareV2(landshares[i]);
 
             var response = _unitService.UpdateUnitLandshares(projectid, byUnitId);
             if (response.Success)

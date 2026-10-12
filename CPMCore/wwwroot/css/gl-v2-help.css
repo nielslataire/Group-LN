@@ -178,6 +178,10 @@
     gap: 16px;
     align-items: start;
 }
+/* Brede schermen (xl): meer plaats voor de boom, zodat minder titels worden afgeknot. */
+@media (min-width: 1600px) { .gl-v2-help-article-layout { grid-template-columns: 340px minmax(0, 1fr) 240px; } }
+/* Extra brede schermen: 500px, zodat bijna elke titel volledig past. Pas vanaf 1800px, anders blijft er te weinig over voor de artikeltekst. */
+@media (min-width: 1800px) { .gl-v2-help-article-layout { grid-template-columns: 500px minmax(0, 1fr) 360px; } }
 @media (max-width: 1279.98px) { .gl-v2-help-article-layout { grid-template-columns: minmax(0, 1fr) 220px; } .gl-v2-help-tree { display: none; } }
 @media (max-width: 1023.98px) { .gl-v2-help-article-layout { grid-template-columns: minmax(0, 1fr); } .gl-v2-help-toc { display: none; } }
 
@@ -190,32 +194,42 @@
     box-shadow: var(--gl-v2-shadow-card);
     padding: 18px 12px;
 }
-.gl-v2-help-tree-group { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 10px; border-radius: 7px; text-decoration: none; }
-.gl-v2-help-tree-group-title { flex: 1; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
-.gl-v2-help-tree-group-count { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
-/* Een ingeklapt topic is een link naar zijn eerste artikel (GetByScreenIds/FirstArticleSlug) —
-   enkel .is-empty (geen artikels) blijft puur informatief, geen hover/cursor-aanduiding. */
-a.gl-v2-help-tree-group:hover { background: var(--gl-v2-hover-tint); }
-.gl-v2-help-tree-group.is-empty { cursor: default; }
-.gl-v2-help-tree-group.is-empty .gl-v2-help-tree-group-title { color: var(--gl-v2-muted); }
-.gl-v2-help-tree-item {
-    display: flex;
-    align-items: center;
-    min-height: 32px;
-    padding: 0 10px 0 28px;
-    border-radius: 7px;
-    font: 450 12.5px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted-soft);
-    text-decoration: none;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Boom (41c/43i): elk onderwerp en elk artikel met kinderen klapt open/dicht met een chevron. De server zet
+   enkel het pad naar het huidige artikel open; gl-v2-help.js doet het klappen en de tooltip. Elke rij is
+   chevron-slot + tekst; een diepte-variabele (--depth) bepaalt de inspringing, ook voor kleinkinderen. */
+.gl-v2-help-tree-group {
+    display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 0 10px;
+    border: 0; border-radius: 7px; background: none; text-align: left; text-decoration: none; cursor: pointer;
 }
+.gl-v2-help-tree-group-title { flex: 1; min-width: 0; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-help-tree-group-count { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-help-tree-group:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-help-tree-group.is-empty { cursor: default; }
+.gl-v2-help-tree-group.is-empty:hover { background: none; }
+.gl-v2-help-tree-group.is-empty .gl-v2-help-tree-group-title { color: var(--gl-v2-muted); }
+.gl-v2-help-tree-chevron-icon, .gl-v2-help-tree-chevron { flex: none; width: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--gl-v2-muted-soft); font-size: 12px; }
+.gl-v2-help-tree-chevron i, .gl-v2-help-tree-chevron-icon { transition: transform .15s ease; }
+.gl-v2-help-tree-chevron.is-spacer, .gl-v2-help-tree-chevron-icon.is-spacer { visibility: hidden; }
+/* Open = chevron wijst naar beneden. */
+.gl-v2-help-tree-node.is-open > .gl-v2-help-tree-group .gl-v2-help-tree-chevron-icon,
+.gl-v2-help-tree-node.is-open > .gl-v2-help-tree-row .gl-v2-help-tree-chevron i { transform: rotate(90deg); }
+.gl-v2-help-tree-children[hidden] { display: none; }
+.gl-v2-help-tree-children { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+
+.gl-v2-help-tree-row {
+    display: flex; align-items: center; gap: 4px; min-width: 0;
+    padding-left: calc(10px + (var(--depth, 0) + 1) * 24px);
+}
+button.gl-v2-help-tree-chevron { height: 32px; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 6px; }
+button.gl-v2-help-tree-chevron:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-help-tree-item {
+    display: flex; align-items: center; flex: 1; min-width: 0; min-height: 32px; padding: 0 10px 0 6px;
+    border-radius: 7px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); text-decoration: none;
+}
+.gl-v2-help-tree-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-help-tree-item:hover { background: var(--gl-v2-hover-tint); }
-.gl-v2-help-tree-item.is-active { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: inset 2px 0 0 var(--gl-v2-primary); }
-/* Kind-artikel (bv. "Project bewerken" onder "Het projectdossier lezen") — extra inspringing,
-   geen eigen bullet/lijn nodig, de inspringing zelf toont het niveauverschil. */
-.gl-v2-help-tree-item.is-child { padding-left: 44px; font-size: 12px; }
+/* Enkel de onderwerpen (hoofditems) staan in het vet; artikels en subartikels niet, ook niet het actieve. */
+.gl-v2-help-tree-item.is-active { background: var(--gl-v2-surface); color: var(--gl-v2-primary); box-shadow: inset 2px 0 0 var(--gl-v2-primary); }
 
 .gl-v2-help-article-body {
     display: flex;
@@ -347,6 +361,18 @@ a.gl-v2-help-tree-group:hover { background: var(--gl-v2-hover-tint); }
     position: sticky;
     top: 20px;
 }
-.gl-v2-help-toc-item { font: 450 12px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding: 3px 0 3px 10px; border-left: 2px solid var(--gl-v2-hairline-soft); }
+/* "Op deze pagina" (41c): klikbaar, en het punt dat je nu ziet staat actief (vet, groen, groene lijn links).
+   Sticky werkt alleen als geen enkele voorouder overflow:hidden heeft: .gl-v2-body heeft dat in de shell
+   (clipt zonder te scrollen) en maakt sticky daardoor stil nutteloos. overflow:clip clipt hetzelfde maar is
+   geen scrollcontainer; enkel op deze pagina (:has), de rest van de shell blijft ongemoeid. */
+.gl-v2-body:has(.gl-v2-help-article-layout) { overflow: clip; }
+.gl-v2-help-toc-item {
+    display: block; font: 450 12px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-decoration: none;
+    padding: 3px 0 3px 10px; border-left: 2px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-help-toc-item:hover { color: var(--gl-v2-ink); }
+.gl-v2-help-toc-item.is-active { font-weight: 600; color: var(--gl-v2-primary); border-left-color: var(--gl-v2-primary); }
+/* Doelen van de toc: iets ruimte erboven, zodat een geklikt blok niet tegen de bovenrand plakt. */
+#toc-before, #toc-steps, #toc-faq, .gl-v2-help-step[id^="toc-step-"] { scroll-margin-top: 24px; }
 .gl-v2-help-toc-divider { height: 1px; background: var(--gl-v2-hairline-soft); margin: 10px 0; }
 .gl-v2-help-toc-screens { display: flex; flex-wrap: wrap; gap: 6px; }

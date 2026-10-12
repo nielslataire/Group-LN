@@ -210,4 +210,79 @@
             }
         }
     });
+
+    // ── Boom (41c/43i): open- en dichtklappen + tooltip bij afgeknotte tekst ─────────────────────
+    document.addEventListener("DOMContentLoaded", function () {
+        var tree = document.querySelector(".gl-v2-help-tree");
+        if (!tree) return;
+
+        tree.addEventListener("click", function (e) {
+            var toggle = e.target.closest("[data-tree-toggle]");
+            if (!toggle || !tree.contains(toggle)) return;
+            var node = toggle.closest("[data-tree-node]");
+            var children = node && node.querySelector(":scope > [data-tree-children]");
+            if (!children) return;
+            var open = children.hasAttribute("hidden");
+            if (open) children.removeAttribute("hidden"); else children.setAttribute("hidden", "");
+            node.classList.toggle("is-open", open);
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+
+        // De volledige titel als tooltip, enkel wanneer de tekst daadwerkelijk wordt afgeknot (breedte-
+        // afhankelijk, dus op het moment van de hover gemeten en niet vooraf ingesteld).
+        tree.addEventListener("mouseover", function (e) {
+            var label = e.target.closest("[data-tree-label]");
+            if (!label || !tree.contains(label)) return;
+            if (label.scrollWidth > label.clientWidth) label.title = label.textContent.trim();
+            else label.removeAttribute("title");
+        });
+    });
+
+    // ── "Op deze pagina" (41c): klikken scrolt naar het blok, het blok dat je ziet staat actief ──
+    document.addEventListener("DOMContentLoaded", function () {
+        var links = Array.prototype.slice.call(document.querySelectorAll("[data-toc-link]"));
+        if (!links.length) return;
+        var targets = links.map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); });
+        var OFFSET = 120; // een blok telt als "gelezen" zodra zijn bovenkant boven deze lijn staat
+
+        function setActive(index) {
+            links.forEach(function (a, i) {
+                var on = i === index;
+                a.classList.toggle("is-active", on);
+                if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+            });
+        }
+
+        function update() {
+            var current = 0;
+            for (var i = 0; i < targets.length; i++) {
+                if (targets[i] && targets[i].getBoundingClientRect().top <= OFFSET) current = i;
+            }
+            // Helemaal onderaan de pagina is het laatste punt actief, ook als dat blok te kort is om
+            // ooit boven de lijn te komen.
+            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = links.length - 1;
+            setActive(current);
+        }
+
+        var ticking = false;
+        window.addEventListener("scroll", function () {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(function () { ticking = false; update(); });
+        }, { passive: true });
+        window.addEventListener("resize", update);
+
+        links.forEach(function (a, i) {
+            a.addEventListener("click", function (e) {
+                var target = targets[i];
+                if (!target) return;
+                e.preventDefault();
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+                setActive(i);
+                if (window.history && history.replaceState) history.replaceState(null, "", "#" + target.id);
+            });
+        });
+
+        update();
+    });
 })();
