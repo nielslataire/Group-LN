@@ -31,8 +31,19 @@ public class ProjectVerslagenController : BaseController
     private readonly IOptions<GlV2PdfCompanyOptions> _company;
     private readonly ILogger<ProjectVerslagenController> _logger;
 
-    // Statussen van een punt dat "nog open" is bij een volgend bezoek (nieuwe reeks + legacy)
-    private static readonly int[] OpenStatuses = { 10, 11, 6, 12, 0, 1, 2, 3, 7 };
+    // Statussen van een punt dat "nog open" is bij een volgend bezoek (nieuwe reeks + legacy) en dus
+    // meegaat als "vorig punt" in het volgende verslag. Concept/PendingApproval staan hier bewust niet
+    // bij (Niels, 2026-10-10): een punt dat nog niet is ingediend of nog wacht op goedkeuring is geen
+    // al-eerder-gemeld punt, dat hoort pas mee zodra het effectief is goedgekeurd of actief is.
+    // Approved stond hier aanvankelijk niet bij (zag er elders in de codebase wél als actief wordt
+    // behandeld, bv. ProjectIssuesController.cs's activeStatuses) — toegevoegd.
+    private static readonly int[] OpenStatuses =
+    {
+        (int)ConstructionIssueStatus.Forwarded, (int)ConstructionIssueStatus.Reported, (int)ConstructionIssueStatus.Rejected,
+        (int)ConstructionIssueStatus.OnHold, (int)ConstructionIssueStatus.Open, (int)ConstructionIssueStatus.Assigned,
+        (int)ConstructionIssueStatus.InProgress, (int)ConstructionIssueStatus.WaitingInspection, (int)ConstructionIssueStatus.Reopened,
+        (int)ConstructionIssueStatus.Approved,
+    };
 
     public ProjectVerslagenController(cpmRunningContext db, IConstructionIssueService issues, IEmailSender email, IWebHostEnvironment env,
         IOptions<GlV2PdfCompanyOptions> company, ILogger<ProjectVerslagenController> logger)
@@ -403,12 +414,29 @@ public class ProjectVerslagenController : BaseController
 
     [HttpPost("{id:int}/Finish")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Finish(int projectId, int id)
+    public async Task<IActionResult> Finish(int projectId, int id, bool forceer = false)
     {
         var v = await Concept(projectId, id);
         if (v == null) { AddMessage("error", "Verslag niet gevonden of al verstuurd.", "Fout"); return RedirectToAction(nameof(Index), new { projectId }); }
         var punten = await _db.WerfverslagPunt.Where(p => p.VerslagId == id).ToListAsync();
         var issues = await _db.ConstructionIssue.AsNoTracking().Where(i => punten.Select(p => p.IssueId).Contains(i.Id)).ToDictionaryAsync(i => i.Id);
+
+        // 1b. punten die nog in concept staan of nog ter goedkeuring zijn, horen niet onafgewerkt in een
+        // verstuurd verslag (Niels, 2026-10-10): eerst waarschuwen, enkel bij expliciete "toch versturen"
+        // (forceer) doorgaan — en dan die punten uit dit verslag halen i.p.v. ze mee te versturen.
+        bool NogNietKlaar(ConstructionIssue i) => i.Status is (int)ConstructionIssueStatus.Concept or (int)ConstructionIssueStatus.PendingApproval;
+        var nogNietKlaar = punten.Where(p => issues.TryGetValue(p.IssueId, out var i) && NogNietKlaar(i)).ToList();
+        if (nogNietKlaar.Count > 0 && !forceer)
+        {
+            AddMessage("warning", $"Dit verslag bevat nog {nogNietKlaar.Count} punt(en) in concept of ter goedkeuring. Verstuur je toch, dan gaan die niet mee in dit verslag.", "Nog niet afgerond");
+            return RedirectToAction(nameof(Edit), new { projectId, id });
+        }
+        if (nogNietKlaar.Count > 0)
+        {
+            _db.WerfverslagPunt.RemoveRange(nogNietKlaar);
+            punten = punten.Except(nogNietKlaar).ToList();
+            await _db.SaveChangesAsync();
+        }
 
         // 1. wat ter plaatse vastgesteld werd: opgelost → gemeld uitgevoerd (de werfleider heeft het gezien maar sluit nog niet af), afgesloten → afgesloten
         foreach (var p in punten.Where(p => !p.IsNieuw))
@@ -419,7 +447,8 @@ public class ProjectVerslagenController : BaseController
                 await _issues.ChangeStatus(projectId, issue.Id, (int)ConstructionIssueStatus.Reported, $"Opgelost vastgesteld bij {v.Naam}", UserCode);
             if (!string.IsNullOrWhiteSpace(p.Opmerking)) await _issues.AddMessage(projectId, issue.Id, $"{v.Naam}: {p.Opmerking}", isInternal: true, UserCode);
         }
-        // 2. nieuwe punten blijven concept: ze worden niet automatisch goedgekeurd, zodat je er nog foto's of details aan kan toevoegen.
+        // 2. nieuwe punten die wél al goedgekeurd/doorgestuurd zijn, blijven gewoon zo — enkel concept/ter
+        // goedkeuring is hierboven al uit het verslag gehaald.
 
         // 3. PDF + mail naar de aanwezigen met e-mailadres
         var model = await BuildPdfModel(v, projectId);

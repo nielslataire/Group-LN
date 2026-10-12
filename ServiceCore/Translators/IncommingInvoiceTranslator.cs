@@ -27,6 +27,9 @@ namespace ServiceCore.Translators
             if (_entity.ExternalId is not null)
                 bo.InvoiceExternalId = _entity.ExternalId;
             bo.InvoicePrice = _entity.Price;
+            bo.DueDate = _entity.DueDate;
+            bo.StatusId = _entity.StatusId;
+            bo.Kind = _entity.InvoiceKind.HasValue ? (IncommingInvoiceKind)_entity.InvoiceKind.Value : (IncommingInvoiceKind?)null;
             foreach (var x in _entity.IncommingInvoiceDetail)
             {
                 IncommingInvoiceDetailBO bou = new IncommingInvoiceDetailBO();
@@ -50,6 +53,17 @@ namespace ServiceCore.Translators
             _entity.Date = bo.IncommingInvoiceDate;
             _entity.ExternalId = bo.InvoiceExternalId;
             _entity.Price = bo.InvoicePrice;
+            // DueDate/StatusId zijn bewust enkel in TranslateEntityToBO gezet (alleen-lezen): het Add/Edit-
+            // formulier heeft geen veld voor deze twee, dus bij een gewone POST zou de BO ze op hun CLR-default
+            // (Nothing/0) binden — ze hier terugschrijven zou de verrijkings-/Octopus-pijplijn se eigen waarden
+            // overschrijven bij elke handmatige bewerking. Enkel die pijplijn (InvoiceEnrichmentPipelineService,
+            // OctopusIncomingInvoiceSyncService) schrijft deze kolommen, rechtstreeks op de EF-entity.
+            // Kind (Vordering/Eindvordering/Creditnota) is wél beide richtingen aangesloten, maar
+            // VOORWAARDELIJK geschreven: bo.Kind == Nothing betekent "dit formulier heeft er geen veld voor"
+            // (het legacy Add/EditIncommingInvoice-scherm) — dan blijft de bestaande DB-waarde staan i.p.v.
+            // terugvallen op "Vordering". Enkel het nieuwe V2-formulier stuurt altijd een expliciete waarde.
+            if (bo.Kind.HasValue)
+                _entity.InvoiceKind = (byte)bo.Kind.Value;
             if (string.IsNullOrEmpty(_entity.CostContextType))
                 _entity.CostContextType = "Unknown";
 

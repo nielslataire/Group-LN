@@ -115,4 +115,49 @@ Public Class IncommingInvoiceActivityBO
             _incomminginvoicetype = value
         End Set
     End Property
+
+    ' Van de factuurkop (IncommingInvoices), niet van deze regel — alleen-lezen, voor de Nacalculatie-
+    ' betaalstatus/vervaldatum-weergave (design-handoff 42b/42f). Zie IncommingInvoiceBO.vb voor dezelfde
+    ' velden op de factuurkop zelf.
+    Private _duedate As DateOnly?
+    <Display(Name:="Vervaldatum")>
+    Public Property DueDate() As DateOnly?
+        Get
+            Return _duedate
+        End Get
+        Set(ByVal value As DateOnly?)
+            _duedate = value
+        End Set
+    End Property
+
+    Private _statusid As Byte
+    <Display(Name:="Status")>
+    Public Property StatusId() As Byte
+        Get
+            Return _statusid
+        End Get
+        Set(ByVal value As Byte)
+            _statusid = value
+        End Set
+    End Property
+
+    ' Van de factuurkop, alleen-lezen (zie IncommingInvoiceBO.Kind voor de volledige toelichting).
+    Private _kind As IncommingInvoiceKind?
+    <Display(Name:="Soort")>
+    Public Property Kind() As IncommingInvoiceKind?
+        Get
+            Return _kind
+        End Get
+        Set(ByVal value As IncommingInvoiceKind?)
+            _kind = value
+        End Set
+    End Property
+
+    ''' <summary>Factuurbedrag met het juiste teken voor Nacalculatie-sommen: een Creditnota telt negatief
+    ''' (design-handoff 42e punt 07), ongeacht met welk teken <see cref="Price"/> zelf werd ingevoerd.</summary>
+    Public ReadOnly Property SignedPrice() As Decimal
+        Get
+            Return If(_kind = IncommingInvoiceKind.Creditnota, -Math.Abs(_price), _price)
+        End Get
+    End Property
 End Class

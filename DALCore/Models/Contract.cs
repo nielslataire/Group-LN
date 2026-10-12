@@ -31,6 +31,14 @@ public partial class Contract
 
     public DateTime? GuaranteeDocUploadedAt { get; set; }
 
+    public DateOnly? GuaranteeReleasedVOAt { get; set; }
+
+    public decimal? GuaranteeReleasedVOAmount { get; set; }
+
+    public DateOnly? GuaranteeReleasedDOAt { get; set; }
+
+    public decimal? GuaranteeReleasedDOAmount { get; set; }
+
     public bool? ContractSigned { get; set; }
 
     public int? SiteManagerContactId { get; set; }

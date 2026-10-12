@@ -41,6 +41,8 @@ public partial class IncommingInvoices
 
     public string DocumentType { get; set; }
 
+    public byte? InvoiceKind { get; set; }
+
     public string Source { get; set; }
 
     public string Notes { get; set; }

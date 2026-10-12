@@ -1,0 +1,117 @@
+/* gl-v2 — Projecten/RecalculationV2 (design-handoff 42a, "Nacalculatie — overzicht"). Page-specifiek,
+   eigen klassen-namespace (gln-nc-*). KPI-strip/sectiekaart/badge/notice zijn gedeeld (zie DESIGN.md);
+   de categorieën-tabel hieronder is nieuw t.o.v. het legacy-scherm (dat 11 losse accordionkaarten had
+   i.p.v. één tabel met voortgangsbalk — zie 42a's eigen "HERGEBRUIKT · NIEUW"-regel). */
+
+#gln-nc-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* ── Categorieën-sectiekaart: kop met zoekveld, chips-rij, dan de tabel ─────────────────────── */
+.gln-nc-search { width: 260px; flex: none; }
+@media (max-width: 767.98px) { .gln-nc-search { width: 100%; order: 10; } }
+
+.gln-nc-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    flex-wrap: wrap;
+}
+.gln-nc-chip {
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 14px;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+}
+.gln-nc-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: #fff; }
+.gln-nc-chip[hidden] { display: none; }
+.gln-nc-hint { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin-left: auto; white-space: nowrap; }
+
+/* ── Tabel: categorie-/activiteitrijen als CSS-grid, geen <table> — zodat een categorierij een
+   klikbare <button> kan zijn met daaronder een los uitklapbaar blok sub-rijen. ──────────────────── */
+.gln-nc-grid-cols {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.05fr) 150px;
+    gap: 12px;
+    align-items: center;
+}
+.gln-nc-row-head {
+    height: 36px;
+    padding: 0 20px;
+    background: var(--gl-v2-subtle-bg, #F7F9F5);
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gln-nc-row-head span:not(:nth-child(2)) { text-align: right; }
+.gln-nc-row-head span:first-child { text-align: left; }
+
+.gln-nc-row-cat {
+    width: 100%;
+    min-height: 50px;
+    padding: 4px 20px;
+    border: 0;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+.gln-nc-row-cat:hover { background: var(--gl-v2-hover-tint, rgba(44, 59, 42, .03)); }
+.gln-nc-row-cat[aria-expanded="true"] { background: var(--gl-v2-primary-tint); }
+.gln-nc-row-cat.is-empty { opacity: .55; cursor: default; }
+.gln-nc-row-cat.is-empty:hover { background: transparent; }
+.gln-nc-chevron { font-size: 13px; color: var(--gl-v2-primary); transition: transform .15s ease; flex: none; }
+.gln-nc-row-cat[aria-expanded="true"] .gln-nc-chevron { transform: rotate(90deg); }
+.gln-nc-row-cat.is-empty .gln-nc-chevron { visibility: hidden; }
+
+.gln-nc-naam { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-nc-amount { text-align: right; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-nc-amount.is-strong { font-weight: 600; }
+.gln-nc-amount.is-neg { color: var(--gl-v2-danger); }
+.gln-nc-amount.is-muted { color: var(--gl-v2-muted-light); }
+
+.gln-nc-progress { display: flex; align-items: center; gap: 8px; }
+.gln-nc-progress .gl-v2-progress-track { flex: 1; min-width: 40px; }
+.gln-nc-progress-val { width: 44px; text-align: right; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; flex: none; }
+.gln-nc-progress-val.is-over { color: var(--gl-v2-danger); }
+
+/* Sub-rijen (geopende categorie) — lichter blok, naam ingesprongen met een linker accentlijn. */
+.gln-nc-activiteiten { background: var(--gl-v2-subtle-bg-soft, #FAFBF8); border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gln-nc-activiteiten[hidden] { display: none; }
+.gln-nc-row-act { min-height: 42px; padding: 2px 20px; text-decoration: none; color: inherit; }
+.gln-nc-row-act:hover { background: var(--gl-v2-hover-tint); }
+.gln-nc-row-act .gln-nc-naam { padding-left: 14px; border-left: 2px solid var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font: 500 12.5px var(--gl-v2-font-sans); }
+.gln-nc-open-link {
+    display: block;
+    padding: 8px 20px 12px 58px;
+    font: 600 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    text-decoration: none;
+}
+.gln-nc-open-link:hover { text-decoration: underline; }
+
+.gln-nc-row-total {
+    min-height: 48px;
+    padding: 4px 20px;
+    background: var(--gl-v2-primary-tint);
+    border-top: 1.5px solid var(--gl-v2-primary);
+    font: 700 13px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gln-nc-row-total .gln-nc-amount { font-weight: 600; }
+
+@media (max-width: 1023.98px) {
+    .gln-nc-grid-cols { grid-template-columns: 22px minmax(0, 1.3fr) repeat(4, minmax(0, 0.8fr)) minmax(0, 0.9fr) 110px; gap: 8px; }
+    .gln-nc-progress-val { width: 38px; }
+}
+@media (max-width: 767.98px) {
+    .gln-nc-grid-cols { grid-template-columns: 18px minmax(0, 1fr) repeat(4, minmax(0, 70px)) minmax(0, 70px) 90px; gap: 6px; }
+    .gln-nc-row-head { display: none; }
+    .gln-nc-amount, .gln-nc-row-head span { font-size: 11px; }
+}

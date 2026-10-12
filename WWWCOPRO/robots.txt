@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /projects/inschrijving/
 Disallow: /error/
+Disallow: /v2/
 
 Sitemap: https://www.groupln.be/sitemap.xml

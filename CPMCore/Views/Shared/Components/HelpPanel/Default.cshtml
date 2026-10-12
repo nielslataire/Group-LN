@@ -1,0 +1,63 @@
+@model CPMCore.Models.Help.HelpPanelVm
+@*
+    gl-v2 — contextueel help-zijpaneel (design-handoff punt 41d). Altijd in de DOM (zelfde patroon
+    als GlV2/_MeldingenPaneel), JS (gl-v2-help-panel.js) toont/verbergt via de "?"-knop in de
+    topbar. Zonder artikels voor het huidige scherm (ViewData["HelpScreenId"] niet gezet, of geen
+    artikel heeft dat screen-id in zijn frontmatter) toont dit gewoon de algemene uitweg naar het
+    Helpcentrum — geen "niets gevonden"-doodlopend straatje.
+*@
+@* Eén antiforgery-token, globaal beschikbaar voor élke Help-fetch (feedback/support) — dit
+   paneel rendert op elke gl-v2-pagina, dus elke pagina heeft hierdoor altijd een token, ook
+   zonder eigen @@Html.AntiForgeryToken() in de pagina zelf. *@
+@Html.AntiForgeryToken()
+<div class="gl-v2-hp-panel" id="glV2HelpPanel" role="dialog" aria-modal="true" aria-labelledby="glV2HelpPanel-title">
+    <div class="gl-v2-hp-header">
+        <i class="ph ph-question" aria-hidden="true"></i>
+        <span class="gl-v2-hp-title" id="glV2HelpPanel-title">Hulp bij dit scherm</span>
+        <span class="gl-v2-hp-spacer"></span>
+        <a class="gl-v2-hp-open-center" href="@Url.Action("Index", "Help")">Helpcentrum</a>
+        <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
+        <button type="button" class="gl-v2-hp-close js-gl-v2-hp-close" aria-label="Sluiten">
+            <i class="ph ph-x" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="gl-v2-hp-body">
+        @if (Model.Articles.Count == 0)
+        {
+            <div class="gl-v2-hp-empty">
+                <span class="gl-v2-hp-empty-icon"><i class="ph ph-question" aria-hidden="true"></i></span>
+                <span class="gl-v2-hp-empty-title">Nog geen artikel voor dit scherm</span>
+                <span class="gl-v2-hp-empty-desc">Bekijk het volledige Helpcentrum, of stel je vraag rechtstreeks aan support.</span>
+                <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Index", "Help")">Naar het Helpcentrum</a>
+            </div>
+        }
+        else
+        {
+            @foreach (var a in Model.Articles)
+            {
+                <a class="gl-v2-hp-article" href="@Url.Action("Artikel", "Help", new { slug = a.Slug })">
+                    <i class="ph ph-file-text" aria-hidden="true"></i>
+                    <span class="gl-v2-hp-article-text">
+                        <span class="gl-v2-hp-article-title">@a.Title</span>
+                        @if (!string.IsNullOrWhiteSpace(a.Description))
+                        {
+                            <span class="gl-v2-hp-article-desc">@a.Description</span>
+                        }
+                    </span>
+                    <i class="ph ph-caret-right" aria-hidden="true"></i>
+                </a>
+            }
+        }
+
+        <button type="button" class="gl-v2-hp-support-trigger" data-help-support-trigger>
+            <i class="ph ph-chat-circle-dots" aria-hidden="true"></i>
+            <span>Vraag stellen aan support</span>
+        </button>
+        <div class="gl-v2-hp-support-form" data-help-support-form hidden>
+            <textarea class="gl-v2-field-input gl-v2-hp-support-textarea" rows="3" placeholder="Waarmee kunnen we helpen?" data-help-support-message></textarea>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-help-support-send>Versturen</button>
+        </div>
+    </div>
+</div>
+<div class="gl-v2-hp-backdrop js-gl-v2-hp-close" id="glV2HelpPanelBackdrop"></div>

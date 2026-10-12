@@ -76,7 +76,12 @@ public partial class ProjectsIssuesController : BaseController
 
 
         SetPageHeader("bx bx-error-circle", $"{projectName} - Punten");
-        if (UseGlV2 && !classic) return View("IndexV2", await BuildIndexV2(projectId, projectName));
+        if (UseGlV2 && !classic)
+        {
+            // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
+            ViewData["HelpScreenId"] = "issues-index";
+            return View("IndexV2", await BuildIndexV2(projectId, projectName));
+        }
         filters ??= new ConstructionIssueFilterBO();
         var hasExplicitStatusFilter = Request.Query.ContainsKey("status");
         // Don't set a default server-side status filter — all issues are loaded so the

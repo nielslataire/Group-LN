@@ -16,13 +16,13 @@
    - Geen "AAN ONS"-tegenpartij in de bedrag-/richtingkaart: dit model draagt geen "onze onderneming"
      -gegeven, in tegenstelling tot Invoices/DetailVM se echte Issuer-partij. Enkel de leverancier
      wordt getoond.
-   - Geen vervaldatum/"Nog te betalen"-saldo: IncommingInvoiceBO heeft geen vervaldatum, betaalde-
-     bedrag- of saldoveld — het bedrag hier is gewoon het factuurbedrag, niet gelabeld als
-     "openstaand".
-   - Geen statusbadges (Te keuren/Goedgekeurd/Vervallen): IncomingInvoiceStatus bestaat wel in
-     BOCore met een kant-en-klare Label()/BadgeClass(), maar IncommingInvoiceBO heeft geen
-     StatusId-property en de translator mapt 'm niet door — dode infrastructuur, niet aansluiten
-     zonder eerst BOCore+ServiceCore uit te breiden.
+   - Vervaldatum en statusbadge (okt. 2026, design-handoff 42e punt 09): `IncommingInvoiceBO.DueDate`/
+     `.StatusId` bestonden al als DB-kolom maar werden niet doorgegeven ("dode infrastructuur") — nu
+     wel, via `IncommingInvoiceTranslator` (alleen-lezen, zie het commentaar daar: het Add/Edit-
+     formulier heeft hier geen veld voor, een schrijfpad zou de verrijkings-/Octopus-pijplijn se eigen
+     waarden overschrijven). Enkel gezet voor facturen die via die pijplijn liepen — handmatig
+     ingevoerde facturen (dit scherm se eigen Add/Edit) blijven StatusId=0/"Nieuw" en DueDate=Nothing,
+     dus tonen geen badge/vervaldatum, net als vroeger.
    - Geen "Goedkeuring"-tab/-werkstroom (stap N van M, wachten op iemand): geen enkele
      controller-actie of databron hiervoor bestaat vandaag.
    - Geen Pdf/UBL-export, geen "bekijk origineel document": geen van beide acties bestaat voor
@@ -76,6 +76,11 @@
             ? Model.Contract.GuaranteePercentage + "% waarborg inhouding op factuur"
             : Model.Contract.GuaranteeType.GetDisplayName();
     }
+    var isPaid = invoice.StatusId == IncomingInvoiceStatus.Paid;
+    var isOverdue = !isPaid && invoice.DueDate.HasValue && invoice.DueDate.Value < DateOnly.FromDateTime(DateTime.Today);
+    var betaalBadgeLabel = isPaid ? "Betaald" : isOverdue ? "Vervallen" : null;
+    var betaalBadgeTone = isPaid ? "is-positive" : "is-blocked";
+    var dueDateStr = invoice.DueDate?.ToString("dd/MM/yyyy", culture);
 }
 @section PageStyle
 {
@@ -88,6 +93,10 @@
     <span class="gl-v2-incominginvoice-direction-badge">
         <i class="ph ph-arrow-left" aria-hidden="true"></i>Aankoop
     </span>
+    @if (betaalBadgeLabel != null)
+    {
+        <span class="gl-v2-badge @betaalBadgeTone">@betaalBadgeLabel</span>
+    }
 }
 @* Zelfde tablet-gedrag als Invoices/DetailV2: op 768–1023.98px verdwijnt Bewerken uit de topbar,
    enkel de ⋯-trigger blijft — Bewerken verhuist dan naar de vaste onderbalk. *@
@@ -197,6 +206,10 @@
                 @Html.DisplayFor(m => invoiceDateStr, "GlV2DetailField", new { Label = "Factuurdatum" })
                 @{ var invoicePriceStr = invoice.InvoicePrice.ToString("C", culture); }
                 @Html.DisplayFor(m => invoicePriceStr, "GlV2DetailField", new { Label = "Factuurbedrag" })
+                @if (dueDateStr != null)
+                {
+                    @Html.DisplayFor(m => dueDateStr, "GlV2DetailField", new { Label = "Vervaldatum" })
+                }
                 @if (hasContract)
                 {
                     @Html.DisplayFor(m => paymentTermDisplay, "GlV2DetailField", new { Label = "Betaaltermijn", Wide = true })

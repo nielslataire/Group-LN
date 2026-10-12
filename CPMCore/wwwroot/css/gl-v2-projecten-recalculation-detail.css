@@ -1,0 +1,89 @@
+/* gl-v2 — Projecten/RecalculationDetailV2 (design-handoff 42b "Categorie Bovenbouw" + 42f
+   "Subcategorieën — Technieken Elektro", één view voor beide). Page-specifiek, klassen-namespace
+   gln-rd-*. Tier-1 (categorieën) hergebruikt .gl-v2-tabbar rechtstreeks (geen eigen CSS nodig — goud
+   actief-lijntje en .gl-v2-tabbar-error-dot zijn al precies wat 42a/42b/42f vragen); de subcategorieën
+   (42f) zijn GEEN tweede tabbar — het ontwerp zegt letterlijk "activiteit-pills in de inhoud" — en
+   gebruiken het nieuwe, project-brede GlV2/_PillSelector-component (gl-v2/pills.css), hier dus ook
+   geen eigen CSS voor nodig. */
+
+#gln-rd-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* ── "Activiteiten"-kaart (42f) ───────────────────────────────────────────────────────────────── */
+.gln-rd-act-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)) minmax(0, 1fr) 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 20px;
+}
+.gln-rd-act-head {
+    background: var(--gl-v2-bg, #F7F9F5);
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gln-rd-act-head span:not(:first-child) { text-align: right; }
+.gln-rd-act-row { border-top: 1px solid var(--gl-v2-hairline-soft); text-decoration: none; color: inherit; }
+.gln-rd-act-row:hover { background: var(--gl-v2-hover-tint); }
+.gln-rd-act-naam { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+.gln-rd-amount { text-align: right; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-rd-amount.is-strong { font-weight: 600; }
+.gln-rd-amount.is-neg { color: var(--gl-v2-danger); }
+.gln-rd-amount.is-muted { color: var(--gl-v2-muted-light); }
+
+/* ── Leverancierskaart: contractstrook (6 cellen) ─────────────────────────────────────────────── */
+.gln-rd-lev-card { overflow: visible; }
+.gln-rd-strip {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gln-rd-strip-cell { padding: 11px 16px; border-right: 1px solid var(--gl-v2-hairline-soft); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gln-rd-strip-cell.is-last { border-right: 0; }
+.gln-rd-strip-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-rd-strip-value { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gln-rd-strip-value.is-small { font-size: 12.5px; font-weight: 500; }
+.gln-rd-strip-value.is-neg { color: var(--gl-v2-danger); }
+.gln-rd-strip-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Facturentabel per groep (CONTRACT/MEERWERK/MEERWERK KLANT/GEEN CONTRACT) ─────────────────── */
+.gln-rd-fact-groepkop {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 9px 20px;
+    background: var(--gl-v2-primary-tint);
+    font: 700 10px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gl-v2-primary);
+}
+.gln-rd-fact-grid {
+    display: grid;
+    grid-template-columns: 110px 100px minmax(0, 1fr) 130px 150px;
+    gap: 12px;
+    align-items: center;
+    padding: 9px 20px;
+}
+.gln-rd-fact-head { background: var(--gl-v2-bg, #F7F9F5); font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-rd-fact-head span:nth-child(4) { text-align: right; }
+.gln-rd-fact-row { border-top: 1px solid var(--gl-v2-hairline-soft); text-decoration: none; color: inherit; }
+.gln-rd-fact-row:hover { background: var(--gl-v2-hover-tint); }
+.gln-rd-fact-nr { font: 500 12px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); }
+.gln-rd-fact-oms { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1023.98px) {
+    .gln-rd-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .gln-rd-strip-cell:nth-child(3) { border-right: 0; }
+    .gln-rd-strip-cell { border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+    .gln-rd-act-grid { grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 0.7fr)) minmax(0, 0.8fr) 90px; gap: 8px; }
+    .gln-rd-fact-grid { grid-template-columns: 90px 86px minmax(0, 1fr) 110px 110px; gap: 8px; }
+}
+@media (max-width: 767.98px) {
+    .gln-rd-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gln-rd-act-head, .gln-rd-fact-head { display: none; }
+    .gln-rd-act-grid { grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 60px)) minmax(0, 60px) 80px; gap: 6px; }
+    .gln-rd-fact-grid { grid-template-columns: 80px 74px minmax(0, 1fr) 90px 90px; gap: 6px; }
+}

@@ -6,6 +6,8 @@ using CPMCore.Models.Invoicing;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Leveranciers;
 using CPMCore.Models.Projecten;
+using CPMCore.Services;
+using CPMCore.Services.InvoiceExtraction;
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
@@ -60,12 +62,13 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Inkomende factuur toevoegen")]
         [Breadcrumb("Inkomende factuur toevoegen", FromAction = "DetailContracts")]
-        public ActionResult AddIncommingInvoice(int projectid, int type, int invoiceid = 0)
+        public ActionResult AddIncommingInvoice(int projectid, int type, int invoiceid = 0, bool focusUpload = false)
         {
             //Referrer
             var referrer = Request.Headers["Referer"].ToString();
             TempData["Referrer"] = referrer;
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            ViewData["FocusUpload"] = focusUpload;
             var model = new ProjectIncommingInvoiceAddUpdateModel();
 
             var service2 = _projectService;
@@ -137,6 +140,8 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = lastnode;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                return View("AddIncommingInvoiceV2", model);
             return View(model);
         }
         [HttpPost]
@@ -198,6 +203,8 @@ namespace CPMCore.Controllers
                 model.ListActivities.Insert(0, new IdNameBO { Group = label });
 
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
+                if (ViewData["UseGlV2Layout"] as bool? == true)
+                    return View("AddIncommingInvoiceV2", model);
                 return View(model);
             }
             var Referrer = TempData["Referrer"];
@@ -216,6 +223,8 @@ namespace CPMCore.Controllers
             {
                 AddMessage("error", $"De factuur is NIET toegevoegd aan het project {model.ProjectName}", "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
+                if (ViewData["UseGlV2Layout"] as bool? == true)
+                    return View("AddIncommingInvoiceV2", model);
                 return View(model);
             }
         }
@@ -558,5 +567,124 @@ namespace CPMCore.Controllers
             return PartialView("Modals/_ModalDeleteIncommingInvoiceV2", viewModel);
         }
 
+        // ── gl-v2 AddIncommingInvoiceV2 (design-handoff 42c) — drie kleine, gl-v2-eigen aanvullingen op
+        // de hierboven ongewijzigde Add/EditIncommingInvoice-actiepaar. Geen van de drie raakt een
+        // bestaand legacy-formulierveld of -actie. ──────────────────────────────────────────────────
+
+        /// <summary>Contractinfo voor de rechterzijbalk (42c) — dezelfde velden als de al bestaande
+        /// read-only kaart op IncommingInvoiceDetailV2.cshtml, hier als JSON zodat de zijbalk live
+        /// bijwerkt zodra de gebruiker een ander contract kiest (dat kan daar niet, het contract staat
+        /// er al vast).</summary>
+        [HttpPost]
+        public ActionResult GetContractInfoForInvoiceFormV2(int contractId)
+        {
+            if (contractId == 0) return Json(new { success = false });
+            var response = _projectService.GetContract(contractId);
+            if (!response.Success || response.Value == null) return Json(new { success = false });
+            var c = response.Value;
+            var bedrag = c.Activities?.Sum(a => a.EffectivePrice) ?? 0m;
+
+            // Reeds gefactureerd/meerwerk (design-handoff 42c, contractkaart) — zelfde filterpatroon als
+            // RecalcLeverancierKaartV2 (ProjectenController.Contracts.cs): "gefactureerd" = Contract +
+            // Meerwerk samen (Meerwerk_Klant telt niet mee, dat wordt aan de klant doorgerekend, niet
+            // aan dit contract), "meerwerk (WO)" is daarbinnen het Meerwerk-deel apart.
+            var facturenResponse = _projectService.GetProjectIncommingInvoicesForRecalculation(c.ProjectId);
+            var facturenContract = facturenResponse.Success
+                ? facturenResponse.Values.Where(f => f.ContractId == contractId).ToList()
+                : new List<IncommingInvoiceActivityBO>();
+            var meerwerkBedrag = facturenContract.Where(f => f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk).Sum(f => f.SignedPrice);
+            var gefactureerdBedrag = facturenContract
+                .Where(f => f.IncommingInvoiceType == IncommingInvoiceType.Contract || f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk)
+                .Sum(f => f.SignedPrice);
+
+            return Json(new
+            {
+                success = true,
+                companyNaam = c.Company?.Display,
+                // Nothing als er geen echte contractnaam is — geen verzonnen "Contract #id"-fallback;
+                // de JS laat de rij dan gewoon weg i.p.v. een betekenisloos nummer te tonen.
+                contractNaam = string.IsNullOrWhiteSpace(c.ContractName) ? null : c.ContractName,
+                contractSigned = c.ContractSigned,
+                contractBedrag = bedrag,
+                meerwerkBedrag,
+                gefactureerdBedrag,
+                vatPercentage = c.VatPercentage,
+                paymentTerm = c.PaymentTerm,
+                cashDiscount = c.CashDiscount,
+                cashDiscountPercentage = c.CashDiscountPercentage,
+                cashDiscountPaymentTerm = c.CashDiscountPaymentTerm,
+                guaranteeType = c.GuaranteeType.ToString(),
+                guaranteePercentage = c.GuaranteePercentage,
+            });
+        }
+
+        /// <summary>PDF (of foto) van de factuur inlezen (design-handoff 42e punt 06) — zelfde Azure
+        /// Document Intelligence-dienst (prebuilt-invoice) die de Octopus-verrijkingspijplijn al gebruikt
+        /// (CPMCore/Services/InvoiceExtraction), hier voor het eerst interactief aangeroepen. Slaat het
+        /// originele bestand ook op (DocStorageService, map "invoices") zodat het later als bijlage kan
+        /// dienen — momenteel enkel het pad teruggeven, geen apart bijlageveld op IncommingInvoiceBO.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(25 * 1024 * 1024)]
+        public async Task<IActionResult> AddIncommingInvoiceV2ExtractPdf(IFormFile file)
+        {
+            if (file is null || file.Length == 0) return Json(new { success = false, message = "Geen bestand ontvangen." });
+
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            var storage = HttpContext.RequestServices.GetRequiredService<DocStorageService>();
+            var fileName = string.IsNullOrWhiteSpace(file.FileName) ? "factuur.pdf" : Path.GetFileName(file.FileName);
+            var stored = await storage.UploadAsync(bytes, fileName, file.ContentType ?? "application/pdf", "invoices");
+
+            var invoiceService = HttpContext.RequestServices.GetRequiredService<IAzureInvoiceAnalysisService>();
+            if (!invoiceService.IsEnabled)
+                return Json(new { success = false, message = "Automatisch inlezen is niet geconfigureerd (geen Azure-sleutel).", path = stored, fileName });
+
+            var result = await invoiceService.AnalyzeAsync(bytes, HttpContext.RequestAborted);
+            if (!result.Success)
+                return Json(new { success = false, message = result.ErrorMessage ?? "Kon de factuur niet lezen.", path = stored, fileName });
+
+            return Json(new
+            {
+                success = true,
+                path = stored,
+                fileName,
+                vendorName = result.VendorName,
+                invoiceNumber = result.InvoiceId,
+                invoiceDate = result.InvoiceDate?.ToString("yyyy-MM-dd"),
+                dueDate = result.DueDate?.ToString("yyyy-MM-dd"),
+                isCreditNote = string.Equals(result.DocumentType, "CreditNote", StringComparison.OrdinalIgnoreCase),
+                amount = result.Lines?.Sum(l => l.Amount ?? 0m),
+            });
+        }
+
+        /// <summary>Zelfde als AddIncommingInvoiceDetailRow, enkel de gl-v2-partial — de binding
+        /// (Html.BeginCollectionItem("details")) en de business-regels (ChangeOrders per contract,
+        /// Contract- vs Geen_Contract-default) blijven identiek.</summary>
+        [HttpPost]
+        public PartialViewResult AddIncommingInvoiceDetailRowV2(int ActivityId, string ActivityName, int ContractId, int CompanyId)
+        {
+            var nIncommingInvoiceDetail = new IncommingInvoiceDetailBO();
+            var response = _projectService.GetContractChangeOrdersForSelect(ContractId);
+            if (response.Success)
+                nIncommingInvoiceDetail.ChangeOrders = response.Values;
+
+            if (ContractId == 0)
+            {
+                nIncommingInvoiceDetail.ActivityID = ActivityId;
+                nIncommingInvoiceDetail.ContractActivityText = ActivityName;
+                nIncommingInvoiceDetail.IncommingInvoiceType = IncommingInvoiceType.Geen_Contract;
+            }
+            else
+            {
+                nIncommingInvoiceDetail.ContractActivityID = ActivityId;
+                nIncommingInvoiceDetail.ContractActivityText = ActivityName;
+                nIncommingInvoiceDetail.IncommingInvoiceType = IncommingInvoiceType.Contract;
+            }
+
+            return PartialView("_IncommingInvoiceDetailRowV2", nIncommingInvoiceDetail);
+        }
     }
 }

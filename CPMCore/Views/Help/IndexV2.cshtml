@@ -1,0 +1,148 @@
+@model CPMCore.Models.Help.HelpHomeV2Vm
+@*
+    gl-v2 — Helpcentrum, startpagina (design-handoff punt 41a, "CRM Help.dc.html"): groot zoekveld
+    met zoeken-terwijl-je-typt (41b, gl-v2-help.js), onderwerpen in dezelfde volgorde als het
+    hoofdmenu, "Begin hier" + "Nieuw en bijgewerkt". Content komt uit IHelpContentService
+    (markdown-bestanden onder CPMCore/HelpContent/, geen DB) — zie DESIGN.md "Helpcentrum".
+*@
+@{
+    ViewData["Title"] = "Help";
+    ViewData["PageIcon"] = "ph ph-question";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-help.css" asp-append-version="true" />
+}
+@* Design-handoff punt 43 (Paginatypes 43i) — topbar van het Helpcentrum-hoofdscherm toont enkel
+   titel "Help" + een zoekvak + de gebruiker, geen kruimelpad (HelpController.Index zet
+   ViewData["HideBreadcrumb"]) en ook geen "Vraag stellen aan support"-knop meer hier — die blijft
+   bereikbaar via de zoekresultaten ("Niet gevonden?") en het "?"-zijpaneel. Zelfde zoekvak-opmaak
+   als 41c se topbar, hergebruikt dezelfde zoeklogica (gl-v2-help.js, wireHelpSearch). *@
+@section PageActions
+{
+    <div class="gl-v2-help-topbar-search" data-help-search>
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+        <input type="text" class="gl-v2-help-topbar-search-input" id="gl-v2-help-topbar-search-input" placeholder="Zoek in help" autocomplete="off" aria-label="Zoek in help">
+        <div class="gl-v2-help-search-results" id="gl-v2-help-topbar-search-results" hidden></div>
+    </div>
+}
+
+<div class="gl-v2-help-home">
+    <div class="gl-v2-help-hero">
+        <span class="gl-v2-help-hero-title">Waarmee kunnen we helpen?</span>
+        <div class="gl-v2-help-search" data-help-search>
+            <div class="gl-v2-field gl-v2-help-search-field">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="gl-v2-help-search-input"
+                           placeholder='Zoek een onderwerp, bv. "wijzigingsopdracht ondertekenen"'
+                           autocomplete="off" aria-label="Zoek in help">
+                    <button type="button" class="gl-v2-field-clear" id="gl-v2-help-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                </div>
+            </div>
+            <div class="gl-v2-help-search-results" id="gl-v2-help-search-results" hidden></div>
+        </div>
+        @if (Model.PopularTerms.Count > 0)
+        {
+            <div class="gl-v2-help-popular">
+                <span class="gl-v2-help-popular-label">Vaak gezocht:</span>
+                @foreach (var term in Model.PopularTerms)
+                {
+                    <button type="button" class="gl-v2-help-popular-chip" data-help-popular-term>@term</button>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-help-topics">
+        <span class="gl-v2-help-section-label">Onderwerpen — zelfde volgorde als het menu</span>
+        <div class="gl-v2-help-topics-grid">
+            @foreach (var t in Model.Topics)
+            {
+                var hasArticles = t.FirstArticleSlug != null;
+                <a class="gl-v2-help-topic-card @(hasArticles ? "" : "is-empty")"
+                   href="@(hasArticles ? Url.Action("Artikel", "Help", new { slug = t.FirstArticleSlug }) : "#")"
+                   @(hasArticles ? "" : "aria-disabled=\"true\" tabindex=\"-1\"")>
+                    <div class="gl-v2-help-topic-head">
+                        <span class="gl-v2-help-topic-icon"><i class="ph @t.Icon" aria-hidden="true"></i></span>
+                        <span class="gl-v2-help-topic-name-wrap">
+                            <span class="gl-v2-help-topic-name">@t.Name</span>
+                            <span class="gl-v2-help-topic-count">@t.Count @(t.Count == 1 ? "artikel" : "artikels")</span>
+                        </span>
+                    </div>
+                    @if (t.TopArticleTitles.Count > 0)
+                    {
+                        <div class="gl-v2-help-topic-list">
+                            @foreach (var title in t.TopArticleTitles)
+                            {
+                                <span class="gl-v2-help-topic-list-item">@title</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="gl-v2-help-topic-list">
+                            <span class="gl-v2-help-topic-list-item gl-v2-help-topic-list-empty">Nog geen artikels</span>
+                        </div>
+                    }
+                    @if (hasArticles)
+                    {
+                        <span class="gl-v2-help-topic-cta">Alle artikels →</span>
+                    }
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="gl-v2-help-home-row">
+        <div class="gl-v2-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-title">Begin hier — eerste week</span>
+            </div>
+            <div class="gl-v2-help-list">
+                @if (Model.Start.Count == 0)
+                {
+                    <div class="gl-v2-card-empty-msg gl-v2-help-list-empty">Nog geen onboarding-artikels geschreven.</div>
+                }
+                @foreach (var s in Model.Start)
+                {
+                    <a class="gl-v2-help-list-row" href="@Url.Action("Artikel", "Help", new { slug = s.ArticleSlug })">
+                        <span class="gl-v2-help-list-num @(s.Highlighted ? "is-highlighted" : "")">@s.Number</span>
+                        <span class="gl-v2-help-list-text">
+                            <span class="gl-v2-help-list-title">@s.Title</span>
+                            <span class="gl-v2-help-list-desc">@s.Description</span>
+                        </span>
+                        <span class="gl-v2-help-list-meta">@s.Minutes</span>
+                    </a>
+                }
+            </div>
+        </div>
+
+        <div class="gl-v2-card">
+            <div class="gl-v2-card-header">
+                <span class="gl-v2-card-header-title">Nieuw en bijgewerkt</span>
+            </div>
+            <div class="gl-v2-help-list">
+                @if (Model.News.Count == 0)
+                {
+                    <div class="gl-v2-card-empty-msg gl-v2-help-list-empty">Nog niets gemarkeerd als nieuw/bijgewerkt.</div>
+                }
+                @foreach (var n in Model.News)
+                {
+                    <a class="gl-v2-help-list-row" href="@Url.Action("Artikel", "Help", new { slug = n.ArticleSlug })">
+                        <span class="gl-v2-badge @(n.IsNew ? "is-solid" : "is-neutral") gl-v2-help-news-tag">@n.Tag</span>
+                        <span class="gl-v2-help-list-text">
+                            <span class="gl-v2-help-list-title">@n.Title</span>
+                        </span>
+                        <span class="gl-v2-help-list-meta">@n.Date</span>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-help.js" asp-append-version="true"></script>
+}

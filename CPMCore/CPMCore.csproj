@@ -242,6 +242,7 @@
     <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="FluentFTP" Version="53.0.1" />
     <PackageReference Include="HtmlToPdfConverter.Core" Version="2.0.0" />
+    <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.22" />
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.9" />

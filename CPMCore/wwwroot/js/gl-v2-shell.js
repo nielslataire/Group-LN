@@ -16,6 +16,7 @@
     initTableEmailActions();
     initClickableRows();
     initGlV2Select();
+    initGlV2NavCombo();
     initGlV2DatePicker();
     initGlV2Steps();
 
@@ -751,8 +752,11 @@
 
         if (glV2SelectListenersBound) return;
         glV2SelectListenersBound = true;
+        // Herkent zowel data-gl-v2-select (formuliergebonden) als data-gl-v2-navcombo (navigatie-combo,
+        // initGlV2NavCombo hieronder — LET OP: niet te verwarren met het losse, al bestaande window.GlV2Combo/gl-v2-combo.js (formuliergebonden zoekveld, data-gl-v2-combo, andere component) — zelfde open/sluit-/positioneer-logica (glV2SelectCloseAll/
+        // -Position), enkel de keuzelogica verschilt (formulierwaarde zetten vs. gewoon een link).
         document.addEventListener("click", function (e) {
-            if (e.target.closest(".gl-v2-select[data-gl-v2-select]")) return;
+            if (e.target.closest(".gl-v2-select[data-gl-v2-select], .gl-v2-select[data-gl-v2-navcombo]")) return;
             glV2SelectCloseAll();
         });
         window.addEventListener("resize", glV2SelectCloseAll);
@@ -763,6 +767,57 @@
         }, true);
     }
     window.GlV2Select.init = initGlV2Select;
+
+    // ── Doorzoekbare navigatie-combo (GlV2/_PillSelector.cshtml, design-handoff 42f) ───────────────
+    // Elke .gl-v2-select-option is hier een gewone <a href>, geen data-value-knop: kiezen = de browser
+    // navigeert zelf, er is geen keuze-JS nodig. Hergebruikt glV2SelectCloseAll()/-Position() hierboven
+    // (vandaar [data-gl-v2-owned] op het paneel en de bredere click-buiten-selector erboven) — enkel
+    // het open/dicht-zetten en het live filteren op tekst zijn hier nieuw.
+    function initGlV2NavCombo(scope) {
+        var root = scope && scope.querySelectorAll ? scope : document;
+        var instances = root.querySelectorAll(".gl-v2-select[data-gl-v2-navcombo]");
+
+        instances.forEach(function (wrap) {
+            if (wrap.hasAttribute("data-gl-v2-wired")) return;
+            var trigger = wrap.querySelector(".gl-v2-select-trigger");
+            var panel = wrap.querySelector(".gl-v2-select-panel");
+            if (!trigger || !panel) return;
+            wrap.setAttribute("data-gl-v2-wired", "");
+            panel.setAttribute("data-gl-v2-owned", "");
+            var search = wrap.querySelector('[data-role="combo-search"]');
+            var options = wrap.querySelectorAll(".gl-v2-select-option");
+
+            trigger.addEventListener("click", function () {
+                var willOpen = !panel.classList.contains("is-open");
+                glV2SelectCloseAll();
+                if (willOpen) {
+                    glV2SelectPosition(trigger, panel);
+                    panel.classList.add("is-open");
+                    trigger.classList.add("is-open");
+                    trigger.setAttribute("aria-expanded", "true");
+                    if (search) {
+                        search.value = "";
+                        options.forEach(function (o) { o.hidden = false; });
+                        search.focus();
+                    }
+                }
+            });
+            trigger.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger.click(); }
+                if (e.key === "Escape") glV2SelectCloseAll();
+            });
+            if (search) {
+                search.addEventListener("click", function (e) { e.stopPropagation(); });
+                search.addEventListener("input", function () {
+                    var term = search.value.trim().toLowerCase();
+                    options.forEach(function (o) {
+                        o.hidden = term.length > 0 && (o.getAttribute("data-search") || "").indexOf(term) === -1;
+                    });
+                });
+            }
+        });
+    }
+    window.GlV2NavCombo = { init: initGlV2NavCombo };
 
     // Zelfde "opnieuw aanroepbaar voor AJAX-geladen inhoud"-conventie als GlV2Select.init hierboven —
     // eerste gebruik: Projecten/PaymentStagesV2's 21h-modal (Niels, 2026-09-30). Enkel veilig op een

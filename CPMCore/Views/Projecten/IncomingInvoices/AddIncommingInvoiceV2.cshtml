@@ -1,0 +1,268 @@
+@model CPMCore.Models.Projecten.ProjectIncommingInvoiceAddUpdateModel
+@using BOCore
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Factuur toevoegen (design-handoff 42c). Post naar de BESTAANDE AddIncommingInvoice-actie
+    (zelfde model, zelfde Html.BeginCollectionItem("details")-binding, zelfde validatie/opslaglogica) —
+    deze view verandert niets aan hoe een factuur bewaard wordt, enkel hoe het formulier eruitziet.
+    "Bedrag excl. btw" uit het ontwerp is hier gewoon "Factuurbedrag" (IncommingInvoice.InvoicePrice):
+    er bestaat geen apart excl-btw-veld op de header, de bestaande validatie vergelijkt dit bedrag al
+    rechtstreeks met de som van de regels. Zie DESIGN.md voor de volledige toelichting per onderdeel
+    (contractinfo-zijbalk, PDF-intake, somcontrole, Vordering/Eindvordering/Creditnota).
+*@
+@{
+    ViewData["Title"] = "Factuur toevoegen";
+    ViewData["PageIcon"] = "bx bx-receipt";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
+    var kindValue = ((int?)Model.IncommingInvoice.Kind) ?? 0;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-incommininvoice-add.css" asp-append-version="true" />
+}
+
+<form method="post" asp-action="AddIncommingInvoice" asp-controller="Projecten" id="gln-ai-form" autocomplete="off">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ProjectId" />
+    <input type="hidden" asp-for="Type" />
+    <input type="hidden" asp-for="ProjectName" />
+    @* Plain hidden input (geen asp-for): de tag helper zou de value overschrijven met Model.IncommingInvoice.Kind
+       (Nothing bij een nieuwe factuur → lege string), terwijl deze V2-form altijd een expliciete 0/1/2 wil
+       versturen zodat IncommingInvoiceTranslator dit (voorwaardelijk) wegschrijft — zie de toelichting daar. *@
+    <input type="hidden" name="IncommingInvoice.Kind" id="gln-ai-kind" value="@kindValue" />
+
+    <div class="gln-ai-grid">
+        <div class="gln-ai-main">
+            @* Upload-dropzone (design-handoff 42c, 06) — enkel kolom 1, zodat het contractinfo-paneel
+               ernaast staat i.p.v. er volledig onder. Leverancier/nummer/datum/bedrag worden ingevuld;
+               de gebruiker kiest zelf nog altijd het Contract/Bedrijf (geen automatische matching op
+               naam, te foutgevoelig om blind te vertrouwen). *@
+            <div class="gln-ai-dropzone" id="gln-ai-dropzone">
+                <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                <span>Sleep de PDF van de factuur hierheen — nummer, datum, vervaldatum en bedrag worden ingevuld</span>
+                <label class="gln-ai-dropzone-link">kies een bestand<input type="file" id="gln-ai-file-input" accept="application/pdf" hidden /></label>
+                <span class="gln-ai-dropzone-status" id="gln-ai-dropzone-status" hidden></span>
+            </div>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Algemene info</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">leverancier en contract eerst — de rest volgt uit het contract</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6">
+                        <label class="gl-v2-field-label">Contract</label>
+                        <div class="gln-ai-segmented" id="gln-ai-contracttype-segmented">
+                            <button type="button" class="gln-ai-segmented-btn @(Model.Type == 0 ? "is-active" : "")" data-contracttype="0">Met contract</button>
+                            <button type="button" class="gln-ai-segmented-btn @(Model.Type != 0 ? "is-active" : "")" data-contracttype="1">Zonder contract</button>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6">
+                        <label class="gl-v2-field-label">Soort</label>
+                        <div class="gln-ai-segmented" id="gln-ai-kind-segmented">
+                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 0 ? "is-active" : "")" data-kind="0">Vordering</button>
+                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 1 ? "is-active" : "")" data-kind="1">Eindvordering</button>
+                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 2 ? "is-active" : "")" data-kind="2">Creditnota</button>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6" id="gln-ai-contract-field"@(Model.Type != 0 ? " hidden" : "")>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="lstProjectContracts_input">Welk contract</label>
+                            @{
+                                var huidigContract = Model.ProjectContracts.FirstOrDefault(c => Model.IncommingInvoice.ContractID > 0 && c.ID == Model.IncommingInvoice.ContractID);
+                            }
+                            @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                            {
+                                // Zelfde component als het leveranciersveld hieronder (zoekveld), maar met een
+                                // statische lijst (OptionsJson, geen LookupUrl) die meteen al onder het veld
+                                // staat zodra je erin klikt — er zijn doorgaans maar enkele contracten per
+                                // project, geen reden om eerst te moeten typen zoals bij de leveranciers-AJAX.
+                                Name = "IncommingInvoice.ContractID", Id = "lstProjectContracts",
+                                Value = (Model.IncommingInvoice.ContractID ?? 0).ToString(), EmptyValue = "0",
+                                DisplayText = huidigContract?.Display,
+                                Placeholder = "Zoek of kies een contract…",
+                                OptionsJson = System.Text.Json.JsonSerializer.Serialize(Model.ProjectContracts.Select(c => new { id = c.ID, text = c.Display })),
+                                ListLabel = "Alle contracten", MinChars = 0, Icon = "ph-file-text",
+                                Help = "Geen contract? Voeg eerst een contract toe, of kies \"Zonder contract\" hierboven.",
+                            })
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6" id="gln-ai-company-field"@(Model.Type == 0 ? " hidden" : "")>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="txtCompanyID_input">Leverancier</label>
+                            @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                            {
+                                Name = "IncommingInvoice.CompanyId", Id = "txtCompanyID",
+                                Value = (Model.IncommingInvoice.CompanyId ?? 0).ToString(), EmptyValue = "0",
+                                Placeholder = "Zoek een leverancier…",
+                                LookupUrl = Url.Action("GetCompanys", "Projecten"), MinChars = 3, Icon = "ph-buildings",
+                            })
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6">
+                        @Html.EditorFor(m => m.IncommingInvoice.InvoiceExternalId, "GlV2Text", new { Label = "Factuurnummer" })
+                    </div>
+                    @* Drie gelijke kolommen op desktop (col-4 elk): Factuurdatum, Vervaldatum, Factuurbedrag
+                       samen op één rij — niet Factuurdatum alleen op zijn eigen volle rij. *@
+                    <div class="gl-v2-col-4">
+                        @Html.EditorFor(m => m.IncommingInvoice.IncommingInvoiceDate, "GlV2Date", new { Label = "Factuurdatum" })
+                    </div>
+                    <div class="gl-v2-col-4">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label">Vervaldatum</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gln-ai-vervaldatum" disabled placeholder="—" /></div>
+                            <span class="gl-v2-field-help" id="gln-ai-korting-hint"></span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-4">
+                        @Html.EditorFor(m => m.IncommingInvoice.InvoicePrice, "GlV2Currency", new { Label = "Factuurbedrag", Required = true })
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Factuurregels</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">per activiteit een regel — meerwerk voor een klant hang je aan de eenheid via de WO-kolom</span>
+                </div>
+                <div class="gln-ai-addrow">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "gln-ai-activiteit-value", Id = "lstActivities", Bare = true,
+                        Placeholder = "Selecteer de activiteit…",
+                        Items = Model.ListActivities.Where(a => a.ID != 0).Select(a => new GlV2SelectItem { Value = a.ID.ToString(), Text = a.Display }).ToList(),
+                    })
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="btnAddActivities"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                </div>
+                <div class="gln-ai-row-grid gln-ai-row-head">
+                    <span>Lot</span><span>Type</span><span>Omschrijving</span><span>Bedrag</span><span>WO</span><span></span>
+                </div>
+                <div id="DetailRows">
+                    @foreach (var item in Model.IncommingInvoice.Details)
+                    {
+                        @await Html.PartialAsync("_IncommingInvoiceDetailRowV2", item)
+                    }
+                </div>
+
+                @* Legende (design-handoff 42c): de 4 regeltypes — overgenomen woord voor woord. *@
+                <div class="gln-ai-legend">
+                    <div class="gln-ai-legend-item"><span class="gl-v2-badge is-positive">Contract</span><span>telt mee in gecontracteerd vs gefactureerd</span></div>
+                    <div class="gln-ai-legend-item"><span class="gl-v2-badge is-attention">Meerwerk klant</span><span>wordt doorgerekend aan de klant · eenheid verplicht, WO optioneel</span></div>
+                    <div class="gln-ai-legend-item"><span class="gl-v2-badge is-neutral">Meerwerk algemeen</span><span>kost voor het project, niet doorgerekend</span></div>
+                    <div class="gln-ai-legend-item"><span class="gl-v2-badge is-neutral">Geen contract</span><span>enkel als de factuur geen contract heeft</span></div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="gln-ai-side">
+            <section class="gl-v2-section-card" id="gln-ai-contract-card" hidden>
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Contract</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-badge is-positive" id="gln-ai-contract-signed" hidden>Getekend</span>
+                </div>
+                <div class="gln-ai-contract-body" id="gln-ai-contract-body">
+                    <div class="gln-ai-contract-name" id="gln-ai-contract-name">—</div>
+
+                    @* Gefactureerd incl. deze factuur — "eerder" (reeds gefactureerd, van de server) en
+                       "deze" (som van de regels hieronder, live, zie updateContractLiveCijfers()). *@
+                    <div class="gl-v2-progress" id="gln-ai-contract-progress" hidden>
+                        <div class="gl-v2-progress-row">
+                            <span class="gl-v2-progress-label">Gefactureerd incl. deze factuur</span>
+                            <span class="gl-v2-progress-spacer"></span>
+                            <span class="gl-v2-progress-value" id="gln-ai-contract-pct">0 %</span>
+                        </div>
+                        <div class="gl-v2-progress-track is-standard gln-ai-contract-track">
+                            <div class="gl-v2-progress-fill gln-ai-contract-fill-prior" id="gln-ai-contract-fill-prior"></div>
+                            <div class="gl-v2-progress-fill gln-ai-contract-fill-current" id="gln-ai-contract-fill-current"></div>
+                        </div>
+                        <div class="gln-ai-contract-legend">
+                            <span class="gln-ai-contract-legend-item"><span class="gln-ai-contract-legend-dot is-prior"></span>eerder <span id="gln-ai-contract-eerder">€ 0</span></span>
+                            <span class="gln-ai-contract-legend-item"><span class="gln-ai-contract-legend-dot is-current"></span>deze <span id="gln-ai-contract-deze">€ 0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="gln-ai-contract-grid">
+                        <span class="gln-ai-contract-grid-label">Contractbedrag</span><span class="gln-ai-contract-grid-value" id="gln-ai-contract-bedrag">—</span>
+                        <span class="gln-ai-contract-grid-label">Meerwerk (WO)</span><span class="gln-ai-contract-grid-value" id="gln-ai-contract-meerwerk">—</span>
+                        <span class="gln-ai-contract-grid-label">Reeds gefactureerd</span><span class="gln-ai-contract-grid-value" id="gln-ai-contract-reedsgefactureerd">—</span>
+                        <span class="gln-ai-contract-grid-label">Saldo na deze factuur</span><span class="gln-ai-contract-grid-value is-strong" id="gln-ai-contract-saldo">—</span>
+                    </div>
+
+                    <div class="gln-ai-contract-details">
+                        <div class="gln-ai-contract-detail-row" id="gln-ai-contract-row-borg" hidden>
+                            <span class="gln-ai-contract-detail-label">Borg</span>
+                            <div class="gln-ai-contract-detail-text">
+                                <span id="gln-ai-contract-waarborg">—</span>
+                                <span class="gln-ai-contract-detail-hint" id="gln-ai-contract-waarborg-hint"></span>
+                            </div>
+                        </div>
+                        <div class="gln-ai-contract-detail-row" id="gln-ai-contract-row-korting" hidden>
+                            <span class="gln-ai-contract-detail-label">Korting contant</span>
+                            <div class="gln-ai-contract-detail-text">
+                                <span id="gln-ai-contract-korting">—</span>
+                                <span class="gln-ai-contract-detail-hint" id="gln-ai-contract-korting-hint"></span>
+                            </div>
+                        </div>
+                        <div class="gln-ai-contract-detail-row">
+                            <span class="gln-ai-contract-detail-label">Betaaltermijn</span>
+                            <div class="gln-ai-contract-detail-text">
+                                <span id="gln-ai-contract-termijn">—</span>
+                                <span class="gln-ai-contract-detail-hint" id="gln-ai-contract-termijn-hint"></span>
+                            </div>
+                        </div>
+                        <div class="gln-ai-contract-detail-row">
+                            <span class="gln-ai-contract-detail-label">Btw</span>
+                            <div class="gln-ai-contract-detail-text">
+                                <span id="gln-ai-contract-btw">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gln-ai-contract-open-row">
+                        <a href="#" class="gl-v2-btn gl-v2-btn-secondary gln-ai-contract-open" id="gln-ai-contract-open" target="_blank" rel="noopener">
+                            <i class="ph ph-file-text" aria-hidden="true"></i>Contract openen
+                        </a>
+                    </div>
+                </div>
+            </section>
+            <div class="gl-v2-notice gl-v2-notice-compact is-info" id="gln-ai-geencontract-notice" hidden>
+                <i class="ph ph-info" aria-hidden="true"></i><span>Factuur zonder contract — er is geen betaaltermijn/waarborg om te tonen.</span>
+            </div>
+        </aside>
+    </div>
+
+    @* Actiebalk — somcontrole: som van de regels vs. Factuurbedrag (design-handoff 42e punt 05). *@
+    <div class="gl-v2-form-actionbar">
+        <span class="gln-ai-somcontrole" id="gln-ai-somcontrole"><i class="ph ph-circle-dashed" aria-hidden="true"></i><span id="gln-ai-somcontrole-tekst">Nog geen regels</span></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Factuur opslaan</button>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script>
+        window.glV2AddIncommingInvoiceConfig = {
+            type: @Model.Type,
+            focusUpload: @((ViewData["FocusUpload"] as bool? ?? false).ToString().ToLowerInvariant()),
+            contractId: @(Model.IncommingInvoice.ContractID ?? 0),
+            companyId: @(Model.IncommingInvoice.CompanyId ?? 0),
+            getContractActivitiesUrl: '@Url.Action("GetContractActivities", "Projecten")',
+            getCompanyActivitiesUrl: '@Url.Action("GetCompanyActivities", "Projecten")',
+            getCompanysUrl: '@Url.Action("GetCompanys", "Projecten")',
+            addRowUrl: '@Url.Action("AddIncommingInvoiceDetailRowV2", "Projecten")',
+            contractInfoUrl: '@Url.Action("GetContractInfoForInvoiceFormV2", "Projecten")',
+            extractPdfUrl: '@Url.Action("AddIncommingInvoiceV2ExtractPdf", "Projecten")',
+            contractOpenUrl: '@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = 0 })',
+        };
+    </script>
+    <script src="~/js/gl-v2-projecten-incommininvoice-add.js" asp-append-version="true"></script>
+}

@@ -129,6 +129,57 @@ Public Class ContractBO
         End Get
     End Property
 
+    ' Borg-vrijgave (design-handoff 42e punt 04, "Borg opvolgen") — 50/50 bij voorlopige/definitieve
+    ' oplevering. Allemaal Nothing zolang er niets vrijgegeven is; geen enkel bestaand scherm zet of
+    ' leest deze velden, dus geen gedragsverandering voor contracten die hier nooit mee werken.
+    Private _guaranteeReleasedVOAt As DateOnly?
+    <Display(Name:="Borg vrijgegeven bij VO op")>
+    Public Property GuaranteeReleasedVOAt() As DateOnly?
+        Get
+            Return _guaranteeReleasedVOAt
+        End Get
+        Set(ByVal value As DateOnly?)
+            _guaranteeReleasedVOAt = value
+        End Set
+    End Property
+    Private _guaranteeReleasedVOAmount As Decimal?
+    <Display(Name:="Borg vrijgegeven bij VO")>
+    Public Property GuaranteeReleasedVOAmount() As Decimal?
+        Get
+            Return _guaranteeReleasedVOAmount
+        End Get
+        Set(ByVal value As Decimal?)
+            _guaranteeReleasedVOAmount = value
+        End Set
+    End Property
+    Private _guaranteeReleasedDOAt As DateOnly?
+    <Display(Name:="Borg vrijgegeven bij DO op")>
+    Public Property GuaranteeReleasedDOAt() As DateOnly?
+        Get
+            Return _guaranteeReleasedDOAt
+        End Get
+        Set(ByVal value As DateOnly?)
+            _guaranteeReleasedDOAt = value
+        End Set
+    End Property
+    Private _guaranteeReleasedDOAmount As Decimal?
+    <Display(Name:="Borg vrijgegeven bij DO")>
+    Public Property GuaranteeReleasedDOAmount() As Decimal?
+        Get
+            Return _guaranteeReleasedDOAmount
+        End Get
+        Set(ByVal value As Decimal?)
+            _guaranteeReleasedDOAmount = value
+        End Set
+    End Property
+
+    ''' <summary>Som van wat al vrijgegeven is (VO + DO) — handig voor "nog ingehouden" op de contractstrook.</summary>
+    Public ReadOnly Property GuaranteeReleasedTotal() As Decimal
+        Get
+            Return _guaranteeReleasedVOAmount.GetValueOrDefault() + _guaranteeReleasedDOAmount.GetValueOrDefault()
+        End Get
+    End Property
+
     Private _contractsigned As Boolean
     <Display(Name:="Contract getekend")>
     Public Property ContractSigned() As Boolean

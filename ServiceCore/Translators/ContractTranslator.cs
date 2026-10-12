@@ -37,6 +37,12 @@ namespace ServiceCore.Translators
             bo.GuaranteePercentage = _entity.GuaranteePercentage;
             bo.GuaranteeDocFilename = _entity.GuaranteeDocFilename;
             bo.GuaranteeDocUploadedAt = _entity.GuaranteeDocUploadedAt;
+            // Alleen-lezen — zie TranslateBOToEntity: AddContract/EditContractV2 hebben geen veld voor deze
+            // 4 (de "borg vrijgeven"-actie zet ze rechtstreeks via de DAL, buiten dit vertaalpad om).
+            bo.GuaranteeReleasedVOAt = _entity.GuaranteeReleasedVOAt;
+            bo.GuaranteeReleasedVOAmount = _entity.GuaranteeReleasedVOAmount;
+            bo.GuaranteeReleasedDOAt = _entity.GuaranteeReleasedDOAt;
+            bo.GuaranteeReleasedDOAmount = _entity.GuaranteeReleasedDOAmount;
             bo.ContractSigned = _entity.ContractSigned ?? false;
             bo.ContractSentDate = _entity.ContractSentDate;
             bo.ContractSentNote = _entity.ContractSentNote;

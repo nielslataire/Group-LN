@@ -1,0 +1,118 @@
+/* gl-v2 — Projecten/AddIncommingInvoiceV2 (design-handoff 42c, "Factuur toevoegen"). Page-specifiek,
+   klassen-namespace gln-ai-*. Hergebruikt .gl-v2-section-card/-grid/-field*, .gl-v2-detail-grid/-field,
+   .gl-v2-form-actionbar, .gl-v2-notice — enkel de dropzone, het segmented-control en de regel-tabel
+   (met de WO-kolom) zijn hier nieuw. */
+
+/* flex:1;min-height:0 is wat de .gl-v2-form-actionbar se eigen margin-top:auto (gl-v2-shell.css,
+   project-brede garantie) nodig heeft om effectief iets te kunnen "opeten" — zonder dit op het
+   <form>-element zelf (de directe flex-ouder van de actiebalk, niet .gl-v2-content twee niveaus
+   hoger) blijft de actiebalk gewoon na de laatste kaart hangen i.p.v. onderaan te plakken. Zelfde
+   recept als Leveranciers/EditV2 se .gl-v2-supplier-edit-form, zie DESIGN.md. */
+#gln-ai-form { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 16px; min-width: 0; }
+
+/* ── Upload-dropzone ───────────────────────────────────────────────────────────────────────────── */
+.gln-ai-dropzone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 56px;
+    padding: 0 20px;
+    border: 1.5px dashed var(--gl-v2-accent-sage);
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-muted);
+    font: 450 12.5px var(--gl-v2-font-sans);
+}
+.gln-ai-dropzone.is-dragover { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary); }
+.gln-ai-dropzone > i { font-size: 20px; color: #2F6038; flex: none; }
+.gln-ai-dropzone-link { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.gln-ai-dropzone-status { margin-left: auto; font-weight: 600; }
+.gln-ai-dropzone-status.is-error { color: var(--gl-v2-danger); }
+.gln-ai-dropzone-status.is-success { color: #2F6038; }
+
+/* ── Layout: formulier links, contract-zijbalk rechts vast ───────────────────────────────────── */
+.gln-ai-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+.gln-ai-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gln-ai-side { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 1023.98px) {
+    .gln-ai-grid { grid-template-columns: minmax(0, 1fr); }
+    .gln-ai-side { position: static; }
+}
+
+/* ── Soort — segmented control (Vordering/Eindvordering/Creditnota) ──────────────────────────── */
+.gln-ai-segmented { display: flex; height: 40px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); overflow: hidden; }
+.gln-ai-segmented-btn { flex: 1; border: 0; background: var(--gl-v2-surface); color: var(--gl-v2-muted); font: 500 12.5px var(--gl-v2-font-sans); cursor: pointer; border-right: 1px solid var(--gl-v2-hairline); }
+.gln-ai-segmented-btn:last-child { border-right: 0; }
+.gln-ai-segmented-btn.is-active { background: var(--gl-v2-primary); color: #fff; font-weight: 600; }
+
+/* ── Factuurregels: toevoegrij + tabel ────────────────────────────────────────────────────────── */
+.gln-ai-addrow { display: flex; gap: 8px; align-items: flex-start; padding: 16px 20px 0; }
+.gln-ai-addrow > .gl-v2-field { flex: 1; min-width: 0; }
+.gln-ai-addrow > .gl-v2-btn { flex: none; margin-top: 0; }
+
+.gln-ai-row-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) 150px minmax(0, 1.4fr) 140px 190px 36px; gap: 10px; align-items: center; padding: 10px 20px; }
+.gln-ai-row-head { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); border-top: 1px solid var(--gl-v2-hairline-soft); margin-top: 8px; }
+.gln-ai-row { border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ai-row-lot { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Rij-velden: zelfde "34px, .gl-v2-field-box in een tabelrij"-recept als Budgetflow se eigen tabellen
+   (gl-v2-bw-table .gl-v2-field-box, DESIGN.md) — de regel hiervoor gebruikte .gl-v2-field-input
+   rechtstreeks zonder .gl-v2-field-box, en die klasse is bewust rand-/achtergrondloos (bedoeld om IN
+   een .gl-v2-field-box te zitten), dus de velden waren onzichtbaar. */
+.gln-ai-row-type .gl-v2-field-input, .gln-ai-row-wo .gl-v2-field-input { font-size: 12.5px; }
+.gln-ai-row .gl-v2-field-box { height: 34px; padding: 0 10px; }
+.gln-ai-row-price .gl-v2-field-input { text-align: right; }
+.gln-ai-row-wo[disabled], .gln-ai-row-wo .gl-v2-field-input:disabled { background: var(--gl-v2-disabled-bg); color: var(--gl-v2-disabled-fg); }
+.gln-ai-row-del { width: 32px; height: 32px; }
+
+/* ── Legende (design-handoff 42c) ─────────────────────────────────────────────────────────────── */
+.gln-ai-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 16px 20px 20px; }
+.gln-ai-legend-item { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--gl-v2-bg, #F7F9F5); padding: 10px 12px; border-radius: 9px; }
+.gln-ai-legend-item span:last-child { font: 450 11px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Actiebalk: somcontrole-tekst links van Annuleren/Opslaan ─────────────────────────────────── */
+.gln-ai-somcontrole { display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-ai-somcontrole.is-ok { color: #2F6038; }
+.gln-ai-somcontrole.is-off { color: var(--gl-v2-danger); }
+.gln-ai-somcontrole i { font-size: 15px; }
+
+@media (max-width: 767.98px) {
+    .gln-ai-row-grid { grid-template-columns: minmax(0, 1fr) 110px; grid-template-areas: "lot lot" "type price" "oms oms" "wo wo"; row-gap: 6px; }
+    .gln-ai-row-head { display: none; }
+    .gln-ai-legend { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Contractkaart (design-handoff 42c) — leverancier/contract, voortgangsbalk "eerder"/"deze",
+   financieel grid, borg/korting/betaaltermijn/btw-rijen, "Contract openen". Page-specifiek: de
+   gesplitste voortgangsbalk bestaat nergens anders in gl-v2 (zie DESIGN.md), de rest hergebruikt
+   enkel bestaande tokens/.gl-v2-progress-* klassen. ──────────────────────────────────────────── */
+.gln-ai-contract-body { display: flex; flex-direction: column; gap: 12px; padding: 14px 18px; }
+.gln-ai-contract-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+.gln-ai-contract-track { display: flex; }
+.gln-ai-contract-fill-prior { background: var(--gl-v2-primary); width: 0; }
+.gln-ai-contract-fill-current { background: var(--gl-v2-accent-sage); width: 0; }
+
+.gln-ai-contract-legend { display: flex; gap: 12px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gln-ai-contract-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.gln-ai-contract-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.gln-ai-contract-legend-dot.is-prior { background: var(--gl-v2-primary); }
+.gln-ai-contract-legend-dot.is-current { background: var(--gl-v2-accent-sage); }
+
+.gln-ai-contract-grid {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 14px;
+    font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink);
+    border-top: 1px solid var(--gl-v2-hairline-soft); padding-top: 12px;
+}
+.gln-ai-contract-grid-label { color: var(--gl-v2-muted); }
+.gln-ai-contract-grid-value { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.gln-ai-contract-grid-value.is-strong { font-weight: 700; color: var(--gl-v2-primary); }
+
+.gln-ai-contract-details { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); padding-top: 12px; }
+.gln-ai-contract-detail-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; }
+.gln-ai-contract-detail-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); padding-top: 2px; }
+.gln-ai-contract-detail-text { display: flex; flex-direction: column; gap: 1px; }
+.gln-ai-contract-detail-text > span:first-child { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-ai-contract-detail-hint { font: 450 11px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+.gln-ai-contract-open-row { border-top: 1px solid var(--gl-v2-hairline-soft); padding-top: 12px; }
+.gln-ai-contract-open { justify-content: center; width: 100%; }

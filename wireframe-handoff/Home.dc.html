@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"><style>
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Light.ttf') format('truetype');font-weight:300}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Book.woff2') format('woff2');font-weight:400}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Medium.ttf') format('truetype');font-weight:500 600}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Heavy.woff2') format('woff2');font-weight:700}
+@keyframes heroScrollHint{0%{transform:translateY(0);opacity:.9}60%{transform:translateY(6px);opacity:.4}100%{transform:translateY(0);opacity:.9}}
+body{margin:0;background:#F2F5EF;font-family:'Avenir','Open Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#2C3B2A;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#00532D;text-decoration:none}a:hover{color:#006638}
+</style></helmet>
+
+<header style="position:fixed;top:0;left:0;right:0;z-index:50;transition:background .3s ease,box-shadow .3s ease;background:{{ headerBg }};box-shadow:{{ headerShadow }}">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:76px;padding:0 clamp(20px,3vw,40px)">
+<div style="display:flex;align-items:center;gap:28px;min-width:0">
+<a href="#" style="display:flex;align-items:center;flex:none"><img src="WWWCOPRO/Content/img/logo.png" alt="Group LN" style="height:50px;width:auto;display:block"><span style="width:1px;height:52px;background:rgba(255,255,255,.3);margin:0 18px"></span><span style="display:flex;flex-direction:column;gap:4px"><span style="font:700 30px/.8 'Avenir',sans-serif;color:#fff;text-transform:uppercase;white-space:nowrap">Group LN</span><span style="font:500 13px/1.3 'Avenir',sans-serif;color:rgba(255,255,255,.75);text-transform:uppercase;white-space:nowrap">Projectontwikkeling</span></span></a>
+<sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}"><a href="tel:" style="display:flex;align-items:center;gap:12px;flex:none"><span style="width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.5);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center"><i class="fa fa-phone"></i></span><span style="display:flex;flex-direction:column;line-height:1.3"><span style="text-transform:uppercase;letter-spacing:1px;font-size:10px;font-weight:700;color:rgba(255,255,255,.7)">Bel ons</span><span style="font-size:15px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums">0xx xx xx xx</span></span></a></sc-if>
+</div>
+<div style="display:flex;align-items:center;gap:32px;flex:none">
+<sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}"><nav style="display:flex;gap:28px"><a href="#" style="text-transform:uppercase;letter-spacing:.5px;font-size:13px;font-weight:700;color:#fff" style-hover="color:#C9A96E">Te koop</a><a href="#" style="text-transform:uppercase;letter-spacing:.5px;font-size:13px;font-weight:700;color:#fff" style-hover="color:#C9A96E">Over ons</a><a href="#" style="text-transform:uppercase;letter-spacing:.5px;font-size:13px;font-weight:700;color:#fff" style-hover="color:#C9A96E">Vacatures</a><a href="#" style="text-transform:uppercase;letter-spacing:.5px;font-size:13px;font-weight:700;color:#fff" style-hover="color:#C9A96E">Contact</a></nav></sc-if>
+<button onClick="{{ toggleMenu }}" aria-label="Menu openen" aria-expanded="{{ menuOpen }}" style="width:46px;height:46px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:#C9A96E;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);cursor:pointer;padding:0" style-hover="background:#B8935A"><span style="display:flex;flex-direction:column;gap:4px;width:20px"><span style="display:block;height:2.5px;background:#2C3B2A;border-radius:1px"></span><span style="display:block;height:2.5px;background:#2C3B2A;border-radius:1px"></span><span style="display:block;height:2.5px;background:#2C3B2A;border-radius:1px"></span></span></button>
+</div></div>
+<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:70px;right:clamp(20px,3vw,40px);width:320px;max-width:calc(100vw - 40px);padding:16px;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45)">
+<nav style="display:flex;flex-direction:column"><a href="#" style="padding:12px 8px;font-size:16px;color:#C9A96E">Home</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Te koop</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Over ons</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Projectbegeleiding</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Grondverwerving</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Vacatures</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Blog</a><a href="#" style="padding:12px 8px;font-size:16px;color:#fff" style-hover="color:#C9A96E">Contact</a></nav>
+<div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;padding:16px 8px 0;border-top:1px solid rgba(255,255,255,.15)"><div><h4 style="text-transform:uppercase;letter-spacing:1px;font:600 12px/1 'Avenir',sans-serif;color:#C9A96E;margin:0 0 8px">Contact</h4><p style="margin:0 0 4px;font-size:14px;color:#fff">0xx xx xx xx</p><p style="margin:0;font-size:14px;color:rgba(255,255,255,.85)">info@groupln.be</p></div><div><h4 style="text-transform:uppercase;letter-spacing:1px;font:600 12px/1 'Avenir',sans-serif;color:#C9A96E;margin:0 0 8px">Adres</h4><p style="margin:0;font-size:14px;color:#fff">Straat 1, 0000 Gemeente</p></div></div>
+</div></sc-if>
+</header>
+
+<section data-screen-label="Hero" style="position:relative;min-height:100vh;background:#00532D;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:140px 24px 40px">
+<img src="WWWCOPRO/Content/video/hero-poster.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0">
+<div style="position:absolute;inset:0;z-index:1;background:rgba(0,0,0,.38);pointer-events:none"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:240px;z-index:1;background:linear-gradient(to bottom,rgba(0,20,10,0),rgba(0,20,10,.6));pointer-events:none"></div>
+<div style="position:relative;z-index:2;max-width:760px">
+<p style="display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 20px;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:700;color:#C9A96E"><span style="display:inline-block;width:32px;height:1px;background:#C9A96E"></span>Nieuwbouw in de regio<span style="display:inline-block;width:32px;height:1px;background:#C9A96E"></span></p>
+<h1 style="font:500 clamp(30px,3.2vw,39px)/1.15 'Playfair Display',Georgia,serif;color:#fff;margin:0 0 22px;text-wrap:balance">Woningen gebouwd om er graag thuis te komen</h1>
+<p style="font-size:17px;line-height:1.6;color:rgba(255,255,255,.88);max-width:560px;margin:0 auto;text-wrap:pretty">Ontdek onze appartementen en woningen te koop — met één aanspreekpunt van eerste bezoek tot sleuteloverdracht.</p>
+</div>
+<div style="position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:14px;margin-top:32px">
+<a href="#" style="display:inline-flex;align-items:center;gap:10px;padding:16px 30px;border-radius:4px;background:#fff;color:#2C3B2A;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;box-shadow:0 10px 30px rgba(0,0,0,.28);transition:background .18s,transform .18s,box-shadow .18s" style-hover="background:#C9A96E;color:#2C3B2A;transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.32)">Bekijk ons aanbod te koop <i class="fa fa-arrow-right" style="font-size:12px"></i></a>
+<button onClick="{{ toggleSearch }}" aria-expanded="{{ searchOpen }}" style="display:inline-flex;align-items:center;gap:10px;padding:16px 24px;border-radius:4px;border:1px solid {{ searchBorder }};background:{{ searchBg }};color:#fff;font:700 13px/1 'Avenir',sans-serif;text-transform:uppercase;letter-spacing:1.2px;cursor:pointer" style-hover="background:rgba(255,255,255,.14);border-color:#fff"><i class="fa fa-search"></i> Zoek een woning</button>
+</div>
+<sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:relative;z-index:3;width:100%;max-width:960px;margin-top:18px">
+<form style="display:flex;flex-wrap:wrap;align-items:stretch;width:100%;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:4px;overflow:visible">
+<sc-for list="{{ fields }}" as="f" hint-placeholder-count="4">
+<div style="flex:1 1 180px;position:relative;padding:10px 20px;border-right:1px solid rgba(255,255,255,.12);text-align:left;min-width:0;cursor:pointer" onClick="{{ f.toggle }}">
+<span style="display:block;text-transform:uppercase;letter-spacing:1px;font-size:11px;font-weight:700;color:rgba(255,255,255,.8);margin:0 0 2px">{{ f.label }}</span>
+<span style="display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;color:#fff">{{ f.value }} <i class="fa fa-angle-down"></i></span>
+<sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}"><ul style="position:absolute;left:0;bottom:calc(100% + 8px);min-width:100%;z-index:10;margin:0;padding:8px;list-style:none;background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.15);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45)"><sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3"><li onClick="{{ o.pick }}" style="display:flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:8px;font-size:14px;font-weight:500;color:{{ o.color }};background:{{ o.bg }};white-space:nowrap;cursor:pointer" style-hover="background:rgba(255,255,255,.14)">{{ o.label }}</li></sc-for></ul></sc-if>
+</div></sc-for>
+<a href="#" aria-label="Zoeken" style="flex:0 0 72px;min-height:56px;background:#C9A96E;color:#2C3B2A;font-size:18px;display:flex;align-items:center;justify-content:center" style-hover="background:#B8935A;color:#2C3B2A"><i class="fa fa-search"></i></a>
+</form></div></sc-if>
+<a href="#over" style="position:relative;z-index:2;display:inline-flex;flex-direction:column;align-items:center;gap:8px;margin-top:26px;color:#fff"><span style="font-size:10px;font-weight:700;letter-spacing:2.4px;text-transform:uppercase;color:rgba(255,255,255,.75);text-shadow:0 1px 6px rgba(0,0,0,.45)">Ontdek meer</span>{{ scrollDot }}</a>
+<button aria-label="Video pauzeren" style="position:absolute;right:20px;bottom:20px;z-index:3;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.5);border-radius:50%;background:rgba(0,0,0,.4);color:#fff;font-size:14px;cursor:pointer"><i class="fa fa-pause"></i></button>
+</section>
+
+<sc-if value="{{ showFeatured }}" hint-placeholder-val="{{ true }}">
+<section data-screen-label="Uitgelicht project" style="position:relative;min-height:max(620px,78vh);display:flex;align-items:flex-end;overflow:hidden;background:#00532D">
+<div style="position:absolute;inset:0;background:repeating-linear-gradient(-45deg,#2f3a30 0 10px,#364237 10px 20px);display:flex;align-items:flex-start;justify-content:flex-end;padding:110px 32px;font:11px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.5)">foto / video uitgelicht project (CMS)</div>
+<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,20,10,.75) 100%);pointer-events:none"></div>
+<div style="position:relative;z-index:2;width:100%;max-width:1170px;margin:0 auto;padding:48px clamp(20px,3vw,15px) 72px">
+<p style="margin:0 0 16px;text-transform:uppercase;letter-spacing:2.6px;font-size:11px;font-weight:700;color:#C9A96E">Uitgelicht project</p>
+<h2 style="font:500 clamp(26px,3vw,34px)/1.2 'Playfair Display',Georgia,serif;color:#fff;margin:0 0 16px;max-width:640px">Residentie De Linde</h2>
+<p style="font-size:16px;line-height:1.6;color:rgba(255,255,255,.85);max-width:520px;margin:0 0 28px">Twaalf energiezuinige appartementen met ruime terrassen, op wandelafstand van het centrum.</p>
+<a href="#" style="display:inline-flex;align-items:center;gap:10px;padding:16px 28px;border-radius:6px;text-transform:uppercase;letter-spacing:1px;font-size:13px;font-weight:700;color:#2C3B2A;background:#fff;transition:background .25s,color .25s" style-hover="background:#00532D;color:#fff">Ontdek het project <i class="fa fa-arrow-right"></i></a>
+</div></section></sc-if>
+
+<section id="over" data-screen-label="Wie zijn we" style="padding:clamp(64px,8vw,100px) 0;background:#F2F5EF;overflow-x:hidden">
+<div style="max-width:1170px;margin:0 auto;padding:0 clamp(20px,3vw,15px);display:flex;flex-wrap:wrap-reverse;align-items:center;gap:clamp(32px,5vw,64px)">
+<div style="flex:1 1 360px;max-width:460px">
+<p style="margin:0 0 16px;text-transform:uppercase;letter-spacing:2.6px;font-size:11px;font-weight:700;color:#00532D">Wie zijn we</p>
+<h2 style="font:500 clamp(26px,3vw,34px)/1.2 'Playfair Display',Georgia,serif;color:#2C3B2A;margin:0 0 22px">Al bijna drie decennia bouwen in dezelfde regio</h2>
+<p style="font-size:16px;line-height:1.7;color:#5A6B58;margin:0 0 18px">Group LN ontwikkelt residentiële projecten van grondaankoop tot oplevering. We kennen de buurt, de mensen en de materialen.</p>
+<p style="font-size:16px;line-height:1.7;color:#5A6B58;margin:0 0 18px">Elke koper krijgt één vast aanspreekpunt dat het hele traject opvolgt.</p>
+<a href="#" style="display:inline-flex;align-items:center;gap:10px;margin-top:20px;padding:14px 22px;border:1.5px solid #2C3B2A;border-radius:6px;text-transform:uppercase;letter-spacing:1px;font-size:13px;font-weight:700;color:#2C3B2A;transition:background .25s,color .25s" style-hover="background:#00532D;border-color:#00532D;color:#fff">Meer over Group LN <i class="fa fa-arrow-right"></i></a>
+</div>
+<div style="flex:1 1 360px"><img src="WWWCOPRO/Content/img/about.webp" alt="Houten trap in een afgewerkte woning" style="display:block;width:100%;height:auto;aspect-ratio:5/6;object-fit:cover;border-radius:3px"></div>
+</div></section>
+
+<section data-screen-label="Onze troeven" style="padding:20px 0 clamp(64px,8vw,100px);background:#F2F5EF">
+<div style="max-width:1170px;margin:0 auto;padding:0 clamp(20px,3vw,15px)">
+<p style="margin:0 0 16px;text-transform:uppercase;letter-spacing:2.6px;font-size:11px;font-weight:700;color:#00532D">Onze troeven</p>
+<h2 style="font:500 clamp(26px,3vw,34px)/1.2 'Playfair Display',Georgia,serif;color:#2C3B2A;margin:0;max-width:640px">Waarom kopers voor een woning van Group LN kiezen</h2>
+<div style="height:1px;background:rgba(0,83,45,.10);margin:40px 0 48px"></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px">
+<sc-for list="{{ troeven }}" as="t" hint-placeholder-count="4"><div style="padding-left:{{ t.pad }};border-left:{{ t.rule }}"><h3 style="font:600 19px/1.3 'Playfair Display',Georgia,serif;color:#2C3B2A;margin:0 0 10px">{{ t.title }}</h3><p style="font-size:15px;line-height:1.65;color:#5A6B58;margin:0">{{ t.text }}</p></div></sc-for>
+</div></div></section>
+
+<section data-screen-label="CTA" style="padding:clamp(64px,8vw,100px) 24px;background:#fff;text-align:center;border-top:1px solid rgba(0,83,45,.10)">
+<p style="margin:0 0 16px;text-transform:uppercase;letter-spacing:2.6px;font-size:11px;font-weight:700;color:#00532D">Projectbegeleiding</p>
+<h2 style="font:500 clamp(26px,3vw,34px)/1.2 'Playfair Display',Georgia,serif;color:#2C3B2A;margin:0 0 16px">Zelf een project realiseren?</h2>
+<p style="font-size:16px;line-height:1.6;color:#5A6B58;max-width:560px;margin:0 auto 32px">Heb je grond of plannen? Wij begeleiden je van ontwerp tot oplevering.</p>
+<a href="#" style="display:inline-flex;align-items:center;gap:10px;padding:16px 28px;border-radius:6px;text-transform:uppercase;letter-spacing:1px;font-size:13px;font-weight:700;color:#fff;background:#00532D;transition:background .25s" style-hover="background:#006638;color:#fff">Neem contact op <i class="fa fa-arrow-right"></i></a>
+</section>
+
+<footer style="background:#00532D;padding-top:72px">
+<div style="max-width:1170px;margin:0 auto;padding:0 clamp(20px,3vw,15px)">
+<p style="font:500 clamp(28px,3.2vw,38px)/1.25 'Playfair Display',Georgia,serif;color:#fff;max-width:720px;margin:0 0 40px">“Wij bouwen niet zomaar woningen. Wij bouwen thuis.”</p>
+<div style="height:1px;background:rgba(255,255,255,.15);margin:0 0 48px"></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;padding-bottom:64px">
+<div><a href="#" style="display:flex;align-items:center;gap:12px;margin-bottom:24px"><img src="WWWCOPRO/Content/img/logo.png" alt="" style="height:40px;width:auto"><span style="display:flex;flex-direction:column;gap:1px"><span style="font:700 27px/1 'Avenir',sans-serif;color:#fff;text-transform:uppercase">Group LN</span><span style="font-size:11px;font-weight:500;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.04em">Projectontwikkeling</span></span></a>
+<div style="display:flex;gap:10px"><a href="#" aria-label="Facebook" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center" style-hover="background:#C9A96E;border-color:#C9A96E;color:#fff"><i class="fa fa-facebook"></i></a><a href="#" aria-label="Instagram" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center" style-hover="background:#C9A96E;border-color:#C9A96E;color:#fff"><i class="fa fa-instagram"></i></a><a href="#" aria-label="LinkedIn" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center" style-hover="background:#C9A96E;border-color:#C9A96E;color:#fff"><i class="fa fa-linkedin"></i></a></div></div>
+<div><p style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#fff;margin:0 0 20px">Projecten</p><div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.55"><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Te koop</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Binnenkort</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Gerealiseerd</a></div></div>
+<div><p style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#fff;margin:0 0 20px">Group LN</p><div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.55"><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Over ons</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Projectbegeleiding</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Grondverwerving</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Vacatures</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Blog</a></div></div>
+<div><p style="font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#fff;margin:0 0 20px">Contact</p><div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.55;color:rgba(255,255,255,.68)"><span>Straat 1<br>0000 Gemeente</span><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">0xx xx xx xx</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">info@groupln.be</a></div></div>
+</div></div>
+<div style="border-top:1px solid rgba(255,255,255,.15);padding:18px 0">
+<div style="max-width:1170px;margin:0 auto;padding:0 clamp(20px,3vw,15px);display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px">
+<p style="font-size:13px;color:rgba(255,255,255,.65);margin:0 auto 0 0">© 2026 Group LN. Alle rechten voorbehouden.</p>
+<div style="display:flex;gap:20px;font-size:13px"><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Privacybeleid</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Cookiebeleid</a><a href="#" style="color:rgba(255,255,255,.68)" style-hover="color:#fff">Algemene voorwaarden</a></div>
+<p style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.5);margin:0"><i class="fa fa-info-circle"></i> Sommige beelden zijn AI-gegenereerd</p>
+</div></div>
+</footer>
+
+<sc-if value="{{ cookieOpen }}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-label="Cookies" style="position:fixed;left:20px;bottom:20px;z-index:60;width:420px;max-width:calc(100vw - 40px);background:#fff;border:1px solid rgba(0,83,45,.14);border-radius:6px;box-shadow:0 18px 50px rgba(0,20,10,.22);padding:22px 22px 18px">
+<p style="margin:0 0 8px;font:600 18px/1.2 'Playfair Display',Georgia,serif;color:#2C3B2A">Cookies op deze site</p>
+<p style="margin:0;font-size:13.5px;line-height:1.6;color:#5A6B58">We gebruiken cookies om de site te verbeteren. Lees ons <a href="#" style="text-decoration:underline">cookiebeleid</a>.</p>
+<div style="display:flex;gap:10px;margin-top:16px"><button onClick="{{ closeCookie }}" style="flex:1.5 1 0;border:0;border-radius:3px;padding:12px 16px;font:700 13px/1 'Avenir',sans-serif;letter-spacing:.04em;text-transform:uppercase;background:#00532D;color:#fff;cursor:pointer" style-hover="background:#006638">Alles aanvaarden</button><button onClick="{{ closeCookie }}" style="flex:1 1 0;border:1px solid rgba(0,83,45,.25);border-radius:3px;padding:10px 16px;font:700 12px/1 'Avenir',sans-serif;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:#2C3B2A;cursor:pointer" style-hover="border-color:#00532D;color:#00532D">Alles weigeren</button></div>
+<button style="margin-top:10px;padding:4px 0;border:0;background:none;font-size:12px;color:#5A6B58;text-decoration:underline;cursor:pointer;font-family:inherit">Voorkeuren instellen</button>
+</div></sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;searchOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Hero&quot;},&quot;showFeatured&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Secties&quot;},&quot;headerSolid&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Header&quot;},&quot;showCookieBanner&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Overlays&quot;}}">class Component extends DCLogic {
+  state = { scrolled: false, menuOpen: false, searchOpen: null, openField: null, cookieClosed: false, w: typeof window !== 'undefined' ? window.innerWidth : 1280,
+    picks: { loc: 'Alle gemeenten', type: 'Alle types', slpk: 'Alle', budget: 'Geen maximum' } };
+  componentDidMount() {
+    this._s = () => this.setState({ scrolled: window.scrollY > 175 });
+    this._r = () => this.setState({ w: window.innerWidth });
+    window.addEventListener('scroll', this._s, { passive: true });
+    window.addEventListener('resize', this._r);
+    this._s();
+  }
+  componentWillUnmount() { window.removeEventListener('scroll', this._s); window.removeEventListener('resize', this._r); }
+  renderVals() {
+    const p = this.props, s = this.state;
+    const searchOpen = s.searchOpen ?? (p.searchOpen ?? false);
+    const solid = s.scrolled || s.menuOpen || (p.headerSolid ?? false);
+    const defs = [
+      { key: 'loc', label: 'Locatie', all: 'Alle gemeenten', opts: ['Gemeente A', 'Gemeente B', 'Gemeente C'] },
+      { key: 'type', label: 'Type', all: 'Alle types', opts: ['Appartement', 'Woning', 'Bouwgrond'] },
+      { key: 'slpk', label: 'Slaapkamers', all: 'Alle', opts: ['1+', '2+', '3+'] },
+      { key: 'budget', label: 'Budget', all: 'Geen maximum', opts: ['€ 300.000', '€ 400.000', '€ 500.000'] }
+    ];
+    const fields = defs.map(d => ({
+      label: d.label, value: s.picks[d.key], open: s.openField === d.key,
+      toggle: () => this.setState(st => ({ openField: st.openField === d.key ? null : d.key })),
+      options: [d.all, ...d.opts].map((o, i) => ({
+        label: o, color: i === 0 ? '#C9A96E' : '#fff', bg: s.picks[d.key] === o && i > 0 ? 'rgba(255,255,255,.14)' : 'transparent',
+        pick: (e) => { e.stopPropagation(); this.setState(st => ({ picks: { ...st.picks, [d.key]: o }, openField: null })); }
+      }))
+    }));
+    const tv = [
+      ['Kwaliteit tot in detail', 'Duurzame materialen en vakmanschap, gecontroleerd op elke werf.'],
+      ['Toplocaties', 'Zorgvuldig gekozen plekken dicht bij centrum, scholen en groen.'],
+      ['Eén aanspreekpunt', 'Persoonlijke begeleiding van eerste bezoek tot sleuteloverdracht.'],
+      ['Energiezuinig', 'Toekomstgerichte woningen met lage energiekosten.']
+    ];
+    const cols = s.w >= 992 ? 4 : s.w >= 768 ? 2 : 1;
+    const troeven = tv.map(([title, text], i) => {
+      const first = i % cols === 0;
+      return { title, text, pad: first ? '0' : '28px', rule: first ? 'none' : '1px solid rgba(0,83,45,.10)' };
+    });
+    return {
+      wide: s.w >= 992,
+      headerBg: solid ? '#00532D' : 'transparent',
+      headerShadow: s.scrolled ? '0 2px 12px rgba(0,0,0,.12)' : 'none',
+      menuOpen: s.menuOpen,
+      toggleMenu: () => this.setState(st => ({ menuOpen: !st.menuOpen })),
+      searchOpen,
+      toggleSearch: () => this.setState({ searchOpen: !searchOpen, openField: null }),
+      searchBg: searchOpen ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)',
+      searchBorder: searchOpen ? '#fff' : 'rgba(255,255,255,.55)',
+      fields,
+      troeven,
+      showFeatured: p.showFeatured ?? true,
+      cookieOpen: (p.showCookieBanner ?? true) && !s.cookieClosed,
+      closeCookie: () => this.setState({ cookieClosed: true }),
+      scrollDot: React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%', border: '1px solid rgba(255,255,255,.5)', background: 'rgba(0,0,0,.3)', color: 'rgba(255,255,255,.9)', fontSize: 14, animation: 'heroScrollHint 2.4s cubic-bezier(.4,0,.2,1) infinite' } }, React.createElement('i', { className: 'fa fa-angle-down' }))
+    };
+  }
+}</script>
+</body>
+</html>

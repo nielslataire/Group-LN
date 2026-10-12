@@ -1,0 +1,38 @@
+@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@model IncommingInvoiceDetailBO
+@*
+    gl-v2 versie van _IncommingInvoiceDetailRow.cshtml (design-handoff 42c, "Factuurregels"). Zelfde
+    binding (Html.BeginCollectionItem("details") — ASP.NET Core model binding leest de GUID-geïndexeerde
+    naam-attributen hiervan terug tot de List<IncommingInvoiceDetailBO> details-parameter) en dezelfde
+    velden; enkel de markup/klassen zijn gl-v2. Niet hergebruikt door de legacy pagina, en omgekeerd —
+    twee kleine, losse partials i.p.v. één met twee opmaak-takken (zie DESIGN.md, "Do's and Don'ts").
+*@
+<div class="gln-ai-row-grid gln-ai-row" data-row>
+    @using (Html.BeginCollectionItem("details"))
+    {
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.ContractActivityID)
+        @Html.HiddenFor(m => m.ContractActivityText)
+        @Html.HiddenFor(m => m.ActivityID)
+        @Html.HiddenFor(m => m.IncommingInvoiceID)
+
+        <span class="gln-ai-row-lot">@Model.ContractActivityText</span>
+        <div class="gl-v2-field-box gln-ai-row-type">
+            <select asp-for="IncommingInvoiceType" asp-items="Html.GetEnumSelectList(Model.IncommingInvoiceType.GetType())" class="gl-v2-field-input" data-row-type onchange="window.GlV2IncommingInvoiceAdd.onTypeChange(this)"></select>
+        </div>
+        <div class="gl-v2-field-box">
+            <input asp-for="Description" class="gl-v2-field-input" placeholder="Omschrijving" />
+        </div>
+        <div class="gl-v2-field-box gln-ai-row-price">
+            <input asp-for="Price" class="gl-v2-field-input Currencymask" data-currency />
+            <span class="gl-v2-field-suffix">€</span>
+        </div>
+        <div class="gl-v2-field-box gln-ai-row-wo">
+            <select asp-for="ChangeOrderId" asp-items="@(new SelectList(Model.ChangeOrders, "ID", "Display", Model.ChangeOrderId))" class="gl-v2-field-input" data-row-wo disabled>
+                <option value="">n.v.t.</option>
+            </select>
+        </div>
+        <button type="button" class="gl-v2-icon-btn is-danger gln-ai-row-del" data-row-delete aria-label="Rij verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+    }
+</div>

@@ -1,0 +1,163 @@
+@model CPMCore.Models.Projecten.RecalculationDetailV2Vm
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Nacalculatie, categorie-/activiteit-detail (design-handoff 42b "Categorie Bovenbouw" +
+    42f "Subcategorieën — Technieken Elektro"). Eén view voor beide: 42f is gewoon 42b met een extra
+    pill-rij (GlV2/_PillSelector, GEEN tweede tabbar — het ontwerp zegt letterlijk "activiteit-pills
+    in de inhoud") zodra de categorie meer dan 1 activiteit heeft (Model.SubTabs leeg = geen pill-rij,
+    zoals "Bovenbouw" in het ontwerp). Sommen/velden komen 1-op-1 van bestaande BO-velden
+    (ContractBO.PaymentTerm/CashDiscount*/Guarantee*, IncommingInvoiceActivityBO.DueDate/StatusId) —
+    zie DESIGN.md voor de volledige herleiding van elk cijfer.
+*@
+@{
+    ViewData["Title"] = "Nacalculatie · " + Model.GroupNaam;
+    ViewData["PageIcon"] = "bx bx-building-house";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · nacalculatie", Mode = GlV2ProjectMenuMode.Outer };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-recalculation-detail.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (gl-v2-shell.css: negatieve marge
+   die .gl-v2-content se padding opheft) — niet in een wrapper en niet na het Phone-menu, anders blijft er
+   een gat boven. Zie ChangeOrders/ChangeOrdersV2.cshtml/Klanten/Core/DetailV2.cshtml.
+   Tier-1: alle 11 categorieën — volle paginanavigatie (geen JS-tabs), elke tab is een link naar
+   dezelfde pagina met een ander groupid. Hergebruikt .gl-v2-tabbar rechtstreeks (goud actief-lijntje,
+   .gl-v2-tabbar-error-dot = de signaal-stip uit het ontwerp — geen nieuwe CSS nodig voor tier-1). *@
+<div class="gl-v2-tabbar" role="tablist">
+    @foreach (var c in Model.Categorieen)
+    {
+        <a href="@Url.Action("RecalculationDetail", "Projecten", new { projectId = Model.ProjectId, groupid = c.GroupId, activityId = 0 })" class="gl-v2-tabbar-tab @(c.IsActief ? "is-active" : "")" role="tab" aria-selected="@(c.IsActief ? "true" : "false")">
+            @c.Naam
+            @if (c.HeeftSignaal) { <span class="gl-v2-tabbar-error-dot"></span> }
+        </a>
+    }
+</div>
+
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+
+<div id="gln-rd-root">
+    @* Subcategorieën (design-handoff 42f): "activiteit-pills in de inhoud" — géén tweede tabbar, het
+       ontwerp zegt letterlijk "pills". GlV2/_PillSelector.cshtml (nieuw, herbruikbaar component, zie
+       DESIGN.md): pills tot 6 items, daarna een doorzoekbare combo met een kruisje dat teruggaat naar
+       "Alle activiteiten" (ClearUrl = die ene pill se eigen Url, altijd de eerste van de lijst). *@
+    @if (Model.SubTabs.Count > 0)
+    {
+        var pillItems = Model.SubTabs.Select(t => new GlV2PillItemVm
+        {
+            Label = t.Naam, Count = t.Aantal, IsActive = t.IsActief,
+            Url = Url.Action("RecalculationDetail", "Projecten", new { projectId = Model.ProjectId, groupid = Model.GroupId, activityId = t.ActivityId ?? 0 }),
+        }).ToList();
+        @await Html.PartialAsync("GlV2/_PillSelector", pillItems, new ViewDataDictionary(ViewData) { ["Label"] = "Activiteit", ["ClearUrl"] = pillItems[0].Url })
+    }
+
+    @await Html.PartialAsync("GlV2/_KpiStrip", Model.Kpis)
+
+    @if (Model.ActiviteitRijen.Count > 0)
+    {
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Activiteiten</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">klik om enkel die facturen te tonen</span>
+            </div>
+            <div class="gln-rd-act-table">
+                <div class="gln-rd-act-grid gln-rd-act-head">
+                    <span>Activiteit</span><span>Begroot</span><span>Gecontracteerd</span><span>Gefactureerd</span><span>Contract – factuur</span><span>Contract</span>
+                </div>
+                @foreach (var a in Model.ActiviteitRijen)
+                {
+                    var vcf = a.VerschilContractFactuur;
+                    <a class="gln-rd-act-grid gln-rd-act-row" href="@Url.Action("RecalculationDetail", "Projecten", new { projectId = Model.ProjectId, groupid = Model.GroupId, activityId = a.ActivityId })">
+                        <span class="gln-rd-act-naam">@a.Naam</span>
+                        <span class="gln-rd-amount">€ @a.Begroot.ToString("N0")</span>
+                        <span class="gln-rd-amount @(a.Gecontracteerd == 0 ? "is-muted" : "")">€ @a.Gecontracteerd.ToString("N0")</span>
+                        <span class="gln-rd-amount is-strong">€ @a.Gefactureerd.ToString("N0")</span>
+                        <span class="gln-rd-amount @(vcf < 0 ? "is-neg" : "")">@(vcf < 0 ? "– " : "")€ @Math.Abs(vcf).ToString("N0")</span>
+                        <span><span class="gl-v2-badge @(a.IsGegund ? "is-positive" : "is-neutral")">@(a.IsGegund ? "Gegund" : "Nog te gunnen")</span></span>
+                    </a>
+                }
+            </div>
+        </section>
+    }
+
+    @if (Model.Leveranciers.Count == 0)
+    {
+        <div class="gl-v2-empty-state-inline gl-v2-empty-state">
+            <div class="gl-v2-empty-state-icon"><i class="ph ph-truck" aria-hidden="true"></i></div>
+            <h3 class="gl-v2-empty-state-title">Nog geen contract of factuur</h3>
+            <p class="gl-v2-empty-state-desc">Voeg een contract of een inkomende factuur toe vanuit het Nacalculatie-overzicht.</p>
+        </div>
+    }
+    @foreach (var lev in Model.Leveranciers)
+    {
+        <section class="gl-v2-section-card gln-rd-lev-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-truck" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">@lev.CompanyNaam</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@lev.ActiviteitNaam@(lev.HasContract ? "" : " · geen contract")</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                @if (lev.HasContract)
+                {
+                    <a href="@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = lev.ContractId })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-file-text" aria-hidden="true"></i>Contract</a>
+                }
+                else
+                {
+                    <a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-link" aria-hidden="true"></i>Contract koppelen</a>
+                }
+                @if (Model.CanWrite)
+                {
+                    <a href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = lev.HasContract ? 0 : 1 })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-receipt" aria-hidden="true"></i>Factuur</a>
+                }
+            </div>
+
+            @if (!lev.HasContract)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Facturen zonder contract tellen mee in Gefactureerd, maar niet in Gecontracteerd. Koppel een contract als dit een vaste leverancier is.</span></div>
+            }
+            @if (lev.HasContract)
+            {
+                <div class="gln-rd-strip">
+                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Contract</span><span class="gln-rd-strip-value">€ @lev.ContractBedrag.ToString("N0")</span><span class="gln-rd-strip-sub">@lev.ContractLabel</span></div>
+                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Meerwerk</span><span class="gln-rd-strip-value">€ @lev.MeerwerkBedrag.ToString("N0")</span></div>
+                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Gefactureerd</span><span class="gln-rd-strip-value @(lev.VoortgangPercent > 100 ? "is-neg" : "")">€ @lev.GefactureerdBedrag.ToString("N0")</span><span class="gln-rd-strip-sub">@lev.VoortgangPercent.ToString("N1") %</span></div>
+                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Saldo</span><span class="gln-rd-strip-value @(lev.Saldo < 0 ? "is-neg" : "")">@(lev.Saldo < 0 ? "– " : "")€ @Math.Abs(lev.Saldo).ToString("N0")</span>@if (lev.Saldo < 0) { <span class="gln-rd-strip-sub">meer dan contract + WO</span> }</div>
+                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Borg @(lev.BorgPercentage.HasValue ? lev.BorgPercentage.Value.ToString("N0") + " %" : "")</span><span class="gln-rd-strip-value">€ @lev.BorgIngehouden.ToString("N0")</span><span class="gln-rd-strip-sub">ingehouden</span></div>
+                    <div class="gln-rd-strip-cell is-last"><span class="gln-rd-strip-label">Betaaltermijn</span><span class="gln-rd-strip-value is-small">@(lev.BetaaltermijnTekst ?? "—")</span></div>
+                </div>
+            }
+
+            @foreach (var groep in lev.FactuurGroepen)
+            {
+                <div class="gln-rd-fact-groepkop"><span>@groep.Label · @groep.Rijen.Count FACTU@(groep.Rijen.Count == 1 ? "UR" : "REN")</span><span class="gln-rd-amount is-strong">@(groep.Totaal < 0 ? "– " : "")€ @Math.Abs(groep.Totaal).ToString("N2")</span></div>
+                <div class="gln-rd-fact-table">
+                    <div class="gln-rd-fact-grid gln-rd-fact-head"><span>Fact nr.</span><span>Datum</span><span>Omschrijving</span><span>Bedrag</span><span></span></div>
+                    @foreach (var r in groep.Rijen)
+                    {
+                        <a class="gln-rd-fact-grid gln-rd-fact-row" href="@Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = Model.ProjectId, invoiceid = r.InvoiceId })">
+                            <span class="gln-rd-fact-nr">@r.FactuurNummer</span>
+                            <span>@r.Datum.ToString("dd/MM/yyyy")</span>
+                            <span class="gln-rd-fact-oms">@r.Omschrijving</span>
+                            <span class="gln-rd-amount is-strong @(r.Bedrag < 0 ? "is-neg" : "")">@(r.Bedrag < 0 ? "– " : "")€ @Math.Abs(r.Bedrag).ToString("N2")</span>
+                            <span>
+                                @if (r.IsCreditnota) { <span class="gl-v2-badge is-neutral">Creditnota</span> }
+                                else if (r.BetaalLabel != null) { <span class="gl-v2-badge @r.BetaalTone">@r.BetaalLabel</span> }
+                                else if (r.KortingTekst != null) { <span class="gl-v2-badge is-attention">@r.KortingTekst</span> }
+                            </span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>

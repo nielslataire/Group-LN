@@ -198,6 +198,14 @@
         <span class="gl-v2-rail-tooltip">Links</span>
     </button>
 
+    @* Design-handoff punt 41 — Helpcentrum, laatste rail-item vóór de spacer (zelfde positie als
+       de mockup se eigen rail-array, waar "help" na alle rubrieken komt). Geen flyout, gewoon een
+       link, net als Documentencentrum/Instellingen hierboven. *@
+    <a class="gl-v2-rail-item @(IsActive("Help") ? "is-active" : "")" href="@Url.Action("Index", "Help")" aria-label="Help">
+        <i class="ph ph-question" aria-hidden="true"></i>
+        <span class="gl-v2-rail-tooltip">Help</span>
+    </a>
+
     <span class="gl-v2-rail-spacer"></span>
 </nav>
 
@@ -395,6 +403,11 @@
             <a class="gl-v2-mobile-subitem" href="https://www.bouwenconstructie.be" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Website BCO</a>
             <a class="gl-v2-mobile-subitem" href="https://www.home-estate.be" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Website Home-Estate</a>
         </div>
+
+        @* Design-handoff punt 41 — Helpcentrum, zelfde plek als de desktoprail (na alle rubrieken). *@
+        <a class="gl-v2-mobile-item js-gl-v2-mobile-searchable" href="@Url.Action("Index", "Help")">
+            <i class="ph ph-question" aria-hidden="true"></i><span>Help</span>
+        </a>
     </nav>
 
     @* Optie 3b (bijgewerkt): profielkaart + aparte knoppenrij, i.p.v. één enkele rij met een

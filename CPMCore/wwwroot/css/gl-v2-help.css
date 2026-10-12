@@ -1,0 +1,352 @@
+/* gl-v2 — Helpcentrum (design-handoff punt 41, "CRM Help.dc.html"): startpagina (41a) +
+   artikelpagina (41c). Zie DESIGN.md "Helpcentrum" voor het volledige contract. */
+
+/* ══════════════════════════════════ 41a — Startpagina ══════════════════════════════════════ */
+
+.gl-v2-help-home { display: flex; flex-direction: column; gap: 28px; padding-bottom: 8px; }
+
+.gl-v2-help-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 36px 24px 28px;
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+}
+.gl-v2-help-hero-title { font: 500 28px var(--gl-v2-font-serif); color: var(--gl-v2-ink); text-align: center; }
+
+.gl-v2-help-search { position: relative; width: 100%; max-width: 640px; }
+
+/* Design-handoff punt 43i — compact zoekvak in de topbar (startpagina én artikelpagina),
+   zelfde zoek-dropdown-opmaak als de hero (gl-v2-help-search-results), enkel een andere trigger. */
+.gl-v2-help-topbar-search {
+    position: relative;
+    width: 320px;
+    height: 36px;
+    box-sizing: border-box;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-surface);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+}
+.gl-v2-help-topbar-search > i { font-size: 14px; color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-help-topbar-search-input { flex: 1; min-width: 0; border: 0; background: none; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); outline: none; }
+.gl-v2-help-topbar-search-input::placeholder { color: var(--gl-v2-muted-light); }
+@media (max-width: 1023.98px) { .gl-v2-help-topbar-search { display: none; } }
+.gl-v2-help-search-field .gl-v2-field-box { height: 48px; border: 1.5px solid var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .10); border-radius: var(--gl-v2-radius-sm); }
+.gl-v2-help-search-field .gl-v2-field-input { font-size: 14px; }
+
+.gl-v2-help-search-results {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    padding: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    z-index: 60;
+}
+.gl-v2-help-search-heading {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px 4px;
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .12em;
+    color: var(--gl-v2-muted);
+    text-transform: uppercase;
+}
+.gl-v2-help-search-heading span:last-child { font-weight: 450; letter-spacing: 0; color: var(--gl-v2-muted-light); text-transform: none; }
+.gl-v2-help-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-help-search-row:hover,
+.gl-v2-help-search-row.is-active { background: var(--gl-v2-hover-tint); }
+.gl-v2-help-search-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-help-search-row-title { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-help-search-row-title b { font-weight: 700; color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); border-radius: 3px; padding: 0 1px; }
+.gl-v2-help-search-row-path { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-help-search-row-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-help-search-empty { padding: 14px 10px; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-help-search-empty a { color: var(--gl-v2-primary); font-weight: 600; text-decoration: none; }
+
+.gl-v2-help-popular { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
+.gl-v2-help-popular-label { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-help-popular-chip {
+    padding: 5px 11px;
+    border-radius: var(--gl-v2-radius-pill);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-bg);
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+}
+.gl-v2-help-popular-chip:hover { border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+
+.gl-v2-help-section-label {
+    font: 600 9.5px var(--gl-v2-font-sans);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gl-v2-muted);
+}
+.gl-v2-help-topics { display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-help-topics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1279.98px) { .gl-v2-help-topics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599.98px) { .gl-v2-help-topics-grid { grid-template-columns: 1fr; } }
+
+.gl-v2-help-topic-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-md);
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-help-topic-card:not(.is-empty):hover { border-color: var(--gl-v2-accent-sage); box-shadow: 0 14px 30px -22px rgba(44, 59, 42, .5); }
+.gl-v2-help-topic-card.is-empty { cursor: default; opacity: .75; }
+.gl-v2-help-topic-head { display: flex; align-items: center; gap: 10px; }
+.gl-v2-help-topic-icon { width: 32px; height: 32px; flex: none; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.gl-v2-help-topic-name-wrap { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-help-topic-name { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-help-topic-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-help-topic-list { display: flex; flex-direction: column; gap: 5px; }
+.gl-v2-help-topic-list-item { font: 450 12.5px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-help-topic-list-empty { color: var(--gl-v2-muted-light); font-style: italic; }
+.gl-v2-help-topic-cta { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+
+.gl-v2-help-home-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 1023.98px) { .gl-v2-help-home-row { grid-template-columns: 1fr; } }
+
+.gl-v2-help-list { display: flex; flex-direction: column; }
+.gl-v2-help-list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 50px;
+    padding: 6px 20px;
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-help-list-row:first-child { border-top: 0; }
+.gl-v2-help-list-row:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-help-list-num {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: 12px;
+    background: var(--gl-v2-neutral-tint);
+    color: var(--gl-v2-muted-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 11px var(--gl-v2-font-sans);
+}
+.gl-v2-help-list-num.is-highlighted { background: var(--gl-v2-primary); color: #fff; }
+.gl-v2-help-list-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-help-list-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-help-list-desc { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-help-list-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
+.gl-v2-help-news-tag { flex: none; }
+.gl-v2-help-list-empty { padding: 18px 20px; }
+
+/* ══════════════════════════════════ 41c — Artikelpagina ═════════════════════════════════════ */
+
+/* Design-handoff punt 43i (Paginatypes "8 · Kennisbank / artikel") — raster 280px/1fr/220px, gap
+   16, élke kolom haar EIGEN sectiekaart (wit, radius 12, schaduw) — niet langer één gefuseerde
+   kaart met interne randen (dat was de 41c-tussenversie vóór punt 43 er was). */
+.gl-v2-help-article-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr) 220px;
+    gap: 16px;
+    align-items: start;
+}
+@media (max-width: 1279.98px) { .gl-v2-help-article-layout { grid-template-columns: minmax(0, 1fr) 220px; } .gl-v2-help-tree { display: none; } }
+@media (max-width: 1023.98px) { .gl-v2-help-article-layout { grid-template-columns: minmax(0, 1fr); } .gl-v2-help-toc { display: none; } }
+
+.gl-v2-help-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--gl-v2-bg);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+    padding: 18px 12px;
+}
+.gl-v2-help-tree-group { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 10px; border-radius: 7px; text-decoration: none; }
+.gl-v2-help-tree-group-title { flex: 1; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-help-tree-group-count { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+/* Een ingeklapt topic is een link naar zijn eerste artikel (GetByScreenIds/FirstArticleSlug) —
+   enkel .is-empty (geen artikels) blijft puur informatief, geen hover/cursor-aanduiding. */
+a.gl-v2-help-tree-group:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-help-tree-group.is-empty { cursor: default; }
+.gl-v2-help-tree-group.is-empty .gl-v2-help-tree-group-title { color: var(--gl-v2-muted); }
+.gl-v2-help-tree-item {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 10px 0 28px;
+    border-radius: 7px;
+    font: 450 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-v2-help-tree-item:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-help-tree-item.is-active { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: inset 2px 0 0 var(--gl-v2-primary); }
+/* Kind-artikel (bv. "Project bewerken" onder "Het projectdossier lezen") — extra inspringing,
+   geen eigen bullet/lijn nodig, de inspringing zelf toont het niveauverschil. */
+.gl-v2-help-tree-item.is-child { padding-left: 44px; font-size: 12px; }
+
+.gl-v2-help-article-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    padding: 28px 40px 40px;
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+}
+@media (max-width: 767.98px) { .gl-v2-help-article-body { padding: 20px 20px 32px; } }
+.gl-v2-help-breadcrumb { display: flex; gap: 6px; font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-help-breadcrumb a { color: inherit; text-decoration: none; }
+.gl-v2-help-breadcrumb a:hover { color: var(--gl-v2-primary); }
+
+.gl-v2-help-article-head { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-help-article-title { margin: 0; font: 500 30px/1.15 var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-help-article-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+.gl-v2-help-intro { font: 450 14.5px/1.65 var(--gl-v2-font-sans); color: var(--gl-v2-ink); max-width: 720px; }
+.gl-v2-help-intro p { margin: 0 0 10px; }
+.gl-v2-help-intro p:last-child { margin-bottom: 0; }
+
+.gl-v2-help-section-title { font: 600 18px var(--gl-v2-font-sans); color: var(--gl-v2-ink); margin-top: 6px; }
+
+.gl-v2-help-step { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 14px; max-width: 820px; }
+.gl-v2-help-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: var(--gl-v2-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 700 12px var(--gl-v2-font-sans);
+}
+.gl-v2-help-step-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gl-v2-help-step-title { font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); padding-top: 4px; }
+.gl-v2-help-step-text { font: 450 14px/1.65 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-help-step-text p { margin: 0 0 8px; }
+.gl-v2-help-step-text p:last-child { margin-bottom: 0; }
+/* Pipe-tables uit Markdig (UseAdvancedExtensions) — enige plek in een artikel-body waar tabulaire
+   uitleg (bv. "wat betekent elk KPI-cijfer") natuurlijker is dan een lopende tekst. */
+.gl-v2-help-step-text table,
+.gl-v2-help-intro table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: 13px; }
+.gl-v2-help-step-text th, .gl-v2-help-step-text td,
+.gl-v2-help-intro th, .gl-v2-help-intro td { padding: 8px 12px; border-bottom: 1px solid var(--gl-v2-hairline-soft); text-align: left; vertical-align: top; }
+.gl-v2-help-step-text th, .gl-v2-help-intro th { font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-help-step-text td:first-child, .gl-v2-help-intro td:first-child { font-weight: 600; color: var(--gl-v2-ink); white-space: nowrap; }
+.gl-v2-help-step-img { max-width: 100%; border-radius: 10px; border: 1px solid var(--gl-v2-hairline); }
+.gl-v2-help-step-caption { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-help-step-img-placeholder {
+    height: 160px;
+    border-radius: 10px;
+    border: 1px dashed var(--gl-v2-dashed);
+    background: var(--gl-v2-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+}
+.gl-v2-help-step-img-placeholder i { font-size: 20px; }
+
+.gl-v2-help-faq { display: flex; flex-direction: column; max-width: 820px; border-top: 1px solid var(--gl-v2-hairline); }
+.gl-v2-help-faq-item { border-bottom: 1px solid var(--gl-v2-hairline); }
+.gl-v2-help-faq-question {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font: 600 13.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+}
+.gl-v2-help-faq-question > span { flex: 1; }
+.gl-v2-help-faq-question i { font-size: 13px; color: var(--gl-v2-primary); transition: transform .15s ease; flex: none; }
+.gl-v2-help-faq-item.is-open .gl-v2-help-faq-question i { transform: rotate(180deg); }
+.gl-v2-help-faq-answer { display: none; padding: 0 0 14px; font: 450 13px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-help-faq-item.is-open .gl-v2-help-faq-answer { display: block; }
+
+.gl-v2-help-feedback {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: var(--gl-v2-radius-md);
+    background: var(--gl-v2-bg);
+    max-width: 820px;
+}
+.gl-v2-help-feedback-title { flex: 1; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-help-feedback-thanks { display: flex; align-items: center; gap: 8px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-help-feedback-form { display: flex; flex-direction: column; gap: 8px; max-width: 820px; }
+.gl-v2-help-feedback-textarea { border: 1px solid var(--gl-v2-hairline); border-radius: 8px; padding: 10px 12px; font: 450 13px/1.5 var(--gl-v2-font-sans); resize: vertical; align-self: stretch; }
+.gl-v2-help-feedback-form .gl-v2-btn { align-self: flex-start; }
+
+.gl-v2-help-related-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 767.98px) { .gl-v2-help-related-grid { grid-template-columns: 1fr; } }
+.gl-v2-help-related-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--gl-v2-hairline);
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-help-related-card:hover { border-color: var(--gl-v2-primary); }
+.gl-v2-help-related-topic { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-help-related-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+
+.gl-v2-help-toc {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px;
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: var(--gl-v2-shadow-card);
+    position: sticky;
+    top: 20px;
+}
+.gl-v2-help-toc-item { font: 450 12px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding: 3px 0 3px 10px; border-left: 2px solid var(--gl-v2-hairline-soft); }
+.gl-v2-help-toc-divider { height: 1px; background: var(--gl-v2-hairline-soft); margin: 10px 0; }
+.gl-v2-help-toc-screens { display: flex; flex-wrap: wrap; gap: 6px; }

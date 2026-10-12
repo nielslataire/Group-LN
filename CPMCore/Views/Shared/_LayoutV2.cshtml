@@ -80,6 +80,7 @@
     <link rel="stylesheet" href="~/css/gl-v2/modals.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/toasts.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/kpi.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/pills.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/contextmenu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/meldingen.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/progress.css" asp-append-version="true" />
@@ -90,6 +91,7 @@
     <link rel="stylesheet" href="~/css/gl-v2/mobile-search.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/steps.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/combo.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/help-panel.css" asp-append-version="true" />
 
     <script src="~/lib/modernizr/modernizr.js"></script>
 </head>
@@ -162,7 +164,14 @@
                                 @pageTitle
                             }
                         </h1>
-                        @await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
+                        @* Design-handoff punt 43 (Paginatypes 43a "Shell"): een pagina die zelf al haar
+                           volledige navigatiecontext toont (bv. het Helpcentrum-hoofdscherm, dat enkel
+                           titel + zoekveld + gebruiker hoort te tonen — geen kruimelpad) zet dit om de
+                           kruimel te onderdrukken. Default aan (overal elders ongewijzigd). *@
+                        @if (ViewData["HideBreadcrumb"] as bool? != true)
+                        {
+                            @await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
+                        }
                     </div>
                     @* Optioneel — design-handoff 8a/8d: statusbadges direct naast de titel (bv.
                        ACTIEF/OOK KLANT op Leveranciers/EditV2). Zelfde IsSectionDefined-wachter als
@@ -197,6 +206,14 @@
                             }
                         </button>
                     }
+                    @* Design-handoff punt 41d — "?"-knop, altijd zichtbaar (anders dan het belletje
+                       hierboven: Help moet overal bereikbaar zijn, ook op een pagina zonder eigen
+                       screen-id/meldingenpaneel). Opent CPMCore/Views/Shared/Components/HelpPanel/
+                       Default.cshtml, hierboven éénmalig gerenderd; toggle-gedrag in
+                       gl-v2-help-panel.js. *@
+                    <button type="button" class="gl-v2-topbar-help-btn" id="gl-v2-help-button" aria-haspopup="true" aria-expanded="false" aria-controls="glV2HelpPanel" aria-label="Help">
+                        <i class="ph ph-question" aria-hidden="true"></i>
+                    </button>
                     @* Optie 3a: zoek-icoon, enkel <768px zichtbaar (gl-v2-shell.css). Nog niet aan
                        echte zoekfunctionaliteit gekoppeld — zelfde eerlijke placeholder-status als
                        de gestippelde velden in de wireframe zelf. Een pagina met eigen filters (zie
@@ -217,9 +234,10 @@
                        op mobiel i.p.v. te vertrouwen op toevallige flex-volgorde.
                        Optie 4d/5c: floating-card userbox — herbouwd op de referentiesheet i.p.v. een
                        kale Bootstrap-dropdown. Menu-items blijven beperkt tot wat vandaag echt
-                       bestaat (Mijn handtekening, de pilot-toggle, Afmelden); de mockup's extra
-                       items (Mijn profiel, Voorkeuren & meldingen, Instellingen, Help & support,
-                       "wissel facturatiebedrijf") komen pas mee zodra die pagina's/data bestaan. *@
+                       bestaat (Mijn handtekening, de pilot-toggle, Help & support — zie punt 41,
+                       Afmelden); de mockup's overige extra's (Mijn profiel, Voorkeuren & meldingen,
+                       Instellingen, "wissel facturatiebedrijf") komen pas mee zodra die
+                       pagina's/data bestaan. *@
                     <div class="dropdown gl-v2-desktop-userbox">
                         <a href="#" class="gl-v2-topbar-userbox" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-label="Gebruikersmenu">
                             <span class="gl-v2-avatar">@userInitials</span>
@@ -240,6 +258,13 @@
                                 <a class="dropdown-item gl-v2-userbox-item" href="@Url.Action("MijnHandtekening", "Account")">
                                     <i class="ph ph-envelope" aria-hidden="true"></i>
                                     <span>Mijn handtekening</span>
+                                    <i class="ph ph-caret-right gl-v2-userbox-item-chevron" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item gl-v2-userbox-item" href="@Url.Action("Index", "Help")">
+                                    <i class="ph ph-question" aria-hidden="true"></i>
+                                    <span>Help &amp; support</span>
                                     <i class="ph ph-caret-right gl-v2-userbox-item-chevron" aria-hidden="true"></i>
                                 </a>
                             </li>
@@ -353,6 +378,13 @@
            gl-v2-shell.js. Enkel de backdrop leeft hier globaal; de panelen zelf renderen waar de
            aanroepende pagina ze nodig heeft (bv. het meldingenscherm se snooze-menu). *@
         <div class="gl-v2-menu-backdrop" id="gl-v2-menu-backdrop"></div>
+
+        @* Design-handoff punt 41d — contextueel help-zijpaneel, altijd in de DOM op élke
+           gl-v2-pagina (zelfde patroon als het meldingenpaneel hierboven), geopend via de
+           "?"-knop in de topbar. ViewData["HelpScreenId"] (comma-lijst, optioneel) bepaalt welke
+           artikels verschijnen — ontbreekt die, dan toont het paneel enkel de algemene uitweg naar
+           het Helpcentrum. Zie DESIGN.md "Helpcentrum". *@
+        @await Component.InvokeAsync("HelpPanel", new { screenIds = ViewData["HelpScreenId"] as string })
     </div>
 
     <script src="~/lib/jquery/jquery.min.js"></script>
@@ -381,6 +413,8 @@
     <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.5/dist/autoNumeric.min.js"></script>
     <script src="~/js/currency.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-shell.js" asp-append-version="true"></script>
+    @* Helpcentrum-zijpaneel (punt 41d) — op elke gl-v2-pagina, net als gl-v2-shell.js zelf. *@
+    <script src="~/js/gl-v2-help-panel.js" asp-append-version="true"></script>
     @* Foutoverzicht (design-handoff punt 24) — gedeeld engine, doet niets tenzij een pagina
        window.GlV2ErrorSummary.init({...}) aanroept. Zie DESIGN.md "Foutoverzicht (punt 24)". *@
     <script src="~/js/gl-v2-error-summary.js" asp-append-version="true"></script>

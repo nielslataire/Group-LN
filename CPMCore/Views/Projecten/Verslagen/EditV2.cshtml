@@ -18,7 +18,7 @@
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · verslagen" };
     var gemeldCount = Model.OpenPunten.Count(p => CPMCore.Helpers.PuntenWeergave.Canon(p.Status) == (int)BOCore.ConstructionIssueStatus.Reported);
     var nagekeken = Model.OpenPunten.Count(p => p.TerPlaatse != null);
-    var data = new { projectId = Model.ProjectId, id = Model.Id, readOnly = ro, aanwezigen = Model.Aanwezigen.Select(a => new { name = a.Name, email = a.Email }), suggesties = Model.Suggesties.Select(s => new { name = s.Name, email = s.Email, org = s.Org }), openTotaal = Model.OpenPunten.Count };
+    var data = new { projectId = Model.ProjectId, id = Model.Id, readOnly = ro, aanwezigen = Model.Aanwezigen.Select(a => new { name = a.Name, email = a.Email }), suggesties = Model.Suggesties.Select(s => new { name = s.Name, email = s.Email, org = s.Org }), openTotaal = Model.OpenPunten.Count, teGoedkeurenAantal = Model.TeGoedkeurenAantal };
 }
 @section PageStyle
 {
@@ -215,19 +215,32 @@
 }
 @if (!ro)
 {
+    var teGoedkeuren = Model.TeGoedkeurenAantal;
+    var finishTone = teGoedkeuren > 0 ? "is-warning" : "is-success";
     <div class="modal fade gl-v2-modal-confirm" id="vs-finish-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content is-success">
+            <div class="modal-content @finishTone">
                 <div class="modal-body">
-                    <span class="gl-v2-modal-icon is-success"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
+                    <span class="gl-v2-modal-icon @finishTone"><i class="ph @(teGoedkeuren > 0 ? "ph-warning" : "ph-paper-plane-tilt")" aria-hidden="true"></i></span>
                     <div class="gl-v2-modal-text">
                         <h2 class="gl-v2-modal-title">@Model.Naam afronden?</h2>
-                        <p class="gl-v2-modal-desc" id="vs-finish-desc">Het verslag gaat als PDF naar de aanwezigen met een e-mailadres. De nieuwe punten blijven concept: je kan er nog foto's en details aan toevoegen en ze daarna goedkeuren.</p>
+                        @if (teGoedkeuren > 0)
+                        {
+                            <p class="gl-v2-modal-desc" id="vs-finish-desc">Dit verslag bevat nog @teGoedkeuren punt@(teGoedkeuren > 1 ? "en" : "") in concept of ter goedkeuring. Verstuur je toch, dan gaan die niet mee in dit verslag — keur ze eerst goed als ze er wél bij moeten.</p>
+                        }
+                        else
+                        {
+                            <p class="gl-v2-modal-desc" id="vs-finish-desc">Het verslag gaat als PDF naar de aanwezigen met een e-mailadres. De nieuwe punten blijven concept: je kan er nog foto's en details aan toevoegen en ze daarna goedkeuren.</p>
+                        }
                     </div>
                 </div>
                 <form method="post" action="@Url.Action("Finish", "ProjectVerslagen", new { projectId = Model.ProjectId, id = Model.Id })">
                     @Html.AntiForgeryToken()
-                    <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Nog niet</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Afronden &amp; versturen</button></div>
+                    @if (teGoedkeuren > 0)
+                    {
+                        <input type="hidden" name="forceer" value="true" />
+                    }
+                    <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Nog niet</button><button type="submit" class="gl-v2-btn @(teGoedkeuren > 0 ? "gl-v2-btn-warning" : "gl-v2-btn-primary")">@(teGoedkeuren > 0 ? "Toch versturen" : "Afronden & versturen")</button></div>
                 </form>
             </div>
         </div>

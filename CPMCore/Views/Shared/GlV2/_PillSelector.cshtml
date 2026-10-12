@@ -1,0 +1,75 @@
+@model List<CPMCore.Models.GlV2.GlV2PillItemVm>
+@*
+    gl-v2 — herbruikbare pill-rij met tellingen (design-handoff punt 42f, Nacalculatie-subcategorieën:
+    "activiteit-pills in de inhoud, onder de categorie-tabbar" — LET OP, dit is géén tweede tabbar,
+    het ontwerp zegt letterlijk "pills", niet "tabbar"). Elke pill is navigatie (Url), geen
+    formuliertoestand. Bij meer dan 6 items (ViewData["Threshold"], standaard 6) valt de rij terug op
+    een doorzoekbare combo (box + zoekveld + kruisje om de selectie te wissen) i.p.v. een rij die zou
+    beginnen wrappen/overlopen.
+
+    De combo hergebruikt UITSLUITEND bestaande, projectbrede klassen uit gl-v2/forms.css
+    (.gl-v2-select/-trigger/-panel/-panel-search/-search-field/-options/-option — hetzelfde skelet als
+    GlV2SearchSelect.cshtml) i.p.v. iets nieuws te verzinnen; enkel de JS-aandrijving
+    (window.GlV2NavCombo/initGlV2NavCombo in gl-v2-shell.js, data-gl-v2-navcombo — NIET te verwarren met het losse, bestaande window.GlV2Combo/gl-v2-combo.js, data-gl-v2-combo, een ander, formuliergebonden zoekveld) is nieuw, want de bestaande
+    initGlV2Select() verwacht een verborgen formulierinput + data-value-knoppen (kiezen = een
+    formulierwaarde zetten), terwijl elke optie hier een gewone link is (kiezen = navigeren, de browser
+    doet het zelf — er is dus zelfs geen keuze-JS nodig, enkel open/dicht + live filteren op tekst).
+
+    ViewData: Threshold (int, standaard 6), Label (string, optioneel, boven de pills/naast de combo),
+    ClearUrl (string, optioneel — url voor het kruisje; getoond zodra de actieve selectie niet al
+    ClearUrl zelf is, bv. "Alle activiteiten").
+*@
+@{
+    var threshold = ViewData["Threshold"] as int? ?? 6;
+    var label = ViewData["Label"] as string;
+    var clearUrl = ViewData["ClearUrl"] as string;
+    var active = Model.FirstOrDefault(i => i.IsActive);
+    var showClear = !string.IsNullOrWhiteSpace(clearUrl) && active != null && active.Url != clearUrl;
+}
+<div class="gl-v2-pillrow">
+    @if (!string.IsNullOrWhiteSpace(label))
+    {
+        <span class="gl-v2-pillrow-label">@label</span>
+    }
+    @if (Model.Count <= threshold)
+    {
+        foreach (var item in Model)
+        {
+            <a class="gl-v2-pill @(item.IsActive ? "is-active" : "")" href="@item.Url">
+                @item.Label
+                <span class="gl-v2-pill-count">@item.Count</span>
+            </a>
+        }
+    }
+    else
+    {
+        <div class="gl-v2-select" data-gl-v2-navcombo>
+            <div class="gl-v2-select-trigger is-filled" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                <span class="gl-v2-select-trigger-label">@(active?.Label ?? "Kies…")</span>
+                @if (showClear)
+                {
+                    <a class="gl-v2-select-trigger-clear" href="@clearUrl" aria-label="Selectie wissen" onclick="event.stopPropagation()"><i class="ph ph-x" aria-hidden="true"></i></a>
+                }
+                <i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i>
+            </div>
+            <div class="gl-v2-select-panel gl-v2-select-panel-search" role="listbox">
+                <div class="gl-v2-select-search">
+                    <div class="gl-v2-select-search-field">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" data-role="combo-search" placeholder="Zoeken…" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="gl-v2-select-options">
+                    @foreach (var item in Model)
+                    {
+                        <a class="gl-v2-select-option @(item.IsActive ? "is-selected" : "")" href="@item.Url" data-search="@item.Label.ToLowerInvariant()">
+                            <i class="ph ph-check" aria-hidden="true"></i>
+                            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@item.Label</span>
+                            <span class="gl-v2-pill-count">@item.Count</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

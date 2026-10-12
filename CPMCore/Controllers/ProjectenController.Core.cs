@@ -103,6 +103,9 @@ namespace CPMCore.Controllers
                 model.Statuses = statusResponse.Values;
             }
 
+            // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
+            ViewData["HelpScreenId"] = "projecten-algemeen";
+
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
@@ -275,6 +278,8 @@ namespace CPMCore.Controllers
             model.Users = GetOrderedUsers();
 
             SetToevoegenBreadcrumbV2();
+            // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
+            ViewData["HelpScreenId"] = "projecten-toevoegen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
         }
 
@@ -301,6 +306,7 @@ namespace CPMCore.Controllers
                 FillInAvailableUsers(model);
                 model.Users = GetOrderedUsers();
                 SetToevoegenBreadcrumbV2();
+                ViewData["HelpScreenId"] = "projecten-toevoegen";
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
             }
 
@@ -598,6 +604,9 @@ namespace CPMCore.Controllers
 
             SetPageHeader("bx bx-building-house", model.Project.Name);
 
+            // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
+            ViewData["HelpScreenId"] = "projecten-detail";
+
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", model);
         }
         [HttpGet]
@@ -723,6 +732,9 @@ namespace CPMCore.Controllers
             ViewData["WebsiteUnits"] = LoadWebsiteUnits(projectid);
 
             SetPageHeader("bx bx-building-house", $"{model.Project.Name} — gegevens bewerken");
+
+            // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
+            ViewData["HelpScreenId"] = "projecten-bewerken";
 
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
         }

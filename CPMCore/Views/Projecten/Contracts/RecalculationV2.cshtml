@@ -1,0 +1,232 @@
+@model CPMCore.Models.Projecten.RecalculationIndexV2Vm
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Nacalculatie, overzicht (design-handoff 42a). KPI-rij (6, gedeelde _KpiStrip), een
+    waarschuwingsbanner zodra een categorie een badge heeft, en de categorieën als ÉÉN tabel (i.p.v.
+    de 11 losse accordionkaarten van het legacy-scherm, Contracts/Recalculation.cshtml) met een
+    voortgangsbalk (gefactureerd/gecontracteerd) en een uitklapbare rij naar de activiteiten. Sommen en
+    statuslogica zijn 1-op-1 overgenomen uit het legacy-scherm, enkel vooraf berekend in de controller
+    (ProjectenController.Contracts.BuildRecalculationIndexV2Vm) i.p.v. in de view — zie DESIGN.md.
+    "Vergeleken met [definitief budget]" (de budget-bron-selector uit het ontwerp) is bewust nog niet
+    gebouwd, zie 42e punt 01 — hoort bij de budgetflow-koppeling, niet bij deze visuele overzet.
+*@
+@{
+    ViewData["Title"] = "Nacalculatie";
+    ViewData["PageIcon"] = "bx bx-building-house";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · nacalculatie", Mode = GlV2ProjectMenuMode.Outer };
+    var aantalSignaal = Model.AantalMetSignaal;
+    var overschrCount = Model.Categorieen.Count(c => c.BadgeLabel == "Overschrijding");
+    var zcCount = Model.Categorieen.Count(c => c.BadgeLabel == "Zonder contract");
+    var nbCount = Model.Categorieen.Count(c => c.BadgeLabel == "Niet begroot");
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-recalculation.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("CalculationSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-gear" aria-hidden="true"></i>Budget instellen</a>
+    }
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("PrintRecalculation", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-printer" aria-hidden="true"></i>Afdrukken</a>
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("ExportInvoicesExcel", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-file-xls" aria-hidden="true"></i>Exporteren</a>
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-gl-v2-menu-trigger" id="gln-nc-add-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gln-nc-add-menu">
+            <i class="ph ph-plus" aria-hidden="true"></i><span>Toevoegen</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+        </button>
+    }
+}
+
+<div id="gln-nc-root">
+    @await Html.PartialAsync("GlV2/_KpiStrip", Model.Kpis)
+
+    @if (aantalSignaal > 0)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+            <i class="ph ph-warning" aria-hidden="true"></i>
+            <span><strong>@aantalSignaal categorie@(aantalSignaal == 1 ? " vraagt" : "ën vragen") aandacht</strong> — @Model.WaarschuwingTekst</span>
+        </div>
+    }
+
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Categorieën</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">klik een rij voor de activiteiten</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <div class="gl-v2-field gln-nc-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="gln-nc-zoek" placeholder="Zoek categorie of activiteit">
+                </div>
+            </div>
+        </div>
+        <div class="gln-nc-chips">
+            <button type="button" class="gln-nc-chip is-active" data-filter="alle">Alle @Model.Categorieen.Count</button>
+            @if (overschrCount > 0) { <button type="button" class="gln-nc-chip" data-filter="overschrijding">Overschrijding @overschrCount</button> }
+            @if (zcCount > 0) { <button type="button" class="gln-nc-chip" data-filter="zonder-contract">Zonder contract @zcCount</button> }
+            @if (nbCount > 0) { <button type="button" class="gln-nc-chip" data-filter="niet-begroot">Niet begroot @nbCount</button> }
+            <span class="gln-nc-hint">bedragen excl. btw · afgerond op €</span>
+        </div>
+        <div id="gln-nc-table">
+            <div class="gln-nc-grid-cols gln-nc-row-head">
+                <span></span><span>Categorie</span><span>Begroot</span><span>Gecontracteerd</span><span>Gefactureerd</span><span>Begroot – contract</span><span>Contract – factuur</span><span>Gefactureerd</span>
+            </div>
+            @foreach (var cat in Model.Categorieen)
+            {
+                var filterKey = cat.BadgeLabel switch { "Overschrijding" => "overschrijding", "Zonder contract" => "zonder-contract", "Niet begroot" => "niet-begroot", _ => "" };
+                var vbc = cat.VerschilBegrootContract;
+                var vcf = cat.VerschilContractFactuur;
+                var progressOver = cat.VoortgangPercent > 100;
+                <div class="gln-nc-group" data-filter-key="@filterKey" data-search="@cat.Naam.ToLowerInvariant()">
+                    <button type="button" class="gln-nc-grid-cols gln-nc-row-cat @(cat.IsLeeg ? "is-empty" : "")" aria-expanded="false" @(cat.IsLeeg ? "disabled" : "") data-group="@cat.GroupId">
+                        <i class="ph ph-caret-right gln-nc-chevron" aria-hidden="true"></i>
+                        <span class="gln-nc-naam">@cat.Naam @if (cat.BadgeLabel != null) { <span class="gl-v2-badge @cat.BadgeTone">@cat.BadgeLabel</span> }</span>
+                        <span class="gln-nc-amount">€ @cat.Begroot.ToString("N0")</span>
+                        <span class="gln-nc-amount @(cat.Gecontracteerd == 0 ? "is-muted" : "")">€ @cat.Gecontracteerd.ToString("N0")</span>
+                        <span class="gln-nc-amount is-strong @(cat.Gefactureerd == 0 ? "is-muted" : "")">€ @cat.Gefactureerd.ToString("N0")</span>
+                        <span class="gln-nc-amount @(vbc < 0 ? "is-neg" : "")">@(vbc < 0 ? "– " : "")€ @Math.Abs(vbc).ToString("N0")</span>
+                        <span class="gln-nc-amount @(vcf < 0 ? "is-neg" : "")">@(vcf < 0 ? "– " : "")€ @Math.Abs(vcf).ToString("N0")</span>
+                        <span class="gln-nc-progress">
+                            <span class="gl-v2-progress-track"><span class="gl-v2-progress-fill @(progressOver ? "is-over" : "")" style="width:@(Math.Min(cat.VoortgangPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
+                            <span class="gln-nc-progress-val @(progressOver ? "is-over" : "")">@cat.VoortgangPercent.ToString("N1") %</span>
+                        </span>
+                    </button>
+                    @if (!cat.IsLeeg)
+                    {
+                        <div class="gln-nc-activiteiten" hidden>
+                            @foreach (var a in cat.Activiteiten)
+                            {
+                                var avbc = a.VerschilBegrootContract;
+                                var avcf = a.VerschilContractFactuur;
+                                <a class="gln-nc-grid-cols gln-nc-row-act" data-search="@a.Naam.ToLowerInvariant()" href="@Url.Action("RecalculationDetail", "Projecten", new { projectid = Model.ProjectId, groupid = cat.GroupId, activityid = a.ActivityId })">
+                                    <span></span>
+                                    <span class="gln-nc-naam">@a.Naam</span>
+                                    <span class="gln-nc-amount">@(a.Begroot.HasValue ? $"€ {a.Begroot.Value:N0}" : "—")</span>
+                                    <span class="gln-nc-amount @(a.Gecontracteerd == 0 ? "is-muted" : "")">€ @a.Gecontracteerd.ToString("N0")</span>
+                                    <span class="gln-nc-amount @(a.Gefactureerd == 0 ? "is-muted" : "")">€ @a.Gefactureerd.ToString("N0")</span>
+                                    <span class="gln-nc-amount @(avbc < 0 ? "is-neg" : "")">@(avbc < 0 ? "– " : "")€ @Math.Abs(avbc).ToString("N0")</span>
+                                    <span class="gln-nc-amount @(avcf < 0 ? "is-neg" : "")">@(avcf < 0 ? "– " : "")€ @Math.Abs(avcf).ToString("N0")</span>
+                                    <span><span class="gl-v2-badge @a.StatusTone">@a.Status</span></span>
+                                </a>
+                            }
+                            @* activityid=0 = "Alle activiteiten" op RecalculationDetailV2 zodra de categorie >1 activiteit heeft
+                               (42f se eigen tier-2-tabbar); bij precies 1 activiteit valt dat vanzelf terug op die ene activiteit. *@
+                            <a class="gln-nc-open-link" href="@Url.Action("RecalculationDetail", "Projecten", new { projectid = Model.ProjectId, activityid = 0, groupid = cat.GroupId })">Open @cat.Naam per activiteit →</a>
+                        </div>
+                    }
+                </div>
+            }
+            <div class="gln-nc-grid-cols gln-nc-row-total">
+                <span></span><span>Totaal</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Begroot).ToString("N0")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Gecontracteerd).ToString("N0")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Gefactureerd).ToString("N0")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.VerschilBegrootContract).ToString("N0")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.VerschilContractFactuur).ToString("N0")</span>
+                @{
+                    var totGecontracteerd = Model.Categorieen.Sum(c => c.Gecontracteerd);
+                    var totGefactureerd = Model.Categorieen.Sum(c => c.Gefactureerd);
+                    var totPct = totGecontracteerd > 0 ? totGefactureerd / totGecontracteerd * 100m : 0m;
+                }
+                <span class="gln-nc-progress">
+                    <span class="gl-v2-progress-track"><span class="gl-v2-progress-fill @(totPct > 100 ? "is-over" : "")" style="width:@(Math.Min(totPct, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
+                    <span class="gln-nc-progress-val @(totPct > 100 ? "is-over" : "")">@totPct.ToString("N1") %</span>
+                </span>
+            </div>
+        </div>
+    </section>
+</div>
+
+@if (Model.CanWrite)
+{
+    @* Gedeeld contextmenu (.gl-v2-menu), positie/open/sluiten door gl-v2-shell.js — zelfde patroon als
+       Projecten/ChangeOrders/ChangeOrdersV2.cshtml se "+ Nieuw". Correctie 11/10/2026: het ontwerp
+       (42a) heeft bewust GEEN twee aparte "met contract"/"zonder contract"-items — één "Inkomende
+       factuur"-item, de keuze gebeurt in het formulier zelf (AddIncommingInvoiceV2, de segmented
+       "Met/Zonder contract"); plus het derde item uit het ontwerp, "Factuur inlezen (PDF)" (42e punt
+       06) — gaat naar dezelfde pagina (de PDF-dropzone zit daar al op), met focusUpload=true zodat de
+       pagina meteen naar de dropzone scrollt/focust i.p.v. een aparte intake-pagina te verzinnen. *@
+    <div class="gl-v2-menu" id="gln-nc-add-menu">
+        <a class="gl-v2-menu-item" href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })">
+            <i class="ph ph-file-text" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Contract</span>
+                <span class="gl-v2-menu-item-sub">bedrag, borg, korting, betaaltermijn</span>
+            </span>
+        </a>
+        <a class="gl-v2-menu-item" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0 })">
+            <i class="ph ph-receipt" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Inkomende factuur</span>
+                <span class="gl-v2-menu-item-sub">met of zonder contract — je kiest in het formulier</span>
+            </span>
+        </a>
+        <a class="gl-v2-menu-item" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0, focusUpload = true })">
+            <i class="ph ph-file-arrow-up" aria-hidden="true"></i>
+            <span class="gl-v2-menu-item-text">
+                <span class="gl-v2-menu-item-label">Factuur inlezen (PDF)</span>
+                <span class="gl-v2-menu-item-sub">herkent leverancier, bedrag en datum</span>
+            </span>
+        </a>
+    </div>
+}
+
+@section PageScripts
+{
+    <script>
+    (function () {
+        // Rij-expand: aria-expanded togglen + het activiteitenblok tonen/verbergen — zelfde idioom als
+        // .gl-v2-section-card.is-collapsible (gl-v2-invoices-detail.js), hier eigen omdat de kop een
+        // tabelrij is, geen .gl-v2-section-card-header.
+        document.querySelectorAll('.gln-nc-row-cat:not(.is-empty)').forEach(function (row) {
+            row.addEventListener('click', function () {
+                var open = row.getAttribute('aria-expanded') === 'true';
+                row.setAttribute('aria-expanded', (!open).toString());
+                var body = row.parentElement.querySelector('.gln-nc-activiteiten');
+                if (body) body.hidden = open;
+            });
+        });
+
+        // Chips: één actieve filter op een keer, verbergt groepen zonder die badge.
+        var chips = document.querySelectorAll('.gln-nc-chip');
+        var groups = document.querySelectorAll('.gln-nc-group');
+        chips.forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                chips.forEach(function (c) { c.classList.remove('is-active'); });
+                chip.classList.add('is-active');
+                var key = chip.getAttribute('data-filter');
+                groups.forEach(function (g) {
+                    g.style.display = (key === 'alle' || g.getAttribute('data-filter-key') === key) ? '' : 'none';
+                });
+            });
+        });
+
+        // Zoekveld: filtert op categorienaam of op een van haar activiteiten.
+        var zoek = document.getElementById('gln-nc-zoek');
+        if (zoek) {
+            zoek.addEventListener('input', function () {
+                var term = zoek.value.trim().toLowerCase();
+                groups.forEach(function (g) {
+                    if (!term) { g.style.display = ''; return; }
+                    var matches = g.getAttribute('data-search').indexOf(term) !== -1
+                        || Array.prototype.some.call(g.querySelectorAll('.gln-nc-row-act'), function (r) { return r.getAttribute('data-search').indexOf(term) !== -1; });
+                    g.style.display = matches ? '' : 'none';
+                });
+            });
+        }
+    })();
+    </script>
+}

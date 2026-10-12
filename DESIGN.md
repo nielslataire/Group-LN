@@ -127,6 +127,13 @@ components:
 > specificiteit hieronder gelden voor de hele familie. Waar dit document "gl-v2-shell.css" zegt bij een
 > component, is dat bestand bedoeld. Pagina-eigen CSS blijft `gl-v2-<module>-<pagina>.css`.
 
+> **Staande regel — elke nieuwe functie krijgt ook een help-artikel.** Zodra een nieuwe pagina of
+> functie gebouwd wordt (gl-v2 of niet), hoort daar een artikel in het Helpcentrum bij op de juiste
+> pagina/topic (zie "Helpcentrum — design-handoff punt 41" verderop voor hoe: frontmatter-velden,
+> `parent:`/`treeOrder`/`treeLabel` voor de boom, `screens:` om het "?"-zijpaneel te koppelen).
+> Geen losse to-do-lijst bijhouden — dit document is de ene plek waar "nog te schrijven" artikels
+> instaan (zie "Nog te bouwen"/"Bewuste vereenvoudiging" onder Helpcentrum).
+
 ## Overview
 
 **Creative North Star: "The Elevated Rail"**
@@ -6507,3 +6514,305 @@ Alle fouten en waarschuwingen van de budgetwizard komen uit één plaats: `Servi
 **Plaatsen.** *Veld*: `_BwNum`, `_SelectList` en de custom velden lezen de melding op hun veldnaam (`BudgetWizardChromeVm.Op(sleutel)`) en tonen rand, icoon en hulptekst volgens 14d. *Rij*: `tr.is-warn` (goud) of `tr.is-fout` (rood) plus `_BwRijIcoon` (driehoek of cirkel met de tekst als tooltip); `tr.is-info-rij` is grijs. *Kader*: `V2/_BwKaders` bovenaan de stap, één per onderwerp (`gl-v2-notice-compact is-danger|is-warning`). *Label*: kleine gouden tekst bij het element.
 **Negeren.** Enkel waarschuwingen: knop "Negeren" in het kader of op stap 9; `BudgetWaarschuwingBevestigen` bewaart per code `code~naam~datum` in `BudgetVersie.WaarschuwingenBevestigd`; de waarschuwing telt dan niet meer en staat grijs met "Terugzetten".
 **Afronden.** `BudgetVersieAfronden`/`BudgetVersieDefinitief` weigeren zolang er een open fout is; de knop "Afronden & definitief maken" staat dan ook uit.
+
+## Helpcentrum — design-handoff punt 41 (10/10/2026)
+Nieuwe, volledig geïsoleerde feature: `HelpController` (`/Help`, `/Help/Artikel/{slug}`,
+`/Help/Search`, `/Help/Feedback`, `/Help/Support`) + `CPMCore/Views/Help/IndexV2.cshtml`
+(41a) en `ArtikelV2.cshtml` (41c) + `Views/Shared/Components/HelpPanel/Default.cshtml`
+(`HelpPanelViewComponent`, het contextuele zijpaneel uit 41d, gerenderd op élke gl-v2-pagina via
+`_LayoutV2.cshtml`). Geen permissiecode — het Helpcentrum is voor élke ingelogde rol.
+
+**Content = markdown, geen DB (bewuste keuze, besproken met Niels).** Artikels zijn `.md`-bestanden
+onder `CPMCore/HelpContent/<topic-slug>/<slug>.md` — frontmatter (titel, topic, rol, toestel,
+leestijd, bijgewerkt-datum, `screens:`/`related:`/`synonyms:` als comma-lijst, `startOrder`/
+`newsTag` voor de startpagina, een `faq:`-lijst) + markdown-body waar elke `## Titel` een
+genummerde stap wordt (41f #05) behalve `## Let op`, die het waarschuwingskader wordt (41f #06).
+Een `![bijschrift](pad)` als eerste regel van een stap wordt de schermafbeelding; ontbreekt die,
+dan toont de view dezelfde gestippelde placeholder als het mockup — nooit een broken image.
+**Schermafbeeldingen horen onder `wwwroot/`, niet onder `HelpContent/`** — dat laatste wordt
+enkel server-side geparset, nooit als static file geserveerd. Conventie:
+`wwwroot/img/help/<topic-slug>/<artikel-slug>/1.png` (oplopend genummerd per stap), referentie in
+de markdown als `![Lijst met "+ Nieuw" open](/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/1.png)`.
+De map per seed-artikel staat al klaar (leeg, met `.gitkeep`) onder `wwwroot/img/help/` — screenshot
+erin droppen en het pad in de `.md` zetten, geen code nodig.
+`HelpMarkdownParser`/`HelpContentService` (eigen kleine parser, geen YAML-library — de vorm is
+klein en vast) lezen alle bestanden in geheugen, met een 2s-herlaad-venster in Development zodat
+een artikel bewerken geen herstart vergt. Acht vaste onderwerpen (`HelpContentService.FixedTopics`)
+in de volgorde van het hoofdmenu (41a "zelfde volgorde als het menu") — dit zijn geen
+frontmatter-velden, artikels verwijzen er enkel naar via `topic:`.
+**Seed, geen 64 artikels.** Deze pass schrijft 6 echte artikels (aan-de-slag, projecten, budget,
+2× punten-verslagen, facturatie-wijzigingen) als sjabloon/bewijs — de overige rubrieken staan leeg
+(`Nog geen artikels`, geen "Alle artikels"-link) tot er echt geschreven wordt. Verder schrijven
+volgt exact 41f se opbouw, zie `HelpContent/facturatie-wijzigingen/wijzigingsopdracht-opmaken.md`
+als volledigste voorbeeld (intro, voor-je-begint, stappen, let-op, FAQ).
+**Screen-id — nieuwe conventie, bestond nergens.** `ViewData["HelpScreenId"]` (comma-lijst),
+gezet per actie net als `SetPageHeader(...)`. Vandaag enkel gezet op twee echte pagina's —
+`InvoicesController.Core.cs` (`"invoices-index"`) en `ProjectIssuesController.cs` se V2-tak
+(`"issues-index"`) — gekoppeld aan de artikels die er echt voor bestaan. Bewust een eigen
+beschrijvende slug i.p.v. de wireframe-nummers (28a/36a enz.): die nummers citeren het ontwerp-
+document, niet een stabiele identifier van een draaiende pagina. Geen `ViewData`-key zonder
+bijpassend artikel — een loze koppeling zou enkel "niets gevonden" tonen.
+**Feedback & support = één DB-tabel.** `HelpFeedback` (`DALCore/Migrations/HelpFeedback.sql`,
+hand-geschreven zoals alle `DALCore/Migrations/*.sql` — **nog uit te voeren op de dev-DB**, geen
+EF-migratie in dit project) + scaffolded POCO/`DbSet`/entity-config in `cpmRunningContext.cs`
+(zelfde patroon als `UserCoachmarkState`). Drie `Kind`-waarden: `SupportQuestion`
+("Vraag stellen aan support", zowel vanuit het zijpaneel als de startpagina-lege-zoekresultaten),
+`ArticleHelpful`/`ArticleNotHelpful` ("Was dit nuttig?" op 41c — ook "Ja" schrijft een rij, zonder
+tekst, zodat later zichtbaar is welk artikel nooit een "Nee" krijgt). `UserId` via
+`User.GetCpmUserId()` (`CpmClaims`), niet via de losse string-`UserId`-kolom op `Users` die
+elders (toewijzingen) gebruikt wordt — zelfde FK-stijl als `UserCoachmarkState`.
+**Hergebruik, geen nieuwe knop-/veld-CSS.** Zoekveld = bestaand `.gl-v2-field` (forms.css),
+feedback-/support-knoppen = bestaand `.gl-v2-btn-primary/-secondary/-text`, "Voor je begint"/
+"Let op" = bestaand `.gl-v2-notice-compact` (punt 25, basis-variant = info zonder `is-`-klasse).
+Enkel het zijpaneel (`gl-v2/help-panel.css`) en de start-/artikelpagina (`gl-v2-help.css`) zijn
+nieuwe CSS — beide gedocumenteerd gl-v2-help-*/gl-v2-hp-*-namespaces.
+**"?"-topbarknop, bewust NIET het belletje-patroon.** Het bestaande `.gl-v2-topbar-bell`
+(`gl-v2/meldingen.css`) is `display:none` op desktop (enkel <1024px zichtbaar — op desktop zit
+het meldingenpaneel al vast in de kolom). Help moet overal bereikbaar zijn, dus een eigen klasse
+`.gl-v2-topbar-help-btn` (zelfde visuele taal, altijd `display:flex`). De knop zelf heeft, anders
+dan de bel, geen `ViewData`-gate — het paneel toont zonder gekoppeld artikel gewoon de algemene
+uitweg naar het Helpcentrum.
+**Rail + gebruikersmenu.** Nieuw, laatste rail-item ná Marktanalyse/vóór de spacer
+(`_RailPartialV2.cshtml`, zelfde plek als de mockup se eigen rail-array), plus het mobiele-
+menu-equivalent. De userbox-dropdown se "Help & support" — tot nu een bewust leeg gelaten
+placeholder-comment (zie Userbox, "komen pas mee zodra die pagina's/data bestaan") — wijst nu
+naar `/Help`; de rest van die placeholder-comment (Mijn profiel, Voorkeuren & meldingen,
+Instellingen, wissel facturatiebedrijf) blijft onvervuld.
+**Bewuste vereenvoudigingen (niet gebouwd in deze pass):**
+- Geen scroll-spy op "Op deze pagina" (41c rechterkolom) — toont de lijst, markeert geen actief item.
+- "Gekoppelde schermen" in diezelfde kolom is platte tekst, geen "Open dit scherm in de app ↗"-
+  link — er bestaat geen registry die een screen-id naar een echte URL vertaalt.
+- 41b se derde zoekgroep "SCHERMEN IN DE APP" is niet gebouwd — enkel ARTIKELS en
+  STAPPEN & VRAGEN; er is geen in-app-schermendirectory om tegen te zoeken.
+- Markdig toegevoegd als nieuwe NuGet-dependency (`CPMCore.csproj`) — eerste markdown-renderer in
+  dit project.
+
+### Follow-up (11/10/2026) — HelpController rendert onder de oude layout zonder de preview-cookie
+`ViewData["UseGlV2Layout"]` hangt normaal af van de `gl_v2_preview`-cookie (`BaseController.
+OnActionExecuting`) — nodig voor pagina's met een echte legacy-tegenhanger (Index/IndexV2 enz.).
+Het Helpcentrum heeft geen legacy-versie: zonder de cookie landde `/Help` dus alsnog op
+`_Layout`, met een view vol gl-v2-klassen zonder de gl-v2-CSS/rail/topbar eromheen — volledig
+onopgemaakt, en de boomstructuur (41c) zag er daardoor ook kapot uit (geen sidebar-grid, gewoon
+een platte lijst). `HelpController.OnActionExecuting` forceert nu `UseGlV2Layout = true`,
+ongeacht de cookie. Zelfde les als de `ProjectsIssues`-/`Invoices`-pagina's zou *niet* opgaan hier
+— controllers zonder legacy-tegenhanger horen dit altijd onvoorwaardelijk te zetten.
+
+### Follow-up (11/10/2026) — twee artikels met échte, geanonimiseerde schermafbeeldingen
+`projecten/project-detail-overzicht.md` (nieuw) en `projecten/project-aanmaken.md` (herschreven —
+de eerste versie verzon een "type en aantal eenheden"-veld dat op het echte formulier niet
+bestaat) gebruiken schermafbeeldingen van de echte, draaiende app (projecten 64/68/69) i.p.v.
+gestippelde placeholders. Namen, adressen, klant-/leverancier-/notaris-/architectnamen zijn
+vervangen door fictieve waarden via een Playwright-script dat de live DOM herschrijft vóór de
+screenshot (consistente fictieve naam per echte naam, ook over de drie projecten heen) — bewust
+gekozen boven blur-vakken: geen layoutverschuiving, en onomkeerbaar i.p.v. mogelijk terug te
+draaien. Cijfers (bedragen, percentages, oppervlaktes) bleven ongemoeid: eenmaal losgekoppeld van
+een echte naam/adres zijn die niet meer herleidbaar tot een klant.
+`ProjectenController.Core.cs` se `Detail`- en `Toevoegen`-acties (GET + de POST-redisplay bij een
+ongeldig model) zetten nu `ViewData["HelpScreenId"]` (`"projecten-detail"`/`"projecten-toevoegen"`)
+— het zijpaneel (41d) toont dus voor het eerst artikels op een scherm dat niet Facturen/Punten is.
+Bijvangst tijdens het maken van de screenshots: een dode `else { ... }`-blok (geen bijbehorende
+`@@if`, dus pure HTML-tekst, geen Razor-fout) in `ToevoegenV2.cshtml` se actiebalk toonde letterlijk
+"else { 2 verplichte velden: naam en gemeente }" — restant van vóór de JS-only-actiebalk-refactor
+(zie de `gl-v2-error-summary.js`-comment er net boven), nu verwijderd.
+
+### Follow-up (11/10/2026, vervolg) — zichtbare afwijkingen van 41c, FAQ-bug in vier artikels, en een parent/child-boom
+Niels wees een reeks echte problemen aan op screenshot, niet enkel in tekst:
+- **Elke stap zonder afbeelding toonde een "Nog geen schermafbeelding"-vak.** `ArtikelV2.cshtml` se
+  `else`-tak (ontbrekende afbeelding) is verwijderd — een afgewerkt artikel toont nu gewoon niets
+  op een stap zonder afbeelding (41f #05: "enkel waar ze iets toont dat de tekst niet zegt").
+- **Volle-pagina-screenshots naast één alinea tekst** (2046px hoog, veel te groot/onleesbaar) —
+  vervangen door 5 losse, met `sharp` (nieuwe npm-dev-dependency, enkel gebruikt om screenshots te
+  bewerken, geen runtime-afhankelijkheid van de app zelf) uitgesneden kaart-crops, één per stap,
+  zonder de rail/het dossiermenu erbij (enkel de kaart die de stap bespreekt).
+- **FAQ geschreven als `## Veelgestelde vragen`-body-heading met `- q:/a:`-bullets i.p.v.
+  frontmatter `faq:`** — rendert dan als een gewone genummerde stap met letterlijke "q:"/"a:"-tekst,
+  geen accordion. Zat in **vier** artikels (`project-detail-overzicht`, `project-aanmaken`,
+  `wijzigingsopdracht-opmaken`, `punten-lijst-overzicht`), overal verplaatst naar frontmatter.
+- **Markdown-tabellen renderden als platte "| Cijfer | Betekent |"-tekst** — `HelpMarkdownParser`
+  se Markdig-pipeline had geen `UseAdvancedExtensions()` (GFM-pipe-tables zijn geen Markdig-
+  standaard zonder die extensie). Nu aangezet; CSS voor `table/th/td` toegevoegd in `gl-v2-help.css`.
+- **Boom/body hadden geen witte kaartachtergrond/randen zoals 41c** — `.gl-v2-help-article-layout`
+  was drie losse, zwevende stukken i.p.v. één witte kaart met interne randen. Herbouwd naar 41c se
+  eigen structuur: `.gl-v2-help-tree` krijgt `--gl-v2-bg`-tint + `border-right`, body/toc delen de
+  witte kaartachtergrond met een `border-left` op de toc — zelfde "één kaart, interne randen i.p.v.
+  gap"-patroon als `.gl-v2-card` elders, hier met 3 kolommen.
+- **"Vraag stellen aan support" ontbrak op de Help-startpagina zelf** (41a toont de knop in de
+  topbar, enkel via het "?"-zijpaneel bereikbaar in de eerste versie) — nieuwe knop in
+  `IndexV2.cshtml` se `@@section PageActions`, hergebruikt hetzelfde paneel/formulier
+  (`gl-v2-help-panel.js`: `#gl-v2-help-support-cta` opent het paneel én toont meteen het formulier).
+- **Parent/child-boom** (Niels se eigen genummerde structuur, bv. "1 Algemeen / 1.1 Toevoegen
+  nieuw project"): nieuw frontmatter-veld `parent: <slug>` op `HelpArticle` (één niveau diep,
+  valt terug op hoofdartikel bij een onbestaande/foute-topic ouder — nooit een crash of een kind
+  dat nergens onder hangt). `HelpController.BuildTreeArticles` bouwt de boom nu als
+  hoofdartikel-gevolgd-door-haar-kinderen i.p.v. een platte, alfabetische lijst;
+  `.gl-v2-help-tree-item.is-child` (44px inspringing) toont het niveau.
+
+### Een nieuw help-artikel schrijven — stappenplan
+1. **Bestand**: `CPMCore/HelpContent/<topic-slug>/<artikel-slug>.md`. De acht topic-slugs liggen
+   vast in `HelpContentService.FixedTopics` (`aan-de-slag`, `projecten`, `budget`,
+   `facturatie-wijzigingen`, `punten-verslagen`, `traject-dossiers`, `documenten`,
+   `instellingen`) — zelfde volgorde als het hoofdmenu, geen nieuwe topic verzinnen zonder dat
+   lijstje ook aan te passen.
+2. **Frontmatter** (tussen de twee `---`-lijnen bovenaan):
+
+   | Veld | Verplicht? | Betekenis |
+   |---|---|---|
+   | `title` | ja | paginatitel, ook de link-tekst in de boom |
+   | `topic` | ja | één van de acht topic-slugs hierboven |
+   | `parent` | nee | slug van een ánder artikel **in hetzelfde topic** — maakt dit een kind in de boom (41c), 41f/41a-lijsten blijven plat |
+   | `role` / `device` | nee | badges onder de titel, bv. `Projectleider` / `Desktop · tablet` |
+   | `minutes` | nee | "N min lezen" |
+   | `updated` | nee | `YYYY-MM-DD`, toont als "bijgewerkt dd/MM/yyyy" |
+   | `screens` | nee | comma-lijst van screen-id's (zie punt 4) — koppelt dit artikel aan het "?"-zijpaneel (41d) van die pagina's |
+   | `synonyms` | nee | comma-lijst, meetelt in zoeken (41b) zonder in de titel te hoeven staan |
+   | `startOrder` | nee | plaatst dit artikel in "Begin hier — eerste week" (41a), oplopend |
+   | `newsTag` | nee | `Nieuw` of `Bijgewerkt` — plaatst dit artikel in "Nieuw en bijgewerkt" (41a) |
+   | `description` | nee | korte ondertitel, gebruikt op de topic-kaart (41a) |
+   | `related` | nee | comma-lijst van slugs voor "Verder lezen" onderaan |
+   | `intro` | nee | `\|`-blokscalar, de inleidende alinea('s) vóór "Zo werkt het" |
+   | `before` | nee | `\|`-blokscalar, het "Voor je begint"-kader (enkel tonen als er écht een voorwaarde is) |
+   | `faq` | nee | lijst van `{q, a}` — **altijd hier, nooit als `## Veelgestelde vragen`-heading in de body** (dat rendert als platte tekst, geen accordion — zie de follow-up hierboven) |
+
+   `faq` schrijf je zo:
+   ```yaml
+   faq:
+     - q: Vraag hier?
+       a: Antwoord hier.
+     - q: Nog een vraag?
+       a: Nog een antwoord.
+   ```
+3. **Body** — elke `## Titel` wordt een genummerde stap (41f #05), behalve `## Let op` (41f #06,
+   wordt het waarschuwingskader). Markdown-tabellen werken (`UseAdvancedExtensions()`). Een
+   `![bijschrift](pad)` als **eerste regel** van een stap wordt de schermafbeelding van die stap;
+   laat een stap zonder afbeelding gewoon zonder `![...]`-regel — er verschijnt dan terecht niets,
+   geen placeholder-vak.
+4. **Schermafbeeldingen**: nooit een volle paginascreenshot — snijd uit tot de kaart/sectie die de
+   stap echt bespreekt (zie "Twee nieuwe artikels" hierboven voor het `sharp`-crop-recept). Pad:
+   `wwwroot/img/help/<topic-slug>/<artikel-slug>/<n>-<korte-naam>.png`, in de markdown als
+   `![Bijschrift](/img/help/<topic-slug>/<artikel-slug>/<n>-<korte-naam>.png)`. Bevat een
+   screenshot echte klant-/leverancier-/notarisnamen of -adressen, vervang ze eerst — zie het
+   Playwright-DOM-herschrijf-recept hierboven (consistente fictieve naam per échte naam, bedragen/
+   percentages mogen blijven staan zodra de namen weg zijn).
+5. **Screen-id koppelen aan een echte pagina** (optioneel, voor het "?"-zijpaneel): kies een
+   beschrijvende slug (bv. `projecten-detail`, niet een wireframe-nummer als "28a" — dat citeert
+   het ontwerp, geen stabiele identifier van een draaiende pagina) en zet in de controller-actie,
+   vlak vóór de `return View(...)`:
+   ```csharp
+   ViewData["HelpScreenId"] = "projecten-detail";
+   ```
+   Zet deze enkel op een pagina waarvoor er ook écht een artikel met dat `screens:`-id bestaat —
+   een losse koppeling zonder artikel toont enkel de lege "nog geen artikel"-staat van het paneel.
+6. **Build/herstart**: content (`.md`) en afbeeldingen zijn statische bestanden — een wijziging is
+   meteen zichtbaar (2s-herlaadvenster in Development, zie `HelpContentService`). Een wijziging aan
+   C#/.cshtml (`HelpController`, `ArtikelV2.cshtml`, `HelpMarkdownParser` …) heeft wél een
+   build+herstart nodig — Razor-runtime-compilation staat niet aan in dit project.
+
+## Projecten/RecalculationV2 — Nacalculatie, overzicht (design-handoff punt 42a, 10/10/2026)
+Vervangt de kaart-per-categorie-opbouw van het legacy-scherm (`Contracts/Recalculation.cshtml`, 11 Bootstrap-accordionkaarten met herhaalde labels) door ÉÉN tabel: elke categorierij is een `<button>` (CSS-grid `26px minmax(0,1.4fr) repeat(4,minmax(0,1fr)) minmax(0,1.05fr) 150px`) die bij een klik een activiteitenblok toont/verbergt — zelfde idee als `.gl-v2-section-card.is-collapsible` (zie de invoice-detail precedent hoger in dit bestand), maar hier eigen markup/JS (`gln-nc-*`) omdat de kop een tabelrij is, geen sectiekaart-header. Sommen/statuslogica zijn 1-op-1 overgenomen uit het legacy-scherm, nu vooraf berekend in `ProjectenController.Contracts.BuildRecalculationIndexV2Vm` i.p.v. in de Razor-view.
+
+**Herbruikt, geen nieuwe component geschreven**: `GlV2/_KpiStrip` (6 KPI's, compacte vorm vanaf >4 items — automatisch), `.gl-v2-section-card`, `.gl-v2-badge` (`is-attention`="Zonder contract", `is-blocked`="Overschrijding"/"Niet begroot" — **niet** `is-warning`/`is-danger`, die bestaan niet als badge-tint, enkel als KPI/progress-tint), `.gl-v2-notice-compact.is-warning` (waarschuwingsbanner), `.gl-v2-progress-track`/`.gl-v2-progress-fill`/`.is-over` (uit `gl-v2/progress.css`, rechtstreeks de CSS-klassen gebruikt i.p.v. via `GlV2/_ProgressBar` — dat component heeft geen vorm "enkel balk + percentage ernaast, geen labelrij erboven", wat hier nodig was), het gedeelde `.gl-v2-menu`/`js-gl-v2-menu-trigger`-contextmenu (zelfde idioom als ChangeOrdersV2's "+ Nieuw") voor de knop "Toevoegen", en `.gl-v2-field-box`/`.gl-v2-field-input` voor het zoekveld.
+
+**Voortgangsbalk = gefactureerd/gecontracteerd**, niet t.o.v. begroot, en 0% zolang er niets gecontracteerd is (ook al zijn er al facturen — zie Onderbouw/Omgevingswerken/Bureel algemeen in het ontwerp, die allemaal op 0% staan met facturen > 0). Rood (`.is-over`) + balk geklemd op 100% breedte zodra > 100%, het percentagecijfer zelf mag wél de echte waarde tonen.
+
+**Badge-prioriteit per categorie** (`RecalculationCategoryV2.BadgeLabel`, hoogste eerst): "Niet begroot" (begroot = €0) → "Zonder contract" (gecontracteerd = €0) → "Overschrijding" (contract − factuur < 0) → geen badge. Een categorie zonder enige activiteit (begroot/contract/factuur allemaal €0, bv. "Schilderwerken" in het ontwerp) krijgt bewust GEEN badge en wordt niet uit de tabel gefilterd — enkel gedimd (`opacity:.55` via `.is-empty`) en niet uitklapbaar, anders zou "Niet begroot" ten onrechte op elke lege categorie verschijnen.
+
+**Waarschuwingsbanner** (`RecalculationIndexV2Vm.WaarschuwingTekst`) is geen vaste tekst — ze wordt opgebouwd uit de badges van alle categorieën ("X is Y % boven contract gefactureerd · A en B hebben facturen zonder contract · C heeft facturen maar geen budget"), inclusief correcte meervoudsvorm ("heeft"/"hebben").
+
+**Bewust niet gebouwd (zie 42e, de "wat ontbrak"-lijst in het ontwerp zelf)**:
+- Punt 01, "Vergeleken met [definitief budget]": de KPI-rij toont nog gewoon de huidige budget/contract/factuur-sommen, geen bron-selector tussen "Definitief budget" en "Handmatig" — hoort bij de budgetflow-koppeling, niet bij deze visuele overzet.
+- Punt 06, "Factuur inlezen (PDF)": stond in het ontwerp als derde item in de "Toevoegen"-dropdown, hier niet toegevoegd (geen OCR-intake voor facturen).
+- De link "Open [categorie] per activiteit (42f) →" onderaan een opengeklapte categorie gaat tussentijds naar de **bestaande** `RecalculationDetail`-pagina (legacy, per activiteit) — niet naar een nieuwe 42f-pagina (categorie met sub-tabbar + leverancierskaarten + contractinfo), die nog gebouwd moet worden.
+- De "Inkomende factuur"-dropdown-items blijven twee apart (met/zonder contract, zoals legacy) i.p.v. één formulier waarin je kiest — dat zit bij 42c ("Factuur toevoegen"), een volgende stap.
+- Filterchips/zoekveld filteren client-side (plain JS, geen eigen endpoint) — geen `.gl-v2-filters-toggle`-paneel zoals andere lijstpagina's, want het ontwerp toont de chips altijd direct zichtbaar, geen inklapbaar paneel.
+
+**Update 10/10/2026 — ook de "wat ontbrak"-lijst (42e) wordt nu meegebouwd**, op expliciet verzoek, inclusief waar nodig additieve databasemigraties (`_migrations/NNN_*.sql`, handmatig in SSMS, zoals de rest van deze codebase) — nooit een bestaande kolom/BO-eigenschap wijzigen of verwijderen, zodat alle legacy-schermen exact blijven werken. Zie de 42b/42f-sectie hieronder voor wat daarvan al verwerkt is.
+
+## Projecten/RecalculationDetailV2 — Nacalculatie, categorie-/activiteit-detail (design-handoff punt 42b "Categorie Bovenbouw" + 42f "Subcategorieën", 10/10/2026)
+Eén view voor zowel 42b als 42f: `Views/Projecten/Contracts/RecalculationDetailV2.cshtml`, gevuld door `ProjectenController.Contracts.BuildRecalculationDetailV2Vm`. 42f is gewoon 42b met een extra pill-rij zodra de categorie meer dan 1 activiteit heeft (`RecalculationDetailV2Vm.SubTabs`) — leeg = geen pill-rij, exact zoals "Bovenbouw" (1 activiteit) in het ontwerp. De route (`RecalculationDetail(int projectId, int activityId, int groupid)`) is **ongewijzigd** t.o.v. legacy; `activityId == 0` betekent in de V2-tak "alle activiteiten van deze categorie" (in de legacy-tak betekent het nog steeds "toon gewoon de eerste tab", zie `Recalculation Detail.cshtml`'s eigen `Model.ActivityID == 0 ? activity == filteredActivities.First() : ...` — geen van beide interpretaties raakt de andere, het is enkel een andere manier om "geen specifieke keuze" te lezen).
+
+**Correctie 11/10/2026**: de subcategorieën onder de categorie-tabbar zijn GEEN tweede tabbar — het ontwerp (42f se eigen titel) zegt letterlijk "activiteit-pills in de inhoud, onder de categorie-tabbar". De eerste versie had dit verkeerd als een kleinere, groene tweede `.gl-v2-tabbar` gebouwd; vervangen door het nieuwe, project-brede `GlV2/_PillSelector`-component.
+
+**Nieuw project-breed component: `GlV2/_PillSelector.cshtml` + `Models/GlV2/GlV2PillItemVm.cs` + `css/gl-v2/pills.css`** (eerste toepassing hier, 11/10/2026) — een rij navigatie-pills met een telling-chip (bv. "Alle activiteiten · 3", "Elektrische installatie · 4"), elk item een eigen URL (geen formuliertoestand). De pill-stijl zelf bouwt uitsluitend op bestaande tokens (`--gl-v2-radius-pill`, `--gl-v2-primary`, `--gl-v2-neutral-tint`) — geen nieuwe kleuren/radii verzonnen.
+
+**Regel: maximaal 6 pills; bij meer valt de rij terug op een doorzoekbare combo** (`ViewData["Threshold"]`, standaard 6) i.p.v. te laten wrappen/overlopen — box met zoekveld + een kruisje op de trigger dat de selectie wist (`ViewData["ClearUrl"]`, getoond zodra de actieve keuze niet al die url is; "geen selectie" = terug naar "Alle activiteiten"). **Update 11/10/2026, na feedback dat de eerste versie (een kale `<select>`) onzichtbaar was** (een `<select class="gl-v2-field-input">` zonder omringende `.gl-v2-field-box` — die klasse is bewust rand-/achtergrondloos, bedoeld om IN een `.gl-v2-field-box` te zitten, zie DESIGN.md's eigen les hierover): vervangen door het bestaande, projectbrede combo-skelet uit `gl-v2/forms.css` (`.gl-v2-select`/`-trigger`/`-trigger-clear`/`-panel-search`/`-search-field`/`-options`/`-option` — exact dezelfde klassen als `GlV2SearchSelect.cshtml`). Elke optie is een gewone `<a href>` (kiezen = navigeren, geen JS nodig voor de keuze zelf); enkel open/dicht-zetten en het live filteren op tekst (`.gl-v2-select-option[hidden]`, al een gedocumenteerd mechanisme in `forms.css`) zijn nieuw, als `initGlV2NavCombo()`/`window.GlV2NavCombo` in `gl-v2-shell.js` — hergebruikt `glV2SelectCloseAll()`/`glV2SelectPosition()` van de bestaande `initGlV2Select()` (de gedeelde "klik buiten sluit"-listener herkent nu zowel `data-gl-v2-select` als `data-gl-v2-navcombo`). Bewust geen 6e page-kopie van het "zoekend dropdown"-patroon (zie de les uit het vorige gesprek over waarom er zoveel page-CSS bestaat die eigenlijk projectbreed hoort) — dit is de eerste écht gedeelde implementatie ervan.
+
+**Naamcorrectie, zelfde dag**: eerst `data-gl-v2-combo`/`window.GlV2Combo` genoemd, zonder te beseffen dat dat al bestond — design-handoff punt 34's eigen "Keuzelijst met zoekveld en knop" (`GlV2/_GlV2Combo.cshtml` + `gl-v2-combo.js`, een heel ander, formuliergebonden AJAX-zoekveld, bv. de leveranciers-picker op `Projecten/AddContractV2.cshtml`). Beide scripts laden projectbreed (`_LayoutV2.cshtml`), dus dit was een echte botsing: `window.GlV2Combo` zou door welk bestand ook als laatste laadt overschreven worden, en `[data-gl-v2-combo]`-elementen van de een zouden (onschadelijk maar verwarrend) ook door de JS van de ander bekeken worden. Hernoemd naar `GlV2NavCombo`/`data-gl-v2-navcombo` vóór dit ergens anders hergebruikt werd. Les: grep altijd op de EXACTE naam die je gaat gebruiken (`data-gl-v2-*`, `window.GlV2*`) vóór je 'm kiest, niet enkel op het concept.
+
+Aanroep: `@await Html.PartialAsync("GlV2/_PillSelector", new List<GlV2PillItemVm> { ... }, new ViewDataDictionary(ViewData) { ["Label"] = "...", ["ClearUrl"] = "..." })`. Project-breed geladen (`_LayoutV2.cshtml`, naast `kpi.css`), dus meteen beschikbaar voor elke volgende pagina die een korte rij geteld-getagde keuzes nodig heeft — geen nieuwe page-CSS/JS ervoor nodig.
+
+**Herbruikt**: de categorie-tabbar is letterlijk `.gl-v2-tabbar`/`.gl-v2-tabbar-tab` (het goudkleurige actief-lijntje en `.gl-v2-tabbar-error-dot` bleken al precies de signaal-stip uit het ontwerp — geen nieuwe CSS nodig), nu als volle paginalinks (groupid verandert) i.p.v. JS-tabs, consistent met hoe deze pagina sowieso al navigeert. `_KpiStrip`, `.gl-v2-section-card`, `.gl-v2-badge`, `.gl-v2-notice-compact.is-info` (infokader bij "geen contract") allemaal ongewijzigd hergebruikt.
+
+**Gedeelde sommen met 42a**: `ContractSom`/`FactuurSom`/`BudgetSom`/`Geld` en de categorieën-met-badges-opbouw zijn uit `BuildRecalculationIndexV2Vm` getrokken naar vrije instance-methodes (`RecalcContractSom`/`RecalcFactuurSom`/`RecalcBudgetSom`/`RecalcGeld`/`BuildCategorieenV2`) zodat deze pagina exact dezelfde badge-logica gebruikt voor haar tier-1-signaaldots — geen tweede, licht-andere kopie.
+
+**Contractstrook per leverancier** (CONTRACT/MEERWERK/GEFACTUREERD/SALDO/BORG/BETAALTERMIJN — design-handoff 42b), allemaal uit bestaande `ContractBO`-velden, geen nieuwe kolom nodig:
+- `CONTRACT` = `Contract.Activities` (binnen de scope van deze categorie/activiteit) `.Sum(EffectivePrice)` — inclusief bijbestellingen.
+- `MEERWERK` = som van facturen met `IncommingInvoiceType.Meerwerk` (niet `Meerwerk_Klant`) voor dit contract.
+- `GEFACTUREERD` = som van `Contract`- + `Meerwerk`-type facturen samen (dus al inclusief de MEERWERK-kolom hierboven — geverifieerd tegen het ontwerp se eigen cijfers: €336.388 contract + €3.210 meerwerk = €339.598 gefactureerd, 100,9 % van het contract).
+- `SALDO` = `CONTRACT − GEFACTUREERD` (niet `CONTRACT + MEERWERK − GEFACTUREERD`, want GEFACTUREERD omvat MEERWERK al) — negatief = "meer dan contract + WO" (rood).
+- `BORG` = `GEFACTUREERD × Contract.GuaranteePercentage / 100`, enkel bij `GuaranteeType.FinancialGuarantee` (een bankwaarborg houdt niets in op de factuur).
+- `BETAALTERMIJN` = `Contract.PaymentTerm` dagen, met `· {CashDiscountPercentage}% / {CashDiscountPaymentTerm} d` erbij als `Contract.CashDiscount` aan staat.
+- De 5e KPI op categorieniveau ("Ingehouden borg", enkel als er geen specifieke activiteit gekozen is) is dezelfde BORG-formule, gesommeerd over alle contracten met een financiële waarborg in deze categorie.
+
+**Betaalstatus/korting per factuurrij** — gebruikt de net aan `IncommingInvoiceActivityBO` toegevoegde `DueDate`/`StatusId` (zie hieronder, 42e punt 09): `Betaald` (`StatusId == IncomingInvoiceStatus.Paid`, groen) · `Vervallen` (`DueDate` voorbij en niet betaald, rood) · anders, als het contract `CashDiscount` heeft en de kortingsdatum (`Invoicedate + CashDiscountPaymentTerm` dagen) nog niet voorbij is, een amberkleurig "Korting tot dd/MM" label — anders geen badge, zoals de meeste rijen in het ontwerp.
+
+**Facturentabel per groep** (CONTRACT/MEERWERK/MEERWERK KLANT/GEEN CONTRACT — enkel groepen met minstens 1 rij worden getoond). Geen "LOT"-kolom: het ontwerp heeft die, maar er bestaat in deze codebase geen apart "lot"-veld los van de activiteit/omschrijving om hem mee te vullen — bewust weggelaten i.p.v. verzonnen.
+
+**42f se "Activiteiten"-kaart** (enkel bij "Alle activiteiten" én een categorie met >1 activiteit): klikbare rijen die naar diezelfde pagina met een specifieke `activityId` linken — "Gegund" (is-positive) als er een contract bestaat voor die activiteit, anders "Nog te gunnen" (is-neutral).
+
+**Bewust niet gebouwd**: 42c se "+ 5 facturen tonen"-uitklaplink (alle rijen van een groep worden altijd getoond, geen inklap-limiet) en de losse "WO"-kolom bij meerwerk-klant-rijen (zie 42c, moet nog gebouwd worden — vraagt een eenheid/WO-koppeling op de factuurregel die vandaag niet bestaat).
+
+**42e, wat hier al in verwerkt is**:
+- Punt 02 (contractinfo bij de factuur) — de contractstrook hierboven, nu ook getoond per leverancier in Nacalculatie, niet enkel op de (enkelvoudige) factuurdetailpagina.
+- Punt 03 (vervaldatum/korting automatisch) — "Korting tot"-label, berekend, niet opgeslagen.
+- Punt 08 (signalen als filter/label) — al in 42a gebouwd, hier hergebruikt voor de tier-1-tabbar-stippen.
+- Punt 09 (betaalstatus), deels: `IncommingInvoiceBO`/`IncommingInvoiceActivityBO` kregen een `DueDate`/`StatusId`-property (**geen migratie** — de kolommen bestonden al in `DALCore.Models.IncommingInvoices`, gevuld door de verrijkings-/Octopus-pijplijn, maar werden door `IncommingInvoiceTranslator`/`IncommingInvoiceActivityTranslator` niet doorgegeven — "dode infrastructuur", nu enkel alleen-lezen aangesloten). Bewust **geen schrijfpad**: het legacy Add/Edit-formulier heeft geen veld hiervoor, en zou bij een gewone POST deze kolommen op hun CLR-default (Nothing/0) binden en zo de pijplijn se eigen waarden overschrijven — vandaar dat `IncommingInvoiceTranslator.TranslateBOToEntity` deze twee velden nooit terugschrijft. Betaalstatus is dus enkel zichtbaar voor facturen die via de verrijkings-/Octopus-pijplijn liepen; handmatig ingevoerde facturen (dit scherm se eigen Add/Edit) blijven zonder badge, exact zoals voorheen.
+- Nog open van 09: een echte koppeling met een "Betalingen"-module bestaat niet (die module bestaat niet — "Betaling"/"Payment" elders in de codebase zijn onverwante verkoop-betalingsschijven); de badge hier is enkel afgeleid van `StatusId`/`DueDate`, niet van een echte betaling-registratie.
+
+**Update 10/10/2026 — 42e punt 01 (definitief budget als Begroot-bron) is nu verwerkt**, in zowel 42a als 42b/42f: `ProjectenController.Contracts.GetBegrootRegelsV2(projectId, legacyBudget)` zoekt eerst of er een `BudgetVersie` met `Status == "Definitief"` bestaat voor dit project (`_uow.BudgetVersies`); zo ja, dan komt "Begroot" uit `BudgetActivityService.GetLotGroepenAsync(definitiefVersieId)` (dezelfde `ActivityId`/`GroupId`-taxonomie, via `BudgetActivityLijnBO.TotaalAlternatief`), en toont de Begroot-KPI de bron als hint ("Budgetnaam vN", zoals het ontwerp se "Vergeleken met [definitief budget]" — een losse bron-pil zoals het ontwerp toont is niet gebouwd, enkel de hint). Zonder Definitief budget valt het terug op het oude, eenvoudige `ProjectContractsModel.BudgetActivities` (`CalculationSettings`/legacy Recalculation blijven dat ongewijzigd gebruiken/bewerken — deze twee bronnen zijn en blijven volledig gescheiden datamodellen, enkel toevallig dezelfde `ActivityBO`/`ActivityGroupBO`-sleutels). `GetLotGroepenAsync` is async; de actie zelf bleef bewust sync (`.GetAwaiter().GetResult()` op die ene aanroep) om de bestaande, ook door de legacy-view gedeelde actie-signatuur niet te moeten wijzigen.
+
+## Projecten/AddIncommingInvoiceV2 — Factuur toevoegen (design-handoff punt 42c, 10/10/2026)
+Geen nieuw formulier/opslagpad: `Views/Projecten/IncomingInvoices/AddIncommingInvoiceV2.cshtml` post naar de **bestaande** `ProjectenController.AddIncommingInvoice`-actie (zelfde model `ProjectIncommingInvoiceAddUpdateModel`, zelfde `Html.BeginCollectionItem("details")`-binding, zelfde validatie: factuurbedrag moet gelijk zijn aan de som van de regels). De actie branchet enkel op `ViewData["UseGlV2Layout"]` naar deze view (GET en de twee invalid-model-terug-naar-dezelfde-view-paden) — geen enkele legacy-gedraging veranderde. Edit (`EditIncommingInvoice`) heeft bewust nog geen V2-tegenhanger — bijna identiek aan Add, volgende stap.
+
+**Herbruikt, ongewijzigd**: de AJAX-lookups zelf (`GetContractActivities`/`GetCompanyActivities`/`GetCompanys` — generieke endpoints in `ProjectenController.Lookups.cs`), `Html.BeginCollectionItem`, `GetContractChangeOrdersForSelect` (WO-lijst per contract), de `GlV2Text`/`GlV2Date`/`GlV2Currency`-EditorTemplates, `.gl-v2-form-actionbar`, `.gl-v2-detail-grid`/`-field` (contractinfo-zijbalk, zelfde opbouw als de al bestaande kaart op `IncommingInvoiceDetailV2.cshtml`).
+
+**Correctie 11/10/2026 — de drie select2/Bootstrap-velden (Contract-dropdown, Bedrijf-zoekveld, Activiteiten-multiselect) renderden onzichtbaar** (`.gl-v2-field-input` zonder `.gl-v2-field-box`, select2 se eigen Bootstrap-thema zit niet consistent in een gl-v2-pagina) — vervangen door gl-v2-native componenten:
+- **Contract**: `GlV2/_SelectList.cshtml` (`window.GlV2Select`), opties client-side ververst via de bestaande `window.GlV2Select.setItems(wrap, items, value)` (al generiek, voor elke afhankelijke keuzelijst — niets nieuws geschreven).
+- **Leverancier (zonder contract)**: `GlV2/_GlV2Combo.cshtml` + `GlV2ComboVm`, zelfde `data-lookup-url`/`GetCompanys`-aanroep als `Projecten/AddContractV2.cshtml`'s leveranciersveld — zelfwerend bedraad (`gl-v2-combo.js`, al projectbreed geladen), geen eigen JS nodig.
+- **Activiteiten**: niet meer meervoudig (select2 multi + bulk-Toevoegen) maar één `GlV2/_SelectList` + "Toevoegen"-knop, één regel per klik — matcht het ontwerp se eigen toevoegrij (42c: "dashed select + knop", geen meervoudige keuze) exact, en is tegelijk de eenvoudigste oplossing voor een lijst die server-side niet gegroepeerd hoeft te worden.
+- **Met/zonder contract** is nu een segmented control IN het formulier (zie hieronder) i.p.v. een server-side `Model.Type`-branch — de twee velden staan allebei in de DOM, de knop toont/verbergt enkel en wist de verborgen waarde van het veld dat net onzichtbaar wordt (anders zou bv. een eerder gekozen ContractID stiekem blijven meesturen).
+
+**Correctie 11/10/2026 — 42a had bewust geen twee aparte menu-items** ("Inkomende factuur · contract" / "· zonder contract") — het ontwerp heeft er één ("met of zonder contract — je kiest in het formulier"), plus het derde item uit het ontwerp dat nog ontbrak, "Factuur inlezen (PDF)" (gaat naar dezelfde pagina, `focusUpload=true` scrollt naar de dropzone i.p.v. een aparte intake-pagina te bouwen). `RecalculationV2.cshtml`'s "Toevoegen"-menu aangepast; `AddIncommingInvoice(..., bool focusUpload = false)` geeft dit door via `ViewData["FocusUpload"]`.
+
+**Correctie 11/10/2026 — de actiebalk hing niet aan de onderkant**: `.gl-v2-form-actionbar` heeft al een projectbrede `margin-top:auto` (zie DESIGN.md's eigen eerdere les hierover), maar dat werkt enkel als de DIRECTE flex-ouder `flex:1;min-height:0` heeft — hier het `<form>`-element zelf. `#gln-ai-form` had `display:flex;flex-direction:column` maar miste `flex:1;min-height:0`; toegevoegd (zelfde recept als `Leveranciers/EditV2`'s eigen formulier-wrapper).
+
+**Naambotsing gevonden en gecorrigeerd**: de nieuwe pill-selector-combo (zie de `GlV2/_PillSelector`-sectie hierboven) heette eerst ook `data-gl-v2-combo`/`window.GlV2Combo`, zonder te beseffen dat dat al bestond voor dit AJAX-zoekveld. Hernoemd naar `data-gl-v2-navcombo`/`window.GlV2NavCombo` vóór het ergens een probleem gaf — zie de toelichting daar.
+
+**Nieuw voor deze view** (eigen partial `_IncommingInvoiceDetailRowV2.cshtml` + acties, bewust NIET in de legacy partial/actie hergebruikt — twee kleine, losse stukken i.p.v. één met twee opmaak-takken):
+- **Soort (Vordering/Eindvordering/Creditnota, 42e punt 07)**: segmented control, schrijft naar een losse, plain `<input type="hidden" name="IncommingInvoice.Kind">` (bewust GEEN `asp-for` — die zou de waarde overschrijven met Model.IncommingInvoice.Kind, dat bij een nieuwe factuur Nothing is, en dan verstuurt deze V2-form net als de legacy-form geen expliciete waarde meer — het hele punt van een losse `Kind`-property was net dat de V2-form altijd iets expliciets meestuurt, zie de translator-toelichting bij 42b/42f hierboven). Bij een validatiefout toont de segmented control gewoon de eerder gekozen waarde terug (serverside berekend, niet hardcoded op "Vordering").
+- **Contractinfo-zijbalk (42e punt 02)**: nieuwe actie `GetContractInfoForInvoiceFormV2(contractId)` (JSON: leverancier, contractbedrag, btw%, betaaltermijn+korting-tekst, waarborg) — live opgehaald zodra de gebruiker een contract kiest (op de bestaande detailpagina staat het contract al vast, hier nog niet, dus kan het niet server-side vooraf berekend worden zoals daar).
+- **Vervaldatum/korting (42e punt 03)**: client-side berekend (factuurdatum + contract.PaymentTerm/CashDiscountPaymentTerm) uit de zelfde contractinfo-JSON — **niet verstuurd/opgeslagen**, blijft bewust een puur informatief veld (zie 42b/42f: `IncommingInvoiceBO.DueDate` heeft hier nog steeds geen schrijfpad).
+- **PDF-intake (42e punt 06)**: nieuwe actie `AddIncommingInvoiceV2ExtractPdf`, roept de al bestaande maar tot nu toe enkel door de Octopus-achtergrondpijplijn gebruikte `IAzureInvoiceAnalysisService` (Azure Document Intelligence, `prebuilt-invoice`) aan en vult Factuurnummer/Factuurdatum/Factuurbedrag in (plus zet "Creditnota" als Azure zelf al `DocumentType == "CreditNote"` herkende). Vult de leverancier NIET automatisch in — geen matching op bedrijfsnaam, te foutgevoelig om blind te vertrouwen; de melding toont enkel de herkende naam zodat de gebruiker ze zelf kan kiezen. Het bestand wordt via `DocStorageService` (map "invoices") wel bewaard, maar hangt nergens aan — er is geen bijlageveld op `IncommingInvoiceBO` (zie 42b/42f se toelichting bij de "dode infrastructuur"-aanpak: geen nieuw veld verzinnen zonder een echt gebruik).
+- **Somcontrole-actiebalk (42e punt 05)**: pure client-side JS, herrekent bij elke regel-/bedragwijziging — groen "N regels = € X · gelijk aan factuurbedrag" of rood met het echte factuurbedrag erbij; de server-side validatie (al legacy, ongewijzigd) blijft de echte bron van waarheid bij Opslaan.
+- **WO-kolom bij meerwerk klant**: de rij se Type-dropdown (`window.GlV2IncommingInvoiceAdd.onTypeChange`) zet de WO-select actief zodra Type = "Meerwerk klant" — exact dezelfde `value !== "3"`-voorwaarde als de legacy rij se eigen `change(this)`-functie.
+
+**Nog te bouwen**: 42d (Budget instellen — bron definitief budget vs. handmatig, verschilkolom), losse 42e-punten 04-UI (borg "vrijgeven"-knoppen — de migratie/velden bestaan al, zie 42b/42f hierboven).
+
+**Correctie 11/10/2026, tweede ronde — lay-out klopte op meerdere punten niet met 42c**:
+- **Dropzone enkel in kolom 1**: stond eerst boven de volledige `.gln-ai-grid` (dropzone + zijbalk samen), waardoor het contractinfo-paneel er altijd ONDER kwam i.p.v. ernaast — verplaatst in `.gln-ai-main`, boven de "Algemene info"-kaart, binnen dezelfde kolom als de zijbalk.
+- **Contract-veld (met contract) is nu ook een `GlV2/_GlV2Combo`**, net als het leveranciersveld — niet meer `GlV2/_SelectList`. Verschil met het leveranciersveld: `OptionsJson` (statische lijst, `MinChars = 0`) i.p.v. `LookupUrl`, zodat alle contracten van het project meteen zichtbaar zijn zodra je erin klikt (`data-list-label="Alle contracten"`) — er typen is niet verplicht zoals bij de leveranciers-AJAX, een project heeft doorgaans maar een handvol contracten. Gevolg: de "Met/zonder contract"-toggle reset nu beide velden op dezelfde manier (`window.GlV2Combo.setValue(..., '', '', '')`) — de eerdere aparte `wisTrigger()`-functie voor een `_SelectList`-trigger is weg.
+- **Contractinfo-zijbalk herordend**: kop is nu een vaste titel "Contract" met de "Getekend"-badge op de uiterst rechtse plek (`.gl-v2-section-card-spacer`, niet meer `.gl-v2-field-divider`) i.p.v. een dynamische titel met de badge ernaast. In het lichaam: rij 1 = Leverancier, rij 2 = Contractnaam — **enkel getoond als het contract écht een naam heeft** (`GetContractInfoForInvoiceFormV2` geeft nu `contractNaam: null` terug i.p.v. het verzonnen `"Contract #" + c.Id"`-fallback van de eerste versie; de JS verbergt de hele rij als er niets is, toont nooit meer een betekenisloos nummer). Alle velden in `.gl-v2-detail-grid` kregen `.is-full` — die klasse is standaard een 4-KOLOMS grid (`gl-v2/page.css`), wat in een smalle 360px-zijbalk Contractbedrag/Btw over elkaar liet overlappen (precies het "niet goed geordend" dat gemeld werd).
+- **Veldengrid herverdeeld**: Factuurnummer is nu `col-6` (zoals Leverancier/Contract). Factuurdatum/Vervaldatum/Factuurbedrag staan samen op één rij, elk `col-4` (drie gelijke kolommen) — een eerste tussenversie zette Factuurdatum per ongeluk alleen op `col-12`, gecorrigeerd na feedback: op desktop horen alle drie op dezelfde rij, elk veld vult de breedte van zijn eigen kolom. De Vervaldatum-rij kreeg ook de ontbrekende `.gl-v2-field`-wrapper (vroeger los `<label>`+`.gl-v2-field-box`+`.gl-v2-field-help` zonder gemeenschappelijke flex-kolom-container) — dat was de bron van de ontbrekende label-naar-veld-ruimte t.o.v. Factuurdatum (die via `GlV2Date` wél al in `.gl-v2-field` zat).
+- **Toevoegrij**: `.gln-ai-addrow > .gl-v2-field { flex:1 }` toegevoegd — het activiteitenveld nam voorheen enkel zijn eigen inhoudsbreedte in, niet de volledige breedte min de knop.
+- **Factuurregels-tabel: dezelfde `.gl-v2-field-input`-zonder-`.gl-v2-field-box`-fout als eerder** (zie de 42c-sectie hierboven, "de drie select2/Bootstrap-velden") — nu ook in `_IncommingInvoiceDetailRowV2.cshtml`: Type/Omschrijving/Bedrag/WO renderden als onopgemaakte, randloze invoervelden. Elk veld kreeg zijn `.gl-v2-field-box`-wrapper (34px, zelfde "veld in een tabelrij"-recept als `gl-v2-bw-table .gl-v2-field-box`, DESIGN.md/Budgetflow), Bedrag kreeg er ook de `.gl-v2-field-suffix`-€-badge bij (zoals `GlV2Currency`).
+- **Legende onder de tabel** (ontbrak volledig): de 4 regeltype-chips uit 42c, woord voor woord overgenomen — Contract (`is-positive`) "telt mee in gecontracteerd vs gefactureerd", Meerwerk klant (`is-attention`) "wordt doorgerekend aan de klant · eenheid verplicht, WO optioneel", Meerwerk algemeen (`is-neutral`) "kost voor het project, niet doorgerekend", Geen contract (`is-neutral`) "enkel als de factuur geen contract heeft".
+
+**Correctie 11/10/2026, derde ronde**:
+- **Factuurdatum/Vervaldatum/Factuurbedrag op één rij, elk `col-4`** (drie gelijke kolommen op desktop) — de vorige ronde zette Factuurdatum per ongeluk alleen op `col-12`.
+- **Activiteit-toevoegen uitgeschakeld zolang er geen leverancier/contract gekozen is**: `setActiviteitenDisabled()` zet `aria-disabled="true"` op de `lstActivities`-trigger (dezelfde eigenschap die `initGlV2Select()` se eigen klik-handler al checkt om te weigeren te openen — geen nieuwe CSS/blokkeerlogica nodig, enkel het attribuut) en `disabled` op de Toevoegen-knop. Staat standaard aan bij laden; `refreshActiviteiten()` (na een echte contract-/leverancierskeuze) zet 'm weer uit, `leegActiviteiten()` (toggle wisselen, keuze gewist) zet 'm terug aan.
+
+**Correctie 11/10/2026, vierde ronde — contractkaart herbouwd naar de echte 42c-kaart** (voorbeeldscreenshot: naam/ondertitel, voortgangsbalk "Gefactureerd incl. deze factuur" met "eerder"/"deze"-segmenten + legende, financieel grid Contractbedrag/Meerwerk (WO)/Reeds gefactureerd/Saldo na deze factuur, BORG/KORTING CONTANT/BETAALTERMIJN/BTW-detailrijen, "Contract openen"-knop) i.p.v. de eerdere platte `.gl-v2-detail-grid` met 6 losse label/waarde-rijen:
+- **Eerst uitgezocht wat écht bestaat** (onderzoeksronde, geen giswerk): contractnummer ("C-2025-004"), ondertekend-datum (enkel een verzend-datum bestaat, `ContractSentDate`), "alle loten", actief/inactief-status, prijsherzieningsformule en de BTW-regimetekst ("verlegd") bestaan **nergens** in `ContractBO`/de DB — op uitdrukkelijk verzoek bewust NIET verzonnen/toegevoegd, die rijen/velden ontbreken dus gewoon in de kaart i.p.v. een nep-waarde te tonen. De borg-50/50-VO/DO-splitsingstekst uit het voorbeeld is om dezelfde reden weggelaten (enkel het percentage + "op deze factuur"-bedrag staan er, geen verzonnen vrijgaveregeling).
+- **"Reeds gefactureerd"/"Meerwerk (WO)" zijn nieuw in `GetContractInfoForInvoiceFormV2`** — zelfde filteridioom als `RecalcLeverancierKaartV2` (`ProjectenController.Contracts.cs`, ~regel 1211-1213): alle `IncommingInvoiceActivityBO` van dit contract (`_projectService.GetProjectIncommingInvoicesForRecalculation(c.ProjectId)`, gefilterd op `ContractId`), "gefactureerd" = type Contract+Meerwerk samen, "meerwerk" enkel het Meerwerk-deel (Meerwerk_Klant telt in geen van beide mee, dat wordt aan de klant doorgerekend, niet aan dit contract).
+- **"Deze factuur" (het 2e balksegment, de legende, het saldo, de borg-/korting-bedragen) is bewust client-side**, niet van de server: op het moment dat de contractinfo opgehaald wordt (zodra je een contract kiest) staan de factuurregels er nog niet — `dezeFactuurBedrag()` telt de huidige `#DetailRows`-prijzen op, nieuwe functie `updateContractLiveCijfers()` herrekent balk/legende/saldo/borg-hint, aangeroepen vanuit `recomputeSomcontrole()` (elke regel-toevoeging/verwijdering/bedragwijziging) én vanuit `laadContractInfo()`/`toonGeenContract()`. De korting-hint ("€X als betaald vóór DD/MM") blijft in `recomputeVervaldatum()` zitten (heeft de factuurdatum nodig, die al daar berekend werd) — `updateContractLiveCijfers()` roept die gewoon mee aan i.p.v. de datumlogica te dupliceren.
+- **Gesplitste voortgangsbalk bestaat nergens anders in gl-v2** (nagevraagd: `GlV2/_ProgressBar.cshtml`/`gl-v2/progress.css` is single-fill, de 42a/42b-balken in Recalculation(Detail)V2 ook) — hier page-scoped nieuw gebouwd (`.gln-ai-contract-track{display:flex}` + twee `.gl-v2-progress-fill`-kinderen die als flex-items naast elkaar renderen i.p.v. het bestaande absolute-positionering-patroon) i.p.v. een generieke component te forceren voor één enkel gebruik; een goede kandidaat om later alsnog projectbreed te trekken als een tweede scherm 'm nodig heeft.
+- **"Contract openen"** gebruikt de al bestaande route (`DetailContract`/`Projecten`, zelfde actie als `DetailContractsV2.cshtml`se eigen link) — `cfg.contractOpenUrl` bevat een placeholder (`contractid=0`), de JS vervangt die string zodra een contract geladen wordt; geen nieuwe actie nodig.

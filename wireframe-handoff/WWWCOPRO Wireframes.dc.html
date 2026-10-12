@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}a{color:#00532D}a:hover{color:#006638}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-tsub{font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.55);margin:0 0 20px;max-width:900px}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.wf{font-family:Kalam,cursive;color:#1d1d1b;background:#fff;position:relative}
+.wf *{box-sizing:border-box}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#00532D;color:#fff;gap:10px}
+.hdr.tr{background:transparent;position:absolute;top:0;left:0;right:0;z-index:3}
+.logo{display:flex;align-items:center;gap:7px;font:700 12px/1 Kalam,cursive;color:#fff;white-space:nowrap}
+.logo i{width:20px;height:22px;border:1.5px solid #fff;border-radius:3px;display:block}
+.logo b{width:1px;height:18px;background:rgba(255,255,255,.4);display:block}
+.tel{display:flex;align-items:center;gap:5px;font:8px/1.1 ui-monospace,monospace;color:#fff;margin-left:8px}
+.tel i{width:13px;height:13px;border:1px solid rgba(255,255,255,.6);border-radius:50%;display:block}
+.nv{display:flex;align-items:center;gap:10px;font:700 8px ui-monospace,monospace;letter-spacing:.5px;text-transform:uppercase;color:#fff}
+.mb{width:20px;height:20px;border-radius:50%;background:#C9A96E;display:flex;align-items:center;justify-content:center;color:#1d1d1b;font:700 11px/1 system-ui}
+.ftr{background:#00532D;color:rgba(255,255,255,.85);padding:9px 14px;font:9px ui-monospace,monospace;display:flex;justify-content:space-between;gap:10px}
+.sec{padding:16px 18px;position:relative}
+.mist{background:#F2F5EF}.g{background:#00532D;color:#fff}.gd{background:#003D21;color:#fff}.olv{background:#3D7A4E;color:#fff}
+.ph{background:repeating-linear-gradient(-45deg,#f3f3ef 0 6px,#e5e5df 6px 12px);border:1.5px solid #1d1d1b;border-radius:4px;display:flex;align-items:center;justify-content:center;font:9px ui-monospace,monospace;color:#666;text-align:center;padding:4px}
+.ph.dk{background:repeating-linear-gradient(-45deg,#3c3c37 0 6px,#33332f 6px 12px);color:#bbb;border-color:#1d1d1b}
+.ln{height:5px;background:#d4d4cd;border-radius:3px;margin:4px 0}.ln.w{background:rgba(255,255,255,.35)}
+.h1{font:700 21px/1.1 Kalam,cursive;margin:0}.h2{font:700 16px/1.15 Kalam,cursive;margin:0}.h3{font:700 12px/1.2 Kalam,cursive;margin:0}
+.k{font:700 7.5px ui-monospace,monospace;letter-spacing:1.6px;text-transform:uppercase;color:#00532D;margin:0 0 5px}.k.gold{color:#C9A96E}.k.mu{color:#777}
+.btn{display:inline-flex;align-items:center;gap:5px;border:1.5px solid #1d1d1b;border-radius:4px;padding:5px 9px;font:700 7.5px ui-monospace,monospace;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;background:#fff;color:#1d1d1b}
+.btn.p{background:#00532D;border-color:#00532D;color:#fff}.btn.gh{background:transparent;border-color:rgba(255,255,255,.7);color:#fff}.btn.gold{background:#C9A96E;border-color:#C9A96E;color:#1d1d1b}.btn.olv{background:#3D7A4E;border-color:#3D7A4E;color:#fff}.btn.wo{background:transparent;border-color:rgba(255,255,255,.6);color:#fff}
+.pill{display:inline-flex;align-items:center;gap:4px;border:1px solid #1d1d1b;border-radius:99px;padding:1px 7px;font:7.5px ui-monospace,monospace;white-space:nowrap}
+.bdg{display:inline-block;font:700 6.5px ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:2px;background:#00532D;color:#fff}
+.card{border:1.5px solid #1d1d1b;border-radius:4px;background:#fff;overflow:hidden}
+.tag{position:absolute;z-index:5;background:#fff6b8;border:1px solid #d8c96a;font:8.5px/1.35 ui-monospace,monospace;color:#5a4a00;padding:3px 6px;border-radius:2px;transform:rotate(-1.2deg);box-shadow:1px 1px 0 rgba(0,0,0,.08);max-width:180px}
+.rule{display:flex;align-items:center;gap:8px;font:700 7.5px ui-monospace,monospace;letter-spacing:1.6px;text-transform:uppercase;color:#777;margin:0 0 8px}.rule::after{content:"";flex:1;height:1px;background:#bbb}
+.crumb{font:8px ui-monospace,monospace;color:#777;margin:0 0 6px}
+.cl{border-left:1px solid #bbb;padding-left:10px}.cl.w{border-color:rgba(255,255,255,.3)}
+.fld{border:1.5px solid #1d1d1b;border-radius:3px;height:18px;background:#fff}
+.lbl{font:700 6.5px ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;color:#666;margin:0 0 2px}
+.spec{font:8.5px/1.45 ui-monospace,monospace;color:#444}
+.spec b{color:#1d1d1b}
+.cdef{width:300px;display:flex;flex-direction:column}
+.cdef .viz{padding:16px;background:#F2F5EF;border-bottom:1px solid #ddd;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.cdef .txt{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.cdef .nm{font:700 14px/1.1 Kalam,cursive;margin:0}
+.src{font:8px ui-monospace,monospace;color:#2a78d6}
+</style></helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">General layout — the page shell every WWWCOPRO page sits in</span></div>
+<p class="dv-tsub">Three page shells exist in the CSS: the <b>home</b> shell (transparent header over a full-screen video), the <b>standard</b> shell (solid green header + light "page-header" band), and the <b>hero</b> shell (transparent header over a green hero — Over ons, Vacatures). All share the same footer and menu overlay. Background is always warm off-white #F2F5EF.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Home shell — transparent header</div>
+<div class="dv-card wf" style="width:380px">
+<div style="position:relative;height:250px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:0 14px 12px">
+<div class="ph dk" style="position:absolute;inset:0;border:0;border-radius:0">full-screen hero video · 100vh</div>
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div></div><div class="nv"><span>· · · ·</span><span class="mb">≡</span></div></div>
+<div style="position:relative;z-index:2;color:#fff;text-align:center;font:9px ui-monospace,monospace">hero content (see <a class="dv-oid" href="#2a">2a</a>)</div>
+<span class="tag" style="top:40px;right:8px">header fades to solid green on scroll (~175px)</span>
+</div>
+<div class="sec mist" style="height:110px;display:flex;flex-direction:column;gap:6px"><div class="k">section kicker</div><div class="h2">Section · padding 100px 0</div><div class="ln" style="width:70%"></div><div class="ln" style="width:55%"></div></div>
+<div class="sec mist" style="height:60px;border-top:1px dashed #ccc;font:9px ui-monospace,monospace;color:#777">… more sections</div>
+<div class="ftr"><span>FOOTER (see <a class="dv-oid" href="#1f" style="color:#fff;background:rgba(255,255,255,.15)">1f</a>)</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Standard shell — solid header + page-header band</div>
+<div class="dv-card wf" style="width:380px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span>link</span><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc;padding-bottom:14px"><div class="crumb">Home / Section / Page</div><div class="h1">Page title (serif 36px)</div><div class="ln" style="width:60%;margin-top:6px"></div><div style="width:24px;height:2px;background:#00532D;margin-top:8px"></div>
+<span class="tag" style="top:10px;right:10px">.page-header · mist bg · hairline bottom</span></div>
+<div class="sec mist" style="height:210px"><div style="border:1.5px dashed #999;border-radius:4px;height:100%;display:flex;align-items:center;justify-content:center;font:9px ui-monospace,monospace;color:#777">.container (Bootstrap 12-col)<br>page content</div></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div>
+<div class="spec" style="max-width:380px"><b>Breadcrumb rule:</b> only shown when the page is 3+ levels deep (Home / Section / Page). Top-level pages show none.<br>Used by: Projecten, Project detail, Inschrijving, Blog, Blog artikel, Contact, Legal.</div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Hero shell — transparent header over green hero</div>
+<div class="dv-card wf" style="width:380px">
+<div class="g" style="position:relative;padding:58px 16px 26px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 1px,transparent 1px 8px),#00532D">
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="k gold">kicker (gold on dark)</div><div class="h1" style="font-size:24px">Hero title 46px</div><div class="ln w" style="width:70%;margin-top:8px"></div><div class="ln w" style="width:50%"></div>
+<span class="tag" style="top:44px;right:8px">min-height 44vh · padding 140/88 · diagonal raster texture</span>
+</div>
+<div class="sec mist" style="height:150px;display:flex;flex-direction:column;gap:6px"><div class="k">kicker</div><div class="h2">Section</div><div class="ln" style="width:70%"></div></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div>
+<div class="spec" style="max-width:380px">Used by: Over ons hub, Projectbegeleiding, Grondverwerving (photo variant), Vacatures (photo + overlap card).</div></div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Header anatomy + menu overlay</div>
+<div class="dv-card wf" style="width:440px">
+<div class="hdr" style="padding:12px 16px"><div style="display:flex;align-items:center;gap:6px"><div class="logo" style="font-size:14px"><i style="width:24px;height:26px"></i><b style="height:24px"></b><span style="display:flex;flex-direction:column;gap:2px">GROUP LN<span style="font:7px ui-monospace,monospace;opacity:.75">SUBTITLE</span></span></div><div class="tel" style="margin-left:14px"><i style="width:16px;height:16px"></i><span>BEL ONS<br><b style="font-size:9px">0xx xx xx xx</b></span></div></div><div class="nv"><span>Link 1</span><span style="color:#C9A96E">Link 2</span><span>Link 3</span><span>Link 4</span><span class="mb" style="width:24px;height:24px">≡</span></div></div>
+<div class="sec mist" style="position:relative;height:250px">
+<div class="spec" style="max-width:190px"><b>Left</b> logo 50px + divider + brand text · phone chip (32px circle).<br><b>Right</b> max 4 uppercase links (hidden ≤991px) + round gold menu button 46px.<br>min-height 70px (80px mobile).</div>
+<div style="position:absolute;right:14px;top:8px;width:170px;background:#2b2b28;color:#fff;border-radius:8px;padding:10px;box-shadow:0 10px 24px rgba(0,0,0,.35)">
+<div style="font:12px/1.9 Kalam,cursive">Home<br>Te koop<br>Over ons<br>Vacatures<br>Blog<br>Contact</div>
+<div style="border-top:1px solid rgba(255,255,255,.2);margin-top:6px;padding-top:6px"><div class="k gold">Contact</div><div class="ln w" style="width:80%"></div><div class="k gold" style="margin-top:6px">Adres</div><div class="ln w" style="width:70%"></div></div>
+</div>
+<span class="tag" style="left:14px;bottom:14px">≥992px: 320px dropdown under button · ≤991px: full panel, 35px links · ≤767px: full screen 25px links</span>
+</div>
+</div>
+<div class="spec" style="max-width:440px">Nav link labels are placeholders — the Razor views weren't readable from the repo, so check the menu entries against the live site.</div></div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Mobile shell ≤767px</div>
+<div class="dv-card wf" style="width:200px">
+<div class="hdr" style="padding:12px 10px"><div class="logo"><i></i><b></b>GROUP LN</div><span class="mb">≡</span></div>
+<div class="sec mist" style="height:120px;padding:12px"><div class="h2">Page title 28px</div><div class="ln" style="width:80%;margin-top:6px"></div></div>
+<div class="sec mist" style="height:150px;padding:12px;display:flex;flex-direction:column;gap:6px"><div class="ph" style="height:70px">1 col</div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+<div class="g" style="padding:12px;text-align:center"><div class="h3" style="color:#fff">Footer quote centred</div><div class="ln w" style="width:60%;margin:6px auto"></div><div style="font:7px ui-monospace,monospace;opacity:.7">brand + contact only · projecten/group-ln cols hidden</div></div>
+</div>
+<div class="spec" style="max-width:200px">Sections 64px padding · grids collapse 4→2→1 at 991/767 · targets ≥44px.</div></div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Footer anatomy</div>
+<div class="dv-card wf" style="width:460px">
+<div class="g" style="padding:22px 18px 0">
+<div class="h2" style="color:#fff;font-size:19px;max-width:300px">"Large Playfair quote, 38px, max 720px"</div>
+<div style="height:1px;background:rgba(255,255,255,.2);margin:14px 0"></div>
+<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:12px;padding-bottom:18px">
+<div><div class="logo"><i></i>GROUP LN</div><div style="display:flex;gap:4px;margin-top:8px"><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span></div></div>
+<div><div class="k" style="color:#fff">Projecten</div><div class="ln w"></div><div class="ln w" style="width:70%"></div><div class="ln w" style="width:80%"></div></div>
+<div><div class="k" style="color:#fff">Group LN</div><div class="ln w"></div><div class="ln w" style="width:60%"></div><div class="ln w" style="width:75%"></div></div>
+<div><div class="k" style="color:#fff">Contact</div><div class="ln w"></div><div class="ln w" style="width:80%"></div></div>
+</div></div>
+<div class="gd" style="padding:7px 18px;display:flex;justify-content:space-between;gap:8px;font:7.5px ui-monospace,monospace;color:rgba(255,255,255,.7)"><span>© Group LN</span><span>Privacy · Cookies · Voorwaarden</span><span>AI note</span></div>
+</div>
+<div class="spec" style="max-width:460px">footer.css · columns 1.3fr 1fr 1fr 1fr / gap 32 → 2 cols ≤991 (brand full width) → 1 col centred ≤767.</div></div>
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Global layers (always present)</div>
+<div class="dv-card wf" style="width:300px">
+<div class="sec mist" style="height:250px;position:relative">
+<div class="btn p" style="position:absolute;top:0;left:0;border-radius:0 0 3px 0">Naar de inhoud</div>
+<div style="position:absolute;left:12px;right:12px;bottom:46px;background:#fff;border:1.5px solid #1d1d1b;border-radius:8px;padding:8px"><div class="h3">Cookie banner</div><div class="ln"></div><div style="display:flex;gap:4px;margin-top:4px"><span class="btn p">Accepteren</span><span class="btn">Weigeren</span><span class="btn" style="border:0">Voorkeuren</span></div></div>
+<div style="position:absolute;left:12px;bottom:12px;width:24px;height:24px;border-radius:50%;background:#00532D"></div>
+<div class="spec" style="position:absolute;top:30px;left:12px;right:12px"><b>Skip-link</b> (visible on Tab) · <b>cookie FAB</b> bottom-left reopens preferences · <b>contact modal</b> + <b>cookie prefs</b> dialogs (see <a class="dv-oid" href="#3t">3t</a>, <a class="dv-oid" href="#3u">3u</a>) · <b>.reveal</b> scroll-in on content blocks.</div>
+</div></div></div>
+
+</div>
+<p class="dv-next">Try next: "show the tablet 991px header" · "add the site map / page tree" · "check nav labels against the live site"</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Pages — desktop wireframes, top to bottom</span></div>
+<p class="dv-tsub">Each page is built from the CSS section by section. Yellow notes give the source class and the key layout rule. Footer is shortened to a bar (full version in <a class="dv-oid" href="#1f">1f</a>).</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Home</div>
+<div class="dv-card wf" style="width:560px">
+<div style="position:relative;height:340px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:0 20px 12px;text-align:center;color:#fff">
+<div class="ph dk" style="position:absolute;inset:0;border:0;border-radius:0;align-items:flex-start;padding-top:60px">background video + 38% dark overlay</div>
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span>link</span><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:380px">
+<div class="k gold" style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:1px;background:#C9A96E"></span>Kicker<span style="width:16px;height:1px;background:#C9A96E"></span></div>
+<div class="h1" style="color:#fff;font-size:24px">Hero headline, serif 39px</div>
+<div class="ln w" style="width:80%"></div><div class="ln w" style="width:60%"></div>
+<div style="display:flex;gap:8px;margin-top:8px"><span class="btn" style="box-shadow:0 4px 12px rgba(0,0,0,.4)">Bekijk ons aanbod te koop →</span><span class="btn gh">⌕ Zoek</span></div>
+<div style="display:flex;width:460px;max-width:100%;margin-top:8px;border:1px dashed rgba(255,255,255,.6);border-radius:4px;background:rgba(0,0,0,.4);font:7px ui-monospace,monospace;text-align:left">
+<div style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,.2)">LOCATIE<br>▾</div><div style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,.2)">TYPE<br>▾</div><div style="flex:1;padding:5px 8px;border-right:1px solid rgba(255,255,255,.2)">SLAAPKAMERS<br>▾</div><div style="flex:1;padding:5px 8px">BUDGET<br>▾</div><div style="width:34px;background:#C9A96E;color:#1d1d1b;display:flex;align-items:center;justify-content:center">⌕</div></div>
+<div style="font:6.5px ui-monospace,monospace;letter-spacing:1.5px;opacity:.75;margin-top:8px">SCROLL</div><div style="width:18px;height:18px;border:1px solid rgba(255,255,255,.6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px">↓</div>
+</div>
+<div style="position:absolute;right:10px;bottom:10px;z-index:2;width:18px;height:18px;border:1px solid rgba(255,255,255,.6);border-radius:50%;font-size:7px;display:flex;align-items:center;justify-content:center">❚❚</div>
+<span class="tag" style="top:46px;left:10px">.home-hero · 100vh · content bottom-aligned</span>
+<span class="tag" style="top:190px;right:8px;transform:rotate(1deg)">search bar hidden until "Zoek" clicked · custom dropdowns</span>
+</div>
+<div style="position:relative;height:200px;display:flex;align-items:flex-end;padding:0 20px 18px;color:#fff">
+<div class="ph dk" style="position:absolute;inset:0;border:0;border-radius:0">featured project photo / video</div>
+<div style="position:relative;z-index:2"><div class="k gold">Uitgelicht project</div><div class="h2" style="color:#fff">Project name 34px</div><div class="ln w" style="width:220px"></div><div class="ln w" style="width:170px"></div><span class="btn" style="margin-top:6px">Ontdek het project →</span></div>
+<span class="tag" style="top:8px;right:10px">.featured-project-section · min-h max(620px,78vh) · bottom gradient</span>
+</div>
+<div class="sec mist" style="display:flex;gap:22px;align-items:center;padding:24px 20px">
+<div style="flex:1"><div class="k">Wie zijn we</div><div class="h2">About headline</div><div class="ln" style="margin-top:8px"></div><div class="ln" style="width:85%"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:60%"></div><span class="btn" style="margin-top:8px">Meer over Group LN →</span></div>
+<div class="ph" style="flex:1;height:180px">photo 5:6<br>(slides in from right)</div>
+<span class="tag" style="top:6px;right:10px">.about-section · flex gap 64</span>
+</div>
+<div class="sec mist" style="padding:6px 20px 24px">
+<div class="k">Onze troeven</div><div class="h2" style="max-width:300px">Troeven headline</div><div style="height:1px;background:#bbb;margin:12px 0 14px"></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+<div><div class="h3">Troef 1</div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+<div class="cl"><div class="h3">Troef 2</div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+<div class="cl"><div class="h3">Troef 3</div><div class="ln"></div><div class="ln" style="width:70%"></div></div>
+<div class="cl"><div class="h3">Troef 4</div><div class="ln"></div><div class="ln" style="width:70%"></div></div></div>
+<span class="tag" style="top:4px;right:10px">.troeven-grid · 4 cols · left hairline</span>
+</div>
+<div class="sec mist" style="text-align:center;padding:24px 20px;border-top:1px dashed #ccc"><div class="h2">Eigen project realiseren?</div><div class="ln" style="width:50%;margin:8px auto"></div><span class="btn p">Neem contact op →</span><span class="tag" style="top:6px;right:10px">.cta-section</span></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Projecten — overview</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span style="color:#C9A96E">link</span><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec mist"><div class="h1">Ons aanbod</div><div class="ln" style="width:45%;margin-top:6px"></div><div style="width:24px;height:2px;background:#00532D;margin-top:8px"></div></div>
+<div class="sec mist" style="padding-top:4px">
+<div class="rule">Uitgelicht</div>
+<div class="card" style="display:grid;grid-template-columns:1fr 170px;margin-bottom:16px">
+<div class="ph" style="border:0;border-radius:0;height:170px;position:relative"><span class="bdg" style="position:absolute;top:8px;left:8px">Nieuw</span><span style="position:absolute;top:8px;right:8px;background:#2C3B2A;color:#fff;border-radius:6px;padding:4px 6px;font:7px ui-monospace,monospace;text-align:center">VERKOCHT<br><b style="font-size:11px">68%</b><br>▬▬▭</span>photo</div>
+<div style="padding:12px;border-left:1.5px solid #1d1d1b;display:flex;flex-direction:column;gap:3px"><div class="k">Type</div><div class="h2">Project naam</div><div class="spec">⌖ Locatie</div><div class="ln"></div><div class="ln" style="width:80%"></div><div class="spec">▭ 3 slpk · ▭ 120m²</div><div class="spec" style="margin-top:4px">VANAF<br><b style="font:700 13px Kalam">€ 000.000</b></div><span class="btn p" style="align-self:flex-start;margin-top:auto">Bekijk →</span></div>
+</div>
+<div class="rule">Alle projecten</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+<div class="card"><div class="ph" style="border:0;border-radius:0;height:80px;position:relative"><span class="bdg" style="position:absolute;top:5px;left:5px">In aanbouw</span><span style="position:absolute;left:6px;bottom:5px;font:8px ui-monospace,monospace">VANAF €…</span><span style="position:absolute;right:5px;bottom:5px;width:14px;height:14px;border:1px solid #666;border-radius:50%"></span></div><div style="padding:7px"><div class="k">Type</div><div class="h3">Project naam</div><div class="spec">⌖ Locatie</div><span class="pill" style="margin-top:4px">● 4 beschikbaar</span></div><div style="border-top:1px solid #ccc;padding:5px 7px"><span class="pill">status</span></div></div>
+<div class="card"><div class="ph" style="border:0;border-radius:0;height:80px;position:relative"><span class="bdg" style="position:absolute;top:5px;left:5px">Lancering</span></div><div style="padding:7px"><div class="k">Type</div><div class="h3">Project naam</div><div class="spec">⌖ Locatie</div></div><div style="border-top:1px solid #ccc;padding:5px 7px"><span class="pill">status</span></div></div>
+<div class="card"><div class="ph dk" style="border:0;border-radius:0;height:80px;color:#fff"><span style="border:1px solid #fff;padding:2px 6px;font:700 7px ui-monospace,monospace;letter-spacing:2px">UITVERKOCHT</span></div><div style="padding:7px"><div class="k">Type</div><div class="h3">Project naam</div><div class="spec">⌖ Locatie</div></div><div style="border-top:1px solid #ccc;padding:5px 7px"><span class="pill">uitverkocht</span></div></div>
+<div class="olv" style="border-radius:4px;padding:12px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px"><div class="k" style="color:rgba(255,255,255,.6)">Grond</div><div class="h3" style="color:#fff">Grond te koop?</div><div class="ln w"></div><span class="btn wo" style="align-self:flex-start">Meer →</span></div>
+<div class="g" style="border-radius:4px;padding:12px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px"><div class="k" style="color:rgba(255,255,255,.6)">Contact</div><div class="h3" style="color:#fff">Niet gevonden?</div><div class="ln w"></div><span class="btn wo" style="align-self:flex-start">Contact →</span></div>
+</div>
+<span class="tag" style="top:30px;right:10px">.uitgelicht-project 1fr/340px · .projecten-grid 3 cols gap 22 · .cta-kaart olive + green</span>
+</div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Project detail</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span style="color:#C9A96E">link</span><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc"><div class="crumb">Home / Projecten / Project</div><div class="h1">Project naam</div><div class="spec" style="color:#7A9E6E">⌖ Gemeente</div></div>
+<div class="sec mist" style="display:grid;grid-template-columns:1fr 180px;gap:12px;align-items:stretch">
+<div style="display:flex;flex-direction:column"><div class="ph" style="flex:1;min-height:250px;position:relative"><span class="bdg" style="position:absolute;top:8px;left:8px">Project badge</span><span style="position:absolute;left:6px;top:50%;font-size:14px">‹</span><span style="position:absolute;right:6px;top:50%;font-size:14px">›</span>gallery carousel · lightbox</div><div style="height:3px;background:linear-gradient(90deg,#3D7A4E,transparent)"></div></div>
+<div class="card" style="display:flex;flex-direction:column">
+<div class="g" style="padding:8px 10px"><div class="k" style="color:rgba(255,255,255,.55)">Prijs vanaf</div><div class="h2" style="color:#fff">€ 000.000</div></div>
+<div style="padding:5px 10px;border-bottom:1px solid #ddd;display:flex;gap:6px" class="spec"><span style="width:44px;color:#777">LOCATIE</span><span>Straat 1<br><u style="color:#3D7A4E">kaart</u></span></div>
+<div style="padding:5px 10px;border-bottom:1px solid #ddd;display:flex;gap:6px" class="spec"><span style="width:44px;color:#777">TYPE</span><span>Appartementen</span></div>
+<div style="padding:5px 10px;border-bottom:1px solid #ddd" class="spec">▭ 12 eenheden<br>▭ 1–3 slaapkamers</div>
+<div style="padding:5px 10px;border-bottom:1px solid #ddd"><span class="pill">● 4 beschikbaar</span></div>
+<div style="padding:6px 10px;border-bottom:1px solid #ddd"><div class="lbl">Documenten</div><span class="btn" style="width:100%">⤓ Brochure</span><div class="spec" style="color:#00532D">▸ lastenboek.pdf</div></div>
+<div class="mist" style="padding:7px;display:flex;flex-direction:column;gap:5px"><div class="lbl">Interesse?</div><div class="btn olv" style="justify-content:space-between;padding:8px">✉ Informatie aanvragen <span>›</span></div><div class="btn" style="justify-content:space-between;padding:7px;color:#00532D;border-color:#00532D">✆ Bel ons <span>›</span></div></div>
+</div>
+<span class="tag" style="top:4px;right:196px">.detail-row · col-8 gallery / col-4 .info-kaart</span>
+</div>
+<div class="sec mist"><div class="h2" style="font-size:14px">Commercial title</div><div style="width:22px;height:2px;background:#3D7A4E;margin:5px 0 7px"></div><div class="ln"></div><div class="ln" style="width:92%"></div><div class="ln" style="width:85%"></div><div class="ln" style="width:60%"></div></div>
+<div class="sec mist" style="padding-top:4px"><div class="h2">Eenheden</div><div style="width:22px;height:2px;background:#3D7A4E;margin:5px 0 8px"></div>
+<div class="card" style="font:7.5px ui-monospace,monospace">
+<div class="g" style="display:grid;grid-template-columns:1.2fr 1fr .8fr .8fr 1fr .9fr .5fr;padding:5px 8px;color:rgba(255,255,255,.75)"><span>LOT</span><span>TYPE</span><span>SLPK</span><span>M²</span><span>PRIJS</span><span>STATUS</span><span>PLAN</span></div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr .8fr .8fr 1fr .9fr .5fr;padding:6px 8px;border-bottom:1px solid #ddd;align-items:center"><span><b style="background:#00532D;color:#fff;padding:1px 4px">A1</b> <span class="pill" style="font-size:6px">2 opties</span></span><span>App.</span><span>●●○</span><span>92</span><span>vanaf €…</span><span class="pill">beschikbaar</span><span>⤓ ▾</span></div>
+<div class="mist" style="display:flex;gap:6px;padding:6px 8px;border-bottom:1px solid #ddd"><div class="card" style="flex:1;padding:5px;border-color:#3D7A4E">OPTIE A · €…</div><div class="card" style="flex:1;padding:5px">OPTIE B · €…</div></div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr .8fr .8fr 1fr .9fr .5fr;padding:6px 8px;border-bottom:1px solid #ddd;color:#999"><span><b style="background:#00532D;color:#fff;padding:1px 4px">A2</b></span><span>App.</span><span>●●●</span><span>110</span><span>—</span><span class="pill">verkocht</span><span>⤓</span></div>
+<div class="mist" style="padding:6px 8px;color:#666">TOTAAL · 12 eenheden</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #ccc;border-top:0;background:#fff" class="spec"><div style="padding:5px 8px;border-right:1px solid #ddd">BESCHIKBAAR<br><b>4</b></div><div style="padding:5px 8px;border-right:1px solid #ddd">IN OPTIE<br><b>2</b></div><div style="padding:5px 8px;border-right:1px solid #ddd">VERKOCHT<br><b>6</b></div><div style="padding:5px 8px">PRIJS VANAF<br><b>€…</b></div></div>
+<span class="tag" style="top:2px;right:10px">.eenheid-tabel · expandable option rows · .samenvatting bar</span>
+</div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Project inschrijving</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div></div><div class="nv"><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc"><div class="crumb">Home / Projecten / Project / Inschrijven</div><div class="h1">Schrijf je in</div></div>
+<div class="sec mist" style="display:grid;grid-template-columns:1fr 230px;gap:12px">
+<div class="ph dk" style="min-height:260px;flex-direction:column;gap:6px;color:#fff"><span class="pill" style="border-color:rgba(255,255,255,.4)">● BINNENKORT</span><span class="h2" style="color:#fff">Project naam</span><span>sub · 60% overlay on photo</span></div>
+<div class="card" style="padding:10px;display:flex;flex-direction:column;gap:6px">
+<div class="k">Inschrijving</div><div class="h2" style="font-size:14px">Blijf op de hoogte</div><div class="ln" style="width:85%"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px"><div><div class="lbl">Voornaam</div><div class="fld"></div></div><div><div class="lbl">Naam</div><div class="fld"></div></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px"><div><div class="lbl">E-mail</div><div class="fld"></div></div><div><div class="lbl">Telefoon</div><div class="fld"></div></div></div>
+<div><div class="lbl">Interesse in</div><div class="spec">☐ 1 slpk ☐ 2 slpk ☐ 3 slpk</div></div>
+<div><div class="lbl">Bericht (optioneel)</div><div class="fld" style="height:30px"></div></div>
+<span class="btn p" style="justify-content:center">Inschrijven</span>
+<div class="spec" style="border-top:1px solid #ddd;padding-top:4px">✆ Bel ons</div>
+</div></div>
+<div class="sec mist" style="padding-top:0"><div class="card" style="display:grid;grid-template-columns:repeat(5,1fr)"><div class="spec" style="padding:6px 8px;border-right:1px solid #ddd">LOCATIE<br><b>…</b></div><div class="spec" style="padding:6px 8px;border-right:1px solid #ddd">TYPE<br><b>…</b></div><div class="spec" style="padding:6px 8px;border-right:1px solid #ddd">EENHEDEN<br><b>…</b></div><div class="spec" style="padding:6px 8px;border-right:1px solid #ddd">START<br><b>…</b></div><div class="spec" style="padding:6px 8px">PRIJS<br><b>…</b></div></div><span class="tag" style="top:-10px;right:10px">.inschrijving-specs-balk · 5 cols → 3 → 2</span></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Over ons — hub</div>
+<div class="dv-card wf" style="width:560px">
+<div class="g" style="position:relative;padding:58px 20px 30px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 1px,transparent 1px 8px),#00532D">
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span style="color:#C9A96E">link</span><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="k gold">Over ons</div><div class="h1" style="color:#fff;font-size:26px;max-width:340px">Hero title 46px</div><div class="ln w" style="width:300px;margin-top:8px"></div><div class="ln w" style="width:220px"></div>
+</div>
+<div class="sec mist" style="display:flex;gap:22px;align-items:flex-start;padding:22px 20px">
+<div style="flex:1"><div class="k">Ons verhaal</div><div class="h2">Story headline</div><div class="ln" style="margin-top:8px"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:95%"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:92%"></div><div class="ln" style="width:85%"></div><div class="ln" style="width:60%"></div></div>
+<div class="ph" style="flex:1;height:170px">photo 5:6 · sticky top:100px</div>
+<span class="tag" style="top:6px;right:10px">.about-story--sticky</span>
+</div>
+<div class="sec" style="background:#fff;padding:22px 20px">
+<div class="k">Wat we doen</div><div class="h2" style="margin-bottom:12px">Pijlers</div>
+<div style="display:flex;gap:14px;padding-bottom:10px"><span class="h2" style="color:#C9A96E;width:24px">01</span><div style="flex:1"><div class="h3">Ontwikkeling</div><div class="ln" style="width:80%"></div><div class="k" style="margin-top:4px">Lees meer →</div></div></div>
+<div style="display:flex;gap:14px;padding:10px 0;border-top:1px solid #ccc"><span class="h2" style="color:#C9A96E;width:24px">02</span><div style="flex:1"><div class="h3">Projectbegeleiding</div><div class="ln" style="width:75%"></div><div class="k" style="margin-top:4px">Lees meer →</div></div></div>
+<div style="display:flex;gap:14px;padding-top:10px;border-top:1px solid #ccc"><span class="h2" style="color:#C9A96E;width:24px">03</span><div style="flex:1"><div class="h3">Grondverwerving</div><div class="ln" style="width:70%"></div><div class="k" style="margin-top:4px">Lees meer →</div></div></div>
+<span class="tag" style="top:8px;right:10px">.about-pijlers · numbered rows + hairline</span>
+</div>
+<div class="sec gd" style="padding:22px 20px"><div class="k gold">Waarom Group LN</div><div class="h2" style="color:#fff">Waarom headline</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px"><div><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div><div class="cl w"><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div><div class="cl w"><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div><div class="cl w"><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div></div>
+<span class="tag" style="top:8px;right:10px">.about-waarom · #003D21</span></div>
+<div class="sec mist" style="text-align:center;padding:22px"><div class="h2">Closing CTA</div><div class="ln" style="width:50%;margin:8px auto"></div><div style="display:flex;gap:6px;justify-content:center"><span class="btn p">Neem contact op</span><span class="btn">Bekijk projecten</span></div><div class="spec" style="margin-top:6px">of mail <u>info@…</u></div></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2f"><div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>Over ons › Projectbegeleiding</div>
+<div class="dv-card wf" style="width:560px">
+<div class="g" style="position:relative;padding:58px 20px 26px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 1px,transparent 1px 8px),#00532D">
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div></div><div class="nv"><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="crumb" style="color:rgba(255,255,255,.6)">Home / Over ons / Projectbegeleiding</div><div class="k gold">Kicker</div><div class="h1" style="color:#fff">Projectbegeleiding</div><div class="ln w" style="width:280px;margin-top:8px"></div>
+</div>
+<div class="sec mist" style="display:flex;gap:22px;align-items:center;padding:22px 20px"><div class="ph" style="flex:1;height:130px">photo</div><div style="flex:1"><div class="k">Intro</div><div class="h2">Intro headline</div><div class="ln" style="margin-top:8px"></div><div class="ln" style="width:85%"></div></div></div>
+<div class="sec" style="background:#fff;padding:22px 20px"><div class="k">Aanpak</div><div class="h2">Drie fases</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:12px">
+<div style="border-top:2px solid #00532D;padding-top:8px"><div class="h3" style="color:#C9A96E">01</div><div class="h3">Voor de bouw</div><div class="spec" style="margin-top:4px">✓ taak<br>✓ taak<br>✓ taak</div></div>
+<div style="border-top:2px solid #00532D;padding-top:8px"><div class="h3" style="color:#C9A96E">02</div><div class="h3">Tijdens de bouw</div><div class="spec" style="margin-top:4px">✓ taak<br>✓ taak<br>✓ taak</div></div>
+<div style="border-top:2px solid #00532D;padding-top:8px"><div class="h3" style="color:#C9A96E">03</div><div class="h3">Na de bouw</div><div class="spec" style="margin-top:4px">✓ taak<br>✓ taak</div></div></div>
+<span class="tag" style="top:8px;right:10px">.about-fases · 3 cols · check-list</span></div>
+<div class="sec gd" style="padding:18px 20px"><div class="k gold">Waarom</div><div class="spec" style="color:rgba(255,255,255,.7)">optional .about-waarom 4-col block</div></div>
+<div class="sec" style="text-align:center;padding:22px;background:#fff"><div class="h2">Closing CTA</div><div style="margin-top:8px"><span class="btn p">Neem contact op</span></div><span class="tag" style="top:6px;right:10px">.about-eind-cta.on-white</span></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2g"><div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a>Over ons › Grond- &amp; pandverwerving</div>
+<div class="dv-card wf" style="width:560px">
+<div style="position:relative;padding:58px 20px 26px;color:#fff">
+<div class="ph dk" style="position:absolute;inset:0;border:0;border-radius:0;align-items:flex-end;justify-content:flex-end;padding:8px">zoeken.webp + green gradient</div>
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div></div><div class="nv"><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div style="position:relative;z-index:2"><div class="crumb" style="color:rgba(255,255,255,.6)">Home / Over ons / Grondverwerving</div><div class="k gold">Kicker</div><div class="h1" style="color:#fff">Grond- en pandverwerving</div><div class="ln w" style="width:280px;margin-top:8px"></div><span class="btn gold" style="margin-top:8px">Bied uw grond aan</span></div>
+<span class="tag" style="top:44px;right:10px">.about-hero--foto</span>
+</div>
+<div class="sec mist" style="padding:22px 20px"><div class="k">Wat we zoeken</div><div class="h2">Aanbod</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;margin-top:12px">
+<div><div class="ph" style="height:70px">bouwgrond.webp</div><div class="h3" style="margin-top:5px">Bouwgrond</div><div class="ln"></div></div>
+<div><div class="ph" style="height:70px">oude-woning.webp</div><div class="h3" style="margin-top:5px">Oude woning</div><div class="ln"></div></div>
+<div><div class="ph" style="height:70px">verouderd-pand.webp</div><div class="h3" style="margin-top:5px">Verouderd pand</div><div class="ln"></div></div>
+<div><div class="ph" style="height:70px">opbrengsteigendom.webp</div><div class="h3" style="margin-top:5px">Opbrengsteigendom</div><div class="ln"></div></div></div>
+<span class="tag" style="top:8px;right:10px">.about-aanbod-grid--foto · 2 cols · 4:3 photos</span></div>
+<div class="sec" style="background:#fff;padding:22px 20px"><div class="k">Werkwijze</div><div class="h2">Stappen (pijler rows)</div><div style="display:flex;gap:12px;margin-top:8px"><span class="h3" style="color:#C9A96E">01</span><div class="ln" style="flex:1"></div></div><div style="display:flex;gap:12px;margin-top:8px;border-top:1px solid #ccc;padding-top:8px"><span class="h3" style="color:#C9A96E">02</span><div class="ln" style="flex:1"></div></div></div>
+<div class="sec mist" style="padding:22px 20px"><div class="k">FAQ</div><div class="h2" style="margin-bottom:8px">Veelgestelde vragen</div>
+<div style="border-top:1px solid #bbb;padding:6px 0;display:flex;justify-content:space-between" class="h3">Vraag 1 <span style="color:#C9A96E">▾</span></div>
+<div style="border-top:1px solid #bbb;padding:6px 0" class="h3"><div style="display:flex;justify-content:space-between">Vraag 2 (open) <span style="color:#C9A96E">▴</span></div><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div></div>
+<div style="border-top:1px solid #bbb;border-bottom:1px solid #bbb;padding:6px 0;display:flex;justify-content:space-between" class="h3">Vraag 3 <span style="color:#C9A96E">▾</span></div>
+<span class="tag" style="top:8px;right:10px">.about-faq · native &lt;details&gt;</span></div>
+<div class="sec" style="text-align:center;padding:20px;background:#fff"><div class="h2">Closing CTA</div><div style="margin-top:8px"><span class="btn p">Neem contact op</span></div></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2h"><div class="dv-olabel"><a class="dv-oid" href="#2h">2h</a>Blog — overview</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span>link</span><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc"><div class="h1">Blog</div><div class="ln" style="width:70%;margin-top:6px"></div><div class="ln" style="width:50%"></div></div>
+<div class="sec mist">
+<div class="rule">Uitgelicht</div>
+<div class="card" style="display:grid;grid-template-columns:3fr 2fr;margin-bottom:14px"><div class="ph" style="border:0;border-radius:0;height:160px">photo</div><div style="padding:12px;border-left:1.5px solid #1d1d1b;display:flex;flex-direction:column;gap:4px"><div class="k">Label</div><div class="h2">Artikel titel</div><div class="spec">datum · leestijd</div><div class="ln"></div><div class="ln" style="width:85%"></div><div class="ln" style="width:70%"></div><span class="btn p" style="align-self:flex-start;margin-top:auto">Lees artikel →</span></div></div>
+<div class="rule">Recent</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+<div class="card"><div class="ph" style="border:0;border-radius:0;height:66px">3:2</div><div style="padding:7px"><div class="h3">Titel</div><div class="spec">datum</div><div class="ln"></div><div class="ln" style="width:70%"></div></div><div style="border-top:1px solid #ccc;padding:5px 7px" class="k">Lees meer →</div></div>
+<div class="card"><div class="ph" style="border:0;border-radius:0;height:66px">3:2</div><div style="padding:7px"><div class="h3">Titel</div><div class="spec">datum</div><div class="ln"></div><div class="ln" style="width:70%"></div></div><div style="border-top:1px solid #ccc;padding:5px 7px" class="k">Lees meer →</div></div>
+<div class="card"><div class="ph" style="border:0;border-radius:0;height:66px">3:2</div><div style="padding:7px"><div class="h3">Titel</div><div class="spec">datum</div><div class="ln"></div><div class="ln" style="width:70%"></div></div><div style="border-top:1px solid #ccc;padding:5px 7px" class="k">Lees meer →</div></div></div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+<div class="card" style="display:grid;grid-template-columns:1fr 1fr"><div class="ph" style="border:0;border-radius:0;min-height:90px">photo</div><div style="padding:8px;border-left:1.5px solid #1d1d1b"><div class="h3">Horizontale kaart</div><div class="ln"></div><div class="k" style="margin-top:6px">Lees meer →</div></div></div>
+<div class="card" style="display:grid;grid-template-columns:1fr 1fr"><div class="ph" style="border:0;border-radius:0;min-height:90px">photo</div><div style="padding:8px;border-left:1.5px solid #1d1d1b"><div class="h3">Kaart</div><div class="ln"></div></div></div></div>
+<span class="tag" style="top:2px;right:10px">.blog-uitgelicht 3fr/2fr · grid 3 · leftovers as .blog-speciaal--1 / --2 (2fr 1fr)</span>
+</div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2i"><div class="dv-olabel"><a class="dv-oid" href="#2i">2i</a>Blog artikel</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div></div><div class="nv"><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc"><div class="crumb">Home / Blog / Artikel</div><div class="h1" style="max-width:400px">Artikel titel serif 40px</div><div class="spec" style="margin-top:4px">auteur · datum · leestijd</div></div>
+<div class="sec mist">
+<div class="ph" style="height:120px;margin-bottom:12px">hero foto · max-h 520</div>
+<div style="display:grid;grid-template-columns:1fr 170px;gap:16px;align-items:start">
+<div>
+<div class="h3" style="font-size:13px;color:#36423a">Intro paragraph, serif 21px — larger lead text</div>
+<div class="h2" style="margin-top:10px">Blok titel</div><div style="width:22px;height:2px;background:#00532D;margin:4px 0 6px"></div><div class="ln"></div><div class="ln" style="width:92%"></div><div class="ln" style="width:80%"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"><div class="ph" style="height:70px">split foto</div><div><div class="h3">Split titel</div><div class="ln"></div><div class="ln" style="width:80%"></div></div></div>
+<div style="border-left:3px solid #cdb885;padding-left:10px;margin:10px 0;font:italic 13px/1.3 Kalam;color:#00532D">"Pullquote"</div>
+<div style="background:#ECF4E8;border-left:3px solid #00532D;padding:8px 10px"><div class="k">Tip</div><div class="spec">◆ bullet<br>◆ bullet</div></div>
+<div class="h2" style="margin-top:12px">FAQ</div><div style="border-top:1px solid #bbb;padding:5px 0;display:flex;justify-content:space-between" class="h3">Vraag <span style="border:1.5px solid #00532D;border-radius:50%;width:13px;height:13px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#00532D">+</span></div><div style="border-top:1px solid #bbb;padding:5px 0;display:flex;justify-content:space-between" class="h3">Vraag <span style="border:1.5px solid #00532D;border-radius:50%;width:13px;height:13px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#00532D">+</span></div>
+<div style="display:flex;justify-content:space-between;border-top:1px solid #bbb;margin-top:10px;padding-top:6px" class="spec"><u>← Terug naar blog</u><span>DELEN ◯ ◯ ◯</span></div>
+</div>
+<div class="card" style="position:relative"><div class="g" style="padding:10px"><div class="h2" style="color:#fff;font-size:14px">Vragen?</div><div class="ln w"></div></div><div style="padding:8px;display:flex;flex-direction:column;gap:4px"><div class="lbl">Naam *</div><div class="fld"></div><div class="lbl">E-mail *</div><div class="fld"></div><div class="lbl">Bericht</div><div class="fld" style="height:30px"></div><div class="spec">☐ privacy</div><span class="btn p" style="justify-content:center">Verstuur</span></div><div style="border-top:1px solid #ddd;padding:8px"><div class="lbl">Direct contact</div><div class="spec">◯ Bel ons<br>◯ Mail ons</div></div>
+<span class="tag" style="top:-14px;right:-4px">sticky sidebar 360px</span></div>
+</div>
+<div class="rule" style="margin-top:16px">Ontdek meer</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div class="card"><div class="ph" style="border:0;border-radius:0;height:50px;position:relative"><span class="pill" style="position:absolute;top:4px;left:4px;background:#fff">● artikel</span></div><div style="padding:6px"><div class="h3">Titel</div></div></div><div class="card"><div class="ph" style="border:0;border-radius:0;height:50px;position:relative"><span class="bdg" style="position:absolute;top:4px;left:4px">● project</span></div><div style="padding:6px"><div class="h3">Project</div></div></div><div class="card"><div class="ph" style="border:0;border-radius:0;height:50px"></div><div style="padding:6px"><div class="h3">Titel</div></div></div></div>
+</div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2j"><div class="dv-olabel"><a class="dv-oid" href="#2j">2j</a>Vacatures — overview</div>
+<div class="dv-card wf" style="width:560px">
+<div style="position:relative;padding:58px 20px 80px;color:#fff">
+<div class="ph dk" style="position:absolute;inset:0;border:0;border-radius:0;background:#00532D;color:rgba(255,255,255,.5);align-items:flex-start;justify-content:flex-end;padding:50px 10px">our-office-3.jpg + green gradient</div>
+<div class="hdr tr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span>link</span><span style="color:#C9A96E">link</span><span>link</span><span class="mb">≡</span></div></div>
+<div style="position:relative;z-index:2"><div class="k gold">Werken bij</div><div class="h1" style="color:#fff;font-size:24px">Vacatures hero 44px</div><div class="ln w" style="width:260px;margin-top:8px"></div></div>
+</div>
+<div class="sec mist" style="padding-top:0">
+<div class="card" style="margin-top:-60px;position:relative;z-index:2;border-radius:10px;padding:14px;display:flex;gap:16px;align-items:center;box-shadow:0 12px 30px rgba(0,0,0,.15)"><div style="flex:1"><div class="k">Wie wij zoeken</div><div class="h2">Headline</div><div class="ln" style="margin-top:6px"></div><div class="ln" style="width:80%"></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><span class="pill">✓ pill</span><span class="pill">✓ pill</span><span class="pill">✓ pill</span></div></div><div class="ph" style="flex:1;height:130px">photo 5:6</div></div>
+<span class="tag" style="top:80px;right:10px">.vac-wie-grid overlaps hero −140px</span></div>
+<div class="sec gd" style="padding:22px 20px"><div class="k gold">Waarom hier starten</div><div class="h2" style="color:#fff">Headline</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px"><div><div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);margin-bottom:4px"></div><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div><div class="cl w"><div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);margin-bottom:4px"></div><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div><div class="cl w"><div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);margin-bottom:4px"></div><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div><div class="cl w"><div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);margin-bottom:4px"></div><div class="h3" style="color:#fff">Item</div><div class="ln w"></div></div></div></div>
+<div class="sec mist" style="padding:22px 20px"><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div class="k">Openstaand</div><div class="h2">Vacatures</div></div><span class="spec">3 vacatures</span></div><div class="ln" style="width:60%;margin:6px 0 10px"></div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="card" style="border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center"><div><div class="k">Categorie</div><div class="h3">Functietitel</div><div class="spec">⌖ Regio · ◷ Voltijds</div></div><span class="k">Bekijk →</span></div>
+<div class="card" style="border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center"><div><div class="k">Categorie</div><div class="h3">Functietitel</div><div class="spec">⌖ Regio · ◷ Voltijds</div></div><span class="k">Bekijk →</span></div></div></div>
+<div class="sec" style="background:#fff;text-align:center;padding:20px"><div class="h2">Spontaan solliciteren?</div><div class="ln" style="width:50%;margin:8px auto 0"></div><span class="tag" style="top:6px;right:10px">.vac-cta-section · no button</span></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2k"><div class="dv-olabel"><a class="dv-oid" href="#2k">2k</a>Vacature detail</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div></div><div class="nv"><span>link</span><span>link</span><span class="mb">≡</span></div></div>
+<div class="sec g" style="padding:20px"><div class="crumb" style="color:rgba(255,255,255,.65)">Home / Vacatures / Functie</div><div class="k gold">Categorie</div><div class="h1" style="color:#fff">Functietitel</div><div style="display:flex;gap:5px;margin:8px 0"><span class="pill" style="border:0;background:rgba(255,255,255,.12)">⌖ Regio</span><span class="pill" style="border:0;background:rgba(255,255,255,.12)">◷ Voltijds</span><span class="pill" style="border:0;background:rgba(255,255,255,.12)">€ Loon</span></div><div class="ln w" style="width:300px"></div><div style="display:flex;gap:6px;margin-top:8px"><span class="btn gold" style="color:#fff">Solliciteer nu</span><span class="btn wo">Bekijk takenpakket</span></div></div>
+<div class="sec mist" style="display:grid;grid-template-columns:1fr 160px;gap:16px;align-items:start;padding:18px 20px">
+<div>
+<div class="h2">Takenpakket</div><div class="spec" style="margin:4px 0 10px">✓ taak<br>✓ taak<br>✓ taak</div>
+<div class="h2">Wie zoeken we</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 10px"><div><div class="lbl">Must-haves</div><div class="spec">• …<br>• …</div></div><div><div class="lbl">Mooi meegenomen</div><div class="spec">• …<br>• …</div></div></div>
+<div class="h2">Wat bieden we</div><div class="spec" style="margin:4px 0 10px">✓ …<br>✓ …</div>
+<div class="h2">Sollicitatieprocedure</div><div style="display:flex;gap:8px;margin-top:5px"><span class="h3" style="color:#C9A96E">01</span><div class="ln" style="flex:1"></div></div><div style="display:flex;gap:8px;margin-top:6px;border-top:1px solid #ccc;padding-top:6px"><span class="h3" style="color:#C9A96E">02</span><div class="ln" style="flex:1"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="ph dk" style="height:90px;border-radius:8px">video ▶</div>
+<div class="card" style="border-radius:8px;padding:8px"><div class="lbl">In het kort</div><div class="spec" style="display:flex;justify-content:space-between"><span>Regio</span><b>…</b></div><div class="spec" style="display:flex;justify-content:space-between;border-top:1px solid #ddd"><span>Uren</span><b>…</b></div></div>
+<div class="gd" style="border-radius:8px;padding:8px"><div class="h3" style="color:#fff">Interesse?</div><div class="ln w"></div><span class="btn gold" style="width:100%;justify-content:center;color:#fff;margin-top:4px">Solliciteer</span></div>
+<div class="card" style="border-radius:8px;padding:8px"><div class="spec">Vragen? <b style="color:#00532D">contact</b></div></div>
+<span class="tag" style="top:-12px;right:-6px">sticky sidebar 340px</span>
+</div></div>
+<div class="sec" style="background:#fff;padding:18px 20px"><div class="h2">Solliciteer</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:8px"><div><div class="lbl">Voornaam</div><div class="fld"></div></div><div><div class="lbl">Naam</div><div class="fld"></div></div><div><div class="lbl">E-mail</div><div class="fld"></div></div><div><div class="lbl">Telefoon</div><div class="fld"></div></div></div><div style="border:1.5px dashed #888;border-radius:6px;padding:8px;margin-top:8px" class="spec">◯ <b>Sleep je CV hierheen</b> · PDF, max …</div><span class="btn p" style="margin-top:8px">Verstuur sollicitatie</span><span class="tag" style="top:6px;right:10px">#solliciteer · AJAX states: error banner, bricks loader, success</span></div>
+<div class="sec mist" style="padding:18px 20px"><div class="h2">Andere vacatures</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div class="card" style="border-radius:8px;padding:8px"><div class="k">Cat.</div><div class="h3">Functie</div></div><div class="card" style="border-radius:8px;padding:8px"><div class="k">Cat.</div><div class="h3">Functie</div></div></div></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2l"><div class="dv-olabel"><a class="dv-oid" href="#2l">2l</a>Contact</div>
+<div class="dv-card wf" style="width:560px">
+<div class="hdr"><div style="display:flex;align-items:center"><div class="logo"><i></i><b></b>GROUP LN</div><div class="tel"><i></i>BEL ONS</div></div><div class="nv"><span>link</span><span>link</span><span>link</span><span style="color:#C9A96E">link</span><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc"><div class="h1">Contact</div><div class="ln" style="width:40%;margin-top:6px"></div></div>
+<div class="sec mist" style="display:grid;grid-template-columns:200px 1fr;gap:16px;padding:18px 20px">
+<div class="g" style="border-radius:14px;padding:16px 14px;display:flex;flex-direction:column;gap:6px">
+<div class="h2" style="color:#fff">Contactgegevens</div>
+<div style="display:flex;gap:6px;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:6px"><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%;flex:none"></span><div><div class="k gold">Telefoon</div><div class="ln w" style="width:80px"></div></div></div>
+<div style="display:flex;gap:6px;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:6px"><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%;flex:none"></span><div><div class="k gold">E-mail</div><div class="ln w" style="width:90px"></div></div></div>
+<div style="display:flex;gap:6px;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:6px"><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%;flex:none"></span><div><div class="k gold">Adres</div><div class="ln w" style="width:100px"></div></div></div>
+<div style="display:flex;gap:4px"><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span><span style="width:14px;height:14px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span></div>
+<div class="ph dk" style="height:90px;border-radius:10px;margin-top:6px">map embed</div>
+</div>
+<div style="padding:10px 8px"><div class="h1" style="font-size:22px">Form title 38px</div><div class="ln" style="width:70%;margin:6px 0 12px"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px"><div><div class="lbl">Voornaam *</div><div class="fld" style="border-radius:6px;height:22px"></div></div><div><div class="lbl">Naam *</div><div class="fld" style="border-radius:6px;height:22px"></div></div><div><div class="lbl">E-mail *</div><div class="fld" style="border-radius:6px;height:22px"></div></div><div><div class="lbl">Telefoon</div><div class="fld" style="border-radius:6px;height:22px"></div></div><div style="grid-column:1/-1"><div class="lbl">Onderwerp ▾</div><div class="fld" style="border-radius:6px;height:22px"></div></div><div style="grid-column:1/-1"><div class="lbl">Bericht *</div><div class="fld" style="border-radius:6px;height:44px"></div></div></div>
+<div class="spec" style="margin:8px 0">☐ Ik ga akkoord met het <u>privacybeleid</u></div><span class="btn p" style="width:100%;justify-content:center;padding:8px">Verstuur bericht →</span></div>
+<span class="tag" style="top:6px;right:10px">.contact-section 460px / 1fr · success state replaces form</span>
+</div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div></div>
+
+<div class="dv-opt" id="2m"><div class="dv-olabel"><a class="dv-oid" href="#2m">2m</a>Legal (privacy / cookies / voorwaarden)</div>
+<div class="dv-card wf" style="width:400px">
+<div class="hdr"><div class="logo"><i></i><b></b>GROUP LN</div><div class="nv"><span class="mb">≡</span></div></div>
+<div class="sec mist" style="border-bottom:1px solid #ccc"><div class="h1">Privacybeleid</div><div class="spec">Laatst bijgewerkt: …</div></div>
+<div class="sec mist" style="max-width:320px"><div class="ln" style="width:95%"></div><div class="ln" style="width:80%"></div>
+<div class="card" style="padding:8px;margin:8px 0"><div class="lbl">Inhoud</div><div class="spec">1. …<br>2. …<br>3. …</div></div>
+<div class="h3">1. Section h2</div><div class="ln"></div><div class="ln" style="width:85%"></div>
+<div class="card" style="margin:8px 0;font:7px ui-monospace,monospace"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:4px 6px;border-bottom:1px solid #ccc;color:#777">COOKIE · DOEL · DUUR</div><div style="padding:4px 6px">… · … · …</div></div>
+<span class="btn" style="color:#00532D;border-color:#00532D">Cookievoorkeuren wijzigen</span>
+<div class="spec" style="margin-top:10px;color:#00532D"><b>← Terug naar home</b></div></div>
+<div class="ftr"><span>FOOTER</span><span>©</span></div>
+</div>
+<div class="spec" style="max-width:400px">.legal-body max 760px prose · TOC card · tables scroll-x.</div></div>
+
+</div>
+<p class="dv-next">Try next: "mobile versions of <a class="dv-oid" href="#2a">2a</a> and <a class="dv-oid" href="#2c">2c</a>" · "show the success / error states" · "explore 3 alternatives for the project detail info card"</p>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Component definitions</span></div>
+<p class="dv-tsub">Every repeated building block, with its source class, anatomy, variants and where it's used. These are what a rebuild or design system would need to cover.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Buttons</div>
+<div class="dv-card wf cdef"><div class="viz">
+<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="btn p">Primary →</span><span class="btn">Outline →</span></div>
+<div style="display:flex;gap:6px;background:#3a3a36;padding:8px;border-radius:4px"><span class="btn">Light (media)</span><span class="btn gh">Ghost</span></div>
+<div style="display:flex;gap:6px;align-items:center"><span class="mb" style="width:24px;height:24px">≡</span><span class="btn gold" style="color:#fff">Gold apply</span><span class="btn olv">Olive CTA</span></div>
+</div><div class="txt"><div class="nm">Button</div><div class="spec"><b>Primary</b> .cta-btn green 16/28 r6 · <b>Outline</b> .about-btn 1.5px · <b>Light</b> .hero-cta white + lift shadow, hover gold · <b>Ghost</b> .hero-search-trigger · <b>Round</b> .hamburger-btn 46px gold · <b>Gold</b> .vac-detail-apply-btn · <b>Olive</b> .info-cta-prim. Label: uppercase 13px tracked, trailing → nudges 3px.</div><div class="src">custom.css · home-sections.css · home-hero.css · vacatures.css</div></div></div></div>
+
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Section kicker + heading</div>
+<div class="dv-card wf cdef"><div class="viz"><div class="k">Section kicker</div><div class="h2">Serif headline 34px</div><div class="ln" style="width:200px"></div><div style="background:#003D21;padding:8px;border-radius:4px;width:100%"><div class="k gold">Kicker on dark = gold</div><div class="h3" style="color:#fff">Headline</div></div></div><div class="txt"><div class="nm">Section head</div><div class="spec">Uppercase 11px / 2.6px tracking above every section heading. Green on light, gold on dark. Optional lead paragraph max 640px.</div><div class="src">.section-kicker · .about-section-head</div></div></div></div>
+
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Sectie-kop (rule label)</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div class="rule">Uitgelicht</div><div class="rule">Alle projecten</div></div><div class="txt"><div class="nm">Sectie-kop</div><div class="spec">10px uppercase muted label + hairline filling the rest of the row. Separates groups within listing pages.</div><div class="src">.sectie-kop · projects-index / blog-index</div></div></div></div>
+
+<div class="dv-opt" id="3d"><div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>Page header band</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch;border-bottom:1px solid #bbb"><div class="crumb">Home / Section / Page</div><div class="h1">Page title</div><div class="ln" style="width:60%"></div><div style="width:24px;height:2px;background:#00532D"></div></div><div class="txt"><div class="nm">Page header</div><div class="spec">Mist bg, padding 44/36, breadcrumb 12px <b>only when the page is 3+ levels deep</b>, H1 serif 36px (28 mobile), subtitle 14px, optional 44×2 green accent. Variants: <b>light</b> (projecten, blog, contact, legal, artikel) · <b>green</b> (vacature detail).</div><div class="src">.projecten-page-header · .blog-page-header · .contact-page-header · .legal-header · .vac-detail-header</div></div></div></div>
+
+<div class="dv-opt" id="3e"><div class="dv-olabel"><a class="dv-oid" href="#3e">3e</a>Green hero</div>
+<div class="dv-card wf cdef"><div class="viz g" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 1px,transparent 1px 8px),#00532D"><div class="crumb" style="color:rgba(255,255,255,.6)">Home / Over ons / Subpagina</div><div class="k gold">Kicker</div><div class="h2" style="color:#fff">Hero title</div><div class="ln w" style="width:180px"></div></div><div class="txt"><div class="nm">About / Vacatures hero</div><div class="spec">Transparent header on top · 140px top padding · title 46px (vacatures 44px). Variants: <b>raster</b> · <b>--foto</b> (photo + gradient) · <b>vacatures</b> (photo, 200px bottom for overlapping card).</div><div class="src">.about-hero · .about-hero--foto · .vacatures-page-header</div></div></div></div>
+
+<div class="dv-opt" id="3f"><div class="dv-olabel"><a class="dv-oid" href="#3f">3f</a>Project card</div>
+<div class="dv-card wf cdef"><div class="viz"><div class="card" style="width:170px"><div class="ph" style="border:0;border-radius:0;height:90px;position:relative"><span class="bdg" style="position:absolute;top:5px;left:5px">Nieuw</span><span style="position:absolute;top:5px;right:5px;background:#2C3B2A;color:#fff;border-radius:5px;padding:2px 4px;font:6px ui-monospace,monospace">68%</span><span style="position:absolute;left:6px;bottom:5px;font:7px ui-monospace,monospace">VANAF €…</span><span style="position:absolute;right:5px;bottom:5px;width:14px;height:14px;border:1px solid #666;border-radius:50%"></span>4:3</div><div style="padding:7px"><div class="k">Type</div><div class="h3">Naam</div><div class="spec">⌖ Locatie</div><span class="pill" style="margin-top:3px">● beschikbaar</span></div><div style="border-top:1px solid #ccc;padding:5px 7px"><span class="pill">status</span></div></div></div><div class="txt"><div class="nm">Project kaart</div><div class="spec">Photo 4:3 with status badge (top-left), % verkocht badge (≥50%, top-right), price + arrow over bottom gradient. Body: type, name, location, specs, beschikbaar pill. Footer: status badge. Hover: lift −2px, photo scale 1.06. <b>Uitverkocht</b> = dark overlay label.</div><div class="src">.project-kaart · projects-index.css</div></div></div></div>
+
+<div class="dv-opt" id="3g"><div class="dv-olabel"><a class="dv-oid" href="#3g">3g</a>Uitgelicht (featured) card</div>
+<div class="dv-card wf cdef"><div class="viz"><div class="card" style="display:grid;grid-template-columns:1fr 100px;width:260px"><div class="ph" style="border:0;border-radius:0;height:100px">photo</div><div style="padding:7px;border-left:1.5px solid #1d1d1b"><div class="k">Type</div><div class="h3">Naam</div><div class="ln"></div><span class="btn p" style="margin-top:4px">→</span></div></div></div><div class="txt"><div class="nm">Featured row card</div><div class="spec">Horizontal split card. <b>Project</b>: 1fr / 340px · <b>Blog</b>: 3fr / 2fr · <b>Blog horizontal</b>: 1fr 1fr (speciaal --1 / --2). Stacks to photo 16:9 on top ≤991px.</div><div class="src">.uitgelicht-project · .blog-uitgelicht · .blog-kaart-h</div></div></div></div>
+
+<div class="dv-opt" id="3h"><div class="dv-olabel"><a class="dv-oid" href="#3h">3h</a>Status badges &amp; pills</div>
+<div class="dv-card wf cdef"><div class="viz"><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="bdg">Nieuw</span><span class="bdg" style="background:#3D7A4E">Lancering</span><span class="bdg" style="background:#5b7fa6">In aanbouw</span><span class="bdg" style="background:#7a9e6e">Bijna</span><span class="bdg" style="background:#a67c5b">Optie</span><span class="bdg" style="background:#c0954a">Laatste</span></div><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="pill" style="background:#EAF3DE;border-color:#C0DD97;color:#3B6D11">● 4 beschikbaar</span><span class="pill" style="background:#fef3e2;border-color:#f5cc80;color:#7a4a00">in optie</span><span class="pill" style="background:#ececec;border-color:#ccc;color:#888">verkocht</span></div><div style="background:#2C3B2A;color:#fff;border-radius:8px;padding:5px 8px;font:7px ui-monospace,monospace;text-align:center">VERKOCHT<br><b style="font-size:13px">68%</b><br>▬▬▬▭</div></div><div class="txt"><div class="nm">Status system</div><div class="spec">Photo badges (solid, 9px uppercase) · tinted status badges with dot (card footer) · unit pills (beschikbaar / in optie / verkocht) · % verkocht progress badge. Note: status colours step outside the two-colour rule.</div><div class="src">.kaart-foto-badge-* · .status-badge-* · .eenheid-status-pill · .kaart-verkocht-badge</div></div></div></div>
+
+<div class="dv-opt" id="3i"><div class="dv-olabel"><a class="dv-oid" href="#3i">3i</a>Info kaart</div>
+<div class="dv-card wf cdef"><div class="viz"><div class="card" style="width:170px"><div class="g" style="padding:6px 8px"><div class="k" style="color:rgba(255,255,255,.55)">Prijs</div><div class="h3" style="color:#fff">€…</div></div><div class="spec" style="padding:4px 8px;border-bottom:1px solid #ddd">KEY · value</div><div class="spec" style="padding:4px 8px;border-bottom:1px solid #ddd">▭ eenheid rij</div><div style="padding:4px 8px;border-bottom:1px solid #ddd"><span class="btn" style="width:100%">⤓ Brochure</span></div><div class="mist" style="padding:5px;display:flex;flex-direction:column;gap:4px"><span class="btn olv" style="justify-content:space-between">Informatie aanvragen ›</span><span class="btn" style="justify-content:space-between">Bel ons ›</span></div></div></div><div class="txt"><div class="nm">Info kaart</div><div class="spec">Price bar (green) → key/value rows → unit rows w/ icon → beschikbaar pill → documents + brochure → CTA block (olive primary 68px, outline secondary 60px; title + sub + ›). Reused on inschrijving panel.</div><div class="src">.info-kaart · project-detail.css</div></div></div></div>
+
+<div class="dv-opt" id="3j"><div class="dv-olabel"><a class="dv-oid" href="#3j">3j</a>Eenheden tabel</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div class="card" style="font:7px ui-monospace,monospace"><div class="g" style="padding:4px 6px;display:flex;justify-content:space-between;color:rgba(255,255,255,.7)"><span>LOT</span><span>SLPK</span><span>PRIJS</span><span>STATUS</span></div><div style="padding:5px 6px;display:flex;justify-content:space-between;align-items:center"><b style="background:#00532D;color:#fff;padding:1px 4px">A1</b><span>●●○</span><span>vanaf €…</span><span>▾</span></div><div class="mist" style="padding:5px 6px;display:flex;gap:4px"><span class="card" style="flex:1;padding:3px">optie</span><span class="card" style="flex:1;padding:3px">optie</span></div></div><div class="spec" style="display:flex;border:1px solid #ccc;background:#fff"><span style="flex:1;padding:3px 5px">BESCHIKB.</span><span style="flex:1;padding:3px 5px;border-left:1px solid #ddd">VERKOCHT</span></div></div><div class="txt"><div class="nm">Unit table</div><div class="spec">Green thead, zebra rows, lot badge (28px square) + "X opties" badge, bedroom dots, serif price (+ "vanaf"), status pill, plan download + options toggle → expand row of option cards. Tfoot total + summary bar (4 → 2×2 mobile).</div><div class="src">.eenheid-tabel · .samenvatting · .opties-*</div></div></div></div>
+
+<div class="dv-opt" id="3k"><div class="dv-olabel"><a class="dv-oid" href="#3k">3k</a>Photo gallery</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div class="ph" style="height:100px;position:relative"><span class="bdg" style="position:absolute;top:6px;left:6px">Badge</span><span style="position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.3)"></span><span style="position:absolute;left:4px;top:42px">‹</span><span style="position:absolute;right:4px;top:42px">›</span>main image</div><div style="height:3px;background:linear-gradient(90deg,#3D7A4E,transparent)"></div></div><div class="txt"><div class="nm">Foto galerij</div><div class="spec">Main image with zoom icon + prev/next on hover, lightbox (magnific-popup), project badge, 3px olive accent line under. Min-height 300.</div><div class="src">.foto-gallerij · .fg-* · .detail-foto-accent</div></div></div></div>
+
+<div class="dv-opt" id="3l"><div class="dv-olabel"><a class="dv-oid" href="#3l">3l</a>Columned list (troeven / waarom)</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"><div><div class="h3">A</div><div class="ln"></div></div><div class="cl"><div class="h3">B</div><div class="ln"></div></div><div class="cl"><div class="h3">C</div><div class="ln"></div></div><div class="cl"><div class="h3">D</div><div class="ln"></div></div></div></div><div class="txt"><div class="nm">Hairline columns</div><div class="spec">4-up grid, gap 32, each item 1px left rule + 28px padding (first flush). 4 → 2 (rule moves to top) → 1. <b>Light</b> on mist · <b>dark</b> on #003D21 with gold kicker · <b>icon</b> variant (vacatures, 40px circle).</div><div class="src">.troeven-grid · .about-waarom-grid · .vac-why-grid</div></div></div></div>
+
+<div class="dv-opt" id="3m"><div class="dv-olabel"><a class="dv-oid" href="#3m">3m</a>Numbered rows (pijlers / stappen)</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div style="display:flex;gap:10px"><span class="h2" style="color:#C9A96E">01</span><div style="flex:1"><div class="h3">Titel</div><div class="ln"></div><div class="k">Lees meer →</div></div></div><div style="display:flex;gap:10px;border-top:1px solid #bbb;padding-top:6px"><span class="h2" style="color:#C9A96E">02</span><div style="flex:1"><div class="h3">Titel</div><div class="ln"></div></div></div></div><div class="txt"><div class="nm">Numbered row</div><div class="spec">Gold serif number (48px col) + title + text + optional arrow link, hairline between rows. Also: vacature application steps.</div><div class="src">.about-pijler · .vac-detail-stap</div></div></div></div>
+
+<div class="dv-opt" id="3n"><div class="dv-olabel"><a class="dv-oid" href="#3n">3n</a>Phase columns w/ check-list</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="border-top:2px solid #00532D;padding-top:5px"><div class="h3" style="color:#C9A96E">01</div><div class="h3">Fase</div><div class="spec">✓ …<br>✓ …</div></div><div style="border-top:2px solid #00532D;padding-top:5px"><div class="h3" style="color:#C9A96E">02</div><div class="h3">Fase</div><div class="spec">✓ …<br>✓ …</div></div></div></div><div class="txt"><div class="nm">Fase</div><div class="spec">2px green top border, gold number, title, green-check list (optional bold lead per item). 3 cols → 1.</div><div class="src">.about-fase · .about-check-list · .vac-detail-check-list</div></div></div></div>
+
+<div class="dv-opt" id="3o"><div class="dv-olabel"><a class="dv-oid" href="#3o">3o</a>FAQ accordion</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div style="border-top:1px solid #bbb;padding:5px 0;display:flex;justify-content:space-between" class="h3">Vraag <span style="color:#C9A96E">▾</span></div><div style="border-top:1px solid #bbb;border-bottom:1px solid #bbb;padding:5px 0;display:flex;justify-content:space-between" class="h3">Vraag <span style="border:1.5px solid #00532D;border-radius:50%;width:13px;height:13px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#00532D">+</span></div></div><div class="txt"><div class="nm">FAQ</div><div class="spec">Two implementations today: <b>about</b> uses native &lt;details&gt; + gold chevron; <b>blog</b> uses JS max-height + round +/− button. Candidate to unify.</div><div class="src">.about-faq-* · .artikel-faq-*</div></div></div></div>
+
+<div class="dv-opt" id="3p"><div class="dv-olabel"><a class="dv-oid" href="#3p">3p</a>Form field</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div><div class="lbl">E-mail <span style="color:#C9A96E">*</span></div><div class="fld" style="border-radius:6px;height:22px"></div></div><div><div class="lbl">Focus</div><div class="fld" style="border-radius:6px;height:22px;border-color:#00532D;background:#f6f9f6"></div></div><div><div class="lbl">Error</div><div class="fld" style="border-radius:6px;height:22px;border-color:#C0392B"></div><div class="spec" style="color:#C0392B">Field message 12px</div></div><div class="spec">☐ privacy checkbox</div><div style="border:1.5px dashed #888;border-radius:6px;padding:6px" class="spec">◯ CV dropzone</div></div><div class="txt"><div class="nm">Field</div><div class="spec">Uppercase label 10–11px, input 1px border, focus = green border + faint wash (no glow), error = brick red + message. Four sizes in use: contact (r6, 12/14), artikel sidebar (r2), inschrijving (compact 8/10), modal. Candidate to unify.</div><div class="src">.contact-field · .artikel-contact-veld · .inschrijving-veld · .vac-cv-dropzone</div></div></div></div>
+
+<div class="dv-opt" id="3q"><div class="dv-olabel"><a class="dv-oid" href="#3q">3q</a>Contact info panel</div>
+<div class="dv-card wf cdef"><div class="viz g" style="border-radius:0"><div style="display:flex;gap:6px"><span style="width:16px;height:16px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span><div><div class="k gold">Telefoon</div><div class="ln w" style="width:90px"></div></div></div><div style="display:flex;gap:6px"><span style="width:16px;height:16px;border:1px solid rgba(255,255,255,.5);border-radius:50%"></span><div><div class="k gold">Adres</div><div class="ln w" style="width:110px"></div></div></div></div><div class="txt"><div class="nm">Contact item</div><div class="spec">36px outlined icon circle + gold label + value; hover fills circle gold. Also: artikel "direct contact" rows (mist circle), nav overlay info block, vacature sidebar contact.</div><div class="src">.contact-info-item · .artikel-contact-direct-item · .nav-overlay-info</div></div></div></div>
+
+<div class="dv-opt" id="3r"><div class="dv-olabel"><a class="dv-oid" href="#3r">3r</a>CTA block</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch;text-align:center"><div class="h3">Closing CTA headline</div><div class="ln" style="width:70%;margin:0 auto"></div><div style="display:flex;gap:4px;justify-content:center"><span class="btn p">Primary</span><span class="btn">Outline</span></div><div style="display:flex;gap:4px"><div class="olv" style="flex:1;border-radius:4px;padding:6px;text-align:left"><div class="h3" style="color:#fff">Kaart</div></div><div class="g" style="flex:1;border-radius:4px;padding:6px;text-align:left"><div class="h3" style="color:#fff">Kaart</div></div></div></div><div class="txt"><div class="nm">CTA</div><div class="spec"><b>Section</b> centred title + text + 1–2 buttons + mail line (mist or white) · <b>CTA kaart</b> coloured tile in grid (olive / green, 260px) · <b>sidebar CTA</b> dark green with gold button.</div><div class="src">.cta-section · .about-eind-cta · .cta-kaart · .vac-detail-sidebar-cta</div></div></div></div>
+
+<div class="dv-opt" id="3s"><div class="dv-olabel"><a class="dv-oid" href="#3s">3s</a>Hero search bar</div>
+<div class="dv-card wf cdef"><div class="viz" style="background:#3a3a36;align-items:stretch"><div style="display:flex;border:1px solid rgba(255,255,255,.3);border-radius:4px;background:rgba(0,0,0,.4);color:#fff;font:7px ui-monospace,monospace"><div style="flex:1;padding:5px">LOCATIE ▾</div><div style="flex:1;padding:5px;border-left:1px solid rgba(255,255,255,.2)">TYPE ▾</div><div style="width:26px;background:#C9A96E;color:#1d1d1b;display:flex;align-items:center;justify-content:center">⌕</div></div><div style="background:rgba(0,0,0,.6);border-radius:6px;padding:4px;color:#fff;font:8px ui-monospace,monospace;width:110px"><div style="color:#C9A96E;padding:3px">Alle</div><div style="padding:3px;background:rgba(255,255,255,.14);border-radius:4px">Optie</div><div style="padding:3px">Optie</div></div></div><div class="txt"><div class="nm">Search bar + dropdown</div><div class="spec">Collapsed by default, opened by ghost trigger. Fields with label + custom dropdown (fixed-position menu, 44px options, "Alle" in gold), gold submit 72px. Wraps 2-up ≤991, 1-up ≤767.</div><div class="src">.home-hero-search · .hero-dropdown-*</div></div></div></div>
+
+<div class="dv-opt" id="3t"><div class="dv-olabel"><a class="dv-oid" href="#3t">3t</a>Contact modal</div>
+<div class="dv-card wf cdef"><div class="viz"><div class="card" style="width:200px;position:relative"><div class="g" style="padding:10px;text-align:center"><span style="position:absolute;top:4px;right:6px;color:#fff">×</span><div style="width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.15);margin:0 auto 4px"></div><div class="h3" style="color:#fff">Informatie aanvragen</div><div style="width:20px;height:1px;background:#C9A96E;margin:4px auto"></div><div class="ln w"></div></div><div style="padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px"><div class="fld"></div><div class="fld"></div><div class="fld" style="grid-column:1/-1;height:26px"></div></div><div style="padding:0 8px 8px"><span class="btn p" style="width:100%;justify-content:center">Verstuur</span></div></div></div><div class="txt"><div class="nm">Contact modal</div><div class="spec">Header with icon circle, title, gold deco line, subtitle · 2-col form · required note · submit + spinner · success / error header variants. Opened from info-kaart CTAs.</div><div class="src">contact-modal.css</div></div></div></div>
+
+<div class="dv-opt" id="3u"><div class="dv-olabel"><a class="dv-oid" href="#3u">3u</a>Cookie consent</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div class="card" style="padding:8px;border-radius:8px"><div class="h3">Cookies</div><div class="ln"></div><div style="display:flex;gap:4px;margin-top:4px"><span class="btn p">Alles</span><span class="btn">Weiger</span><span class="spec"><u>voorkeuren</u></span></div></div><div class="card" style="padding:8px;border-radius:8px"><div style="display:flex;justify-content:space-between" class="h3">Analytisch <span style="width:22px;height:12px;border-radius:99px;background:#00532D"></span></div><div class="ln"></div><div style="display:flex;justify-content:space-between;margin-top:4px" class="h3">Noodzakelijk <span class="spec">verplicht</span></div></div></div><div class="txt"><div class="nm">Cookie consent</div><div class="spec">First-visit banner (accept / reject / preferences link) · preferences dialog with category rows + switches · floating FAB bottom-left to reopen.</div><div class="src">cookie-consent.css · .cc-*</div></div></div></div>
+
+<div class="dv-opt" id="3v"><div class="dv-olabel"><a class="dv-oid" href="#3v">3v</a>Vacature card</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div class="card" style="border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center"><div><div class="k">Categorie</div><div class="h3">Functietitel</div><div class="spec">⌖ Regio · ◷ Uren</div></div><span class="k">Bekijk →</span></div><div class="card" style="border-radius:8px;padding:8px"><div class="k">Cat.</div><div class="h3">Andere vacature</div></div></div><div class="txt"><div class="nm">Vac card</div><div class="spec">Full-width row card r10: category, serif title, meta icons, teaser; link right (stacks ≤767). Compact grid variant for "Andere vacatures". Hover: green border + soft shadow.</div><div class="src">.vac-card · .vac-detail-other-card</div></div></div></div>
+
+<div class="dv-opt" id="3w"><div class="dv-olabel"><a class="dv-oid" href="#3w">3w</a>Article rich-text blocks</div>
+<div class="dv-card wf cdef"><div class="viz" style="align-items:stretch"><div class="h3">Blok titel</div><div style="width:22px;height:2px;background:#00532D"></div><div class="ln"></div><div style="border-left:3px solid #cdb885;padding-left:8px;font:italic 12px Kalam;color:#00532D">"Pullquote"</div><div style="background:#ECF4E8;border-left:3px solid #00532D;padding:6px"><div class="k">Tip</div><div class="spec">◆ bullet</div></div></div><div class="txt"><div class="nm">Artikel blokken</div><div class="spec">Blok (title + 48px rule + Quill rich text, diamond bullets) · split blok with photo · pullquote · callout · share bar (34px round buttons) · "Ontdek meer" cards with artikel/project badge.</div><div class="src">blog-artikel.css</div></div></div></div>
+
+</div>
+<p class="dv-next">Try next: "turn <a class="dv-oid" href="#3p">3p</a> and <a class="dv-oid" href="#3o">3o</a> into one unified spec" · "build hi-fi versions of the components" · "add a states sheet (hover / focus / error)"</p>
+</section>
+</x-dc>
+</body>
+</html>

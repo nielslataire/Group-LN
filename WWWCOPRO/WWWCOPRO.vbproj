@@ -253,10 +253,13 @@
     <Compile Include="Controllers\TeamController.vb" />
     <Compile Include="Controllers\ProjectsController.vb" />
     <Compile Include="Controllers\ReferencesController.vb" />
+    <Compile Include="Areas\V2\V2AreaRegistration.vb" />
+    <Compile Include="Areas\V2\Controllers\HomeController.vb" />
     <Compile Include="Global.asax.vb">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\ViewRenderHelper.vb" />
+    <Compile Include="Helpers\HomeHeroDataHelper.vb" />
     <Compile Include="Helpers\SmtpMailHelper.vb" />
     <Compile Include="Helpers\Extensions.vb" />
     <Compile Include="Helpers\LatestNews.vb" />
@@ -514,6 +517,9 @@
     <Content Include="Vendor\simple-line-icons\scss\simple-line-icons.scss" />
     <Content Include="packages.config" />
     <Content Include="robots.txt" />
+    <Content Include="Content\v2\tokens.css" />
+    <Content Include="Content\v2\layout.css" />
+    <Content Include="Content\v2\home.css" />
     <Content Include="Views\Error\NotFound.vbhtml" />
     <Content Include="Views\Error\ServerError.vbhtml" />
     <Content Include="Views\Contact\Index.vbhtml" />
@@ -859,6 +865,7 @@
     <Content Include="Content\Site.css" />
     <Content Include="Scripts\custom.js" />
     <Content Include="Scripts\cookie-consent.js" />
+    <Content Include="Scripts\v2\site.js" />
     <Content Include="Scripts\reveal.js" />
     <Content Include="Scripts\theme.init.js" />
     <Content Include="Scripts\theme.js" />
@@ -1020,6 +1027,10 @@
     </Content>
     <Content Include="Views\Web.config" />
     <Content Include="Views\_ViewStart.vbhtml" />
+    <Content Include="Areas\V2\Views\Web.config" />
+    <Content Include="Areas\V2\Views\_ViewStart.vbhtml" />
+    <Content Include="Areas\V2\Views\Shared\_LayoutV2.vbhtml" />
+    <Content Include="Areas\V2\Views\Home\Index.vbhtml" />
     <Content Include="Views\Shared\Error.vbhtml" />
     <Content Include="Views\Shared\_Layout.vbhtml" />
   </ItemGroup>

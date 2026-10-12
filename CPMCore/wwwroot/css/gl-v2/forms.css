@@ -48,6 +48,7 @@
 .gl-v2-select-trigger-clear {
     display: none;
     flex: none;
+    text-decoration: none;
     align-items: center;
     justify-content: center;
     width: 20px;
@@ -141,6 +142,7 @@
 .gl-v2-select-option {
     display: flex;
     align-items: center;
+    text-decoration: none;
     gap: 9px;
     width: 100%;
     padding: 9px 10px;
@@ -244,7 +246,12 @@
     letter-spacing: .12em;
     padding: 6px 10px 4px;
 }
-.gl-v2-select-panel-search .gl-v2-select-options { padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+/* max-height/overflow-y stonden hier nog niet (de "MET ZOEKVELD"-variant was tot de combo hieronder
+   nergens echt toegepast) — zonder dit groeit de optielijst gewoon mee met het aantal items i.p.v. te
+   scrollen, en blijft het zoekveld niet vast bovenaan staan. Zelfde recept als de buurvariant
+   hieronder (.gl-v2-select-panel-newitem .gl-v2-select-options), enkel een iets ruimere hoogte omdat
+   hier geen vaste voetrij evenveel plaats inneemt. */
+.gl-v2-select-panel-search .gl-v2-select-options { padding: 6px; display: flex; flex-direction: column; gap: 1px; max-height: 280px; overflow-y: auto; }
 
 /* MET NIEUW ITEM — vaste voetrij buiten de scroll, stippellijn-knop zodat 'm niet als gewone
    optie gelezen wordt; component klaar, nergens toegepast. */

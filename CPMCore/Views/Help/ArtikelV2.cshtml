@@ -1,0 +1,210 @@
+@model CPMCore.Models.Help.HelpArticleV2Vm
+@*
+    gl-v2 — Helpcentrum, artikel (design-handoff punt 41c): links de volledige boom, midden de
+    tekst met genummerde stappen (41f #05) en FAQ (41f #07), rechts "Op deze pagina" + gekoppelde
+    schermen (41f #09). Opbouw volgt 41f letterlijk — zie dat sub-scherm voor de volledige
+    checklist per onderdeel.
+
+    Bewuste vereenvoudiging t.o.v. het mockup: "Op deze pagina" markeert geen actief item tijdens
+    scrollen (geen scroll-spy JS gebouwd in deze pass) en "Gekoppelde schermen" is platte tekst, geen
+    "Open dit scherm in de app ↗"-link — er bestaat nog geen registry die een screen-id naar een
+    echte URL vertaalt (zie DESIGN.md "Helpcentrum").
+*@
+@{
+    ViewData["Title"] = Model.Article.Title;
+    ViewData["PageIcon"] = "ph ph-question";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-help.css" asp-append-version="true" />
+}
+@* Design-handoff punt 43i — zelfde topbar-zoekvak als de startpagina, zodat je vanaf elk
+   help-artikel meteen naar een ander artikel kan zoeken zonder terug naar /Help te gaan. *@
+@section PageActions
+{
+    <div class="gl-v2-help-topbar-search" data-help-search>
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+        <input type="text" class="gl-v2-help-topbar-search-input" id="gl-v2-help-topbar-search-input" placeholder="Zoek in help" autocomplete="off" aria-label="Zoek in help">
+        <div class="gl-v2-help-search-results" id="gl-v2-help-topbar-search-results" hidden></div>
+    </div>
+}
+
+<div class="gl-v2-help-article-layout">
+    <aside class="gl-v2-help-tree" aria-label="Help-onderwerpen">
+        @foreach (var g in Model.Tree)
+        {
+            @* Design-handoff punt 43i/41c — een ingeklapt topic (elk topic behalve het huidige)
+               moet je naar zijn eerste artikel kunnen brengen, niet enkel tonen: anders is de boom
+               een doodlopend overzicht i.p.v. navigatie. Leeg topic (geen FirstArticleSlug) blijft
+               niet-klikbaar — er is nergens heen te gaan. *@
+            if (g.FirstArticleSlug != null)
+            {
+                <a class="gl-v2-help-tree-group @(g.IsOpen ? "is-open" : "")" href="@Url.Action("Artikel", "Help", new { slug = g.FirstArticleSlug })">
+                    <span class="gl-v2-help-tree-group-title">@g.Name</span>
+                    <span class="gl-v2-help-tree-group-count">@g.Count</span>
+                </a>
+            }
+            else
+            {
+                <div class="gl-v2-help-tree-group is-empty">
+                    <span class="gl-v2-help-tree-group-title">@g.Name</span>
+                    <span class="gl-v2-help-tree-group-count">@g.Count</span>
+                </div>
+            }
+            @if (g.IsOpen)
+            {
+                @foreach (var a in g.Articles)
+                {
+                    <a class="gl-v2-help-tree-item @(a.IsActive ? "is-active" : "") @(a.IsChild ? "is-child" : "")"
+                       href="@Url.Action("Artikel", "Help", new { slug = a.Slug })">@a.Title</a>
+                }
+            }
+        }
+    </aside>
+
+    <div class="gl-v2-help-article-body">
+        <div class="gl-v2-help-breadcrumb">
+            <a href="@Url.Action("Index", "Help")">Help</a>
+            <span>/</span>
+            <span>@Model.Topic.Name</span>
+        </div>
+
+        <div class="gl-v2-help-article-head">
+            <h1 class="gl-v2-help-article-title">@Model.Article.Title</h1>
+            <div class="gl-v2-help-article-meta">
+                @if (Model.Article.Minutes > 0)
+                {
+                    <span>@Model.Article.Minutes min lezen</span>
+                    <span>·</span>
+                }
+                @if (Model.Article.UpdatedOn.HasValue)
+                {
+                    <span>bijgewerkt @Model.Article.UpdatedOn.Value.ToString("dd/MM/yyyy")</span>
+                    <span>·</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.Article.Role))
+                {
+                    <span class="gl-v2-badge is-neutral">@Model.Article.Role</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.Article.Device))
+                {
+                    <span class="gl-v2-badge is-neutral">@Model.Article.Device</span>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Article.IntroHtml))
+        {
+            <div class="gl-v2-help-intro">@Html.Raw(Model.Article.IntroHtml)</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.Article.BeforeHtml))
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact">
+                <i class="ph ph-info" aria-hidden="true"></i>
+                <span><b>Voor je begint:</b> @Html.Raw(Model.Article.BeforeHtml)</span>
+            </div>
+        }
+
+        @if (Model.Article.Steps.Count > 0)
+        {
+            <span class="gl-v2-help-section-title">Zo werkt het</span>
+            @foreach (var step in Model.Article.Steps)
+            {
+                <div class="gl-v2-help-step">
+                    <span class="gl-v2-help-step-num">@step.Number</span>
+                    <div class="gl-v2-help-step-body">
+                        <span class="gl-v2-help-step-title">@step.Title</span>
+                        <div class="gl-v2-help-step-text">@Html.Raw(step.BodyHtml)</div>
+                        @if (!string.IsNullOrEmpty(step.ImagePath))
+                        {
+                            <img class="gl-v2-help-step-img" src="@step.ImagePath" alt="@step.ImageCaption" loading="lazy" />
+                            @if (!string.IsNullOrEmpty(step.ImageCaption))
+                            {
+                                <span class="gl-v2-help-step-caption">@step.ImageCaption</span>
+                            }
+                        }
+                        @* Geen placeholder voor een stap zonder afbeelding (41f #05: "enkel waar ze iets
+                           toont dat de tekst niet zegt") — een afgewerkt artikel toont nooit een rij
+                           "Nog geen schermafbeelding"-vakken na elkaar, dat hoort enkel bij een artikel
+                           in opbouw. *@
+                    </div>
+                </div>
+            }
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.Article.WarningHtml))
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                <i class="ph ph-warning" aria-hidden="true"></i>
+                <span><b>Let op:</b> @Html.Raw(Model.Article.WarningHtml)</span>
+            </div>
+        }
+
+        @if (Model.Article.Faq.Count > 0)
+        {
+            <span class="gl-v2-help-section-title">Veelgestelde vragen</span>
+            <div class="gl-v2-help-faq" data-help-faq>
+                @for (var i = 0; i < Model.Article.Faq.Count; i++)
+                {
+                    var f = Model.Article.Faq[i];
+                    <div class="gl-v2-help-faq-item @(i == 0 ? "is-open" : "")" data-help-faq-item>
+                        <button type="button" class="gl-v2-help-faq-question" data-help-faq-toggle>
+                            <span>@f.Question</span>
+                            <i class="ph ph-caret-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="gl-v2-help-faq-answer">@f.Answer</div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="gl-v2-help-feedback" data-help-feedback data-article-slug="@Model.Article.Slug">
+            <span class="gl-v2-help-feedback-title">Was dit artikel nuttig?</span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-help-feedback-yes>Ja</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-help-feedback-no>Nee, iets ontbreekt</button>
+        </div>
+        <div class="gl-v2-help-feedback-form" data-help-feedback-form hidden>
+            <textarea class="gl-v2-field-input gl-v2-help-feedback-textarea" rows="3" placeholder="Wat ontbreekt of klopt niet?" data-help-feedback-message></textarea>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-help-feedback-send>Versturen</button>
+        </div>
+
+        @if (Model.Related.Count > 0)
+        {
+            <span class="gl-v2-help-section-label">Verder lezen</span>
+            <div class="gl-v2-help-related-grid">
+                @foreach (var r in Model.Related)
+                {
+                    <a class="gl-v2-help-related-card" href="@Url.Action("Artikel", "Help", new { slug = r.Slug })">
+                        <span class="gl-v2-help-related-topic">@r.TopicName</span>
+                        <span class="gl-v2-help-related-title">@r.Title</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    <aside class="gl-v2-help-toc" aria-label="Op deze pagina">
+        <span class="gl-v2-help-section-label">Op deze pagina</span>
+        @foreach (var o in Model.Toc)
+        {
+            <span class="gl-v2-help-toc-item">@o.Text</span>
+        }
+        @if (Model.Article.Screens.Count > 0)
+        {
+            <div class="gl-v2-help-toc-divider"></div>
+            <span class="gl-v2-help-section-label">Gekoppelde schermen</span>
+            <div class="gl-v2-help-toc-screens">
+                @foreach (var s in Model.Article.Screens)
+                {
+                    <span class="gl-v2-badge is-neutral">@s</span>
+                }
+            </div>
+        }
+    </aside>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-help.js" asp-append-version="true"></script>
+}

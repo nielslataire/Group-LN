@@ -1,0 +1,139 @@
+/* gl-v2 component — contextueel help-zijpaneel (design-handoff punt 41d, "Help zijpaneel").
+   Altijd in de DOM op élke gl-v2-pagina (zie _LayoutV2.cshtml), zelfde open/dicht-klasse-patroon
+   als .gl-v2-mc-panel (meldingen.css) maar éénvoudiger: dit paneel heeft geen desktop-vaste-
+   kolomvariant — het is op élke breedte een overlay die van rechts inschuift, enkel <768px wordt
+   het volledig scherm (zelfde omslagpunt als de rest van gl-v2). */
+
+.gl-v2-topbar-help-btn {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    border: 1px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--gl-v2-ink);
+    cursor: pointer;
+    flex: none;
+}
+.gl-v2-topbar-help-btn i { font-size: 17px; }
+.gl-v2-topbar-help-btn:hover,
+.gl-v2-topbar-help-btn:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); outline: none; }
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-help-btn { border-color: rgba(255, 255, 255, .35); color: var(--gl-v2-surface); }
+    .gl-v2-topbar-help-btn:hover,
+    .gl-v2-topbar-help-btn:focus-visible { background: rgba(255, 255, 255, .16); border-color: var(--gl-v2-surface); }
+}
+
+.gl-v2-hp-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 28, 18, .45);
+    z-index: 1300;
+}
+.gl-v2-hp-backdrop.is-open { display: block; }
+
+.gl-v2-hp-panel {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    max-width: 100vw;
+    background: var(--gl-v2-surface);
+    box-shadow: -24px 0 50px -20px rgba(44, 59, 42, .45);
+    z-index: 1301;
+}
+.gl-v2-hp-panel.is-open { display: flex; }
+@media (max-width: 767.98px) {
+    .gl-v2-hp-panel { width: 100%; }
+}
+
+.gl-v2-hp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 62px;
+    flex: none;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-hp-header > i:first-child { font-size: 16px; color: var(--gl-v2-primary); }
+.gl-v2-hp-title { font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-hp-spacer { flex: 1; }
+.gl-v2-hp-open-center { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-hp-header > i.ph-arrow-up-right { font-size: 11px; color: var(--gl-v2-primary); margin-left: -4px; }
+.gl-v2-hp-close { width: 30px; height: 30px; flex: none; border: 0; background: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer; }
+.gl-v2-hp-close:hover { background: var(--gl-v2-hover-tint); }
+
+.gl-v2-hp-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gl-v2-hp-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    padding: 24px 10px;
+}
+.gl-v2-hp-empty-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    background: var(--gl-v2-hover-tint);
+    color: var(--gl-v2-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 21px;
+}
+.gl-v2-hp-empty-title { font: 500 15px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-hp-empty-desc { font: 450 12px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 280px; }
+
+.gl-v2-hp-article {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--gl-v2-hairline);
+    text-decoration: none;
+    color: inherit;
+}
+.gl-v2-hp-article:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-hp-article > i:first-child { font-size: 15px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-hp-article > i:last-child { font-size: 12px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-hp-article-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-hp-article-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-hp-article-desc { font: 450 11.5px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-hp-support-trigger {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 6px;
+    padding: 11px 12px;
+    border: 1px dashed var(--gl-v2-dashed);
+    border-radius: 10px;
+    background: none;
+    font: 600 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    cursor: pointer;
+}
+.gl-v2-hp-support-trigger:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-hp-support-form { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-hp-support-textarea { border: 1px solid var(--gl-v2-hairline); border-radius: 8px; padding: 10px 12px; font: 450 13px/1.5 var(--gl-v2-font-sans); resize: vertical; }
+.gl-v2-hp-support-sent { display: flex; align-items: center; gap: 7px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); padding: 8px 2px; }

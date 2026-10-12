@@ -1,0 +1,43 @@
+/* gl-v2 component — pill-rij met tellingen (design-handoff 42f, GlV2/_PillSelector.cshtml).
+   Eerste echte toepassing: Projecten/RecalculationDetailV2 (Nacalculatie-subcategorieën: "Alle
+   activiteiten · 3", "Elektrische installatie · 4", …) — generiek genoeg voor elke andere plek die
+   een rij navigeerbare, geteld-getagde keuzes nodig heeft. Gebruikt bestaande tokens
+   (--gl-v2-radius-pill, --gl-v2-primary, --gl-v2-neutral-tint) i.p.v. nieuwe kleuren/radii te
+   verzinnen. Bij meer dan het ingestelde aantal (standaard 6) valt de partial terug op de bestaande,
+   projectbrede combo-skelet (.gl-v2-select/-trigger/-panel-search, gl-v2/forms.css) — hier enkel een
+   breedte nodig (die componenten zijn van zichzelf shrink-to-fit), zie .gl-v2-pillrow-select onderaan. */
+.gl-v2-pillrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gl-v2-pillrow-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted); margin-right: 2px; }
+
+.gl-v2-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--gl-v2-radius-pill);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-ink);
+    font: 500 12.5px var(--gl-v2-font-sans);
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.gl-v2-pill:hover { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); }
+.gl-v2-pill-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--gl-v2-neutral-tint);
+    color: var(--gl-v2-muted);
+    font: 600 10.5px var(--gl-v2-font-sans);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.gl-v2-pill.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+.gl-v2-pill.is-active .gl-v2-pill-count { background: rgba(255, 255, 255, .22); color: var(--gl-v2-surface); }
+
+.gl-v2-pillrow .gl-v2-select[data-gl-v2-navcombo] { min-width: 260px; }

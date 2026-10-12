@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"><style>
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Light.ttf') format('truetype');font-weight:300}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Book.woff2') format('woff2');font-weight:400}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Medium.ttf') format('truetype');font-weight:500 600}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Heavy.woff2') format('woff2');font-weight:700}
+@font-face{font-family:'Avenir';src:url('WWWCOPRO/Content/fonts/Avenir-Black.woff2') format('woff2');font-weight:900}
+:root{--color-primary:#00532D;--color-primary-hover:#006638;--color-primary-dark:#003D21;--color-cta:#C9A96E;--color-cta-hover:#B8935A;--olijf:#3D7A4E;--olijf-hover:#2F6038;--groen-diep:#2C3B2A;--groen-mid:#7A9E6E;--groen-licht:#D6E5CC;--mist:#F2F5EF;--tekst:#2C3B2A;--tekst-sub:#5A6B58;--border:rgba(0,83,45,.10);--font-serif:'Playfair Display','Times New Roman',Georgia,serif;--font-sans:'Avenir','Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#E9ECE6;font-family:var(--font-sans);color:var(--tekst);-webkit-font-smoothing:antialiased}
+a{color:var(--color-primary)}a:hover{color:var(--color-primary-hover)}
+h1,h2,h3,h4{font-family:var(--font-serif);color:var(--groen-diep)}
+.doc{max-width:1320px;margin:0 auto;padding:48px 32px 120px}
+.doc-top{display:flex;flex-wrap:wrap;gap:24px 48px;align-items:flex-end;justify-content:space-between;margin-bottom:40px}
+.doc-title{font:500 44px/1.1 var(--font-serif);margin:0 0 10px}
+.doc-lead{font-size:15px;line-height:1.65;color:var(--tekst-sub);max-width:640px;margin:0}
+.doc-index{display:flex;flex-wrap:wrap;gap:6px;max-width:620px}
+.doc-index a{font:700 10px/1 var(--font-sans);letter-spacing:.8px;text-transform:uppercase;text-decoration:none;color:var(--groen-diep);background:#fff;border:1px solid var(--border);border-radius:99px;padding:7px 11px}
+.doc-index a:hover{border-color:var(--color-primary);color:var(--color-primary)}
+.doc-group{font:700 11px/1 var(--font-sans);letter-spacing:2.6px;text-transform:uppercase;color:var(--color-primary);margin:64px 0 18px;display:flex;align-items:center;gap:14px}
+.doc-group::after{content:'';flex:1;height:1px;background:rgba(0,83,45,.2)}
+.cmp{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:28px;overflow:hidden;scroll-margin-top:20px}
+.cmp-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;padding:22px 28px 18px;border-bottom:1px solid var(--border)}
+.cmp-id{font:700 10px/1 ui-monospace,Menlo,monospace;background:var(--groen-diep);color:#fff;padding:4px 7px;border-radius:4px}
+.cmp-name{font:500 26px/1.15 var(--font-serif);margin:0}
+.cmp-src{font:11px/1.4 ui-monospace,Menlo,monospace;color:#2a78d6;margin-left:auto}
+.cmp-desc{flex-basis:100%;font-size:14px;line-height:1.6;color:var(--tekst-sub);margin:2px 0 0;max-width:820px}
+.cmp-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,440px)}
+.cmp-prev{background:var(--mist);padding:28px;display:flex;flex-direction:column;gap:22px;min-width:0;border-right:1px solid var(--border)}
+.cmp-prev.dark{background:#2b302a}
+.state{display:flex;flex-direction:column;gap:8px;min-width:0}
+.state-l{font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.5px;text-transform:uppercase;color:#8a958a}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.specs{padding:18px 24px 24px;font-size:12.5px;line-height:1.5}
+.sp-g{font:700 9.5px/1 var(--font-sans);letter-spacing:1.6px;text-transform:uppercase;color:var(--color-primary);margin:16px 0 6px}
+.sp-g:first-child{margin-top:0}
+.sp{display:grid;grid-template-columns:118px minmax(0,1fr);gap:10px;padding:6px 0;border-top:1px solid rgba(0,83,45,.07)}
+.sp-k{color:var(--tekst-sub)}
+.sp-v{color:var(--tekst)}
+.sp-v code,.specs code{font:11px ui-monospace,Menlo,monospace;background:var(--mist);padding:1px 4px;border-radius:3px;color:var(--groen-diep)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px;border:1px solid rgba(0,0,0,.1)}
+.ph{background:repeating-linear-gradient(-45deg,#E4E9E0 0 8px,#EDF0EA 8px 16px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,Menlo,monospace;color:#7d8a7b;text-align:center}
+.ph.dk{background:repeating-linear-gradient(-45deg,#2f3a30 0 8px,#364237 8px 16px);color:rgba(255,255,255,.55)}
+@media (max-width:1200px){.cmp-body{grid-template-columns:1fr}.cmp-prev{border-right:0;border-bottom:1px solid var(--border)}}
+.cmp-prev{overflow-x:auto}
+
+.fnd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.swc{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.swc-c{height:72px}
+.swc-t{padding:10px 12px;font-size:12px;line-height:1.45}
+.swc-t b{display:block;font-size:13px}
+.swc-t code{font:10.5px ui-monospace,Menlo,monospace;color:var(--tekst-sub)}
+.ty-row{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,260px);gap:20px;align-items:baseline;padding:16px 0;border-top:1px solid var(--border)}
+.ty-k{font:700 10px/1.3 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;color:var(--color-primary)}
+.ty-m{font:11px/1.5 ui-monospace,Menlo,monospace;color:var(--tekst-sub)}
+@media (max-width:900px){.ty-row{grid-template-columns:1fr}}
+.tok{display:flex;align-items:center;gap:12px;font-size:12.5px;padding:8px 0;border-top:1px solid var(--border)}
+.tok code{font:11px ui-monospace,Menlo,monospace;color:var(--tekst-sub);min-width:58px}
+
+/* ===== component styles (mirrors source CSS) ===== */
+.section-kicker{margin:0 0 16px;text-transform:uppercase;letter-spacing:2.6px;font-size:11px;font-weight:700;font-family:var(--font-sans);color:var(--color-primary)}
+.cta-btn{display:inline-flex;align-items:center;gap:10px;padding:16px 28px;border-radius:6px;text-transform:uppercase;letter-spacing:1px;font:700 13px/1 var(--font-sans);color:#fff;background:var(--color-primary);text-decoration:none;border:0}
+.cta-btn.is-hover{background:var(--color-primary-hover)}
+.about-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border:1.5px solid var(--groen-diep);border-radius:6px;text-transform:uppercase;letter-spacing:1px;font:700 13px/1 var(--font-sans);color:var(--groen-diep);background:transparent;text-decoration:none}
+.about-btn.is-hover{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.hero-cta{display:inline-flex;align-items:center;gap:10px;padding:16px 30px;border-radius:4px;background:#fff;color:var(--groen-diep);font:700 13px/1 var(--font-sans);text-transform:uppercase;letter-spacing:1.2px;text-decoration:none;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.hero-cta i{font-size:12px}
+.hero-cta.is-hover{background:var(--color-cta);transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.32)}
+.hero-cta.is-hover i{transform:translateX(3px)}
+.hero-search-trigger{display:inline-flex;align-items:center;gap:10px;padding:16px 24px;border-radius:4px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.06);color:#fff;font:700 13px/1 var(--font-sans);text-transform:uppercase;letter-spacing:1.2px}
+.hero-search-trigger.is-hover{background:rgba(255,255,255,.14);border-color:#fff}
+.hamburger-btn{width:46px;height:46px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--color-cta);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);padding:0}
+.hamburger-btn.is-hover{background:var(--color-cta-hover)}
+.hamburger-lines{display:flex;flex-direction:column;gap:4px;width:20px}
+.hamburger-lines span{display:block;height:2.5px;background:var(--groen-diep);border-radius:1px}
+.vac-detail-apply-btn{display:inline-flex;align-items:center;gap:10px;padding:16px 28px;border-radius:6px;text-transform:uppercase;letter-spacing:1px;font:700 13px/1 var(--font-sans);color:#fff;background:var(--color-cta);text-decoration:none}
+.vac-detail-outline-btn{display:inline-flex;align-items:center;padding:16px 28px;border-radius:6px;border:1px solid rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;font:700 13px/1 var(--font-sans);color:#fff}
+.uitgelicht-cta{display:inline-flex;align-items:center;gap:8px;background:var(--color-primary);color:#fff;font:600 11px/1 var(--font-sans);letter-spacing:1.5px;padding:11px 18px;border-radius:2px;text-transform:uppercase}
+.cta-kaart-btn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid rgba(255,255,255,.55);color:#fff;font:700 10px/1 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;padding:9px 16px;border-radius:2px}
+.about-pijler-link{display:inline-flex;align-items:center;gap:8px;font:700 12px/1 var(--font-sans);text-transform:uppercase;letter-spacing:1px;color:var(--color-primary);text-decoration:none}
+.cc-btn{border:1px solid transparent;border-radius:3px;padding:10px 16px;font:700 12px/1 var(--font-sans);letter-spacing:.04em;text-transform:uppercase}
+.cc-btn-primary{background:var(--color-primary);color:#fff}
+.cc-btn-ghost{background:transparent;border-color:rgba(0,83,45,.25);color:var(--groen-diep)}
+.focus-ring{outline:2px solid var(--color-cta);outline-offset:2px;box-shadow:0 0 0 4px var(--groen-diep)}
+
+.sectie-kop{font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--tekst-sub);margin:0;display:flex;align-items:center;gap:14px}
+.sectie-kop::after{content:'';flex:1;height:1px;background:var(--border)}
+.h-34{font:500 34px/1.2 var(--font-serif);color:var(--groen-diep);margin:0}
+.p-sub{font-size:16px;line-height:1.7;color:var(--tekst-sub);margin:0}
+
+.page-header-x{background:var(--mist);padding:44px 32px 36px;border-bottom:1px solid var(--border)}
+.bc{list-style:none;margin:0 0 16px;padding:0;font-size:12px;color:var(--tekst-sub)}
+.bc li{display:inline}.bc li+li::before{content:'/';padding:0 8px;color:rgba(0,83,45,.35)}
+.bc a{color:var(--tekst-sub);text-decoration:none}
+.bc.on-dark,.bc.on-dark a{color:rgba(255,255,255,.65)}.bc.on-dark li+li::before{color:rgba(255,255,255,.35)}
+.page-h1{font:400 36px/1.2 var(--font-serif);color:var(--tekst);margin:0 0 8px}
+.page-subtitle{font-size:14px;color:var(--tekst-sub);margin:0 0 20px}
+.page-accent{display:block;width:44px;height:2px;background:var(--color-primary);border-radius:1px}
+
+.about-hero{position:relative;padding:72px 36px 56px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 1px,transparent 1px 10px),linear-gradient(180deg,#075c34 0%,#00532D 48%,#003d21 100%);overflow:hidden}
+.about-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:100px;background:linear-gradient(to bottom,rgba(0,61,33,0),rgba(0,40,21,.5));pointer-events:none}
+.about-hero-inner{position:relative;z-index:1;max-width:720px}
+.about-hero-kicker{margin:0 0 18px;text-transform:uppercase;letter-spacing:2.4px;font:700 12px/1 var(--font-sans);color:var(--color-cta)}
+.about-hero-title{font:500 46px/1.12 var(--font-serif);color:#fff;margin:0 0 20px}
+.about-hero-text{font-size:17px;line-height:1.6;color:rgba(255,255,255,.85);max-width:560px;margin:0}
+.hdr-x{background:var(--color-primary);padding:0 40px;display:flex;align-items:center;justify-content:space-between;min-height:70px;gap:20px}
+.hdr-x.tr{background:transparent}
+.hdr-logo{display:flex;align-items:center;gap:28px;flex:none}
+.hdr-x:not([style*="max-width"]){min-width:760px}
+.ftr-x,.ftr-bot{min-width:640px}
+.hdr-brand{display:flex;align-items:center;text-decoration:none}
+.hdr-mark{width:44px;height:50px;border:1.5px solid rgba(255,255,255,.7);border-radius:3px;display:flex;align-items:center;justify-content:center;font:700 9px ui-monospace,monospace;color:rgba(255,255,255,.7)}
+.hdr-div{width:1px;height:52px;background:rgba(255,255,255,.3);margin:0 18px}
+.hdr-name{display:block;font:700 30px/.8 'Avenir',sans-serif;color:#fff;text-transform:uppercase}
+.hdr-sub{display:block;font:500 13px/1.3 var(--font-sans);color:rgba(255,255,255,.75);text-transform:uppercase;margin-top:4px}
+.hdr-phone{display:flex;align-items:center;gap:12px;text-decoration:none}
+.hdr-phone-i{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.5);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center}
+.hdr-phone-l{display:block;text-transform:uppercase;letter-spacing:1px;font:700 10px/1.3 var(--font-sans);color:rgba(255,255,255,.7)}
+.hdr-phone-n{display:block;font:700 15px/1.3 var(--font-sans);color:#fff;font-variant-numeric:tabular-nums}
+.hdr-nav{display:flex;align-items:center;gap:32px}
+.hdr-items{display:flex;gap:28px}
+.hdr-items a{text-transform:uppercase;letter-spacing:.5px;font:700 13px/1 var(--font-sans);color:#fff;text-decoration:none}
+.hdr-items a.active{color:var(--color-cta)}
+.nav-panel{width:320px;padding:16px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45);color:#fff}
+.nav-list{list-style:none;margin:0;padding:0}
+.nav-list a{display:block;padding:12px 8px;font:400 16px/1.2 var(--font-sans);color:#fff;text-decoration:none}
+.nav-list a.active{color:var(--color-cta)}
+.nav-info{display:flex;flex-direction:column;gap:16px;margin-top:16px;padding:16px 8px 0;border-top:1px solid rgba(255,255,255,.15)}
+.nav-info h4{text-transform:uppercase;letter-spacing:1px;font:600 12px/1 var(--font-sans);color:var(--color-cta);margin:0 0 8px}
+.nav-info p{margin:0 0 4px;font-size:14px;color:#fff}
+.nav-full{background:var(--color-primary);padding:40px 24px;color:#fff;width:300px}
+.nav-full .nav-list a{font-size:25px;line-height:1.1;padding:10px 0}
+.ftr-x{background:var(--color-primary);padding:56px 40px 0}
+.ftr-quote{font:500 38px/1.25 var(--font-serif);color:#fff;max-width:720px;margin:0 0 40px}
+.ftr-div{height:1px;background:rgba(255,255,255,.15);margin:0 0 48px}
+.ftr-cols{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:32px;padding-bottom:56px}
+.ftr-t{font:700 11px/1 var(--font-sans);letter-spacing:1.8px;text-transform:uppercase;color:#fff;margin:0 0 20px}
+.ftr-l{list-style:none;margin:0;padding:0}
+.ftr-l li{font-size:13px;line-height:1.55;color:rgba(255,255,255,.68);margin-bottom:12px}
+.ftr-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.ftr-bn{font:700 27px/1 'Avenir',sans-serif;color:#fff;text-transform:uppercase}
+.ftr-bs{font:500 11px/1 var(--font-sans);color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
+.ftr-soc{display:flex;gap:10px;list-style:none;margin:0;padding:0}
+.ftr-soc a{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center}
+.ftr-soc a.is-hover{background:var(--color-cta);border-color:var(--color-cta)}
+.ftr-bot{background:var(--color-primary);border-top:1px solid rgba(255,255,255,.15);padding:18px 40px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.ftr-bot p{margin:0 auto 0 0;font-size:13px;color:rgba(255,255,255,.65)}
+.ftr-legal{display:flex;gap:20px;font-size:13px;color:rgba(255,255,255,.68)}
+.ftr-ai{font-size:12px;color:rgba(255,255,255,.5);display:flex;gap:6px;align-items:center}
+@media (max-width:991px){.ftr-cols{grid-template-columns:1fr 1fr}.ftr-cols>:first-child{grid-column:1/-1}}
+.hs-form{display:flex;align-items:stretch;width:100%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);border-radius:4px;overflow:hidden}
+.hs-field{flex:1 1 0;padding:10px 20px;border-right:1px solid rgba(255,255,255,.12);text-align:left;min-width:0}
+.hs-l{display:block;text-transform:uppercase;letter-spacing:1px;font:700 11px/1 var(--font-sans);color:rgba(255,255,255,.8);margin:0 0 4px}
+.hs-v{font:600 14px/1.3 var(--font-sans);color:#fff;display:flex;justify-content:space-between;gap:8px}
+.hs-btn{flex:0 0 72px;background:var(--color-cta);color:var(--groen-diep);font-size:18px;display:flex;align-items:center;justify-content:center}
+.hs-menu{width:220px;padding:8px;background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.15);border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.45);list-style:none;margin:0}
+.hs-opt{display:flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:8px;font:500 14px/1 var(--font-sans);color:#fff}
+.hs-opt.is-active{background:rgba(255,255,255,.14)}
+.hs-opt.is-all{color:var(--color-cta)}
+.pk{border:1px solid var(--border);border-radius:3px;overflow:hidden;background:#fff;display:flex;flex-direction:column;width:300px;text-decoration:none;color:inherit}
+.pk.is-hover{box-shadow:0 6px 24px rgba(0,0,0,.09);transform:translateY(-2px)}
+.pk-foto{position:relative;aspect-ratio:4/3;overflow:hidden;display:flex}
+.pk-foto .ph{flex:1}
+.pk-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.52) 0%,transparent 52%)}
+.pk-prijs{position:absolute;bottom:12px;left:14px;color:#fff;font:400 15px/1 var(--font-serif);text-shadow:0 1px 4px rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+.pk-prijs span{display:block;font:600 9px/1 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;opacity:.82;margin-bottom:3px}
+.pk-pijl{position:absolute;bottom:12px;right:14px;width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,.65);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.pk.is-hover .pk-pijl{background:var(--color-primary);border-color:var(--color-primary)}
+.fb{position:absolute;top:10px;left:10px;font:700 9px/1 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;padding:4px 9px;border-radius:2px;color:#fff;background:var(--color-primary)}
+.vb{position:absolute;top:10px;right:10px;width:82px;background:var(--groen-diep);padding:9px 10px 10px;border-radius:10px;text-align:center}
+.vb-l{font:700 8.5px/1 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:5px}
+.vb-v{font:700 21px/1 var(--font-sans);color:#fff;margin-bottom:7px}
+.vb-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.2);overflow:hidden}.vb-bar span{display:block;height:100%;background:#5FBF6E;border-radius:2px}
+.pk-body{padding:16px 18px 12px;flex:1;display:flex;flex-direction:column}
+.pk-type{font:700 9px/1 var(--font-sans);letter-spacing:2px;text-transform:uppercase;color:var(--color-primary);margin-bottom:5px}
+.pk-naam{font:400 17px/1.25 var(--font-serif);color:var(--tekst);margin:0 0 5px}
+.pk-loc{font-size:12px;color:var(--tekst-sub);display:flex;gap:4px;align-items:center}
+.pk-specs{display:flex;gap:10px;margin-top:8px;font-size:11px;color:var(--tekst-sub)}
+.pk-foot{padding:10px 18px 13px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);margin-top:10px}
+.bpill{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;background:#EAF3DE;border:.5px solid #C0DD97;color:#3B6D11;font:500 12px/1.4 var(--font-sans);padding:2px 12px;border-radius:20px;margin-top:12px}
+.bpill i{width:7px;height:7px;border-radius:50%;background:#3B6D11;display:block}
+.sb{display:inline-flex;align-items:center;gap:5px;font:700 9px/1 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;padding:4px 9px;border-radius:2px}
+.sb i{width:5px;height:5px;border-radius:50%;display:block}
+.sold-ov{position:absolute;inset:0;background:rgba(44,59,42,.6);display:flex;align-items:center;justify-content:center}
+.sold-ov span{font:700 10px/1 var(--font-sans);letter-spacing:3px;text-transform:uppercase;color:#fff;border:1.5px solid rgba(255,255,255,.55);padding:6px 14px}
+.ul{display:grid;grid-template-columns:1fr 340px;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:#fff;width:100%}
+.ul-foto{position:relative;min-height:300px;display:flex}.ul-foto .ph{flex:1}
+.ul-info{padding:40px 36px;display:flex;flex-direction:column;border-left:1px solid var(--border)}
+.ul-naam{font:400 26px/1.2 var(--font-serif);margin:0 0 8px;color:var(--tekst)}
+.ul-txt{font-size:13px;line-height:1.65;color:var(--tekst-sub);margin:0 0 20px}
+.ul-prijs{font:400 20px/1 var(--font-serif);margin:24px 0;font-variant-numeric:tabular-nums}
+.ul-prijs span{display:block;font:400 12px/1 var(--font-sans);letter-spacing:.5px;text-transform:uppercase;color:var(--tekst-sub);margin-bottom:4px}
+@media (max-width:1100px){.ul{grid-template-columns:1fr}.ul-info{border-left:0;border-top:1px solid var(--border);padding:28px}}
+.ik{background:#fff;border-radius:3px;border:.5px solid var(--border);overflow:hidden;box-shadow:0 2px 20px rgba(0,83,45,.06);width:360px}
+.ik-prijs{background:var(--color-primary);padding:20px 26px;border-bottom:.5px solid rgba(201,169,110,.2)}
+.ik-pl{font:500 10px/1 var(--font-sans);color:rgba(255,255,255,.55);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.ik-pv{font:400 28px/1 var(--font-serif);color:#fff;margin:0;font-variant-numeric:tabular-nums}
+.ik-rij{display:flex;gap:14px;padding:12px 26px;border-bottom:.5px solid var(--border)}
+.ik-k{font:500 10.5px/1.4 var(--font-sans);color:var(--tekst-sub);letter-spacing:.07em;text-transform:uppercase;min-width:90px;padding-top:2px}
+.ik-v{font-size:14px;line-height:1.5;flex:1}.ik-v a{display:block;font-size:11.5px;color:var(--olijf);text-decoration:none;margin-top:3px}
+.ik-e{display:flex;align-items:center;gap:12px;padding:10px 26px;border-bottom:.5px solid var(--border);font-size:14px}.ik-e i{color:var(--groen-mid);width:20px;text-align:center}
+.ik-docs{padding:14px 20px}
+.ik-dk{font:600 10px/1 var(--font-sans);color:var(--tekst-sub);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.ik-bro{display:flex;align-items:center;gap:10px;color:var(--color-primary);border:1.5px solid var(--color-primary);border-radius:2px;padding:10px 16px;font:600 13px/1 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+.ik-doc{color:var(--color-primary);font-size:13px;display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.ik-cta{padding:16px 20px 20px;background:var(--mist);border-top:.5px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.ik-ctak{font:500 10px/1 var(--font-sans);color:var(--tekst-sub);letter-spacing:.1em;text-transform:uppercase;padding:0 4px}
+.ik-prim,.ik-sec{display:flex;align-items:center;justify-content:space-between;border-radius:2px;padding:16px 18px 16px 16px}
+.ik-prim{background:var(--olijf);color:#fff;min-height:68px}
+.ik-sec{border:1.5px solid var(--color-primary);color:var(--color-primary);min-height:60px;padding:14px 18px 14px 16px}
+.ck-in{display:flex;align-items:center;gap:13px}.ck-ico{font-size:18px}
+.ck-t{display:block;font:600 14px/1.2 var(--font-sans);letter-spacing:.02em}.ck-s{display:block;font:300 11px/1.2 var(--font-sans);opacity:.75;margin-top:2px}
+.ck-a{font-size:20px;opacity:.55;font-weight:300}
+.et{width:100%;border-collapse:collapse;font-size:14px;color:var(--tekst);font-variant-numeric:tabular-nums}
+.et thead tr{background:var(--color-primary)}
+.et th{padding:14px 20px;font:600 10px/1 var(--font-sans);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.7);text-align:left;white-space:nowrap}
+.et td{padding:16px 20px;vertical-align:middle}
+.et tbody tr{border-bottom:.5px solid var(--border);background:#fff}.et tbody tr.z{background:var(--mist)}.et tbody tr.v{color:#aaa}
+.et .num{text-align:right}.et .c{text-align:center}
+.lot{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 var(--font-sans);color:var(--color-primary)}
+.lot b{width:28px;height:28px;border-radius:2px;background:var(--color-primary);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+.opt-b{display:inline-block;font:700 9px/1.4 var(--font-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--olijf);border:1px solid var(--olijf);border-radius:2px;padding:2px 7px;margin-top:5px}
+.dots{display:flex;gap:5px;align-items:center}.dots i{width:8px;height:8px;border-radius:50%;background:var(--olijf);display:block}.dots i.o{background:transparent;border:1px solid var(--groen-licht)}
+.pv{font:400 16px/1 var(--font-serif);color:var(--color-primary)}.pv small{display:block;font:500 9.5px/1 var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--tekst-sub);margin-bottom:3px}
+.esp{display:inline-flex;align-items:center;gap:5px;font:600 10px/1 var(--font-sans);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.esp i{width:6px;height:6px;border-radius:50%;background:currentColor;display:block}
+.esp.b{background:#eaf3e4;color:#3B6D11;border:.5px solid #C0DD97}.esp.o{background:#fef3e2;color:#7a4a00;border:.5px solid #f5cc80}.esp.s{background:#ececec;color:#888;border:.5px solid #ccc}
+.sq{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:2px;border:1px solid var(--groen-licht);color:var(--olijf);font-size:13px}.sq.on{background:var(--olijf);border-color:var(--olijf);color:#fff}
+.oc{flex:1;min-width:180px;background:#fff;border:.5px solid rgba(0,83,45,.12);border-radius:4px;padding:16px 20px;display:flex;flex-direction:column;gap:8px}.oc.d{border-color:var(--olijf);background:#f4faf0}
+.oc b{font:700 11px/1 var(--font-sans);letter-spacing:.1em}.oc span{font:400 20px/1 var(--font-serif);color:var(--color-primary)}
+.smv{display:flex;border:.5px solid var(--border);border-top:none;border-radius:0 0 4px 4px;overflow:hidden}
+.smv div{flex:1;padding:14px 20px;border-right:.5px solid var(--border);background:#fff}.smv div:last-child{border-right:0}
+.smv small{display:block;font:600 9.5px/1 var(--font-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--groen-mid);margin-bottom:4px}.smv b{font:400 18px/1.2 var(--font-serif)}
+.fg{position:relative;display:flex;flex-direction:column;width:100%}
+.fg-main{position:relative;min-height:300px;display:flex;border-radius:3px 3px 0 0;overflow:hidden}.fg-main .ph{flex:1}
+.fg-zoom{position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+.fg-arr{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:2px;background:rgba(0,0,0,.4);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center}
+.fg-arr.h{background:rgba(0,83,45,.75)}
+.fg-badge{position:absolute;top:16px;left:16px;background:var(--color-primary);color:var(--groen-licht);font:600 9.5px/1 var(--font-sans);letter-spacing:.16em;text-transform:uppercase;padding:6px 14px;border-radius:2px}
+.fg-acc{height:3px;background:linear-gradient(90deg,var(--olijf) 0%,transparent 70%);border-radius:0 0 2px 2px}
+.bk{border:1px solid var(--border);border-radius:3px;overflow:hidden;background:#fff;display:flex;flex-direction:column;width:280px}
+.bk-foto{aspect-ratio:3/2;display:flex}.bk-foto .ph{flex:1}
+.bk-body{padding:18px 20px 14px;flex:1}
+.bk-naam{font:400 19px/1.25 var(--font-serif);margin:0 0 7px;color:var(--tekst)}
+.bk-dat{font-size:12px;color:var(--tekst-sub);margin-bottom:10px}
+.bk-txt{font-size:13px;line-height:1.65;color:var(--tekst-sub);margin:0}
+.bk-foot{padding:10px 20px 14px;border-top:1px solid var(--border);margin-top:14px}
+.bk-link{display:inline-flex;gap:5px;font:700 11px/1 var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:var(--color-primary)}
+.bkh{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:3px;overflow:hidden;width:100%;max-width:560px}
+.bkh-foto{min-height:220px;display:flex}.bkh-foto .ph{flex:1}
+.bkh-body{padding:32px 36px;background:#fff;border-left:1px solid var(--border);display:flex;flex-direction:column}
+.cols4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px}
+.cols4>div{padding-left:28px;border-left:1px solid var(--border)}.cols4>div:first-child{padding-left:0;border-left:0}
+.cols4 h3{font:600 19px/1.3 var(--font-serif);margin:0 0 10px;color:var(--groen-diep)}
+.cols4 p{font-size:15px;line-height:1.65;color:var(--tekst-sub);margin:0}
+.cols4.dk>div{border-color:rgba(255,255,255,.18)}.cols4.dk h3{color:#fff;font-size:18px}.cols4.dk p{color:rgba(255,255,255,.7);font-size:14px;line-height:1.6}
+.wi{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);color:var(--color-cta);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px}
+@media (max-width:1100px){.cols4{grid-template-columns:repeat(2,minmax(0,1fr))}.cols4>div:nth-child(3){padding-left:0;border-left:0}}
+.pj{display:flex;gap:32px;padding:32px 0;border-top:1px solid var(--border)}.pj:first-child{border-top:0;padding-top:0}
+.pj-n{flex-shrink:0;width:48px;font:500 22px/1.35 var(--font-serif);color:var(--color-cta)}
+.pj h3{font:600 20px/1.3 var(--font-serif);margin:0 0 10px;color:var(--groen-diep)}
+.pj p{font-size:15px;line-height:1.7;color:var(--tekst-sub);margin:0;max-width:640px}
+.fase-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
+.fase{border-top:2px solid var(--color-primary);padding-top:24px}
+.fase-n{display:block;font:500 20px/1 var(--font-serif);color:var(--color-cta);margin-bottom:6px}
+.fase h3{font:600 20px/1.3 var(--font-serif);margin:0 0 18px;color:var(--groen-diep)}
+.chk{list-style:none;margin:0;padding:0}
+.chk li{position:relative;padding-left:28px;margin-bottom:16px;font-size:14px;line-height:1.6;color:var(--tekst-sub)}
+.chk li::before{content:'\f00c';font-family:FontAwesome;position:absolute;left:0;top:0;color:var(--color-primary);font-size:13px}
+.chk li strong{display:block;font-weight:700;color:var(--groen-diep);margin-bottom:2px}
+.faq{max-width:760px;border-top:1px solid rgba(0,83,45,.12)}
+.faq-i{border-bottom:1px solid rgba(0,83,45,.12)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 0;font:600 17px/1.4 var(--font-serif);color:var(--groen-diep)}
+.faq-q i{color:var(--color-cta)}
+.faq-a{padding:0 0 22px;font-size:15px;line-height:1.7;color:var(--tekst-sub);max-width:68ch}
+.faq2-q{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 4px;font:600 15px/1.45 var(--font-sans);color:var(--tekst)}
+.faq2-b{width:25px;height:25px;border-radius:50%;border:1.5px solid var(--color-primary);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:11px}
+.faq2-b.on{background:var(--color-primary);color:#fff}
+.cf{display:flex;flex-direction:column;margin-bottom:12px;width:280px}
+.cf label{font:700 11px/1 var(--font-sans);letter-spacing:.8px;text-transform:uppercase;color:var(--tekst-sub);margin-bottom:10px}
+.cf label .req{color:var(--color-cta);margin-left:2px}
+.cf .in{font:400 15px/1.4 var(--font-sans);color:var(--tekst);border:1px solid rgba(0,83,45,.2);border-radius:6px;padding:12px 14px;background:transparent}
+.cf .in.ph-t{color:rgba(90,107,88,.6)}
+.cf .in.f{border-color:var(--color-primary);background:rgba(0,83,45,.03)}
+.cf .in.e{border-color:#C0392B}
+.cf .err{font-size:12px;color:#C0392B;margin-top:6px}
+.cf .in.sel{display:flex;justify-content:space-between;align-items:center}
+.cf .in.ta{min-height:90px}
+.chkb{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;color:var(--tekst-sub);max-width:340px}
+.chkb span.box{width:15px;height:15px;border:1.5px solid var(--tekst-sub);border-radius:2px;flex:none;margin-top:2px}
+.chkb span.box.on{background:var(--color-primary);border-color:var(--color-primary)}
+.dz{display:flex;align-items:center;gap:14px;padding:16px 20px;border:1px dashed rgba(0,83,45,.3);border-radius:8px;background:#fff;width:340px}
+.dz-i{width:36px;height:36px;border-radius:50%;background:var(--mist);color:var(--color-primary);display:flex;align-items:center;justify-content:center}
+.dz strong{display:block;font:600 14px/1.3 var(--font-sans)}.dz small{font-size:12px;color:var(--tekst-sub)}
+.errban{background:#FDF1F0;border:1px solid #F3C6C2;color:#b3392b;font-size:14px;line-height:1.5;padding:14px 18px;border-radius:8px;max-width:420px}
+.cip{background:var(--color-primary);color:#fff;padding:40px 36px 32px;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.08);width:380px}
+.cip h3{font:500 26px/1.2 var(--font-serif);color:#fff;margin:0 0 28px}
+.cii{display:flex;gap:14px;padding:18px 0;border-bottom:1px solid rgba(255,255,255,.15)}.cii:first-of-type{padding-top:0}
+.cii-i{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;flex:none}
+.cii-i.h{background:var(--color-cta);border-color:var(--color-cta)}
+.cii-l{font:700 11px/1 var(--font-sans);letter-spacing:1.2px;text-transform:uppercase;color:var(--color-cta);margin-bottom:6px}
+.cii-v{font-size:15px;line-height:1.5;color:rgba(255,255,255,.9)}
+.ctas{background:var(--mist);text-align:center;padding:56px 24px;border-radius:4px;width:100%}
+.ctas h3{font:500 34px/1.2 var(--font-serif);margin:0 0 16px}
+.ctas p{font-size:16px;line-height:1.6;color:var(--tekst-sub);max-width:560px;margin:0 auto 32px}
+.ctk{border-radius:3px;display:flex;flex-direction:column;justify-content:flex-end;padding:32px 28px;min-height:260px;width:260px}
+.ctk-l{font:700 9px/1 var(--font-sans);letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:10px}
+.ctk-t{font:400 21px/1.3 var(--font-serif);color:#fff;margin-bottom:14px}
+.ctk-x{font-size:12px;line-height:1.6;color:rgba(255,255,255,.72);margin-bottom:22px}
+.vc{display:flex;align-items:center;justify-content:space-between;gap:24px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:28px 32px;width:100%}
+.vc.h{border-color:var(--color-primary);box-shadow:0 12px 28px rgba(0,0,0,.06)}
+.vc-cat{display:block;font:700 11px/1 var(--font-sans);letter-spacing:1.4px;text-transform:uppercase;color:var(--color-primary);margin:0 0 8px}
+.vc-t{font:500 21px/1.2 var(--font-serif);color:var(--groen-diep);margin:0 0 10px}
+.vc-meta{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px;font-size:13px;color:var(--tekst-sub)}
+.vc-txt{font-size:14px;line-height:1.6;color:var(--tekst-sub);margin:0;max-width:640px}
+.vc-link{font:700 13px/1 var(--font-sans);text-transform:uppercase;letter-spacing:.5px;color:var(--color-primary);white-space:nowrap}
+.vpill{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:100px;background:#fff;border:1px solid var(--border);font:600 13px/1 var(--font-sans);color:var(--tekst)}
+.vpill i{color:var(--color-primary)}
+.vmeta{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:100px;background:rgba(255,255,255,.1);font:600 13px/1 var(--font-sans);color:#fff}.vmeta i{color:var(--color-cta)}
+.ab-t{font:500 27px/1.25 var(--font-serif);color:var(--tekst);margin:0 0 6px}
+.ab-l{width:48px;height:2px;background:var(--color-primary);margin-bottom:18px}
+.ab-p{font-size:15px;line-height:1.85;color:var(--tekst);margin:0 0 18px}
+.ab-ul{list-style:none;padding:0;margin:0 0 14px}
+.ab-ul li{display:flex;gap:10px;font-size:15px;line-height:1.75;margin-bottom:8px}
+.ab-ul li::before{content:'';width:7px;height:7px;min-width:7px;background:var(--color-primary);transform:rotate(45deg);margin-top:9px}
+.pq{font:italic 400 25px/1.45 var(--font-serif);color:var(--color-primary);padding:8px 0 8px 26px;border-left:3px solid #cdb885;margin:0}
+.co{background:#ECF4E8;border-left:3px solid var(--color-primary);padding:26px 30px}
+.co h4{font:700 11px/1 var(--font-sans);letter-spacing:1.6px;text-transform:uppercase;color:var(--color-primary);margin:0 0 14px}
+.shr{display:flex;align-items:center;gap:6px}
+.shr span.l{font:600 10px/1 var(--font-sans);letter-spacing:1.5px;text-transform:uppercase;color:var(--tekst-sub);margin-right:4px}
+.shr a{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--tekst-sub);display:flex;align-items:center;justify-content:center;font-size:13px}
+.shr a.h{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+.shr a.ok{background:#2d7a4f;color:#fff;border-color:#2d7a4f}
+.md{background:#fff;border-radius:3px;overflow:hidden;width:520px;max-width:100%;box-shadow:0 16px 40px rgba(0,0,0,.3)}
+.md-h{background:var(--color-primary);padding:36px 40px 32px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.md-h.err{background:#6b1a1a}
+.md-x{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:2px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:13px}
+.md-ic{width:56px;height:56px;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:#fff;font-size:20px}
+.md-t{font:400 24px/1.2 var(--font-serif);color:#fff;margin:0 0 10px}
+.md-d{width:36px;height:1.5px;background:rgba(255,255,255,.25);margin:0 auto 12px}
+.md-s{font:300 13px/1.6 var(--font-sans);color:rgba(255,255,255,.65);margin:0;max-width:360px}
+.md-b{padding:32px 40px 8px;display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}
+.md-lb{display:block;font:600 10px/1 var(--font-sans);color:var(--tekst-sub);margin-bottom:6px;text-transform:uppercase;letter-spacing:.1em}
+.md-in{padding:12px 14px;border:.5px solid var(--border);border-radius:2px;font:300 14px/1.3 var(--font-sans);background:var(--mist);color:#aab8a6}
+.md-f{padding:20px 40px 28px}
+.md-btn{display:flex;align-items:center;justify-content:center;gap:10px;height:52px;background:var(--olijf);color:#fff;border-radius:2px;font:600 13px/1 var(--font-sans);letter-spacing:.08em;text-transform:uppercase}
+.md-pn{text-align:center;font-size:11px;color:#aab8a6;margin-top:12px}
+.ccb{background:#fff;border:1px solid rgba(0,83,45,.14);border-radius:6px;box-shadow:0 18px 50px rgba(0,20,10,.22);width:420px;max-width:100%;padding:22px 22px 18px}
+.ccb h4{margin:0 0 8px;font:600 18px/1.2 var(--font-serif);color:var(--groen-diep)}
+.ccb p{margin:0;font-size:13.5px;line-height:1.6;color:var(--tekst-sub)}
+.ccb-a{display:flex;gap:10px;margin-top:16px}.ccb-a .cc-btn{flex:1 1 0;text-align:center}.ccb-a .cc-btn-primary{flex:1.5 1 0;padding:12px 16px;font-size:13px}
+.ccd{background:#fff;border-radius:6px;box-shadow:0 24px 60px rgba(0,20,10,.3);width:480px;max-width:100%;overflow:hidden}
+.ccd-h{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid rgba(0,83,45,.12)}
+.ccd-h h4{margin:0;font:600 19px/1.2 var(--font-serif)}
+.ccd-b{padding:20px 22px}
+.ccc{padding:14px 0;border-top:1px solid var(--border)}.ccc:first-child{border-top:0;padding-top:0}
+.ccc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font:700 14px/1 var(--font-sans);color:var(--groen-diep)}
+.ccc p{margin:0;font-size:13px;line-height:1.55;color:var(--tekst-sub)}
+.sw2{width:42px;height:24px;border-radius:24px;background:#cfd8cf;position:relative;flex:none}.sw2::before{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.sw2.on{background:var(--color-primary)}.sw2.on::before{transform:translateX(18px)}
+.ccd-a{display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid rgba(0,83,45,.12);background:var(--mist)}
+.fab{width:52px;height:52px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,61,33,.35);font-size:20px}
+.rv{display:flex;gap:16px;align-items:flex-end}
+.rv div{width:90px;height:64px;border-radius:3px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;color:var(--tekst-sub)}
+</style></helmet>
+<div class="doc">
+<div class="doc-top">
+<div><div class="section-kicker">Group LN · WWWCOPRO</div><h1 class="doc-title">Component specificaties</h1><p class="doc-lead">Alle bouwstenen van de publieke site met hun anatomie, maten, typografie, kleuren, states, responsive gedrag en toegankelijkheid. Waarden komen 1:1 uit <code>WWWCOPRO/Content/*.css</code> en <code>DESIGN.md</code>. Klassenamen zijn die uit de codebase. Wireframes: <a href="WWWCOPRO Wireframes.dc.html">WWWCOPRO Wireframes</a>.</p></div>
+<nav class="doc-index"><a href="#f-color">Kleur</a><a href="#f-type">Type</a><a href="#f-space">Ruimte &amp; vorm</a><a href="#c01">Buttons</a><a href="#c02">Kicker</a><a href="#c03">Sectie-kop</a><a href="#c04">Page header</a><a href="#c05">Breadcrumb</a><a href="#c06">Hero</a><a href="#c07">Header</a><a href="#c08">Menu</a><a href="#c09">Footer</a><a href="#c10">Zoekbalk</a><a href="#c11">Project kaart</a><a href="#c12">Uitgelicht</a><a href="#c13">Status</a><a href="#c14">Info kaart</a><a href="#c15">Eenheden</a><a href="#c16">Galerij</a><a href="#c17">Blog kaart</a><a href="#c18">Kolommen</a><a href="#c19">Genummerd</a><a href="#c20">Fase</a><a href="#c21">FAQ</a><a href="#c22">Formulier</a><a href="#c23">Contact info</a><a href="#c24">CTA</a><a href="#c25">Vacature kaart</a><a href="#c26">Artikel</a><a href="#c27">Modal</a><a href="#c28">Cookies</a><a href="#c29">Reveal</a></nav>
+</div>
+
+<div class="doc-group" id="f-color">Foundations · Kleur</div>
+<div class="fnd-grid">
+<div class="swc"><div class="swc-c" style="background:#00532D"></div><div class="swc-t"><b>Deep Green</b><code>--color-primary · #00532D</code><br>Header, footer, primaire knoppen, links, kickers</div></div>
+<div class="swc"><div class="swc-c" style="background:#006638"></div><div class="swc-t"><b>Green Hover</b><code>--color-primary-hover · #006638</code><br>Hover van groene knoppen &amp; links</div></div>
+<div class="swc"><div class="swc-c" style="background:#003D21"></div><div class="swc-t"><b>Green Dark</b><code>--color-primary-dark · #003D21</code><br>Donkere secties, onderbalk footer</div></div>
+<div class="swc"><div class="swc-c" style="background:#C9A96E"></div><div class="swc-t"><b>Warm Gold</b><code>--color-cta · #C9A96E</code><br>Enige accent: menuknop, kickers op donker, focus</div></div>
+<div class="swc"><div class="swc-c" style="background:#B8935A"></div><div class="swc-t"><b>Gold Hover</b><code>--color-cta-hover · #B8935A</code></div></div>
+<div class="swc"><div class="swc-c" style="background:#3D7A4E"></div><div class="swc-t"><b>Olijf</b><code>--olijf · #3D7A4E</code><br>Info-kaart CTA, modal submit, accentlijnen</div></div>
+<div class="swc"><div class="swc-c" style="background:#2C3B2A"></div><div class="swc-t"><b>Near-black Green</b><code>--groen-diep / --tekst · #2C3B2A</code><br>Alle tekst en koppen</div></div>
+<div class="swc"><div class="swc-c" style="background:#5A6B58"></div><div class="swc-t"><b>Text Muted</b><code>--tekst-sub · #5A6B58</code><br>Ondersteunende tekst, labels</div></div>
+<div class="swc"><div class="swc-c" style="background:#7A9E6E"></div><div class="swc-t"><b>Green Mid</b><code>--groen-mid · #7A9E6E</code></div></div>
+<div class="swc"><div class="swc-c" style="background:#D6E5CC"></div><div class="swc-t"><b>Green Light</b><code>--groen-licht · #D6E5CC</code></div></div>
+<div class="swc"><div class="swc-c" style="background:#F2F5EF;border-bottom:1px solid var(--border)"></div><div class="swc-t"><b>Warm Off-white</b><code>--mist · #F2F5EF</code><br>Pagina-achtergrond (nooit #fff)</div></div>
+<div class="swc"><div class="swc-c" style="background:#fff;border-bottom:1px solid rgba(0,83,45,.10)"></div><div class="swc-t"><b>Hairline</b><code>--border · rgba(0,83,45,.10)</code><br>Op donker: rgba(255,255,255,.15–.3)</div></div>
+<div class="swc"><div class="swc-c" style="background:#C0392B"></div><div class="swc-t"><b>Brick Red</b><code>#C0392B · tint #FDF1F0 · rand #F3C6C2</code><br>Enkel validatie</div></div>
+</div>
+
+<div class="doc-group" id="f-type">Foundations · Typografie</div>
+<div class="cmp" style="padding:8px 28px 12px">
+<div class="ty-row" style="border-top:0"><div class="ty-k">Display</div><div style="font:500 39px/1.15 var(--font-serif)">Wonen waar het goed is</div><div class="ty-m">Playfair 500 · 39/1.15 · 35 ≤991 · 30 ≤767 · hero-titel. About-hero 46px, vacatures 44px</div></div>
+<div class="ty-row"><div class="ty-k">Headline</div><div style="font:500 34px/1.2 var(--font-serif)">Onze troeven</div><div class="ty-m">Playfair 500 · 34/1.2 · 26 ≤767 · sectiekoppen. About 32px, footer-quote 38px</div></div>
+<div class="ty-row"><div class="ty-k">Page title</div><div style="font:400 36px/1.2 var(--font-serif)">Ons aanbod</div><div class="ty-m">Playfair 400 · 36/1.2 · 28 ≤767 · H1 in page header</div></div>
+<div class="ty-row"><div class="ty-k">Title</div><div style="font:600 19px/1.3 var(--font-serif)">Kwaliteit tot in detail</div><div class="ty-m">Playfair 600 · 19/1.3 · item- en kaarttitels (17–21px)</div></div>
+<div class="ty-row"><div class="ty-k">Body</div><div style="font-size:16px;line-height:1.7;color:var(--tekst-sub)">Al bijna drie decennia bouwen we in dezelfde regio aan woningen waar mensen graag thuiskomen.</div><div class="ty-m">Avenir 400 · 16/1.7 · ondersteunend 14–15px in --tekst-sub</div></div>
+<div class="ty-row"><div class="ty-k">Label</div><div style="font:700 11px/1.4 var(--font-sans);letter-spacing:1.8px;text-transform:uppercase;color:var(--color-primary)">Sectie kicker</div><div class="ty-m">Avenir 700 · 10–13px · tracking 1–2.6px · UPPERCASE · enige plek met tracking</div></div>
+<div class="ty-row"><div class="ty-k">Cijfers</div><div style="font:400 20px/1 var(--font-serif);font-variant-numeric:tabular-nums">€ 389.000 · € 412.500</div><div class="ty-m">font-variant-numeric: tabular-nums op prijzen, tabellen, telefoon</div></div>
+</div>
+
+<div class="doc-group" id="f-space">Foundations · Ruimte, vorm, diepte, breakpoints</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+<div class="cmp" style="padding:18px 22px;margin:0"><div class="sp-g">Spacing</div>
+<div class="tok"><code>8</code><span style="width:8px;height:12px;background:var(--color-primary)"></span>xs</div><div class="tok"><code>12</code><span style="width:12px;height:12px;background:var(--color-primary)"></span>sm</div><div class="tok"><code>16</code><span style="width:16px;height:12px;background:var(--color-primary)"></span>md</div><div class="tok"><code>24</code><span style="width:24px;height:12px;background:var(--color-primary)"></span>lg</div><div class="tok"><code>32</code><span style="width:32px;height:12px;background:var(--color-primary)"></span>xl · grid-gap</div><div class="tok"><code>48</code><span style="width:48px;height:12px;background:var(--color-primary)"></span>xxl</div><div class="tok"><code>100</code><span style="width:100px;height:12px;background:var(--color-primary)"></span>sectie · 64 ≤767</div></div>
+<div class="cmp" style="padding:18px 22px;margin:0"><div class="sp-g">Radius</div>
+<div class="tok"><code>2px</code><span style="width:28px;height:20px;border:1.5px solid var(--groen-diep);border-radius:2px"></span>badges, kleine knoppen, tabelknoppen</div><div class="tok"><code>3px</code><span style="width:28px;height:20px;border:1.5px solid var(--groen-diep);border-radius:3px"></span>thema-basis: knoppen, kaarten, foto's</div><div class="tok"><code>4px</code><span style="width:28px;height:20px;border:1.5px solid var(--groen-diep);border-radius:4px"></span>hero-knoppen, zoekbalk</div><div class="tok"><code>6px</code><span style="width:28px;height:20px;border:1.5px solid var(--groen-diep);border-radius:6px"></span>sectie-CTA, outline, velden contact</div><div class="tok"><code>8–10px</code><span style="width:28px;height:20px;border:1.5px solid var(--groen-diep);border-radius:9px"></span>zwevende panelen, vacature-kaarten</div><div class="tok"><code>50%</code><span style="width:20px;height:20px;border:1.5px solid var(--groen-diep);border-radius:50%"></span>icoonknoppen, avatars</div></div>
+<div class="cmp" style="padding:18px 22px;margin:0"><div class="sp-g">Schaduwen</div>
+<div class="tok"><code>CTA</code><span style="width:28px;height:20px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.28)"></span>0 10 30 rgba(0,0,0,.28)</div><div class="tok"><code>Kaart</code><span style="width:28px;height:20px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.09)"></span>hover 0 6 24 rgba(0,0,0,.09)</div><div class="tok"><code>Info</code><span style="width:28px;height:20px;background:#fff;box-shadow:0 2px 20px rgba(0,83,45,.06)"></span>rust 0 2 20 rgba(0,83,45,.06)</div><div class="tok"><code>Overlay</code><span style="width:28px;height:20px;background:#fff;box-shadow:0 16px 40px rgba(0,0,0,.45)"></span>0 16 40 rgba(0,0,0,.45) · enkel zwevend</div>
+<div class="sp-g">Breakpoints</div><div class="tok"><code>≤991</code>tablet · nav-strip weg, grids 4→2, sidebars onder</div><div class="tok"><code>≤767</code>mobiel · 1 kolom, sectie 64px</div><div class="tok"><code>≤575</code>klein · formulieren 1 kolom</div></div>
+</div>
+
+<div class="doc-group">Componenten · Basis</div>
+<div class="cmp" id="c01"><div class="cmp-head"><span class="cmp-id">C01</span><h2 class="cmp-name">Button</h2><span class="cmp-src">.cta-btn · .about-btn · .hero-cta · .hero-search-trigger · .hamburger-btn</span><p class="cmp-desc">Eén knopfamilie met acht varianten. Altijd Avenir 700 uppercase met tracking, echte verticale padding (14–16px) en optioneel een pijl <code>fa-arrow-right</code> die 3px opschuift op hover.</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Primary · rust / hover / focus</span><div class="row"><a class="cta-btn">Neem contact op <i class="fa fa-arrow-right"></i></a><a class="cta-btn is-hover">Neem contact op <i class="fa fa-arrow-right"></i></a><a class="cta-btn focus-ring">Focus</a></div></div>
+<div class="state"><span class="state-l">Outline · rust / hover</span><div class="row"><a class="about-btn">Meer over Group LN <i class="fa fa-arrow-right"></i></a><a class="about-btn is-hover">Meer over Group LN <i class="fa fa-arrow-right"></i></a></div></div>
+<div class="state" style="background:#2b302a;padding:20px;border-radius:6px"><span class="state-l" style="color:rgba(255,255,255,.5)">Op media · Light rust / hover · Ghost rust / hover</span><div class="row"><a class="hero-cta">Bekijk ons aanbod te koop <i class="fa fa-arrow-right"></i></a><a class="hero-cta is-hover">Bekijk aanbod <i class="fa fa-arrow-right"></i></a></div><div class="row"><span class="hero-search-trigger"><i class="fa fa-search"></i> Zoek een woning</span><span class="hero-search-trigger is-hover"><i class="fa fa-search"></i> Zoek een woning</span></div></div>
+<div class="state"><span class="state-l">Round icon · rust / hover</span><div class="row"><span class="hamburger-btn"><span class="hamburger-lines"><span></span><span></span><span></span></span></span><span class="hamburger-btn is-hover"><span class="hamburger-lines"><span></span><span></span><span></span></span></span></div></div>
+<div class="state" style="background:var(--color-primary);padding:20px;border-radius:6px"><span class="state-l" style="color:rgba(255,255,255,.55)">Op groen · Gold apply · White outline · CTA-kaart</span><div class="row"><a class="vac-detail-apply-btn">Solliciteer nu</a><a class="vac-detail-outline-btn">Bekijk takenpakket</a><a class="cta-kaart-btn">Meer info <i class="fa fa-arrow-right"></i></a></div></div>
+<div class="state"><span class="state-l">Compact · tekstlink · cookie</span><div class="row"><span class="uitgelicht-cta">Bekijk project <i class="fa fa-arrow-right"></i></span><a class="about-pijler-link">Lees meer <i class="fa fa-arrow-right"></i></a><span class="cc-btn cc-btn-primary">Alles aanvaarden</span><span class="cc-btn cc-btn-ghost">Alles weigeren</span></div></div>
+</div><div class="specs">
+<div class="sp-g">Varianten</div>
+<div class="sp"><div class="sp-k">Primary</div><div class="sp-v"><code>.cta-btn</code> bg <span class="sw" style="background:#00532D"></span>#00532D, tekst #fff, padding 16×28, r6. Hover → #006638</div></div>
+<div class="sp"><div class="sp-k">Outline</div><div class="sp-v"><code>.about-btn</code> 1.5px #2C3B2A, padding 14×22, r6. Hover → gevuld #00532D + wit</div></div>
+<div class="sp"><div class="sp-k">Light (media)</div><div class="sp-v"><code>.hero-cta</code> wit, padding 16×30, r4, shadow 0 10 30 .28. Hover → <span class="sw" style="background:#C9A96E"></span>goud, translateY(−2px), shadow 0 14 34 .32</div></div>
+<div class="sp"><div class="sp-k">Ghost (media)</div><div class="sp-v"><code>.hero-search-trigger</code> bg rgba(255,255,255,.06), rand .55, padding 16×24, r4. Hover/expanded → bg .14, rand #fff</div></div>
+<div class="sp"><div class="sp-k">Round icon</div><div class="sp-v"><code>.hamburger-btn</code> 46×46 goud, inset 0 0 0 1px rgba(0,0,0,.12), 3 lijnen 20×2.5 gap 4. Active → translateY(1px). Footer-social: 38px outline</div></div>
+<div class="sp"><div class="sp-k">Gold apply</div><div class="sp-v"><code>.vac-detail-apply-btn</code> 16×28 r6 goud, hover #B8935A</div></div>
+<div class="sp"><div class="sp-k">Compact</div><div class="sp-v"><code>.uitgelicht-cta</code> 11×18 r2, 11px/1.5 · <code>.cta-kaart-btn</code> 9×16 r2 10px · <code>.cc-btn</code> 10×16 r3 12px</div></div>
+<div class="sp"><div class="sp-k">Tekstlink</div><div class="sp-v"><code>.about-pijler-link</code> 12px 700 uppercase 1px, groen, pijl schuift 3px</div></div>
+<div class="sp-g">Typografie</div>
+<div class="sp"><div class="sp-k">Label</div><div class="sp-v">Avenir 700 · 13px · letter-spacing 1–1.2px · UPPERCASE · gap icoon 10px</div></div>
+<div class="sp-g">States</div>
+<div class="sp"><div class="sp-k">Transitie</div><div class="sp-v">background/color .18–.25s ease</div></div>
+<div class="sp"><div class="sp-k">Focus</div><div class="sp-v">:focus-visible → outline 2px #C9A96E, offset 2, box-shadow 0 0 0 4px #2C3B2A (dubbele ring, ≥3:1 op wit én donker). Tekstkleur blijft leesbaar bij focus/active</div></div>
+<div class="sp"><div class="sp-k">Disabled</div><div class="sp-v">Niet gedefinieerd in CSS — voorstel: opacity .5, cursor not-allowed</div></div>
+<div class="sp-g">Responsive &amp; a11y</div>
+<div class="sp"><div class="sp-k">≤767</div><div class="sp-v">Hero-acties stapelen, full width (max 360), tekst gecentreerd</div></div>
+<div class="sp"><div class="sp-k">Target</div><div class="sp-v">Min. 44px hoog. Icoonknoppen krijgen <code>aria-label</code> ("Menu openen")</div></div>
+</div></div></div>
+
+<div class="cmp" id="c02"><div class="cmp-head"><span class="cmp-id">C02</span><h2 class="cmp-name">Section kicker + heading</h2><span class="cmp-src">.section-kicker · .about-section-head</span><p class="cmp-desc">Signatuur van de site: korte uppercase label boven bijna elke sectiekop. Groen op licht, goud op donker/foto.</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Op licht</span><div style="max-width:640px"><div class="section-kicker">Wie zijn we</div><h3 class="h-34" style="margin-bottom:12px">Bouwen met oog voor wie er woont</h3><p class="p-sub">Optionele lead, max 640px breed, 16/1.65 in tekst-sub.</p></div></div>
+<div class="state" style="background:var(--color-primary-dark);padding:28px;border-radius:6px"><span class="state-l" style="color:rgba(255,255,255,.5)">Op donker</span><div><div class="section-kicker" style="color:var(--color-cta)">Waarom Group LN</div><h3 class="h-34" style="color:#fff;font-size:32px">Vier redenen om met ons te bouwen</h3></div></div>
+</div><div class="specs">
+<div class="sp-g">Kicker</div>
+<div class="sp"><div class="sp-k">Type</div><div class="sp-v">Avenir 700 · 11px · letter-spacing 2.6px · UPPERCASE (hero 12–13px / 2–2.4px)</div></div>
+<div class="sp"><div class="sp-k">Kleur</div><div class="sp-v">Licht: <span class="sw" style="background:#00532D"></span>#00532D · Donker: <span class="sw" style="background:#C9A96E"></span>#C9A96E</div></div>
+<div class="sp"><div class="sp-k">Afstand</div><div class="sp-v">margin-bottom 16px</div></div>
+<div class="sp"><div class="sp-k">Hero-variant</div><div class="sp-v"><code>.hero-kicker</code> gecentreerd met 32×1px gouden lijnen links/rechts, gap 14</div></div>
+<div class="sp-g">Heading</div>
+<div class="sp"><div class="sp-k">Type</div><div class="sp-v">Playfair 500 · 34/1.2 (about 32) · 26 ≤767 · kleur #2C3B2A of #fff</div></div>
+<div class="sp"><div class="sp-k">Breedte</div><div class="sp-v">max-width 640px · margin-bottom 12–22px</div></div>
+<div class="sp"><div class="sp-k">Lead</div><div class="sp-v">Avenir 16/1.65 · #5A6B58 · max 640px</div></div>
+<div class="sp-g">Regels</div>
+<div class="sp"><div class="sp-k">Gebruik</div><div class="sp-v">Elke nieuwe sectie krijgt een kicker. Nooit Playfair, nooit italic. Kop nooit 700+</div></div>
+<div class="sp"><div class="sp-k">Semantiek</div><div class="sp-v">Kicker = <code>&lt;p&gt;</code>, kop = <code>&lt;h2&gt;</code> binnen sectie</div></div>
+</div></div></div>
+
+<div class="cmp" id="c03"><div class="cmp-head"><span class="cmp-id">C03</span><h2 class="cmp-name">Sectie-kop</h2><span class="cmp-src">.sectie-kop · projects-index.css · blog-index.css</span><p class="cmp-desc">Groepslabel binnen overzichtspagina's: muted uppercase tekst met een haarlijn die de rest van de rij vult.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="state"><span class="state-l">Default</span><p class="sectie-kop">Uitgelicht project</p><p class="sectie-kop">Alle projecten</p></div></div><div class="specs">
+<div class="sp-g">Anatomie</div><div class="sp"><div class="sp-k">Layout</div><div class="sp-v">flex, align center, gap 14 · ::after flex 1, 1px <code>--border</code></div></div>
+<div class="sp-g">Typografie</div><div class="sp"><div class="sp-k">Label</div><div class="sp-v">Avenir 600 · 10px · letter-spacing 2.5px · UPPERCASE · #5A6B58</div></div>
+<div class="sp-g">Afstand</div><div class="sp"><div class="sp-k">Margin</div><div class="sp-v">0 0 22px</div></div>
+<div class="sp-g">Gebruik</div><div class="sp"><div class="sp-k">Pagina's</div><div class="sp-v">Projecten, Blog, Artikel "Ontdek meer"</div></div>
+</div></div></div>
+
+<div class="cmp" id="c04"><div class="cmp-head"><span class="cmp-id">C04</span><h2 class="cmp-name">Page header</h2><span class="cmp-src">.projecten-page-header · .blog-page-header · .contact-page-header · .legal-header · .artikel-header</span><p class="cmp-desc">Lichte titelband bovenaan standaardpagina's, onder de solide groene header. Breadcrumb enkel bij 3+ niveaus (C05).</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="padding:0">
+<div class="page-header-x"><span class="state-l" style="display:block;margin-bottom:14px">Top-level (geen breadcrumb)</span><h1 class="page-h1">Ons aanbod</h1><p class="page-subtitle">Ontdek onze nieuwbouwprojecten te koop.</p><span class="page-accent"></span></div>
+<div class="page-header-x" style="border-bottom:0"><span class="state-l" style="display:block;margin-bottom:14px">Diepere pagina (met breadcrumb)</span><ul class="bc"><li><a href="#">Home</a></li><li><a href="#">Projecten</a></li><li>Residentie De Linde</li></ul><h1 class="page-h1" style="margin-top:18px;margin-bottom:3px">Residentie De Linde</h1><p style="font-size:14px;color:var(--groen-mid);margin:0"><i class="fa fa-map-marker" style="margin-right:5px"></i>Gemeente</p></div>
+</div><div class="specs">
+<div class="sp-g">Container</div>
+<div class="sp"><div class="sp-k">Achtergrond</div><div class="sp-v"><span class="sw" style="background:#F2F5EF"></span>#F2F5EF · border-bottom 1px <code>--border</code></div></div>
+<div class="sp"><div class="sp-k">Padding</div><div class="sp-v">44 0 36 (projecten 44 0 0 · artikel 36 0 32 · legal 48 0 0)</div></div>
+<div class="sp-g">Inhoud</div>
+<div class="sp"><div class="sp-k">H1</div><div class="sp-v">Playfair 400 · 36/1.2 · #2C3B2A · 28 ≤767 (artikel 40 → 32 → 26 · legal 38 / 500)</div></div>
+<div class="sp"><div class="sp-k">Subtitle</div><div class="sp-v">14px #5A6B58 · margin 0 0 20 (blog: max 950, lh 1.7)</div></div>
+<div class="sp"><div class="sp-k">Accent</div><div class="sp-v">44×2 #00532D r1 (enkel projecten)</div></div>
+<div class="sp"><div class="sp-k">Locatie</div><div class="sp-v">Projectdetail: 14px #7A9E6E met map-marker, h1 margin 18/3</div></div>
+<div class="sp"><div class="sp-k">Meta</div><div class="sp-v">Artikel: 13px auteur · datum · leestijd met scheiders · Legal: "Laatst bijgewerkt" 13px, pb 32</div></div>
+<div class="sp-g">Variant</div>
+<div class="sp"><div class="sp-k">Groen</div><div class="sp-v"><code>.vac-detail-header</code> bg #00532D, padding 64/56, h1 40px #fff 500, breadcrumb wit .65</div></div>
+</div></div></div>
+
+<div class="cmp" id="c05"><div class="cmp-head"><span class="cmp-id">C05</span><h2 class="cmp-name">Breadcrumb</h2><span class="cmp-src">.breadcrumb · .about-breadcrumb · .legal-header .breadcrumb</span><p class="cmp-desc">Toon enkel wanneer de pagina 3 of meer niveaus diep zit (Home / Sectie / Pagina). Top-level pagina's (Projecten, Over ons, Blog, Vacatures, Contact, Legal) krijgen geen breadcrumb.</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Op licht</span><ul class="bc"><li><a href="#">Home</a></li><li><a href="#">Blog</a></li><li>Bouwen in 2026: wat verandert er?</li></ul></div>
+<div class="state" style="background:var(--color-primary);padding:20px;border-radius:6px"><span class="state-l" style="color:rgba(255,255,255,.5)">Op donker</span><ul class="bc on-dark" style="margin:0"><li><a href="#">Home</a></li><li><a href="#">Over ons</a></li><li style="color:rgba(255,255,255,.9)">Projectbegeleiding</li></ul></div>
+</div><div class="specs">
+<div class="sp-g">Regel</div><div class="sp"><div class="sp-k">Tonen</div><div class="sp-v">Enkel bij ≥3 niveaus: projectdetail, inschrijving, Over ons-subpagina's, blogartikel, vacaturedetail</div></div>
+<div class="sp-g">Stijl</div>
+<div class="sp"><div class="sp-k">Type</div><div class="sp-v">Avenir 12px · #5A6B58 · links zonder underline, hover #00532D</div></div>
+<div class="sp"><div class="sp-k">Scheider</div><div class="sp-v">"/" padding 0 8 · rgba(0,83,45,.35)</div></div>
+<div class="sp"><div class="sp-k">Op donker</div><div class="sp-v">links rgba(255,255,255,.72) → hover #fff · scheider .35 · actief .9</div></div>
+<div class="sp"><div class="sp-k">Afstand</div><div class="sp-v">margin 0 0 16px (about-hero 22px)</div></div>
+<div class="sp-g">A11y</div><div class="sp"><div class="sp-k">Markup</div><div class="sp-v"><code>&lt;nav aria-label="Kruimelpad"&gt;&lt;ol&gt;</code> · laatste item <code>aria-current="page"</code>, geen link</div></div>
+</div></div></div>
+
+<div class="cmp" id="c06"><div class="cmp-head"><span class="cmp-id">C06</span><h2 class="cmp-name">Green hero</h2><span class="cmp-src">.about-hero · .about-hero--foto · .vacatures-page-header</span><p class="cmp-desc">Volvlakse groene kop voor Over ons en Vacatures, met de site-header transparant erover. Varianten met diagonaal raster of met foto.</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="padding:0">
+<div class="about-hero"><div class="about-hero-inner"><ul class="bc on-dark" style="margin-bottom:22px"><li><a href="#">Home</a></li><li><a href="#">Over ons</a></li><li>Projectbegeleiding</li></ul><p class="about-hero-kicker">Projectbegeleiding</p><h2 class="about-hero-title">Van eerste schets tot sleuteloverdracht</h2><p class="about-hero-text">Lead-tekst van maximaal 560px in wit .85.</p></div></div>
+<div style="position:relative;padding:48px 36px 40px;background:linear-gradient(180deg,rgba(0,83,45,.88),rgba(0,61,33,.9)),repeating-linear-gradient(-45deg,#4a5a48 0 8px,#566654 8px 16px)"><span class="state-l" style="color:rgba(255,255,255,.55);display:block;margin-bottom:12px">--foto variant (foto + groene gradient)</span><p class="about-hero-kicker" style="margin-bottom:10px">Grondverwerving</p><h2 class="about-hero-title" style="font-size:36px;margin:0">Grond of pand te koop?</h2></div>
+</div><div class="specs">
+<div class="sp-g">Container</div>
+<div class="sp"><div class="sp-k">Hoogte</div><div class="sp-v">min-height 44vh, volgt inhoud · padding 140 0 88 (116/56 ≤767)</div></div>
+<div class="sp"><div class="sp-k">Achtergrond</div><div class="sp-v">raster repeating-linear-gradient(135deg, wit .04 1px / 10px) over verloop #075c34 → #00532D → #003d21 · ::after verdonkering 100px onderaan</div></div>
+<div class="sp"><div class="sp-k">--foto</div><div class="sp-v">foto cover/center, fallback #003D21, inline groene gradient, sterkere ::after .55</div></div>
+<div class="sp"><div class="sp-k">Vacatures</div><div class="sp-v">padding 140 0 200 (120/130 ≤767), foto + gradient #00532D → rgba(0,61,33,.85); kaart C25-intro overlapt −140px</div></div>
+<div class="sp-g">Inhoud (max 720)</div>
+<div class="sp"><div class="sp-k">Kicker</div><div class="sp-v">12px 700 · 2.4px · goud · mb 18</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 500 · 46/1.12 · #fff · 32 ≤767 · mb 20 (vacatures 44 + text-shadow)</div></div>
+<div class="sp"><div class="sp-k">Tekst</div><div class="sp-v">17/1.6 · wit .85 · max 560 · 15 ≤767</div></div>
+<div class="sp-g">Gedrag</div><div class="sp"><div class="sp-k">Header</div><div class="sp-v"><code>ViewData("HeroHeader") = True</code> → transparante header</div></div>
+</div></div></div>
+
+<div class="doc-group">Componenten · Navigatie &amp; structuur</div>
+
+<div class="cmp" id="c07"><div class="cmp-head"><span class="cmp-id">C07</span><h2 class="cmp-name">Site header</h2><span class="cmp-src">#header .header-row-redesign · custom.css</span><p class="cmp-desc">Vaste, sticky balk. Op home transparant over de video en fade naar groen bij scrollen; elders solide groen vanaf de top. Alle tekst wit.</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="padding:0;gap:0">
+<div style="padding:16px 28px 8px"><span class="state-l">Solide (standaardpagina's)</span></div>
+<div class="hdr-x"><div class="hdr-logo"><a class="hdr-brand"><span class="hdr-mark">LOGO</span><span class="hdr-div"></span><span><span class="hdr-name">Group LN</span><span class="hdr-sub">Projectontwikkeling</span></span></a><a class="hdr-phone"><span class="hdr-phone-i"><i class="fa fa-phone"></i></span><span><span class="hdr-phone-l">Bel ons</span><span class="hdr-phone-n">0xx xx xx xx</span></span></a></div><div class="hdr-nav"><div class="hdr-items"><a>Te koop</a><a class="active">Over ons</a><a>Vacatures</a><a>Contact</a></div><span class="hamburger-btn"><span class="hamburger-lines"><span></span><span></span><span></span></span></span></div></div>
+<div style="padding:20px 28px 8px"><span class="state-l">Transparant over hero (home, about, vacatures)</span></div>
+<div style="background:repeating-linear-gradient(-45deg,#2f3a30 0 8px,#364237 8px 16px)"><div class="hdr-x tr"><div class="hdr-logo"><a class="hdr-brand"><span class="hdr-mark">LOGO</span><span class="hdr-div"></span><span><span class="hdr-name">Group LN</span><span class="hdr-sub">Projectontwikkeling</span></span></a></div><div class="hdr-nav"><div class="hdr-items"><a>Te koop</a><a>Over ons</a><a>Vacatures</a><a>Contact</a></div><span class="hamburger-btn"><span class="hamburger-lines"><span></span><span></span><span></span></span></span></div></div></div>
+<div style="padding:20px 28px 8px"><span class="state-l">≤991 / ≤767 — enkel logo + menuknop</span></div>
+<div class="hdr-x" style="padding:0 20px;min-height:80px;max-width:380px"><a class="hdr-brand"><span class="hdr-mark" style="width:36px;height:40px">LOGO</span><span class="hdr-div" style="height:32px;margin:0 12px"></span><span><span class="hdr-name" style="font-size:25px">Group LN</span><span class="hdr-sub" style="font-size:11px">Projectontwikkeling</span></span></a><span class="hamburger-btn"><span class="hamburger-lines"><span></span><span></span><span></span></span></span></div>
+<div style="height:28px"></div>
+</div><div class="specs">
+<div class="sp-g">Container</div>
+<div class="sp"><div class="sp-k">Hoogte</div><div class="sp-v">min-height 70px (80px ≤767) · padding x 40 (20 ≤767) · full width</div></div>
+<div class="sp"><div class="sp-k">Achtergrond</div><div class="sp-v">Solide <span class="sw" style="background:#00532D"></span>#00532D · Home transparant → groen via ::before bij <code>stickyStartAt</code> ≈175px · logo-box padding 10×18 r5 vast (geen sprong)</div></div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">flex space-between, nowrap · links gap 28 · rechts gap 32</div></div>
+<div class="sp-g">Links</div>
+<div class="sp"><div class="sp-k">Logo</div><div class="sp-v">hoogte 50 (40 ≤767) · divider 1×52 wit .3, margin 0 18 (32 / 0 12 ≤767)</div></div>
+<div class="sp"><div class="sp-k">Merknaam</div><div class="sp-v">Avenir 700 · 30/.8 uppercase #fff (25 ≤767) · sub 13px 500 wit .75 (11 ≤767)</div></div>
+<div class="sp"><div class="sp-k">Telefoon</div><div class="sp-v">32px cirkel rand wit .5 · label 10px 700 1px wit .7 · nummer 15px 700 tabular · hover opacity .8</div></div>
+<div class="sp-g">Rechts</div>
+<div class="sp"><div class="sp-k">Nav-links</div><div class="sp-v">Max 4 · Avenir 700 13px .5px uppercase · gap 28 · hover/actief <span class="sw" style="background:#C9A96E"></span>goud · 5e link → menu</div></div>
+<div class="sp"><div class="sp-k">Menuknop</div><div class="sp-v">C01 Round icon 46px · <code>aria-label="Menu openen"</code> · altijd zichtbaar</div></div>
+<div class="sp-g">Responsive</div>
+<div class="sp"><div class="sp-k">≤991</div><div class="sp-v">telefoon + nav-links verborgen · menuknop = enige navigatie</div></div>
+<div class="sp-g">A11y</div>
+<div class="sp"><div class="sp-k">Skip-link</div><div class="sp-v">"Naar de inhoud" absolute top-left, groen, 10×18, translateY(−120%) → 0 bij focus</div></div>
+</div></div></div>
+
+<div class="cmp" id="c08"><div class="cmp-head"><span class="cmp-id">C08</span><h2 class="cmp-name">Menu overlay</h2><span class="cmp-src">.nav-overlay · .nav-overlay-panel · custom.js positionNavOverlayPanel()</span><p class="cmp-desc">Volledige navigatie + contact/adres. Desktop: glazen dropdown onder de menuknop. Tablet: groen paneel. Mobiel: volledig scherm.</p></div>
+<div class="cmp-body"><div class="cmp-prev dark"><div class="row" style="align-items:flex-start;gap:24px">
+<div class="state"><span class="state-l" style="color:rgba(255,255,255,.5)">≥992 dropdown</span><div class="nav-panel"><ul class="nav-list"><li><a>Home</a></li><li><a class="active">Te koop</a></li><li><a>Over ons</a></li><li><a>Vacatures</a></li><li><a>Blog</a></li><li><a>Contact</a></li></ul><div class="nav-info"><div><h4>Contact</h4><p>0xx xx xx xx</p><p>info@groupln.be</p></div><div><h4>Adres</h4><p>Straat 1, 0000 Gemeente</p></div></div></div></div>
+<div class="state"><span class="state-l" style="color:rgba(255,255,255,.5)">≤767 volledig scherm</span><div class="nav-full" style="position:relative"><span style="position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:24px">×</span><ul class="nav-list" style="margin-top:40px"><li><a>Home</a></li><li><a style="color:var(--color-cta)">Te koop</a></li><li><a>Over ons</a></li><li><a>Vacatures</a></li><li><a>Contact</a></li></ul><div class="nav-info" style="padding-left:0"><div><h4>Contact</h4><p>0xx xx xx xx</p></div></div></div></div>
+</div></div><div class="specs">
+<div class="sp-g">Lagen</div>
+<div class="sp"><div class="sp-k">Overlay</div><div class="sp-v">fixed inset 0 · z-index 2000 · backdrop rgba(0,0,0,.55) (transparant ≥992)</div></div>
+<div class="sp-g">≥992 · dropdown</div>
+<div class="sp"><div class="sp-k">Paneel</div><div class="sp-v">fixed onder menuknop (JS) · 320px, max calc(100vw − 40) · padding 16 · bg rgba(0,0,0,.55) · rand wit .15 · r8 · shadow overlay</div></div>
+<div class="sp"><div class="sp-k">Links</div><div class="sp-v">Avenir 16px wit · padding 12×8 · hover/actief goud · sluitknop verborgen</div></div>
+<div class="sp-g">≤991 · paneel</div>
+<div class="sp"><div class="sp-k">Paneel</div><div class="sp-v">absolute top, bg #00532D, padding 90 24 60 · links links uitgelijnd 35/1.1, geen borders</div></div>
+<div class="sp-g">≤767 · fullscreen</div>
+<div class="sp"><div class="sp-k">Paneel</div><div class="sp-v">bottom 0 (volledig scherm) · links 25/1.1 · sluitknop 44px cirkel rand wit .5, exact op plaats menuknop</div></div>
+<div class="sp-g">Info-blok</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">kolom, gap 16 · border-top wit .15 · h4 12px 600 1px goud · p 14px wit</div></div>
+<div class="sp-g">A11y</div>
+<div class="sp"><div class="sp-k">Focus</div><div class="sp-v">focus-trap · focus terug naar menuknop bij sluiten · rest van pagina <code>inert</code> · body scroll-lock · Esc sluit</div></div>
+</div></div></div>
+
+<div class="cmp" id="c09"><div class="cmp-head"><span class="cmp-id">C09</span><h2 class="cmp-name">Footer</h2><span class="cmp-src">#footer.site-footer · footer.css</span><p class="cmp-desc">Solide groen. Grote Playfair-quote, haarlijn, 4-koloms linkgrid, donkere onderbalk met copyright, legal links en AI-nota.</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="padding:0">
+<div class="ftr-x"><p class="ftr-quote">"Wij bouwen niet zomaar woningen, wij bouwen thuis."</p><div class="ftr-div"></div><div class="ftr-cols">
+<div><div class="ftr-brand"><span class="hdr-mark" style="width:36px;height:40px">LOGO</span><div><div class="ftr-bn">Group LN</div><div class="ftr-bs">Projectontwikkeling</div></div></div><ul class="ftr-soc"><li><a><i class="fa fa-facebook"></i></a></li><li><a class="is-hover"><i class="fa fa-instagram"></i></a></li><li><a><i class="fa fa-linkedin"></i></a></li></ul></div>
+<div><div class="ftr-t">Projecten</div><ul class="ftr-l"><li>Te koop</li><li>Binnenkort</li><li>Gerealiseerd</li></ul></div>
+<div><div class="ftr-t">Group LN</div><ul class="ftr-l"><li>Over ons</li><li>Vacatures</li><li>Blog</li></ul></div>
+<div><div class="ftr-t">Contact</div><ul class="ftr-l"><li>Straat 1, 0000 Gemeente</li><li>0xx xx xx xx</li><li>info@groupln.be</li></ul></div></div></div>
+<div class="ftr-bot"><p>© 2026 Group LN</p><div class="ftr-legal"><span>Privacy</span><span>Cookies</span><span>Voorwaarden</span></div><span class="ftr-ai"><i class="fa fa-info-circle"></i> AI-nota</span></div>
+</div><div class="specs">
+<div class="sp-g">Container</div>
+<div class="sp"><div class="sp-k">Achtergrond</div><div class="sp-v">#00532D · padding-top 72 · geen border-top</div></div>
+<div class="sp"><div class="sp-k">Quote</div><div class="sp-v">Playfair 500 · 38/1.25 · #fff · max 720 · mb 40 · 28 ≤575 · gecentreerd ≤767</div></div>
+<div class="sp"><div class="sp-k">Divider</div><div class="sp-v">1px wit .15 · mb 48</div></div>
+<div class="sp-g">Kolommen</div>
+<div class="sp"><div class="sp-k">Grid</div><div class="sp-v">1.3fr 1fr 1fr 1fr · gap 32 · pb 64 → 2 kol (merk full width) ≤991 → 1 kol gecentreerd ≤767, Projecten + Group LN verborgen</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Avenir 700 11px 1.8px uppercase #fff · mb 20</div></div>
+<div class="sp"><div class="sp-k">Links</div><div class="sp-v">13/1.55 wit .68 → #fff hover · mb 12</div></div>
+<div class="sp"><div class="sp-k">Merk</div><div class="sp-v">logo 40 · naam 27px 700 uppercase · sub 11px 500 .04em wit .75 · gap 12 · mb 24</div></div>
+<div class="sp"><div class="sp-k">Social</div><div class="sp-v">38px cirkel rand wit .3 · 16px icoon · gap 10 · hover goud vlak + rand</div></div>
+<div class="sp-g">Onderbalk</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">border-top wit .15 · padding 18 · flex wrap gap 12×24 · copyright margin-right auto · gestapeld + gecentreerd ≤767</div></div>
+<div class="sp"><div class="sp-k">Tekst</div><div class="sp-v">copyright 13px wit .65 · legal 13px wit .68, gap 20 · AI-nota 12px wit .5</div></div>
+</div></div></div>
+
+<div class="cmp" id="c10"><div class="cmp-head"><span class="cmp-id">C10</span><h2 class="cmp-name">Hero zoekbalk + dropdown</h2><span class="cmp-src">.home-hero-search · .hero-dropdown-* · custom.js</span><p class="cmp-desc">Filterbalk in de home-hero, standaard ingeklapt; opent via de ghost-knop. Native selects zijn vervangen door eigen dropdowns die boven de balk openen.</p></div>
+<div class="cmp-body"><div class="cmp-prev dark">
+<div class="state"><span class="state-l" style="color:rgba(255,255,255,.5)">Open balk</span><div class="hs-form"><div class="hs-field"><span class="hs-l">Locatie</span><span class="hs-v">Alle gemeenten <i class="fa fa-angle-down"></i></span></div><div class="hs-field"><span class="hs-l">Type</span><span class="hs-v">Appartement <i class="fa fa-angle-down"></i></span></div><div class="hs-field"><span class="hs-l">Slaapkamers</span><span class="hs-v">2+ <i class="fa fa-angle-down"></i></span></div><div class="hs-field" style="border-right:0"><span class="hs-l">Budget</span><span class="hs-v" style="color:rgba(255,255,255,.6);font-weight:400">Max. prijs</span></div><span class="hs-btn"><i class="fa fa-search"></i></span></div></div>
+<div class="state"><span class="state-l" style="color:rgba(255,255,255,.5)">Dropdown-menu</span><ul class="hs-menu"><li class="hs-opt is-all">Alle types</li><li class="hs-opt is-active">Appartement</li><li class="hs-opt">Woning</li><li class="hs-opt">Bouwgrond</li></ul></div>
+</div><div class="specs">
+<div class="sp-g">Balk</div>
+<div class="sp"><div class="sp-k">Container</div><div class="sp-v">max 960 · mt 18 · display none → block (.is-open)</div></div>
+<div class="sp"><div class="sp-k">Form</div><div class="sp-v">flex stretch · bg rgba(0,0,0,.55) · rand wit .15 · r4 · overflow hidden</div></div>
+<div class="sp"><div class="sp-k">Veld</div><div class="sp-v">flex 1 · padding 10×20 · rechterrand wit .12 · label 11px 700 1px wit .8 · waarde 14px 600 #fff · placeholder wit .6 / 400</div></div>
+<div class="sp"><div class="sp-k">Submit</div><div class="sp-v">72px breed · goud · icoon 18px #2C3B2A · hover #B8935A</div></div>
+<div class="sp-g">Dropdown</div>
+<div class="sp"><div class="sp-k">Menu</div><div class="sp-v">position fixed (JS top/left/width) · padding 8 · bg rgba(0,0,0,.78) · rand wit .15 · r8 · shadow overlay · max-h 320 scroll</div></div>
+<div class="sp"><div class="sp-k">Optie</div><div class="sp-v">min-h 44 · padding 8×16 · r8 · 14px 500 · hover/actief wit .14 · "Alle…" goud</div></div>
+<div class="sp-g">Responsive</div>
+<div class="sp"><div class="sp-k">≤991</div><div class="sp-v">velden 50% met onderrand · submit 100% · menu bg #003D21</div></div>
+<div class="sp"><div class="sp-k">≤767</div><div class="sp-v">velden 100%, geen rechterrand · mt 14</div></div>
+<div class="sp-g">A11y</div>
+<div class="sp"><div class="sp-k">Trigger</div><div class="sp-v"><code>aria-expanded</code> op ghost-knop · dropdown = listbox met pijltjes/Enter/Esc</div></div>
+</div></div></div>
+
+<div class="doc-group">Componenten · Projecten</div>
+
+<div class="cmp" id="c11"><div class="cmp-head"><span class="cmp-id">C11</span><h2 class="cmp-name">Project kaart</h2><span class="cmp-src">.project-kaart · projects-index.css</span><p class="cmp-desc">Kaart in het projectenoverzicht en "Ontdek meer". Volledige kaart is één link.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="row" style="align-items:flex-start;gap:20px">
+<div class="state"><span class="state-l">Te koop · rust</span><a class="pk"><div class="pk-foto"><div class="ph">foto 4:3</div><div class="pk-ov"></div><span class="fb">Nieuw</span><div class="vb"><div class="vb-l">Verkocht</div><div class="vb-v">68%</div><div class="vb-bar"><span style="width:68%"></span></div></div><div class="pk-prijs"><span>Vanaf</span>€ 289.000</div><span class="pk-pijl"><i class="fa fa-arrow-right"></i></span></div><div class="pk-body"><div class="pk-type">Appartementen</div><h3 class="pk-naam">Residentie De Linde</h3><div class="pk-loc"><i class="fa fa-map-marker"></i> Gemeente</div><div class="pk-specs"><span><i class="fa fa-bed"></i> 1–3 slpk</span><span><i class="fa fa-arrows-alt"></i> 78–124 m²</span></div><span class="bpill"><i></i>4 beschikbaar</span></div><div class="pk-foot"><span class="sb" style="background:rgba(0,83,45,.07);color:#00532D"><i style="background:#00532D"></i>Te koop</span></div></a></div>
+<div class="state"><span class="state-l">Hover</span><a class="pk is-hover"><div class="pk-foto"><div class="ph" style="transform:scale(1.06)">foto 4:3</div><div class="pk-ov"></div><span class="fb" style="background:#5b7fa6">In aanbouw</span><div class="pk-prijs"><span>Vanaf</span>€ 349.000</div><span class="pk-pijl"><i class="fa fa-arrow-right"></i></span></div><div class="pk-body"><div class="pk-type">Woningen</div><h3 class="pk-naam">Hof ter Beke</h3><div class="pk-loc"><i class="fa fa-map-marker"></i> Gemeente</div></div><div class="pk-foot"><span class="sb" style="background:rgba(91,127,166,.08);color:#3d6289"><i style="background:#5b7fa6"></i>In aanbouw</span></div></a></div>
+<div class="state"><span class="state-l">Uitverkocht</span><a class="pk"><div class="pk-foto"><div class="ph">foto 4:3</div><div class="sold-ov"><span>Uitverkocht</span></div></div><div class="pk-body"><div class="pk-type">Appartementen</div><h3 class="pk-naam">Residentie Oud Hof</h3><div class="pk-loc"><i class="fa fa-map-marker"></i> Gemeente</div></div><div class="pk-foot"><span class="sb" style="background:rgba(44,59,42,.07);color:#2C3B2A"><i style="background:#2C3B2A;opacity:.45"></i>Uitverkocht</span></div></a></div>
+</div></div><div class="specs">
+<div class="sp-g">Container</div>
+<div class="sp"><div class="sp-k">Kaart</div><div class="sp-v">bg #fff · rand 1px <code>--border</code> · r3 · flex kolom · grid 3 kol gap 22 (2 ≤991 · 1 ≤767)</div></div>
+<div class="sp"><div class="sp-k">Hover</div><div class="sp-v">shadow 0 6 24 rgba(0,0,0,.09) · translateY(−2) · foto scale 1.06 (.42s) · pijl vult groen · .22s</div></div>
+<div class="sp-g">Foto (4:3)</div>
+<div class="sp"><div class="sp-k">Overlay</div><div class="sp-v">linear-gradient(to top, rgba(0,0,0,.52) 0, transparent 52%)</div></div>
+<div class="sp"><div class="sp-k">Prijs</div><div class="sp-v">links-onder 12/14 · Playfair 15px wit, text-shadow · label 9px 600 1.5px .82</div></div>
+<div class="sp"><div class="sp-k">Pijl</div><div class="sp-v">rechts-onder 32px cirkel rand 1.5 wit .65</div></div>
+<div class="sp"><div class="sp-k">Badges</div><div class="sp-v">status links-boven 10/10 (C13) · % verkocht rechts-boven (≥50%, enkel te koop) · uitverkocht-overlay rgba(44,59,42,.6)</div></div>
+<div class="sp-g">Body · padding 16 18 12</div>
+<div class="sp"><div class="sp-k">Type</div><div class="sp-v">9px 700 2px uppercase #00532D · mb 5</div></div>
+<div class="sp"><div class="sp-k">Naam</div><div class="sp-v">Playfair 400 17/1.25 #2C3B2A</div></div>
+<div class="sp"><div class="sp-k">Locatie / specs</div><div class="sp-v">12px / 11px tekst-sub · icoon opacity .55</div></div>
+<div class="sp"><div class="sp-k">Beschikbaar</div><div class="sp-v">pill enkel bij ≥1 vrije eenheid (C13)</div></div>
+<div class="sp-g">Footer</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">padding 10 18 13 · border-top · status badge</div></div>
+</div></div></div>
+
+<div class="cmp" id="c12"><div class="cmp-head"><span class="cmp-id">C12</span><h2 class="cmp-name">Uitgelicht project</h2><span class="cmp-src">.uitgelicht-project · projects-index.css</span><p class="cmp-desc">Brede gesplitste kaart bovenaan het projectenoverzicht. Zelfde patroon voor blog (C17) in andere verhouding.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="ul"><div class="ul-foto"><div class="ph">foto / video</div><span class="fb" style="top:16px;left:16px;padding:5px 11px">Lancering</span><div class="vb" style="top:16px;right:16px"><div class="vb-l">Verkocht</div><div class="vb-v">54%</div><div class="vb-bar"><span style="width:54%"></span></div></div></div><div class="ul-info"><div class="pk-type" style="font-size:10px;margin-bottom:10px">Appartementen</div><h3 class="ul-naam">Residentie De Linde</h3><div class="pk-loc" style="font-size:13px;margin-bottom:18px"><i class="fa fa-map-marker"></i> Gemeente</div><p class="ul-txt">Korte omschrijving, max 4 regels (line-clamp), 13/1.65.</p><div class="pk-specs" style="font-size:12px;gap:14px"><span><i class="fa fa-bed"></i> 1–3 slpk</span><span><i class="fa fa-building"></i> 12 eenheden</span></div><div class="ul-prijs"><span>Vanaf</span>€ 289.000</div><span class="uitgelicht-cta" style="align-self:flex-start">Bekijk project <i class="fa fa-arrow-right"></i></span></div></div></div><div class="specs">
+<div class="sp-g">Layout</div>
+<div class="sp"><div class="sp-k">Grid</div><div class="sp-v">1fr 340px · rand 1px · r3 · mb 52 · ≤991 → 1 kol, foto 16:9</div></div>
+<div class="sp"><div class="sp-k">Foto</div><div class="sp-v">min-h 280 · overlay rechts rgba(0,0,0,.28) · badges 16/16 · hover scale 1.04 (.45s)</div></div>
+<div class="sp"><div class="sp-k">Info</div><div class="sp-v">padding 40×36 (28 ≤991) · wit · border-left</div></div>
+<div class="sp-g">Typografie</div>
+<div class="sp"><div class="sp-k">Type</div><div class="sp-v">10px 600 2px #00532D</div></div>
+<div class="sp"><div class="sp-k">Naam</div><div class="sp-v">Playfair 400 26/1.2 (22 ≤767)</div></div>
+<div class="sp"><div class="sp-k">Tekst</div><div class="sp-v">13/1.65 tekst-sub · line-clamp 4</div></div>
+<div class="sp"><div class="sp-k">Prijs</div><div class="sp-v">Playfair 20/1 · label 12px uppercase · margin 24 0</div></div>
+<div class="sp"><div class="sp-k">CTA</div><div class="sp-v">C01 Compact · margin-top auto · hover kaart → #006638</div></div>
+<div class="sp-g">Hover</div><div class="sp"><div class="sp-k">Kaart</div><div class="sp-v">shadow 0 8 32 rgba(0,0,0,.10)</div></div>
+</div></div></div>
+
+<div class="cmp" id="c13"><div class="cmp-head"><span class="cmp-id">C13</span><h2 class="cmp-name">Status badges &amp; pills</h2><span class="cmp-src">.kaart-foto-badge-* · .status-badge-* · .beschikbaar-pill · .eenheid-status-pill · .kaart-verkocht-badge</span><p class="cmp-desc">Statussysteem voor projecten en eenheden. Let op: de statuskleuren vallen buiten de Two-Material Rule — kandidaat om te herzien.</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Foto-badge (solide)</span><div class="row" style="gap:8px"><span class="fb" style="position:static">Nieuw</span><span class="fb" style="position:static">Binnenkort</span><span class="fb" style="position:static;background:#3D7A4E">Lancering</span><span class="fb" style="position:static;background:#5b7fa6">In aanbouw</span><span class="fb" style="position:static;background:#7a9e6e">Bijna uitverkocht</span><span class="fb" style="position:static;background:#a67c5b">In optie</span><span class="fb" style="position:static;background:#c0954a">Laatste kans</span><span class="fb" style="position:static;background:rgba(44,59,42,.85)">Uitverkocht</span></div></div>
+<div class="state"><span class="state-l">Status-badge (getint + dot)</span><div class="row" style="gap:8px"><span class="sb" style="background:rgba(0,83,45,.07);color:#00532D"><i style="background:#00532D"></i>Beschikbaar</span><span class="sb" style="background:rgba(61,122,78,.09);color:#3D7A4E"><i style="background:#3D7A4E"></i>Binnenkort</span><span class="sb" style="background:rgba(91,127,166,.08);color:#3d6289"><i style="background:#5b7fa6"></i>In aanbouw</span><span class="sb" style="background:rgba(122,158,110,.08);color:#4e7a40"><i style="background:#7a9e6e"></i>Bijna</span><span class="sb" style="background:rgba(166,124,91,.08);color:#7a5535"><i style="background:#a67c5b"></i>Optie</span><span class="sb" style="background:rgba(192,149,74,.08);color:#8c6420"><i style="background:#c0954a"></i>Laatste</span><span class="sb" style="background:rgba(44,59,42,.07);color:#2C3B2A"><i style="background:#2C3B2A;opacity:.45"></i>Uitverkocht</span></div></div>
+<div class="state"><span class="state-l">Eenheid-pill · beschikbaar-pill · % verkocht</span><div class="row" style="gap:10px"><span class="esp b"><i></i>Beschikbaar</span><span class="esp o"><i></i>In optie</span><span class="esp s"><i></i>Verkocht</span><span class="bpill" style="margin:0"><i></i>4 beschikbaar</span><div class="vb" style="position:static"><div class="vb-l">Verkocht</div><div class="vb-v">68%</div><div class="vb-bar"><span style="width:68%"></span></div></div></div></div>
+</div><div class="specs">
+<div class="sp-g">Foto-badge</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">9px 700 1.5px uppercase wit · padding 4×9 (uitgelicht 5×11) · r2 · pointer-events none</div></div>
+<div class="sp"><div class="sp-k">Kleuren</div><div class="sp-v">nieuw/binnenkort #00532D · lancering #3D7A4E · in aanbouw #5b7fa6 · bijna #7a9e6e · optie #a67c5b · laatste #c0954a · uitverkocht rgba(44,59,42,.85)</div></div>
+<div class="sp-g">Status-badge</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">9px 700 1.5px · padding 4×9 · r2 · bg kleur @ 6–9% · tekst donkere variant · dot 5px</div></div>
+<div class="sp-g">Eenheid-pill</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">10px 600 .06em · padding 3×10 · r20 · dot 6px currentColor</div></div>
+<div class="sp"><div class="sp-k">Kleuren</div><div class="sp-v">beschikbaar #eaf3e4/#3B6D11/#C0DD97 · optie #fef3e2/#7a4a00/#f5cc80 · verkocht #ececec/#888/#ccc</div></div>
+<div class="sp-g">Beschikbaar-pill</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">#EAF3DE · .5px #C0DD97 · #3B6D11 · 12px 500 · padding 2×12 (detail 5×13) · r20 · dot 7px</div></div>
+<div class="sp"><div class="sp-k">Regel</div><div class="sp-v">enkel te-koop projecten met ≥1 vrije eenheid</div></div>
+<div class="sp-g">% verkocht</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">82px (72 ≤767) · #2C3B2A · r10 · padding 9 10 10 · label 8.5px · waarde 21px 700 · bar 4px wit .2 / vulling #5FBF6E</div></div>
+<div class="sp"><div class="sp-k">Regel</div><div class="sp-v">enkel ≥50% en te koop</div></div>
+</div></div></div>
+
+<div class="cmp" id="c14"><div class="cmp-head"><span class="cmp-id">C14</span><h2 class="cmp-name">Info kaart</h2><span class="cmp-src">.info-kaart · project-detail.css</span><p class="cmp-desc">Rechterkolom op projectdetail (col-4) naast de galerij. Ook basis voor het inschrijvingspaneel.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="ik"><div class="ik-prijs"><div class="ik-pl">Prijs vanaf</div><p class="ik-pv">€ 289.000</p></div><div class="ik-rij"><span class="ik-k">Locatie</span><span class="ik-v">Straat 1, Gemeente<a href="#">Bekijk op kaart</a></span></div><div class="ik-rij"><span class="ik-k">Type</span><span class="ik-v">Appartementen</span></div><div class="ik-e"><i class="fa fa-building-o"></i>12 eenheden</div><div class="ik-e"><i class="fa fa-bed"></i>1 tot 3 slaapkamers</div><div class="ik-rij" style="align-items:center"><span class="ik-k">Status</span><span class="bpill" style="margin:0;padding:5px 13px;font-size:12.5px"><i></i>4 beschikbaar</span></div><div class="ik-docs"><div class="ik-dk">Documenten</div><div class="ik-bro"><i class="fa fa-download"></i>Brochure</div><div class="ik-doc"><i class="fa fa-file-pdf-o"></i>Lastenboek.pdf</div></div><div class="ik-cta"><div class="ik-ctak">Interesse?</div><div class="ik-prim"><span class="ck-in"><i class="fa fa-envelope-o ck-ico"></i><span><span class="ck-t">Informatie aanvragen</span><span class="ck-s">We antwoorden binnen 24u</span></span></span><span class="ck-a">›</span></div><div class="ik-sec"><span class="ck-in"><i class="fa fa-phone ck-ico"></i><span><span class="ck-t">Bel ons</span><span class="ck-s">0xx xx xx xx</span></span></span><span class="ck-a">›</span></div></div></div></div><div class="specs">
+<div class="sp-g">Container</div>
+<div class="sp"><div class="sp-k">Kaart</div><div class="sp-v">#fff · .5px <code>--border</code> · r3 · shadow 0 2 20 rgba(0,83,45,.06) · mt 20 ≤768</div></div>
+<div class="sp-g">Secties (van boven naar onder)</div>
+<div class="sp"><div class="sp-k">1 Prijsbalk</div><div class="sp-v">#00532D · padding 20×26 (16×18 ≤768) · label 10px 500 .1em wit .55 · waarde Playfair 28 (22 ≤768) · of status 13px 600 .12em</div></div>
+<div class="sp"><div class="sp-k">2 Info-rij</div><div class="sp-v">padding 12×26 · gap 14 · sleutel 10.5px 500 .07em min-w 90 · waarde 14/1.5 · sublink 11.5px olijf</div></div>
+<div class="sp"><div class="sp-k">3 Eenheid-rij</div><div class="sp-v">padding 10×26 · icoon 15px #7A9E6E w20 · tekst 14px</div></div>
+<div class="sp"><div class="sp-k">4 Status</div><div class="sp-v">beschikbaar-pill (C13)</div></div>
+<div class="sp"><div class="sp-k">5 Documenten</div><div class="sp-v">padding 14×20 · kop 10px 600 · brochure outline 1.5px groen r2 10×16 13px → hover gevuld · lijst 13px groen</div></div>
+<div class="sp"><div class="sp-k">6 CTA-blok</div><div class="sp-v">bg mist · padding 16 20 20 · gap 10</div></div>
+<div class="sp-g">CTA-knoppen</div>
+<div class="sp"><div class="sp-k">Primair</div><div class="sp-v"><span class="sw" style="background:#3D7A4E"></span>olijf · min-h 68 · r2 · hover #2F6038 + translateY(−1) · opent contact modal (C27)</div></div>
+<div class="sp"><div class="sp-k">Secundair</div><div class="sp-v">outline 1.5px #00532D · min-h 60 · hover gevuld · <code>tel:</code> link</div></div>
+<div class="sp"><div class="sp-k">Inhoud</div><div class="sp-v">icoon 18 · titel 14px 600 · sub 11px 300 .75 · pijl 20px .55 · gap 13</div></div>
+</div></div></div>
+
+<div class="cmp" id="c15"><div class="cmp-head"><span class="cmp-id">C15</span><h2 class="cmp-name">Eenheden tabel</h2><span class="cmp-src">.eenheid-tabel · .samenvatting · .opties-* · project-detail.css</span><p class="cmp-desc">Overzicht van alle loten met prijs, status en plan. Loten met afwerkingsopties klappen open naar optiekaarten.</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="overflow-x:auto"><div style="min-width:620px"><table class="et"><thead><tr><th>Lot</th><th>Type</th><th>Slpk</th><th class="num">m²</th><th class="num">Prijs</th><th>Status</th><th class="c">Plan</th></tr></thead><tbody>
+<tr><td><div class="lot"><b>A1</b>Lot A1</div><br><span class="opt-b">2 opties</span></td><td>Appartement</td><td><span class="dots"><i></i><i></i><i class="o"></i></span></td><td class="num">92</td><td class="num"><span class="pv"><small>Vanaf</small>€ 289.000</span></td><td><span class="esp b"><i></i>Beschikbaar</span></td><td class="c"><span class="row" style="gap:6px;justify-content:center"><span class="sq"><i class="fa fa-download"></i></span><span class="sq on"><i class="fa fa-angle-up"></i></span></span></td></tr>
+<tr style="background:var(--mist)"><td colspan="7" style="padding:0"><div style="display:flex;gap:16px;padding:16px 20px 20px;flex-wrap:wrap"><div class="oc d"><b>STANDAARD</b><span>€ 289.000</span></div><div class="oc"><b>MET TERRAS</b><span>€ 304.000</span></div></div></td></tr>
+<tr class="z"><td><div class="lot"><b>A2</b>Lot A2</div></td><td>Appartement</td><td><span class="dots"><i></i><i></i><i></i></span></td><td class="num">110</td><td class="num"><span class="pv">€ 335.000</span></td><td><span class="esp o"><i></i>In optie</span></td><td class="c"><span class="sq"><i class="fa fa-download"></i></span></td></tr>
+<tr class="v"><td><div class="lot"><b>A3</b>Lot A3</div></td><td>Appartement</td><td><span class="dots"><i></i><i class="o"></i><i class="o"></i></span></td><td class="num">68</td><td class="num">—</td><td><span class="esp s"><i></i>Verkocht</span></td><td class="c"><span class="sq"><i class="fa fa-download"></i></span></td></tr>
+</tbody></table><div class="smv"><div><small>Beschikbaar</small><b>4</b></div><div><small>In optie</small><b>2</b></div><div><small>Verkocht</small><b>6</b></div><div><small>Prijs vanaf</small><b style="font-size:15px">€ 289.000</b></div></div></div></div><div class="specs">
+<div class="sp-g">Sectie</div>
+<div class="sp"><div class="sp-k">Kop</div><div class="sp-v">Playfair 28 400 −.01em · olijf streep 40×2 · mt 48 · tabel in overflow-x wrapper</div></div>
+<div class="sp-g">Tabel</div>
+<div class="sp"><div class="sp-k">Thead</div><div class="sp-v">#00532D · th 14×20 · 10px 600 .12em uppercase wit .7 · nowrap · num rechts</div></div>
+<div class="sp"><div class="sp-k">Rijen</div><div class="sp-v">td 16×20 (12×12 ≤768) · .5px onderrand · zebra wit/mist · hover #eaf3e4 · verkocht tekst #aaa</div></div>
+<div class="sp"><div class="sp-k">Cijfers</div><div class="sp-v">tabular-nums · prijs Playfair 16 #00532D · "Vanaf" 9.5px · verkocht/verborgen tekst-sub</div></div>
+<div class="sp-g">Cellen</div>
+<div class="sp"><div class="sp-k">Lot</div><div class="sp-v">28px vierkant #00532D r2 11px 700 + naam 13px 600 · "X opties" badge 9px olijf outline</div></div>
+<div class="sp"><div class="sp-k">Slaapkamers</div><div class="sp-v">dots 8px gap 5 · vol olijf / leeg rand #D6E5CC</div></div>
+<div class="sp"><div class="sp-k">Plan / opties</div><div class="sp-v">34px vierkant r2 rand #D6E5CC olijf · hover/expanded gevuld olijf · <code>aria-expanded</code></div></div>
+<div class="sp-g">Optierij</div>
+<div class="sp"><div class="sp-k">Kaarten</div><div class="sp-v">flex gap 16 · padding 16 20 20 · kaart min 200 r4 padding 16×20 · default rand olijf bg #f4faf0 · naam 11px 700 · prijs Playfair 20 · kolom ≤768</div></div>
+<div class="sp-g">Totaal + samenvatting</div>
+<div class="sp"><div class="sp-k">Tfoot</div><div class="sp-v">mist · border-top #D6E5CC · 11px 600 · totaalprijs Playfair 15</div></div>
+<div class="sp"><div class="sp-k">Balk</div><div class="sp-v">4 items padding 14×20 · label 9.5px #7A9E6E · waarde Playfair 18 · 2×2 ≤768</div></div>
+</div></div></div>
+
+<div class="cmp" id="c16"><div class="cmp-head"><span class="cmp-id">C16</span><h2 class="cmp-name">Foto galerij</h2><span class="cmp-src">.foto-gallerij · .fg-* · .detail-project-badge · owl.carousel + magnific-popup</span><p class="cmp-desc">Hoofdbeeld op projectdetail (col-8), rekt mee met de hoogte van de info kaart.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="row" style="align-items:flex-start;gap:20px"><div class="state" style="flex:1;min-width:260px"><span class="state-l">Rust</span><div class="fg"><div class="fg-main"><div class="ph">hoofdfoto / video</div><span class="fg-badge">Nieuw project</span></div><div class="fg-acc"></div></div></div><div class="state" style="flex:1;min-width:260px"><span class="state-l">Hover</span><div class="fg"><div class="fg-main"><div class="ph" style="transform:scale(1.02)">hoofdfoto / video</div><span class="fg-badge">Nieuw project</span><span class="fg-zoom"><i class="fa fa-search-plus"></i></span><span class="fg-arr" style="left:10px">‹</span><span class="fg-arr h" style="right:10px">›</span></div><div class="fg-acc"></div></div></div></div></div><div class="specs">
+<div class="sp-g">Hoofdbeeld</div>
+<div class="sp"><div class="sp-k">Maat</div><div class="sp-v">flex 1 · min-h 300 · object-fit cover · r 3 3 0 0 · cursor zoom-in</div></div>
+<div class="sp"><div class="sp-k">Hover</div><div class="sp-v">img scale 1.02 (.3s) · zoom-icoon + pijlen opacity 0 → 1 (.2s)</div></div>
+<div class="sp-g">Overlays</div>
+<div class="sp"><div class="sp-k">Zoom</div><div class="sp-v">38px cirkel rgba(0,0,0,.35) · top/right 12 · 16px icoon</div></div>
+<div class="sp"><div class="sp-k">Pijlen</div><div class="sp-v">40×40 r2 rgba(0,0,0,.4) · 22px · links/rechts 10 · hover rgba(0,83,45,.75)</div></div>
+<div class="sp"><div class="sp-k">Badge</div><div class="sp-v">top/left 16 · #00532D · tekst #D6E5CC · 9.5px 600 .16em · 6×14 r2</div></div>
+<div class="sp"><div class="sp-k">Accentlijn</div><div class="sp-v">3px · linear-gradient(90deg, olijf 0, transparent 70%) · direct onder beeld</div></div>
+<div class="sp-g">Gedrag</div>
+<div class="sp"><div class="sp-k">Lightbox</div><div class="sp-v">klik → magnific-popup gallery · pijltjestoetsen</div></div>
+<div class="sp"><div class="sp-k">A11y</div><div class="sp-v">pijlen = <code>&lt;button aria-label&gt;</code> · ook zichtbaar bij focus (niet enkel hover)</div></div>
+</div></div></div>
+
+<div class="doc-group">Componenten · Content</div>
+
+<div class="cmp" id="c17"><div class="cmp-head"><span class="cmp-id">C17</span><h2 class="cmp-name">Blog kaart</h2><span class="cmp-src">.blog-kaart · .blog-uitgelicht · .blog-kaart-h · blog-index.css</span><p class="cmp-desc">Drie vormen: uitgelicht (3fr/2fr), standaardkaart in grid van 3, en horizontale kaart voor "overschot"-artikels (speciaal --1 volle breedte, --2 als 2fr/1fr).</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Standaard</span><div class="bk"><div class="bk-foto"><div class="ph">foto 3:2 · placeholder = streep-patroon</div></div><div class="bk-body"><h3 class="bk-naam">Bouwen in 2026: wat verandert er?</h3><div class="bk-dat">12 september 2026</div><p class="bk-txt">Samenvatting, max 5 regels (line-clamp) in 13/1.65.</p></div><div class="bk-foot"><span class="bk-link">Lees meer <i class="fa fa-arrow-right"></i></span></div></div></div>
+<div class="state"><span class="state-l">Horizontaal</span><div class="bkh"><div class="bkh-foto"><div class="ph">foto</div></div><div class="bkh-body"><h3 class="bk-naam" style="font-size:22px;margin-bottom:8px">Waarom kiezen voor nieuwbouw?</h3><div class="bk-dat" style="margin-bottom:16px">3 september 2026</div><p class="bk-txt" style="font-size:14px;margin-bottom:24px">Teaser 14/1.65, line-clamp 4.</p><span class="bk-link" style="margin-top:auto">Lees meer <i class="fa fa-arrow-right"></i></span></div></div></div>
+</div><div class="specs">
+<div class="sp-g">Standaard</div>
+<div class="sp"><div class="sp-k">Kaart</div><div class="sp-v">#fff · rand 1px · r3 · grid 3 kol gap 22 mb 60 (2 ≤991 · 1 ≤767) · hover zoals C11</div></div>
+<div class="sp"><div class="sp-k">Foto</div><div class="sp-v">3:2 · hover scale 1.06 · placeholder repeating-linear-gradient(−45deg, mist / #e8ece4, 8px)</div></div>
+<div class="sp"><div class="sp-k">Body</div><div class="sp-v">padding 18 20 14 · titel Playfair 19/1.25 · datum 12px · tekst 13/1.65 clamp 5</div></div>
+<div class="sp"><div class="sp-k">Footer</div><div class="sp-v">padding 10 20 14 · border-top · link 11px 700 1px groen</div></div>
+<div class="sp-g">Uitgelicht</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">3fr 2fr · foto min-h 340 · info padding 44×40 · label 10px 600 2px · titel Playfair 30 (24 ≤767) · meta 12 · tekst 14/1.7 clamp 5 · CTA 12×20 r2</div></div>
+<div class="sp-g">Horizontaal</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">1fr 1fr · foto min-h 220 · body padding 32×36 · titel 22 (--1: 28) · tekst 14 clamp 4 · ≤991 gestapeld foto 16:9</div></div>
+<div class="sp-g">Ontdek meer</div>
+<div class="sp"><div class="sp-k">Badge</div><div class="sp-v">top/left 12 · 10px 700 .08em · 4×10 r4 · artikel = wit + groene dot · project = groen + dot #cdb885</div></div>
+</div></div></div>
+
+<div class="cmp" id="c18"><div class="cmp-head"><span class="cmp-id">C18</span><h2 class="cmp-name">Haarlijn-kolommen</h2><span class="cmp-src">.troeven-grid · .about-waarom-grid · .vac-why-grid</span><p class="cmp-desc">Vier troeven naast elkaar, gescheiden door een dunne linkerlijn. Licht (home), donker (Over ons, Vacatures) en met icoon (Vacatures).</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Licht · .troeven-grid</span><div class="cols4"><div><h3>Kwaliteit</h3><p>Duurzame materialen en vakmanschap.</p></div><div><h3>Locatie</h3><p>Zorgvuldig gekozen plekken.</p></div><div><h3>Begeleiding</h3><p>Eén aanspreekpunt van start tot sleutel.</p></div><div><h3>Ervaring</h3><p>Bijna 30 jaar in de regio.</p></div></div></div>
+<div class="state" style="background:var(--color-primary-dark);padding:28px;border-radius:6px"><span class="state-l" style="color:rgba(255,255,255,.5)">Donker + icoon · .vac-why-grid</span><div class="cols4 dk"><div><span class="wi"><i class="fa fa-leaf"></i></span><h3>Groei</h3><p>Opleiding en doorgroei.</p></div><div><span class="wi"><i class="fa fa-users"></i></span><h3>Team</h3><p>Korte lijnen.</p></div><div><span class="wi"><i class="fa fa-home"></i></span><h3>Projecten</h3><p>Zichtbaar resultaat.</p></div><div><span class="wi"><i class="fa fa-car"></i></span><h3>Voordelen</h3><p>Wagen, laptop, gsm.</p></div></div></div>
+</div><div class="specs">
+<div class="sp-g">Grid</div>
+<div class="sp"><div class="sp-k">Kolommen</div><div class="sp-v">repeat(4,1fr) · gap 32 · mt 48 (dark) · licht: divider 1px boven, margin 40 0 48</div></div>
+<div class="sp"><div class="sp-k">Item</div><div class="sp-v">padding-left 28 · border-left 1px <code>--border</code> (donker wit .18) · eerste: geen</div></div>
+<div class="sp-g">Typografie</div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 600 19px (donker 18 #fff) · mb 10 · vacatures: lowercase + ::first-letter uppercase</div></div>
+<div class="sp"><div class="sp-k">Tekst</div><div class="sp-v">15/1.65 tekst-sub (donker 14/1.6 wit .7)</div></div>
+<div class="sp"><div class="sp-k">Icoon</div><div class="sp-v">40px cirkel wit .10 · goud · mb 16</div></div>
+<div class="sp-g">Responsive</div>
+<div class="sp"><div class="sp-k">≤991</div><div class="sp-v">2 kol · item 3 + 4 krijgen border-top + pt 24, item 3 geen linkerlijn</div></div>
+<div class="sp"><div class="sp-k">≤767</div><div class="sp-v">1 kol · geen linkerlijnen · vanaf 2e item border-top + pt 24 · row-gap 24</div></div>
+<div class="sp-g">Achtergrond</div><div class="sp"><div class="sp-k">Sectie</div><div class="sp-v">licht mist padding 20 0 100 · donker #003D21 padding 100 0</div></div>
+</div></div></div>
+
+<div class="cmp" id="c19"><div class="cmp-head"><span class="cmp-id">C19</span><h2 class="cmp-name">Genummerde rijen</h2><span class="cmp-src">.about-pijler · .vac-detail-stap</span><p class="cmp-desc">Pijlers op de Over ons-hub en sollicitatiestappen. Groot goud serifnummer links, inhoud rechts, haarlijn ertussen.</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="background:#fff"><div><div class="pj"><span class="pj-n">01</span><div><h3>Projectontwikkeling</h3><p>Van grond tot sleutel: we zoeken, ontwerpen en bouwen.</p><a class="about-pijler-link" style="margin-top:14px">Lees meer <i class="fa fa-arrow-right"></i></a></div></div><div class="pj"><span class="pj-n">02</span><div><h3>Projectbegeleiding</h3><p>Voor wie zelf bouwt: wij nemen de opvolging over.</p><a class="about-pijler-link" style="margin-top:14px">Lees meer <i class="fa fa-arrow-right"></i></a></div></div><div class="pj"><span class="pj-n">03</span><div><h3>Grondverwerving</h3><p>We kopen grond en panden met potentieel.</p></div></div></div></div><div class="specs">
+<div class="sp-g">Rij</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">flex gap 32 (18 ≤767) · padding 32 0 (24 ≤767) · border-top 1px · eerste geen rand/pt</div></div>
+<div class="sp"><div class="sp-k">Nummer</div><div class="sp-v">w 48 (32 ≤767) · Playfair 500 22/1.35 (18 ≤767) · goud</div></div>
+<div class="sp"><div class="sp-k">Body</div><div class="sp-v">max 640 · titel Playfair 600 20 mb 10 · tekst 15/1.7</div></div>
+<div class="sp"><div class="sp-k">Link</div><div class="sp-v">C01 tekstlink · mt 14</div></div>
+<div class="sp-g">Variant · stap</div>
+<div class="sp"><div class="sp-k">Vacature</div><div class="sp-v">gap 22 · padding 20 0 · nummer w40 22px · titel Avenir 700 15 · tekst 14/1.6</div></div>
+<div class="sp-g">Sectie</div><div class="sp"><div class="sp-k">Pijlers</div><div class="sp-v">bg #fff · padding 96 0</div></div>
+</div></div></div>
+
+<div class="cmp" id="c20"><div class="cmp-head"><span class="cmp-id">C20</span><h2 class="cmp-name">Fase-kolommen + vinkjeslijst</h2><span class="cmp-src">.about-fase · .about-check-list · .vac-detail-check-list</span><p class="cmp-desc">Drie fases van projectbegeleiding met afgevinkte taken. De vinkjeslijst wordt ook gebruikt in vacature-detail.</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="background:#fff"><div class="fase-g"><div class="fase"><span class="fase-n">01</span><h3>Voor de bouw</h3><ul class="chk"><li><strong>Budget</strong>Haalbaarheid en raming.</li><li>Keuze architect</li><li>Vergunningen</li></ul></div><div class="fase"><span class="fase-n">02</span><h3>Tijdens de bouw</h3><ul class="chk"><li>Werfopvolging</li><li>Planning</li></ul></div><div class="fase"><span class="fase-n">03</span><h3>Na de bouw</h3><ul class="chk"><li>Oplevering</li><li>Nazorg</li></ul></div></div></div><div class="specs">
+<div class="sp-g">Grid</div><div class="sp"><div class="sp-k">Kolommen</div><div class="sp-v">3 · gap 40 · mt 44 · 1 kol gap 32 ≤991</div></div>
+<div class="sp-g">Fase</div>
+<div class="sp"><div class="sp-k">Rand</div><div class="sp-v">border-top 2px #00532D · pt 24</div></div>
+<div class="sp"><div class="sp-k">Nummer</div><div class="sp-v">Playfair 500 20 goud · mb 6</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 600 20 · mb 18</div></div>
+<div class="sp-g">Vinkjeslijst</div>
+<div class="sp"><div class="sp-k">Item</div><div class="sp-v">padding-left 28 · mb 16 · 14/1.6 tekst-sub · optionele <code>&lt;strong&gt;</code> block 700 #2C3B2A</div></div>
+<div class="sp"><div class="sp-k">Vinkje</div><div class="sp-v">SVG polyline 16×16, stroke #00532D 2.5 (vacature 18px, pl 30, mb 12)</div></div>
+<div class="sp-g">Sectie</div><div class="sp"><div class="sp-k">Fases</div><div class="sp-v">bg #fff · padding 96 0</div></div>
+</div></div></div>
+
+<div class="cmp" id="c21"><div class="cmp-head"><span class="cmp-id">C21</span><h2 class="cmp-name">FAQ accordeon</h2><span class="cmp-src">.about-faq-* · .artikel-faq-*</span><p class="cmp-desc">Bestaat in twee implementaties. Aanbeveling: unificeren naar variant A (native &lt;details&gt;, geen JS nodig).</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">A · Over ons (details + chevron)</span><div class="faq"><div class="faq-i"><div class="faq-q">Welke gronden zoeken jullie? <i class="fa fa-angle-down"></i></div></div><div class="faq-i"><div class="faq-q" style="color:var(--color-primary)">Hoe snel krijg ik een bod? <i class="fa fa-angle-up"></i></div><div class="faq-a">Binnen twee weken na een eerste bezoek ontvang je een vrijblijvend voorstel.</div></div></div></div>
+<div class="state"><span class="state-l">B · Blogartikel (JS + ronde knop)</span><div style="max-width:760px;border-bottom:1px solid var(--border)"><div style="border-top:1px solid var(--border)"><div class="faq2-q">Wat kost een nieuwbouwwoning? <span class="faq2-b"><i class="fa fa-plus"></i></span></div></div><div style="border-top:1px solid var(--border)"><div class="faq2-q" style="color:var(--color-primary)">Welke premies bestaan er? <span class="faq2-b on"><i class="fa fa-minus"></i></span></div><div style="padding:6px 4px 14px;font-size:15px;line-height:1.75;color:var(--tekst-sub)">Antwoord in 15/1.75, pre-wrap.</div></div></div></div>
+</div><div class="specs">
+<div class="sp-g">A · details</div>
+<div class="sp"><div class="sp-k">Lijst</div><div class="sp-v">max 760 · border-top + items border-bottom rgba(0,83,45,.12)</div></div>
+<div class="sp"><div class="sp-k">Vraag</div><div class="sp-v">&lt;summary&gt; flex · padding 20 0 · Playfair 600 17/1.4 (16 ≤767) · hover #00532D · marker verborgen</div></div>
+<div class="sp"><div class="sp-k">Chevron</div><div class="sp-v">goud · rotate(180deg) bij [open] · .2s</div></div>
+<div class="sp"><div class="sp-k">Antwoord</div><div class="sp-v">pb 22 · 15/1.7 tekst-sub · max 68ch</div></div>
+<div class="sp-g">B · JS</div>
+<div class="sp"><div class="sp-k">Vraag</div><div class="sp-v">padding 15 4 · Avenir 600 15/1.45 · open → groen</div></div>
+<div class="sp"><div class="sp-k">Knop</div><div class="sp-v">25px cirkel 1.5px groen · open gevuld wit icoon · +/− wisselt</div></div>
+<div class="sp"><div class="sp-k">Antwoord</div><div class="sp-v">max-height 0 → JS · .3s · inner pt 20 pb 10</div></div>
+<div class="sp-g">A11y</div><div class="sp"><div class="sp-k">B</div><div class="sp-v">vereist <code>aria-expanded</code> + <code>aria-controls</code> op vraag-knop (A heeft dit native)</div></div>
+</div></div></div>
+
+<div class="doc-group">Componenten · Formulieren &amp; conversie</div>
+
+<div class="cmp" id="c22"><div class="cmp-head"><span class="cmp-id">C22</span><h2 class="cmp-name">Formulierveld</h2><span class="cmp-src">.contact-field · .artikel-contact-veld · .inschrijving-veld · .contact-form-control · .vac-cv-dropzone</span><p class="cmp-desc">Referentie = contactpagina. Vier formulieren gebruiken elk een eigen veldmaat; aanbeveling om naar deze ene spec te unificeren.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="row" style="align-items:flex-start;gap:24px">
+<div><div class="cf"><label>Voornaam <span class="req">*</span></label><div class="in ph-t">Jan</div></div><div class="cf"><label>E-mail <span class="req">*</span></label><div class="in f">jan@voorbeeld.be</div><span class="state-l" style="margin-top:6px">focus</span></div><div class="cf"><label>Telefoon</label><div class="in e">04</div><span class="err">Vul een geldig telefoonnummer in.</span></div></div>
+<div><div class="cf"><label>Onderwerp</label><div class="in sel">Informatie over een project <i class="fa fa-angle-down" style="color:var(--tekst-sub)"></i></div></div><div class="cf"><label>Bericht <span class="req">*</span></label><div class="in ta ph-t">Je bericht…</div></div><div class="chkb"><span class="box on"></span>Ik ga akkoord met het <a href="#">privacybeleid</a>.</div></div>
+</div>
+<div class="dz"><span class="dz-i"><i class="fa fa-upload"></i></span><span><strong>Sleep je CV hierheen of klik</strong><small>PDF of Word, max 5 MB</small></span></div>
+<div class="errban">Er ging iets mis bij het versturen. Probeer opnieuw of bel ons.</div>
+</div><div class="specs">
+<div class="sp-g">Label</div>
+<div class="sp"><div class="sp-k">Type</div><div class="sp-v">Avenir 700 11px .8px uppercase · tekst-sub · mb 10 · verplicht-ster goud</div></div>
+<div class="sp-g">Input</div>
+<div class="sp"><div class="sp-k">Rust</div><div class="sp-v">15/1.4 · rand 1px rgba(0,83,45,.2) · r6 · padding 12×14 · bg transparent · geen shadow</div></div>
+<div class="sp"><div class="sp-k">Placeholder</div><div class="sp-v">tekst-sub @ 60%</div></div>
+<div class="sp"><div class="sp-k">Focus</div><div class="sp-v">rand #00532D · bg rgba(0,83,45,.03) · <b>geen</b> glow</div></div>
+<div class="sp"><div class="sp-k">Fout</div><div class="sp-v">rand #C0392B · bericht 12px brick-red mt 6</div></div>
+<div class="sp"><div class="sp-k">Select</div><div class="sp-v">min-h 48 · chevron rechts 16 · pr 44 · <code>appearance: base-select</code> waar ondersteund: picker r10 shadow, actieve optie groen</div></div>
+<div class="sp"><div class="sp-k">Textarea</div><div class="sp-v">min-h 90 · resize vertical</div></div>
+<div class="sp-g">Layout</div>
+<div class="sp"><div class="sp-k">Grid</div><div class="sp-v">2 kol gap 0 40 · veld mb 12 · full = grid-column 1/−1 · 1 kol ≤575</div></div>
+<div class="sp"><div class="sp-k">Privacy</div><div class="sp-v">checkbox + 13/1.5 label, link groen underline · margin 8 0 28</div></div>
+<div class="sp"><div class="sp-k">Submit</div><div class="sp-v">100% · 16×24 · r6 · groen · 13px 700 1px</div></div>
+<div class="sp-g">Extra</div>
+<div class="sp"><div class="sp-k">Dropzone</div><div class="sp-v">dashed 1px rgba(0,83,45,.3) · r8 · padding 16×20 · icoon 36px mist · hover rand groen</div></div>
+<div class="sp"><div class="sp-k">Fout-banner</div><div class="sp-v">#FDF1F0 · rand #F3C6C2 · #b3392b · 14/1.5 · 14×18 · r8 · mb 24</div></div>
+<div class="sp"><div class="sp-k">Laden</div><div class="sp-v">"bricks" animatie: 4 blokjes 24×14 groen stapelen (1.6s)</div></div>
+<div class="sp-g">Afwijkende varianten (te unificeren)</div>
+<div class="sp"><div class="sp-k">Artikel</div><div class="sp-v">label 10px 1.5px · input 9×11 r2 bg #fafafa</div></div>
+<div class="sp"><div class="sp-k">Inschrijving</div><div class="sp-v">label 10px · input 8×10 13px r2</div></div>
+<div class="sp"><div class="sp-k">Modal</div><div class="sp-v">label 10px 600 · input 12×14 .5px rand bg mist r2 · focus olijf + glow 3px</div></div>
+</div></div></div>
+
+<div class="cmp" id="c23"><div class="cmp-head"><span class="cmp-id">C23</span><h2 class="cmp-name">Contact info paneel</h2><span class="cmp-src">.contact-info-panel · .contact-info-item · contact.css</span><p class="cmp-desc">Groene linkerkolom op de contactpagina (460px), met gegevens, social en kaart.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="cip"><h3>Contactgegevens</h3><div class="cii"><span class="cii-i"><i class="fa fa-phone"></i></span><div><div class="cii-l">Telefoon</div><div class="cii-v">0xx xx xx xx</div></div></div><div class="cii"><span class="cii-i h"><i class="fa fa-envelope-o"></i></span><div><div class="cii-l">E-mail (hover)</div><div class="cii-v">info@groupln.be</div></div></div><div class="cii"><span class="cii-i"><i class="fa fa-map-marker"></i></span><div><div class="cii-l">Adres</div><div class="cii-v">Straat 1, 0000 Gemeente</div></div></div><ul class="ftr-soc" style="margin-top:28px"><li><a><i class="fa fa-facebook"></i></a></li><li><a><i class="fa fa-instagram"></i></a></li><li><a><i class="fa fa-linkedin"></i></a></li></ul><div class="ph dk" style="margin-top:32px;height:160px;border-radius:12px">kaart (embed)</div></div></div><div class="specs">
+<div class="sp-g">Paneel</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">#00532D · padding 56 40 40 (48×32 ≤991 · 40×24 ≤575) · r16 (12 ≤575) · shadow 0 24 60 rgba(0,0,0,.08)</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 500 26 #fff · mb 28</div></div>
+<div class="sp-g">Item</div>
+<div class="sp"><div class="sp-k">Layout</div><div class="sp-v">flex gap 14 · padding 18 0 · border-bottom wit .15 · hele item is link</div></div>
+<div class="sp"><div class="sp-k">Icoon</div><div class="sp-v">36px cirkel rand wit .35 · hover gevuld goud</div></div>
+<div class="sp"><div class="sp-k">Label</div><div class="sp-v">11px 700 1.2px goud · mb 6</div></div>
+<div class="sp"><div class="sp-k">Waarde</div><div class="sp-v">15/1.5 wit .9</div></div>
+<div class="sp-g">Rest</div>
+<div class="sp"><div class="sp-k">Social</div><div class="sp-v">zoals footer (C09) · mt 28</div></div>
+<div class="sp"><div class="sp-k">Kaart</div><div class="sp-v">mt 40 · flex 1 · min-h 220 · r12</div></div>
+<div class="sp"><div class="sp-k">≤767</div><div class="sp-v">paneel ná formulier · lijst + social verborgen · enkel titel + kaart</div></div>
+<div class="sp-g">Verwant</div><div class="sp"><div class="sp-k">Varianten</div><div class="sp-v">artikel "Direct contact" (38px mist-cirkel, groen icoon) · menu-info (C08)</div></div>
+</div></div></div>
+
+<div class="cmp" id="c24"><div class="cmp-head"><span class="cmp-id">C24</span><h2 class="cmp-name">CTA blok</h2><span class="cmp-src">.cta-section · .about-eind-cta · .cta-kaart · .vac-detail-sidebar-cta</span><p class="cmp-desc">Afsluitende oproep onderaan pagina's, gekleurde tegels in het projectengrid en de donkere sidebar-CTA.</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Sectie</span><div class="ctas"><h3>Zelf een project realiseren?</h3><p>Wij denken graag met je mee, van grond tot oplevering.</p><div class="row" style="justify-content:center"><a class="cta-btn">Neem contact op <i class="fa fa-arrow-right"></i></a><a class="about-btn">Bekijk projecten</a></div><span style="display:block;margin-top:20px;font-size:13px;color:var(--tekst-sub)">of mail naar <a style="font-weight:700;text-decoration:none">info@groupln.be</a></span></div></div>
+<div class="state"><span class="state-l">Tegels · Sidebar</span><div class="row" style="align-items:stretch"><div class="ctk" style="background:var(--olijf)"><div class="ctk-l">Grondverwerving</div><div class="ctk-t">Grond of pand te koop?</div><div class="ctk-x">Wij doen een vrijblijvend bod.</div><span class="cta-kaart-btn" style="align-self:flex-start">Meer info <i class="fa fa-arrow-right"></i></span></div><div class="ctk" style="background:var(--color-primary)"><div class="ctk-l">Contact</div><div class="ctk-t">Niet gevonden wat je zoekt?</div><div class="ctk-x">Laat je gegevens na.</div><span class="cta-kaart-btn" style="align-self:flex-start">Contacteer ons <i class="fa fa-arrow-right"></i></span></div><div style="background:var(--color-primary-dark);border-radius:10px;padding:24px;width:240px;align-self:flex-start"><h3 style="font:500 19px var(--font-serif);color:#fff;margin:0 0 8px">Interesse?</h3><p style="font-size:13px;line-height:1.55;color:rgba(255,255,255,.75);margin:0 0 18px">Solliciteer in 2 minuten.</p><span style="display:block;text-align:center;padding:13px 20px;border-radius:6px;background:var(--color-cta);font:700 12px/1 var(--font-sans);letter-spacing:1px;text-transform:uppercase;color:#fff">Solliciteer</span></div></div></div>
+</div><div class="specs">
+<div class="sp-g">Sectie</div>
+<div class="sp"><div class="sp-k">Container</div><div class="sp-v">padding 100 0 (64 ≤767) · gecentreerd · bg mist (of wit: .on-white)</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 500 34/1.2 (about 32 · 26 ≤767) · mb 16</div></div>
+<div class="sp"><div class="sp-k">Tekst</div><div class="sp-v">16/1.6 tekst-sub · max 560 · mb 32</div></div>
+<div class="sp"><div class="sp-k">Acties</div><div class="sp-v">flex wrap gap 14 center · gestapeld full width ≤767 · mail-regel 13px mt 20</div></div>
+<div class="sp-g">Tegel (.cta-kaart)</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">r3 · padding 32×28 · min-h 260 (200 ≤767) · inhoud onderaan · olijf of groen · hover brightness 1.05</div></div>
+<div class="sp"><div class="sp-k">Inhoud</div><div class="sp-v">label 9px 700 2.5px wit .6 · titel Playfair 21/1.3 · tekst 12/1.6 wit .72 · C01 CTA-kaart knop</div></div>
+<div class="sp-g">Sidebar</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">#003D21 · r10 · padding 24 · titel Playfair 500 19 · tekst 13/1.55 · knop goud 13×20 r6 12px block</div></div>
+</div></div></div>
+
+<div class="cmp" id="c25"><div class="cmp-head"><span class="cmp-id">C25</span><h2 class="cmp-name">Vacature kaart + pills</h2><span class="cmp-src">.vac-card · .vac-detail-other-card · .vac-pill · .vac-detail-meta-item</span><p class="cmp-desc">Rij-kaart in de vacaturelijst, compacte kaart bij "Andere vacatures" en twee soorten pills (eigenschappen en meta in de detail-hero).</p></div>
+<div class="cmp-body"><div class="cmp-prev">
+<div class="state"><span class="state-l">Rust</span><div class="vc"><div><span class="vc-cat">Werf</span><h3 class="vc-t">Werfleider residentiële bouw</h3><div class="vc-meta"><span><i class="fa fa-map-marker"></i> Regio</span><span><i class="fa fa-clock-o"></i> Voltijds</span></div><p class="vc-txt">Korte teaser van de functie, max 640px.</p></div><span class="vc-link">Bekijk vacature <i class="fa fa-arrow-right"></i></span></div></div>
+<div class="state"><span class="state-l">Hover</span><div class="vc h"><div><span class="vc-cat">Kantoor</span><h3 class="vc-t">Projectcoördinator</h3><div class="vc-meta" style="margin:0"><span><i class="fa fa-map-marker"></i> Regio</span><span><i class="fa fa-clock-o"></i> Voltijds</span></div></div><span class="vc-link">Bekijk vacature <i class="fa fa-arrow-right"></i></span></div></div>
+<div class="state"><span class="state-l">Eigenschap-pill · meta-pill (op groen)</span><div class="row"><span class="vpill"><i class="fa fa-check"></i>Teamspeler</span><span class="vpill"><i class="fa fa-check"></i>Hands-on</span><span style="background:var(--color-primary);padding:12px;border-radius:6px;display:flex;gap:10px"><span class="vmeta"><i class="fa fa-map-marker"></i>Regio</span><span class="vmeta"><i class="fa fa-clock-o"></i>Voltijds</span></span></div></div>
+</div><div class="specs">
+<div class="sp-g">Rij-kaart</div>
+<div class="sp"><div class="sp-k">Container</div><div class="sp-v">flex space-between gap 24 · #fff · rand 1px · r10 · padding 28×32 (22×20 ≤767, gestapeld) · lijst gap 16</div></div>
+<div class="sp"><div class="sp-k">Hover</div><div class="sp-v">rand #00532D · shadow 0 12 28 rgba(0,0,0,.06) · .2s</div></div>
+<div class="sp"><div class="sp-k">Categorie</div><div class="sp-v">11px 700 1.4px groen · mb 8</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 500 21 · lowercase + first-letter upper · mb 10</div></div>
+<div class="sp"><div class="sp-k">Meta</div><div class="sp-v">13px tekst-sub · gap 16 · icoon + tekst gap 6</div></div>
+<div class="sp"><div class="sp-k">Link</div><div class="sp-v">13px 700 .5px groen · nowrap</div></div>
+<div class="sp-g">Compact</div><div class="sp"><div class="sp-k">Andere</div><div class="sp-v">block · r10 · padding 24 · titel Playfair 19 · grid 2 kol gap 20 (1 ≤767)</div></div>
+<div class="sp-g">Pills</div>
+<div class="sp"><div class="sp-k">Eigenschap</div><div class="sp-v">10×16 · r100 · wit · rand 1px · 13px 600 · groen icoon · gap 10 · mt 24</div></div>
+<div class="sp"><div class="sp-k">Meta</div><div class="sp-v">8×16 · r100 · wit .10 · 13px 600 wit · gouden icoon · gap 12</div></div>
+<div class="sp-g">Leeg</div><div class="sp"><div class="sp-k">.vac-empty</div><div class="sp-v">gecentreerd · padding 48×24 · wit · r10 · 15px tekst-sub</div></div>
+</div></div></div>
+
+<div class="cmp" id="c26"><div class="cmp-head"><span class="cmp-id">C26</span><h2 class="cmp-name">Artikel blokken</h2><span class="cmp-src">.artikel-blok · .artikel-pullquote · .artikel-callout · .artikel-delen · blog-artikel.css</span><p class="cmp-desc">Bouwstenen van een blogartikel (Quill rich text). Body = 1fr + sticky sidebar 360px (C22/C23-varianten).</p></div>
+<div class="cmp-body"><div class="cmp-prev" style="background:#fff">
+<div class="state"><span class="state-l">Intro</span><p style="font:400 21px/1.55 var(--font-serif);color:#36423a;margin:0">Een nieuwbouwwoning kopen is spannend. Dit moet je weten voor je tekent.</p></div>
+<div class="state"><span class="state-l">Blok + lijst</span><div><h3 class="ab-t">Waar moet je op letten?</h3><div class="ab-l"></div><p class="ab-p">Rich text in 15/1.85. Links groen onderstreept.</p><ul class="ab-ul"><li>Lees het lastenboek grondig</li><li>Vraag naar de EPC-waarde</li></ul></div></div>
+<div class="state"><span class="state-l">Pullquote</span><blockquote class="pq">"Een goede locatie is de beste investering."</blockquote></div>
+<div class="state"><span class="state-l">Callout</span><div class="co"><h4>Tip</h4><ul class="ab-ul" style="margin:0"><li>Plan een werfbezoek</li></ul></div></div>
+<div class="state"><span class="state-l">Footer · delen (rust / hover / gekopieerd)</span><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;border-top:1px solid var(--border);padding-top:22px"><a style="font:600 13px var(--font-sans);color:var(--tekst-sub)"><i class="fa fa-arrow-left"></i> Terug naar blog</a><div class="shr"><span class="l">Delen</span><a><i class="fa fa-facebook"></i></a><a class="h"><i class="fa fa-linkedin"></i></a><a class="ok"><i class="fa fa-check"></i></a></div></div></div>
+</div><div class="specs">
+<div class="sp-g">Layout</div>
+<div class="sp"><div class="sp-k">Body</div><div class="sp-v">grid 1fr 360 · gap 48 (1fr 320 / 36 ≤1100 · 1 kol ≤991, sidebar static) · container pt 36 pb 72</div></div>
+<div class="sp"><div class="sp-k">Hero-foto</div><div class="sp-v">r3 · max-h 520 (260 ≤767) · mb 40</div></div>
+<div class="sp-g">Blokken</div>
+<div class="sp"><div class="sp-k">Intro</div><div class="sp-v">Playfair 21/1.55 #36423a · mb 34</div></div>
+<div class="sp"><div class="sp-k">Blok</div><div class="sp-v">mb 40 · titel Playfair 500 27/1.25 · lijn 48×2 groen mb 18</div></div>
+<div class="sp"><div class="sp-k">Split</div><div class="sp-v">1fr 1fr gap 28 · foto r2 max-h 480 · titel 25 · 1 kol ≤767</div></div>
+<div class="sp"><div class="sp-k">Rich text</div><div class="sp-v">p 15/1.85 mb 18 · bullets = gedraaid vierkantje 7px groen · blockquote 3px groen italic 16</div></div>
+<div class="sp"><div class="sp-k">Pullquote</div><div class="sp-v">Playfair italic 25/1.45 groen · rand-links 3px #cdb885 · pl 26 · margin 34 0</div></div>
+<div class="sp"><div class="sp-k">Callout</div><div class="sp-v">#ECF4E8 · rand-links 3px groen · padding 26×30 · kop 11px 700 1.6px groen</div></div>
+<div class="sp-g">Footer</div>
+<div class="sp"><div class="sp-k">Delen</div><div class="sp-v">34px cirkels · rand 1px · wit · hover groen gevuld · gekopieerd #2d7a4f · label 10px 600 1.5px</div></div>
+<div class="sp"><div class="sp-k">Terug</div><div class="sp-v">13px 600 tekst-sub underline · hover groen</div></div>
+<div class="sp-g">Sidebar</div>
+<div class="sp"><div class="sp-k">Contactblok</div><div class="sp-v">sticky top 24 · kop groen padding 28 26 22 · titel Playfair 28 · formulier padding 22 · direct contact 38px mist-cirkels</div></div>
+</div></div></div>
+
+<div class="doc-group">Componenten · Overlays &amp; motion</div>
+
+<div class="cmp" id="c27"><div class="cmp-head"><span class="cmp-id">C27</span><h2 class="cmp-name">Contact modal</h2><span class="cmp-src">.contact-modal-* · contact-modal.css</span><p class="cmp-desc">Informatie-aanvraag vanuit de info kaart. Drie staten: formulier, succes (groene header) en fout (donkerrode header).</p></div>
+<div class="cmp-body"><div class="cmp-prev dark"><div class="row" style="align-items:flex-start">
+<div class="md"><div class="md-h"><span class="md-x">✕</span><span class="md-ic"><i class="fa fa-envelope-o"></i></span><h3 class="md-t">Informatie aanvragen</h3><div class="md-d"></div><p class="md-s">Residentie De Linde · we nemen binnen 24u contact op.</p></div><div class="md-b"><div><span class="md-lb">Voornaam <span style="color:var(--olijf)">*</span></span><div class="md-in">Jan</div></div><div><span class="md-lb">Naam <span style="color:var(--olijf)">*</span></span><div class="md-in">Peeters</div></div><div style="grid-column:1/-1"><span class="md-lb">E-mail <span style="color:var(--olijf)">*</span></span><div class="md-in">jan@voorbeeld.be</div></div><div style="grid-column:1/-1"><span class="md-lb">Bericht</span><div class="md-in" style="height:70px">Je vraag…</div></div></div><div class="md-f"><hr style="border:0;border-top:.5px solid var(--border);margin:0 0 20px"><div class="md-btn"><i class="fa fa-paper-plane"></i>Verstuur aanvraag</div><p class="md-pn">We gebruiken je gegevens enkel om je vraag te beantwoorden.</p></div></div>
+<div class="md" style="width:300px"><div class="md-h err" style="padding:28px 24px"><span class="md-ic"><i class="fa fa-exclamation"></i></span><h3 class="md-t" style="font-size:20px">Er ging iets mis</h3></div><div style="padding:24px"><div style="display:flex;align-items:center;justify-content:center;height:52px;border:.5px solid rgba(0,83,45,.15);border-radius:2px;font:500 13px var(--font-sans);color:var(--tekst-sub)">Sluiten</div></div></div>
+</div></div><div class="specs">
+<div class="sp-g">Container</div><div class="sp"><div class="sp-k">Modal</div><div class="sp-v">#fff · r3 · overflow hidden · Bootstrap modal (backdrop, Esc, focus-trap)</div></div>
+<div class="sp-g">Header</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">#00532D (fout #6b1a1a) · padding 36 40 32 (28 24 24 ≤576) · gecentreerd</div></div>
+<div class="sp"><div class="sp-k">Sluiten</div><div class="sp-v">30×30 r2 · wit .12 → .22 hover · top/right 16</div></div>
+<div class="sp"><div class="sp-k">Icoon</div><div class="sp-v">56px cirkel · rand 1.5 wit .25 · bg wit .10 · mb 18</div></div>
+<div class="sp"><div class="sp-k">Titel</div><div class="sp-v">Playfair 400 24/1.2 wit · deco 36×1.5 wit .25 · sub 13px 300 wit .65 max 360</div></div>
+<div class="sp-g">Body · Footer</div>
+<div class="sp"><div class="sp-k">Form</div><div class="sp-v">padding 32 40 8 · 2 kol gap 18×20 (1 ≤576) · velden C22 modal-variant</div></div>
+<div class="sp"><div class="sp-k">Submit</div><div class="sp-v">100% · h52 · olijf · r2 · 13px 600 .08em · hover #2F6038 + −1px</div></div>
+<div class="sp"><div class="sp-k">Sluit (succes/fout)</div><div class="sp-v">h52 · outline .5px · 13px 500 tekst-sub · hover olijf</div></div>
+<div class="sp"><div class="sp-k">Privacy</div><div class="sp-v">11px #aab8a6 · gecentreerd · mt 12</div></div>
+</div></div></div>
+
+<div class="cmp" id="c28"><div class="cmp-head"><span class="cmp-id">C28</span><h2 class="cmp-name">Cookie consent</h2><span class="cmp-src">.cc-banner · .cc-dialog · .cc-fab · cookie-consent.css</span><p class="cmp-desc">Banner bij eerste bezoek, voorkeurenpaneel en zwevende knop linksonder om keuzes later aan te passen. Weigeren is even zichtbaar als aanvaarden (conformiteit).</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="row" style="align-items:flex-start;gap:24px">
+<div class="state"><span class="state-l">Banner</span><div class="ccb"><h4>Cookies op deze site</h4><p>We gebruiken cookies om de site te verbeteren. Lees ons <a href="#">cookiebeleid</a>.</p><div class="ccb-a"><span class="cc-btn cc-btn-primary">Alles aanvaarden</span><span class="cc-btn cc-btn-ghost">Alles weigeren</span></div><span style="display:inline-block;margin-top:10px;font-size:12px;color:var(--tekst-sub);text-decoration:underline">Voorkeuren instellen</span></div></div>
+<div class="state"><span class="state-l">Floating knop</span><span class="fab"><i class="fa fa-shield"></i></span></div>
+</div>
+<div class="state"><span class="state-l">Voorkeurenpaneel</span><div class="ccd"><div class="ccd-h"><h4>Cookievoorkeuren</h4><span style="font-size:24px;color:var(--tekst-sub)">×</span></div><div class="ccd-b"><div class="ccc"><div class="ccc-h">Noodzakelijk <span style="font:700 11px/1 var(--font-sans);letter-spacing:.04em;text-transform:uppercase;color:var(--color-cta)">Altijd actief</span></div><p>Nodig om de site te laten werken.</p></div><div class="ccc"><div class="ccc-h">Analytisch <span class="sw2 on"></span></div><p>Anoniem bezoekersgedrag meten.</p></div><div class="ccc"><div class="ccc-h">Marketing <span class="sw2"></span></div><p>Gepersonaliseerde advertenties.</p></div></div><div class="ccd-a"><span class="cc-btn cc-btn-ghost">Alles weigeren</span><span class="cc-btn cc-btn-primary">Opslaan</span></div></div></div>
+</div><div class="specs">
+<div class="sp-g">Banner</div>
+<div class="sp"><div class="sp-k">Positie</div><div class="sp-v">fixed left/bottom 20 (12 + right 12 ≤575) · 420px · z 2100</div></div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">wit · rand rgba(0,83,45,.14) · r6 · shadow 0 18 50 rgba(0,20,10,.22) · padding 22 22 18</div></div>
+<div class="sp"><div class="sp-k">Inhoud</div><div class="sp-v">titel Playfair 600 18 · tekst 13.5/1.6 · acties gap 10, aanvaarden flex 1.5 · ≤575 gestapeld, aanvaarden bovenaan</div></div>
+<div class="sp-g">Paneel</div>
+<div class="sp"><div class="sp-k">Dialog</div><div class="sp-v">overlay rgba(0,0,0,.5) z 2200 · paneel 560 max · r6 · shadow 0 24 60 .3 · body scroll-lock</div></div>
+<div class="sp"><div class="sp-k">Kop / voet</div><div class="sp-v">padding 18×22 · titel Playfair 600 19 · voet mist, rechts uitgelijnd gap 8</div></div>
+<div class="sp"><div class="sp-k">Categorie</div><div class="sp-v">padding 14 0 · naam 14px 700 · "verplicht" 11px 700 goud · tekst 13/1.55</div></div>
+<div class="sp"><div class="sp-k">Switch</div><div class="sp-v">42×24 · uit #cfd8cf · aan #00532D · knop 18px wit · .15s · native checkbox eronder</div></div>
+<div class="sp-g">FAB</div>
+<div class="sp"><div class="sp-k">Stijl</div><div class="sp-v">52px (46 ≤767) · groen · shadow 0 6 20 rgba(0,61,33,.35) · left/bottom 20 (14) · hover #006638 −2px · z 1800</div></div>
+<div class="sp-g">Knoppen</div><div class="sp"><div class="sp-k">.cc-btn</div><div class="sp-v">C01 cookie-variant · 10×16 r3 12px 700</div></div>
+</div></div></div>
+
+<div class="cmp" id="c29"><div class="cmp-head"><span class="cmp-id">C29</span><h2 class="cmp-name">Scroll reveal</h2><span class="cmp-src">.reveal · .reveal-slide-right · reveal.css · reveal.js</span><p class="cmp-desc">Het enige geschreven motion-moment. Alle andere beweging is ≤250ms hover/press-feedback.</p></div>
+<div class="cmp-body"><div class="cmp-prev"><div class="row" style="gap:40px"><div class="state"><span class="state-l">.reveal (van onder)</span><div class="rv"><div style="opacity:.25;transform:translateY(24px)">start</div><div style="opacity:.6;transform:translateY(12px)">…</div><div>visible</div></div></div><div class="state"><span class="state-l">.reveal-slide-right</span><div class="rv"><div style="opacity:.25;transform:translateX(40px)">start</div><div>visible</div></div></div></div></div><div class="specs">
+<div class="sp-g">Animatie</div>
+<div class="sp"><div class="sp-k">Start</div><div class="sp-v">opacity 0 · translateY(24px) (slide-right: translateX(60px))</div></div>
+<div class="sp"><div class="sp-k">Eind</div><div class="sp-v">.visible → opacity 1 · transform 0</div></div>
+<div class="sp"><div class="sp-k">Timing</div><div class="sp-v">.95s ease · stagger 100ms per sibling, max 4 stappen</div></div>
+<div class="sp-g">Voorwaarden</div>
+<div class="sp"><div class="sp-k">Gating</div><div class="sp-v"><code>html.js-reveal</code> (enkel met IntersectionObserver) én <code>prefers-reduced-motion: no-preference</code> · zonder JS alles zichtbaar</div></div>
+<div class="sp"><div class="sp-k">Overflow</div><div class="sp-v">secties met slide-right krijgen overflow-x: hidden/clip</div></div>
+<div class="sp-g">Hover-motion (overige)</div>
+<div class="sp"><div class="sp-k">Waarden</div><div class="sp-v">knoppen .15–.25s · kaart-lift −2px .22s · foto-zoom 1.04–1.06 .42–.45s · pijl +3px .18s · scroll-cue 2.4s loop</div></div>
+</div></div></div>
+</div>
+</x-dc>
+</body>
+</html>

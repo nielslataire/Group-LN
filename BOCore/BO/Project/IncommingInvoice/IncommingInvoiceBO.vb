@@ -89,4 +89,44 @@ Public Class IncommingInvoiceBO
         End Set
     End Property
 
+    ' Kolommen bestonden al in de DB (DALCore.Models.IncommingInvoices, verrijkings-/Octopus-pijplijn)
+    ' maar werden door de translator niet doorgegeven ("dode infrastructuur", zie IncommingInvoiceDetailV2.cshtml) —
+    ' hier enkel doorgegeven, geen nieuwe kolom. Legacy Add/EditIncommingInvoice zetten deze nooit, dus blijven
+    ' gewoon Nothing/0 voor elke factuur die via dat scherm aangemaakt is — geen gedragsverandering daar.
+    Private _duedate As DateOnly?
+    <Display(Name:="Vervaldatum")>
+    Public Property DueDate() As DateOnly?
+        Get
+            Return _duedate
+        End Get
+        Set(ByVal value As DateOnly?)
+            _duedate = value
+        End Set
+    End Property
+
+    Private _statusid As Byte
+    <Display(Name:="Status")>
+    Public Property StatusId() As Byte
+        Get
+            Return _statusid
+        End Get
+        Set(ByVal value As Byte)
+            _statusid = value
+        End Set
+    End Property
+
+    ' Nothing = "niet opgegeven" (legacy Add/Edit-formulier kent dit veld niet) — de translator schrijft
+    ' de kolom enkel weg als dit een waarde heeft, anders blijft wat al in de DB stond ongewijzigd. Zie
+    ' ServiceCore/Translators/IncommingInvoiceTranslator.cs voor de volledige toelichting.
+    Private _kind As IncommingInvoiceKind?
+    <Display(Name:="Soort")>
+    Public Property Kind() As IncommingInvoiceKind?
+        Get
+            Return _kind
+        End Get
+        Set(ByVal value As IncommingInvoiceKind?)
+            _kind = value
+        End Set
+    End Property
+
 End Class

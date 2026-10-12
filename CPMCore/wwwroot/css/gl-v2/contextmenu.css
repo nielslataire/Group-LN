@@ -61,8 +61,22 @@
 .gl-v2-menu-item:hover i,
 .gl-v2-menu-item:focus-visible i { color: var(--gl-v2-primary); }
 
+/* Icoon-chip (11/10/2026) — zelfde recept als .gl-v2-section-card-icon (30×30, --gl-v2-primary-tint),
+   zodat het icoon een groen vlak krijgt i.p.v. enkel een gekleurd glyph. Enkel het eerste icoon van
+   het item (het onderwerp-icoon); eventuele kleinere iconen in de tekst zelf blijven ongemoeid. */
+.gl-v2-menu-item > i:first-child {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--gl-v2-radius-sm);
+    background: var(--gl-v2-primary-tint);
+}
+
 .gl-v2-menu-item.is-danger { color: #8B2A2A; font-weight: 600; }
 .gl-v2-menu-item.is-danger i { color: #8B2A2A; }
+.gl-v2-menu-item.is-danger > i:first-child { background: var(--gl-v2-danger-tint); }
 .gl-v2-menu-item.is-danger:hover,
 .gl-v2-menu-item.is-danger:focus-visible { background: #F8EBEB; color: #8B2A2A; }
 .gl-v2-menu-item.is-danger:hover i,

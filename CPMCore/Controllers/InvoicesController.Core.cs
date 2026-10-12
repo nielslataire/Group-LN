@@ -126,6 +126,8 @@ namespace CPMCore.Controllers
               : vms.Select(v => v.BookyearLabel).FirstOrDefault();
             SetIndexBreadcrumb(issuerCompanyId, ViewBag.CompanyName as string);
             SetPageHeader("bx bx-receipt", $"Facturen - {ViewBag.CompanyName}");
+            // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
+            ViewData["HelpScreenId"] = "invoices-index";
             // gl-v2 layout-pilot: zelfde data/query hierboven, enkel de view wisselt (design-handoff/).
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", vms);
         }

@@ -103,4 +103,8 @@ public class VerslagEditV2Vm
     public DateOnly? VorigDatum { get; set; }
     /// <summary>Gegevens voor het gedeelde punt-zijpaneel (Bewerken van een nieuw punt).</summary>
     public CPMCore.Models.Issues.PuntenIndexV2Vm Panel { get; set; } = new();
+    /// <summary>Punten die nog in concept staan of nog ter goedkeuring zijn — die mogen niet zomaar mee in
+    /// het verstuurde verslag (Niels, 2026-10-10). De "Afronden"-modal waarschuwt hiervoor en biedt een
+    /// expliciete "toch versturen"-optie; <c>Finish</c> sluit ze dan uit i.p.v. ze onafgewerkt te versturen.</summary>
+    public int TeGoedkeurenAantal => OpenPunten.Concat(NieuwePunten).Count(p => p.Status is (int)BOCore.ConstructionIssueStatus.Concept or (int)BOCore.ConstructionIssueStatus.PendingApproval);
 }

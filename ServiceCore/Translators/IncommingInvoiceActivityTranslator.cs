@@ -26,6 +26,9 @@ namespace ServiceCore.Translators
             bo.Invoicedate = invoice?.Date ?? default;
             bo.Description = _entity.Description;
             bo.IncommingInvoiceType = (IncommingInvoiceType)_entity.Type;
+            bo.DueDate = invoice?.DueDate;
+            bo.StatusId = invoice?.StatusId ?? 0;
+            bo.Kind = invoice?.InvoiceKind.HasValue == true ? (IncommingInvoiceKind)invoice.InvoiceKind.Value : (IncommingInvoiceKind?)null;
             if (invoice?.ContractId is int contractId && contractId != 0)
                 bo.ContractId = contractId;
             if (_entity.ContractAct is not null)

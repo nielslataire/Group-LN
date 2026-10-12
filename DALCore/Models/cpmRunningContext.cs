@@ -111,6 +111,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<Country> Country { get; set; }
 
+    public virtual DbSet<HelpFeedback> HelpFeedback { get; set; }
+
     public virtual DbSet<IncomingInvoiceAttachments> IncomingInvoiceAttachments { get; set; }
 
     public virtual DbSet<IncomingInvoiceEnrichment> IncomingInvoiceEnrichment { get; set; }
@@ -1341,6 +1343,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ContractSentNote).HasMaxLength(200);
             entity.Property(e => e.GuaranteePercentage).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.GuaranteeDocFilename).HasMaxLength(260);
+            entity.Property(e => e.GuaranteeReleasedVOAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.GuaranteeReleasedDOAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PaymentTerm).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
             entity.Property(e => e.SiteManagerContactId).HasColumnName("SiteManagerContactID");
@@ -3035,6 +3039,27 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Type).WithMany(p => p.Units)
                 .HasForeignKey(d => d.TypeId)
                 .HasConstraintName("FK_Units_UnitTypes");
+        });
+
+        modelBuilder.Entity<HelpFeedback>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_HelpFeedback_UserId");
+
+            entity.HasIndex(e => e.ArticleSlug, "IX_HelpFeedback_ArticleSlug");
+
+            entity.Property(e => e.Kind)
+                .IsRequired()
+                .HasMaxLength(30);
+
+            entity.Property(e => e.ArticleSlug).HasMaxLength(200);
+
+            entity.Property(e => e.ScreenId).HasMaxLength(20);
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.User).WithMany(p => p.HelpFeedback)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_HelpFeedback_Users");
         });
 
         modelBuilder.Entity<UserCoachmarkState>(entity =>

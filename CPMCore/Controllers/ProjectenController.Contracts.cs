@@ -2,6 +2,7 @@ using BOCore;
 using CPMCore.Documents;
 using CPMCore.Helpers;
 using CPMCore.Models;
+using CPMCore.Models.GlV2;
 using CPMCore.Models.Invoicing;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Leveranciers;
@@ -331,11 +332,143 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = projectRecalc;
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
-            ViewBag.CanWriteProjectCalculation = _ps.HasWrite(PermissionCodes.ProjectsPostCalculation);
+            var canWriteCalc = _ps.HasWrite(PermissionCodes.ProjectsPostCalculation);
+            ViewBag.CanWriteProjectCalculation = canWriteCalc;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Nacalculatie");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                return View("RecalculationV2", BuildRecalculationIndexV2Vm(model, canWriteCalc));
             return View(model);
         }
+
+        /// <summary>Gedeelde sommen voor heel de Nacalculatie V2 (42a/42b/42c/42f) — zelfde formules als
+        /// Recalculation.cshtml (legacy). Instance-methodes (niet lokale functies) zodat zowel
+        /// <see cref="BuildRecalculationIndexV2Vm"/> als <see cref="BuildRecalculationDetailV2Vm"/> ze kunnen
+        /// delen i.p.v. elk hun eigen kopie te laten verschillen.</summary>
+        private static decimal RecalcContractSom(IEnumerable<ContractBO> contracten, int? groupId, int? activityId) => contracten
+            .SelectMany(c => c.Activities)
+            .Where(a => groupId == null || a.Activity.Group.ID == groupId)
+            .Where(a => activityId == null || a.Activity.ID == activityId)
+            .Sum(a => a.EffectivePrice);
+        private static decimal RecalcFactuurSom(IEnumerable<IncommingInvoiceActivityBO> facturen, int? groupId, int? activityId, bool meerwerkKlant) => facturen
+            .Where(f => meerwerkKlant ? f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk_Klant : f.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
+            .Where(f => groupId == null || f.Activity.Group.ID == groupId)
+            .Where(f => activityId == null || f.Activity.ID == activityId)
+            .Sum(f => f.SignedPrice);
+        /// <summary>Begroot-bron (design-handoff 42e punt 01): ofwel een rij per legacy BudgetActivityBO, ofwel
+        /// een rij per budgetflow-lijn van het definitief budget — zie <see cref="GetBegrootRegelsV2"/>. De rest
+        /// van de Nacalculatie-sommen weet niet (en moet niet weten) welke van de twee het is.</summary>
+        private readonly record struct BegrootRegel(int ActivityId, int GroupId, decimal Bedrag);
+
+        private static decimal RecalcBudgetSom(IEnumerable<BegrootRegel> begroot, int? groupId, int? activityId) => begroot
+            .Where(b => groupId == null || b.GroupId == groupId)
+            .Where(b => activityId == null || b.ActivityId == activityId)
+            .Sum(b => b.Bedrag);
+        private static string RecalcGeld(decimal v) => $"€ {v:N0}";
+
+        /// <summary>Begroot-bron bepalen: het definitief budget (via de budgetflow-module, design-handoff 42e
+        /// punt 01) als er één bestaat voor dit project, anders het oude, eenvoudige per-activiteit-budget
+        /// (Model.BudgetActivities, zoals CalculationSettings dat nog steeds alleen gebruikt/bewerkt — dat
+        /// scherm en de legacy Recalculation-pagina's blijven dus ongewijzigd werken). <c>.GetAwaiter().GetResult()</c>
+        /// i.p.v. de hele actie async maken: één disjuncte call, geen SynchronizationContext-risico onder Kestrel.</summary>
+        private (List<BegrootRegel> Regels, string? BronLabel) GetBegrootRegelsV2(int projectId, List<BudgetActivityBO> legacyBudget)
+        {
+            var definitief = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.ProjectId == projectId && v.Status == DALCore.Models.BudgetVersie.StatusDefinitief)
+                .Select(v => new { v.Id, v.Versienummer, Naam = v.BudgetMaster.Naam })
+                .FirstOrDefault();
+            if (definitief != null)
+            {
+                var groepen = _budgetActivityService.GetLotGroepenAsync(definitief.Id).GetAwaiter().GetResult();
+                var regels = groepen.SelectMany(g => g.Lijnen).Select(l => new BegrootRegel(l.ActivityId, l.GroupId, l.TotaalAlternatief)).ToList();
+                return (regels, $"{definitief.Naam} v{definitief.Versienummer}");
+            }
+            return (legacyBudget.Select(b => new BegrootRegel(b.Activity.ID, b.Activity.Group.ID, b.Price)).ToList(), null);
+        }
+
+        /// <summary>Categorieën + per-activiteit-rijen met badges/voortgang — exact de 42a-tabel-logica,
+        /// hier gedeeld zodat 42b/42f se tier-1 tabbar (enkel de signaaldots) dezelfde badges toont.</summary>
+        private static List<RecalculationCategoryV2> BuildCategorieenV2(List<ActivityGroupBO> groepen, List<ContractBO> contracten, List<BegrootRegel> begroot, List<IncommingInvoiceActivityBO> facturen)
+        {
+            var categorieen = new List<RecalculationCategoryV2>();
+            foreach (var groep in groepen)
+            {
+                var activiteiten = groep.Activities
+                    .Where(a => contracten.Any(c => c.Activities.Any(ca => ca.Activity.ID == a.ID))
+                             || begroot.Any(b => b.ActivityId == a.ID)
+                             || facturen.Any(f => f.Activity.ID == a.ID))
+                    .OrderBy(a => a.Name)
+                    .ToList();
+
+                var rijen = activiteiten.Select(a =>
+                {
+                    var heeftBudget = begroot.Any(b => b.ActivityId == a.ID);
+                    var gecontracteerd = RecalcContractSom(contracten, null, a.ID);
+                    var gefactureerd = RecalcFactuurSom(facturen, null, a.ID, meerwerkKlant: false);
+                    var (status, tone) = gefactureerd == gecontracteerd ? ("Volledig", "is-positive")
+                        : gefactureerd < gecontracteerd ? ("Gedeeltelijk", "is-neutral")
+                        : ("Over", "is-blocked");
+                    return new RecalculationActivityRowV2
+                    {
+                        ActivityId = a.ID, Naam = a.Name,
+                        Begroot = heeftBudget ? RecalcBudgetSom(begroot, null, a.ID) : null,
+                        Gecontracteerd = gecontracteerd, Gefactureerd = gefactureerd,
+                        MeerwerkKlant = RecalcFactuurSom(facturen, null, a.ID, meerwerkKlant: true),
+                        Status = status, StatusTone = tone,
+                    };
+                }).ToList();
+
+                categorieen.Add(new RecalculationCategoryV2
+                {
+                    GroupId = groep.ID, Naam = groep.Name,
+                    Begroot = RecalcBudgetSom(begroot, groep.ID, null), Gecontracteerd = RecalcContractSom(contracten, groep.ID, null),
+                    Gefactureerd = RecalcFactuurSom(facturen, groep.ID, null, meerwerkKlant: false),
+                    MeerwerkKlant = RecalcFactuurSom(facturen, groep.ID, null, meerwerkKlant: true),
+                    Activiteiten = rijen,
+                });
+            }
+            return categorieen;
+        }
+
+        /// <summary>Zelfde sommen/statuslogica als Recalculation.cshtml (legacy) — enkel herschikt in een
+        /// Vm i.p.v. in de view uitgerekend, zodat RecalculationV2.cshtml dun blijft (gl-v2-conventie).</summary>
+        private RecalculationIndexV2Vm BuildRecalculationIndexV2Vm(ProjectContractsModel m, bool canWrite)
+        {
+            var (begroot, bronLabel) = GetBegrootRegelsV2(m.ProjectId, m.BudgetActivities);
+            var begrootTotaal = RecalcBudgetSom(begroot, null, null);
+            var contractTotaal = RecalcContractSom(m.Contracts, null, null);
+            var factuurTotaal = RecalcFactuurSom(m.IncommingInvoicesActivities, null, null, meerwerkKlant: false);
+            var meerwerkTotaal = RecalcFactuurSom(m.IncommingInvoicesActivities, null, null, meerwerkKlant: true);
+            var verschilBegrootContract = begrootTotaal - contractTotaal;
+            var nogTeFactureren = contractTotaal - factuurTotaal;
+            var pctGecontracteerdVanBegroot = begrootTotaal > 0 ? contractTotaal / begrootTotaal * 100m : 0m;
+            var pctGefactureerdVanContract = contractTotaal > 0 ? factuurTotaal / contractTotaal * 100m : 0m;
+
+            // Exacte labels/volgorde/hints — design-handoff 42a (KPI-rij): Begroot · Gecontracteerd · Gefactureerd ·
+            // Meerwerk klanten · Begroot – contract · Nog te factureren. "Begroot" se hint toont de echte bron
+            // (design-handoff 42e punt 01: "Vergeleken met [definitief budget]") zodra er een Definitief budget
+            // bestaat voor dit project — anders geen hint, net als vroeger (het oude per-activiteit-budget).
+            var kpis = new List<GlV2KpiItemVm>
+            {
+                new() { Label = "Begroot", Value = RecalcGeld(begrootTotaal), IconClass = "ph-wallet", Hint = bronLabel, HintInline = true },
+                new() { Label = "Gecontracteerd", Value = RecalcGeld(contractTotaal), IconClass = "ph-file-text", Hint = $"{pctGecontracteerdVanBegroot:N0} % van begroot", HintInline = true },
+                new() { Label = "Gefactureerd", Value = RecalcGeld(factuurTotaal), IconClass = "ph-receipt", Hint = $"{pctGefactureerdVanContract:N0} % van contract", HintInline = true },
+                new() { Label = "Meerwerk klanten", Value = RecalcGeld(meerwerkTotaal), IconClass = "ph-user-plus", Hint = meerwerkTotaal == 0 ? "geen WO gefactureerd" : null, HintInline = true },
+                new() { Label = "Begroot – contract", Value = (verschilBegrootContract < 0 ? "– " : "") + RecalcGeld(Math.Abs(verschilBegrootContract)), IconClass = "ph-scales", Tone = verschilBegrootContract < 0 ? GlV2KpiTone.Danger : GlV2KpiTone.Primary, Hint = verschilBegrootContract < 0 ? "boven budget" : "nog vrij", HintInline = true },
+                new()
+                {
+                    Label = "Nog te factureren", Value = (nogTeFactureren < 0 ? "– " : "") + RecalcGeld(Math.Abs(nogTeFactureren)), IconClass = "ph-warning",
+                    Tone = nogTeFactureren < 0 ? GlV2KpiTone.Danger : GlV2KpiTone.Primary, Hint = nogTeFactureren < 0 ? "overfacturatie" : "door leveranciers", HintInline = true,
+                },
+            };
+
+            // Alle groepen tonen, ook zonder enige activiteit (bv. "Schilderwerken" in 42a) — die krijgt in de
+            // view enkel een gedimde rij (RecalculationCategoryV2.IsLeeg), wordt niet uit de tabel weggelaten.
+            var categorieen = BuildCategorieenV2(m.ActivityGroups, m.Contracts, begroot, m.IncommingInvoicesActivities);
+
+            return new RecalculationIndexV2Vm { ProjectId = m.ProjectId, ProjectName = m.ProjectName, CanWrite = canWrite, Kpis = kpis, Categorieen = categorieen };
+        }
+
         [HttpGet]
         public IActionResult PrintRecalculation(int projectid)
         {
@@ -953,8 +1086,194 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = projectRecalcAct;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Nacalculatie - {breadcrumbTitle}");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                var _ps2 = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+                var canWriteCalc2 = _ps2.HasWrite(PermissionCodes.ProjectsPostCalculation);
+                // Enkel voor de V2-tier-1-tabbar (signaaldots op alle 11 categorieën) — ongeschaald, niet
+                // de group-beperkte model.IncommingInvoicesActivities hierboven (die blijft voor de legacy
+                // view, ongewijzigd qua gedrag/perf).
+                var alleFacturenResponse = projectService.GetProjectIncommingInvoicesForRecalculation(projectId);
+                return View("RecalculationDetailV2", BuildRecalculationDetailV2Vm(model, alleFacturenResponse.Values, canWriteCalc2));
+            }
             return View(model);
         }
+
+        /// <summary>Zelfde bron/sommen als 42b/42f (categorie/activiteit-detail) — zie <see cref="BuildCategorieenV2"/>
+        /// voor de tier-1-badges en <see cref="BuildRecalculationIndexV2Vm"/> voor de gedeelde sommen.</summary>
+        private RecalculationDetailV2Vm BuildRecalculationDetailV2Vm(ProjectRecalculationDetailModel m, List<IncommingInvoiceActivityBO> alleFacturen, bool canWrite)
+        {
+            var (begrootRegels, bronLabel) = GetBegrootRegelsV2(m.ProjectId, m.BudgetActivities);
+            var groep = m.ActivityGroups.FirstOrDefault(g => g.ID == m.GroupID);
+            var activiteitenInGroep = (groep?.Activities ?? new List<ActivityBO>())
+                .Where(a => m.Contracts.Any(c => c.Activities.Any(ca => ca.Activity.ID == a.ID))
+                         || begrootRegels.Any(b => b.ActivityId == a.ID)
+                         || alleFacturen.Any(f => f.Activity.ID == a.ID))
+                .OrderBy(a => a.Name)
+                .ToList();
+
+            // Tier-2 enkel bij >1 activiteit (design-handoff: "Bij Algemeen komt een tweede tabbar met de
+            // activiteiten" — Bovenbouw, met 1 activiteit, toont er in 42b géén).
+            var subTabs = new List<RecalcTabActiviteitV2>();
+            if (activiteitenInGroep.Count > 1)
+            {
+                subTabs.Add(new RecalcTabActiviteitV2 { ActivityId = null, Naam = "Alle activiteiten", IsActief = m.ActivityID == 0, Aantal = activiteitenInGroep.Count });
+                subTabs.AddRange(activiteitenInGroep.Select(a => new RecalcTabActiviteitV2
+                {
+                    ActivityId = a.ID, Naam = a.Name, IsActief = m.ActivityID == a.ID,
+                    Aantal = alleFacturen.Count(f => f.Activity.ID == a.ID),
+                }));
+            }
+            // Effectieve scope: een specifieke activiteit enkel als er een tier-2-tabbar is EN die activiteit
+            // gekozen is, of als de categorie toevallig precies 1 activiteit heeft (dan is er geen keuze nodig).
+            int? scopeActivityId = subTabs.Count > 0 ? (m.ActivityID != 0 ? m.ActivityID : null)
+                : activiteitenInGroep.Count == 1 ? activiteitenInGroep[0].ID : null;
+            var activityNaam = scopeActivityId.HasValue ? activiteitenInGroep.FirstOrDefault(a => a.ID == scopeActivityId)?.Name : null;
+
+            var categorieen = BuildCategorieenV2(m.ActivityGroups, m.Contracts, begrootRegels, alleFacturen)
+                .Select(c => new RecalcTabCategorieV2 { GroupId = c.GroupId, Naam = c.Naam, HeeftSignaal = c.BadgeLabel != null, IsActief = c.GroupId == m.GroupID })
+                .ToList();
+
+            var begroot = RecalcBudgetSom(begrootRegels, m.GroupID, scopeActivityId);
+            var gecontracteerd = RecalcContractSom(m.Contracts, m.GroupID, scopeActivityId);
+            var gefactureerd = RecalcFactuurSom(alleFacturen, m.GroupID, scopeActivityId, meerwerkKlant: false);
+            var verschilBegrootContract = begroot - gecontracteerd;
+
+            var kpis = new List<GlV2KpiItemVm>
+            {
+                new() { Label = "Begroot", Value = RecalcGeld(begroot), IconClass = "ph-wallet", Hint = scopeActivityId == null ? bronLabel : null, HintInline = true },
+                new() { Label = "Gecontracteerd", Value = RecalcGeld(gecontracteerd), IconClass = "ph-file-text" },
+                new()
+                {
+                    Label = "Gefactureerd", Value = RecalcGeld(gefactureerd), IconClass = "ph-receipt",
+                    Tone = gecontracteerd > 0 && gefactureerd > gecontracteerd ? GlV2KpiTone.Danger : GlV2KpiTone.Primary,
+                    Hint = gecontracteerd > 0 ? $"{(gefactureerd / gecontracteerd * 100m):N0} % van contract" : null, HintInline = true,
+                },
+                new() { Label = "Begroot – contract", Value = (verschilBegrootContract < 0 ? "– " : "") + RecalcGeld(Math.Abs(verschilBegrootContract)), IconClass = "ph-scales", Tone = verschilBegrootContract < 0 ? GlV2KpiTone.Danger : GlV2KpiTone.Primary, Hint = verschilBegrootContract < 0 ? "boven budget" : "nog vrij", HintInline = true },
+            };
+            // "Ingehouden borg" (5e KPI, enkel op categorieniveau — 42b) = som over alle contracten in scope van
+            // (hun Contract+Meerwerk-gefactureerd-bedrag × GuaranteePercentage), enkel bij een financiële waarborg.
+            if (scopeActivityId == null)
+            {
+                var contractenInScope = m.Contracts.Where(c => c.Activities.Any(ca => ca.Activity.Group.ID == m.GroupID));
+                decimal borgTotaal = 0m;
+                foreach (var c in contractenInScope.Where(c => c.GuaranteeType == ContractGuaranteeType.FinancialGuarantee && c.GuaranteePercentage.HasValue))
+                {
+                    var compId = c.Company?.ID ?? 0;
+                    var gefactCompany = alleFacturen.Where(f => f.ContractId == c.Id && f.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant).Sum(f => f.SignedPrice);
+                    borgTotaal += gefactCompany * c.GuaranteePercentage.Value / 100m;
+                }
+                kpis.Add(new GlV2KpiItemVm { Label = "Ingehouden borg", Value = RecalcGeld(borgTotaal), IconClass = "ph-vault", Hint = "per leverancier, zie onder", HintInline = true });
+            }
+
+            // 42f se eigen "Activiteiten"-kaart — enkel bij "Alle activiteiten" (en enkel als er een tier-2 is).
+            var activiteitRijen = new List<RecalcActiviteitRijV2>();
+            if (subTabs.Count > 0 && scopeActivityId == null)
+            {
+                activiteitRijen = activiteitenInGroep.Select(a => new RecalcActiviteitRijV2
+                {
+                    ActivityId = a.ID, Naam = a.Name,
+                    Begroot = RecalcBudgetSom(begrootRegels, null, a.ID),
+                    Gecontracteerd = RecalcContractSom(m.Contracts, null, a.ID),
+                    Gefactureerd = RecalcFactuurSom(alleFacturen, null, a.ID, meerwerkKlant: false),
+                    IsGegund = m.Contracts.Any(c => c.Activities.Any(ca => ca.Activity.ID == a.ID)),
+                }).ToList();
+            }
+
+            // Leverancierskaarten: elk bedrijf met een contract OF factuur binnen deze scope (groep, of de
+            // gekozen activiteit). Facturen voor "Meerwerk_Klant" tellen niet mee in Gefactureerd/Saldo van de
+            // strook (die blijven, net als op 42a, een apart spoor) maar krijgen wel hun eigen factuurgroep.
+            bool InScope(IncommingInvoiceActivityBO f) => scopeActivityId.HasValue ? f.Activity.ID == scopeActivityId : f.Activity.Group.ID == m.GroupID;
+            bool ContractInScope(ContractBO c) => c.Activities.Any(ca => scopeActivityId.HasValue ? ca.Activity.ID == scopeActivityId : ca.Activity.Group.ID == m.GroupID);
+
+            var facturenInScope = alleFacturen.Where(InScope).ToList();
+            var contractenScope = m.Contracts.Where(ContractInScope).ToList();
+            var companyIds = contractenScope.Select(c => c.Company?.ID ?? 0).Concat(facturenInScope.Select(f => f.Company?.ID ?? 0)).Where(id => id != 0).Distinct().ToList();
+
+            var leveranciers = new List<RecalcLeverancierKaartV2>();
+            foreach (var companyId in companyIds)
+            {
+                var contract = contractenScope.FirstOrDefault(c => c.Company?.ID == companyId);
+                var facturenBedrijf = facturenInScope.Where(f => f.Company?.ID == companyId).ToList();
+                var companyNaam = contract?.Company?.Display ?? facturenBedrijf.FirstOrDefault()?.Company?.Display ?? "";
+
+                var kaart = new RecalcLeverancierKaartV2
+                {
+                    CompanyId = companyId, CompanyNaam = companyNaam,
+                    ActiviteitNaam = activityNaam ?? groep?.Name ?? "",
+                    HasContract = contract != null,
+                };
+
+                if (contract != null)
+                {
+                    var contractBedrag = contract.Activities
+                        .Where(ca => scopeActivityId.HasValue ? ca.Activity.ID == scopeActivityId : ca.Activity.Group.ID == m.GroupID)
+                        .Sum(ca => ca.EffectivePrice);
+                    var meerwerkBedrag = facturenBedrijf.Where(f => f.ContractId == contract.Id && f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk).Sum(f => f.SignedPrice);
+                    var contractFacturenBedrag = facturenBedrijf.Where(f => f.ContractId == contract.Id && (f.IncommingInvoiceType == IncommingInvoiceType.Contract || f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk)).Sum(f => f.SignedPrice);
+
+                    kaart.ContractId = contract.Id;
+                    kaart.ContractLabel = string.IsNullOrWhiteSpace(contract.ContractName) ? $"Contract #{contract.Id}" : contract.ContractName;
+                    kaart.ContractSigned = contract.ContractSigned;
+                    kaart.ContractSentDate = contract.ContractSentDate.HasValue ? DateOnly.FromDateTime(contract.ContractSentDate.Value) : null;
+                    kaart.ContractBedrag = contractBedrag;
+                    kaart.MeerwerkBedrag = meerwerkBedrag;
+                    kaart.GefactureerdBedrag = contractFacturenBedrag;
+                    kaart.BorgPercentage = contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee ? contract.GuaranteePercentage : null;
+                    kaart.BorgIngehouden = kaart.BorgPercentage.HasValue ? contractFacturenBedrag * kaart.BorgPercentage.Value / 100m : 0m;
+                    kaart.BetaaltermijnTekst = contract.PaymentTerm.HasValue
+                        ? $"{contract.PaymentTerm.Value:0} d" + (contract.CashDiscount == true && contract.CashDiscountPercentage.HasValue && contract.CashDiscountPaymentTerm.HasValue
+                            ? $" · {contract.CashDiscountPercentage.Value:0.#}% / {contract.CashDiscountPaymentTerm.Value:0} d" : "")
+                        : null;
+                }
+
+                RecalcFactuurRijV2 ToRij(IncommingInvoiceActivityBO f)
+                {
+                    var isPaid = f.StatusId == IncomingInvoiceStatus.Paid;
+                    var isOverdue = !isPaid && f.DueDate.HasValue && f.DueDate.Value < DateOnly.FromDateTime(DateTime.Today);
+                    string? kortingTekst = null;
+                    if (!isPaid && !isOverdue && contract?.CashDiscount == true && contract.CashDiscountPaymentTerm.HasValue)
+                    {
+                        var kortingDatum = f.Invoicedate.AddDays((int)contract.CashDiscountPaymentTerm.Value);
+                        if (kortingDatum >= DateOnly.FromDateTime(DateTime.Today))
+                            kortingTekst = "Korting tot " + kortingDatum.ToString("dd/MM");
+                    }
+                    return new RecalcFactuurRijV2
+                    {
+                        InvoiceId = f.InvoiceId, FactuurNummer = f.ExternalInvoiceId, Datum = f.Invoicedate, Omschrijving = f.Description, Bedrag = f.SignedPrice,
+                        IsCreditnota = f.Kind == IncommingInvoiceKind.Creditnota,
+                        BetaalLabel = isPaid ? "Betaald" : isOverdue ? "Vervallen" : null,
+                        BetaalTone = isPaid ? "is-positive" : "is-blocked",
+                        KortingTekst = kortingTekst,
+                    };
+                }
+
+                var groepen = new List<RecalcFactuurGroepV2>();
+                void VoegGroepToe(string label, IncommingInvoiceType? type, bool? zonderContract = null)
+                {
+                    var rijen = facturenBedrijf.Where(f => zonderContract == true ? f.ContractId == 0 : f.IncommingInvoiceType == type && f.ContractId != 0)
+                        .OrderByDescending(f => f.Invoicedate).Select(ToRij).ToList();
+                    if (rijen.Count > 0)
+                        groepen.Add(new RecalcFactuurGroepV2 { Label = label, Totaal = rijen.Sum(r => r.Bedrag), Rijen = rijen });
+                }
+                VoegGroepToe("CONTRACT", IncommingInvoiceType.Contract);
+                VoegGroepToe("MEERWERK", IncommingInvoiceType.Meerwerk);
+                VoegGroepToe("MEERWERK KLANT", IncommingInvoiceType.Meerwerk_Klant);
+                VoegGroepToe("GEEN CONTRACT", null, zonderContract: true);
+                kaart.FactuurGroepen = groepen;
+
+                leveranciers.Add(kaart);
+            }
+
+            return new RecalculationDetailV2Vm
+            {
+                ProjectId = m.ProjectId, ProjectName = m.ProjectName, CanWrite = canWrite,
+                GroupId = m.GroupID, GroupNaam = groep?.Name ?? "", ActivityId = scopeActivityId, ActivityNaam = activityNaam,
+                Categorieen = categorieen, SubTabs = subTabs, Kpis = kpis, ActiviteitRijen = activiteitRijen,
+                Leveranciers = leveranciers.OrderByDescending(l => l.GefactureerdBedrag + l.FactuurGroepen.Sum(g => g.Totaal)).ToList(),
+            };
+        }
+
         [HttpGet]
         [Breadcrumb("Contract toevoegen", FromAction = "DetailContracts")]
         //[Breadcrumb("Contract toevoegen")]

@@ -14,6 +14,11 @@
     var token = ($("#vs-token-form input[name=__RequestVerificationToken]") || {}).value || "";
     var aanwezigen = (data.aanwezigen || []).map(function (a) { return { name: a.name, email: a.email || "" }; });
     var readOnly = !!data.readOnly;
+    // Punten in concept/ter goedkeuring mogen niet onafgewerkt mee in een verstuurd verslag (zie Finish
+    // in ProjectVerslagenController). Basisaantal komt van de server (bij page load); elk nieuw punt
+    // start altijd als concept, dus +1 per geslaagde addPoint(). Een goedkeuring via het zijpaneel zonder
+    // herladen telt hier niet af — de server controleert dit sowieso opnieuw vóór het effectief verstuurt.
+    var teGoedkeurenAantal = data.teGoedkeurenAantal || 0;
 
     function post(path, fields) {
         var fd = new FormData(); fd.append("__RequestVerificationToken", token);
@@ -142,6 +147,7 @@
                 '<button type="button" class="gl-v2-icon-btn js-pt-edit" data-id="' + j.issueId + '" title="Eenheid, aannemer en details kiezen" aria-label="Bewerken ' + esc(j.nr) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>';
             $("#vs-new-list").appendChild(li);
             $("#vs-new-count").textContent = $("#vs-new-list").children.length;
+            teGoedkeurenAantal++;
             inp.value = ""; inp.focus();
         }).catch(function () { err.textContent = "Toevoegen mislukt."; err.hidden = false; });
     }
@@ -154,10 +160,29 @@
     function openFinish() {
         var m = document.getElementById("vs-finish-modal"); if (!m || !window.bootstrap) return;
         var open = $$("#vs-open-body tr[data-issue]"), unchecked = open.filter(function (r) { return !r.querySelector(".gl-v2-vs-ter .is-on"); }).length;
-        var mailable = aanwezigen.filter(function (a) { return a.email; }).length, nieuw = $("#vs-new-list").children.length;
-        $("#vs-finish-desc").textContent = nieuw + " nieuw(e) punt(en) blijven concept: je kan er nog foto's en details aan toevoegen en ze daarna goedkeuren." +
-            (unchecked ? " " + unchecked + " openstaand punt(en) zijn niet nagekeken en blijven zoals ze zijn." : "") +
-            " Het verslag gaat als PDF naar " + mailable + " aanwezige(n) met een e-mailadres.";
+        var mailable = aanwezigen.filter(function (a) { return a.email; }).length;
+        var desc = $("#vs-finish-desc"), content = m.querySelector(".modal-content"), icon = m.querySelector(".gl-v2-modal-icon"), btn = m.querySelector("button[type=submit]");
+        var forceerInput = m.querySelector("input[name=forceer]");
+        if (teGoedkeurenAantal > 0) {
+            desc.textContent = "Dit verslag bevat nog " + teGoedkeurenAantal + " punt" + (teGoedkeurenAantal > 1 ? "en" : "") +
+                " in concept of ter goedkeuring. Verstuur je toch, dan gaan die niet mee in dit verslag — keur ze eerst goed als ze er wél bij moeten.";
+            content.classList.remove("is-success"); content.classList.add("is-warning");
+            icon.classList.remove("is-success"); icon.classList.add("is-warning");
+            icon.querySelector("i").className = "ph ph-warning";
+            btn.classList.remove("gl-v2-btn-primary"); btn.classList.add("gl-v2-btn-warning");
+            btn.textContent = "Toch versturen";
+            if (!forceerInput) { forceerInput = document.createElement("input"); forceerInput.type = "hidden"; forceerInput.name = "forceer"; m.querySelector("form").appendChild(forceerInput); }
+            forceerInput.value = "true";
+        } else {
+            desc.textContent = (unchecked ? unchecked + " openstaand punt(en) zijn niet nagekeken en blijven zoals ze zijn. " : "") +
+                "Het verslag gaat als PDF naar " + mailable + " aanwezige(n) met een e-mailadres.";
+            content.classList.remove("is-warning"); content.classList.add("is-success");
+            icon.classList.remove("is-warning"); icon.classList.add("is-success");
+            icon.querySelector("i").className = "ph ph-paper-plane-tilt";
+            btn.classList.remove("gl-v2-btn-warning"); btn.classList.add("gl-v2-btn-primary");
+            btn.textContent = "Afronden & versturen";
+            if (forceerInput) forceerInput.remove();
+        }
         window.bootstrap.Modal.getOrCreateInstance(m).show();
     }
     document.addEventListener("click", function (ev) { if (ev.target.closest(".js-vs-finish") || ev.target.closest("#vs-finish-open")) openFinish(); });
