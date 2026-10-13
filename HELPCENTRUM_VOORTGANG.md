@@ -1,6 +1,6 @@
 # Helpcentrum (design-handoff punt 41 + 43) — voortgang en overdracht
 
-Laatst bijgewerkt: 11/10/2026 (avond). Bron van het ontwerp: `design-handoff/CRM Help.dc.html`
+Laatst bijgewerkt: 13/10/2026. Bron van het ontwerp: `design-handoff/CRM Help.dc.html`
 (punt 41a–f) + `design-handoff/CRM Paginatypes.dc.html` (punt 43, vooral 43a "Shell" en 43i
 "Kennisbank / artikel"). Volledige technische uitleg staat in `DESIGN.md`, sectie "Helpcentrum —
 design-handoff punt 41" (met drie "Follow-up"-subsecties) — dit bestand is het overdracht-/
@@ -91,8 +91,9 @@ het nieuwe punt 43 (`CRM Paginatypes.dc.html`, 11 vaste paginatypes — Help-art
 ## Nog open / volgende stappen
 - **Nog te verifiëren na de volgende herstart:** boom-volgorde (Overzicht vóór Detail),
   "Overzicht"-label, klikbare ingeklapte topic-items.
-- **Nog te schrijven:** Klanten- en Leveranciers-artikels (zelfde structuur als Projecten:
-  Algemeen/Toevoegen/Detail/Bewerken), en de overige ~55 artikels voor de andere topics.
+- **Nog te schrijven:** de overige ~55 artikels voor de andere topics. Klanten/Leveranciers
+  (inclusief Contacten, Klant toevoegen, Contract toevoegen/bewerken) zijn nu gedekt — zie
+  12/10/2026 (vervolg 5) en (vervolg 6).
 - **`HelpFeedback`-tabel nog niet aangemaakt op de live DB** — `DALCore/Migrations/
   HelpFeedback.sql` moet nog handmatig uitgevoerd worden (dit project gebruikt geen EF-migraties).
 - Geen "Open dit scherm in de app ↗"-knop gebouwd (punt 41c/43i) — er bestaat geen registry die
@@ -167,3 +168,106 @@ het nieuwe punt 43 (`CRM Paginatypes.dc.html`, 11 vaste paginatypes — Help-art
 - Toc klikbaar + actief punt (41c: vet, groen, groene lijn): `HelpTocItemVm.TargetId`, ids `toc-before`, `toc-steps`,
   `toc-step-N`, `toc-faq` op de blokken, scroll-spy in `gl-v2-help.js` (lijn op 120px, onderaan = laatste punt actief,
   klik scrolt smooth en zet `#` in de url). Gebouwd (0 fouten), nog NIET getest: herstart nodig (view + controller).
+
+## 12/10/2026 (vervolg 5) — Klanten- en Leveranciers-artikels (project-detail)
+- 4 nieuwe artikels in `projecten/`, geschreven uit de view/controller-code (geen screenshots —
+  geen Playwright-sessie deze keer), per `HELP_SCHRIJFGIDS.md`:
+  - `project-klanten-overzicht.md` (treeOrder 5, `screens: projecten-klanten`) — `Projecten/DetailClients`.
+  - `project-klant-detail.md` (parent `project-klanten-overzicht`, `screens: projecten-klant-detail`) —
+    `Klanten/Detail` (de klantfiche binnen een project).
+  - `project-leveranciers-overzicht.md` (treeOrder 6, `screens: projecten-leveranciers`) — `Projecten/DetailContracts`.
+  - `project-leverancier-detail.md` (parent `project-leveranciers-overzicht`, `screens: projecten-leverancier-detail`) —
+    `Projecten/DetailContract` + `DetailSupplier` (zelfde view, met of zonder contractid).
+  `ViewData["HelpScreenId"]` gezet in `ProjectenController.Clients.cs` (DetailClients),
+  `ProjectenController.Contracts.cs` (DetailContracts, DetailContract, DetailSupplier) en
+  `KlantenController.Core.cs` (Detail) — vlak vóór elke `return View(...)`. Herstart nodig voor het
+  "?"-zijpaneel op die 4 schermen (C#-wijziging); de `.md`'s zelf zijn al live.
+- Niet gedekt: `Projecten/DetailContacts` (contactpersonen-tak), `Klanten/AddClientAccount` (Klant
+  toevoegen), `Projecten/AddContract`/`EditContract` (Leverancier/contract toevoegen/bewerken) — elk
+  een apart artikel, nog te schrijven.
+- Meerdere `[VRAAG: ...]` toegevoegd (o.a. status verkocht/optie/akte, wat er gebeurt bij een klant
+  verwijderen, financiële waarborg vs. bankwaarborg, of "Herinnering sturen" ergens gelogd wordt) —
+  nog door Niels te beantwoorden, dan verhuizen naar `HELP_SCHRIJFGIDS.md`.
+
+## 12/10/2026 (vervolg 6) — Contacten, Klant toevoegen, Contract toevoegen/bewerken
+- 3 nieuwe artikels in `projecten/`, allemaal kind van hun overzichtsartikel:
+  - `project-contactpersonen.md` (kind van `project-klanten-overzicht`, geen `screens`) —
+    `Projecten/DetailContacts`/`ContactDetails`/`AddContact`/`EditContact`. Deze vier acties zijn
+    **legacy-only** (geen `UseGlV2Layout`-tak, geen V2-view), dus geen `ViewData["HelpScreenId"]`
+    gezet: het "?"-zijpaneel bestaat enkel in `_LayoutV2`, op deze pagina's zou het niets doen.
+  - `project-klant-toevoegen.md` (kind van `project-klanten-overzicht`, `screens:
+    projecten-klant-toevoegen`) — `Klanten/AddClientAccount` (heeft wel een V2).
+  - `project-leverancier-toevoegen.md` (kind van `project-leveranciers-overzicht`, `screens:
+    projecten-leverancier-toevoegen`) — dekt zowel `Projecten/AddContract` als `EditContract`
+    (zelfde formulier, zelfde `screens`-id op beide acties).
+  `ViewData["HelpScreenId"]` gezet in `KlantenController.ClientAccount.cs` (AddClientAccount) en
+  `ProjectenController.Contracts.cs` (AddContract, EditContract) — vlak vóór hun `return View(...)`.
+  Build (`dotnet build CPMCore/CPMCore.csproj -c Debug -o <los pad>`) geeft 0 errors. Herstart nog
+  nodig om het zijpaneel op die 2 schermen te zien.
+- Nieuwe `[VRAAG: ...]`: of een contactaanvraag automatisch naar de klantenlijst verhuist bij
+  aankoop, en of een klantenaccount zonder eenheid kan bestaan.
+
+## 12/10/2026 (vervolg 7) — antwoorden van Niels verwerkt (Klanten/Leveranciers)
+- Verwerkt in `HELP_SCHRIJFGIDS.md` (woordenlijst Financieel + nieuwe sectie "Klanten en
+  leveranciers") en in de 4 betrokken artikels, alle `[VRAAG: ...]` daar verdwenen:
+  - Status eenheid: In optie (tijdelijk, één klant) → Verkocht (na ondertekening compromis) →
+    Akte verleden (na het verlijden van de akte).
+  - Klant verwijderen is niet omkeerbaar en geblokkeerd zodra de klant al facturatie of
+    wijzigingsopdrachten heeft; de gekoppelde eenheid wordt dan terug "Nog geen klant".
+  - Contactaanvragen (`DetailContacts`) en de klantenlijst zijn vandaag volledig losse lijsten, geen
+    automatische koppeling bij aankoop.
+  - Een klantenaccount wordt altijd met minstens één eenheid aangemaakt.
+  - Financiële waarborg = percentage ingehouden op elke factuur; bankwaarborg = percentage
+    gewaarborgd door een bank met attest, niets ingehouden.
+  - "Herinnering sturen"/"Opvragen" zijn pure `mailto:`-snelkoppelingen, zelf nagekeken in de code
+    (`DetailContractV2.cshtml`, `ReminderMailto`) — geen enkele controller-actie logt dit; bevestigd
+    aan Niels in plaats van aan hem gevraagd.
+  - Eén constatering i.p.v. een vraag: Niels verwacht dat je op de klantfiche (`Klanten/Detail`) alle
+    eenheden van een klant samen ziet, maar de gl-v2-kaart (`DetailV2.cshtml`) toont vandaag enkel de
+    eerste eenheid + een teller "+ N andere", geen klikbare volledige lijst — vastgelegd in de gids
+    én in `project-klant-detail.md` als bestaande beperking, geen uitnodiging om het zelf te bouwen.
+
+## 13/10/2026 — Contacten hoort bij Verkoop, niet bij Klanten
+- Niels corrigeerde: `project-contactpersonen.md` stond als kind van `project-klanten-overzicht`,
+  maar `Projecten/DetailContacts` zit in het linkermenu onder de groep **Verkoop** (samen met **Te
+  koop**/`DetailSales`), niet onder **Klanten** — geverifieerd in
+  `Views/Shared/GlV2/_ProjectInnerMenuV2.cshtml` regel 121-124 (`verkoopItems`/groep `"verkoop"`).
+  De intro van het artikel zei zelfs expliciet (en fout) "via Klanten → Contacten".
+- Fix: `parent: project-klanten-overzicht` weg, nu een eigen top-level item (`treeOrder: 7`) in de
+  `projecten`-boom i.p.v. een kind van Klanten. `role` Projectleider → Verkoper (zelfde patroon als
+  `role: Werfleider` elders). Intro herschreven: "via Verkoop → Contacten", met een expliciete zin
+  dat dit bij Verkoop hoort, niet bij Klanten. `project-klanten-overzicht.md` se eigen `related:`
+  verwijst niet langer naar dit artikel. Het artikel zelf houdt nog wel een `related:` terug naar
+  `project-klanten-overzicht` (het blijft relevant via de FAQ "verschil met de klantenlijst"), dat is
+  een gewone kruisverwijzing, geen hiërarchie.
+- Geen `screens`/`HelpScreenId` hier (zie vervolg 6: `DetailContacts` is legacy-only), dus geen
+  controllerwijziging nodig voor deze fix — enkel de `.md` is aangepast, meteen live.
+- "Te koop" (`Projecten/DetailSales`), de andere ingang in dezelfde Verkoop-groep, heeft nog geen
+  artikel — nog te schrijven.
+
+## 13/10/2026 — echte, geanonimiseerde screenshots voor alle 7 Klanten/Leveranciers-artikels
+- Playwright-opzet in de scratchpad (niet in de repo, zie `DESIGN.md` se nieuwe sectie "Schermafbeeldingen
+  maken — herbruikbaar Playwright-recept" voor het volledige, herbruikbare stappenplan): eigen
+  automatiseringsprofiel, Niels logde zelf in (Entra ID), daarna de `gl_v2_preview`-cookie gezet via
+  `/LayoutPreview/On` en project 68 gevonden (heeft klanten, contracten én contactaanvragen).
+- 11 crops gemaakt en met het Read-tool zelf bekeken vóór verplaatsen (geen enkele als volle
+  paginascreenshot): `project-klanten-overzicht/1-lijst`, `project-klant-detail/{1-kerncijfers,
+  2-gegevens}`, `project-leveranciers-overzicht/1-lijst`, `project-leverancier-detail/{1-kerncijfers,
+  2-voorwaarden}`, `project-contactpersonen/{1-kerncijfers,2-lijst}`,
+  `project-klant-toevoegen/1-klantenaccount`, `project-leverancier-toevoegen/1-algemeen`. Alle 7
+  `.md`'s kregen hun `![...]`-regel(s) en `updated: 2026-10-13`.
+- **Privacy-incident, zelf ontdekt vóór publicatie, niet door Niels:** de eerste
+  `contacten-2-lijst.png` (legacy `Projecten/DetailContacts`-tabel) stond met **echte namen,
+  e-mailadressen en telefoonnummers** (ook dat van Niels als testcontact) nog in de scratch-outputmap
+  — de anonimisatie draaide enkel op gl-v2-CSS-klassen, die deze legacy-pagina niet heeft. Bestand
+  meteen verwijderd, nooit in de repo of gepubliceerd geweest. Fix: kolompositie-gebaseerde
+  anonimisatie (`tr td:nth-child(n)`) toegevoegd voor deze ene legacy-tabel, opnieuw gescreenshot,
+  pas daarna manueel geverifieerd en gebruikt. Vastgelegd in `DESIGN.md` als expliciete waarschuwing
+  (punt 6 van het Playwright-recept) zodat dit niet herhaald wordt op de volgende legacy-pagina.
+- Twee kleinere bugs onderweg gefixt: (1) de login-detectie gebruikte eerst een in-page
+  `waitForFunction` die de Microsoft-loginpagina zelf al als "ingelogd" herkende en de browser te
+  vroeg sloot — vervangen door `page.url()`-polling vanuit Node; (2) de fake-naamgenerator gaf soms
+  "Tom undefined" (signed `>>` i.p.v. unsigned `>>> ` bij de hash-shift, negatieve array-index).
+- Niet gedekt: "Te koop" (`DetailSales`), `Klanten/AddClientAccount`/`Projecten/AddContract` tonen
+  enkel hun eerste kaart (leeg formulier, geen bestaande data nodig) — de rest van die lange
+  formulieren (Eigenaars, Facturatie, Eenheden, Voorwaarden, Loten) heeft nog geen screenshot.

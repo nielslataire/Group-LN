@@ -65,6 +65,11 @@ niet staat en die je niet zeker kent: vraag het, of zet `[VRAAG: ...]` in de tek
 - Wijzigingsopdracht: [VRAAG: definitie, en wanneer wordt het een factuur of betalingsschijf?]
 - Betalingsschijf: [VRAAG: definitie en hoe de schijven ontstaan]
 - Factuur / voorschotfactuur / creditnota: [VRAAG: welke soorten bestaan er en wanneer gebruik je welke?]
+- Financiële waarborg: een percentage (bv. 5 %) dat bij elke factuur van de leverancier wordt
+  afgehouden, tot een bepaalde periode of voorwaarde vervuld is.
+- Bankwaarborg: een percentage dat een bank waarborgt voor de leverancier, met een attest als bewijs.
+  Er wordt niets afgehouden van de facturen, het waarborgdocument (het attest) moet wel toegevoegd
+  worden. Zie "Het contract van een leverancier bekijken".
 
 ### Opvolging en documenten
 - Punt: [VRAAG: definitie ("issue"/actiepunt?), wie kan het aanmaken, wat doet de status?]
@@ -106,6 +111,24 @@ regel hier staat; anders `[VRAAG: ...]`.
 - Het weerstation wordt gebruikt om de weerverletdagen van het project te berekenen. Die verschuiven de opleverdatum automatisch.
 - De km-afstand uit het adres wordt gebruikt voor: [VRAAG: coördinatie, en wat als het adres ontbreekt?]
 - Een project verwijderen kan enkel een beheerder. Archiveren kan nog niet. [VRAAG: wat gebeurt er met gekoppelde facturen en documenten bij verwijderen?]
+
+### Klanten en leveranciers
+- Status van een eenheid: **In optie** is tijdelijk, voorbehouden voor één klant. **Verkocht** komt er
+  na ondertekening van de compromis (de verkoopovereenkomst). **Akte verleden** komt er na het
+  verlijden van de notariële akte.
+- Een klant verwijderen kan niet ongedaan gemaakt worden. Heeft die klant al facturatie of
+  wijzigingsopdrachten, dan kan hij niet meer verwijderd worden. Bij een geslaagde verwijdering wordt
+  de gekoppelde eenheid weer "Nog geen klant".
+- Contactaanvragen (vanuit de website, `Projecten/DetailContacts`) en de klantenlijst zijn vandaag
+  volledig losse lijsten. Er is geen automatische koppeling als een contact een eenheid koopt.
+- Een klantenaccount wordt altijd aangemaakt met minstens één gekoppelde eenheid, dat kan niet leeg
+  blijven.
+- Alle eenheden van één klant samen bekijk je normaal op de klantfiche (`Klanten/Detail`). De
+  gl-v2-versie van die kaart toont vandaag wel enkel de eerste eenheid met een teller "+ N andere" en
+  heeft nog geen link naar de volledige lijst.
+- "Herinnering sturen" (bij een niet-getekend contract) en "Opvragen" (bij ontbrekende PID-attesten)
+  openen enkel het eigen e-mailprogramma van de gebruiker. CPM houdt nergens bij of en wanneer die
+  mail effectief verstuurd is.
 
 ### Budget
 - Een definitief budget wordt enkel herzien als het bedrijf beslissingen neemt die het budget beïnvloeden. [VRAAG: hoe start je een herziening, en is dat een nieuwe budgetversie?]

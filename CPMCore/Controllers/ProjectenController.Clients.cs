@@ -114,6 +114,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = projectDetail;
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Klanten");
+            ViewData["HelpScreenId"] = "projecten-klanten";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailClientsV2" : "DetailClients", model);
         }
 

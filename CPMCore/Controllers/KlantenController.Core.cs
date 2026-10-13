@@ -941,6 +941,7 @@ namespace CPMCore.Controllers
 
 
             SetPageHeader("bx bx-group", "Klant - " + model.Client?.DisplayName);
+            ViewData["HelpScreenId"] = "projecten-klant-detail";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", model);
         }
 

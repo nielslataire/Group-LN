@@ -10,7 +10,7 @@ screens: projecten-detail
 synonyms: projectdossier, projectpagina, kpi, kerncijfers, acties vereist
 newsTag: Nieuw
 description: de knoppen bovenaan en de zes kerncijfers van de projectpagina
-related: project-vraagt-actie, project-traject-eenheden, project-gegevens-budget-facturen, project-bewerken
+related: project-vraagt-actie, project-traject-eenheden, project-gegevens-budget-facturen, project-bewerken, project-klanten-overzicht, project-leveranciers-overzicht
 intro: |
   De projectpagina is het startpunt voor alles wat een project aangaat. Bovenaan zie je in één
   oogopslag hoe het project ervoor staat. Je opent de pagina via **Project** in het linkermenu van

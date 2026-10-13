@@ -84,6 +84,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = bcAdd;
 
             SetPageHeader("bx bx-group", model.ProjectName);
+            ViewData["HelpScreenId"] = "projecten-klant-toevoegen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddClientAccountV2" : "AddClientAccount", model);
         }
         [HttpPost]

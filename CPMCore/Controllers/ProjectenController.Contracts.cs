@@ -137,6 +137,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectSuppliers = _ps.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _ps.HasDelete(PermissionCodes.ProjectsSuppliers);
             SetPageHeader("ph ph-hard-hat", $"{model.ProjectName} - Leveranciers");
+            ViewData["HelpScreenId"] = "projecten-leveranciers";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractsV2" : "DetailContracts", model);
         }
 
@@ -223,6 +224,7 @@ namespace CPMCore.Controllers
             ViewBag.CanDeleteProjectSuppliers = _psDetail.HasDelete(PermissionCodes.ProjectsSuppliers);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
+            ViewData["HelpScreenId"] = "projecten-leverancier-detail";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractV2" : "DetailContract", model);
         }
 
@@ -290,6 +292,7 @@ namespace CPMCore.Controllers
             ViewBag.CanDeleteProjectSuppliers = _psSupplier.HasDelete(PermissionCodes.ProjectsSuppliers);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
+            ViewData["HelpScreenId"] = "projecten-leverancier-detail";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractV2" : "DetailContract", model);
         }
 
@@ -1349,6 +1352,7 @@ namespace CPMCore.Controllers
             else ViewData["BreadcrumbNode"] = projectContractsAdd;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
+            ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
         }
         [HttpPost]
@@ -1575,6 +1579,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = supplierDetail;
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
+            ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
         }
         [HttpPost]

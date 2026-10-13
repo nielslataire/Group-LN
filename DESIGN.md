@@ -6728,6 +6728,83 @@ Inhoud, toon, woordenlijst en `[VRAAG: ...]`-regel: zie `HELP_SCHRIJFGIDS.md` (e
    C#/.cshtml (`HelpController`, `ArtikelV2.cshtml`, `HelpMarkdownParser` …) heeft wél een
    build+herstart nodig — Razor-runtime-compilation staat niet aan in dit project.
 
+### Schermafbeeldingen maken — herbruikbaar Playwright-recept (13/10/2026)
+Elke keer opnieuw uitvinden kost tijd en leidde al tot fouten (zie onder). Dit is het vaste recept,
+telkens uit te voeren als een help-artikel echte schermafbeeldingen nodig heeft. Het script zelf
+hoort **niet** in de repo (het bevat geen productiecode en verandert elke keer een beetje), bouw het
+telkens opnieuw op in de scratchpad van de sessie.
+
+1. **Opzet** (eenmalig per sessie, in de scratchpad, niet in de repo):
+   ```
+   npm init -y
+   npm install playwright
+   npx playwright install chromium
+   ```
+2. **Eigen automatiseringsprofiel, nooit het echte browserprofiel van Niels.** Gebruik
+   `chromium.launchPersistentContext(profileDir, { headless: false, ignoreHTTPSErrors: true })` met
+   een `profileDir` in de scratchpad. `headless: false` is verplicht: Niels moet zelf inloggen
+   (Entra ID/Microsoft-login), een geautomatiseerd account bestaat niet. `ignoreHTTPSErrors: true`
+   is nodig voor het self-signed dev-certificaat op `https://localhost:7046`.
+3. **Wachten op een handmatige login — poll `page.url()` vanuit Node, niet
+   `page.waitForFunction(...)` in de pagina zelf.** De login gaat via een cross-origin redirect naar
+   `login.microsoftonline.com`; een in-page `waitForFunction` verliest zijn execution context bij
+   die navigatie en kan een valse-positieve `LOGIN_OK` geven **voordat** er echt ingelogd is (gebeurd
+   op 13/10/2026: de eerste poging herkende de Microsoft-loginpagina zelf al als "ingelogd" en sloot
+   de browser meteen, nog vóór Niels had kunnen inloggen). Correct patroon:
+   ```js
+   function isLoggedInUrl(u) {
+     const url = new URL(u);
+     if (url.hostname !== 'localhost') return false;        // nog bij Microsoft
+     const p = url.pathname.toLowerCase();
+     if (p.includes('/account/login')) return false;
+     if (p.includes('signin-oidc')) return false;           // transiente OIDC-callback
+     return true;
+   }
+   // in een lus: await page.waitForTimeout(2000); check isLoggedInUrl(page.url());
+   ```
+4. **De gl-v2-preview-cookie aanzetten, ALTIJD, vóór je iets screenshot.** Zonder de cookie
+   `gl_v2_preview=1` (`BaseController.GlV2PreviewCookie`) rendert elke pagina de **legacy V1-view**
+   met heel andere CSS-klassen/selectors dan hieronder gebruikt worden — gebeurde op 13/10/2026,
+   Niels moest het zelf melden ("you are watching version 1 layout not version 2"). Zet 'm meteen na
+   het inloggen, één keer:
+   ```js
+   await page.goto(`${BASE}/LayoutPreview/On?returnUrl=/`, { waitUntil: 'networkidle' });
+   ```
+5. **Een project met echte data zoeken, niet blind een id gokken.** Navigeer naar `/Projecten/Index`
+   en haal met een regex (`/projectid=(\d+)/gi`) over `page.content()` de echte, bestaande
+   project-id's op. Loop daarna over die id's en open per kandidaat-scherm (bv.
+   `/Projecten/DetailClients?projectid=<id>`) tot je er één vindt met rijen in de tabel (DataTables
+   `tbody tr`-telling). Klanten, leveranciers en contactaanvragen staan vaak niet in hetzelfde
+   project — zoek elk apart.
+6. **Anonimiseren met gerichte CSS-selectors, nooit een blinde regex over heel de pagina** (zou
+   bedragen/percentages/data mee kapotmaken). Vervang per bekende klasse (bv.
+   `.gl-v2-dc-client-name`, `.gl-v2-pc-supplier-name`, `.gl-v2-kd-contact-name`, `mailto:`/`tel:`-
+   links) met een deterministische fake naam/bedrijf/e-mail (simpele hash van de originele tekst →
+   index in een vaste lijst) zodat dezelfde persoon op één pagina overal dezelfde fake naam krijgt.
+   Cijfers blijven altijd ongemoeid.
+   - **Elk scherm apart nalopen — een lijst gl-v2-selectors dekt geen legacy-pagina's.**
+     Gebeurd op 13/10/2026: de anonimisatie draaide enkel op gl-v2-klassen; `Projecten/
+     DetailContacts` (legacy, geen V2-tegenhanger, zie punt 5 van het stappenplan hierboven) heeft
+     geen van die klassen — een screenshot van die tabel ging de deur uit met **echte namen,
+     e-mailadressen en telefoonnummers**, ongefilterd (zelfs dat van Niels zelf, als testcontact).
+     Bij een legacy Bootstrap-tabel zonder eigen klassen anonimiseer je op **kolompositie** binnen
+     de rij (`tr td:nth-child(n)`), niet op klasse. Lees de `.cshtml` van het scherm dat je
+     screenshot vóór je de selectors schrijft — ga er nooit van uit dat de gl-v2-lijst hierboven
+     volstaat.
+   - **Bekijk zelf elke screenshot met het Read-tool vóór je 'm gebruikt** (zie punt 8) — een
+     "MISS, selector not found"-log in de scriptoutput is geen garantie dat een andere, wél
+     gevonden selector ook werkelijk alles anonimiseerde.
+7. **Crop per kaart met `elementHandle.screenshot({ path })`, nooit `page.screenshot()` op de hele
+   pagina.** Kies de selector van de sectiekaart die de stap echt bespreekt (bv. `.gl-v2-kd-stats`,
+   `.gl-v2-detail-table-card`, `.gl-v2-pcd-grid`) — dat is tegelijk de bestaande regel uit punt 4
+   hierboven en de makkelijkste manier om de topbar/pagina-titel (vaak een klant-/bedrijfsnaam) al
+   buiten beeld te houden.
+8. **Eerst naar een scratch-outputmap, nooit rechtstreeks naar `wwwroot/img/help/...`.** Bekijk de
+   PNG's met het Read-tool (dat toont afbeeldingen) vóór je ze verplaatst — controleer dat er geen
+   echte naam, adres of telefoonnummer meer leesbaar is. Pas dan verplaatsen naar
+   `wwwroot/img/help/<topic-slug>/<artikel-slug>/<n>-<korte-naam>.png` en de `![...]`-regel
+   toevoegen in het artikel.
+
 ## Projecten/RecalculationV2 — Nacalculatie, overzicht (design-handoff punt 42a, 10/10/2026)
 Vervangt de kaart-per-categorie-opbouw van het legacy-scherm (`Contracts/Recalculation.cshtml`, 11 Bootstrap-accordionkaarten met herhaalde labels) door ÉÉN tabel: elke categorierij is een `<button>` (CSS-grid `26px minmax(0,1.4fr) repeat(4,minmax(0,1fr)) minmax(0,1.05fr) 150px`) die bij een klik een activiteitenblok toont/verbergt — zelfde idee als `.gl-v2-section-card.is-collapsible` (zie de invoice-detail precedent hoger in dit bestand), maar hier eigen markup/JS (`gln-nc-*`) omdat de kop een tabelrij is, geen sectiekaart-header. Sommen/statuslogica zijn 1-op-1 overgenomen uit het legacy-scherm, nu vooraf berekend in `ProjectenController.Contracts.BuildRecalculationIndexV2Vm` i.p.v. in de Razor-view.
 
